@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip -l \"/c/Users/wande/Downloads/clyon2 \\(1\\).zip\")",
+      "Bash(ls -la \"/c/Users/wande/Downloads/\" | grep -i clyon; echo \"---\"; ls -la \"/c/Users/wande/Downloads/Plano refinado para transformar a Clyon em marketplace assistido por IA.docx\" \"/c/Users/wande/Downloads/CLYON_Plano_Mestre_MVP_v2.docx\" 2>&1)",
+      "Read(//c/Users/wande/AppData/Local/Temp/claude/C--Users-wande-Documents-nova-clyon/17332ad3-e90d-4342-be95-d2399374b95c/scratchpad/**)",
+      "Bash(python3 -c ' *)",
+      "Bash(/c/Python314/python -c ' *)",
+      "Bash(unzip -q \"/c/Users/wande/Downloads/clyon2 \\(1\\).zip\" -x \".webdev/artifacts/checkpoint_zip/*\" -d .)",
+      "Bash(command -v pnpm)",
+      "Bash(pnpm -v)",
+      "Bash(command -v npm)",
+      "Bash(npm -v)",
+      "Bash(command -v node)",
+      "Bash(command -v npx)",
+      "Bash(npx -v)",
+      "Bash(npx --yes pnpm install)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/maps/autocomplete -H \"Content-Type: application/json\" -d '{\"input\":\"Lisboa\"}')",
+      "Bash(curl -s \"http://localhost:3000/api/address/search?q=Lisboa\")",
+      "Bash(curl -s -D - -o /dev/null \"http://localhost:3000/\" -H \"Host: localhost:3000\" --max-time 15)",
+      "Bash(curl -sv \"http://localhost:3000/\" --max-time 20 -o /tmp/out.html -D /tmp/headers.txt)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3000/\" --max-time 15)",
+      "Bash(curl -s \"http://localhost:3000/\" --max-time 15 -o /tmp/home.html -D /tmp/home_headers.txt)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://127.0.0.1:3000/\" --max-time 20)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://127.0.0.1:3000/trabalhos\" --max-time 20)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://127.0.0.1:3000/api/instagram\" --max-time 15)"
+    ]
+  }
+}

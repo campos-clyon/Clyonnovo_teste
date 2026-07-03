@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1765374826188,
+      "tag": "0000_last_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1767935169727,
+      "tag": "0001_charming_lady_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768004451620,
+      "tag": "0002_hot_thanos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1768207164147,
+      "tag": "0003_typical_true_believers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1772303513551,
+      "tag": "0004_square_quasar",
+      "breakpoints": true
+    }
+  ]
+}

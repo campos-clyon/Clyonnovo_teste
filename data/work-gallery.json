@@ -1,0 +1,101 @@
+{
+  "items": [
+    {
+      "id": "hero-entulho",
+      "section": "hero",
+      "title": "Recolha de Entulho",
+      "subtitle": "Exemplo inicial para substituir no painel",
+      "description": "Imagem inicial enquanto as fotos reais são carregadas no painel.",
+      "alt": "Recolha de entulho",
+      "imageUrl": "/images/service-1.jpg",
+      "order": 1,
+      "isActive": true,
+      "projectKey": "recolha-entulho"
+    },
+    {
+      "id": "hero-moveis",
+      "section": "hero",
+      "title": "Recolha de Móveis",
+      "subtitle": "Exemplo inicial para substituir no painel",
+      "description": "Imagem inicial enquanto as fotos reais são carregadas no painel.",
+      "alt": "Recolha de móveis",
+      "imageUrl": "/images/service-2.jpg",
+      "order": 2,
+      "isActive": true,
+      "projectKey": "recolha-moveis"
+    },
+    {
+      "id": "hero-mudancas",
+      "section": "hero",
+      "title": "Mudanças Completas",
+      "subtitle": "Exemplo inicial para substituir no painel",
+      "description": "Imagem inicial enquanto as fotos reais são carregadas no painel.",
+      "alt": "Mudanças completas",
+      "imageUrl": "/images/service-3.jpg",
+      "order": 3,
+      "isActive": true,
+      "projectKey": "mudancas-completas"
+    },
+    {
+      "id": "hero-limpeza",
+      "section": "hero",
+      "title": "Limpeza Pós-Obra",
+      "subtitle": "Exemplo inicial para substituir no painel",
+      "description": "Imagem inicial enquanto as fotos reais são carregadas no painel.",
+      "alt": "Limpeza pós-obra",
+      "imageUrl": "/images/service-4.jpg",
+      "order": 4,
+      "isActive": true,
+      "projectKey": "limpeza-pos-obra"
+    },
+    {
+      "id": "showcase-entulho",
+      "section": "showcase",
+      "title": "Recolha de Entulho",
+      "subtitle": "Caso inicial",
+      "description": "Substitua esta imagem por uma foto real de antes ou depois no painel.",
+      "alt": "Caso inicial de recolha de entulho",
+      "imageUrl": "/images/service-1.jpg",
+      "order": 1,
+      "isActive": true,
+      "projectKey": "recolha-entulho"
+    },
+    {
+      "id": "showcase-moveis",
+      "section": "showcase",
+      "title": "Recolha de Móveis",
+      "subtitle": "Caso inicial",
+      "description": "Substitua esta imagem por uma foto real de antes ou depois no painel.",
+      "alt": "Caso inicial de recolha de móveis",
+      "imageUrl": "/images/service-2.jpg",
+      "order": 2,
+      "isActive": true,
+      "projectKey": "recolha-moveis"
+    },
+    {
+      "id": "showcase-mudancas",
+      "section": "showcase",
+      "title": "Mudanças Completas",
+      "subtitle": "Caso inicial",
+      "description": "Substitua esta imagem por uma foto real de antes ou depois no painel.",
+      "alt": "Caso inicial de mudanças",
+      "imageUrl": "/images/service-3.jpg",
+      "order": 3,
+      "isActive": true,
+      "projectKey": "mudancas-completas"
+    },
+    {
+      "id": "showcase-limpeza",
+      "section": "showcase",
+      "title": "Limpeza Pós-Obra",
+      "subtitle": "Caso inicial",
+      "description": "Substitua esta imagem por uma foto real de antes ou depois no painel.",
+      "alt": "Caso inicial de limpeza pós-obra",
+      "imageUrl": "/images/service-4.jpg",
+      "order": 4,
+      "isActive": true,
+      "projectKey": "limpeza-pos-obra"
+    }
+  ]
+}
+

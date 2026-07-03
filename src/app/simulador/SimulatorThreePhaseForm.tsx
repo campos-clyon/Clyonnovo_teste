@@ -1,0 +1,1239 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useLocation } from "@/contexts/LocationContext";
+import type {
+  OrderData,
+  UploadedFile,
+  AddressData,
+  DistanceFromBase,
+  DistanceStatus,
+  EstimateResult,
+  AddressStatus,
+  MovingAccess,
+  MovingDistance,
+  ServiceType,
+} from "./types";
+import AddressAutocomplete from "./components/AddressAutocomplete";
+import OrderSummaryCard from "./components/OrderSummaryCard";
+import ContactAccessForm from "./components/ContactAccessForm";
+import AnalysisResultCard from "./components/AnalysisResultCard";
+import ServiceTypeCards from "./components/ServiceTypeCards";
+import EntulhoDetails from "./components/EntulhoDetails";
+import CompactOrderDetails from "./components/CompactOrderDetails";
+import { ChevronRight, ChevronLeft, CheckCircle } from "lucide-react";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import {
+  trackSimulatorStart,
+  trackSimulatorContact,
+  trackSimulatorEstimate,
+  trackSimulatorOrderConfirmed,
+} from "@/lib/analytics";
+
+const DRAFT_KEY = "clyon_simulator_draft";
+const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
+
+interface FormState extends OrderData {
+  distanceFromBase?: DistanceFromBase;
+  distanceStatus?: DistanceStatus;
+  addressStatus?: AddressStatus;
+}
+
+export default function SimulatorThreePhaseForm() {
+  const { data: session } = useSession();
+  const { location: savedLocation } = useLocation();
+  const [phase, setPhase] = useState(1);
+  const [formData, setFormData] = useState<FormState>({});
+  const [analysis, setAnalysis] = useState<EstimateResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeStep, setAnalyzeStep] = useState(0); // 0=idle 1=calc 2=validate 3=prepare
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
+  const [successAssignedTo, setSuccessAssignedTo] = useState<{ id: number; name: string } | null>(null);
+  const [addressValue, setAddressValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [phase2Attempted, setPhase2Attempted] = useState(false);
+
+  const ANALYZE_STEP_LABELS = [
+    "Analisar pedido",
+    "A calcular estimativa...",
+    "A validar condições de acesso...",
+    "A preparar envio para análise...",
+  ];
+
+  // Limpar localStorage ao inicializar (F5 sempre reseta)
+  useEffect(() => {
+    try {
+      // Sempre limpar localStorage ao montar (F5 reseta o formulário)
+      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem("clyon_simulator_form_draft");
+    } catch {
+      // silencioso
+    }
+    // Registar início do simulador
+    trackSimulatorStart();
+  }, []);
+
+  // Pré-preencher simplificado: nome, email da sessão Google e morada salva
+  useEffect(() => {
+    if (session?.user?.email || session?.user?.name || savedLocation) {
+      // Localização aproximada (por IP): usar apenas a cidade, nunca uma morada
+      // exata — o cliente deve escolher a morada precisa no passo "Local e acesso".
+      const isApproximate = savedLocation?.isApproximate;
+      const exactAddress =
+        savedLocation && !isApproximate ? savedLocation : undefined;
+
+      setFormData((prev) => ({
+        ...prev,
+        receiver: {
+          ...prev.receiver,
+          name: prev.receiver?.name || session?.user?.name || undefined,
+          email: prev.receiver?.email || session?.user?.email || undefined,
+        },
+        address: prev.address || exactAddress || undefined,
+        city: prev.city || savedLocation?.city || undefined,
+      }));
+
+      // Só preencher o campo de input com morada exata (não aproximada)
+      if (exactAddress && !addressValue && exactAddress.formattedAddress) {
+        setAddressValue(exactAddress.formattedAddress);
+      }
+    }
+  }, [session?.user?.email, session?.user?.name, savedLocation]);
+
+  // Salvar draft no localStorage
+  useEffect(() => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+  }, [formData]);
+
+  const updateField = (field: string, value: unknown) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleAddressSelect = (data: AddressData) => {
+    updateField("address", data);
+    updateField("addressStatus", "selected");
+    setAddressValue(data.formattedAddress || "");
+  };
+
+  const handleDistanceCalculated = (distance: DistanceFromBase, status: DistanceStatus) => {
+    updateField("distanceFromBase", distance);
+    updateField("distanceStatus", status);
+  };
+
+  // ── Mudança: handlers de morada de origem e destino ──────────────────────
+  const handleOriginSelect = (data: AddressData) => {
+    updateField("originAddress", data);
+    updateField("originAddressValue", data.formattedAddress || "");
+    updateField("originAddressStatus", "selected");
+  };
+
+  const handleDestinationSelect = (data: AddressData) => {
+    updateField("destinationAddress", data);
+    updateField("destinationAddressValue", data.formattedAddress || "");
+    updateField("destinationAddressStatus", "selected");
+  };
+
+  const handleMovingDistanceCalculated = (distance: MovingDistance, status: DistanceStatus) => {
+    updateField("movingDistance", distance);
+    updateField("movingDistanceStatus", status);
+  };
+
+  const updateOriginAccess = (field: keyof MovingAccess, value: unknown) => {
+    updateField("originAccess", { ...formData.originAccess, [field]: value });
+  };
+
+  const updateDestinationAccess = (field: keyof MovingAccess, value: unknown) => {
+    updateField("destinationAccess", { ...formData.destinationAccess, [field]: value });
+  };
+
+  const isPhase1Valid = () => {
+    // Deve ter serviço selecionado
+    if (!formData.serviceType) return false;
+
+    // Para entulho: precisa de estado + quantidade
+    if (formData.serviceType === "recolha_entulho") {
+      const hasEntulhoData = formData.entulhoState && formData.entulhoQuantidade;
+      if (!hasEntulhoData) return false;
+      // Para entulho: tem dados suficientes (campo de descrição agora é opcional)
+      return true;
+    }
+
+    // Para outros serviços: precisa de PELO MENOS UMA DAS:
+    // 1. Descrição preenchida
+    // 2. Fotos/vídeos adicionados
+    const hasDescription = !!formData.description?.trim();
+    const hasFiles = (formData.files || []).length > 0;
+
+    return hasDescription || hasFiles;
+  };
+
+  const isPhase2Valid = () => {
+    if (formData.serviceType === "mudanca") {
+      // Mudança: obriga origem e destino com acesso completo nos dois lados
+      const hasOrigin = !!(formData.originAddress?.formattedAddress);
+      const hasDestination = !!(formData.destinationAddress?.formattedAddress);
+      const originElevatorValid =
+        formData.originAccess?.floor === "rés-do-chão" ? true : !!formData.originAccess?.hasElevator;
+      const destElevatorValid =
+        formData.destinationAccess?.floor === "rés-do-chão" ? true : !!formData.destinationAccess?.hasElevator;
+      const originAccessOk = !!(formData.originAccess?.floor && originElevatorValid && formData.originAccess?.parkingDistance);
+      const destAccessOk = !!(formData.destinationAccess?.floor && destElevatorValid && formData.destinationAccess?.parkingDistance);
+      return hasOrigin && hasDestination && originAccessOk && destAccessOk;
+    }
+    // Outros serviços: apenas uma morada
+    const elevatorValid = formData.floor === "rés-do-chão" ? true : !!formData.hasElevator;
+    return formData.address?.formattedAddress && formData.floor && elevatorValid && formData.parkingDistance;
+  };
+
+  const isPhase3Valid = () => {
+    return formData.receiver?.name && formData.receiver?.phone && formData.urgency;
+  };
+
+  const canProceedToPhase2 = isPhase1Valid();
+  const canProceedToPhase3 = isPhase2Valid();
+  const canAnalyze = isPhase3Valid();
+
+  const handleAnalyze = async () => {
+    if (!canAnalyze) {
+      setError("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalyzeStep(1);
+    setError(null);
+
+    // ── Progressive step labels ────────────────────────────────────────────
+    const stepTimers: ReturnType<typeof setTimeout>[] = [];
+    stepTimers.push(setTimeout(() => setAnalyzeStep(2), 1200));
+    stepTimers.push(setTimeout(() => setAnalyzeStep(3), 2400));
+
+    // ── Hard 7s client timeout: se API ainda não respondeu, forçar fallback UI
+    // (7s > 4s Gemini timeout + overhead de resposta do servidor)
+    let hardTimeoutFired = false;
+    const hardTimer = setTimeout(() => {
+      hardTimeoutFired = true;
+      setIsAnalyzing(false);
+      setAnalyzeStep(0);
+      // Mostrar card "pronto para análise" sem bloquear cliente
+      setAnalysis({
+        status: "estimated",
+        estimatedPriceWithoutVat: null,
+        vatAmount: null,
+        estimatedPriceWithVat: null,
+        difficultyLevel: 2,
+        summary: "Análise em processamento.",
+        assumptions: [],
+        missingFields: [],
+        customerMessage: "A equipa CLYON irá confirmar os dados e entrar em contacto em breve.",
+        internalNotes: ["Timeout no cliente (7s) — análise do servidor ainda em curso."],
+        analysisSource: "timeout_fallback",
+      });
+    }, 7000);
+
+    try {
+      const res = await fetch("/api/simulator/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: formData }),
+      });
+
+      // Limpar todos os timers — resposta chegou a tempo
+      stepTimers.forEach(clearTimeout);
+      clearTimeout(hardTimer);
+
+      // Ler o resultado da API uma única vez (usado tanto para UI como para auto-save)
+      let apiResult: EstimateResult | null = null;
+      if (!res.ok) {
+        if (!hardTimeoutFired) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as Record<string, string>).error || "Erro ao analisar pedido");
+        }
+      } else {
+        apiResult = await res.json() as EstimateResult;
+        if (!hardTimeoutFired) {
+          // Actualizar UI apenas se o hard timeout ainda não disparou
+          setAnalysis(apiResult);
+          trackSimulatorEstimate(
+            formData.serviceType ?? "desconhecido",
+            apiResult.estimatedPriceWithVat ?? apiResult.estimatedPriceWithoutVat ?? 0,
+            formData.address?.city ?? formData.originAddress?.city,
+            {
+              estimateMin: apiResult.estimatedPriceWithoutVat,
+              estimateMax: apiResult.estimatedPriceWithVat,
+              difficultyLevel: apiResult.difficultyLevel,
+              analysisSource: apiResult.analysisSource,
+            }
+          );
+        }
+        // Se hard timeout disparou mas API respondeu com preços reais,
+        // actualizar silenciosamente o estado (backoffice verá valores correctos)
+        if (hardTimeoutFired && apiResult.estimatedPriceWithoutVat) {
+          setAnalysis(apiResult);
+        }
+      }
+
+      // Auto-save: sempre guardar na BD — usar resultado real da API quando disponível
+      try {
+        const currentAnalysis: EstimateResult = apiResult ?? {
+          status: "estimated" as const,
+          estimatedPriceWithoutVat: null,
+          vatAmount: null,
+          estimatedPriceWithVat: null,
+          difficultyLevel: 2 as const,
+          summary: "Timeout — aguarda análise da equipa",
+          assumptions: [],
+          missingFields: [],
+          customerMessage: "",
+          internalNotes: ["Timeout cliente 7s — API não respondeu a tempo"],
+          analysisSource: "timeout_fallback" as const,
+        };
+
+        const saveRes = await fetch("/api/simulador/pedido", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: formData, estimate: currentAnalysis }),
+        });
+        if (saveRes.ok) {
+          const saved = await saveRes.json();
+          setSuccessOrderId(saved.id);
+          // Tracking: pedido confirmado/guardado
+          trackSimulatorOrderConfirmed({
+            service: formData.serviceType ?? undefined,
+            name: formData.receiver?.name ?? undefined,
+            phone: formData.receiver?.phone ?? undefined,
+            email: formData.receiver?.email ?? undefined,
+            city: formData.address?.city ?? formData.originAddress?.city,
+            simulatorData: { orderId: saved.id, serviceType: formData.serviceType },
+          });
+        }
+      } catch {
+        // Auto-save failure não bloqueia o cliente
+      }
+
+    } catch (err) {
+      stepTimers.forEach(clearTimeout);
+      clearTimeout(hardTimer);
+      if (!hardTimeoutFired) {
+        const message = err instanceof Error ? err.message : "Erro ao analisar pedido";
+        setError(message);
+      }
+    } finally {
+      if (!hardTimeoutFired) {
+        setIsAnalyzing(false);
+        setAnalyzeStep(0);
+      }
+    }
+  };
+
+  const handleSubmitOrder = () => {
+    // O pedido já foi guardado automaticamente em handleAnalyze.
+    // Este handler é mantido como no-op — os botões no AnalysisResultCard
+    // são apenas ilustrativos e o success screen aparece via successOrderId.
+  };
+
+  const handleReset = () => {
+    setFormData({});
+    setAnalysis(null);
+    setSuccessOrderId(null);
+    setSuccessAssignedTo(null);
+    setPhase(1);
+    setAddressValue("");
+    setError(null);
+
+    // Limpar TODOS os localStorage keys (novos e antigos)
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem("clyon_simulator_form_draft");
+    localStorage.removeItem("clyon_simulator_draft");
+
+    // Limpar também qualquer outra chave do simulador antigo
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes("simulador") || key.includes("simulator")) {
+        localStorage.removeItem(key);
+      }
+    });
+  };
+
+  // Success Screen
+  if (successOrderId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 py-16 px-4 flex items-center">
+        <div className="max-w-2xl mx-auto w-full">
+          {/* Success Icon - Animated */}
+          <div className="flex justify-center mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full blur-lg opacity-40 animate-pulse"></div>
+              <div className="relative w-24 h-24 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center shadow-xl">
+                <CheckCircle className="w-12 h-12 text-white drop-shadow-lg" />
+              </div>
+            </div>
+          </div>
+
+          {/* Main Title */}
+          <div className="text-center mb-10">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3">
+              Pedido Enviado com Sucesso!
+            </h1>
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <span className="text-lg font-semibold text-gray-600">Pedido</span>
+              <span className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-lg px-4 py-1.5 rounded-full">
+                #{successOrderId}
+              </span>
+            </div>
+            <p className="text-gray-600 text-base">Seu pedido foi recebido e está pronto para análise</p>
+          </div>
+
+          {/* Info Cards Grid */}
+          <div className="space-y-4 mb-10">
+            {/* Status Card */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 mb-1">Próximos Passos</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    A equipa CLYON irá analisar o pedido e entrar em contacto em breve para confirmar os detalhes e disponibilidade.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Details Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 p-6 shadow-md">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Número de pedido</span>
+                  <span className="font-mono font-bold text-blue-600 text-lg">#{successOrderId}</span>
+                </div>
+                <div className="h-px bg-gradient-to-r from-blue-200 to-cyan-200"></div>
+                <div className="text-sm text-gray-700 space-y-3">
+                  {successAssignedTo ? (
+                    <p>
+                      Pedido enviado para análise.<br/>
+                      Assistente responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>.<br/>
+                      Entraremos em contacto pelo telefone ou email.
+                    </p>
+                  ) : (
+                    <p>
+                      Pedido enviado para análise.<br/>
+                      Os assistentes irão avaliar o pedido em breve.<br/>
+                      Entraremos em contacto pelo telefone ou email.
+                    </p>
+                  )}
+                  <p className="font-semibold text-gray-900 pt-2">
+                    Guarde este número para referência futura.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={handleReset}
+              className="group relative inline-block"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+              <div className="relative bg-white text-blue-600 font-semibold py-3 px-8 rounded-xl hover:bg-gray-50 transition-colors text-base">
+                Novo Pedido
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#F7FBFF] to-white py-6 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Progress Indicator */}
+        <div className="flex items-center justify-center gap-1 sm:gap-3 mb-10 w-full overflow-hidden">
+          {PHASES.map((phaseName, idx) => {
+            const phaseNum = idx + 1;
+            const isActive = phaseNum === phase;
+            const isCompleted = phaseNum < phase || (phaseNum === 1 && isPhase1Valid()) || (phaseNum === 2 && isPhase2Valid()) || (phaseNum === 3 && isPhase3Valid());
+
+            return (
+              <div key={phaseNum} className="flex items-center min-w-0 shrink">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink">
+                  <div
+                    className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base transition-colors shrink-0 ${
+                      isActive
+                        ? "bg-cyan-600 text-white"
+                        : isCompleted
+                          ? "bg-green-600 text-white"
+                          : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {isCompleted && phaseNum < phase ? "✓" : phaseNum}
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-600 leading-tight break-words min-w-0">{phaseName}</p>
+                </div>
+                {idx < PHASES.length - 1 && (
+                  <div className={`w-4 sm:w-12 h-1 mx-1 sm:mx-2 shrink-0 ${isCompleted ? "bg-green-600" : "bg-gray-300"}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Main Content - 2 Columns on Desktop, 1 on Mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Form Section - 2 columns on desktop */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+              {/* Phase 1: Service */}
+              {phase === 1 && (
+                <Phase1Service
+                  formData={formData}
+                  updateField={updateField}
+                />
+              )}
+
+              {/* Phase 2: Location & Access */}
+              {phase === 2 && (
+                <Phase2Location
+                  formData={formData}
+                  addressValue={addressValue}
+                  setAddressValue={setAddressValue}
+                  onAddressSelect={handleAddressSelect}
+                  onDistanceCalculated={handleDistanceCalculated}
+                  updateField={updateField}
+                  onOriginSelect={handleOriginSelect}
+                  onDestinationSelect={handleDestinationSelect}
+                  onMovingDistanceCalculated={handleMovingDistanceCalculated}
+                  updateOriginAccess={updateOriginAccess}
+                  updateDestinationAccess={updateDestinationAccess}
+                  showValidationErrors={phase2Attempted}
+                />
+              )}
+
+              {/* Phase 3: Contact & Review */}
+              {phase === 3 && !analysis && (
+                <Phase3Contact
+                  formData={formData}
+                  updateField={updateField}
+                  session={session}
+                />
+              )}
+
+              {/* Analysis Result */}
+              {phase === 3 && analysis && (
+                <AnalysisResultCard
+                  analysis={analysis}
+                  isLoading={isAnalyzing}
+                  onConfirm={handleSubmitOrder}
+                  isSubmitting={isSubmitting}
+                  alreadySaved={!!successOrderId}
+                />
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              {phase < 3 || !analysis ? (
+                <div className="flex gap-4 pt-4 border-t border-gray-200">
+                  {phase > 1 && (
+                    <button
+                      onClick={() => setPhase(phase - 1)}
+                      className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Anterior
+                    </button>
+                  )}
+
+                  {phase < 3 && (
+                    <button
+                      onClick={() => {
+                        if (phase === 1) {
+                          // Avança de fase 1 (serviço) para fase 2 (local)
+                        } else if (phase === 2) {
+                          // Marcar tentativa para mostrar erros de validação
+                          if (!canProceedToPhase3) {
+                            setPhase2Attempted(true);
+                            return;
+                          }
+                          setPhase2Attempted(false);
+                          trackSimulatorContact({
+                            service: formData.serviceType ?? undefined,
+                          });
+                        }
+                        setPhase(phase + 1);
+                      }}
+                      disabled={!canProceedToPhase2}
+                      className="ml-auto flex items-center gap-2 px-6 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:bg-gray-300 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 active:scale-95"
+                    >
+                      Seguinte
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {phase === 3 && !analysis && (
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={!canAnalyze || isAnalyzing}
+                      className="ml-auto flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[240px] justify-center"
+                    >
+                      {isAnalyzing && (
+                        <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      )}
+                      {ANALYZE_STEP_LABELS[analyzeStep] || "Analisar pedido"}
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Summary Sidebar - 1 column on desktop */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <OrderSummaryCard
+                order={formData}
+                onEdit={() => setPhase(1)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Phase 1 Component
+function Phase1Service({
+  formData,
+  updateField,
+}: {
+  formData: FormState;
+  updateField: (field: string, value: unknown) => void;
+}) {
+  const services = SERVICE_CATEGORIES.map((category) => ({
+    id: category.id as ServiceType,
+    label: category.label,
+    icon: category.emoji,
+  }));
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">
+          Que serviço precisa?
+        </h2>
+        <p className="text-xs text-slate-600 mt-1">
+          Escolha o tipo de serviço e adicione detalhes para análise.
+        </p>
+      </div>
+
+      {/* Service Cards */}
+      <ServiceTypeCards
+        services={services}
+        selected={formData.serviceType}
+        onSelect={(serviceType) => updateField("serviceType", serviceType)}
+      />
+
+      {/* Entulho Details (conditional) */}
+      {formData.serviceType === "recolha_entulho" && (
+        <EntulhoDetails
+          state={formData.entulhoState}
+          quantity={formData.entulhoQuantidade}
+          quantidadeEnsacados={formData.entulhoQuantidadeEnsacados}
+          quantidadePorEnsacar={formData.entulhoQuantidadePorEnsacar}
+          onStateChange={(state) => updateField("entulhoState", state)}
+          onQuantityChange={(quantity) => updateField("entulhoQuantidade", quantity)}
+          onQuantidadeEnsacadosChange={(q) => {
+            updateField("entulhoQuantidadeEnsacados", q);
+            // Combinar misto: total = ensacados + por ensacar
+            const total = (parseInt(q) || 0) + (parseInt(formData.entulhoQuantidadePorEnsacar ?? "0") || 0);
+            if (total > 0) updateField("entulhoQuantidade", String(total));
+          }}
+          onQuantidadePorEnsacarChange={(q) => {
+            updateField("entulhoQuantidadePorEnsacar", q);
+            const total = (parseInt(formData.entulhoQuantidadeEnsacados ?? "0") || 0) + (parseInt(q) || 0);
+            if (total > 0) updateField("entulhoQuantidade", String(total));
+          }}
+        />
+      )}
+
+      {/* Order Details with integrated upload */}
+      <CompactOrderDetails
+        description={formData.description}
+        files={formData.files || []}
+        onDescriptionChange={(description) => updateField("description", description)}
+        onFilesAdd={(files) => updateField("files", [...(formData.files || []), ...files])}
+        onFileRemove={(id) => updateField("files", (formData.files || []).filter(f => f.id !== id))}
+        maxFiles={10}
+        maxSizeMB={50}
+      />
+    </div>
+  );
+}
+
+// ── Selector de andar + elevador + estacionamento reutilizável ──────────────
+function AccessFields({
+  prefix,
+  floor,
+  hasElevator,
+  parkingDistance,
+  difficultAccess,
+  onChange,
+}: {
+  prefix: string;
+  floor?: string;
+  hasElevator?: string;
+  parkingDistance?: string;
+  difficultAccess?: boolean;
+  onChange: (field: keyof MovingAccess, value: unknown) => void;
+}) {
+  const selectCls = "w-full px-3 py-2 border-2 border-gray-300 bg-white rounded-xl text-sm focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm";
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Andar *</label>
+          <select
+            value={floor || ""}
+            onChange={(e) => {
+              onChange("floor", e.target.value);
+              if (e.target.value === "rés-do-chão") onChange("hasElevator", "");
+            }}
+            className={selectCls}
+          >
+            <option value="">Seleccione...</option>
+            <option value="rés-do-chão">Rés-do-chão</option>
+            <option value="1º">1º Andar</option>
+            <option value="2º">2º Andar</option>
+            <option value="3º">3º Andar</option>
+            <option value="4º+">4º Andar ou superior</option>
+          </select>
+        </div>
+
+        {floor && floor !== "rés-do-chão" && (
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Elevador *</label>
+            <select
+              value={hasElevator || ""}
+              onChange={(e) => onChange("hasElevator", e.target.value)}
+              className={selectCls}
+            >
+              <option value="">Seleccione...</option>
+              <option value="yes">Sim, funciona</option>
+              <option value="small">Sim, mas é pequeno</option>
+              <option value="no">Não tem</option>
+              <option value="unknown">Não sei</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Estacionamento *</label>
+        <select
+          value={parkingDistance || ""}
+          onChange={(e) => onChange("parkingDistance", e.target.value)}
+          className={selectCls}
+        >
+          <option value="">Seleccione...</option>
+          <option value="door">Sim, mesmo à porta</option>
+          <option value="under_20m">Sim, até 20 metros</option>
+          <option value="over_30m">Mais de 30 metros</option>
+          <option value="difficult">Estacionamento difícil</option>
+        </select>
+      </div>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={!!difficultAccess}
+          onChange={(e) => onChange("difficultAccess", e.target.checked)}
+          className="rounded border-gray-400 accent-cyan-600"
+        />
+        <span className="text-sm text-gray-700">Acesso difícil ou desmontagem necessária</span>
+      </label>
+    </div>
+  );
+}
+
+// Phase 2 Component
+function Phase2Location({
+  formData,
+  addressValue,
+  setAddressValue,
+  onAddressSelect,
+  onDistanceCalculated,
+  updateField,
+  onOriginSelect,
+  onDestinationSelect,
+  onMovingDistanceCalculated,
+  updateOriginAccess,
+  updateDestinationAccess,
+  showValidationErrors,
+}: {
+  formData: FormState;
+  addressValue: string;
+  setAddressValue: (value: string) => void;
+  onAddressSelect: (data: AddressData) => void;
+  onDistanceCalculated: (distance: DistanceFromBase, status: DistanceStatus) => void;
+  updateField: (field: string, value: unknown) => void;
+  onOriginSelect: (data: AddressData) => void;
+  onDestinationSelect: (data: AddressData) => void;
+  onMovingDistanceCalculated: (distance: MovingDistance, status: DistanceStatus) => void;
+  updateOriginAccess: (field: keyof MovingAccess, value: unknown) => void;
+  updateDestinationAccess: (field: keyof MovingAccess, value: unknown) => void;
+  showValidationErrors?: boolean;
+}) {
+  const isMudanca = formData.serviceType === "mudanca";
+
+  // ── Percurso da mudança ─────────────────────────────────────────────────
+  const [calcStatus, setCalcStatus] = useState<DistanceStatus>("idle");
+
+  const calcSelectCls = "w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm";
+
+  const calcMovingRoute = async () => {
+    const origin = formData.originAddress;
+    const dest = formData.destinationAddress;
+    if (!origin || !dest) return;
+    setCalcStatus("calculating");
+    try {
+      const res = await fetch("/api/maps/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin, destination: dest }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const result: MovingDistance = {
+          distanceMeters: data.distanceMeters,
+          distanceKm: data.distanceKm,
+          durationSeconds: data.durationSeconds,
+          durationText: data.durationText,
+          calculatedAt: new Date().toISOString(),
+        };
+        setCalcStatus("calculated");
+        onMovingDistanceCalculated(result, "calculated");
+      } else {
+        // Fallback Haversine
+        if (origin.lat && origin.lng && dest.lat && dest.lng) {
+          const R = 6371;
+          const dLat = ((dest.lat - origin.lat) * Math.PI) / 180;
+          const dLng = ((dest.lng - origin.lng) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos((origin.lat * Math.PI) / 180) * Math.cos((dest.lat * Math.PI) / 180) *
+            Math.sin(dLng / 2) ** 2;
+          const km = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+          const mins = Math.round((km / 60) * 60);
+          const result: MovingDistance = {
+            distanceMeters: Math.round(km * 1000),
+            distanceKm: km,
+            durationSeconds: mins * 60,
+            durationText: mins < 60 ? `~${mins} min` : `~${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}min` : ""}`,
+            calculatedAt: new Date().toISOString(),
+            isEstimate: true,
+          };
+          setCalcStatus("calculated");
+          onMovingDistanceCalculated(result, "calculated");
+        } else {
+          setCalcStatus("error");
+          onMovingDistanceCalculated({}, "error");
+        }
+      }
+    } catch {
+      setCalcStatus("error");
+      onMovingDistanceCalculated({}, "error");
+    }
+  };
+
+  // Auto-calcular percurso quando ambas as moradas estiverem selecionadas
+  const originReady = !!(formData.originAddress?.formattedAddress);
+  const destReady = !!(formData.destinationAddress?.formattedAddress);
+  const autoCalcRef = useState(false);
+  const [autoCalcDone, setAutoCalcDone] = useState(false);
+
+  useEffect(() => {
+    if (isMudanca && originReady && destReady && !autoCalcDone && calcStatus === "idle") {
+      setAutoCalcDone(true);
+      calcMovingRoute();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMudanca, originReady, destReady]);
+
+  // Reset autoCalc se as moradas mudarem
+  useEffect(() => {
+    setAutoCalcDone(false);
+    setCalcStatus("idle");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.originAddress?.formattedAddress, formData.destinationAddress?.formattedAddress]);
+
+  if (isMudanca) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900">Local e acesso da mudança</h2>
+
+        {/* Card: Moradas */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 rounded-t-2xl">
+            <h3 className="text-sm font-semibold text-gray-800">Moradas da mudança</h3>
+          </div>
+          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Origem */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">A</span>
+                <span className="text-sm font-semibold text-gray-800">Morada de origem</span>
+              </div>
+              <AddressAutocomplete
+                value={formData.originAddressValue || ""}
+                onChange={(v) => updateField("originAddressValue", v)}
+                onSelect={onOriginSelect}
+                placeholder="Rua, número, localidade de origem..."
+              />
+            </div>
+
+            {/* Destino */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">B</span>
+                <span className="text-sm font-semibold text-gray-800">Morada de destino</span>
+              </div>
+              <AddressAutocomplete
+                value={formData.destinationAddressValue || ""}
+                onChange={(v) => updateField("destinationAddressValue", v)}
+                onSelect={onDestinationSelect}
+                placeholder="Rua, número, localidade de destino..."
+              />
+            </div>
+          </div>
+
+          {/* Percurso */}
+          {(originReady && destReady) && (
+            <div className="px-5 pb-4">
+              {calcStatus === "calculating" && (
+                <p className="text-xs text-blue-600 flex items-center gap-1.5">
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  A calcular percurso da mudança...
+                </p>
+              )}
+              {calcStatus === "calculated" && formData.movingDistance?.distanceKm && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-800">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  Percurso: {formData.movingDistance.distanceKm} km · {formData.movingDistance.durationText}
+                  {formData.movingDistance.isEstimate && " (estimativa)"}
+                </div>
+              )}
+              {(calcStatus === "error" || calcStatus === "idle") && (
+                <button
+                  type="button"
+                  onClick={calcMovingRoute}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  Calcular percurso da mudança
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Card: Condições de acesso */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 rounded-t-2xl">
+            <h3 className="text-sm font-semibold text-gray-800">Condições de acesso</h3>
+          </div>
+          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Acesso na origem */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">A</span>
+                <span className="text-sm font-semibold text-gray-700">Acesso na origem</span>
+              </div>
+              <AccessFields
+                prefix="origin"
+                floor={formData.originAccess?.floor}
+                hasElevator={formData.originAccess?.hasElevator}
+                parkingDistance={formData.originAccess?.parkingDistance}
+                difficultAccess={formData.originAccess?.difficultAccess}
+                onChange={updateOriginAccess}
+              />
+            </div>
+
+            {/* Acesso no destino */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">B</span>
+                <span className="text-sm font-semibold text-gray-700">Acesso no destino</span>
+              </div>
+              <AccessFields
+                prefix="destination"
+                floor={formData.destinationAccess?.floor}
+                hasElevator={formData.destinationAccess?.hasElevator}
+                parkingDistance={formData.destinationAccess?.parkingDistance}
+                difficultAccess={formData.destinationAccess?.difficultAccess}
+                onChange={updateDestinationAccess}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Validation hint */}
+        {(!originReady || !destReady) && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Preencha a origem e o destino da mudança para continuar.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── Outros serviços: layout original ────────────────────────────────────
+  const missingAddress = showValidationErrors && !formData.address?.formattedAddress;
+  const missingFloor = showValidationErrors && !formData.floor;
+  const missingElevator = showValidationErrors && formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator;
+  const missingParking = showValidationErrors && !formData.parkingDistance;
+
+  // Calcular lista de campos em falta para mostrar mensagem única
+  const missingFields: string[] = [];
+  if (!formData.address?.formattedAddress) missingFields.push("Morada");
+  if (!formData.floor) missingFields.push("Andar");
+  if (formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator) missingFields.push("Elevador");
+  if (!formData.parkingDistance) missingFields.push("Estacionamento");
+
+  const errorBorderCls = "border-2 border-red-400 focus:ring-red-400 focus:border-red-400";
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Morada e condições de acesso</h2>
+
+      {/* Validation summary */}
+      {showValidationErrors && missingFields.length > 0 && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+          <p className="text-sm font-semibold text-red-800 mb-1">Campos obrigatórios por preencher:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            {missingFields.map((f) => (
+              <li key={f} className="text-sm text-red-700">{f}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div>
+        <AddressAutocomplete
+          value={addressValue}
+          onChange={setAddressValue}
+          onSelect={onAddressSelect}
+          onDistanceCalculated={onDistanceCalculated}
+          placeholder="Escreva a rua, número e localidade..."
+        />
+        {missingAddress && <p className="text-xs text-red-600 mt-1">Morada obrigatória</p>}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-900">Andar *</label>
+          <select
+            value={formData.floor || ""}
+            onChange={(e) => {
+              const newFloor = e.target.value;
+              updateField("floor", newFloor);
+              if (newFloor === "rés-do-chão") {
+                updateField("hasElevator", "");
+              }
+            }}
+            className={`${calcSelectCls} ${missingFloor ? errorBorderCls : ""}`}
+          >
+            <option value="">Seleccione...</option>
+            <option value="rés-do-chão">Rés-do-chão</option>
+            <option value="1º">1º Andar</option>
+            <option value="2º">2º Andar</option>
+            <option value="3º">3º Andar</option>
+            <option value="4º+">4º Andar ou superior</option>
+          </select>
+        </div>
+
+        {formData.floor !== "rés-do-chão" && formData.floor && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-900">Elevador *</label>
+            <select
+              value={formData.hasElevator || ""}
+              onChange={(e) => updateField("hasElevator", e.target.value)}
+              className={`${calcSelectCls} ${missingElevator ? errorBorderCls : ""}`}
+            >
+              <option value="">Seleccione...</option>
+              <option value="yes">Sim, funciona</option>
+              <option value="small">Sim, mas é pequeno</option>
+              <option value="no">Não tem</option>
+              <option value="unknown">Não sei</option>
+            </select>
+            {missingElevator && <p className="text-xs text-red-600 mt-1">Elevador obrigatório</p>}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-900">Estacionamento *</label>
+        <select
+          value={formData.parkingDistance || ""}
+          onChange={(e) => updateField("parkingDistance", e.target.value)}
+          className={`${calcSelectCls} ${missingParking ? errorBorderCls : ""}`}
+        >
+          <option value="">Seleccione...</option>
+          <option value="door">Sim, mesmo à porta</option>
+          <option value="under_20m">Sim, até 20 metros</option>
+          <option value="over_30m">Mais de 30 metros</option>
+          <option value="difficult">Estacionamento difícil</option>
+        </select>
+        {missingParking && <p className="text-xs text-red-600 mt-1">Estacionamento obrigatório</p>}
+      </div>
+
+      <div className="space-y-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={!!formData.needsDismantling && formData.needsDismantling !== "no"}
+            onChange={(e) => updateField("needsDismantling", e.target.checked ? "simple" : "no")}
+            className="rounded border-gray-400"
+          />
+          <span className="text-sm text-gray-700">Acesso difícil ou desmontagem necessária</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+// Phase 3 Component
+function Phase3Contact({
+  formData,
+  updateField,
+  session,
+}: {
+  formData: FormState;
+  updateField: (field: string, value: unknown) => void;
+  session: any;
+}) {
+  const isLoggedIn = !!session?.user?.email;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Contacto e revisão</h2>
+
+      {/* Info Box: Not Logged In */}
+      {!isLoggedIn && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <span className="text-lg">ℹ️</span>
+          <div className="flex-1">
+            <p className="text-sm text-amber-900">
+              Tem conta CLYON?{" "}
+              <a
+                href="/entrar"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-cyan-600 hover:text-cyan-700 underline"
+              >
+                Entrar com Google
+              </a>{" "}
+              para acompanhar o seu pedido online.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Info Box: Logged In */}
+      {isLoggedIn && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
+          <span className="text-lg">✓</span>
+          <div>
+            <p className="text-sm text-emerald-900">
+              <strong>Sessão activa</strong> — poderá acompanhar este pedido em{" "}
+              <a href="/conta" className="font-semibold text-cyan-600 hover:text-cyan-700 underline">
+                clyon.pt/conta
+              </a>{" "}
+              após a conclusão.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-900">Nome completo *</label>
+          <input
+            type="text"
+            value={formData.receiver?.name || ""}
+            onChange={(e) => updateField("receiver", { ...formData.receiver, name: e.target.value })}
+            placeholder="Ex: Eugênia Almeida"
+            className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-900">Telefone *</label>
+          <input
+            type="tel"
+            value={formData.receiver?.phone || ""}
+            onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
+            placeholder="Ex: 911 128 863"
+            className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-900">Email (opcional)</label>
+        <input
+          type="email"
+          value={formData.receiver?.email || ""}
+          onChange={(e) => updateField("receiver", { ...formData.receiver, email: e.target.value })}
+          placeholder="Ex: exemplo@email.com"
+          className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-900">Quando precisa do serviço? *</label>
+        <select
+          value={formData.urgency || ""}
+          onChange={(e) => updateField("urgency", e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
+        >
+          <option value="">Seleccione...</option>
+          <option value="today">Hoje</option>
+          <option value="tomorrow">Amanhã</option>
+          <option value="this_week">Esta semana</option>
+          <option value="flexible">Flexível</option>
+        </select>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-900">
+          <strong>Nota:</strong> Após enviar o pedido, a equipa CLYON irá analisar os dados e entrar em contacto através do telefone ou email fornecido.
+        </p>
+      </div>
+    </div>
+  );
+}

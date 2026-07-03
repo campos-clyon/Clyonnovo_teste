@@ -1,0 +1,1 @@
+ALTER TABLE `colaboradores` MODIFY COLUMN `funcao` enum('motorista','ajudante','admin') NOT NULL;

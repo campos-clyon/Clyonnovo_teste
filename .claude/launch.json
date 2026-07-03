@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "clyon-web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

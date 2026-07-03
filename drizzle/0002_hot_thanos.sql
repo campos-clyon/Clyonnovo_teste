@@ -1,0 +1,1 @@
+ALTER TABLE `colaboradores` MODIFY COLUMN `valorHora` decimal(5,2) NOT NULL;

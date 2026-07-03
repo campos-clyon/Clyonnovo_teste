@@ -1,0 +1,1 @@
+ALTER TABLE `registrosHoras` MODIFY COLUMN `horaSaida` varchar(5);

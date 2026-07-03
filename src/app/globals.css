@@ -1,0 +1,471 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  
+  /* Premium background palette */
+  --background: #ffffff;
+  --background-alt: #f8fafc;
+  --background-premium: #f7fbff;
+  --background-light-blue: #eff8ff;
+  
+  /* Premium text palette */
+  --foreground: #0f172a;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  
+  /* Premium border palette */
+  --border: #e2e8f0;
+  --border-light: #cbd5e1;
+  --border-slate: #e2e8f0;
+  
+  /* Premium accent palette - CLYON Blue */
+  --accent: #0284c7;
+  --accent-dark: #0284c7;
+  --accent-light: #0ea5e9;
+  --accent-hover: #0284c7;
+  --accent-bg: #e0f7ff;
+
+  /* Roxo premium — acento pontual (IA, destaque de comparação), nunca substitui o cyan primário */
+  --accent-premium: #7c3aed;
+  --accent-premium-light: #a78bfa;
+  --accent-premium-bg: #f5f3ff;
+  
+  /* Premium status colors */
+  --success: #22c55e;
+  --success-hover: #16a34a;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  
+  /* Legacy support */
+  --muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-poppins), var(--font-inter), system-ui, sans-serif;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* Premium utility classes */
+.bg-premium {
+  background: var(--background-premium);
+}
+
+.bg-premium-card {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+.premium-header {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.premium-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+/* Footer links - forçar cor branca */
+footer a,
+footer a:visited,
+footer a:hover,
+footer a:active,
+footer span,
+footer li,
+footer p {
+  color: inherit !important;
+}
+
+footer a[style*="color: #ffffff"],
+footer a[style*="color:#ffffff"] {
+  color: #ffffff !important;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Scrollbar - mais subtil */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Button styles - redesigned */
+.site-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+  padding: 0.875rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px -4px rgba(8, 145, 178, 0.4);
+}
+
+.site-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -4px rgba(8, 145, 178, 0.5);
+}
+
+.site-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  border: 1.5px solid #e2e8f0;
+  background-color: white;
+  padding: 0.875rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #334155;
+  transition: all 0.2s ease;
+}
+
+.site-btn-secondary:hover {
+  border-color: #0891b2;
+  color: #0891b2;
+  background-color: #f0fdfa;
+}
+
+.site-btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  background-color: #25D366;
+  padding: 0.875rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: white !important;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px -4px rgba(37, 211, 102, 0.4);
+}
+
+.site-btn-whatsapp:hover {
+  background-color: #20bd5a;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -4px rgba(37, 211, 102, 0.5);
+}
+
+.site-btn-whatsapp svg,
+.site-btn-whatsapp span {
+  color: white !important;
+}
+
+.site-btn-primary svg,
+.site-btn-primary span {
+  color: white !important;
+}
+
+.site-btn-secondary svg {
+  color: #334155 !important;
+}
+
+.site-btn-secondary:hover svg {
+  color: #0891b2 !important;
+}
+
+/* Card styles */
+.card-elevated {
+  background: white;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 24px -8px rgba(15, 23, 42, 0.08);
+  transition: all 0.25s ease;
+}
+
+.card-elevated:hover {
+  border-color: rgba(8, 145, 178, 0.2);
+  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Section spacing */
+.section-spacing {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 1024px) {
+  .section-spacing {
+    padding-top: 6.5rem;
+    padding-bottom: 6.5rem;
+  }
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #164e63 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Garantir texto branco em todos os botoes com fundo colorido */
+a.bg-cyan-600,
+a.bg-cyan-500,
+a.bg-cyan-400,
+a[class*="bg-cyan-"],
+button[class*="bg-cyan-"],
+a.bg-\[\#0891b2\],
+a.bg-\[\#009FC2\] {
+  color: #ffffff !important;
+}
+
+a.bg-cyan-600:hover,
+a.bg-cyan-500:hover,
+a.bg-cyan-400:hover,
+a[class*="bg-cyan-"]:hover,
+button[class*="bg-cyan-"]:hover,
+a.bg-cyan-600:focus,
+a.bg-cyan-600:active,
+a.bg-cyan-600:visited {
+  color: #ffffff !important;
+}
+
+/* WhatsApp buttons - força cor verde WhatsApp correta */
+a.bg-emerald-500,
+a.bg-emerald-400,
+a.bg-emerald-600,
+a[class*="bg-emerald-"],
+button[class*="bg-emerald-"],
+a.bg-\[\#25D366\] {
+  background-color: #25D366 !important;
+  color: #ffffff !important;
+}
+
+a.bg-emerald-500:hover,
+a.bg-emerald-400:hover,
+a.bg-emerald-600:hover,
+a[class*="bg-emerald-"]:hover,
+a.bg-\[\#25D366\]:hover,
+a[class*="bg-emerald-"]:focus,
+a[class*="bg-emerald-"]:active,
+a[class*="bg-emerald-"]:visited {
+  background-color: #20bd5a !important;
+  color: #ffffff !important;
+}
+
+a[class*="bg-emerald-"] svg,
+button[class*="bg-emerald-"] svg,
+a[class*="bg-emerald-"] span,
+a.bg-\[\#25D366\] svg,
+a.bg-\[\#25D366\] span {
+  color: #ffffff !important;
+}
+
+/* Botões cyan (primários CLYON) - TODOS os estados */
+a[class*="bg-cyan-"] svg,
+a[class*="bg-cyan-"] span,
+button[class*="bg-cyan-"] svg,
+button[class*="bg-cyan-"] span,
+a.bg-\[\#0891b2\] svg,
+a.bg-\[\#0891b2\] span {
+  color: #ffffff !important;
+}
+
+/* Botões brancos/outline - texto escuro */
+a.bg-white,
+a.bg-white span,
+a.bg-white svg,
+button.bg-white,
+button.bg-white span,
+button.bg-white svg {
+  color: #0f172a !important;
+}
+
+a.bg-white:hover,
+a.bg-white:hover span,
+a.bg-white:hover svg,
+a.bg-white:focus,
+a.bg-white:active {
+  color: #0f172a !important;
+}
+
+/* Footer button styles - garantir visibilidade em todos os estados */
+footer .site-btn-footer,
+footer a[class*="bg-slate-800"],
+footer a[class*="bg-slate-700"],
+footer a[style*="background"] {
+  color: #ffffff !important;
+}
+
+footer .site-btn-footer:hover,
+footer .site-btn-footer:focus,
+footer .site-btn-footer:active,
+footer a[class*="bg-slate-"]:hover,
+footer a[class*="bg-slate-"]:focus,
+footer a[class*="bg-slate-"]:active {
+  color: #ffffff !important;
+  background-color: #334155 !important;
+}
+
+footer .site-btn-footer svg,
+footer .site-btn-footer span,
+footer a[class*="bg-slate-"] span {
+  color: #ffffff !important;
+}
+
+footer .site-btn-footer svg {
+  color: #22d3ee !important;
+}
+
+footer .site-btn-footer:hover svg {
+  color: #ffffff !important;
+}
+
+/* ============================================
+   GLOBAL CONTRAST FIX - Cyan elements
+   Ensures all cyan-50 backgrounds have visible text
+   ============================================ */
+
+/* Tags and badges with cyan-50 background */
+[class*="bg-cyan-50"][class*="text-cyan-"],
+.bg-cyan-50.text-cyan-600,
+.bg-cyan-50.text-cyan-700,
+div[class*="bg-cyan-50"][class*="text-cyan-"],
+span[class*="bg-cyan-50"][class*="text-cyan-"] {
+  color: #0e7490 !important; /* cyan-700 - darker for better contrast */
+}
+
+/* Links and buttons with cyan-50 background */
+a[class*="bg-cyan-50"],
+a[class*="bg-cyan-50"] span,
+button[class*="bg-cyan-50"],
+button[class*="bg-cyan-50"] span {
+  color: #0e7490 !important;
+}
+
+/* Rounded-full tags (city buttons, category pills) */
+.rounded-full[class*="bg-cyan-50"],
+.rounded-full[class*="text-cyan-"],
+a.rounded-full[class*="border-cyan"] {
+  color: #0e7490 !important;
+}
+
+/* Icons inside cyan-50 containers */
+[class*="bg-cyan-50"] svg,
+div[class*="bg-cyan-50"][class*="text-cyan-"] svg {
+  color: #0891b2 !important; /* cyan-600 for icons */
+}
+
+/* Ensure hover states maintain visibility */
+a[class*="bg-cyan-50"]:hover,
+a[class*="hover\\:bg-cyan-50"]:hover {
+  color: #0e7490 !important;
+}
+
+/* Footer styles - ensure text is visible */
+footer {
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+footer a {
+  color: #ffffff;
+}
+
+footer a:hover {
+  color: #06b6d4;
+}
+
+footer h3 {
+  color: #ffffff;
+}
+
+footer li {
+  list-style: none;
+}
+
+footer p {
+  color: #cbd5e1;
+}
+
+footer .text-white {
+  color: #ffffff !important;
+}
+
+/* /conta — transição entre secções */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 150ms ease-out both;
+}
+
+/* Ocultar scrollbar nas tabs mobile sem perder funcionalidade */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
