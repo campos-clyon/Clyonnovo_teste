@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Star } from "lucide-react";
 import { useProviderAuth } from "@/hooks/useProviderAuth";
 
 interface ProviderOrder {
@@ -19,6 +20,15 @@ interface ProviderOrder {
   createdAt: string;
 }
 
+interface Ganhos {
+  commissionRate: number;
+  jobsConcluded: number;
+  grossTotal: number;
+  netTotal: number;
+  ratingAvg: number | null;
+  ratingCount: number;
+}
+
 export default function ParceiroDashboardClient() {
   const { provider, ready, authHeader, logout } = useProviderAuth();
   const [available, setAvailable] = useState<ProviderOrder[]>([]);
@@ -26,6 +36,7 @@ export default function ParceiroDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [ganhos, setGanhos] = useState<Ganhos | null>(null);
 
   const loadPedidos = useCallback(async () => {
     setLoading(true);
@@ -46,10 +57,21 @@ export default function ParceiroDashboardClient() {
     }
   }, [authHeader]);
 
+  const loadGanhos = useCallback(async () => {
+    try {
+      const res = await fetch("/api/parceiros/ganhos", { headers: authHeader });
+      const data = await res.json();
+      if (res.ok) setGanhos(data);
+    } catch {
+      // painel de ganhos é informativo — falhas silenciosas não bloqueiam o resto do dashboard
+    }
+  }, [authHeader]);
+
   useEffect(() => {
     if (!ready) return;
     void loadPedidos();
-  }, [ready, loadPedidos]);
+    void loadGanhos();
+  }, [ready, loadPedidos, loadGanhos]);
 
   async function handleAceitar(orderId: number) {
     setAcceptingId(orderId);
@@ -101,6 +123,36 @@ export default function ParceiroDashboardClient() {
           <div className="mb-6 rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-300">
             {error}
           </div>
+        )}
+
+        {ganhos && (
+          <section className="mb-10 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,25,42,0.98)_0%,rgba(9,18,32,0.98)_100%)] p-5">
+              <p className="text-xs font-medium text-slate-400">Ganhos líquidos</p>
+              <p className="mt-1 text-2xl font-bold text-cyan-400">{ganhos.netTotal.toFixed(2)} €</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {ganhos.grossTotal.toFixed(2)} € brutos · comissão {ganhos.commissionRate}%
+              </p>
+            </div>
+            <div className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,25,42,0.98)_0%,rgba(9,18,32,0.98)_100%)] p-5">
+              <p className="text-xs font-medium text-slate-400">Trabalhos concluídos</p>
+              <p className="mt-1 text-2xl font-bold text-white">{ganhos.jobsConcluded}</p>
+            </div>
+            <div className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,25,42,0.98)_0%,rgba(9,18,32,0.98)_100%)] p-5">
+              <p className="text-xs font-medium text-slate-400">Avaliação média</p>
+              <div className="mt-1 flex items-center gap-1.5">
+                {ganhos.ratingAvg != null ? (
+                  <>
+                    <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                    <span className="text-2xl font-bold text-white">{ganhos.ratingAvg.toFixed(1)}</span>
+                    <span className="text-xs text-slate-500">({ganhos.ratingCount})</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-slate-500">Ainda sem avaliações</span>
+                )}
+              </div>
+            </div>
+          </section>
         )}
 
         <section className="mb-10">

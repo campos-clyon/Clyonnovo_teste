@@ -1,5 +1,8 @@
 /**
- * As 7 categorias de serviço do MVP (CLYON_Plano_Mestre_Definitivo v3.0, secção 3).
+ * Categorias de serviço do simulador. As 7 originais vêm do MVP
+ * (CLYON_Plano_Mestre_Definitivo v3.0, secção 3); montagem_moveis, jardinagem e
+ * manutencao_casa foram adicionadas como categorias adjacentes a remoções/casa,
+ * mantendo o posicionamento de especialista (não um marketplace generalista).
  * Fonte única partilhada pelo simulador e pela homepage — evita arrays duplicados
  * a divergir entre si.
  */
@@ -61,6 +64,30 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     emoji: "🚚",
     description: "Transporte, carga, descarga e apoio com equipa organizada.",
     href: "/mudancas",
+  },
+  {
+    id: "montagem_moveis",
+    slug: "montagem-moveis",
+    label: "Montagem e desmontagem de móveis",
+    emoji: "🔧",
+    description: "Montamos e desmontamos móveis, roupeiros e camas com todo o cuidado.",
+    href: "/simulador",
+  },
+  {
+    id: "jardinagem",
+    slug: "jardinagem",
+    label: "Jardinagem",
+    emoji: "🌿",
+    description: "Corte de relva, poda e limpeza de jardins e espaços exteriores.",
+    href: "/limpeza-de-quintais",
+  },
+  {
+    id: "manutencao_casa",
+    slug: "manutencao-casa",
+    label: "Manutenção da casa",
+    emoji: "🛠️",
+    description: "Pequenas reparações e manutenção geral para manter a casa em ordem.",
+    href: "/simulador",
   },
   {
     id: "outro",

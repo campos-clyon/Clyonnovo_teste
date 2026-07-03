@@ -5,6 +5,9 @@ export type ServiceType =
   | "esvaziamento_casa"
   | "esvaziamento_apartamento"
   | "mudanca"
+  | "montagem_moveis"
+  | "jardinagem"
+  | "manutencao_casa"
   | "outro";
 
 export type LocationZone = "A" | "B" | "C" | "D";
@@ -99,6 +102,8 @@ export interface OrderData {
   destinationAccess?: MovingAccess;
   movingDistance?: MovingDistance;
   movingDistanceStatus?: DistanceStatus;
+  /** Marcação recorrente (só relevante para categorias tipo jardinagem/manutenção) */
+  recurrenceFrequency?: "semanal" | "quinzenal" | null;
 }
 
 export type EstimateStatus = "estimated" | "needs_more_info" | "onsite_required";

@@ -1229,6 +1229,23 @@ function Phase3Contact({
         </select>
       </div>
 
+      {(formData.serviceType === "jardinagem" || formData.serviceType === "manutencao_casa") && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-900">
+            Frequência do serviço <span className="text-gray-500 font-normal">(opcional — poupe com marcação recorrente)</span>
+          </label>
+          <select
+            value={formData.recurrenceFrequency || ""}
+            onChange={(e) => updateField("recurrenceFrequency", e.target.value || null)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
+          >
+            <option value="">Pontual (serviço único)</option>
+            <option value="semanal">Semanal — poupe 15%</option>
+            <option value="quinzenal">Quinzenal — poupe 10%</option>
+          </select>
+        </div>
+      )}
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
           <strong>Nota:</strong> Após enviar o pedido, a equipa CLYON irá analisar os dados e entrar em contacto através do telefone ou email fornecido.

@@ -36,6 +36,19 @@ export async function POST(req: NextRequest) {
       estimateTotal: estimate?.estimatedPriceWithVat?.toString() ?? null,
     });
 
+    // ── Marcação recorrente: aplica desconto à estimativa guardada ────────────
+    // Semanal = 15%, quinzenal = 10%. O assistente vê o valor já com desconto
+    // e as notas internas explicam a razão, antes de definir o precoFinal.
+    const recurrenceFrequency: "semanal" | "quinzenal" | null =
+      order.recurrenceFrequency === "semanal" || order.recurrenceFrequency === "quinzenal"
+        ? order.recurrenceFrequency
+        : null;
+    const recurringDiscountPercent = recurrenceFrequency === "semanal" ? 15 : recurrenceFrequency === "quinzenal" ? 10 : null;
+    const applyDiscount = (value: number | null | undefined) =>
+      value != null && recurringDiscountPercent != null
+        ? Math.round(value * (1 - recurringDiscountPercent / 100) * 100) / 100
+        : (value ?? null);
+
     // ── Sem atribuição automática ─────────────────────────────────────────────
     // Pedidos entram sempre na fila geral. Uma assistente deve aceitar
     // manualmente via POST /api/admin/pedidos/[id]/accept.
@@ -81,10 +94,12 @@ export async function POST(req: NextRequest) {
       // Prioridade: email da conta autenticada → email do formulário
       contactEmail,
       urgency: order.urgency || null,
-      estimateMin: estimate?.estimatedPriceWithoutVat?.toString() ?? null,
-      estimateMax: estimate?.estimatedPriceWithVat?.toString() ?? null,
-      estimateTotal: estimate?.estimatedPriceWithVat?.toString() ?? null,
+      estimateMin: applyDiscount(estimate?.estimatedPriceWithoutVat)?.toString() ?? null,
+      estimateMax: applyDiscount(estimate?.estimatedPriceWithVat)?.toString() ?? null,
+      estimateTotal: applyDiscount(estimate?.estimatedPriceWithVat)?.toString() ?? null,
       estimateJson: estimate ? JSON.stringify(estimate) : null,
+      recurrenceFrequency,
+      recurringDiscountPercent: recurringDiscountPercent != null ? recurringDiscountPercent.toFixed(2) : null,
       // Guardar análise completa incluindo externalMarketEstimate, analysisSource e confidence
       // Este campo é APENAS para uso interno no backoffice — nunca exposto ao cliente
       analysisJsonExtended: estimate
@@ -145,7 +160,8 @@ export async function POST(req: NextRequest) {
     await appendOrderHistory(id, {
       type: "created",
       by: null,
-      message: `Pedido criado via simulador. Fila geral (sem assistente). Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.`,
+      message: `Pedido criado via simulador. Fila geral (sem assistente). Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.`
+        + (recurrenceFrequency ? ` Marcação recorrente (${recurrenceFrequency}, desconto de ${recurringDiscountPercent}% já aplicado à estimativa).` : ""),
     });
 
     // Notificação WhatsApp — assíncrona, não bloqueia a resposta ao cliente.

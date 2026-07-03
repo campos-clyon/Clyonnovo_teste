@@ -40,6 +40,15 @@ export interface Order {
   updatedAt: string;
   confirmadoPeloCliente: number;
   canceladoPeloCliente: number;
+  recurrenceFrequency: "semanal" | "quinzenal" | null;
+  recurringDiscountPercent: number | null;
+  clientRating: number | null;
+  clientRatingComment: string | null;
+  providerId: number | null;
+  assignedToId: number | null;
+  assignedToName: string | null;
+  providerName: string | null;
+  providerPhone: string | null;
 }
 
 export interface OrderSummary {
@@ -77,4 +86,7 @@ export const SERVICE_LABELS: Record<string, string> = {
   limpeza_quintais:         "Limpeza de Quintais",
   mudanca:                  "Mudança",
   recolha_eletrodomesticos: "Recolha de Eletrodomésticos",
+  montagem_moveis:          "Montagem e Desmontagem de Móveis",
+  jardinagem:               "Jardinagem",
+  manutencao_casa:          "Manutenção da Casa",
 };

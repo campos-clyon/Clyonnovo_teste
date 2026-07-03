@@ -72,16 +72,21 @@ export async function GET(request: NextRequest) {
 
     const [rows] = await pool.execute(
       `SELECT
-         id, serviceType, address, city, postalCode, status,
-         estimateMin, estimateMax, estimateTotal,
-         precoFinal, precoFinalIva,
-         mensagemCliente, description,
-         scheduledDate, scheduledStartTime,
-         createdAt, updatedAt, confirmadoPeloCliente,
-         canceladoPeloCliente
-       FROM simulatorOrders
+         o.id, o.serviceType, o.address, o.city, o.postalCode, o.status,
+         o.estimateMin, o.estimateMax, o.estimateTotal,
+         o.precoFinal, o.precoFinalIva,
+         o.mensagemCliente, o.description,
+         o.scheduledDate, o.scheduledStartTime,
+         o.createdAt, o.updatedAt, o.confirmadoPeloCliente,
+         o.canceladoPeloCliente,
+         o.recurrenceFrequency, o.recurringDiscountPercent,
+         o.clientRating, o.clientRatingComment,
+         o.providerId, o.assignedToId, o.assignedToName,
+         p.name AS providerName, p.phone AS providerPhone
+       FROM simulatorOrders o
+       LEFT JOIN providers p ON p.id = o.providerId
        WHERE ${where}
-       ORDER BY createdAt DESC
+       ORDER BY o.createdAt DESC
        LIMIT ? OFFSET ?`,
       [...params, limit, offset],
     ) as [Array<Record<string, unknown>>, unknown];

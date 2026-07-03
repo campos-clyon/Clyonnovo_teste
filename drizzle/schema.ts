@@ -198,6 +198,14 @@ export interface SimulatorOrder {
   providerId?: number | null;
   /** Momento em que o parceiro aceitou o pedido */
   providerAcceptedAt?: Date | null;
+  /** Frequência de marcação recorrente escolhida pelo cliente ('semanal' | 'quinzenal' | null = pontual) */
+  recurrenceFrequency?: string | null;
+  /** Percentagem de desconto aplicada por ser recorrente (ex: 15.00) */
+  recurringDiscountPercent?: string | null;
+  /** Avaliação do cliente (1-5) após o pedido concluído */
+  clientRating?: number | null;
+  /** Comentário opcional da avaliação do cliente */
+  clientRatingComment?: string | null;
   /** Scheduled service date (YYYY-MM-DD) */
   scheduledDate?: string | null;
   /** Scheduled start time (HH:MM) */
@@ -308,6 +316,10 @@ export interface InsertSimulatorOrder {
   acceptedAt?: Date | null;
   providerId?: number | null;
   providerAcceptedAt?: Date | null;
+  recurrenceFrequency?: string | null;
+  recurringDiscountPercent?: string | null;
+  clientRating?: number | null;
+  clientRatingComment?: string | null;
   scheduledDate?: string | null;
   scheduledStartTime?: string | null;
   scheduledEndTime?: string | null;

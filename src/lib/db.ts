@@ -1207,6 +1207,11 @@ export async function ensureSimulatorOrdersTable() {
     // v9 migrations — atribuição a empresa parceira do marketplace (portal do parceiro)
     `ALTER TABLE simulatorOrders ADD COLUMN providerId INT UNSIGNED NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN providerAcceptedAt TIMESTAMP NULL DEFAULT NULL`,
+    // v10 migrations — marcações recorrentes (desconto) e avaliação do cliente pós-conclusão
+    `ALTER TABLE simulatorOrders ADD COLUMN recurrenceFrequency VARCHAR(20) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN recurringDiscountPercent DECIMAL(5,2) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN clientRating TINYINT NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN clientRatingComment TEXT NULL DEFAULT NULL`,
   ];
   for (const sql of migrations) {
     try { await pool.execute(sql); } catch (e: any) {
@@ -1331,6 +1336,10 @@ export async function updateSimulatorOrder(
     analysisJsonExtended: string | null;
     calendarTargetId: string | null;
     calendarTargetName: string | null;
+    recurrenceFrequency: string | null;
+    recurringDiscountPercent: number | null;
+    clientRating: number | null;
+    clientRatingComment: string | null;
   }>
 ) {
   await ensureSimulatorOrdersTable();
