@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptionsCliente } from "@/auth-cliente";
+import { authOptions } from "@/auth";
 import { getSimulatorOrderById, updateSimulatorOrder, appendOrderHistory } from "@/lib/db";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptionsCliente);
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }

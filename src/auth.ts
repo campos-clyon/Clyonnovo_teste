@@ -1,15 +1,15 @@
 /**
- * Configuração do NextAuth v4 para colaboradores CLYON.
+ * Configuração ÚNICA do NextAuth v4 — serve clientes e colaboradores.
  *
- * Fluxo:
- *   1. Colaborador clica "Entrar com Google" em /colaboradores/entrar
- *   2. O callback signIn retorna true para qualquer conta Google (sem verificação de DB aqui)
- *   3. Após o redirect de regresso, EntrarForm.tsx faz fetch a /api/colaboradores/verify-email
- *   4. Se o email não estiver na tabela colaboradores → signOut + erro=nao_autorizado
- *   5. Se estiver → redireciona para /colaboradores/admin
+ * O callback signIn retorna true para qualquer conta Google; a distinção é feita
+ * DEPOIS do login:
+ *   - Clientes: entram por /entrar → callbackUrl /conta (conta criada automaticamente).
+ *   - Colaboradores: entram por /colaboradores/entrar → EntrarForm.tsx faz fetch a
+ *     /api/colaboradores/verify-email; se o email não estiver autorizado → signOut.
  *
- * Esta abordagem evita que o handler de colaboradores bloqueie logins de clientes
- * que usam o handler separado /api/auth/cliente/[...nextauth] (auth-cliente.ts).
+ * Nota: existia uma segunda instância (/api/auth/cliente) para clientes, removida
+ * porque o NextAuth no Vercel ignora basePaths personalizados ao construir o
+ * redirect_uri do OAuth, o que fazia o callback cair no handler errado.
  *
  * Variáveis de ambiente necessárias (adicionar no Vercel → Settings → Vars):
  *   NEXTAUTH_SECRET      — openssl rand -base64 32

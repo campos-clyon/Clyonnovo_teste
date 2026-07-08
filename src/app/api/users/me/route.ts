@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptionsCliente } from "@/auth-cliente";
+import { authOptions } from "@/auth";
 import { withConnection, ensureUsersSchema } from "@/lib/db";
 
 // Cache de módulo para evitar chamar ensureUsersSchema múltiplas vezes (é lento na Neon DB)
@@ -71,7 +71,7 @@ async function getOrCreateUser(email: string, name: string | null): Promise<User
 
 // GET /api/users/me
 export async function GET() {
-  const session = await getServerSession(authOptionsCliente);
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
@@ -114,7 +114,7 @@ const PatchSchema = z.object({
 
 // PATCH /api/users/me
 export async function PATCH(request: NextRequest) {
-  const session = await getServerSession(authOptionsCliente);
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
@@ -248,7 +248,7 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE /api/users/me — anonimiza dados, não apaga pedidos
 export async function DELETE() {
-  const session = await getServerSession(authOptionsCliente);
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }

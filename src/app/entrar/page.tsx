@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { authOptionsCliente } from "@/auth-cliente";
+import { authOptions } from "@/auth";
 import { AnimatedBackground } from "./AnimatedBackground";
 import { ErrorHandler } from "./ErrorHandler";
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function EntrarPage() {
-  const session = await getServerSession(authOptionsCliente);
+  const session = await getServerSession(authOptions);
   if (session) redirect("/conta");
 
   return (

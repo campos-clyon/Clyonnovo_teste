@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptionsCliente } from "@/auth-cliente";
+import { authOptions } from "@/auth";
 import ContaCliente from "./ContaCliente";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ContaPage() {
-  const session = await getServerSession(authOptionsCliente);
+  const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/entrar");
 
   return (

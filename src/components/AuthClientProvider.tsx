@@ -3,17 +3,16 @@
 import { SessionProvider } from "next-auth/react";
 
 /**
- * Envolve a aplicação pública com o SessionProvider do NextAuth de cliente.
- * Usa a rota /api/auth/cliente para separar sessões de clientes e colaboradores.
+ * Envolve a aplicação com o SessionProvider único do NextAuth.
+ * Clientes e colaboradores partilham a mesma instância (/api/auth) —
+ * a distinção é feita após o login (verify-email para colaboradores).
+ * Instância separada de clientes foi removida: o NextAuth no Vercel ignora
+ * basePaths personalizados, o que quebrava o callback OAuth.
  */
 export default function AuthClientProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SessionProvider basePath="/api/auth/cliente">
-      {children}
-    </SessionProvider>
-  );
+  return <SessionProvider>{children}</SessionProvider>;
 }
