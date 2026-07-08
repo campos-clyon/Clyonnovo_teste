@@ -46,8 +46,10 @@ export async function middleware(request: NextRequest) {
     nextUrl.pathname.startsWith("/api/") ||
     nextUrl.pathname.startsWith("/colaboradores/");
   const isLocalDev = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host);
+  // Deployments de teste no Vercel (preview/staging) não devem ser forçados para o domínio de produção.
+  const isVercelPreview = host.endsWith(".vercel.app");
 
-  if (!isApiOrInternal && !isLocalDev && (host !== CANONICAL_HOST || forwardedProto !== "https")) {
+  if (!isApiOrInternal && !isLocalDev && !isVercelPreview && (host !== CANONICAL_HOST || forwardedProto !== "https")) {
     const redirectUrl = new URL(request.url);
     redirectUrl.protocol = "https:";
     redirectUrl.host = CANONICAL_HOST;
