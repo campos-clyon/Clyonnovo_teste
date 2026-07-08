@@ -5,9 +5,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import {
   ChevronDown,
-  Menu,
   MessageCircle,
-  X,
   Sofa,
   HardHat,
   Package,
@@ -96,9 +94,7 @@ const navLinks = [
 ];
 
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [solucoesOpen, setSolucoesOpen] = useState(false);
-  const [mobileAccordionOpen, setMobileAccordionOpen] = useState(false);
   const [contaOpen, setContaOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -267,7 +263,8 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile: localização + avatar de conta + botão hambúrguer */}
+        {/* Mobile: topo mínimo (localização + conta). A navegação vive na barra
+            inferior estilo app — sem menu hambúrguer para evitar dois menus. */}
         <div className="flex items-center gap-2 lg:hidden">
           <HeaderLocationSelector />
           {session?.user ? (
@@ -295,13 +292,6 @@ export default function Header() {
               <User className="h-4 w-4" />
             </Link>
           )}
-          <button
-            className="inline-flex rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 transition-colors hover:border-cyan-200 hover:text-cyan-600"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
         </div>
       </div>
 
@@ -385,101 +375,6 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="border-t border-slate-100 bg-white lg:hidden">
-          <nav className="mx-auto max-w-7xl px-4 py-4">
-            {/* Soluções Accordion */}
-            <div className="mb-1">
-              <button
-                onClick={() => setMobileAccordionOpen(!mobileAccordionOpen)}
-                className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-base font-medium text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                <span>Soluções</span>
-                <ChevronDown
-                  className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${
-                    mobileAccordionOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {mobileAccordionOpen && (
-                <div className="mt-1 space-y-1 rounded-xl bg-slate-50 p-3">
-                  {solucoes.map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setMobileAccordionOpen(false);
-                      }}
-                      className="flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-white"
-                    >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-cyan-600">
-                        <item.icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">
-                          {item.label}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {item.description}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Other nav links */}
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center rounded-xl px-4 py-3 text-base font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-cyan-600"
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {/* Mobile CTA buttons */}
-            <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick("header-mobile")}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3.5 text-base font-semibold text-white transition-all hover:bg-[#20bd5a]"
-              >
-                <MessageCircle className="h-5 w-5 text-white" />
-                <span className="text-white">WhatsApp</span>
-              </a>
-              {/* Conta mobile */}
-              {session?.user ? (
-                <button
-                  type="button"
-                  onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/" }); }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-100 px-4 py-3 text-sm text-slate-500 transition hover:text-red-600"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sair da conta
-                </button>
-              ) : (
-                <Link
-                  href="/entrar"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-base font-semibold text-slate-700 transition hover:border-slate-300"
-                >
-                  <User className="h-5 w-5 text-slate-500" />
-                  Entrar / Criar conta
-                </Link>
-              )}
-            </div>
-          </nav>
-        </div>
-      )}
     </header>
     </>
   );
