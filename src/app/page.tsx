@@ -1,19 +1,26 @@
 import type { Metadata } from "next";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Building2,
   CheckCircle2,
   ClipboardList,
+  Hammer,
+  HardHat,
   Handshake,
+  Home,
+  Leaf,
   MapPin,
   MessageCircle,
+  Package,
   Quote,
-  ShieldCheck,
+  Sofa,
   Sparkles,
   Star,
   Truck,
   UserCheck,
-  Zap,
+  Wrench,
 } from "lucide-react";
 
 import RotatingHeroCopy from "@/components/RotatingHeroCopy";
@@ -22,6 +29,7 @@ import { getHeroCarouselImages } from "@/lib/work-gallery";
 import HeroCTAButton from "@/components/HeroCTAButton";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { reviews } from "@/lib/reviews-data";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const metadata: Metadata = {
   title: "CLYON — Recolha de Móveis, Entulho, Monos e Esvaziamento de Casas em Lisboa e Setúbal",
@@ -36,6 +44,19 @@ export const metadata: Metadata = {
       "Recolha de móveis, entulho, monos, esvaziamento de casas e limpeza pós-obra em Lisboa e Setúbal. Resposta em 24h. Orçamento grátis!",
     url: "https://clyon.pt",
   },
+};
+
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  recolha_moveis: Sofa,
+  recolha_monos: Package,
+  recolha_entulho: HardHat,
+  esvaziamento_casa: Home,
+  esvaziamento_apartamento: Building2,
+  mudanca: Truck,
+  montagem_moveis: Wrench,
+  jardinagem: Leaf,
+  manutencao_casa: Hammer,
+  outro: Star,
 };
 
 const priceHighlights = [
@@ -125,46 +146,28 @@ const homeFaqs = [
   },
 ];
 
-const proofPoints = [
-  "Resposta comercial rápida",
-  "Equipa profissional e organizada",
-  "Cobertura forte em Lisboa, Margem Sul e Setúbal",
-  "Fluxo simples do pedido até à recolha",
-];
-
-const lisbonSearchLinks = [
+const regionalHighlights = [
   {
-    href: "/recolha-moveis-lisboa",
-    title: "Recolha de móveis em Lisboa",
-    text: "Retirada de sofás, camas, armários e eletrodomésticos com apoio completo dentro da cidade.",
+    heading: "Grande Lisboa",
+    description: "Recolha de sofás, camas, armários e eletrodomésticos com apoio completo dentro da cidade.",
+    mainHref: "/recolha-moveis-lisboa",
+    cta: "Ver Lisboa",
+    links: [
+      { href: "/recolha-moveis-lisboa", title: "Recolha de móveis em Lisboa" },
+      { href: "/recolha-moveis-benfica", title: "Recolha de móveis em Benfica" },
+      { href: "/recolha-moveis-lumiar", title: "Recolha de móveis no Lumiar" },
+    ],
   },
   {
-    href: "/recolha-moveis-benfica",
-    title: "Recolha de móveis em Benfica",
-    text: "Serviço local para pedidos em Benfica com recolha rápida, carga e encaminhamento responsável.",
-  },
-  {
-    href: "/recolha-moveis-lumiar",
-    title: "Recolha de móveis no Lumiar",
-    text: "Apoio no Lumiar para retirar móveis usados, colchões e volumes grandes sem complicações.",
-  },
-];
-
-const coastalSearchLinks = [
-  {
-    href: "/recolha-moveis-cascais",
-    title: "Recolha de móveis em Cascais",
-    text: "Retiramos móveis, recheios e eletrodomésticos em Cascais com rapidez e cuidado no acesso.",
-  },
-  {
-    href: "/recolha-moveis-oeiras",
-    title: "Recolha de móveis em Oeiras",
-    text: "Cobertura em Oeiras para recolha de sofás, camas, armários e outros volumes pesados.",
-  },
-  {
-    href: "/recolha-moveis-sintra",
-    title: "Recolha de móveis em Sintra",
-    text: "Equipa preparada para recolhas em Sintra com desmontagem, carregamento e transporte incluídos.",
+    heading: "Linha de Cascais",
+    description: "Cobertura em Cascais, Oeiras e Sintra para retirar móveis usados, recheios e volumes grandes.",
+    mainHref: "/recolha-moveis-cascais",
+    cta: "Ver Cascais",
+    links: [
+      { href: "/recolha-moveis-cascais", title: "Recolha de móveis em Cascais" },
+      { href: "/recolha-moveis-oeiras", title: "Recolha de móveis em Oeiras" },
+      { href: "/recolha-moveis-sintra", title: "Recolha de móveis em Sintra" },
+    ],
   },
 ];
 
@@ -197,9 +200,9 @@ export default async function HomePage() {
 
             {/* Left: text content */}
             <div className="max-w-lg">
-              <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1">
-                <Sparkles className="h-3 w-3 text-violet-600" />
-                <span className="text-xs font-semibold text-violet-700">
+              <div className="mb-4 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 flex-shrink-0 text-violet-600" />
+                <span className="text-sm font-semibold text-violet-700">
                   Preço fixo calculado por IA, confirmado por um assistente humano
                 </span>
               </div>
@@ -246,7 +249,7 @@ export default async function HomePage() {
             </div>
 
             {/* Right: carousel — hidden on mobile */}
-            <div className="relative hidden lg:block">
+            <div className="hidden lg:block">
               <div className="overflow-hidden rounded-2xl shadow-xl">
                 <div className="aspect-[4/3]">
                   <ImageCarousel
@@ -256,30 +259,9 @@ export default async function HomePage() {
                   />
                 </div>
               </div>
-              {/* Badge: Equipa Profissional */}
-              <div className="absolute -right-2.5 -top-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-cyan-100">
-                    <ShieldCheck className="h-4 w-4 text-cyan-600" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900">Equipa Profissional</div>
-                    <div className="text-[9px] text-slate-500">Lisboa e Setúbal</div>
-                  </div>
-                </div>
-              </div>
-              {/* Badge: Resposta Rápida */}
-              <div className="absolute -bottom-2.5 -left-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-100">
-                    <Zap className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900">Resposta Rápida</div>
-                    <div className="text-[9px] text-slate-500">Em 11 minutos</div>
-                  </div>
-                </div>
-              </div>
+              <p className="mt-3 text-center text-xs font-medium text-slate-500">
+                Equipa profissional em Lisboa e Setúbal — resposta média em 11 minutos
+              </p>
             </div>
 
           </div>
@@ -290,10 +272,6 @@ export default async function HomePage() {
       <section className="bg-slate-50 py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-              <MapPin className="h-4 w-4" />
-              Cobertura geográfica
-            </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Onde Operamos</h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
               Mais de 24 localidades cobertas em Lisboa, Margem Sul e Setúbal.
@@ -325,8 +303,8 @@ export default async function HomePage() {
                     </span>
                   ))}
                 </div>
-                <Link 
-                  href={`/regioes/${region.slug}`} 
+                <Link
+                  href={`/regioes/${region.slug}`}
                   className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700"
                 >
                   Ver serviços na região
@@ -342,32 +320,32 @@ export default async function HomePage() {
       <section className="bg-white py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-              Serviços principais
-            </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">O que fazemos</h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-              Recolha profissional com equipa organizada e resposta rápida.
+              Da recolha de um único sofá ao esvaziamento completo de uma casa — mesma equipa, mesmo processo, sem surpresas no preço.
             </p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {SERVICE_CATEGORIES.map((category) => (
-              <div key={category.id} className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-cyan-200 hover:shadow-lg">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-50 to-cyan-100 text-3xl">
-                  {category.emoji}
+            {SERVICE_CATEGORIES.map((category) => {
+              const CategoryIcon = CATEGORY_ICONS[category.id] ?? Star;
+              return (
+                <div key={category.id} className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-cyan-200 hover:shadow-lg">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-cyan-50">
+                    <CategoryIcon className="h-7 w-7 text-cyan-600" />
+                  </div>
+                  <h3 className="mt-5 text-lg font-bold text-slate-900">{category.label}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{category.description}</p>
+                  <Link
+                    href={category.href}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700"
+                  >
+                    Saber mais
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
                 </div>
-                <h3 className="mt-5 text-lg font-bold text-slate-900">{category.label}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{category.description}</p>
-                <Link
-                  href={category.href}
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700"
-                >
-                  Saber mais
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -376,12 +354,9 @@ export default async function HomePage() {
       <section className="bg-slate-50 py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-              Avaliações reais
-            </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">O que dizem os clientes</h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-              163 avaliações com 5 estrelas em Lisboa, Margem Sul e Setúbal.
+              Histórias reais de quem já recolheu com a CLYON em Lisboa, Margem Sul e Setúbal.
             </p>
           </div>
 
@@ -419,84 +394,41 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Lisboa Destaque */}
+      {/* Destaques regionais */}
       <section className="py-16 lg:py-20">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="mb-6">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-600">
-                Mais procurado em Lisboa
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900">
-                Recolha de móveis em Lisboa com resposta rápida.
-              </h2>
-              <p className="mt-2 text-slate-600">
-                Retiramos sofás, camas, armários, colchões e eletrodomésticos em Lisboa com desmontagem e carregamento.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {lisbonSearchLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:border-cyan-200 hover:bg-cyan-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">{item.title}</h3>
-                    <ArrowRight className="h-4 w-4 text-slate-400" />
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{item.text}</p>
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <Link href="/recolha-moveis-lisboa" className="inline-flex h-10 items-center justify-center rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-700">
-                Ver Lisboa
-              </Link>
-            </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Onde somos mais procurados</h2>
+            <p className="mt-2 max-w-2xl text-slate-600">
+              As duas zonas com maior volume de pedidos — cobertura garantida e resposta rápida.
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* Cascais Destaque */}
-      <section className="py-16 lg:py-20">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="mb-6">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-600">
-                Linha de Cascais
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900">
-                Recolha de móveis na linha de Cascais.
-              </h2>
-              <p className="mt-2 text-slate-600">
-                Atuamos em Cascais, Oeiras e Sintra para retirar móveis usados, recheios e volumes grandes.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {coastalSearchLinks.map((item) => (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {regionalHighlights.map((zone) => (
+              <div key={zone.heading} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <h3 className="text-lg font-bold text-slate-900">{zone.heading}</h3>
+                <p className="mt-2 text-sm text-slate-600">{zone.description}</p>
+                <div className="mt-5 space-y-2.5">
+                  {zone.links.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="group flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-cyan-200 hover:bg-cyan-50"
+                    >
+                      <span className="text-sm font-medium text-slate-900">{link.title}</span>
+                      <ArrowRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  ))}
+                </div>
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:border-cyan-200 hover:bg-cyan-50"
+                  href={zone.mainHref}
+                  className="mt-5 inline-flex h-10 items-center justify-center rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-700"
                 >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">{item.title}</h3>
-                    <ArrowRight className="h-4 w-4 text-slate-400" />
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{item.text}</p>
+                  {zone.cta}
                 </Link>
-              ))}
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <Link href="/recolha-moveis-cascais" className="inline-flex h-10 items-center justify-center rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-700">
-                Ver Cascais
-              </Link>
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -506,9 +438,6 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-              <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-                Preços orientativos
-              </div>
               <h2 className="text-2xl font-bold text-slate-900">Valores de referência</h2>
               <p className="mt-2 text-slate-600">Orçamento final depende do volume e acesso.</p>
               <div className="mt-6 space-y-3">
@@ -528,9 +457,6 @@ export default async function HomePage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-              <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-                O que recolhemos
-              </div>
               <h2 className="text-2xl font-bold text-slate-900">Do sofá ao entulho</h2>
               <p className="mt-2 text-slate-600">Serviço completo para particulares e empresas.</p>
               <div className="mt-6 space-y-3">
@@ -549,10 +475,7 @@ export default async function HomePage() {
       {/* Como funciona */}
       <section className="bg-white py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-              Como funciona
-            </div>
+          <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
               O modelo único da CLYON
             </h2>
@@ -561,26 +484,25 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step, index) => (
-              <div key={step.step} className="relative rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="absolute -top-4 left-8 flex h-8 w-8 items-center justify-center rounded-full bg-cyan-600 text-sm font-bold text-white">
-                  {index + 1}
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-x-[12.5%] top-6 hidden h-px bg-slate-200 md:block" />
+            <div className="grid gap-10 md:grid-cols-4">
+              {steps.map((step, index) => (
+                <div key={step.step} className="relative flex flex-col items-center text-center">
+                  <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-600 text-sm font-bold text-white ring-4 ring-white">
+                    {index + 1}
+                  </div>
+                  <step.icon
+                    className={`mt-4 h-7 w-7 ${step.accent === "premium" ? "text-violet-600" : "text-cyan-600"}`}
+                  />
+                  <h3 className="mt-3 text-lg font-bold text-slate-900">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{step.description}</p>
                 </div>
-                <div
-                  className={`mt-4 flex h-14 w-14 items-center justify-center rounded-xl ${
-                    step.accent === "premium" ? "bg-violet-50" : "bg-cyan-50"
-                  }`}
-                >
-                  <step.icon className={`h-7 w-7 ${step.accent === "premium" ? "text-violet-600" : "text-cyan-600"}`} />
-                </div>
-                <h3 className="mt-5 text-xl font-bold text-slate-900">{step.title}</h3>
-                <p className="mt-3 text-base leading-relaxed text-slate-600">{step.description}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          <div className="mt-10 text-center">
+          <div className="mt-12 text-center">
             <Link href="/como-funciona" className="inline-flex items-center gap-2 text-base font-semibold text-cyan-600 transition-colors hover:text-cyan-700">
               Saber mais sobre o modelo
               <ArrowRight className="h-4 w-4" />
@@ -593,9 +515,6 @@ export default async function HomePage() {
       <section className="bg-slate-50 py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-              Porquê a CLYON
-            </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
               Diferente das plataformas de orçamentos
             </h2>
@@ -661,25 +580,28 @@ export default async function HomePage() {
       </section>
 
       {/* FAQs */}
-      <section className="bg-slate-50 py-20 lg:py-24">
+      <section className="bg-white py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
-              Perguntas frequentes
-            </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Dúvidas comuns</h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
               Respostas às perguntas mais frequentes sobre os nossos serviços.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {homeFaqs.map((faq) => (
-              <div key={faq.question} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-base font-bold text-slate-900">{faq.question}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">{faq.answer}</p>
-              </div>
-            ))}
+          <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white px-6 shadow-sm sm:px-8">
+            <Accordion type="single" collapsible>
+              {homeFaqs.map((faq) => (
+                <AccordionItem key={faq.question} value={faq.question} className="border-slate-200">
+                  <AccordionTrigger className="text-base font-bold text-slate-900 hover:no-underline">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm leading-relaxed text-slate-600">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
 
           <div className="mt-10 text-center">
@@ -692,9 +614,9 @@ export default async function HomePage() {
       </section>
 
       {/* Torna-te parceiro */}
-      <section className="bg-white py-16 lg:py-20">
+      <section className="bg-slate-50 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center gap-6 rounded-3xl border border-violet-200 bg-violet-50 p-8 text-center sm:p-12 lg:flex-row lg:justify-between lg:text-left">
+          <div className="flex flex-col items-center gap-6 rounded-3xl border border-violet-200 bg-white p-8 text-center sm:p-12 lg:flex-row lg:justify-between lg:text-left">
             <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center">
               <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-violet-600">
                 <Handshake className="h-7 w-7 text-white" />
@@ -726,17 +648,13 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 sm:p-12 lg:p-16">
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-4 py-2 text-cyan-400">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm font-semibold">Orçamento imediato</span>
-              </div>
               <h2 className="text-3xl font-bold text-white sm:text-4xl">Pronto para libertar espaço?</h2>
               <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
                 Simule o pedido, confirme os detalhes e receba uma resposta clara em minutos.
               </p>
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                <Link 
-                  href="/simulador" 
+                <Link
+                  href="/simulador"
                   className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[#0891b2] px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5 hover:bg-[#0e7490] hover:shadow-xl"
                 >
                   <span className="text-white">Simular orçamento grátis</span>
