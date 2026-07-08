@@ -1,8 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import UserAvatar from "@/components/UserAvatar";
-import { ArrowRight, CalendarDays, ClipboardList } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  ClipboardList,
+  LogOut,
+  Receipt,
+  Shield,
+  User as UserIcon,
+} from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { SERVICE_LABELS, type UserProfile, type Order, type OrderSummary, type Section } from "./types";
 
@@ -20,11 +31,23 @@ function formatDate(iso: string) {
   });
 }
 
+// Formato curto (sem ano) para caber na coluna estreita do MetricCard em mobile.
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+}
+
+const ACCOUNT_LINKS: { id: Section; label: string; icon: React.ElementType }[] = [
+  { id: "dados-pessoais", label: "Dados pessoais", icon: UserIcon },
+  { id: "faturacao",      label: "Faturação",      icon: Receipt },
+  { id: "notificacoes",   label: "Notificações",   icon: Bell },
+  { id: "seguranca",      label: "Segurança",      icon: Shield },
+];
+
 function MetricCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex-1 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
+    <div className="flex-1 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
+      <p className="text-xs font-medium text-slate-400">{label}</p>
+      <p className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{value}</p>
     </div>
   );
 }
@@ -43,9 +66,9 @@ export default function VisaoGeral({ user, googleAvatar, orders, summary, onSect
     : orders.filter((o) => !["concluido", "cancelado", "rejeitado"].includes(o.status)).length;
 
   const ultimoPedido = summary?.lastOrderDate
-    ? formatDate(summary.lastOrderDate)
+    ? formatShortDate(summary.lastOrderDate)
     : orders[0]
-      ? formatDate(orders[0].createdAt)
+      ? formatShortDate(orders[0].createdAt)
       : "—";
 
   return (
@@ -142,6 +165,35 @@ export default function VisaoGeral({ user, googleAvatar, orders, summary, onSect
           </ul>
         </div>
       )}
+
+      {/* Lista de definições — só em mobile, o desktop já tem a sidebar */}
+      <div className="lg:hidden">
+        <h3 className="mb-3 text-base font-semibold text-slate-800">Conta</h3>
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+          {ACCOUNT_LINKS.map(({ id, label, icon: Icon }, index) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onSection(id)}
+              className={`flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-slate-50 ${
+                index > 0 ? "border-t border-slate-100" : ""
+              }`}
+            >
+              <Icon className="h-4.5 w-4.5 shrink-0 text-slate-400" />
+              <span className="flex-1 text-sm font-medium text-slate-700">{label}</span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="flex w-full items-center gap-3 border-t border-slate-100 px-5 py-4 text-left transition hover:bg-red-50"
+          >
+            <LogOut className="h-4.5 w-4.5 shrink-0 text-red-400" />
+            <span className="flex-1 text-sm font-medium text-red-600">Sair</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

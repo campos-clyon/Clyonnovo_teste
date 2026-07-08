@@ -3,20 +3,15 @@
 import {
   LayoutDashboard,
   ClipboardList,
-  User,
-  Receipt,
-  Bell,
-  Shield,
 } from "lucide-react";
 import type { Section } from "./types";
 
+// Só as 2 secções mais usadas ficam na barra — as restantes (Dados, Fatura,
+// Notif., Segurança) vivem como lista dentro de "Geral", ao estilo do
+// ecrã de Perfil da Oscar, para não cortar abas num ecrã estreito.
 const TABS: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: "visao-geral",    label: "Geral",     icon: LayoutDashboard },
-  { id: "pedidos",        label: "Pedidos",   icon: ClipboardList },
-  { id: "dados-pessoais", label: "Dados",     icon: User },
-  { id: "faturacao",      label: "Fatura",    icon: Receipt },
-  { id: "notificacoes",   label: "Notif.",    icon: Bell },
-  { id: "seguranca",      label: "Segurança", icon: Shield },
+  { id: "visao-geral", label: "Geral",   icon: LayoutDashboard },
+  { id: "pedidos",     label: "Pedidos", icon: ClipboardList },
 ];
 
 interface Props {
