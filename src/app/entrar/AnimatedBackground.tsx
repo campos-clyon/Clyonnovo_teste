@@ -12,7 +12,6 @@ export function AnimatedBackground() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Dimensionar canvas
     function resizeCanvas() {
       if (!canvas) return;
       canvas.width = window.innerWidth;
@@ -21,7 +20,7 @@ export function AnimatedBackground() {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    // Animação de linhas em movimento (transporte)
+    // Linhas suaves em movimento — só tons da marca (ciano/turquesa), sem vermelho.
     const lines: Array<{
       x: number;
       y: number;
@@ -32,30 +31,31 @@ export function AnimatedBackground() {
       color: string;
     }> = [];
 
-    // Gerar linhas iniciais
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       lines.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        length: 150 + Math.random() * 150,
-        width: 2 + Math.random() * 1.5,
-        speed: 0.5 + Math.random() * 1,
-        angle: (Math.PI / 4) * (0.5 + Math.random()),
-        color: i % 2 === 0 ? "rgba(34, 211, 238, 0.3)" : "rgba(248, 113, 113, 0.3)",
+        length: 140 + Math.random() * 160,
+        width: 1.5 + Math.random() * 1.5,
+        speed: 0.4 + Math.random() * 0.8,
+        angle: (Math.PI / 4) * (0.4 + Math.random()),
+        color: i % 2 === 0 ? "rgba(6, 182, 212, 0.18)" : "rgba(45, 212, 191, 0.14)",
       });
     }
+
+    let raf = 0;
 
     function animate() {
       if (!ctx || !canvas) return;
 
-      // Limpar com gradiente sutil
+      // Fundo claro com leve gradiente
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, "rgba(15, 23, 42, 1)");
-      gradient.addColorStop(1, "rgba(20, 30, 50, 1)");
+      gradient.addColorStop(0, "rgba(248, 250, 252, 1)");
+      gradient.addColorStop(0.5, "rgba(240, 249, 255, 1)");
+      gradient.addColorStop(1, "rgba(236, 254, 255, 1)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Desenhar linhas animadas
       lines.forEach((line) => {
         ctx.strokeStyle = line.color;
         ctx.lineWidth = line.width;
@@ -70,11 +70,9 @@ export function AnimatedBackground() {
         );
         ctx.stroke();
 
-        // Mover linhas
         line.x += Math.cos(line.angle) * line.speed;
         line.y += Math.sin(line.angle) * line.speed;
 
-        // Rebote nas bordas
         if (line.x < -200 || line.x > canvas.width + 200) {
           line.x = Math.random() * canvas.width;
           line.y = Math.random() * canvas.height;
@@ -85,20 +83,23 @@ export function AnimatedBackground() {
         }
       });
 
-      // Adicionar alguns círculos leves (nós de conexão)
-      ctx.fillStyle = "rgba(34, 211, 238, 0.15)";
+      // Nós de ligação
+      ctx.fillStyle = "rgba(6, 182, 212, 0.12)";
       lines.forEach((line) => {
         ctx.beginPath();
-        ctx.arc(line.x, line.y, 3, 0, Math.PI * 2);
+        ctx.arc(line.x, line.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      requestAnimationFrame(animate);
+      raf = requestAnimationFrame(animate);
     }
 
     animate();
 
-    return () => window.removeEventListener("resize", resizeCanvas);
+    return () => {
+      window.removeEventListener("resize", resizeCanvas);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (
