@@ -1380,6 +1380,8 @@ export async function updateSimulatorOrder(
           [to],
         )) as [Array<{ notifOrderStatus: number }>, unknown];
         if (uRows[0] && Number(uRows[0].notifOrderStatus) === 0) return;
+
+        // Email
         await sendOrderStatusEmail({
           to,
           clienteName: prevForNotify!.contactName,
@@ -1387,6 +1389,19 @@ export async function updateSimulatorOrder(
           orderId: id,
           status: newStatus,
         });
+
+        // Web Push (navegador) — para os mesmos estados relevantes ao cliente.
+        const { sendPushToUser } = await import("@/lib/webpush");
+        const { STATUS_PUSH } = await import("@/lib/email-status");
+        const push = STATUS_PUSH[newStatus];
+        if (push) {
+          await sendPushToUser(to, {
+            title: push.title,
+            body: push.body,
+            url: "/conta",
+            tag: `pedido-${id}`,
+          });
+        }
       })().catch((err) => console.error("[updateSimulatorOrder] falha na notificação de estado:", err));
     }
   }
@@ -1414,6 +1429,63 @@ export async function deleteSimulatorOrder(id: number) {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   await pool.execute("DELETE FROM simulatorOrders WHERE id = ?", [id]);
+}
+
+// ── Web Push: subscrições do navegador ───────────────────────────────────────
+let pushTableReady = false;
+async function ensurePushSubscriptionsTable() {
+  if (pushTableReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS pushSubscriptions (
+      id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      userEmail VARCHAR(255) NOT NULL,
+      endpoint  VARCHAR(600) NOT NULL,
+      p256dh    VARCHAR(255) NOT NULL,
+      auth      VARCHAR(255) NOT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_endpoint (endpoint),
+      KEY idx_email (userEmail)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  pushTableReady = true;
+}
+
+export interface StoredPushSubscription {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+export async function savePushSubscription(email: string, sub: StoredPushSubscription) {
+  await ensurePushSubscriptionsTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO pushSubscriptions (userEmail, endpoint, p256dh, auth)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE userEmail = VALUES(userEmail), p256dh = VALUES(p256dh), auth = VALUES(auth)`,
+    [email.trim().toLowerCase(), sub.endpoint, sub.p256dh, sub.auth],
+  );
+}
+
+export async function deletePushSubscription(endpoint: string) {
+  await ensurePushSubscriptionsTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("DELETE FROM pushSubscriptions WHERE endpoint = ?", [endpoint]);
+}
+
+export async function getPushSubscriptionsByEmail(email: string): Promise<StoredPushSubscription[]> {
+  await ensurePushSubscriptionsTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT endpoint, p256dh, auth FROM pushSubscriptions WHERE userEmail = ?",
+    [email.trim().toLowerCase()],
+  )) as [StoredPushSubscription[], unknown];
+  return rows;
 }
 
 export async function countSimulatorOrdersByStatus(): Promise<Record<string, number>> {

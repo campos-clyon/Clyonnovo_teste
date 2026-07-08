@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { UserProfile } from "./types";
+import { isPushSupported, isPushEnabled, enablePush, disablePush } from "@/lib/push-client";
 
 interface ToggleProps {
   id: string;
@@ -51,6 +52,36 @@ export default function Notificacoes({ user, onUpdate }: Props) {
   const [notifWhatsapp,     setNotifWhatsapp]      = useState(!!user.notifWhatsapp);
   const [saving, setSaving] = useState(false);
 
+  // Notificações do navegador (Web Push) — estado é do browser, não da DB.
+  const [pushSupported, setPushSupported] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    const supported = isPushSupported();
+    setPushSupported(supported);
+    if (supported) void isPushEnabled().then(setPushEnabled);
+  }, []);
+
+  const togglePush = async (v: boolean) => {
+    setPushBusy(true);
+    try {
+      if (v) {
+        const ok = await enablePush();
+        setPushEnabled(ok);
+        if (!ok) {
+          // Permissão negada ou falha — reverter visualmente.
+          alert("Não foi possível ativar as notificações. Verifica se autorizaste as notificações no navegador.");
+        }
+      } else {
+        await disablePush();
+        setPushEnabled(false);
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
   const save = async (patch: Partial<UserProfile>) => {
     setSaving(true);
     try {
@@ -94,6 +125,18 @@ export default function Notificacoes({ user, onUpdate }: Props) {
             setNotifWeeklyDigest(v);
             void save({ notifWeeklyDigest: v ? 1 : 0 });
           }}
+        />
+        <Toggle
+          id="notif-push"
+          label="Notificações no navegador"
+          description={
+            pushSupported
+              ? "Recebe um aviso no browser/telemóvel quando o estado mudar, mesmo com o site fechado."
+              : "Este navegador não suporta notificações push."
+          }
+          checked={pushEnabled}
+          saving={pushBusy || !pushSupported}
+          onChange={(v) => void togglePush(v)}
         />
         <Toggle
           id="notif-whatsapp"

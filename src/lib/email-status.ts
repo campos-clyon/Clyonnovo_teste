@@ -39,6 +39,11 @@ export function statusTriggersEmail(status: string): boolean {
   return status in STATUS_MESSAGES;
 }
 
+/** Título/corto para notificação push, derivado das mesmas mensagens. */
+export const STATUS_PUSH: Record<string, { title: string; body: string }> = Object.fromEntries(
+  Object.entries(STATUS_MESSAGES).map(([k, v]) => [k, { title: `CLYON — ${v.title}`, body: v.body }]),
+);
+
 export interface SendStatusEmailParams {
   to: string;
   clienteName: string | null;
