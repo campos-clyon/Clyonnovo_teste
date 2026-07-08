@@ -70,6 +70,13 @@ export async function GET(request: NextRequest) {
     ) as [Array<{ total: number }>, unknown];
     const total = Number(countRows[0]?.total ?? 0);
 
+    // LIMIT/OFFSET interpolados como inteiros validados — o mysql2 (.execute,
+    // prepared statement) rejeita LIMIT ?/OFFSET ? como parâmetros vinculados
+    // (ER_WRONG_ARGUMENTS). São calculados a partir de page (inteiro), nunca
+    // de input livre, por isso não há risco de injeção.
+    const safeLimit = Math.max(1, Math.floor(limit));
+    const safeOffset = Math.max(0, Math.floor(offset));
+
     const [rows] = await pool.execute(
       `SELECT
          o.id, o.serviceType, o.address, o.city, o.postalCode, o.status,
@@ -87,8 +94,8 @@ export async function GET(request: NextRequest) {
        LEFT JOIN providers p ON p.id = o.providerId
        WHERE ${where}
        ORDER BY o.createdAt DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset],
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+      params,
     ) as [Array<Record<string, unknown>>, unknown];
 
     return NextResponse.json({
