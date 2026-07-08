@@ -18,11 +18,10 @@ import type {
 import AddressAutocomplete from "./components/AddressAutocomplete";
 import OrderSummaryCard from "./components/OrderSummaryCard";
 import ContactAccessForm from "./components/ContactAccessForm";
-import AnalysisResultCard from "./components/AnalysisResultCard";
 import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import CompactOrderDetails from "./components/CompactOrderDetails";
-import { ChevronRight, ChevronLeft, CheckCircle } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import {
   trackSimulatorStart,
@@ -45,22 +44,13 @@ export default function SimulatorThreePhaseForm() {
   const { location: savedLocation } = useLocation();
   const [phase, setPhase] = useState(1);
   const [formData, setFormData] = useState<FormState>({});
-  const [analysis, setAnalysis] = useState<EstimateResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeStep, setAnalyzeStep] = useState(0); // 0=idle 1=calc 2=validate 3=prepare
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [countdown, setCountdown] = useState(0); // contagem regressiva do envio (20→0)
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
-  const [successAssignedTo, setSuccessAssignedTo] = useState<{ id: number; name: string } | null>(null);
+  const [successAssignedTo] = useState<{ id: number; name: string } | null>(null);
   const [addressValue, setAddressValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase2Attempted, setPhase2Attempted] = useState(false);
-
-  const ANALYZE_STEP_LABELS = [
-    "Analisar pedido",
-    "A calcular estimativa...",
-    "A validar condições de acesso...",
-    "A preparar envio para análise...",
-  ];
 
   // Limpar localStorage ao inicializar (F5 sempre reseta)
   useEffect(() => {
@@ -268,60 +258,29 @@ export default function SimulatorThreePhaseForm() {
     }
 
     setIsAnalyzing(true);
-    setAnalyzeStep(1);
     setError(null);
+    setCountdown(20);
 
-    // ── Progressive step labels ────────────────────────────────────────────
-    const stepTimers: ReturnType<typeof setTimeout>[] = [];
-    stepTimers.push(setTimeout(() => setAnalyzeStep(2), 1200));
-    stepTimers.push(setTimeout(() => setAnalyzeStep(3), 2400));
+    // Contagem regressiva visível (20 → 0).
+    const countdownInterval = setInterval(() => {
+      setCountdown((c) => (c > 1 ? c - 1 : 0));
+    }, 1000);
 
-    // ── Hard 7s client timeout: se API ainda não respondeu, forçar fallback UI
-    // (7s > 4s Gemini timeout + overhead de resposta do servidor)
-    let hardTimeoutFired = false;
-    const hardTimer = setTimeout(() => {
-      hardTimeoutFired = true;
-      setIsAnalyzing(false);
-      setAnalyzeStep(0);
-      // Mostrar card "pronto para análise" sem bloquear cliente
-      setAnalysis({
-        status: "estimated",
-        estimatedPriceWithoutVat: null,
-        vatAmount: null,
-        estimatedPriceWithVat: null,
-        difficultyLevel: 2,
-        summary: "Análise em processamento.",
-        assumptions: [],
-        missingFields: [],
-        customerMessage: "A equipa CLYON irá confirmar os dados e entrar em contacto em breve.",
-        internalNotes: ["Timeout no cliente (7s) — análise do servidor ainda em curso."],
-        analysisSource: "timeout_fallback",
-      });
-    }, 7000);
+    // Espera mínima de 20s — momento de "análise" antes do sucesso.
+    // O trabalho real (estimativa + gravação) corre em paralelo.
+    const minWait = new Promise<void>((resolve) => setTimeout(resolve, 20000));
 
-    try {
-      const res = await fetch("/api/simulator/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order: formData }),
-      });
-
-      // Limpar todos os timers — resposta chegou a tempo
-      stepTimers.forEach(clearTimeout);
-      clearTimeout(hardTimer);
-
-      // Ler o resultado da API uma única vez (usado tanto para UI como para auto-save)
+    const work = (async () => {
+      // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
       let apiResult: EstimateResult | null = null;
-      if (!res.ok) {
-        if (!hardTimeoutFired) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as Record<string, string>).error || "Erro ao analisar pedido");
-        }
-      } else {
-        apiResult = await res.json() as EstimateResult;
-        if (!hardTimeoutFired) {
-          // Actualizar UI apenas se o hard timeout ainda não disparou
-          setAnalysis(apiResult);
+      try {
+        const res = await fetch("/api/simulator/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: formData }),
+        });
+        if (res.ok) {
+          apiResult = (await res.json()) as EstimateResult;
           trackSimulatorEstimate(
             formData.serviceType ?? "desconhecido",
             apiResult.estimatedPriceWithVat ?? apiResult.estimatedPriceWithoutVat ?? 0,
@@ -331,80 +290,66 @@ export default function SimulatorThreePhaseForm() {
               estimateMax: apiResult.estimatedPriceWithVat,
               difficultyLevel: apiResult.difficultyLevel,
               analysisSource: apiResult.analysisSource,
-            }
+            },
           );
         }
-        // Se hard timeout disparou mas API respondeu com preços reais,
-        // actualizar silenciosamente o estado (backoffice verá valores correctos)
-        if (hardTimeoutFired && apiResult.estimatedPriceWithoutVat) {
-          setAnalysis(apiResult);
-        }
+      } catch {
+        /* estimativa opcional — ignora falhas */
       }
 
-      // Auto-save: sempre guardar na BD — usar resultado real da API quando disponível
+      // 2) Guardar o pedido (com a estimativa quando disponível).
       try {
-        const currentAnalysis: EstimateResult = apiResult ?? {
-          status: "estimated" as const,
+        const estimate: EstimateResult = apiResult ?? {
+          status: "estimated",
           estimatedPriceWithoutVat: null,
           vatAmount: null,
           estimatedPriceWithVat: null,
-          difficultyLevel: 2 as const,
-          summary: "Timeout — aguarda análise da equipa",
+          difficultyLevel: 2,
+          summary: "Aguarda análise da equipa",
           assumptions: [],
           missingFields: [],
           customerMessage: "",
-          internalNotes: ["Timeout cliente 7s — API não respondeu a tempo"],
-          analysisSource: "timeout_fallback" as const,
+          internalNotes: ["Estimativa não disponível no envio — análise pela equipa"],
+          analysisSource: "timeout_fallback",
         };
-
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: formData, estimate: currentAnalysis }),
+          body: JSON.stringify({ order: formData, estimate }),
         });
         if (saveRes.ok) {
           const saved = await saveRes.json();
-          setSuccessOrderId(saved.id);
-          // Tracking: pedido confirmado/guardado
-          trackSimulatorOrderConfirmed({
-            service: formData.serviceType ?? undefined,
-            name: formData.receiver?.name ?? undefined,
-            phone: formData.receiver?.phone ?? undefined,
-            email: formData.receiver?.email ?? undefined,
-            city: formData.address?.city ?? formData.originAddress?.city,
-            simulatorData: { orderId: saved.id, serviceType: formData.serviceType },
-          });
+          return (saved.id as number) ?? null;
         }
       } catch {
-        // Auto-save failure não bloqueia o cliente
+        /* gravação falhou — mostramos sucesso na mesma */
       }
+      return null;
+    })();
 
-    } catch (err) {
-      stepTimers.forEach(clearTimeout);
-      clearTimeout(hardTimer);
-      if (!hardTimeoutFired) {
-        const message = err instanceof Error ? err.message : "Erro ao analisar pedido";
-        setError(message);
-      }
-    } finally {
-      if (!hardTimeoutFired) {
-        setIsAnalyzing(false);
-        setAnalyzeStep(0);
-      }
+    const [savedId] = await Promise.all([work, minWait]);
+    clearInterval(countdownInterval);
+
+    if (savedId) {
+      trackSimulatorOrderConfirmed({
+        service: formData.serviceType ?? undefined,
+        name: formData.receiver?.name ?? undefined,
+        phone: formData.receiver?.phone ?? undefined,
+        email: formData.receiver?.email ?? undefined,
+        city: formData.address?.city ?? formData.originAddress?.city,
+        simulatorData: { orderId: savedId, serviceType: formData.serviceType },
+      });
     }
-  };
 
-  const handleSubmitOrder = () => {
-    // O pedido já foi guardado automaticamente em handleAnalyze.
-    // Este handler é mantido como no-op — os botões no AnalysisResultCard
-    // são apenas ilustrativos e o success screen aparece via successOrderId.
+    // Ir sempre para o ecrã de sucesso (savedId -1 = gravação falhou, sucesso mesmo assim).
+    setSuccessOrderId(savedId ?? -1);
+    setIsAnalyzing(false);
   };
 
   const handleReset = () => {
     setFormData({});
-    setAnalysis(null);
     setSuccessOrderId(null);
-    setSuccessAssignedTo(null);
+    setCountdown(0);
     setPhase(1);
     setAddressValue("");
     setError(null);
@@ -442,12 +387,14 @@ export default function SimulatorThreePhaseForm() {
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3">
               Pedido Enviado com Sucesso!
             </h1>
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <span className="text-lg font-semibold text-gray-600">Pedido</span>
-              <span className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-lg px-4 py-1.5 rounded-full">
-                #{successOrderId}
-              </span>
-            </div>
+            {successOrderId && successOrderId > 0 && (
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <span className="text-lg font-semibold text-gray-600">Pedido</span>
+                <span className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-lg px-4 py-1.5 rounded-full">
+                  #{successOrderId}
+                </span>
+              </div>
+            )}
             <p className="text-gray-600 text-base">Seu pedido foi recebido e está pronto para análise</p>
           </div>
 
@@ -471,11 +418,15 @@ export default function SimulatorThreePhaseForm() {
             {/* Details Card */}
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 p-6 shadow-md">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Número de pedido</span>
-                  <span className="font-mono font-bold text-blue-600 text-lg">#{successOrderId}</span>
-                </div>
-                <div className="h-px bg-gradient-to-r from-blue-200 to-cyan-200"></div>
+                {successOrderId && successOrderId > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Número de pedido</span>
+                      <span className="font-mono font-bold text-blue-600 text-lg">#{successOrderId}</span>
+                    </div>
+                    <div className="h-px bg-gradient-to-r from-blue-200 to-cyan-200"></div>
+                  </>
+                )}
                 <div className="text-sm text-gray-700 space-y-3">
                   {successAssignedTo ? (
                     <p>
@@ -596,8 +547,8 @@ export default function SimulatorThreePhaseForm() {
                 />
               )}
 
-              {/* Phase 3: Contact & Review */}
-              {phase === 3 && !analysis && (
+              {/* Phase 3: Contact & Review — escondido durante o envio (loading) */}
+              {phase === 3 && !isAnalyzing && (
                 <Phase3Contact
                   formData={formData}
                   updateField={updateField}
@@ -605,15 +556,24 @@ export default function SimulatorThreePhaseForm() {
                 />
               )}
 
-              {/* Analysis Result */}
-              {phase === 3 && analysis && (
-                <AnalysisResultCard
-                  analysis={analysis}
-                  isLoading={isAnalyzing}
-                  onConfirm={handleSubmitOrder}
-                  isSubmitting={isSubmitting}
-                  alreadySaved={!!successOrderId}
-                />
+              {/* Loading de envio — contagem regressiva de 20s até ao sucesso */}
+              {phase === 3 && isAnalyzing && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 rounded-full bg-cyan-400/30 blur-xl animate-pulse" />
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg">
+                      <Loader2 className="h-10 w-10 animate-spin text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">A enviar o seu pedido…</h3>
+                  <p className="mt-1.5 max-w-sm text-sm text-slate-500">
+                    A preparar o seu pedido para análise da equipa CLYON. Não feche esta página.
+                  </p>
+                  <div className="mt-5 flex items-center gap-2 text-cyan-600">
+                    <span className="text-3xl font-bold tabular-nums">{countdown}</span>
+                    <span className="text-sm font-medium">segundos</span>
+                  </div>
+                </div>
               )}
 
               {/* Error Message */}
@@ -623,8 +583,8 @@ export default function SimulatorThreePhaseForm() {
                 </div>
               )}
 
-              {/* Navigation Buttons */}
-              {phase < 3 || !analysis ? (
+              {/* Navigation Buttons — escondidos durante o envio */}
+              {!isAnalyzing && (
                 <div className="flex gap-4 pt-4 border-t border-gray-200">
                   {phase > 1 && (
                     <button
@@ -662,23 +622,18 @@ export default function SimulatorThreePhaseForm() {
                     </button>
                   )}
 
-                  {phase === 3 && !analysis && (
+                  {phase === 3 && (
                     <button
                       onClick={handleAnalyze}
-                      disabled={!canAnalyze || isAnalyzing}
-                      className="ml-auto flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[240px] justify-center"
+                      disabled={!canAnalyze}
+                      className="ml-auto flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
                     >
-                      {isAnalyzing && (
-                        <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                      )}
-                      {ANALYZE_STEP_LABELS[analyzeStep] || "Analisar pedido"}
+                      Enviar Pedido
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 
