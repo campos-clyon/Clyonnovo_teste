@@ -102,6 +102,67 @@ export default function SimulatorThreePhaseForm() {
     }
   }, [session?.user?.email, session?.user?.name, savedLocation]);
 
+  // Pré-preencher telefone e morada a partir do PERFIL da conta (tabela users).
+  // A sessão Google só traz nome/email — telefone e morada guardada vivem no
+  // perfil e têm de ser buscados à parte. Só corre para utilizadores autenticados
+  // e nunca sobrescreve o que o utilizador já escreveu.
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/users/me", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          user?: {
+            name?: string | null;
+            phone?: string | null;
+            addressLine?: string | null;
+            addressNumber?: string | null;
+            postalCode?: string | null;
+            addressCity?: string | null;
+          };
+        };
+        const u = data.user;
+        if (!u || cancelled) return;
+
+        // Construir a morada formatada a partir dos campos do perfil.
+        const linha = [u.addressLine, u.addressNumber].filter(Boolean).join(", ");
+        const zona = [u.postalCode, u.addressCity].filter(Boolean).join(" ");
+        const savedAddress = [linha, zona].filter(Boolean).join(", ").trim();
+
+        setFormData((prev) => ({
+          ...prev,
+          receiver: {
+            ...prev.receiver,
+            name: prev.receiver?.name || u.name || undefined,
+            phone: prev.receiver?.phone || u.phone || undefined,
+          },
+          address: prev.address?.formattedAddress
+            ? prev.address
+            : savedAddress
+              ? {
+                  ...prev.address,
+                  formattedAddress: savedAddress,
+                  city: u.addressCity || prev.address?.city || undefined,
+                  postalCode: u.postalCode || prev.address?.postalCode || undefined,
+                }
+              : prev.address,
+          city: prev.city || u.addressCity || undefined,
+        }));
+
+        if (savedAddress) setAddressValue((cur) => cur || savedAddress);
+      } catch {
+        /* silencioso — prefill é conveniência, não bloqueia o formulário */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.email]);
+
   // Salvar draft no localStorage
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));

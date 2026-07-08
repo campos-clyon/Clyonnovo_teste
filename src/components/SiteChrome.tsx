@@ -6,12 +6,12 @@ import CoverageNotice from "@/components/CoverageNotice";
 import DeferredCookieConsent from "@/components/DeferredCookieConsent";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import StickyCTA from "@/components/StickyCTA";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 // Rotas de landing de conversão (Google Ads) que não usam o chrome global
 const BARE_ROUTES = ["/orcamento-recolha-lisboa"];
 
-// Rotas internas (dashboard) que usam apenas o Header — sem Footer nem StickyCTA
+// Rotas internas (dashboard) que usam apenas o Header — sem Footer nem barra inferior
 const DASHBOARD_ROUTES = ["/colaboradores", "/simulador", "/conta"];
 
 export default function SiteChrome({
@@ -45,9 +45,10 @@ export default function SiteChrome({
   return (
     <>
       <Header />
-      <main className="site-page-shell pt-[76px]">{children}</main>
+      {/* pb no mobile para o conteúdo não ficar escondido atrás da barra de navegação */}
+      <main className="site-page-shell pt-[76px] pb-[72px] md:pb-0">{children}</main>
       <Footer />
-      <StickyCTA />
+      <MobileBottomNav />
       <DeferredCookieConsent />
       <CoverageNotice />
     </>
