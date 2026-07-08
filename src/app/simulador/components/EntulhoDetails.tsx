@@ -2,15 +2,19 @@
 
 import { Info } from "lucide-react";
 
+type EntulhoState = "ensacado" | "chao" | "misto" | "bigbags" | "unknown";
+
 interface EntulhoDetailsProps {
-  state?: "ensacado" | "chao" | "misto" | "unknown";
+  state?: EntulhoState;
   quantity?: string;
   quantidadeEnsacados?: string;
   quantidadePorEnsacar?: string;
-  onStateChange: (state: "ensacado" | "chao" | "misto" | "unknown") => void;
+  quantidadeBigBags?: string;
+  onStateChange: (state: EntulhoState) => void;
   onQuantityChange: (quantity: string) => void;
   onQuantidadeEnsacadosChange?: (quantity: string) => void;
   onQuantidadePorEnsacarChange?: (quantity: string) => void;
+  onQuantidadeBigBagsChange?: (quantity: string) => void;
 }
 
 export default function EntulhoDetails({
@@ -18,10 +22,12 @@ export default function EntulhoDetails({
   quantity,
   quantidadeEnsacados,
   quantidadePorEnsacar,
+  quantidadeBigBags,
   onStateChange,
   onQuantityChange,
   onQuantidadeEnsacadosChange,
   onQuantidadePorEnsacarChange,
+  onQuantidadeBigBagsChange,
 }: EntulhoDetailsProps) {
   return (
     <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-3">
@@ -68,7 +74,7 @@ export default function EntulhoDetails({
           <button
             type="button"
             onClick={() => onStateChange("misto")}
-            className={`p-2.5 rounded-lg border-2 transition-all text-center col-span-2 ${
+            className={`p-2.5 rounded-lg border-2 transition-all text-center ${
               state === "misto"
                 ? "border-blue-500 bg-white"
                 : "border-slate-200 bg-white hover:border-blue-300"
@@ -76,6 +82,19 @@ export default function EntulhoDetails({
           >
             <p className="text-xs font-semibold text-slate-900">
               Misto
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onStateChange("bigbags")}
+            className={`p-2.5 rounded-lg border-2 transition-all text-center ${
+              state === "bigbags"
+                ? "border-blue-500 bg-white"
+                : "border-slate-200 bg-white hover:border-blue-300"
+            }`}
+          >
+            <p className="text-xs font-semibold text-slate-900">
+              Big Bags
             </p>
           </button>
         </div>
@@ -110,6 +129,20 @@ export default function EntulhoDetails({
               />
             </div>
           </>
+        ) : state === "bigbags" ? (
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-slate-900">
+              Número de big bags
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={quantidadeBigBags || ""}
+              onChange={(e) => onQuantidadeBigBagsChange?.(e.target.value)}
+              placeholder="Ex: 3"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+            />
+          </div>
         ) : (
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-slate-900">

@@ -555,8 +555,12 @@ export function estimateLaborHours(input: FastEstimateInput): number {
     else if (qtd <= 150) hours = 4;
     else if (qtd <= 240) hours = 6;
     else                 hours = 6 + Math.ceil((qtd - 240) / 80) * 2; // proporcional
-    // Entulho no chão: +30% no tempo
-    if (input.entulhoState === "chao" || input.entulhoState === "misto") {
+    // Entulho no chão (inclui big bags, tratados como sacos no chão): +30% no tempo
+    if (
+      input.entulhoState === "chao" ||
+      input.entulhoState === "misto" ||
+      input.entulhoState === "bigbags"
+    ) {
       hours = Math.round(hours * 1.3 * 2) / 2;
     }
     // Acesso difícil: +30 min

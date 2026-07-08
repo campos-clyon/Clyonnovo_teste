@@ -719,6 +719,7 @@ function Phase1Service({
           quantity={formData.entulhoQuantidade}
           quantidadeEnsacados={formData.entulhoQuantidadeEnsacados}
           quantidadePorEnsacar={formData.entulhoQuantidadePorEnsacar}
+          quantidadeBigBags={formData.entulhoQuantidadeBigBags}
           onStateChange={(state) => updateField("entulhoState", state)}
           onQuantityChange={(quantity) => updateField("entulhoQuantidade", quantity)}
           onQuantidadeEnsacadosChange={(q) => {
@@ -731,6 +732,13 @@ function Phase1Service({
             updateField("entulhoQuantidadePorEnsacar", q);
             const total = (parseInt(formData.entulhoQuantidadeEnsacados ?? "0") || 0) + (parseInt(q) || 0);
             if (total > 0) updateField("entulhoQuantidade", String(total));
+          }}
+          onQuantidadeBigBagsChange={(q) => {
+            updateField("entulhoQuantidadeBigBags", q);
+            // Conversão escondida do cliente: 1 big bag = 42 sacos no chão.
+            // O motor de preços recebe sempre sacos em entulhoQuantidade.
+            const sacos = (parseInt(q.replace(/[^\d]/g, "")) || 0) * 42;
+            updateField("entulhoQuantidade", sacos > 0 ? String(sacos) : "");
           }}
         />
       )}

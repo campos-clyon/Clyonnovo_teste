@@ -74,6 +74,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     ensacado: "Ensacado",
     chao:     "No chão",
     misto:    "Misto",
+    bigbags:  "Big bags",
     unknown:  "Não informado",
   },
   priority: {

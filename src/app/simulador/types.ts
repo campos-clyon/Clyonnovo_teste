@@ -87,10 +87,11 @@ export interface OrderData {
   urgency?: "no" | "today" | "tomorrow" | "this_week" | "flexible";
   receiver?: ReceiverData;
   // Campos específicos para entulho
-  entulhoState?: "ensacado" | "chao" | "misto" | "unknown";
+  entulhoState?: "ensacado" | "chao" | "misto" | "bigbags" | "unknown";
   entulhoQuantidade?: string;
   entulhoQuantidadeEnsacados?: string;   // misto: sacos já ensacados
   entulhoQuantidadePorEnsacar?: string;  // misto: sacos por ensacar
+  entulhoQuantidadeBigBags?: string;     // big bags: nº de big bags (1 = 42 sacos)
   // Campos específicos para mudança (dois endereços)
   originAddress?: AddressData;
   originAddressValue?: string;
