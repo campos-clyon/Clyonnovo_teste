@@ -17,6 +17,20 @@ function buildOwnershipMatch(emailNorm: string) {
   return { sql: `LOWER(TRIM(contactEmail)) = ?`, params: [emailNorm] };
 }
 
+/**
+ * Mapeia cada separador visível ao cliente para o grupo de estados internos
+ * correspondente. Os estados internos do backoffice (ex: "sem_assistente",
+ * "atribuido") não devem aparecer crus ao cliente — são agrupados em buckets.
+ */
+const STATUS_GROUPS: Record<string, string[]> = {
+  novo:       ["novo", "pendente", "sem_assistente", "atribuido"],
+  em_analise: ["em_analise", "precisa_info", "estimativa_pronta", "presencial_recomendado"],
+  aprovado:   ["aprovado", "enviado_cliente", "confirmado"],
+  agendado:   ["agendado", "em_execucao", "em_curso"],
+  concluido:  ["concluido"],
+  cancelado:  ["cancelado", "rejeitado"],
+};
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -59,8 +73,15 @@ export async function GET(request: NextRequest) {
     const conditions = [match.sql];
     const params: unknown[] = [...match.params];
     if (status !== "todos") {
-      conditions.push("status = ?");
-      params.push(status);
+      const group = STATUS_GROUPS[status];
+      if (group) {
+        conditions.push(`status IN (${group.map(() => "?").join(", ")})`);
+        params.push(...group);
+      } else {
+        // Retrocompatível: aceita também um estado interno cru.
+        conditions.push("status = ?");
+        params.push(status);
+      }
     }
     const where = conditions.join(" AND ");
 

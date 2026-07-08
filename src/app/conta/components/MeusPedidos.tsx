@@ -13,7 +13,7 @@ function toWhatsAppNumber(phone: string) {
 
 const FILTER_TABS = [
   { value: "todos",      label: "Todos" },
-  { value: "pendente",   label: "Novo" },
+  { value: "novo",       label: "Novo" },
   { value: "em_analise", label: "Em análise" },
   { value: "aprovado",   label: "Aprovado" },
   { value: "agendado",   label: "Agendado" },
@@ -203,6 +203,7 @@ export default function MeusPedidos() {
   const [page, setPage]       = useState(1);
   const [orders, setOrders]   = useState<Order[]>([]);
   const [total, setTotal]     = useState(0);
+  const [grandTotal, setGrandTotal] = useState(0);
   const [pages, setPages]     = useState(1);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
@@ -211,10 +212,19 @@ export default function MeusPedidos() {
     setLoading(true);
     try {
       const res = await fetch(`/api/users/me/orders?status=${f}&page=${p}`, { credentials: "include" });
-      const data = await res.json() as { orders: Order[]; total: number; pages: number };
+      const data = await res.json() as {
+        orders: Order[];
+        total: number;
+        pages: number;
+        summary?: { totalOrders?: number };
+      };
       setOrders(data.orders ?? []);
       setTotal(data.total ?? 0);
       setPages(data.pages ?? 1);
+      // Total geral (todos os pedidos) — independente do filtro ativo.
+      if (typeof data.summary?.totalOrders === "number") {
+        setGrandTotal(data.summary.totalOrders);
+      }
     } finally {
       setLoading(false);
     }
@@ -228,7 +238,7 @@ export default function MeusPedidos() {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Os meus pedidos</h2>
-        <p className="mt-0.5 text-sm text-slate-500">{total} {total === 1 ? "pedido" : "pedidos"} no total</p>
+        <p className="mt-0.5 text-sm text-slate-500">{grandTotal} {grandTotal === 1 ? "pedido" : "pedidos"} no total</p>
       </div>
 
       {/* Filtros */}
