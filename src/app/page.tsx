@@ -197,14 +197,6 @@ export default async function HomePage() {
 
             {/* Left: text content */}
             <div className="max-w-lg">
-              <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1">
-                <span className="flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-1.5 w-1.5 animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                </span>
-                <span className="text-xs font-semibold text-emerald-700">163 avaliações 5 estrelas</span>
-              </div>
-
               <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1">
                 <Sparkles className="h-3 w-3 text-violet-600" />
                 <span className="text-xs font-semibold text-violet-700">
