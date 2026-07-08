@@ -216,9 +216,11 @@ export default function SimulatorThreePhaseForm() {
     // Deve ter serviço selecionado
     if (!formData.serviceType) return false;
 
-    // Para entulho: precisa de estado + quantidade
+    // Para entulho: precisa de estado + (quantidade OU "não tenho a certeza")
     if (formData.serviceType === "recolha_entulho") {
-      const hasEntulhoData = formData.entulhoState && formData.entulhoQuantidade;
+      const hasEntulhoData =
+        formData.entulhoState &&
+        (formData.entulhoQuantidade || formData.entulhoQuantidadeIncerta);
       if (!hasEntulhoData) return false;
       // Para entulho: tem dados suficientes (campo de descrição agora é opcional)
       return true;
@@ -516,6 +518,22 @@ export default function SimulatorThreePhaseForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7FBFF] to-white py-6 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Barra de progresso — % concluído */}
+        <div className="mx-auto mb-5 max-w-md">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Passo {phase} de {PHASES.length}</span>
+            <span className="text-xs font-semibold text-cyan-600">
+              {Math.round((phase / PHASES.length) * 100)}% concluído
+            </span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-600 transition-all duration-500"
+              style={{ width: `${(phase / PHASES.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
         {/* Progress Indicator */}
         <div className="flex items-center justify-center gap-1 sm:gap-3 mb-10 w-full overflow-hidden">
           {PHASES.map((phaseName, idx) => {
@@ -720,8 +738,26 @@ function Phase1Service({
           quantidadeEnsacados={formData.entulhoQuantidadeEnsacados}
           quantidadePorEnsacar={formData.entulhoQuantidadePorEnsacar}
           quantidadeBigBags={formData.entulhoQuantidadeBigBags}
+          volume={formData.entulhoVolume}
           onStateChange={(state) => updateField("entulhoState", state)}
-          onQuantityChange={(quantity) => updateField("entulhoQuantidade", quantity)}
+          onQuantityChange={(quantity) => {
+            updateField("entulhoQuantidade", quantity);
+            // Número exato limpa a estimativa por volume e a incerteza.
+            updateField("entulhoVolume", undefined);
+            if (quantity) updateField("entulhoQuantidadeIncerta", false);
+          }}
+          onVolumeChange={(vol) => {
+            updateField("entulhoVolume", vol);
+            // Conversão escondida do cliente: cada tier de volume → nº de sacos.
+            const map: Record<string, number> = { carrinha: 40, camiao_caixa: 120, camiao_lixo: 240 };
+            if (vol === "incerto") {
+              updateField("entulhoQuantidadeIncerta", true);
+              updateField("entulhoQuantidade", "");
+            } else {
+              updateField("entulhoQuantidadeIncerta", false);
+              updateField("entulhoQuantidade", String(map[vol] ?? ""));
+            }
+          }}
           onQuantidadeEnsacadosChange={(q) => {
             updateField("entulhoQuantidadeEnsacados", q);
             // Combinar misto: total = ensacados + por ensacar
