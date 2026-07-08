@@ -664,8 +664,8 @@ export default function SimulatorThreePhaseForm() {
             </div>
           </div>
 
-          {/* Summary Sidebar - 1 column on desktop */}
-          <div className="lg:col-span-1">
+          {/* Summary Sidebar - só no desktop (escondido no telemóvel) */}
+          <div className="hidden lg:col-span-1 lg:block">
             <div className="sticky top-8">
               <OrderSummaryCard
                 order={formData}

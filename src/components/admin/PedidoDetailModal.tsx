@@ -313,6 +313,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   const [distanceMsg, setDistanceMsg] = useState("");
   const [editPrecoFinal, setEditPrecoFinal] = useState("");
   const [editPrecoFinalIva, setEditPrecoFinalIva] = useState("");
+  // Conversor big bags → sacos (só admin). 1 big bag = 42 sacos no chão.
+  const [bigBags, setBigBags] = useState("");
   const [editMensagemCliente, setEditMensagemCliente] = useState("");
   const [editNotasInternas, setEditNotasInternas] = useState("");
   const [editStatus, setEditStatus] = useState<OrderStatus>("pendente");
@@ -1569,27 +1571,52 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         <textarea rows={5} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className={inputCls} placeholder="Descreva o serviço em detalhe..." />
                       </Field>
 
-                      {/* Entulho: quantidade de sacos e estado — apenas para recolha_entulho */}
+                      {/* Entulho: quantidade de sacos, estado e conversor big bags — apenas para recolha_entulho */}
                       {editServiceType === "recolha_entulho" && (() => {
                         const raw = parseRawOrder(order.rawOrderJson);
                         const qtd: string | null = raw.entulhoQuantidade ?? null;
                         const state: string | null = raw.entulhoState ?? null;
-                        return (qtd || state) ? (
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 flex flex-wrap items-center gap-6">
-                            {qtd && (
-                              <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Quantidade de sacos</p>
-                                <p className="mt-1 text-sm font-bold text-slate-200">{qtd}</p>
+                        const bb = parseInt(bigBags.replace(/[^\d]/g, ""), 10) || 0;
+                        const sacosEquiv = bb * 42;
+                        return (
+                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-4">
+                            {(qtd || state) && (
+                              <div className="flex flex-wrap items-center gap-6">
+                                {qtd && (
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Quantidade de sacos</p>
+                                    <p className="mt-1 text-sm font-bold text-slate-200">{qtd}</p>
+                                  </div>
+                                )}
+                                {state && (
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Estado</p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-300">{tEntulho(state)}</p>
+                                  </div>
+                                )}
                               </div>
                             )}
-                            {state && (
-                              <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Estado</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-300">{tEntulho(state)}</p>
+
+                            {/* Conversor big bags → sacos — uso interno, nunca visível ao cliente */}
+                            <div className={`${qtd || state ? "border-t border-white/[0.06] pt-4" : ""}`}>
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-400">Big bags → sacos (uso interno)</p>
+                              <p className="mt-0.5 text-[11px] text-slate-500">1 big bag = 42 sacos no chão. Usa o equivalente para calcular o preço.</p>
+                              <div className="mt-2 flex items-center gap-3">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={bigBags}
+                                  onChange={(e) => setBigBags(e.target.value)}
+                                  placeholder="Nº de big bags"
+                                  className="w-36 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
+                                />
+                                <span className="text-sm font-semibold text-slate-300">
+                                  {bb > 0 ? `= ${sacosEquiv} sacos` : "= — sacos"}
+                                </span>
                               </div>
-                            )}
+                            </div>
                           </div>
-                        ) : null;
+                        );
                       })()}
 
                       {/* Estimativa da IA — cartões de valores */}
