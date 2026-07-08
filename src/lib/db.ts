@@ -1345,11 +1345,51 @@ export async function updateSimulatorOrder(
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+
+  // Capturar estado + contacto ANTES da atualização, para saber se o estado
+  // mudou e a quem notificar.
+  let prevForNotify:
+    | { status: string; contactEmail: string | null; contactName: string | null; serviceType: string | null }
+    | null = null;
+  if (data.status !== undefined) {
+    const [prevRows] = (await pool.execute(
+      "SELECT status, contactEmail, contactName, serviceType FROM simulatorOrders WHERE id = ? LIMIT 1",
+      [id],
+    )) as [Array<{ status: string; contactEmail: string | null; contactName: string | null; serviceType: string | null }>, unknown];
+    prevForNotify = prevRows[0] ?? null;
+  }
+
   const entries = Object.entries(data).filter(([, v]) => v !== undefined);
   if (!entries.length) return;
   const sets = entries.map(([k]) => `${k} = ?`).join(", ");
   const vals = [...entries.map(([, v]) => v), id];
   await pool.execute(`UPDATE simulatorOrders SET ${sets} WHERE id = ?`, vals);
+
+  // Notificar o cliente por email quando o estado muda de facto — assíncrono,
+  // respeita a preferência notifOrderStatus e nunca bloqueia a atualização.
+  if (data.status !== undefined && prevForNotify && data.status !== prevForNotify.status) {
+    const to = prevForNotify.contactEmail;
+    const newStatus = data.status;
+    if (to) {
+      (async () => {
+        const { statusTriggersEmail, sendOrderStatusEmail } = await import("@/lib/email-status");
+        if (!statusTriggersEmail(newStatus)) return;
+        // Opt-out explícito: só não envia se existir um utilizador com a preferência desligada.
+        const [uRows] = (await pool.execute(
+          "SELECT notifOrderStatus FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) LIMIT 1",
+          [to],
+        )) as [Array<{ notifOrderStatus: number }>, unknown];
+        if (uRows[0] && Number(uRows[0].notifOrderStatus) === 0) return;
+        await sendOrderStatusEmail({
+          to,
+          clienteName: prevForNotify!.contactName,
+          serviceType: prevForNotify!.serviceType,
+          orderId: id,
+          status: newStatus,
+        });
+      })().catch((err) => console.error("[updateSimulatorOrder] falha na notificação de estado:", err));
+    }
+  }
 
   // Exportação para Google Sheets quando o pedido passa a concluído — assíncrona,
   // nunca bloqueia nem falha a atualização do pedido em si (ver google-sheets.ts).
