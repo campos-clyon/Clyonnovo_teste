@@ -63,6 +63,18 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   manutencao_casa: { bg: "bg-sky-50", text: "text-sky-600" },
 };
 
+const CATEGORY_PRICES: Record<string, string> = {
+  recolha_moveis: "40 – 100 €",
+  recolha_monos: "50 – 120 €",
+  recolha_entulho: "3 – 5 €",
+  esvaziamento_casa: "180 – 280 €",
+  esvaziamento_apartamento: "200 – 350 €",
+  mudanca: "50 €/h · mín. 3h",
+  montagem_moveis: "desde 49 €",
+  jardinagem: "desde 64 €",
+  manutencao_casa: "desde 57 €",
+};
+
 const HERO_PILLS = [
   { id: "recolha_moveis", label: "Móveis", href: "/recolha-de-moveis" },
   { id: "recolha_entulho", label: "Entulho", href: "/recolha-de-entulho" },
@@ -299,26 +311,31 @@ export default function HomePage() {
       {/* ── SERVICES ──────────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
               const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-cyan-600" };
+              const price = CATEGORY_PRICES[cat.id];
               return (
                 <Link
                   key={cat.id}
                   href={cat.href}
-                  className="group flex flex-col rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-lg sm:p-6"
+                  className="group flex flex-col rounded-xl border border-[#E2EEF3] bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md sm:p-3.5"
                 >
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors sm:h-14 sm:w-14 ${colors.bg}`}>
-                    <Icon className={`h-5 w-5 sm:h-7 sm:w-7 ${colors.text}`} />
+                  <div className="flex items-start gap-2.5">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colors.bg}`}>
+                      <Icon className={`h-[18px] w-[18px] ${colors.text}`} strokeWidth={2} />
+                    </div>
+                    <h3 className="text-xs font-bold leading-snug text-[#0B1929] sm:text-sm">{cat.label}</h3>
                   </div>
-                  <h3 className="mt-4 text-sm font-bold text-[#0B1929] sm:text-base">{cat.label}</h3>
-                  <p className="mt-1.5 flex-1 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                  <p className="mt-2 flex-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
                     {cat.description}
                   </p>
-                  <span className={`mt-4 text-xs font-semibold sm:text-sm ${colors.text}`}>
-                    Pedir orçamento
-                  </span>
+                  {price && (
+                    <div className={`mt-2.5 text-xs font-bold sm:text-sm ${colors.text}`}>
+                      {price}
+                    </div>
+                  )}
                 </Link>
               );
             })}
