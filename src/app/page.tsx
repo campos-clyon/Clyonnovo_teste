@@ -192,8 +192,21 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <section className="relative min-h-[525px] overflow-hidden bg-gradient-to-b from-slate-50 to-white md:min-h-[605px]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.08),transparent_50%)]" />
+      <section className="relative min-h-[525px] overflow-hidden bg-slate-900 md:min-h-[605px]">
+        {/* Background video */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        >
+          <source src="/hero-video.mp4" type="video/mp4" />
+        </video>
+
+        {/* Overlay: texto legível à esquerda, vídeo visível à direita */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/75 via-white/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-white/40 lg:hidden" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 pb-14 pt-12 sm:px-6 sm:pt-14 lg:px-8 lg:pb-21 lg:pt-18">
           <div className="grid items-center gap-9 lg:grid-cols-2 lg:gap-12">
@@ -248,21 +261,8 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right: carousel — hidden on mobile */}
-            <div className="hidden lg:block">
-              <div className="overflow-hidden rounded-2xl shadow-xl">
-                <div className="aspect-[4/3]">
-                  <ImageCarousel
-                    images={workImages}
-                    autoPlayInterval={5000}
-                    sizes="(max-width: 1023px) 0px, (max-width: 1279px) 50vw, 620px"
-                  />
-                </div>
-              </div>
-              <p className="mt-3 text-center text-xs font-medium text-slate-500">
-                Equipa profissional em Lisboa e Setúbal — resposta média em 11 minutos
-              </p>
-            </div>
+            {/* Right: vídeo aparece através do overlay (placeholder invisível) */}
+            <div className="hidden lg:block" />
 
           </div>
         </div>
