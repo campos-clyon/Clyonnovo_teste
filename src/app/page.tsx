@@ -270,29 +270,53 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────────────── */}
-      <section className="bg-white py-16 sm:py-24">
+      <section className="bg-[#F4F8FB] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-14 text-center">
-            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
+          <div className="mb-16 text-center">
+            <h2 className="text-4xl font-bold tracking-tight text-[#0B1929] sm:text-5xl">
               Simples do início ao fim
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-slate-500 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-base text-slate-500 sm:text-lg">
               Do pedido à porta fechada — sem chamadas desnecessárias, sem orçamentos que nunca chegam.
             </p>
           </div>
 
-          <div className="relative grid gap-8 md:grid-cols-3">
-            <div className="pointer-events-none absolute left-[16.5%] right-[16.5%] top-7 hidden h-px border-t-2 border-dashed border-slate-200 md:block" />
+          <div className="relative grid gap-14 md:grid-cols-3 md:gap-8">
+            {/* Dashed animated line — only between steps on desktop */}
+            <div
+              className="step-line pointer-events-none absolute top-[52px] hidden h-[2px] md:block"
+              style={{ left: "18%", right: "18%" }}
+              aria-hidden="true"
+            />
+
             {HOW_IT_WORKS.map((step, i) => (
-              <div key={step.title} className="relative flex flex-col items-center text-center">
-                <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500 shadow-lg shadow-cyan-500/30 ring-4 ring-white">
-                  <step.icon className="h-7 w-7 text-white" />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#0B1929] text-[10px] font-bold text-white">
-                    {i + 1}
-                  </span>
+              <div
+                key={step.title}
+                className="step-enter relative flex flex-col items-center text-center"
+                style={{ animationDelay: `${i * 180}ms` }}
+              >
+                {/* Icon with float animation + pulse ring */}
+                <div className="relative">
+                  <span
+                    className="step-pulse-ring absolute inset-0 rounded-3xl bg-cyan-400"
+                    style={{ animationDelay: `${i * 400}ms` }}
+                    aria-hidden="true"
+                  />
+                  <div
+                    className="step-icon relative z-10 flex h-[104px] w-[104px] items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-xl shadow-cyan-500/30 transition-transform duration-300 hover:scale-110 hover:rotate-3"
+                    style={{ animationDelay: `${i * 400}ms` }}
+                  >
+                    <step.icon className="h-12 w-12 text-white" strokeWidth={2.2} />
+                    <span className="absolute -right-2 -top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#0B1929] text-sm font-bold text-white shadow-md ring-4 ring-[#F4F8FB]">
+                      {i + 1}
+                    </span>
+                  </div>
                 </div>
-                <h3 className="mt-5 text-lg font-bold text-[#0B1929]">{step.title}</h3>
-                <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">{step.description}</p>
+
+                <h3 className="mt-8 text-xl font-bold text-[#0B1929] sm:text-2xl">{step.title}</h3>
+                <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-500 sm:text-base">
+                  {step.description}
+                </p>
               </div>
             ))}
           </div>
