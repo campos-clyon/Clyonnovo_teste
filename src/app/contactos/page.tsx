@@ -1,8 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Clock3, Mail, MapPin, MessageCircle, Phone, Star } from "lucide-react";
-
-import ContactForm from "@/components/ContactForm";
+import { ArrowRight, Clock3, Mail, MapPin, MessageCircle, Phone, Sparkles, Star } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Contactos — Orçamento Grátis em 24h",
@@ -34,8 +32,9 @@ export default function ContactosPage() {
                 Orçamento grátis em 24h.
               </h1>
               <p className="mt-4 max-w-lg text-base leading-8 text-slate-600">
-                Preencha o formulário ou contacte-nos diretamente. Respondemos com
-                rapidez e ajudamos a perceber o melhor caminho para avançar.
+                Use o simulador para uma estimativa imediata ou contacte-nos
+                diretamente. Respondemos com rapidez e ajudamos a perceber o
+                melhor caminho para avançar.
               </p>
             </div>
             <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.2)]">
@@ -59,21 +58,42 @@ export default function ContactosPage() {
       <section className="bg-slate-50 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
-            {/* Formulário de Contacto */}
-            <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
-              <div className="mb-6">
+            {/* Simulador */}
+            <div className="flex flex-col justify-between rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
+              <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
                   Pedir orçamento
                 </p>
                 <h2 className="mt-3 text-2xl font-bold text-slate-950">
-                  Preencha e escolha como enviar
+                  Calcule o preço em 3 passos
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Todos os campos com * são obrigatórios. Envie por WhatsApp ou email - respondemos em 24h.
+                  Indique o serviço, a morada e os seus dados de contacto — o
+                  simulador dá-lhe uma estimativa imediata, sem compromisso.
                 </p>
+                <ul className="mt-6 space-y-3 text-sm text-slate-700">
+                  <li className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-bold text-cyan-700">1</span>
+                    Escolha o serviço
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-bold text-cyan-700">2</span>
+                    Indique a morada e o acesso
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-bold text-cyan-700">3</span>
+                    Deixe o seu contacto e envie
+                  </li>
+                </ul>
               </div>
-
-              <ContactForm />
+              <Link
+                href="/simulador"
+                className="mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-500 px-6 py-3.5 text-base font-semibold text-white shadow-[0_18px_40px_-22px_rgba(6,182,212,0.75)] transition hover:-translate-y-0.5 hover:bg-cyan-400"
+              >
+                <Sparkles className="h-5 w-5" />
+                <span className="text-white">Abrir simulador</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
 
             {/* Contacto Direto */}
@@ -170,21 +190,15 @@ export default function ContactosPage() {
 
               <div className="rounded-[28px] bg-[linear-gradient(135deg,#062737_0%,#083344_100%)] p-6 text-white">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                  Quer calcular primeiro?
+                  Sem compromisso
                 </p>
                 <h3 className="mt-3 text-2xl font-bold leading-tight">
-                  Use o simulador para ter uma estimativa rápida.
+                  Resposta em 24h, sempre.
                 </h3>
                 <p className="mt-3 text-sm leading-8 text-slate-300">
-                  Calcule online o valor aproximado do seu pedido antes de entrar em contacto.
+                  Peça o orçamento pelo simulador ou fale connosco — a nossa
+                  equipa responde com rapidez e sem qualquer compromisso.
                 </p>
-                <Link
-                  href="/simulador"
-                  className="mt-5 inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
-                >
-                  <span className="text-white">Abrir simulador</span>
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
               </div>
             </div>
           </div>

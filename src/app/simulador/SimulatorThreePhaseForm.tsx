@@ -17,7 +17,6 @@ import type {
 } from "./types";
 import AddressAutocomplete from "./components/AddressAutocomplete";
 import OrderSummaryCard from "./components/OrderSummaryCard";
-import ContactAccessForm from "./components/ContactAccessForm";
 import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import CompactOrderDetails from "./components/CompactOrderDetails";

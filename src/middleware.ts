@@ -24,7 +24,8 @@ export async function middleware(request: NextRequest) {
   const { nextUrl, headers } = request;
 
   // Proteger /conta — requer sessão de cliente Google
-  if (nextUrl.pathname.startsWith("/conta")) {
+  // (startsWith("/conta") apanharia também "/contactos" — por isso a checagem exata + "/conta/")
+  if (nextUrl.pathname === "/conta" || nextUrl.pathname.startsWith("/conta/")) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,

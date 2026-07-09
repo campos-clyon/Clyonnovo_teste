@@ -119,41 +119,6 @@ function getStoredUtms(): Record<string, string> {
   }
 }
 
-function isFromAd(utms: Record<string, string>): boolean {
-  if (utms.gclid) return true;
-  const medium = (utms.utm_medium || "").toLowerCase();
-  if (["cpc", "ppc", "paid", "ads", "paidsearch"].includes(medium)) return true;
-  const source = (utms.utm_source || "").toLowerCase();
-  if (source === "google" && medium) return true;
-  return false;
-}
-
-const SERVICE_OPTIONS = [
-  "Recolha de entulho",
-  "Recolha de móveis",
-  "Recolha de monos/volumosos",
-  "Esvaziamento de casa",
-  "Limpeza pós-obra",
-  "Outro",
-];
-
-const ACCESS_OPTIONS = [
-  "Rés-do-chão",
-  "Com elevador",
-  "Sem elevador",
-  "Escadas estreitas",
-  "Acesso difícil",
-];
-
-const URGENCY_OPTIONS = ["Hoje", "Amanhã", "Esta semana", "Sem urgência"];
-
-const CONTACT_PREFERENCES = [
-  { value: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
-  { value: "Chamada", label: "Chamada", icon: Phone },
-  { value: "SMS/Mensagem", label: "SMS", icon: MessageSquare },
-  { value: "Email", label: "Email", icon: Mail },
-] as const;
-
 const AREAS = [
   "Lisboa",
   "Amadora",
@@ -439,337 +404,66 @@ function DirectContactStrip() {
   );
 }
 
-/* ---------------------------- Lead Form ---------------------------- */
+/* ------------------------- Simulator CTA Card ------------------------- */
 function LeadForm() {
-  const [form, setForm] = useState({
-    nome: "",
-    telefone: "",
-    email: "",
-    localidade: "",
-    servico: "",
-    acesso: "",
-    urgencia: "",
-    descricao: "",
-    preferencia: "",
-  });
-  const [consent, setConsent] = useState(false);
-  const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const formStarted = useRef(false);
-
-  function handleFirstInteraction() {
-    if (!formStarted.current) {
-      formStarted.current = true;
-      pushDataLayer({ event: "form_start", form_name: "orcamento_recolha" });
-    }
-  }
-
-  function update(field: keyof typeof form, value: string) {
-    handleFirstInteraction();
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (value) setErrors((prev) => ({ ...prev, [field]: false }));
-  }
-
-  function isValidEmail(value: string) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    const newErrors: Record<string, boolean> = {
-      nome: !form.nome.trim(),
-      telefone: !form.telefone.trim(),
-      email: !isValidEmail(form.email),
-      localidade: !form.localidade.trim(),
-      servico: !form.servico,
-      preferencia: !form.preferencia,
-      consent: !consent,
-    };
-    setErrors(newErrors);
-    if (Object.values(newErrors).some(Boolean)) return;
-
+  function handleOpenSimulator() {
     const utms = getStoredUtms();
     pushDataLayer({
       event: "lead_form_submit",
       form_name: "orcamento_recolha",
-      service_type: form.servico || undefined,
-      location: form.localidade || undefined,
-      urgency: form.urgencia || undefined,
-      access_type: form.acesso || undefined,
-      contact_preference: form.preferencia || undefined,
+      cta: "abrir_simulador",
       ...utms,
     });
-
     trackLeadConversion();
-
-    const fromAd = isFromAd(utms);
-
-    const message = [
-      "Olá CLYON, gostaria de pedir um orçamento.",
-      "",
-      `Nome: ${form.nome}`,
-      `Telefone: ${form.telefone}`,
-      `Email: ${form.email}`,
-      `Localidade: ${form.localidade}`,
-      `Serviço: ${form.servico}`,
-      `Acesso: ${form.acesso}`,
-      `Urgência: ${form.urgencia}`,
-      `Preferência de contacto: ${form.preferencia}`,
-      `Descrição: ${form.descricao}`,
-      "",
-      fromAd ? "(via AD)" : null,
-      "Obrigado.",
-    ]
-      .filter((line) => line !== null)
-      .join("\n");
-
-    const encoded = encodeURIComponent(message);
-
-    switch (form.preferencia) {
-      case "WhatsApp":
-        trackWhatsApp("hero_form");
-        window.open(
-          `${WHATSAPP_BASE}?text=${encoded}`,
-          "_blank",
-          "noopener,noreferrer",
-        );
-        break;
-      case "Chamada":
-        trackCall("hero_form");
-        window.location.href = `tel:${PHONE_TEL}`;
-        break;
-      case "SMS/Mensagem":
-        trackSms("hero_form");
-        window.location.href = `sms:${PHONE_SMS}?body=${encoded}`;
-        break;
-      case "Email":
-        trackEmail("hero_form");
-        window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encoded}`;
-        break;
-      default:
-        break;
-    }
-  }
-
-  const baseInput =
-    "w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:outline-none focus:ring-2";
-  function inputClass(field: string) {
-    return `${baseInput} ${
-      errors[field]
-        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-        : "border-slate-300 focus:border-cyan-400 focus:ring-cyan-100"
-    }`;
-  }
-  const selectArrow =
-    "appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:18px] bg-[right_0.75rem_center] bg-no-repeat pr-10";
-
-  function fieldError(field: string, msg: string) {
-    return errors[field] ? (
-      <p className="mt-1 text-xs font-medium text-red-500">{msg}</p>
-    ) : null;
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-300/40 sm:p-7"
-    >
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-300/40 sm:p-7">
       <div className="flex items-center gap-3">
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-          <Camera className="h-5 w-5" />
+          <Sparkles className="h-5 w-5" />
         </span>
         <div>
           <h2 className="text-lg font-bold text-slate-900">
             Peça o seu orçamento
           </h2>
           <p className="text-xs text-slate-500">
-            Preencha os dados e escolha como prefere ser contactado.
+            Calcule o preço em 3 passos, sem compromisso.
           </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <input
-              type="text"
-              placeholder="Nome *"
-              aria-label="Nome"
-              value={form.nome}
-              onChange={(e) => update("nome", e.target.value)}
-              className={inputClass("nome")}
-            />
-            {fieldError("nome", "Indique o seu nome.")}
-          </div>
-          <div>
-            <input
-              type="tel"
-              placeholder="Telefone *"
-              aria-label="Telefone"
-              value={form.telefone}
-              onChange={(e) => update("telefone", e.target.value)}
-              className={inputClass("telefone")}
-            />
-            {fieldError("telefone", "Indique o seu telefone.")}
-          </div>
-        </div>
+      <ul className="mt-5 space-y-2.5 text-sm text-slate-700">
+        <li className="flex items-center gap-3">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-cyan-700">1</span>
+          Escolha o serviço
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-cyan-700">2</span>
+          Indique a morada e o acesso
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-cyan-700">3</span>
+          Deixe o seu contacto e envie
+        </li>
+      </ul>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <input
-              type="email"
-              placeholder="Email *"
-              aria-label="Email"
-              value={form.email}
-              onChange={(e) => update("email", e.target.value)}
-              className={inputClass("email")}
-            />
-            {fieldError("email", "Indique um email válido.")}
-          </div>
-          <div>
-            <input
-              type="text"
-              placeholder="Localidade *"
-              aria-label="Localidade"
-              value={form.localidade}
-              onChange={(e) => update("localidade", e.target.value)}
-              className={inputClass("localidade")}
-            />
-            {fieldError("localidade", "Indique a sua localidade.")}
-          </div>
-        </div>
-
-        <p className="-mt-1 text-xs text-slate-400">
-          Usamos o email apenas para responder ao seu pedido de orçamento.
-        </p>
-
-        <div>
-          <select
-            aria-label="Tipo de serviço"
-            value={form.servico}
-            onChange={(e) => update("servico", e.target.value)}
-            className={`${inputClass("servico")} ${selectArrow} ${form.servico ? "text-slate-900" : "text-slate-400"}`}
-          >
-            <option value="" disabled>
-              Tipo de serviço *
-            </option>
-            {SERVICE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt} className="text-slate-900">
-                {opt}
-              </option>
-            ))}
-          </select>
-          {fieldError("servico", "Escolha o tipo de serviço.")}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <select
-            aria-label="Tipo de acesso"
-            value={form.acesso}
-            onChange={(e) => update("acesso", e.target.value)}
-            className={`${baseInput} border-slate-300 focus:border-cyan-400 focus:ring-cyan-100 ${selectArrow} ${form.acesso ? "text-slate-900" : "text-slate-400"}`}
-          >
-            <option value="" disabled>
-              Tipo de acesso
-            </option>
-            {ACCESS_OPTIONS.map((opt) => (
-              <option key={opt} value={opt} className="text-slate-900">
-                {opt}
-              </option>
-            ))}
-          </select>
-
-          <select
-            aria-label="Urgência"
-            value={form.urgencia}
-            onChange={(e) => update("urgencia", e.target.value)}
-            className={`${baseInput} border-slate-300 focus:border-cyan-400 focus:ring-cyan-100 ${selectArrow} ${form.urgencia ? "text-slate-900" : "text-slate-400"}`}
-          >
-            <option value="" disabled>
-              Urgência
-            </option>
-            {URGENCY_OPTIONS.map((opt) => (
-              <option key={opt} value={opt} className="text-slate-900">
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <textarea
-          placeholder="O que precisa recolher?"
-          aria-label="Descrição"
-          rows={2}
-          value={form.descricao}
-          onChange={(e) => update("descricao", e.target.value)}
-          className={`${baseInput} resize-none border-slate-300 focus:border-cyan-400 focus:ring-cyan-100`}
-        />
-
-        <div>
-          <span className="mb-2 block text-sm font-semibold text-slate-700">
-            Como prefere ser contactado? *
-          </span>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {CONTACT_PREFERENCES.map((pref) => {
-              const active = form.preferencia === pref.value;
-              return (
-                <button
-                  key={pref.value}
-                  type="button"
-                  onClick={() => update("preferencia", pref.value)}
-                  aria-pressed={active}
-                  className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
-                    active
-                      ? "border-cyan-500 bg-[#ecfeff] text-cyan-700 shadow-sm ring-2 ring-cyan-100"
-                      : errors.preferencia
-                        ? "border-red-300 bg-white text-slate-600 hover:border-cyan-300"
-                        : "border-slate-300 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700"
-                  }`}
-                >
-                  <pref.icon className="h-5 w-5" />
-                  {pref.label}
-                </button>
-              );
-            })}
-          </div>
-          {fieldError("preferencia", "Escolha como prefere ser contactado.")}
-        </div>
-
-        <label className="mt-1 flex items-start gap-2.5 text-xs text-slate-600">
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(e) => {
-              setConsent(e.target.checked);
-              if (e.target.checked)
-                setErrors((prev) => ({ ...prev, consent: false }));
-            }}
-            className={`mt-0.5 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-cyan-600 focus:ring-cyan-400 ${
-              errors.consent ? "border-red-400" : ""
-            }`}
-          />
-          <span className={errors.consent ? "text-red-500" : ""}>
-            Autorizo a CLYON a contactar-me sobre este pedido de orçamento.
-          </span>
-        </label>
-
-        <button
-          type="submit"
-          className="mt-1 inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
-        >
-          <Sparkles className="h-5 w-5" />
-          Enviar Pedido de Orçamento
-        </button>
-        <p className="text-center text-xs text-slate-500">
-          Após enviar, abrimos o canal escolhido com os seus dados preenchidos.
-        </p>
-        <p className="text-center text-xs text-slate-400">
-          O pedido de orçamento é gratuito. O serviço de recolha é pago mediante
-          avaliação.
-        </p>
-      </div>
-    </form>
+      <a
+        href="/simulador"
+        onClick={handleOpenSimulator}
+        className="mt-6 inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
+      >
+        <Sparkles className="h-5 w-5" />
+        Abrir Simulador de Orçamento
+      </a>
+      <p className="mt-3 text-center text-xs text-slate-500">
+        Prefere enviar fotos diretamente? Use o WhatsApp abaixo.
+      </p>
+      <p className="text-center text-xs text-slate-400">
+        O pedido de orçamento é gratuito. O serviço de recolha é pago mediante
+        avaliação.
+      </p>
+    </div>
   );
 }
 
