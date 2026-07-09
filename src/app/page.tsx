@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   BadgeCheck,
@@ -428,138 +429,15 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#DBF0FA] via-[#CDE7F3] to-[#B8DDEE] p-4 ring-1 ring-[#B8DDEE] sm:p-6">
-              <svg
-                viewBox="0 0 800 500"
+            <div className="relative overflow-hidden rounded-3xl ring-1 ring-[#B8DDEE]">
+              <Image
+                src="/mapa-cobertura.webp"
+                alt="Mapa de cobertura CLYON — Lisboa, Margem Sul e Setúbal"
+                width={1123}
+                height={644}
+                sizes="(min-width: 1024px) 50vw, 100vw"
                 className="h-auto w-full"
-                aria-label="Mapa de cobertura CLYON em Portugal"
-              >
-                <defs>
-                  <linearGradient id="landGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#FFFFFF" />
-                    <stop offset="100%" stopColor="#F4F9FB" />
-                  </linearGradient>
-                  <filter id="pinShadow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
-                    <feOffset dx="0" dy="2" result="off" />
-                    <feComponentTransfer><feFuncA type="linear" slope="0.35" /></feComponentTransfer>
-                    <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
-                  </filter>
-                </defs>
-
-                {/* Spain (background) */}
-                <path
-                  d="M 385 55 L 800 55 L 800 500 L 400 500 L 395 470 L 380 440 L 375 410 L 372 380 L 375 340 L 378 300 L 380 260 L 380 220 L 378 180 L 380 140 L 383 100 L 385 55 Z"
-                  fill="url(#landGrad)"
-                  stroke="#B8DDEE"
-                  strokeWidth="1"
-                />
-
-                {/* Portugal outline (realistic-ish) */}
-                <path
-                  d="M 245 60
-                     C 262 58, 285 62, 315 68
-                     C 340 74, 365 82, 380 95
-                     L 385 110
-                     C 386 130, 385 155, 383 180
-                     C 381 210, 380 245, 378 280
-                     C 376 320, 375 355, 375 385
-                     C 375 415, 378 445, 372 465
-                     L 355 490
-                     L 320 495
-                     L 285 493
-                     L 250 490
-                     C 245 475, 240 458, 235 435
-                     L 225 415
-                     L 218 425
-                     L 210 445
-                     L 200 450
-                     L 195 435
-                     L 190 415
-                     L 195 395
-                     L 200 375
-                     L 205 355
-                     L 210 335
-                     L 215 315
-                     L 218 305
-                     L 208 300
-                     L 200 305
-                     L 190 315
-                     L 182 320
-                     L 175 315
-                     L 172 305
-                     L 178 295
-                     L 195 285
-                     L 210 270
-                     L 218 250
-                     L 220 225
-                     L 218 200
-                     L 215 180
-                     L 210 165
-                     L 200 155
-                     L 195 140
-                     L 200 125
-                     L 210 110
-                     L 220 95
-                     L 230 78
-                     L 245 60 Z"
-                  fill="url(#landGrad)"
-                  stroke="#0891B2"
-                  strokeWidth="1.8"
-                />
-
-                {/* Coverage zones (soft cyan blobs) */}
-                <ellipse cx="215" cy="290" rx="55" ry="42" fill="#5EEAD4" fillOpacity="0.28" />
-                <ellipse cx="235" cy="380" rx="60" ry="35" fill="#5EEAD4" fillOpacity="0.28" />
-
-                {/* Subtle pulse rings around Lisboa cluster */}
-                <circle cx="215" cy="290" r="80" fill="none" stroke="#0891B2" strokeWidth="0.5" strokeDasharray="2 4" opacity="0.4" />
-                <circle cx="215" cy="290" r="110" fill="none" stroke="#0891B2" strokeWidth="0.5" strokeDasharray="2 4" opacity="0.25" />
-
-                {/* Text labels */}
-                <text x="80" y="220" fontSize="15" fontWeight="500" letterSpacing="4" fill="#5B9BB8" fontFamily="serif">
-                  OCEANO
-                </text>
-                <text x="60" y="242" fontSize="15" fontWeight="500" letterSpacing="4" fill="#5B9BB8" fontFamily="serif">
-                  ATLÂNTICO
-                </text>
-                <text x="530" y="200" fontSize="22" fontWeight="500" letterSpacing="8" fill="#5B9BB8" fontFamily="serif">
-                  PORTUGAL
-                </text>
-
-                {/* Location pins (teardrop) — clustered on Lisboa/Setubal region */}
-                {[
-                  { x: 210, y: 275 }, // Lisboa
-                  { x: 195, y: 268 }, // Sintra
-                  { x: 178, y: 280 }, // Cascais
-                  { x: 200, y: 258 }, // Loures
-                  { x: 215, y: 262 }, // Odivelas
-                  { x: 205, y: 285 }, // Amadora
-                  { x: 220, y: 300 }, // Almada
-                  { x: 232, y: 308 }, // Seixal
-                  { x: 245, y: 305 }, // Barreiro
-                  { x: 255, y: 368 }, // Setúbal
-                  { x: 240, y: 375 }, // Palmela
-                  { x: 225, y: 388 }, // Sesimbra
-                  { x: 245, y: 358 }, // Montijo
-                ].map((pin, i) => (
-                  <g key={i} transform={`translate(${pin.x} ${pin.y})`} filter="url(#pinShadow)">
-                    <path
-                      d="M 0 -20 C -9 -20 -15 -14 -15 -7 C -15 2 -8 12 0 22 C 8 12 15 2 15 -7 C 15 -14 9 -20 0 -20 Z"
-                      fill="#0891B2"
-                    />
-                    <circle cx="0" cy="-7" r="4.5" fill="#FFFFFF" />
-                  </g>
-                ))}
-
-                {/* Compass rose (bottom-right) */}
-                <g transform="translate(730 445)">
-                  <circle r="18" fill="#FFFFFF" stroke="#5B9BB8" strokeWidth="1" opacity="0.85" />
-                  <path d="M 0 -14 L 4 0 L 0 14 L -4 0 Z" fill="#5B9BB8" />
-                  <path d="M 0 -14 L 4 0 L 0 0 Z" fill="#0891B2" />
-                  <text x="0" y="-22" textAnchor="middle" fontSize="10" fontWeight="600" fill="#5B9BB8">N</text>
-                </g>
-              </svg>
+              />
             </div>
           </div>
         </div>
