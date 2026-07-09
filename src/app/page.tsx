@@ -194,7 +194,7 @@ export default function HomePage() {
         </video>
 
         {/* Overlay */}
-        <div className="absolute inset-0 bg-[#820AD1]/5" />
+        <div className="absolute inset-0 bg-[#820AD1]/[0.02]" />
 
         {/* Content */}
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
