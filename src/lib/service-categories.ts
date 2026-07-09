@@ -94,7 +94,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "outro-servico",
     label: "Outro serviço",
     emoji: "⭐",
-    description: "Não encontrou o que precisa? Descreva o serviço e a IA calcula um orçamento à medida.",
+    description: "Não encontrou o que precisa? Descreva o serviço e preparamos um orçamento à medida.",
     href: "/simulador",
   },
 ];
