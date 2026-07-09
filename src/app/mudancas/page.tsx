@@ -345,12 +345,11 @@ export default function MudancasPage() {
         <div className="rounded-[30px] border border-emerald-100 bg-emerald-50/50 p-7">
           <h2 className="text-2xl font-bold text-slate-950">Serviços relacionados</h2>
           <p className="mt-2 text-slate-600">Muitas vezes a mudança vem acompanhada de outros serviços:</p>
-          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
               { href: "/recolha-de-moveis", label: "Recolha de Móveis", desc: "Retirar móveis que não vão para a nova casa" },
               { href: "/esvaziamento-casas", label: "Esvaziamento de Casas", desc: "Libertar o imóvel completamente" },
               { href: "/recolha-de-entulho", label: "Recolha de Entulho", desc: "Se houver obras na nova casa" },
-              { href: "/limpeza-pos-obra", label: "Limpeza Pós-Obra", desc: "Deixar o novo espaço pronto" },
             ].map((item) => (
               <Link
                 key={item.href}

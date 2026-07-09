@@ -28,7 +28,6 @@ export const metadata: Metadata = {
 const services = [
   { name: "Recolha de Móveis", slug: "recolha-moveis", color: "cyan" },
   { name: "Recolha de Entulho", slug: "recolha-entulho", color: "amber" },
-  { name: "Limpeza Pós-Obra", slug: "limpeza-pos-obra", color: "emerald" },
   { name: "Esvaziamento de Casas", slug: "esvaziamento-casas", color: "violet" },
 ];
 

@@ -56,12 +56,6 @@ const solucoes = [
     icon: Home,
   },
   {
-    label: "Limpeza Pós-Obra",
-    description: "Apoio após remodelações, obras e mudanças.",
-    href: "/limpeza-pos-obra",
-    icon: Sparkles,
-  },
-  {
     label: "Limpeza de Quintais",
     description: "Lixo verde, resíduos exteriores e limpeza de espaços.",
     href: "/limpeza-de-quintais",

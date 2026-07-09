@@ -358,23 +358,6 @@ export const SERVICES: ServiceData[] = [
       "desocupação de casa",
     ],
   },
-  {
-    slug: "limpeza-pos-obra",
-    name: "Limpeza Pós-Obra",
-    shortName: "limpeza pós-obra",
-    category: "limpeza pós-obra",
-    description:
-      "Limpeza pós-obra para deixar o espaço pronto a usar, com detalhe e rapidez.",
-    longDescription:
-      "Executamos limpeza pós-obra em apartamentos, moradias, lojas e escritórios. Removemos pó, restos leves, sujidade fina e damos acabamento visual para que o espaço fique pronto a habitar ou entregar.",
-    primaryKeyword: "limpeza pós-obra",
-    keywords: [
-      "limpeza pós-obra",
-      "limpeza após obra",
-      "limpeza final de obra",
-      "limpeza de construção",
-    ],
-  },
 ];
 
 export function getRegion(slug: string) {

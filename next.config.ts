@@ -190,14 +190,31 @@ const nextConfig: NextConfig = {
         destination: "/recolha-de-moveis",
         permanent: true,
       },
+      // Serviço de limpeza pós-obra descontinuado — redirect para /servicos
       {
         source: "/limpeza-obra",
-        destination: "/limpeza-pos-obra",
+        destination: "/servicos",
         permanent: true,
       },
       {
-        source: "/limpeza-pos-obra-lisboa",
-        destination: "/limpeza-pos-obra",
+        source: "/limpeza-pos-obra",
+        destination: "/servicos",
+        permanent: true,
+      },
+      {
+        source: "/limpeza-pos-obra-:city*",
+        destination: "/servicos",
+        permanent: true,
+      },
+      // Serviço "camião com motorista" descontinuado — redirect para /mudancas
+      {
+        source: "/camiao-com-motorista",
+        destination: "/mudancas",
+        permanent: true,
+      },
+      {
+        source: "/camiao-com-motorista-:city*",
+        destination: "/mudancas",
         permanent: true,
       },
       {

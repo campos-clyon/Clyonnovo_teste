@@ -504,56 +504,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   },
 
   // ---------------------------------------------------------------------------
-  // 8. LIMPEZA PÓS-OBRA EM LISBOA
-  // ---------------------------------------------------------------------------
-  "limpeza-pos-obra-lisboa": {
-    citySlug: "lisboa",
-    serviceSlug: "limpeza-pos-obra",
-    metaTitle: "Limpeza Pós-Obra em Lisboa - Apartamentos, Lojas e Escritórios | CLYON",
-    metaDescription:
-      "Limpeza pós-obra profissional em Lisboa. Retiramos pó de construção, manchas de tinta e cimento. Apartamentos, lojas e escritórios. Orçamento grátis, equipa experiente.",
-    h1: "Limpeza Pós-Obra Profissional em Lisboa",
-    localIntro:
-      "Acabou a obra e o espaço está cheio de pó fino, restos de massa, manchas de tinta e cimento no chão? A CLYON faz a limpeza final profissional para entregar o imóvel pronto a habitar. Trabalhamos em todo o tipo de obras em Lisboa: remodelações de apartamentos antigos em Alfama e Mouraria, renovações de lojas na Baixa e Chiado, obras de escritórios nas Avenidas Novas e Saldanha. A nossa equipa sabe que o pó de obra é diferente - penetra em todas as frestas e precisa de técnica própria para remover.",
-    accessNotes:
-      "Em muitas obras de Lisboa, a limpeza só pode ser feita depois de sair o último entulho. Podemos coordenar a recolha de entulho e a limpeza no mesmo dia para simplificar o processo.",
-    neighborhoodHighlight:
-      "As zonas com mais pedidos de limpeza pós-obra em Lisboa são as Avenidas Novas (escritórios), o centro histórico (apartamentos em renovação) e o Parque das Nações (apartamentos e lojas novas).",
-    nearbyAreas: ["Amadora", "Loures", "Odivelas", "Oeiras"],
-    faqs: [
-      {
-        q: "O que inclui a limpeza pós-obra da CLYON em Lisboa?",
-        a: "Retiramos pó de obra de todas as superfícies (paredes, tetos, rodapés), limpamos vidros por dentro e fora, removemos manchas de tinta e massa do chão, aspiramos e lavamos todos os pavimentos. O espaço fica pronto a mobilar ou entregar ao proprietário.",
-      },
-      {
-        q: "Quanto custa limpeza pós-obra de um T2 em Lisboa?",
-        a: "Um apartamento T2 em Lisboa (cerca de 70m²), após remodelação completa, custa entre 150EUR e 250EUR. Se a obra foi só numa divisão, o preço é proporcional. Enviamos orçamento após ver fotos do estado atual.",
-      },
-      {
-        q: "A CLYON retira entulho e faz limpeza no mesmo dia?",
-        a: "Sim, é um dos nossos serviços mais pedidos. Primeiro retiramos os sacos de entulho e restos maiores, depois fazemos a limpeza fina. Coordenamos as duas equipas para o cliente não ter de marcar dois dias.",
-      },
-      {
-        q: "Fazem limpeza pós-obra de escritórios em Lisboa?",
-        a: "Sim. Escritórios, lojas, consultórios e espaços comerciais. Podemos trabalhar ao fim de semana ou fora do horário laboral para não interferir com a atividade.",
-      },
-      {
-        q: "A limpeza pós-obra inclui vidros e caixilhos?",
-        a: "Sim. Limpamos vidros, caixilhos, peitoris e portadas. O pó de obra cola-se muito aos vidros e é uma das partes mais demoradas da limpeza.",
-      },
-    ],
-    pricingNotes: [
-      "Apartamento T1 (até 50m²): 100EUR a 150EUR",
-      "Apartamento T2 (50-80m²): 150EUR a 250EUR",
-      "Apartamento T3 (80-120m²): 200EUR a 350EUR",
-      "Loja ou escritório pequeno (até 60m²): 120EUR a 200EUR",
-      "Escritório médio (100m²): 180EUR a 300EUR",
-    ],
-    ctaText: "Obra acabada em Lisboa? Deixamos o espaço pronto a usar - peça orçamento.",
-  },
-
-  // ---------------------------------------------------------------------------
-  // 9. RECOLHA DE MÓVEIS EM SETÚBAL
+  // 8. RECOLHA DE MÓVEIS EM SETÚBAL
   // ---------------------------------------------------------------------------
   "recolha-moveis-setubal": {
     citySlug: "setubal",

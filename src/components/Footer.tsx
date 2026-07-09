@@ -70,8 +70,8 @@ export default function Footer() {
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
               <li><Link href="/recolha-de-moveis" style={linkStyleInline}>Recolha de Móveis</Link></li>
               <li><Link href="/recolha-de-entulho" style={linkStyleInline}>Recolha de Entulho</Link></li>
-              <li><Link href="/limpeza-pos-obra" style={linkStyleInline}>Limpeza Pós-Obra</Link></li>
               <li><Link href="/esvaziamento-de-casas" style={linkStyleInline}>Esvaziamento de Casas</Link></li>
+              <li><Link href="/mudancas" style={linkStyleInline}>Mudanças</Link></li>
               <li><Link href="/precos" style={linkStyleInline}>Preços orientativos</Link></li>
             </ul>
           </div>

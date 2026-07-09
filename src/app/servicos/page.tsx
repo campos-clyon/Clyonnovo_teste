@@ -46,14 +46,6 @@ const services = [
     cta: "Ver serviço",
   },
   {
-    title: "Limpeza Pós-Obra",
-    description:
-      "Limpeza final para deixar a casa, loja ou escritório pronto a usar depois da obra, com ritmo e acabamento cuidado.",
-    icon: Zap,
-    href: "/limpeza-pos-obra",
-    cta: "Ver serviço",
-  },
-  {
     title: "Esvaziamento de Casas",
     description:
       "Libertação completa de casas, apartamentos, lojas e imóveis com recolha de móveis, monos e resíduos acumulados.",

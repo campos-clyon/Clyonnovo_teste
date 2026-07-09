@@ -12,13 +12,12 @@ const simulatorCategoryMap: Record<string, string> = {
   "recolha-entulho": "entulho",
   mudancas: "mudancas",
   "esvaziamento-casas": "moveis",
-  "limpeza-pos-obra": "limpeza",
 };
 
 export const metadata: Metadata = {
   title: "Regiões de Atuação em Lisboa, Margem Sul e Setúbal",
   description:
-    "Conheça as regiões de atuação da CLYON e encontre páginas locais fortes para recolha de entulho, móveis, monos, mudanças e limpeza pós-obra.",
+    "Conheça as regiões de atuação da CLYON e encontre páginas locais fortes para recolha de entulho, móveis, monos, mudanças e esvaziamento de casas.",
   alternates: {
     canonical: `${SITE_URL}/regioes`,
   },
@@ -96,11 +95,10 @@ export default function RegioesPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Páginas hub</p>
           <h2 className="mt-3 text-2xl font-bold text-slate-950">Hubs de Serviço</h2>
           <p className="mt-3 text-slate-600">Páginas principais de cada serviço com links para todas as cidades.</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {[
               { name: "Recolha de Móveis", href: "/recolha-de-moveis", color: "cyan" },
               { name: "Recolha de Entulho", href: "/recolha-de-entulho", color: "amber" },
-              { name: "Limpeza Pós-Obra", href: "/limpeza-pos-obra", color: "emerald" },
               { name: "Esvaziamento de Casas", href: "/esvaziamento-casas", color: "violet" },
             ].map((hub) => (
               <Link

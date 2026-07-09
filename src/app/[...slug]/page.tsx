@@ -64,10 +64,6 @@ function buildTitle(serviceName: string, cityName: string, serviceSlug: string, 
     return `Recolha de Entulho em ${cityName} — Orçamento Grátis`;
   }
 
-  if (serviceSlug === "limpeza-pos-obra") {
-    return `Limpeza Pós-Obra em ${cityName} — Resposta em 24h`;
-  }
-
   return `${serviceName} em ${cityName} — Orçamento Grátis`;
 }
 
@@ -98,11 +94,7 @@ function buildDescription(
     return `Recolha de entulho em ${cityName}, ${regionLabel}. Carregamento directo, sacos big bag, limpeza fina. Resposta em 24h. Orçamento grátis!`;
   }
 
-  if (serviceSlug === "limpeza-pos-obra") {
-    return `Limpeza pós-obra profissional em ${cityName}. Retiramos pó de obra, manchas, cimento. Resposta em 24h, equipa experiente. Orçamento grátis!`;
-  }
-
-  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta rápida em 24h, 163 reviews 5⭐. Orçamento grátis!`;
+  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta rápida em 24h, 32 reviews 5⭐. Orçamento grátis!`;
 }
 
 function getServiceIntro(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string) {
@@ -447,7 +439,6 @@ export default async function ServiceCityPage({ params }: Props) {
   const serviceHubMap: Record<string, { href: string; label: string }> = {
     "recolha-moveis": { href: "/recolha-de-moveis", label: "Ver todos os serviços de recolha de móveis" },
     "recolha-entulho": { href: "/recolha-de-entulho", label: "Ver todos os serviços de recolha de entulho" },
-    "limpeza-pos-obra": { href: "/limpeza-pos-obra", label: "Ver todos os serviços de limpeza pós-obra" },
     "esvaziamento-casas": { href: "/esvaziamento-casas", label: "Ver todos os serviços de esvaziamento" },
   };
   const currentServiceHub = serviceHubMap[service.slug];
@@ -507,7 +498,7 @@ export default async function ServiceCityPage({ params }: Props) {
     : service.slug === "recolha-entulho"
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: `/${getCityServiceSlug("limpeza-pos-obra", city.slug)}`, label: `Limpeza pós-obra em ${city.name}` },
+        { href: `/${getCityServiceSlug("esvaziamento-casas", city.slug)}`, label: `Esvaziamento de casas em ${city.name}` },
         { href: `/${getCityServiceSlug("recolha-moveis", city.slug)}`, label: `Recolha de móveis em ${city.name}` },
         { href: "/blog/recolha-de-entulho-legal-e-organizada", label: "Guia: recolha de entulho" },
         { href: "/contactos", label: "Contactos" },

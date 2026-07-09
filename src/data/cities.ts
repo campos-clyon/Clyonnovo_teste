@@ -69,14 +69,6 @@ export const SERVICES: ServiceData[] = [
     keywords: ["esvaziamento de casas", "esvaziar casa", "desocupação de imóvel", "limpeza de casa"],
   },
   {
-    slug: "limpeza-pos-obra",
-    name: "Limpeza Pós-Obra",
-    description: "Limpeza profissional após obras e remodelações.",
-    longDescription:
-      "Após a conclusão de obras e remodelações, a CLYON realiza uma limpeza profissional completa. Removemos pó, resíduos de construção e deixamos o espaço pronto a habitar. Serviço disponível para casas, apartamentos e escritórios.",
-    keywords: ["limpeza pós-obra", "limpeza após obra", "limpeza de construção", "limpeza profissional"],
-  },
-  {
     slug: "mudancas",
     name: "Mudanças",
     description: "Serviço de mudanças residenciais e comerciais.",
