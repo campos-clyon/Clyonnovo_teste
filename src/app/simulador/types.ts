@@ -94,6 +94,10 @@ export interface OrderData {
   entulhoQuantidadeBigBags?: string;     // big bags: nº de big bags (1 = 42 sacos)
   entulhoVolume?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto"; // estimativa visual
   entulhoQuantidadeIncerta?: boolean;    // cliente marcou "não tenho a certeza"
+  // Estimativa visual de quantidade — recolha_moveis, recolha_monos, esvaziamento_casa,
+  // esvaziamento_apartamento (categorias onde "quanto enche" é a pergunta certa).
+  volumeTier?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
+  quantityExact?: string;
   // Campos específicos para mudança (dois endereços)
   originAddress?: AddressData;
   originAddressValue?: string;

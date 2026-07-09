@@ -19,6 +19,7 @@ import AddressAutocomplete from "./components/AddressAutocomplete";
 import OrderSummaryCard from "./components/OrderSummaryCard";
 import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
+import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -729,6 +730,43 @@ function Phase1Service({
             // O motor de preços recebe sempre sacos em entulhoQuantidade.
             const sacos = (parseInt(q.replace(/[^\d]/g, "")) || 0) * 42;
             updateField("entulhoQuantidade", sacos > 0 ? String(sacos) : "");
+          }}
+        />
+      )}
+
+      {/* Quantidade (volume) — categorias onde "quanto enche" é a pergunta certa.
+          Entulho tem o seu próprio seletor acima (com conversão de sacos). */}
+      {["recolha_moveis", "recolha_monos", "esvaziamento_casa", "esvaziamento_apartamento"].includes(
+        formData.serviceType ?? "",
+      ) && (
+        <VolumeQuantitySelector
+          volume={formData.volumeTier}
+          exactValue={formData.quantityExact}
+          exactLabel="Sei a quantidade exata"
+          exactPlaceholder={
+            formData.serviceType === "esvaziamento_casa" || formData.serviceType === "esvaziamento_apartamento"
+              ? "Ex: 3 divisões"
+              : "Ex: 5 móveis"
+          }
+          onVolumeChange={(vol) => {
+            updateField("volumeTier", vol);
+            const labels: Record<string, string> = {
+              carrinha: "Enche uma carrinha (poucos itens)",
+              camiao_caixa: "Enche a caixa de um camião (volume médio)",
+              camiao_lixo: "Enche um camião (grande volume)",
+              incerto: "Quantidade incerta — a confirmar com a equipa",
+            };
+            updateField("quantityExact", undefined);
+            const label = `Quantidade estimada: ${labels[vol]}.`;
+            const rest = (formData.description ?? "").replace(/^Quantidade( estimada)?:.*\n?/, "");
+            updateField("description", [label, rest].filter(Boolean).join("\n").trim());
+          }}
+          onExactChange={(value) => {
+            updateField("quantityExact", value);
+            updateField("volumeTier", undefined);
+            const label = value ? `Quantidade: ${value}.` : "";
+            const rest = (formData.description ?? "").replace(/^Quantidade( estimada)?:.*\n?/, "");
+            updateField("description", [label, rest].filter(Boolean).join("\n").trim());
           }}
         />
       )}

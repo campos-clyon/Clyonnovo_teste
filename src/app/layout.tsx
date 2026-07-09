@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -18,10 +18,10 @@ import {
 
 import "./globals.css";
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-jakarta",
 });
 
 const poppins = Poppins({
@@ -215,7 +215,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-PT" className={`${inter.variable} ${poppins.variable}`}>
+    <html lang="pt-PT" className={`${jakarta.variable} ${poppins.variable}`}>
       <head>
         <meta name="color-scheme" content="light" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
