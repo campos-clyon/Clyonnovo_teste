@@ -269,43 +269,43 @@ export default async function HomePage() {
       </section>
 
       {/* Onde Operamos */}
-      <section className="bg-slate-50 py-12 lg:py-16">
+      <section className="bg-slate-50 py-8 sm:py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Onde Operamos</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
+          <div className="mb-6 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">Onde Operamos</h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:mt-3 sm:text-lg">
               Mais de 24 localidades cobertas em Lisboa, Margem Sul e Setúbal.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-3 sm:gap-6 md:grid-cols-3">
             {[
               { name: "Grande Lisboa", slug: "lisboa", cities: ["Lisboa", "Amadora", "Sintra", "Cascais", "Oeiras"], highlight: "Mais procurado" },
               { name: "Margem Sul", slug: "margem-sul", cities: ["Almada", "Seixal", "Barreiro", "Moita", "Montijo"], highlight: "Base CLYON" },
               { name: "Setúbal", slug: "setubal", cities: ["Setúbal", "Palmela", "Sesimbra"], highlight: null },
             ].map((region) => (
-              <div key={region.slug} className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-cyan-200 hover:shadow-lg">
+              <div key={region.slug} className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-cyan-200 hover:shadow-lg sm:p-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-50">
-                    <MapPin className="h-6 w-6 text-cyan-600" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-50 sm:h-12 sm:w-12">
+                    <MapPin className="h-4.5 w-4.5 text-cyan-600 sm:h-6 sm:w-6" />
                   </div>
                   {region.highlight && (
-                    <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:px-3 sm:text-xs">
                       {region.highlight}
                     </span>
                   )}
                 </div>
-                <h3 className="mt-5 text-xl font-bold text-slate-900">{region.name}</h3>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <h3 className="mt-3 text-lg font-bold text-slate-900 sm:mt-5 sm:text-xl">{region.name}</h3>
+                <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
                   {region.cities.map((city) => (
-                    <span key={city} className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600">
+                    <span key={city} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 sm:px-3 sm:py-1.5 sm:text-sm">
                       {city}
                     </span>
                   ))}
                 </div>
                 <Link
                   href={`/regioes/${region.slug}`}
-                  className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700 sm:mt-5"
                 >
                   Ver serviços na região
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -317,31 +317,31 @@ export default async function HomePage() {
       </section>
 
       {/* Servicos */}
-      <section className="bg-white py-20 lg:py-24">
+      <section className="bg-white py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">O que fazemos</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
+          <div className="mb-6 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">O que fazemos</h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:mt-3 sm:text-lg">
               Da recolha de um único sofá ao esvaziamento completo de uma casa — mesma equipa, mesmo processo, sem surpresas no preço.
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {SERVICE_CATEGORIES.map((category) => {
               const CategoryIcon = CATEGORY_ICONS[category.id] ?? Star;
               return (
-                <div key={category.id} className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-cyan-200 hover:shadow-lg">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-cyan-50">
-                    <CategoryIcon className="h-7 w-7 text-cyan-600" />
+                <div key={category.id} className="group rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-all hover:border-cyan-200 hover:shadow-lg sm:p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50 sm:h-14 sm:w-14">
+                    <CategoryIcon className="h-5 w-5 text-cyan-600 sm:h-7 sm:w-7" />
                   </div>
-                  <h3 className="mt-5 text-lg font-bold text-slate-900">{category.label}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{category.description}</p>
+                  <h3 className="mt-3 text-sm font-bold text-slate-900 sm:mt-5 sm:text-lg">{category.label}</h3>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-sm">{category.description}</p>
                   <Link
                     href={category.href}
-                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700"
+                    className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-600 transition-colors group-hover:text-cyan-700 sm:mt-4 sm:text-sm"
                   >
                     Saber mais
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1 sm:h-4 sm:w-4" />
                   </Link>
                 </div>
               );
@@ -351,10 +351,10 @@ export default async function HomePage() {
       </section>
 
       {/* Testemunhos */}
-      <section className="bg-slate-50 py-20 lg:py-24">
+      <section className="bg-slate-50 py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">O que dizem os clientes</h2>
+          <div className="mb-6 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">O que dizem os clientes</h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
               Histórias reais de quem já recolheu com a CLYON em Lisboa, Margem Sul e Setúbal.
             </p>
@@ -395,7 +395,7 @@ export default async function HomePage() {
       </section>
 
       {/* Destaques regionais */}
-      <section className="py-16 lg:py-20">
+      <section className="py-10 sm:py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10">
             <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Onde somos mais procurados</h2>
@@ -434,7 +434,7 @@ export default async function HomePage() {
       </section>
 
       {/* Precos e O que recolhemos */}
-      <section className="bg-slate-50 py-20 lg:py-24">
+      <section className="bg-slate-50 py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -473,10 +473,10 @@ export default async function HomePage() {
       </section>
 
       {/* Como funciona */}
-      <section className="bg-white py-20 lg:py-24">
+      <section className="bg-white py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">
               O modelo único da CLYON
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
@@ -512,10 +512,10 @@ export default async function HomePage() {
       </section>
 
       {/* Comparação com o mercado */}
-      <section className="bg-slate-50 py-20 lg:py-24">
+      <section className="bg-slate-50 py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+          <div className="mb-6 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">
               Diferente das plataformas de orçamentos
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
@@ -580,10 +580,10 @@ export default async function HomePage() {
       </section>
 
       {/* FAQs */}
-      <section className="bg-white py-20 lg:py-24">
+      <section className="bg-white py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">Dúvidas comuns</h2>
+          <div className="mb-6 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">Dúvidas comuns</h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
               Respostas às perguntas mais frequentes sobre os nossos serviços.
             </p>
@@ -614,7 +614,7 @@ export default async function HomePage() {
       </section>
 
       {/* Torna-te parceiro */}
-      <section className="bg-slate-50 py-16 lg:py-20">
+      <section className="bg-slate-50 py-10 sm:py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center gap-6 rounded-3xl border border-violet-200 bg-white p-8 text-center sm:p-12 lg:flex-row lg:justify-between lg:text-left">
             <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center">
@@ -644,11 +644,11 @@ export default async function HomePage() {
       </section>
 
       {/* CTA Final */}
-      <section className="bg-white py-20 lg:py-24">
+      <section className="bg-white py-10 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 sm:p-12 lg:p-16">
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-3xl font-bold text-white sm:text-4xl">Pronto para libertar espaço?</h2>
+              <h2 className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">Pronto para libertar espaço?</h2>
               <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
                 Simule o pedido, confirme os detalhes e receba uma resposta clara em minutos.
               </p>
