@@ -192,7 +192,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <section className="relative min-h-[525px] overflow-hidden bg-slate-900 md:min-h-[605px]">
+      <section className="relative min-h-[541px] overflow-hidden bg-slate-900 md:min-h-[623px]">
         {/* Background video */}
         <video
           autoPlay
@@ -213,7 +213,7 @@ export default async function HomePage() {
           <div className="grid items-center gap-9 lg:grid-cols-2 lg:gap-12">
 
             {/* Left: text content */}
-            <div className="max-w-lg">
+            <div className="max-w-lg lg:scale-[1.07] lg:origin-top-left">
               <h1 className="text-balance text-[1.675rem] font-bold leading-[1.15] tracking-tight text-white drop-shadow-md sm:text-[2.1rem] lg:text-[2.35rem]">
                 Recolha de Móveis, Entulho e Esvaziamento de Casas em Lisboa
               </h1>

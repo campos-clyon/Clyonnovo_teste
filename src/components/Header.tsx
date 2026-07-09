@@ -137,13 +137,13 @@ export default function Header() {
   return (
     <>
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-100 bg-white shadow-sm">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
           <Image
             src="/logo-clyon.png"
             alt="CLYON - Recolha de Móveis e Entulho"
-            className="h-10 w-auto sm:h-11"
+            className="h-8 w-auto sm:h-10"
             width={205}
             height={84}
             priority
