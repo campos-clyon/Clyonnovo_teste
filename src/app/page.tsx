@@ -204,8 +204,10 @@ export default async function HomePage() {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Véu escuro mínimo para legibilidade do texto branco */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/20 to-transparent" />
+        {/* Mobile: degradê de cima para baixo */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-transparent lg:hidden" />
+        {/* Desktop: degradê da esquerda até ao meio */}
+        <div className="absolute inset-0 hidden bg-gradient-to-r from-black/45 via-black/20 to-transparent lg:block" style={{ backgroundSize: "50% 100%", backgroundRepeat: "no-repeat" }} />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 pb-14 pt-12 sm:px-6 sm:pt-14 lg:px-8 lg:pb-21 lg:pt-18">
           <div className="grid items-center gap-9 lg:grid-cols-2 lg:gap-12">
