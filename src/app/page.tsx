@@ -205,8 +205,8 @@ export default async function HomePage() {
         </video>
 
         {/* Overlay: texto legível à esquerda, vídeo visível à direita */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/75 via-white/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-white/40 lg:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/55 via-white/25 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/20 lg:hidden" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 pb-14 pt-12 sm:px-6 sm:pt-14 lg:px-8 lg:pb-21 lg:pt-18">
           <div className="grid items-center gap-9 lg:grid-cols-2 lg:gap-12">
