@@ -181,9 +181,8 @@ export default function HomePage() {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0B1929]/50 via-[#0B1929]/28 to-[#0B1929]/5 lg:to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1929]/35 via-transparent to-transparent" />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-[#820AD1]/5" />
 
         {/* Content */}
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
