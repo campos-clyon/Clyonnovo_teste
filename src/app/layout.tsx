@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     template: "%s | CLYON",
   },
   description:
-    "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Entrega em 24h, preços desde 120EUR e 163 avaliações 5 estrelas. Orçamento grátis!",
+    "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Entrega em 24h, preços desde 120EUR e 188 trabalhos concluídos com 5 estrelas. Orçamento grátis!",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
@@ -151,8 +151,8 @@ const localBusinessSchema = {
   ],
   aggregateRating: {
     "@type": "AggregateRating",
-    ratingValue: "4.9",
-    reviewCount: "163",
+    ratingValue: "5.0",
+    reviewCount: "32",
     bestRating: "5",
     worstRating: "1",
   },

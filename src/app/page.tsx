@@ -30,7 +30,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export const metadata: Metadata = {
   title: "CLYON — Plataforma de Serviços para Casa em Lisboa e Setúbal",
   description:
-    "Encontre profissionais verificados para recolha de móveis, entulho, esvaziamento de casas e mais em Lisboa, Margem Sul e Setúbal. Orçamento confirmado em minutos. 163 avaliações 4.9★.",
+    "Encontre profissionais verificados para recolha de móveis, entulho, esvaziamento de casas e mais em Lisboa, Margem Sul e Setúbal. Orçamento confirmado em minutos. 188 trabalhos concluídos com 5,0 ★.",
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
     title: "CLYON — Plataforma de Serviços para Casa em Lisboa e Setúbal",
@@ -61,8 +61,8 @@ const HERO_PILLS = [
 ];
 
 const PLATFORM_STATS = [
-  { value: "163", label: "Avaliações verificadas", sub: "4.9 ★ no Google" },
-  { value: "48h", label: "Resposta média", sub: "Muitos pedidos no dia" },
+  { value: "5,0 ★", label: "Avaliação dos clientes", sub: "Baseado em opiniões reais" },
+  { value: "188", label: "Trabalhos concluídos", sub: "e a contar" },
   { value: "9", label: "Categorias de serviço", sub: "Casa, jardim e mais" },
   { value: "24+", label: "Localidades cobertas", sub: "Lisboa · Margem Sul · Setúbal" },
 ];
@@ -177,16 +177,6 @@ export default function HomePage() {
         {/* Content */}
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
           <div className="w-full max-w-2xl">
-
-            {/* Trust pill */}
-            <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.08] px-4 py-1.5 backdrop-blur-sm">
-              <div className="flex gap-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <span className="text-sm font-medium text-white/90">4.9 · 163 avaliações verificadas</span>
-            </div>
 
             {/* H1 */}
             <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-[3.5rem]">
@@ -419,7 +409,7 @@ export default function HomePage() {
               href="/avaliacoes"
               className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700"
             >
-              Ver todas as 163 avaliações
+              Ver mais testemunhos
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
