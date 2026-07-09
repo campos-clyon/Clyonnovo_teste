@@ -51,6 +51,18 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   manutencao_casa: Hammer,
 };
 
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  recolha_moveis: { bg: "bg-cyan-50", text: "text-cyan-600" },
+  recolha_monos: { bg: "bg-amber-50", text: "text-amber-600" },
+  recolha_entulho: { bg: "bg-orange-50", text: "text-orange-600" },
+  esvaziamento_casa: { bg: "bg-emerald-50", text: "text-emerald-600" },
+  esvaziamento_apartamento: { bg: "bg-blue-50", text: "text-blue-600" },
+  mudanca: { bg: "bg-violet-50", text: "text-violet-600" },
+  montagem_moveis: { bg: "bg-rose-50", text: "text-rose-600" },
+  jardinagem: { bg: "bg-lime-50", text: "text-lime-600" },
+  manutencao_casa: { bg: "bg-sky-50", text: "text-sky-600" },
+};
+
 const HERO_PILLS = [
   { id: "recolha_moveis", label: "Móveis", href: "/recolha-de-moveis" },
   { id: "recolha_entulho", label: "Entulho", href: "/recolha-de-entulho" },
@@ -60,10 +72,10 @@ const HERO_PILLS = [
 ];
 
 const PLATFORM_STATS = [
-  { value: "5,0 ★", label: "Avaliação dos clientes", sub: "Baseado em opiniões reais" },
-  { value: "188", label: "Trabalhos concluídos", sub: "e a contar" },
-  { value: "9", label: "Categorias de serviço", sub: "Casa, jardim e mais" },
-  { value: "24+", label: "Localidades cobertas", sub: "Lisboa · Margem Sul · Setúbal" },
+  { value: "5,0 ★", label: "Avaliação dos clientes", sub: "Baseado em opiniões reais", accent: "text-amber-500" },
+  { value: "188", label: "Trabalhos concluídos", sub: "e a contar", accent: "text-cyan-600" },
+  { value: "9", label: "Categorias de serviço", sub: "Casa, jardim e mais", accent: "text-emerald-600" },
+  { value: "24+", label: "Localidades cobertas", sub: "Lisboa · Margem Sul · Setúbal", accent: "text-blue-600" },
 ];
 
 const HOW_IT_WORKS = [
@@ -232,14 +244,14 @@ export default function HomePage() {
       </section>
 
       {/* ── STATS BAR ─────────────────────────────────────────────── */}
-      <section className="border-b border-white/5 bg-[#0B1929]">
+      <section className="border-b border-[#E2EEF3] bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 divide-x divide-white/10 md:grid-cols-4">
+          <div className="grid grid-cols-2 divide-x divide-[#E2EEF3] md:grid-cols-4">
             {PLATFORM_STATS.map((stat) => (
               <div key={stat.label} className="px-4 py-6 text-center sm:px-6 sm:py-8">
-                <div className="text-2xl font-bold text-white sm:text-3xl">{stat.value}</div>
-                <div className="mt-0.5 text-sm font-semibold text-white/75">{stat.label}</div>
-                <div className="mt-0.5 text-xs text-white/35">{stat.sub}</div>
+                <div className={`text-2xl font-bold sm:text-3xl ${stat.accent}`}>{stat.value}</div>
+                <div className="mt-0.5 text-sm font-semibold text-[#0B1929]">{stat.label}</div>
+                <div className="mt-0.5 text-xs text-slate-400">{stat.sub}</div>
               </div>
             ))}
           </div>
@@ -280,7 +292,7 @@ export default function HomePage() {
           <div className="mt-12 text-center">
             <Link
               href="/simulador"
-              className="inline-flex items-center rounded-xl bg-[#0B1929] px-7 py-3.5 text-sm font-semibold text-white transition-all hover:bg-slate-800"
+              className="inline-flex items-center rounded-xl bg-cyan-500 px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
             >
               Iniciar pedido agora
             </Link>
@@ -294,20 +306,21 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
+              const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-cyan-600" };
               return (
                 <Link
                   key={cat.id}
                   href={cat.href}
                   className="group flex flex-col rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-lg sm:p-6"
                 >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 transition-colors group-hover:bg-cyan-100 sm:h-14 sm:w-14">
-                    <Icon className="h-5 w-5 text-cyan-600 sm:h-7 sm:w-7" />
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors sm:h-14 sm:w-14 ${colors.bg}`}>
+                    <Icon className={`h-5 w-5 sm:h-7 sm:w-7 ${colors.text}`} />
                   </div>
                   <h3 className="mt-4 text-sm font-bold text-[#0B1929] sm:text-base">{cat.label}</h3>
                   <p className="mt-1.5 flex-1 text-xs leading-relaxed text-slate-500 sm:text-sm">
                     {cat.description}
                   </p>
-                  <span className="mt-4 text-xs font-semibold text-cyan-600 sm:text-sm">
+                  <span className={`mt-4 text-xs font-semibold sm:text-sm ${colors.text}`}>
                     Pedir orçamento
                   </span>
                 </Link>
@@ -464,17 +477,17 @@ export default function HomePage() {
       </section>
 
       {/* ── FOR PROFESSIONALS ─────────────────────────────────────── */}
-      <section className="bg-[#0B1929] py-16 sm:py-24">
+      <section className="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-400">
+              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
                 Para profissionais
               </p>
-              <h2 className="text-3xl font-bold text-white sm:text-4xl">
+              <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
                 Tem uma empresa de remoções ou transportes?
               </h2>
-              <p className="mt-4 text-slate-400 sm:text-lg">
+              <p className="mt-4 text-slate-500 sm:text-lg">
                 Receba pedidos verificados na sua zona. Sem investimento em publicidade, sem
                 leads frios — só trabalho real com clientes confirmados.
               </p>
@@ -484,8 +497,8 @@ export default function HomePage() {
                   { icon: Shield, label: "Sem leads falhados" },
                   { icon: BadgeCheck, label: "Pagamento garantido" },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2 text-sm text-white/70">
-                    <item.icon className="h-4 w-4 text-cyan-400" />
+                  <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <item.icon className="h-4 w-4 text-cyan-600" />
                     {item.label}
                   </div>
                 ))}
@@ -541,13 +554,13 @@ export default function HomePage() {
       </section>
 
       {/* ── FINAL CTA ─────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-10 sm:py-16">
+      <section className="bg-white py-10 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-3xl bg-[#0B1929] px-8 py-12 text-center sm:px-12 sm:py-16">
-            <h2 className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-8 py-12 text-center ring-1 ring-[#E2EEF3] sm:px-12 sm:py-16">
+            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
               Pronto para libertar espaço?
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-slate-400 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-slate-500 sm:text-lg">
               Orçamento online, sem telefonemas. Confirme os detalhes e receba uma resposta clara.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
