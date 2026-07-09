@@ -193,8 +193,15 @@ export default function HomePage() {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-[#820AD1]/[0.02]" />
+        {/* Overlay — 2% roxo Nubank, só nos primeiros 50% (topo→baixo mobile, esquerda→direita desktop) */}
+        <div
+          className="absolute inset-0 lg:hidden"
+          style={{ background: "linear-gradient(to bottom, rgba(130,10,209,0.02) 0%, transparent 50%)" }}
+        />
+        <div
+          className="absolute inset-0 hidden lg:block"
+          style={{ background: "linear-gradient(to right, rgba(130,10,209,0.02) 0%, transparent 50%)" }}
+        />
 
         {/* Content */}
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
