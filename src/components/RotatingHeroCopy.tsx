@@ -90,7 +90,7 @@ export default function RotatingHeroCopy() {
       aria-atomic="true"
     >
       <p
-        className={`text-[1.0625rem] font-semibold text-cyan-600 leading-relaxed transition-all duration-500 ${
+        className={`text-[1.0625rem] font-semibold text-cyan-300 leading-relaxed drop-shadow transition-all duration-500 ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
         }`}
       >

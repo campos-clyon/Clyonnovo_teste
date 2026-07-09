@@ -204,23 +204,15 @@ export default async function HomePage() {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Overlay: texto legível à esquerda, vídeo visível à direita */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/55 via-white/25 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/20 lg:hidden" />
+        {/* Véu escuro mínimo para legibilidade do texto branco */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/20 to-transparent" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 pb-14 pt-12 sm:px-6 sm:pt-14 lg:px-8 lg:pb-21 lg:pt-18">
           <div className="grid items-center gap-9 lg:grid-cols-2 lg:gap-12">
 
             {/* Left: text content */}
             <div className="max-w-lg">
-              <div className="mb-4 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 flex-shrink-0 text-violet-600" />
-                <span className="text-sm font-semibold text-violet-700">
-                  Preço fixo calculado por IA, confirmado por um assistente humano
-                </span>
-              </div>
-
-              <h1 className="text-balance text-[1.675rem] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[2.1rem] lg:text-[2.35rem]">
+              <h1 className="text-balance text-[1.675rem] font-bold leading-[1.15] tracking-tight text-white drop-shadow-md sm:text-[2.1rem] lg:text-[2.35rem]">
                 Recolha de Móveis, Entulho e Esvaziamento de Casas em Lisboa
               </h1>
 
@@ -228,7 +220,7 @@ export default async function HomePage() {
                 <RotatingHeroCopy />
               </div>
 
-              <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
+              <p className="mt-3 text-[0.9375rem] leading-relaxed text-white/85 drop-shadow">
                 Recolha rápida de móveis, entulho, monos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Orçamento grátis em 24h.
               </p>
 
@@ -247,15 +239,15 @@ export default async function HomePage() {
                 </a>
               </div>
 
-              <div className="mt-8 grid grid-cols-3 gap-4 border-t border-slate-200 pt-6">
+              <div className="mt-8 grid grid-cols-3 gap-4 border-t border-white/25 pt-6">
                 {[
                   { value: "163", label: "Avaliações" },
                   { value: "24h", label: "Resposta" },
                   { value: "Grátis", label: "Orçamento" },
                 ].map((stat) => (
                   <div key={stat.label}>
-                    <div className="text-lg font-bold text-slate-900 sm:text-xl">{stat.value}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+                    <div className="text-lg font-bold text-white drop-shadow sm:text-xl">{stat.value}</div>
+                    <div className="mt-0.5 text-xs text-white/70">{stat.label}</div>
                   </div>
                 ))}
               </div>
