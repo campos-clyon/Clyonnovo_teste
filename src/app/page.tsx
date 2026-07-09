@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
-  ArrowRight,
   BadgeCheck,
   Building2,
   CheckCircle2,
@@ -206,7 +205,7 @@ export default function HomePage() {
                 href="/simulador"
                 className="rounded-full border border-cyan-400/40 bg-cyan-500/20 px-4 py-1.5 text-sm font-semibold text-cyan-300 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-500/30 hover:text-cyan-200"
               >
-                Ver todos →
+                Ver todos
               </Link>
             </div>
 
@@ -214,10 +213,9 @@ export default function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/simulador"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
               >
                 Pedir Orçamento Grátis
-                <ArrowRight className="h-4 w-4" />
               </Link>
               <a
                 href="https://wa.me/351965785395?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
@@ -282,10 +280,9 @@ export default function HomePage() {
           <div className="mt-12 text-center">
             <Link
               href="/simulador"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0B1929] px-7 py-3.5 text-sm font-semibold text-white transition-all hover:bg-slate-800"
+              className="inline-flex items-center rounded-xl bg-[#0B1929] px-7 py-3.5 text-sm font-semibold text-white transition-all hover:bg-slate-800"
             >
               Iniciar pedido agora
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -294,18 +291,6 @@ export default function HomePage() {
       {/* ── SERVICES ──────────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
-              Categorias
-            </p>
-            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
-              Todos os serviços numa só plataforma
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-slate-500 sm:text-lg">
-              Da recolha de um único sofá ao esvaziamento completo de uma casa — preço confirmado em todos os casos.
-            </p>
-          </div>
-
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
@@ -322,9 +307,8 @@ export default function HomePage() {
                   <p className="mt-1.5 flex-1 text-xs leading-relaxed text-slate-500 sm:text-sm">
                     {cat.description}
                   </p>
-                  <span className="mt-4 flex items-center gap-1 text-xs font-semibold text-cyan-600 transition-transform group-hover:translate-x-0.5 sm:text-sm">
+                  <span className="mt-4 text-xs font-semibold text-cyan-600 sm:text-sm">
                     Pedir orçamento
-                    <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </Link>
               );
@@ -407,10 +391,9 @@ export default function HomePage() {
           <div className="mt-10 text-center">
             <Link
               href="/avaliacoes"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700"
+              className="inline-flex items-center text-sm font-semibold text-cyan-600 hover:text-cyan-700"
             >
               Ver mais testemunhos
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -515,10 +498,9 @@ export default function HomePage() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
               >
                 Tornar-me parceiro
-                <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           </div>
@@ -571,10 +553,9 @@ export default function HomePage() {
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/simulador"
-                className="inline-flex h-12 items-center gap-2 rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
+                className="inline-flex h-12 items-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
               >
                 Pedir Orçamento Grátis
-                <ArrowRight className="h-5 w-5" />
               </Link>
               <a
                 href="https://wa.me/351965785395?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
