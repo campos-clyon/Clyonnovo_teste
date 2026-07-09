@@ -11,7 +11,6 @@ import {
   HardHat,
   Home,
   Leaf,
-  MapPin,
   MessageCircle,
   Package,
   Shield,
@@ -182,8 +181,8 @@ export default function HomePage() {
         </video>
 
         {/* Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0B1929]/90 via-[#0B1929]/60 to-[#0B1929]/20 lg:to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1929]/70 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0B1929]/70 via-[#0B1929]/40 to-[#0B1929]/10 lg:to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1929]/50 via-transparent to-transparent" />
 
         {/* Content */}
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
@@ -262,9 +261,6 @@ export default function HomePage() {
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-14 text-center">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
-              Como funciona
-            </p>
             <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
               Simples do início ao fim
             </h2>
@@ -334,9 +330,6 @@ export default function HomePage() {
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
-              As nossas garantias
-            </p>
             <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
               Construída para inspirar confiança
             </h2>
@@ -363,9 +356,6 @@ export default function HomePage() {
       <section className="bg-[#F4F8FB] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
-              Avaliações reais
-            </p>
             <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
               O que dizem os nossos clientes
             </h2>
@@ -415,63 +405,127 @@ export default function HomePage() {
       {/* ── COVERAGE ──────────────────────────────────────────────── */}
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
-              Cobertura
-            </p>
-            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">Onde operamos</h2>
-            <p className="mx-auto mt-3 max-w-xl text-slate-500 sm:text-lg">
-              Mais de 24 localidades em Lisboa, Margem Sul e Setúbal. Pedido hoje, resposta hoje.
-            </p>
-          </div>
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
+            <div>
+              <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">Onde estamos</h2>
+              <p className="mt-4 max-w-md text-slate-500 sm:text-lg">
+                Já cobrimos mais de 24 localidades em Lisboa, Margem Sul e Setúbal —
+                e continuamos a crescer.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {[
+                  "Lisboa", "Amadora", "Loures", "Odivelas", "Sintra", "Cascais",
+                  "Oeiras", "Almada", "Seixal", "Barreiro", "Moita", "Montijo",
+                  "Setúbal", "Palmela", "Sesimbra", "Azeitão",
+                ].map((city) => (
+                  <span
+                    key={city}
+                    className="rounded-xl border border-[#E2EEF3] bg-white px-3.5 py-1.5 text-sm font-medium text-[#0B1929] shadow-sm"
+                  >
+                    {city}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                name: "Grande Lisboa",
-                cities: ["Lisboa", "Amadora", "Loures", "Odivelas", "Sintra", "Cascais", "Oeiras"],
-                tag: "Mais pedidos",
-              },
-              {
-                name: "Margem Sul",
-                cities: ["Almada", "Seixal", "Barreiro", "Moita", "Montijo"],
-                tag: "Base CLYON",
-              },
-              {
-                name: "Setúbal e Linha",
-                cities: ["Setúbal", "Palmela", "Sesimbra", "Azeitão"],
-                tag: null,
-              },
-            ].map((region) => (
-              <div
-                key={region.name}
-                className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] p-6"
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-50 via-white to-blue-50 p-6 ring-1 ring-[#E2EEF3] sm:p-8">
+              <svg
+                viewBox="0 0 220 400"
+                className="mx-auto h-auto w-full max-w-[280px]"
+                aria-label="Mapa de cobertura CLYON em Portugal"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-100">
-                      <MapPin className="h-4 w-4 text-cyan-600" />
-                    </div>
-                    <h3 className="font-bold text-[#0B1929]">{region.name}</h3>
-                  </div>
-                  {region.tag && (
-                    <span className="rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
-                      {region.tag}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {region.cities.map((city) => (
-                    <span
-                      key={city}
-                      className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm"
+                {/* Portugal outline (simplified) */}
+                <path
+                  d="M 78 32
+                     C 92 26, 110 32, 122 46
+                     C 132 62, 138 82, 140 104
+                     C 142 128, 144 152, 146 176
+                     C 150 204, 156 230, 162 256
+                     C 166 282, 168 306, 162 328
+                     C 154 352, 138 366, 118 372
+                     C 96 376, 76 372, 60 362
+                     C 46 350, 40 332, 38 314
+                     C 36 290, 40 264, 44 240
+                     C 48 210, 52 180, 56 152
+                     C 60 124, 62 100, 66 78
+                     C 68 58, 72 44, 78 32 Z"
+                  fill="#ffffff"
+                  stroke="#0891B2"
+                  strokeWidth="1.5"
+                />
+
+                {/* Region highlight — Lisboa/Margem Sul area */}
+                <ellipse cx="95" cy="278" rx="52" ry="36" fill="#06B6D4" fillOpacity="0.08" />
+
+                {/* Location markers with animation */}
+                {[
+                  { cx: 82, cy: 250, label: "Lisboa" },
+                  { cx: 72, cy: 244, label: "Sintra" },
+                  { cx: 60, cy: 258, label: "Cascais" },
+                  { cx: 88, cy: 260, label: "Almada" },
+                  { cx: 96, cy: 270, label: "Seixal" },
+                  { cx: 106, cy: 268, label: "Barreiro" },
+                  { cx: 118, cy: 292, label: "Setúbal" },
+                  { cx: 108, cy: 298, label: "Sesimbra" },
+                ].map((pin, i) => (
+                  <g key={pin.label}>
+                    <circle
+                      cx={pin.cx}
+                      cy={pin.cy}
+                      r="8"
+                      fill="#06B6D4"
+                      fillOpacity="0.15"
                     >
-                      {city}
-                    </span>
-                  ))}
+                      <animate
+                        attributeName="r"
+                        values="6;12;6"
+                        dur="2.5s"
+                        begin={`${i * 0.3}s`}
+                        repeatCount="indefinite"
+                      />
+                      <animate
+                        attributeName="fill-opacity"
+                        values="0.25;0;0.25"
+                        dur="2.5s"
+                        begin={`${i * 0.3}s`}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                    <circle
+                      cx={pin.cx}
+                      cy={pin.cy}
+                      r="3.5"
+                      fill="#0891B2"
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+                ))}
+
+                {/* Region label */}
+                <text
+                  x="95"
+                  y="330"
+                  textAnchor="middle"
+                  fontSize="11"
+                  fontWeight="700"
+                  fill="#0891B2"
+                >
+                  ÁREA CLYON
+                </text>
+              </svg>
+
+              <div className="mt-4 flex items-center justify-center gap-6 text-xs text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-cyan-500" />
+                  Localidade coberta
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-cyan-500/20" />
+                  Zona activa
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
@@ -481,9 +535,6 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">
-                Para profissionais
-              </p>
               <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
                 Tem uma empresa de remoções ou transportes?
               </h2>
@@ -524,7 +575,6 @@ export default function HomePage() {
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-cyan-600">FAQ</p>
             <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
               Perguntas frequentes
             </h2>
