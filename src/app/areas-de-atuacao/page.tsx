@@ -2,9 +2,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 
-import Breadcrumb from "@/components/Breadcrumb";
 import CTABlock from "@/components/CTABlock";
-import TrustBadges from "@/components/TrustBadges";
 import { getCitiesByRegion, getAllCities } from "@/lib/city-content";
 import {
   BUSINESS_NAME,
@@ -83,14 +81,8 @@ export default function AreasDeAtuacaoPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-cyan-50 via-cyan-50/50 to-white pb-12 pt-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(6,182,212,0.12),_transparent_32%)]" />
         <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-          <Breadcrumb items={[{ label: "Áreas de Atuação" }]} className="mb-6" />
-
           <div className="grid gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-center">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700 shadow-sm">
-                <MapPin className="h-4 w-4" />
-                Cobertura geográfica
-              </div>
               <h1 className="mt-5 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
                 Áreas de Atuação da CLYON
               </h1>
@@ -117,9 +109,6 @@ export default function AreasDeAtuacaoPage() {
               </div>
             </div>
 
-            <div className="hidden lg:block">
-              <TrustBadges variant="grid" />
-            </div>
           </div>
         </div>
       </section>

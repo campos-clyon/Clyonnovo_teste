@@ -14,7 +14,6 @@ import {
   Heart,
 } from "lucide-react";
 
-import Breadcrumb from "@/components/Breadcrumb";
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import {
   BUSINESS_NAME,
@@ -173,14 +172,6 @@ export default function RecolhaGratuitaDeMoveisUsadosPage() {
       {/* Hero Section */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pb-20 lg:pt-14">
-          <Breadcrumb
-            items={[
-              { label: "Serviços", href: "/servicos" },
-              { label: "Recolha de Móveis", href: "/recolha-de-moveis" },
-              { label: "Recolha Gratuita de Móveis Usados" },
-            ]}
-          />
-
           <div className="mt-8 max-w-4xl">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
               Recolha gratuita de móveis usados: quando é possível e quando escolher a CLYON

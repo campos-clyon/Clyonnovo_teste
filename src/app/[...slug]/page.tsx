@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
-  MapPin,
   MessageCircle,
   Phone,
   Recycle,
@@ -14,7 +13,6 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import Breadcrumb from "@/components/Breadcrumb";
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import {
   getCityServiceContent,
@@ -517,20 +515,8 @@ export default async function ServiceCityPage({ params }: Props) {
       <section className="relative overflow-hidden bg-gradient-to-br from-cyan-100 via-cyan-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.22),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(6,182,212,0.14),_transparent_30%)]" />
         <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <Breadcrumb
-            items={[
-              { label: "Regiões", href: "/regioes" },
-              { label: region.name, href: `/regioes/${region.slug}` },
-              { label: `${service.shortName} em ${city.name}` },
-            ]}
-            className="mb-6"
-          />
           <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700 shadow-sm">
-                <MapPin className="h-4 w-4" />
-                {city.name}, {city.regionLabel}
-              </div>
               <h1 className="mt-5 max-w-[15ch] text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
                 {isFurnitureService(service.slug)
                   ? `Recolha de Móveis em ${city.name}`
@@ -556,9 +542,6 @@ export default async function ServiceCityPage({ params }: Props) {
             </div>
 
             <div className="overflow-hidden rounded-[32px] border border-cyan-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Cobertura local
-              </p>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
                 Resposta reforçada em {city.name}
               </h2>
@@ -631,9 +614,6 @@ export default async function ServiceCityPage({ params }: Props) {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              O que está incluído
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Serviço completo para recolha em {city.name}
             </h2>
@@ -649,16 +629,13 @@ export default async function ServiceCityPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-cyan-100 bg-slate-950 p-7 text-white shadow-[0_24px_60px_-34px_rgba(2,6,23,0.45)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200">
-              O que não entra
-            </p>
-            <h2 className="mt-3 text-3xl font-bold">Evita ruído no orçamento</h2>
+          <div className="rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
+            <h2 className="mt-3 text-3xl font-bold text-[#0B1929]">Evita ruído no orçamento</h2>
             <div className="mt-6 space-y-3">
               {excludedItems.map((item) => (
                 <div
                   key={item}
-                  className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-slate-100"
+                  className="rounded-[22px] border border-[#E2EEF3] bg-white px-4 py-4 text-sm font-medium text-slate-700"
                 >
                   {item}
                 </div>
@@ -669,9 +646,6 @@ export default async function ServiceCityPage({ params }: Props) {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Preços orientativos
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Referências úteis para {city.name}
             </h2>
@@ -685,9 +659,6 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
 
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Como funciona
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Da marcação à retirada final, sem complicações
             </h2>
@@ -711,9 +682,6 @@ export default async function ServiceCityPage({ params }: Props) {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Porque a CLYON em {city.name}
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Um serviço pensado para resolver de forma rápida e segura
             </h2>
@@ -738,9 +706,6 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
 
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Serviços relacionados
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Apoio adicional para pedidos maiores ou mistos
             </h2>
@@ -762,9 +727,6 @@ export default async function ServiceCityPage({ params }: Props) {
 
         {isLisbonFurniturePage && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Intenção local em Lisboa
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Recolha de móveis em Lisboa para quem precisa de uma solução privada, rápida e completa
             </h2>
@@ -795,9 +757,6 @@ export default async function ServiceCityPage({ params }: Props) {
 
         {isCascaisFurniturePage && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Intenção local em Cascais
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Recolha de móveis em Cascais para quem procura uma recolha privada e completa
             </h2>
@@ -828,9 +787,6 @@ export default async function ServiceCityPage({ params }: Props) {
 
         {isCostaFurniturePage && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Intenção informativa e comercial
-            </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Na Costa da Caparica, a pesquisa por "recolha gratuita de móveis" mistura doação, câmara e serviço privado
             </h2>
@@ -859,9 +815,6 @@ export default async function ServiceCityPage({ params }: Props) {
         )}
 
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-            Perguntas frequentes locais
-          </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {faqs.map((faq) => (
               <div key={faq.q} className="rounded-[22px] bg-white p-5 shadow-sm">
@@ -886,9 +839,6 @@ export default async function ServiceCityPage({ params }: Props) {
           <div className="flex items-start gap-3">
             <Star className="mt-1 h-5 w-5 text-cyan-600" />
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                CTA local
-              </p>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
                 Precisa de {service.shortName} em {city.name}?
               </h2>
@@ -900,7 +850,7 @@ export default async function ServiceCityPage({ params }: Props) {
             a recolha com maior precisao.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            163 avaliacoes 5 estrelas no Fixando. Tempo medio de resposta: 11 minutos.
+            163 avaliacoes 5 estrelas verificadas. Tempo medio de resposta: 11 minutos.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link

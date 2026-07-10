@@ -247,9 +247,6 @@ export default function ServicosPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
-                Serviços CLYON
-              </div>
               <h1 className="mt-5 max-w-[12ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
                 Recolha, limpeza e mudanças com resposta clara.
               </h1>
@@ -262,9 +259,6 @@ export default function ServicosPage() {
             </div>
 
             <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.2)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                O que ganha ao pedir com a CLYON
-              </p>
               <div className="mt-4 space-y-3">
                 {[
                   "Triagem rápida do pedido por fotos, volume e acessos",
@@ -326,9 +320,6 @@ export default function ServicosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="rounded-[34px] border border-cyan-100 bg-cyan-50/70 p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Como escolher o serviço certo
-              </p>
               <h2 className="mt-4 text-3xl font-bold text-slate-950 sm:text-4xl">
                 O pedido certo acelera orçamento e recolha.
               </h2>
@@ -343,9 +334,6 @@ export default function ServicosPage() {
             </div>
 
             <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Links úteis
-              </p>
               <h2 className="mt-4 text-3xl font-bold text-slate-950 sm:text-4xl">
                 Aprofunde o pedido sem sair do site.
               </h2>
@@ -373,9 +361,6 @@ export default function ServicosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
-                Perguntas frequentes
-              </p>
               <h2 className="mt-4 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
                 Respostas rápidas antes do pedido.
               </h2>

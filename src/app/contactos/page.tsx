@@ -25,9 +25,6 @@ export default function ContactosPage() {
         <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.96fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
-                Contactos
-              </div>
               <h1 className="mt-5 max-w-[14ch] text-[2.55rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.1rem]">
                 Orçamento grátis em 24h.
               </h1>
@@ -47,7 +44,7 @@ export default function ContactosPage() {
                 <span className="text-sm font-semibold text-slate-700">163 avaliações</span>
               </div>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                A CLYON tem 163 avaliações 5 estrelas no Fixando. Orçamento grátis,
+                A CLYON tem mais de 160 avaliações 5 estrelas verificadas. Orçamento grátis,
                 resposta em 24h e entrega no mesmo dia quando disponível.
               </p>
             </div>
@@ -61,9 +58,6 @@ export default function ContactosPage() {
             {/* Simulador */}
             <div className="flex flex-col justify-between rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
-                  Pedir orçamento
-                </p>
                 <h2 className="mt-3 text-2xl font-bold text-slate-950">
                   Calcule o preço em 3 passos
                 </h2>
@@ -188,14 +182,11 @@ export default function ContactosPage() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] bg-[linear-gradient(135deg,#062737_0%,#083344_100%)] p-6 text-white">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                  Sem compromisso
-                </p>
-                <h3 className="mt-3 text-2xl font-bold leading-tight">
+              <div className="rounded-[28px] bg-[#F4F8FB] p-6">
+                <h3 className="mt-3 text-2xl font-bold leading-tight text-[#0B1929]">
                   Resposta em 24h, sempre.
                 </h3>
-                <p className="mt-3 text-sm leading-8 text-slate-300">
+                <p className="mt-3 text-sm leading-8 text-slate-600">
                   Peça o orçamento pelo simulador ou fale connosco — a nossa
                   equipa responde com rapidez e sem qualquer compromisso.
                 </p>

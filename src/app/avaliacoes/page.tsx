@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Star, Quote, MessageCircle } from "lucide-react";
+import { Star, Quote, MessageCircle } from "lucide-react";
 
 import { reviews } from "@/lib/reviews-data";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -49,7 +49,7 @@ const aggregateRatingSchema = {
 const STATS = [
   { value: "5.0", label: "Classificação média", sub: "Google Business" },
   { value: "32", label: "Avaliações Google", sub: "todas verificadas" },
-  { value: "156+", label: "Trabalhos Fixando", sub: "plataforma parceira" },
+  { value: "156+", label: "Trabalhos realizados", sub: "e a contar" },
   { value: "100%", label: "Recomendariam", sub: "com base nas respostas" },
 ];
 
@@ -63,19 +63,8 @@ export default function AvaliacoesPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_30%),linear-gradient(160deg,rgba(236,254,255,0.9)_0%,rgba(255,255,255,1)_55%)]" />
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pb-20">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-700 transition hover:text-cyan-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar ao início
-          </Link>
-
           <div className="mt-10 grid gap-10 lg:grid-cols-2 lg:items-center">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
-                Avaliações verificadas
-              </div>
               <h1 className="mt-5 text-[2.4rem] font-bold leading-[1.06] tracking-tight text-[#0B1929] sm:text-5xl lg:text-[3.2rem]">
                 O que dizem os clientes{" "}
                 <span className="text-cyan-500">sobre a CLYON</span>

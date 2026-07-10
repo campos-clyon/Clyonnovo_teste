@@ -52,18 +52,15 @@ export default async function TrabalhosPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="relative overflow-hidden bg-slate-950 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_20%),radial-gradient(circle_at_85%_15%,rgba(8,145,178,0.28),transparent_26%),linear-gradient(135deg,#03131d_0%,#062737_55%,#083344_100%)]" />
+      <section className="relative overflow-hidden bg-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_30%),linear-gradient(160deg,rgba(236,254,255,0.9)_0%,rgba(255,255,255,1)_55%)]" />
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-300/20 bg-white/5 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-                Trabalhos reais
-              </div>
-              <h1 className="mt-5 max-w-[13ch] text-[2.6rem] font-bold leading-[1.02] tracking-tight sm:text-[4.3rem]">
+              <h1 className="mt-5 max-w-[13ch] text-[2.6rem] font-bold leading-[1.02] tracking-tight text-[#0B1929] sm:text-[4.3rem]">
                 Veja o que fazemos no terreno.
               </h1>
-              <p className="mt-5 max-w-2xl text-[1.02rem] leading-8 text-slate-300">
+              <p className="mt-5 max-w-2xl text-[1.02rem] leading-8 text-slate-600">
                 Fotos reais, intervenções rápidas e um processo simples para recolha,
                 limpeza e mudanças em Lisboa, Margem Sul e Setúbal.
               </p>
@@ -88,10 +85,10 @@ export default async function TrabalhosPage() {
               {stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-[26px] border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+                  className="rounded-[26px] border border-[#E2EEF3] bg-[#F4F8FB] p-5"
                 >
-                  <div className="text-2xl font-bold text-white">{stat.value}</div>
-                  <div className="mt-2 text-sm leading-7 text-slate-300">{stat.label}</div>
+                  <div className="text-2xl font-bold text-[#0B1929]">{stat.value}</div>
+                  <div className="mt-2 text-sm leading-7 text-slate-600">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -105,9 +102,6 @@ export default async function TrabalhosPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-10 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#0077B6]">
-                  Portfólio
-                </p>
                 <h2 className="mt-3 text-4xl font-bold text-slate-950 text-balance">
                   Trabalhos realizados.
                 </h2>
@@ -126,9 +120,6 @@ export default async function TrabalhosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
-                Antes e depois
-              </p>
               <h2 className="mt-3 text-4xl font-bold text-slate-950">
                 Casos reais geridos no painel.
               </h2>
@@ -148,7 +139,7 @@ export default async function TrabalhosPage() {
                 <div className="border-b border-cyan-100 bg-cyan-50/70 px-6 py-5">
                   <h3 className="text-2xl font-bold text-slate-950">{project.title}</h3>
                   {project.subtitle && (
-                    <p className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                    <p className="mt-2 text-sm text-slate-600">
                       {project.subtitle}
                     </p>
                   )}
@@ -199,9 +190,6 @@ export default async function TrabalhosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
-                Avaliações
-              </p>
               <h2 className="mt-3 text-4xl font-bold text-slate-950">
                 Casos reais com resultado visível.
               </h2>
@@ -220,7 +208,7 @@ export default async function TrabalhosPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                    <p className="text-sm font-semibold text-cyan-700">
                       {item.rating}
                     </p>
                     <h3 className="mt-3 text-[1.45rem] font-bold leading-tight text-slate-950">
@@ -254,9 +242,6 @@ export default async function TrabalhosPage() {
           <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)] lg:p-10">
             <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
               <div>
-                <div className="inline-flex items-center rounded-full bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                  Como entregamos
-                </div>
                 <h2 className="mt-4 text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
                   Trabalho real, comunicação simples e resposta profissional.
                 </h2>

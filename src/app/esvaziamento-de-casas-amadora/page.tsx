@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
-import Breadcrumb from "@/components/Breadcrumb";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -136,19 +135,8 @@ export default function EsvaziamentoAmadoraPage() {
         {/* Hero */}
         <section className="bg-gradient-to-b from-white to-slate-50 pb-12 pt-8">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <Breadcrumb
-              items={[
-                { label: "Início", href: "/" },
-                { label: "Esvaziamento de Casas", href: "/esvaziamento-de-casas" },
-                { label: "Amadora" },
-              ]}
-            />
-
             <div className="mt-8 grid items-start gap-10 lg:grid-cols-2">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                  Serviço local na Amadora
-                </p>
                 <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
                   Esvaziamento de casas e apartamentos na Amadora
                 </h1>
@@ -182,9 +170,6 @@ export default function EsvaziamentoAmadoraPage() {
               </div>
 
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                  Valores de referência na Amadora
-                </p>
                 <div className="mt-4 space-y-3">
                   {[
                     { type: "Apartamento T0/T1", price: "300€ – 500€" },
@@ -209,9 +194,6 @@ export default function EsvaziamentoAmadoraPage() {
         {/* Quando pedir */}
         <section className="py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-              Situações comuns
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Quando pedir esvaziamento de casa na Amadora
             </h2>
@@ -237,9 +219,6 @@ export default function EsvaziamentoAmadoraPage() {
         {/* O que removemos */}
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-              Remoção completa
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               O que a equipa remove na Amadora
             </h2>
@@ -259,9 +238,6 @@ export default function EsvaziamentoAmadoraPage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-2">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                  Serviço completo
-                </p>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">
                   Esvaziamento com limpeza na Amadora
                 </h2>
@@ -299,9 +275,6 @@ export default function EsvaziamentoAmadoraPage() {
         {/* Zonas da Amadora */}
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-              Cobertura local
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Zonas da Amadora onde fazemos esvaziamento
             </h2>
@@ -323,9 +296,6 @@ export default function EsvaziamentoAmadoraPage() {
         {/* Serviços relacionados */}
         <section className="bg-slate-50/50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-600">
-              Serviços relacionados na Amadora
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Outros serviços que pode precisar
             </h2>
@@ -358,9 +328,6 @@ export default function EsvaziamentoAmadoraPage() {
         {/* FAQ */}
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-              Dúvidas frequentes
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Perguntas sobre esvaziamento na Amadora
             </h2>

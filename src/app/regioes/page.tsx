@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, MapPin } from "lucide-react";
-
-import Breadcrumb from "@/components/Breadcrumb";
+import { ArrowRight } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { REGIONS, SERVICES, SITE_URL, getRegionCities } from "@/lib/seo-data";
 
@@ -31,12 +29,7 @@ export default function RegioesPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-cyan-100 via-cyan-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.20),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(6,182,212,0.12),_transparent_34%)]" />
         <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <Breadcrumb items={[{ label: "Áreas de Atuação", href: "/areas-de-atuacao" }, { label: "Regiões" }]} className="mb-6" />
           <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700 shadow-sm">
-              <MapPin className="h-4 w-4" />
-              Cobertura regional
-            </div>
             <h1 className="mt-5 max-w-[14ch] text-4xl font-bold leading-[1.14] tracking-tight text-slate-950 md:text-6xl md:leading-[1.08]">
               Regiões e cidades onde a CLYON já atua.
             </h1>
@@ -58,9 +51,6 @@ export default function RegioesPage() {
                 key={region.slug}
                 className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]"
               >
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                  {region.shortLabel}
-                </p>
                 <h2 className="mt-3 text-3xl font-bold text-slate-950">{region.name}</h2>
                 <p className="mt-4 text-base leading-8 text-slate-600">{region.intro}</p>
 
@@ -92,7 +82,6 @@ export default function RegioesPage() {
 
                 {/* Hubs de serviço */}
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Páginas hub</p>
           <h2 className="mt-3 text-2xl font-bold text-slate-950">Hubs de Serviço</h2>
           <p className="mt-3 text-slate-600">Páginas principais de cada serviço com links para todas as cidades.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -116,15 +105,14 @@ export default function RegioesPage() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-[30px] border border-cyan-100 bg-slate-950 p-7 text-white shadow-[0_24px_60px_-34px_rgba(2,6,23,0.45)]">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200">Serviços estratégicos</p>
-          <h2 className="mt-3 text-3xl font-bold">Base local preparada para captar intenção comercial</h2>
+        <div className="mt-8 rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
+          <h2 className="mt-3 text-3xl font-bold text-[#0B1929]">Base local preparada para captar intenção comercial</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {SERVICES.map((service) => (
               <Link
                 key={service.slug}
                 href={`/simulador?categoria=${simulatorCategoryMap[service.slug] ?? "moveis"}`}
-                className="rounded-[22px] border border-cyan-400/30 bg-cyan-400/10 px-4 py-4 text-sm font-medium text-white transition hover:border-cyan-300 hover:bg-cyan-400/20"
+                className="rounded-[22px] border border-[#E2EEF3] bg-white px-4 py-4 text-sm font-medium text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50"
               >
                 {service.name}
               </Link>

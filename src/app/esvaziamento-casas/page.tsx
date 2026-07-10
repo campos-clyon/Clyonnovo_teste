@@ -11,11 +11,9 @@ import {
   Truck,
 } from "lucide-react";
 
-import Breadcrumb from "@/components/Breadcrumb";
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import PricingTable from "@/components/service/PricingTable";
-import TrustBadges from "@/components/TrustBadges";
 import { getCitiesByRegion } from "@/lib/city-content";
 import {
   BUSINESS_NAME,
@@ -141,19 +139,8 @@ export default function EsvaziamentoCasasPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-violet-50/50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.15),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(124,58,237,0.1),_transparent_32%)]" />
 <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-  <Breadcrumb
-    items={[
-      { label: "Serviços", href: "/servicos" },
-      { label: "Esvaziamento de Casas" },
-    ]}
-    className="mb-6"
-  />
   <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-center">
   <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-violet-700 shadow-sm">
-                <Home className="h-4 w-4" />
-                Esvaziamento de casas em Lisboa e Setúbal
-              </div>
               <h1 className="mt-5 max-w-[16ch] text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
                 Esvaziamento Completo de Casas e Heranças
               </h1>
@@ -184,7 +171,6 @@ export default function EsvaziamentoCasasPage() {
             </div>
 
             <div className="overflow-hidden rounded-[32px] border border-violet-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(124,58,237,0.12)]">
-              <TrustBadges variant="grid" />
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[22px] border border-violet-100 bg-violet-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Orçamento em</p>
@@ -223,7 +209,6 @@ export default function EsvaziamentoCasasPage() {
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-[30px] border border-violet-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(124,58,237,0.08)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">O que inclui</p>
             <h2 className="mt-3 text-2xl font-bold text-slate-950">Serviço completo</h2>
             <div className="mt-6 grid gap-3">
               {includedServices.map((item) => (
@@ -235,12 +220,11 @@ export default function EsvaziamentoCasasPage() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-slate-200 bg-slate-950 p-7 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">Porquê a CLYON</p>
-            <h2 className="mt-3 text-2xl font-bold">Esvaziamento sem preocupações</h2>
+          <div className="rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
+            <h2 className="mt-3 text-2xl font-bold text-[#0B1929]">Esvaziamento sem preocupações</h2>
             <div className="mt-6 space-y-3">
               {differentiators.map((item) => (
-                <div key={item} className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-100">
+                <div key={item} className="rounded-[18px] border border-[#E2EEF3] bg-white px-4 py-3 text-sm font-medium text-slate-700">
                   {item}
                 </div>
               ))}

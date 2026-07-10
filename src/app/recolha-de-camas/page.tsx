@@ -13,7 +13,6 @@ import {
   Users,
 } from "lucide-react";
 
-import Breadcrumb from "@/components/Breadcrumb";
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import {
   BUSINESS_NAME,
@@ -169,14 +168,6 @@ export default function RecolhaDeCamasPage() {
       {/* Hero Section */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pb-20 lg:pt-14">
-          <Breadcrumb
-            items={[
-              { label: "Serviços", href: "/servicos" },
-              { label: "Recolha de Móveis", href: "/recolha-de-moveis" },
-              { label: "Recolha de Camas" },
-            ]}
-          />
-
           <div className="mt-8 grid gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">

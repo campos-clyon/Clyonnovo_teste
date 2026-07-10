@@ -338,9 +338,6 @@ export default function RecolhaDeMoveisPage() {
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              O que recolhemos
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Móveis usados, recheios e volumes grandes
             </h2>
@@ -356,9 +353,6 @@ export default function RecolhaDeMoveisPage() {
 
           {/* Pricing table */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Preços de referência
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Exemplos de valores para recolha de móveis
             </h2>
@@ -425,9 +419,9 @@ export default function RecolhaDeMoveisPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-xl bg-slate-900 p-5 text-white">
-            <p className="text-sm font-semibold">Quando escolher a CLYON:</p>
-            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+          <div className="mt-6 rounded-xl bg-[#F4F8FB] p-5">
+            <p className="text-sm font-semibold text-[#0B1929]">Quando escolher a CLYON:</p>
+            <ul className="mt-2 space-y-1 text-sm text-slate-600">
               <li>• Precisa de recolha de móveis usados nos próximos dias</li>
               <li>• Tem armários, camas ou móveis grandes que precisam de desmontagem</li>
               <li>• Os móveis estão em andares altos ou acessos difíceis</li>
@@ -440,9 +434,6 @@ export default function RecolhaDeMoveisPage() {
 
       {/* Páginas por tipo de móvel */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-          Serviços especializados
-        </p>
         <h2 className="mt-2 text-2xl font-bold text-slate-900">
           Recolha por tipo de móvel ou equipamento
         </h2>
@@ -474,9 +465,6 @@ export default function RecolhaDeMoveisPage() {
 
       {/* Cidades */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-          Cobertura local
-        </p>
         <h2 className="mt-2 text-2xl font-bold text-slate-900">
           Recolha de móveis nas principais zonas
         </h2>
@@ -513,9 +501,6 @@ export default function RecolhaDeMoveisPage() {
 
       {/* FAQs */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-          Perguntas frequentes
-        </p>
         <h2 className="mt-2 text-2xl font-bold text-slate-900">
           Dúvidas sobre recolha de móveis usados
         </h2>
@@ -531,11 +516,11 @@ export default function RecolhaDeMoveisPage() {
 
       {/* CTA Final */}
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-6 lg:px-8">
-        <div className="rounded-2xl bg-slate-900 p-8 text-center lg:p-12">
-          <h2 className="text-2xl font-bold text-white lg:text-3xl">
+        <div className="rounded-2xl bg-[#F4F8FB] p-8 text-center lg:p-12">
+          <h2 className="text-2xl font-bold text-[#0B1929] lg:text-3xl">
             Precisa de recolha de móveis hoje?
           </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-slate-300">
+          <p className="mx-auto mt-3 max-w-2xl text-slate-600">
             Envie fotos e morada para receber orçamento rápido. Quanto mais informação nos der, mais preciso será o valor.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

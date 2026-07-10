@@ -87,9 +87,6 @@ export default async function BlogPostPage({ params }: Props) {
 
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700 shadow-sm">
-            {post.heroLabel}
-          </div>
           <h1 className="mt-5 max-w-4xl text-[2.6rem] font-bold leading-[1.03] tracking-tight text-slate-950 sm:text-[4.2rem]">
             {post.title}
           </h1>
@@ -162,7 +159,6 @@ export default async function BlogPostPage({ params }: Props) {
 
           <aside className="space-y-6">
             <div className="rounded-[28px] border border-cyan-100 bg-cyan-50/70 p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Categoria</p>
               <p className="mt-3 text-2xl font-bold text-slate-950">{post.category}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {post.keywords.map((keyword) => (
@@ -177,7 +173,6 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
 
             <div className="rounded-[28px] border border-cyan-100 bg-white p-6 shadow-[0_18px_40px_-34px_rgba(14,116,144,0.18)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">FAQ rápida</p>
               <div className="mt-5 space-y-4">
                 {post.faq.map((item) => (
                   <div key={item.question} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -195,7 +190,6 @@ export default async function BlogPostPage({ params }: Props) {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Mais leitura</p>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">Artigos relacionados</h2>
             </div>
             <Link href="/blog" className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-600">
@@ -208,7 +202,6 @@ export default async function BlogPostPage({ params }: Props) {
                 key={item.slug}
                 className="rounded-[28px] border border-cyan-100 bg-white p-6 shadow-[0_20px_44px_-34px_rgba(14,116,144,0.16)]"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">{item.category}</p>
                 <h3 className="mt-4 text-2xl font-bold leading-tight text-slate-950">{item.title}</h3>
                 <p className="mt-4 text-sm leading-7 text-slate-600">{item.description}</p>
                 <Link

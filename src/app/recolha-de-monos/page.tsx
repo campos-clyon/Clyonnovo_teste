@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
-  Package,
   MapPin,
   Phone,
   Recycle,
@@ -13,7 +12,6 @@ import {
 
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
-import TrustBadges from "@/components/TrustBadges";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -124,10 +122,6 @@ export default function RecolhaMonosPage() {
         <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-center">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-violet-700 shadow-sm">
-                <Package className="h-4 w-4" />
-                Recolha de monos
-              </div>
               <h1 className="mt-5 max-w-[18ch] text-4xl font-bold tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
                 Recolha de Monos em Lisboa e Setúbal
               </h1>
@@ -157,7 +151,6 @@ export default function RecolhaMonosPage() {
             </div>
 
             <div className="overflow-hidden rounded-3xl border border-violet-100 bg-white p-6 shadow-xl">
-              <TrustBadges variant="grid" />
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-violet-100 bg-violet-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Resposta em</p>
@@ -196,7 +189,6 @@ export default function RecolhaMonosPage() {
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-3xl border border-violet-100 bg-white p-7 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-wider text-violet-700">O que recolhemos</p>
             <h2 className="mt-3 text-2xl font-bold text-slate-950">Tipos de monos</h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {includedItems.map((item) => (
@@ -208,12 +200,11 @@ export default function RecolhaMonosPage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-slate-950 p-7 text-white">
-            <p className="text-sm font-semibold uppercase tracking-wider text-violet-300">Porquê a CLYON</p>
-            <h2 className="mt-3 text-2xl font-bold">Serviço completo de monos</h2>
+          <div className="rounded-3xl border border-slate-200 bg-[#F4F8FB] p-7">
+            <h2 className="mt-3 text-2xl font-bold text-[#0B1929]">Serviço completo de monos</h2>
             <div className="mt-6 space-y-3">
               {differentiators.map((item) => (
-                <div key={item} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-100">
+                <div key={item} className="rounded-xl border border-[#E2EEF3] bg-white px-4 py-3 text-sm font-medium text-slate-700">
                   {item}
                 </div>
               ))}

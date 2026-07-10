@@ -9,7 +9,6 @@ import {
   Truck,
   Zap,
 } from "lucide-react";
-import Breadcrumb from "@/components/Breadcrumb";
 
 export const metadata: Metadata = {
   title: "Recolha de Sofá Lisboa | Carregamento e Transporte | CLYON",
@@ -166,17 +165,6 @@ export default function RecolhaSofaLisboaPage() {
       />
 
       <main className="min-h-screen bg-white">
-        {/* Breadcrumb */}
-        <div className="mx-auto max-w-7xl px-6 pt-6 lg:px-8">
-          <Breadcrumb
-            items={[
-              { label: "Início", href: "/" },
-              { label: "Recolha de Sofás", href: "/recolha-de-sofas" },
-              { label: "Lisboa" },
-            ]}
-          />
-        </div>
-
         {/* Hero */}
         <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
           <div className="flex items-center gap-2 text-sm font-medium text-cyan-700">
@@ -225,9 +213,6 @@ export default function RecolhaSofaLisboaPage() {
         {/* Quando contratar */}
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Situações comuns
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Quando contratar recolha de sofá
             </h2>
@@ -248,9 +233,6 @@ export default function RecolhaSofaLisboaPage() {
 
         {/* Como funciona */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-            Processo simples
-          </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
             Como funciona a recolha de sofá
           </h2>
@@ -271,9 +253,6 @@ export default function RecolhaSofaLisboaPage() {
         {/* Tipos de sofá */}
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Tipos de sofá
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               O que recolhemos em Lisboa
             </h2>
@@ -294,9 +273,6 @@ export default function RecolhaSofaLisboaPage() {
 
         {/* FAQ */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-            Perguntas frequentes
-          </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
             Dúvidas sobre recolha de sofá em Lisboa
           </h2>
@@ -314,9 +290,6 @@ export default function RecolhaSofaLisboaPage() {
         {/* Links internos */}
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Páginas relacionadas
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Outros serviços de recolha
             </h2>

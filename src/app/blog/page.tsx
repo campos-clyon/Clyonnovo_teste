@@ -25,9 +25,6 @@ export default function BlogPage() {
         <div className="mx-auto max-w-6xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700 shadow-sm">
-                Blog CLYON
-              </div>
               <h1 className="mt-5 max-w-[14.5ch] text-[2.45rem] font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-[3.8rem]">
                 Conteúdo útil para quem precisa de libertar espaço sem complicações.
               </h1>
@@ -44,9 +41,6 @@ export default function BlogPage() {
                   <Search className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                    SEO local
-                  </p>
                   <p className="mt-2 text-sm leading-8 text-slate-600">
                     Estes artigos foram pensados para captar termos com intenção
                     real de contacto, como recolha de móveis, doação, despejo de
@@ -68,9 +62,6 @@ export default function BlogPage() {
                 className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_22px_50px_-36px_rgba(14,116,144,0.16)]"
               >
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                    {post.category}
-                  </span>
                   <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                     <Clock3 className="h-4 w-4" />
                     {post.readingTime}

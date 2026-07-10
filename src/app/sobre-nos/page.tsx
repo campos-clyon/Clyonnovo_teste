@@ -7,7 +7,6 @@ import {
   MapPin,
   Phone,
   Recycle,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -73,9 +72,6 @@ export default function SobreNosPage() {
         <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
-                Sobre a CLYON
-              </div>
               <h1 className="mt-5 max-w-[12ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
                 Menos complicação, mais execução no terreno.
               </h1>
@@ -88,9 +84,6 @@ export default function SobreNosPage() {
             </div>
 
             <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.2)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Presença local
-              </p>
               <div className="mt-4 space-y-3">
                 {REGIONS.map((region) => (
                   <div key={region.slug} className="flex items-start gap-3">
@@ -166,10 +159,6 @@ export default function SobreNosPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                <ShieldCheck className="h-4 w-4" />
-                Como trabalhamos
-              </div>
               <h2 className="mt-4 text-4xl font-bold leading-tight text-slate-950">
                 Um processo simples do pedido até ao espaço livre.
               </h2>
@@ -203,9 +192,6 @@ export default function SobreNosPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.98fr_1.02fr]">
             <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Sinais de confiança
-              </p>
               <h2 className="mt-4 text-3xl font-bold text-slate-950">
                 Porque tantos pedidos chegam por recomendação.
               </h2>
@@ -219,9 +205,6 @@ export default function SobreNosPage() {
             </div>
 
             <div className="rounded-[34px] border border-cyan-100 bg-cyan-50/70 p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Contacto e base operacional
-              </p>
               <div className="mt-6 space-y-4">
                 <div className="flex items-start gap-3 rounded-[22px] bg-white p-5 shadow-sm">
                   <Phone className="mt-1 h-4 w-4 text-cyan-600" />

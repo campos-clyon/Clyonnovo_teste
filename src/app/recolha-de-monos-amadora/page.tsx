@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
-import Breadcrumb from "@/components/Breadcrumb";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -131,19 +130,8 @@ export default function MonosAmadoraPage() {
         {/* Hero */}
         <section className="bg-gradient-to-b from-white to-slate-50 pb-12 pt-8">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <Breadcrumb
-              items={[
-                { label: "Início", href: "/" },
-                { label: "Recolha de Monos", href: "/recolha-monos-lisboa" },
-                { label: "Amadora" },
-              ]}
-            />
-
             <div className="mt-8 grid items-start gap-10 lg:grid-cols-2">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-                  Serviço local na Amadora
-                </p>
                 <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
                   Recolha de monos na Amadora com carregamento e transporte
                 </h1>
@@ -177,9 +165,6 @@ export default function MonosAmadoraPage() {
               </div>
 
               <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-                  Valores de referência
-                </p>
                 <div className="mt-4 space-y-3">
                   {[
                     { type: "1-2 itens pequenos", price: "sob avaliação" },
@@ -204,9 +189,6 @@ export default function MonosAmadoraPage() {
         {/* Municipal vs Privada */}
         <section className="py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-              Qual escolher
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Recolha municipal gratuita ou serviço privado?
             </h2>
@@ -256,9 +238,6 @@ export default function MonosAmadoraPage() {
         {/* O que recolhemos */}
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-              Monos e volumosos
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               O que recolhemos na Amadora
             </h2>
@@ -276,9 +255,6 @@ export default function MonosAmadoraPage() {
         {/* Quando contratar */}
         <section className="py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-              Situações comuns
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Quando contratar a CLYON para recolha de monos
             </h2>
@@ -303,9 +279,6 @@ export default function MonosAmadoraPage() {
         {/* Zonas */}
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-              Cobertura local
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Zonas da Amadora onde atuamos
             </h2>
@@ -328,9 +301,6 @@ export default function MonosAmadoraPage() {
         {/* Serviços relacionados */}
         <section className="py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-              Serviços relacionados na Amadora
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Outros serviços que pode precisar
             </h2>
@@ -360,9 +330,6 @@ export default function MonosAmadoraPage() {
         {/* FAQ */}
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-              Dúvidas frequentes
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Perguntas sobre recolha de monos na Amadora
             </h2>

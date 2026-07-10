@@ -577,7 +577,7 @@ function HowItWorks() {
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
-      <SectionTitle eyebrow="Simples e rápido" title="Como funciona" />
+      <SectionTitle title="Como funciona" />
       <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
           <div
@@ -632,7 +632,6 @@ function SendForQuote() {
     <section className="bg-slate-50 py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
         <SectionTitle
-          eyebrow="Pré-qualificação"
           title="Para receber um orçamento mais certo, envie:"
           subtitle="Com estas informações, a CLYON consegue avaliar volume, acesso e logística com mais precisão."
         />
@@ -718,7 +717,6 @@ function ServicesSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
       <SectionTitle
-        eyebrow="O que recolhemos"
         title="Serviços de recolha e esvaziamento"
         subtitle="Soluções para particulares e empresas em toda a região de Lisboa, Margem Sul e Setúbal."
       />
@@ -793,7 +791,6 @@ function PricingGuide() {
     <section className="bg-slate-50 py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
         <SectionTitle
-          eyebrow="Valores orientativos"
           title="Quanto custa a recolha?"
           subtitle="O valor depende do volume, peso, localização, acesso, distância até à carrinha, necessidade de desmontagem e urgência."
         />
@@ -850,7 +847,6 @@ function WhyChooseSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
       <SectionTitle
-        eyebrow="Confiança"
         title="Porque escolher a CLYON?"
         subtitle="Ajudamos particulares e empresas a libertar espaço com recolha profissional e orçamento simples."
       />
@@ -897,7 +893,6 @@ function ReviewsSection() {
     <section className="bg-slate-50 py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
         <SectionTitle
-          eyebrow="Testemunhos"
           title="O que dizem os clientes"
         />
         <div className="mt-5 flex items-center justify-center gap-2">
@@ -950,25 +945,22 @@ function ReviewsSection() {
 /* --------------------------- Areas --------------------------- */
 function AreasSection() {
   return (
-    <section className="bg-slate-900 py-14 sm:py-16">
+    <section className="bg-[#F4F8FB] py-14 sm:py-16">
       <div className="mx-auto max-w-5xl px-4 text-center">
-        <span className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-400">
-          Áreas atendidas
-        </span>
-        <h2 className="mt-2 text-balance text-2xl font-extrabold text-white sm:text-3xl">
+        <h2 className="mt-2 text-balance text-2xl font-extrabold text-[#0B1929] sm:text-3xl">
           Atendimento em Lisboa, Margem Sul e Setúbal
         </h2>
         <div className="mt-8 flex flex-wrap justify-center gap-2.5">
           {AREAS.map((area) => (
             <span
               key={area}
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white"
+              className="rounded-full border border-[#E2EEF3] bg-white px-4 py-2 text-sm font-medium text-slate-700"
             >
               {area}
             </span>
           ))}
         </div>
-        <p className="mx-auto mt-6 max-w-xl text-sm text-slate-300">
+        <p className="mx-auto mt-6 max-w-xl text-sm text-slate-600">
           Se a sua localidade não estiver na lista, envie mensagem para
           confirmar disponibilidade.
         </p>
@@ -994,7 +986,7 @@ function FAQSection() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-14 sm:py-16">
-      <SectionTitle eyebrow="Dúvidas frequentes" title="Perguntas e respostas" />
+      <SectionTitle title="Perguntas e respostas" />
       <div className="mt-8 space-y-3">
         {FAQ_ITEMS.map((item, index) => {
           const isOpen = open === index;

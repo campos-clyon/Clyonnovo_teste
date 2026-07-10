@@ -10,7 +10,6 @@ import {
   Truck,
   Zap,
 } from "lucide-react";
-import Breadcrumb from "@/components/Breadcrumb";
 
 export const metadata: Metadata = {
   title: "Retirar Móveis Velhos Lisboa, Margem Sul e Setúbal | CLYON",
@@ -165,17 +164,6 @@ export default function RetirarMoveisVelhosPage() {
       />
 
       <main className="min-h-screen bg-white">
-        {/* Breadcrumb */}
-        <div className="mx-auto max-w-7xl px-6 pt-6 lg:px-8">
-          <Breadcrumb
-            items={[
-              { label: "Início", href: "/" },
-              { label: "Recolha de Móveis", href: "/recolha-de-moveis" },
-              { label: "Retirar Móveis Velhos" },
-            ]}
-          />
-        </div>
-
         {/* Hero */}
         <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
           <div className="flex items-center gap-2 text-sm font-medium text-cyan-700">
@@ -224,9 +212,6 @@ export default function RetirarMoveisVelhosPage() {
         {/* Quando contratar */}
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Situações comuns
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Quando contratar retirada de móveis velhos
             </h2>
@@ -247,9 +232,6 @@ export default function RetirarMoveisVelhosPage() {
 
         {/* Como funciona */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-            Processo simples
-          </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
             Como funciona a retirada de móveis velhos
           </h2>
@@ -270,9 +252,6 @@ export default function RetirarMoveisVelhosPage() {
         {/* O que retiramos */}
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Tipos de móveis
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Que móveis velhos retiramos
             </h2>
@@ -293,9 +272,6 @@ export default function RetirarMoveisVelhosPage() {
 
         {/* Diferencial */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-            Porquê a CLYON
-          </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
             Vantagens da retirada profissional
           </h2>
@@ -318,9 +294,6 @@ export default function RetirarMoveisVelhosPage() {
         {/* FAQ */}
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-              Perguntas frequentes
-            </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Dúvidas sobre retirar móveis velhos
             </h2>
@@ -338,9 +311,6 @@ export default function RetirarMoveisVelhosPage() {
 
         {/* Links internos */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
-            Páginas relacionadas
-          </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
             Outros serviços de recolha
           </h2>

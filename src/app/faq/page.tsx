@@ -86,9 +86,6 @@ export default function FAQPage() {
         <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
-                Perguntas frequentes
-              </div>
               <h1 className="mt-5 max-w-[13ch] text-[2.55rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.1rem]">
                 Respostas rápidas para decidir com clareza.
               </h1>
