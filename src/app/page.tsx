@@ -208,14 +208,14 @@ export default function HomePage() {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Overlay roxo — só nos primeiros 55% (topo→baixo mobile, esquerda→direita desktop). Lado oposto 100% limpo. */}
+        {/* Overlay preto — só nos primeiros 55% (topo→baixo mobile, esquerda→direita desktop). Lado oposto 100% limpo. */}
         <div
           className="absolute inset-0 lg:hidden"
-          style={{ background: "linear-gradient(to bottom, rgba(8,17,29,0.72) 0%, rgba(101,7,163,0.20) 38%, transparent 58%)" }}
+          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.20) 38%, transparent 58%)" }}
         />
         <div
           className="absolute inset-0 hidden lg:block"
-          style={{ background: "linear-gradient(to right, rgba(8,17,29,0.72) 0%, rgba(101,7,163,0.20) 38%, transparent 58%)" }}
+          style={{ background: "linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.20) 38%, transparent 58%)" }}
         />
 
         {/* Content */}
