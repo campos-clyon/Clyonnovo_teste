@@ -626,6 +626,14 @@ export async function ensureColaboradoresSchema(): Promise<void> {
       name: "updatedAt",
       sql: `ALTER TABLE colaboradores ADD COLUMN updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`,
     },
+    {
+      name: "costPerAcceptedOrder",
+      sql: `ALTER TABLE colaboradores ADD COLUMN costPerAcceptedOrder DECIMAL(8,2) DEFAULT '6.00'`,
+    },
+    {
+      name: "totalPaid",
+      sql: `ALTER TABLE colaboradores ADD COLUMN totalPaid DECIMAL(10,2) DEFAULT '0.00'`,
+    },
   ];
 
   // Verificar e adicionar cada coluna individualmente

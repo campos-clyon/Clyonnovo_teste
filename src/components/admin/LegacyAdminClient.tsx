@@ -424,6 +424,25 @@ const formatRoleLabel = (role: Colaborador["funcao"]) => {
   return "Ajudante";
 };
 
+function maskName(name: string | null | undefined): string {
+  if (!name) return "—";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return "—";
+  return parts.map((p) => p.charAt(0) + "***").join(" ");
+}
+function maskPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 4) return "***";
+  return digits.slice(0, 3) + "***" + digits.slice(-2);
+}
+function maskEmail(email: string | null | undefined): string {
+  if (!email) return "";
+  const [local, domain] = email.split("@");
+  if (!domain) return "***@***";
+  return local.charAt(0) + "***@" + domain.charAt(0) + "***";
+}
+
 export default function ColaboradorAdminClient() {
   const router = useRouter();
 
@@ -569,6 +588,11 @@ export default function ColaboradorAdminClient() {
   const [selectedPedido, setSelectedPedido] = useState<SimulatorOrder | null>(null);
   const [pedidoDetalheOpen, setPedidoDetalheOpen] = useState(false);
   const [assistentes, setAssistentes] = useState<Array<{ id: number; nome: string; funcao: string }>>([]);
+  const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
+  const [billing, setBilling] = useState<{ acceptedCount: number; costPerOrder: number; totalOwed: number; totalPaid: number; balance: number } | null>(null);
+  const [adminBilling, setAdminBilling] = useState<Array<{ id: number; nome: string; costPerAcceptedOrder: string; totalPaid: string; acceptedCount: number }>>([]);
+  const [billingPaymentAmounts, setBillingPaymentAmounts] = useState<Record<number, string>>({});
+  const [billingCostEdits, setBillingCostEdits] = useState<Record<number, string>>({});
   const pedidoSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlePedidoSearch = (value: string) => {
     setPedidoSearch(value);
@@ -749,6 +773,19 @@ export default function ColaboradorAdminClient() {
     } catch {}
   };
 
+  const carregarBilling = async (authToken: string) => {
+    try {
+      const res = await fetch("/api/admin/billing", {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.balance !== undefined) setBilling(data);
+        if (data.assistants) setAdminBilling(data.assistants);
+      }
+    } catch {}
+  };
+
   const carregarLeads = async (authToken: string, periodo = leadPeriodo, status = leadStatusFilter) => {
     if (!authToken) return;
     try {
@@ -828,6 +865,7 @@ export default function ColaboradorAdminClient() {
     if (activeSection !== "pedidos" || !token) return;
     carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
     carregarAssistentes(token);
+    if (!isAdminGeral) carregarBilling(token);
     const interval = setInterval(() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced), 120000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -839,6 +877,15 @@ export default function ColaboradorAdminClient() {
     carregarPedidos(token, "todos", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Carregar billing admin quando entra em Settings > Funções
+  useEffect(() => {
+    if (!token || !isAdminGeral) return;
+    if ((activeSection === "site" || activeSection === "configs") && settingsTab === "funcoes") {
+      carregarBilling(token);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, settingsTab, token, isAdminGeral]);
 
   const colaboradoresFiltrados = useMemo(() => {
     if (filtroColaborador === "todos") return colaboradores;
@@ -2052,6 +2099,29 @@ export default function ColaboradorAdminClient() {
                 })}
               </div>
 
+              {/* Billing card — assistente only */}
+              {!isAdminGeral && billing && (
+                <div className="flex items-center gap-4 rounded-[16px] border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Euro className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-slate-700">Pedidos aceites: <span className="text-amber-700">{billing.acceptedCount}</span></span>
+                  </div>
+                  <span className="text-xs text-slate-500">×</span>
+                  <span className="text-sm text-slate-600">{billing.costPerOrder.toFixed(2)} €/pedido</span>
+                  <span className="text-xs text-slate-500">=</span>
+                  <span className="text-sm font-bold text-slate-800">{billing.totalOwed.toFixed(2)} €</span>
+                  {billing.totalPaid > 0 && (
+                    <>
+                      <span className="text-xs text-slate-400">−</span>
+                      <span className="text-sm text-emerald-700">{billing.totalPaid.toFixed(2)} € pago</span>
+                    </>
+                  )}
+                  <span className="ml-auto rounded-full border border-amber-300 bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-800">
+                    Saldo: {billing.balance.toFixed(2)} €
+                  </span>
+                </div>
+              )}
+
               {/* Filtros e pesquisa */}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1">
@@ -2194,10 +2264,19 @@ export default function ColaboradorAdminClient() {
                               </td>
                               {/* Cliente */}
                               <td className="px-2 py-3.5">
-                                <p className="max-w-[130px] truncate font-semibold text-slate-900">{p.contactName ?? "—"}</p>
-                                {p.contactPhone && (
-                                  <p className="mt-0.5 text-[11px] text-slate-400">{p.contactPhone}</p>
-                                )}
+                                {(() => {
+                                  const isAssist = !isAdminGeral;
+                                  const isOwner = p.assignedToId === colabId;
+                                  const shouldMask = isAssist && !isOwner;
+                                  return (
+                                    <>
+                                      <p className="max-w-[130px] truncate font-semibold text-slate-900">{shouldMask ? maskName(p.contactName) : (p.contactName ?? "—")}</p>
+                                      {p.contactPhone && (
+                                        <p className="mt-0.5 text-[11px] text-slate-400">{shouldMask ? maskPhone(p.contactPhone) : p.contactPhone}</p>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </td>
                               {/* Serviço */}
                               <td className="px-2 py-3.5">
@@ -2256,47 +2335,49 @@ export default function ColaboradorAdminClient() {
                                     <button
                                       type="button"
                                       className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                                      onClick={(e) => { e.stopPropagation(); setConfirmAcceptPedido(p); }}
+                                    >
+                                      Aceitar
+                                    </button>
+                                  )}
+                                  {!isAdminGeral && (
+                                    <button
+                                      type="button"
+                                      className="rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
-                                        if (!token) { alert("Sessão expirada."); return; }
+                                        if (!token || !p.id) return;
+                                        if (!confirm("Rejeitar este pedido? Ele voltará à fila geral.")) return;
                                         try {
-                                          const r = await fetch(`/api/admin/pedidos/${p.id}/accept`, {
+                                          await fetch(`/api/admin/pedidos/${p.id}/reject`, {
                                             method: "POST",
                                             headers: { Authorization: `Bearer ${token}` },
                                           });
-                                          let data: { ok?: boolean; message?: string; order?: SimulatorOrder } = {};
-                                          try { data = await r.json(); } catch { /* empty */ }
-                                          if (r.ok && data?.ok) {
-                                            const updated = data.order ?? { ...p, assignedToId: colabId, assignedToName: adminNome, status: "atribuido" };
-                                            setPedidos((prev) => prev.map((x) => x.id === p.id ? { ...x, ...updated } : x));
-                                            await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
-                                          } else {
-                                            alert(`Erro ${r.status}: ${data?.message ?? "Não foi possível aceitar."}`);
-                                          }
-                                        } catch (err) {
-                                          alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
-                                        }
+                                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+                                        } catch { /* silent */ }
                                       }}
                                     >
-                                      Aceitar
+                                      Rejeitar
                                     </button>
                                   )}
                                   {isAdminGeral && (
                                     <button
                                       type="button"
                                       className="rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
-                                      onClick={(e) => { e.stopPropagation(); /* cancelar via modal */ setSelectedPedido(p); setPedidoDetalheOpen(true); }}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                                     >
                                       Cancelar
                                     </button>
                                   )}
-                                  <button
-                                    type="button"
-                                    className="rounded-[8px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 transition"
-                                    onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
-                                  >
-                                    Abrir
-                                  </button>
+                                  {isAdminGeral && (
+                                    <button
+                                      type="button"
+                                      className="rounded-[8px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 transition"
+                                      onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
+                                    >
+                                      Abrir
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -2307,6 +2388,60 @@ export default function ColaboradorAdminClient() {
                 </div>
               )}
             </section>
+          )}
+
+          {/* Modal de confirmação de aceitar pedido (assistente) */}
+          {confirmAcceptPedido && token && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <div className="w-full max-w-sm rounded-[24px] border border-slate-200 bg-white p-6 shadow-xl">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50">
+                  <svg className="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Aceitar este pedido?</h3>
+                <p className="mt-2 text-sm text-slate-500">
+                  Ao aceitar, os dados do cliente ficam visíveis e será cobrado o valor por pedido aceite.
+                  Este pedido ficará atribuído a si.
+                </p>
+                <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2">
+                  <p className="text-xs text-slate-500">Serviço: <span className="font-semibold text-slate-700">{confirmAcceptPedido.serviceType ?? "—"}</span></p>
+                  <p className="text-xs text-slate-500">Cidade: <span className="font-semibold text-slate-700">{confirmAcceptPedido.city ?? "—"}</span></p>
+                </div>
+                <div className="mt-5 flex gap-3">
+                  <button
+                    onClick={() => setConfirmAcceptPedido(null)}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const p = confirmAcceptPedido;
+                      setConfirmAcceptPedido(null);
+                      try {
+                        const r = await fetch(`/api/admin/pedidos/${p.id}/accept`, {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        let data: { ok?: boolean; message?: string; order?: SimulatorOrder } = {};
+                        try { data = await r.json(); } catch { /* empty */ }
+                        if (r.ok && data?.ok) {
+                          const updated = data.order ?? { ...p, assignedToId: colabId, assignedToName: adminNome, status: "atribuido" };
+                          setPedidos((prev) => prev.map((x) => x.id === p.id ? { ...x, ...updated } : x));
+                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+                        } else {
+                          alert(`Erro ${r.status}: ${data?.message ?? "Não foi possível aceitar."}`);
+                        }
+                      } catch (err) {
+                        alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
+                      }
+                    }}
+                    className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 transition"
+                  >
+                    Sim, aceitar
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Modal de detalhe do pedido — novo PedidoDetailModal */}
@@ -3680,6 +3815,97 @@ export default function ColaboradorAdminClient() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Billing — gestão de custos por pedido aceite */}
+                    {adminBilling.length > 0 && (
+                      <div className="rounded-[20px] border border-amber-400/20 bg-amber-400/[0.04] p-5 space-y-4">
+                        <h3 className="text-base font-semibold text-amber-200">Faturação de assistentes</h3>
+                        <p className="text-xs text-slate-400">Valor por pedido aceite e pagamentos registados. O saldo acumula até que registe um pagamento.</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[600px] border-collapse text-sm">
+                            <thead>
+                              <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                                <th className="px-3 py-2 font-semibold">Assistente</th>
+                                <th className="px-3 py-2 font-semibold">Aceites</th>
+                                <th className="px-3 py-2 font-semibold">€/pedido</th>
+                                <th className="px-3 py-2 font-semibold">Total</th>
+                                <th className="px-3 py-2 font-semibold">Pago</th>
+                                <th className="px-3 py-2 font-semibold">Saldo</th>
+                                <th className="px-3 py-2 font-semibold">Registar pagamento</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {adminBilling.map((a) => {
+                                const cost = parseFloat(a.costPerAcceptedOrder ?? "6");
+                                const paid = parseFloat(a.totalPaid ?? "0");
+                                const total = a.acceptedCount * cost;
+                                const balance = total - paid;
+                                return (
+                                  <tr key={a.id} className="border-b border-white/5">
+                                    <td className="px-3 py-2 font-semibold text-white">{a.nome}</td>
+                                    <td className="px-3 py-2 text-white">{a.acceptedCount}</td>
+                                    <td className="px-3 py-2">
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="w-20 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-sm text-white"
+                                        value={billingCostEdits[a.id] ?? cost.toFixed(2)}
+                                        onChange={(e) => setBillingCostEdits((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                                        onBlur={async () => {
+                                          const newCost = billingCostEdits[a.id];
+                                          if (newCost === undefined || parseFloat(newCost) === cost) return;
+                                          await fetch("/api/admin/billing", {
+                                            method: "PATCH",
+                                            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                            body: JSON.stringify({ assistantId: a.id, costPerAcceptedOrder: parseFloat(newCost) }),
+                                          });
+                                          carregarBilling(token);
+                                        }}
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 font-semibold text-amber-300">{total.toFixed(2)} €</td>
+                                    <td className="px-3 py-2 text-emerald-400">{paid.toFixed(2)} €</td>
+                                    <td className={`px-3 py-2 font-bold ${balance > 0 ? "text-red-400" : "text-emerald-400"}`}>{balance.toFixed(2)} €</td>
+                                    <td className="px-3 py-2">
+                                      <div className="flex items-center gap-1">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          placeholder="€"
+                                          className="w-20 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-sm text-white placeholder:text-slate-500"
+                                          value={billingPaymentAmounts[a.id] ?? ""}
+                                          onChange={(e) => setBillingPaymentAmounts((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                                        />
+                                        <button
+                                          type="button"
+                                          className="rounded-lg bg-emerald-500 px-2 py-1 text-xs font-bold text-white hover:bg-emerald-400 transition disabled:opacity-40"
+                                          disabled={!billingPaymentAmounts[a.id] || parseFloat(billingPaymentAmounts[a.id]) <= 0}
+                                          onClick={async () => {
+                                            const amount = parseFloat(billingPaymentAmounts[a.id]);
+                                            if (!amount || amount <= 0) return;
+                                            await fetch("/api/admin/billing", {
+                                              method: "PATCH",
+                                              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                              body: JSON.stringify({ assistantId: a.id, addPayment: amount }),
+                                            });
+                                            setBillingPaymentAmounts((prev) => ({ ...prev, [a.id]: "" }));
+                                            carregarBilling(token);
+                                          }}
+                                        >
+                                          Pagar
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </ActionCard>
               )}

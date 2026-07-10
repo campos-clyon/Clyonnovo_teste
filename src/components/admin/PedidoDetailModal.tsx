@@ -282,6 +282,21 @@ type Props = {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+function _maskName(name: string | null | undefined): string {
+  if (!name) return "—";
+  return name.trim().split(/\s+/).map((p) => p.charAt(0) + "***").join(" ");
+}
+function _maskPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  const d = phone.replace(/\D/g, "");
+  return d.length < 4 ? "***" : d.slice(0, 3) + "***" + d.slice(-2);
+}
+function _maskEmail(email: string | null | undefined): string {
+  if (!email) return "";
+  const [l, dom] = email.split("@");
+  return !dom ? "***@***" : l.charAt(0) + "***@" + dom.charAt(0) + "***";
+}
+
 export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFuncao, onClose, onDeleted, onUpdated }: Props) {
   const authHeader = { Authorization: `Bearer ${token}` };
 
@@ -292,6 +307,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("geral");
+  const [showAcceptPrompt, setShowAcceptPrompt] = useState(false);
+
+  const isOwner = order?.assignedToId != null && order.assignedToId === colabId;
+  const shouldMask = !isAdmin && !isOwner;
 
   // Edit state
   const [editContactName, setEditContactName] = useState("");
@@ -1048,7 +1067,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       Pedido #{order.id} · Simulador
                     </p>
                     <h2 className="mt-0.5 text-xl font-bold text-slate-900 truncate">
-                      {order.contactName ?? "Cliente sem nome"}
+                      {shouldMask ? _maskName(order.contactName) : (order.contactName ?? "Cliente sem nome")}
                     </h2>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <StatusBadge status={order.status} />
@@ -1165,17 +1184,31 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       Rejeitar
                     </button>
                     {/* WhatsApp */}
-                    <a
-                      href={`https://wa.me/${waPhone}?text=${waMsg}`}
-                      target="_blank" rel="noreferrer"
-                      className="hidden md:flex items-center gap-1.5 rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-sm font-semibold text-green-300 hover:bg-green-400/20 transition"
-                    >
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.845L.057 23.455a.5.5 0 00.614.6l5.757-1.508A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.746-.523-5.302-1.434l-.38-.222-3.938 1.031 1.046-3.82-.247-.393A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-                      </svg>
-                      WhatsApp
-                    </a>
+                    {shouldMask ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAcceptPrompt(true)}
+                        className="hidden md:flex items-center gap-1.5 rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-sm font-semibold text-green-300 hover:bg-green-400/20 transition"
+                      >
+                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.845L.057 23.455a.5.5 0 00.614.6l5.757-1.508A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.746-.523-5.302-1.434l-.38-.222-3.938 1.031 1.046-3.82-.247-.393A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+                        </svg>
+                        WhatsApp
+                      </button>
+                    ) : (
+                      <a
+                        href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                        target="_blank" rel="noreferrer"
+                        className="hidden md:flex items-center gap-1.5 rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-sm font-semibold text-green-300 hover:bg-green-400/20 transition"
+                      >
+                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.845L.057 23.455a.5.5 0 00.614.6l5.757-1.508A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.746-.523-5.302-1.434l-.38-.222-3.938 1.031 1.046-3.82-.247-.393A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+                        </svg>
+                        WhatsApp
+                      </a>
+                    )}
                     {/* Agendar serviço — admin ou assistente responsável, pedido aprovado/confirmado/em_execucao */}
                     {(isAdmin || (colabFuncao === "assistente" && order.assignedToId === colabId)) &&
                       (["aprovado", "confirmado", "em_execucao"].includes(order.status) || !!order.scheduledDate) && (
@@ -1258,7 +1291,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         { icon: "🔧", label: "Tipo de serviço", value: getServiceLabel(order.serviceType), accent: "text-cyan-400" },
                         { icon: "📋", label: "Pedido nº", value: `#${order.id}`, accent: "text-slate-800" },
                         { icon: "📅", label: "Data de entrada", value: fmt(order.createdAt), accent: "text-slate-800" },
-                        { icon: "👤", label: "Cliente", value: order.contactName ?? "—", accent: "text-slate-900" },
+                        { icon: "👤", label: "Cliente", value: shouldMask ? _maskName(order.contactName) : (order.contactName ?? "—"), accent: "text-slate-900" },
                         { icon: "📊", label: "Estado", value: STATUS_CFG[order.status]?.label ?? order.status, accent: "text-cyan-700" },
                       ].map((c) => (
                         <div key={c.label} className="rounded-[16px] border border-slate-100 bg-slate-50/50 p-3.5">
@@ -1523,7 +1556,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                               </svg>
-                              <span className="text-sm font-semibold text-slate-800">{order.contactPhone}</span>
+                              <span className="text-sm font-semibold text-slate-800">{shouldMask ? _maskPhone(order.contactPhone) : order.contactPhone}</span>
                             </div>
                           )}
                           {order.contactEmail && (
@@ -1531,15 +1564,22 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                               </svg>
-                              <span className="text-xs text-slate-700 truncate">{order.contactEmail}</span>
+                              <span className="text-xs text-slate-700 truncate">{shouldMask ? _maskEmail(order.contactEmail) : order.contactEmail}</span>
                             </div>
                           )}
-                          {order.contactPhone && (
+                          {order.contactPhone && !shouldMask && (
                             <a href={`https://wa.me/${waPhone}?text=${waMsg}`} target="_blank" rel="noreferrer"
                               className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
                               <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
                               WhatsApp
                             </a>
+                          )}
+                          {order.contactPhone && shouldMask && (
+                            <button onClick={() => setShowAcceptPrompt(true)}
+                              className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
+                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                              WhatsApp
+                            </button>
                           )}
                         </div>
 
@@ -2720,6 +2760,57 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
           </div>
         );
       })()}
+
+      {/* ── Accept prompt (assistente) ── */}
+      {showAcceptPrompt && order && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10">
+              <svg className="h-6 w-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">Aceitar pedido #{order.id}?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              Ao aceitar, terá acesso ao contacto completo do cliente e será cobrado o valor por pedido aceite.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAcceptPrompt(false)}
+                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+              >Cancelar</button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/admin/pedidos/${order.id}/accept`, {
+                      method: "POST",
+                      headers: authHeader,
+                    });
+                    if (res.ok) {
+                      setShowAcceptPrompt(false);
+                      const data = await res.json();
+                      if (data.order) setOrder(data.order);
+                      onUpdated?.(data.order ?? order);
+                    } else {
+                      const err = await res.json();
+                      setError(err.error || "Erro ao aceitar pedido.");
+                      setShowAcceptPrompt(false);
+                    }
+                  } catch {
+                    setError("Erro de ligação ao aceitar.");
+                    setShowAcceptPrompt(false);
+                  }
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyan-500 py-2.5 text-sm font-bold text-white hover:bg-cyan-400 transition"
+              >
+                Aceitar pedido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Delete confirmation ── */}
       {showDelete && order && (
