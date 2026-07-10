@@ -20,6 +20,7 @@ export default function ContactosClient() {
         body: JSON.stringify({
           order: {
             serviceType: "outro",
+            origemPedido: "formulario_contactos",
             description: `Contacto direto via página de contactos. Morada: ${form.morada}`,
             address: { formattedAddress: form.morada },
             receiver: {

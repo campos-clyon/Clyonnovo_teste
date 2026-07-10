@@ -552,6 +552,7 @@ export default function ColaboradorAdminClient() {
     assignedToId?: number | null;
     assignedToName?: string | null;
     assignedAt?: string | null;
+    rawOrderJson?: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -2102,16 +2103,16 @@ export default function ColaboradorAdminClient() {
                   </a>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px] border-separate border-spacing-y-1 text-sm">
+                <div className="overflow-x-auto rounded-[18px] border border-white/[0.06] bg-white/[0.015]">
+                  <table className="w-full min-w-[860px] border-collapse text-sm">
                     <thead>
-                      <tr>
-                        {["Nº", "Cliente", "Telefone", "Serviço", "Localidade", "Urgência", "Status", "Assistente", "Data", "Ação"].map((h) => (
-                          <th key={h} className="px-3 pb-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{h}</th>
+                      <tr className="border-b border-white/[0.06]">
+                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Status", "Origem", "Assistente", "Data", "Ação"].map((h) => (
+                          <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 first:pl-4 last:pr-4 last:text-right">{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-white/[0.04]">
                       {pedidos
                         .filter((p) => {
                           if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId;
@@ -2120,17 +2121,17 @@ export default function ColaboradorAdminClient() {
                         })
                         .map((p) => {
                           const statusColors: Record<string, string> = {
-                            sem_assistente: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-                            pendente: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-                            atribuido: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-                            em_analise: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-                            precisa_info: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-                            presencial_recomendado: "bg-red-500/20 text-red-300 border-red-500/30",
-                            estimativa_pronta: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
-                            aprovado: "bg-cyan-500/20 text-cyan-200 border-cyan-500/30 font-semibold",
-                            enviado_cliente: "bg-teal-500/20 text-teal-300 border-teal-500/30",
-                            confirmado: "bg-green-500/20 text-green-300 border-green-500/30",
-                            cancelado: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+                            sem_assistente: "bg-yellow-500/15 text-yellow-300 border-yellow-500/25",
+                            pendente: "bg-blue-500/15 text-blue-300 border-blue-500/25",
+                            atribuido: "bg-purple-500/15 text-purple-300 border-purple-500/25",
+                            em_analise: "bg-amber-500/15 text-amber-300 border-amber-500/25",
+                            precisa_info: "bg-orange-500/15 text-orange-300 border-orange-500/25",
+                            presencial_recomendado: "bg-red-500/15 text-red-300 border-red-500/25",
+                            estimativa_pronta: "bg-cyan-500/15 text-cyan-300 border-cyan-500/25",
+                            aprovado: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
+                            enviado_cliente: "bg-teal-500/15 text-teal-300 border-teal-500/25",
+                            confirmado: "bg-green-500/15 text-green-300 border-green-500/25",
+                            cancelado: "bg-slate-500/15 text-slate-400 border-slate-500/20",
                           };
                           const statusLabel: Record<string, string> = {
                             sem_assistente: "Sem assistente",
@@ -2145,79 +2146,145 @@ export default function ColaboradorAdminClient() {
                             confirmado: "Confirmado",
                             cancelado: "Cancelado",
                           };
-                          const urgencyColors: Record<string, string> = {
-                            urgente: "text-rose-400",
-                            alta: "text-orange-400",
+                          const urgencyDot: Record<string, string> = {
+                            urgente: "bg-rose-400",
+                            alta: "bg-orange-400",
+                            normal: "bg-slate-500",
+                            baixa: "bg-slate-600",
+                          };
+                          const urgencyText: Record<string, string> = {
+                            urgente: "text-rose-300",
+                            alta: "text-orange-300",
                             normal: "text-slate-400",
                             baixa: "text-slate-500",
                           };
+
+                          // Origem: lê rawOrderJson.origemPedido ou assume "simulador"
+                          let origemLabel = "Simulador";
+                          let origemStyle = "bg-violet-500/15 text-violet-300 border-violet-500/25";
+                          try {
+                            const raw = p.rawOrderJson ? JSON.parse(p.rawOrderJson) : null;
+                            const orig = raw?.origemPedido ?? null;
+                            if (orig === "formulario_contactos") {
+                              origemLabel = "Contactos";
+                              origemStyle = "bg-cyan-500/15 text-cyan-300 border-cyan-500/25";
+                            } else if (orig === "quero_contratar_header" || orig === "quero_contratar") {
+                              origemLabel = "Contratar";
+                              origemStyle = "bg-amber-500/15 text-amber-300 border-amber-500/25";
+                            }
+                          } catch { /* rawOrderJson inválido */ }
+
                           return (
                             <tr
                               key={p.id}
-                              className="group cursor-pointer rounded-[16px] transition hover:bg-white/[0.04]"
+                              className="group cursor-pointer transition-colors hover:bg-white/[0.03]"
                               onClick={() => { setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                             >
-                              <td className="rounded-l-[14px] px-3 py-3 text-xs font-mono text-slate-500">#{p.id}</td>
-                              <td className="px-3 py-3 font-medium text-white">{p.contactName ?? "—"}</td>
-                              <td className="px-3 py-3 text-slate-300">{p.contactPhone ?? "—"}</td>
-                              <td className="px-3 py-3 text-slate-300">{normalizeServiceTypeLabel(p.serviceType)}</td>
-                              <td className="px-3 py-3 text-slate-400">{p.city ?? "—"}</td>
-                              <td className={`px-3 py-3 font-semibold capitalize ${urgencyColors[p.urgency ?? "normal"] ?? "text-slate-400"}`}>{p.urgency ?? "—"}</td>
-                              <td className="px-3 py-3">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[p.status] ?? "bg-slate-500/20 text-slate-400"}`}>
-                                    {statusLabel[p.status] ?? p.status}
-                                  </span>
-                                  {(p as any).calendarStatus && (p as any).calendarStatus !== "not_scheduled" && (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
-                                      <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                      </svg>
-                                      Agendado
-                                    </span>
-                                  )}
-                                </div>
+                              {/* # */}
+                              <td className="pl-4 pr-2 py-3.5">
+                                <span className="font-mono text-[11px] font-semibold text-slate-500">#{p.id}</span>
                               </td>
-                              <td className="px-3 py-3 text-slate-400">{p.assignedToName ?? <span className="text-rose-400">Sem assistente</span>}</td>
-                              <td className="px-3 py-3 text-xs text-slate-500">{p.createdAt ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt)) : "—"}</td>
-                              <td className="rounded-r-[14px] px-3 py-3 text-right">
+                              {/* Cliente */}
+                              <td className="px-2 py-3.5">
+                                <p className="max-w-[130px] truncate font-semibold text-white">{p.contactName ?? "—"}</p>
+                                {p.contactPhone && (
+                                  <p className="mt-0.5 text-[11px] text-slate-500">{p.contactPhone}</p>
+                                )}
+                              </td>
+                              {/* Serviço */}
+                              <td className="px-2 py-3.5">
+                                <span className="inline-block max-w-[110px] truncate rounded-[8px] bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-slate-300">
+                                  {normalizeServiceTypeLabel(p.serviceType)}
+                                </span>
+                              </td>
+                              {/* Localidade */}
+                              <td className="px-2 py-3.5 text-xs text-slate-400">
+                                <span className="max-w-[100px] truncate block">{p.city ?? "—"}</span>
+                              </td>
+                              {/* Urgência */}
+                              <td className="px-2 py-3.5">
+                                {p.urgency ? (
+                                  <span className={`flex items-center gap-1.5 text-[11px] font-semibold capitalize ${urgencyText[p.urgency] ?? "text-slate-400"}`}>
+                                    <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${urgencyDot[p.urgency] ?? "bg-slate-500"}`} />
+                                    {p.urgency}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-600">—</span>
+                                )}
+                              </td>
+                              {/* Status */}
+                              <td className="px-2 py-3.5">
+                                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusColors[p.status] ?? "bg-slate-500/15 text-slate-400"}`}>
+                                  {statusLabel[p.status] ?? p.status}
+                                </span>
+                              </td>
+                              {/* Origem */}
+                              <td className="px-2 py-3.5">
+                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${origemStyle}`}>
+                                  {origemLabel}
+                                </span>
+                              </td>
+                              {/* Assistente */}
+                              <td className="px-2 py-3.5">
+                                {p.assignedToName ? (
+                                  <span className="text-xs font-medium text-slate-300">{p.assignedToName}</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                                    Fila geral
+                                  </span>
+                                )}
+                              </td>
+                              {/* Data */}
+                              <td className="px-2 py-3.5 text-[11px] text-slate-500">
+                                {p.createdAt
+                                  ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
+                                  : "—"}
+                              </td>
+                              {/* Ação */}
+                              <td className="py-3.5 pl-2 pr-4">
                                 <div className="flex items-center justify-end gap-2">
-                                  {/* Aceitar: visível apenas para assistentes em pedidos sem atribuição */}
                                   {!isAdminGeral && !p.assignedToId && (
                                     <button
                                       type="button"
-                                      className="rounded-[10px] border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/20 transition"
+                                      className="rounded-[8px] border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-400/20 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
-                                        if (!token) {
-                                          alert("Sessão expirada. Por favor, faça login novamente.");
-                                          return;
-                                        }
+                                        if (!token) { alert("Sessão expirada."); return; }
                                         try {
                                           const r = await fetch(`/api/admin/pedidos/${p.id}/accept`, {
                                             method: "POST",
                                             headers: { Authorization: `Bearer ${token}` },
                                           });
                                           let data: { ok?: boolean; message?: string; order?: SimulatorOrder } = {};
-                                          try { data = await r.json(); } catch { /* body vazio */ }
+                                          try { data = await r.json(); } catch { /* empty */ }
                                           if (r.ok && data?.ok) {
                                             const updated = data.order ?? { ...p, assignedToId: colabId, assignedToName: adminNome, status: "atribuido" };
                                             setPedidos((prev) => prev.map((x) => x.id === p.id ? { ...x, ...updated } : x));
                                             await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
                                           } else {
-                                            alert(`Erro ${r.status}: ${data?.message ?? "Não foi possível aceitar o pedido."}`);
+                                            alert(`Erro ${r.status}: ${data?.message ?? "Não foi possível aceitar."}`);
                                           }
                                         } catch (err) {
-                                          alert(`Erro de rede: ${err instanceof Error ? err.message : String(err)}`);
+                                          alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
                                         }
                                       }}
                                     >
                                       Aceitar
                                     </button>
                                   )}
+                                  {isAdminGeral && (
+                                    <button
+                                      type="button"
+                                      className="rounded-[8px] border border-red-400/20 bg-red-400/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-400/20 transition"
+                                      onClick={(e) => { e.stopPropagation(); /* cancelar via modal */ setSelectedPedido(p); setPedidoDetalheOpen(true); }}
+                                    >
+                                      Cancelar
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
-                                    className="rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-cyan-100 transition group-hover:border-cyan-400/30 group-hover:bg-cyan-400/10"
+                                    className="rounded-[8px] border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:bg-cyan-400/20 transition"
                                     onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                                   >
                                     Abrir
