@@ -2871,13 +2871,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   if (!pedirInfoText.trim()) return;
                   setPedirInfoSending(true);
                   try {
-                    const res = await fetch(`/api/admin/pedidos/${order.id}`, {
-                      method: "PATCH",
+                    const res = await fetch(`/api/admin/pedidos/${order.id}/pedir-info`, {
+                      method: "POST",
                       headers: { ...authHeader, "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        status: "precisa_info",
-                        mensagemCliente: pedirInfoText.trim(),
-                      }),
+                      body: JSON.stringify({ message: pedirInfoText.trim() }),
                     });
                     const data = await safeJson(res);
                     if (!res.ok) throw new Error(data?.error || "Erro ao enviar pedido de info");

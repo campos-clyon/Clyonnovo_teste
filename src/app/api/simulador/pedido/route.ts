@@ -58,9 +58,18 @@ export async function POST(req: NextRequest) {
       description: order.description || null,
       filesJson: order.files?.length
         ? JSON.stringify(
-            order.files.map((f: Record<string, unknown>) => ({
-              id: f.id, name: f.name, size: f.size, type: f.type, mimeType: f.mimeType,
-            }))
+            order.files.map((f: unknown) => {
+              if (typeof f === "string") return { url: f };
+              const rec = f as Record<string, unknown>;
+              return {
+                id: rec.id,
+                name: rec.name,
+                size: rec.size,
+                type: rec.type,
+                mimeType: rec.mimeType,
+                url: rec.url ?? rec.path ?? null,
+              };
+            })
           )
         : null,
       // Morada principal: para mudança guardamos a origem; para outros o endereço único
