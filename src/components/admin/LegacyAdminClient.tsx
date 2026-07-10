@@ -1417,7 +1417,7 @@ export default function ColaboradorAdminClient() {
       };
 
       if (isAssistente) {
-        payload.paymentModel = "fixed_per_job";
+        payload.paymentModel = "commission";
         payload.valorHora = null;
         payload.canReceiveSimulatorRequests = 1;
         payload.participatesInTimeTracking = 0;
