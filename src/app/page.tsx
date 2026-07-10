@@ -115,20 +115,35 @@ const GUARANTEES = [
   {
     icon: BadgeCheck,
     title: "Profissionais verificados",
+    stat: "100%",
+    statLabel: "com historial verificado",
     description:
       "Todos os operacionais passam por verificação de identidade e avaliação de qualidade contínua. Nenhum profissional sem historial entra na plataforma.",
+    gradient: "from-cyan-400 to-cyan-500",
+    glow: "shadow-cyan-500/40",
+    iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
   },
   {
     icon: Shield,
     title: "Preço confirmado, sem surpresas",
+    stat: "€0",
+    statLabel: "de adicionais no final",
     description:
       "O orçamento é fechado antes do serviço começar. Não há adicionais no final, nem negociações no dia da recolha.",
+    gradient: "from-emerald-400 to-emerald-500",
+    glow: "shadow-emerald-500/40",
+    iconBg: "bg-gradient-to-br from-emerald-400 to-emerald-600",
   },
   {
     icon: Clock,
     title: "Resposta em menos de 48 horas",
+    stat: "<48h",
+    statLabel: "tempo médio de resposta",
     description:
       "A maioria dos pedidos em Lisboa e Margem Sul recebe confirmação de data no próprio dia. Cobertura em mais de 24 localidades.",
+    gradient: "from-violet-400 to-violet-500",
+    glow: "shadow-violet-500/40",
+    iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
   },
 ];
 
@@ -375,25 +390,48 @@ export default function HomePage() {
       </section>
 
       {/* ── GUARANTEES ────────────────────────────────────────────── */}
-      <section className="bg-white py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
+      <section className="relative overflow-hidden bg-[#0B1929] py-20 sm:py-28">
+        {/* subtle radial glow background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/4 top-0 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[120px]" />
+          <div className="absolute right-1/4 bottom-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
+        </div>
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
               Construída para inspirar confiança
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-slate-500 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-slate-400 sm:text-lg">
               Cada detalhe foi pensado para eliminar incerteza — no preço, no profissional e no resultado.
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            {GUARANTEES.map((g) => (
-              <div key={g.title} className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] p-8">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500 shadow-lg shadow-cyan-500/25">
+            {GUARANTEES.map((g, i) => (
+              <div
+                key={g.title}
+                className="guarantee-card group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 transition-all duration-300 hover:-translate-y-1 hover:bg-white/8 hover:shadow-2xl"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              >
+                {/* gradient top border */}
+                <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${g.gradient}`} />
+
+                {/* icon */}
+                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${g.iconBg} shadow-xl ${g.glow} transition-transform duration-300 group-hover:scale-110`}>
                   <g.icon className="h-7 w-7 text-white" />
                 </div>
-                <h3 className="mt-6 text-xl font-bold text-[#0B1929]">{g.title}</h3>
-                <p className="mt-3 leading-relaxed text-slate-500">{g.description}</p>
+
+                {/* stat */}
+                <div className="mt-6">
+                  <span className={`bg-gradient-to-r ${g.gradient} bg-clip-text text-5xl font-black text-transparent`}>
+                    {g.stat}
+                  </span>
+                  <span className="ml-2 text-sm font-medium text-slate-400">{g.statLabel}</span>
+                </div>
+
+                <h3 className="mt-3 text-xl font-bold text-white">{g.title}</h3>
+                <p className="mt-3 leading-relaxed text-slate-400">{g.description}</p>
               </div>
             ))}
           </div>
