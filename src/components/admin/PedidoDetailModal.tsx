@@ -1248,153 +1248,376 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   const originAddr = raw.originAddress?.formattedAddress ?? raw.originAddress?.address ?? order.address;
                   const destAddr = raw.destinationAddress?.formattedAddress ?? raw.destinationAddress?.address;
                   const movDist = raw.movingDistance?.distanceText ?? (order.distanceKm ? `${order.distanceKm} km` : null);
-                  const elevatorLabel = order.hasElevator ? tElevator(order.hasElevator) : null;
-                  const parkingLabel = order.parkingDistance ? tParking(order.parkingDistance) : null;
+                  const estVal = parseEstimate(order.estimateJson);
+                  const vatAmount = estVal?.vatAmount ?? (order.estimateTotal ? parseFloat(order.estimateTotal) * 0.23 : null);
+                  const totalWithVat = estVal?.estimatedPriceWithVat ?? (order.estimateTotal ? parseFloat(order.estimateTotal) * 1.23 : null);
+
                   return (
-                  <div className="space-y-6">
-                    {/* Resumo do pedido */}
-                    <div>
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resumo do pedido</p>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {[
-                          { label: "Pedido nº", value: `#${order.id}` },
-                          { label: "Cliente", value: order.contactName },
-                          { label: "Telefone", value: order.contactPhone },
-                          { label: "Serviço", value: getServiceLabel(order.serviceType) },
-                          { label: "Status", value: STATUS_CFG[order.status]?.label ?? order.status },
-                          { label: "Assistente", value: order.assignedToName ?? "Fila geral" },
-                          { label: "Data de entrada", value: fmt(order.createdAt) },
-                          { label: "Última atualização", value: fmt(order.updatedAt) },
-                        ].map((item) => (
-                          <div key={item.label} className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">{item.label}</p>
-                            <p className="mt-1.5 text-sm font-semibold text-slate-200">{item.value ?? "—"}</p>
+                  <div className="space-y-5">
+
+                    {/* Top info cards */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                      {[
+                        { icon: "🔧", label: "Tipo de serviço", value: getServiceLabel(order.serviceType), accent: "text-cyan-400" },
+                        { icon: "📋", label: "Pedido nº", value: `#${order.id}`, accent: "text-slate-200" },
+                        { icon: "📅", label: "Data de entrada", value: fmt(order.createdAt), accent: "text-slate-200" },
+                        { icon: "👤", label: "Cliente", value: order.contactName ?? "—", accent: "text-white" },
+                        { icon: "📊", label: "Estado", value: STATUS_CFG[order.status]?.label ?? order.status, accent: "text-cyan-300" },
+                      ].map((c) => (
+                        <div key={c.label} className="rounded-[16px] border border-white/[0.06] bg-white/[0.02] p-3.5">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-sm">{c.icon}</span>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-600">{c.label}</p>
                           </div>
-                        ))}
-                      </div>
+                          <p className={`text-sm font-bold ${c.accent} truncate`}>{c.value}</p>
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Morada e acesso */}
-                    <div>
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Morada e acesso</p>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {isMov ? (
-                          <>
-                            <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 sm:col-span-2">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Origem</p>
-                              <p className="mt-1.5 text-sm font-semibold text-slate-200">{originAddr ?? "—"}</p>
+                    {/* Estimate cards */}
+                    {(order.estimateTotal || order.precoFinal) && (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-[16px] border border-emerald-400/20 bg-emerald-400/[0.06] p-4">
+                          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
+                            {order.precoFinal ? "Preço s/IVA" : "Estimativa s/IVA"}
+                          </p>
+                          <p className="mt-1.5 text-xl font-bold text-emerald-300">
+                            {fmtEur(order.precoFinal) ?? fmtEur(order.estimateTotal) ?? "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-[16px] border border-cyan-400/20 bg-cyan-400/[0.06] p-4">
+                          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-cyan-500">IVA 23%</p>
+                          <p className="mt-1.5 text-xl font-bold text-cyan-300">
+                            {vatAmount != null && !isNaN(vatAmount) ? `${vatAmount.toFixed(2)} €` : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-[16px] border border-orange-400/20 bg-orange-400/[0.06] p-4">
+                          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-orange-500">
+                            {order.precoFinalIva ? "Preço total" : "Estimativa total"}
+                          </p>
+                          <p className="mt-1.5 text-xl font-bold text-orange-300">
+                            {fmtEur(order.precoFinalIva) ?? (totalWithVat != null && !isNaN(totalWithVat) ? `${totalWithVat.toFixed(2)} €` : "—")}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Two-column layout */}
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+
+                      {/* Left column (3/5) */}
+                      <div className="space-y-5 lg:col-span-3">
+
+                        {/* Dados do serviço */}
+                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-5">
+                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Dados do serviço</p>
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Tipo</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-200">{getServiceLabel(order.serviceType)}</p>
                             </div>
-                            <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 sm:col-span-2">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Destino</p>
-                              <p className="mt-1.5 text-sm font-semibold text-slate-200">{destAddr ?? "—"}</p>
+                            <div>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Urgência</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-200">{tUrgency(order.urgency) ?? "Normal"}</p>
                             </div>
-                            {movDist && (
-                              <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Percurso</p>
-                                <p className="mt-1.5 text-sm font-semibold text-slate-200">{movDist}</p>
+                          </div>
+                          {order.description && (
+                            <div>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Descrição</p>
+                              <p className="text-sm leading-relaxed text-slate-300">{order.description}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Análise Gemini */}
+                        {estVal && (
+                          <div className="rounded-[18px] border border-violet-400/20 bg-violet-400/[0.03] p-5 space-y-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-violet-400 uppercase tracking-wider">Análise Gemini</span>
+                              {estVal.confidence && (
+                                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                  estVal.confidence === "high" ? "border-emerald-400/30 text-emerald-400" :
+                                  estVal.confidence === "medium" ? "border-amber-400/30 text-amber-400" :
+                                  "border-red-400/30 text-red-400"
+                                }`}>
+                                  {estVal.confidence === "high" ? "Alta" : estVal.confidence === "medium" ? "Média" : "Baixa"}
+                                </span>
+                              )}
+                              {estVal.confidence && (
+                                <div className="ml-2 flex items-center gap-1 flex-1">
+                                  <div className="h-1.5 flex-1 max-w-[100px] rounded-full bg-white/[0.06] overflow-hidden">
+                                    <div className={`h-full rounded-full ${
+                                      estVal.confidence === "high" ? "bg-emerald-400 w-full" :
+                                      estVal.confidence === "medium" ? "bg-amber-400 w-2/3" :
+                                      "bg-red-400 w-1/3"
+                                    }`} />
+                                  </div>
+                                </div>
+                              )}
+                              <span className="ml-auto rounded-full border border-violet-400/30 px-2 py-0.5 text-[10px] font-semibold text-violet-400">IA</span>
+                            </div>
+
+                            {estVal.summary && (
+                              <div>
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-400 mb-1">Resumo</p>
+                                <p className="text-xs leading-relaxed text-slate-300">{estVal.summary}</p>
                               </div>
                             )}
-                          </>
-                        ) : (
-                          <>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              {estVal.assumptions && estVal.assumptions.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-emerald-400 mb-1.5">Pressupostos</p>
+                                  <ul className="space-y-1">
+                                    {estVal.assumptions.map((a, i) => (
+                                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-400">
+                                        <span className="mt-1 text-emerald-400 text-[10px]">✓</span>{a}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {estVal.missingFields && estVal.missingFields.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-amber-400 mb-1.5">Pontos de atenção</p>
+                                  <ul className="space-y-1">
+                                    {estVal.missingFields.map((f, i) => (
+                                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-amber-400">
+                                        <span className="mt-0.5 text-[10px]">◆</span>{f.replace(/_/g, " ")}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                              {estVal.difficultyLevel && (
+                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Dificuldade</p>
+                                  <div className="flex gap-0.5 mb-1">
+                                    {[1,2,3,4,5].map((n) => (
+                                      <div key={n} className={`h-1 w-3.5 rounded-full ${n <= (estVal.difficultyLevel ?? 0) ? "bg-violet-400" : "bg-white/10"}`} />
+                                    ))}
+                                  </div>
+                                  <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[estVal.difficultyLevel] ?? "text-slate-300"}`}>
+                                    {DIFFICULTY_LABEL[estVal.difficultyLevel] ?? estVal.difficultyLevel}
+                                  </span>
+                                </div>
+                              )}
+                              {estVal.teamSize && (
+                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Equipa</p>
+                                  <p className="text-[11px] font-semibold text-slate-300">{estVal.teamSize}</p>
+                                </div>
+                              )}
+                              {estVal.estimatedHoursText && (
+                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Tempo</p>
+                                  <p className="text-[11px] font-semibold text-slate-300">{estVal.estimatedHoursText}</p>
+                                </div>
+                              )}
+                              {estVal.recommendation && (
+                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Ação</p>
+                                  <p className={`text-[11px] font-semibold ${
+                                    estVal.recommendation === "pode_aprovar" ? "text-emerald-400" :
+                                    estVal.recommendation === "visita_presencial" ? "text-red-400" :
+                                    "text-amber-400"
+                                  }`}>
+                                    {estVal.recommendation === "pode_aprovar" ? "Pode aprovar" :
+                                     estVal.recommendation === "pedir_fotos" ? "Pedir fotos" :
+                                     estVal.recommendation === "pedir_info" ? "Pedir info" :
+                                     estVal.recommendation === "visita_presencial" ? "Visita presencial" :
+                                     estVal.recommendation}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Preço e notas internas */}
+                        {isAdmin && (
+                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Preço e notas internas</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Field label="Preço final sem IVA (€)">
+                                <input type="number" step="0.01" min="0" value={editPrecoFinal} onChange={(e) => setEditPrecoFinal(e.target.value)} className={inputCls} placeholder="0.00" />
+                              </Field>
+                              <Field label="Preço final com IVA (€)">
+                                <input type="number" step="0.01" min="0" value={editPrecoFinalIva} onChange={(e) => setEditPrecoFinalIva(e.target.value)} className={inputCls} placeholder="0.00" />
+                              </Field>
+                            </div>
+                            <Field label="Razão interna / notas">
+                              <textarea rows={3} value={editNotasInternas} onChange={(e) => setEditNotasInternas(e.target.value)} className={inputCls} placeholder="Notas internas (não visíveis pelo cliente)..." />
+                            </Field>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              <button onClick={handleRecalcularEstimativa} disabled={recalculating || saving}
+                                className="flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/20 disabled:opacity-60 transition">
+                                {recalculating ? "A recalcular..." : "Recalcular estimativa"}
+                              </button>
+                              <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
+                                className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-60 transition">
+                                Aprovar orçamento
+                              </button>
+                              <button onClick={handleSave} disabled={saving}
+                                className="flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition">
+                                {saving ? "A guardar..." : "Guardar alterações"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Fotos e ficheiros */}
+                        {files.length > 0 && (
+                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-5">
+                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Fotos e ficheiros ({files.length})</p>
+                            <div className="flex flex-wrap gap-2">
+                              {files.slice(0, 8).map((url, i) => {
+                                const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
+                                return isImg ? (
+                                  <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-xl border border-white/[0.06]">
+                                    <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition" />
+                                  </button>
+                                ) : (
+                                  <a key={i} href={url} target="_blank" rel="noreferrer" className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-slate-500 hover:text-slate-300 transition">
+                                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                  </a>
+                                );
+                              })}
+                              {files.length > 8 && (
+                                <button type="button" onClick={() => setActiveTab("servico_fotos")} className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-xs text-slate-400 hover:bg-white/[0.05] transition">
+                                  +{files.length - 8}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right sidebar (2/5) */}
+                      <div className="space-y-4 lg:col-span-2">
+
+                        {/* Resumo rápido */}
+                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2.5">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Resumo rápido</p>
+                          {[
+                            { label: "Assistente", value: order.assignedToName ?? "Fila geral" },
+                            { label: "Prioridade", value: order.priority === "urgente" ? "Urgente" : order.priority === "alta" ? "Alta" : order.priority === "baixa" ? "Baixa" : "Normal" },
+                            { label: "Urgência", value: tUrgency(order.urgency) ?? "Normal" },
+                            ...(estVal?.difficultyLevel ? [{ label: "Complexidade", value: DIFFICULTY_LABEL[estVal.difficultyLevel] ?? String(estVal.difficultyLevel) }] : []),
+                            ...(order.distanceKm ? [{ label: "Distância", value: `${order.distanceKm} km` }] : []),
+                          ].map((item) => (
+                            <div key={item.label} className="flex items-center justify-between py-1 border-b border-white/[0.04] last:border-0">
+                              <span className="text-[10px] text-slate-500">{item.label}</span>
+                              <span className="text-xs font-semibold text-slate-200">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Contacto */}
+                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Contacto</p>
+                          {order.contactPhone && (
+                            <div className="flex items-center gap-2">
+                              <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              <span className="text-sm font-semibold text-slate-200">{order.contactPhone}</span>
+                            </div>
+                          )}
+                          {order.contactEmail && (
+                            <div className="flex items-center gap-2">
+                              <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              <span className="text-xs text-slate-300 truncate">{order.contactEmail}</span>
+                            </div>
+                          )}
+                          {order.contactPhone && (
+                            <a href={`https://wa.me/${waPhone}?text=${waMsg}`} target="_blank" rel="noreferrer"
+                              className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
+                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                              WhatsApp
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Morada */}
+                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Morada</p>
+                          {isMov ? (
+                            <>
+                              <div>
+                                <p className="text-[9px] text-cyan-500 font-semibold uppercase tracking-wider">Origem</p>
+                                <p className="text-xs text-slate-200 mt-0.5">{originAddr ?? "—"}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-violet-400 font-semibold uppercase tracking-wider">Destino</p>
+                                <p className="text-xs text-slate-200 mt-0.5">{destAddr ?? "—"}</p>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-xs text-slate-200">{order.address ?? "—"}</p>
+                          )}
+                          {(order.city || order.postalCode) && (
+                            <p className="text-[11px] text-slate-400">{[order.city, order.postalCode].filter(Boolean).join(" · ")}</p>
+                          )}
+                          {order.address && (
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer"
+                              className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                              Ver no mapa
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Distância / Zona */}
+                        {(order.distanceKm || movDist) && (
+                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Distância / Zona</p>
+                            <p className="text-lg font-bold text-cyan-300">
+                              {isMov ? movDist : `${order.distanceKm} km`}
+                            </p>
+                            {order.distanceText && <p className="text-[11px] text-slate-400">{order.distanceText}</p>}
+                            {order.city && (
+                              <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-300">
+                                {order.city}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Mini histórico */}
+                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
+                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Histórico do pedido</p>
+                          <div className="relative space-y-0 pl-3">
+                            <div className="absolute left-3 top-1 bottom-1 w-px bg-white/[0.06]" />
                             {[
-                              { label: "Morada completa", value: order.address, span: true },
-                              { label: "Localidade", value: order.city },
-                              { label: "Código postal", value: order.postalCode },
-                              { label: "Andar", value: order.floor },
-                              { label: "Elevador", value: elevatorLabel },
-                              { label: "Estacionamento", value: parkingLabel },
-                            ].map((item) => (
-                              <div key={item.label} className={`rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4${item.span ? " sm:col-span-2" : ""}`}>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">{item.label}</p>
-                                <p className="mt-1.5 text-sm font-semibold text-slate-200">{item.value ?? "—"}</p>
+                              { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
+                              ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "assistente"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
+                              ...(order.status === "aprovado" ? [{ label: "Orçamento aprovado", date: order.updatedAt, color: "bg-emerald-400" }] : []),
+                              ...(order.status === "confirmado" ? [{ label: "Confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
+                              ...(order.status === "em_execucao" ? [{ label: "Em execução", date: order.updatedAt, color: "bg-lime-400" }] : []),
+                              ...(order.status === "concluido" ? [{ label: "Concluído", date: order.updatedAt, color: "bg-emerald-400" }] : []),
+                            ].slice(0, 5).map((item, i) => (
+                              <div key={i} className="relative pb-3 pl-5">
+                                <span className={`absolute left-[-3px] top-1 h-2 w-2 rounded-full ${item.color} ring-3 ring-[#070e17]`} />
+                                <p className="text-[11px] font-semibold text-slate-300">{item.label}</p>
+                                <p className="text-[10px] text-slate-600">{fmt(item.date)}</p>
                               </div>
                             ))}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Serviço */}
-                    <div>
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Serviço</p>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {[
-                          { label: "Tipo", value: getServiceLabel(order.serviceType) },
-                          { label: "Urgência", value: tUrgency(order.urgency) },
-                          { label: "Estimativa IA", value: fmtEur(order.estimateTotal) },
-                          { label: "Preço final s/IVA", value: fmtEur(order.precoFinal) },
-                          { label: "Preço final c/IVA", value: fmtEur(order.precoFinalIva) },
-                          ...(order.distanceKm ? [{ label: "Distância", value: `${order.distanceKm} km` }] : []),
-                        ].map((item) => (
-                          <div key={item.label} className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">{item.label}</p>
-                            <p className="mt-1.5 text-sm font-semibold text-slate-200">{item.value ?? "—"}</p>
                           </div>
-                        ))}
-                      </div>
-                      {order.description && (
-                        <div className="mt-3 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
-                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Descrição do pedido</p>
-                          <p className="text-sm leading-relaxed text-slate-300">{order.description}</p>
+                          {history.length > 0 && (
+                            <button onClick={() => setActiveTab("historico")} className="mt-2 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                              Ver histórico completo →
+                            </button>
+                          )}
                         </div>
-                      )}
-                      {files.length > 0 && (
-                        <div className="mt-3 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
-                          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Fotos anexadas ({files.length})</p>
-                          <div className="flex flex-wrap gap-2">
-                            {files.slice(0, 6).map((url, i) => {
-                              const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
-                              return isImg ? (
-                                <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-xl border border-white/[0.06]">
-                                  <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition" />
-                                </button>
-                              ) : (
-                                <a key={i} href={url} target="_blank" rel="noreferrer" className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-slate-500 hover:text-slate-300 transition">
-                                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                  </svg>
-                                </a>
-                              );
-                            })}
-                            {files.length > 6 && (
-                              <button type="button" onClick={() => setActiveTab("servico_fotos")} className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-xs text-slate-400 hover:bg-white/[0.05] transition">
-                                +{files.length - 6}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Ações rápidas */}
-                    <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Ações rápidas</p>
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
-                          className="flex items-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-60 transition">
-                          Aprovar orçamento
-                        </button>
-                        <button onClick={() => handleStatusQuick("precisa_info")} disabled={saving}
-                          className="flex items-center gap-1.5 rounded-xl border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-xs font-semibold text-orange-300 hover:bg-orange-400/20 disabled:opacity-60 transition">
-                          Pedir mais info
-                        </button>
-                        <button onClick={() => handleStatusQuick("presencial_recomendado")} disabled={saving}
-                          className="flex items-center gap-1.5 rounded-xl border border-indigo-400/20 bg-indigo-400/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-indigo-400/20 disabled:opacity-60 transition">
-                          Recomendar presencial
-                        </button>
-                        {order.contactPhone && (
-                          <a href={`https://wa.me/${waPhone}?text=${waMsg}`} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1.5 rounded-xl border border-green-400/20 bg-green-400/10 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/20 transition">
-                            Enviar WhatsApp
-                          </a>
-                        )}
-                        {isAdmin && (
-                          <button onClick={() => setShowDelete(true)}
-                            className="flex items-center gap-1.5 rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-400/20 transition">
-                            Excluir pedido
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>
