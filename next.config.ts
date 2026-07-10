@@ -49,6 +49,22 @@ const nextConfig: NextConfig = {
       },
       // URLs antigas deprecated
       {
+        source: "/credito-fiscal",
+        destination: "/servicos",
+        permanent: true,
+      },
+      // mudanças com cedilha (ç) → redirect para mudancas sem cedilha
+      {
+        source: "/mudan%C3%A7as",
+        destination: "/mudancas",
+        permanent: true,
+      },
+      {
+        source: "/mudan%C3%A7as-:city*",
+        destination: "/mudancas",
+        permanent: true,
+      },
+      {
         source: "/contato",
         destination: "/contactos",
         permanent: true,

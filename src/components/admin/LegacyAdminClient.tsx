@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
+import ContasPanel from "@/components/admin/ContasPanel";
 import {
   AlertTriangle,
   ArrowRight,
@@ -100,7 +101,7 @@ type SimulatorSetting = {
   description?: string | null;
 };
 
-type AdminSection = "overview" | "pedidos" | "operacao" | "leads" | "site" | "equipa" | "pagamentos" | "configs";
+type AdminSection = "overview" | "pedidos" | "operacao" | "leads" | "site" | "equipa" | "pagamentos" | "configs" | "contas";
 type OperacaoTab = "equipa" | "horarios" | "pagamentos" | "funcoes";
 
 type Lead = {
@@ -179,6 +180,7 @@ const adminNavItems: Array<{
   { id: "leads",     icon: TrendingUp },
   { id: "equipa",    icon: Users },
   { id: "pagamentos", icon: Wallet },
+  { id: "contas",     icon: UserPlus },
   { id: "configs",   icon: Settings2 },
 ];
 
@@ -190,6 +192,7 @@ const sectionLabels: Record<AdminSection, string> = {
   site:       "Configurações",
   equipa:     "Equipa",
   pagamentos: "Pagamentos",
+  contas:     "Contas",
   configs:    "Configs",
 };
 
@@ -3443,6 +3446,14 @@ export default function ColaboradorAdminClient() {
               </p>
             </section>
           )}
+          {/* ══════════════════════════════════════════════════════════════ */}
+
+          {activeSection === "contas" && (
+            <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <ContasPanel authToken={token} />
+            </section>
+          )}
+
           {/* ══════════════════════════════════════════════════════════════ */}
 
           {(activeSection === "site" || activeSection === "configs") && (
