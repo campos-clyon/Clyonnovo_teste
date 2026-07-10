@@ -1994,20 +1994,20 @@ export default function ColaboradorAdminClient() {
           )}
 
           {activeSection === "pedidos" && (
-            <section className="space-y-4 rounded-[28px] border border-cyan-300/16 bg-[linear-gradient(180deg,rgba(9,25,40,0.94)_0%,rgba(11,30,47,0.92)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.22)]">
+            <section className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
                     Gestão de pedidos
                   </p>
-                  <h2 className="mt-2 text-[1.85rem] font-semibold text-white">
+                  <h2 className="mt-2 text-[1.85rem] font-semibold text-slate-900">
                     Pedidos do simulador
                   </h2>
                 </div>
                 <button
                   type="button"
                   onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
-                  className="flex h-11 items-center gap-2 rounded-[14px] border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-cyan-100 transition hover:bg-white/[0.08]"
+                  className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Actualizar
@@ -2016,31 +2016,37 @@ export default function ColaboradorAdminClient() {
 
               {/* Métricas de pedidos */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                {/* Total — mostra sempre todos os pedidos */}
                 <button
                   type="button"
                   onClick={() => setPedidoStatusFilter("todos")}
-                  className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 border-white/10 bg-white/[0.04] ${pedidoStatusFilter === "todos" ? "ring-2 ring-cyan-400" : ""}`}
+                  className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 border-slate-200 bg-slate-50 ${pedidoStatusFilter === "todos" ? "ring-2 ring-cyan-500" : ""}`}
                 >
-                  <span className="text-2xl font-bold text-slate-300">{pedidosCounts["total"] ?? 0}</span>
-                  <span className="mt-0.5 text-center text-xs text-slate-400">Total</span>
+                  <span className="text-2xl font-bold text-slate-700">{pedidosCounts["total"] ?? 0}</span>
+                  <span className="mt-0.5 text-center text-xs text-slate-500">Total</span>
+                  <span className="mt-0.5 text-[10px] text-slate-400">100% do total</span>
                 </button>
                 {[
-                  { label: "Novos", key: "pendente", color: "text-blue-400", bg: "border-blue-400/20 bg-blue-400/10" },
-                  { label: "Sem assistente", key: "sem_assistente", color: "text-rose-400", bg: "border-rose-400/20 bg-rose-400/10" },
-                  { label: "Aprovados", key: "aprovado", color: "text-cyan-300 font-semibold", bg: "border-cyan-400/30 bg-cyan-400/15" },
-                  { label: "Confirmados", key: "confirmado", color: "text-green-400", bg: "border-green-400/20 bg-green-400/10" },
-                ].map((m) => (
+                  { label: "Novos", key: "pendente", color: "text-blue-600", bg: "border-blue-200 bg-blue-50", pct: "pendente" },
+                  { label: "Sem assistente", key: "sem_assistente", color: "text-rose-600", bg: "border-rose-200 bg-rose-50", pct: "sem_assistente" },
+                  { label: "Aprovados", key: "aprovado", color: "text-emerald-600 font-semibold", bg: "border-emerald-200 bg-emerald-50", pct: "aprovado" },
+                  { label: "Confirmados", key: "confirmado", color: "text-green-600", bg: "border-green-200 bg-green-50", pct: "confirmado" },
+                ].map((m) => {
+                  const total = pedidosCounts["total"] ?? 0;
+                  const count = pedidosCounts[m.key] ?? 0;
+                  const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0";
+                  return (
                   <button
                     key={m.key}
                     type="button"
                     onClick={() => setPedidoStatusFilter(m.key === pedidoStatusFilter ? "todos" : m.key)}
-                    className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 ${m.bg} ${pedidoStatusFilter === m.key ? "ring-2 ring-cyan-400" : ""}`}
+                    className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 ${m.bg} ${pedidoStatusFilter === m.key ? "ring-2 ring-cyan-500" : ""}`}
                   >
-                    <span className={`text-2xl font-bold ${m.color}`}>{pedidosCounts[m.key] ?? 0}</span>
-                    <span className="mt-0.5 text-center text-xs text-slate-400">{m.label}</span>
+                    <span className={`text-2xl font-bold ${m.color}`}>{count}</span>
+                    <span className="mt-0.5 text-center text-xs text-slate-600">{m.label}</span>
+                    <span className="mt-0.5 text-[10px] text-slate-400">{pct}% do total</span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Filtros e pesquisa */}
@@ -2051,15 +2057,15 @@ export default function ColaboradorAdminClient() {
                     value={pedidoSearch}
                     onChange={(e) => handlePedidoSearch(e.target.value)}
                     placeholder="Pesquisar por nome, telefone, morada, serviço..."
-                    className="h-11 w-full rounded-[14px] border border-cyan-300/20 bg-[#0d1f35] pl-9 pr-4 text-sm font-medium text-white outline-none focus:border-cyan-400 [color-scheme:dark]"
+                    className="h-11 w-full rounded-[14px] border border-slate-200 bg-white pl-9 pr-4 text-sm font-medium text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                   />
                 </div>
                 <select
                   value={pedidoStatusFilter}
                   onChange={(e) => setPedidoStatusFilter(e.target.value)}
-                  className="h-11 rounded-[14px] border border-cyan-300/20 bg-[#0d1f35] px-3 text-sm font-medium text-white outline-none focus:border-cyan-400 [color-scheme:dark]"
+                  className="h-11 rounded-[14px] border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 >
-                  <option value="todos">Todos</option>
+                  <option value="todos">Todos os status</option>
                   <option value="pendente">Novos</option>
                   <option value="atribuido">Atribuídos</option>
                   <option value="em_analise">Em análise</option>
@@ -2076,43 +2082,43 @@ export default function ColaboradorAdminClient() {
 
               {/* Lista de pedidos */}
               {pedidosError && (
-                <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                   {pedidosError}
                 </div>
               )}
               {pedidosLoading ? (
-                <div className="py-10 text-center text-sm text-slate-400">A carregar pedidos...</div>
+                <div className="py-10 text-center text-sm text-slate-500">A carregar pedidos...</div>
               ) : pedidos.filter((p) => {
                 if (pedidoStatusFilter === "todos") return true;
                 if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId;
                 return p.status === pedidoStatusFilter;
               }).length === 0 ? (
-                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/10 py-12 text-center">
-                  <FileText className="h-10 w-10 text-slate-600" />
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 py-12 text-center">
+                  <FileText className="h-10 w-10 text-slate-300" />
                   <div>
-                    <p className="text-base font-semibold text-slate-300">Nenhum pedido do simulador ainda</p>
+                    <p className="text-base font-semibold text-slate-700">Nenhum pedido do simulador ainda</p>
                     <p className="mt-1 text-sm text-slate-500">Quando um cliente enviar um pedido pelo simulador, ele aparecerá aqui para análise.</p>
                   </div>
                   <a
                     href="/simulador"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 rounded-[14px] border border-cyan-400/30 bg-cyan-400/10 px-5 py-2.5 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-400/20"
+                    className="mt-1 rounded-[14px] border border-cyan-500/30 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
                   >
                     Ver simulador
                   </a>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-[18px] border border-white/[0.06] bg-white/[0.015]">
+                <div className="overflow-x-auto rounded-[18px] border border-slate-200 bg-white">
                   <table className="w-full min-w-[860px] border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-white/[0.06]">
+                      <tr className="border-b border-slate-100 bg-slate-50/70">
                         {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Status", "Origem", "Assistente", "Data", "Ação"].map((h) => (
                           <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 first:pl-4 last:pr-4 last:text-right">{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.04]">
+                    <tbody className="divide-y divide-slate-100">
                       {pedidos
                         .filter((p) => {
                           if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId;
@@ -2121,17 +2127,17 @@ export default function ColaboradorAdminClient() {
                         })
                         .map((p) => {
                           const statusColors: Record<string, string> = {
-                            sem_assistente: "bg-yellow-500/15 text-yellow-300 border-yellow-500/25",
-                            pendente: "bg-blue-500/15 text-blue-300 border-blue-500/25",
-                            atribuido: "bg-purple-500/15 text-purple-300 border-purple-500/25",
-                            em_analise: "bg-amber-500/15 text-amber-300 border-amber-500/25",
-                            precisa_info: "bg-orange-500/15 text-orange-300 border-orange-500/25",
-                            presencial_recomendado: "bg-red-500/15 text-red-300 border-red-500/25",
-                            estimativa_pronta: "bg-cyan-500/15 text-cyan-300 border-cyan-500/25",
-                            aprovado: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
-                            enviado_cliente: "bg-teal-500/15 text-teal-300 border-teal-500/25",
-                            confirmado: "bg-green-500/15 text-green-300 border-green-500/25",
-                            cancelado: "bg-slate-500/15 text-slate-400 border-slate-500/20",
+                            sem_assistente: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                            pendente: "bg-blue-50 text-blue-700 border-blue-200",
+                            atribuido: "bg-purple-50 text-purple-700 border-purple-200",
+                            em_analise: "bg-amber-50 text-amber-700 border-amber-200",
+                            precisa_info: "bg-orange-50 text-orange-700 border-orange-200",
+                            presencial_recomendado: "bg-red-50 text-red-700 border-red-200",
+                            estimativa_pronta: "bg-cyan-50 text-cyan-700 border-cyan-200",
+                            aprovado: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            enviado_cliente: "bg-teal-50 text-teal-700 border-teal-200",
+                            confirmado: "bg-green-50 text-green-700 border-green-200",
+                            cancelado: "bg-slate-100 text-slate-500 border-slate-200",
                           };
                           const statusLabel: Record<string, string> = {
                             sem_assistente: "Sem assistente",
@@ -2147,58 +2153,57 @@ export default function ColaboradorAdminClient() {
                             cancelado: "Cancelado",
                           };
                           const urgencyDot: Record<string, string> = {
-                            urgente: "bg-rose-400",
-                            alta: "bg-orange-400",
-                            normal: "bg-slate-500",
-                            baixa: "bg-slate-600",
+                            urgente: "bg-rose-500",
+                            alta: "bg-orange-500",
+                            normal: "bg-slate-400",
+                            baixa: "bg-slate-300",
                           };
                           const urgencyText: Record<string, string> = {
-                            urgente: "text-rose-300",
-                            alta: "text-orange-300",
-                            normal: "text-slate-400",
-                            baixa: "text-slate-500",
+                            urgente: "text-rose-600",
+                            alta: "text-orange-600",
+                            normal: "text-slate-500",
+                            baixa: "text-slate-400",
                           };
 
-                          // Origem: lê rawOrderJson.origemPedido ou assume "simulador"
                           let origemLabel = "Simulador";
-                          let origemStyle = "bg-violet-500/15 text-violet-300 border-violet-500/25";
+                          let origemStyle = "bg-violet-50 text-violet-700 border-violet-200";
                           try {
                             const raw = p.rawOrderJson ? JSON.parse(p.rawOrderJson) : null;
                             const orig = raw?.origemPedido ?? null;
                             if (orig === "formulario_contactos") {
                               origemLabel = "Contactos";
-                              origemStyle = "bg-cyan-500/15 text-cyan-300 border-cyan-500/25";
+                              origemStyle = "bg-cyan-50 text-cyan-700 border-cyan-200";
                             } else if (orig === "quero_contratar_header" || orig === "quero_contratar") {
                               origemLabel = "Contratar";
-                              origemStyle = "bg-amber-500/15 text-amber-300 border-amber-500/25";
+                              origemStyle = "bg-amber-50 text-amber-700 border-amber-200";
                             }
                           } catch { /* rawOrderJson inválido */ }
 
                           return (
                             <tr
                               key={p.id}
-                              className="group cursor-pointer transition-colors hover:bg-white/[0.03]"
+                              className="group cursor-pointer transition-colors hover:bg-slate-50"
                               onClick={() => { setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                             >
                               {/* # */}
                               <td className="pl-4 pr-2 py-3.5">
-                                <span className="font-mono text-[11px] font-semibold text-slate-500">#{p.id}</span>
+                                <span className="font-mono text-[11px] font-semibold text-slate-400">#{p.id}</span>
                               </td>
                               {/* Cliente */}
                               <td className="px-2 py-3.5">
-                                <p className="max-w-[130px] truncate font-semibold text-white">{p.contactName ?? "—"}</p>
+                                <p className="max-w-[130px] truncate font-semibold text-slate-900">{p.contactName ?? "—"}</p>
                                 {p.contactPhone && (
-                                  <p className="mt-0.5 text-[11px] text-slate-500">{p.contactPhone}</p>
+                                  <p className="mt-0.5 text-[11px] text-slate-400">{p.contactPhone}</p>
                                 )}
                               </td>
                               {/* Serviço */}
                               <td className="px-2 py-3.5">
-                                <span className="inline-block max-w-[110px] truncate rounded-[8px] bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-slate-300">
+                                <span className="inline-block max-w-[110px] truncate rounded-[8px] bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">
                                   {normalizeServiceTypeLabel(p.serviceType)}
                                 </span>
                               </td>
                               {/* Localidade */}
-                              <td className="px-2 py-3.5 text-xs text-slate-400">
+                              <td className="px-2 py-3.5 text-xs text-slate-500">
                                 <span className="max-w-[100px] truncate block">{p.city ?? "—"}</span>
                               </td>
                               {/* Urgência */}
@@ -2227,16 +2232,16 @@ export default function ColaboradorAdminClient() {
                               {/* Assistente */}
                               <td className="px-2 py-3.5">
                                 {p.assignedToName ? (
-                                  <span className="text-xs font-medium text-slate-300">{p.assignedToName}</span>
+                                  <span className="text-xs font-medium text-slate-700">{p.assignedToName}</span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                                     Fila geral
                                   </span>
                                 )}
                               </td>
                               {/* Data */}
-                              <td className="px-2 py-3.5 text-[11px] text-slate-500">
+                              <td className="px-2 py-3.5 text-[11px] text-slate-400">
                                 {p.createdAt
                                   ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
                                   : "—"}
@@ -2247,7 +2252,7 @@ export default function ColaboradorAdminClient() {
                                   {!isAdminGeral && !p.assignedToId && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-400/20 transition"
+                                      className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         if (!token) { alert("Sessão expirada."); return; }
@@ -2276,7 +2281,7 @@ export default function ColaboradorAdminClient() {
                                   {isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-red-400/20 bg-red-400/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-400/20 transition"
+                                      className="rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
                                       onClick={(e) => { e.stopPropagation(); /* cancelar via modal */ setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                                     >
                                       Cancelar
@@ -2284,7 +2289,7 @@ export default function ColaboradorAdminClient() {
                                   )}
                                   <button
                                     type="button"
-                                    className="rounded-[8px] border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:bg-cyan-400/20 transition"
+                                    className="rounded-[8px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 transition"
                                     onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                                   >
                                     Abrir

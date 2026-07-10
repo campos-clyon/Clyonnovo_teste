@@ -108,20 +108,20 @@ type GeminiEstimate = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<OrderStatus, { label: string; dot: string; badge: string }> = {
-  sem_assistente:         { label: "Fila geral",          dot: "bg-yellow-400",  badge: "bg-yellow-400/10 border-yellow-400/30 text-yellow-300" },
-  pendente:               { label: "Pendente",            dot: "bg-amber-400",   badge: "bg-amber-400/10 border-amber-400/30 text-amber-300" },
-  atribuido:              { label: "Atribuído",           dot: "bg-sky-400",     badge: "bg-sky-400/10 border-sky-400/30 text-sky-300" },
-  em_analise:             { label: "Em análise",          dot: "bg-violet-400",  badge: "bg-violet-400/10 border-violet-400/30 text-violet-300" },
-  precisa_info:           { label: "Precisa info",        dot: "bg-orange-400",  badge: "bg-orange-400/10 border-orange-400/30 text-orange-300" },
-  estimativa_pronta:      { label: "Estimativa pronta",   dot: "bg-teal-400",    badge: "bg-teal-400/10 border-teal-400/30 text-teal-300" },
-  presencial_recomendado: { label: "Presencial rec.",     dot: "bg-indigo-400",  badge: "bg-indigo-400/10 border-indigo-400/30 text-indigo-300" },
-  aprovado:               { label: "Aprovado",            dot: "bg-cyan-400",    badge: "bg-cyan-400/10 border-cyan-400/30 text-cyan-300" },
-  enviado_cliente:        { label: "Enviado",             dot: "bg-blue-400",    badge: "bg-blue-400/10 border-blue-400/30 text-blue-300" },
-  confirmado:             { label: "Confirmado",          dot: "bg-green-400",   badge: "bg-green-400/10 border-green-400/30 text-green-300" },
-  em_execucao:            { label: "Em execução",         dot: "bg-lime-400",    badge: "bg-lime-400/10 border-lime-400/30 text-lime-300" },
-  concluido:              { label: "Concluído",           dot: "bg-emerald-400", badge: "bg-emerald-400/10 border-emerald-400/30 text-emerald-300" },
-  cancelado:              { label: "Cancelado",           dot: "bg-slate-500",   badge: "bg-slate-500/10 border-slate-500/30 text-slate-400" },
-  rejeitado:              { label: "Rejeitado",           dot: "bg-red-500",     badge: "bg-red-500/10 border-red-500/30 text-red-400" },
+  sem_assistente:         { label: "Fila geral",          dot: "bg-yellow-500",  badge: "bg-yellow-50 border-yellow-200 text-yellow-700" },
+  pendente:               { label: "Pendente",            dot: "bg-amber-500",   badge: "bg-amber-50 border-amber-200 text-amber-700" },
+  atribuido:              { label: "Atribuído",           dot: "bg-sky-500",     badge: "bg-sky-50 border-sky-200 text-sky-700" },
+  em_analise:             { label: "Em análise",          dot: "bg-violet-500",  badge: "bg-violet-50 border-violet-200 text-violet-700" },
+  precisa_info:           { label: "Precisa info",        dot: "bg-orange-500",  badge: "bg-orange-50 border-orange-200 text-orange-700" },
+  estimativa_pronta:      { label: "Estimativa pronta",   dot: "bg-teal-500",    badge: "bg-teal-50 border-teal-200 text-teal-700" },
+  presencial_recomendado: { label: "Presencial rec.",     dot: "bg-indigo-500",  badge: "bg-indigo-50 border-indigo-200 text-indigo-700" },
+  aprovado:               { label: "Aprovado",            dot: "bg-cyan-500",    badge: "bg-cyan-50 border-cyan-200 text-cyan-700" },
+  enviado_cliente:        { label: "Enviado",             dot: "bg-blue-500",    badge: "bg-blue-50 border-blue-200 text-blue-700" },
+  confirmado:             { label: "Confirmado",          dot: "bg-green-500",   badge: "bg-green-50 border-green-200 text-green-700" },
+  em_execucao:            { label: "Em execução",         dot: "bg-lime-500",    badge: "bg-lime-50 border-lime-200 text-lime-700" },
+  concluido:              { label: "Concluído",           dot: "bg-emerald-500", badge: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+  cancelado:              { label: "Cancelado",           dot: "bg-slate-400",   badge: "bg-slate-100 border-slate-200 text-slate-500" },
+  rejeitado:              { label: "Rejeitado",           dot: "bg-red-500",     badge: "bg-red-50 border-red-200 text-red-700" },
 };
 
 const ALL_STATUSES: OrderStatus[] = [
@@ -255,17 +255,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function ReadonlyField({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="space-y-1">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">{label}</p>
-      <p className="text-sm font-medium text-slate-200">{value || "—"}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</p>
+      <p className="text-sm font-medium text-slate-800">{value || "—"}</p>
     </div>
   );
 }
 
-const inputCls = "w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/20 transition";
-// bg-[#111827] garante fundo escuro no dropdown nativo — sem isto as <option> ficam
-// com texto branco sobre fundo branco (comportamento padrão do browser).
-const selectCls = "w-full rounded-2xl border border-white/10 bg-[#111827] px-4 py-2.5 text-sm text-white focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/20 transition appearance-none cursor-pointer";
-const optionCls = "bg-[#111827] text-white";
+const inputCls = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition";
+const selectCls = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition appearance-none cursor-pointer";
+const optionCls = "bg-white text-slate-900";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -999,11 +997,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#070e17] shadow-[0_40px_120px_rgba(0,0,0,0.8)]"
+        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_40px_120px_rgba(0,0,0,0.15)]"
         style={{ maxWidth: "min(1600px, 96vw)", maxHeight: "94vh", height: "94vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1026,8 +1024,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <p className="text-base font-semibold text-white">{error}</p>
-            <button onClick={onClose} className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/[0.08] transition">Fechar</button>
+            <p className="text-base font-semibold text-slate-900">{error}</p>
+            <button onClick={onClose} className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">Fechar</button>
           </div>
         )}
 
@@ -1044,44 +1042,44 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
           return (
             <div className="flex flex-col" style={{ height: "94vh", maxHeight: "94vh" }}>
               {/* ── Header ── */}
-              <div className="flex-shrink-0 border-b border-white/[0.06] px-6 py-5">
+              <div className="flex-shrink-0 border-b border-slate-100 px-6 py-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
                       Pedido #{order.id} · Simulador
                     </p>
-                    <h2 className="mt-0.5 text-xl font-bold text-white truncate">
+                    <h2 className="mt-0.5 text-xl font-bold text-slate-900 truncate">
                       {order.contactName ?? "Cliente sem nome"}
                     </h2>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <StatusBadge status={order.status} />
                       {order.priority && order.priority !== "normal" && (
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                          order.priority === "urgente" ? "text-red-400" :
-                          order.priority === "alta" ? "text-amber-400" : "text-slate-500"
+                          order.priority === "urgente" ? "text-red-600" :
+                          order.priority === "alta" ? "text-amber-600" : "text-slate-500"
                         }`}>{order.priority}</span>
                       )}
                       {order.assignedToName ? (
                         <span className="text-xs text-slate-500">
-                          Assistente: <span className="font-semibold text-sky-400">{order.assignedToName}</span>
+                          Assistente: <span className="font-semibold text-sky-600">{order.assignedToName}</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-yellow-300">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-[10px] font-semibold text-yellow-700">
                           Fila geral
                         </span>
                       )}
-                      <span className="text-xs text-slate-600">{fmt(order.createdAt)}</span>
+                      <span className="text-xs text-slate-400">{fmt(order.createdAt)}</span>
                     </div>
                   </div>
 
                   <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
                     {acceptMsg && (
-                      <span className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                      <span className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
                         {acceptMsg}
                       </span>
                     )}
                     {saveMsg && (
-                      <span className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                      <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                         {saveMsg}
                       </span>
                     )}
@@ -1107,12 +1105,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     )}
                     {/* Pedido já atribuído a outra assistente */}
                     {!isAdmin && colabFuncao === "assistente" && order.assignedToId && order.assignedToId !== colabId && (
-                      <span className="rounded-xl border border-slate-400/20 bg-slate-400/10 px-3 py-1 text-xs font-semibold text-slate-400">
+                      <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
                         Atribuído a {order.assignedToName}
                       </span>
                     )}
                     {error && !showDelete && (
-                      <span className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs font-semibold text-red-300 max-w-[200px] truncate">
+                      <span className="rounded-xl border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 max-w-[200px] truncate">
                         {error}
                       </span>
                     )}
@@ -1138,7 +1136,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     <button
                       onClick={() => handleStatusQuick("aprovado")}
                       disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-60 transition"
+                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1160,7 +1158,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     <button
                       onClick={handleReject}
                       disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-300 hover:bg-rose-400/20 disabled:opacity-60 transition"
+                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-400/20 disabled:opacity-60 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1186,7 +1184,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                            "Abrir no Google Calendar" is shown after scheduling inside the modal itself. */
                         <button
                           onClick={openCalendarModal}
-                          className="hidden lg:flex items-center gap-1.5 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-300 hover:bg-violet-400/20 transition"
+                          className="hidden lg:flex items-center gap-1.5 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-400/20 transition"
                           title={order.calendarEventId ? `Atualizar agenda (agendado para ${order.scheduledDate} ${order.scheduledStartTime}–${order.scheduledEndTime})` : "Agendar no Google Calendar"}
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1209,7 +1207,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {/* Fechar */}
                     <button
                       onClick={onClose}
-                      className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-white transition"
+                      className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1220,7 +1218,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
               </div>
 
               {/* ── Tabs ── */}
-              <div className="flex-shrink-0 overflow-x-auto border-b border-white/[0.06] px-6">
+              <div className="flex-shrink-0 overflow-x-auto border-b border-slate-100 px-6">
                 <div className="flex gap-0.5 py-2">
                   {TABS.map((tab) => (
                     <button
@@ -1229,7 +1227,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       className={`flex-shrink-0 rounded-[12px] px-4 py-1.5 text-xs font-semibold transition ${
                         activeTab === tab.id
                           ? "bg-cyan-400 text-slate-950"
-                          : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+                          : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
                       }`}
                     >
                       {tab.label}
@@ -1259,12 +1257,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                       {[
                         { icon: "🔧", label: "Tipo de serviço", value: getServiceLabel(order.serviceType), accent: "text-cyan-400" },
-                        { icon: "📋", label: "Pedido nº", value: `#${order.id}`, accent: "text-slate-200" },
-                        { icon: "📅", label: "Data de entrada", value: fmt(order.createdAt), accent: "text-slate-200" },
-                        { icon: "👤", label: "Cliente", value: order.contactName ?? "—", accent: "text-white" },
-                        { icon: "📊", label: "Estado", value: STATUS_CFG[order.status]?.label ?? order.status, accent: "text-cyan-300" },
+                        { icon: "📋", label: "Pedido nº", value: `#${order.id}`, accent: "text-slate-800" },
+                        { icon: "📅", label: "Data de entrada", value: fmt(order.createdAt), accent: "text-slate-800" },
+                        { icon: "👤", label: "Cliente", value: order.contactName ?? "—", accent: "text-slate-900" },
+                        { icon: "📊", label: "Estado", value: STATUS_CFG[order.status]?.label ?? order.status, accent: "text-cyan-700" },
                       ].map((c) => (
-                        <div key={c.label} className="rounded-[16px] border border-white/[0.06] bg-white/[0.02] p-3.5">
+                        <div key={c.label} className="rounded-[16px] border border-slate-100 bg-slate-50/50 p-3.5">
                           <div className="flex items-center gap-2 mb-1.5">
                             <span className="text-sm">{c.icon}</span>
                             <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-600">{c.label}</p>
@@ -1281,13 +1279,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
                             {order.precoFinal ? "Preço s/IVA" : "Estimativa s/IVA"}
                           </p>
-                          <p className="mt-1.5 text-xl font-bold text-emerald-300">
+                          <p className="mt-1.5 text-xl font-bold text-emerald-700">
                             {fmtEur(order.precoFinal) ?? fmtEur(order.estimateTotal) ?? "—"}
                           </p>
                         </div>
                         <div className="rounded-[16px] border border-cyan-400/20 bg-cyan-400/[0.06] p-4">
                           <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-cyan-500">IVA 23%</p>
-                          <p className="mt-1.5 text-xl font-bold text-cyan-300">
+                          <p className="mt-1.5 text-xl font-bold text-cyan-700">
                             {vatAmount != null && !isNaN(vatAmount) ? `${vatAmount.toFixed(2)} €` : "—"}
                           </p>
                         </div>
@@ -1309,22 +1307,22 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <div className="space-y-5 lg:col-span-3">
 
                         {/* Dados do serviço */}
-                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-5">
+                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-5">
                           <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Dados do serviço</p>
                           <div className="grid grid-cols-2 gap-3 mb-3">
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Tipo</p>
-                              <p className="mt-1 text-sm font-semibold text-slate-200">{getServiceLabel(order.serviceType)}</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-800">{getServiceLabel(order.serviceType)}</p>
                             </div>
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Urgência</p>
-                              <p className="mt-1 text-sm font-semibold text-slate-200">{tUrgency(order.urgency) ?? "Normal"}</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-800">{tUrgency(order.urgency) ?? "Normal"}</p>
                             </div>
                           </div>
                           {order.description && (
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Descrição</p>
-                              <p className="text-sm leading-relaxed text-slate-300">{order.description}</p>
+                              <p className="text-sm leading-relaxed text-slate-700">{order.description}</p>
                             </div>
                           )}
                         </div>
@@ -1360,7 +1358,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             {estVal.summary && (
                               <div>
                                 <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-400 mb-1">Resumo</p>
-                                <p className="text-xs leading-relaxed text-slate-300">{estVal.summary}</p>
+                                <p className="text-xs leading-relaxed text-slate-700">{estVal.summary}</p>
                               </div>
                             )}
 
@@ -1393,32 +1391,32 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                               {estVal.difficultyLevel && (
-                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                   <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Dificuldade</p>
                                   <div className="flex gap-0.5 mb-1">
                                     {[1,2,3,4,5].map((n) => (
                                       <div key={n} className={`h-1 w-3.5 rounded-full ${n <= (estVal.difficultyLevel ?? 0) ? "bg-violet-400" : "bg-white/10"}`} />
                                     ))}
                                   </div>
-                                  <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[estVal.difficultyLevel] ?? "text-slate-300"}`}>
+                                  <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[estVal.difficultyLevel] ?? "text-slate-700"}`}>
                                     {DIFFICULTY_LABEL[estVal.difficultyLevel] ?? estVal.difficultyLevel}
                                   </span>
                                 </div>
                               )}
                               {estVal.teamSize && (
-                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                   <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Equipa</p>
-                                  <p className="text-[11px] font-semibold text-slate-300">{estVal.teamSize}</p>
+                                  <p className="text-[11px] font-semibold text-slate-700">{estVal.teamSize}</p>
                                 </div>
                               )}
                               {estVal.estimatedHoursText && (
-                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                   <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Tempo</p>
-                                  <p className="text-[11px] font-semibold text-slate-300">{estVal.estimatedHoursText}</p>
+                                  <p className="text-[11px] font-semibold text-slate-700">{estVal.estimatedHoursText}</p>
                                 </div>
                               )}
                               {estVal.recommendation && (
-                                <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                   <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Ação</p>
                                   <p className={`text-[11px] font-semibold ${
                                     estVal.recommendation === "pode_aprovar" ? "text-emerald-400" :
@@ -1439,7 +1437,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
                         {/* Preço e notas internas */}
                         {isAdmin && (
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
+                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-5 space-y-4">
                             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Preço e notas internas</p>
                             <div className="grid grid-cols-2 gap-3">
                               <Field label="Preço final sem IVA (€)">
@@ -1454,11 +1452,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             </Field>
                             <div className="flex flex-wrap gap-2 pt-1">
                               <button onClick={handleRecalcularEstimativa} disabled={recalculating || saving}
-                                className="flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/20 disabled:opacity-60 transition">
+                                className="flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold text-cyan-700 hover:bg-cyan-400/20 disabled:opacity-60 transition">
                                 {recalculating ? "A recalcular..." : "Recalcular estimativa"}
                               </button>
                               <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
-                                className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-60 transition">
+                                className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition">
                                 Aprovar orçamento
                               </button>
                               <button onClick={handleSave} disabled={saving}
@@ -1471,17 +1469,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
                         {/* Fotos e ficheiros */}
                         {files.length > 0 && (
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-5">
+                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-5">
                             <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Fotos e ficheiros ({files.length})</p>
                             <div className="flex flex-wrap gap-2">
                               {files.slice(0, 8).map((url, i) => {
                                 const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
                                 return isImg ? (
-                                  <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-xl border border-white/[0.06]">
+                                  <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-xl border border-slate-100">
                                     <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition" />
                                   </button>
                                 ) : (
-                                  <a key={i} href={url} target="_blank" rel="noreferrer" className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-slate-500 hover:text-slate-300 transition">
+                                  <a key={i} href={url} target="_blank" rel="noreferrer" className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 text-slate-500 hover:text-slate-700 transition">
                                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     </svg>
@@ -1489,7 +1487,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                                 );
                               })}
                               {files.length > 8 && (
-                                <button type="button" onClick={() => setActiveTab("servico_fotos")} className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-xs text-slate-400 hover:bg-white/[0.05] transition">
+                                <button type="button" onClick={() => setActiveTab("servico_fotos")} className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 text-xs text-slate-400 hover:bg-slate-100 transition">
                                   +{files.length - 8}
                                 </button>
                               )}
@@ -1502,7 +1500,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <div className="space-y-4 lg:col-span-2">
 
                         {/* Resumo rápido */}
-                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2.5">
+                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Resumo rápido</p>
                           {[
                             { label: "Assistente", value: order.assignedToName ?? "Fila geral" },
@@ -1513,20 +1511,20 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           ].map((item) => (
                             <div key={item.label} className="flex items-center justify-between py-1 border-b border-white/[0.04] last:border-0">
                               <span className="text-[10px] text-slate-500">{item.label}</span>
-                              <span className="text-xs font-semibold text-slate-200">{item.value}</span>
+                              <span className="text-xs font-semibold text-slate-800">{item.value}</span>
                             </div>
                           ))}
                         </div>
 
                         {/* Contacto */}
-                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2">
                           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Contacto</p>
                           {order.contactPhone && (
                             <div className="flex items-center gap-2">
                               <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                               </svg>
-                              <span className="text-sm font-semibold text-slate-200">{order.contactPhone}</span>
+                              <span className="text-sm font-semibold text-slate-800">{order.contactPhone}</span>
                             </div>
                           )}
                           {order.contactEmail && (
@@ -1534,7 +1532,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                               </svg>
-                              <span className="text-xs text-slate-300 truncate">{order.contactEmail}</span>
+                              <span className="text-xs text-slate-700 truncate">{order.contactEmail}</span>
                             </div>
                           )}
                           {order.contactPhone && (
@@ -1547,28 +1545,28 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         </div>
 
                         {/* Morada */}
-                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2">
                           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Morada</p>
                           {isMov ? (
                             <>
                               <div>
                                 <p className="text-[9px] text-cyan-500 font-semibold uppercase tracking-wider">Origem</p>
-                                <p className="text-xs text-slate-200 mt-0.5">{originAddr ?? "—"}</p>
+                                <p className="text-xs text-slate-800 mt-0.5">{originAddr ?? "—"}</p>
                               </div>
                               <div>
                                 <p className="text-[9px] text-violet-400 font-semibold uppercase tracking-wider">Destino</p>
-                                <p className="text-xs text-slate-200 mt-0.5">{destAddr ?? "—"}</p>
+                                <p className="text-xs text-slate-800 mt-0.5">{destAddr ?? "—"}</p>
                               </div>
                             </>
                           ) : (
-                            <p className="text-xs text-slate-200">{order.address ?? "—"}</p>
+                            <p className="text-xs text-slate-800">{order.address ?? "—"}</p>
                           )}
                           {(order.city || order.postalCode) && (
                             <p className="text-[11px] text-slate-400">{[order.city, order.postalCode].filter(Boolean).join(" · ")}</p>
                           )}
                           {order.address && (
                             <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer"
-                              className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                              className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-700 transition">
                               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                               Ver no mapa
                             </a>
@@ -1577,14 +1575,14 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
                         {/* Distância / Zona */}
                         {(order.distanceKm || movDist) && (
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2">
                             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Distância / Zona</p>
-                            <p className="text-lg font-bold text-cyan-300">
+                            <p className="text-lg font-bold text-cyan-700">
                               {isMov ? movDist : `${order.distanceKm} km`}
                             </p>
                             {order.distanceText && <p className="text-[11px] text-slate-400">{order.distanceText}</p>}
                             {order.city && (
-                              <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-300">
+                              <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-700">
                                 {order.city}
                               </span>
                             )}
@@ -1592,7 +1590,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         )}
 
                         {/* Mini histórico */}
-                        <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
+                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4">
                           <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Histórico do pedido</p>
                           <div className="relative space-y-0 pl-3">
                             <div className="absolute left-3 top-1 bottom-1 w-px bg-white/[0.06]" />
@@ -1605,14 +1603,14 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               ...(order.status === "concluido" ? [{ label: "Concluído", date: order.updatedAt, color: "bg-emerald-400" }] : []),
                             ].slice(0, 5).map((item, i) => (
                               <div key={i} className="relative pb-3 pl-5">
-                                <span className={`absolute left-[-3px] top-1 h-2 w-2 rounded-full ${item.color} ring-3 ring-[#070e17]`} />
-                                <p className="text-[11px] font-semibold text-slate-300">{item.label}</p>
+                                <span className={`absolute left-[-3px] top-1 h-2 w-2 rounded-full ${item.color} ring-3 ring-white`} />
+                                <p className="text-[11px] font-semibold text-slate-700">{item.label}</p>
                                 <p className="text-[10px] text-slate-600">{fmt(item.date)}</p>
                               </div>
                             ))}
                           </div>
                           {history.length > 0 && (
-                            <button onClick={() => setActiveTab("historico")} className="mt-2 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                            <button onClick={() => setActiveTab("historico")} className="mt-2 text-[11px] font-semibold text-cyan-400 hover:text-cyan-700 transition">
                               Ver histórico completo →
                             </button>
                           )}
@@ -1639,7 +1637,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   <div className="space-y-8">
                     {/* Dados do cliente */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-white">Dados do cliente</h3>
+                      <h3 className="text-base font-bold text-slate-900">Dados do cliente</h3>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <Field label="Nome completo">
                           <input type="text" value={editContactName} onChange={(e) => setEditContactName(e.target.value)} className={inputCls} placeholder="Nome do cliente" />
@@ -1668,7 +1666,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {/* Morada e acesso */}
                     {isMov ? (
                       <div className="space-y-6">
-                        <h3 className="text-base font-bold text-white">Morada de mudança — Origem e Destino</h3>
+                        <h3 className="text-base font-bold text-slate-900">Morada de mudança — Origem e Destino</h3>
                         <div className="rounded-[20px] border border-cyan-400/20 bg-cyan-400/[0.03] p-5">
                           <p className="mb-4 text-xs font-bold uppercase tracking-wider text-cyan-400">Origem</p>
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1704,7 +1702,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           </div>
                         </div>
                         {(movDist.distanceText || movDist.distanceKm || order.distanceKm || baseDist.distanceText) && (
-                          <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-5">
+                          <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 p-5">
                             <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Percurso</p>
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                               <ReadonlyField label="Origem → Destino" value={movDist.distanceText ?? (order.distanceKm ? `${order.distanceKm} km` : null)} />
@@ -1717,7 +1715,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <h3 className="text-base font-bold text-white">Morada e acesso</h3>
+                        <h3 className="text-base font-bold text-slate-900">Morada e acesso</h3>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <Field label="Morada completa">
                             <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className={inputCls} placeholder="Rua, número, andar..." />
@@ -1765,7 +1763,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   <div className="space-y-8">
                     {/* Serviço */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-white">Dados do serviço</h3>
+                      <h3 className="text-base font-bold text-slate-900">Dados do serviço</h3>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <Field label="Tipo de serviço">
                           <select value={editServiceType} onChange={(e) => setEditServiceType(e.target.value)} className={selectCls}>
@@ -1802,26 +1800,26 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         const bb = parseInt(bigBags.replace(/[^\d]/g, ""), 10) || 0;
                         const sacosEquiv = bb * 42;
                         return (
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4 space-y-4">
+                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-4">
                             {(qtd || state) && (
                               <div className="flex flex-wrap items-center gap-6">
                                 {qtd && (
                                   <div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Quantidade de sacos</p>
-                                    <p className="mt-1 text-sm font-bold text-slate-200">{qtd}</p>
+                                    <p className="mt-1 text-sm font-bold text-slate-800">{qtd}</p>
                                   </div>
                                 )}
                                 {state && (
                                   <div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Estado</p>
-                                    <p className="mt-1 text-sm font-semibold text-slate-300">{tEntulho(state)}</p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-700">{tEntulho(state)}</p>
                                   </div>
                                 )}
                               </div>
                             )}
 
                             {/* Conversor big bags → sacos — uso interno, nunca visível ao cliente */}
-                            <div className={`${qtd || state ? "border-t border-white/[0.06] pt-4" : ""}`}>
+                            <div className={`${qtd || state ? "border-t border-slate-100 pt-4" : ""}`}>
                               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-400">Big bags → sacos (uso interno)</p>
                               <p className="mt-0.5 text-[11px] text-slate-500">1 big bag = 42 sacos no chão. Usa o equivalente para calcular o preço.</p>
                               <div className="mt-2 flex items-center gap-3">
@@ -1831,9 +1829,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                                   value={bigBags}
                                   onChange={(e) => setBigBags(e.target.value)}
                                   placeholder="Nº de big bags"
-                                  className="w-36 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
+                                  className="w-36 rounded-lg border border-slate-200 bg-white/[0.03] px-3 py-2 text-sm text-slate-800 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
                                 />
-                                <span className="text-sm font-semibold text-slate-300">
+                                <span className="text-sm font-semibold text-slate-700">
                                   {bb > 0 ? `= ${sacosEquiv} sacos` : "= — sacos"}
                                 </span>
                               </div>
@@ -1846,13 +1844,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <div>
                         <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">Estimativa da IA</p>
                         <div className="grid grid-cols-3 gap-3">
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
+                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Mínimo s/IVA</p>
                             <p className="mt-1.5 text-lg font-bold text-cyan-400">
                               {fmtEur(order.estimateMin) ?? (est?.estimateMinWithoutVat ? `${est.estimateMinWithoutVat.toFixed(2)} €` : "—")}
                             </p>
                           </div>
-                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-4">
+                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Máximo s/IVA</p>
                             <p className="mt-1.5 text-lg font-bold text-cyan-400">
                               {fmtEur(order.estimateMax) ?? (est?.estimateMaxWithoutVat ? `${est.estimateMaxWithoutVat.toFixed(2)} €` : "—")}
@@ -1860,7 +1858,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           </div>
                           <div className="rounded-[18px] border border-cyan-400/10 bg-cyan-400/5 p-4">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cyan-600">Recomendado s/IVA</p>
-                            <p className="mt-1.5 text-lg font-bold text-cyan-300">
+                            <p className="mt-1.5 text-lg font-bold text-cyan-700">
                               {fmtEur(order.estimateTotal) ?? (est?.estimatedPriceWithoutVat ? `${est.estimatedPriceWithoutVat.toFixed(2)} €` : "—")}
                             </p>
                           </div>
@@ -1900,32 +1898,32 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           {/* Equipa / Horas / Dificuldade / Recomendação */}
                           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             {est.difficultyLevel && (
-                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                 <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Dificuldade</p>
                                 <div className="flex gap-0.5 mb-1">
                                   {[1,2,3,4,5].map((n) => (
                                     <div key={n} className={`h-1 w-3.5 rounded-full ${n <= (est.difficultyLevel ?? 0) ? "bg-violet-400" : "bg-white/10"}`} />
                                   ))}
                                 </div>
-                                <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[est.difficultyLevel] ?? "text-slate-300"}`}>
+                                <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[est.difficultyLevel] ?? "text-slate-700"}`}>
                                   {DIFFICULTY_LABEL[est.difficultyLevel] ?? est.difficultyLevel}
                                 </span>
                               </div>
                             )}
                             {est.teamSize && (
-                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                 <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Equipa</p>
-                                <p className="text-[11px] font-semibold text-slate-300">{est.teamSize}</p>
+                                <p className="text-[11px] font-semibold text-slate-700">{est.teamSize}</p>
                               </div>
                             )}
                             {est.estimatedHoursText && (
-                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                 <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Tempo</p>
-                                <p className="text-[11px] font-semibold text-slate-300">{est.estimatedHoursText}</p>
+                                <p className="text-[11px] font-semibold text-slate-700">{est.estimatedHoursText}</p>
                               </div>
                             )}
                             {est.recommendation && (
-                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.02] p-2.5">
+                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
                                 <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Ação</p>
                                 <p className={`text-[11px] font-semibold ${
                                   est.recommendation === "pode_aprovar" ? "text-emerald-400" :
@@ -1954,19 +1952,19 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                                 <div className="grid grid-cols-3 gap-2">
                                   <div>
                                     <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Distância da base</p>
-                                    <p className="mt-1 text-[12px] font-bold text-cyan-300">
+                                    <p className="mt-1 text-[12px] font-bold text-cyan-700">
                                       {tKm != null ? `${String(tKm).replace(".", ",")} km${tDur ? ` · ${tDur}` : ""}` : "A confirmar"}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Custo deslocação</p>
-                                    <p className="mt-1 text-[12px] font-bold text-cyan-300">
+                                    <p className="mt-1 text-[12px] font-bold text-cyan-700">
                                       {tCost != null ? `${tCost.toFixed(2)} €` : "—"}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Horas estimadas</p>
-                                    <p className="mt-1 text-[12px] font-bold text-cyan-300">
+                                    <p className="mt-1 text-[12px] font-bold text-cyan-700">
                                       {tHours != null ? `${tHours}h` : (est.estimatedHoursText ?? "—")}
                                     </p>
                                   </div>
@@ -1981,13 +1979,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           {est.summary && (
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-400 mb-1">Resumo</p>
-                              <p className="text-xs leading-relaxed text-slate-300">{est.summary}</p>
+                              <p className="text-xs leading-relaxed text-slate-700">{est.summary}</p>
                             </div>
                           )}
                           {est.customerMessage && (
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-cyan-500 mb-1">Mensagem sugerida ao cliente</p>
-                              <p className="text-xs leading-relaxed text-slate-300 italic">{est.customerMessage}</p>
+                              <p className="text-xs leading-relaxed text-slate-700 italic">{est.customerMessage}</p>
                             </div>
                           )}
                           {est.assumptions && est.assumptions.length > 0 && (
@@ -2039,13 +2037,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             />
                             <button
                               type="button" onClick={handleCalcularDistancia} disabled={distanceCalculating}
-                              className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 hover:bg-cyan-400/20 disabled:opacity-60 transition"
+                              className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-700 hover:bg-cyan-400/20 disabled:opacity-60 transition"
                             >
                               {distanceCalculating ? "A calcular..." : "Calcular pela morada"}
                             </button>
                             <button
                               type="button" onClick={handleGuardarDistanciaManual} disabled={distanceCalculating}
-                              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/[0.08] disabled:opacity-60 transition"
+                              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 transition"
                             >
                               Guardar km manual
                             </button>
@@ -2072,11 +2070,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
                       <div className="flex flex-wrap justify-end gap-2">
                         <button onClick={handleRecalcularEstimativa} disabled={recalculating || saving}
-                          className="flex items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-300 hover:bg-violet-400/20 disabled:opacity-60 transition">
+                          className="flex items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-400/20 disabled:opacity-60 transition">
                           {recalculating ? "A recalcular..." : "Recalcular estimativa"}
                         </button>
                         <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
-                          className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-60 transition">
+                          className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition">
                           Aprovar orçamento
                         </button>
                         <button onClick={handleSave} disabled={saving}
@@ -2088,7 +2086,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
                     {/* Fotos */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-white">Fotos e ficheiros</h3>
+                      <h3 className="text-base font-bold text-slate-900">Fotos e ficheiros</h3>
                       {files.length === 0 ? (
                         <div className="flex flex-col items-center justify-center rounded-[20px] border border-dashed border-white/10 py-16 text-center">
                           <svg className="mb-3 h-10 w-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2102,12 +2100,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
                             const isVid = /\.(mp4|mov|webm|avi)$/i.test(url);
                             return (
-                              <div key={i} className="group relative overflow-hidden rounded-[16px] border border-white/[0.06] bg-white/[0.02] aspect-square">
+                              <div key={i} className="group relative overflow-hidden rounded-[16px] border border-slate-100 bg-slate-50/50 aspect-square">
                                 {isImg ? (
                                   <>
                                     <img src={url} alt={`Ficheiro ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105 cursor-pointer" onClick={() => setLightbox(url)} />
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition cursor-pointer" onClick={() => setLightbox(url)}>
-                                      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="h-6 w-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                       </svg>
@@ -2116,7 +2114,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                                 ) : isVid ? (
                                   <video src={url} className="h-full w-full object-cover" controls />
                                 ) : (
-                                  <a href={url} target="_blank" rel="noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center hover:bg-white/[0.04] transition">
+                                  <a href={url} target="_blank" rel="noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center hover:bg-slate-50 transition">
                                     <svg className="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     </svg>
@@ -2136,7 +2134,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                 {/* Atribuição */}
                 {activeTab === "atribuicao" && (
                   <div className="space-y-6">
-                    <h3 className="text-base font-bold text-white">Atribuição e status</h3>
+                    <h3 className="text-base font-bold text-slate-900">Atribuição e status</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Status do pedido">
                         <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as OrderStatus)} className={selectCls}>
@@ -2207,7 +2205,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {(isAdmin || (colabFuncao === "assistente" && order.assignedToId === colabId)) && (
                       <div className="rounded-[20px] border border-violet-400/20 bg-violet-400/[0.03] p-5 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-bold text-violet-300 flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-violet-700 flex items-center gap-2">
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -2215,7 +2213,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           </h4>
                           {/* Current calendar status badge */}
                           {order.calendarStatus === "scheduled" && (
-                            <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-300">
+                            <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700">
                               Agendado
                             </span>
                           )}
@@ -2237,7 +2235,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             <svg className="h-3.5 w-3.5 flex-shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-[11px] text-slate-500">Agenda: <span className="font-semibold text-violet-300">{order.calendarTargetName}</span></span>
+                            <span className="text-[11px] text-slate-500">Agenda: <span className="font-semibold text-violet-700">{order.calendarTargetName}</span></span>
                           </div>
                         )}
 
@@ -2252,9 +2250,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               </svg>
                               <span className="text-violet-200">
                                 Agendado para{" "}
-                                <span className="font-bold text-white">{datePt}</span>
+                                <span className="font-bold text-slate-900">{datePt}</span>
                                 {order.scheduledStartTime && order.scheduledEndTime && (
-                                  <>, <span className="font-bold text-white">{order.scheduledStartTime}–{order.scheduledEndTime}</span></>
+                                  <>, <span className="font-bold text-slate-900">{order.scheduledStartTime}–{order.scheduledEndTime}</span></>
                                 )}
                               </span>
                             </div>
@@ -2303,7 +2301,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           <p className="text-xs font-semibold text-red-400">{schedError}</p>
                         )}
                         {schedMsg && (
-                          <p className="text-xs font-semibold text-violet-300">{schedMsg}</p>
+                          <p className="text-xs font-semibold text-violet-700">{schedMsg}</p>
                         )}
 
                         {/* Action buttons */}
@@ -2311,7 +2309,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           <button
                             onClick={handleSchedule}
                             disabled={scheduling || !schedDate || !schedStart || !schedEnd}
-                            className="flex items-center gap-1.5 rounded-2xl bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-400 disabled:opacity-50 transition"
+                            className="flex items-center gap-1.5 rounded-2xl bg-violet-500 px-4 py-2 text-sm font-bold text-slate-900 hover:bg-violet-400 disabled:opacity-50 transition"
                           >
                             {scheduling ? (
                               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -2331,7 +2329,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               href={order.calendarEventUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="flex items-center gap-1.5 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-300 hover:bg-violet-400/20 transition"
+                              className="flex items-center gap-1.5 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-400/20 transition"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -2348,7 +2346,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                 {/* Histórico */}
                 {activeTab === "historico" && (
                   <div className="space-y-4">
-                    <h3 className="text-base font-bold text-white">Histórico do pedido</h3>
+                    <h3 className="text-base font-bold text-slate-900">Histórico do pedido</h3>
                     {history.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <svg className="mb-3 h-10 w-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2361,8 +2359,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         <div className="absolute left-4 top-3 bottom-3 w-px bg-white/[0.06]" />
                         {history.map((entry, i) => (
                           <div key={i} className="relative pb-5 pl-6">
-                            <span className="absolute left-[-3px] top-1.5 h-2 w-2 rounded-full bg-cyan-400 ring-4 ring-[#070e17]" />
-                            <p className="text-xs font-semibold text-slate-200">{entry.message}</p>
+                            <span className="absolute left-[-3px] top-1.5 h-2 w-2 rounded-full bg-cyan-400 ring-4 ring-white" />
+                            <p className="text-xs font-semibold text-slate-800">{entry.message}</p>
                             <div className="mt-0.5 flex items-center gap-2">
                               {entry.by && <span className="text-[10px] font-medium text-slate-500">{entry.by.nome}</span>}
                               <span className="text-[10px] text-slate-600">{fmt(entry.createdAt)}</span>
@@ -2371,8 +2369,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         ))}
                       </div>
                     )}
-                    <div className="relative space-y-0 border-t border-white/[0.06] pl-4 pt-4">
-                      <div className="absolute left-4 top-7 bottom-3 w-px bg-white/[0.04]" />
+                    <div className="relative space-y-0 border-t border-slate-100 pl-4 pt-4">
+                      <div className="absolute left-4 top-7 bottom-3 w-px bg-slate-50" />
                       <p className="mb-3 pl-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Linha do tempo automática</p>
                       {[
                         { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
@@ -2381,8 +2379,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         ...(order.status === "confirmado" ? [{ label: "Pedido confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
                       ].map((item, i) => (
                         <div key={i} className="relative pb-4 pl-6">
-                          <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ${item.color} ring-4 ring-[#070e17]`} />
-                          <p className="text-xs font-semibold text-slate-300">{item.label}</p>
+                          <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ${item.color} ring-4 ring-white`} />
+                          <p className="text-xs font-semibold text-slate-700">{item.label}</p>
                           <p className="text-[10px] text-slate-600">{fmt(item.date)}</p>
                         </div>
                       ))}
@@ -2400,7 +2398,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
       {lightbox && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={() => setLightbox(null)}>
           <img src={lightbox} alt="Preview" className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain" />
-          <button className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-white/20 transition" onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-slate-900 hover:bg-white/20 transition" onClick={() => setLightbox(null)}>
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -2411,7 +2409,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
       {/* ── Calendar confirm modal ───────────────────────────────────────── */}
       {calendarModalOpen && order && (() => {
         const isMov = isMudanca(order.serviceType);
-        const calCls = "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-400/40 focus:outline-none focus:ring-1 focus:ring-violet-400/20 transition";
+        const calCls = "w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-violet-400/40 focus:outline-none focus:ring-1 focus:ring-violet-400/20 transition";
         const lbCls = "block text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5";
         return (
           <div
@@ -2419,20 +2417,20 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
             onClick={(e) => { if (e.target === e.currentTarget) setCalendarModalOpen(false); }}
           >
             <div
-              className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-violet-400/20 bg-[#070e17] shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
+              className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_40px_100px_rgba(0,0,0,0.15)]"
               style={{ maxHeight: "92vh" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex-shrink-0 border-b border-white/[0.06] px-6 py-5">
+              <div className="flex-shrink-0 border-b border-slate-100 px-6 py-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-white">Agendar servico no Google Calendar</h2>
+                    <h2 className="text-base font-bold text-slate-900">Agendar servico no Google Calendar</h2>
                     <p className="mt-1 text-xs text-slate-500">Confirme os dados antes de enviar para a agenda.</p>
                   </div>
                   <button
                     onClick={() => setCalendarModalOpen(false)}
-                    className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white transition"
+                    className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-900 transition"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2491,7 +2489,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                           )}
                         </div>
                         {hasTarget && (
-                          <span className="flex-shrink-0 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+                          <span className="flex-shrink-0 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                             Configurado
                           </span>
                         )}
@@ -2609,14 +2607,14 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {cmApiDisabledUrl && (
                       <div className="rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2.5 space-y-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Como resolver</p>
-                        <p className="text-xs text-amber-300 leading-relaxed">
+                        <p className="text-xs text-amber-700 leading-relaxed">
                           A <strong>Google Calendar API</strong> precisa de ser activada no Google Cloud Console.
                         </p>
                         <a
                           href={cmApiDisabledUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-300 transition hover:bg-amber-400/20"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-400/20"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -2631,7 +2629,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {cmErrorCode === "calendar_not_found" && !cmApiDisabledUrl && (
                       <div className="rounded-lg border border-sky-400/20 bg-sky-400/[0.05] px-3 py-3 space-y-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-sky-400">Como resolver — 3 passos</p>
-                        <ol className="space-y-2 text-xs text-slate-300 leading-relaxed list-none">
+                        <ol className="space-y-2 text-xs text-slate-700 leading-relaxed list-none">
                           <li className="flex items-start gap-2">
                             <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-sky-400">1</span>
                             Abra o <strong>Google Calendar</strong> com a conta <strong>geral@clyon.pt</strong>
@@ -2666,7 +2664,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <svg className="h-4 w-4 flex-shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      <p className="text-xs font-semibold text-violet-300">{cmMsg}</p>
+                      <p className="text-xs font-semibold text-violet-700">{cmMsg}</p>
                     </div>
                     {cmTargetName && (
                       <div className="flex items-center gap-2 rounded-lg border border-violet-400/15 bg-violet-400/[0.06] px-3 py-2">
@@ -2694,17 +2692,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
               </div>
 
               {/* Footer */}
-              <div className="flex-shrink-0 border-t border-white/[0.06] px-6 py-4 flex items-center justify-end gap-3">
+              <div className="flex-shrink-0 border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-3">
                 <button
                   onClick={() => setCalendarModalOpen(false)}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/[0.08] transition"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleScheduleModal}
                   disabled={cmScheduling || !cmDate || !cmStart || !cmEnd}
-                  className="flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-400 disabled:opacity-50 transition"
+                  className="flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-bold text-slate-900 hover:bg-violet-400 disabled:opacity-50 transition"
                 >
                   {cmScheduling ? (
                     <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -2727,13 +2725,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
       {/* ── Delete confirmation ── */}
       {showDelete && order && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-[28px] border border-red-500/20 bg-[#0a1520] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.7)]">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/10">
               <svg className="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-white">Excluir pedido #{order.id}?</h2>
+            <h2 className="text-lg font-bold text-slate-900">Excluir pedido #{order.id}?</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
               Esta ação irá remover o pedido definitivamente da base de dados e{" "}
               <span className="font-semibold text-red-300">não poderá ser desfeita</span>.
@@ -2756,13 +2754,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
               <button
                 type="button"
                 onClick={() => { setShowDelete(false); setDeleteConfirm(""); setError(""); }}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/[0.08] transition"
+                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
               >Cancelar</button>
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting || deleteConfirm !== "EXCLUIR"}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-400 disabled:opacity-40 transition"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-slate-900 hover:bg-red-400 disabled:opacity-40 transition"
               >
                 {deleting ? (
                   <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
