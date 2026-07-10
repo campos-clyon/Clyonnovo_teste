@@ -308,6 +308,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("geral");
   const [showAcceptPrompt, setShowAcceptPrompt] = useState(false);
+  const [showPedirInfo, setShowPedirInfo] = useState(false);
+  const [pedirInfoText, setPedirInfoText] = useState("");
+  const [pedirInfoSending, setPedirInfoSending] = useState(false);
 
   const isOwner = order?.assignedToId != null && order.assignedToId === colabId;
   const shouldMask = !isAdmin && !isOwner;
@@ -1016,10 +1019,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1791d6]/20 backdrop-blur-sm p-2"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#ccccff]/50 backdrop-blur-sm p-2"
     >
       <div
-        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-[#f0f7fc] shadow-[0_40px_120px_rgba(23,145,214,0.12)]"
+        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-[#ccccff] bg-[#e8e8ff] shadow-[0_40px_120px_rgba(204,204,255,0.4)]"
         style={{ maxWidth: "min(1800px, 98vw)", maxHeight: "97vh", height: "97vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1163,7 +1166,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     </button>
                     {/* Pedir info */}
                     <button
-                      onClick={() => handleStatusQuick("precisa_info")}
+                      onClick={() => { setPedirInfoText(""); setShowPedirInfo(true); }}
                       disabled={saving}
                       className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-orange-400/30 bg-orange-400/10 px-4 py-2 text-sm font-semibold text-orange-300 hover:bg-orange-400/20 disabled:opacity-60 transition"
                     >
@@ -1172,16 +1175,16 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       </svg>
                       Pedir info
                     </button>
-                    {/* Rejeitar */}
+                    {/* Arquivar */}
                     <button
                       onClick={handleReject}
                       disabled={saving}
                       className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-400/20 disabled:opacity-60 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M6 8l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M10 12h4" />
                       </svg>
-                      Rejeitar
+                      Arquivar
                     </button>
                     {/* WhatsApp */}
                     {shouldMask ? (
@@ -2806,6 +2809,74 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyan-500 py-2.5 text-sm font-bold text-white hover:bg-cyan-400 transition"
               >
                 Aceitar pedido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Pedir info dialog ── */}
+      {showPedirInfo && order && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-400/10">
+              <svg className="h-6 w-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">Pedir informação ao cliente</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              Escreva a informação em falta. Esta mensagem será enviada para a conta do cliente e o status do pedido passa a &quot;Precisa info&quot;.
+            </p>
+            <textarea
+              rows={5}
+              value={pedirInfoText}
+              onChange={(e) => setPedirInfoText(e.target.value)}
+              placeholder="Ex: Pode confirmar quantos volumes tem ao todo? Precisamos de fotos das peças maiores para a estimativa final."
+              className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+              autoFocus
+            />
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowPedirInfo(false); setPedirInfoText(""); }}
+                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+              >Cancelar</button>
+              <button
+                type="button"
+                disabled={pedirInfoSending || !pedirInfoText.trim()}
+                onClick={async () => {
+                  if (!pedirInfoText.trim()) return;
+                  setPedirInfoSending(true);
+                  try {
+                    const res = await fetch(`/api/admin/pedidos/${order.id}`, {
+                      method: "PATCH",
+                      headers: { ...authHeader, "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        status: "precisa_info",
+                        mensagemCliente: pedirInfoText.trim(),
+                      }),
+                    });
+                    const data = await safeJson(res);
+                    if (!res.ok) throw new Error(data?.error || "Erro ao enviar pedido de info");
+                    const updated = data?.order ?? { ...order, status: "precisa_info", mensagemCliente: pedirInfoText.trim() };
+                    setOrder(updated);
+                    setEditStatus("precisa_info");
+                    setEditMensagemCliente(pedirInfoText.trim());
+                    setSaveMsg("Pedido de informação enviado ao cliente!");
+                    setTimeout(() => setSaveMsg(""), 3000);
+                    onUpdated?.(updated);
+                    setShowPedirInfo(false);
+                    setPedirInfoText("");
+                  } catch (e: any) {
+                    setError(e.message);
+                  } finally {
+                    setPedirInfoSending(false);
+                  }
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-orange-500 py-2.5 text-sm font-bold text-white hover:bg-orange-400 disabled:opacity-40 transition"
+              >
+                {pedirInfoSending ? "A enviar..." : "Enviar ao cliente"}
               </button>
             </div>
           </div>

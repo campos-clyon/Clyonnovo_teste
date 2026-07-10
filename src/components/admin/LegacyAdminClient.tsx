@@ -2044,7 +2044,7 @@ export default function ColaboradorAdminClient() {
           )}
 
           {activeSection === "pedidos" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="space-y-4 rounded-[28px] border border-[#ccccff] bg-[#e8e8ff] p-5 shadow-sm">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
@@ -2130,13 +2130,13 @@ export default function ColaboradorAdminClient() {
                     value={pedidoSearch}
                     onChange={(e) => handlePedidoSearch(e.target.value)}
                     placeholder="Pesquisar por nome, telefone, morada, serviço..."
-                    className="h-11 w-full rounded-[14px] border border-slate-200 bg-white pl-9 pr-4 text-sm font-medium text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-[14px] border border-[#ccccff] bg-white/70 pl-9 pr-4 text-sm font-medium text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                   />
                 </div>
                 <select
                   value={pedidoStatusFilter}
                   onChange={(e) => setPedidoStatusFilter(e.target.value)}
-                  className="h-11 rounded-[14px] border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                  className="h-11 rounded-[14px] border border-[#ccccff] bg-white/70 px-3 text-sm font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 >
                   <option value="todos">Todos os status</option>
                   <option value="pendente">Novos</option>
@@ -2182,7 +2182,7 @@ export default function ColaboradorAdminClient() {
                   </a>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-[18px] border border-slate-200 bg-white">
+                <div className="overflow-x-auto rounded-[18px] border border-[#ccccff] bg-white/70">
                   <table className="w-full min-w-[860px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/70">
@@ -2347,7 +2347,7 @@ export default function ColaboradorAdminClient() {
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         if (!token || !p.id) return;
-                                        if (!confirm("Rejeitar este pedido? Ele voltará à fila geral.")) return;
+                                        if (!confirm("Arquivar este pedido? Ele voltará à fila geral.")) return;
                                         try {
                                           await fetch(`/api/admin/pedidos/${p.id}/reject`, {
                                             method: "POST",
@@ -2357,7 +2357,7 @@ export default function ColaboradorAdminClient() {
                                         } catch { /* silent */ }
                                       }}
                                     >
-                                      Rejeitar
+                                      Arquivar
                                     </button>
                                   )}
                                   {isAdminGeral && (
