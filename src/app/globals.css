@@ -509,7 +509,7 @@ footer .text-white {
   to   { transform: translateX(-50%); }
 }
 .reviews-marquee {
-  animation: reviews-marquee 42s linear infinite;
+  animation: reviews-marquee 75s linear infinite;
   will-change: transform;
 }
 .reviews-marquee:hover {
