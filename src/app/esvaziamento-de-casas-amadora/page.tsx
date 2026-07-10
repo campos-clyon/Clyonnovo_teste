@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
@@ -164,7 +164,6 @@ export default function EsvaziamentoAmadoraPage() {
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-emerald-600 px-6 text-sm font-semibold text-white transition hover:bg-emerald-700"
                   >
                     Simular orçamento
-                    <ArrowRight className="h-4 w-4" />
                   </Link>
                   <a
                     href="https://wa.me/351965785395?text=Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?"

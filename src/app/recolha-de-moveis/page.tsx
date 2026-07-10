@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -544,7 +544,6 @@ export default function RecolhaDeMoveisPage() {
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-cyan-500 px-8 font-semibold text-white transition hover:bg-cyan-400"
             >
               Simular Orçamento
-              <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href={`tel:${BUSINESS_PHONE}`}

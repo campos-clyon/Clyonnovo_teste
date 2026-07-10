@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -199,7 +199,6 @@ export default function RecolhaGratuitaDeMoveisUsadosPage() {
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-600 px-6 text-base font-semibold text-white shadow-sm transition hover:bg-cyan-700"
               >
                 Simular orçamento CLYON
-                <ArrowRight className="h-4 w-4" />
               </Link>
               <a
                 href={`tel:${BUSINESS_PHONE}`}
@@ -383,7 +382,6 @@ export default function RecolhaGratuitaDeMoveisUsadosPage() {
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-cyan-600 transition hover:bg-cyan-50"
             >
               Simular orçamento
-              <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href="https://wa.me/351965785395?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20m%C3%B3veis."

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -369,7 +369,6 @@ export default function RetirarMoveisVelhosPage() {
               className="inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-800"
             >
               Simular orçamento agora
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </section>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
@@ -164,7 +164,6 @@ export default function EsvaziamentoDeCasasPage() {
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-cyan-600 px-6 text-sm font-semibold text-white transition hover:bg-cyan-700"
                   >
                     Simular orçamento
-                    <ArrowRight className="h-4 w-4" />
                   </Link>
                   <a
                     href="https://wa.me/351965785395?text=Olá! Preciso de esvaziamento de casa. Podem dar-me um orçamento?"
@@ -297,7 +296,7 @@ export default function EsvaziamentoDeCasasPage() {
                   A equipa retira os itens indicados, carrega e transporta.
                 </p>
                 <Link href="/recolha-de-moveis" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 hover:underline">
-                  Ver serviço de recolha de móveis <ArrowRight className="h-4 w-4" />
+                  Ver serviço de recolha de móveis
                 </Link>
               </div>
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6">

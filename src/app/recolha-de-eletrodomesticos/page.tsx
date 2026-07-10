@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -188,7 +188,6 @@ export default function RecolhaDeEletrodomesticosPage() {
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-600 px-6 text-base font-semibold text-white shadow-sm transition hover:bg-cyan-700"
                 >
                   Simular orçamento
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
                   href={`tel:${BUSINESS_PHONE}`}
@@ -316,7 +315,6 @@ export default function RecolhaDeEletrodomesticosPage() {
                 className="inline-flex items-center gap-2 text-base font-semibold text-cyan-600 hover:text-cyan-700"
               >
                 Simular orçamento para recolha de eletrodoméstico
-                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -363,7 +361,6 @@ export default function RecolhaDeEletrodomesticosPage() {
               style={{ color: '#0891b2' }}
             >
               Simular orçamento
-              <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href={`tel:${BUSINESS_PHONE}`}

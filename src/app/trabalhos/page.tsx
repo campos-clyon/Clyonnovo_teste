@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
 import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
@@ -80,7 +80,6 @@ export default async function TrabalhosPage() {
                   className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3.5 text-base font-semibold text-slate-900 transition hover:bg-slate-100"
                 >
                   Falar connosco
-                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>
             </div>

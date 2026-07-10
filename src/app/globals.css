@@ -503,6 +503,19 @@ footer .text-white {
   animation: guarantee-enter 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Homepage — marquee de avaliações */
+@keyframes reviews-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.reviews-marquee {
+  animation: reviews-marquee 42s linear infinite;
+  will-change: transform;
+}
+.reviews-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Ocultar scrollbar nas tabs mobile sem perder funcionalidade */
 .scrollbar-hide {
   -ms-overflow-style: none;

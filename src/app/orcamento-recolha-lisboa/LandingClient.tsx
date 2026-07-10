@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -756,7 +756,6 @@ function ServicesSection() {
               className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-700 transition group-hover:gap-2.5"
             >
               Pedir orçamento
-              <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         ))}

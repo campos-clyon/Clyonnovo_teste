@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -122,7 +122,6 @@ export default function FAQPage() {
                 className="inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
               >
                 Contactar agora
-                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </div>
           </div>

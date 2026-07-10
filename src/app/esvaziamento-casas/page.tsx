@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -327,7 +327,6 @@ export default function EsvaziamentoCasasPage() {
           <div className="mt-8 text-center">
             <Link href="/areas-de-atuacao" className="inline-flex items-center gap-2 text-violet-600 transition-colors hover:text-violet-700">
               Ver todas as áreas de atuação
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

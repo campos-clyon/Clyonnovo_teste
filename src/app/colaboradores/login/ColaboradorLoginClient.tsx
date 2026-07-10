@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -219,7 +219,6 @@ export default function ColaboradorLoginClient() {
                 className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-500 px-5 text-sm font-semibold text-slate-950 shadow-[0_14px_32px_-14px_rgba(6,182,212,0.8)] transition hover:-translate-y-0.5 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {loading ? "A entrar..." : "Entrar"}
-                {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
               </button>
             </form>
 

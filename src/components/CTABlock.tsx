@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, MessageCircle, Phone } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { trackWhatsAppClick, trackCTAClick, trackPhoneCall } from "@/lib/analytics";
@@ -42,7 +42,6 @@ export default function CTABlock({
           className="site-btn-primary site-btn-lively min-w-[200px] px-6 py-3.5 text-white"
         >
           <span className="text-white">{primaryText}</span>
-          <ArrowRight className="h-4 w-4" />
         </Link>
         {showWhatsApp && (
           <a
@@ -88,7 +87,6 @@ export default function CTABlock({
             className="site-btn-primary site-btn-lively min-w-[220px] px-8 py-4 text-lg text-white"
           >
             <span className="text-white">{primaryText}</span>
-            <ArrowRight className="h-5 w-5" />
           </Link>
           {showWhatsApp && (
             <a
@@ -124,7 +122,6 @@ export default function CTABlock({
           className="site-btn-primary site-btn-lively px-6 py-3.5 text-white"
         >
           <span className="text-white">{primaryText}</span>
-          <ArrowRight className="h-4 w-4" />
         </Link>
         {showWhatsApp && (
           <a

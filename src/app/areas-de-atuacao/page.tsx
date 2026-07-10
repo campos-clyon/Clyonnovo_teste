@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 
@@ -160,7 +160,6 @@ export default function AreasDeAtuacaoPage() {
                   className="inline-flex items-center gap-2 text-cyan-600 transition-colors hover:text-cyan-700"
                 >
                   Ver região
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
 
@@ -278,7 +277,6 @@ export default function AreasDeAtuacaoPage() {
             className="inline-flex items-center gap-2 text-cyan-600 transition-colors hover:text-cyan-700"
           >
             Ver todas as regiões e cidades
-            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>

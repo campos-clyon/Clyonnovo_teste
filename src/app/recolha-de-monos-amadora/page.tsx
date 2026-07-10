@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
@@ -159,7 +159,6 @@ export default function MonosAmadoraPage() {
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-amber-600 px-6 text-sm font-semibold text-white transition hover:bg-amber-700"
                   >
                     Simular orçamento
-                    <ArrowRight className="h-4 w-4" />
                   </Link>
                   <a
                     href="https://wa.me/351965785395?text=Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?"

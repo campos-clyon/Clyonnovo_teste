@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { trackWhatsAppClick, trackCTAClick } from "@/lib/analytics";
 
 interface ServiceHeroButtonsProps {
@@ -27,7 +27,6 @@ export default function ServiceHeroButtons({
         className="site-btn-primary site-btn-lively min-w-[220px] px-8 py-4 text-lg"
       >
         <span>{ctaText}</span>
-        <ArrowRight className="h-5 w-5" />
       </Link>
       {showWhatsApp && (
         <a
