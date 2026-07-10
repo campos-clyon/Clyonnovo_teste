@@ -203,19 +203,19 @@ export default function HomePage() {
           muted
           loop
           playsInline
-          className="absolute inset-0 h-full w-full object-cover opacity-60"
+          className="absolute inset-0 h-full w-full object-cover"
         >
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Overlay — 2% roxo Nubank, só nos primeiros 50% (topo→baixo mobile, esquerda→direita desktop) */}
+        {/* Overlay roxo — só nos primeiros 55% (topo→baixo mobile, esquerda→direita desktop). Lado oposto 100% limpo. */}
         <div
           className="absolute inset-0 lg:hidden"
-          style={{ background: "linear-gradient(to bottom, rgba(130,10,209,0.02) 0%, transparent 50%)" }}
+          style={{ background: "linear-gradient(to bottom, rgba(8,17,29,0.72) 0%, rgba(101,7,163,0.20) 38%, transparent 58%)" }}
         />
         <div
           className="absolute inset-0 hidden lg:block"
-          style={{ background: "linear-gradient(to right, rgba(130,10,209,0.02) 0%, transparent 50%)" }}
+          style={{ background: "linear-gradient(to right, rgba(8,17,29,0.72) 0%, rgba(101,7,163,0.20) 38%, transparent 58%)" }}
         />
 
         {/* Content */}
@@ -390,19 +390,13 @@ export default function HomePage() {
       </section>
 
       {/* ── GUARANTEES ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#0B1929] py-20 sm:py-28">
-        {/* subtle radial glow background */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/4 top-0 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[120px]" />
-          <div className="absolute right-1/4 bottom-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-violet-500/10 blur-[100px]" />
-        </div>
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="bg-[#F4F8FB] py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-14 text-center">
-            <h2 className="text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
+            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl lg:text-5xl">
               Construída para inspirar confiança
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-slate-400 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-slate-500 sm:text-lg">
               Cada detalhe foi pensado para eliminar incerteza — no preço, no profissional e no resultado.
             </p>
           </div>
@@ -411,14 +405,14 @@ export default function HomePage() {
             {GUARANTEES.map((g, i) => (
               <div
                 key={g.title}
-                className="guarantee-card group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 transition-all duration-300 hover:-translate-y-1 hover:bg-white/8 hover:shadow-2xl"
+                className="guarantee-card group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.07)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.11)]"
                 style={{ animationDelay: `${i * 0.15}s` }}
               >
                 {/* gradient top border */}
                 <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${g.gradient}`} />
 
                 {/* icon */}
-                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${g.iconBg} shadow-xl ${g.glow} transition-transform duration-300 group-hover:scale-110`}>
+                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${g.iconBg} shadow-lg ${g.glow} transition-transform duration-300 group-hover:scale-110`}>
                   <g.icon className="h-7 w-7 text-white" />
                 </div>
 
@@ -430,8 +424,8 @@ export default function HomePage() {
                   <span className="ml-2 text-sm font-medium text-slate-400">{g.statLabel}</span>
                 </div>
 
-                <h3 className="mt-3 text-xl font-bold text-white">{g.title}</h3>
-                <p className="mt-3 leading-relaxed text-slate-400">{g.description}</p>
+                <h3 className="mt-3 text-xl font-bold text-[#0B1929]">{g.title}</h3>
+                <p className="mt-3 leading-relaxed text-slate-500">{g.description}</p>
               </div>
             ))}
           </div>
