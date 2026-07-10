@@ -29,11 +29,11 @@ import {
   XCircle,
 } from "lucide-react";
 
-const PHONE_DISPLAY = "+351 965 785 395";
-const PHONE_TEL = "+351965785395";
-const PHONE_SMS = "+351965785395";
+const PHONE_DISPLAY = "+351 931 632 622";
+const PHONE_TEL = "+351931632622";
+const PHONE_SMS = "+351931632622";
 const EMAIL = "geral@clyon.pt";
-const WHATSAPP_BASE = "https://wa.me/351965785395";
+const WHATSAPP_BASE = "https://wa.me/351931632622";
 const REVIEWS_COUNT = 163;
 
 declare global {

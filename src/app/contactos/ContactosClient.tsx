@@ -95,8 +95,8 @@ export default function ContactosClient() {
                 </span>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Telefone</p>
-                  <a href="tel:+351965785395" className="text-sm font-bold text-slate-900 hover:text-cyan-600">
-                    +351 965 785 395
+                  <a href="tel:+351931632622" className="text-sm font-bold text-slate-900 hover:text-cyan-600">
+                    +351 931 632 622
                   </a>
                   <p className="text-xs text-slate-400">Pedidos rápidos e marcações</p>
                 </div>
@@ -136,14 +136,14 @@ export default function ContactosClient() {
 
             <div className="mt-6 flex gap-3">
               <a
-                href="tel:+351965785395"
+                href="tel:+351931632622"
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-500 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-400"
               >
                 <Phone className="h-4 w-4" />
                 Ligar
               </a>
               <a
-                href="https://wa.me/351965785395?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-sm font-semibold text-white transition hover:bg-[#1ebe5d]"

@@ -8,7 +8,7 @@
  *   WHATSAPP_PHONE_NUMBER_ID — ID do número de telefone registado no painel
  *                              Meta for Developers → WhatsApp → API Setup
  *   WHATSAPP_TO_NUMBER       — Número da empresa que recebe as notificações,
- *                              formato internacional sem '+' (ex: 351965785395)
+ *                              formato internacional sem '+' (ex: 351931632622)
  *
  * Se qualquer variável estiver em falta, a função retorna silenciosamente sem
  * erro para não bloquear o fluxo principal.

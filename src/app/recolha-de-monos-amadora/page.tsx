@@ -73,7 +73,7 @@ const serviceSchema = {
   provider: {
     "@type": "LocalBusiness",
     name: "CLYON",
-    telephone: "+351965785395",
+    telephone: "+351931632622",
     url: SITE_URL,
     address: {
       "@type": "PostalAddress",
@@ -149,13 +149,13 @@ export default function MonosAmadoraPage() {
                     Simular orçamento
                   </Link>
                   <a
-                    href="https://wa.me/351965785395?text=Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?"
+                    href="https://wa.me/351931632622?text=Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?"
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-amber-200 bg-white px-6 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
                   >
                     WhatsApp
                   </a>
                   <a
-                    href="tel:+351965785395"
+                    href="tel:+351931632622"
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     <Phone className="h-4 w-4" />

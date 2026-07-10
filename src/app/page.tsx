@@ -263,7 +263,7 @@ export default function HomePage() {
                 Pedir Orçamento Grátis
               </Link>
               <a
-                href="https://wa.me/351965785395?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.08] px-8 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
@@ -554,7 +554,7 @@ export default function HomePage() {
             </div>
             <div className="flex-shrink-0">
               <a
-                href={`https://wa.me/351965785395?text=${encodeURIComponent(
+                href={`https://wa.me/351931632622?text=${encodeURIComponent(
                   "Olá! Sou uma empresa de remoções/transportes e quero saber mais sobre ser parceiro CLYON.",
                 )}`}
                 target="_blank"
@@ -618,7 +618,7 @@ export default function HomePage() {
                 Pedir Orçamento Grátis
               </Link>
               <a
-                href="https://wa.me/351965785395?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#25D366] px-8 text-base font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d]"

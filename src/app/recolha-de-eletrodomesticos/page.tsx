@@ -197,7 +197,7 @@ export default function RecolhaDeEletrodomesticosPage() {
                   Ligar agora
                 </a>
                 <a
-                  href="https://wa.me/351965785395?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20eletrodom%C3%A9stico."
+                  href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20eletrodom%C3%A9stico."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 text-base font-semibold text-white transition hover:bg-emerald-600"
@@ -371,7 +371,7 @@ export default function RecolhaDeEletrodomesticosPage() {
               <span>Ligar Agora</span>
             </a>
             <a
-              href="https://wa.me/351965785395?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20eletrodom%C3%A9stico."
+              href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20eletrodom%C3%A9stico."
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 text-base font-semibold text-white transition hover:bg-emerald-600"

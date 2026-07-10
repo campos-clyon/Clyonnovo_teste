@@ -3814,8 +3814,8 @@ export default function ColaboradorAdminClient() {
                         <Phone className="h-3.5 w-3.5" />
                         Telefone
                       </p>
-                      <a href="tel:+351965785395" className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100">
-                        +351 965 785 395
+                      <a href="tel:+351931632622" className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100">
+                        +351 931 632 622
                       </a>
                     </div>
                     <div className="rounded-[20px] border border-white/10 bg-white/[0.03] px-5 py-4">
@@ -3824,12 +3824,12 @@ export default function ColaboradorAdminClient() {
                         WhatsApp
                       </p>
                       <a
-                        href="https://wa.me/351965785395"
+                        href="https://wa.me/351931632622"
                         target="_blank"
                         rel="noreferrer"
                         className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100"
                       >
-                        +351 965 785 395
+                        +351 931 632 622
                       </a>
                     </div>
                     <div className="rounded-[20px] border border-white/10 bg-white/[0.03] px-5 py-4">
