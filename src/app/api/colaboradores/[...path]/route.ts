@@ -579,10 +579,11 @@ async function handleRequest(req: NextRequest, path: string[]) {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error("[criar-colaborador] erro:", msg, err);
       if (msg.includes("Duplicate") || msg.includes("ER_DUP")) {
         return NextResponse.json({ ok: false, code: "DUPLICATE_NOME", error: "Já existe um colaborador com este nome." }, { status: 409 });
       }
-      return NextResponse.json({ ok: false, code: "DB_ERROR", error: "Erro ao guardar colaborador. Verifique os dados e tente novamente." }, { status: 500 });
+      return NextResponse.json({ ok: false, code: "DB_ERROR", error: msg }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
