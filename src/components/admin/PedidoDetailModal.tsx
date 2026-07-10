@@ -997,12 +997,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1791d6]/20 backdrop-blur-sm p-2"
     >
       <div
-        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_40px_120px_rgba(0,0,0,0.15)]"
-        style={{ maxWidth: "min(1600px, 96vw)", maxHeight: "94vh", height: "94vh" }}
+        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-[#f0f7fc] shadow-[0_40px_120px_rgba(23,145,214,0.12)]"
+        style={{ maxWidth: "min(1800px, 98vw)", maxHeight: "97vh", height: "97vh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Loading ── */}
