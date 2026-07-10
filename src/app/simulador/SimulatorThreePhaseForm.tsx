@@ -297,7 +297,24 @@ export default function SimulatorThreePhaseForm() {
         /* estimativa opcional — ignora falhas */
       }
 
-      // 2) Guardar o pedido (com a estimativa quando disponível).
+      // 2) Upload das fotos/vídeos ao Vercel Blob (se existirem) antes de guardar o pedido.
+      let uploadedFiles: Array<{ url: string; name: string; size: number; type?: string }> = [];
+      const rawFiles = (formData.files ?? []).filter((f) => f?.file instanceof File);
+      if (rawFiles.length > 0) {
+        try {
+          const fd = new FormData();
+          rawFiles.forEach((f) => fd.append("fotos", f.file as File, f.name));
+          const upRes = await fetch("/api/simulador/upload-fotos", { method: "POST", body: fd });
+          if (upRes.ok) {
+            const upData = await upRes.json();
+            uploadedFiles = (upData.files ?? []) as typeof uploadedFiles;
+          }
+        } catch {
+          /* upload opcional — se falhar, o pedido segue sem fotos */
+        }
+      }
+
+      // 3) Guardar o pedido (com a estimativa quando disponível).
       try {
         const estimate: EstimateResult = apiResult ?? {
           status: "estimated",
@@ -312,10 +329,30 @@ export default function SimulatorThreePhaseForm() {
           internalNotes: ["Estimativa não disponível no envio — análise pela equipa"],
           analysisSource: "timeout_fallback",
         };
+        // Substituir os File objects por metadata + URL (o servidor recebe JSON puro).
+        const orderPayload = {
+          ...formData,
+          files: uploadedFiles.length > 0
+            ? uploadedFiles.map((f, i) => ({
+                id: String(i),
+                url: f.url,
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                mimeType: f.type,
+              }))
+            : (formData.files ?? []).map((f) => ({
+                id: f.id,
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                mimeType: f.mimeType,
+              })),
+        };
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: formData, estimate }),
+          body: JSON.stringify({ order: orderPayload, estimate }),
         });
         if (saveRes.ok) {
           const saved = await saveRes.json();
@@ -370,97 +407,59 @@ export default function SimulatorThreePhaseForm() {
   // Success Screen
   if (successOrderId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 py-16 px-4 flex items-center">
-        <div className="max-w-2xl mx-auto w-full">
-          {/* Success Icon - Animated */}
-          <div className="flex justify-center mb-8">
+      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-blue-50 via-white to-blue-50 px-4 py-6 sm:py-10 flex items-center">
+        <div className="mx-auto w-full max-w-md">
+          {/* Success Icon */}
+          <div className="flex justify-center mb-4 sm:mb-5">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full blur-lg opacity-40 animate-pulse"></div>
-              <div className="relative w-24 h-24 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center shadow-xl">
-                <CheckCircle className="w-12 h-12 text-white drop-shadow-lg" />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full blur-md opacity-40 animate-pulse" />
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center shadow-lg">
+                <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
             </div>
           </div>
 
-          {/* Main Title */}
-          <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3">
-              Pedido Enviado com Sucesso!
+          {/* Title */}
+          <div className="text-center mb-5">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent leading-tight">
+              Pedido enviado
             </h1>
-            {successOrderId && successOrderId > 0 && (
-              <div className="flex items-center justify-center gap-2 mb-6">
-                <span className="text-lg font-semibold text-gray-600">Pedido</span>
-                <span className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-lg px-4 py-1.5 rounded-full">
+            {successOrderId > 0 && (
+              <div className="mt-2 inline-flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">Nº</span>
+                <span className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-sm px-3 py-0.5 rounded-full">
                   #{successOrderId}
                 </span>
               </div>
             )}
-            <p className="text-gray-600 text-base">Seu pedido foi recebido e está pronto para análise</p>
           </div>
 
-          {/* Info Cards Grid */}
-          <div className="space-y-4 mb-10">
-            {/* Status Card */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 mb-1">Próximos Passos</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    A equipa CLYON irá analisar o pedido e entrar em contacto em breve para confirmar os detalhes e disponibilidade.
-                  </p>
-                </div>
+          {/* Combined info card */}
+          <div className="bg-white rounded-2xl border border-blue-100 p-4 sm:p-5 shadow-sm mb-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 shrink-0 bg-blue-50 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-blue-600" />
               </div>
-            </div>
-
-            {/* Details Card */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 p-6 shadow-md">
-              <div className="space-y-4">
-                {successOrderId && successOrderId > 0 && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Número de pedido</span>
-                      <span className="font-mono font-bold text-blue-600 text-lg">#{successOrderId}</span>
-                    </div>
-                    <div className="h-px bg-gradient-to-r from-blue-200 to-cyan-200"></div>
-                  </>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {successAssignedTo ? (
+                  <>A equipa vai avaliar o pedido. Assistente responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>. Entramos em contacto por telefone ou email.</>
+                ) : (
+                  <>A equipa CLYON vai avaliar o pedido em breve e entrar em contacto por telefone ou email.</>
                 )}
-                <div className="text-sm text-gray-700 space-y-3">
-                  {successAssignedTo ? (
-                    <p>
-                      Pedido enviado para análise.<br/>
-                      Assistente responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>.<br/>
-                      Entraremos em contacto pelo telefone ou email.
-                    </p>
-                  ) : (
-                    <p>
-                      Pedido enviado para análise.<br/>
-                      Os assistentes irão avaliar o pedido em breve.<br/>
-                      Entraremos em contacto pelo telefone ou email.
-                    </p>
-                  )}
-                  <p className="font-semibold text-gray-900 pt-2">
-                    Guarde este número para referência futura.
-                  </p>
-                </div>
-              </div>
+              </p>
             </div>
+            <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+              Guarde o número <span className="font-mono font-semibold text-gray-700">#{successOrderId}</span> para referência.
+            </p>
           </div>
 
-          {/* CTA Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={handleReset}
-              className="group relative inline-block"
-            >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative bg-white text-blue-600 font-semibold py-3 px-8 rounded-xl hover:bg-gray-50 transition-colors text-base">
-                Novo Pedido
-              </div>
-            </button>
-          </div>
+          {/* CTA */}
+          <button
+            onClick={handleReset}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-shadow"
+          >
+            Novo pedido
+          </button>
         </div>
       </div>
     );
