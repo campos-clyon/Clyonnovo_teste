@@ -463,6 +463,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, showDelete, lightbox]);
 
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   /**
    * Calcula a distância da base CLYON até à morada do serviço via /api/maps/distance
    * e persiste distanceKm + distanceText no pedido. Para mudança usa a morada de origem.
@@ -1255,19 +1262,34 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
               {/* ── Tabs ── */}
               <div className="flex-shrink-0 overflow-x-auto border-b border-slate-100 px-6">
                 <div className="flex gap-0.5 py-2">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex-shrink-0 rounded-[12px] px-4 py-1.5 text-xs font-semibold transition ${
-                        activeTab === tab.id
-                          ? "bg-cyan-400 text-slate-950"
-                          : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                  {TABS.map((tab) => {
+                    const isDisabled = shouldMask && tab.id === "cliente_morada";
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          if (isDisabled) { setShowAcceptPrompt(true); return; }
+                          setActiveTab(tab.id);
+                        }}
+                        disabled={isDisabled}
+                        title={isDisabled ? "Aceite o pedido para ver os dados completos do cliente" : undefined}
+                        className={`flex-shrink-0 rounded-[12px] px-4 py-1.5 text-xs font-semibold transition ${
+                          activeTab === tab.id
+                            ? "bg-cyan-400 text-slate-950"
+                            : isDisabled
+                            ? "text-slate-300 cursor-not-allowed opacity-60"
+                            : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+                        }`}
+                      >
+                        {isDisabled && (
+                          <svg className="inline h-3 w-3 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                        )}
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
