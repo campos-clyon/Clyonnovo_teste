@@ -359,7 +359,7 @@ export default function ColaboradorLoginClient() {
       </div>
 
       {/* ── Keyframes globais para animações do fundo ── */}
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes clyonGrid {
           0%   { background-position: 0 0; }
           100% { background-position: 0 60px; }
@@ -377,10 +377,6 @@ export default function ColaboradorLoginClient() {
           0%, 100% { transform: translate(0, 0) scale(1); }
           50%      { transform: translate(35px, 20px) scale(1.1); }
         }
-        @keyframes clyonPulse {
-          0%, 100% { opacity: 0.35; }
-          50%      { opacity: 0.7; }
-        }
         @keyframes clyonBeam {
           0%   { transform: translateX(-30%) rotate(-15deg); opacity: 0; }
           15%  { opacity: 0.55; }
@@ -388,12 +384,11 @@ export default function ColaboradorLoginClient() {
           100% { transform: translateX(130%) rotate(-15deg); opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
-          :global(.clyon-grid),
-          :global(.clyon-halo-a),
-          :global(.clyon-halo-b),
-          :global(.clyon-halo-c),
-          :global(.clyon-pulse),
-          :global(.clyon-beam) {
+          .clyon-grid,
+          .clyon-halo-a,
+          .clyon-halo-b,
+          .clyon-halo-c,
+          .clyon-beam {
             animation: none !important;
           }
         }
