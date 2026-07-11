@@ -300,17 +300,21 @@ export default function SimulatorThreePhaseForm() {
       // 2) Upload das fotos/vídeos ao Vercel Blob (se existirem) antes de guardar o pedido.
       let uploadedFiles: Array<{ url: string; name: string; size: number; type?: string }> = [];
       const rawFiles = (formData.files ?? []).filter((f) => f?.file instanceof File);
+      console.info(`[simulador] Tem ${rawFiles.length} ficheiros para upload`);
       if (rawFiles.length > 0) {
         try {
           const fd = new FormData();
           rawFiles.forEach((f) => fd.append("fotos", f.file as File, f.name));
           const upRes = await fetch("/api/simulador/upload-fotos", { method: "POST", body: fd });
-          if (upRes.ok) {
-            const upData = await upRes.json();
+          const upData = await upRes.json().catch(() => null);
+          if (upRes.ok && upData) {
             uploadedFiles = (upData.files ?? []) as typeof uploadedFiles;
+            console.info(`[simulador] Upload OK: ${uploadedFiles.length} URLs`);
+          } else {
+            console.error(`[simulador] Upload falhou (${upRes.status}):`, upData?.error ?? upData);
           }
-        } catch {
-          /* upload opcional — se falhar, o pedido segue sem fotos */
+        } catch (err) {
+          console.error("[simulador] Erro de rede no upload:", err);
         }
       }
 
