@@ -99,11 +99,11 @@ export default function ColaboradorLoginClient() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050810] text-slate-100">
-      {/* ── Fundo 3D com camadas paralaxadas ── */}
-      <div aria-hidden className="absolute inset-0 -z-10">
-        {/* Grade base — perspective grid */}
+      {/* ── Fundo 3D animado ── */}
+      <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
+        {/* Grade em perspectiva a deslizar continuamente — sensação de movimento */}
         <div
-          className="absolute inset-0 opacity-[0.09]"
+          className="clyon-grid absolute inset-0 opacity-[0.11]"
           style={{
             backgroundImage:
               "linear-gradient(rgba(34,211,238,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.6) 1px, transparent 1px)",
@@ -112,17 +112,38 @@ export default function ColaboradorLoginClient() {
             transformOrigin: "50% 100%",
             maskImage: "linear-gradient(180deg, transparent 0%, black 55%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(180deg, transparent 0%, black 55%, transparent 100%)",
+            animation: "clyonGrid 8s linear infinite",
           }}
         />
-        {/* Halo central superior */}
-        <div className="absolute -top-32 left-1/2 h-96 w-[560px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-[110px]" />
-        {/* Halo diagonal inferior direito */}
-        <div className="absolute bottom-[-8rem] right-[-6rem] h-[420px] w-[420px] rounded-full bg-cyan-400/15 blur-[110px]" />
-        {/* Halo azul violeta topo esquerdo — leve */}
-        <div className="absolute -top-24 -left-24 h-[380px] w-[380px] rounded-full bg-indigo-500/10 blur-[110px]" />
+        {/* Halo central superior — respira lentamente */}
+        <div
+          className="clyon-halo-a absolute -top-32 left-1/2 h-96 w-[560px] rounded-full bg-cyan-500/20 blur-[110px]"
+          style={{ animation: "clyonHaloA 12s ease-in-out infinite" }}
+        />
+        {/* Halo diagonal inferior direito — deriva em orbita */}
+        <div
+          className="clyon-halo-b absolute bottom-[-8rem] right-[-6rem] h-[420px] w-[420px] rounded-full bg-cyan-400/15 blur-[110px]"
+          style={{ animation: "clyonHaloB 18s ease-in-out infinite" }}
+        />
+        {/* Halo indigo topo esquerdo */}
+        <div
+          className="clyon-halo-c absolute -top-24 -left-24 h-[380px] w-[380px] rounded-full bg-indigo-500/10 blur-[110px]"
+          style={{ animation: "clyonHaloC 15s ease-in-out infinite" }}
+        />
+        {/* Feixe de luz que atravessa o ecrã de tempos a tempos — alusão a velocidade / entrega */}
+        <div
+          className="clyon-beam absolute top-1/3 h-[200%] w-[220px] -translate-y-1/2 opacity-0"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.18) 45%, rgba(56,189,248,0.28) 50%, rgba(34,211,238,0.18) 55%, transparent 100%)",
+            filter: "blur(24px)",
+            animation: "clyonBeam 10s ease-in-out infinite",
+            animationDelay: "3s",
+          }}
+        />
         {/* Ruído subtil para evitar banding */}
         <div
-          className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
+          className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
           style={{
             backgroundImage:
               "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/></svg>\")",
@@ -333,13 +354,50 @@ export default function ColaboradorLoginClient() {
               </button>
             </form>
 
-            <p className="relative mt-5 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500">
-              <LockKeyhole className="h-3 w-3" />
-              Ligação segura e encriptada · HTTPS
-            </p>
           </div>
         </div>
       </div>
+
+      {/* ── Keyframes globais para animações do fundo ── */}
+      <style jsx>{`
+        @keyframes clyonGrid {
+          0%   { background-position: 0 0; }
+          100% { background-position: 0 60px; }
+        }
+        @keyframes clyonHaloA {
+          0%, 100% { transform: translate(-50%, 0) scale(1); }
+          50%      { transform: translate(-45%, 20px) scale(1.08); }
+        }
+        @keyframes clyonHaloB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33%      { transform: translate(-30px, -20px) scale(1.05); }
+          66%      { transform: translate(20px, 25px) scale(0.95); }
+        }
+        @keyframes clyonHaloC {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(35px, 20px) scale(1.1); }
+        }
+        @keyframes clyonPulse {
+          0%, 100% { opacity: 0.35; }
+          50%      { opacity: 0.7; }
+        }
+        @keyframes clyonBeam {
+          0%   { transform: translateX(-30%) rotate(-15deg); opacity: 0; }
+          15%  { opacity: 0.55; }
+          85%  { opacity: 0.55; }
+          100% { transform: translateX(130%) rotate(-15deg); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          :global(.clyon-grid),
+          :global(.clyon-halo-a),
+          :global(.clyon-halo-b),
+          :global(.clyon-halo-c),
+          :global(.clyon-pulse),
+          :global(.clyon-beam) {
+            animation: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
