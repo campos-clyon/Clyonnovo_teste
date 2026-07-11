@@ -3,9 +3,11 @@ import { getToken } from "next-auth/jwt";
 
 const CANONICAL_HOST = "clyon.pt";
 
-// Todas as cidades de mudanças que devem redirecionar para /mudancas
-// (exceto lisboa que é especial e fica em /mudancas-lisboa)
-const WEAK_MUDANCAS_CITIES = [
+// Cidades onde temos página dedicada em /mudancas/[cidade].
+// URLs antigas /mudancas-cidade fazem 301 para /mudancas/cidade — preserva
+// o SEO acumulado sem manter o formato antigo.
+const MUDANCAS_CITIES_WITH_PAGE = [
+  "lisboa",
   "alcochete",
   "sintra",
   "montijo",
@@ -18,6 +20,12 @@ const WEAK_MUDANCAS_CITIES = [
   "lumiar",
   "sesimbra",
   "costa-da-caparica",
+  "almada",
+  "cascais",
+  "amadora",
+  "seixal",
+  "moita",
+  "setubal",
 ];
 
 export async function middleware(request: NextRequest) {
@@ -131,28 +139,31 @@ export async function middleware(request: NextRequest) {
   if (nextUrl.pathname.includes("mudan%C3%A7as") || nextUrl.pathname.includes("mudanças")) {
     const decodedPath = decodeURIComponent(nextUrl.pathname);
     
-    // /mudanças-lisboa → /mudancas-lisboa
-    if (decodedPath === "/mudanças-lisboa") {
-      return NextResponse.redirect(new URL("/mudancas-lisboa", request.url), 301);
-    }
-    
     // /mudanças (sem cidade) → /mudancas
     if (decodedPath === "/mudanças") {
       return NextResponse.redirect(new URL("/mudancas", request.url), 301);
     }
-    
-    // /mudanças-[qualquer cidade] → /mudancas
+
+    // /mudanças-cidade → /mudancas/cidade quando temos a página
     if (decodedPath.startsWith("/mudanças-")) {
+      const city = decodedPath.substring(10);
+      if (MUDANCAS_CITIES_WITH_PAGE.includes(city)) {
+        return NextResponse.redirect(new URL(`/mudancas/${city}`, request.url), 301);
+      }
       return NextResponse.redirect(new URL("/mudancas", request.url), 301);
     }
   }
 
-  // 4. Redirect mudanças fracas (sem cedilha) para /mudancas
+  // 4. URLs antigas /mudancas-cidade → 301 para /mudancas/cidade
+  //    Preserva o SEO acumulado das long-tails ("mudanças alcochete", etc.)
+  //    em vez de as colapsar todas na página genérica.
   if (nextUrl.pathname.startsWith("/mudancas-")) {
     const city = nextUrl.pathname.substring(10); // Remove "/mudancas-"
-    if (WEAK_MUDANCAS_CITIES.includes(city)) {
-      return NextResponse.redirect(new URL("/mudancas", request.url), 301);
+    if (MUDANCAS_CITIES_WITH_PAGE.includes(city)) {
+      return NextResponse.redirect(new URL(`/mudancas/${city}`, request.url), 301);
     }
+    // Cidade não conhecida — cai na página genérica /mudancas
+    return NextResponse.redirect(new URL("/mudancas", request.url), 301);
   }
 
   return NextResponse.next();

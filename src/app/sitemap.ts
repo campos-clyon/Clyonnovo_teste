@@ -8,6 +8,7 @@ import {
   getCityServiceSlug,
 } from "@/lib/seo-data";
 import { getAllBlogPosts } from "@/lib/blog-data";
+import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 
 const staticPages = [
   { url: `${SITE_URL}`, priority: 1.0, changeFrequency: "weekly" as const },
@@ -117,10 +118,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.72,
   }));
 
+  // Páginas por cidade em /mudancas/[cidade] — pSEO real com conteúdo único
+  const mudancasCidadePages = getAllCidadeSlugs().map((slug) => ({
+    url: `${SITE_URL}/mudancas/${slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.94,
+  }));
+
   return [
     ...staticPages.map((page) => ({ ...page, lastModified: now })),
     ...regionPages,
     ...blogPages,
     ...localPages,
+    ...mudancasCidadePages,
   ];
 }

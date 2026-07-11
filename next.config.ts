@@ -84,67 +84,22 @@ const nextConfig: NextConfig = {
         destination: "/recolha-moveis-lisboa",
         permanent: true,
       },
-      // Redirects de mudanças fracas para hub principal
-      {
-        source: "/mudancas-alcochete",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-sintra",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-montijo",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-carnaxide",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-oeiras",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-corroios",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-barreiro",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-palmela",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-odivelas",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-lumiar",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-sesimbra",
-        destination: "/mudancas",
-        permanent: true,
-      },
-      {
-        source: "/mudancas-costa-da-caparica",
-        destination: "/mudancas",
-        permanent: true,
-      },
+      // Redirects de mudanças-cidade → páginas dedicadas em /mudancas/cidade
+      // (antes colapsavam todas em /mudancas — matava o SEO das long-tails)
+      { source: "/mudancas-alcochete",        destination: "/mudancas/alcochete",        permanent: true },
+      { source: "/mudancas-sintra",           destination: "/mudancas/sintra",           permanent: true },
+      { source: "/mudancas-montijo",          destination: "/mudancas/montijo",          permanent: true },
+      { source: "/mudancas-oeiras",           destination: "/mudancas/oeiras",           permanent: true },
+      { source: "/mudancas-barreiro",         destination: "/mudancas/barreiro",         permanent: true },
+      { source: "/mudancas-lisboa",           destination: "/mudancas/lisboa",           permanent: true },
+      // Cidades sem página dedicada ainda — mantém redirect para hub genérico
+      { source: "/mudancas-carnaxide",        destination: "/mudancas",                  permanent: true },
+      { source: "/mudancas-corroios",         destination: "/mudancas",                  permanent: true },
+      { source: "/mudancas-palmela",          destination: "/mudancas",                  permanent: true },
+      { source: "/mudancas-odivelas",         destination: "/mudancas",                  permanent: true },
+      { source: "/mudancas-lumiar",           destination: "/mudancas",                  permanent: true },
+      { source: "/mudancas-sesimbra",         destination: "/mudancas",                  permanent: true },
+      { source: "/mudancas-costa-da-caparica",destination: "/mudancas",                  permanent: true },
       // URLs 404 identificadas - redirecionar para páginas relevantes
       {
         source: "/recolha-de-moveis-usados",

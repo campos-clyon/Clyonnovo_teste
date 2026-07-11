@@ -20,6 +20,7 @@ import {
   SITE_URL,
   getCityServiceSlug,
 } from "@/lib/seo-data";
+import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Rápidas, Seguras, Sem Stress",
@@ -255,7 +256,7 @@ export default function MudancasPage() {
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
             Fazemos mudanças dentro de Lisboa, entre Lisboa e Margem Sul, e para Setúbal. 
-            <Link href={`/${getCityServiceSlug("mudancas", "lisboa")}`} className="ml-1 font-medium text-emerald-600 hover:underline">
+            <Link href="/mudancas/lisboa" className="ml-1 font-medium text-emerald-600 hover:underline">
               Ver preços de mudanças em Lisboa
             </Link>
           </p>
@@ -342,6 +343,37 @@ export default function MudancasPage() {
                 <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-emerald-600">
                   Ver serviço <ArrowRight className="h-3 w-3" />
                 </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Hub de cidades — links para páginas dedicadas por cidade */}
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center text-2xl font-bold text-slate-900 sm:text-3xl">
+            Cidades com página dedicada
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-600">
+            Para cada cidade principal temos uma página com dados locais — faixa de preço, distância à base, rotas mais pedidas e FAQ específico.
+          </p>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {CIDADES_MUDANCAS.map((cidade) => (
+              <Link
+                key={cidade.slug}
+                href={`/mudancas/${cidade.slug}`}
+                className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-400 hover:bg-emerald-50/50 hover:shadow-md"
+              >
+                <div>
+                  <p className="text-base font-bold text-slate-800 group-hover:text-emerald-700">
+                    Mudanças em {cidade.nome}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Desde {cidade.precoMin}€ · {cidade.distanceKm}km da base
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-600" />
               </Link>
             ))}
           </div>
