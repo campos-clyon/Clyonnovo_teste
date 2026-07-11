@@ -2071,9 +2071,13 @@ export default function ColaboradorAdminClient() {
                   onClick={() => setPedidoStatusFilter("todos")}
                   className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 border-slate-200 bg-slate-50 ${pedidoStatusFilter === "todos" ? "ring-2 ring-cyan-500" : ""}`}
                 >
-                  <span className="text-2xl font-bold text-slate-700">{pedidosCounts["total"] ?? 0}</span>
-                  <span className="mt-0.5 text-center text-xs text-slate-500">Total</span>
-                  <span className="mt-0.5 text-[10px] text-slate-400">100% do total</span>
+                  <span className="text-2xl font-bold text-slate-700">{(pedidosCounts["total"] ?? 0) - (pedidosCounts["arquivado"] ?? 0)}</span>
+                  <span className="mt-0.5 text-center text-xs text-slate-500">Total activos</span>
+                  <span className="mt-0.5 text-[10px] text-slate-400">
+                    {(pedidosCounts["arquivado"] ?? 0) > 0
+                      ? `+${pedidosCounts["arquivado"]} arquivado${(pedidosCounts["arquivado"] ?? 0) === 1 ? "" : "s"}`
+                      : "100% do total"}
+                  </span>
                 </button>
                 {[
                   { label: "Novos", key: "pendente", color: "text-blue-600", bg: "border-blue-200 bg-blue-50", pct: "pendente" },
@@ -2138,7 +2142,7 @@ export default function ColaboradorAdminClient() {
                   onChange={(e) => setPedidoStatusFilter(e.target.value)}
                   className="h-11 rounded-[14px] border border-[#ccccff] bg-white/70 px-3 text-sm font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 >
-                  <option value="todos">Todos os status</option>
+                  <option value="todos">Todos os status (activos)</option>
                   <option value="pendente">Novos</option>
                   <option value="atribuido">Atribuídos</option>
                   <option value="em_analise">Em análise</option>
@@ -2150,6 +2154,7 @@ export default function ColaboradorAdminClient() {
                   <option value="enviado_cliente">Enviados ao cliente</option>
                   <option value="confirmado">Confirmados</option>
                   <option value="cancelado">Cancelados</option>
+                  <option value="arquivado">Arquivados</option>
                 </select>
               </div>
 
@@ -2162,8 +2167,8 @@ export default function ColaboradorAdminClient() {
               {pedidosLoading ? (
                 <div className="py-10 text-center text-sm text-slate-500">A carregar pedidos...</div>
               ) : pedidos.filter((p) => {
-                if (pedidoStatusFilter === "todos") return true;
-                if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId;
+                if (pedidoStatusFilter === "todos") return p.status !== "arquivado";
+                if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId && p.status !== "arquivado";
                 return p.status === pedidoStatusFilter;
               }).length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 py-12 text-center">
@@ -2194,7 +2199,8 @@ export default function ColaboradorAdminClient() {
                     <tbody className="divide-y divide-slate-100">
                       {pedidos
                         .filter((p) => {
-                          if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId;
+                          if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId && p.status !== "arquivado";
+                          if (pedidoStatusFilter === "todos") return p.status !== "arquivado";
                           if (pedidoStatusFilter !== "todos") return p.status === pedidoStatusFilter;
                           return true;
                         })

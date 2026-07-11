@@ -11,8 +11,9 @@ export const runtime = "nodejs";
 /**
  * POST /api/admin/pedidos/[id]/reject
  *
- * Permite a uma assistente rejeitar um pedido atribuído a si,
- * devolvendo-o à fila geral.
+ * Arquiva um pedido — passa o status a "arquivado" e liberta a
+ * atribuição. Deixa de aparecer na vista "Todos" do backoffice;
+ * fica disponível no filtro "Arquivados".
  */
 export async function POST(
   req: NextRequest,
@@ -42,7 +43,7 @@ export async function POST(
       assignedToId: null,
       assignedToName: null,
       assignedAt: null,
-      status: "pendente",
+      status: "arquivado",
     });
   } catch (err) {
     return NextResponse.json(
@@ -52,9 +53,9 @@ export async function POST(
   }
 
   await appendOrderHistory(orderId, {
-    type: "rejected",
+    type: "archived",
     by: { id: jwt.id, nome: jwt.nome, role: jwt.funcao ?? "assistente" },
-    message: `Pedido rejeitado por ${jwt.nome}. Devolvido à fila geral.`,
+    message: `Pedido arquivado por ${jwt.nome}.`,
   });
 
   const updated = await getSimulatorOrderById(orderId);
