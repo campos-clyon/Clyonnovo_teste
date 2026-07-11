@@ -470,13 +470,13 @@ export default function SimulatorThreePhaseForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F7FBFF] to-white py-6 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#F7FBFF] to-white py-3 px-3 sm:py-6 sm:px-4">
       <div className="max-w-7xl mx-auto">
         {/* Barra de progresso — % concluído */}
-        <div className="mx-auto mb-5 max-w-md">
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Passo {phase} de {PHASES.length}</span>
-            <span className="text-xs font-semibold text-cyan-600">
+        <div className="mx-auto mb-3 sm:mb-5 max-w-md">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500">Passo {phase} de {PHASES.length}</span>
+            <span className="text-[11px] sm:text-xs font-semibold text-cyan-600">
               {Math.round((phase / PHASES.length) * 100)}% concluído
             </span>
           </div>
@@ -488,8 +488,8 @@ export default function SimulatorThreePhaseForm() {
           </div>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-center gap-1 sm:gap-3 mb-10 w-full overflow-hidden">
+        {/* Progress Indicator — versão mobile mostra só ícones, versão desktop com labels */}
+        <div className="flex items-center justify-center gap-1 sm:gap-3 mb-4 sm:mb-8 w-full overflow-hidden">
           {PHASES.map((phaseName, idx) => {
             const phaseNum = idx + 1;
             const isActive = phaseNum === phase;
@@ -497,9 +497,9 @@ export default function SimulatorThreePhaseForm() {
 
             return (
               <div key={phaseNum} className="flex items-center min-w-0 shrink">
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink">
+                <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
                   <div
-                    className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base transition-colors shrink-0 ${
+                    className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-colors shrink-0 ${
                       isActive
                         ? "bg-cyan-600 text-white"
                         : isCompleted
@@ -509,10 +509,11 @@ export default function SimulatorThreePhaseForm() {
                   >
                     {isCompleted && phaseNum < phase ? "✓" : phaseNum}
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-600 leading-tight break-words min-w-0">{phaseName}</p>
+                  {/* Em mobile só o passo activo mostra label */}
+                  <p className={`text-[11px] sm:text-sm text-gray-600 leading-tight break-words min-w-0 ${isActive ? "block" : "hidden sm:block"}`}>{phaseName}</p>
                 </div>
                 {idx < PHASES.length - 1 && (
-                  <div className={`w-4 sm:w-12 h-1 mx-1 sm:mx-2 shrink-0 ${isCompleted ? "bg-green-600" : "bg-gray-300"}`} />
+                  <div className={`w-3 sm:w-10 h-1 mx-1 sm:mx-2 shrink-0 rounded-full ${isCompleted ? "bg-green-600" : "bg-gray-300"}`} />
                 )}
               </div>
             );
@@ -520,10 +521,10 @@ export default function SimulatorThreePhaseForm() {
         </div>
 
         {/* Main Content - 2 Columns on Desktop, 1 on Mobile */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Form Section - 2 columns on desktop */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-6 space-y-4 sm:space-y-6">
               {/* Phase 1: Service */}
               {phase === 1 && (
                 <Phase1Service
@@ -670,14 +671,14 @@ function Phase1Service({
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900">
+        <h2 className="text-lg sm:text-xl font-bold text-slate-900">
           Que serviço precisa?
         </h2>
-        <p className="text-xs text-slate-600 mt-1">
-          Escolha o tipo de serviço e adicione detalhes para análise.
+        <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 sm:mt-1">
+          Escolha o serviço e adicione detalhes.
         </p>
       </div>
 

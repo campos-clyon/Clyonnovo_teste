@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, MapPin, MessageCircle, Send, Star, X, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { SERVICE_LABELS, type Order, type OrderHistoryEntry } from "./types";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { tElevator, tParking, tUrgency, tFloor } from "@/lib/translations";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -17,23 +18,6 @@ function parseFilesUrls(json: string | null): string[] {
   } catch { return []; }
 }
 
-const URGENCY_LABEL: Record<string, string> = {
-  urgente:  "Urgente",
-  hoje:     "Hoje",
-  amanha:   "Amanhã",
-  "amanhã": "Amanhã",
-  semana:   "Esta semana",
-  proxima_semana: "Próxima semana",
-  flexivel: "Flexível",
-  normal:   "Normal",
-};
-
-const ELEVATOR_LABEL: Record<string, string> = {
-  sim:          "Com elevador",
-  nao:          "Sem elevador",
-  "não":        "Sem elevador",
-  "N/A":        "Não aplicável",
-};
 
 function toWhatsAppNumber(phone: string) {
   return phone.replace(/[^\d]/g, "");
@@ -70,6 +54,14 @@ interface Props {
 
 export default function OrderDetailModal({ order, onClose, onOrderChange }: Props) {
   const preco = order.precoFinalIva ?? order.precoFinal ?? order.estimateTotal;
+
+  // Bloquear scroll da página por trás enquanto o modal está aberto.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   const [rating, setRating] = useState<number | null>(order.clientRating);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [ratingError, setRatingError] = useState("");
@@ -142,7 +134,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="relative w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -183,7 +175,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                   <Zap className="h-3.5 w-3.5" /> Urgência
                 </div>
                 <p className="mt-1 text-sm text-slate-800">
-                  {URGENCY_LABEL[order.urgency.toLowerCase()] ?? order.urgency}
+                  {tUrgency(order.urgency)}
                 </p>
               </div>
             )}
@@ -193,9 +185,9 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                   <Building2 className="h-3.5 w-3.5" /> Andar
                 </div>
                 <p className="mt-1 text-sm text-slate-800">
-                  {order.floor}
+                  {tFloor(order.floor)}
                   {order.hasElevator && (
-                    <span className="ml-1.5 text-xs text-slate-500">· {ELEVATOR_LABEL[order.hasElevator] ?? order.hasElevator}</span>
+                    <span className="ml-1.5 text-xs text-slate-500">· {tElevator(order.hasElevator)}</span>
                   )}
                 </p>
               </div>
@@ -205,7 +197,9 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                 <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <Car className="h-3.5 w-3.5" /> Estacionamento
                 </div>
-                <p className="mt-1 text-sm text-slate-800">{order.parkingDistance}</p>
+                <p className="mt-1 text-sm text-slate-800">
+                  {tParking(order.parkingDistance)}
+                </p>
               </div>
             )}
             {order.distanceKm != null && (

@@ -16,9 +16,15 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
   },
   parking: {
     door:      "Mesmo à porta",
-    under_20m: "Sim, até 20 metros",
+    under_20m: "Até 20 metros",
+    "20_50m":  "20 a 50 metros",
+    "50_100m": "50 a 100 metros",
     over_30m:  "Mais de 30 metros",
+    over_100m: "Mais de 100 metros",
     difficult:  "Estacionamento difícil",
+    normal:    "Acesso normal",
+    dificil:   "Acesso difícil",
+    acesso_dificil: "Acesso difícil",
     unknown:   "Não informado",
     // legado
     porta:   "À porta",
