@@ -15,24 +15,32 @@ interface Props {
   nome:   string;
   email:  string;
   avatar: string | null;
+  initialUser?: UserProfile | null;
+  initialOrders?: Order[];
+  initialSummary?: OrderSummary | null;
 }
 
-export default function ContaCliente({ nome, email, avatar }: Props) {
+export default function ContaCliente({
+  nome, email, avatar,
+  initialUser = null, initialOrders = [], initialSummary = null,
+}: Props) {
   const [section, setSection] = useState<Section>("visao-geral");
-  const [user,    setUser]    = useState<UserProfile | null>(null);
-  const [orders,  setOrders]  = useState<Order[]>([]);
-  const [summary, setSummary] = useState<OrderSummary | null>(null);
+  const [user,    setUser]    = useState<UserProfile | null>(initialUser);
+  const [orders,  setOrders]  = useState<Order[]>(initialOrders);
+  const [summary, setSummary] = useState<OrderSummary | null>(initialSummary);
 
-  // Carregar perfil do utilizador — cache: no-store garante dados frescos após reload
+  // Se o SSR não conseguiu carregar (falha no DB, sessão sem email), fazer
+  // fetch client-side como fallback. Se o SSR trouxe dados, saltar o fetch.
   useEffect(() => {
+    if (initialUser) return;
     fetch("/api/users/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: { user?: UserProfile }) => { if (d.user) setUser(d.user); })
       .catch(() => { /* falha silenciosa */ });
-  }, []);
+  }, [initialUser]);
 
-  // Carregar últimos pedidos para Visão Geral
   useEffect(() => {
+    if (initialOrders.length > 0 || initialSummary) return;
     fetch("/api/users/me/orders?page=1", { credentials: "include" })
       .then((r) => r.json())
       .then((d: { orders?: Order[]; summary?: OrderSummary }) => {
@@ -40,7 +48,7 @@ export default function ContaCliente({ nome, email, avatar }: Props) {
         if (d.summary) setSummary(d.summary);
       })
       .catch(() => { /* falha silenciosa */ });
-  }, []);
+  }, [initialOrders.length, initialSummary]);
 
   const handleUpdate = (updated: Partial<UserProfile>) => {
     setUser((prev) => prev ? { ...prev, ...updated } : prev);

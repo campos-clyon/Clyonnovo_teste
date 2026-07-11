@@ -1070,54 +1070,44 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
 
           return (
             <div className="flex flex-col" style={{ height: "94vh", maxHeight: "94vh" }}>
-              {/* ── Header ── */}
-              <div className="flex-shrink-0 border-b border-slate-100 px-6 py-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                      Pedido #{order.id} · Simulador
-                    </p>
-                    <h2 className="mt-0.5 text-xl font-bold text-slate-900 truncate">
-                      {shouldMask ? _maskName(order.contactName) : (order.contactName ?? "Cliente sem nome")}
-                    </h2>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <StatusBadge status={order.status} />
-                      {order.priority && order.priority !== "normal" && (
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                          order.priority === "urgente" ? "text-red-600" :
-                          order.priority === "alta" ? "text-amber-600" : "text-slate-500"
-                        }`}>{order.priority}</span>
-                      )}
-                      {order.assignedToName ? (
-                        <span className="text-xs text-slate-500">
-                          Assistente: <span className="font-semibold text-sky-600">{order.assignedToName}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-0.5 text-[10px] font-semibold text-yellow-700">
-                          Fila geral
-                        </span>
-                      )}
-                      <span className="text-xs text-slate-400">{fmt(order.createdAt)}</span>
+              {/* ── Header (compacto — 1 linha) ── */}
+              <div className="flex-shrink-0 border-b border-slate-100 px-5 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 leading-tight">
+                        #{order.id} · Simulador
+                      </p>
+                      <h2 className="text-base font-bold text-slate-900 truncate leading-tight">
+                        {shouldMask ? _maskName(order.contactName) : (order.contactName ?? "Cliente sem nome")}
+                      </h2>
                     </div>
+                    <StatusBadge status={order.status} />
+                    {order.priority && order.priority !== "normal" && (
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                        order.priority === "urgente" ? "text-red-600" :
+                        order.priority === "alta" ? "text-amber-600" : "text-slate-500"
+                      }`}>{order.priority}</span>
+                    )}
+                    {order.assignedToName ? (
+                      <span className="text-[11px] text-slate-500 truncate">
+                        <span className="font-semibold text-sky-600">{order.assignedToName}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">
+                        Fila geral
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400">{fmt(order.createdAt)}</span>
                   </div>
 
-                  <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-                    {acceptMsg && (
-                      <span className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
-                        {acceptMsg}
-                      </span>
-                    )}
-                    {saveMsg && (
-                      <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        {saveMsg}
-                      </span>
-                    )}
+                  <div className="flex flex-shrink-0 flex-wrap items-center gap-1.5">
                     {/* Aceitar pedido — visível apenas para assistentes quando pedido está na fila geral */}
                     {!isAdmin && colabFuncao === "assistente" && !order.assignedToId && (
                       <button
                         onClick={handleAccept}
                         disabled={accepting}
-                        className="flex items-center gap-1.5 rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
+                        className="flex items-center gap-1.5 rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
                       >
                         {accepting ? (
                           <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1138,16 +1128,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         Atribuído a {order.assignedToName}
                       </span>
                     )}
-                    {error && !showDelete && (
-                      <span className="rounded-xl border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 max-w-[200px] truncate">
-                        {error}
-                      </span>
-                    )}
                     {/* Guardar */}
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="flex items-center gap-1.5 rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
+                      className="flex items-center gap-1.5 rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
                     >
                       {saving ? (
                         <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1165,7 +1150,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     <button
                       onClick={() => handleStatusQuick("aprovado")}
                       disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition"
+                      className="hidden sm:flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1176,7 +1161,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     <button
                       onClick={() => { setPedirInfoText(""); setShowPedirInfo(true); }}
                       disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-orange-400/30 bg-orange-400/10 px-4 py-2 text-sm font-semibold text-orange-300 hover:bg-orange-400/20 disabled:opacity-60 transition"
+                      className="hidden sm:flex items-center gap-1.5 rounded-xl border border-orange-400/30 bg-orange-400/10 px-3 py-1.5 text-xs font-semibold text-orange-300 hover:bg-orange-400/20 disabled:opacity-60 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1187,7 +1172,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     <button
                       onClick={handleReject}
                       disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-400/20 disabled:opacity-60 transition"
+                      className="hidden sm:flex items-center gap-1.5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-400/20 disabled:opacity-60 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M6 8l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M10 12h4" />
@@ -1199,7 +1184,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <button
                         type="button"
                         onClick={() => setShowAcceptPrompt(true)}
-                        className="hidden md:flex items-center gap-1.5 rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-sm font-semibold text-green-300 hover:bg-green-400/20 transition"
+                        className="hidden md:flex items-center gap-1.5 rounded-xl border border-green-400/30 bg-green-400/10 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/20 transition"
                       >
                         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
@@ -1211,7 +1196,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <a
                         href={`https://wa.me/${waPhone}?text=${waMsg}`}
                         target="_blank" rel="noreferrer"
-                        className="hidden md:flex items-center gap-1.5 rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-sm font-semibold text-green-300 hover:bg-green-400/20 transition"
+                        className="hidden md:flex items-center gap-1.5 rounded-xl border border-green-400/30 bg-green-400/10 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/20 transition"
                       >
                         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
@@ -1227,7 +1212,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                            "Abrir no Google Calendar" is shown after scheduling inside the modal itself. */
                         <button
                           onClick={openCalendarModal}
-                          className="hidden lg:flex items-center gap-1.5 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-400/20 transition"
+                          className="hidden lg:flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-400/20 transition"
                           title={order.calendarEventId ? `Atualizar agenda (agendado para ${order.scheduledDate} ${order.scheduledStartTime}–${order.scheduledEndTime})` : "Agendar no Google Calendar"}
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1240,7 +1225,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {/* Excluir — apenas admin geral */}
                     {isAdmin && <button
                       onClick={() => setShowDelete(true)}
-                      className="flex items-center gap-1.5 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-500/20 transition"
+                      className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1250,7 +1235,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {/* Fechar */}
                     <button
                       onClick={onClose}
-                      className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1259,6 +1244,27 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   </div>
                 </div>
               </div>
+
+              {/* Mensagens de estado (accept / save / error) — strip fina abaixo do header */}
+              {(acceptMsg || saveMsg || (error && !showDelete)) && (
+                <div className="flex-shrink-0 border-b border-slate-100 px-5 py-1.5 flex flex-wrap items-center gap-2">
+                  {acceptMsg && (
+                    <span className="rounded-md border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[11px] font-semibold text-cyan-700">
+                      {acceptMsg}
+                    </span>
+                  )}
+                  {saveMsg && (
+                    <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                      {saveMsg}
+                    </span>
+                  )}
+                  {error && !showDelete && (
+                    <span className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                      {error}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* ── Tabs ── */}
               {(() => {
@@ -2485,7 +2491,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                               href={order.calendarEventUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="flex items-center gap-1.5 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-400/20 transition"
+                              className="flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-400/20 transition"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
