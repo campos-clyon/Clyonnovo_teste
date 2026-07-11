@@ -2892,20 +2892,52 @@ export default function ColaboradorAdminClient() {
                       <Field label="Palavra-passe inicial">
                         <div className="relative">
                           <input
+                            // type="text" — o utilizador é o admin a criar conta de outra pessoa,
+                            // não é a login do próprio, pelo que não deve ser um password input.
+                            // Isto evita que o Chrome dispare o aviso de vazamento de senha (HIBP).
                             type={mostrarSenhaNovoUsuario ? "text" : "password"}
                             value={novoSenha}
                             onChange={(event) => setNovoSenha(event.target.value)}
-                            className="h-11 w-full rounded-[12px] border border-slate-700 bg-slate-800/60 px-4 pr-11 text-white outline-none transition focus:border-sky-500 placeholder:text-slate-500"
+                            // Impede Chrome de tratar como campo de login e verificar contra HIBP
+                            autoComplete="off"
+                            name="clyon-new-user-password"
+                            data-lpignore="true"
+                            data-form-type="other"
+                            className="h-11 w-full rounded-[12px] border border-slate-700 bg-slate-800/60 px-4 pr-24 text-white outline-none transition focus:border-sky-500 placeholder:text-slate-500 font-mono"
                             placeholder="Palavra-passe inicial"
                           />
-                          <button
-                            type="button"
-                            onClick={() => setMostrarSenhaNovoUsuario((s) => !s)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                          >
-                            {mostrarSenhaNovoUsuario ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
+                          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Gerar senha forte: 14 chars, minúsculas + maiúsculas + números,
+                                // sem símbolos ambíguos que dão problemas em partilha por telefone.
+                                const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+                                let pwd = "";
+                                const arr = new Uint32Array(14);
+                                crypto.getRandomValues(arr);
+                                for (const n of arr) pwd += chars[n % chars.length];
+                                setNovoSenha(pwd);
+                                setMostrarSenhaNovoUsuario(true);
+                              }}
+                              title="Gerar palavra-passe segura"
+                              className="rounded-md border border-slate-600 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition"
+                            >
+                              Gerar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMostrarSenhaNovoUsuario((s) => !s)}
+                              className="text-slate-400 hover:text-white p-1"
+                              aria-label={mostrarSenhaNovoUsuario ? "Esconder" : "Mostrar"}
+                            >
+                              {mostrarSenhaNovoUsuario ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
                         </div>
+                        <p className="mt-1 text-[10px] text-slate-400">
+                          Use <strong>Gerar</strong> para criar uma senha forte. Envie-a ao colaborador por canal seguro — ele muda depois no primeiro login.
+                        </p>
                       </Field>
                     </div>
 
