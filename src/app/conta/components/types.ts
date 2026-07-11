@@ -50,6 +50,13 @@ export interface Order {
   providerName: string | null;
   providerPhone: string | null;
   historyJson: string | null;
+  urgency: string | null;
+  floor: string | null;
+  hasElevator: string | null;
+  parkingDistance: string | null;
+  distanceKm: number | null;
+  distanceText: string | null;
+  filesJson: string | null;
 }
 
 export interface OrderHistoryEntry {

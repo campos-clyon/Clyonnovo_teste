@@ -1,10 +1,39 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, MessageCircle, Send, Star, X } from "lucide-react";
+import { CalendarDays, MapPin, MessageCircle, Send, Star, X, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { SERVICE_LABELS, type Order, type OrderHistoryEntry } from "./types";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+
+function parseFilesUrls(json: string | null): string[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((f: any) => (typeof f === "string" ? f : (f?.url ?? "")))
+      .filter((u: string) => typeof u === "string" && u.length > 0);
+  } catch { return []; }
+}
+
+const URGENCY_LABEL: Record<string, string> = {
+  urgente:  "Urgente",
+  hoje:     "Hoje",
+  amanha:   "Amanhã",
+  "amanhã": "Amanhã",
+  semana:   "Esta semana",
+  proxima_semana: "Próxima semana",
+  flexivel: "Flexível",
+  normal:   "Normal",
+};
+
+const ELEVATOR_LABEL: Record<string, string> = {
+  sim:          "Com elevador",
+  nao:          "Sem elevador",
+  "não":        "Sem elevador",
+  "N/A":        "Não aplicável",
+};
 
 function toWhatsAppNumber(phone: string) {
   return phone.replace(/[^\d]/g, "");
@@ -116,13 +145,16 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="relative w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">
-              {SERVICE_LABELS[order.serviceType] ?? order.serviceType}
-            </h3>
-            <p className="mt-0.5 text-xs text-slate-400">Pedido #{order.id}</p>
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {SERVICE_LABELS[order.serviceType] ?? order.serviceType}
+              </h3>
+              <StatusBadge status={order.status} />
+            </div>
+            <p className="mt-0.5 text-xs text-slate-400">Pedido #{order.id} · Criado a {formatDate(order.createdAt)}</p>
           </div>
           <button
             type="button"
@@ -132,33 +164,116 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="space-y-4 px-6 py-5 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500">Estado:</span>
-            <StatusBadge status={order.status} />
+        <div className="space-y-5 px-6 py-5 text-sm">
+          {/* Grelha de detalhes principais */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {order.address && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <MapPin className="h-3.5 w-3.5" /> Morada
+                </div>
+                <p className="mt-1 text-sm text-slate-800">
+                  {[order.address, order.city, order.postalCode].filter(Boolean).join(", ")}
+                </p>
+              </div>
+            )}
+            {order.urgency && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <Zap className="h-3.5 w-3.5" /> Urgência
+                </div>
+                <p className="mt-1 text-sm text-slate-800">
+                  {URGENCY_LABEL[order.urgency.toLowerCase()] ?? order.urgency}
+                </p>
+              </div>
+            )}
+            {order.floor && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <Building2 className="h-3.5 w-3.5" /> Andar
+                </div>
+                <p className="mt-1 text-sm text-slate-800">
+                  {order.floor}
+                  {order.hasElevator && (
+                    <span className="ml-1.5 text-xs text-slate-500">· {ELEVATOR_LABEL[order.hasElevator] ?? order.hasElevator}</span>
+                  )}
+                </p>
+              </div>
+            )}
+            {order.parkingDistance && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <Car className="h-3.5 w-3.5" /> Estacionamento
+                </div>
+                <p className="mt-1 text-sm text-slate-800">{order.parkingDistance}</p>
+              </div>
+            )}
+            {order.distanceKm != null && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <Route className="h-3.5 w-3.5" /> Distância
+                </div>
+                <p className="mt-1 text-sm text-slate-800">
+                  {Number(order.distanceKm).toFixed(1)} km
+                  {order.distanceText && <span className="ml-1.5 text-xs text-slate-500">· {order.distanceText}</span>}
+                </p>
+              </div>
+            )}
+            {order.recurrenceFrequency && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Recorrência</div>
+                <p className="mt-1 text-sm text-emerald-800">
+                  {order.recurrenceFrequency === "semanal" ? "Semanal" : "Quinzenal"}
+                  {order.recurringDiscountPercent != null && (
+                    <span className="ml-1.5 text-xs">· desconto {order.recurringDiscountPercent}%</span>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
-          {order.address && (
-            <div>
-              <span className="font-medium text-slate-700">Morada: </span>
-              <span className="text-slate-600">
-                {[order.address, order.city, order.postalCode].filter(Boolean).join(", ")}
-              </span>
-            </div>
-          )}
+
           {order.description && (
-            <div>
-              <span className="font-medium text-slate-700">Descrição: </span>
-              <span className="text-slate-600">{order.description}</span>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Descrição</div>
+              <p className="mt-1 text-sm text-slate-800 whitespace-pre-line">{order.description}</p>
             </div>
           )}
+
+          {/* Fotos enviadas */}
+          {(() => {
+            const urls = parseFilesUrls(order.filesJson);
+            if (urls.length === 0) return null;
+            return (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <ImageIcon className="h-3.5 w-3.5" /> Fotos enviadas ({urls.length})
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {urls.map((u, i) => {
+                    const isVid = /\.(mp4|mov|webm|avi)$/i.test(u);
+                    return isVid ? (
+                      <video key={i} src={u} className="aspect-square w-full rounded-lg object-cover" controls />
+                    ) : (
+                      <a key={i} href={u} target="_blank" rel="noreferrer" className="group relative block aspect-square overflow-hidden rounded-lg">
+                        <img src={u} alt={`Foto ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {order.scheduledDate && (
-            <div className="flex items-center gap-1.5 text-slate-600">
-              <CalendarDays className="h-4 w-4 text-[#00B4D8]" />
+            <div className="flex items-center gap-1.5 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2 text-sm text-violet-800">
+              <CalendarDays className="h-4 w-4" />
               Agendado para{" "}
-              {new Date(order.scheduledDate).toLocaleDateString("pt-PT", {
-                weekday: "long", day: "2-digit", month: "long",
-              })}
-              {order.scheduledStartTime ? ` às ${order.scheduledStartTime}` : ""}
+              <span className="font-semibold">
+                {new Date(order.scheduledDate).toLocaleDateString("pt-PT", {
+                  weekday: "long", day: "2-digit", month: "long",
+                })}
+                {order.scheduledStartTime ? ` às ${order.scheduledStartTime}` : ""}
+              </span>
             </div>
           )}
 

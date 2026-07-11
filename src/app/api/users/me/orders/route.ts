@@ -104,6 +104,8 @@ export async function GET(request: NextRequest) {
          o.estimateMin, o.estimateMax, o.estimateTotal,
          o.precoFinal, o.precoFinalIva,
          o.mensagemCliente, o.description, o.historyJson,
+         o.urgency, o.floor, o.hasElevator, o.parkingDistance,
+         o.distanceKm, o.distanceText, o.filesJson,
          o.scheduledDate, o.scheduledStartTime,
          o.createdAt, o.updatedAt, o.confirmadoPeloCliente,
          o.canceladoPeloCliente,

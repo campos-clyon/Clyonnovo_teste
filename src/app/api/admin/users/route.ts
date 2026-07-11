@@ -18,11 +18,25 @@ export async function GET(request: NextRequest) {
   try {
     await ensureUsersSchema();
     const rows = await withConnection(async (conn) => {
+      // Se o utilizador ainda não preencheu telefone/cidade no perfil, cair
+      // para o telefone/cidade do último pedido que fez (contactPhone / city).
       const [r] = await conn.execute(
-        `SELECT id, name, email, phone, addressCity, loginMethod, role,
-                nif, createdAt, lastSignedIn, deletedAt
-         FROM users
-         ORDER BY createdAt DESC
+        `SELECT
+           u.id, u.name, u.email,
+           COALESCE(NULLIF(TRIM(u.phone), ''), lastOrder.contactPhone) AS phone,
+           COALESCE(NULLIF(TRIM(u.addressCity), ''), lastOrder.city) AS addressCity,
+           u.loginMethod, u.role, u.nif, u.createdAt, u.lastSignedIn, u.deletedAt
+         FROM users u
+         LEFT JOIN (
+           SELECT o1.contactEmail,
+                  SUBSTRING_INDEX(GROUP_CONCAT(o1.contactPhone ORDER BY o1.createdAt DESC SEPARATOR '||'), '||', 1) AS contactPhone,
+                  SUBSTRING_INDEX(GROUP_CONCAT(o1.city         ORDER BY o1.createdAt DESC SEPARATOR '||'), '||', 1) AS city
+           FROM simulatorOrders o1
+           WHERE o1.contactEmail IS NOT NULL AND TRIM(o1.contactEmail) <> ''
+           GROUP BY o1.contactEmail
+         ) lastOrder
+           ON LOWER(TRIM(lastOrder.contactEmail)) = LOWER(TRIM(u.email))
+         ORDER BY u.createdAt DESC
          LIMIT 500`
       );
       return r;
