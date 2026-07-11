@@ -1220,6 +1220,9 @@ export async function ensureSimulatorOrdersTable() {
     `ALTER TABLE simulatorOrders ADD COLUMN recurringDiscountPercent DECIMAL(5,2) NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN clientRating TINYINT NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN clientRatingComment TEXT NULL DEFAULT NULL`,
+    // v11 migrations — quando o assistente abriu pela última vez a aba Histórico
+    // (usado para contar respostas de cliente por ler e mostrar badge)
+    `ALTER TABLE simulatorOrders ADD COLUMN historyReadAt DATETIME NULL DEFAULT NULL`,
   ];
   for (const sql of migrations) {
     try { await pool.execute(sql); } catch (e: any) {
@@ -1348,6 +1351,7 @@ export async function updateSimulatorOrder(
     recurringDiscountPercent: number | null;
     clientRating: number | null;
     clientRatingComment: string | null;
+    historyReadAt: string | null;
   }>
 ) {
   await ensureSimulatorOrdersTable();

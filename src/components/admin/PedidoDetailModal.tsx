@@ -53,6 +53,7 @@ export type PedidoOrder = {
   assignedAt?: string | null;
   acceptedAt?: string | null;
   historyJson?: string | null;
+  historyReadAt?: string | null;
   reviewJson?: string | null;
   rawOrderJson?: string | null;
   dataAgendada?: string | null;
@@ -1260,38 +1261,66 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
               </div>
 
               {/* ── Tabs ── */}
-              <div className="flex-shrink-0 overflow-x-auto border-b border-slate-100 px-6">
-                <div className="flex gap-0.5 py-2">
-                  {TABS.map((tab) => {
-                    const isDisabled = shouldMask && tab.id === "cliente_morada";
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => {
-                          if (isDisabled) { setShowAcceptPrompt(true); return; }
-                          setActiveTab(tab.id);
-                        }}
-                        disabled={isDisabled}
-                        title={isDisabled ? "Aceite o pedido para ver os dados completos do cliente" : undefined}
-                        className={`flex-shrink-0 rounded-[12px] px-4 py-1.5 text-xs font-semibold transition ${
-                          activeTab === tab.id
-                            ? "bg-cyan-400 text-slate-950"
-                            : isDisabled
-                            ? "text-slate-300 cursor-not-allowed opacity-60"
-                            : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
-                        }`}
-                      >
-                        {isDisabled && (
-                          <svg className="inline h-3 w-3 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                        )}
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {(() => {
+                const historyEntries = parseHistory(order.historyJson);
+                const lastReadAt = order.historyReadAt ? new Date(order.historyReadAt).getTime() : 0;
+                const unreadClientReplies = historyEntries.filter(
+                  (e) => e.type === "client_reply" && new Date(e.createdAt).getTime() > lastReadAt
+                ).length;
+                return (
+                  <div className="flex-shrink-0 overflow-x-auto border-b border-slate-100 px-6">
+                    <div className="flex gap-0.5 py-2">
+                      {TABS.map((tab) => {
+                        const isDisabled = shouldMask && tab.id === "cliente_morada";
+                        const showBadge = tab.id === "historico" && unreadClientReplies > 0;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={async () => {
+                              if (isDisabled) { setShowAcceptPrompt(true); return; }
+                              setActiveTab(tab.id);
+                              if (tab.id === "historico" && unreadClientReplies > 0) {
+                                try {
+                                  const res = await fetch(`/api/admin/pedidos/${order.id}/mark-history-read`, {
+                                    method: "POST",
+                                    headers: authHeader,
+                                  });
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    setOrder((cur) => cur ? { ...cur, historyReadAt: data.historyReadAt } : cur);
+                                    onUpdated?.({ ...order, historyReadAt: data.historyReadAt });
+                                  }
+                                } catch { /* silencioso */ }
+                              }
+                            }}
+                            disabled={isDisabled}
+                            title={isDisabled ? "Aceite o pedido para ver os dados completos do cliente" : undefined}
+                            className={`relative flex-shrink-0 rounded-[12px] px-4 py-1.5 text-xs font-semibold transition ${
+                              activeTab === tab.id
+                                ? "bg-cyan-400 text-slate-950"
+                                : isDisabled
+                                ? "text-slate-300 cursor-not-allowed opacity-60"
+                                : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+                            }`}
+                          >
+                            {isDisabled && (
+                              <svg className="inline h-3 w-3 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                            )}
+                            {tab.label}
+                            {showBadge && (
+                              <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                                {unreadClientReplies > 9 ? "9+" : unreadClientReplies}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ── Tab Content ── */}
               <div className="flex-1 overflow-y-auto px-6 py-6">
@@ -2421,16 +2450,37 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     ) : (
                       <div className="relative space-y-0 pl-4">
                         <div className="absolute left-4 top-3 bottom-3 w-px bg-white/[0.06]" />
-                        {history.map((entry, i) => (
-                          <div key={i} className="relative pb-5 pl-6">
-                            <span className="absolute left-[-3px] top-1.5 h-2 w-2 rounded-full bg-cyan-400 ring-4 ring-white" />
-                            <p className="text-xs font-semibold text-slate-800">{entry.message}</p>
-                            <div className="mt-0.5 flex items-center gap-2">
-                              {entry.by && <span className="text-[10px] font-medium text-slate-500">{entry.by.nome}</span>}
-                              <span className="text-[10px] text-slate-600">{fmt(entry.createdAt)}</span>
+                        {history.map((entry, i) => {
+                          const isReply = entry.type === "client_reply";
+                          const isInfoReq = entry.type === "info_requested";
+                          return (
+                            <div key={i} className="relative pb-5 pl-6">
+                              <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ring-4 ring-white ${
+                                isReply ? "bg-blue-500" : isInfoReq ? "bg-orange-400" : "bg-cyan-400"
+                              }`} />
+                              {isReply ? (
+                                <div className="inline-block rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                                    Resposta do cliente
+                                  </p>
+                                  <p className="mt-1 text-sm font-medium text-slate-800 whitespace-pre-line">{entry.message}</p>
+                                  <div className="mt-1 flex items-center gap-2">
+                                    {entry.by && <span className="text-[10px] font-medium text-blue-600">{entry.by.nome}</span>}
+                                    <span className="text-[10px] text-slate-500">{fmt(entry.createdAt)}</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-semibold text-slate-800">{entry.message}</p>
+                                  <div className="mt-0.5 flex items-center gap-2">
+                                    {entry.by && <span className="text-[10px] font-medium text-slate-500">{entry.by.nome}</span>}
+                                    <span className="text-[10px] text-slate-600">{fmt(entry.createdAt)}</span>
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     <div className="relative space-y-0 border-t border-slate-100 pl-4 pt-4">
