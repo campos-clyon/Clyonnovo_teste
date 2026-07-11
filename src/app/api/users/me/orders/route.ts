@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
          o.id, o.serviceType, o.address, o.city, o.postalCode, o.status,
          o.estimateMin, o.estimateMax, o.estimateTotal,
          o.precoFinal, o.precoFinalIva,
-         o.mensagemCliente, o.description,
+         o.mensagemCliente, o.description, o.historyJson,
          o.scheduledDate, o.scheduledStartTime,
          o.createdAt, o.updatedAt, o.confirmadoPeloCliente,
          o.canceladoPeloCliente,

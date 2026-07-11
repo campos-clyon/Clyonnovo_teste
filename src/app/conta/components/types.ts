@@ -49,6 +49,14 @@ export interface Order {
   assignedToName: string | null;
   providerName: string | null;
   providerPhone: string | null;
+  historyJson: string | null;
+}
+
+export interface OrderHistoryEntry {
+  type: string;
+  by?: { id: number; nome: string; role: string } | null;
+  message: string;
+  createdAt: string;
 }
 
 export interface OrderSummary {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import UserAvatar from "@/components/UserAvatar";
@@ -15,6 +16,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import OrderDetailModal from "./OrderDetailModal";
 import { SERVICE_LABELS, type UserProfile, type Order, type OrderSummary, type Section } from "./types";
 
 interface Props {
@@ -53,6 +55,7 @@ function MetricCard({ label, value }: { label: string; value: string | number })
 }
 
 export default function VisaoGeral({ user, googleAvatar, orders, summary, onSection }: Props) {
+  const [selected, setSelected] = useState<Order | null>(null);
   const nome = user.name ?? user.email.split("@")[0];
   const primeiroNome = nome.split(" ")[0];
   const avatar = user.avatarUrl ?? googleAvatar;
@@ -137,7 +140,8 @@ export default function VisaoGeral({ user, googleAvatar, orders, summary, onSect
               return (
                 <li
                   key={o.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm"
+                  onClick={() => setSelected(o)}
+                  className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm transition hover:border-[#0077B6]/30 hover:shadow-md"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-800">
@@ -194,6 +198,14 @@ export default function VisaoGeral({ user, googleAvatar, orders, summary, onSect
           </button>
         </div>
       </div>
+
+      {selected && (
+        <OrderDetailModal
+          order={selected}
+          onClose={() => setSelected(null)}
+          onOrderChange={(patch) => setSelected((cur) => (cur ? { ...cur, ...patch } as Order : cur))}
+        />
+      )}
     </div>
   );
 }
