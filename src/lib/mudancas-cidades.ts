@@ -280,6 +280,272 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     testemunho: null,
     cidadesVizinhas: ["cascais", "amadora", "sintra", "lisboa"],
   },
+  {
+    slug: "carnaxide",
+    nome: "Carnaxide",
+    distrito: "Lisboa",
+    distanceKm: 32,
+    tempoMedio: "35 minutos",
+    geo: { lat: 38.7145, lng: -9.2376 },
+    precoMin: 190,
+    precoMax: 700,
+    rotasComuns: [
+      "Carnaxide → Lisboa (A5)",
+      "Carnaxide → Oeiras",
+      "Carnaxide → Amadora",
+      "Carnaxide → Cascais",
+    ],
+    landmarks: [
+      "Linda-a-Velha — zona residencial densa, muitos prédios dos anos 80",
+      "Carnaxide Centro — blocos de apartamentos com elevadores modernos",
+      "Queijas — moradias unifamiliares com bons acessos",
+      "Zona Industrial de Carnaxide — mudanças de escritório e armazém",
+    ],
+    desafio:
+      "Carnaxide tem uma mistura de prédios de anos 80 com elevadores de dimensão reduzida e moradias com acesso directo pela A5. O trânsito na IC19 e A5 em horas de ponta é o principal factor de tempo — agendamos sempre fora dos picos.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças de Carnaxide para Lisboa?",
+        resposta:
+          "Sim, é uma das rotas mais rápidas — pela A5 chegamos a Lisboa em 15 a 25 minutos fora das horas de ponta. Preço entre 190€ e 380€ para T1/T2.",
+      },
+      {
+        pergunta: "Conseguem entrar na Zona Industrial de Carnaxide com camião?",
+        resposta:
+          "Sim, a Zona Industrial tem boas vias de acesso para veículos de grande porte. Trabalhamos ao fim-de-semana para não interferir com a operação dos negócios.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["oeiras", "amadora", "lisboa", "sintra"],
+  },
+  {
+    slug: "corroios",
+    nome: "Corroios",
+    distrito: "Setúbal",
+    distanceKm: 10,
+    tempoMedio: "13 minutos",
+    geo: { lat: 38.6336, lng: -9.1559 },
+    precoMin: 145,
+    precoMax: 520,
+    rotasComuns: [
+      "Corroios → Seixal",
+      "Corroios → Almada",
+      "Corroios → Barreiro",
+      "Corroios → Lisboa (ponte 25 de Abril)",
+    ],
+    landmarks: [
+      "Corroios Centro — blocos de apartamentos dos anos 80 e 90",
+      "Bairro da Palmeirinha — zona residencial consolidada",
+      "Quinta de S. Nicolau — moradias com acesso fácil de carrinha",
+      "Zona próxima do Metro Sul do Tejo — acesso condicionado em horas de pico",
+    ],
+    desafio:
+      "Corroios é muito próximo da nossa base em Fernão Ferro — uma das cidades onde o custo de deslocação é mais baixo. Os prédios dos anos 80 têm frequentemente elevadores pequenos que requerem mais viagens; garantimos equipa suficiente.",
+    faqs: [
+      {
+        pergunta: "Quanto custa uma mudança em Corroios?",
+        resposta:
+          "Entre 145€ e 350€ para T0/T1. Por ser muito próximo da nossa base, o custo de deslocação é mínimo — um dos melhores preços da margem sul.",
+      },
+      {
+        pergunta: "Fazem mudanças Corroios → Lisboa?",
+        resposta:
+          "Sim, pela ponte 25 de Abril o trajecto é rápido. Para T1/T2 o preço fica entre 200€ e 420€ incluindo portagem.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["seixal", "almada", "barreiro", "montijo"],
+  },
+  {
+    slug: "palmela",
+    nome: "Palmela",
+    distrito: "Setúbal",
+    distanceKm: 15,
+    tempoMedio: "18 minutos",
+    geo: { lat: 38.5676, lng: -8.9025 },
+    precoMin: 155,
+    precoMax: 560,
+    rotasComuns: [
+      "Palmela → Setúbal",
+      "Palmela → Montijo",
+      "Palmela → Almada",
+      "Palmela → Lisboa (A2)",
+    ],
+    landmarks: [
+      "Palmela histórica — castelo medieval, ruas estreitas no centro",
+      "Quinta do Anjo — zona residencial dispersa, moradias",
+      "Pinhal Novo — nó rodoviário, bom acesso de carrinha grande",
+      "Área vitivinícola — Quinta da Bacalhoa e arredores rurais",
+    ],
+    desafio:
+      "Palmela tem um centro histórico medieval com ruas muito estreitas que exigem carrinha pequena. As zonas periféricas (Quinta do Anjo, Pinhal Novo) têm excelentes acessos pela A2/A12. Para o castelo e centro antigo, validamos sempre a rota antes.",
+    faqs: [
+      {
+        pergunta: "Conseguem fazer mudança no centro histórico de Palmela?",
+        resposta:
+          "Sim, usamos viaturas mais pequenas para o centro histórico. Para ruas medievais junto ao castelo coordenamos com a câmara quando necessário.",
+      },
+      {
+        pergunta: "Fazem mudanças de Palmela para Lisboa?",
+        resposta:
+          "Sim, pela A2 chegamos a Lisboa em 35 a 50 minutos. Para T1/T2 o preço fica entre 210€ e 420€.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["montijo", "setubal", "almada", "alcochete"],
+  },
+  {
+    slug: "odivelas",
+    nome: "Odivelas",
+    distrito: "Lisboa",
+    distanceKm: 37,
+    tempoMedio: "42 minutos",
+    geo: { lat: 38.7952, lng: -9.1853 },
+    precoMin: 195,
+    precoMax: 720,
+    rotasComuns: [
+      "Odivelas → Lisboa",
+      "Odivelas → Loures",
+      "Odivelas → Sintra (A8)",
+      "Odivelas → Amadora",
+    ],
+    landmarks: [
+      "Odivelas Centro — zona densamente habitada, prédios anos 80/90",
+      "Famões e Pontinha — zonas residenciais com moradias e prédios baixos",
+      "Ramada — zona empresarial com bons acessos para carrinha grande",
+      "Póvoa de Santo Adrião — bairro misto, elevadores na maioria dos prédios",
+    ],
+    desafio:
+      "Odivelas é uma das zonas mais densamente habitadas da Grande Lisboa — o trânsito nas horas de ponta (IC17, CRIL) pode atrasar significativamente. Agendamos preferentemente de manhã cedo ou ao fim-de-semana. Prédios dos anos 80 têm elevadores de tamanho variável.",
+    faqs: [
+      {
+        pergunta: "Quanto custa mudança em Odivelas?",
+        resposta:
+          "Entre 195€ e 420€ para T1/T2 dentro de Odivelas ou para Lisboa. A distância é média mas o trânsito pode alongar o serviço — por isso preferimos início às 7h.",
+      },
+      {
+        pergunta: "Fazem mudanças de Odivelas para Sintra ou Cascais?",
+        resposta:
+          "Sim. Para Sintra via A8 o trajecto demora ~35 minutos. Para Cascais via A5 ~50 minutos. Orçamento específico mediante volume.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["lisboa", "amadora", "sintra", "loures"],
+  },
+  {
+    slug: "lumiar",
+    nome: "Lumiar",
+    distrito: "Lisboa",
+    distanceKm: 30,
+    tempoMedio: "33 minutos",
+    geo: { lat: 38.7700, lng: -9.1570 },
+    precoMin: 185,
+    precoMax: 700,
+    rotasComuns: [
+      "Lumiar → Lisboa Centro",
+      "Lumiar → Odivelas",
+      "Lumiar → Loures",
+      "Lumiar → Parque das Nações",
+    ],
+    landmarks: [
+      "Alta de Lisboa — empreendimento moderno, elevadores amplos",
+      "Telheiras — prédios residenciais, zona consolidada",
+      "Quinta das Conchas e Museu do Traje — ruas largas com bom acesso",
+      "Aeroporto Humberto Delgado — zona envolvente com tráfego intenso",
+    ],
+    desafio:
+      "Lumiar combina bairros antigos como Telheiras com novos empreendimentos na Alta de Lisboa — os novos têm excelentes acessos e elevadores espaçosos. A proximidade com o aeroporto pode criar congestionamento na Segunda Circular.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças em Telheiras e Alta de Lisboa?",
+        resposta:
+          "Sim, cobrimos toda a freguesia de Lumiar. Alta de Lisboa tem acessos modernos e amplos. Telheiras é uma zona residencial tranquila com bom estacionamento de apoio.",
+      },
+      {
+        pergunta: "Quanto custa mudança no Lumiar?",
+        resposta:
+          "Entre 185€ e 380€ para T1/T2 dentro do Lumiar. Para mudanças com destino a outros pontos de Lisboa o preço varia com o percurso.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["lisboa", "odivelas", "loures", "amadora"],
+  },
+  {
+    slug: "sesimbra",
+    nome: "Sesimbra",
+    distrito: "Setúbal",
+    distanceKm: 25,
+    tempoMedio: "28 minutos",
+    geo: { lat: 38.4439, lng: -9.1014 },
+    precoMin: 165,
+    precoMax: 600,
+    rotasComuns: [
+      "Sesimbra → Almada",
+      "Sesimbra → Setúbal",
+      "Sesimbra → Lisboa (A2 + ponte)",
+      "Sesimbra → Costa da Caparica",
+    ],
+    landmarks: [
+      "Vila de Sesimbra — ruas estreitas junto ao porto e castelo",
+      "Quinta do Conde — zona residencial interior, bons acessos",
+      "Azóia e Santana — aldeias rurais, caminhos de terra possíveis",
+      "Zona balnear — estacionamento muito condicionado em julho/agosto",
+    ],
+    desafio:
+      "A vila de Sesimbra tem acesso condicionado em época estival — de junho a setembro o centro histórico tem trânsito proibido a veículos pesados em determinadas horas. Planeamos sempre as mudanças para manhã cedo ou fora de época.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças no centro de Sesimbra no verão?",
+        resposta:
+          "Sim, mas programamos a carga/descarga para antes das 9h durante os meses de verão, quando as restrições de acesso ainda não estão em vigor. Contacte-nos para confirmar a janela horária.",
+      },
+      {
+        pergunta: "Quanto custa mudança em Sesimbra?",
+        resposta:
+          "Entre 165€ e 380€ dentro de Sesimbra ou para Almada. Para Lisboa a preço fica entre 220€ e 480€ incluindo portagem da ponte.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["almada", "seixal", "palmela", "costa-da-caparica"],
+  },
+  {
+    slug: "costa-da-caparica",
+    nome: "Costa da Caparica",
+    distrito: "Setúbal",
+    distanceKm: 20,
+    tempoMedio: "23 minutos",
+    geo: { lat: 38.6412, lng: -9.2353 },
+    precoMin: 160,
+    precoMax: 580,
+    rotasComuns: [
+      "Costa da Caparica → Almada",
+      "Costa da Caparica → Lisboa (ponte 25 de Abril)",
+      "Costa da Caparica → Setúbal",
+      "Costa da Caparica → Seixal",
+    ],
+    landmarks: [
+      "Caparica Praia — zona balnear, estacionamento muito condicionado no verão",
+      "São João — zona residencial interior, prédios de 3-4 andares",
+      "Charneca da Caparica — moradias e condomínios, bons acessos",
+      "Trafaria — porta fluvial, zona histórica com ruas estreitas",
+    ],
+    desafio:
+      "Costa da Caparica é popular no verão — entre junho e setembro o estacionamento de suporte à mudança na frente de mar é quase impossível. Recomendamos mudanças fora de época ou muito cedo de manhã. No inverno as condições são excelentes.",
+    faqs: [
+      {
+        pergunta: "É difícil fazer mudança na Costa da Caparica no verão?",
+        resposta:
+          "Na zona de praia, sim — o estacionamento é totalmente tomado. Programamos as mudanças de verão para antes das 8h quando há acesso temporário às zonas de carga/descarga. Fora de época é muito simples.",
+      },
+      {
+        pergunta: "Quanto custa mudança Costa da Caparica → Lisboa?",
+        resposta:
+          "Entre 200€ e 420€ para T1/T2, incluindo a portagem da ponte 25 de Abril. Pela ponte o trajecto demora 20 a 35 minutos.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["almada", "seixal", "sesimbra", "barreiro"],
+  },
 ];
 
 export function getCidadeMudancaBySlug(slug: string): CidadeMudanca | undefined {

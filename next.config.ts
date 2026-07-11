@@ -92,14 +92,14 @@ const nextConfig: NextConfig = {
       { source: "/mudancas-oeiras",           destination: "/mudancas/oeiras",           permanent: true },
       { source: "/mudancas-barreiro",         destination: "/mudancas/barreiro",         permanent: true },
       { source: "/mudancas-lisboa",           destination: "/mudancas/lisboa",           permanent: true },
-      // Cidades sem página dedicada ainda — mantém redirect para hub genérico
-      { source: "/mudancas-carnaxide",        destination: "/mudancas",                  permanent: true },
-      { source: "/mudancas-corroios",         destination: "/mudancas",                  permanent: true },
-      { source: "/mudancas-palmela",          destination: "/mudancas",                  permanent: true },
-      { source: "/mudancas-odivelas",         destination: "/mudancas",                  permanent: true },
-      { source: "/mudancas-lumiar",           destination: "/mudancas",                  permanent: true },
-      { source: "/mudancas-sesimbra",         destination: "/mudancas",                  permanent: true },
-      { source: "/mudancas-costa-da-caparica",destination: "/mudancas",                  permanent: true },
+      // Todas as cidades agora têm página dedicada
+      { source: "/mudancas-carnaxide",        destination: "/mudancas/carnaxide",        permanent: true },
+      { source: "/mudancas-corroios",         destination: "/mudancas/corroios",         permanent: true },
+      { source: "/mudancas-palmela",          destination: "/mudancas/palmela",          permanent: true },
+      { source: "/mudancas-odivelas",         destination: "/mudancas/odivelas",         permanent: true },
+      { source: "/mudancas-lumiar",           destination: "/mudancas/lumiar",           permanent: true },
+      { source: "/mudancas-sesimbra",         destination: "/mudancas/sesimbra",         permanent: true },
+      { source: "/mudancas-costa-da-caparica",destination: "/mudancas/costa-da-caparica",permanent: true },
       // URLs 404 identificadas - redirecionar para páginas relevantes
       {
         source: "/recolha-de-moveis-usados",
