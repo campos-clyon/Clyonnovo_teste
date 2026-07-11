@@ -2069,12 +2069,75 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             );
                           })()}
 
-                          {est.summary && (
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-400 mb-1">Resumo</p>
-                              <p className="text-xs leading-relaxed text-slate-700">{est.summary}</p>
-                            </div>
-                          )}
+                          {/* Resumo destacado + custo mínimo (break-even) */}
+                          {(() => {
+                            const finalPrice = est.estimatedPriceWithoutVat ?? null;
+                            const distance = est.travel?.distanceCost ?? null;
+                            const labor = est.labor?.laborCost ?? null;
+                            // Fórmula CLYON: (combustível + pessoal + overhead) × 1.40 = preço s/IVA
+                            // Se temos os componentes soma-os; senão, divide o preço por 1.40 (assumindo margem 40%).
+                            const componentsSum = (distance != null && labor != null)
+                              ? distance + labor + 17 // overhead fixo (as internal notes indicam 17€)
+                              : null;
+                            const breakEven = componentsSum ?? (finalPrice != null ? finalPrice / 1.4 : null);
+                            const profit = (finalPrice != null && breakEven != null) ? finalPrice - breakEven : null;
+                            const marginPercent = (finalPrice != null && breakEven != null && breakEven > 0)
+                              ? ((finalPrice - breakEven) / breakEven) * 100
+                              : null;
+                            return (
+                              <div className="rounded-[16px] border-2 border-violet-400/40 bg-gradient-to-br from-violet-50 to-white p-4">
+                                {est.summary && (
+                                  <>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-600 mb-1.5">Resumo</p>
+                                    <p className="text-sm font-medium leading-relaxed text-slate-800 mb-4">{est.summary}</p>
+                                  </>
+                                )}
+                                {breakEven != null && (
+                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 border-t border-violet-200/60 pt-3">
+                                    <div>
+                                      <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 mb-1">
+                                        Custo mínimo (break-even)
+                                      </p>
+                                      <p className="text-xl font-bold text-rose-700">
+                                        {breakEven.toFixed(2)} €
+                                      </p>
+                                      <p className="mt-0.5 text-[10px] text-slate-500">
+                                        Abaixo deste valor = prejuízo
+                                      </p>
+                                    </div>
+                                    {finalPrice != null && (
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                          Preço sugerido s/IVA
+                                        </p>
+                                        <p className="text-xl font-bold text-violet-700">
+                                          {finalPrice.toFixed(2)} €
+                                        </p>
+                                        {marginPercent != null && (
+                                          <p className="mt-0.5 text-[10px] text-slate-500">
+                                            Margem {marginPercent.toFixed(0)}%
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    {profit != null && profit > 0 && (
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">
+                                          Lucro estimado
+                                        </p>
+                                        <p className="text-xl font-bold text-emerald-700">
+                                          {profit.toFixed(2)} €
+                                        </p>
+                                        <p className="mt-0.5 text-[10px] text-slate-500">
+                                          s/IVA · antes de comissão
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {est.customerMessage && (
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-cyan-500 mb-1">Mensagem sugerida ao cliente</p>
