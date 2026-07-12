@@ -1267,10 +1267,13 @@ export async function getAllSimulatorOrders(filters?: {
     conditions.push("(assignedToId IS NULL OR assignedToId = 0) AND status NOT IN ('cancelado','confirmado','concluido','arquivado')");
   } else if (filters?.status === "pendente") {
     // "Novos" = any status but NOT viewed yet (viewedAt IS NULL)
-    conditions.push("viewedAt IS NULL");
+    conditions.push("viewedAt IS NULL AND status != 'arquivado'");
   } else if (filters?.status) {
     conditions.push("status = ?");
     params.push(filters.status);
+  } else {
+    // Vista por defeito ("todos os status activos"): exclui pedidos arquivados
+    conditions.push("status != 'arquivado'");
   }
   
   if (filters?.search) {

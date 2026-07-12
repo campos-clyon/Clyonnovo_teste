@@ -105,3 +105,6 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Ficheiros exemplo de apps (APK/XAPK grandes)
+Apps exemplos/

@@ -9,6 +9,7 @@ import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import ContasPanel from "@/components/admin/ContasPanel";
 import {
   AlertTriangle,
+  Archive,
   ArrowRight,
   Briefcase,
   Building2,
@@ -2054,14 +2055,31 @@ export default function ColaboradorAdminClient() {
                     Pedidos do simulador
                   </h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
-                  className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Actualizar
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "arquivado" ? "todos" : "arquivado")}
+                    className={`flex h-11 items-center gap-2 rounded-[14px] border px-4 text-sm font-medium transition ${
+                      pedidoStatusFilter === "arquivado"
+                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos activos" : "Ver pedidos arquivados"}
+                  >
+                    <Archive className="h-4 w-4" />
+                    {pedidoStatusFilter === "arquivado"
+                      ? "Ver activos"
+                      : `Arquivados${(pedidosCounts["arquivado"] ?? 0) > 0 ? ` (${pedidosCounts["arquivado"]})` : ""}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
+                    className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Actualizar
+                  </button>
+                </div>
               </div>
 
               {/* Métricas de pedidos */}
@@ -2369,10 +2387,34 @@ export default function ColaboradorAdminClient() {
                                   {isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
-                                      onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
+                                      className="rounded-[8px] border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 transition"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (!token || !p.id) return;
+                                        const isAlreadyArchived = p.status === "arquivado";
+                                        const confirmMsg = isAlreadyArchived
+                                          ? "Restaurar este pedido para a fila activa?"
+                                          : "Arquivar este pedido? Ele deixará de aparecer na lista principal.";
+                                        if (!confirm(confirmMsg)) return;
+                                        try {
+                                          const targetStatus = isAlreadyArchived ? "pendente" : "arquivado";
+                                          const r = await fetch(`/api/admin/pedidos/${p.id}`, {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                            body: JSON.stringify({ status: targetStatus }),
+                                          });
+                                          if (!r.ok) {
+                                            const j = await r.json().catch(() => ({}));
+                                            alert(`Erro: ${j?.message ?? j?.error ?? r.statusText}`);
+                                            return;
+                                          }
+                                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+                                        } catch (err) {
+                                          alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
+                                        }
+                                      }}
                                     >
-                                      Cancelar
+                                      {p.status === "arquivado" ? "Restaurar" : "Arquivar"}
                                     </button>
                                   )}
                                   {isAdminGeral && (
