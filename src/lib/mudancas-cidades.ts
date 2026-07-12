@@ -502,7 +502,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança em Sesimbra?",
         resposta:
-          "Entre 165€ e 380€ dentro de Sesimbra ou para Almada. Para Lisboa a preço fica entre 220€ e 480€ incluindo portagem da ponte.",
+          "Entre 165€ e 380€ dentro de Sesimbra ou para Almada. Para Lisboa o preço fica entre 220€ e 480€ incluindo portagem da ponte.",
       },
     ],
     testemunho: null,
