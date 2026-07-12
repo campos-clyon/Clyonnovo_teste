@@ -23,7 +23,7 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha de Entulho em Lisboa — Obras e Remodelações | CLYON",
+  title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
   description:
     "Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento directo. Resposta em 24h, preços desde 80€. Orçamento grátis.",
   keywords: [
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-entulho` },
   openGraph: {
-    title: "Recolha de Entulho em Lisboa — Obras e Remodelações | CLYON",
+    title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
     description:
       "Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 24h desde 80€.",
     url: `${SITE_URL}/recolha-de-entulho`,

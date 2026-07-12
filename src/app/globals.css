@@ -291,11 +291,12 @@ a.bg-cyan-600:visited {
 }
 
 /* WhatsApp buttons - força cor verde WhatsApp correta */
+/* NOTA: usar apenas classes exatas (a.bg-emerald-XXX). Seletores como
+   [class*="bg-emerald-"] são demasiado abrangentes — apanham qualquer link
+   com hover:bg-emerald-50 e pintam o site inteiro de verde. */
 a.bg-emerald-500,
 a.bg-emerald-400,
 a.bg-emerald-600,
-a[class*="bg-emerald-"],
-button[class*="bg-emerald-"],
 a.bg-\[\#25D366\] {
   background-color: #25D366 !important;
   color: #ffffff !important;
@@ -304,18 +305,22 @@ a.bg-\[\#25D366\] {
 a.bg-emerald-500:hover,
 a.bg-emerald-400:hover,
 a.bg-emerald-600:hover,
-a[class*="bg-emerald-"]:hover,
-a.bg-\[\#25D366\]:hover,
-a[class*="bg-emerald-"]:focus,
-a[class*="bg-emerald-"]:active,
-a[class*="bg-emerald-"]:visited {
+a.bg-emerald-500:focus,
+a.bg-emerald-500:active,
+a.bg-emerald-500:visited,
+a.bg-emerald-400:visited,
+a.bg-emerald-600:visited,
+a.bg-\[\#25D366\]:hover {
   background-color: #20bd5a !important;
   color: #ffffff !important;
 }
 
-a[class*="bg-emerald-"] svg,
-button[class*="bg-emerald-"] svg,
-a[class*="bg-emerald-"] span,
+a.bg-emerald-500 svg,
+a.bg-emerald-400 svg,
+a.bg-emerald-600 svg,
+a.bg-emerald-500 span,
+a.bg-emerald-400 span,
+a.bg-emerald-600 span,
 a.bg-\[\#25D366\] svg,
 a.bg-\[\#25D366\] span {
   color: #ffffff !important;

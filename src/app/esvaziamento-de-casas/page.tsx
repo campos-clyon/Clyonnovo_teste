@@ -6,7 +6,7 @@ import CTABlock from "@/components/CTABlock";
 const SITE_URL = "https://clyon.pt";
 
 export const metadata: Metadata = {
-  title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios | CLYON",
+  title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
   description:
     "Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações em Lisboa, Margem Sul e Setúbal. Heranças, mudanças e venda de imóvel. Retiramos móveis, eletrodomésticos, roupas e objetos. Preços desde 300€. Orçamento grátis em 24h.",
   keywords: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
   openGraph: {
-    title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios | CLYON",
+    title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
     description:
       "Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços desde 300€. Orçamento em 24h.",
     url: `${SITE_URL}/esvaziamento-de-casas`,

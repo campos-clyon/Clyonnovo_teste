@@ -20,7 +20,7 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos | CLYON",
+  title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
   description:
     "Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços desde 50€. Orçamento grátis em 24h.",
   keywords: [
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
   openGraph: {
-    title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos | CLYON",
+    title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
     description:
       "Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Desde 50€. Resposta em 24h.",
     url: `${SITE_URL}/recolha-de-monos`,

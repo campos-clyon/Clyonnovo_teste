@@ -156,11 +156,7 @@ const nextConfig: NextConfig = {
         destination: "/recolha-de-moveis",
         permanent: true,
       },
-      {
-        source: "/recolha-de-monos",
-        destination: "/recolha-de-moveis",
-        permanent: true,
-      },
+      // /recolha-de-monos tem página própria — não redirecionar
       // Serviço de limpeza pós-obra descontinuado — redirect para /servicos
       {
         source: "/limpeza-obra",

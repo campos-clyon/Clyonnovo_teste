@@ -27,12 +27,12 @@ import { reviews } from "@/lib/reviews-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const metadata: Metadata = {
-  title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa | CLYON",
+  title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
   description:
     "Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Retiramos sofás, armários, colchões e eletrodomésticos. Orçamento gratuito em 24h. 188 trabalhos concluídos com 5,0 ★.",
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
-    title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa | CLYON",
+    title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
     description:
       "Retiramos sofás, armários, colchões, monos e tudo o que já não precisa. Orçamento gratuito em 24h. Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt",

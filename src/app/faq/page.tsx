@@ -4,7 +4,7 @@ import Link from "next/link";
 import FAQClient from "./FAQClient";
 
 export const metadata: Metadata = {
-  title: "FAQ — Recolha de Móveis e Esvaziamento de Casa em Lisboa | CLYON",
+  title: "FAQ — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
   description:
     "Perguntas frequentes sobre recolha de móveis, esvaziamento de casa e apartamento em Lisboa. Saiba quanto custa, quais móveis recolhemos, em que zonas atuamos e como funciona o serviço CLYON.",
   alternates: { canonical: "https://clyon.pt/faq" },

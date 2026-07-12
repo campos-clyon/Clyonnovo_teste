@@ -1,11 +1,35 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
+import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
 import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
 import { listTrabalhos } from "@/lib/db";
+import { SITE_URL } from "@/lib/seo-data";
 import TrabalhosGallery from "./TrabalhosGallery";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: "Trabalhos Realizados — Recolha de Móveis e Esvaziamento em Lisboa",
+  description:
+    "Portfólio de recolhas de móveis, esvaziamentos de casa, recolhas de entulho e mudanças executadas pela CLYON em Lisboa, Margem Sul e Setúbal. Fotos reais, 163 avaliações 5★, tempo médio de resposta 11 minutos.",
+  keywords: [
+    "trabalhos CLYON",
+    "portefólio recolha de móveis",
+    "recolha de móveis antes e depois",
+    "esvaziamento de casa fotos",
+    "trabalhos realizados Lisboa",
+    "avaliações CLYON",
+    "casos reais recolha",
+  ],
+  alternates: { canonical: `${SITE_URL}/trabalhos` },
+  openGraph: {
+    title: "Trabalhos Realizados — Recolha de Móveis e Esvaziamento em Lisboa",
+    description:
+      "Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, 163 avaliações 5★.",
+    url: `${SITE_URL}/trabalhos`,
+  },
+};
 
 const testimonials = [
   {
@@ -57,12 +81,17 @@ export default async function TrabalhosPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
             <div>
-              <h1 className="mt-5 max-w-[13ch] text-[2.6rem] font-bold leading-[1.02] tracking-tight text-[#0B1929] sm:text-[4.3rem]">
-                Veja o que fazemos no terreno.
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-600">
+                Portefólio CLYON
+              </p>
+              <h1 className="mt-4 max-w-[17ch] text-[2.4rem] font-bold leading-[1.04] tracking-tight text-[#0B1929] sm:text-[4rem]">
+                Recolhas, esvaziamentos e mudanças — casos reais em Lisboa.
               </h1>
               <p className="mt-5 max-w-2xl text-[1.02rem] leading-8 text-slate-600">
-                Fotos reais, intervenções rápidas e um processo simples para recolha,
-                limpeza e mudanças em Lisboa, Margem Sul e Setúbal.
+                Fotos reais de trabalhos concluídos: recolha de móveis, esvaziamento
+                de casa e apartamento, recolha de entulho e mudanças em Lisboa,
+                Margem Sul e Setúbal. Cada intervenção com antes e depois, cliente
+                identificado e avaliação verificada.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
