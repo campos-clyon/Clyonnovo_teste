@@ -20,14 +20,26 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha de Monos em Lisboa e Setúbal — Resposta em 24h | CLYON",
+  title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos | CLYON",
   description:
-    "Recolha de monos e volumes grandes em Lisboa, Margem Sul e Setúbal. Objetos antigos, móveis danificados e materiais acumulados. Orçamento grátis em 24h!",
+    "Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços desde 50€. Orçamento grátis em 24h.",
+  keywords: [
+    "recolha de monos",
+    "recolha de monos Lisboa",
+    "recolha de volumosos",
+    "recolha de objetos volumosos",
+    "recolha de monos Amadora",
+    "recolha de monos Almada",
+    "recolha municipal de monos",
+    "recolha de volumosos Lisboa",
+    "levar monos",
+    "remoção de volumosos",
+  ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
   openGraph: {
-    title: "Recolha de Monos em Lisboa e Setúbal — Resposta em 24h | CLYON",
+    title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos | CLYON",
     description:
-      "Recolha de monos e volumes grandes. Carregamento directo, resposta em 24h em Lisboa e Setúbal.",
+      "Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Desde 50€. Resposta em 24h.",
     url: `${SITE_URL}/recolha-de-monos`,
   },
 };

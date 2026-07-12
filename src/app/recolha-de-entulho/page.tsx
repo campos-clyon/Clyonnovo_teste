@@ -23,14 +23,26 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha de Entulho em Lisboa e Setúbal — Resposta em 24h",
+  title: "Recolha de Entulho em Lisboa — Obras e Remodelações | CLYON",
   description:
-    "Recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal. Carregamento directo, resposta em 24h, preços desde 80EUR. Orçamento grátis!",
+    "Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento directo. Resposta em 24h, preços desde 80€. Orçamento grátis.",
+  keywords: [
+    "recolha de entulho",
+    "recolha de entulho Lisboa",
+    "recolha de entulho de obras",
+    "recolha de escombros",
+    "big bag entulho",
+    "carga de entulho",
+    "recolha de entulho Setúbal",
+    "recolha de entulho Almada",
+    "remoção de entulho",
+    "recolha de resíduos de construção",
+  ],
   alternates: { canonical: `${SITE_URL}/recolha-de-entulho` },
   openGraph: {
-    title: "Recolha de Entulho em Lisboa e Setúbal — Resposta em 24h",
+    title: "Recolha de Entulho em Lisboa — Obras e Remodelações | CLYON",
     description:
-      "Recolha de entulho de obras e remodelações. Carregamento directo, resposta em 24h em Lisboa e Setúbal.",
+      "Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 24h desde 80€.",
     url: `${SITE_URL}/recolha-de-entulho`,
   },
 };

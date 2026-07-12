@@ -27,28 +27,33 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha de Móveis em Lisboa, Margem Sul e Setúbal",
+  title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários | CLYON",
   description:
-    "Recolha de móveis usados, sofás, camas, armários e eletrodomésticos em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento e transporte. Peça orçamento rápido.",
+    "Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços desde 40€. Orçamento grátis em 24h.",
   keywords: [
     "recolha de móveis",
-    "recolha de móveis lisboa",
+    "recolha de móveis Lisboa",
     "recolha de móveis usados",
     "recolha gratuita de móveis usados",
-    "recolha de sofá lisboa",
+    "recolha de sofá Lisboa",
+    "recolha de sofás usados",
+    "recolha de camas",
+    "recolha de armários",
+    "recolha de eletrodomésticos",
     "retirar móveis velhos",
-    "recolha de móveis setúbal",
-    "recolha de móveis almada",
+    "recolha de móveis Setúbal",
+    "recolha de móveis Almada",
     "remoção de móveis",
     "levar móveis velhos",
+    "recolha de móveis no mesmo dia",
   ],
   alternates: {
     canonical: `${SITE_URL}/recolha-de-moveis`,
   },
   openGraph: {
-    title: "Recolha de Móveis em Lisboa, Margem Sul e Setúbal",
+    title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários | CLYON",
     description:
-      "Recolha de móveis usados, sofás, camas, armários e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável.",
+      "Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços desde 40€.",
     url: `${SITE_URL}/recolha-de-moveis`,
     locale: "pt_PT",
     type: "website",

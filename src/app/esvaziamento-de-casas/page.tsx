@@ -6,14 +6,27 @@ import CTABlock from "@/components/CTABlock";
 const SITE_URL = "https://clyon.pt";
 
 export const metadata: Metadata = {
-  title: "Esvaziamento de Casas e Apartamentos | Lisboa, Amadora e Setúbal",
+  title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios | CLYON",
   description:
-    "Serviço de esvaziamento de casas, apartamentos, garagens e arrecadações. Remoção de móveis, monos, eletrodomésticos e limpeza associada. Orçamento rápido com a CLYON.",
+    "Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações em Lisboa, Margem Sul e Setúbal. Heranças, mudanças e venda de imóvel. Retiramos móveis, eletrodomésticos, roupas e objetos. Preços desde 300€. Orçamento grátis em 24h.",
+  keywords: [
+    "esvaziamento de casas",
+    "esvaziamento de casa Lisboa",
+    "esvaziamento de apartamento",
+    "esvaziamento de heranças",
+    "esvaziamento de recheio",
+    "esvaziar casa em Lisboa",
+    "esvaziar apartamento",
+    "esvaziamento de imóveis",
+    "remoção de recheio",
+    "esvaziamento Margem Sul",
+    "esvaziamento Setúbal",
+  ],
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
   openGraph: {
-    title: "Esvaziamento de Casas e Apartamentos | Lisboa, Amadora e Setúbal",
+    title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios | CLYON",
     description:
-      "Serviço completo de esvaziamento de casas com remoção de móveis, monos e limpeza. Orçamento rápido.",
+      "Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços desde 300€. Orçamento em 24h.",
     url: `${SITE_URL}/esvaziamento-de-casas`,
   },
 };
@@ -24,24 +37,48 @@ const faqs = [
     answer: "Incluímos a remoção de móveis, eletrodomésticos, monos, objetos volumosos e recheios completos. Fazemos carregamento, transporte e encaminhamento responsável. A limpeza final pode ser adicionada ao serviço.",
   },
   {
-    question: "Quanto custa esvaziar uma casa?",
-    answer: "O valor depende do volume, acessos, andar, elevador e necessidade de limpeza. Para apartamento T1/T2, o valor costuma começar nos 300-500EUR. Envie fotos para orçamento rápido e personalizado.",
+    question: "Quanto custa esvaziar uma casa em Lisboa?",
+    answer: "O valor depende do volume, acessos, andar, elevador e necessidade de limpeza. Para apartamento T0/T1 começa nos 300€. T2/T3 entre 500€ e 800€. Moradias entre 800€ e 1500€. Envie fotos para orçamento rápido e personalizado em 24 horas.",
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
-    answer: "Sim, é um dos pedidos mais comuns. Tratamos do esvaziamento completo, incluindo remoção de móveis, objetos pessoais, eletrodomésticos e limpeza associada quando necessário.",
+    answer: "Sim, é um dos nossos pedidos mais comuns. Especializámo-nos em heranças: tratamos de todo o processo com sensibilidade. Podemos separar objetos de valor sentimental (fotografias, documentos, jóias) antes de esvaziar o resto. A família não precisa estar presente.",
   },
   {
     question: "Retiram os móveis de dentro da casa?",
-    answer: "Sim, a nossa equipa entra no imóvel, desmonta o necessário, carrega tudo e transporta. Não precisa de colocar nada no exterior.",
+    answer: "Sim, a nossa equipa entra no imóvel, desmonta o necessário, carrega tudo e transporta. Não precisa colocar nada no exterior nem fazer qualquer esforço físico.",
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
-    answer: "Sim, oferecemos limpeza associada ao esvaziamento. Pode ser limpeza básica (varrer, remover restos) ou limpeza mais completa dependendo do estado do imóvel.",
+    answer: "Sim, oferecemos limpeza associada ao esvaziamento. Pode ser limpeza básica (varrer, remover restos) ou limpeza pós-obra completa (pavimentos, paredes, casas de banho, cozinha). Peça no orçamento.",
   },
   {
     question: "Quanto tempo demora um esvaziamento?",
-    answer: "Depende do volume e acessos. Um apartamento T2 costuma demorar meio dia. Casas maiores ou com muito recheio podem precisar de um dia completo.",
+    answer: "Depende do volume e acessos. Um T1 fica vazio em 3 a 5 horas. Um T2 em meio dia. T3 e moradias podem precisar de um dia completo ou dois. Heranças com muito acumulado podem exigir mais tempo — sempre estimado no orçamento.",
+  },
+  {
+    question: "Precisam que eu esteja presente durante o esvaziamento?",
+    answer: "Não é obrigatório. Basta entregar as chaves no início e recolhê-las no final. Se preferir acompanhar, também é possível. Muitos senhorios e famílias em heranças pedem que tratemos de tudo sem estarem presentes.",
+  },
+  {
+    question: "Podem separar objetos de valor antes de esvaziar?",
+    answer: "Sim. Podemos separar documentos, fotografias, objetos de valor sentimental, jóias, quadros ou qualquer item que queira guardar. Basta indicar o que preservar antes do início do serviço.",
+  },
+  {
+    question: "O que acontece aos objetos retirados?",
+    answer: "Fazemos triagem responsável: objetos em bom estado vão para doação a instituições ou reaproveitamento, materiais recicláveis são separados (metal, madeira, plástico, cartão) e o restante é encaminhado para destino final legal. Nunca descarga ilegal.",
+  },
+  {
+    question: "Fazem esvaziamento de apartamento sem elevador?",
+    answer: "Sim. Apartamentos sem elevador têm um pequeno acréscimo por andar devido ao esforço adicional. Este custo é sempre incluído no orçamento após identificar o número de andares.",
+  },
+  {
+    question: "Fazem esvaziamento de garagens, arrecadações e caves?",
+    answer: "Sim. Serviço específico para espaços de arrumação. Preços começam nos 150€ para arrecadações pequenas. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.",
+  },
+  {
+    question: "Fazem esvaziamento urgente em 24 horas?",
+    answer: "Dependendo da disponibilidade e do volume, sim. Para pedidos urgentes envie fotos pelo WhatsApp e tentamos encaixar na agenda mais próxima — muitas vezes no próprio dia ou no seguinte, incluindo fins de semana.",
   },
 ];
 
@@ -180,9 +217,11 @@ export default function EsvaziamentoDeCasasPage() {
                 <div className="mt-4 space-y-3">
                   {[
                     { type: "Apartamento T0/T1", price: "300€ – 500€" },
-                    { type: "Apartamento T2/T3", price: "500€ – 800€" },
-                    { type: "Moradia ou T4+", price: "800€ – 1500€" },
-                    { type: "Garagem ou arrecadação", price: "150€ – 400€" },
+                    { type: "Apartamento T2", price: "450€ – 700€" },
+                    { type: "Apartamento T3/T4", price: "600€ – 1000€" },
+                    { type: "Moradia completa", price: "800€ – 1500€" },
+                    { type: "Garagem / arrecadação", price: "150€ – 400€" },
+                    { type: "Loja / escritório", price: "400€ – 900€" },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                       <span className="text-sm text-slate-700">{item.type}</span>
