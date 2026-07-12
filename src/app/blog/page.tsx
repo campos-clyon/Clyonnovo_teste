@@ -6,11 +6,25 @@ import { getAllBlogPosts } from "@/lib/blog-data";
 import { SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Blog — Guias de Recolha de Moveis, Monos e Entulho",
+  title: "Blog — Como Recolher Móveis, Esvaziar Casa e Doar Recheio em Lisboa",
   description:
-    "Guias praticos: como doar moveis, recolha de monos, entulho de obra, esvaziamento de casas. Dicas para libertar espaco em Lisboa, Almada e Setubal.",
+    "Guias práticos: como esvaziar uma casa herdada, doar móveis usados em Lisboa, recolha de monos pela câmara vs empresa, preços de recolha de entulho, como preparar uma mudança. Escrito por quem faz o serviço no terreno.",
+  keywords: [
+    "como esvaziar casa herança",
+    "como doar móveis usados Lisboa",
+    "como recolher entulho de obra",
+    "recolha municipal vs empresa",
+    "preços recolha de móveis",
+    "blog mudanças Lisboa",
+  ],
   alternates: {
     canonical: `${SITE_URL}/blog`,
+  },
+  openGraph: {
+    title: "Blog — Guias de Recolha, Esvaziamento e Doações em Lisboa",
+    description:
+      "Guias práticos sobre recolha de móveis, esvaziamento de casas, doação de recheio e mudanças em Lisboa, Margem Sul e Setúbal.",
+    url: `${SITE_URL}/blog`,
   },
 };
 
@@ -25,8 +39,8 @@ export default function BlogPage() {
         <div className="mx-auto max-w-6xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
-              <h1 className="mt-5 max-w-[14.5ch] text-[2.45rem] font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-[3.8rem]">
-                Conteúdo útil para quem precisa de libertar espaço sem complicações.
+              <h1 className="mt-5 max-w-[17ch] text-[2.45rem] font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-[3.8rem]">
+                Guias sobre recolha de móveis, esvaziamento e doações em Lisboa.
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
                 Guias práticos sobre recolha, doações, despejo de móveis, entulho,

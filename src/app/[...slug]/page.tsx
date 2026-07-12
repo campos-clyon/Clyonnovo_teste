@@ -40,29 +40,46 @@ function isFurnitureService(serviceSlug: string) {
 }
 
 function buildTitle(serviceName: string, cityName: string, serviceSlug: string, citySlug: string) {
-  // Páginas de high-priority com titles mais comerciais e específicas
+  // Páginas de high-priority com titles optimizados para CTR
   // NOTA: Não incluir "| CLYON" aqui - o template do layout já adiciona
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de Móveis em Lisboa — Sofás, Camas, Eletrodomésticos`;
+      return `Recolha de Móveis em Lisboa — Hoje ou Amanhã, desde 40€`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de Móveis em Setúbal — Preços Competitivos`;
+      return `Recolha de Móveis em Setúbal — Preços desde 40€, Resposta 24h`;
     }
     if (citySlug === "almada") {
-      return `Recolha de Móveis em Almada — Resposta Rápida`;
+      return `Recolha de Móveis em Almada — Resposta Rápida, desde 40€`;
     }
-    return `Recolha de Móveis em ${cityName} — Orçamento Grátis`;
+    return `Recolha de Móveis em ${cityName} — desde 40€, Orçamento em 24h`;
+  }
+
+  // Recolha de monos — foco em "recolha municipal" e resposta rápida
+  if (serviceSlug === "recolha-monos") {
+    if (citySlug === "lisboa") {
+      return `Recolha de Monos em Lisboa — Alternativa Rápida à Câmara`;
+    }
+    if (citySlug === "almada") {
+      return `Recolha de Monos em Almada — Sem Esperar pela Câmara`;
+    }
+    if (citySlug === "cascais") {
+      return `Recolha de Monos em Cascais — Contactos e Preços 24h`;
+    }
+    return `Recolha de Monos em ${cityName} — Alternativa à Recolha Municipal`;
   }
 
   if (serviceSlug === "recolha-entulho") {
-    if (citySlug === "setubal") {
-      return `Recolha de Entulho em Setúbal — Resposta em 24h`;
+    if (citySlug === "lisboa") {
+      return `Recolha de Entulho em Lisboa — Big Bags, desde 80€, 24h`;
     }
-    return `Recolha de Entulho em ${cityName} — Orçamento Grátis`;
+    if (citySlug === "setubal") {
+      return `Recolha de Entulho em Setúbal — Obras e Remodelações 24h`;
+    }
+    return `Recolha de Entulho em ${cityName} — Big Bags e Camiões, 24h`;
   }
 
-  return `${serviceName} em ${cityName} — Orçamento Grátis`;
+  return `${serviceName} em ${cityName} — Orçamento Grátis em 24h`;
 }
 
 function buildDescription(
@@ -74,25 +91,41 @@ function buildDescription(
 ) {
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de móveis em Lisboa: sofás, camas, armários, eletrodomésticos. Desmontagem, carga, transporte. Resposta rápida em 24h. 163 reviews 5⭐. Orçamento grátis!`;
+      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços desde 40€. Resposta em 24h, 163 reviews 5★. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos! Sofás, camas, eletrodomésticos. Resposta em 24h. Orçamento grátis.`;
+      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços desde 40€, resposta em 24h. Orçamento grátis pelo WhatsApp.`;
     }
     if (citySlug === "almada") {
-      return `Recolha de móveis em Almada e zona de Caparica. Sofás, camas, armários, eletrodomésticos. Resposta rápida em 24h. Orçamento grátis!`;
+      return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços desde 40€, resposta rápida em 24h. Orçamento grátis!`;
     }
-    return `Recolha de móveis em ${cityName}, ${regionLabel}. Desmontagem e transporte. Resposta rápida em 24h, 163 reviews 5⭐. Orçamento grátis!`;
+    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços desde 40€. Resposta em 24h, 163 reviews 5★. Orçamento grátis.`;
+  }
+
+  if (serviceSlug === "recolha-monos") {
+    if (citySlug === "lisboa") {
+      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Retiramos sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços desde 50€, resposta em 24h. Orçamento grátis por WhatsApp.`;
+    }
+    if (citySlug === "almada") {
+      return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços desde 50€. Resposta em 24h por WhatsApp.`;
+    }
+    if (citySlug === "cascais") {
+      return `Recolha de monos em Cascais e Estoril: contactos rápidos por WhatsApp. Sofás velhos, colchões, eletrodomésticos, volumes grandes. Preços desde 50€, resposta em 24h. Orçamento grátis.`;
+    }
+    return `Recolha de monos em ${cityName}: sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à recolha municipal. Preços desde 50€, resposta em 24h.`;
   }
 
   if (serviceSlug === "recolha-entulho") {
-    if (citySlug === "setubal") {
-      return `Recolha de entulho em Setúbal: carregamento directo, resposta em 24h. Orçamento grátis!`;
+    if (citySlug === "lisboa") {
+      return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços desde 80€, resposta em 24h. Orçamento grátis por WhatsApp.`;
     }
-    return `Recolha de entulho em ${cityName}, ${regionLabel}. Carregamento directo, sacos big bag, limpeza fina. Resposta em 24h. Orçamento grátis!`;
+    if (citySlug === "setubal") {
+      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento directo, resposta em 24h. Preços desde 80€. Orçamento grátis!`;
+    }
+    return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços desde 80€, resposta em 24h. Orçamento grátis!`;
   }
 
-  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta rápida em 24h, 32 reviews 5⭐. Orçamento grátis!`;
+  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 24h, 163 reviews 5★. Orçamento grátis por WhatsApp.`;
 }
 
 function getServiceIntro(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string) {

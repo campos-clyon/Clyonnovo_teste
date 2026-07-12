@@ -12,24 +12,32 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Retirar Móveis Velhos Lisboa, Margem Sul e Setúbal | CLYON",
+  title: "Empresas que Retiram Móveis Velhos em Lisboa, Margem Sul e Setúbal",
   description:
-    "Precisa de retirar móveis velhos? A CLYON retira sofás, camas, armários e eletrodomésticos antigos em Lisboa, Margem Sul e Setúbal. Orçamento grátis: 931 632 622.",
+    "Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços desde 40€, resposta em 24h por WhatsApp.",
   keywords: [
+    "empresas que retiram móveis velhos",
+    "empresas que retiram móveis velhos Lisboa",
+    "empresa recolha de móveis",
+    "empresa que leva móveis velhos",
+    "quem retira móveis velhos",
     "retirar móveis velhos",
     "retirar móveis velhos Lisboa",
+    "retirar móveis velhos Almada",
+    "retirar móveis velhos Setúbal",
     "levar móveis velhos",
     "recolha de móveis velhos",
     "despejo de móveis antigos",
     "retirar móveis usados",
+    "quem leva móveis velhos",
   ],
   alternates: {
     canonical: "https://clyon.pt/retirar-moveis-velhos",
   },
   openGraph: {
-    title: "Retirar Móveis Velhos Lisboa, Margem Sul e Setúbal | CLYON",
+    title: "Empresas que Retiram Móveis Velhos em Lisboa, Margem Sul e Setúbal",
     description:
-      "Precisa de retirar móveis velhos? A CLYON retira sofás, camas, armários e eletrodomésticos antigos com desmontagem e carregamento incluídos.",
+      "Empresa profissional para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem e carregamento incluídos. Desde 40€.",
     url: "https://clyon.pt/retirar-moveis-velhos",
     siteName: "CLYON",
     locale: "pt_PT",

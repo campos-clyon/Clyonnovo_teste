@@ -22,25 +22,31 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha Gratuita de Móveis Usados: Quando é Possível e Quando Escolher a CLYON",
+  title: "Recolha Gratuita de Móveis Usados em Lisboa, Almada e Setúbal",
   description:
-    "Recolha gratuita de móveis usados existe? Sim, através de doação ou recolha municipal. Mas quando precisa de rapidez, desmontagem ou carregamento completo, a CLYON é a solução.",
+    "Recolha gratuita de móveis usados em Lisboa, Almada, Setúbal e arredores: quando é possível pela câmara ou doação, e quando faz sentido pagar um serviço profissional que retira, desmonta e entra em casa. Guia completo com contactos e alternativas.",
   keywords: [
     "recolha gratuita de móveis usados",
+    "recolha gratuita de móveis usados Lisboa",
+    "recolha gratuita de móveis usados Almada",
+    "recolha gratuita de móveis usados Setúbal",
+    "recolha gratuita de móveis Sintra",
     "recolha de móveis grátis",
     "onde doar móveis usados",
+    "doar móveis Lisboa",
     "recolha municipal de móveis",
     "como desfazer de móveis velhos",
-    "recolha de móveis lisboa",
+    "recolha de móveis Lisboa",
     "levar móveis usados",
+    "quem recolhe móveis grátis",
   ],
   alternates: {
     canonical: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   },
   openGraph: {
-    title: "Recolha Gratuita de Móveis Usados: Quando é Possível e Quando Escolher a CLYON",
+    title: "Recolha Gratuita de Móveis Usados em Lisboa, Almada e Setúbal",
     description:
-      "Guia completo sobre recolha gratuita de móveis usados em Portugal. Quando a opção gratuita resolve e quando faz sentido contratar um serviço profissional.",
+      "Guia sobre recolha gratuita de móveis usados em Lisboa, Almada e Setúbal. Câmara, doação ou serviço profissional — quando cada opção faz sentido.",
     url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
     locale: "pt_PT",
     type: "website",

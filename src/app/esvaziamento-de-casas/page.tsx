@@ -6,21 +6,28 @@ import CTABlock from "@/components/CTABlock";
 const SITE_URL = "https://clyon.pt";
 
 export const metadata: Metadata = {
-  title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
+  title: "Esvaziar Casa e Apartamento em Lisboa — Heranças, Recheios e Doações",
   description:
-    "Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações em Lisboa, Margem Sul e Setúbal. Heranças, mudanças e venda de imóvel. Retiramos móveis, eletrodomésticos, roupas e objetos. Preços desde 300€. Orçamento grátis em 24h.",
+    "Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços desde 300€. Orçamento grátis em 24h.",
   keywords: [
+    "esvaziar casas",
+    "esvaziar casa",
+    "esvaziar casa Lisboa",
+    "esvaziar apartamento",
+    "esvaziar apartamento Lisboa",
     "esvaziamento de casas",
     "esvaziamento de casa Lisboa",
     "esvaziamento de apartamento",
     "esvaziamento de heranças",
     "esvaziamento de recheio",
-    "esvaziar casa em Lisboa",
-    "esvaziar apartamento",
+    "doar recheio de casa",
+    "doar recheio",
+    "doar móveis de herança",
     "esvaziamento de imóveis",
     "remoção de recheio",
     "esvaziamento Margem Sul",
     "esvaziamento Setúbal",
+    "quem esvazia casas",
   ],
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
   openGraph: {
@@ -176,12 +183,14 @@ export default function EsvaziamentoDeCasasPage() {
             <div className="mt-8 grid items-start gap-10 lg:grid-cols-2">
               <div>
                 <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
-                  Esvaziamento de casas e apartamentos em Lisboa, Amadora e Setúbal
+                  Esvaziar casa ou apartamento em Lisboa, Amadora e Setúbal
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  A CLYON faz esvaziamento completo de casas, apartamentos, garagens e arrecadações. 
-                  Retiramos móveis, eletrodomésticos, monos e recheios com carregamento, transporte e 
-                  encaminhamento responsável. Limpeza associada disponível.
+                  Fazemos esvaziamento completo de casas, apartamentos, moradias, garagens e
+                  arrecadações. Retiramos móveis, eletrodomésticos, roupa e recheio com
+                  carregamento, transporte e triagem responsável — <strong>doamos o que estiver em
+                  bom estado</strong> a instituições parceiras e encaminhamos o restante para
+                  destino legal. Limpeza associada disponível.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
