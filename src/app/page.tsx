@@ -27,14 +27,14 @@ import { reviews } from "@/lib/reviews-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const metadata: Metadata = {
-  title: "CLYON — Plataforma de Serviços para Casa em Lisboa e Setúbal",
+  title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa | CLYON",
   description:
-    "Encontre profissionais verificados para recolha de móveis, entulho, esvaziamento de casas e mais em Lisboa, Margem Sul e Setúbal. Orçamento confirmado em minutos. 188 trabalhos concluídos com 5,0 ★.",
+    "Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Retiramos sofás, armários, colchões e eletrodomésticos. Orçamento gratuito em 24h. 188 trabalhos concluídos com 5,0 ★.",
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
-    title: "CLYON — Plataforma de Serviços para Casa em Lisboa e Setúbal",
+    title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa | CLYON",
     description:
-      "Profissionais verificados para recolha, esvaziamento e serviços em casa em Lisboa. Orçamento online em 2 minutos.",
+      "Retiramos sofás, armários, colchões, monos e tudo o que já não precisa. Orçamento gratuito em 24h. Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt",
   },
 };
@@ -224,15 +224,15 @@ export default function HomePage() {
 
             {/* H1 */}
             <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-[3.5rem]">
-              Profissionais verificados{" "}
-              <span className="text-cyan-400">para cada serviço</span>{" "}
-              em casa
+              Recolha de móveis{" "}
+              <span className="text-cyan-400">e esvaziamento</span>{" "}
+              em Lisboa
             </h1>
 
             {/* Subtitle */}
             <p className="mt-5 max-w-lg text-base leading-relaxed text-white/75 sm:text-lg">
-              Peça orçamento online em 2 minutos. Confirmamos preço e data.
-              Coordenamos o profissional certo para o seu trabalho em Lisboa e Setúbal.
+              Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
+              Orçamento gratuito em 24&nbsp;horas. Serviço em Lisboa, Margem Sul e Setúbal.
             </p>
 
             {/* Category pills */}
