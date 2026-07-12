@@ -4,24 +4,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, MapPin, Loader2, Navigation, Search, Pencil } from 'lucide-react';
 import { useLocation, CustomerLocation } from '@/contexts/LocationContext';
 import { checkCoverage } from '@/lib/coverage';
+import { useGooglePlaces, type PlacePrediction } from '@/hooks/useGooglePlaces';
 
 interface LocationModalProps {
   onClose: () => void;
 }
 
-interface Suggestion {
-  id: string;
-  mainText: string;
-  secondaryText: string;
-  description: string;
-  /** Google: precisa de place-details para obter lat/lng */
-  placeId?: string;
-  /** Nominatim (fallback): já vem com coordenadas resolvidas */
-  resolved?: CustomerLocation;
-}
+// O dropdown trabalha diretamente com as predictions do hook useGooglePlaces.
+type Suggestion = PlacePrediction;
 
 export default function LocationModal({ onClose }: LocationModalProps) {
   const { location: savedLocation, setLocation } = useLocation();
+  const places = useGooglePlaces();
 
   // ── Estados SEPARADOS ──────────────────────────────────────────────────
   // Texto que o utilizador está a escrever (independente da seleção)
@@ -60,90 +54,31 @@ export default function LocationModal({ onClose }: LocationModalProps) {
       !searching,
   );
 
-  // ── Pesquisa: Google Places → fallback Nominatim ───────────────────────
-  const fetchPredictions = useCallback(async (input: string) => {
-    if (input.trim().length < 3) {
-      setPredictions([]);
+  // ── Pesquisa: SDK Google no cliente (modo Oscar) ou proxy servidor ─────
+  const fetchPredictions = useCallback(
+    async (input: string) => {
+      if (input.trim().length < 3) {
+        setPredictions([]);
+        setNoResults(false);
+        return;
+      }
+      setSearching(true);
       setNoResults(false);
-      return;
-    }
-    setSearching(true);
-    setNoResults(false);
 
-    try {
-      // 1) Tentar Google Places
-      let results: Suggestion[] = [];
       try {
-        const res = await fetch('/api/maps/autocomplete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          results = (data.predictions ?? []).map((p: {
-            placeId: string;
-            description: string;
-            mainText: string;
-            secondaryText: string;
-          }) => ({
-            id: p.placeId,
-            placeId: p.placeId,
-            description: p.description,
-            mainText: p.mainText,
-            secondaryText: p.secondaryText,
-          }));
-        }
-      } catch {
-        // ignora — cai no fallback
+        const results = await places.search(input);
+        setPredictions(results);
+        setNoResults(results.length === 0);
+      } catch (err) {
+        console.error('[LocationModal] Erro na pesquisa:', err);
+        setPredictions([]);
+        setNoResults(true);
+      } finally {
+        setSearching(false);
       }
-
-      // 2) Fallback Nominatim se o Google não devolveu nada
-      if (results.length === 0) {
-        const res = await fetch(`/api/address/search?q=${encodeURIComponent(input)}`);
-        if (res.ok) {
-          const data = await res.json();
-          results = (data.suggestions ?? []).map(
-            (
-              s: {
-                label: string;
-                address: string;
-                city: string;
-                postalCode: string;
-                lat: number;
-                lng: number;
-              },
-              idx: number,
-            ) => ({
-              id: `nominatim-${idx}`,
-              description: s.label,
-              mainText: s.address || s.city || s.label,
-              secondaryText: [s.city, s.postalCode].filter(Boolean).join(' • '),
-              resolved: {
-                formattedAddress: s.address || s.label,
-                city: s.city,
-                postalCode: s.postalCode,
-                lat: s.lat,
-                lng: s.lng,
-                label: s.city || s.address,
-                source: 'manual' as const,
-                isApproximate: false,
-              },
-            }),
-          );
-        }
-      }
-
-      setPredictions(results);
-      setNoResults(results.length === 0);
-    } catch (err) {
-      console.error('[LocationModal] Erro na pesquisa:', err);
-      setPredictions([]);
-      setNoResults(true);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+    },
+    [places],
+  );
 
   const handleInputChange = (value: string) => {
     setSearchQuery(value);
@@ -155,50 +90,32 @@ export default function LocationModal({ onClose }: LocationModalProps) {
   // ── Selecionar sugestão ────────────────────────────────────────────────
   const handleSelectPrediction = async (s: Suggestion) => {
     setError(null);
-
-    // Nominatim: já temos coordenadas
-    if (s.resolved) {
-      setSelectedLocation(s.resolved);
-      setSearchQuery('');
-      setPredictions([]);
-      setNoResults(false);
-      return;
-    }
-
-    // Google: obter detalhes (lat/lng)
-    if (s.placeId) {
-      setSelecting(true);
-      setPredictions([]);
-      try {
-        const res = await fetch('/api/maps/place-details', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ placeId: s.placeId }),
+    setSelecting(true);
+    setPredictions([]);
+    try {
+      const resolved = await places.resolve(s);
+      if (resolved) {
+        setSelectedLocation({
+          formattedAddress: resolved.formattedAddress || s.description,
+          city: resolved.city,
+          postalCode: resolved.postalCode,
+          countryCode: resolved.countryCode || undefined,
+          lat: resolved.lat ?? undefined,
+          lng: resolved.lng ?? undefined,
+          label: resolved.city || s.mainText,
+          source: 'manual',
+          isApproximate: false,
         });
-        const data = await res.json();
-        if (data.ok) {
-          setSelectedLocation({
-            formattedAddress: data.formattedAddress || s.description,
-            city: data.city,
-            postalCode: data.postalCode,
-            countryCode: data.countryCode,
-            lat: data.lat,
-            lng: data.lng,
-            label: data.city || s.mainText,
-            source: 'manual',
-            isApproximate: false,
-          });
-          setSearchQuery('');
-          setNoResults(false);
-        } else {
-          setError('Não foi possível obter os detalhes desta morada.');
-        }
-      } catch (err) {
-        console.error('[LocationModal] Erro nos detalhes:', err);
+        setSearchQuery('');
+        setNoResults(false);
+      } else {
         setError('Não foi possível obter os detalhes desta morada.');
-      } finally {
-        setSelecting(false);
       }
+    } catch (err) {
+      console.error('[LocationModal] Erro nos detalhes:', err);
+      setError('Não foi possível obter os detalhes desta morada.');
+    } finally {
+      setSelecting(false);
     }
   };
 
@@ -364,9 +281,9 @@ export default function LocationModal({ onClose }: LocationModalProps) {
                 )}
 
                 {!searching &&
-                  predictions.map((p) => (
+                  predictions.map((p, idx) => (
                     <button
-                      key={p.id}
+                      key={p.placeId || `nominatim-${idx}`}
                       onClick={() => handleSelectPrediction(p)}
                       className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-slate-50"
                     >

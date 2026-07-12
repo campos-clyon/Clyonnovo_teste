@@ -3,17 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AddressData, AddressStatus, DistanceFromBase, DistanceStatus } from "../types";
 import { useLocation } from "@/contexts/LocationContext";
+import { useGooglePlaces, type PlacePrediction } from "@/hooks/useGooglePlaces";
 
-interface AddressSuggestion {
-  id: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  /** Google Places: precisa de /api/maps/place-details para obter lat/lng */
-  placeId?: string;
-  /** Nominatim (fallback): já vem com coordenadas resolvidas */
-  resolved?: AddressData;
-}
+// A lista de sugestões trabalha diretamente com as predictions do hook.
+type AddressSuggestion = PlacePrediction;
 
 interface AddressAutocompleteProps {
   value: string;
@@ -36,6 +29,7 @@ export default function AddressAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { setLocation } = useLocation();
+  const places = useGooglePlaces();
 
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -57,76 +51,31 @@ export default function AddressAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ── Buscar endereços no servidor: Google Places → fallback Nominatim ───
-  const fetchAddresses = useCallback(async (query: string) => {
-    if (query.trim().length < 3) {
-      setSuggestions([]);
-      setShowDropdown(false);
-      return;
-    }
+  // ── Buscar endereços: SDK Google no cliente (modo Oscar) ou proxy servidor ─
+  const fetchAddresses = useCallback(
+    async (query: string) => {
+      if (query.trim().length < 3) {
+        setSuggestions([]);
+        setShowDropdown(false);
+        return;
+      }
 
-    setLoading(true);
+      setLoading(true);
 
-    try {
-      let results: AddressSuggestion[] = [];
-
-      // 1) Google Places (cobre ruas e cidades isoladas)
       try {
-        const res = await fetch("/api/maps/autocomplete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ input: query }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          results = (data.predictions || []).map(
-            (p: { placeId: string; description: string; mainText: string; secondaryText: string }) => ({
-              id: p.placeId,
-              address: p.mainText || p.description,
-              city: p.secondaryText,
-              postalCode: "",
-              placeId: p.placeId,
-            }),
-          );
-        }
-      } catch {
-        // ignora — cai no fallback
+        const results = await places.search(query);
+        setSuggestions(results);
+        setShowDropdown(results.length > 0);
+      } catch (error) {
+        console.error("[AddressAutocomplete] Erro ao buscar endereços:", error);
+        setSuggestions([]);
+        setShowDropdown(false);
+      } finally {
+        setLoading(false);
       }
-
-      // 2) Fallback Nominatim se o Google não devolver nada (ex: chave em falta)
-      if (results.length === 0) {
-        const res = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        results = (data.suggestions || []).map(
-          (
-            s: { label: string; address: string; city: string; postalCode: string; lat: number; lng: number },
-            idx: number,
-          ) => ({
-            id: `nominatim-${idx}`,
-            address: s.address || s.city || s.label,
-            city: s.city,
-            postalCode: s.postalCode,
-            resolved: {
-              formattedAddress: s.label,
-              city: s.city,
-              postalCode: s.postalCode,
-              lat: s.lat,
-              lng: s.lng,
-            },
-          }),
-        );
-      }
-
-      setSuggestions(results);
-      setShowDropdown(results.length > 0);
-    } catch (error) {
-      console.error("[AddressAutocomplete] Erro ao buscar endereços:", error);
-      setSuggestions([]);
-      setShowDropdown(false);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [places],
+  );
 
   // ── Debounce da input ──────────────────────────────────────────────────
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,47 +101,31 @@ export default function AddressAutocomplete({
   const handleSelectSuggestion = async (suggestion: AddressSuggestion) => {
     setSuggestions([]);
     setShowDropdown(false);
+    setLoading(true);
 
     let addressData: AddressData;
-
-    if (suggestion.resolved) {
-      // Nominatim: já vem com coordenadas
-      addressData = suggestion.resolved;
-    } else if (suggestion.placeId) {
-      // Google: obter detalhes (lat/lng) antes de continuar
-      setLoading(true);
-      try {
-        const res = await fetch("/api/maps/place-details", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ placeId: suggestion.placeId }),
-        });
-        const data = await res.json();
-        if (!data.ok) {
-          console.error("[AddressAutocomplete] place-details falhou:", data.error);
-          setLoading(false);
-          return;
-        }
-        addressData = {
-          formattedAddress: data.formattedAddress,
-          city: data.city,
-          postalCode: data.postalCode,
-          lat: data.lat,
-          lng: data.lng,
-          placeId: suggestion.placeId,
-        };
-      } catch (error) {
-        console.error("[AddressAutocomplete] Erro ao obter detalhes da morada:", error);
-        setLoading(false);
+    try {
+      const resolved = await places.resolve(suggestion);
+      if (!resolved) {
+        console.error("[AddressAutocomplete] Não foi possível resolver a morada");
         return;
-      } finally {
-        setLoading(false);
       }
-    } else {
+      addressData = {
+        formattedAddress: resolved.formattedAddress,
+        city: resolved.city,
+        postalCode: resolved.postalCode,
+        lat: resolved.lat ?? undefined,
+        lng: resolved.lng ?? undefined,
+        placeId: resolved.placeId || suggestion.placeId || undefined,
+      };
+    } catch (error) {
+      console.error("[AddressAutocomplete] Erro ao obter detalhes da morada:", error);
       return;
+    } finally {
+      setLoading(false);
     }
 
-    const label = addressData.formattedAddress || suggestion.address;
+    const label = addressData.formattedAddress || suggestion.mainText;
 
     onChange(label);
     setSelectedAddress(addressData);
@@ -288,19 +221,18 @@ export default function AddressAutocomplete({
           ref={dropdownRef}
           className="absolute z-[9999] left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-80 overflow-y-auto"
         >
-          {suggestions.map((suggestion) => (
+          {suggestions.map((suggestion, idx) => (
             <button
-              key={suggestion.id}
+              key={suggestion.placeId || `nominatim-${idx}`}
               type="button"
               onClick={() => handleSelectSuggestion(suggestion)}
               onMouseDown={(e) => e.preventDefault()}
               className="w-full px-4 py-3 text-left hover:bg-slate-50 border-b border-gray-100 last:border-b-0 transition-colors"
             >
-              <div className="font-medium text-slate-900">{suggestion.address}</div>
-              <div className="text-sm text-slate-500">
-                {suggestion.city}
-                {suggestion.postalCode && ` • ${suggestion.postalCode}`}
-              </div>
+              <div className="font-medium text-slate-900">{suggestion.mainText}</div>
+              {suggestion.secondaryText && (
+                <div className="text-sm text-slate-500">{suggestion.secondaryText}</div>
+              )}
             </button>
           ))}
         </div>
