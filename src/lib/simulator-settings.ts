@@ -23,7 +23,12 @@ export type SimulatorSettingKey =
   | "margem_lucro"
   | "diesel_preco"
   | "km_por_litro"
-  | "pagamento_assistente_por_trabalho";
+  | "pagamento_assistente_por_trabalho"
+  // Mudanças — preçário horário comercial (o que o cliente paga)
+  | "mudanca_2pessoas_hora"
+  | "mudanca_3pessoas_hora"
+  | "mudanca_minimo_horas"
+  | "mudanca_km_limite_recolha";
 
 export type SimulatorSettingDefinition = {
   key: SimulatorSettingKey;
@@ -199,10 +204,10 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "margem_lucro",
     label: "Margem de lucro (%)",
-    description: "Percentagem de lucro obrigatória sobre o custo total. 0.40 = 40%.",
+    description: "Percentagem de lucro obrigatória sobre o custo total. 0.50 = 50%.",
     category: "geral",
     unit: "multiplier",
-    value: 0.40,
+    value: 0.50,
   },
   {
     key: "diesel_preco",
@@ -227,6 +232,39 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
     category: "geral",
     unit: "eur",
     value: 7.00,
+  },
+  // ── Mudanças — preçário horário comercial ──────────────────────────────────
+  {
+    key: "mudanca_2pessoas_hora",
+    label: "Mudança 2 colaboradores (€/hora)",
+    description: "Taxa horária total para mudanças com 2 colaboradores. Mínimo 3 horas.",
+    category: "mudancas",
+    unit: "eur",
+    value: 50.00,
+  },
+  {
+    key: "mudanca_3pessoas_hora",
+    label: "Mudança 3 colaboradores (€/hora)",
+    description: "Taxa horária total para mudanças com 3 colaboradores. Mínimo 3 horas.",
+    category: "mudancas",
+    unit: "eur",
+    value: 70.00,
+  },
+  {
+    key: "mudanca_minimo_horas",
+    label: "Mínimo de horas por mudança",
+    description: "Número mínimo de horas faturadas numa mudança (independente da duração real).",
+    category: "mudancas",
+    unit: "multiplier",
+    value: 3,
+  },
+  {
+    key: "mudanca_km_limite_recolha",
+    label: "Limite de distância para recolhas (km)",
+    description: "Distância máxima aceitável para recolhas sem orçamento personalizado. Mudanças não têm limite.",
+    category: "geral",
+    unit: "multiplier",
+    value: 70,
   },
 ];
 

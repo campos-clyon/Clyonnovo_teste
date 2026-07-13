@@ -58,10 +58,14 @@ function formatPricingRulesForGemini(settingsMap: SimulatorSettingsMap): string 
   const custoHoraPess = settingsMap.custo_hora_pessoa  ?? 9;
   const numPessoas    = settingsMap.num_pessoas_equipa ?? 3;
   const overhead      = settingsMap.overhead_por_servico ?? 17.00;
-  const margem        = settingsMap.margem_lucro       ?? 0.40;
+  const margem        = settingsMap.margem_lucro       ?? 0.50;
   const margemPct     = (margem * 100).toFixed(0);
   const fatorMargem   = (1 + margem).toFixed(2);
   const custoHoraEquipa = custoHoraPess * numPessoas;
+  const mudanca2PessHora  = settingsMap.mudanca_2pessoas_hora  ?? 50;
+  const mudanca3PessHora  = settingsMap.mudanca_3pessoas_hora  ?? 70;
+  const mudancaMinHoras   = settingsMap.mudanca_minimo_horas   ?? 3;
+  const kmLimiteRecolha   = settingsMap.mudanca_km_limite_recolha ?? 70;
 
   return `ESTRUTURA DE CUSTOS REAIS CLYON (valores actuais do backoffice):
 
@@ -73,9 +77,12 @@ FÓRMULA UNIVERSAL OBRIGATÓRIA:
   preco_sem_iva      = custo_total × ${fatorMargem}  (margem ${margemPct}% de lucro sobre custo total)
   preco_com_iva      = preco_sem_iva × 1.23
 
+HORÁRIO DE TRABALHO:
+  Horário normal: 08h00–18h00. Fora deste horário requer agendamento prévio com a equipa.
+
 DISTÂNCIAS:
-  Recolhas/esvaziamento: distância base→cliente × 2 (ida + volta)
-  Mudança: distância origem→destino (sem volta à base)
+  Recolhas/esvaziamento: distância base→cliente × 2 (ida + volta). LIMITE: ${kmLimiteRecolha} km — acima disso é orçamento personalizado.
+  Mudança: distância origem→destino (sem volta à base). Sem limite de distância.
 
 HORAS ESTIMADAS POR TIPO DE SERVIÇO:
 
@@ -109,12 +116,15 @@ ENTULHO — tabela de TEMPO (para a fórmula de custo pessoal):
   - Entulho no chão (não ensacado): × 1.3 no tempo
   - Acesso difícil: +30 min
 
-MUDANÇA:
-  - Base: 7h
-  - Sem elevador na origem (andar > 2): +1h
-  - Sem elevador no destino (andar > 2): +1h
-  - Acesso difícil por local: +30 min
-  - Percurso acima de 30 km: +30 min
+MUDANÇA — PREÇÁRIO HORÁRIO COMERCIAL (taxa que o cliente paga, inclui equipa e veículo):
+  2 colaboradores: ${mudanca2PessHora} €/hora total (mínimo ${mudancaMinHoras} horas = ${mudanca2PessHora * mudancaMinHoras} € s/IVA)
+  3 colaboradores: ${mudanca3PessHora} €/hora total (mínimo ${mudancaMinHoras} horas = ${mudanca3PessHora * mudancaMinHoras} € s/IVA)
+  Regra padrão: usar 3 colaboradores (${mudanca3PessHora} €/h) como base.
+  HORAS ESTIMADAS MUDANÇA:
+    Base: 7h · Sem elevador origem (andar > 2): +1h · Sem elevador destino (andar > 2): +1h
+    Acesso difícil por local: +30 min · Percurso > 30 km: +30 min
+  Mínimo faturado: max(horas_estimadas, ${mudancaMinHoras}) × taxa_horária
+  Não tem limite de distância.
 
 MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
 
@@ -146,7 +156,7 @@ CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO:
   - Loures / VFX / Sintra / Cascais > 20 km: 300 € s/IVA
 
 ENTULHO: mínimo fixo 90 € s/IVA — sem mínimo de zona
-MUDANÇA: mínimo fixo 150 € s/IVA — sem mínimo de zona
+MUDANÇA: mínimo fixo ${mudanca3PessHora * mudancaMinHoras} € s/IVA (${mudancaMinHoras}h × ${mudanca3PessHora} €/h, 3 colaboradores) — sem mínimo de zona
 
 AGRAVAMENTOS (adicionais ao preço final s/IVA):
   - Urgência hoje: +40 €
@@ -179,16 +189,23 @@ function getDefaultPricingRules(): string {
     // Fallback de último recurso — texto literal com defaults
     return `ESTRUTURA DE CUSTOS REAIS CLYON (valores default):
 
-FÓRMULA: custo_combustivel (distancia × 0.50 €/km) + custo_pessoal (horas × 3p × 9 €/h) + overhead (17.00 €) → × 1.40 (40% margem) = preço s/IVA
+FÓRMULA: custo_combustivel (distancia × 0.50 €/km) + custo_pessoal (horas × 3p × 9 €/h) + overhead (17.00 €) → × 1.50 (50% margem) = preço s/IVA
 IVA: 23%
+HORÁRIO: 08h00–18h00 (fora deste horário requer agendamento prévio)
 
 HORAS: Recolha 1-7 itens: 0.5h/item | Carga completa: 4h | Entulho 1-10 sacos: 1h, 11-30: 1.5h, 31-80: 2.5h, 81-150: 4h | Mudança: 7h base
+
+MUDANÇA — PREÇÁRIO HORÁRIO (taxa total equipa, mín. 3h):
+  2 colaboradores: 50€/h → mín. 150€ s/IVA
+  3 colaboradores: 70€/h → mín. 210€ s/IVA (padrão)
+  Sem limite de distância. Calcular: max(horas_estimadas, 3) × taxa_horária.
 
 MÍNIMOS (REGRA CRÍTICA):
   ITENS SOLTOS (1-7 itens): SEM mínimo de zona. Preço real pela fórmula. Mínimo 48,78€ s/IVA por item.
     Exemplos c/IVA: 1 frigorifico 50-80€ | 1 sofá 80-120€ | 1 mesa 45-70€ | 2 mesas+cadeiras Lisboa 100-130€ (NÃO 270€)
   CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO: mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€ | Lisboa difícil/Loures 270€
-  ENTULHO: mínimo 90€ s/IVA (sem zona) | MUDANÇA: mínimo 150€ s/IVA (sem zona)
+  ENTULHO: mínimo 90€ s/IVA (sem zona) | MUDANÇA: mínimo 210€ s/IVA (3 colaboradores, 3h)
+  RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
 AGRAVAMENTOS: Urgência hoje +40€ | amanhã +20€ | Estacionamento difícil +15€`;
   }
 }
@@ -258,7 +275,7 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
   recolha_entulho:           { min: 120, max: 300, suggested: 180 },
   esvaziamento_apartamento:  { min: 250, max: 600, suggested: 380 },
   esvaziamento_casa:         { min: 300, max: 800, suggested: 500 },
-  mudanca:                   { min: 150, max: 350, suggested: 220 },
+  mudanca:                   { min: 210, max: 500, suggested: 280 },
   outro:                     { min: 100, max: 250, suggested: 160 },
 };
 
@@ -657,10 +674,10 @@ function applyZoneMinimum(
     return { price: priceWithoutVat, note: null, minimumThreshold: 90 };
   }
 
-  // Mudança: mínimo fixo, sem mínimo de zona
+  // Mudança: mínimo fixo = 3 colaboradores × 70€/h × 3h = 210€ s/IVA
   if (svc === "mudanca") {
-    if (priceWithoutVat < 150) return { price: 150, note: "Mínimo de mudança aplicado: 150 € s/IVA", minimumThreshold: 150 };
-    return { price: priceWithoutVat, note: null, minimumThreshold: 150 };
+    if (priceWithoutVat < 210) return { price: 210, note: "Mínimo de mudança aplicado: 210 € s/IVA (3 colab. × 70€/h × 3h mín.)", minimumThreshold: 210 };
+    return { price: priceWithoutVat, note: null, minimumThreshold: 210 };
   }
 
   // Itens soltos (1 a FULL_LOAD_ITEM_THRESHOLD-1 itens): NÃO aplicar mínimo de zona
@@ -807,11 +824,17 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // "Outro Serviço" é sempre tratado como genérico de risco desconhecido —
   // margem de segurança fixa de 30%, independente da margem configurada no
   // backoffice para os restantes tipos de serviço.
-  const margem        = input.serviceType === "outro" ? 0.30 : (pricing.margem_lucro ?? 0.40);
+  const margem        = input.serviceType === "outro" ? 0.30 : (pricing.margem_lucro ?? 0.50);
+  // Mudança — preçário horário comercial (o que o cliente paga, inclui equipa e veículo)
+  const mudanca2PessHora  = pricing.mudanca_2pessoas_hora  ?? 50;
+  const mudanca3PessHora  = pricing.mudanca_3pessoas_hora  ?? 70;
+  const mudancaMinHoras   = pricing.mudanca_minimo_horas   ?? 3;
+  // Limite de distância para recolhas (mudanças não têm limite)
+  const kmLimiteRecolha   = pricing.mudanca_km_limite_recolha ?? 70;
 
   const missing: string[] = [];
   const assumptions: string[] = [];
-  const notes: string[] = ["Estimativa rápida local — fórmula de custo real CLYON + 40% margem"];
+  const notes: string[] = [`Estimativa rápida local — fórmula de custo real CLYON + ${(margem * 100).toFixed(0)}% margem`];
 
   // ── 1. Horas estimadas ───────────────────────────────────────────────────────
   if (input.serviceType === "recolha_entulho") {
@@ -842,12 +865,42 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // ── 4. Overhead fixo por serviço ─────────────────────────────────────────────
   assumptions.push(`Overhead fixo: ${overhead.toFixed(2)} €`);
 
-  // ── 5. Custo total + margem de lucro ─────────────────────────────────────────
+  // ── 4b. Limite de distância para recolhas (mudanças não têm limite) ──────────
+  const svc = input.serviceType;
+  const distKmOneWayCheck = input.distanceFromBase?.distanceKm ?? 0;
+  if (svc !== "mudanca" && distKmOneWayCheck > kmLimiteRecolha) {
+    return {
+      ...buildReferenceEstimate(input),
+      status: "onsite_required",
+      internalNotes: [
+        `Distância ${distKmOneWayCheck} km > limite ${kmLimiteRecolha} km para recolhas — orçamento personalizado necessário.`,
+      ],
+      customerMessage: `A distância até à morada indicada (${distKmOneWayCheck} km) ultrapassa a nossa área de cobertura padrão. A equipa CLYON irá contactá-lo para apresentar um orçamento personalizado.`,
+    };
+  }
+
+  // ── 5. Custo total + margem de lucro (fórmula geral) ─────────────────────────
   const custoTotal = custoCombustivel + custoPessoal + overhead;
-  const precoSemIva = Math.round(custoTotal * (1 + margem) * 100) / 100;
-  notes.push(
-    `Custo total: combustível ${custoCombustivel}€ + pessoal ${custoPessoal}€ + overhead ${overhead}€ = ${custoTotal.toFixed(2)}€ → ×${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%) = ${precoSemIva}€ s/IVA`
-  );
+  let precoSemIva = Math.round(custoTotal * (1 + margem) * 100) / 100;
+
+  // ── 5b. Override para mudança: preçário horário comercial ────────────────────
+  // O cliente paga taxa horária total (equipa + veículo), mínimo 3 horas.
+  // A fórmula geral não se aplica a mudanças.
+  if (svc === "mudanca") {
+    const taxaHoraria = mudanca3PessHora; // padrão: 3 colaboradores × 70€/h
+    const horasEfetivas = Math.max(laborHours, mudancaMinHoras);
+    precoSemIva = Math.round(taxaHoraria * horasEfetivas * 100) / 100;
+    notes.push(
+      `Mudança: 3 colaboradores × ${taxaHoraria}€/h × ${horasEfetivas}h (mín. ${mudancaMinHoras}h) = ${precoSemIva}€ s/IVA`
+    );
+    assumptions.push(
+      `3 colaboradores × ${taxaHoraria} €/h × ${horasEfetivas}h = ${precoSemIva} € s/IVA`
+    );
+  } else {
+    notes.push(
+      `Custo total: combustível ${custoCombustivel}€ + pessoal ${custoPessoal}€ + overhead ${overhead}€ = ${custoTotal.toFixed(2)}€ → ×${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%) = ${precoSemIva}€ s/IVA`
+    );
+  }
 
   // ── 6. Custo por saco de entulho (entulho ensacado ou misto) ────────────────
   // Motor B unifica com a regra do prompt Gemini: saco ensacado = 3,00€; difícil = 3,20€

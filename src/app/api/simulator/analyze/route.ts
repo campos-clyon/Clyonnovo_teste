@@ -674,7 +674,8 @@ REGRAS ABSOLUTAS
 ═══════════════════════════════════════════════════════════
 
 0. NÚMERO DE ITENS: usa SEMPRE o valor em "CONTAGEM DE ITENS (PRÉ-CALCULADA)" acima — está correto e já contabiliza todos os itens mencionados na descrição. NUNCA contes os itens tu mesmo a partir do texto livre nem assumas 1 item quando o valor pré-calculado é maior. Um pedido com 3 ou 4 itens TEM de ser cobrado como 3 ou 4 itens, nunca como 1.
-1. USA SEMPRE a fórmula: (combustível + pessoal + overhead) × (1 + margem) = preço s/IVA.
+1. USA a fórmula geral para recolhas/entulho/esvaziamento: (combustível + pessoal + overhead) × (1 + margem) = preço s/IVA.
+   Para MUDANÇA usa EXCLUSIVAMENTE o preçário horário: max(horas_estimadas, 3) × taxa_horária (70€/h com 3 colaboradores por defeito).
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
    a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
       Usar preço real calculado pela fórmula. Mínimo por item: ~48,78 € s/IVA (60 € c/IVA).
@@ -700,13 +701,24 @@ REGRAS ABSOLUTAS
       Mínimo fixo de entulho: 90 € s/IVA (sem mínimo de zona).
       EXEMPLO: 10 sacos ensacados, acesso normal → 10 × 3,00 = 30€ (preço saco) + tempo fórmula. Mínimo = 90€.
       EXEMPLO: 20 sacos, sem elevador → 20 × 3,20 = 64€ (preço saco) + tempo fórmula. Mínimo = 90€.
-   d) MUDANÇA: mínimo fixo 150 € s/IVA — sem mínimo de zona.
+   d) MUDANÇA — preçário horário comercial (NÃO usar a fórmula geral custo×margem):
+      • 2 colaboradores: 50 €/hora total (mínimo 3 horas = 150 € s/IVA)
+      • 3 colaboradores: 70 €/hora total (mínimo 3 horas = 210 € s/IVA) ← PADRÃO
+      Calcular: max(horas_estimadas, 3) × taxa_horária_escolhida
+      Horas estimadas mudança: base 7h + sem elevador origem/destino (andar>2): +1h cada + acesso difícil: +30min/local + percurso >30km: +30min
+      Mudanças NÃO têm limite de distância.
+      EXEMPLOS: Mudança 7h normal → 7×70=490€ s/IVA | Mudança 3h pequena → max(3,3)×70=210€ s/IVA
+   e) RECOLHAS (móveis/monos/entulho/esvaziamento): limite máximo 70 km da base CLYON.
+      Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".
 2.1. DESLOCAÇÃO — OBRIGATÓRIA NO PREÇO FINAL:
    - A distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM SEMPRE de influenciar o preço final. NUNCA gerar preço ignorando a deslocação.
    - Para cargas completas/esvaziamentos, as bandas de zona/distância acima já embebem a deslocação — aplica a banda correta consoante os km reais.
-   - Para itens soltos, entulho e mudança, adiciona a componente de deslocação ao custo antes da margem: custo_deslocação = distanceKm × 2 € (regra interna CLYON, cobre ida+volta).
+   - Para itens soltos e entulho, adiciona a componente de deslocação ao custo antes da margem: custo_deslocação = distanceKm × 2 € (regra interna CLYON, cobre ida+volta).
+   - Para mudança, a distância origem→destino é considerada nas horas estimadas (percurso >30km: +30min). NÃO somar custo de combustível separado — está embutido na taxa horária.
    - Preenche SEMPRE o objeto "travel" com distanceKm, durationText e distanceCost.
    - Se a distância NÃO estiver calculada, assume acesso local, assinala "distancia_base" em missingFields e usa confidence no máximo "medium".
+2.2. HORÁRIO DE TRABALHO:
+   Horário normal: 08h00–18h00. Pedidos fora deste horário requerem agendamento prévio com a equipa CLYON. Se o cliente solicitar horário fora desta janela, adiciona nota em internalNotes e inclui aviso em customerMessage.
 3. estimatedPriceWithoutVat, estimateMinWithoutVat e estimateMaxWithoutVat NUNCA podem ser null ou 0.
 4. Se faltarem dados críticos, dá SEMPRE um intervalo razoável com confidence "low".
 5. NUNCA devolveres preços 0 ou null.

@@ -281,10 +281,32 @@ export async function calculateLocalEstimate(order: OrderData): Promise<Estimate
   let base = 0;
 
   if (isEntulho) {
-    const r = calcEntulhoBase(qty);
+    // entulhoState === 'chao' → entulho por ensacar (isBagged = false)
+    const isBagged = order.entulhoState !== "chao";
+    const r = calcEntulhoBase(qty, isBagged);
     base = r.price;
     assumptions.push(r.note);
     internalNotes.push(`Entulho: ${r.note}`);
+  } else if (order.serviceType === "outro") {
+    // "Outro serviço" → preço base genérico com margem de segurança de 30%
+    const baseRaw = calcMovelBase(qty, order.description ?? "").price;
+    const r = { price: Math.round(baseRaw * 1.30), note: `Serviço genérico (+30% margem de segurança)` };
+    base = r.price;
+    assumptions.push(r.note);
+    internalNotes.push(`Outro serviço: ${r.note}`);
+  } else if (order.movelMode === "item") {
+    // Modo Item: preço fixo por tamanho — custo laboral anulado (plano v3.0 §5.2)
+    const p = (order.movelItemsPequeno ?? 0) * 25;
+    const m = (order.movelItemsMedio  ?? 0) * 50;
+    const g = (order.movelItemsGrande ?? 0) * 60;
+    base = Math.max(80, p + m + g);
+    const note = [
+      order.movelItemsPequeno ? `${order.movelItemsPequeno}× pequeno (25€)` : null,
+      order.movelItemsMedio   ? `${order.movelItemsMedio}× médio (50€)` : null,
+      order.movelItemsGrande  ? `${order.movelItemsGrande}× grande (60€)` : null,
+    ].filter(Boolean).join(", ") || "Itens por tamanho";
+    assumptions.push(`Item — ${note}`);
+    internalNotes.push(`Modo item: ${note} = ${p + m + g}€ (mín 80€)`);
   } else {
     const r = calcMovelBase(qty, order.description ?? "");
     base = r.price;
@@ -332,7 +354,7 @@ export async function calculateLocalEstimate(order: OrderData): Promise<Estimate
   // ── Ajuste por distância real ──
   const distKm = order.distanceFromBase?.distanceKm;
   if (distKm !== undefined) {
-    if (distKm > 50) {
+    if (distKm > 70) {
       return {
         status: "onsite_required",
         estimatedPriceWithoutVat: null,
