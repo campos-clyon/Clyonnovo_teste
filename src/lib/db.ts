@@ -1902,10 +1902,10 @@ export async function getPagamentosAssistente(opts: {
        city
      FROM simulatorOrders
      WHERE assignedToId IS NOT NULL
-       AND assignedAt >= ?
-       AND assignedAt <= ?
+       AND COALESCE(assignedAt, updatedAt, createdAt) >= ?
+       AND COALESCE(assignedAt, updatedAt, createdAt) <= ?
        ${opts.assistenteId ? "AND assignedToId = ?" : ""}
-     ORDER BY assignedToId, assignedAt DESC`,
+     ORDER BY assignedToId, COALESCE(assignedAt, updatedAt) DESC`,
     opts.assistenteId
       ? [opts.from, opts.to, opts.assistenteId]
       : [opts.from, opts.to]

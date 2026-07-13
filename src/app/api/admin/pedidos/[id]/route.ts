@@ -66,6 +66,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ ok: false, message: "Body JSON inválido." }, { status: 400 });
   }
 
+  // Se o admin está a atribuir um assistente mas não enviou assignedAt, preenche agora
+  if (colab!.isAdmin && body.assignedToId != null && !body.assignedAt) {
+    body.assignedAt = new Date().toISOString();
+  }
+
   // Assistente não pode alterar atribuição nem aprovar
   if (!colab!.isAdmin) {
     delete body.assignedToId;

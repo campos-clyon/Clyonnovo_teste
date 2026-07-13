@@ -739,11 +739,13 @@ export default function ColaboradorAdminClient() {
     }
   };
 
-  const carregarPedidos = async (authToken: string, status = "todos", search = "") => {
+  const carregarPedidos = async (authToken: string, status = "todos", search = "", silent = false) => {
     if (!authToken) return;
     try {
-      setPedidosLoading(true);
-      setPedidosError(null);
+      if (!silent) {
+        setPedidosLoading(true);
+        setPedidosError(null);
+      }
       const params = new URLSearchParams();
       if (status && status !== "todos") params.set("status", status);
       if (search) params.set("search", search);
@@ -756,9 +758,9 @@ export default function ColaboradorAdminClient() {
       setPedidos(data.orders ?? []);
       setPedidosCounts(data.counts ?? {});
     } catch {
-      setPedidosError("Não foi possível carregar os pedidos.");
+      if (!silent) setPedidosError("Não foi possível carregar os pedidos.");
     } finally {
-      setPedidosLoading(false);
+      if (!silent) setPedidosLoading(false);
     }
   };
 
@@ -787,10 +789,10 @@ export default function ColaboradorAdminClient() {
     } catch {}
   };
 
-  const carregarLeads = async (authToken: string, periodo = leadPeriodo, status = leadStatusFilter) => {
+  const carregarLeads = async (authToken: string, periodo = leadPeriodo, status = leadStatusFilter, silent = false) => {
     if (!authToken) return;
     try {
-      setLoadingLeads(true);
+      if (!silent) setLoadingLeads(true);
       setLeadsError(null);
       const [leadsRes, eventsRes] = await Promise.all([
         fetch(`/api/admin/leads?periodo=${periodo}&status=${status}&_=${Date.now()}`, {
@@ -830,9 +832,9 @@ export default function ColaboradorAdminClient() {
       setLeadsLastUpdate(new Date());
     } catch (err) {
       console.error("[admin] carregarLeads error:", err);
-      setLeadsError("Não foi possível carregar leads. Verifique a ligação à base de dados ou os endpoints.");
+      if (!silent) setLeadsError("Não foi possível carregar leads. Verifique a ligação à base de dados ou os endpoints.");
     } finally {
-      setLoadingLeads(false);
+      if (!silent) setLoadingLeads(false);
     }
   };
 
@@ -856,7 +858,7 @@ export default function ColaboradorAdminClient() {
   useEffect(() => {
     if (activeSection !== "leads" || !token) return;
     carregarLeads(token, leadPeriodo, leadStatusFilter);
-    const interval = setInterval(() => carregarLeads(token, leadPeriodo, leadStatusFilter), 15000);
+    const interval = setInterval(() => carregarLeads(token, leadPeriodo, leadStatusFilter, true), 15000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, leadPeriodo, leadStatusFilter, leadEventTypeFilter]);
@@ -867,7 +869,7 @@ export default function ColaboradorAdminClient() {
     carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
     carregarAssistentes(token);
     if (!isAdminGeral) carregarBilling(token);
-    const interval = setInterval(() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced), 120000);
+    const interval = setInterval(() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true), 120000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, pedidoStatusFilter, pedidoSearchDebounced]);
