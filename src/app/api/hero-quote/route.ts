@@ -73,6 +73,23 @@ export async function POST(req: NextRequest) {
   const morada = [rua, numeroPosta, codigoPostal].filter(Boolean).join(", ");
 
   // ── Motor de preços (rápido, sem Gemini) ─────────────────────────────────────
+  // Estimar distância km a partir do código postal (sem geocoding).
+  // Prefixos PT: 1xxx/2xxx = Lisboa metro ~20km | 28xx = Almada/Barreiro ~25km
+  // 29xx/30xx = Setúbal/Palmela ~45km | outros = 35km (genérico)
+  function estimateKmFromPostal(cp: string): number {
+    const prefix = parseInt(cp.replace(/\D/g, "").slice(0, 4), 10);
+    if (isNaN(prefix)) return 30;
+    if (prefix >= 1000 && prefix <= 1999) return 20; // Lisboa
+    if (prefix >= 2800 && prefix <= 2849) return 25; // Almada / Barreiro
+    if (prefix >= 2850 && prefix <= 2899) return 22; // Seixal / Corroios
+    if (prefix >= 2900 && prefix <= 2959) return 40; // Setúbal
+    if (prefix >= 2960 && prefix <= 2999) return 45; // Palmela / Montijo
+    if (prefix >= 2000 && prefix <= 2799) return 30; // Margem Sul genérica
+    return 35; // outros
+  }
+
+  const estimatedKm = codigoPostal ? estimateKmFromPostal(codigoPostal) : 30;
+
   let estimate: Awaited<ReturnType<typeof calculateFastEstimate>> | null = null;
   try {
     estimate = await calculateFastEstimate({
@@ -80,6 +97,7 @@ export async function POST(req: NextRequest) {
       description: descricao ?? "",
       floor: andar || undefined,
       hasElevator: elevador,
+      distanceFromBase: { distanceKm: estimatedKm },
     });
   } catch (e) {
     console.error("[hero-quote] calculateFastEstimate error:", e);

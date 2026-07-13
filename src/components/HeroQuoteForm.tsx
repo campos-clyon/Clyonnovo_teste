@@ -28,9 +28,6 @@ const ANDAR_OPTIONS = [
   { value: "4+",  label: "5.º ou superior" },
 ];
 
-function fmtEur(v: number) {
-  return v.toLocaleString("pt-PT", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
 
 function inputCls(error?: string) {
   return `w-full rounded-lg border bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 ${error ? "border-red-400/70" : "border-white/10"}`;
@@ -202,45 +199,82 @@ export default function HeroQuoteForm() {
     }
   }
 
+  // ── auto-reset after 60s ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!sent) return;
+    const t = setTimeout(() => {
+      setSent(false);
+      setEstimate(null);
+      setStep(1);
+      setForm({
+        primeiroNome: "", ultimoNome: "", indicativo: "+351", telefone: "",
+        tipoServico: "", rua: "", codigoPostal: "", numeroPosta: "",
+        andar: "", elevador: "unknown", descricao: "",
+      });
+      setImages([]);
+      setErrors({});
+      setServerError("");
+    }, 60_000);
+    return () => clearTimeout(t);
+  }, [sent]);
+
   // ── success ───────────────────────────────────────────────────────────────────
 
   if (sent) {
     return (
       <div
-        className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] p-6 text-center backdrop-blur-md"
+        className="flex flex-col rounded-2xl border border-cyan-400/20 bg-white/[0.06] backdrop-blur-md"
         style={{ minHeight: CARD_MIN_HEIGHT }}
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20 text-2xl text-cyan-400">
-          ✓
-        </div>
-        <h3 className="mt-3 text-lg font-bold text-white">Pedido recebido!</h3>
-        <p className="mt-1 text-xs text-slate-400">
-          Contactamos em breve para confirmar data e valor.
-        </p>
+        {/* top accent bar */}
+        <div className="h-1 w-full rounded-t-2xl bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-500" />
 
-        {estimate && estimate.estimatedPriceWithVat && (
-          <div className="mt-5 w-full rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-left">
-            <p className="text-[9px] font-semibold uppercase tracking-widest text-cyan-400/80">
-              Estimativa rápida
-            </p>
-            {estimate.estimateMinWithVat && estimate.estimateMaxWithVat ? (
-              <p className="mt-1 text-xl font-bold text-white">
-                {fmtEur(estimate.estimateMinWithVat)} – {fmtEur(estimate.estimateMaxWithVat)}
-                <span className="ml-1 text-xs font-normal text-slate-400">c/IVA</span>
-              </p>
-            ) : (
-              <p className="mt-1 text-xl font-bold text-white">
-                {fmtEur(estimate.estimatedPriceWithVat)}
-                <span className="ml-1 text-xs font-normal text-slate-400">c/IVA</span>
-              </p>
-            )}
-            <p className="mt-2 text-[11px] text-slate-400">{estimate.customerMessage}</p>
+        <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
+          {/* animated check */}
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-500/20" />
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-cyan-400/40 bg-cyan-500/15">
+              <svg className="h-7 w-7 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
           </div>
-        )}
 
-        <p className="mt-4 text-[10px] text-slate-500">
-          Sem compromisso · Confirmação antes de qualquer trabalho
-        </p>
+          <h3 className="mt-5 text-xl font-bold text-white">Pedido enviado com sucesso!</h3>
+
+          <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-slate-400">
+            A nossa equipa irá entrar em contacto em breve para confirmar data, horário e detalhes do serviço.
+          </p>
+
+          {/* info pills */}
+          <div className="mt-6 flex flex-col gap-2 w-full max-w-[300px]">
+            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+              <span className="text-lg">📞</span>
+              <div className="text-left">
+                <p className="text-[11px] font-semibold text-white">Resposta em &lt;24&nbsp;h</p>
+                <p className="text-[10px] text-slate-500">Via chamada ou WhatsApp</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+              <span className="text-lg">📋</span>
+              <div className="text-left">
+                <p className="text-[11px] font-semibold text-white">Orçamento confirmado antes de avançar</p>
+                <p className="text-[10px] text-slate-500">Nenhum trabalho sem a sua aprovação</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+              <span className="text-lg">✅</span>
+              <div className="text-left">
+                <p className="text-[11px] font-semibold text-white">Sem custos ocultos</p>
+                <p className="text-[10px] text-slate-500">O preço fechado é o preço final</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-6 text-[10px] text-slate-600">
+            Este formulário irá reiniciar automaticamente em 1 minuto.
+          </p>
+        </div>
       </div>
     );
   }
