@@ -111,6 +111,15 @@ export interface OrderData {
   movingDistanceStatus?: DistanceStatus;
   /** Marcação recorrente (só relevante para categorias tipo jardinagem/manutenção) */
   recurrenceFrequency?: "semanal" | "quinzenal" | null;
+  // ── Móveis: modo de cálculo (Carga vs Item) ──────────────────────────────
+  /** "carga" → estima por volume (comportamento padrão); "item" → preço fixo por tamanho */
+  movelMode?: "carga" | "item";
+  /** Nº de itens pequenos (micro-ondas, mesinha de cabeceira…) — 25 €/un, máx 20 */
+  movelItemsPequeno?: number;
+  /** Nº de itens médios (fogão, frigorífico bar…) — 50 €/un */
+  movelItemsMedio?: number;
+  /** Nº de itens grandes (sofá, armário, frigorífico, máquina de lavar…) — 60 €/un */
+  movelItemsGrande?: number;
 }
 
 export type EstimateStatus = "estimated" | "needs_more_info" | "onsite_required";
@@ -217,6 +226,26 @@ export interface EstimateResult {
    */
   externalMarketEstimate?: ExternalMarketEstimate;
   _pricingSnapshot?: Record<string, unknown>;
+  /** Briefing estruturado para o assistente — gerado pelo motor IA (nunca exposto ao cliente) */
+  assistantBriefing?: AssistantBriefing | null;
+}
+
+/** Briefing estruturado para o assistente CLYON — gerado pelo motor IA */
+export interface AssistantBriefing {
+  /** Contagem de itens por tipo (ex: { "sofá": 2, "armário": 1 }) */
+  itemSummary: Record<string, number>;
+  /** Condições de acesso observadas (andar, elevador, corredor, etc.) */
+  accessConditions: string[];
+  /** Riscos identificados (peso, desmontagem, espaço, etc.) */
+  risks: string[];
+  /** Tempo estimado mínimo em horas */
+  estimatedHoursMin: number;
+  /** Tempo estimado máximo em horas */
+  estimatedHoursMax: number;
+  /** Nível de confiança na estimativa */
+  confidenceLevel: "high" | "medium" | "low";
+  /** Notas sobre o preço (o que pode alterar o valor) */
+  pricingNotes: string[];
 }
 
 export type ChatMessageRole = "assistant" | "user";

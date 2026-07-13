@@ -511,14 +511,30 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       "=== DETALHES DO ENTULHO ===",
       `Estado do Entulho: ${
         order.entulhoState === "ensacado"
-          ? "Já ensacado (2.50€/saco)"
+          ? "Já ensacado (3.00€/saco)"
           : order.entulhoState === "chao"
-          ? "No chão/Por ensacar (3.00€/saco)"
+          ? "No chão/Por ensacar — usar fórmula de tempo × 1.3"
           : order.entulhoState === "misto"
           ? "Misto (alguns ensacados, alguns não)"
           : "(não especificado)"
       }`,
       `Quantidade de Sacos: ${order.entulhoQuantidade || "(não fornecida)"}`,
+    );
+  }
+
+  if (order.serviceType === "recolha_moveis" && order.movelMode === "item") {
+    const p = order.movelItemsPequeno ?? 0;
+    const m = order.movelItemsMedio ?? 0;
+    const g = order.movelItemsGrande ?? 0;
+    lines.push(
+      "",
+      "=== MODO ITEM (PREÇO FIXO POR TAMANHO) ===",
+      `ATENÇÃO: Este pedido usa preço fixo por tamanho — custo laboral ANULADO.`,
+      `Itens Pequenos (mesinha, micro-ondas…): ${p} × 25 € = ${p * 25} €`,
+      `Itens Médios (fogão, frigorífico bar…): ${m} × 50 € = ${m * 50} €`,
+      `Itens Grandes (sofá, armário, frigorífico…): ${g} × 60 € = ${g * 60} €`,
+      `Subtotal Itens: ${p * 25 + m * 50 + g * 60} € (mínimo 80 €)`,
+      `Acrescentar apenas: taxa de acesso (sem elevador, acesso difícil) + deslocação.`,
     );
   }
 
@@ -631,6 +647,15 @@ FORMATO DE RESPOSTA (JSON puro — sem markdown, sem texto extra)
   "missingFields": ["campo em falta 1"],
   "customerMessage": "mensagem pronta para o cliente COM o valor estimado incluído (ex: à volta de X € + IVA)",
   "internalNotes": ["nota interna para a equipa"],
+  "assistantBriefing": {
+    "itemSummary": { "sofá": 2, "armário": 1 },
+    "accessConditions": ["3º andar sem elevador", "corredor estreito"],
+    "risks": ["peso elevado", "desmontagem necessária"],
+    "estimatedHoursMin": 2,
+    "estimatedHoursMax": 3,
+    "confidenceLevel": "medium",
+    "pricingNotes": ["acesso difícil pode aumentar o valor", "confirmar nº de sacos no local"]
+  },
   "labor": {
     "estimatedHours": número (mínimo 1),
     "peopleCount": número de pessoas da equipa,
@@ -785,6 +810,29 @@ function parseGeminiResponse(response: string): EstimateResult {
       internalNotes: Array.isArray(parsed.internalNotes) ? parsed.internalNotes : [],
       labor,
       travel,
+      assistantBriefing: parsed.assistantBriefing && typeof parsed.assistantBriefing === "object"
+        ? {
+            itemSummary: parsed.assistantBriefing.itemSummary && typeof parsed.assistantBriefing.itemSummary === "object"
+              ? parsed.assistantBriefing.itemSummary
+              : {},
+            accessConditions: Array.isArray(parsed.assistantBriefing.accessConditions)
+              ? parsed.assistantBriefing.accessConditions
+              : [],
+            risks: Array.isArray(parsed.assistantBriefing.risks) ? parsed.assistantBriefing.risks : [],
+            estimatedHoursMin: typeof parsed.assistantBriefing.estimatedHoursMin === "number"
+              ? parsed.assistantBriefing.estimatedHoursMin
+              : 1,
+            estimatedHoursMax: typeof parsed.assistantBriefing.estimatedHoursMax === "number"
+              ? parsed.assistantBriefing.estimatedHoursMax
+              : 3,
+            confidenceLevel: (["high", "medium", "low"].includes(parsed.assistantBriefing.confidenceLevel)
+              ? parsed.assistantBriefing.confidenceLevel
+              : "medium") as "high" | "medium" | "low",
+            pricingNotes: Array.isArray(parsed.assistantBriefing.pricingNotes)
+              ? parsed.assistantBriefing.pricingNotes
+              : [],
+          }
+        : null,
     };
   } catch (error) {
     console.error("[v0] parseGeminiResponse: Erro ao parse JSON", error);

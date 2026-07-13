@@ -202,6 +202,7 @@ export interface FastEstimateInput {
   serviceType?: string;
   entulhoState?: string;
   entulhoQuantidade?: string;
+  entulhoQuantidadeEnsacados?: string;
   floor?: string;
   hasElevator?: string;
   parkingDistance?: string;
@@ -848,8 +849,32 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     `Custo total: combustível ${custoCombustivel}€ + pessoal ${custoPessoal}€ + overhead ${overhead}€ = ${custoTotal.toFixed(2)}€ → ×${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%) = ${precoSemIva}€ s/IVA`
   );
 
-  // ── 6. Agravamentos adicionais (taxas fixas do documento) ────────────────────
-  let extras = 0;
+  // ── 6. Custo por saco de entulho (entulho ensacado ou misto) ────────────────
+  // Motor B unifica com a regra do prompt Gemini: saco ensacado = 3,00€; difícil = 3,20€
+  let sacoCost = 0;
+  if (input.serviceType === "recolha_entulho") {
+    const sacoDificil = input.hasElevator === "no" || input.parkingDistance === "difficult";
+    const taxaSaco = sacoDificil
+      ? (pricing.entulho_saco_chao ?? 3.20)
+      : (pricing.entulho_saco_ensacado ?? 3.00);
+
+    if (input.entulhoState === "ensacado") {
+      const qtd = parseInt((input.entulhoQuantidade ?? "").replace(/[^\d]/g, ""), 10) || 0;
+      if (qtd > 0) {
+        sacoCost = Math.round(qtd * taxaSaco * 100) / 100;
+        assumptions.push(`Sacos ensacados: ${qtd} × ${taxaSaco.toFixed(2)} €/saco = ${sacoCost.toFixed(2)} €`);
+      }
+    } else if (input.entulhoState === "misto") {
+      const qtdEns = parseInt((input.entulhoQuantidadeEnsacados ?? "").replace(/[^\d]/g, ""), 10) || 0;
+      if (qtdEns > 0) {
+        sacoCost = Math.round(qtdEns * taxaSaco * 100) / 100;
+        assumptions.push(`Sacos já ensacados (misto): ${qtdEns} × ${taxaSaco.toFixed(2)} €/saco = ${sacoCost.toFixed(2)} €`);
+      }
+    }
+  }
+
+  // ── 7. Agravamentos adicionais (taxas fixas do documento) ────────────────────
+  let extras = sacoCost;
   const urgency = (input as any).urgency ?? "";
   if (urgency === "today")    { extras += 40; assumptions.push("Urgência hoje: +40 €"); }
   if (urgency === "tomorrow") { extras += 20; assumptions.push("Urgência amanhã: +20 €"); }

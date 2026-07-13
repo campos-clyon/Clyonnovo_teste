@@ -116,7 +116,7 @@ export async function ensureSimulatorSettingsTable() {
           category: setting.category,
           unit: setting.unit,
           description: setting.description,
-          value: setting.value.toFixed(2),
+          // value NOT updated — admin edits via backoffice are preserved
         },
       });
   }
