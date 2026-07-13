@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
+import HeroBackground from "@/components/HeroBackground";
 import {
   BadgeCheck,
   Building2,
@@ -198,26 +199,8 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden bg-[#0B1929]"
-        style={{
-          background: "radial-gradient(ellipse 80% 60% at 30% 40%, #0d2740 0%, #0B1929 55%, #060f1a 100%)",
-        }}
-      >
-        {/* Subtle grid texture */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(0,180,216,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(0,180,216,0.8) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
-        {/* Cyan glow accent */}
-        <div
-          className="pointer-events-none absolute -left-32 -top-32 h-[520px] w-[520px] rounded-full opacity-[0.12]"
-          style={{ background: "radial-gradient(circle, #00b4d8 0%, transparent 70%)" }}
-        />
+      <section className="relative overflow-hidden">
+        <HeroBackground />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:grid lg:grid-cols-[1fr_420px] lg:items-center lg:gap-12 lg:px-8 lg:py-20 xl:grid-cols-[1fr_460px]">
 
