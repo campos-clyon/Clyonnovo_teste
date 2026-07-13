@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import HeroQuoteForm from "@/components/HeroQuoteForm";
 import {
   BadgeCheck,
   Building2,
@@ -197,40 +198,41 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section className="relative min-h-[600px] overflow-hidden bg-[#0B1929] md:min-h-[680px] lg:min-h-[740px]">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover"
-        >
-          <source src="/hero-video.mp4" type="video/mp4" />
-        </video>
-
-        {/* Overlay preto — só nos primeiros 55% (topo→baixo mobile, esquerda→direita desktop). Lado oposto 100% limpo. */}
+      <section
+        className="relative overflow-hidden bg-[#0B1929]"
+        style={{
+          background: "radial-gradient(ellipse 80% 60% at 30% 40%, #0d2740 0%, #0B1929 55%, #060f1a 100%)",
+        }}
+      >
+        {/* Subtle grid texture */}
         <div
-          className="absolute inset-0 lg:hidden"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.20) 38%, transparent 58%)" }}
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(0,180,216,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(0,180,216,0.8) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
         />
+        {/* Cyan glow accent */}
         <div
-          className="absolute inset-0 hidden lg:block"
-          style={{ background: "linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.20) 38%, transparent 58%)" }}
+          className="pointer-events-none absolute -left-32 -top-32 h-[520px] w-[520px] rounded-full opacity-[0.12]"
+          style={{ background: "radial-gradient(circle, #00b4d8 0%, transparent 70%)" }}
         />
 
-        {/* Content */}
-        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-          <div className="w-full max-w-2xl">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:grid lg:grid-cols-[1fr_420px] lg:items-center lg:gap-12 lg:px-8 lg:py-20 xl:grid-cols-[1fr_460px]">
+
+          {/* ── Left: copy ───────────────────────────────────────────── */}
+          <div className="mb-10 lg:mb-0">
 
             {/* H1 */}
-            <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white drop-shadow-md sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.2rem]">
               Recolha de móveis{" "}
               <span className="text-cyan-400">e esvaziamento</span>{" "}
               em Lisboa
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-white/75 sm:text-lg">
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70 sm:text-lg">
               Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
               Orçamento gratuito em 24&nbsp;horas. Serviço em Lisboa, Margem Sul e Setúbal.
             </p>
@@ -254,24 +256,30 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* CTA buttons */}
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/simulador"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
-              >
-                Pedir Orçamento Grátis
-              </Link>
+            {/* Trust signals */}
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <span className="flex items-center gap-1.5 text-sm text-white/60">
+                <span className="text-amber-400">★★★★★</span>
+                <span>5,0 · 188 trabalhos</span>
+              </span>
+              <span className="text-white/20">·</span>
+              <span className="text-sm text-white/60">Resposta em &lt;24&nbsp;h</span>
+              <span className="text-white/20">·</span>
               <a
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.08] px-8 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
+                className="flex items-center gap-1.5 text-sm text-white/60 transition hover:text-white"
               >
-                <MessageCircle className="h-5 w-5" />
+                <MessageCircle className="h-4 w-4" />
                 WhatsApp
               </a>
             </div>
+          </div>
+
+          {/* ── Right: form ──────────────────────────────────────────── */}
+          <div>
+            <HeroQuoteForm />
           </div>
         </div>
       </section>
