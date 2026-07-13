@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const SERVICE_OPTIONS = [
   { value: "recolha_moveis",           label: "Recolha de móveis" },
@@ -32,8 +32,6 @@ function fmtEur(v: number) {
   return v.toLocaleString("pt-PT", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-// ── field primitives ──────────────────────────────────────────────────────────
-
 function inputCls(error?: string) {
   return `w-full rounded-lg border bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 ${error ? "border-red-400/70" : "border-white/10"}`;
 }
@@ -54,8 +52,6 @@ function Err({ msg }: { msg?: string }) {
   if (!msg) return null;
   return <p className="mt-0.5 text-[10px] text-red-400">{msg}</p>;
 }
-
-// ── types ─────────────────────────────────────────────────────────────────────
 
 type FormData = {
   primeiroNome: string;
@@ -83,7 +79,8 @@ type EstimateResult = {
   customerMessage: string;
 };
 
-// ── main component ────────────────────────────────────────────────────────────
+// Fixed card height matches phase 2 (the bigger one)
+const CARD_MIN_HEIGHT = 530;
 
 export default function HeroQuoteForm() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -102,15 +99,36 @@ export default function HeroQuoteForm() {
   });
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [sent, setSent] = useState(false);
   const [estimate, setEstimate] = useState<EstimateResult | null>(null);
   const [serverError, setServerError] = useState("");
 
-  // image upload state
   const [images, setImages] = useState<File[]>([]);
   const [showUploadMenu, setShowUploadMenu] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Countdown ticker
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  function startCountdown() {
+    setCountdown(15);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownRef.current!);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
 
   function set(field: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -122,8 +140,6 @@ export default function HeroQuoteForm() {
     setImages((prev) => [...prev, ...Array.from(files)].slice(0, 5));
     setShowUploadMenu(false);
   }
-
-  // ── validation ──────────────────────────────────────────────────────────────
 
   function validateStep1(): boolean {
     const e: Errors = {};
@@ -150,13 +166,12 @@ export default function HeroQuoteForm() {
     if (validateStep1()) setStep(2);
   }
 
-  // ── submit ──────────────────────────────────────────────────────────────────
-
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     if (!validateStep2()) return;
     setLoading(true);
     setServerError("");
+    startCountdown();
 
     try {
       const res = await fetch("/api/hero-quote", {
@@ -170,6 +185,9 @@ export default function HeroQuoteForm() {
 
       const data = await res.json();
       if (!res.ok) {
+        setLoading(false);
+        setCountdown(null);
+        if (countdownRef.current) clearInterval(countdownRef.current);
         setServerError(data.error ?? "Erro ao enviar. Tente novamente.");
         return;
       }
@@ -177,17 +195,21 @@ export default function HeroQuoteForm() {
       setEstimate(data.estimate);
       setSent(true);
     } catch {
-      setServerError("Erro de rede. Verifique a sua ligação e tente novamente.");
-    } finally {
       setLoading(false);
+      setCountdown(null);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setServerError("Erro de rede. Verifique a sua ligação e tente novamente.");
     }
   }
 
-  // ── success state ────────────────────────────────────────────────────────────
+  // ── success ───────────────────────────────────────────────────────────────────
 
   if (sent) {
     return (
-      <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] p-6 text-center backdrop-blur-md">
+      <div
+        className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] p-6 text-center backdrop-blur-md"
+        style={{ minHeight: CARD_MIN_HEIGHT }}
+      >
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20 text-2xl text-cyan-400">
           ✓
         </div>
@@ -223,10 +245,13 @@ export default function HeroQuoteForm() {
     );
   }
 
-  // ── shared form wrapper ──────────────────────────────────────────────────────
+  // ── form card (fixed height) ───────────────────────────────────────────────
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-md" style={{ minHeight: 420 }}>
+    <div
+      className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-md"
+      style={{ minHeight: CARD_MIN_HEIGHT }}
+    >
       {/* progress bar */}
       <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3">
         <div className="flex flex-1 items-center gap-1.5">
@@ -240,214 +265,219 @@ export default function HeroQuoteForm() {
 
       {/* ── STEP 1 ── */}
       {step === 1 && (
-        <form onSubmit={nextStep} noValidate className="space-y-3 p-5">
-          {/* Nome */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label>Primeiro nome</Label>
-              <input className={inputCls(errors.primeiroNome)} placeholder="Ana"
-                value={form.primeiroNome} onChange={(e) => set("primeiroNome", e.target.value)}
-                autoComplete="given-name" />
-              <Err msg={errors.primeiroNome} />
+        <form onSubmit={nextStep} noValidate className="flex flex-1 flex-col p-5">
+          <div className="flex flex-1 flex-col justify-between space-y-3">
+            <div className="space-y-3">
+              {/* Nome */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Primeiro nome</Label>
+                  <input className={inputCls(errors.primeiroNome)} placeholder="Ana"
+                    value={form.primeiroNome} onChange={(e) => set("primeiroNome", e.target.value)}
+                    autoComplete="given-name" />
+                  <Err msg={errors.primeiroNome} />
+                </div>
+                <div>
+                  <Label>Último nome</Label>
+                  <input className={inputCls(errors.ultimoNome)} placeholder="Silva"
+                    value={form.ultimoNome} onChange={(e) => set("ultimoNome", e.target.value)}
+                    autoComplete="family-name" />
+                  <Err msg={errors.ultimoNome} />
+                </div>
+              </div>
+
+              {/* Telefone */}
+              <div className="grid grid-cols-[72px_1fr] gap-2">
+                <div>
+                  <Label>Ind.</Label>
+                  <input className={inputCls(errors.indicativo)} placeholder="+351"
+                    value={form.indicativo} onChange={(e) => set("indicativo", e.target.value)}
+                    autoComplete="tel-country-code" maxLength={6} />
+                  <Err msg={errors.indicativo} />
+                </div>
+                <div>
+                  <Label>Telemóvel</Label>
+                  <input className={inputCls(errors.telefone)} placeholder="912 345 678"
+                    value={form.telefone} onChange={(e) => set("telefone", e.target.value)}
+                    type="tel" autoComplete="tel-national" maxLength={20} />
+                  <Err msg={errors.telefone} />
+                </div>
+              </div>
+
+              {/* Serviço */}
+              <div>
+                <Label>Tipo de serviço</Label>
+                <select className={selectCls(errors.tipoServico)}
+                  value={form.tipoServico} onChange={(e) => set("tipoServico", e.target.value)}>
+                  <option value="">Escolha o serviço…</option>
+                  {SERVICE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <Err msg={errors.tipoServico} />
+              </div>
             </div>
-            <div>
-              <Label>Último nome</Label>
-              <input className={inputCls(errors.ultimoNome)} placeholder="Silva"
-                value={form.ultimoNome} onChange={(e) => set("ultimoNome", e.target.value)}
-                autoComplete="family-name" />
-              <Err msg={errors.ultimoNome} />
+
+            {/* spacer + CTA at bottom to match phase 2 height */}
+            <div className="mt-auto space-y-3 pt-3">
+              <button type="submit"
+                className="w-full rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400">
+                Próximo
+              </button>
+              <p className="text-center text-[10px] text-slate-500">
+                Sem compromisso · Gratuito · Resposta &lt;24&nbsp;h
+              </p>
             </div>
           </div>
-
-          {/* Telefone */}
-          <div className="grid grid-cols-[72px_1fr] gap-2">
-            <div>
-              <Label>Ind.</Label>
-              <input className={inputCls(errors.indicativo)} placeholder="+351"
-                value={form.indicativo} onChange={(e) => set("indicativo", e.target.value)}
-                autoComplete="tel-country-code" maxLength={6} />
-              <Err msg={errors.indicativo} />
-            </div>
-            <div>
-              <Label>Telemóvel</Label>
-              <input className={inputCls(errors.telefone)} placeholder="912 345 678"
-                value={form.telefone} onChange={(e) => set("telefone", e.target.value)}
-                type="tel" autoComplete="tel-national" maxLength={20} />
-              <Err msg={errors.telefone} />
-            </div>
-          </div>
-
-          {/* Serviço */}
-          <div>
-            <Label>Tipo de serviço</Label>
-            <select className={selectCls(errors.tipoServico)}
-              value={form.tipoServico} onChange={(e) => set("tipoServico", e.target.value)}>
-              <option value="">Escolha o serviço…</option>
-              {SERVICE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <Err msg={errors.tipoServico} />
-          </div>
-
-          <button type="submit"
-            className="mt-1 w-full rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400">
-            Próximo
-          </button>
-
-          <p className="text-center text-[10px] text-slate-500">
-            Sem compromisso · Gratuito · Resposta &lt;24&nbsp;h
-          </p>
         </form>
       )}
 
       {/* ── STEP 2 ── */}
       {step === 2 && (
-        <form onSubmit={handleSubmit} noValidate className="space-y-3 p-5">
-          {/* Rua */}
-          <div>
-            <Label>Rua / Avenida</Label>
-            <input className={inputCls(errors.rua)} placeholder="Rua das Flores"
-              value={form.rua} onChange={(e) => set("rua", e.target.value)}
-              autoComplete="street-address" />
-            <Err msg={errors.rua} />
-          </div>
+        <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col p-5">
+          <div className="flex flex-1 flex-col justify-between space-y-3">
+            <div className="space-y-3">
+              {/* Rua */}
+              <div>
+                <Label>Rua / Avenida</Label>
+                <input className={inputCls(errors.rua)} placeholder="Rua das Flores"
+                  value={form.rua} onChange={(e) => set("rua", e.target.value)}
+                  autoComplete="street-address" />
+                <Err msg={errors.rua} />
+              </div>
 
-          {/* CP + porta */}
-          <div className="grid grid-cols-[1fr_76px] gap-2">
-            <div>
-              <Label>Código postal</Label>
-              <input className={inputCls(errors.codigoPostal)} placeholder="2840-123"
-                value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)}
-                autoComplete="postal-code" maxLength={12} />
-              <Err msg={errors.codigoPostal} />
-            </div>
-            <div>
-              <Label>Nº porta</Label>
-              <input className={inputCls()} placeholder="12"
-                value={form.numeroPosta} onChange={(e) => set("numeroPosta", e.target.value)}
-                maxLength={10} />
-            </div>
-          </div>
-
-          {/* Andar + elevador */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label>Andar</Label>
-              <select className={selectCls()} value={form.andar}
-                onChange={(e) => set("andar", e.target.value)}>
-                {ANDAR_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Elevador</Label>
-              <select className={selectCls()} value={form.elevador}
-                onChange={(e) => set("elevador", e.target.value as FormData["elevador"])}>
-                {ELEVATOR_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Descrição + upload */}
-          <div>
-            <div className="mb-1 flex items-center justify-between">
-              <Label>Descrição <span className="normal-case text-slate-500">(opcional)</span></Label>
-              <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-400" : "text-slate-600"}`}>
-                {form.descricao.length}/300
-              </span>
-            </div>
-
-            <div className={`relative rounded-lg border bg-white/[0.06] transition focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/25 ${errors.descricao ? "border-red-400/70" : "border-white/10"}`}>
-              <textarea
-                value={form.descricao}
-                onChange={(e) => set("descricao", e.target.value)}
-                maxLength={310}
-                rows={3}
-                placeholder="Ex: 1 sofá de 3 lugares, 1 colchão de casal…"
-                className="w-full resize-none rounded-lg bg-transparent px-3 pb-8 pt-2.5 text-sm text-white placeholder-slate-500 outline-none"
-              />
-
-              {/* upload bar */}
-              <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between rounded-b-lg border-t border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
-                {images.length > 0 ? (
-                  <span className="text-[10px] text-slate-500">
-                    {images.length} imagem{images.length > 1 ? "ns" : ""} selecionada{images.length > 1 ? "s" : ""}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-slate-600">Adicionar fotos</span>
-                )}
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowUploadMenu((v) => !v)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-white/10 text-sm text-slate-300 transition hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-cyan-400"
-                    aria-label="Adicionar imagem"
-                  >
-                    +
-                  </button>
-
-                  {showUploadMenu && (
-                    <div className="absolute bottom-8 right-0 z-20 w-40 overflow-hidden rounded-xl border border-white/10 bg-[#0e2035] shadow-xl">
-                      <button
-                        type="button"
-                        onClick={() => cameraRef.current?.click()}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
-                      >
-                        <span>📷</span> Câmera
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => galleryRef.current?.click()}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
-                      >
-                        <span>🖼️</span> Galeria
-                      </button>
-                    </div>
-                  )}
+              {/* CP + porta */}
+              <div className="grid grid-cols-[1fr_76px] gap-2">
+                <div>
+                  <Label>Código postal</Label>
+                  <input className={inputCls(errors.codigoPostal)} placeholder="2840-123"
+                    value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)}
+                    autoComplete="postal-code" maxLength={12} />
+                  <Err msg={errors.codigoPostal} />
                 </div>
+                <div>
+                  <Label>Nº porta</Label>
+                  <input className={inputCls()} placeholder="12"
+                    value={form.numeroPosta} onChange={(e) => set("numeroPosta", e.target.value)}
+                    maxLength={10} />
+                </div>
+              </div>
+
+              {/* Andar + elevador */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Andar</Label>
+                  <select className={selectCls()} value={form.andar}
+                    onChange={(e) => set("andar", e.target.value)}>
+                    {ANDAR_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Elevador</Label>
+                  <select className={selectCls()} value={form.elevador}
+                    onChange={(e) => set("elevador", e.target.value as FormData["elevador"])}>
+                    {ELEVATOR_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Descrição + upload */}
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <Label>Descrição <span className="normal-case text-slate-500">(opcional)</span></Label>
+                  <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-400" : "text-slate-600"}`}>
+                    {form.descricao.length}/300
+                  </span>
+                </div>
+
+                <div className={`relative rounded-lg border bg-white/[0.06] transition focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/25 ${errors.descricao ? "border-red-400/70" : "border-white/10"}`}>
+                  <textarea
+                    value={form.descricao}
+                    onChange={(e) => set("descricao", e.target.value)}
+                    maxLength={310}
+                    rows={3}
+                    placeholder="Ex: 1 sofá de 3 lugares, 1 colchão de casal…"
+                    className="w-full resize-none rounded-lg bg-transparent px-3 pb-8 pt-2.5 text-sm text-white placeholder-slate-500 outline-none"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between rounded-b-lg border-t border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
+                    {images.length > 0 ? (
+                      <span className="text-[10px] text-slate-500">
+                        {images.length} imagem{images.length > 1 ? "ns" : ""} selecionada{images.length > 1 ? "s" : ""}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-600">Adicionar fotos</span>
+                    )}
+                    <div className="relative">
+                      <button type="button"
+                        onClick={() => setShowUploadMenu((v) => !v)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-white/10 text-sm text-slate-300 transition hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-cyan-400"
+                        aria-label="Adicionar imagem">
+                        +
+                      </button>
+                      {showUploadMenu && (
+                        <div className="absolute bottom-8 right-0 z-20 w-40 overflow-hidden rounded-xl border border-white/10 bg-[#0e2035] shadow-xl">
+                          <button type="button" onClick={() => cameraRef.current?.click()}
+                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-white">
+                            <span>📷</span> Câmera
+                          </button>
+                          <button type="button" onClick={() => galleryRef.current?.click()}
+                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-white">
+                            <span>🖼️</span> Galeria
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Err msg={errors.descricao} />
               </div>
             </div>
 
-            <Err msg={errors.descricao} />
+            {/* hidden inputs */}
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+              multiple className="hidden" onChange={(e) => addImages(e.target.files)} />
+            <input ref={galleryRef} type="file" accept="image/*"
+              multiple className="hidden" onChange={(e) => addImages(e.target.files)} />
+
+            {serverError && (
+              <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                {serverError}
+              </p>
+            )}
+
+            {/* CTA at bottom */}
+            <div className="mt-auto space-y-3 pt-3">
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => { setStep(1); setErrors({}); }}
+                  disabled={loading}
+                  className="rounded-xl border border-white/15 px-4 py-3 text-sm text-slate-400 transition hover:border-white/30 hover:text-white disabled:opacity-40">
+                  ← Voltar
+                </button>
+                <button type="submit" disabled={loading}
+                  className="relative flex-1 overflow-hidden rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-cyan-600">
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Calculando e enviando
+                      {countdown !== null && (
+                        <span className="tabular-nums text-white/70">{countdown}s</span>
+                      )}
+                    </span>
+                  ) : (
+                    "Pedir orçamento grátis"
+                  )}
+                </button>
+              </div>
+              <p className="text-center text-[10px] text-slate-500">
+                Sem compromisso · Gratuito · Resposta &lt;24&nbsp;h
+              </p>
+            </div>
           </div>
-
-          {/* hidden file inputs */}
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment"
-            multiple className="hidden" onChange={(e) => addImages(e.target.files)} />
-          <input ref={galleryRef} type="file" accept="image/*"
-            multiple className="hidden" onChange={(e) => addImages(e.target.files)} />
-
-          {serverError && (
-            <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-              {serverError}
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => { setStep(1); setErrors({}); }}
-              className="rounded-xl border border-white/15 px-4 py-3 text-sm text-slate-400 transition hover:border-white/30 hover:text-white"
-            >
-              ← Voltar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400 disabled:opacity-60"
-            >
-              {loading ? "A enviar…" : "Pedir orçamento grátis"}
-            </button>
-          </div>
-
-          <p className="text-center text-[10px] text-slate-500">
-            Sem compromisso · Gratuito · Resposta &lt;24&nbsp;h
-          </p>
         </form>
       )}
     </div>

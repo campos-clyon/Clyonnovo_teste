@@ -205,7 +205,7 @@ export default function HomePage() {
         <div className="relative z-10 mx-auto flex min-h-[560px] max-w-7xl items-center px-4 py-14 sm:px-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-0 xl:grid-cols-[1fr_460px]">
 
           {/* ── Left: copy ───────────────────────────────────────────── */}
-          <div className="mb-10 lg:mb-0">
+          <div className="mb-10 lg:mb-0" style={{ transform: "scale(1.05)", transformOrigin: "left center" }}>
 
             {/* H1 */}
             <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.2rem]">
