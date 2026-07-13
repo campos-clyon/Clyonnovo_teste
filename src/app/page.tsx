@@ -199,10 +199,10 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden" style={{ minHeight: 560 }}>
         <HeroBackground />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:grid lg:grid-cols-[1fr_420px] lg:items-center lg:gap-12 lg:px-8 lg:py-20 xl:grid-cols-[1fr_460px]">
+        <div className="relative z-10 mx-auto flex min-h-[560px] max-w-7xl items-center px-4 py-14 sm:px-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-0 xl:grid-cols-[1fr_460px]">
 
           {/* ── Left: copy ───────────────────────────────────────────── */}
           <div className="mb-10 lg:mb-0">
@@ -261,8 +261,10 @@ export default function HomePage() {
           </div>
 
           {/* ── Right: form ──────────────────────────────────────────── */}
-          <div>
-            <HeroQuoteForm />
+          <div className="flex items-center lg:py-14">
+            <div className="w-full" style={{ minHeight: 400 }}>
+              <HeroQuoteForm />
+            </div>
           </div>
         </div>
       </section>

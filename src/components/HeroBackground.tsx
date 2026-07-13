@@ -2,164 +2,178 @@
 
 import { useEffect, useRef } from "react";
 
+interface Bubble {
+  x: number;
+  y: number;
+  r: number;
+  speed: number;
+  opacity: number;
+  drift: number;
+  driftSpeed: number;
+  driftPhase: number;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  opacity: number;
+  opacityDir: number;
+}
+
 export default function HeroBackground() {
-  const ref = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     let raf = 0;
-    let tx = 0, ty = 0; // target
-    let cx = 0, cy = 0; // current (lerped)
+    let W = 0, H = 0;
 
-    function onMove(e: MouseEvent | TouchEvent) {
-      const rect = el!.getBoundingClientRect();
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-      tx = ((clientX - rect.left) / rect.width  - 0.5) * 2;   // -1 to 1
-      ty = ((clientY - rect.top)  / rect.height - 0.5) * 2;
+    function resize() {
+      const el = canvas!.parentElement;
+      W = canvas!.width  = el ? el.offsetWidth  : window.innerWidth;
+      H = canvas!.height = el ? el.offsetHeight : window.innerHeight;
     }
 
-    function tick() {
-      cx += (tx - cx) * 0.04;
-      cy += (ty - cy) * 0.04;
-      if (el) {
-        el.style.setProperty("--mx", cx.toFixed(4));
-        el.style.setProperty("--my", cy.toFixed(4));
+    // ── bubbles (limpeza / bolhas de água) ──────────────────────
+    const NUM_BUBBLES = 28;
+    const bubbles: Bubble[] = [];
+
+    function makeBubble(startAtBottom = false): Bubble {
+      return {
+        x: Math.random() * (W || 1400),
+        y: startAtBottom ? (H || 600) + Math.random() * 200 : Math.random() * (H || 600),
+        r: 3 + Math.random() * 14,
+        speed: 0.3 + Math.random() * 0.7,
+        opacity: 0.06 + Math.random() * 0.14,
+        drift: 0,
+        driftSpeed: 0.004 + Math.random() * 0.008,
+        driftPhase: Math.random() * Math.PI * 2,
+      };
+    }
+
+    for (let i = 0; i < NUM_BUBBLES; i++) bubbles.push(makeBubble(false));
+
+    // ── sparkle particles ────────────────────────────────────────
+    const NUM_SPARKS = 40;
+    const sparks: Particle[] = [];
+
+    function makeSpark(): Particle {
+      return {
+        x: Math.random() * (W || 1400),
+        y: Math.random() * (H || 600),
+        size: 1 + Math.random() * 2,
+        speed: 0.15 + Math.random() * 0.35,
+        opacity: Math.random() * 0.5,
+        opacityDir: (Math.random() > 0.5 ? 1 : -1) * (0.003 + Math.random() * 0.006),
+      };
+    }
+
+    for (let i = 0; i < NUM_SPARKS; i++) sparks.push(makeSpark());
+
+    // ── orb positions (static but slowly drifting) ───────────────
+    let t = 0;
+
+    function draw() {
+      t += 0.004;
+      ctx!.clearRect(0, 0, W, H);
+
+      // base gradient — slightly lighter navy, clean feel
+      const bg = ctx!.createLinearGradient(0, 0, W * 0.6, H);
+      bg.addColorStop(0, "#0e2d47");
+      bg.addColorStop(0.5, "#112e48");
+      bg.addColorStop(1, "#0b2036");
+      ctx!.fillStyle = bg;
+      ctx!.fillRect(0, 0, W, H);
+
+      // slow-moving orbs (cleaning/water feel — cyan + aquamarine)
+      const orbs = [
+        { cx: 0.15 + 0.08 * Math.sin(t * 0.7),  cy: 0.25 + 0.07 * Math.cos(t * 0.5),  r: 0.38, color: "rgba(0,188,220,0.13)" },
+        { cx: 0.82 + 0.06 * Math.cos(t * 0.6),  cy: 0.65 + 0.09 * Math.sin(t * 0.4),  r: 0.30, color: "rgba(20,210,175,0.10)" },
+        { cx: 0.50 + 0.10 * Math.sin(t * 0.45), cy: 0.15 + 0.06 * Math.cos(t * 0.8),  r: 0.22, color: "rgba(100,200,255,0.09)" },
+        { cx: 0.72 + 0.07 * Math.cos(t * 0.55), cy: 0.12 + 0.05 * Math.sin(t * 0.65), r: 0.18, color: "rgba(0,220,200,0.08)" },
+      ];
+
+      for (const o of orbs) {
+        const grd = ctx!.createRadialGradient(o.cx * W, o.cy * H, 0, o.cx * W, o.cy * H, o.r * W);
+        grd.addColorStop(0, o.color);
+        grd.addColorStop(1, "rgba(0,0,0,0)");
+        ctx!.fillStyle = grd;
+        ctx!.fillRect(0, 0, W, H);
       }
-      raf = requestAnimationFrame(tick);
+
+      // subtle horizontal shimmer line (water surface)
+      const shimmerY = H * (0.55 + 0.04 * Math.sin(t * 0.3));
+      const shimmer = ctx!.createLinearGradient(0, shimmerY - 1, 0, shimmerY + 1);
+      shimmer.addColorStop(0, "rgba(0,200,220,0)");
+      shimmer.addColorStop(0.5, `rgba(0,200,220,${0.06 + 0.04 * Math.sin(t * 0.8)})`);
+      shimmer.addColorStop(1, "rgba(0,200,220,0)");
+      ctx!.fillStyle = shimmer;
+      ctx!.fillRect(0, shimmerY - 1, W, 2);
+
+      // bubbles
+      for (const b of bubbles) {
+        b.driftPhase += b.driftSpeed;
+        b.x += Math.sin(b.driftPhase) * 0.4;
+        b.y -= b.speed;
+
+        if (b.y < -b.r * 2) {
+          b.x = Math.random() * W;
+          b.y = H + b.r;
+          b.r = 3 + Math.random() * 14;
+          b.speed = 0.3 + Math.random() * 0.7;
+          b.opacity = 0.06 + Math.random() * 0.14;
+        }
+
+        ctx!.beginPath();
+        ctx!.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx!.strokeStyle = `rgba(160,230,255,${b.opacity})`;
+        ctx!.lineWidth = 0.8;
+        ctx!.stroke();
+
+        // inner highlight
+        ctx!.beginPath();
+        ctx!.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.25, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(220,245,255,${b.opacity * 0.6})`;
+        ctx!.fill();
+      }
+
+      // sparkles / dust
+      for (const s of sparks) {
+        s.y -= s.speed;
+        s.opacity += s.opacityDir;
+        if (s.opacity <= 0 || s.opacity >= 0.55) s.opacityDir *= -1;
+        if (s.y < 0) { s.y = H; s.x = Math.random() * W; }
+
+        ctx!.beginPath();
+        ctx!.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(180,240,255,${s.opacity})`;
+        ctx!.fill();
+      }
+
+      raf = requestAnimationFrame(draw);
     }
 
-    window.addEventListener("mousemove", onMove, { passive: true });
-    window.addEventListener("touchmove", onMove, { passive: true });
-    raf = requestAnimationFrame(tick);
+    resize();
+    window.addEventListener("resize", resize, { passive: true });
+    draw();
 
     return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("touchmove", onMove);
       cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
     };
   }, []);
 
   return (
-    <div
-      ref={ref}
-      className="pointer-events-none absolute inset-0 overflow-hidden"
-      style={
-        {
-          "--mx": "0",
-          "--my": "0",
-          background: "linear-gradient(135deg, #0c1e32 0%, #0e2a44 40%, #091826 100%)",
-        } as React.CSSProperties
-      }
-    >
-      {/* Noise grain */}
-      <svg className="absolute inset-0 h-full w-full opacity-[0.035]" xmlns="http://www.w3.org/2000/svg">
-        <filter id="noise">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#noise)" />
-      </svg>
-
-      {/* Grid */}
-      <div
-        className="absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(0,180,216,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,180,216,1) 1px, transparent 1px)",
-          backgroundSize: "56px 56px",
-          transform: "perspective(1000px) rotateX(calc(var(--my) * 4deg)) rotateY(calc(var(--mx) * -4deg))",
-          transformOrigin: "center center",
-          transition: "none",
-        }}
-      />
-
-      {/* Orb 1 — cyan large */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: 600,
-          height: 600,
-          top: "-10%",
-          left: "-8%",
-          background: "radial-gradient(circle, rgba(0,180,216,0.22) 0%, transparent 65%)",
-          transform: "translate(calc(var(--mx) * 30px), calc(var(--my) * 20px))",
-          willChange: "transform",
-        }}
-      />
-
-      {/* Orb 2 — blue mid */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: 400,
-          height: 400,
-          bottom: "-5%",
-          right: "10%",
-          background: "radial-gradient(circle, rgba(56,134,255,0.18) 0%, transparent 65%)",
-          transform: "translate(calc(var(--mx) * -20px), calc(var(--my) * -25px))",
-          willChange: "transform",
-        }}
-      />
-
-      {/* Orb 3 — teal accent small */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: 260,
-          height: 260,
-          top: "30%",
-          right: "5%",
-          background: "radial-gradient(circle, rgba(20,220,185,0.14) 0%, transparent 65%)",
-          transform: "translate(calc(var(--mx) * 40px), calc(var(--my) * -15px))",
-          willChange: "transform",
-        }}
-      />
-
-      {/* Orb 4 — deep purple counter-accent */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: 340,
-          height: 340,
-          bottom: "15%",
-          left: "25%",
-          background: "radial-gradient(circle, rgba(100,60,200,0.12) 0%, transparent 65%)",
-          transform: "translate(calc(var(--mx) * 15px), calc(var(--my) * 35px))",
-          willChange: "transform",
-        }}
-      />
-
-      {/* Floating particles */}
-      {[
-        { cx: "15%", cy: "20%", r: 2.5, delay: "0s",   dur: "7s"  },
-        { cx: "82%", cy: "15%", r: 1.5, delay: "1.4s", dur: "9s"  },
-        { cx: "60%", cy: "72%", r: 2,   delay: "0.8s", dur: "8s"  },
-        { cx: "38%", cy: "55%", r: 1,   delay: "2.2s", dur: "6s"  },
-        { cx: "70%", cy: "38%", r: 1.5, delay: "3.1s", dur: "10s" },
-        { cx: "22%", cy: "80%", r: 1,   delay: "1.8s", dur: "7s"  },
-      ].map((p, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full bg-cyan-300/60"
-          style={{
-            width:  p.r * 2,
-            height: p.r * 2,
-            left:   p.cx,
-            top:    p.cy,
-            animation: `heroFloat ${p.dur} ease-in-out ${p.delay} infinite alternate`,
-          }}
-        />
-      ))}
-
-      <style>{`
-        @keyframes heroFloat {
-          from { transform: translateY(0px) translateX(0px); opacity: 0.4; }
-          to   { transform: translateY(-18px) translateX(8px); opacity: 1; }
-        }
-      `}</style>
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden
+    />
   );
 }

@@ -226,7 +226,7 @@ export default function HeroQuoteForm() {
   // ── shared form wrapper ──────────────────────────────────────────────────────
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-md">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-md" style={{ minHeight: 420 }}>
       {/* progress bar */}
       <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3">
         <div className="flex flex-1 items-center gap-1.5">
@@ -292,7 +292,7 @@ export default function HeroQuoteForm() {
 
           <button type="submit"
             className="mt-1 w-full rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400">
-            Próximo →
+            Próximo
           </button>
 
           <p className="text-center text-[10px] text-slate-500">
@@ -441,7 +441,7 @@ export default function HeroQuoteForm() {
               disabled={loading}
               className="flex-1 rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400 disabled:opacity-60"
             >
-              {loading ? "A enviar…" : "Pedir orçamento grátis →"}
+              {loading ? "A enviar…" : "Pedir orçamento grátis"}
             </button>
           </div>
 
