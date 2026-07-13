@@ -285,6 +285,7 @@ export interface InsertSimulatorOrder {
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;
+  postalCode?: string | null;
   floor?: string | null;
   hasElevator?: string | null;
   parkingDistance?: string | null;

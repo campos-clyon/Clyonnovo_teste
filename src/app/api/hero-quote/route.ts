@@ -73,22 +73,33 @@ export async function POST(req: NextRequest) {
   const morada = [rua, numeroPosta, codigoPostal].filter(Boolean).join(", ");
 
   // ── Motor de preços (rápido, sem Gemini) ─────────────────────────────────────
-  // Estimar distância km a partir do código postal (sem geocoding).
-  // Prefixos PT: 1xxx/2xxx = Lisboa metro ~20km | 28xx = Almada/Barreiro ~25km
-  // 29xx/30xx = Setúbal/Palmela ~45km | outros = 35km (genérico)
+  // Estimativa de distância a partir do código postal relativamente à base CLYON em Fernão Ferro.
+  // Fernão Ferro (2865) é a origem → zonas adjacentes têm km reduzidos.
   function estimateKmFromPostal(cp: string): number {
-    const prefix = parseInt(cp.replace(/\D/g, "").slice(0, 4), 10);
-    if (isNaN(prefix)) return 30;
-    if (prefix >= 1000 && prefix <= 1999) return 20; // Lisboa
-    if (prefix >= 2800 && prefix <= 2849) return 25; // Almada / Barreiro
-    if (prefix >= 2850 && prefix <= 2899) return 22; // Seixal / Corroios
-    if (prefix >= 2900 && prefix <= 2959) return 40; // Setúbal
-    if (prefix >= 2960 && prefix <= 2999) return 45; // Palmela / Montijo
-    if (prefix >= 2000 && prefix <= 2799) return 30; // Margem Sul genérica
-    return 35; // outros
+    const digits = cp.replace(/\D/g, "");
+    const prefix4 = parseInt(digits.slice(0, 4), 10);
+    if (isNaN(prefix4)) return 25;
+    // Fernão Ferro / Amora / Seixal imediato — base muito próxima
+    if (prefix4 >= 2845 && prefix4 <= 2869) return 7;
+    // Corroios / Belverde / Miratejo
+    if (prefix4 >= 2836 && prefix4 <= 2844) return 10;
+    // Almada / Pragal / Cacilhas
+    if (prefix4 >= 2800 && prefix4 <= 2835) return 18;
+    // Barreiro / Moita / Montijo
+    if (prefix4 >= 2830 && prefix4 <= 2839) return 15;
+    if (prefix4 >= 2870 && prefix4 <= 2899) return 12; // Costa da Caparica / Trafaria
+    // Setúbal
+    if (prefix4 >= 2900 && prefix4 <= 2959) return 45;
+    // Palmela / Sesimbra
+    if (prefix4 >= 2960 && prefix4 <= 2999) return 35;
+    // Lisboa — distância variável pela ponte
+    if (prefix4 >= 1000 && prefix4 <= 1799) return 35;
+    if (prefix4 >= 1800 && prefix4 <= 1999) return 25; // Margem Norte próxima
+    // Outras zonas Portugal
+    return 30;
   }
 
-  const estimatedKm = codigoPostal ? estimateKmFromPostal(codigoPostal) : 30;
+  const estimatedKm = codigoPostal ? estimateKmFromPostal(codigoPostal) : 25;
 
   let estimate: Awaited<ReturnType<typeof calculateFastEstimate>> | null = null;
   try {
@@ -150,7 +161,8 @@ export async function POST(req: NextRequest) {
       description: descricao || null,
       filesJson: null,
       address: morada || null,
-      city: null,
+      city: codigoPostal || null,   // será refinado pelo admin; usamos CP como referência
+      postalCode: codigoPostal || null,
       floor: andar || null,
       hasElevator: elevador !== "unknown" ? elevador : null,
       parkingDistance: null,
