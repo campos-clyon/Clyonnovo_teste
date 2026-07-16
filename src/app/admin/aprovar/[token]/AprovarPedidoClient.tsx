@@ -76,7 +76,7 @@ export default function AprovarPedidoClient() {
   // Fetch order once auth is ready
   useEffect(() => {
     if (!ready) return;
-    fetch(`/api/admin/pedidos/by-token/${token}`, { headers: { authorization: authHeader } })
+    fetch(`/api/admin/pedidos/by-token/${token}`, { headers: authHeader })
       .then((r) => r.json())
       .then((data) => {
         if (data.error) { setError(data.error); return; }
@@ -99,7 +99,7 @@ export default function AprovarPedidoClient() {
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}/approve`, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: authHeader },
+        headers: { "content-type": "application/json", ...authHeader },
         body: JSON.stringify({ precoFinal, precoFinalIva, mensagemCliente, notasInternas }),
       });
       if (!res.ok) {
