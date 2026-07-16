@@ -1,12 +1,15 @@
-import type { Metadata } from "next";
+"use client";
+
+import { usePathname } from "next/navigation";
 import AdminShell from "@/components/admin/AdminShell";
 
-export const metadata: Metadata = {
-  title: "Painel Admin — CLYON",
-  description: "Gestão interna de pedidos e equipa CLYON.",
-  robots: "noindex,nofollow",
-};
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  // Páginas públicas dentro de /admin que não precisam de autenticação
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
   return <AdminShell>{children}</AdminShell>;
 }
