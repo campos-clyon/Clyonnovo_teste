@@ -1,23 +1,33 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-// Este cliente usa a service_role key — NUNCA importar em ficheiros "use client".
-// Bypass total do RLS → só usar em Server Components, Route Handlers e Server Actions.
+// Cliente Supabase server-side com service_role (bypass RLS).
+// NUNCA importar em ficheiros "use client".
+// Inicialização lazy — só valida env vars quando efectivamente usado,
+// para não quebrar a build quando as vars ainda não estão configuradas.
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let cached: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error(
-    "Supabase admin client: faltam SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY no ambiente."
-  );
+export function getSupabaseAdmin(): SupabaseClient {
+  if (cached) return cached;
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error(
+      "Supabase admin client: faltam SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY no ambiente."
+    );
+  }
+
+  cached = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return cached;
 }
-
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
 
 // ─── Tipos mapeados da schema Supabase ────────────────────────────────────────
 
@@ -38,7 +48,6 @@ export interface AppOrder {
   photos: string[];
   created_at: string;
   updated_at: string;
-  // JOINs
   client_name: string | null;
   client_email: string | null;
   client_phone: string | null;

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   // Mesma proteção usada nos outros endpoints admin
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 
   // Busca service_requests com dados do cliente e da categoria
-  let query = supabaseAdmin
+  let query = getSupabaseAdmin()
     .from("service_requests")
     .select(`
       id,
