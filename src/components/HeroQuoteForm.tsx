@@ -30,16 +30,16 @@ const ANDAR_OPTIONS = [
 
 
 function inputCls(error?: string) {
-  return `w-full rounded-lg border bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 ${error ? "border-red-400/70" : "border-white/10"}`;
+  return `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/25 ${error ? "border-red-400" : "border-slate-200"}`;
 }
 
 function selectCls(error?: string) {
-  return `w-full rounded-lg border bg-[#0c1e32] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/25 ${error ? "border-red-400/70" : "border-white/10"}`;
+  return `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/25 ${error ? "border-red-400" : "border-slate-200"}`;
 }
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">
       {children}
     </label>
   );
@@ -223,7 +223,7 @@ export default function HeroQuoteForm() {
   if (sent) {
     return (
       <div
-        className="flex flex-col rounded-2xl border border-cyan-400/20 bg-white/[0.06] backdrop-blur-md"
+        className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50"
         style={{ minHeight: CARD_MIN_HEIGHT }}
       >
         {/* top accent bar */}
@@ -233,45 +233,45 @@ export default function HeroQuoteForm() {
           {/* animated check */}
           <div className="relative flex h-16 w-16 items-center justify-center">
             <div className="absolute inset-0 animate-ping rounded-full bg-cyan-500/20" />
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-cyan-400/40 bg-cyan-500/15">
-              <svg className="h-7 w-7 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-cyan-400/40 bg-cyan-50">
+              <svg className="h-7 w-7 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
           </div>
 
-          <h3 className="mt-5 text-xl font-bold text-white">Pedido enviado com sucesso!</h3>
+          <h3 className="mt-5 text-xl font-bold text-[#0B1929]">Pedido enviado com sucesso!</h3>
 
-          <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-slate-400">
+          <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-slate-500">
             A nossa equipa irá entrar em contacto em breve para confirmar data, horário e detalhes do serviço.
           </p>
 
           {/* info pills */}
           <div className="mt-6 flex flex-col gap-2 w-full max-w-[300px]">
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">📞</span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-white">Resposta em &lt;24&nbsp;h</p>
+                <p className="text-[11px] font-semibold text-[#0B1929]">Resposta em &lt;24&nbsp;h</p>
                 <p className="text-[10px] text-slate-500">Via chamada ou WhatsApp</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">📋</span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-white">Orçamento confirmado antes de avançar</p>
+                <p className="text-[11px] font-semibold text-[#0B1929]">Orçamento confirmado antes de avançar</p>
                 <p className="text-[10px] text-slate-500">Nenhum trabalho sem a sua aprovação</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">✅</span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-white">Sem custos ocultos</p>
+                <p className="text-[11px] font-semibold text-[#0B1929]">Sem custos ocultos</p>
                 <p className="text-[10px] text-slate-500">O preço fechado é o preço final</p>
               </div>
             </div>
           </div>
 
-          <p className="mt-6 text-[10px] text-slate-600">
+          <p className="mt-6 text-[10px] text-slate-400">
             Este formulário irá reiniciar automaticamente em 1 minuto.
           </p>
         </div>
@@ -283,14 +283,14 @@ export default function HeroQuoteForm() {
 
   return (
     <div
-      className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-md"
+      className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50"
       style={{ minHeight: CARD_MIN_HEIGHT }}
     >
       {/* progress bar */}
-      <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3">
+      <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
         <div className="flex flex-1 items-center gap-1.5">
-          <div className="h-1 flex-1 rounded-full bg-cyan-400" />
-          <div className={`h-1 flex-1 rounded-full transition-colors ${step === 2 ? "bg-cyan-400" : "bg-white/10"}`} />
+          <div className="h-1 flex-1 rounded-full bg-cyan-500" />
+          <div className={`h-1 flex-1 rounded-full transition-colors ${step === 2 ? "bg-cyan-500" : "bg-slate-200"}`} />
         </div>
         <span className="text-[10px] text-slate-500">
           {step === 1 ? "Passo 1/2 · Contacto" : "Passo 2/2 · Localização"}
@@ -423,43 +423,43 @@ export default function HeroQuoteForm() {
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <Label>Descrição <span className="normal-case text-slate-500">(opcional)</span></Label>
-                  <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-400" : "text-slate-600"}`}>
+                  <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-500" : "text-slate-400"}`}>
                     {form.descricao.length}/300
                   </span>
                 </div>
 
-                <div className={`relative rounded-lg border bg-white/[0.06] transition focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/25 ${errors.descricao ? "border-red-400/70" : "border-white/10"}`}>
+                <div className={`relative rounded-lg border bg-white transition focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500/25 ${errors.descricao ? "border-red-400" : "border-slate-200"}`}>
                   <textarea
                     value={form.descricao}
                     onChange={(e) => set("descricao", e.target.value)}
                     maxLength={310}
                     rows={3}
                     placeholder="Ex: 1 sofá de 3 lugares, 1 colchão de casal…"
-                    className="w-full resize-none rounded-lg bg-transparent px-3 pb-8 pt-2.5 text-sm text-white placeholder-slate-500 outline-none"
+                    className="w-full resize-none rounded-lg bg-transparent px-3 pb-8 pt-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none"
                   />
-                  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between rounded-b-lg border-t border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
+                  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between rounded-b-lg border-t border-slate-100 bg-slate-50 px-3 py-1.5">
                     {images.length > 0 ? (
                       <span className="text-[10px] text-slate-500">
                         {images.length} imagem{images.length > 1 ? "ns" : ""} selecionada{images.length > 1 ? "s" : ""}
                       </span>
                     ) : (
-                      <span className="text-[10px] text-slate-600">Adicionar fotos</span>
+                      <span className="text-[10px] text-slate-400">Adicionar fotos</span>
                     )}
                     <div className="relative">
                       <button type="button"
                         onClick={() => setShowUploadMenu((v) => !v)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-white/10 text-sm text-slate-300 transition hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-cyan-400"
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-slate-400 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-500"
                         aria-label="Adicionar imagem">
                         +
                       </button>
                       {showUploadMenu && (
-                        <div className="absolute bottom-8 right-0 z-20 w-40 overflow-hidden rounded-xl border border-white/10 bg-[#0e2035] shadow-xl">
+                        <div className="absolute bottom-8 right-0 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                           <button type="button" onClick={() => cameraRef.current?.click()}
-                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-white">
+                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                             <span>📷</span> Câmera
                           </button>
                           <button type="button" onClick={() => galleryRef.current?.click()}
-                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-white">
+                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                             <span>🖼️</span> Galeria
                           </button>
                         </div>
@@ -478,7 +478,7 @@ export default function HeroQuoteForm() {
               multiple className="hidden" onChange={(e) => addImages(e.target.files)} />
 
             {serverError && (
-              <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
                 {serverError}
               </p>
             )}
@@ -489,7 +489,7 @@ export default function HeroQuoteForm() {
                 <button type="button"
                   onClick={() => { setStep(1); setErrors({}); }}
                   disabled={loading}
-                  className="rounded-xl border border-white/15 px-4 py-3 text-sm text-slate-400 transition hover:border-white/30 hover:text-white disabled:opacity-40">
+                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-500 transition hover:border-slate-300 hover:text-slate-700 disabled:opacity-40">
                   ← Voltar
                 </button>
                 <button type="submit" disabled={loading}
