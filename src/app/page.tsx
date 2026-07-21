@@ -208,14 +208,14 @@ export default function HomePage() {
           <div className="mb-10 lg:mb-0" style={{ transform: "scale(1.05)", transformOrigin: "left center" }}>
 
             {/* H1 */}
-            <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.2rem]">
+            <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-[#0B1929] sm:text-5xl lg:text-[3.2rem]">
               Recolha de móveis{" "}
-              <span className="text-cyan-400">e esvaziamento</span>{" "}
+              <span className="text-cyan-600">e esvaziamento</span>{" "}
               em Lisboa
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70 sm:text-lg">
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-slate-500 sm:text-lg">
               Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
               Orçamento gratuito em 24&nbsp;horas. Serviço em Lisboa, Margem Sul e Setúbal.
             </p>
@@ -226,14 +226,14 @@ export default function HomePage() {
                 <Link
                   key={pill.id}
                   href={pill.href}
-                  className="rounded-full border border-white/20 bg-white/[0.08] px-4 py-1.5 text-sm font-medium text-white/85 backdrop-blur-sm transition-all hover:border-cyan-400/70 hover:bg-cyan-500/20 hover:text-white"
+                  className="rounded-full border border-slate-200 bg-white/60 px-4 py-1.5 text-sm font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-700"
                 >
                   {pill.label}
                 </Link>
               ))}
               <Link
                 href="/simulador"
-                className="rounded-full border border-cyan-400/40 bg-cyan-500/20 px-4 py-1.5 text-sm font-semibold text-cyan-300 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-500/30 hover:text-cyan-200"
+                className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-sm font-semibold text-cyan-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100"
               >
                 Ver todos
               </Link>
@@ -241,18 +241,18 @@ export default function HomePage() {
 
             {/* Trust signals */}
             <div className="mt-8 flex flex-wrap items-center gap-4">
-              <span className="flex items-center gap-1.5 text-sm text-white/60">
-                <span className="text-amber-400">★★★★★</span>
+              <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                <span className="text-amber-500">★★★★★</span>
                 <span>5,0 · 188 trabalhos</span>
               </span>
-              <span className="text-white/20">·</span>
-              <span className="text-sm text-white/60">Resposta em &lt;24&nbsp;h</span>
-              <span className="text-white/20">·</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-sm text-slate-500">Resposta em &lt;24&nbsp;h</span>
+              <span className="text-slate-300">·</span>
               <a
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-white/60 transition hover:text-white"
+                className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-cyan-600"
               >
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
