@@ -84,9 +84,9 @@ export default function ColaboradorLoginClient() {
 
       // Redirect por função
       if (data.colaborador.isAdmin === 1) {
-        router.push("/colaboradores/admin");
+        router.push("/admin");
       } else if (data.colaborador.funcao === "assistente") {
-        router.push("/colaboradores/admin?section=pedidos");
+        router.push("/admin?section=pedidos");
       } else {
         router.push("/colaboradores/dashboard");
       }

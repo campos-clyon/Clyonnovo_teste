@@ -174,13 +174,13 @@ export default function ColaboradorDashboard() {
     }
 
     if (isAdmin === "1") {
-      router.push("/colaboradores/admin");
+      router.push("/admin");
       return;
     }
 
     // Assistente não deve registar horas — redirecionar para painel de pedidos
     if (funcao === "assistente") {
-      router.replace("/colaboradores/admin?section=pedidos");
+      router.replace("/admin?section=pedidos");
       return;
     }
 

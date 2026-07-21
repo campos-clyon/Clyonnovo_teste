@@ -28,8 +28,13 @@ export default function AdminLoginPage() {
       }
       // Qualquer colaborador pode aceder ao painel (admin ou assistente)
       // A distinção de permissões é feita dentro do painel e nas APIs
-      localStorage.setItem("admin_token", data.token);
-      localStorage.setItem("admin_user", JSON.stringify(data.colaborador));
+      // Guardar credenciais no formato colaborador-storage
+      const isAdminNorm = data.colaborador.isAdmin === 1 || data.colaborador.isAdmin === true ? "1" : "0";
+      localStorage.setItem("colaborador_token", data.token);
+      localStorage.setItem("colaborador_nome", data.colaborador.nome);
+      localStorage.setItem("colaborador_id", String(data.colaborador.id));
+      localStorage.setItem("colaborador_isAdmin", isAdminNorm);
+      localStorage.setItem("colaborador_funcao", data.colaborador.funcao ?? "");
       router.push("/admin");
     } catch {
       setError("Erro de ligação. Tente novamente.");

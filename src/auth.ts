@@ -49,10 +49,10 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Após login bem-sucedido de colaborador → ir para /colaboradores/admin
+      // Após login bem-sucedido de colaborador → ir para /admin
       if (url.startsWith(baseUrl)) return url;
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      return `${baseUrl}/colaboradores/admin`;
+      return `${baseUrl}/admin`;
     },
   },
 

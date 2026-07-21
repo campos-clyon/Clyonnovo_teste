@@ -614,7 +614,7 @@ export default function ColaboradorAdminClient() {
     const storedFuncao = getColaboradorItem("funcao") ?? "";
 
     if (!storedToken) {
-      router.push("/colaboradores");
+      router.push("/admin/login");
       return;
     }
 
@@ -1325,7 +1325,7 @@ export default function ColaboradorAdminClient() {
 
   const handleLogout = () => {
     clearColaboradorStorage();
-    router.push("/colaboradores");
+    router.push("/admin/login");
   };
 
   const abrirEdicao = (colaborador: Colaborador) => {
@@ -3689,7 +3689,7 @@ export default function ColaboradorAdminClient() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => router.push("/colaboradores/admin/imagens")}
+                  onClick={() => router.push("/admin/imagens")}
                   className="h-11 rounded-2xl bg-cyan-400 px-5 text-slate-950 hover:bg-cyan-300"
                 >
                   Abrir gestor de imagens
@@ -4032,7 +4032,7 @@ export default function ColaboradorAdminClient() {
                     </div>
                     <Button
                       type="button"
-                      onClick={() => router.push("/colaboradores/admin/imagens")}
+                      onClick={() => router.push("/admin/imagens")}
                       className="h-11 w-full rounded-2xl bg-cyan-400 text-slate-950 hover:bg-cyan-300"
                     >
                       <ImagePlus className="mr-2 h-4 w-4" />

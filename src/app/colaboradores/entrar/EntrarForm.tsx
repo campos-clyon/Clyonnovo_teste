@@ -40,7 +40,7 @@ export default function EntrarForm({ erro }: EntrarFormProps) {
           await signOut({ callbackUrl: "/colaboradores/entrar?erro=nao_autorizado" });
         } else {
           // Autorizado: redirecionar para o painel de admin
-          window.location.href = "/colaboradores/admin";
+          window.location.href = "/admin";
         }
       } catch {
         await signOut({ callbackUrl: "/colaboradores/entrar?erro=Default" });

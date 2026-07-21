@@ -358,7 +358,7 @@ export default function ImageManagerClient() {
           <div>
             <button
               type="button"
-              onClick={() => router.push("/colaboradores/admin")}
+              onClick={() => router.push("/admin")}
               className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 hover:text-cyan-300"
             >
               <ArrowLeft className="h-3.5 w-3.5" />

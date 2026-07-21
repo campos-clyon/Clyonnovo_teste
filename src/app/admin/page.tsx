@@ -1,5 +1,13 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import LegacyAdminClient from "@/components/admin/LegacyAdminClient";
 
-export default function AdminIndex() {
-  redirect("/admin/pedidos");
+export const metadata: Metadata = {
+  title: "Painel Admin",
+  robots: { index: false, follow: false },
+};
+
+export default function AdminPage() {
+  return <LegacyAdminClient />;
 }
+
+export const dynamic = "force-dynamic";
