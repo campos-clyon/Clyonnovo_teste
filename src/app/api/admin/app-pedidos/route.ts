@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("[app-pedidos] supabase error:", error);
-    return NextResponse.json({ error: "Erro ao buscar pedidos." }, { status: 500 });
+    return NextResponse.json({ error: `Erro ao buscar pedidos: ${error.message}` }, { status: 500 });
   }
 
   // Normaliza a resposta para o formato esperado pelo frontend
