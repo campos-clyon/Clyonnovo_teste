@@ -5,8 +5,33 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AppStatus = "draft" | "open" | "in_progress" | "completed" | "cancelled";
+type AppStatus =
+  | "draft"
+  | "received"
+  | "in_review"
+  | "awaiting_deposit"
+  | "assignment_pending"
+  | "partner_selected"
+  | "confirmed"
+  | "in_route"
+  | "arrived"
+  | "in_execution"
+  | "extra_review_requested"
+  | "awaiting_confirmation"
+  | "completed"
+  | "in_dispute"
+  | "canceled"
+  | "rejected";
+
+type FilterGroup = "todos" | "abertos" | "em_curso" | "concluidos" | "cancelados";
 type Urgency   = "normal" | "urgent" | "flexible";
+
+const GROUP_STATUSES: Record<Exclude<FilterGroup, "todos">, AppStatus[]> = {
+  abertos:     ["draft", "received", "in_review", "awaiting_deposit", "assignment_pending", "partner_selected"],
+  em_curso:    ["confirmed", "in_route", "arrived", "in_execution", "extra_review_requested", "awaiting_confirmation"],
+  concluidos:  ["completed"],
+  cancelados:  ["canceled", "rejected", "in_dispute"],
+};
 
 type AppOrder = {
   id: string;
@@ -31,12 +56,29 @@ type AppOrder = {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+const AMBER  = { dot: "bg-amber-400",   badge: "bg-amber-400/10 border-amber-400/30 text-amber-300" };
+const SKY    = { dot: "bg-sky-400",     badge: "bg-sky-400/10 border-sky-400/30 text-sky-300" };
+const EMER   = { dot: "bg-emerald-400", badge: "bg-emerald-400/10 border-emerald-400/30 text-emerald-300" };
+const RED    = { dot: "bg-red-500",     badge: "bg-red-500/10 border-red-500/30 text-red-400" };
+const SLATE  = { dot: "bg-slate-500",   badge: "bg-slate-500/10 border-slate-500/30 text-slate-400" };
+
 const STATUS_CFG: Record<AppStatus, { label: string; dot: string; badge: string }> = {
-  draft:       { label: "Rascunho",    dot: "bg-slate-500",   badge: "bg-slate-500/10 border-slate-500/30 text-slate-400" },
-  open:        { label: "Aberto",      dot: "bg-amber-400",   badge: "bg-amber-400/10 border-amber-400/30 text-amber-300" },
-  in_progress: { label: "Em curso",   dot: "bg-sky-400",     badge: "bg-sky-400/10 border-sky-400/30 text-sky-300" },
-  completed:   { label: "Concluído",  dot: "bg-emerald-400", badge: "bg-emerald-400/10 border-emerald-400/30 text-emerald-300" },
-  cancelled:   { label: "Cancelado",  dot: "bg-red-500",     badge: "bg-red-500/10 border-red-500/30 text-red-400" },
+  draft:                  { label: "Rascunho",        ...SLATE },
+  received:               { label: "Recebido",        ...AMBER },
+  in_review:              { label: "Em análise",      ...AMBER },
+  awaiting_deposit:       { label: "Aguarda depósito",...AMBER },
+  assignment_pending:     { label: "A atribuir",      ...AMBER },
+  partner_selected:       { label: "Parceiro atribuído",...AMBER },
+  confirmed:              { label: "Confirmado",      ...SKY },
+  in_route:               { label: "A caminho",       ...SKY },
+  arrived:                { label: "Chegou",          ...SKY },
+  in_execution:           { label: "Em execução",     ...SKY },
+  extra_review_requested: { label: "Revisão extra",   ...SKY },
+  awaiting_confirmation:  { label: "Aguarda confirmação",...SKY },
+  completed:              { label: "Concluído",       ...EMER },
+  in_dispute:             { label: "Em disputa",      ...RED },
+  canceled:               { label: "Cancelado",       ...RED },
+  rejected:               { label: "Rejeitado",       ...RED },
 };
 
 const URGENCY_CFG: Record<Urgency, { label: string; color: string }> = {
@@ -45,12 +87,12 @@ const URGENCY_CFG: Record<Urgency, { label: string; color: string }> = {
   flexible: { label: "Flexível",  color: "text-slate-500" },
 };
 
-const FILTER_TABS: { key: AppStatus | "todos"; label: string }[] = [
+const FILTER_TABS: { key: FilterGroup; label: string }[] = [
   { key: "todos",       label: "Todos" },
-  { key: "open",        label: "Abertos" },
-  { key: "in_progress", label: "Em curso" },
-  { key: "completed",   label: "Concluídos" },
-  { key: "cancelled",   label: "Cancelados" },
+  { key: "abertos",     label: "Abertos" },
+  { key: "em_curso",    label: "Em curso" },
+  { key: "concluidos",  label: "Concluídos" },
+  { key: "cancelados",  label: "Cancelados" },
 ];
 
 function fmt(iso: string) {
@@ -63,7 +105,7 @@ function fmt(iso: string) {
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: AppStatus }) {
-  const cfg = STATUS_CFG[status] ?? STATUS_CFG.open;
+  const cfg = STATUS_CFG[status] ?? STATUS_CFG.received;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cfg.badge}`}>
       <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${cfg.dot}`} />
@@ -147,7 +189,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
   const [total, setTotal]     = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
-  const [filter, setFilter]   = useState<AppStatus | "todos">("todos");
+  const [filter, setFilter]   = useState<FilterGroup>("todos");
   const [search, setSearch]   = useState("");
 
   const fetchOrders = useCallback(async () => {
@@ -169,19 +211,17 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  // Contagens por status para os tabs
-  const counts = orders.reduce<Record<string, number>>((acc, o) => {
-    acc[o.status] = (acc[o.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  // Contagens por grupo para os tabs
+  const countInGroup = (g: Exclude<FilterGroup, "todos">) =>
+    orders.filter(o => GROUP_STATUSES[g].includes(o.status)).length;
 
-  const openCount      = orders.filter(o => o.status === "open").length;
-  const inProgressCount = orders.filter(o => o.status === "in_progress").length;
-  const urgentCount    = orders.filter(o => o.urgency === "urgent" && o.status === "open").length;
+  const openCount       = countInGroup("abertos");
+  const inProgressCount = countInGroup("em_curso");
+  const urgentCount     = orders.filter(o => o.urgency === "urgent" && GROUP_STATUSES.abertos.includes(o.status)).length;
 
-  // Filtro por status + pesquisa local
+  // Filtro por grupo + pesquisa local
   const filtered = orders.filter(o => {
-    if (filter !== "todos" && o.status !== filter) return false;
+    if (filter !== "todos" && !GROUP_STATUSES[filter].includes(o.status)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -229,7 +269,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
           {FILTER_TABS.map(tab => {
             const count = tab.key === "todos"
               ? orders.length
-              : (counts[tab.key] ?? 0);
+              : countInGroup(tab.key);
             return (
               <button
                 key={tab.key}
