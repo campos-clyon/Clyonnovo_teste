@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 
   try {
-    // First, discover what columns service_requests has
-    let query = getSupabaseAdmin()
+    const sb = getSupabaseAdmin();
+
+    let query = sb
       .from("service_requests")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
@@ -34,27 +35,59 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: `Erro ao buscar pedidos: ${error.message}` }, { status: 500 });
     }
 
-    const orders = (data ?? []).map((row: any) => ({
-      id:              row.id,
-      title:           row.title ?? row.service_type ?? "Sem título",
-      description:     row.description ?? "",
-      location:        row.location ?? row.address ?? "",
-      district:        row.district ?? "",
-      city:            row.city ?? "",
-      urgency:         row.urgency ?? "normal",
-      budget_range:    row.budget_range ?? null,
-      preferred_date:  row.preferred_date ?? null,
-      status:          row.status ?? "open",
-      photos:          row.photos ?? [],
-      created_at:      row.created_at,
-      updated_at:      row.updated_at ?? row.created_at,
-      client_name:     row.client_name ?? null,
-      client_email:    row.client_email ?? null,
-      client_phone:    row.client_phone ?? null,
-      category_name:   row.category_name ?? null,
-      category_icon:   row.category_icon ?? null,
-      responses_count: row.responses_count ?? 0,
-    }));
+    const rows = data ?? [];
+
+    // Fetch customer profiles for all unique customer_ids
+    const customerIds = [...new Set(rows.map((r: any) => r.customer_id).filter(Boolean))];
+    let profilesMap: Record<string, any> = {};
+    if (customerIds.length > 0) {
+      const { data: profiles } = await sb
+        .from("profiles")
+        .select("id, full_name, email, phone")
+        .in("id", customerIds);
+      for (const p of profiles ?? []) {
+        profilesMap[p.id] = p;
+      }
+    }
+
+    // Fetch category names for all unique category_slugs
+    const categorySlugs = [...new Set(rows.map((r: any) => r.category_slug).filter(Boolean))];
+    let categoriesMap: Record<string, any> = {};
+    if (categorySlugs.length > 0) {
+      const { data: cats } = await sb
+        .from("service_categories")
+        .select("slug, name, icon")
+        .in("slug", categorySlugs);
+      for (const c of cats ?? []) {
+        categoriesMap[c.slug] = c;
+      }
+    }
+
+    const orders = rows.map((row: any) => {
+      const profile = profilesMap[row.customer_id] ?? {};
+      const cat = categoriesMap[row.category_slug] ?? {};
+      return {
+        id:              row.id,
+        title:           row.details || cat.name || row.category_slug || "Pedido",
+        description:     row.notes ?? "",
+        location:        row.address_line ?? "",
+        district:        row.region ?? "",
+        city:            row.city ?? "",
+        urgency:         row.urgency ?? "normal",
+        budget_range:    row.estimated_price ? `€${row.estimated_price}` : null,
+        preferred_date:  row.scheduled_for ?? null,
+        status:          row.status ?? "open",
+        photos:          row.photos ?? [],
+        created_at:      row.created_at,
+        updated_at:      row.updated_at ?? row.created_at,
+        client_name:     profile.full_name ?? null,
+        client_email:    profile.email ?? null,
+        client_phone:    profile.phone ?? null,
+        category_name:   cat.name ?? row.category_slug ?? null,
+        category_icon:   cat.icon ?? null,
+        responses_count: 0,
+      };
+    });
 
     return NextResponse.json({ orders, total: count ?? orders.length });
   } catch (err: any) {
