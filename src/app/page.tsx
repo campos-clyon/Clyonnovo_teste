@@ -283,7 +283,7 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-20 sm:py-28">
+      <section className="bg-[#F4F8FB] py-10 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center sm:mb-16">
             <h2 className="text-2xl font-bold tracking-tight text-[#0B1929] sm:text-4xl lg:text-5xl">
@@ -346,7 +346,7 @@ export default function HomePage() {
       </section>
 
       {/* ── SERVICES ──────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-16 sm:py-24">
+      <section className="bg-[#F4F8FB] py-8 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
@@ -381,7 +381,7 @@ export default function HomePage() {
       </section>
 
       {/* ── GUARANTEES ────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-14 sm:py-20 lg:py-28">
+      <section className="bg-[#F4F8FB] py-8 sm:py-14 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-14">
             <h2 className="text-2xl font-bold text-[#0B1929] sm:text-4xl lg:text-5xl">
@@ -424,7 +424,7 @@ export default function HomePage() {
       </section>
 
       {/* ── REVIEWS ───────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-16 sm:py-24">
+      <section className="bg-[#F4F8FB] py-8 sm:py-16">
         <div className="mb-8 text-center px-4 sm:mb-12">
           <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
             O que dizem os nossos clientes
@@ -479,7 +479,7 @@ export default function HomePage() {
       </section>
 
       {/* ── COVERAGE ──────────────────────────────────────────────── */}
-      <section className="bg-white py-12 sm:py-16 lg:py-24">
+      <section className="bg-white py-8 sm:py-12 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div>
@@ -519,7 +519,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FOR PROFESSIONALS ─────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-16 sm:py-24">
+      <section className="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-8 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
@@ -560,7 +560,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────────── */}
-      <section className="bg-white py-12 sm:py-16 lg:py-24">
+      <section className="bg-white py-8 sm:py-12 lg:py-20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-12">
             <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
