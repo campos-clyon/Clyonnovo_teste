@@ -10,13 +10,14 @@ export type AdminUser = {
   funcao: string;
 };
 
-export function useAdminAuth() {
+export function useAdminAuth({ skip = false }: { skip?: boolean } = {}) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(skip);
 
   useEffect(() => {
+    if (skip) return;
     const t = localStorage.getItem("admin_token");
     const u = localStorage.getItem("admin_user");
     if (!t || !u) {
@@ -35,7 +36,7 @@ export function useAdminAuth() {
     } catch {
       router.replace("/admin/login");
     }
-  }, [router]);
+  }, [router, skip]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("admin_token");

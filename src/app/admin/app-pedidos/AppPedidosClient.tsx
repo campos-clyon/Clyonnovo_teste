@@ -139,7 +139,7 @@ function OrderRow({ order }: { order: AppOrder }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AppPedidosClient({ externalAuthHeader }: { externalAuthHeader?: Record<string, string> } = {}) {
-  const ownAuth = useAdminAuth();
+  const ownAuth = useAdminAuth({ skip: !!externalAuthHeader });
   const ready = externalAuthHeader ? true : ownAuth.ready;
   const authHeader = externalAuthHeader ?? ownAuth.authHeader;
 
