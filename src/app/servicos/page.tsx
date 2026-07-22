@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   MessageCircle,
   Phone,
-  Sparkles,
   Star,
 } from "lucide-react";
 
@@ -29,48 +28,90 @@ const WA_HREF = `https://wa.me/351931632622?text=${encodeURIComponent(
   "Olá CLYON, quero pedir orçamento para um serviço.",
 )}`;
 
-const services = [
+type Message = { from: "cliente" | "clyon"; text: string; time: string };
+
+type Service = {
+  title: string;
+  tagline: string;
+  price: string;
+  href: string;
+  accent: string;        // gradient
+  emoji: string;         // service marker
+  messages: Message[];   // stylized conversation
+};
+
+const services: Service[] = [
   {
     title: "Recolha de Móveis",
     tagline: "Sofás, camas, armários, eletrodomésticos",
     price: "desde 60€",
-    image: "/images/service-1.webp",
     href: "/recolha-de-moveis",
+    accent: "from-cyan-400 to-blue-500",
+    emoji: "🛋️",
+    messages: [
+      { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
+      { from: "clyon",   text: "Bom dia! Recolhemos amanhã de manhã — 75€ tudo incluído. Confirma?", time: "09:14" },
+    ],
   },
   {
     title: "Recolha de Entulho",
     tagline: "Restos de obra, sacos e materiais mistos",
     price: "desde 120€",
-    image: "/images/service-2.webp",
     href: "/recolha-de-entulho",
+    accent: "from-amber-400 to-orange-500",
+    emoji: "🧱",
+    messages: [
+      { from: "cliente", text: "Fiz obras na cozinha, tenho ~2m³ de entulho. É possível hoje?", time: "14:03" },
+      { from: "clyon",   text: "Hoje entre as 17h e 19h. Fica em 130€ com transporte incluído.", time: "14:05" },
+    ],
   },
   {
     title: "Esvaziamento de Casas",
     tagline: "Libertação completa do imóvel",
     price: "orçamento no local",
-    image: "/images/service-3.webp",
     href: "/esvaziamento-de-casas",
+    accent: "from-emerald-400 to-teal-500",
+    emoji: "🏠",
+    messages: [
+      { from: "cliente", text: "Herdei um T2 cheio e preciso de esvaziar para vender. Ajudam?", time: "10:40" },
+      { from: "clyon",   text: "Passamos amanhã para avaliar — tratamos de tudo, incluindo entrega da chave.", time: "10:42" },
+    ],
   },
   {
     title: "Recolha de Monos",
     tagline: "Volumes grandes e acumulados",
     price: "desde 80€",
-    image: "/images/service-4.webp",
     href: "/recolha-de-monos",
+    accent: "from-fuchsia-400 to-pink-500",
+    emoji: "📦",
+    messages: [
+      { from: "cliente", text: "Tenho garagem cheia de tralha antiga, quero libertar espaço.", time: "16:20" },
+      { from: "clyon",   text: "Envie 2 ou 3 fotos por WhatsApp e mando preço em 15 minutos.", time: "16:21" },
+    ],
   },
   {
     title: "Mudanças",
     tagline: "Casa, escritório, com desmontagem",
     price: "orçamento personalizado",
-    image: "/images/service-5.webp",
     href: "/mudancas",
+    accent: "from-indigo-400 to-purple-500",
+    emoji: "🚚",
+    messages: [
+      { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de guarda-roupa.", time: "11:08" },
+      { from: "clyon",   text: "Temos disponibilidade. Envio orçamento por email ainda hoje.", time: "11:10" },
+    ],
   },
   {
     title: "Limpeza pós-obra",
     tagline: "Pronto a habitar depois de obra",
     price: "desde 150€",
-    image: "/images/service-6.webp",
     href: "/limpeza-de-quintais",
+    accent: "from-sky-400 to-cyan-500",
+    emoji: "✨",
+    messages: [
+      { from: "cliente", text: "Acabei remodelação, quero entregar a casa a brilhar.", time: "18:47" },
+      { from: "clyon",   text: "Equipa disponível na quarta às 09h — 180€ com produtos incluídos.", time: "18:49" },
+    ],
   },
 ];
 
@@ -81,9 +122,9 @@ const steps = [
 ];
 
 const reviews = [
-  { name: "Rita M.", text: "Rápido, profissional e sem confusão. Voltaria a contratar.", img: "/images/review-rita.webp" },
-  { name: "Carlos S.", text: "Recolha do sofá antigo no mesmo dia. Preço justo.", img: "/images/review-carlos.webp" },
-  { name: "Patricia C.", text: "Equipa educada, chegou à hora e deixou tudo limpo.", img: "/images/review-patricia.webp" },
+  { name: "Rita M.", initial: "R", text: "Rápido, profissional e sem confusão. Voltaria a contratar." },
+  { name: "Carlos S.", initial: "C", text: "Recolha do sofá antigo no mesmo dia. Preço justo." },
+  { name: "Patricia C.", initial: "P", text: "Equipa educada, chegou à hora e deixou tudo limpo." },
 ];
 
 const faqs = [
@@ -135,32 +176,76 @@ const faqSchema = {
   })),
 };
 
+// ─── Chat card ─────────────────────────────────────────────────────────────
+function ChatCard({ service }: { service: Service }) {
+  return (
+    <Link
+      href={service.href}
+      className="group relative flex flex-col overflow-hidden rounded-[26px] border border-[#E2EEF3] bg-white shadow-[0_10px_40px_-24px_rgba(14,116,144,0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_50px_-24px_rgba(14,116,144,0.35)]"
+    >
+      {/* Header com gradiente e emoji */}
+      <div className={`relative flex items-center gap-3 bg-gradient-to-r ${service.accent} px-5 pb-5 pt-4 text-white`}>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/25 text-xl backdrop-blur-sm">
+          {service.emoji}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-white/85">CLYON · Lisboa</p>
+          <h3 className="truncate text-[15px] font-bold leading-tight">{service.title}</h3>
+        </div>
+        <span className="rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-900">
+          {service.price}
+        </span>
+      </div>
+
+      {/* Bolhas de conversa */}
+      <div className="flex flex-col gap-2.5 bg-[#F5F9FC] px-4 py-4">
+        {service.messages.map((m, i) => (
+          <div key={i} className={`flex ${m.from === "cliente" ? "justify-start" : "justify-end"}`}>
+            <div
+              className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-[13px] leading-snug shadow-sm ${
+                m.from === "cliente"
+                  ? "rounded-bl-md bg-white text-slate-800 ring-1 ring-slate-200/70"
+                  : "rounded-br-md bg-gradient-to-br from-cyan-500 to-blue-600 text-white"
+              }`}
+            >
+              <p>{m.text}</p>
+              <div
+                className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+                  m.from === "cliente" ? "text-slate-400" : "text-white/75"
+                }`}
+              >
+                <span>{m.time}</span>
+                {m.from === "clyon" && <Check className="h-3 w-3" strokeWidth={3} />}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between border-t border-slate-100 bg-white px-5 py-3.5">
+        <p className="text-sm text-slate-600">{service.tagline}</p>
+        <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 transition group-hover:text-cyan-500">
+          Ver mais
+          <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 export default function ServicosPage() {
   return (
     <div className="min-h-screen bg-white pb-24 md:pb-0">
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-slate-950 text-white">
-        <Image
-          src="/hero-clyon-carrinha-lisboa.jpg"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover opacity-30"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/70 to-slate-950" />
-
-        <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-14 sm:px-6 md:pt-20 lg:px-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-            <Sparkles className="h-3 w-3" />
-            Resposta em minutos
-          </div>
-
-          <h1 className="mt-4 max-w-[16ch] text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
-            Recolhas, limpezas e mudanças <span className="text-cyan-300">sem complicar.</span>
+      <section className="relative overflow-hidden bg-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_40%)]" />
+        <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 md:pb-12 md:pt-16 lg:px-8">
+          <h1 className="max-w-[16ch] text-[2rem] font-bold leading-[1.08] tracking-tight text-[#0B1929] sm:text-5xl md:text-6xl">
+            Recolhas, limpezas e mudanças <span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">sem complicar.</span>
           </h1>
 
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
             Envie fotos, recebemos o pedido e damos preço claro. Lisboa, Margem Sul e Setúbal — muitas vezes no mesmo dia.
           </p>
 
@@ -177,14 +262,14 @@ export default function ServicosPage() {
             </a>
             <Link
               href="/simulador"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-5 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 sm:text-base"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110 sm:text-base"
             >
               Simular preço
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href={`tel:${BUSINESS_PHONE}`}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10 sm:text-base"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 sm:text-base"
             >
               <Phone className="h-4 w-4" />
               931 632 622
@@ -192,7 +277,7 @@ export default function ServicosPage() {
           </div>
 
           {/* Reassurance strip */}
-          <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-300 sm:grid-cols-4 sm:text-sm">
+          <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600 sm:grid-cols-4 sm:text-sm">
             {[
               "Orçamento grátis",
               "Sem visita prévia",
@@ -200,7 +285,7 @@ export default function ServicosPage() {
               "Destino responsável",
             ].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-cyan-300" />
+                <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-cyan-600" />
                 <span>{t}</span>
               </li>
             ))}
@@ -209,12 +294,15 @@ export default function ServicosPage() {
       </section>
 
       {/* ── SERVICES ─────────────────────────────────────────────────── */}
-      <section className="bg-slate-50 py-10 md:py-14">
+      <section className="bg-[#F4F8FB] py-10 md:py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-end justify-between gap-3 md:mb-8">
-            <h2 className="text-2xl font-bold leading-tight text-slate-950 sm:text-3xl md:text-4xl">
-              O que fazemos
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold leading-tight text-[#0B1929] sm:text-3xl md:text-4xl">
+                O que fazemos
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 sm:text-base">Exemplos reais do que respondemos por dia.</p>
+            </div>
             <Link
               href="/precos"
               className="hidden text-sm font-semibold text-cyan-700 hover:text-cyan-500 sm:inline-flex sm:items-center sm:gap-1"
@@ -225,32 +313,7 @@ export default function ServicosPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((s) => (
-              <Link
-                key={s.title}
-                href={s.href}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
-              >
-                <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
-                  <Image
-                    src={s.image}
-                    alt={s.title}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-900">
-                    {s.price}
-                  </span>
-                </div>
-                <div className="p-4">
-                  <h3 className="text-base font-bold text-slate-950 sm:text-lg">{s.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{s.tagline}</p>
-                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 group-hover:text-cyan-500">
-                    Ver detalhes <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                  </span>
-                </div>
-              </Link>
+              <ChatCard key={s.title} service={s} />
             ))}
           </div>
         </div>
@@ -259,7 +322,7 @@ export default function ServicosPage() {
       {/* ── HOW IT WORKS ─────────────────────────────────────────────── */}
       <section className="bg-white py-10 md:py-14">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold leading-tight text-slate-950 sm:text-3xl md:text-4xl">
+          <h2 className="text-2xl font-bold leading-tight text-[#0B1929] sm:text-3xl md:text-4xl">
             Como pedir — 3 passos
           </h2>
           <p className="mt-2 max-w-lg text-sm text-slate-600 sm:text-base">
@@ -269,10 +332,10 @@ export default function ServicosPage() {
           <ol className="mt-6 grid gap-3 md:grid-cols-3 md:gap-5">
             {steps.map((step) => (
               <li key={step.n} className="relative rounded-2xl border border-cyan-100 bg-cyan-50/40 p-5">
-                <span className="absolute -top-3 left-4 inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500 text-sm font-bold text-white shadow-md">
+                <span className="absolute -top-3 left-4 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-bold text-white shadow-md">
                   {step.n}
                 </span>
-                <h3 className="mt-2 text-base font-bold text-slate-950 sm:text-lg">{step.title}</h3>
+                <h3 className="mt-2 text-base font-bold text-[#0B1929] sm:text-lg">{step.title}</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-600">{step.text}</p>
               </li>
             ))}
@@ -281,7 +344,7 @@ export default function ServicosPage() {
       </section>
 
       {/* ── REVIEWS ──────────────────────────────────────────────────── */}
-      <section className="bg-slate-50 py-10 md:py-14">
+      <section className="bg-[#F4F8FB] py-10 md:py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-5 flex items-center justify-between gap-3 md:mb-8">
             <div>
@@ -303,16 +366,17 @@ export default function ServicosPage() {
 
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             {reviews.map((r) => (
-              <figure key={r.name} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <blockquote className="text-sm leading-6 text-slate-700">&ldquo;{r.text}&rdquo;</blockquote>
+              <figure key={r.name} className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-1 text-amber-400">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                  ))}
+                </div>
+                <blockquote className="mt-2 text-sm leading-6 text-slate-700">&ldquo;{r.text}&rdquo;</blockquote>
                 <figcaption className="mt-3 flex items-center gap-2.5">
-                  <Image
-                    src={r.img}
-                    alt=""
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-bold text-white">
+                    {r.initial}
+                  </span>
                   <span className="text-sm font-semibold text-slate-900">{r.name}</span>
                 </figcaption>
               </figure>
@@ -324,7 +388,7 @@ export default function ServicosPage() {
       {/* ── FAQ ──────────────────────────────────────────────────────── */}
       <section className="bg-white py-10 md:py-14">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold leading-tight text-slate-950 sm:text-3xl md:text-4xl">
+          <h2 className="text-2xl font-bold leading-tight text-[#0B1929] sm:text-3xl md:text-4xl">
             Perguntas frequentes
           </h2>
           <div className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
@@ -346,14 +410,14 @@ export default function ServicosPage() {
       {/* ── FINAL CTA ────────────────────────────────────────────────── */}
       <section className="bg-white pb-10 md:pb-14">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-xl md:px-10 md:py-12">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.25),transparent_50%)]" />
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-600 px-6 py-8 text-white shadow-xl md:px-10 md:py-12">
+            <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
             <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 className="text-xl font-bold leading-tight sm:text-2xl md:text-3xl">
                   Já sabe o serviço? Peça agora.
                 </h2>
-                <p className="mt-2 max-w-lg text-sm text-slate-300 sm:text-base">
+                <p className="mt-2 max-w-lg text-sm text-cyan-50 sm:text-base">
                   Envie o pedido pelo WhatsApp ou simulador — resposta em minutos.
                 </p>
               </div>
@@ -362,14 +426,14 @@ export default function ServicosPage() {
                   href={WA_HREF}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
                 >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </a>
                 <Link
                   href="/simulador"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950/25 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/25 transition hover:bg-slate-950/40"
                 >
                   Simular preço
                 </Link>
@@ -393,7 +457,7 @@ export default function ServicosPage() {
           </a>
           <Link
             href="/simulador"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-cyan-400 px-3 py-3 text-sm font-semibold text-slate-950 active:bg-cyan-500"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-3 text-sm font-semibold text-white active:brightness-110"
           >
             Simular
           </Link>
