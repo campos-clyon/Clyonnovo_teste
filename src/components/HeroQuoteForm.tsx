@@ -76,8 +76,7 @@ type EstimateResult = {
   customerMessage: string;
 };
 
-// Fixed card height matches phase 2 (the bigger one)
-const CARD_MIN_HEIGHT = 530;
+const CARD_MIN_HEIGHT = 420;
 
 export default function HeroQuoteForm() {
   const [step, setStep] = useState<1 | 2>(1);

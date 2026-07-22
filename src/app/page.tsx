@@ -199,60 +199,60 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ minHeight: 560 }}>
+      <section className="relative overflow-hidden">
         <HeroBackground />
 
-        <div className="relative z-10 mx-auto flex min-h-[560px] max-w-7xl items-center px-4 py-14 sm:px-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-0 xl:grid-cols-[1fr_460px]">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:grid lg:min-h-[560px] lg:grid-cols-[1fr_420px] lg:items-center lg:gap-12 lg:px-8 lg:py-0 xl:grid-cols-[1fr_460px]">
 
           {/* ── Left: copy ───────────────────────────────────────────── */}
-          <div className="mb-10 lg:mb-0" style={{ transform: "scale(1.05)", transformOrigin: "left center" }}>
+          <div className="mb-8 lg:mb-0">
 
             {/* H1 */}
-            <h1 className="text-[2.1rem] font-bold leading-[1.1] tracking-tight text-[#0B1929] sm:text-5xl lg:text-[3.2rem]">
+            <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[#0B1929] sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
               Recolha de móveis{" "}
               <span className="text-cyan-600">e esvaziamento</span>{" "}
               em Lisboa
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-slate-500 sm:text-lg">
+            <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
               Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
               Orçamento gratuito em 24&nbsp;horas. Serviço em Lisboa, Margem Sul e Setúbal.
             </p>
 
             {/* Category pills */}
-            <div className="mt-7 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
               {HERO_PILLS.map((pill) => (
                 <Link
                   key={pill.id}
                   href={pill.href}
-                  className="rounded-full border border-slate-200 bg-white/60 px-4 py-1.5 text-sm font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-700"
+                  className="rounded-full border border-slate-200 bg-white/60 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-700 sm:px-4 sm:py-1.5 sm:text-sm"
                 >
                   {pill.label}
                 </Link>
               ))}
               <Link
                 href="/simulador"
-                className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-sm font-semibold text-cyan-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100"
+                className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100 sm:px-4 sm:py-1.5 sm:text-sm"
               >
                 Ver todos
               </Link>
             </div>
 
             {/* Trust signals */}
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <span className="flex items-center gap-1.5 text-sm text-slate-500">
+            <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
+              <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
                 <span className="text-amber-500">★★★★★</span>
                 <span>5,0 · 188 trabalhos</span>
               </span>
               <span className="text-slate-300">·</span>
-              <span className="text-sm text-slate-500">Resposta em &lt;24&nbsp;h</span>
-              <span className="text-slate-300">·</span>
+              <span className="text-xs text-slate-500 sm:text-sm">Resposta em &lt;24&nbsp;h</span>
+              <span className="hidden text-slate-300 sm:inline">·</span>
               <a
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-cyan-600"
+                className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-cyan-600 sm:flex"
               >
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
@@ -261,10 +261,8 @@ export default function HomePage() {
           </div>
 
           {/* ── Right: form ──────────────────────────────────────────── */}
-          <div className="flex items-center lg:py-14">
-            <div className="w-full" style={{ minHeight: 400 }}>
-              <HeroQuoteForm />
-            </div>
+          <div className="lg:py-14">
+            <HeroQuoteForm />
           </div>
         </div>
       </section>
@@ -287,19 +285,19 @@ export default function HomePage() {
       {/* ── HOW IT WORKS ──────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
-            <h2 className="text-4xl font-bold tracking-tight text-[#0B1929] sm:text-5xl">
+          <div className="mb-10 text-center sm:mb-16">
+            <h2 className="text-2xl font-bold tracking-tight text-[#0B1929] sm:text-4xl lg:text-5xl">
               Simples do início ao fim
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-slate-500 sm:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
               Do pedido à porta fechada — sem chamadas desnecessárias, sem orçamentos que nunca chegam.
             </p>
           </div>
 
-          <div className="relative grid gap-14 md:grid-cols-3 md:gap-8">
+          <div className="relative grid gap-10 md:grid-cols-3 md:gap-8">
             {/* Dashed animated line — only between steps on desktop */}
             <div
-              className="step-line pointer-events-none absolute top-[52px] hidden h-[2px] md:block"
+              className="step-line pointer-events-none absolute top-[40px] hidden h-[2px] md:block lg:top-[52px]"
               style={{ left: "18%", right: "18%" }}
               aria-hidden="true"
             />
@@ -313,23 +311,23 @@ export default function HomePage() {
                 {/* Icon with float animation + pulse ring */}
                 <div className="relative">
                   <span
-                    className="step-pulse-ring absolute inset-0 rounded-3xl bg-cyan-400"
+                    className="step-pulse-ring absolute inset-0 rounded-2xl bg-cyan-400 sm:rounded-3xl"
                     style={{ animationDelay: `${i * 400}ms` }}
                     aria-hidden="true"
                   />
                   <div
-                    className="step-icon relative z-10 flex h-[104px] w-[104px] items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-xl shadow-cyan-500/30 transition-transform duration-300 hover:scale-110 hover:rotate-3"
+                    className="step-icon relative z-10 flex h-[80px] w-[80px] items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-xl shadow-cyan-500/30 transition-transform duration-300 hover:scale-110 hover:rotate-3 sm:h-[104px] sm:w-[104px] sm:rounded-3xl"
                     style={{ animationDelay: `${i * 400}ms` }}
                   >
-                    <step.icon className="h-12 w-12 text-white" strokeWidth={2.2} />
-                    <span className="absolute -right-2 -top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#0B1929] text-sm font-bold text-white shadow-md ring-4 ring-[#F4F8FB]">
+                    <step.icon className="h-9 w-9 text-white sm:h-12 sm:w-12" strokeWidth={2.2} />
+                    <span className="absolute -right-2 -top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-[#0B1929] text-xs font-bold text-white shadow-md ring-4 ring-[#F4F8FB] sm:h-8 sm:w-8 sm:text-sm">
                       {i + 1}
                     </span>
                   </div>
                 </div>
 
-                <h3 className="mt-8 text-xl font-bold text-[#0B1929] sm:text-2xl">{step.title}</h3>
-                <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-500 sm:text-base">
+                <h3 className="mt-5 text-lg font-bold text-[#0B1929] sm:mt-8 sm:text-2xl">{step.title}</h3>
+                <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500 sm:mt-3 sm:text-base">
                   {step.description}
                 </p>
               </div>
@@ -383,42 +381,42 @@ export default function HomePage() {
       </section>
 
       {/* ── GUARANTEES ────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-20 sm:py-28">
+      <section className="bg-[#F4F8FB] py-14 sm:py-20 lg:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-14 text-center">
-            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl lg:text-5xl">
+          <div className="mb-8 text-center sm:mb-14">
+            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-4xl lg:text-5xl">
               Construída para inspirar confiança
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-slate-500 sm:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
               Cada detalhe foi pensado para eliminar incerteza — no preço, no profissional e no resultado.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
             {GUARANTEES.map((g, i) => (
               <div
                 key={g.title}
-                className="guarantee-card group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.07)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.11)]"
+                className="guarantee-card group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.07)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.11)] sm:rounded-3xl sm:p-8"
                 style={{ animationDelay: `${i * 0.15}s` }}
               >
                 {/* gradient top border */}
                 <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${g.gradient}`} />
 
                 {/* icon */}
-                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${g.iconBg} shadow-lg ${g.glow} transition-transform duration-300 group-hover:scale-110`}>
-                  <g.icon className="h-7 w-7 text-white" />
+                <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${g.iconBg} shadow-lg ${g.glow} transition-transform duration-300 group-hover:scale-110 sm:h-14 sm:w-14 sm:rounded-2xl`}>
+                  <g.icon className="h-5 w-5 text-white sm:h-7 sm:w-7" />
                 </div>
 
                 {/* stat */}
-                <div className="mt-6">
-                  <span className={`bg-gradient-to-r ${g.gradient} bg-clip-text text-5xl font-black text-transparent`}>
+                <div className="mt-4 sm:mt-6">
+                  <span className={`bg-gradient-to-r ${g.gradient} bg-clip-text text-3xl font-black text-transparent sm:text-5xl`}>
                     {g.stat}
                   </span>
-                  <span className="ml-2 text-sm font-medium text-slate-400">{g.statLabel}</span>
+                  <span className="ml-2 text-xs font-medium text-slate-400 sm:text-sm">{g.statLabel}</span>
                 </div>
 
-                <h3 className="mt-3 text-xl font-bold text-[#0B1929]">{g.title}</h3>
-                <p className="mt-3 leading-relaxed text-slate-500">{g.description}</p>
+                <h3 className="mt-2 text-base font-bold text-[#0B1929] sm:mt-3 sm:text-xl">{g.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500 sm:mt-3 sm:text-base">{g.description}</p>
               </div>
             ))}
           </div>
@@ -427,11 +425,11 @@ export default function HomePage() {
 
       {/* ── REVIEWS ───────────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] py-16 sm:py-24">
-        <div className="mb-12 text-center px-4">
-          <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
+        <div className="mb-8 text-center px-4 sm:mb-12">
+          <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
             O que dizem os nossos clientes
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-slate-500 sm:text-lg">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
             Histórias reais de quem já usou a CLYON em Lisboa, Margem Sul e Setúbal.
           </p>
         </div>
@@ -481,12 +479,12 @@ export default function HomePage() {
       </section>
 
       {/* ── COVERAGE ──────────────────────────────────────────────── */}
-      <section className="bg-white py-16 sm:py-24">
+      <section className="bg-white py-12 sm:py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div>
-              <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">Onde estamos</h2>
-              <p className="mt-4 max-w-md text-slate-500 sm:text-lg">
+              <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">Onde estamos</h2>
+              <p className="mt-3 max-w-md text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
                 Já cobrimos mais de 24 localidades em Lisboa, Margem Sul e Setúbal —
                 e continuamos a crescer.
               </p>
@@ -525,10 +523,10 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
-              <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
+              <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
                 Tem uma empresa de remoções ou transportes?
               </h2>
-              <p className="mt-4 text-slate-500 sm:text-lg">
+              <p className="mt-3 text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
                 Receba pedidos verificados na sua zona. Sem investimento em publicidade, sem
                 leads frios — só trabalho real com clientes confirmados.
               </p>
@@ -562,17 +560,17 @@ export default function HomePage() {
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────────── */}
-      <section className="bg-white py-16 sm:py-24">
+      <section className="bg-white py-12 sm:py-16 lg:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-[#0B1929] sm:text-4xl">
+          <div className="mb-8 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
               Perguntas frequentes
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-slate-500">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base">
               Respostas às dúvidas mais comuns sobre recolha de móveis, entulho e esvaziamento em Lisboa.
             </p>
           </div>
-          <div className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] px-6 sm:px-8">
+          <div className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] px-4 sm:px-6 lg:px-8">
             <Accordion type="single" collapsible>
               {homeFaqs.map((faq) => (
                 <AccordionItem
@@ -580,10 +578,10 @@ export default function HomePage() {
                   value={faq.question}
                   className="border-[#E2EEF3]"
                 >
-                  <AccordionTrigger className="text-left text-base font-semibold text-[#0B1929] hover:no-underline">
+                  <AccordionTrigger className="text-left text-sm font-semibold text-[#0B1929] hover:no-underline sm:text-base">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed text-slate-500">
+                  <AccordionContent className="text-xs leading-relaxed text-slate-500 sm:text-sm">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -594,19 +592,19 @@ export default function HomePage() {
       </section>
 
       {/* ── FINAL CTA ─────────────────────────────────────────────── */}
-      <section className="bg-white py-10 sm:py-16">
+      <section className="bg-white py-8 sm:py-10 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-8 py-12 text-center ring-1 ring-[#E2EEF3] sm:px-12 sm:py-16">
-            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-5 py-10 text-center ring-1 ring-[#E2EEF3] sm:rounded-3xl sm:px-12 sm:py-16">
+            <h2 className="text-xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
               Pronto para libertar espaço?
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-slate-500 sm:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
               Orçamento online, sem telefonemas. Confirme os detalhes e receba uma resposta clara.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center">
               <Link
                 href="/simulador"
-                className="inline-flex h-12 items-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
+                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-500 px-6 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-cyan-400 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
               >
                 Pedir Orçamento Grátis
               </Link>
@@ -614,7 +612,7 @@ export default function HomePage() {
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#25D366] px-8 text-base font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] sm:h-12 sm:w-auto sm:px-8 sm:text-base"
               >
                 <MessageCircle className="h-5 w-5" />
                 WhatsApp
