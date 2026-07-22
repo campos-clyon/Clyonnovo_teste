@@ -7,6 +7,7 @@ import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-s
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import ContasPanel from "@/components/admin/ContasPanel";
+import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import {
   AlertTriangle,
   Archive,
@@ -37,6 +38,7 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Trash2,
   TrendingUp,
@@ -67,7 +69,7 @@ type SimulatorSetting = {
   description?: string | null;
 };
 
-type AdminSection = "overview" | "pedidos" | "operacao" | "leads" | "site" | "equipa" | "pagamentos" | "configs" | "contas";
+type AdminSection = "overview" | "pedidos" | "app_clyon" | "operacao" | "leads" | "site" | "equipa" | "pagamentos" | "configs" | "contas";
 type OperacaoTab = "equipa" | "pagamentos" | "funcoes";
 
 type Lead = {
@@ -143,6 +145,7 @@ const adminNavItems: Array<{
 }> = [
   { id: "overview", icon: LayoutDashboard },
   { id: "pedidos",   icon: FileText },
+  { id: "app_clyon", icon: Smartphone },
   { id: "leads",     icon: TrendingUp },
   { id: "equipa",    icon: Users },
   { id: "pagamentos", icon: Wallet },
@@ -153,6 +156,7 @@ const adminNavItems: Array<{
 const sectionLabels: Record<AdminSection, string> = {
   overview:   "Início",
   pedidos:    "Pedidos",
+  app_clyon:  "App CLYON",
   operacao:   "Operação",   // mantido internamente (aliases apontam para ele)
   leads:      "Leads",
   site:       "Configurações",
@@ -2199,6 +2203,13 @@ export default function ColaboradorAdminClient() {
               </div>
               )}
 
+            </section>
+          )}
+
+          {/* ═══════════════════════ APP CLYON ═══════════════════════ */}
+          {activeSection === "app_clyon" && (
+            <section className="overflow-hidden rounded-[28px] border border-cyan-300/16 shadow-[0_20px_70px_rgba(3,10,18,0.22)]">
+              <AppPedidosClient externalAuthHeader={token ? { Authorization: `Bearer ${token}` } : undefined} />
             </section>
           )}
 
