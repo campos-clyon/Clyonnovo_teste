@@ -127,10 +127,13 @@ function MetricCard({ label, value, accent }: { label: string; value: string | n
 
 // ─── OrderRow ────────────────────────────────────────────────────────────────
 
-function OrderRow({ order }: { order: AppOrder }) {
+function OrderRow({ order, onClick }: { order: AppOrder; onClick: () => void }) {
   const urgency = URGENCY_CFG[order.urgency] ?? URGENCY_CFG.normal;
   return (
-    <div className="group flex cursor-default items-center gap-4 border-b border-white/[0.04] px-5 py-4 transition hover:bg-white/[0.02]">
+    <div
+      onClick={onClick}
+      className="group flex cursor-pointer items-center gap-4 border-b border-white/[0.04] px-5 py-4 transition hover:bg-white/[0.03]"
+    >
       {/* ID curto + urgência */}
       <div className="w-16 flex-shrink-0">
         <p className={`text-[10px] font-bold uppercase tracking-wider ${urgency.color}`}>
@@ -178,6 +181,168 @@ function OrderRow({ order }: { order: AppOrder }) {
   );
 }
 
+// ─── DetailModal ─────────────────────────────────────────────────────────────
+
+function DetailModal({
+  order,
+  authHeader,
+  onClose,
+  onUpdated,
+}: {
+  order: AppOrder;
+  authHeader: Record<string, string>;
+  onClose: () => void;
+  onUpdated: (o: AppOrder) => void;
+}) {
+  const [status, setStatus] = useState<AppStatus>(order.status);
+  const [saving, setSaving] = useState<null | "status" | "aprovar" | "rejeitar">(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const patch = async (payload: Record<string, unknown>, tag: typeof saving) => {
+    setSaving(tag);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${order.id}`, {
+        method: "PATCH",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error ?? "Erro"); return; }
+      const updated: AppOrder = { ...order, status: (data.order?.status as AppStatus) ?? status };
+      onUpdated(updated);
+      onClose();
+    } catch {
+      setErr("Erro de rede.");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0F1729] p-6 shadow-2xl"
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              #{order.id.slice(0, 8)}
+            </p>
+            <h2 className="mt-0.5 text-lg font-bold text-white">{order.title}</h2>
+            <div className="mt-1">
+              <StatusBadge status={order.status} />
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-300 hover:bg-white/10"
+          >
+            Fechar
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Cliente</p>
+            <p className="text-sm text-white">{order.client_name ?? "—"}</p>
+            <p className="text-xs text-slate-500">{order.client_phone ?? order.client_email ?? ""}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Categoria</p>
+            <p className="text-sm text-white">{order.category_name ?? "—"}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Localização</p>
+            <p className="text-sm text-white">
+              {order.location || "—"}
+              {order.city && `, ${order.city}`}
+              {order.district && `, ${order.district}`}
+            </p>
+          </div>
+          {order.description && (
+            <div className="md:col-span-2">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Descrição</p>
+              <p className="text-sm text-slate-200 whitespace-pre-wrap">{order.description}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Urgência</p>
+            <p className="text-sm text-white">{URGENCY_CFG[order.urgency]?.label ?? order.urgency}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Orçamento</p>
+            <p className="text-sm text-white">{order.budget_range ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Criado em</p>
+            <p className="text-sm text-white">{fmt(order.created_at)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Data preferida</p>
+            <p className="text-sm text-white">{order.preferred_date ?? "—"}</p>
+          </div>
+        </div>
+
+        {err && (
+          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+            {err}
+          </div>
+        )}
+
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">Acções</p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              disabled={saving !== null}
+              onClick={() => patch({ status: "assignment_pending" }, "aprovar")}
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-50"
+            >
+              {saving === "aprovar" ? "A aprovar..." : "Aprovar"}
+            </button>
+            <button
+              disabled={saving !== null}
+              onClick={() => patch({ status: "rejected" }, "rejeitar")}
+              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
+            >
+              {saving === "rejeitar" ? "A rejeitar..." : "Rejeitar"}
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="text-[10px] uppercase tracking-wider text-slate-500">Alterar status</label>
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as AppStatus)}
+                className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+              >
+                {(Object.keys(STATUS_CFG) as AppStatus[]).map(s => (
+                  <option key={s} value={s} className="bg-[#0F1729]">
+                    {STATUS_CFG[s].label} ({s})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              disabled={saving !== null || status === order.status}
+              onClick={() => patch({ status }, "status")}
+              className="h-10 rounded-lg bg-cyan-500 px-4 text-sm font-semibold text-white hover:bg-cyan-400 disabled:opacity-50"
+            >
+              {saving === "status" ? "A guardar..." : "Guardar status"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AppPedidosClient({ externalAuthHeader }: { externalAuthHeader?: Record<string, string> } = {}) {
@@ -191,6 +356,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
   const [error, setError]     = useState<string | null>(null);
   const [filter, setFilter]   = useState<FilterGroup>("todos");
   const [search, setSearch]   = useState("");
+  const [selected, setSelected] = useState<AppOrder | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!ready) return;
@@ -323,7 +489,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
         )}
 
         {!loading && filtered.map(order => (
-          <OrderRow key={order.id} order={order} />
+          <OrderRow key={order.id} order={order} onClick={() => setSelected(order)} />
         ))}
 
         {!loading && !error && filtered.length > 0 && (
@@ -332,6 +498,18 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
           </p>
         )}
       </div>
+
+      {selected && (
+        <DetailModal
+          order={selected}
+          authHeader={authHeader}
+          onClose={() => setSelected(null)}
+          onUpdated={(o) => {
+            setOrders(prev => prev.map(p => p.id === o.id ? { ...p, status: o.status } : p));
+            setSelected(null);
+          }}
+        />
+      )}
     </div>
   );
 }
