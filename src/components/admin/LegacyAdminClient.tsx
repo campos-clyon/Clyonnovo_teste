@@ -365,6 +365,12 @@ export default function ColaboradorAdminClient() {
   const [editSenha, setEditSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [loadingEdicao, setLoadingEdicao] = useState(false);
+  const [senhaAtualAdmin, setSenhaAtualAdmin] = useState("");
+  const [novaSenhaAdmin, setNovaSenhaAdmin] = useState("");
+  const [confirmacaoSenhaAdmin, setConfirmacaoSenhaAdmin] = useState("");
+  const [mostrarSenhaAtualAdmin, setMostrarSenhaAtualAdmin] = useState(false);
+  const [mostrarNovaSenhaAdmin, setMostrarNovaSenhaAdmin] = useState(false);
+  const [alterandoSenhaAdmin, setAlterandoSenhaAdmin] = useState(false);
   const [simulatorSettings, setSimulatorSettings] = useState<SimulatorSetting[]>([]);
   const [simulatorDrafts, setSimulatorDrafts] = useState<Record<string, string>>({});
   const [loadingSimulatorSettings, setLoadingSimulatorSettings] = useState(false);
@@ -852,6 +858,47 @@ export default function ColaboradorAdminClient() {
       setError(err instanceof Error ? err.message : "Não foi possível atualizar o colaborador.");
     } finally {
       setLoadingEdicao(false);
+    }
+  };
+
+  const alterarMinhaSenha = async () => {
+    setError("");
+
+    if (!senhaAtualAdmin || !novaSenhaAdmin || !confirmacaoSenhaAdmin) {
+      setError("Preencha a palavra-passe atual, a nova palavra-passe e a respetiva confirmação.");
+      return;
+    }
+    if (novaSenhaAdmin !== confirmacaoSenhaAdmin) {
+      setError("A confirmação não coincide com a nova palavra-passe.");
+      return;
+    }
+    if (novaSenhaAdmin.length < 8) {
+      setError("A nova palavra-passe deve ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    setAlterandoSenhaAdmin(true);
+    try {
+      const response = await fetch("/api/admin/seguranca/alterar-senha", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ senhaAtual: senhaAtualAdmin, novaSenha: novaSenhaAdmin }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Não foi possível atualizar a palavra-passe.");
+      }
+
+      clearColaboradorStorage();
+      setToken("");
+      router.replace("/admin/login?passwordChanged=1");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível atualizar a palavra-passe.");
+    } finally {
+      setAlterandoSenhaAdmin(false);
     }
   };
 
@@ -2915,48 +2962,80 @@ export default function ColaboradorAdminClient() {
               {/* Aba: Segurança */}
               {settingsTab === "seguranca" && (
                 <ActionCard
-                  title="Segurança do portal"
-                  description="Altere a palavra-passe da sua conta de administrador. Utilize uma palavra-passe forte com pelo menos 8 caracteres."
+                  title="Segurança da sua conta"
+                  description={`Altere a palavra-passe da conta autenticada (${adminNome || "administrador"}). Para sua proteção, será necessário iniciar sessão novamente.`}
                 >
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field label="Palavra-passe atual">
+                      <div className="relative">
+                        <input
+                          type={mostrarSenhaAtualAdmin ? "text" : "password"}
+                          value={senhaAtualAdmin}
+                          onChange={(event) => setSenhaAtualAdmin(event.target.value)}
+                          autoComplete="current-password"
+                          placeholder="A sua palavra-passe atual"
+                          className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 pr-12 text-white outline-none transition focus:border-cyan-300"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setMostrarSenhaAtualAdmin((value) => !value)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          aria-label={mostrarSenhaAtualAdmin ? "Ocultar palavra-passe atual" : "Mostrar palavra-passe atual"}
+                        >
+                          {mostrarSenhaAtualAdmin ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </Field>
                     <Field label="Nova palavra-passe">
                       <div className="relative">
                         <input
-                          type={mostrarSenha ? "text" : "password"}
-                          value={editSenha}
-                          onChange={(event) => setEditSenha(event.target.value)}
+                          type={mostrarNovaSenhaAdmin ? "text" : "password"}
+                          value={novaSenhaAdmin}
+                          onChange={(event) => setNovaSenhaAdmin(event.target.value)}
+                          autoComplete="new-password"
                           placeholder="Mínimo 8 caracteres"
                           className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 pr-12 text-white outline-none transition focus:border-cyan-300"
                         />
                         <button
                           type="button"
-                          onClick={() => setMostrarSenha((s) => !s)}
+                          onClick={() => setMostrarNovaSenhaAdmin((value) => !value)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          aria-label={mostrarNovaSenhaAdmin ? "Ocultar nova palavra-passe" : "Mostrar nova palavra-passe"}
                         >
-                          {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          {mostrarNovaSenhaAdmin ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </button>
                       </div>
                     </Field>
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        disabled={!editSenha || editSenha.length < 8 || loadingEdicao}
-                        onClick={() => {
-                          const adminColaborador = colaboradores.find((c) => c.isAdmin === 1 || c.funcao === "admin");
-                          if (adminColaborador) editarUsuario(adminColaborador.id);
-                        }}
-                        className="h-12 w-full rounded-2xl bg-cyan-400 px-6 text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
-                      >
-                        {loadingEdicao ? "A guardar..." : "Guardar palavra-passe"}
-                      </Button>
-                    </div>
+                    <Field label="Confirmar nova palavra-passe">
+                      <input
+                        type="password"
+                        value={confirmacaoSenhaAdmin}
+                        onChange={(event) => setConfirmacaoSenhaAdmin(event.target.value)}
+                        autoComplete="new-password"
+                        placeholder="Repita a nova palavra-passe"
+                        className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
+                      />
+                    </Field>
                   </div>
-                  <div className="rounded-[16px] border border-white/10 bg-white/[0.02] px-4 py-4 text-sm text-slate-400">
-                    <p className="font-semibold text-slate-300">Boas práticas de segurança</p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-400">
+                      A nova palavra-passe deve conter pelo menos 8 caracteres, incluindo uma letra e um número.
+                    </p>
+                    <Button
+                      type="button"
+                      disabled={alterandoSenhaAdmin}
+                      onClick={alterarMinhaSenha}
+                      className="h-12 shrink-0 rounded-2xl bg-cyan-400 px-6 text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
+                    >
+                      {alterandoSenhaAdmin ? "A atualizar..." : "Atualizar palavra-passe"}
+                    </Button>
+                  </div>
+                  <div className="mt-5 rounded-[16px] border border-white/10 bg-white/[0.02] px-4 py-4 text-sm text-slate-400">
+                    <p className="font-semibold text-slate-300">Como este controlo protege a conta</p>
                     <ul className="mt-2 list-inside list-disc space-y-1">
-                      <li>Use uma palavra-passe com pelo menos 8 caracteres, com letras, números e símbolos.</li>
-                      <li>Não partilhe as credenciais de administrador com colaboradores sem permissão.</li>
-                      <li>Termine sempre a sessão quando não estiver a usar o portal.</li>
+                      <li>A palavra-passe atual é confirmada antes de qualquer alteração.</li>
+                      <li>A alteração é aplicada apenas à conta de administrador autenticada.</li>
+                      <li>A sessão é terminada após a confirmação, para que entre novamente com a nova palavra-passe.</li>
                     </ul>
                   </div>
                 </ActionCard>

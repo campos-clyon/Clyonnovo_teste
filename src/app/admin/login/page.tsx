@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const passwordChanged = searchParams.get("passwordChanged") === "1";
   const [nome, setNome] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,6 +67,12 @@ export default function AdminLoginPage() {
         <div className="rounded-[28px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,25,42,0.98)_0%,rgba(9,18,32,0.98)_100%)] p-7 shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
           <h1 className="text-xl font-bold text-white mb-1">Entrar no painel</h1>
           <p className="text-sm text-slate-400 mb-7">Acesso exclusivo para equipa CLYON.</p>
+
+          {passwordChanged && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
+              Palavra-passe atualizada. Entre novamente com a nova palavra-passe.
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
