@@ -150,14 +150,12 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
   const [filter, setFilter]   = useState<AppStatus | "todos">("todos");
   const [search, setSearch]   = useState("");
 
-  const fetchOrders = useCallback(async (status: AppStatus | "todos") => {
+  const fetchOrders = useCallback(async () => {
     if (!ready) return;
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ limit: "100" });
-      if (status !== "todos") params.set("status", status);
-      const res = await fetch(`/api/admin/app-pedidos?${params}`, { headers: authHeader });
+      const res = await fetch(`/api/admin/app-pedidos?limit=200`, { headers: authHeader });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Erro ao carregar."); return; }
       setOrders(data.orders ?? []);
@@ -169,7 +167,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
     }
   }, [ready, authHeader]);
 
-  useEffect(() => { fetchOrders(filter); }, [fetchOrders, filter]);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   // Contagens por status para os tabs
   const counts = orders.reduce<Record<string, number>>((acc, o) => {
@@ -181,8 +179,9 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
   const inProgressCount = orders.filter(o => o.status === "in_progress").length;
   const urgentCount    = orders.filter(o => o.urgency === "urgent" && o.status === "open").length;
 
-  // Pesquisa local
+  // Filtro por status + pesquisa local
   const filtered = orders.filter(o => {
+    if (filter !== "todos" && o.status !== filter) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -205,7 +204,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
             <p className="text-xs text-slate-500">Pedidos enviados pelos clientes via app CLYON</p>
           </div>
           <button
-            onClick={() => fetchOrders(filter)}
+            onClick={() => fetchOrders()}
             className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 hover:bg-white/10"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
