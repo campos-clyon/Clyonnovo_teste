@@ -183,6 +183,17 @@ function OrderRow({ order, onClick }: { order: AppOrder; onClick: () => void }) 
 
 // ─── DetailModal ─────────────────────────────────────────────────────────────
 
+const LABEL = "text-[10px] uppercase tracking-wider text-slate-500";
+const INPUT = "mt-1 h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
+const TA    = "mt-1 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400";
+
+// € prefixed budget -> numeric price
+function parsePrice(budget: string | null): string {
+  if (!budget) return "";
+  const n = Number(String(budget).replace(/[^\d.,-]/g, "").replace(",", "."));
+  return Number.isFinite(n) ? String(n) : "";
+}
+
 function DetailModal({
   order,
   authHeader,
@@ -194,11 +205,19 @@ function DetailModal({
   onClose: () => void;
   onUpdated: (o: AppOrder) => void;
 }) {
-  const [status, setStatus] = useState<AppStatus>(order.status);
-  const [saving, setSaving] = useState<null | "status" | "aprovar" | "rejeitar">(null);
+  const [status, setStatus]         = useState<AppStatus>(order.status);
+  const [title, setTitle]           = useState(order.title);
+  const [description, setDescription] = useState(order.description);
+  const [location, setLocation]     = useState(order.location);
+  const [city, setCity]             = useState(order.city);
+  const [district, setDistrict]     = useState(order.district);
+  const [urgency, setUrgency]       = useState<Urgency>(order.urgency);
+  const [price, setPrice]           = useState(parsePrice(order.budget_range));
+  const [preferredDate, setPreferredDate] = useState(order.preferred_date ?? "");
+  const [saving, setSaving] = useState<null | "status" | "aprovar" | "rejeitar" | "guardar">(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const patch = async (payload: Record<string, unknown>, tag: typeof saving) => {
+  const patch = async (payload: Record<string, unknown>, tag: NonNullable<typeof saving>) => {
     setSaving(tag);
     setErr(null);
     try {
@@ -209,7 +228,19 @@ function DetailModal({
       });
       const data = await res.json();
       if (!res.ok) { setErr(data.error ?? "Erro"); return; }
-      const updated: AppOrder = { ...order, status: (data.order?.status as AppStatus) ?? status };
+      const row = data.order ?? {};
+      const updated: AppOrder = {
+        ...order,
+        title:          typeof row.details === "string" && row.details ? row.details : order.title,
+        description:    typeof row.notes === "string" ? row.notes : order.description,
+        location:       typeof row.address_line === "string" ? row.address_line : order.location,
+        city:           typeof row.city === "string" ? row.city : order.city,
+        district:       typeof row.region === "string" ? row.region : order.district,
+        urgency:        (row.urgency as Urgency) ?? order.urgency,
+        budget_range:   row.estimated_price != null ? `€${row.estimated_price}` : order.budget_range,
+        preferred_date: row.scheduled_for ?? order.preferred_date,
+        status:         (row.status as AppStatus) ?? order.status,
+      };
       onUpdated(updated);
       onClose();
     } catch {
@@ -219,14 +250,38 @@ function DetailModal({
     }
   };
 
+  const guardar = () => {
+    const payload: Record<string, unknown> = {};
+    if (title !== order.title)                     payload.details = title;
+    if (description !== order.description)         payload.notes = description;
+    if (location !== order.location)               payload.address_line = location;
+    if (city !== order.city)                       payload.city = city;
+    if (district !== order.district)               payload.region = district;
+    if (urgency !== order.urgency)                 payload.urgency = urgency;
+    if (status !== order.status)                   payload.status = status;
+    const originalPrice = parsePrice(order.budget_range);
+    if (price !== originalPrice) {
+      payload.estimated_price = price === "" ? null : Number(price);
+    }
+    const originalDate = order.preferred_date ?? "";
+    if (preferredDate !== originalDate) {
+      payload.scheduled_for = preferredDate === "" ? null : preferredDate;
+    }
+    if (Object.keys(payload).length === 0) {
+      setErr("Nada foi alterado.");
+      return;
+    }
+    patch(payload, "guardar");
+  };
+
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4"
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0F1729] p-6 shadow-2xl"
+        className="my-8 w-full max-w-3xl rounded-2xl border border-white/10 bg-[#0F1729] p-6 shadow-2xl"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
@@ -246,45 +301,110 @@ function DetailModal({
           </button>
         </div>
 
+        {/* Info não editável */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Cliente</p>
+            <p className={LABEL}>Cliente</p>
             <p className="text-sm text-white">{order.client_name ?? "—"}</p>
             <p className="text-xs text-slate-500">{order.client_phone ?? order.client_email ?? ""}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Categoria</p>
+            <p className={LABEL}>Categoria</p>
             <p className="text-sm text-white">{order.category_name ?? "—"}</p>
           </div>
-          <div className="md:col-span-2">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Localização</p>
-            <p className="text-sm text-white">
-              {order.location || "—"}
-              {order.city && `, ${order.city}`}
-              {order.district && `, ${order.district}`}
-            </p>
-          </div>
-          {order.description && (
-            <div className="md:col-span-2">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Descrição</p>
-              <p className="text-sm text-slate-200 whitespace-pre-wrap">{order.description}</p>
-            </div>
-          )}
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Urgência</p>
-            <p className="text-sm text-white">{URGENCY_CFG[order.urgency]?.label ?? order.urgency}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Orçamento</p>
-            <p className="text-sm text-white">{order.budget_range ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Criado em</p>
+            <p className={LABEL}>Criado em</p>
             <p className="text-sm text-white">{fmt(order.created_at)}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Data preferida</p>
-            <p className="text-sm text-white">{order.preferred_date ?? "—"}</p>
+            <p className={LABEL}>Respostas</p>
+            <p className="text-sm text-white">{order.responses_count}</p>
+          </div>
+        </div>
+
+        {/* Campos editáveis */}
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <p className={LABEL}>Editar detalhes</p>
+
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className={LABEL}>Título</label>
+              <input value={title} onChange={e => setTitle(e.target.value)} className={INPUT} />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={LABEL}>Descrição</label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={3}
+                className={TA}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={LABEL}>Morada</label>
+              <input value={location} onChange={e => setLocation(e.target.value)} className={INPUT} />
+            </div>
+
+            <div>
+              <label className={LABEL}>Cidade</label>
+              <input value={city} onChange={e => setCity(e.target.value)} className={INPUT} />
+            </div>
+
+            <div>
+              <label className={LABEL}>Distrito / Região</label>
+              <input value={district} onChange={e => setDistrict(e.target.value)} className={INPUT} />
+            </div>
+
+            <div>
+              <label className={LABEL}>Urgência</label>
+              <select
+                value={urgency}
+                onChange={e => setUrgency(e.target.value as Urgency)}
+                className={INPUT}
+              >
+                {(Object.keys(URGENCY_CFG) as Urgency[]).map(u => (
+                  <option key={u} value={u} className="bg-[#0F1729]">{URGENCY_CFG[u].label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={LABEL}>Preço estimado (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL}>Data preferida</label>
+              <input
+                type="date"
+                value={preferredDate ? preferredDate.slice(0, 10) : ""}
+                onChange={e => setPreferredDate(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL}>Status</label>
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as AppStatus)}
+                className={INPUT}
+              >
+                {(Object.keys(STATUS_CFG) as AppStatus[]).map(s => (
+                  <option key={s} value={s} className="bg-[#0F1729]">
+                    {STATUS_CFG[s].label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -294,10 +414,9 @@ function DetailModal({
           </div>
         )}
 
-        <div className="mt-6 border-t border-white/10 pt-4">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">Acções</p>
-
-          <div className="mt-3 flex flex-wrap gap-2">
+        {/* Acções */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4">
+          <div className="flex flex-wrap gap-2">
             <button
               disabled={saving !== null}
               onClick={() => patch({ status: "assignment_pending" }, "aprovar")}
@@ -314,29 +433,13 @@ function DetailModal({
             </button>
           </div>
 
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="text-[10px] uppercase tracking-wider text-slate-500">Alterar status</label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as AppStatus)}
-                className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
-              >
-                {(Object.keys(STATUS_CFG) as AppStatus[]).map(s => (
-                  <option key={s} value={s} className="bg-[#0F1729]">
-                    {STATUS_CFG[s].label} ({s})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              disabled={saving !== null || status === order.status}
-              onClick={() => patch({ status }, "status")}
-              className="h-10 rounded-lg bg-cyan-500 px-4 text-sm font-semibold text-white hover:bg-cyan-400 disabled:opacity-50"
-            >
-              {saving === "status" ? "A guardar..." : "Guardar status"}
-            </button>
-          </div>
+          <button
+            disabled={saving !== null}
+            onClick={guardar}
+            className="rounded-lg bg-cyan-500 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-400 disabled:opacity-50"
+          >
+            {saving === "guardar" ? "A guardar..." : "Guardar alterações"}
+          </button>
         </div>
       </div>
     </div>
