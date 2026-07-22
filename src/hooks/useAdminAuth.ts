@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 export type AdminUser = {
@@ -43,7 +43,11 @@ export function useAdminAuth() {
     router.push("/admin/login");
   }, [router]);
 
-  const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+  const authHeader = useMemo<Record<string, string>>(() => {
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
+  }, [token]);
 
   return { token, user, ready, logout, authHeader };
 }
