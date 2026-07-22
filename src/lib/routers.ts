@@ -1,15 +1,11 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure, adminProcedure } from "./trpc-server";
 import {
-  getRegistrosHorasByColaborador,
   getAllColaboradores,
   getColaboradorByNome,
   createColaborador,
   updateColaborador,
   deleteColaborador,
-  createRegistroHoras,
-  updateRegistroHoras,
-  getTodayRegistroByColaborador,
 } from "./db";
 import { COOKIE_NAME } from "./auth";
 import * as bcrypt from "bcryptjs";
@@ -18,35 +14,8 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(({ ctx }) => ctx.user),
     logout: publicProcedure.mutation(() => {
-      // Cookie deletion is handled in the API route
       return { success: true } as const;
     }),
-  }),
-
-  historico: router({
-    list: publicProcedure
-      .input(
-        z.object({
-          colaboradorId: z.number(),
-          page: z.number().default(1),
-          limit: z.number().default(50),
-        })
-      )
-      .query(async ({ input }) => {
-        const offset = (input.page - 1) * input.limit;
-        const registros = await getRegistrosHorasByColaborador(
-          input.colaboradorId,
-          input.limit,
-          offset
-        );
-        return {
-          registros,
-          total: registros.length,
-          page: input.page,
-          limit: input.limit,
-          totalPages: Math.ceil(registros.length / input.limit),
-        };
-      }),
   }),
 
   colaboradores: router({
@@ -91,80 +60,6 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await deleteColaborador(input.id);
         return { success: true };
-      }),
-  }),
-
-  ponto: router({
-    login: publicProcedure
-      .input(z.object({ nome: z.string(), senha: z.string() }))
-      .mutation(async ({ input }) => {
-        const colab = await getColaboradorByNome(input.nome);
-        if (!colab) throw new Error("Colaborador não encontrado");
-        const valid = await bcrypt.compare(input.senha, colab.senha);
-        if (!valid) throw new Error("Senha incorreta");
-        return {
-          id: colab.id,
-          nome: colab.nome,
-          funcao: colab.funcao,
-          valorHora: colab.valorHora,
-          isAdmin: colab.isAdmin,
-        };
-      }),
-
-    entrada: publicProcedure
-      .input(
-        z.object({
-          colaboradorId: z.number(),
-          horaEntrada: z.string(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        await createRegistroHoras({
-          colaboradorId: input.colaboradorId,
-          data: new Date(),
-          horaEntrada: input.horaEntrada,
-          numeroTrabalhos: 0,
-          horasTrabalhadas: "0",
-          valorTotal: "0",
-        });
-        return { success: true };
-      }),
-
-    pausa: publicProcedure
-      .input(z.object({ colaboradorId: z.number(), horaPausa: z.string() }))
-      .mutation(async ({ input }) => {
-        const reg = await getTodayRegistroByColaborador(input.colaboradorId);
-        if (!reg) throw new Error("Registo de hoje não encontrado");
-        await updateRegistroHoras(reg.id, { horaPausa: input.horaPausa });
-        return { success: true };
-      }),
-
-    saida: publicProcedure
-      .input(
-        z.object({
-          colaboradorId: z.number(),
-          horaSaida: z.string(),
-          numeroTrabalhos: z.number(),
-          horasTrabalhadas: z.string(),
-          valorTotal: z.string(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const reg = await getTodayRegistroByColaborador(input.colaboradorId);
-        if (!reg) throw new Error("Registo de hoje não encontrado");
-        await updateRegistroHoras(reg.id, {
-          horaSaida: input.horaSaida,
-          numeroTrabalhos: input.numeroTrabalhos,
-          horasTrabalhadas: input.horasTrabalhadas,
-          valorTotal: input.valorTotal,
-        });
-        return { success: true };
-      }),
-
-    today: publicProcedure
-      .input(z.object({ colaboradorId: z.number() }))
-      .query(async ({ input }) => {
-        return getTodayRegistroByColaborador(input.colaboradorId);
       }),
   }),
 });

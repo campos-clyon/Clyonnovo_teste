@@ -13,11 +13,8 @@ import {
   ArrowRight,
   Briefcase,
   Building2,
-  CalendarClock,
-  CalendarDays,
   CheckCircle2,
   ChevronRight,
-  Clock3,
   Download,
   Euro,
   Eye,
@@ -25,7 +22,6 @@ import {
   ExternalLink,
   FileText,
   Filter,
-  History,
   ImagePlus,
   LayoutDashboard,
   ListChecks,
@@ -42,7 +38,6 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
-  TimerReset,
   Trash2,
   TrendingUp,
   UserPlus,
@@ -54,24 +49,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-type Registro = {
-  id: number;
-  data: string;
-  horaEntrada: string;
-  horaPausa?: string | null;
-  horaSaida?: string | null;
-  numeroTrabalhos: number;
-  horasTrabalhadas?: string;
-  valorTotal?: string;
-};
-
-type PeriodoStats = {
-  horas: string;
-  valor: string;
-  trabalhos: number;
-  periodo?: string;
-};
-
 type Colaborador = {
   id: number;
   nome: string;
@@ -79,18 +56,6 @@ type Colaborador = {
   valorHora: string;
   isAdmin: number;
   createdAt?: string;
-  registros: Registro[];
-  estatisticas: {
-    semana: PeriodoStats;
-    ultimos15Dias: PeriodoStats;
-    mes: PeriodoStats;
-  };
-};
-
-type RegistroComColaborador = Registro & {
-  colaboradorId: number;
-  colaboradorNome: string;
-  colaboradorValorHora: string;
 };
 
 type SimulatorSetting = {
@@ -103,7 +68,7 @@ type SimulatorSetting = {
 };
 
 type AdminSection = "overview" | "pedidos" | "operacao" | "leads" | "site" | "equipa" | "pagamentos" | "configs" | "contas";
-type OperacaoTab = "equipa" | "horarios" | "pagamentos" | "funcoes";
+type OperacaoTab = "equipa" | "pagamentos" | "funcoes";
 
 type Lead = {
   id: number;
@@ -310,95 +275,6 @@ const formatDateTime = (value?: string) => {
   })}`;
 };
 
-const formatDayName = (value?: string) => {
-  if (!value) return "Sem dia";
-  return new Intl.DateTimeFormat("pt-PT", { weekday: "long" }).format(new Date(value));
-};
-
-const getCurrentWeekRange = () => {
-  const today = new Date();
-  const start = new Date(today);
-  const day = start.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + diffToMonday);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-};
-
-// Semana operacional CLYON: começa sempre segunda 00:00 e termina domingo 23:59.
-// O offset permite navegar entre semanas (0 = atual, -1 = anterior).
-const getWeekRange = (offset = 0) => {
-  const today = new Date();
-  const start = new Date(today);
-  const day = start.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + diffToMonday + offset * 7);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-};
-
-const WEEK_DAY_LABELS = [
-  "Segunda",
-  "Terça",
-  "Quarta",
-  "Quinta",
-  "Sexta",
-  "Sábado",
-  "Domingo",
-];
-
-const getCurrentMonthRange = () => {
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-};
-
-const isBetweenDates = (value: string, start: Date, end: Date) => {
-  const date = new Date(value);
-  return date >= start && date <= end;
-};
-
-const isSameDay = (value: string, reference: Date) => {
-  const date = new Date(value);
-  return (
-    date.getFullYear() === reference.getFullYear() &&
-    date.getMonth() === reference.getMonth() &&
-    date.getDate() === reference.getDate()
-  );
-};
-
-// Estado derivado do registo (não há campo dedicado na BD, por isso é calculado).
-// incompleto: falta hora de saída | alerta: horas anómalas | validado: registo fechado normal.
-const HIGH_HOURS_THRESHOLD = 16;
-
-type RecordStatus = "incompleto" | "alerta" | "validado";
-
-const getRecordStatus = (registro: Registro): RecordStatus => {
-  if (!registro.horaSaida) return "incompleto";
-  if (parseFloat(registro.horasTrabalhadas || "0") > HIGH_HOURS_THRESHOLD) return "alerta";
-  return "validado";
-};
-
-const formatShortDate = (value?: string) => {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit" }).format(new Date(value));
-};
-
 const formatSimulatorUnit = (unit: SimulatorSetting["unit"]) =>
   unit === "eur" ? "EUR" : "Multiplicador";
 
@@ -456,10 +332,6 @@ export default function ColaboradorAdminClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
-  const [filtroColaborador, setFiltroColaborador] = useState("todos");
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [funcaoFilter, setFuncaoFilter] = useState<"todas" | Colaborador["funcao"]>("todas");
-  const [colaboradorDrawerId, setColaboradorDrawerId] = useState<number | null>(null);
 
   // Aba ativa da página Configurações
   const [settingsTab, setSettingsTab] = useState<
@@ -469,14 +341,6 @@ export default function ColaboradorAdminClient() {
   // Filtros da página Equipa
   const [teamSearch, setTeamSearch] = useState("");
   const [teamFuncao, setTeamFuncao] = useState<"todas" | Colaborador["funcao"]>("todas");
-  const [teamStatus, setTeamStatus] = useState<"todos" | "ativo" | "inativo">("todos");
-
-  // Filtros da página Horários
-  const [hoursFuncao, setHoursFuncao] = useState<"todas" | Colaborador["funcao"]>("todas");
-  const [hoursStatus, setHoursStatus] = useState<"todos" | "validado" | "pendente" | "incompleto">("todos");
-  const [hoursPeriodo, setHoursPeriodo] = useState<"semana" | "anterior" | "personalizado">("semana");
-  const [hoursDe, setHoursDe] = useState("");
-  const [hoursAte, setHoursAte] = useState("");
 
   const [operacaoTab, setOperacaoTab] = useState<OperacaoTab>("equipa");
   const [criarNovoVisivel, setCriarNovoVisivel] = useState(false);
@@ -501,17 +365,6 @@ export default function ColaboradorAdminClient() {
   const [editSenha, setEditSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [loadingEdicao, setLoadingEdicao] = useState(false);
-  const [editandoRegistroId, setEditandoRegistroId] = useState<number | null>(null);
-  const [registroForm, setRegistroForm] = useState({
-    data: "",
-    horaEntrada: "",
-    horaPausa: "",
-    horaSaida: "",
-    numeroTrabalhos: "0",
-    valorHora: "",
-    valorTotal: "",
-  });
-  const [savingRegistro, setSavingRegistro] = useState(false);
   const [simulatorSettings, setSimulatorSettings] = useState<SimulatorSetting[]>([]);
   const [simulatorDrafts, setSimulatorDrafts] = useState<Record<string, string>>({});
   const [loadingSimulatorSettings, setLoadingSimulatorSettings] = useState(false);
@@ -890,26 +743,6 @@ export default function ColaboradorAdminClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, settingsTab, token, isAdminGeral]);
 
-  const colaboradoresFiltrados = useMemo(() => {
-    if (filtroColaborador === "todos") return colaboradores;
-    return colaboradores.filter((colaborador) => colaborador.id === Number(filtroColaborador));
-  }, [colaboradores, filtroColaborador]);
-
-  const todosRegistros = useMemo<RegistroComColaborador[]>(
-    () =>
-      colaboradoresFiltrados
-        .flatMap((colaborador) =>
-          (colaborador.registros || []).map((registro) => ({
-            ...registro,
-            colaboradorId: colaborador.id,
-            colaboradorNome: colaborador.nome,
-            colaboradorValorHora: colaborador.valorHora,
-          })),
-        )
-        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()),
-    [colaboradoresFiltrados],
-  );
-
   const simulatorGroups = useMemo(() => {
     const settingsMap = new Map(simulatorSettings.map((setting) => [setting.key, setting]));
 
@@ -923,17 +756,6 @@ export default function ColaboradorAdminClient() {
     }));
   }, [simulatorSettings]);
 
-  // ---- Núcleo operacional: semana selecionada (segunda -> domingo) ----
-  const weekRange = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
-
-  const weekLabel = useMemo(() => {
-    const fmt = (date: Date) =>
-      new Intl.DateTimeFormat("pt-PT", { weekday: "long", day: "2-digit", month: "2-digit" }).format(date);
-    return `${fmt(weekRange.start)} até ${fmt(weekRange.end)}`;
-  }, [weekRange]);
-
-  const today = useMemo(() => new Date(), []);
-
   const hojeLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("pt-PT", {
@@ -945,383 +767,38 @@ export default function ColaboradorAdminClient() {
     [],
   );
 
-  // Colaboradores com registos na semana selecionada (respeitando filtro de função).
-  const weekCollaborators = useMemo(() => {
-    const base =
-      funcaoFilter === "todas"
-        ? colaboradores
-        : colaboradores.filter((c) => c.funcao === funcaoFilter);
 
-    return base
-      .map((colaborador) => {
-        const registrosSemana = (colaborador.registros || [])
-          .filter((registro) => isBetweenDates(registro.data, weekRange.start, weekRange.end))
-          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
-        const horas = registrosSemana.reduce((sum, r) => sum + parseFloat(r.horasTrabalhadas || "0"), 0);
-        const valor = registrosSemana.reduce((sum, r) => sum + parseFloat(r.valorTotal || "0"), 0);
-        const trabalhos = registrosSemana.reduce((sum, r) => sum + (r.numeroTrabalhos || 0), 0);
-        const diasTrabalhados = new Set(
-          registrosSemana.map((r) => new Date(r.data).toISOString().split("T")[0]),
-        ).size;
-        const ultimoDia = registrosSemana[0]?.data || "";
-        const ativoHoje = registrosSemana.some((r) => isSameDay(r.data, today));
-        const temPendencia = registrosSemana.some((r) => getRecordStatus(r) !== "validado");
 
-        return {
-          ...colaborador,
-          registrosSemana,
-          horas,
-          valor,
-          trabalhos,
-          diasTrabalhados,
-          ultimoDia,
-          ativoHoje,
-          temPendencia,
-        };
-      })
-      .filter((c) => c.registrosSemana.length > 0)
-      .sort((a, b) => b.horas - a.horas);
-  }, [colaboradores, funcaoFilter, weekRange, today]);
 
-  // Cards de topo da semana.
-  const weekSummary = useMemo(() => {
-    const totalHoras = weekCollaborators.reduce((sum, c) => sum + c.horas, 0);
-    const totalValor = weekCollaborators.reduce((sum, c) => sum + c.valor, 0);
-    const totalRegistos = weekCollaborators.reduce((sum, c) => sum + c.registrosSemana.length, 0);
-    const pendentes = weekCollaborators.reduce(
-      (sum, c) => sum + c.registrosSemana.filter((r) => getRecordStatus(r) !== "validado").length,
-      0,
-    );
-    const ativosHoje = weekCollaborators.filter((c) => c.ativoHoje).length;
 
-    return {
-      colaboradores: weekCollaborators.length,
-      totalHoras,
-      totalValor,
-      totalRegistos,
-      pendentes,
-      ativosHoje,
-    };
-  }, [weekCollaborators]);
 
-  // Registos da semana com colaborador, ordenados (pendentes primeiro, depois recentes).
-  const weekRecords = useMemo(() => {
-    const rows = weekCollaborators.flatMap((colaborador) =>
-      colaborador.registrosSemana.map((registro) => ({
-        ...registro,
-        colaboradorId: colaborador.id,
-        colaboradorNome: colaborador.nome,
-        colaboradorValorHora: colaborador.valorHora,
-        status: getRecordStatus(registro),
-      })),
-    );
-
-    return rows.sort((a, b) => {
-      const aPend = a.status !== "validado" ? 0 : 1;
-      const bPend = b.status !== "validado" ? 0 : 1;
-      if (aPend !== bPend) return aPend - bPend;
-      return new Date(b.data).getTime() - new Date(a.data).getTime();
-    });
-  }, [weekCollaborators]);
-
-  // ---- Página Horários: registos filtrados por período/status/função ----
-  const hoursRange = useMemo(() => {
-    if (hoursPeriodo === "anterior") {
-      const start = new Date(weekRange.start);
-      start.setDate(start.getDate() - 7);
-      const end = new Date(weekRange.end);
-      end.setDate(end.getDate() - 7);
-      return { start, end };
-    }
-    if (hoursPeriodo === "personalizado" && hoursDe && hoursAte) {
-      const start = new Date(`${hoursDe}T00:00:00`);
-      const end = new Date(`${hoursAte}T23:59:59`);
-      return { start, end };
-    }
-    return weekRange;
-  }, [hoursPeriodo, hoursDe, hoursAte, weekRange]);
-
-  const hoursRecords = useMemo(() => {
-    const funcaoById = new Map(colaboradores.map((c) => [c.id, c.funcao]));
-    return colaboradores
-      .flatMap((colaborador) =>
-        (colaborador.registros || []).map((registro) => {
-          const status = getRecordStatus(registro);
-          return {
-            ...registro,
-            colaboradorId: colaborador.id,
-            colaboradorNome: colaborador.nome,
-            colaboradorValorHora: colaborador.valorHora,
-            funcao: colaborador.funcao,
-            status,
-            statusLabel: (status === "incompleto"
-              ? "incompleto"
-              : status === "alerta"
-                ? "pendente"
-                : "validado") as "incompleto" | "pendente" | "validado",
-          };
-        }),
-      )
-      .filter((r) => isBetweenDates(r.data, hoursRange.start, hoursRange.end))
-      .filter((r) => (filtroColaborador === "todos" ? true : r.colaboradorId === Number(filtroColaborador)))
-      .filter((r) => (hoursFuncao === "todas" ? true : funcaoById.get(r.colaboradorId) === hoursFuncao))
-      .filter((r) => {
-        if (hoursStatus === "todos") return true;
-        if (hoursStatus === "validado") return r.status === "validado";
-        if (hoursStatus === "incompleto") return r.status === "incompleto";
-        return r.status === "alerta"; // pendente
-      })
-      .sort((a, b) => {
-        const aPend = a.status !== "validado" ? 0 : 1;
-        const bPend = b.status !== "validado" ? 0 : 1;
-        if (aPend !== bPend) return aPend - bPend;
-        return new Date(b.data).getTime() - new Date(a.data).getTime();
-      });
-  }, [colaboradores, hoursRange, filtroColaborador, hoursFuncao, hoursStatus]);
-
-  const hoursSummary = useMemo(() => {
-    const colaboradoresComRegisto = new Set(hoursRecords.map((r) => r.colaboradorId)).size;
-    const totalHoras = hoursRecords.reduce((s, r) => s + parseFloat(r.horasTrabalhadas || "0"), 0);
-    const totalValor = hoursRecords.reduce((s, r) => s + parseFloat(r.valorTotal || "0"), 0);
-    const pendentes = hoursRecords.filter((r) => r.status === "alerta").length;
-    const incompletos = hoursRecords.filter((r) => r.status === "incompleto").length;
-    return {
-      colaboradoresComRegisto,
-      totalHoras,
-      totalValor,
-      pendentes,
-      incompletos,
-      mediaHoras: colaboradoresComRegisto > 0 ? totalHoras / colaboradoresComRegisto : 0,
-    };
-  }, [hoursRecords]);
-
-  const hoursPeriodLabel = useMemo(() => {
-    const fmt = (d: Date) =>
-      d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" });
-    return `${fmt(hoursRange.start)} a ${fmt(hoursRange.end)}`;
-  }, [hoursRange]);
-
-  // Pendências operacionais derivadas dos registos da semana.
-  const pendencias = useMemo(() => {
-    const semSaida: Array<{ id: number; nome: string; data: string }> = [];
-    const horasAltas: Array<{ id: number; nome: string; data: string; horas: number }> = [];
-    const naoValidados: number[] = [];
-
-    weekCollaborators.forEach((colaborador) => {
-      colaborador.registrosSemana.forEach((registro) => {
-        if (!registro.horaSaida) {
-          semSaida.push({ id: registro.id, nome: colaborador.nome, data: registro.data });
-        } else if (parseFloat(registro.horasTrabalhadas || "0") > HIGH_HOURS_THRESHOLD) {
-          horasAltas.push({
-            id: registro.id,
-            nome: colaborador.nome,
-            data: registro.data,
-            horas: parseFloat(registro.horasTrabalhadas || "0"),
-          });
-        }
-        if (getRecordStatus(registro) !== "validado") naoValidados.push(registro.id);
-      });
-    });
-
-    return { semSaida, horasAltas, totalNaoValidados: naoValidados.length };
-  }, [weekCollaborators]);
-
-  // Dados do colaborador aberto no drawer de histórico semanal.
-  const drawerColaborador = useMemo(() => {
-    if (colaboradorDrawerId === null) return null;
-    return weekCollaborators.find((c) => c.id === colaboradorDrawerId) || null;
-  }, [colaboradorDrawerId, weekCollaborators]);
-
-  // Histórico dia-a-dia (segunda -> domingo) para o drawer.
-  const drawerDias = useMemo(() => {
-    if (!drawerColaborador) return [];
-    return WEEK_DAY_LABELS.map((label, index) => {
-      const dia = new Date(weekRange.start);
-      dia.setDate(dia.getDate() + index);
-      const registros = drawerColaborador.registrosSemana.filter((r) => isSameDay(r.data, dia));
-      return { label, dia, registros };
-    });
-  }, [drawerColaborador, weekRange]);
-
-  // ---- Página Equipa: dados derivados por colaborador (estado = atividade real) ----
+  // ---- Página Equipa: dados derivados por colaborador ----
   const teamRows = useMemo(() => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
     return colaboradores.map((colaborador) => {
-      const registros = colaborador.registros || [];
-      const ultimoRegistro = [...registros].sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
-      )[0];
-
-      const horasSemana = registros
-        .filter((r) => isBetweenDates(r.data, weekRange.start, weekRange.end))
-        .reduce((sum, r) => sum + parseFloat(r.horasTrabalhadas || "0"), 0);
-
-      const horas30 = registros
-        .filter((r) => new Date(r.data) >= thirtyDaysAgo)
-        .reduce((sum, r) => sum + parseFloat(r.horasTrabalhadas || "0"), 0);
-
-      const trabalhouSemana = horasSemana > 0;
-      const ativoHoje = registros.some((r) => isSameDay(r.data, today));
-
       return {
         ...colaborador,
-        ultimoRegistro,
-        horasSemana,
-        horas30,
-        valorMes: parseFloat(colaborador.estatisticas?.mes?.valor || "0"),
-        trabalhouSemana,
-        ativoHoje,
-        // "ativo" = trabalhou esta semana (estado derivado, sem campo na BD)
-        estadoAtividade: (trabalhouSemana ? "ativo" : "inativo") as "ativo" | "inativo",
       };
     });
-  }, [colaboradores, weekRange, today]);
+  }, [colaboradores]);
 
   const teamRowsFiltered = useMemo(() => {
     const term = teamSearch.trim().toLowerCase();
     return teamRows
       .filter((row) => (term ? row.nome.toLowerCase().includes(term) : true))
       .filter((row) => (teamFuncao === "todas" ? true : row.funcao === teamFuncao))
-      .filter((row) => (teamStatus === "todos" ? true : row.estadoAtividade === teamStatus))
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [teamRows, teamSearch, teamFuncao, teamStatus]);
+  }, [teamRows, teamSearch, teamFuncao]);
 
   const teamStats = useMemo(() => {
     return {
       total: colaboradores.length,
-      ativos: teamRows.filter((r) => r.estadoAtividade === "ativo").length,
-      inativos: teamRows.filter((r) => r.estadoAtividade === "inativo").length,
       motoristas: colaboradores.filter((c) => c.funcao === "motorista").length,
       ajudantes: colaboradores.filter((c) => c.funcao === "ajudante").length,
       admins: colaboradores.filter((c) => c.isAdmin === 1 || c.funcao === "admin").length,
     };
-  }, [colaboradores, teamRows]);
-
-  const sortCollaboratorsByHoursReport = <
-    T extends {
-      nome: string;
-      relatorio: {
-        semana: { horas: number; valor: number; trabalhos: number };
-        mes: { horas: number; valor: number; trabalhos: number };
-      };
-    },
-  >(
-    reports: T[],
-  ) =>
-    [...reports].sort((a, b) => {
-      const aWorked =
-        a.relatorio.mes.trabalhos > 0 ||
-        a.relatorio.mes.horas > 0 ||
-        a.relatorio.semana.trabalhos > 0 ||
-        a.relatorio.semana.horas > 0;
-      const bWorked =
-        b.relatorio.mes.trabalhos > 0 ||
-        b.relatorio.mes.horas > 0 ||
-        b.relatorio.semana.trabalhos > 0 ||
-        b.relatorio.semana.horas > 0;
-
-      if (aWorked !== bWorked) {
-        return Number(bWorked) - Number(aWorked);
-      }
-
-      if (b.relatorio.mes.valor !== a.relatorio.mes.valor) {
-        return b.relatorio.mes.valor - a.relatorio.mes.valor;
-      }
-
-      if (b.relatorio.semana.valor !== a.relatorio.semana.valor) {
-        return b.relatorio.semana.valor - a.relatorio.semana.valor;
-      }
-
-      if (b.relatorio.mes.horas !== a.relatorio.mes.horas) {
-        return b.relatorio.mes.horas - a.relatorio.mes.horas;
-      }
-
-      if (b.relatorio.semana.horas !== a.relatorio.semana.horas) {
-        return b.relatorio.semana.horas - a.relatorio.semana.horas;
-      }
-
-      return a.nome.localeCompare(b.nome, "pt-PT");
-    });
-
-  const collaboratorHourReports = useMemo(() => {
-    const { start: weekStart, end: weekEnd } = getCurrentWeekRange();
-    const { start: monthStart, end: monthEnd } = getCurrentMonthRange();
-
-    const buildPeriod = (records: Registro[]) => {
-      const horas = records.reduce((sum, item) => sum + parseFloat(item.horasTrabalhadas || "0"), 0);
-      const valor = records.reduce((sum, item) => sum + parseFloat(item.valorTotal || "0"), 0);
-      const trabalhos = records.reduce((sum, item) => sum + (item.numeroTrabalhos || 0), 0);
-
-      return {
-        horas,
-        valor,
-        trabalhos,
-      };
-    };
-
-    const reports = colaboradoresFiltrados.map((colaborador) => {
-      const registros = [...(colaborador.registros || [])].sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
-      );
-      const semanaRegistros = registros.filter((registro) => isBetweenDates(registro.data, weekStart, weekEnd));
-      const mesRegistros = registros.filter((registro) => isBetweenDates(registro.data, monthStart, monthEnd));
-
-      return {
-        ...colaborador,
-        relatorio: {
-          semana: {
-            ...buildPeriod(semanaRegistros),
-            periodo: `${formatDate(weekStart.toISOString())} - ${formatDate(weekEnd.toISOString())}`,
-            historico: semanaRegistros,
-          },
-          mes: {
-            ...buildPeriod(mesRegistros),
-            periodo: new Intl.DateTimeFormat("pt-PT", {
-              month: "long",
-              year: "numeric",
-            }).format(monthStart),
-            historico: mesRegistros,
-          },
-        },
-      };
-    });
-
-    return sortCollaboratorsByHoursReport(reports);
-  }, [colaboradoresFiltrados]);
-
-  const collaboratorHoursFilters = useMemo(() => {
-    const { start: weekStart, end: weekEnd } = getCurrentWeekRange();
-    const { start: monthStart, end: monthEnd } = getCurrentMonthRange();
-
-    const reports = colaboradores.map((colaborador) => {
-      const registros = colaborador.registros || [];
-      const semanaRegistros = registros.filter((registro) => isBetweenDates(registro.data, weekStart, weekEnd));
-      const mesRegistros = registros.filter((registro) => isBetweenDates(registro.data, monthStart, monthEnd));
-
-      const semanaHoras = semanaRegistros.reduce(
-        (sum, item) => sum + parseFloat(item.horasTrabalhadas || "0"),
-        0,
-      );
-      const semanaValor = semanaRegistros.reduce((sum, item) => sum + parseFloat(item.valorTotal || "0"), 0);
-      const semanaTrabalhos = semanaRegistros.reduce((sum, item) => sum + (item.numeroTrabalhos || 0), 0);
-      const mesHoras = mesRegistros.reduce((sum, item) => sum + parseFloat(item.horasTrabalhadas || "0"), 0);
-      const mesValor = mesRegistros.reduce((sum, item) => sum + parseFloat(item.valorTotal || "0"), 0);
-      const mesTrabalhos = mesRegistros.reduce((sum, item) => sum + (item.numeroTrabalhos || 0), 0);
-
-      return {
-        ...colaborador,
-        relatorio: {
-          semana: { horas: semanaHoras, valor: semanaValor, trabalhos: semanaTrabalhos },
-          mes: { horas: mesHoras, valor: mesValor, trabalhos: mesTrabalhos },
-        },
-      };
-    });
-
-    return sortCollaboratorsByHoursReport(reports);
   }, [colaboradores]);
+
 
   const handleLogout = () => {
     clearColaboradorStorage();
@@ -1459,71 +936,6 @@ export default function ColaboradorAdminClient() {
     }
   };
 
-  const abrirEdicaoRegistro = (registro: RegistroComColaborador) => {
-    setEditandoRegistroId(registro.id);
-    setRegistroForm({
-      data: registro.data ? new Date(registro.data).toISOString().split("T")[0] || "" : "",
-      horaEntrada: registro.horaEntrada || "",
-      horaPausa: registro.horaPausa || "",
-      horaSaida: registro.horaSaida || "",
-      numeroTrabalhos: String(registro.numeroTrabalhos || 0),
-      valorHora: String(registro.colaboradorValorHora || ""),
-      valorTotal: String(registro.valorTotal || ""),
-    });
-  };
-
-  const guardarRegistro = async (id: number) => {
-    setSavingRegistro(true);
-    try {
-      const response = await fetch(`/api/colaboradores/registros/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...registroForm,
-          valorHora: registroForm.valorHora || null,
-          horaPausa: registroForm.horaPausa || null,
-          horaSaida: registroForm.horaSaida || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Não foi possível atualizar o registo.");
-      }
-
-      setEditandoRegistroId(null);
-      setError("");
-      await carregarDados(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar o registo.");
-    } finally {
-      setSavingRegistro(false);
-    }
-  };
-
-  const apagarRegistro = async (id: number) => {
-    if (!confirm("Tem a certeza de que deseja apagar este registo?")) return;
-
-    try {
-      const response = await fetch(`/api/colaboradores/registros/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Não foi possível apagar o registo.");
-      }
-
-      setError("");
-      await carregarDados(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível apagar o registo.");
-    }
-  };
 
   const guardarSimulatorSetting = async (setting: SimulatorSetting) => {
     setSavingSettingKey(setting.key);
@@ -1648,49 +1060,21 @@ export default function ColaboradorAdminClient() {
 
           {activeSection === "overview" && (
             <>
-              {/* Barra de semana + filtros operacionais */}
+              {/* Barra de ações rápidas */}
               <section className="flex flex-col gap-4 rounded-[24px] border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(9,27,43,0.96)_0%,rgba(12,34,52,0.94)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.24)] xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950">
-                    <CalendarDays className="h-6 w-6" />
+                    <LayoutDashboard className="h-6 w-6" />
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
-                      {weekOffset === 0 ? "Semana atual" : weekOffset === -1 ? "Semana anterior" : "Semana selecionada"}
+                      Painel de controlo
                     </p>
-                    <p className="mt-1 text-lg font-semibold capitalize text-white">{weekLabel}</p>
+                    <p className="mt-1 text-lg font-semibold capitalize text-white">{hojeLabel}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex rounded-[16px] border border-white/10 bg-white/[0.03] p-1">
-                    <button
-                      type="button"
-                      onClick={() => setWeekOffset(0)}
-                      className={`rounded-[12px] px-3 py-2 text-sm font-semibold transition ${weekOffset === 0 ? "bg-cyan-400 text-slate-950" : "text-slate-200 hover:bg-white/[0.06]"}`}
-                    >
-                      Atual
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWeekOffset(-1)}
-                      className={`rounded-[12px] px-3 py-2 text-sm font-semibold transition ${weekOffset === -1 ? "bg-cyan-400 text-slate-950" : "text-slate-200 hover:bg-white/[0.06]"}`}
-                    >
-                      Anterior
-                    </button>
-                  </div>
-
-                  <select
-                    value={funcaoFilter}
-                    onChange={(e) => setFuncaoFilter(e.target.value as typeof funcaoFilter)}
-                    className="h-11 rounded-[14px] border border-cyan-300/20 bg-[#0d1f35] px-3 text-sm font-medium text-white outline-none focus:border-cyan-400 [color-scheme:dark]"
-                  >
-                    <option value="todas">Todas as funções</option>
-                    <option value="admin">Administradores</option>
-                    <option value="motorista">Motoristas</option>
-                    <option value="ajudante">Ajudantes</option>
-                  </select>
-
                   <Button
                     type="button"
                     onClick={() => {
@@ -1701,29 +1085,11 @@ export default function ColaboradorAdminClient() {
                     className="h-11 rounded-[14px] bg-sky-500 px-4 text-white hover:bg-sky-400"
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Adicionar registo
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => { setOperacaoTab("horarios"); setActiveSection("operacao"); }}
-                    className="h-11 rounded-[14px] border-slate-700 bg-slate-800/60 px-4 text-slate-200 hover:bg-slate-700"
-                  >
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    Validar pendências
+                    Novo colaborador
                   </Button>
                 </div>
               </section>
 
-              {/* Cards de resumo da semana */}
-              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-                <SummaryStat icon={Users} label="Colaboradores" value={String(weekSummary.colaboradores)} helper="ativos na semana" />
-                <SummaryStat icon={Clock3} label="Horas da semana" value={`${decimal(weekSummary.totalHoras)}h`} helper="total da equipa" />
-                <SummaryStat icon={Euro} label="A pagar (estimado)" value={money(weekSummary.totalValor)} helper="valor da semana" tone="emerald" />
-                <SummaryStat icon={Briefcase} label="Registos" value={String(weekSummary.totalRegistos)} helper="turnos da semana" />
-                <SummaryStat icon={AlertTriangle} label="Pendentes" value={String(weekSummary.pendentes)} helper="por validar" tone="amber" />
-                <SummaryStat icon={CheckCircle2} label="Ativos hoje" value={String(weekSummary.ativosHoje)} helper="com registo hoje" tone="cyan" />
-              </section>
 
               {/* Bloco de resumo de pedidos do simulador */}
               <section className="rounded-[24px] border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(9,27,43,0.96)_0%,rgba(12,34,52,0.94)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.24)]">
@@ -1841,94 +1207,9 @@ export default function ColaboradorAdminClient() {
                 )}
               </section>
 
-              {/* Layout principal: colaboradores + lateral de pendências */}
+              {/* Layout principal: leads + ações */}
               <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-                <ActionCard
-                  title="Colaboradores que trabalharam esta semana"
-                  description="Clique num colaborador para abrir o histórico semanal detalhado."
-                >
-                  {weekCollaborators.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
-                      Sem registos de colaboradores nesta semana.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {weekCollaborators.map((colaborador) => (
-                        <button
-                          key={colaborador.id}
-                          type="button"
-                          onClick={() => setColaboradorDrawerId(colaborador.id)}
-                          className="grid w-full items-center gap-3 rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-cyan-400/40 hover:bg-white/[0.06] md:grid-cols-[1.6fr_repeat(4,minmax(0,1fr))_auto]"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-cyan-400 text-sm font-semibold text-slate-950">
-                              {getInitials(colaborador.nome)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-white">{colaborador.nome}</p>
-                              <p className="text-xs capitalize text-slate-400">{formatRoleLabel(colaborador.funcao)}</p>
-                            </div>
-                          </div>
-                          <CellStat label="Dias" value={String(colaborador.diasTrabalhados)} />
-                          <CellStat label="Horas" value={`${decimal(colaborador.horas)}h`} />
-                          <CellStat label="A receber" value={money(colaborador.valor)} accent />
-                          <CellStat label="Último dia" value={formatShortDate(colaborador.ultimoDia)} />
-                          <div className="flex items-center justify-between gap-2 md:justify-end">
-                            <StatusBadge
-                              status={
-                                colaborador.temPendencia
-                                  ? "pendente"
-                                  : colaborador.ativoHoje
-                                    ? "ativo"
-                                    : "inativo"
-                              }
-                            />
-                            <ChevronRight className="hidden h-4 w-4 text-slate-500 md:block" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </ActionCard>
-
                 <div className="space-y-4">
-                  {/* Pendências */}
-                  <ActionCard title="Pendências" description="Alertas operacionais desta semana." compact>
-                    <div className="space-y-3">
-                      <PendingRow
-                        icon={TimerReset}
-                        tone="rose"
-                        label="Sem hora de saída"
-                        count={pendencias.semSaida.length}
-                        detail={pendencias.semSaida.slice(0, 3).map((p) => `${p.nome} · ${formatShortDate(p.data)}`)}
-                      />
-                      <PendingRow
-                        icon={AlertTriangle}
-                        tone="amber"
-                        label="Horas muito altas"
-                        count={pendencias.horasAltas.length}
-                        detail={pendencias.horasAltas
-                          .slice(0, 3)
-                          .map((p) => `${p.nome} · ${decimal(p.horas)}h`)}
-                      />
-                      <PendingRow
-                        icon={ListChecks}
-                        tone="cyan"
-                        label="Registos por validar"
-                        count={pendencias.totalNaoValidados}
-                        detail={[]}
-                      />
-                      {pendencias.semSaida.length === 0 &&
-                        pendencias.horasAltas.length === 0 &&
-                        pendencias.totalNaoValidados === 0 && (
-                          <div className="flex items-center gap-2 rounded-[16px] border border-emerald-300/20 bg-emerald-400/[0.08] px-4 py-3 text-sm text-emerald-100">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Tudo em dia esta semana.
-                          </div>
-                        )}
-                    </div>
-                  </ActionCard>
-
                   {/* Leads e contactos do site */}
                   <ActionCard title="Leads e contactos do site" description="Resumo de hoje e últimos contactos.">
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -1971,78 +1252,12 @@ export default function ColaboradorAdminClient() {
 
                   {/* Ações rápidas */}
                   <ActionCard title="Ações rápidas" description="Atalhos operacionais." compact>
-                    <QuickAction icon={CalendarClock} label="Abrir histórico e horários" onClick={() => { setOperacaoTab("horarios"); setActiveSection("operacao"); }} />
                     <QuickAction icon={Users} label="Ver colaboradores" onClick={() => { setOperacaoTab("equipa"); setActiveSection("equipa"); }} />
                     <QuickAction icon={TrendingUp} label="Ver leads e contactos" onClick={() => setActiveSection("leads")} />
                     <QuickAction icon={Settings2} label="Configurações" onClick={() => setActiveSection("configs")} />
                   </ActionCard>
                 </div>
               </section>
-
-              {/* Registos recentes da semana */}
-              <ActionCard
-                title="Registos recentes"
-                description="Pendentes primeiro, depois os mais recentes da semana."
-              >
-                {weekRecords.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-400">
-                    Sem registos nesta semana.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-slate-400">
-                          <th className="px-3 py-2 font-medium">Colaborador</th>
-                          <th className="px-3 py-2 font-medium">Data</th>
-                          <th className="px-3 py-2 font-medium">Entrada</th>
-                          <th className="px-3 py-2 font-medium">Saída</th>
-                          <th className="px-3 py-2 font-medium">Horas</th>
-                          <th className="px-3 py-2 font-medium">Valor</th>
-                          <th className="px-3 py-2 font-medium">Estado</th>
-                          <th className="px-3 py-2 font-medium text-right">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {weekRecords.slice(0, 12).map((registro) => (
-                          <tr key={registro.id} className="border-t border-white/10 text-slate-200">
-                            <td className="px-3 py-3 font-medium text-white">{registro.colaboradorNome}</td>
-                            <td className="px-3 py-3">{formatShortDate(registro.data)}</td>
-                            <td className="px-3 py-3">{registro.horaEntrada || "—"}</td>
-                            <td className="px-3 py-3">{registro.horaSaida || "—"}</td>
-                            <td className="px-3 py-3 font-medium text-white">
-                              {decimal(parseFloat(registro.horasTrabalhadas || "0"))}h
-                            </td>
-                            <td className="px-3 py-3 font-medium text-cyan-200">
-                              {money(parseFloat(registro.valorTotal || "0"))}
-                            </td>
-                            <td className="px-3 py-3">
-                              <StatusBadge
-                                status={
-                                  registro.status === "incompleto"
-                                    ? "incompleto"
-                                    : registro.status === "alerta"
-                                      ? "pendente"
-                                      : "validado"
-                                }
-                              />
-                            </td>
-                            <td className="px-3 py-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() => setColaboradorDrawerId(registro.colaboradorId)}
-                                className="rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-cyan-100 transition hover:bg-white/[0.08]"
-                              >
-                                Ver
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </ActionCard>
             </>
           )}
 
@@ -2525,16 +1740,16 @@ export default function ColaboradorAdminClient() {
                     {operacaoTab === "equipa" || operacaoTab === "pagamentos" ? sectionLabels[activeSection] || "Operação" : "Operação"}
                   </p>
                   <h2 className="mt-1 text-2xl font-semibold text-white">
-                    {operacaoTab === "equipa" ? "Equipa" : operacaoTab === "horarios" ? "Horários e registos" : operacaoTab === "pagamentos" ? "Pagamentos" : "Funções"}
+                    {operacaoTab === "equipa" ? "Equipa" : operacaoTab === "pagamentos" ? "Pagamentos" : "Funções"}
                   </h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    {operacaoTab === "equipa" ? "Gestão de colaboradores: assistentes, motoristas e ajudantes." : operacaoTab === "horarios" ? "Valide entradas, saídas, pausas e valores da equipa." : operacaoTab === "pagamentos" ? "Ganhos fixos por trabalho atribuído no período seleccionado." : "Funções e valores padrão por tipo de colaborador."}
+                    {operacaoTab === "equipa" ? "Gestão de colaboradores: assistentes, motoristas e ajudantes." : operacaoTab === "pagamentos" ? "Ganhos fixos por trabalho atribuído no período seleccionado." : "Funções e valores padrão por tipo de colaborador."}
                   </p>
                 </div>
                 {/* Sub-tabs */}
                 <div className="flex flex-wrap gap-2 border-b border-slate-700/50 pb-3">
-                  {(["equipa", "horarios", "pagamentos", "funcoes"] as OperacaoTab[]).map((tab) => {
-                    const labels: Record<OperacaoTab, string> = { equipa: "Equipa", horarios: "Horários", pagamentos: "Pagamentos", funcoes: "Funções" };
+                  {(["equipa", "pagamentos", "funcoes"] as OperacaoTab[]).map((tab) => {
+                    const labels: Record<OperacaoTab, string> = { equipa: "Equipa", pagamentos: "Pagamentos", funcoes: "Funções" };
                     return (
                       <button
                         key={tab}
@@ -2558,317 +1773,6 @@ export default function ColaboradorAdminClient() {
                   })}
                 </div>
               </div>
-
-              {/* Sub-aba Horários */}
-              {operacaoTab === "horarios" && (
-              <div>
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-400 hidden">
-                    Gestão operacional
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setWeekOffset((v) => v - 1)}
-                    className="h-11 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
-                  >
-                    Semana anterior
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setWeekOffset(0)}
-                    className={`h-11 rounded-2xl px-5 ${
-                      weekOffset === 0
-                        ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300"
-                        : "border border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
-                    }`}
-                  >
-                    Semana atual
-                  </Button>
-                </div>
-              </div>
-
-              {/* Filtros */}
-              <div className="flex flex-col gap-3 rounded-[20px] border border-white/10 bg-white/[0.02] p-4 lg:flex-row lg:flex-wrap lg:items-center">
-                <div className="flex flex-wrap gap-2">
-                  <FilterPill
-                    active={filtroColaborador === "todos"}
-                    onClick={() => setFiltroColaborador("todos")}
-                    label="Toda a equipa"
-                  />
-                  {collaboratorHoursFilters.map((colaborador) => (
-                    <FilterPill
-                      key={colaborador.id}
-                      active={filtroColaborador === String(colaborador.id)}
-                      onClick={() => setFiltroColaborador(String(colaborador.id))}
-                      label={colaborador.nome}
-                    />
-                  ))}
-                </div>
-                <span className="hidden h-6 w-px bg-white/10 lg:block" />
-                <div className="flex flex-wrap gap-2">
-                  {(["todas", "motorista", "ajudante", "admin"] as const).map((funcao) => (
-                    <button
-                      key={funcao}
-                      type="button"
-                      onClick={() => setHoursFuncao(funcao)}
-                      className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold capitalize transition ${
-                        hoursFuncao === funcao
-                          ? "border-cyan-300 bg-cyan-400 text-slate-950"
-                          : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.07]"
-                      }`}
-                    >
-                      {funcao === "todas" ? "Todas" : formatRoleLabel(funcao)}
-                    </button>
-                  ))}
-                </div>
-                <span className="hidden h-6 w-px bg-white/10 lg:block" />
-                <div className="flex flex-wrap gap-2">
-                  {(["todos", "validado", "pendente", "incompleto"] as const).map((status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => setHoursStatus(status)}
-                      className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold capitalize transition ${
-                        hoursStatus === status
-                          ? "border-cyan-300 bg-cyan-400 text-slate-950"
-                          : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.07]"
-                      }`}
-                    >
-                      {status === "todos" ? "Todos" : status}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Cards de resumo */}
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-                <SummaryStat icon={Users} label="Com registo" value={String(hoursSummary.colaboradoresComRegisto)} helper="Colaboradores" tone="cyan" />
-                <SummaryStat icon={TimerReset} label="Horas" value={`${decimal(hoursSummary.totalHoras)}h`} helper="No filtro atual" tone="slate" />
-                <SummaryStat icon={Wallet} label="A pagar" value={money(hoursSummary.totalValor)} helper="Estimado" tone="emerald" />
-                <SummaryStat icon={AlertTriangle} label="Pendentes" value={String(hoursSummary.pendentes)} helper="Por validar" tone="amber" />
-                <SummaryStat icon={Clock3} label="Incompletos" value={String(hoursSummary.incompletos)} helper="Sem saída" tone="amber" />
-                <SummaryStat icon={CalendarDays} label="Média" value={`${decimal(hoursSummary.mediaHoras)}h`} helper="Por colaborador" tone="slate" />
-              </div>
-
-              {/* Painel de edição de registo */}
-              {editandoRegistroId !== null && (
-                <Card className="rounded-[24px] border-cyan-300/20 bg-[linear-gradient(180deg,rgba(12,34,52,0.96)_0%,rgba(9,27,43,0.94)_100%)] text-white">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-xl text-white">Corrigir registo</CardTitle>
-                    <CardDescription className="text-slate-400">
-                      As horas e valores são recalculados pelo sistema com base nos horários introduzidos.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <Field label="Data">
-                      <input
-                        type="date"
-                        value={registroForm.data}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, data: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Hora entrada">
-                      <input
-                        type="time"
-                        value={registroForm.horaEntrada}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, horaEntrada: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Pausa">
-                      <input
-                        type="time"
-                        value={registroForm.horaPausa}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, horaPausa: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Hora saída">
-                      <input
-                        type="time"
-                        value={registroForm.horaSaida}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, horaSaida: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Número de trabalhos">
-                      <input
-                        type="number"
-                        min="0"
-                        value={registroForm.numeroTrabalhos}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, numeroTrabalhos: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Valor/hora">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={registroForm.valorHora}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, valorHora: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Valor final">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={registroForm.valorTotal}
-                        onChange={(event) => setRegistroForm((state) => ({ ...state, valorTotal: event.target.value }))}
-                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <div className="flex flex-wrap items-end justify-end gap-3 md:col-span-2 xl:col-span-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setEditandoRegistroId(null)}
-                        className="h-11 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={savingRegistro}
-                        onClick={() => editandoRegistroId !== null && guardarRegistro(editandoRegistroId)}
-                        className="h-11 rounded-2xl bg-cyan-400 px-5 text-slate-950 hover:bg-cyan-300"
-                      >
-                        {savingRegistro ? "A guardar..." : "Guardar registo"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Tabela de registos */}
-              <div className="overflow-x-auto rounded-[20px] border border-white/10">
-                <table className="w-full min-w-[880px] border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wide text-slate-400">
-                      <th className="px-4 py-3 font-semibold">Data</th>
-                      <th className="px-4 py-3 font-semibold">Colaborador</th>
-                      <th className="px-4 py-3 font-semibold">Função</th>
-                      <th className="px-4 py-3 font-semibold">Entrada</th>
-                      <th className="px-4 py-3 font-semibold">Pausa</th>
-                      <th className="px-4 py-3 font-semibold">Saída</th>
-                      <th className="px-4 py-3 font-semibold">Horas</th>
-                      <th className="px-4 py-3 font-semibold">Valor</th>
-                      <th className="px-4 py-3 font-semibold">Estado</th>
-                      <th className="px-4 py-3 text-right font-semibold">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {hoursRecords.length === 0 && (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
-                          Ainda não existem registos para os filtros escolhidos.
-                        </td>
-                      </tr>
-                    )}
-                    {hoursRecords.map((registro) => (
-                      <tr key={registro.id} className="border-b border-white/5 transition hover:bg-white/[0.03]">
-                        <td className="px-4 py-3 text-slate-300">{formatShortDate(registro.data)}</td>
-                        <td className="px-4 py-3 font-semibold text-white">{registro.colaboradorNome}</td>
-                        <td className="px-4 py-3 capitalize text-slate-400">{formatRoleLabel(registro.funcao)}</td>
-                        <td className="px-4 py-3 text-slate-300">{registro.horaEntrada || "—"}</td>
-                        <td className="px-4 py-3 text-slate-300">{registro.horaPausa || "—"}</td>
-                        <td className="px-4 py-3 text-slate-300">{registro.horaSaida || "—"}</td>
-                        <td className="px-4 py-3 font-semibold text-white">{decimal(parseFloat(registro.horasTrabalhadas || "0"))}h</td>
-                        <td className="px-4 py-3 font-semibold text-cyan-200">{money(parseFloat(registro.valorTotal || "0"))}</td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={registro.statusLabel} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setColaboradorDrawerId(registro.colaboradorId)}
-                              title="Ver histórico"
-                              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-200 transition hover:bg-white/[0.08]"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirEdicaoRegistro(registro)}
-                              title="Corrigir"
-                              className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/[0.1] text-cyan-100 transition hover:bg-cyan-400/[0.2]"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => apagarRegistro(registro.id)}
-                              title="Excluir"
-                              className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300/20 bg-rose-400/[0.08] text-rose-100 transition hover:bg-rose-400/[0.16]"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Resumo por colaborador */}
-              <Card className="rounded-[24px] border-cyan-300/14 bg-[linear-gradient(180deg,rgba(12,34,52,0.96)_0%,rgba(9,27,43,0.94)_100%)] text-white">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <ReceiptText className="h-5 w-5 text-cyan-300" />
-                    Resumo por colaborador
-                  </CardTitle>
-                  <CardDescription className="text-slate-400">
-                    Total semanal e mensal por colaborador. A semana fecha de segunda a domingo.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto rounded-[16px] border border-white/10">
-                    <table className="w-full min-w-[640px] border-collapse text-sm">
-                      <thead>
-                        <tr className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wide text-slate-400">
-                          <th className="px-4 py-3 font-semibold">Colaborador</th>
-                          <th className="px-4 py-3 font-semibold">Horas semana</th>
-                          <th className="px-4 py-3 font-semibold">Valor semana</th>
-                          <th className="px-4 py-3 font-semibold">Horas mês</th>
-                          <th className="px-4 py-3 font-semibold">Valor mês</th>
-                          <th className="px-4 py-3 text-right font-semibold">Histórico</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {collaboratorHourReports.map((colaborador) => (
-                          <tr key={colaborador.id} className="border-b border-white/5 transition hover:bg-white/[0.03]">
-                            <td className="px-4 py-3 font-semibold text-white">{colaborador.nome}</td>
-                            <td className="px-4 py-3 text-white">{decimal(colaborador.relatorio.semana.horas)}h</td>
-                            <td className="px-4 py-3 text-cyan-200">{money(colaborador.relatorio.semana.valor)}</td>
-                            <td className="px-4 py-3 text-white">{decimal(colaborador.relatorio.mes.horas)}h</td>
-                            <td className="px-4 py-3 font-semibold text-emerald-200">{money(colaborador.relatorio.mes.valor)}</td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() => setColaboradorDrawerId(colaborador.id)}
-                                className="rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-cyan-100 transition hover:bg-white/[0.08]"
-                              >
-                                Ver semana
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-              </div>
-              )}
 
               {/* Sub-aba Equipa */}
               {operacaoTab === "equipa" && (
@@ -3055,10 +1959,8 @@ export default function ColaboradorAdminClient() {
               )}
 
               {/* Cards de resumo da equipa */}
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <SummaryStat icon={Users} label="Colaboradores" value={String(teamStats.total)} helper="no total" />
-                <SummaryStat icon={CheckCircle2} label="Ativos" value={String(teamStats.ativos)} helper="trabalharam esta semana" tone="emerald" />
-                <SummaryStat icon={TimerReset} label="Inativos" value={String(teamStats.inativos)} helper="sem registo esta semana" tone="amber" />
                 <SummaryStat icon={Briefcase} label="Motoristas" value={String(teamStats.motoristas)} helper="na equipa" />
                 <SummaryStat icon={Users} label="Ajudantes" value={String(teamStats.ajudantes)} helper="na equipa" />
                 <SummaryStat icon={ShieldCheck} label="Administradores" value={String(teamStats.admins)} helper="com acesso total" tone="cyan" />
@@ -3082,15 +1984,6 @@ export default function ColaboradorAdminClient() {
                   <option value="assistente">Assistentes</option>
                   <option value="motorista">Motoristas</option>
                   <option value="ajudante">Ajudantes</option>
-                </select>
-                <select
-                  value={teamStatus}
-                  onChange={(event) => setTeamStatus(event.target.value as typeof teamStatus)}
-                  className="h-11 rounded-[14px] border border-cyan-300/20 bg-[#0d1f35] px-3 text-sm font-medium text-white outline-none focus:border-cyan-400 [color-scheme:dark]"
-                >
-                  <option value="todos">Todos os estados</option>
-                  <option value="ativo">Trabalhou esta semana</option>
-                  <option value="inativo">Sem atividade esta semana</option>
                 </select>
               </div>
 
@@ -3185,19 +2078,14 @@ export default function ColaboradorAdminClient() {
                     <tr className="text-left text-slate-400">
                       <th className="px-3 py-3 font-medium">Nome</th>
                       <th className="px-3 py-3 font-medium">Função</th>
-                      <th className="px-3 py-3 font-medium">Estado</th>
                       <th className="px-3 py-3 font-medium">Valor/hora</th>
-                      <th className="px-3 py-3 font-medium">Horas semana</th>
-                      <th className="px-3 py-3 font-medium">Horas 30 dias</th>
-                      <th className="px-3 py-3 font-medium">Valor mês</th>
-                      <th className="px-3 py-3 font-medium">Último registo</th>
                       <th className="px-3 py-3 text-right font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {teamRowsFiltered.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-3 py-8 text-center text-slate-400">
+                        <td colSpan={4} className="px-3 py-8 text-center text-slate-400">
                           Nenhum colaborador corresponde aos filtros.
                         </td>
                       </tr>
@@ -3205,16 +2093,12 @@ export default function ColaboradorAdminClient() {
                       teamRowsFiltered.map((row) => (
                         <tr key={row.id} className="border-t border-white/10 text-slate-200">
                           <td className="px-3 py-3">
-                            <button
-                              type="button"
-                              onClick={() => setColaboradorDrawerId(row.id)}
-                              className="flex items-center gap-2 text-left font-medium text-white transition hover:text-cyan-200"
-                            >
+                            <div className="flex items-center gap-2 text-left font-medium text-white">
                               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400 text-xs font-semibold text-slate-950">
                                 {getInitials(row.nome)}
                               </span>
                               {row.nome}
-                            </button>
+                            </div>
                           </td>
                           <td className="px-3 py-3 capitalize">
                             {formatRoleLabel(row.funcao)}
@@ -3224,24 +2108,9 @@ export default function ColaboradorAdminClient() {
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-3">
-                            <StatusBadge status={row.ativoHoje ? "ativo" : row.estadoAtividade === "ativo" ? "validado" : "inativo"} />
-                          </td>
-                          <td className="px-3 py-3 font-medium text-white">{row.funcao === "assistente" ? <span className="text-slate-500">—</span> : money(parseFloat(row.valorHora || "0"))}</td>
-                          <td className="px-3 py-3">{decimal(row.horasSemana)}h</td>
-                          <td className="px-3 py-3">{decimal(row.horas30)}h</td>
-                          <td className="px-3 py-3 font-medium text-cyan-200">{money(row.valorMes)}</td>
-                          <td className="px-3 py-3">{row.ultimoRegistro ? formatShortDate(row.ultimoRegistro.data) : "—"}</td>
+                          <td className="px-3 py-3 font-medium text-white">{row.funcao === "assistente" ? <span className="text-slate-500">---</span> : money(parseFloat(row.valorHora || "0"))}</td>
                           <td className="px-3 py-3">
                             <div className="flex items-center justify-end gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setColaboradorDrawerId(row.id)}
-                                title="Ver histórico"
-                                className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-cyan-100 transition hover:bg-white/[0.08]"
-                              >
-                                <History className="h-4 w-4" />
-                              </button>
                               <button
                                 type="button"
                                 onClick={() => abrirEdicao(row)}
@@ -4326,136 +3195,6 @@ export default function ColaboradorAdminClient() {
         </div>
       )}
 
-      {/* Drawer lateral: histórico semanal do colaborador */}
-      {drawerColaborador && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <button
-            type="button"
-            aria-label="Fechar histórico"
-            onClick={() => setColaboradorDrawerId(null)}
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
-          />
-          <aside className="relative flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-cyan-300/20 bg-[linear-gradient(180deg,rgba(9,27,43,0.99)_0%,rgba(7,20,33,0.99)_100%)] shadow-[-30px_0_80px_rgba(3,10,18,0.5)]">
-            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-white/10 bg-[rgba(9,27,43,0.96)] px-6 py-5 backdrop-blur">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">
-                  Histórico semanal
-                </p>
-                <h3 className="mt-1 text-xl font-semibold text-white">{drawerColaborador.nome}</h3>
-                <p className="mt-1 text-sm capitalize text-slate-400">
-                  {formatRoleLabel(drawerColaborador.funcao)} • <span className="capitalize">{weekLabel}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setColaboradorDrawerId(null)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.1]"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 space-y-3 px-6 py-5">
-              {drawerDias.map((dia) => {
-                const trabalhou = dia.registros.length > 0;
-                return (
-                  <div
-                    key={dia.label}
-                    className={`rounded-[18px] border px-4 py-3 ${
-                      trabalhou
-                        ? "border-white/10 bg-white/[0.04]"
-                        : "border-white/5 bg-white/[0.015]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white">{dia.label}</span>
-                        <span className="text-xs text-slate-500">{formatShortDate(dia.dia.toISOString())}</span>
-                      </div>
-                      {trabalhou ? (
-                        <StatusBadge status={getRecordStatus(dia.registros[0]) === "validado" ? "validado" : getRecordStatus(dia.registros[0]) === "incompleto" ? "incompleto" : "pendente"} />
-                      ) : (
-                        <span className="text-xs font-medium text-slate-500">Sem registo</span>
-                      )}
-                    </div>
-
-                    {trabalhou &&
-                      dia.registros.map((r) => (
-                        <div
-                          key={r.id}
-                          className="mt-3 grid grid-cols-2 gap-2 rounded-[14px] border border-white/10 bg-white/[0.03] px-3 py-2 text-sm sm:grid-cols-4"
-                        >
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Entrada</p>
-                            <p className="font-medium text-white">{r.horaEntrada || "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Sa��da</p>
-                            <p className="font-medium text-white">{r.horaSaida || "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Horas</p>
-                            <p className="font-medium text-white">{decimal(parseFloat(r.horasTrabalhadas || "0"))}h</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Valor</p>
-                            <p className="font-medium text-cyan-200">{money(parseFloat(r.valorTotal || "0"))}</p>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="sticky bottom-0 space-y-4 border-t border-white/10 bg-[rgba(9,27,43,0.96)] px-6 py-5 backdrop-blur">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-[16px] border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Horas</p>
-                  <p className="mt-1 text-lg font-semibold text-white">{decimal(drawerColaborador.horas)}h</p>
-                </div>
-                <div className="rounded-[16px] border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Dias</p>
-                  <p className="mt-1 text-lg font-semibold text-white">{drawerColaborador.diasTrabalhados}</p>
-                </div>
-                <div className="rounded-[16px] border border-emerald-300/20 bg-emerald-400/[0.08] px-3 py-3 text-center">
-                  <p className="text-[11px] uppercase tracking-wide text-emerald-200/80">A pagar</p>
-                  <p className="mt-1 text-lg font-semibold text-emerald-100">{money(drawerColaborador.valor)}</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setFiltroColaborador(String(drawerColaborador.id));
-                    setColaboradorDrawerId(null);
-                    setOperacaoTab("horarios");
-                    setActiveSection("operacao");
-                  }}
-                  className="h-11 flex-1 rounded-[14px] bg-sky-500 text-white hover:bg-sky-400"
-                >
-                  <History className="mr-2 h-4 w-4" />
-                  Ver histórico completo
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFiltroColaborador(String(drawerColaborador.id));
-                    setColaboradorDrawerId(null);
-                    setOperacaoTab("horarios");
-                    setActiveSection("operacao");
-                  }}
-                  className="h-11 rounded-[14px] border-slate-700 bg-slate-800/60 px-4 text-slate-200 hover:bg-slate-700"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Corrigir registo
-                </Button>
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
     </div>
   );
 }
@@ -4494,69 +3233,7 @@ function SummaryStat({
   );
 }
 
-function CellStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-0.5 truncate text-sm font-semibold ${accent ? "text-cyan-200" : "text-white"}`}>{value}</p>
-    </div>
-  );
-}
 
-function StatusBadge({ status }: { status: "ativo" | "inativo" | "pendente" | "validado" | "incompleto" }) {
-  const config = {
-    ativo: { label: "Ativo hoje", className: "border-emerald-300/30 bg-emerald-400/[0.12] text-emerald-100" },
-    validado: { label: "Validado", className: "border-emerald-300/30 bg-emerald-400/[0.12] text-emerald-100" },
-    pendente: { label: "Pendente", className: "border-amber-300/30 bg-amber-400/[0.12] text-amber-100" },
-    incompleto: { label: "Incompleto", className: "border-rose-300/30 bg-rose-400/[0.12] text-rose-100" },
-    inativo: { label: "Sem atividade hoje", className: "border-white/15 bg-white/[0.05] text-slate-300" },
-  }[status];
-
-  return (
-    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${config.className}`}>
-      {config.label}
-    </span>
-  );
-}
-
-function PendingRow({
-  icon: Icon,
-  tone,
-  label,
-  count,
-  detail,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  tone: "rose" | "amber" | "cyan";
-  label: string;
-  count: number;
-  detail: string[];
-}) {
-  const toneClass = {
-    rose: "border-rose-300/25 bg-rose-400/[0.08] text-rose-100",
-    amber: "border-amber-300/25 bg-amber-400/[0.08] text-amber-100",
-    cyan: "border-cyan-300/25 bg-cyan-400/[0.08] text-cyan-100",
-  }[tone];
-
-  return (
-    <div className={`rounded-[16px] border px-4 py-3 ${toneClass}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          <span className="text-sm font-semibold text-white">{label}</span>
-        </div>
-        <span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-xs font-semibold text-white">{count}</span>
-      </div>
-      {detail.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-xs text-slate-300">
-          {detail.map((item, index) => (
-            <li key={index} className="truncate">{item}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 function QuickAction({
   icon: Icon,
@@ -4628,30 +3305,6 @@ function StatSurface({
       <h3 className="mt-3 text-base font-semibold text-white">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-200">{body}</p>
     </div>
-  );
-}
-
-function FilterPill({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-        active
-          ? "border-cyan-300 bg-cyan-400 text-slate-950"
-          : "border-cyan-300/14 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-      }`}
-    >
-      {label}
-    </button>
   );
 }
 

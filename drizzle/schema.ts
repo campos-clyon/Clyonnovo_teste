@@ -49,22 +49,6 @@ export const colaboradores = mysqlTable('colaboradores', {
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
 });
 
-// Tabela de registros de horas
-export const registrosHoras = mysqlTable('registrosHoras', {
-  id: int('id').autoincrement().primaryKey(),
-  colaboradorId: int('colaboradorId').notNull(),
-  data: timestamp('data').notNull(),
-  horaEntrada: varchar('horaEntrada', { length: 5 }).notNull(), // HH:MM
-  horaPausa: varchar('horaPausa', { length: 5 }), // HH:MM (opcional)
-  horaSaida: varchar('horaSaida', { length: 5 }), // HH:MM (opcional)
-  numeroTrabalhos: int('numeroTrabalhos').notNull().default(0),
-  horasTrabalhadas: varchar('horasTrabalhadas', { length: 10 }).notNull(),
-  valorTotal: varchar('valorTotal', { length: 10 }).notNull(),
-  sincronizadoSheets: int('sincronizadoSheets').notNull().default(0),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-
 export const simulatorSettings = mysqlTable("simulatorSettings", {
   key: varchar("key", { length: 120 }).primaryKey(),
   label: varchar("label", { length: 160 }).notNull(),
@@ -94,8 +78,6 @@ export const galleryMedia = mysqlTable("galleryMedia", {
 
 export type Colaborador = typeof colaboradores.$inferSelect;
 export type InsertColaborador = typeof colaboradores.$inferInsert;
-export type RegistroHoras = typeof registrosHoras.$inferSelect;
-export type InsertRegistroHoras = typeof registrosHoras.$inferInsert;
 export type SimulatorSetting = typeof simulatorSettings.$inferSelect;
 export type InsertSimulatorSetting = typeof simulatorSettings.$inferInsert;
 export type GalleryMedia = typeof galleryMedia.$inferSelect;

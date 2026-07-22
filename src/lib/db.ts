@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { eq, desc, inArray } from "drizzle-orm";
-import { users, colaboradores, registrosHoras, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
+import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
 export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
@@ -815,82 +815,6 @@ export async function deleteColaborador(id: number) {
   await db.delete(colaboradores).where(eq(colaboradores.id, id));
 }
 
-// ─── Registros de Horas helpers ───────────────────────────��──────────────────
-
-function calcularHoras(entrada: string, saida: string, pausa?: string | null): number {
-  try {
-    const [entH, entM] = entrada.split(":").map(Number);
-    const [saiH, saiM] = saida.split(":").map(Number);
-    let totalMinutos = saiH * 60 + saiM - (entH * 60 + entM);
-    if (pausa) {
-      const [pausaH, pausaM] = pausa.split(":").map(Number);
-      totalMinutos -= pausaH * 60 + pausaM;
-    }
-    return Math.max(0, parseFloat((totalMinutos / 60).toFixed(2)));
-  } catch {
-    return 0;
-  }
-}
-
-export async function getRegistrosHorasByColaborador(
-  colaboradorId: number,
-  limit = 50,
-  offset = 0
-) {
-  const db = await getDb();
-  if (!db) return [];
-  const result = await db
-    .select()
-    .from(registrosHoras)
-    .where(eq(registrosHoras.colaboradorId, colaboradorId))
-    .orderBy(desc(registrosHoras.data))
-    .limit(limit)
-    .offset(offset);
-
-  const colab = await db
-    .select()
-    .from(colaboradores)
-    .where(eq(colaboradores.id, colaboradorId))
-    .limit(1);
-  const valorHora = colab[0] ? parseFloat(colab[0].valorHora ?? "0") : 0;
-
-  return result.map((reg) => {
-    const horas = reg.horaSaida ? calcularHoras(reg.horaEntrada, reg.horaSaida, reg.horaPausa) : 0;
-    const valor = parseFloat((horas * valorHora).toFixed(2));
-    return { ...reg, horasTrabalhadas: horas.toFixed(2), valorTotal: valor.toFixed(2) };
-  });
-}
-
-export async function createRegistroHoras(data: {
-  colaboradorId: number;
-  data: Date;
-  horaEntrada: string;
-  horaPausa?: string;
-  horaSaida?: string;
-  numeroTrabalhos: number;
-  horasTrabalhadas: string;
-  valorTotal: string;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db.insert(registrosHoras).values({ ...data, sincronizadoSheets: 0 });
-}
-
-export async function updateRegistroHoras(
-  id: number,
-  data: Partial<{
-    horaPausa: string;
-    horaSaida: string;
-    numeroTrabalhos: number;
-    horasTrabalhadas: string;
-    valorTotal: string;
-    sincronizadoSheets: number;
-  }>
-) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db.update(registrosHoras).set(data).where(eq(registrosHoras.id, id));
-}
 
 // ─── Leads helpers ───────────────────────────────────────────────────────────
 
@@ -1099,26 +1023,6 @@ export async function createLeadEvent(data: {
 
 // ─── Leads helpers END ───────────────────────────────────────────────────────
 
-export async function getTodayRegistroByColaborador(colaboradorId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const result = await db
-    .select()
-    .from(registrosHoras)
-    .where(eq(registrosHoras.colaboradorId, colaboradorId))
-    .orderBy(desc(registrosHoras.data))
-    .limit(1);
-
-  if (!result[0]) return undefined;
-  const regDate = new Date(result[0].data);
-  if (regDate >= today && regDate < tomorrow) return result[0];
-  return undefined;
-}
 
 // ─── SimulatorOrders ────────────────────────────────���─────────────────────────
 
