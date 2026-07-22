@@ -337,7 +337,7 @@ export default function SimulatorMultiStepForm() {
                     <select
                       value={formData.serviceType}
                       onChange={(e) => handleChange("serviceType", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="clyon-select w-full border border-slate-300 rounded-lg pl-4 py-2.5 text-sm"
                     >
                       <option value="">Seleccione um serviço</option>
                       {SERVICES.map((s) => (
@@ -509,7 +509,7 @@ export default function SimulatorMultiStepForm() {
                     <select
                       value={formData.floor}
                       onChange={(e) => handleChange("floor", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="clyon-select w-full border border-slate-300 rounded-lg pl-4 py-2.5 text-sm"
                     >
                       <option value="">Seleccione</option>
                       {FLOORS.map((f) => (
@@ -525,7 +525,7 @@ export default function SimulatorMultiStepForm() {
                     <select
                       value={formData.hasElevator}
                       onChange={(e) => handleChange("hasElevator", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="clyon-select w-full border border-slate-300 rounded-lg pl-4 py-2.5 text-sm"
                     >
                       <option value="">Seleccione</option>
                       <option value="Sim, funciona">Sim, funciona</option>
@@ -541,7 +541,7 @@ export default function SimulatorMultiStepForm() {
                     <select
                       value={formData.parkingDistance}
                       onChange={(e) => handleChange("parkingDistance", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="clyon-select w-full border border-slate-300 rounded-lg pl-4 py-2.5 text-sm"
                     >
                       <option value="">Seleccione</option>
                       <option value="Sim, mesmo à porta">Sim, mesmo à porta</option>
@@ -558,7 +558,7 @@ export default function SimulatorMultiStepForm() {
                     <select
                       value={formData.difficultAccess}
                       onChange={(e) => handleChange("difficultAccess", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="clyon-select w-full border border-slate-300 rounded-lg pl-4 py-2.5 text-sm"
                     >
                       <option value="">Seleccione</option>
                       <option value="Não">Não</option>
@@ -579,7 +579,7 @@ export default function SimulatorMultiStepForm() {
                     <select
                       value={formData.urgency}
                       onChange={(e) => handleChange("urgency", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="clyon-select w-full border border-slate-300 rounded-lg pl-4 py-2.5 text-sm"
                     >
                       <option value="">Seleccione</option>
                       {URGENCIES.map((u) => (

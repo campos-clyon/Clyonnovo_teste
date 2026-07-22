@@ -20,6 +20,7 @@ import OrderSummaryCard from "./components/OrderSummaryCard";
 import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
+import MovelItemSelector from "./components/MovelItemSelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -738,11 +739,49 @@ function Phase1Service({
         />
       )}
 
+      {/* Seletor Carga vs Item — apenas para recolha de móveis */}
+      {formData.serviceType === "recolha_moveis" && (
+        <MovelItemSelector
+          mode={formData.movelMode}
+          pequeno={formData.movelItemsPequeno ?? 0}
+          medio={formData.movelItemsMedio ?? 0}
+          grande={formData.movelItemsGrande ?? 0}
+          onModeChange={(m) => {
+            updateField("movelMode", m);
+            if (m === "item") {
+              // Limpa campos de volume ao entrar no modo item
+              updateField("volumeTier", undefined);
+              updateField("quantityExact", undefined);
+            } else {
+              // Limpa campos de item ao voltar ao modo carga
+              updateField("movelItemsPequeno", 0);
+              updateField("movelItemsMedio", 0);
+              updateField("movelItemsGrande", 0);
+            }
+          }}
+          onPequenoChange={(n) => {
+            updateField("movelItemsPequeno", n);
+            const total = n + (formData.movelItemsMedio ?? 0) + (formData.movelItemsGrande ?? 0);
+            updateField("quantityExact", total > 0 ? String(total) : undefined);
+          }}
+          onMedioChange={(n) => {
+            updateField("movelItemsMedio", n);
+            const total = (formData.movelItemsPequeno ?? 0) + n + (formData.movelItemsGrande ?? 0);
+            updateField("quantityExact", total > 0 ? String(total) : undefined);
+          }}
+          onGrandeChange={(n) => {
+            updateField("movelItemsGrande", n);
+            const total = (formData.movelItemsPequeno ?? 0) + (formData.movelItemsMedio ?? 0) + n;
+            updateField("quantityExact", total > 0 ? String(total) : undefined);
+          }}
+        />
+      )}
+
       {/* Quantidade (volume) — categorias onde "quanto enche" é a pergunta certa.
-          Entulho tem o seu próprio seletor acima (com conversão de sacos). */}
+          Entulho tem o seu próprio seletor acima; recolha_moveis usa MovelItemSelector no modo carga. */}
       {["recolha_moveis", "recolha_monos", "esvaziamento_casa", "esvaziamento_apartamento"].includes(
         formData.serviceType ?? "",
-      ) && (
+      ) && formData.movelMode !== "item" && (
         <VolumeQuantitySelector
           volume={formData.volumeTier}
           exactValue={formData.quantityExact}
@@ -775,6 +814,7 @@ function Phase1Service({
         />
       )}
 
+
       {/* Order Details with integrated upload */}
       <CompactOrderDetails
         description={formData.description}
@@ -805,7 +845,7 @@ function AccessFields({
   difficultAccess?: boolean;
   onChange: (field: keyof MovingAccess, value: unknown) => void;
 }) {
-  const selectCls = "w-full px-3 py-2 border-2 border-gray-300 bg-white rounded-xl text-sm focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm";
+  const selectCls = "clyon-select w-full pl-4 py-3 border border-slate-300 bg-white rounded-xl text-sm font-medium text-slate-900 shadow-sm";
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -907,7 +947,7 @@ function Phase2Location({
   // ── Percurso da mudança ─────────────────────────────────────────────────
   const [calcStatus, setCalcStatus] = useState<DistanceStatus>("idle");
 
-  const calcSelectCls = "w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm";
+  const calcSelectCls = "clyon-select w-full pl-4 py-3 border border-slate-300 bg-white rounded-xl text-sm font-medium text-slate-900 shadow-sm";
 
   const calcMovingRoute = async () => {
     const origin = formData.originAddress;
