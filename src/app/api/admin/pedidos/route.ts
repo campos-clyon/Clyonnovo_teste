@@ -12,6 +12,21 @@ import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
 
 export const runtime = "nodejs";
 
+function sanitizeOrders(orders: any[]): any[] {
+  return orders.map((o) => {
+    const safe: Record<string, unknown> = { ...o };
+    for (const k of Object.keys(safe)) {
+      const v = safe[k];
+      if (v !== null && typeof v === "object" && !(v instanceof Date) && !Array.isArray(v)) {
+        safe[k] = typeof v.toString === "function" && v.toString() !== "[object Object]"
+          ? v.toString()
+          : JSON.stringify(v);
+      }
+    }
+    return safe;
+  });
+}
+
 /**
  * Verifica autenticação e retorna o colaborador.
  * Admin geral (isAdmin=1) e assistentes (funcao='assistente') podem aceder.
@@ -52,7 +67,7 @@ export async function GET(req: NextRequest) {
       getAllSimulatorOrders({ status: status !== "todos" ? status : undefined, search }),
       countSimulatorOrdersByStatus(),
     ]);
-    return NextResponse.json({ orders, counts, role: "admin_geral" });
+    return NextResponse.json({ orders: sanitizeOrders(orders), counts, role: "admin_geral" });
   } else {
     // Assistente vê pedidos atribuídos a si + pedidos da fila geral (assignedToId IS NULL)
     const orders = await getSimulatorOrdersByAssistant(colab!.id);
@@ -89,7 +104,7 @@ export async function GET(req: NextRequest) {
     // "sem_assistente" = na fila geral
     counts["sem_assistente"] = allVisible.filter((o) => !o.assignedToId).length;
 
-    return NextResponse.json({ orders: filtered, counts, role: "assistente" });
+    return NextResponse.json({ orders: sanitizeOrders(filtered), counts, role: "assistente" });
   }
 }
 
