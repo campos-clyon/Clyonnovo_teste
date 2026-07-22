@@ -63,28 +63,35 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const asString = (v: any): string | null => {
+      if (v === null || v === undefined) return null;
+      if (typeof v === "string") return v;
+      if (typeof v === "number" || typeof v === "boolean") return String(v);
+      return null; // discard objects/arrays — cannot be safely rendered as text
+    };
+
     const orders = rows.map((row: any) => {
       const profile = profilesMap[row.customer_id] ?? {};
       const cat = categoriesMap[row.category_slug] ?? {};
       return {
-        id:              row.id,
-        title:           row.details || cat.name || row.category_slug || "Pedido",
-        description:     row.notes ?? "",
-        location:        row.address_line ?? "",
-        district:        row.region ?? "",
-        city:            row.city ?? "",
-        urgency:         row.urgency ?? "normal",
-        budget_range:    row.estimated_price ? `€${row.estimated_price}` : null,
-        preferred_date:  row.scheduled_for ?? null,
-        status:          row.status ?? "open",
-        photos:          row.photos ?? [],
-        created_at:      row.created_at,
-        updated_at:      row.updated_at ?? row.created_at,
-        client_name:     profile.full_name ?? null,
-        client_email:    profile.email ?? null,
-        client_phone:    profile.phone ?? null,
-        category_name:   cat.name ?? row.category_slug ?? null,
-        category_icon:   cat.icon ?? null,
+        id:              String(row.id ?? ""),
+        title:           asString(row.details) || asString(cat.name) || asString(row.category_slug) || "Pedido",
+        description:     asString(row.notes) ?? "",
+        location:        asString(row.address_line) ?? "",
+        district:        asString(row.region) ?? "",
+        city:            asString(row.city) ?? "",
+        urgency:         asString(row.urgency) ?? "normal",
+        budget_range:    row.estimated_price != null ? `€${row.estimated_price}` : null,
+        preferred_date:  asString(row.scheduled_for),
+        status:          asString(row.status) ?? "open",
+        photos:          Array.isArray(row.photos) ? row.photos.filter((p: any) => typeof p === "string") : [],
+        created_at:      asString(row.created_at) ?? "",
+        updated_at:      asString(row.updated_at) ?? asString(row.created_at) ?? "",
+        client_name:     asString(profile.full_name),
+        client_email:    asString(profile.email),
+        client_phone:    asString(profile.phone),
+        category_name:   asString(cat.name) ?? asString(row.category_slug),
+        category_icon:   asString(cat.icon),
         responses_count: 0,
       };
     });
