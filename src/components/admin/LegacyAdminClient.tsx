@@ -618,7 +618,16 @@ export default function ColaboradorAdminClient() {
       });
       if (!res.ok) throw new Error("Erro ao carregar pedidos");
       const data = await res.json();
-      setPedidos(data.orders ?? []);
+      const safeOrders = (data.orders ?? []).map((o: any) => {
+        const safe = { ...o };
+        for (const k of Object.keys(safe)) {
+          if (safe[k] !== null && typeof safe[k] === "object" && !(safe[k] instanceof Date) && !Array.isArray(safe[k])) {
+            safe[k] = JSON.stringify(safe[k]);
+          }
+        }
+        return safe;
+      });
+      setPedidos(safeOrders);
       setPedidosCounts(data.counts ?? {});
     } catch {
       if (!silent) setPedidosError("Não foi possível carregar os pedidos.");
