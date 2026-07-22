@@ -393,6 +393,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   function populateEdit(o: PedidoOrder) {
+    // Fallback ao rawOrderJson (o simulador guarda lá quando o campo top-level
+    // ainda não existia) e a `originAccess` para mudanças.
+    let raw: any = {};
+    try { raw = o.rawOrderJson ? JSON.parse(o.rawOrderJson) : {}; } catch { raw = {}; }
+    const orig = raw.originAccess ?? {};
+
     setEditContactName(o.contactName ?? "");
     setEditContactPhone(o.contactPhone ?? "");
     setEditContactEmail(o.contactEmail ?? "");
@@ -400,12 +406,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
     setEditServiceType(normalizeServiceType(o.serviceType));
     setEditDescription(o.description ?? "");
     setEditUrgency(o.urgency ?? "");
-    setEditAddress(o.address ?? "");
-    setEditCity(o.city ?? "");
-    setEditPostalCode(o.postalCode ?? "");
-    setEditFloor(o.floor ?? "");
-    setEditHasElevator(o.hasElevator ?? "");
-    setEditParkingDistance(o.parkingDistance ?? "");
+    setEditAddress(o.address ?? raw.address?.formattedAddress ?? "");
+    setEditCity(o.city ?? raw.address?.city ?? "");
+    setEditPostalCode(o.postalCode ?? raw.address?.postalCode ?? "");
+    setEditFloor(o.floor ?? orig.floor ?? raw.floor ?? "");
+    setEditHasElevator(o.hasElevator ?? orig.hasElevator ?? raw.hasElevator ?? "");
+    setEditParkingDistance(o.parkingDistance ?? orig.parkingDistance ?? raw.parkingDistance ?? "");
     setEditDistanceKm(o.distanceKm ?? "");
     setDistanceMsg("");
     setEditPrecoFinal(o.precoFinal ?? "");
