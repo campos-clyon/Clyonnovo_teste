@@ -1847,7 +1847,7 @@ function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
       <p className="text-xs text-slate-500">{total} entrada{total !== 1 ? "s" : ""} · fonte: <code className="text-slate-400">{source === "ops" ? "service_request_ops" : "admin_audit_log"}</code></p>
 
       {entries.length === 0 ? (
-        <p className="py-8 text-center text-sm text-slate-600">Sem entradas. A tabela pode estar vazia ou não existir.</p>
+        <p className="py-8 text-center text-sm text-slate-600">Não existem entradas para a fonte e os filtros seleccionados.</p>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
           {entries.map((e, i) => (

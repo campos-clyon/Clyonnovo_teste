@@ -71,14 +71,16 @@ describe("calculateFastEstimate — margem de 'Outro Serviço'", () => {
     expect(note).toContain("margem 30%");
   });
 
-  it("usa a margem por defeito (40%) para outras categorias", async () => {
+  // Regra comercial em vigor desde o commit aa37b12 (13 Jul 2026):
+  // margem padrão 0,40 → 0,50. Este teste valida a margem de 50%.
+  it("usa a margem por defeito (50%) para outras categorias", async () => {
     const result = await calculateFastEstimate({
       ...base,
       serviceType: "recolha_moveis",
       heavyItems: ["sofá"],
     });
     const note = result.internalNotes.find((n) => n.includes("Custo total"));
-    expect(note).toContain("margem 40%");
+    expect(note).toContain("margem 50%");
   });
 });
 

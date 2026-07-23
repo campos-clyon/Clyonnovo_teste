@@ -124,6 +124,55 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
     }
 
+    const actionType = updates.status ? "status_change" : hasNote ? "note" : "update";
+    const auditFields = {
+      colab_id:    colab!.id,
+      colab_nome:  colab!.nome,
+      action_type: actionType,
+      status_from: updates.status ? ((current as Record<string, unknown>).status as string | null) ?? null : null,
+      status_to:   (updates.status as string | undefined) ?? null,
+      reason:      typeof body.reason === "string" ? body.reason.trim() || null : null,
+      note:        hasNote ? (body.admin_note as string).trim() : null,
+      data_json:   hasUpdates ? { changes: updates, correlation_id: correlationId } : { correlation_id: correlationId },
+    };
+
+    // Caminho preferido: RPC transaccional (migração 004) — update + auditoria
+    // no mesmo commit, com lock de linha. Fallback: compensação em duas escritas.
+    const { data: rpcRows, error: rpcErr } = await sb.rpc("patch_request_with_audit", {
+      p_request_id:  id,
+      p_updates:     hasUpdates ? updates : {},
+      p_colab_id:    auditFields.colab_id,
+      p_colab_nome:  auditFields.colab_nome,
+      p_action_type: auditFields.action_type,
+      p_status_from: auditFields.status_from,
+      p_status_to:   auditFields.status_to,
+      p_reason:      auditFields.reason,
+      p_note:        auditFields.note,
+      p_data_json:   auditFields.data_json,
+    });
+
+    if (!rpcErr) {
+      const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+      if (!row) {
+        return NextResponse.json({ error: "Pedido não encontrado.", correlation_id: correlationId }, { status: 404 });
+      }
+      return NextResponse.json({ order: await enrichOrder(sb, row as Record<string, unknown>) });
+    }
+
+    // RPC inexistente (migração 004 ainda não executada) → fallback.
+    // Qualquer outro erro da RPC é falha real e devolve 500 sem escrever nada
+    // (a transacção reverteu tudo do lado do Postgres).
+    const rpcMissing = rpcErr.code === "PGRST202" || /function .* does not exist/i.test(rpcErr.message ?? "");
+    if (!rpcMissing) {
+      console.error("[app-pedidos/[id] PATCH] rpc failed", { correlationId, rpcErr });
+      return NextResponse.json({
+        error: "Erro ao actualizar pedido (transacção revertida).",
+        correlation_id: correlationId,
+        details: rpcErr.message,
+      }, { status: 500 });
+    }
+    console.warn("[app-pedidos/[id] PATCH] RPC patch_request_with_audit ausente — usar fallback de compensação. Executar supabase/migrations/004_patch_request_with_audit.sql.", { correlationId });
+
     let updated: Record<string, unknown> = current as Record<string, unknown>;
     if (hasUpdates) {
       const { data: patched, error: patchErr } = await sb
@@ -136,20 +185,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Auditoria bloqueante: se falhar, tentar reverter e devolver erro claro.
-    const actionType = updates.status ? "status_change" : hasNote ? "note" : "update";
-    const opsEntry = {
-      request_id:  id,
-      colab_id:    colab!.id,
-      colab_nome:  colab!.nome,
-      action_type: actionType,
-      status_from: updates.status ? (current as Record<string, unknown>).status ?? null : null,
-      status_to:   updates.status ?? null,
-      reason:      typeof body.reason === "string" ? body.reason.trim() || null : null,
-      note:        hasNote ? (body.admin_note as string).trim() : null,
-      data_json:   hasUpdates ? { changes: updates, correlation_id: correlationId } : { correlation_id: correlationId },
-    };
-
-    const { error: opsErr } = await sb.from("service_request_ops").insert([opsEntry]);
+    const { error: opsErr } = await sb.from("service_request_ops").insert([{ request_id: id, ...auditFields }]);
     if (opsErr) {
       console.error("[app-pedidos/[id] PATCH] audit insert failed", { correlationId, opsErr });
 
