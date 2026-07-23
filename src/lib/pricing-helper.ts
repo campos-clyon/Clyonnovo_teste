@@ -231,6 +231,8 @@ export interface FastEstimateInput {
   /** Lista de itens pesados descritos pelo cliente (ex: "sofá 3 lugares", "frigorífico") */
   heavyItems?: string[];
   description?: string;
+  /** Estimativa visual de volume escolhida pelo cliente no formulário */
+  volumeTier?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
 }
 
 export interface FastEstimateResult {
@@ -446,20 +448,44 @@ export function countItemsFromDescription(description: string): number | null {
 export const FULL_LOAD_ITEM_THRESHOLD = 8;
 
 /**
+ * Mapeia a selecção visual de volume ("Enche uma carrinha", "Enche a
+ * caixa de um camião", "Enche um camião") para uma contagem de itens
+ * equivalente. Usado quando o cliente não descreveu itens nem enviou
+ * heavyItems[], mas escolheu o tier de volume no formulário.
+ *
+ * carrinha      → 4 itens (abaixo do limiar de carga completa)
+ * camiao_caixa  → 10 itens (carga completa)
+ * camiao_lixo   → 18 itens (carga completa grande)
+ * incerto       → null (não usar como fonte)
+ */
+function volumeTierToItemCount(tier: FastEstimateInput["volumeTier"]): number | null {
+  switch (tier) {
+    case "carrinha":     return 4;
+    case "camiao_caixa": return 10;
+    case "camiao_lixo":  return 18;
+    default:             return null;
+  }
+}
+
+/**
  * Determina o número de itens de forma determinística — fonte ÚNICA de
  * verdade, usada tanto no cálculo de horas (estimateLaborHours) como no
  * mínimo por item e mínimo de zona (applyZoneMinimum), e enviada ao Gemini
  * para que nunca tenha de recontar a partir do texto livre.
  *
  * Prioridade: heavyItems[] (lista explícita do simulador) > contagem na
- * descrição (countItemsFromDescription) > 1 (conservador — nunca infla o
- * preço por falta de informação).
+ * descrição (countItemsFromDescription) > volumeTier (selecção visual
+ * no formulário) > 1 (conservador — nunca infla o preço por falta de
+ * informação).
  */
 export function resolveItemCount(input: FastEstimateInput): number {
   const heavyItemCount = input.heavyItems?.length ?? 0;
   if (heavyItemCount > 0) return heavyItemCount;
   const fromDescription = countItemsFromDescription(input.description ?? "");
-  return fromDescription !== null ? fromDescription : 1;
+  if (fromDescription !== null) return fromDescription;
+  const fromVolume = volumeTierToItemCount(input.volumeTier);
+  if (fromVolume !== null) return fromVolume;
+  return 1;
 }
 
 /**

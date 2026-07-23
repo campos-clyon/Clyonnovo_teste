@@ -1,7 +1,7 @@
 "use client";
 
 import type { EstimateResult, OrderData } from "../types";
-import { TAX_RATE } from "../pricingRules";
+const TAX_RATE = 0.23;
 
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: "Fácil",

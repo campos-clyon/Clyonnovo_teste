@@ -54,6 +54,24 @@ describe("resolveItemCount", () => {
     const count = resolveItemCount({ description: "" });
     expect(count).toBe(1);
   });
+
+  it("usa volumeTier quando descrição e heavyItems estão vazios", () => {
+    expect(resolveItemCount({ description: "", volumeTier: "carrinha" })).toBe(4);
+    expect(resolveItemCount({ description: "", volumeTier: "camiao_caixa" })).toBe(10);
+    expect(resolveItemCount({ description: "", volumeTier: "camiao_lixo" })).toBe(18);
+  });
+
+  it("descrição tem prioridade sobre volumeTier", () => {
+    const count = resolveItemCount({
+      description: "duas cadeiras",
+      volumeTier: "camiao_lixo",
+    });
+    expect(count).toBe(2);
+  });
+
+  it("volumeTier 'incerto' não influencia a contagem", () => {
+    expect(resolveItemCount({ description: "", volumeTier: "incerto" })).toBe(1);
+  });
 });
 
 describe("calculateFastEstimate — margem de 'Outro Serviço'", () => {
@@ -81,6 +99,35 @@ describe("calculateFastEstimate — margem de 'Outro Serviço'", () => {
     });
     const note = result.internalNotes.find((n) => n.includes("Custo total"));
     expect(note).toContain("margem 50%");
+  });
+});
+
+describe("calculateFastEstimate — volumeTier como carga completa", () => {
+  it("camiao_caixa sem descrição gera preço de carga completa, não de 1 item", async () => {
+    const result = await calculateFastEstimate({
+      serviceType: "recolha_moveis",
+      description: "",
+      volumeTier: "camiao_caixa",
+      floor: "0",
+      hasElevator: "yes",
+      distanceFromBase: { distanceKm: 15 },
+    });
+    expect(result.itemCount).toBe(10);
+    expect(result.isFullLoad).toBe(true);
+    expect(result.estimatedPriceWithoutVat).toBeGreaterThanOrEqual(220);
+  });
+
+  it("carrinha sem descrição gera preço de 4 itens soltos", async () => {
+    const result = await calculateFastEstimate({
+      serviceType: "recolha_moveis",
+      description: "",
+      volumeTier: "carrinha",
+      floor: "0",
+      hasElevator: "yes",
+      distanceFromBase: { distanceKm: 10 },
+    });
+    expect(result.itemCount).toBe(4);
+    expect(result.isFullLoad).toBe(false);
   });
 });
 

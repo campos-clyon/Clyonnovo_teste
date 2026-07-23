@@ -284,17 +284,16 @@ export async function POST(req: NextRequest) {
     ).slice(0, 5);
 
     type ImagePart = { inlineData: { mimeType: string; data: string } };
-    const imageParts: ImagePart[] = [];
 
-    for (const f of imageFiles) {
-      try {
+    // Fetch de todas as imagens em paralelo (antes era sequencial — até 10s de latência)
+    const imageResults = await Promise.allSettled(
+      imageFiles.map(async (f): Promise<ImagePart | null> => {
         if (f.base64) {
-          // base64 já disponível no cliente
           const mimeType = f.mimeType ?? "image/jpeg";
           const data = f.base64.replace(/^data:[^;]+;base64,/, "");
-          if (data.length > 0) imageParts.push({ inlineData: { mimeType, data } });
-        } else if (f.previewUrl) {
-          // Fetch da URL do Vercel Blob com timeout de 2s
+          return data.length > 0 ? { inlineData: { mimeType, data } } : null;
+        }
+        if (f.previewUrl) {
           const imgRes = await Promise.race([
             fetch(f.previewUrl),
             new Promise<never>((_, rej) => setTimeout(() => rej(new Error("IMG_TIMEOUT")), 2000)),
@@ -303,13 +302,16 @@ export async function POST(req: NextRequest) {
             const buf = await imgRes.arrayBuffer();
             const data = Buffer.from(buf).toString("base64");
             const mimeType = imgRes.headers.get("content-type") ?? f.mimeType ?? "image/jpeg";
-            if (data.length > 0) imageParts.push({ inlineData: { mimeType, data } });
+            return data.length > 0 ? { inlineData: { mimeType, data } } : null;
           }
         }
-      } catch {
-        // Imagem ignorada — não afecta o cálculo de preço
-      }
-    }
+        return null;
+      })
+    );
+    const imageParts = imageResults
+      .filter((r): r is PromiseFulfilledResult<ImagePart | null> => r.status === "fulfilled")
+      .map((r) => r.value)
+      .filter((v): v is ImagePart => v !== null);
 
     // Construir conteúdo: imagens primeiro (contexto visual), depois o prompt de texto
     // Se não houver imagens, envia apenas o prompt (comportamento original)
@@ -502,7 +504,8 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
     "=== CONTAGEM DE ITENS (PRÉ-CALCULADA — NÃO RECALCULAR) ===",
     `Número de Itens: ${resolvedItemCount}`,
     `Classificação: ${isFullLoad ? `Carga completa (≥ ${FULL_LOAD_ITEM_THRESHOLD} itens ou esvaziamento)` : "Itens soltos (cobrança por item)"}`,
-    "Este valor já foi determinado pelo motor de preços CLYON a partir da lista de itens e/ou da descrição. USA EXATAMENTE este número de itens nos teus cálculos — não tentes recontar a partir da descrição em texto livre.",
+    `Volume Estimado: ${order.volumeTier === "carrinha" ? "Enche uma carrinha (poucos itens)" : order.volumeTier === "camiao_caixa" ? "Enche a caixa de um camião (volume médio)" : order.volumeTier === "camiao_lixo" ? "Enche um camião (grande volume)" : order.volumeTier === "incerto" ? "Cliente não tem certeza do volume" : "(não especificado)"}`,
+    "Este valor já foi determinado pelo motor de preços CLYON a partir da lista de itens, descrição e/ou selecção de volume. USA EXATAMENTE este número de itens nos teus cálculos — não tentes recontar a partir da descrição em texto livre.",
   ];
 
   if (order.serviceType === "recolha_entulho") {
