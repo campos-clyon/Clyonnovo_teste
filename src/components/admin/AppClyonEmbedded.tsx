@@ -1538,7 +1538,7 @@ function TabMetricas({ authHeader }: { authHeader: Record<string, string> }) {
 
 // ── Auditoria ──────────────────────────────────────────────────────────────
 type AuditEntry = {
-  id: string; request_id: string; colab_nome: string; action_type: string;
+  id: string; request_id: string | null; colab_nome: string; action_type: string;
   status_from: string | null; status_to: string | null;
   reason: string | null; note: string | null; created_at: string;
 };
@@ -1553,21 +1553,30 @@ function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"ops" | "admin">("ops");
+  const [colabFilter, setColabFilter] = useState("");
+  const [colabQ, setColabQ] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
   const LIMIT = 50;
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`/api/admin/app-clyon/auditoria?page=${page}&limit=${LIMIT}`, { headers: authHeader });
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), source });
+      if (colabQ) params.set("colab", colabQ);
+      if (actionFilter) params.set("action_type", actionFilter);
+      const res = await fetch(`/api/admin/app-clyon/auditoria?${params}`, { headers: authHeader });
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Erro."); return; }
       setEntries(json.ops ?? []);
       setTotal(json.total ?? 0);
     } catch { setError("Erro de ligação."); }
     finally { setLoading(false); }
-  }, [authHeader, page]);
+  }, [authHeader, page, source, colabQ, actionFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  function applyColab(e: React.FormEvent) { e.preventDefault(); setPage(1); setColabQ(colabFilter.trim()); }
 
   if (loading) return <Spinner />;
   if (error) return <ErrBox msg={error} onRetry={load} />;
@@ -1576,12 +1585,58 @@ function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">{total} entradas no registo de auditoria</p>
-        <button onClick={load} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 hover:text-white transition">↻ Actualizar</button>
+      <div className="flex items-center gap-1 border-b border-white/[0.05]">
+        {[
+          { k: "ops" as const, label: "Operações em pedidos" },
+          { k: "admin" as const, label: "Acções admin" },
+        ].map((s) => (
+          <button
+            key={s.k}
+            onClick={() => { setSource(s.k); setPage(1); }}
+            className={`border-b-2 px-4 py-2 text-xs font-semibold transition ${
+              source === s.k ? "border-[#00BDEB] text-[#00BDEB]" : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <form onSubmit={applyColab} className="flex flex-1 gap-2">
+          <input
+            value={colabFilter}
+            onChange={(e) => setColabFilter(e.target.value)}
+            placeholder="Filtrar por colaborador…"
+            className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs text-white outline-none focus:border-cyan-400"
+          />
+          <select
+            value={actionFilter}
+            onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+            className="h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs text-white outline-none"
+          >
+            <option value="" className="bg-[#0C1C2E]">Todas acções</option>
+            {source === "ops"
+              ? <>
+                  <option value="status_change" className="bg-[#0C1C2E]">Mudança de estado</option>
+                  <option value="note" className="bg-[#0C1C2E]">Nota</option>
+                  <option value="update" className="bg-[#0C1C2E]">Actualização</option>
+                </>
+              : <>
+                  <option value="create" className="bg-[#0C1C2E]">Criação</option>
+                  <option value="update" className="bg-[#0C1C2E]">Actualização</option>
+                  <option value="delete" className="bg-[#0C1C2E]">Eliminação</option>
+                </>}
+          </select>
+          <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30 transition">Filtrar</button>
+        </form>
+        <button onClick={load} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-400 hover:text-white transition">↻</button>
+      </div>
+
+      <p className="text-xs text-slate-500">{total} entrada{total !== 1 ? "s" : ""} · fonte: <code className="text-slate-400">{source === "ops" ? "service_request_ops" : "admin_audit_log"}</code></p>
+
       {entries.length === 0 ? (
-        <p className="py-8 text-center text-sm text-slate-600">Sem entradas de auditoria. A tabela <code>service_request_ops</code> pode estar vazia ou não existir.</p>
+        <p className="py-8 text-center text-sm text-slate-600">Sem entradas. A tabela pode estar vazia ou não existir.</p>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
           {entries.map((e, i) => (
@@ -1596,7 +1651,7 @@ function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
                 )}
                 <span className="ml-auto text-[10px] text-slate-600">{fmtDt(e.created_at)}</span>
               </div>
-              <p className="mt-1 font-mono text-[10px] text-slate-600">Pedido: {e.request_id.slice(0, 8)}…</p>
+              {e.request_id && <p className="mt-1 font-mono text-[10px] text-slate-600">Pedido: {e.request_id.slice(0, 8)}…</p>}
               {e.reason && <p className="mt-0.5 text-xs text-amber-300">Motivo: {e.reason}</p>}
               {e.note && <p className="mt-0.5 text-xs text-slate-400 italic">{e.note}</p>}
             </div>
