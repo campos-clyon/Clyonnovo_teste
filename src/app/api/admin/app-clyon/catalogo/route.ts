@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const sb = getSupabaseAdmin();
     const { data, error } = await sb
       .from("service_categories")
-      .select("slug, name, icon, description, is_active, sort_order")
+      .select("slug, name, icon, description, active, sort_order")
       .order("sort_order", { ascending: true, nullsFirst: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       name: c.name,
       icon: c.icon ?? null,
       description: c.description ?? null,
-      is_active: c.is_active !== false, // default true se campo não existir
+      is_active: c.active !== false,
       sort_order: c.sort_order ?? null,
       request_count: countMap[c.slug] ?? 0,
     }));

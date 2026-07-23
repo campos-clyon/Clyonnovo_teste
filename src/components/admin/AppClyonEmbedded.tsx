@@ -286,7 +286,7 @@ function PedidoInlinePanel({
                 <label className={IL}>Estado</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} className={INP}>
                   {INLINE_VALID_STATUSES.map((s) => (
-                    <option key={s} value={s} className="bg-[#0E1830]">{INLINE_STATUS_CFG[s].label}</option>
+                    <option key={s} value={s} className="bg-[#0C1C2E]">{INLINE_STATUS_CFG[s].label}</option>
                   ))}
                 </select>
               </div>
@@ -299,9 +299,9 @@ function PedidoInlinePanel({
               <div>
                 <label className={IL}>Urgência</label>
                 <select value={urgency} onChange={(e) => setUrgency(e.target.value)} className={INP}>
-                  <option value="normal" className="bg-[#0E1830]">Normal</option>
-                  <option value="urgent" className="bg-[#0E1830]">Urgente</option>
-                  <option value="flexible" className="bg-[#0E1830]">Flexível</option>
+                  <option value="normal" className="bg-[#0C1C2E]">Normal</option>
+                  <option value="urgent" className="bg-[#0C1C2E]">Urgente</option>
+                  <option value="flexible" className="bg-[#0C1C2E]">Flexível</option>
                 </select>
               </div>
               <div>
@@ -636,7 +636,7 @@ function TabCatalogo({ authHeader }: { authHeader: Record<string, string> }) {
       const res = await fetch(`/api/admin/app-clyon/catalogo/${cat.slug}`, {
         method: "PATCH",
         headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: !cat.is_active }),
+        body: JSON.stringify({ active: !cat.is_active }),
       });
       if (res.ok) setCats((p) => p.map((c) => c.slug === cat.slug ? { ...c, is_active: !c.is_active } : c));
       else { const j = await res.json(); setError(j.error ?? "Erro."); }
@@ -931,8 +931,8 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
               <div>
                 <label className={LBL}>Tipo de desconto</label>
                 <select value={form.discount_type} onChange={(e) => setForm((f) => ({ ...f, discount_type: e.target.value as "percent" | "fixed" }))} className={INP}>
-                  <option value="percent" className="bg-[#0E1830]">Percentagem (%)</option>
-                  <option value="fixed" className="bg-[#0E1830]">Valor fixo (€)</option>
+                  <option value="percent" className="bg-[#0C1C2E]">Percentagem (%)</option>
+                  <option value="fixed" className="bg-[#0C1C2E]">Valor fixo (€)</option>
                 </select>
               </div>
               <div>
@@ -1344,10 +1344,10 @@ export default function AppClyonEmbedded({
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#0C1525]">
+    <div className="overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#06111F]">
       {/* Header */}
-      <div className="border-b border-white/[0.06] bg-[#0E1830] px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-500">App CLYON</p>
+      <div className="border-b border-white/[0.06] bg-[#0C1C2E] px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#00BDEB]">App CLYON</p>
         <h2 className="mt-0.5 text-lg font-bold text-white">Gestão da Aplicação</h2>
       </div>
 
@@ -1359,7 +1359,7 @@ export default function AppClyonEmbedded({
             onClick={() => handleTabChange(t.id)}
             className={`flex-shrink-0 border-b-2 px-4 py-3 text-xs font-semibold transition ${
               tab === t.id
-                ? "border-cyan-400 text-cyan-300"
+                ? "border-[#00BDEB] text-[#00BDEB]"
                 : "border-transparent text-slate-500 hover:text-slate-300"
             }`}
           >

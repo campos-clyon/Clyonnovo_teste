@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_FIELDS = ["is_active", "sort_order", "name", "icon", "description"] as const;
+const ALLOWED_FIELDS = ["active", "sort_order", "name", "icon", "description"] as const;
 type AllowedField = (typeof ALLOWED_FIELDS)[number];
 
 export async function PATCH(
@@ -50,7 +50,7 @@ export async function PATCH(
       .from("service_categories")
       .update(updates)
       .eq("slug", slug)
-      .select("slug, name, icon, description, is_active, sort_order")
+      .select("slug, name, icon, description, active, sort_order")
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
