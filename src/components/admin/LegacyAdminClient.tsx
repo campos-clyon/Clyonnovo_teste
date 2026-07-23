@@ -8,6 +8,7 @@ import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import ContasPanel from "@/components/admin/ContasPanel";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
+import AppClyonEmbedded from "@/components/admin/AppClyonEmbedded";
 import {
   AlertTriangle,
   Archive,
@@ -2217,9 +2218,7 @@ export default function ColaboradorAdminClient() {
 
           {/* ═══════════════════════ APP CLYON ═══════════════════════ */}
           {activeSection === "app_clyon" && (
-            <section className="overflow-hidden rounded-[28px] border border-cyan-300/16 shadow-[0_20px_70px_rgba(3,10,18,0.22)]">
-              <AppPedidosClient externalAuthHeader={token ? { Authorization: `Bearer ${token}` } : undefined} />
-            </section>
+            <AppClyonEmbedded authHeader={token ? { Authorization: `Bearer ${token}` } : {}} />
           )}
 
           {/* ═══════════════════════════ LEADS ══��════════════════════════ */}
