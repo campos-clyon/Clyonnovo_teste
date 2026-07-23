@@ -11,6 +11,12 @@
 
 import { describe, it, expect } from "vitest";
 import { CLYON_TABS, CLYON_TAB_IDS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
+import {
+  buildQuoteApprovalPayload,
+  isQuoteApprovalAvailable,
+  quotePriceIsRequiredForStatus,
+  validatedQuotePrice,
+} from "@/lib/quote-approval";
 
 // ── 1. Parser de URL ───────────────────────────────────────────────────────
 function parseClyonUrl(search: string): { section: string | null; tab: AppClyonTab | null; pedido: string | null } {
@@ -302,7 +308,48 @@ describe("displayText — renderização segura para JSX", () => {
   });
 });
 
-// ── 7. safeText (normalizador API) ────────────────────────────────────────
+// ── 7. Aprovação explícita de orçamento ────────────────────────────────────
+describe("aprovação de orçamento", () => {
+  it("só fica disponível para pedidos recebidos ou em análise", () => {
+    expect(isQuoteApprovalAvailable("received")).toBe(true);
+    expect(isQuoteApprovalAvailable("in_review")).toBe(true);
+    expect(isQuoteApprovalAvailable("awaiting_deposit")).toBe(false);
+    expect(isQuoteApprovalAvailable("confirmed")).toBe(false);
+  });
+
+  it("cria a operação de aprovação para aguardar depósito", () => {
+    const result = buildQuoteApprovalPayload("200.50", "Cliente informado por telefone.");
+    expect(result.error).toBeNull();
+    expect(result.payload).toEqual({
+      status: "awaiting_deposit",
+      estimated_price: 200.5,
+      admin_note: "Orçamento aprovado; pedido colocado a aguardar depósito. Cliente informado por telefone.",
+    });
+  });
+
+  it("rejeita uma aprovação sem orçamento positivo", () => {
+    expect(buildQuoteApprovalPayload("", null).error).toMatch(/superior a 0/);
+    expect(buildQuoteApprovalPayload(0, null).error).toMatch(/superior a 0/);
+    expect(buildQuoteApprovalPayload(-1, null).error).toMatch(/superior a 0/);
+    expect(buildQuoteApprovalPayload("abc", null).error).toMatch(/superior a 0/);
+  });
+
+  it("normaliza apenas preços finitos e positivos", () => {
+    expect(validatedQuotePrice("42.75")).toBe(42.75);
+    expect(validatedQuotePrice(0)).toBeNull();
+    expect(validatedQuotePrice(null)).toBeNull();
+    expect(validatedQuotePrice(true)).toBeNull();
+    expect(validatedQuotePrice("NaN")).toBeNull();
+  });
+
+  it("exige orçamento antes de aguardar depósito ou confirmar", () => {
+    expect(quotePriceIsRequiredForStatus("awaiting_deposit")).toBe(true);
+    expect(quotePriceIsRequiredForStatus("confirmed")).toBe(true);
+    expect(quotePriceIsRequiredForStatus("in_review")).toBe(false);
+  });
+});
+
+// ── 8. safeText (normalizador API) ─────────────────────────────────────────
 function safeText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;

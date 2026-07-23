@@ -6,6 +6,7 @@ import { Package } from "lucide-react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
+import { buildQuoteApprovalPayload, isQuoteApprovalAvailable } from "@/lib/quote-approval";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -206,7 +207,7 @@ function PedidoInlinePanel({
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveOk, setSaveOk] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   const needsReason = status === "canceled" || status === "rejected";
 
@@ -236,7 +237,7 @@ function PedidoInlinePanel({
 
   async function handleSave() {
     if (!order) return;
-    setSaving(true); setSaveError(null); setSaveOk(false);
+    setSaving(true); setSaveError(null); setSaveSuccess(null);
     const payload: Record<string, unknown> = {};
     if (status !== order.status) payload.status = status;
     if (urgency !== order.urgency) payload.urgency = urgency;
@@ -255,12 +256,41 @@ function PedidoInlinePanel({
       });
       const json = await res.json();
       if (!res.ok) { setSaveError(json.error ?? "Erro ao guardar."); return; }
-      setSaveOk(true);
+      setSaveSuccess("Alterações guardadas com sucesso.");
       await load();
     } catch { setSaveError("Erro de ligação."); }
     finally { setSaving(false); }
   }
 
+  async function handleApproveQuote() {
+    if (!order) return;
+
+    const { payload, error: approvalError } = buildQuoteApprovalPayload(price, adminNote);
+    if (!payload) {
+      setSaveSuccess(null);
+      setSaveError(approvalError ?? "Não foi possível aprovar o orçamento.");
+      return;
+    }
+
+    setSaving(true); setSaveError(null); setSaveSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${id}`, {
+        method: "PATCH",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao aprovar o orçamento."); return; }
+      setSaveSuccess("Orçamento aprovado. O pedido aguarda agora o depósito do cliente.");
+      await load();
+    } catch {
+      setSaveError("Erro de ligação.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const canApproveQuote = isQuoteApprovalAvailable(order?.status);
   const IL = "text-[10px] uppercase tracking-wider text-slate-500 block mb-1";
   const INP = "mt-0.5 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
   const TA = "mt-0.5 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 resize-none";
@@ -394,9 +424,25 @@ function PedidoInlinePanel({
                 </select>
               </div>
               <div>
-                <label className={IL}>Orçamento confirmado (€)</label>
+                <label className={IL}>Valor do orçamento (€)</label>
                 <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={INP} />
               </div>
+              {canApproveQuote && (
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3">
+                  <p className="text-xs font-bold text-emerald-300">Aprovação do orçamento</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                    Confirma o valor acima, regista esta operação na Auditoria e altera o pedido para <span className="font-semibold text-amber-300">Aguarda depósito</span>.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleApproveQuote}
+                    disabled={saving}
+                    className="mt-3 w-full rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? "A aprovar..." : "Aprovar orçamento"}
+                  </button>
+                </div>
+              )}
               <div>
                 <label className={IL}>Data/hora agendada</label>
                 <input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} className={INP} />
@@ -407,7 +453,7 @@ function PedidoInlinePanel({
               </div>
             </div>
             {saveError && <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{saveError}</div>}
-            {saveOk && <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">Guardado com sucesso.</div>}
+            {saveSuccess && <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{saveSuccess}</div>}
             <button onClick={handleSave} disabled={saving} className="mt-4 w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50">
               {saving ? "A guardar..." : "Guardar"}
             </button>

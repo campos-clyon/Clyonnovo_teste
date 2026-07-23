@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,9 +96,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     updates.status = body.status;
   }
-  if (typeof body.urgency === "string")        updates.urgency = body.urgency;
-  if (body.estimated_price !== undefined)      updates.estimated_price = body.estimated_price;
-  if (body.scheduled_for !== undefined)        updates.scheduled_for = body.scheduled_for;
+  if (typeof body.urgency === "string") updates.urgency = body.urgency;
+  if (body.estimated_price !== undefined) {
+    if (body.estimated_price === null) {
+      updates.estimated_price = null;
+    } else {
+      const rawPrice = body.estimated_price;
+      if (typeof rawPrice !== "number" && typeof rawPrice !== "string") {
+        return NextResponse.json({ error: "O valor do orçamento deve ser um número igual ou superior a 0 €." }, { status: 400 });
+      }
+      const normalizedPrice = typeof rawPrice === "number" ? rawPrice : Number(rawPrice);
+      if ((typeof rawPrice === "string" && rawPrice.trim() === "") || !Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+        return NextResponse.json({ error: "O valor do orçamento deve ser um número igual ou superior a 0 €." }, { status: 400 });
+      }
+      updates.estimated_price = normalizedPrice;
+    }
+  }
+  if (body.scheduled_for !== undefined) updates.scheduled_for = body.scheduled_for;
 
   if (updates.status && CANCEL_STATUSES.has(updates.status as string)) {
     const reason = typeof body.reason === "string" ? body.reason.trim() : "";
@@ -122,6 +137,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .from("service_requests").select("*").eq("id", id).single();
     if (fetchErr || !current) {
       return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+    }
+
+    // "Aguarda depósito" é o estado de orçamento aprovado; "Confirmado" é
+    // a etapa seguinte. Ambos exigem que exista um valor positivo, mesmo se a
+    // chamada vier de outra interface administrativa.
+    if (quotePriceIsRequiredForStatus(updates.status as string | undefined)) {
+      const effectivePrice = updates.estimated_price !== undefined
+        ? updates.estimated_price
+        : (current as Record<string, unknown>).estimated_price;
+      if (validatedQuotePrice(effectivePrice) === null) {
+        return NextResponse.json({
+          error: "Indique um valor de orçamento superior a 0 € antes de colocar o pedido a aguardar depósito ou confirmá-lo.",
+        }, { status: 400 });
+      }
     }
 
     const actionType = updates.status ? "status_change" : hasNote ? "note" : "update";
