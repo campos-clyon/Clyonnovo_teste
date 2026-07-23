@@ -348,8 +348,8 @@ const nextConfig: NextConfig = {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           // Fontes
           "font-src 'self' https://fonts.gstatic.com",
-          // Imagens: self + blobs Vercel + Google
-          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com",
+          // Imagens: self + blobs Vercel + Google + Storage Supabase (fotos dos pedidos da app)
+          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://*.supabase.co",
           // Ligações de rede: self + APIs externas
           "connect-src 'self' https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io",
           // Frames: nenhum (embeds externos não usados)

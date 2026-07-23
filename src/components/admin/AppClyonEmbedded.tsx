@@ -241,6 +241,96 @@ function FactChip({ label, value, tone = "neutral" }: { label: string; value: st
   );
 }
 
+// Visualizador de fotografias no próprio painel, com navegação e teclado
+function PhotoLightbox({
+  photos,
+  index,
+  onClose,
+  onNavigate,
+}: {
+  photos: string[];
+  index: number;
+  onClose: () => void;
+  onNavigate: (i: number) => void;
+}) {
+  const hasMany = photos.length > 1;
+  const prev = useCallback(
+    () => onNavigate((index - 1 + photos.length) % photos.length),
+    [index, photos.length, onNavigate],
+  );
+  const next = useCallback(
+    () => onNavigate((index + 1) % photos.length),
+    [index, photos.length, onNavigate],
+  );
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft" && hasMany) prev();
+      else if (e.key === "ArrowRight" && hasMany) next();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, prev, next, hasMany]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      role="dialog"
+      aria-label={`Fotografia ${index + 1} de ${photos.length}`}
+    >
+      <button
+        onClick={onClose}
+        className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/[0.06] p-2 text-slate-300 transition hover:bg-white/[0.12] hover:text-white"
+        aria-label="Fechar"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {hasMany && (
+        <button
+          onClick={(e) => { e.stopPropagation(); prev(); }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-white/[0.06] p-2.5 text-slate-300 transition hover:bg-white/[0.12] hover:text-white"
+          aria-label="Fotografia anterior"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photos[index]}
+        alt={`Fotografia ${index + 1} do pedido`}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+      />
+
+      {hasMany && (
+        <button
+          onClick={(e) => { e.stopPropagation(); next(); }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-white/[0.06] p-2.5 text-slate-300 transition hover:bg-white/[0.12] hover:text-white"
+          aria-label="Fotografia seguinte"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+
+      {hasMany && (
+        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/[0.08] px-3 py-1 text-xs font-semibold text-slate-200">
+          {index + 1} / {photos.length}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Detalhes técnicos colapsáveis (breakdown do motor, ids, coordenadas)
 function TechnicalDetails({ rest }: { rest: Record<string, unknown> }) {
   const entries = Object.entries(rest).filter(([, v]) => v !== null && v !== undefined && v !== "");
@@ -346,6 +436,7 @@ function PedidoInlinePanel({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [photoIdx, setPhotoIdx] = useState<number | null>(null);
 
   const needsReason = status === "canceled" || status === "rejected";
 
@@ -546,13 +637,12 @@ function PedidoInlinePanel({
               <p className={CARD_TITLE}>Fotografias ({order.photos.length})</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {order.photos.map((url, i) => (
-                  <a
+                  <button
                     key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-[#12263B]"
-                    title="Abrir em tamanho real"
+                    type="button"
+                    onClick={() => setPhotoIdx(i)}
+                    className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-[#12263B] outline-none transition focus-visible:border-[#00BDEB]"
+                    title="Ver fotografia"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -561,10 +651,18 @@ function PedidoInlinePanel({
                       className="h-full w-full object-cover transition group-hover:scale-105"
                       loading="lazy"
                     />
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
+          )}
+          {photoIdx !== null && order.photos && order.photos.length > 0 && (
+            <PhotoLightbox
+              photos={order.photos}
+              index={Math.min(photoIdx, order.photos.length - 1)}
+              onClose={() => setPhotoIdx(null)}
+              onNavigate={setPhotoIdx}
+            />
           )}
 
           {/* Mensagem do cliente */}
