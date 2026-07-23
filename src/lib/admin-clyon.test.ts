@@ -52,12 +52,12 @@ describe("parseClyonUrl", () => {
 
 // ── 2. Lista de abas ───────────────────────────────────────────────────────
 describe("CLYON_TABS / CLYON_TAB_IDS", () => {
-  it("contém exactamente 12 abas", () => {
-    expect(CLYON_TABS).toHaveLength(12);
+  it("contém exactamente 11 abas", () => {
+    expect(CLYON_TABS).toHaveLength(11);
   });
 
-  it("CLYON_TAB_IDS tem os IDs das 12 abas", () => {
-    expect(CLYON_TAB_IDS).toHaveLength(12);
+  it("CLYON_TAB_IDS tem os IDs das 11 abas", () => {
+    expect(CLYON_TAB_IDS).toHaveLength(11);
     expect(CLYON_TAB_IDS).toContain("visao-geral");
     expect(CLYON_TAB_IDS).toContain("pedidos");
     expect(CLYON_TAB_IDS).toContain("cupons");
