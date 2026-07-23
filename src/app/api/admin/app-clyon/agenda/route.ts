@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!colab.isAdmin) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  const { err } = await requireAdmin(req);
+  if (err) return err;
 
   try {
     const sb = getSupabaseAdmin();

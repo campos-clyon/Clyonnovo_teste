@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -12,9 +12,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!colab.isAdmin) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  const { err } = await requireAdmin(req);
+  if (err) return err;
 
   const { slug } = await params;
   const body = await req.json().catch(() => null);
