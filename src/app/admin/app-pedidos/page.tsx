@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import AppPedidosClient from "./AppPedidosClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Pedidos App — Painel Admin CLYON",
-  robots: "noindex,nofollow",
-};
-
-export default function AppPedidosPage() {
-  return <AppPedidosClient />;
+// Compatibilidade: links antigos para /admin/app-pedidos redirecionam
+// para a nova localização canónica em /admin/app-clyon/pedidos
+export default function AppPedidosLegacyPage() {
+  redirect("/admin/app-clyon/pedidos");
 }
