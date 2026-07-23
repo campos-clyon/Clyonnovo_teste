@@ -6,6 +6,7 @@ import { Package } from "lucide-react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
+import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { buildQuoteApprovalPayload, isQuoteApprovalAvailable } from "@/lib/quote-approval";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
@@ -39,6 +40,7 @@ type InlineOrder = {
   client_name: unknown; client_email: unknown; client_phone: unknown;
   category_name: unknown; category_icon: string | null;
   details_meta?: Record<string, unknown> | null;
+  archived_at?: string | null;
 };
 
 // Labels de negócio para chaves conhecidas em details_meta.
@@ -417,15 +419,20 @@ function PedidoInlinePanel({
   id,
   authHeader,
   onBack,
+  onChanged,
 }: {
   id: string;
   authHeader: Record<string, string>;
   onBack: () => void;
+  onChanged?: () => void;
 }) {
   const [order, setOrder] = useState<InlineOrder | null>(null);
   const [ops, setOps] = useState<OpsEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState<null | "archive" | "delete">(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
 
   const [status, setStatus] = useState<AppStatus>("received");
   const [urgency, setUrgency] = useState("normal");
@@ -519,7 +526,52 @@ function PedidoInlinePanel({
     }
   }
 
+  async function handleArchive() {
+    if (!order) return;
+    const isArchived = order.archived_at != null;
+    setActionBusy("archive"); setSaveError(null); setSaveSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${id}/archive`, {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: !isArchived }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao arquivar."); return; }
+      setSaveSuccess(isArchived ? "Pedido restaurado." : "Pedido arquivado.");
+      await load();
+      onChanged?.();
+    } catch {
+      setSaveError("Erro de ligação.");
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!order) return;
+    const reasonErr = deleteReasonError(deleteReason);
+    if (reasonErr) { setSaveError(reasonErr); return; }
+    setActionBusy("delete"); setSaveError(null); setSaveSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${id}`, {
+        method: "DELETE",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: deleteReason.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao eliminar."); return; }
+      onChanged?.();
+      onBack();
+    } catch {
+      setSaveError("Erro de ligação.");
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
   const canApproveQuote = isQuoteApprovalAvailable(order?.status);
+  const isArchived = order?.archived_at != null;
   const IL = "text-[10px] uppercase tracking-wider text-[#97AABD] block mb-1";
   const INP = "mt-0.5 h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-[#F5FAFF] outline-none transition focus:border-[#00BDEB]";
   const TA = "mt-0.5 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-2 text-sm text-[#F5FAFF] outline-none transition focus:border-[#00BDEB] resize-none";
@@ -736,20 +788,50 @@ function PedidoInlinePanel({
             <p className={CARD_TITLE}>Cliente</p>
             <p className="text-sm font-medium text-white">{displayText(order.client_name)}</p>
             {typeof order.client_phone === "string" && order.client_phone && (
-              <a href={`tel:${order.client_phone}`} className="mt-2 flex items-center gap-1.5 text-xs text-cyan-400 hover:underline">
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                {order.client_phone}
-              </a>
+              <p className="mt-0.5 text-xs text-slate-500">{order.client_phone}</p>
             )}
             {typeof order.client_email === "string" && order.client_email && (
-              <a href={`mailto:${order.client_email}`} className="mt-1 flex items-center gap-1.5 text-xs text-cyan-400 hover:underline">
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                {order.client_email}
-              </a>
+              <p className="text-xs text-slate-500 break-all">{order.client_email}</p>
+            )}
+
+            {/* Contactar cliente */}
+            {((typeof order.client_phone === "string" && order.client_phone) ||
+              (typeof order.client_email === "string" && order.client_email)) && (
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
+                {typeof order.client_phone === "string" && order.client_phone && (
+                  <>
+                    <a
+                      href={buildWhatsappLink(order.client_phone, order.id, displayText(order.category_name ?? order.category_slug, "pedido"))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-1 rounded-lg border border-[#19C37D]/25 bg-[#19C37D]/[0.08] px-2 py-2 text-[10px] font-semibold text-[#19C37D] transition hover:bg-[#19C37D]/[0.15]"
+                    >
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                      WhatsApp
+                    </a>
+                    <a
+                      href={`tel:${order.client_phone}`}
+                      className="flex flex-col items-center gap-1 rounded-lg border border-white/[0.08] bg-[#12263B] px-2 py-2 text-[10px] font-semibold text-[#00BDEB] transition hover:bg-[#12263B]/70"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      Chamar
+                    </a>
+                  </>
+                )}
+                {typeof order.client_email === "string" && order.client_email && (
+                  <a
+                    href={`mailto:${order.client_email}?subject=${encodeURIComponent(`CLYON — pedido #${order.id.slice(0, 8)}`)}`}
+                    className="flex flex-col items-center gap-1 rounded-lg border border-white/[0.08] bg-[#12263B] px-2 py-2 text-[10px] font-semibold text-[#00BDEB] transition hover:bg-[#12263B]/70"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Email
+                  </a>
+                )}
+              </div>
             )}
           </div>
 
@@ -812,6 +894,69 @@ function PedidoInlinePanel({
             <button onClick={handleSave} disabled={saving} className="mt-4 w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50">
               {saving ? "A guardar..." : "Guardar"}
             </button>
+          </div>
+
+          {/* Acções de administração */}
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Acções de administração</p>
+            {isArchived && (
+              <p className="mb-3 rounded-lg border border-[#F6B84A]/20 bg-[#F6B84A]/[0.06] px-3 py-2 text-[11px] text-[#F6B84A]">
+                Este pedido está arquivado — não aparece nas listas operacionais.
+              </p>
+            )}
+            <button
+              onClick={handleArchive}
+              disabled={actionBusy !== null}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-[#12263B] py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-[#12263B]/70 disabled:opacity-50"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              {actionBusy === "archive" ? "A processar..." : isArchived ? "Restaurar pedido" : "Arquivar pedido"}
+            </button>
+
+            {!confirmDelete ? (
+              <button
+                onClick={() => { setConfirmDelete(true); setSaveError(null); }}
+                disabled={actionBusy !== null}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[#EF5A67]/25 py-2.5 text-sm font-semibold text-[#EF5A67] transition hover:bg-[#EF5A67]/[0.08] disabled:opacity-50"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Eliminar pedido
+              </button>
+            ) : (
+              <div className="mt-3 rounded-xl border border-[#EF5A67]/25 bg-[#EF5A67]/[0.05] p-3">
+                <p className="text-xs font-bold text-[#EF5A67]">Eliminar definitivamente?</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                  Esta acção é irreversível. Um instantâneo do pedido fica registado em Auditoria. Considera arquivar em vez de eliminar.
+                </p>
+                <textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  rows={2}
+                  placeholder="Motivo da eliminação (obrigatório)…"
+                  className="mt-2 w-full rounded-lg border border-white/[0.08] bg-[#0C1C2E] px-3 py-2 text-sm text-[#F5FAFF] outline-none transition focus:border-[#EF5A67] resize-none"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => { setConfirmDelete(false); setDeleteReason(""); }}
+                    disabled={actionBusy !== null}
+                    className="flex-1 rounded-lg border border-white/[0.1] bg-[#12263B] py-2 text-xs font-semibold text-slate-300 transition hover:bg-[#12263B]/70 disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={actionBusy !== null || !deleteReason.trim()}
+                    className="flex-1 rounded-lg bg-[#EF5A67] py-2 text-xs font-bold text-white transition hover:bg-[#EF5A67]/85 disabled:opacity-50"
+                  >
+                    {actionBusy === "delete" ? "A eliminar..." : "Eliminar"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2157,6 +2302,7 @@ type AuditEntry = {
 
 const ACTION_LABELS: Record<string, string> = {
   status_change: "Mudança de estado", note: "Nota", update: "Actualização",
+  archive: "Arquivado", unarchive: "Restaurado", delete_request: "Eliminado",
 };
 
 function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
@@ -2297,6 +2443,7 @@ export default function AppClyonEmbedded({
 }) {
   const [internalTab, setInternalTab] = useState<AppClyonTab>("visao-geral");
   const [internalPedidoId, setInternalPedidoId] = useState<string | null>(null);
+  const [pedidosRefresh, setPedidosRefresh] = useState(0);
 
   const tab = externalTab ?? internalTab;
   const selectedOrderId = externalPedidoId !== undefined ? externalPedidoId : internalPedidoId;
@@ -2345,6 +2492,7 @@ export default function AppClyonEmbedded({
         {tab === "visao-geral"   && <TabVisaoGeral authHeader={authHeader} />}
         {tab === "pedidos" && !selectedOrderId && (
           <AppPedidosClient
+            key={pedidosRefresh}
             externalAuthHeader={authHeader}
             onRowClick={(id) => handlePedidoChange(id)}
           />
@@ -2353,6 +2501,7 @@ export default function AppClyonEmbedded({
           <div className="flex flex-col md:flex-row">
             <div className="hidden md:block md:w-[40%] md:border-r md:border-white/[0.06] overflow-y-auto max-h-[80vh]">
               <AppPedidosClient
+                key={pedidosRefresh}
                 externalAuthHeader={authHeader}
                 onRowClick={(id) => handlePedidoChange(id)}
                 compact
@@ -2364,6 +2513,7 @@ export default function AppClyonEmbedded({
                 id={selectedOrderId}
                 authHeader={authHeader}
                 onBack={() => handlePedidoChange(null)}
+                onChanged={() => setPedidosRefresh((n) => n + 1)}
               />
             </div>
           </div>

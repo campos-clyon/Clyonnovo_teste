@@ -473,13 +473,14 @@ export default function AppPedidosClient({
   const [filter, setFilter]   = useState<FilterGroup>("todos");
   const [search, setSearch]   = useState("");
   const [selected, setSelected] = useState<AppOrder | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!ready) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/app-pedidos?limit=200`, { headers: authHeader });
+      const res = await fetch(`/api/admin/app-pedidos?limit=200${showArchived ? "&archived=1" : ""}`, { headers: authHeader });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Erro ao carregar."); return; }
       setOrders(data.orders ?? []);
@@ -489,7 +490,7 @@ export default function AppPedidosClient({
     } finally {
       setLoading(false);
     }
-  }, [ready, authHeader]);
+  }, [ready, authHeader, showArchived]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
@@ -578,13 +579,29 @@ export default function AppPedidosClient({
           })}
         </div>
 
-        <input
-          type="search"
-          placeholder="Pesquisar nome, telefone, cidade..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white placeholder-slate-600 outline-none focus:border-white/20 md:w-56"
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            className={`flex flex-shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+              showArchived
+                ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+                : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200"
+            }`}
+            title={showArchived ? "A mostrar arquivados" : "Mostrar arquivados"}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            {showArchived ? "Arquivados" : "Arquivo"}
+          </button>
+          <input
+            type="search"
+            placeholder="Pesquisar nome, telefone, cidade..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white placeholder-slate-600 outline-none focus:border-white/20 md:w-56"
+          />
+        </div>
       </div>
 
       {/* Lista */}

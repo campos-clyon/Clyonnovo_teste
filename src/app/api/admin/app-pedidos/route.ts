@@ -1,34 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!colab.isAdmin) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  const { err } = await requireAdmin(req);
+  if (err) return err;
 
   const { searchParams } = req.nextUrl;
   const status = searchParams.get("status");
+  const showArchived = searchParams.get("archived") === "1";
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 200);
   const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 
   try {
     const sb = getSupabaseAdmin();
 
-    let query = sb
-      .from("service_requests")
-      .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+    const buildQuery = (withArchiveFilter: boolean) => {
+      let query = sb
+        .from("service_requests")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+      if (status && status !== "todos") query = query.eq("status", status);
+      if (withArchiveFilter) {
+        query = showArchived
+          ? query.not("archived_at", "is", null)
+          : query.is("archived_at", null);
+      }
+      return query;
+    };
 
-    if (status && status !== "todos") {
-      query = query.eq("status", status);
+    let { data, error, count } = await buildQuery(true);
+
+    // Coluna archived_at pode não existir (migração 005 pendente) — repetir sem filtro
+    if (error && /archived_at/.test(error.message ?? "")) {
+      if (showArchived) {
+        return NextResponse.json({ orders: [], total: 0, archive_unavailable: true });
+      }
+      ({ data, error, count } = await buildQuery(false));
     }
-
-    const { data, error, count } = await query;
 
     if (error) {
       console.error("[app-pedidos] supabase error:", error);
@@ -92,6 +105,7 @@ export async function GET(req: NextRequest) {
         client_phone:    asString(profile.phone),
         category_name:   asString(cat.name) ?? asString(row.category_slug),
         category_icon:   asString(cat.icon),
+        archived_at:     asString(row.archived_at),
         responses_count: 0,
       };
     });

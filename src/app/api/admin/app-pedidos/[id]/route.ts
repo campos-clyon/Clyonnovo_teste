@@ -280,3 +280,54 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Erro interno.", correlation_id: correlationId }, { status: 500 });
   }
 }
+
+// Eliminação definitiva de um pedido. Irreversível: o histórico em
+// service_request_ops é removido em cascata, por isso um instantâneo
+// completo é gravado primeiro em admin_audit_log (sem FK, sobrevive).
+// Se esse registo falhar, a eliminação é abortada.
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { err, colab } = await requireAdmin(req);
+  if (err) return err;
+  const { id } = await params;
+
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (!reason) {
+    return NextResponse.json({ error: "Motivo obrigatório para eliminar um pedido." }, { status: 400 });
+  }
+
+  try {
+    const sb = getSupabaseAdmin();
+
+    const { data: current, error: fetchErr } = await sb
+      .from("service_requests").select("*").eq("id", id).single();
+    if (fetchErr || !current) {
+      return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+    }
+
+    const { error: logErr } = await sb.from("admin_audit_log").insert([{
+      action:      "delete_request",
+      entity_type: "service_request",
+      entity_id:   id,
+      old_value:   { ...current, _deleted_by: `${colab!.id}:${colab!.nome}` },
+      reason,
+    }]);
+    if (logErr) {
+      console.error("[app-pedidos/[id] DELETE] audit log failed — abort", logErr);
+      return NextResponse.json({
+        error: "Não foi possível registar a eliminação em auditoria. Operação abortada.",
+      }, { status: 500 });
+    }
+
+    const { error: delErr } = await sb.from("service_requests").delete().eq("id", id);
+    if (delErr) {
+      console.error("[app-pedidos/[id] DELETE]", delErr);
+      return NextResponse.json({ error: "Erro ao eliminar o pedido." }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    console.error("[app-pedidos/[id] DELETE]", e);
+    return NextResponse.json({ error: "Erro interno." }, { status: 500 });
+  }
+}
