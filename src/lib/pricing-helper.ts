@@ -626,8 +626,10 @@ export function estimateLaborHours(input: FastEstimateInput): number {
       else if (smallElev) hours = 4.5;  // elevador pequeno
       if (input.parkingDistance === "difficult" || input.needsDismantling) hours += 1; // acesso difícil
     } else {
-      // Por item (1 a 7 itens): 30 min/item = 0.5h/item
-      hours = Math.max(0.5, itemCount * 0.5);
+      // Por item (1 a 7 itens): 30 min primeiro item, ~60% por cada
+      // adicional (desconto de eficiência — equipa já está no local).
+      // 1 item = 0.5h, 2 = 0.8h, 3 = 1.1h, 4 = 1.4h, …
+      hours = Math.max(0.5, 0.5 + (itemCount - 1) * 0.3);
       // Sem elevador: +50% no tempo total
       if (noElev) hours = hours * 1.5;
       // Elevador pequeno: +15% no tempo total
@@ -707,16 +709,21 @@ function applyZoneMinimum(
   }
 
   // Itens soltos (1 a FULL_LOAD_ITEM_THRESHOLD-1 itens): NÃO aplicar mínimo de zona
-  // Para recolha_moveis/monos sem carga completa, usar apenas mínimo por item: 48,78€ s/IVA
+  // Para recolha_moveis/monos sem carga completa, usar mínimo por item com
+  // desconto de eficiência: 1º item = 48,78€, cada adicional = 60% (~29,27€).
+  // A equipa já está no local — cada item adicional custa menos.
   const isLooseItems = !isFullLoad && (svc === "recolha_moveis" || svc === "recolha_monos") && itemCount < FULL_LOAD_ITEM_THRESHOLD;
   if (isLooseItems) {
     const effectiveCount = Math.max(1, itemCount);
-    const perItemMin = 48.78; // ~60 € c/IVA por item
-    const itemMin = Math.round(effectiveCount * perItemMin * 100) / 100;
+    const perItemMin = 48.78; // ~60 € c/IVA por item (primeiro item)
+    const additionalRate = 0.60; // 60% do preço base por item adicional
+    const itemMin = Math.round(
+      (perItemMin + Math.max(0, effectiveCount - 1) * perItemMin * additionalRate) * 100
+    ) / 100;
     if (priceWithoutVat < itemMin) {
       return {
         price: itemMin,
-        note: `Mínimo por item aplicado: ${effectiveCount} item(s) × 48,78 € = ${itemMin.toFixed(2)} € s/IVA`,
+        note: `Mínimo por item aplicado: 1× 48,78€ + ${Math.max(0, effectiveCount - 1)}× 29,27€ (60%) = ${itemMin.toFixed(2)} € s/IVA`,
         minimumThreshold: itemMin,
       };
     }

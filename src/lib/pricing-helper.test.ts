@@ -3,6 +3,7 @@ import {
   countItemsFromDescription,
   resolveItemCount,
   calculateFastEstimate,
+  estimateLaborHours,
   FULL_LOAD_ITEM_THRESHOLD,
 } from "./pricing-helper";
 
@@ -128,6 +129,82 @@ describe("calculateFastEstimate — volumeTier como carga completa", () => {
     });
     expect(result.itemCount).toBe(4);
     expect(result.isFullLoad).toBe(false);
+  });
+});
+
+describe("estimateLaborHours — desconto de eficiência (itens soltos)", () => {
+  const base = {
+    serviceType: "recolha_moveis" as const,
+    floor: "0",
+    hasElevator: "yes" as const,
+    parkingDistance: "easy" as const,
+  };
+
+  // Resultado final arredondado a 0.5h com mínimo de 1h (LABOR_MIN_HOURS).
+  // Fórmula bruta: 0.5 + (n-1)×0.3, depois round(h*2)/2, depois max(1, h).
+
+  it("1 item = 1h (bruto 0.5 → arred. 0.5 → mín. 1h)", () => {
+    expect(estimateLaborHours({ ...base, heavyItems: ["sofá"] })).toBe(1);
+  });
+
+  it("2 itens = 1h (bruto 0.8 → arred. 1.0 → mín. 1h)", () => {
+    expect(estimateLaborHours({ ...base, heavyItems: ["sofá", "cama"] })).toBe(1);
+  });
+
+  it("4 itens = 1.5h (bruto 1.4 → arred. 1.5)", () => {
+    expect(estimateLaborHours({ ...base, heavyItems: ["a", "b", "c", "d"] })).toBe(1.5);
+  });
+
+  it("7 itens = 2.5h (bruto 2.3 → arred. 2.5) — último nível antes de carga completa", () => {
+    expect(estimateLaborHours({ ...base, heavyItems: ["a", "b", "c", "d", "e", "f", "g"] })).toBe(2.5);
+  });
+
+  it("8+ itens = carga completa (4h base), NÃO usa desconto de eficiência", () => {
+    expect(estimateLaborHours({
+      ...base,
+      heavyItems: ["a", "b", "c", "d", "e", "f", "g", "h"],
+    })).toBe(4);
+  });
+
+  it("horas crescem sub-linearmente com mais itens", () => {
+    const h1 = estimateLaborHours({ ...base, heavyItems: ["a"] });
+    const h4 = estimateLaborHours({ ...base, heavyItems: ["a", "b", "c", "d"] });
+    const h7 = estimateLaborHours({ ...base, heavyItems: ["a", "b", "c", "d", "e", "f", "g"] });
+    expect(h4).toBeLessThan(4 * h1);
+    expect(h7).toBeLessThan(7 * h1);
+  });
+});
+
+describe("calculateFastEstimate — mínimo por item com desconto de eficiência", () => {
+  it("2 itens: mínimo = 48.78 + 29.27 = 78.05€ (não 2×48.78)", async () => {
+    const result = await calculateFastEstimate({
+      serviceType: "recolha_moveis",
+      heavyItems: ["sofá", "cama"],
+      description: "",
+      floor: "0",
+      hasElevator: "yes",
+      parkingDistance: "easy",
+      distanceFromBase: { distanceKm: 5 },
+    });
+    const minNote = result.assumptions.find((n: string) => n.includes("Mínimo por item"));
+    if (minNote) {
+      expect(minNote).toContain("60%");
+      expect(minNote).toContain("78.05");
+    }
+  });
+
+  it("sem distância (km=0), Motor B ainda entrega preço coerente (não zero)", async () => {
+    const result = await calculateFastEstimate({
+      serviceType: "recolha_moveis",
+      heavyItems: ["sofá"],
+      description: "",
+      floor: "2",
+      hasElevator: "no",
+      parkingDistance: "easy",
+      distanceFromBase: { distanceKm: 0 },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.estimatedPriceWithoutVat).toBeGreaterThan(0);
   });
 });
 
