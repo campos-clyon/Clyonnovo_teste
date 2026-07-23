@@ -39,19 +39,52 @@ function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
   return normalized;
 }
 
+// Converte o conteúdo de service_requests.photos em URLs visualizáveis.
+// URLs http(s) passam directamente; paths de Storage geram signed URLs (1h),
+// tentando os buckets existentes (o nome do bucket não está no path guardado).
+async function resolvePhotoUrls(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  photos: unknown,
+): Promise<string[]> {
+  if (!Array.isArray(photos) || photos.length === 0) return [];
+  const out: string[] = [];
+  let buckets: string[] | null = null;
+
+  for (const p of photos) {
+    if (typeof p !== "string" || !p.trim()) continue;
+    if (/^https?:\/\//i.test(p)) { out.push(p); continue; }
+
+    if (buckets === null) {
+      const { data } = await sb.storage.listBuckets();
+      const score = (n: string) =>
+        /photo|foto|image|request|upload|pedido/i.test(n) ? 1 : 0;
+      buckets = (data ?? []).map((b) => b.name).sort((a, b) => score(b) - score(a));
+    }
+
+    const path = p.replace(/^\/+/, "");
+    for (const bucket of buckets) {
+      const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600);
+      if (!error && data?.signedUrl) { out.push(data.signedUrl); break; }
+    }
+  }
+  return out;
+}
+
 async function enrichOrder(sb: ReturnType<typeof getSupabaseAdmin>, row: Record<string, unknown>) {
   const safe = normalizeOrder(row);
   const customerId = safe.customer_id as string | null;
   const categorySlug = safe.category_slug as string | null;
 
-  const [profileRes, catRes] = await Promise.all([
+  const [profileRes, catRes, photoUrls] = await Promise.all([
     customerId
       ? sb.from("profiles").select("id, full_name, email, phone").eq("id", customerId).single()
       : Promise.resolve({ data: null }),
     categorySlug
       ? sb.from("service_categories").select("slug, name, icon").eq("slug", categorySlug).single()
       : Promise.resolve({ data: null }),
+    resolvePhotoUrls(sb, row.photos),
   ]);
+  safe.photos = photoUrls;
 
   const profile = (profileRes.data as Record<string, unknown> | null) ?? {};
   const cat = (catRes.data as Record<string, unknown> | null) ?? {};

@@ -113,20 +113,158 @@ function displayText(value: unknown, fallback = "—"): string {
   return String(value) || fallback;
 }
 
-// Renderiza details_meta como lista de linhas rotuladas (mais legível que uma linha só)
-function DetailsMetaList({ meta }: { meta: Record<string, unknown> | null | undefined }) {
+// ── Curadoria de details_meta → secções de negócio ─────────────────────────
+// O motor de orçamentos da app grava um objecto técnico em details. Aqui
+// separamos o que o operador precisa de ver (itens, acesso, riscos, mensagem)
+// do que é depuração (breakdown, ids, coordenadas), que fica colapsado.
+
+const RISK_FLAG_LABELS: Record<string, string> = {
+  out_of_zone: "Fora da zona de cobertura",
+  volume_grande: "Volume grande",
+  volume_high: "Volume elevado",
+  heavy_items: "Itens pesados",
+  no_elevator: "Sem elevador",
+  long_carry: "Transporte longo à mão",
+};
+
+const QUOTE_STATUS_LABELS: Record<string, string> = {
+  out_of_zone: "Fora de zona — proposta manual",
+  ok: "Orçamento automático válido",
+  pending: "Orçamento pendente",
+  manual_review: "Requer revisão manual",
+};
+
+type MetaItem = { qty: number; name: string; unitPrice: number | null; subtotal: number | null; volume: number | null };
+
+type CuratedMeta = {
+  items: MetaItem[];
+  totalSemIva: number | null;
+  serviceType: string | null;
+  bags: number | null;
+  floor: string | null;
+  elevator: boolean | null;
+  parkingAvailable: boolean | null;
+  parkingDistanceM: number | null;
+  pickupAddress: string | null;
+  customerMessage: string | null;
+  riskFlags: string[];
+  quoteStatus: string | null;
+  confidenceScore: number | null;
+  estimatedVolume: number | null;
+  rest: Record<string, unknown>;
+};
+
+function metaTake(rest: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const k of keys) {
+    if (k in rest) { const v = rest[k]; delete rest[k]; return v; }
+  }
+  return undefined;
+}
+
+function asNum(v: unknown): number | null {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+function asBool(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (v === "Sim" || v === "sim" || v === "yes" || v === "true") return true;
+  if (v === "Não" || v === "nao" || v === "no" || v === "false") return false;
+  return null;
+}
+
+function curateMeta(meta: Record<string, unknown> | null | undefined): CuratedMeta | null {
   if (!meta || typeof meta !== "object") return null;
-  const entries = Object.entries(meta).filter(([, v]) => v !== null && v !== undefined && v !== "");
+  const rest: Record<string, unknown> = { ...meta };
+
+  const rawItems = metaTake(rest, "selected_items", "selectedItems", "items");
+  const items: MetaItem[] = Array.isArray(rawItems)
+    ? rawItems.filter((it) => it && typeof it === "object").map((it: any) => ({
+        qty: asNum(it.qty ?? it.Qty ?? it.quantity) ?? 1,
+        name: String(it.name ?? it.Name ?? "Item"),
+        unitPrice: asNum(it.unit_price ?? it.unitPrice ?? it.UnitPrice),
+        subtotal: asNum(it.subtotal ?? it.Subtotal),
+        volume: asNum(it.volume ?? it.Volume),
+      }))
+    : [];
+
+  const pickup = metaTake(rest, "pickup", "Pickup") as Record<string, unknown> | undefined;
+  const pickupAddress = pickup && typeof pickup === "object" && typeof pickup.address === "string"
+    ? pickup.address : null;
+  // Coordenadas e restos do pickup vão para os detalhes técnicos
+  if (pickup && typeof pickup === "object") {
+    const { address: _a, ...coords } = pickup as Record<string, unknown>;
+    if (Object.keys(coords).length > 0) rest.pickup_coords = coords;
+  }
+
+  const rawFlags = metaTake(rest, "risk_flags", "riskFlags");
+  const riskFlags = Array.isArray(rawFlags) ? rawFlags.map(String) : [];
+
+  const curated: CuratedMeta = {
+    items,
+    totalSemIva: asNum(metaTake(rest, "total_sem_iva", "totalSemIva")),
+    serviceType: (metaTake(rest, "service_type", "serviceType", "tipo_de_servico") as string) ?? null,
+    bags: asNum(metaTake(rest, "bags", "sacos")),
+    floor: ((v) => (v === undefined || v === null ? null : String(v)))(metaTake(rest, "floor", "andar")),
+    elevator: asBool(metaTake(rest, "has_elevator", "elevator", "elevador", "needs_elevator")),
+    parkingAvailable: asBool(metaTake(rest, "parking_available", "parkingAvailable")),
+    parkingDistanceM: asNum(metaTake(rest, "parking_distance_m", "parkingDistanceM")),
+    pickupAddress,
+    customerMessage: ((v) => (typeof v === "string" && v.trim() ? v.trim() : null))(
+      metaTake(rest, "customer_message", "customerMessage"),
+    ),
+    riskFlags,
+    quoteStatus: ((v) => (typeof v === "string" ? v : null))(metaTake(rest, "quote_status", "quoteStatus")),
+    confidenceScore: asNum(metaTake(rest, "confidence_score", "confidenceScore")),
+    estimatedVolume: asNum(metaTake(rest, "estimated_volume_m3", "estimatedVolumeM3", "volume_m3")),
+    rest,
+  };
+  // Redundante com a galeria de fotografias
+  metaTake(curated.rest, "photos_count", "photosCount");
+  return curated;
+}
+
+const CARD = "rounded-2xl border border-white/[0.08] bg-[#0C1C2E] p-4";
+const CARD_TITLE = "mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#97AABD]";
+
+function FactChip({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "ok" | "warn" }) {
+  const tones = {
+    neutral: "border-white/[0.08] bg-[#12263B] text-[#F5FAFF]",
+    ok: "border-[#19C37D]/25 bg-[#19C37D]/[0.08] text-[#19C37D]",
+    warn: "border-[#F6B84A]/25 bg-[#F6B84A]/[0.08] text-[#F6B84A]",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${tones[tone]}`}>
+      <span className="text-[10px] uppercase tracking-wider text-[#97AABD]">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </span>
+  );
+}
+
+// Detalhes técnicos colapsáveis (breakdown do motor, ids, coordenadas)
+function TechnicalDetails({ rest }: { rest: Record<string, unknown> }) {
+  const entries = Object.entries(rest).filter(([, v]) => v !== null && v !== undefined && v !== "");
   if (entries.length === 0) return null;
   return (
-    <dl className="mt-2 space-y-1 rounded-lg border border-white/[0.05] bg-white/[0.02] p-3">
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex gap-2 text-xs">
-          <dt className="w-40 flex-shrink-0 text-slate-500">{labelFor(k)}</dt>
-          <dd className="flex-1 text-slate-200 break-words">{formatDetailValue(v)}</dd>
-        </div>
-      ))}
-    </dl>
+    <details className="group rounded-2xl border border-white/[0.06] bg-[#0C1C2E]/60">
+      <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs font-semibold text-[#97AABD] transition hover:text-white [&::-webkit-details-marker]:hidden">
+        <svg className="h-3.5 w-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        Detalhes técnicos do orçamento automático
+        <span className="ml-auto rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px]">{entries.length}</span>
+      </summary>
+      <dl className="space-y-2 border-t border-white/[0.05] px-4 py-3">
+        {entries.map(([k, v]) => (
+          <div key={k} className="text-xs">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{labelFor(k)}</dt>
+            <dd className="mt-0.5 whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-slate-400">
+              {typeof v === "object" ? JSON.stringify(v, null, 1).replace(/[{}"]/g, "").trim() : String(v)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 
@@ -291,9 +429,9 @@ function PedidoInlinePanel({
   }
 
   const canApproveQuote = isQuoteApprovalAvailable(order?.status);
-  const IL = "text-[10px] uppercase tracking-wider text-slate-500 block mb-1";
-  const INP = "mt-0.5 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
-  const TA = "mt-0.5 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 resize-none";
+  const IL = "text-[10px] uppercase tracking-wider text-[#97AABD] block mb-1";
+  const INP = "mt-0.5 h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-[#F5FAFF] outline-none transition focus:border-[#00BDEB]";
+  const TA = "mt-0.5 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-2 text-sm text-[#F5FAFF] outline-none transition focus:border-[#00BDEB] resize-none";
 
   if (loading) return <Spinner />;
   if (error) return (
@@ -304,18 +442,40 @@ function PedidoInlinePanel({
   if (!order) return null;
 
   const statusCfg = INLINE_STATUS_CFG[order.status];
+  const meta = curateMeta(order.details_meta);
+  const morada = meta?.pickupAddress ?? displayText(order.address_line, "");
+  // A mensagem do cliente aparece muitas vezes duplicada em notes — mostrar uma vez
+  const notesText = displayText(order.notes, "");
+  const clientMessage = meta?.customerMessage ?? (notesText || null);
+  const isUrgent = order.urgency === "urgent";
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      {/* Cabeçalho do pedido */}
+      <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.08] transition"
+          className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0C1C2E] px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-[#12263B]"
         >
           ← Voltar
         </button>
-        <span className="font-mono text-xs text-slate-600">{order.id}</span>
-        <span className={`ml-auto text-xs font-bold ${statusCfg?.color ?? "text-white"}`}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-base font-bold text-[#F5FAFF]">
+              {displayText(order.category_name ?? order.category_slug, "Pedido")}
+            </h3>
+            {isUrgent && (
+              <span className="rounded-full border border-[#EF5A67]/30 bg-[#EF5A67]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#EF5A67]">
+                Urgente
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 font-mono text-[10px] text-slate-500">
+            #{order.id.slice(0, 8)} · criado {fmtDt(order.created_at)}
+          </p>
+        </div>
+        <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-bold ${statusCfg?.color ?? "text-white"}`}>
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
           {statusCfg?.label ?? order.status}
         </span>
       </div>
@@ -323,40 +483,137 @@ function PedidoInlinePanel({
       <div className="grid gap-4 md:grid-cols-[1fr_280px]">
         {/* Coluna principal */}
         <div className="space-y-4">
-          {/* Pedido original */}
-          <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Pedido original do cliente (só leitura)</p>
-            <dl className="space-y-2 text-sm">
-              {[
-                ["Categoria", displayText(order.category_name ?? order.category_slug)],
-                ["Morada", displayText(order.address_line)],
-                ["Cidade", displayText(order.city)],
-                ["Região", displayText(order.region)],
-                ["Descrição", displayText(order.details)],
-                ["Notas", displayText(order.notes)],
-                ["Criado", fmtDt(order.created_at)],
-              ].map(([k, v]) => (
-                <div key={k} className="flex gap-2">
-                  <dt className="w-24 flex-shrink-0 text-slate-500">{k}</dt>
-                  <dd className="flex-1 text-slate-200 break-words">{v}</dd>
-                </div>
-              ))}
-            </dl>
-            {order.details_meta && (
-              <>
-                <p className="mt-4 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Metadados do pedido</p>
-                <DetailsMetaList meta={order.details_meta} />
-              </>
+          {/* Resumo do serviço */}
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Resumo do serviço</p>
+            {meta && meta.items.length > 0 ? (
+              <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+                {meta.items.map((it, i) => (
+                  <div key={i} className={`flex items-center gap-3 bg-[#12263B]/60 px-3 py-2.5 ${i < meta.items.length - 1 ? "border-b border-white/[0.05]" : ""}`}>
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#00BDEB]/10 text-xs font-bold text-[#00BDEB]">
+                      {it.qty}×
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-[#F5FAFF]">{it.name}</p>
+                      {it.volume != null && <p className="text-[10px] text-slate-500">{it.volume} m³ por unidade</p>}
+                    </div>
+                    <div className="text-right">
+                      {it.subtotal != null && <p className="text-sm font-semibold text-[#F5FAFF]">{fmtMoney(it.subtotal)}</p>}
+                      {it.unitPrice != null && it.qty > 1 && (
+                        <p className="text-[10px] text-slate-500">{fmtMoney(it.unitPrice)}/un</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">{displayText(order.details)}</p>
             )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {meta?.totalSemIva != null && <FactChip label="Total s/ IVA" value={fmtMoney(meta.totalSemIva)} />}
+              {meta?.estimatedVolume != null && <FactChip label="Volume est." value={`${meta.estimatedVolume} m³`} />}
+              {meta?.bags != null && meta.bags > 0 && <FactChip label="Sacos" value={String(meta.bags)} />}
+            </div>
           </div>
+
+          {/* Local e acesso */}
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Local e acesso</p>
+            {morada && <p className="text-sm leading-relaxed text-[#F5FAFF]">{morada}</p>}
+            {(displayText(order.city, "") || displayText(order.region, "")) && (
+              <p className="mt-0.5 text-xs text-slate-500">
+                {[displayText(order.city, ""), displayText(order.region, "")].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {meta?.floor != null && <FactChip label="Andar" value={meta.floor === "0" ? "R/C" : `${meta.floor}º`} />}
+              {meta?.elevator != null && (
+                <FactChip label="Elevador" value={meta.elevator ? "Sim" : "Não"} tone={meta.elevator ? "ok" : "warn"} />
+              )}
+              {meta?.parkingAvailable != null && (
+                <FactChip
+                  label="Estacionamento"
+                  value={meta.parkingAvailable ? (meta.parkingDistanceM != null ? `a ${meta.parkingDistanceM} m` : "Sim") : "Não"}
+                  tone={meta.parkingAvailable ? "ok" : "warn"}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Fotografias */}
+          {order.photos && order.photos.length > 0 && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>Fotografias ({order.photos.length})</p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {order.photos.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-[#12263B]"
+                    title="Abrir em tamanho real"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={`Fotografia ${i + 1} do pedido`}
+                      className="h-full w-full object-cover transition group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mensagem do cliente */}
+          {clientMessage && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>Mensagem do cliente</p>
+              <blockquote className="border-l-2 border-[#00BDEB]/40 pl-3 text-sm italic leading-relaxed text-slate-300">
+                {clientMessage}
+              </blockquote>
+            </div>
+          )}
+
+          {/* Avaliação automática */}
+          {meta && (meta.riskFlags.length > 0 || meta.quoteStatus || meta.confidenceScore != null) && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>Avaliação automática</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {meta.riskFlags.map((f) => (
+                  <span key={f} className="inline-flex items-center gap-1.5 rounded-full border border-[#F6B84A]/25 bg-[#F6B84A]/[0.08] px-2.5 py-1 text-xs font-semibold text-[#F6B84A]">
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+                    </svg>
+                    {RISK_FLAG_LABELS[f] ?? f.replace(/_/g, " ")}
+                  </span>
+                ))}
+                {meta.quoteStatus && (
+                  <FactChip
+                    label="Orçamento"
+                    value={QUOTE_STATUS_LABELS[meta.quoteStatus] ?? meta.quoteStatus.replace(/_/g, " ")}
+                    tone={meta.quoteStatus === "ok" ? "ok" : "warn"}
+                  />
+                )}
+                {meta.confidenceScore != null && (
+                  <FactChip label="Confiança" value={`${meta.confidenceScore}/100`} tone={meta.confidenceScore >= 80 ? "ok" : "neutral"} />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Detalhes técnicos colapsados */}
+          {meta && <TechnicalDetails rest={meta.rest} />}
 
           {/* Histórico de operações */}
           {ops.length > 0 && (
-            <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Histórico de operações</p>
+            <div className={CARD}>
+              <p className={CARD_TITLE}>Histórico de operações</p>
               <div className="space-y-2">
                 {ops.map((op) => (
-                  <div key={op.id} className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                  <div key={op.id} className="rounded-xl border border-white/[0.05] bg-[#12263B]/60 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-slate-300">{op.colab_nome}</span>
                       <span className="text-[10px] text-slate-600">{fmtDt(op.created_at)}</span>
@@ -377,8 +634,8 @@ function PedidoInlinePanel({
 
         {/* Coluna lateral */}
         <div className="space-y-4">
-          <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Cliente</p>
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Cliente</p>
             <p className="text-sm font-medium text-white">{displayText(order.client_name)}</p>
             {typeof order.client_phone === "string" && order.client_phone && (
               <a href={`tel:${order.client_phone}`} className="mt-2 flex items-center gap-1.5 text-xs text-cyan-400 hover:underline">
@@ -398,8 +655,8 @@ function PedidoInlinePanel({
             )}
           </div>
 
-          <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Operação</p>
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Operação</p>
             <div className="space-y-3">
               <div>
                 <label className={IL}>Estado</label>
