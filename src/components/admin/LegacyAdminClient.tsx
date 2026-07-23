@@ -2,13 +2,13 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import ContasPanel from "@/components/admin/ContasPanel";
-import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
-import AppClyonEmbedded from "@/components/admin/AppClyonEmbedded";
+import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
+import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
   AlertTriangle,
   Archive,
@@ -337,6 +337,9 @@ export default function ColaboradorAdminClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
+  const [activeClyonTab, setActiveClyonTab] = useState<AppClyonTab>("visao-geral");
+  const [activePedidoId, setActivePedidoId] = useState<string | null>(null);
+  const urlSyncReady = useRef(false);
 
   // Aba ativa da página Configurações
   const [settingsTab, setSettingsTab] = useState<
@@ -497,15 +500,21 @@ export default function ColaboradorAdminClient() {
     if (storedId) setColabId(Number(storedId));
     setColabFuncao(storedFuncao);
 
-    // Verificar se há section no URL (ex: ?section=pedidos)
+    // Verificar se há section/tab/pedido no URL
     const searchParams = new URLSearchParams(window.location.search);
     const sectionParam = searchParams.get("section") as AdminSection | null;
     if (sectionParam && adminNavItems.some(item => item.id === sectionParam)) {
       setActiveSection(sectionParam);
-      // Sincronizar a sub-tab de operação com o item de nav escolhido
       if (sectionParam === "equipa") setOperacaoTab("equipa");
       if (sectionParam === "pagamentos") setOperacaoTab("pagamentos");
     }
+    const tabParam = searchParams.get("tab") as AppClyonTab | null;
+    if (tabParam && CLYON_TAB_IDS.includes(tabParam)) {
+      setActiveClyonTab(tabParam);
+    }
+    const pedidoParam = searchParams.get("pedido");
+    if (pedidoParam) setActivePedidoId(pedidoParam);
+    urlSyncReady.current = true;
 
     // Admin geral carrega dados da equipa e configurações; assistente começa directamente nos pedidos
     if (isAdminGeral) {
@@ -524,6 +533,32 @@ export default function ColaboradorAdminClient() {
       document.head.removeChild(metaRobots);
     };
   }, [router]);
+
+  // Sincronizar URL com a secção e aba activa
+  useEffect(() => {
+    if (!token || !urlSyncReady.current) return;
+    const p = new URLSearchParams({ section: activeSection });
+    if (activeSection === "app_clyon") {
+      p.set("tab", activeClyonTab);
+      if (activePedidoId) p.set("pedido", activePedidoId);
+    }
+    router.replace(`/admin?${p.toString()}`, { scroll: false });
+  }, [activeSection, activeClyonTab, activePedidoId, token, router]);
+
+  // Repor estado ao navegar com os botões Anterior/Seguinte do browser
+  useEffect(() => {
+    function handlePop() {
+      const sp = new URLSearchParams(window.location.search);
+      const sec = sp.get("section") as AdminSection | null;
+      if (sec && adminNavItems.some((i) => i.id === sec)) setActiveSection(sec);
+      const t = sp.get("tab") as AppClyonTab | null;
+      if (t && CLYON_TAB_IDS.includes(t)) setActiveClyonTab(t);
+      else setActiveClyonTab("visao-geral");
+      setActivePedidoId(sp.get("pedido") ?? null);
+    }
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   const carregarDados = async (authToken: string) => {
     try {
@@ -2218,7 +2253,13 @@ export default function ColaboradorAdminClient() {
 
           {/* ═══════════════════════ APP CLYON ═══════════════════════ */}
           {activeSection === "app_clyon" && (
-            <AppClyonEmbedded authHeader={token ? { Authorization: `Bearer ${token}` } : {}} />
+            <AppClyonEmbedded
+              authHeader={token ? { Authorization: `Bearer ${token}` } : {}}
+              activeTab={activeClyonTab}
+              activePedidoId={activePedidoId}
+              onTabChange={(t) => { setActiveClyonTab(t); setActivePedidoId(null); }}
+              onPedidoChange={(id) => setActivePedidoId(id)}
+            />
           )}
 
           {/* ═══════════════════════════ LEADS ══��════════════════════════ */}

@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
+import PagamentosPanel from "@/components/admin/PagamentosPanel";
+import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
+
+export type { AppClyonTab };
 
 // ── Tipos partilhados ──────────────────────────────────────────────────────
 type AppStatus =
@@ -53,6 +57,27 @@ function fmtDt(iso: string) {
   });
 }
 
+// ── Spinner / ErrBox comuns ────────────────────────────────────────────────
+function Spinner() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <svg className="h-6 w-6 animate-spin text-cyan-500" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+    </div>
+  );
+}
+
+function ErrBox({ msg, onRetry }: { msg: string; onRetry: () => void }) {
+  return (
+    <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+      {msg}{" "}
+      <button onClick={onRetry} className="ml-2 underline">Tentar novamente</button>
+    </div>
+  );
+}
+
 // ── Painel de detalhe inline ───────────────────────────────────────────────
 function PedidoInlinePanel({
   id,
@@ -68,7 +93,6 @@ function PedidoInlinePanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Campos editáveis
   const [status, setStatus] = useState<AppStatus>("received");
   const [urgency, setUrgency] = useState("normal");
   const [price, setPrice] = useState("");
@@ -136,140 +160,82 @@ function PedidoInlinePanel({
   const INP = "mt-0.5 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
   const TA = "mt-0.5 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 resize-none";
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-16">
-      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-cyan-500" />
-    </div>
-  );
-
+  if (loading) return <Spinner />;
   if (error) return (
     <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
       {error} <button onClick={onBack} className="ml-2 underline">← Voltar</button>
     </div>
   );
-
   if (!order) return null;
 
   const statusCfg = INLINE_STATUS_CFG[order.status];
 
   return (
     <div className="space-y-4">
-      {/* Header do detalhe */}
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.07]"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.08] transition"
         >
-          ← Pedidos
+          ← Voltar
         </button>
-        <span className="font-mono text-xs text-slate-600">#{order.id.slice(0, 8)}</span>
-        <span className={`text-xs font-semibold ${statusCfg?.color ?? "text-slate-400"}`}>
+        <span className="font-mono text-xs text-slate-600">{order.id}</span>
+        <span className={`ml-auto text-xs font-bold ${statusCfg?.color ?? "text-white"}`}>
           {statusCfg?.label ?? order.status}
         </span>
-        {order.urgency === "urgent" && (
-          <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-400">URGENTE</span>
-        )}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 md:grid-cols-[1fr_280px]">
         {/* Coluna principal */}
         <div className="space-y-4">
-
-          {/* Dados originais do cliente — só leitura */}
+          {/* Pedido original */}
           <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Pedido original
-              <span className="ml-1.5 font-normal normal-case text-slate-700">(só leitura)</span>
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <span className={IL}>Título / detalhes</span>
-                <p className="text-sm text-white">{order.details || "—"}</p>
-              </div>
-              <div>
-                <span className={IL}>Categoria</span>
-                <p className="text-sm text-white">
-                  {order.category_icon && <span className="mr-1">{order.category_icon}</span>}
-                  {order.category_name || order.category_slug || "—"}
-                </p>
-              </div>
-              <div className="sm:col-span-2">
-                <span className={IL}>Descrição</span>
-                <p className="text-sm text-slate-300">{order.notes || "—"}</p>
-              </div>
-              <div>
-                <span className={IL}>Morada</span>
-                <p className="text-sm text-white">{order.address_line || "—"}</p>
-                <p className="text-xs text-slate-500">{[order.city, order.region].filter(Boolean).join(", ")}</p>
-              </div>
-              <div>
-                <span className={IL}>Criado em</span>
-                <p className="text-sm text-white">{fmtDt(order.created_at)}</p>
-              </div>
-              <div>
-                <span className={IL}>Orçamento indicativo</span>
-                <p className="text-sm text-white">
-                  {order.estimated_price != null
-                    ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(order.estimated_price)
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <span className={IL}>Data preferida</span>
-                <p className="text-sm text-white">
-                  {order.scheduled_for ? fmtDt(String(order.scheduled_for)) : "—"}
-                </p>
-              </div>
-            </div>
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Pedido original do cliente (só leitura)</p>
+            <dl className="space-y-2 text-sm">
+              {[
+                ["Categoria", order.category_name ?? order.category_slug ?? "—"],
+                ["Morada", order.address_line ?? "—"],
+                ["Cidade", order.city ?? "—"],
+                ["Região", order.region ?? "—"],
+                ["Descrição", order.details ?? "—"],
+                ["Notas", order.notes ?? "—"],
+                ["Criado", fmtDt(order.created_at)],
+              ].map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <dt className="w-24 flex-shrink-0 text-slate-500">{k}</dt>
+                  <dd className="flex-1 text-slate-200 break-words">{v}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           {/* Histórico de operações */}
-          <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02]">
-            <div className="border-b border-white/[0.05] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Histórico de operações</p>
-            </div>
-            {ops.length === 0 ? (
-              <p className="px-4 py-6 text-xs text-slate-600">Sem operações registadas.</p>
-            ) : (
-              <div>
+          {ops.length > 0 && (
+            <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Histórico de operações</p>
+              <div className="space-y-2">
                 {ops.map((op) => (
-                  <div key={op.id} className="border-b border-white/[0.03] px-4 py-3 last:border-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        {op.action_type === "status_change" && (
-                          <p className="text-xs text-white">
-                            <span className="text-slate-500">{INLINE_STATUS_CFG[op.status_from ?? ""]?.label ?? op.status_from}</span>
-                            {" → "}
-                            <span className={INLINE_STATUS_CFG[op.status_to ?? ""]?.color ?? "text-white"}>
-                              {INLINE_STATUS_CFG[op.status_to ?? ""]?.label ?? op.status_to}
-                            </span>
-                          </p>
-                        )}
-                        {op.reason && (
-                          <p className="mt-0.5 text-xs text-amber-300/80">Motivo: {op.reason}</p>
-                        )}
-                        {op.note && (
-                          <p className="mt-0.5 text-xs text-slate-300">{op.note}</p>
-                        )}
-                        {op.action_type === "update" && !op.note && (
-                          <p className="text-xs text-slate-500">Campos operacionais actualizados</p>
-                        )}
-                      </div>
-                      <div className="flex-shrink-0 text-right">
-                        <p className="text-[10px] text-slate-600">{op.colab_nome}</p>
-                        <p className="text-[10px] text-slate-700">{fmtDt(op.created_at)}</p>
-                      </div>
+                  <div key={op.id} className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-300">{op.colab_nome}</span>
+                      <span className="text-[10px] text-slate-600">{fmtDt(op.created_at)}</span>
                     </div>
+                    {op.status_from && op.status_to && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {INLINE_STATUS_CFG[op.status_from]?.label ?? op.status_from} → <span className="text-cyan-400">{INLINE_STATUS_CFG[op.status_to]?.label ?? op.status_to}</span>
+                      </p>
+                    )}
+                    {op.reason && <p className="mt-1 text-xs text-amber-300">Motivo: {op.reason}</p>}
+                    {op.note && <p className="mt-1 text-xs text-slate-400 italic">{op.note}</p>}
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Coluna lateral — operação */}
+        {/* Coluna lateral */}
         <div className="space-y-4">
-          {/* Cliente */}
           <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Cliente</p>
             <p className="text-sm font-medium text-white">{order.client_name || "—"}</p>
@@ -291,7 +257,6 @@ function PedidoInlinePanel({
             )}
           </div>
 
-          {/* Painel de operação */}
           <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Operação</p>
             <div className="space-y-3">
@@ -303,20 +268,12 @@ function PedidoInlinePanel({
                   ))}
                 </select>
               </div>
-
               {needsReason && (
                 <div>
                   <label className={IL}>Motivo (obrigatório)</label>
-                  <textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    rows={2}
-                    placeholder="Razão do cancelamento / rejeição..."
-                    className={TA}
-                  />
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Razão do cancelamento / rejeição..." className={TA} />
                 </div>
               )}
-
               <div>
                 <label className={IL}>Urgência</label>
                 <select value={urgency} onChange={(e) => setUrgency(e.target.value)} className={INP}>
@@ -325,52 +282,22 @@ function PedidoInlinePanel({
                   <option value="flexible" className="bg-[#0A1220]">Flexível</option>
                 </select>
               </div>
-
               <div>
                 <label className={IL}>Orçamento confirmado (€)</label>
-                <input
-                  type="number" step="0.01" min="0"
-                  value={price} onChange={(e) => setPrice(e.target.value)}
-                  className={INP}
-                />
+                <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={INP} />
               </div>
-
               <div>
                 <label className={IL}>Data/hora agendada</label>
-                <input
-                  type="datetime-local"
-                  value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)}
-                  className={INP}
-                />
+                <input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} className={INP} />
               </div>
-
               <div>
                 <label className={IL}>Nota interna</label>
-                <textarea
-                  value={adminNote} onChange={(e) => setAdminNote(e.target.value)}
-                  rows={3}
-                  placeholder="Nota registada no histórico..."
-                  className={TA}
-                />
+                <textarea value={adminNote} onChange={(e) => setAdminNote(e.target.value)} rows={3} placeholder="Nota registada no histórico..." className={TA} />
               </div>
             </div>
-
-            {saveError && (
-              <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                {saveError}
-              </div>
-            )}
-            {saveOk && (
-              <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
-                Guardado com sucesso.
-              </div>
-            )}
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="mt-4 w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
-            >
+            {saveError && <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{saveError}</div>}
+            {saveOk && <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">Guardado com sucesso.</div>}
+            <button onClick={handleSave} disabled={saving} className="mt-4 w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50">
               {saving ? "A guardar..." : "Guardar"}
             </button>
           </div>
@@ -380,18 +307,7 @@ function PedidoInlinePanel({
   );
 }
 
-type AppClyonTab = "visao-geral" | "pedidos" | "agenda" | "equipa" | "catalogo" | "config" | "metricas";
-
-const TABS: { id: AppClyonTab; label: string }[] = [
-  { id: "visao-geral", label: "Visão Geral" },
-  { id: "pedidos",     label: "Pedidos" },
-  { id: "agenda",      label: "Agenda" },
-  { id: "equipa",      label: "Equipa" },
-  { id: "catalogo",    label: "Catálogo" },
-  { id: "config",      label: "Configuração" },
-  { id: "metricas",    label: "Métricas" },
-];
-
+// ── STATUS_LABELS ──────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
   draft: "Rascunho", received: "Recebido", in_review: "Em análise",
   awaiting_deposit: "Aguarda depósito", assignment_pending: "A atribuir",
@@ -406,26 +322,6 @@ const COVERAGE_ZONES = [
   "Sesimbra", "Palmela", "Moita", "Alcochete", "Loures", "Amadora",
   "Sintra", "Cascais", "Oeiras", "Vila Franca de Xira",
 ];
-
-function Spinner() {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <svg className="h-6 w-6 animate-spin text-cyan-500" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
-    </div>
-  );
-}
-
-function ErrBox({ msg, onRetry }: { msg: string; onRetry: () => void }) {
-  return (
-    <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
-      {msg}{" "}
-      <button onClick={onRetry} className="ml-2 underline">Tentar novamente</button>
-    </div>
-  );
-}
 
 // ── Visão Geral ────────────────────────────────────────────────────────────
 type VisaoGeral = {
@@ -460,13 +356,13 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
 
   const { stats, recent } = data;
   const cards = [
-    { label: "Total",           value: stats.total,         color: "text-white" },
-    { label: "Abertos",         value: stats.open,          color: "text-yellow-400" },
-    { label: "Em curso",        value: stats.inProgress,    color: "text-blue-400" },
-    { label: "Concluídos",      value: stats.completed,     color: "text-emerald-400" },
-    { label: "Cancelados",      value: stats.cancelled,     color: "text-slate-500" },
-    { label: "Urgentes",        value: stats.urgent,        color: "text-red-400" },
-    { label: "Sem atribuição",  value: stats.unassigned,    color: "text-orange-400" },
+    { label: "Total",           value: stats.total,          color: "text-white" },
+    { label: "Abertos",         value: stats.open,           color: "text-yellow-400" },
+    { label: "Em curso",        value: stats.inProgress,     color: "text-blue-400" },
+    { label: "Concluídos",      value: stats.completed,      color: "text-emerald-400" },
+    { label: "Cancelados",      value: stats.cancelled,      color: "text-slate-500" },
+    { label: "Urgentes",        value: stats.urgent,         color: "text-red-400" },
+    { label: "Sem atribuição",  value: stats.unassigned,     color: "text-orange-400" },
     { label: "Agendados hoje",  value: stats.scheduledToday, color: "text-cyan-400" },
   ];
 
@@ -480,7 +376,6 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
           </div>
         ))}
       </div>
-
       {recent.length > 0 && (
         <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02]">
           <div className="border-b border-white/[0.05] px-4 py-3">
@@ -540,7 +435,6 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
     );
   }
 
-  // Agrupar por dia
   const byDay: Record<string, AgendaOrder[]> = {};
   for (const o of orders) {
     const day = o.scheduled_for.slice(0, 10);
@@ -577,7 +471,77 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
   );
 }
 
-// ── Equipa ─────────────────────────────────────────────────────────────────
+// ── Profissionais (utilizadores app) ──────────────────────────────────────
+type AppProfile = { id: string; full_name: string | null; email: string | null; phone: string | null; created_at: string };
+
+function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }) {
+  const [profiles, setProfiles] = useState<AppProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [q, setQ] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const url = q ? `/api/admin/app-clyon/profissionais?q=${encodeURIComponent(q)}` : "/api/admin/app-clyon/profissionais";
+      const res = await fetch(url, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      setProfiles(json.profiles ?? []);
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, q]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setQ(search.trim());
+  }
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrBox msg={error} onRetry={load} />;
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Pesquisar por nome ou e-mail…"
+          className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+        />
+        <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30 transition">Pesquisar</button>
+        {q && <button type="button" onClick={() => { setSearch(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
+      </form>
+      {profiles.length === 0 ? (
+        <p className="py-10 text-center text-sm text-slate-600">Sem perfis encontrados.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+          {profiles.map((p, i) => (
+            <div key={p.id} className={`flex items-center gap-3 px-4 py-3 ${i < profiles.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-300">
+                {(p.full_name ?? p.email ?? "?").charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{p.full_name ?? "—"}</p>
+                <p className="text-xs text-slate-500 truncate">{p.email ?? "—"}</p>
+              </div>
+              {p.phone && <p className="text-xs text-slate-500 flex-shrink-0">{p.phone}</p>}
+              <p className="text-[10px] text-slate-600 flex-shrink-0">
+                {new Date(p.created_at).toLocaleDateString("pt-PT")}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-slate-600">Total visível: {profiles.length}</p>
+    </div>
+  );
+}
+
+// ── Equipa interna (colaboradores) ─────────────────────────────────────────
 type Assistente = { id: number; nome: string; funcao: string; isAdmin: number };
 
 function TabEquipa({ authHeader }: { authHeader: Record<string, string> }) {
@@ -602,28 +566,23 @@ function TabEquipa({ authHeader }: { authHeader: Record<string, string> }) {
   if (error) return <ErrBox msg={error} onRetry={load} />;
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-slate-500">
-        Gestão detalhada de colaboradores disponível no tab <strong className="text-slate-300">Equipa</strong> do painel principal.
-      </p>
-      <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-        {list.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-slate-600">Sem colaboradores encontrados.</p>
-        ) : list.map((a, i) => (
-          <div key={a.id} className={`flex items-center gap-3 px-4 py-3 ${i < list.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">
-              {a.nome.charAt(0)}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-white">{a.nome}</p>
-              <p className="text-xs text-slate-500">{a.funcao}</p>
-            </div>
-            {a.isAdmin === 1 && (
-              <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-400">Admin</span>
-            )}
+    <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+      {list.length === 0 ? (
+        <p className="px-4 py-8 text-center text-sm text-slate-600">Sem colaboradores encontrados.</p>
+      ) : list.map((a, i) => (
+        <div key={a.id} className={`flex items-center gap-3 px-4 py-3 ${i < list.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">
+            {a.nome.charAt(0)}
           </div>
-        ))}
-      </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-white">{a.nome}</p>
+            <p className="text-xs text-slate-500">{a.funcao}</p>
+          </div>
+          {a.isAdmin === 1 && (
+            <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-400">Admin</span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -679,9 +638,7 @@ function TabCatalogo({ authHeader }: { authHeader: Record<string, string> }) {
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
           {cats.map((cat, i) => (
             <div key={cat.slug} className={`flex items-center gap-3 px-4 py-3 ${i < cats.length - 1 ? "border-b border-white/[0.04]" : ""} ${!cat.is_active ? "opacity-50" : ""}`}>
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-lg">
-                {cat.icon || "📦"}
-              </div>
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-lg">{cat.icon || "📦"}</div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white">{cat.name}</p>
                 <p className="text-[10px] font-mono text-slate-600">{cat.slug}</p>
@@ -691,11 +648,7 @@ function TabCatalogo({ authHeader }: { authHeader: Record<string, string> }) {
               <button
                 onClick={() => toggle(cat)}
                 disabled={toggling === cat.slug}
-                className={`flex-shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                  cat.is_active
-                    ? "border-red-500/30 text-red-400 hover:bg-red-500/10"
-                    : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                }`}
+                className={`flex-shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${cat.is_active ? "border-red-500/30 text-red-400 hover:bg-red-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
               >
                 {toggling === cat.slug ? "..." : cat.is_active ? "Arquivar" : "Activar"}
               </button>
@@ -703,9 +656,255 @@ function TabCatalogo({ authHeader }: { authHeader: Record<string, string> }) {
           ))}
         </div>
       )}
-      <p className="text-xs text-amber-300/60">
-        Arquivar não apaga histórico — apenas impede novos pedidos dessa categoria.
-      </p>
+      <p className="text-xs text-amber-300/60">Arquivar não apaga histórico — apenas impede novos pedidos dessa categoria.</p>
+    </div>
+  );
+}
+
+// ── Cupons ─────────────────────────────────────────────────────────────────
+type Cupon = {
+  id: string; code: string; discount_type: "percent" | "fixed"; discount_value: number;
+  currency_code: string; starts_at: string | null; ends_at: string | null;
+  usage_limit: number | null; usage_count: number;
+  minimum_order_amount: number | null; per_account_limit: number | null;
+  active: boolean; created_at: string;
+};
+
+function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
+  const [cupons, setCupons] = useState<Cupon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [form, setForm] = useState({ code: "", discount_type: "percent" as "percent" | "fixed", discount_value: "", ends_at: "", usage_limit: "" });
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch("/api/admin/app-clyon/cupons", { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      setCupons(json.cupons ?? []);
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true); setCreateError(null);
+    try {
+      const payload: Record<string, unknown> = {
+        code: form.code.trim(),
+        discount_type: form.discount_type,
+        discount_value: Number(form.discount_value),
+      };
+      if (form.ends_at) payload.ends_at = form.ends_at;
+      if (form.usage_limit) payload.usage_limit = Number(form.usage_limit);
+      const res = await fetch("/api/admin/app-clyon/cupons", {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) { setCreateError(json.error ?? "Erro ao criar."); return; }
+      setForm({ code: "", discount_type: "percent", discount_value: "", ends_at: "", usage_limit: "" });
+      await load();
+    } catch { setCreateError("Erro de ligação."); }
+    finally { setCreating(false); }
+  }
+
+  async function toggleActive(c: Cupon) {
+    try {
+      await fetch(`/api/admin/app-clyon/cupons/${c.id}`, {
+        method: "PATCH",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !c.active }),
+      });
+      setCupons((prev) => prev.map((x) => x.id === c.id ? { ...x, active: !x.active } : x));
+    } catch { /* silently fail - will show on next load */ }
+  }
+
+  const INP = "h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrBox msg={error} onRetry={load} />;
+
+  return (
+    <div className="space-y-5">
+      {/* Formulário de criação */}
+      <form onSubmit={handleCreate} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4 space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Novo cupão</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Código</label>
+            <input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="EX: PROMO20" required className={`${INP} w-full`} />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Tipo</label>
+            <select value={form.discount_type} onChange={(e) => setForm((f) => ({ ...f, discount_type: e.target.value as "percent" | "fixed" }))} className={`${INP} w-full`}>
+              <option value="percent" className="bg-[#0A1220]">Percentagem (%)</option>
+              <option value="fixed" className="bg-[#0A1220]">Valor fixo (€)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Valor</label>
+            <input type="number" step="0.01" min="0.01" value={form.discount_value} onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))} required placeholder={form.discount_type === "percent" ? "20" : "5.00"} className={`${INP} w-full`} />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Expira em</label>
+            <input type="date" value={form.ends_at} onChange={(e) => setForm((f) => ({ ...f, ends_at: e.target.value }))} className={`${INP} w-full`} />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Limite de usos</label>
+            <input type="number" min="1" value={form.usage_limit} onChange={(e) => setForm((f) => ({ ...f, usage_limit: e.target.value }))} placeholder="Ilimitado" className={`${INP} w-full`} />
+          </div>
+        </div>
+        {createError && <p className="text-xs text-red-300">{createError}</p>}
+        <button type="submit" disabled={creating} className="rounded-xl bg-cyan-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition">
+          {creating ? "A criar..." : "Criar cupão"}
+        </button>
+      </form>
+
+      {/* Lista */}
+      {cupons.length === 0 ? (
+        <p className="py-8 text-center text-sm text-slate-600">Sem cupões criados.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+          {cupons.map((c, i) => (
+            <div key={c.id} className={`flex items-center gap-3 px-4 py-3 ${i < cupons.length - 1 ? "border-b border-white/[0.04]" : ""} ${!c.active ? "opacity-50" : ""}`}>
+              <span className="font-mono text-sm font-bold text-white">{c.code}</span>
+              <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
+                {c.discount_type === "percent" ? `${c.discount_value}%` : `${c.discount_value} ${c.currency_code}`}
+              </span>
+              {c.ends_at && (
+                <span className="text-[10px] text-slate-500">até {new Date(c.ends_at).toLocaleDateString("pt-PT")}</span>
+              )}
+              <span className="text-[10px] text-slate-600 flex-1 text-right">{c.usage_count}{c.usage_limit ? `/${c.usage_limit}` : ""} usos</span>
+              <button
+                onClick={() => toggleActive(c)}
+                className={`flex-shrink-0 rounded-xl border px-3 py-1 text-[10px] font-semibold transition ${c.active ? "border-red-500/30 text-red-400 hover:bg-red-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
+              >
+                {c.active ? "Desactivar" : "Activar"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Moedas e preços ────────────────────────────────────────────────────────
+function TabMoedas() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-[18px] border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">€</span>
+          <div>
+            <p className="text-sm font-bold text-white">EUR — Euro</p>
+            <p className="text-xs text-slate-400">Moeda principal activa</p>
+          </div>
+          <span className="ml-auto rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">Activa</span>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Código ISO",    value: "EUR" },
+            { label: "Símbolo",       value: "€" },
+            { label: "Casas decimais", value: "2" },
+          ].map((r) => (
+            <div key={r.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">{r.label}</p>
+              <p className="mt-1 text-sm font-bold text-white">{r.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
+        <p className="text-sm font-semibold text-white">Multi-moeda</p>
+        <p className="mt-1 text-xs text-slate-500">A plataforma suporta extensão para múltiplas moedas. A tabela <code className="text-slate-400">cupons.currency_code</code> já aceita qualquer código ISO. A activação de uma segunda moeda requer configuração adicional no backend de pagamentos.</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Pagamentos (internos — assistentes) ────────────────────────────────────
+function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
+  return <PagamentosPanel authHeader={authHeader} />;
+}
+
+// ── Contas (utilizadores da plataforma) ────────────────────────────────────
+type UserAccount = {
+  id: number; name: string | null; email: string;
+  phone: string | null; addressCity: string | null;
+  loginMethod: string; role: string; createdAt: string;
+};
+
+function TabContas({ authHeader }: { authHeader: Record<string, string> }) {
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch("/api/admin/users", { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      setUsers(json.users ?? []);
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrBox msg={error} onRetry={load} />;
+
+  const q = search.toLowerCase();
+  const visible = q
+    ? users.filter((u) => (u.name ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    : users;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filtrar por nome ou e-mail…"
+          className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+        />
+        <button onClick={load} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-400 hover:text-white transition">↻</button>
+      </div>
+      {visible.length === 0 ? (
+        <p className="py-8 text-center text-sm text-slate-600">Sem contas encontradas.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+          {visible.map((u, i) => (
+            <div key={u.id} className={`flex items-center gap-3 px-4 py-3 ${i < visible.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-slate-300">
+                {(u.name ?? u.email).charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{u.name ?? "—"}</p>
+                <p className="text-xs text-slate-500 truncate">{u.email}</p>
+              </div>
+              {u.addressCity && <span className="text-xs text-slate-600 flex-shrink-0">{u.addressCity}</span>}
+              <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${u.role === "admin" ? "bg-amber-500/10 text-amber-300" : "bg-white/[0.04] text-slate-400"}`}>
+                {u.role}
+              </span>
+              <span className="text-[10px] text-slate-600 flex-shrink-0">
+                {new Date(u.createdAt).toLocaleDateString("pt-PT")}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-slate-600">{visible.length} contas visíveis · A alteração de funções requer acesso de administrador geral.</p>
     </div>
   );
 }
@@ -724,9 +923,9 @@ function TabConfig() {
         </div>
       </div>
       {[
-        { title: "Regras de triagem e SLA", note: "N/D — sem tabela de SLA persistida." },
-        { title: "Modelos de comunicação",  note: "N/D — modelos não têm persistência configurável." },
-        { title: "Limites de orçamento",    note: "N/D — calculados em src/lib/pricing-helper.ts." },
+        { title: "Regras de triagem e SLA",  note: "N/D — sem tabela de SLA persistida." },
+        { title: "Modelos de comunicação",   note: "N/D — modelos não têm persistência configurável." },
+        { title: "Limites de orçamento",     note: "N/D — calculados em src/lib/pricing-helper.ts." },
       ].map((s) => (
         <div key={s.title} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
           <p className="text-sm font-semibold text-white">{s.title}</p>
@@ -788,21 +987,19 @@ function TabMetricas({ authHeader }: { authHeader: Record<string, string> }) {
       <div className="flex gap-1.5">
         {[7, 30, 90].map((d) => (
           <button key={d} onClick={() => setDays(d)}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-              days === d ? "bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30" : "text-slate-500 hover:text-slate-300"
-            }`}>{d} dias</button>
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${days === d ? "bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30" : "text-slate-500 hover:text-slate-300"}`}>
+            {d} dias
+          </button>
         ))}
       </div>
-
       {loading && <Spinner />}
       {error && <ErrBox msg={error} onRetry={load} />}
-
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Total",             value: data.summary.total, accent: "text-white" },
-              { label: "Concluídos",        value: data.summary.completed, accent: "text-emerald-400" },
+              { label: "Total",             value: data.summary.total,             accent: "text-white" },
+              { label: "Concluídos",        value: data.summary.completed,         accent: "text-emerald-400" },
               { label: "Taxa conclusão",    value: data.summary.completionRate != null ? `${data.summary.completionRate}%` : "N/D", accent: "text-emerald-400" },
               { label: "Taxa cancelamento", value: data.summary.cancellationRate != null ? `${data.summary.cancellationRate}%` : "N/D", accent: "text-red-400" },
             ].map((c) => (
@@ -812,7 +1009,6 @@ function TabMetricas({ authHeader }: { authHeader: Record<string, string> }) {
               </div>
             ))}
           </div>
-
           {data.timeSeries.length > 0 && (
             <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Volume diário</p>
@@ -826,7 +1022,6 @@ function TabMetricas({ authHeader }: { authHeader: Record<string, string> }) {
               </div>
             </div>
           )}
-
           <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Por estado</p>
             <div className="space-y-2">
@@ -835,22 +1030,17 @@ function TabMetricas({ authHeader }: { authHeader: Record<string, string> }) {
               ))}
             </div>
           </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Top categorias</p>
               {data.topCategories.length === 0 ? <p className="text-xs text-slate-600">Sem dados.</p> : (
-                <div className="space-y-2">
-                  {data.topCategories.map((c) => <MBar key={c.slug} label={c.slug} count={c.count} max={maxCat} />)}
-                </div>
+                <div className="space-y-2">{data.topCategories.map((c) => <MBar key={c.slug} label={c.slug} count={c.count} max={maxCat} />)}</div>
               )}
             </div>
             <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Top localidades</p>
               {data.topCities.length === 0 ? <p className="text-xs text-slate-600">Sem dados.</p> : (
-                <div className="space-y-2">
-                  {data.topCities.map((c) => <MBar key={c.city} label={c.city} count={c.count} max={maxCity} />)}
-                </div>
+                <div className="space-y-2">{data.topCities.map((c) => <MBar key={c.city} label={c.city} count={c.count} max={maxCity} />)}</div>
               )}
             </div>
           </div>
@@ -860,10 +1050,117 @@ function TabMetricas({ authHeader }: { authHeader: Record<string, string> }) {
   );
 }
 
+// ── Auditoria ──────────────────────────────────────────────────────────────
+type AuditEntry = {
+  id: string; request_id: string; colab_nome: string; action_type: string;
+  status_from: string | null; status_to: string | null;
+  reason: string | null; note: string | null; created_at: string;
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  status_change: "Mudança de estado", note: "Nota", update: "Actualização",
+};
+
+function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const LIMIT = 50;
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`/api/admin/app-clyon/auditoria?page=${page}&limit=${LIMIT}`, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      setEntries(json.ops ?? []);
+      setTotal(json.total ?? 0);
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, page]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrBox msg={error} onRetry={load} />;
+
+  const pages = Math.ceil(total / LIMIT);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">{total} entradas no registo de auditoria</p>
+        <button onClick={load} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 hover:text-white transition">↻ Actualizar</button>
+      </div>
+      {entries.length === 0 ? (
+        <p className="py-8 text-center text-sm text-slate-600">Sem entradas de auditoria. A tabela <code>service_request_ops</code> pode estar vazia ou não existir.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+          {entries.map((e, i) => (
+            <div key={e.id} className={`px-4 py-3 ${i < entries.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-slate-300">{e.colab_nome}</span>
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-400">{ACTION_LABELS[e.action_type] ?? e.action_type}</span>
+                {e.status_from && e.status_to && (
+                  <span className="text-[10px] text-slate-500">
+                    {STATUS_LABELS[e.status_from] ?? e.status_from} → <span className="text-cyan-400">{STATUS_LABELS[e.status_to] ?? e.status_to}</span>
+                  </span>
+                )}
+                <span className="ml-auto text-[10px] text-slate-600">{fmtDt(e.created_at)}</span>
+              </div>
+              <p className="mt-1 font-mono text-[10px] text-slate-600">Pedido: {e.request_id.slice(0, 8)}…</p>
+              {e.reason && <p className="mt-0.5 text-xs text-amber-300">Motivo: {e.reason}</p>}
+              {e.note && <p className="mt-0.5 text-xs text-slate-400 italic">{e.note}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+      {pages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-slate-400 disabled:opacity-30 hover:text-white">←</button>
+          <span className="text-xs text-slate-500">{page} / {pages}</span>
+          <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages} className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-slate-400 disabled:opacity-30 hover:text-white">→</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shell principal ────────────────────────────────────────────────────────
-export default function AppClyonEmbedded({ authHeader }: { authHeader: Record<string, string> }) {
-  const [tab, setTab] = useState<AppClyonTab>("visao-geral");
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+export default function AppClyonEmbedded({
+  authHeader,
+  activeTab: externalTab,
+  onTabChange,
+  activePedidoId: externalPedidoId,
+  onPedidoChange,
+}: {
+  authHeader: Record<string, string>;
+  activeTab?: AppClyonTab;
+  onTabChange?: (tab: AppClyonTab) => void;
+  activePedidoId?: string | null;
+  onPedidoChange?: (id: string | null) => void;
+}) {
+  const [internalTab, setInternalTab] = useState<AppClyonTab>("visao-geral");
+  const [internalPedidoId, setInternalPedidoId] = useState<string | null>(null);
+
+  const tab = externalTab ?? internalTab;
+  const selectedOrderId = externalPedidoId !== undefined ? externalPedidoId : internalPedidoId;
+
+  function handleTabChange(newTab: AppClyonTab) {
+    if (onTabChange) onTabChange(newTab);
+    else setInternalTab(newTab);
+    if (newTab !== "pedidos") {
+      if (onPedidoChange) onPedidoChange(null);
+      else setInternalPedidoId(null);
+    }
+  }
+
+  function handlePedidoChange(id: string | null) {
+    if (onPedidoChange) onPedidoChange(id);
+    else setInternalPedidoId(id);
+  }
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#080F1A]">
@@ -875,10 +1172,10 @@ export default function AppClyonEmbedded({ authHeader }: { authHeader: Record<st
 
       {/* Sub-tabs */}
       <div className="flex overflow-x-auto border-b border-white/[0.05] px-4 scrollbar-none">
-        {TABS.map((t) => (
+        {CLYON_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setSelectedOrderId(null); }}
+            onClick={() => handleTabChange(t.id)}
             className={`flex-shrink-0 border-b-2 px-4 py-3 text-xs font-semibold transition ${
               tab === t.id
                 ? "border-cyan-400 text-cyan-300"
@@ -892,25 +1189,30 @@ export default function AppClyonEmbedded({ authHeader }: { authHeader: Record<st
 
       {/* Conteúdo */}
       <div className="p-5">
-        {tab === "visao-geral" && <TabVisaoGeral authHeader={authHeader} />}
+        {tab === "visao-geral"   && <TabVisaoGeral authHeader={authHeader} />}
         {tab === "pedidos" && !selectedOrderId && (
           <AppPedidosClient
             externalAuthHeader={authHeader}
-            onRowClick={(id) => setSelectedOrderId(id)}
+            onRowClick={(id) => handlePedidoChange(id)}
           />
         )}
         {tab === "pedidos" && selectedOrderId && (
           <PedidoInlinePanel
             id={selectedOrderId}
             authHeader={authHeader}
-            onBack={() => setSelectedOrderId(null)}
+            onBack={() => handlePedidoChange(null)}
           />
         )}
-        {tab === "agenda"      && <TabAgenda authHeader={authHeader} />}
-        {tab === "equipa"      && <TabEquipa authHeader={authHeader} />}
-        {tab === "catalogo"    && <TabCatalogo authHeader={authHeader} />}
-        {tab === "config"      && <TabConfig />}
-        {tab === "metricas"    && <TabMetricas authHeader={authHeader} />}
+        {tab === "agenda"        && <TabAgenda authHeader={authHeader} />}
+        {tab === "profissionais" && <TabProfissionais authHeader={authHeader} />}
+        {tab === "catalogo"      && <TabCatalogo authHeader={authHeader} />}
+        {tab === "cupons"        && <TabCupons authHeader={authHeader} />}
+        {tab === "moedas"        && <TabMoedas />}
+        {tab === "pagamentos"    && <TabPagamentos authHeader={authHeader} />}
+        {tab === "contas"        && <TabContas authHeader={authHeader} />}
+        {tab === "config"        && <TabConfig />}
+        {tab === "metricas"      && <TabMetricas authHeader={authHeader} />}
+        {tab === "auditoria"     && <TabAuditoria authHeader={authHeader} />}
       </div>
     </div>
   );

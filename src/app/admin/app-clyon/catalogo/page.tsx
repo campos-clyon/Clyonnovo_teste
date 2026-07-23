@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import CatalogoClient from "./CatalogoClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Catálogo",
-  robots: "noindex,nofollow",
-};
-
-export default function CatalogoPage() {
-  return <CatalogoClient />;
+export default function CatalogoRedirect() {
+  redirect("/admin?section=app_clyon&tab=catalogo");
 }

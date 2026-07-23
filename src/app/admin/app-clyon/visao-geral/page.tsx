@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import VisaoGeralClient from "./VisaoGeralClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Visão Geral",
-  robots: "noindex,nofollow",
-};
-
-export default function VisaoGeralPage() {
-  return <VisaoGeralClient />;
+export default function VisaoGeralRedirect() {
+  redirect("/admin?section=app_clyon&tab=visao-geral");
 }

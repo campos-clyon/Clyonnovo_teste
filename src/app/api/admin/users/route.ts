@@ -57,6 +57,11 @@ export async function PATCH(request: NextRequest) {
     const { id, role, deletedAt } = body;
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
 
+    // Apenas administradores gerais podem alterar funções de conta de utilizador
+    if (role !== undefined && auth.colaborador.funcao !== "admin_geral") {
+      return NextResponse.json({ error: "Apenas administradores gerais podem alterar funções." }, { status: 403 });
+    }
+
     await ensureUsersSchema();
     await withConnection(async (conn) => {
       const updates: string[] = [];

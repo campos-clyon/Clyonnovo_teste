@@ -1,3 +1,6 @@
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+import AdminErrorBoundary from "@/components/admin/AdminErrorBoundary";
+import type { ReactNode } from "react";
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return <AdminErrorBoundary>{children}</AdminErrorBoundary>;
 }

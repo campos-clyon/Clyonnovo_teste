@@ -1,16 +1,10 @@
-import type { Metadata } from "next";
-import PedidoDetalheClient from "./PedidoDetalheClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Detalhe do Pedido — App CLYON",
-  robots: "noindex,nofollow",
-};
-
-export default async function PedidoDetalhePage({
+export default async function PedidoDetalheRedirect({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <PedidoDetalheClient id={id} />;
+  redirect(`/admin?section=app_clyon&tab=pedidos&pedido=${id}`);
 }

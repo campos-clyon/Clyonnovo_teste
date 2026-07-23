@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import ConfigClient from "./ConfigClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Configuração",
-  robots: "noindex,nofollow",
-};
-
-export default function ConfigPage() {
-  return <ConfigClient />;
+export default function ConfigRedirect() {
+  redirect("/admin?section=app_clyon&tab=config");
 }

@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import MetricasAppClient from "./MetricasAppClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Métricas",
-  robots: "noindex,nofollow",
-};
-
-export default function MetricasAppPage() {
-  return <MetricasAppClient />;
+export default function MetricasRedirect() {
+  redirect("/admin?section=app_clyon&tab=metricas");
 }

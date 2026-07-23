@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import AppClyonPedidosClient from "./AppClyonPedidosClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Pedidos",
-  robots: "noindex,nofollow",
-};
-
-export default function AppClyonPedidosPage() {
-  return <AppClyonPedidosClient />;
+export default function PedidosRedirect() {
+  redirect("/admin?section=app_clyon&tab=pedidos");
 }

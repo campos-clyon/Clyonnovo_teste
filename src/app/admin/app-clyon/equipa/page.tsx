@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import EquipaClient from "./EquipaClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Equipa",
-  robots: "noindex,nofollow",
-};
-
-export default function EquipaPage() {
-  return <EquipaClient />;
+export default function EquipaRedirect() {
+  redirect("/admin?section=app_clyon&tab=profissionais");
 }

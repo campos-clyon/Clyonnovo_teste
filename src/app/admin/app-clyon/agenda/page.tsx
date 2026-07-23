@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import AgendaClient from "./AgendaClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "App CLYON — Agenda",
-  robots: "noindex,nofollow",
-};
-
-export default function AgendaPage() {
-  return <AgendaClient />;
+export default function AgendaRedirect() {
+  redirect("/admin?section=app_clyon&tab=agenda");
 }
