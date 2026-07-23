@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -14,13 +14,6 @@ const VALID_STATUSES = [
 
 const CANCEL_STATUSES = new Set(["canceled", "rejected"]);
 
-async function requireAdmin(req: NextRequest) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return { err: NextResponse.json({ error: "Não autorizado" }, { status: 401 }), colab: null };
-  if (!colab.isAdmin) return { err: NextResponse.json({ error: "Acesso negado" }, { status: 403 }), colab: null };
-  return { err: null, colab };
-}
-
 function safeText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
@@ -28,16 +21,7 @@ function safeText(value: unknown): string | null {
   if (Array.isArray(value)) {
     return value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
   }
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    const parts: string[] = [];
-    for (const [k, v] of Object.entries(obj)) {
-      if (v !== null && v !== undefined) {
-        parts.push(`${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
-      }
-    }
-    return parts.length > 0 ? parts.join("; ") : null;
-  }
+  if (typeof value === "object") return null;
   return String(value);
 }
 
@@ -91,7 +75,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { data, error } = await sb.from("service_requests").select("*").eq("id", id).single();
     if (error || !data) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
     return NextResponse.json({ order: await enrichOrder(sb, data as Record<string, unknown>) });
-  } catch {
+  } catch (e: any) {
+    console.error("[app-pedidos/[id] GET]", e);
     return NextResponse.json({ error: "Erro interno." }, { status: 500 });
   }
 }
@@ -103,7 +88,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json() as Record<string, unknown>;
 
-  // Campos operacionais permitidos — dados originais do cliente são imutáveis
   const updates: Record<string, unknown> = {};
   if (body.status !== undefined) {
     if (!VALID_STATUSES.includes(body.status as (typeof VALID_STATUSES)[number])) {
@@ -115,7 +99,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.estimated_price !== undefined)      updates.estimated_price = body.estimated_price;
   if (body.scheduled_for !== undefined)        updates.scheduled_for = body.scheduled_for;
 
-  // Motivo obrigatório ao cancelar ou rejeitar
   if (updates.status && CANCEL_STATUSES.has(updates.status as string)) {
     const reason = typeof body.reason === "string" ? body.reason.trim() : "";
     if (!reason) {
@@ -130,10 +113,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Nada para actualizar." }, { status: 400 });
   }
 
+  const correlationId = `patch_${id.slice(0, 8)}_${Date.now().toString(36)}`;
+
   try {
     const sb = getSupabaseAdmin();
 
-    // Validar existência e obter estado actual (para status_from no log)
     const { data: current, error: fetchErr } = await sb
       .from("service_requests").select("*").eq("id", id).single();
     if (fetchErr || !current) {
@@ -145,12 +129,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const { data: patched, error: patchErr } = await sb
         .from("service_requests").update(updates).eq("id", id).select("*").single();
       if (patchErr || !patched) {
-        return NextResponse.json({ error: "Erro ao actualizar pedido." }, { status: 500 });
+        console.error("[app-pedidos/[id] PATCH] update failed", { correlationId, patchErr });
+        return NextResponse.json({ error: "Erro ao actualizar pedido.", correlation_id: correlationId }, { status: 500 });
       }
       updated = patched as Record<string, unknown>;
     }
 
-    // Registar no log de operações
+    // Auditoria bloqueante: se falhar, tentar reverter e devolver erro claro.
     const actionType = updates.status ? "status_change" : hasNote ? "note" : "update";
     const opsEntry = {
       request_id:  id,
@@ -161,13 +146,39 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       status_to:   updates.status ?? null,
       reason:      typeof body.reason === "string" ? body.reason.trim() || null : null,
       note:        hasNote ? (body.admin_note as string).trim() : null,
-      data_json:   hasUpdates ? { changes: updates } : null,
+      data_json:   hasUpdates ? { changes: updates, correlation_id: correlationId } : { correlation_id: correlationId },
     };
-    // Log em background; não falha o pedido principal se a tabela ainda não existir
-    await sb.from("service_request_ops").insert([opsEntry]).then(() => null, () => null);
+
+    const { error: opsErr } = await sb.from("service_request_ops").insert([opsEntry]);
+    if (opsErr) {
+      console.error("[app-pedidos/[id] PATCH] audit insert failed", { correlationId, opsErr });
+
+      if (hasUpdates) {
+        const revertPayload: Record<string, unknown> = {};
+        for (const k of Object.keys(updates)) {
+          revertPayload[k] = (current as Record<string, unknown>)[k] ?? null;
+        }
+        const { error: revertErr } = await sb
+          .from("service_requests").update(revertPayload).eq("id", id);
+        if (revertErr) {
+          console.error("[app-pedidos/[id] PATCH] REVERT ALSO FAILED", { correlationId, revertErr });
+          return NextResponse.json({
+            error: "Auditoria falhou e reversão da alteração também falhou. Estado inconsistente — contactar suporte.",
+            correlation_id: correlationId,
+          }, { status: 500 });
+        }
+      }
+
+      return NextResponse.json({
+        error: "Auditoria não pôde ser gravada. Alteração revertida — repete a operação.",
+        correlation_id: correlationId,
+        audit_error: opsErr.message,
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ order: await enrichOrder(sb, updated) });
-  } catch {
-    return NextResponse.json({ error: "Erro interno." }, { status: 500 });
+  } catch (e: any) {
+    console.error("[app-pedidos/[id] PATCH]", { correlationId, error: e });
+    return NextResponse.json({ error: "Erro interno.", correlation_id: correlationId }, { status: 500 });
   }
 }

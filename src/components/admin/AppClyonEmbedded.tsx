@@ -25,25 +25,93 @@ type InlineOrder = {
   details_meta?: Record<string, unknown> | null;
 };
 
+// Labels de negócio para chaves conhecidas em details_meta.
+// Mantém-se aqui para permitir tradução centralizada e evitar mostrar chaves técnicas.
+const DETAILS_LABELS: Record<string, string> = {
+  items_max: "Quantidade máxima de itens",
+  items_count: "Quantidade de itens",
+  items: "Itens",
+  distance_km: "Distância estimada (km)",
+  distance: "Distância estimada",
+  floor: "Andar",
+  floors: "Andares",
+  has_elevator: "Elevador",
+  elevator: "Elevador",
+  needs_elevator: "Necessita elevador",
+  building_type: "Tipo de edifício",
+  property_type: "Tipo de propriedade",
+  area_sqm: "Área (m²)",
+  area: "Área",
+  rooms: "Divisões",
+  bedrooms: "Quartos",
+  parking: "Estacionamento",
+  access_notes: "Notas de acesso",
+  preferred_time: "Hora preferida",
+  contact_time: "Melhor hora para contactar",
+  additional_notes: "Observações adicionais",
+  observations: "Observações",
+  volume_m3: "Volume estimado (m³)",
+  weight_kg: "Peso estimado (kg)",
+  pending_quote_id: "Orçamento pendente",
+  quote_id: "Orçamento",
+  service_type: "Tipo de serviço",
+  urgency_reason: "Motivo de urgência",
+};
+
+function labelFor(key: string): string {
+  if (DETAILS_LABELS[key]) return DETAILS_LABELS[key];
+  // Fallback: converter snake_case em Título com Espaços
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDetailValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(formatDetailValue).join(", ");
+  if (typeof value === "object") {
+    // Objecto aninhado: uma linha compacta com sub-labels
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== null && v !== undefined) parts.push(`${labelFor(k)}: ${formatDetailValue(v)}`);
+    }
+    return parts.join("; ") || "—";
+  }
+  return String(value);
+}
+
 function displayText(value: unknown, fallback = "—"): string {
   if (value === null || value === undefined) return fallback;
   if (typeof value === "string") return value || fallback;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) {
-    const joined = value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
-    return joined || fallback;
-  }
+  if (typeof value === "number" || typeof value === "boolean") return formatDetailValue(value);
+  if (Array.isArray(value)) return formatDetailValue(value) || fallback;
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
     const parts: string[] = [];
     for (const [k, v] of Object.entries(obj)) {
-      if (v !== null && v !== undefined) {
-        parts.push(`${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
-      }
+      if (v !== null && v !== undefined) parts.push(`${labelFor(k)}: ${formatDetailValue(v)}`);
     }
-    return parts.length > 0 ? parts.join("; ") : fallback;
+    return parts.length > 0 ? parts.join(" · ") : fallback;
   }
   return String(value) || fallback;
+}
+
+// Renderiza details_meta como lista de linhas rotuladas (mais legível que uma linha só)
+function DetailsMetaList({ meta }: { meta: Record<string, unknown> | null | undefined }) {
+  if (!meta || typeof meta !== "object") return null;
+  const entries = Object.entries(meta).filter(([, v]) => v !== null && v !== undefined && v !== "");
+  if (entries.length === 0) return null;
+  return (
+    <dl className="mt-2 space-y-1 rounded-lg border border-white/[0.05] bg-white/[0.02] p-3">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex gap-2 text-xs">
+          <dt className="w-40 flex-shrink-0 text-slate-500">{labelFor(k)}</dt>
+          <dd className="flex-1 text-slate-200 break-words">{formatDetailValue(v)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 type OpsEntry = {
@@ -229,6 +297,12 @@ function PedidoInlinePanel({
                 </div>
               ))}
             </dl>
+            {order.details_meta && (
+              <>
+                <p className="mt-4 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Metadados do pedido</p>
+                <DetailsMetaList meta={order.details_meta} />
+              </>
+            )}
           </div>
 
           {/* Histórico de operações */}
@@ -437,25 +511,51 @@ type AgendaOrder = {
 };
 
 const WEEKDAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const TZ = "Europe/Lisbon";
 
+// Devolve o ano/mês/dia em Lisboa como { y, m, d } — evita drift UTC.
+function lisbonParts(d: Date): { y: number; m: number; d: number; weekday: number } {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    year: "numeric", month: "2-digit", day: "2-digit", weekday: "short",
+  });
+  const parts = fmt.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  // weekday em en-GB curto: Mon=1..Sun=7 em ISO. Fazemos manualmente.
+  const wdMap: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+  return {
+    y: Number(get("year")),
+    m: Number(get("month")),
+    d: Number(get("day")),
+    weekday: wdMap[get("weekday")] ?? 1,
+  };
+}
+
+function lisbonDateStr(d: Date): string {
+  const { y, m, d: dd } = lisbonParts(d);
+  return `${y}-${String(m).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+}
+
+// Segunda-feira da semana que contém `d`, em Europe/Lisbon.
+// Retorna uma Date UTC-safe ancorada ao meio-dia local de Lisboa (evita DST edge).
 function getMonday(d: Date): Date {
-  const copy = new Date(d);
-  const day = copy.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  copy.setDate(copy.getDate() + diff);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
+  const { y, m, d: dd, weekday } = lisbonParts(d);
+  // Constrói meio-dia local de Lisboa. new Date(YYYY-MM-DDT12:00) usa TZ local do runtime,
+  // mas como só usamos lisbonDateStr para o output, chega para calcular offsets de dia.
+  const base = new Date(Date.UTC(y, m - 1, dd, 12, 0, 0));
+  base.setUTCDate(base.getUTCDate() - (weekday - 1));
+  return base;
 }
 
 function addDays(d: Date, n: number): Date {
   const r = new Date(d);
-  r.setDate(r.getDate() + n);
+  r.setUTCDate(r.getUTCDate() + n);
   return r;
 }
 
 function fmtWeekRange(monday: Date): string {
   const sunday = addDays(monday, 6);
-  const fmtD = (d: Date) => d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+  const fmtD = (dt: Date) => new Intl.DateTimeFormat("pt-PT", { timeZone: TZ, day: "2-digit", month: "short" }).format(dt);
   return `${fmtD(monday)} — ${fmtD(sunday)}`;
 }
 
@@ -467,8 +567,8 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
-    const from = weekStart.toISOString().slice(0, 10);
-    const to = addDays(weekStart, 7).toISOString().slice(0, 10);
+    const from = lisbonDateStr(weekStart);
+    const to = lisbonDateStr(addDays(weekStart, 7));
     try {
       const res = await fetch(`/api/admin/app-clyon/agenda?from=${from}&to=${to}`, { headers: authHeader });
       const json = await res.json();
@@ -484,11 +584,12 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
   const nextWeek = () => setWeekStart((w) => addDays(w, 7));
   const goToday = () => setWeekStart(getMonday(new Date()));
 
+  const todayStr = lisbonDateStr(new Date());
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i);
-    const dateStr = date.toISOString().slice(0, 10);
-    const dayOrders = orders.filter((o) => o.scheduled_for.slice(0, 10) === dateStr);
-    const isToday = dateStr === new Date().toISOString().slice(0, 10);
+    const dateStr = lisbonDateStr(date);
+    const dayOrders = orders.filter((o) => lisbonDateStr(new Date(o.scheduled_for)) === dateStr);
+    const isToday = dateStr === todayStr;
     return { date, dateStr, label: WEEKDAY_LABELS[i], dayOrders, isToday };
   });
 
@@ -531,7 +632,7 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
                   {d.label}
                 </span>
                 <span className={`text-xs font-semibold ${d.isToday ? "text-cyan-400" : "text-slate-400"}`}>
-                  {d.date.getDate()}
+                  {lisbonParts(d.date).d}
                 </span>
               </div>
               {d.dayOrders.length === 0 ? (
@@ -1181,10 +1282,17 @@ function TabMoedas() {
 
 // ── Pagamentos (clientes app) ─────────────────────────────────────────────
 type PagamentosData = {
-  stats: { total_paid: number; total_manual: number; total_earnings: number; count_paid: number; count_manual: number; count_earnings: number };
-  payments: Array<{ id: string; request_id?: string; amount: number; currency?: string; status?: string; method?: string; created_at: string }>;
-  manual: Array<{ id: string; request_id?: string; amount: number; currency?: string; method?: string; note?: string; created_at: string }>;
-  earnings: Array<{ id: string; partner_id?: string; request_id?: string; amount: number; currency?: string; status?: string; created_at: string }>;
+  stats: {
+    total_paid: number; total_manual: number; total_earnings: number; total_platform_fee?: number;
+    count_paid: number; count_manual: number; count_earnings: number;
+  };
+  payments: Array<{ id: string; request_id?: string; customer_id?: string; partner_id?: string;
+    amount: number; net_service_total?: number; platform_fee?: number;
+    status?: string; method?: string; provider?: string; failure_reason?: string; created_at: string }>;
+  manual: Array<{ id: string; request_id?: string; booking_id?: string; amount: number;
+    method?: string; status?: string; internal_note?: string; paid_at?: string; created_at: string }>;
+  earnings: Array<{ id: string; partner_id?: string; request_id?: string; payment_id?: string;
+    partner_amount: number; gross_amount?: number; status?: string; paid_at?: string; created_at: string }>;
   days: number;
 };
 
@@ -1205,7 +1313,13 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
     try {
       const res = await fetch(`/api/admin/app-clyon/pagamentos?days=${days}`, { headers: authHeader });
       const json = await res.json();
-      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      if (!res.ok) {
+        const detailStr = json.details && typeof json.details === "object"
+          ? Object.entries(json.details).map(([k, v]) => `${k}: ${v}`).join(" · ")
+          : "";
+        setError(`${json.error ?? "Erro."}${detailStr ? ` — ${detailStr}` : ""}`);
+        return;
+      }
       setData(json);
     } catch { setError("Erro de ligação."); }
     finally { setLoading(false); }
@@ -1296,31 +1410,47 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
         </p>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-          {rows.map((r: any, i) => (
-            <div key={r.id} className={`flex items-center gap-3 px-4 py-3 ${i < rows.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-              <span className="font-mono text-[10px] text-slate-600 w-16 truncate">{String(r.id).slice(0, 8)}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white">{fmtMoney(Number(r.amount ?? 0), r.currency || "EUR")}</p>
-                <p className="text-[10px] text-slate-500 truncate">
-                  {r.request_id ? `Pedido ${String(r.request_id).slice(0, 8)}` : ""}
-                  {r.partner_id ? ` · Partner ${String(r.partner_id).slice(0, 8)}` : ""}
-                  {r.method ? ` · ${r.method}` : ""}
-                  {r.note ? ` · ${r.note}` : ""}
-                </p>
+          {rows.map((r: any, i) => {
+            // amount efectivo consoante o tipo de linha
+            const displayAmount =
+              tab === "earnings"
+                ? Number(r.partner_amount ?? 0)
+                : Number(r.net_service_total ?? r.amount ?? 0);
+            const displayNote =
+              tab === "manual"   ? r.internal_note :
+              tab === "payments" ? r.failure_reason :
+                                    null;
+            return (
+              <div key={r.id} className={`flex items-center gap-3 px-4 py-3 ${i < rows.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+                <span className="font-mono text-[10px] text-slate-600 w-16 truncate">{String(r.id).slice(0, 8)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{fmtMoney(displayAmount)}</p>
+                  <p className="text-[10px] text-slate-500 truncate">
+                    {r.request_id ? `Pedido ${String(r.request_id).slice(0, 8)}` : ""}
+                    {r.partner_id ? ` · Partner ${String(r.partner_id).slice(0, 8)}` : ""}
+                    {r.customer_id ? ` · Cliente ${String(r.customer_id).slice(0, 8)}` : ""}
+                    {r.method ? ` · ${r.method}` : ""}
+                    {r.provider ? ` · ${r.provider}` : ""}
+                    {displayNote ? ` · ${displayNote}` : ""}
+                  </p>
+                </div>
+                {r.status && (
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    ["paid", "captured", "succeeded", "completed"].includes(String(r.status))
+                      ? "bg-emerald-500/15 text-emerald-300" :
+                    ["pending", "authorized", "available"].includes(String(r.status))
+                      ? "bg-amber-500/15 text-amber-300" :
+                    ["failed", "refunded", "canceled"].includes(String(r.status))
+                      ? "bg-red-500/15 text-red-300" :
+                    "bg-slate-500/15 text-slate-400"
+                  }`}>{r.status}</span>
+                )}
+                <span className="text-[10px] text-slate-600 flex-shrink-0">
+                  {new Date(r.created_at).toLocaleDateString("pt-PT")}
+                </span>
               </div>
-              {r.status && (
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  r.status === "paid" || r.status === "succeeded" ? "bg-emerald-500/15 text-emerald-300" :
-                  r.status === "pending" ? "bg-amber-500/15 text-amber-300" :
-                  r.status === "failed" ? "bg-red-500/15 text-red-300" :
-                  "bg-slate-500/15 text-slate-400"
-                }`}>{r.status}</span>
-              )}
-              <span className="text-[10px] text-slate-600 flex-shrink-0">
-                {new Date(r.created_at).toLocaleDateString("pt-PT")}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
