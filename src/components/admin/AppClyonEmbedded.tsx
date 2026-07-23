@@ -1,9 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import * as LucideIcons from "lucide-react";
+import { Package } from "lucide-react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
+
+// Converte um nome kebab-case (guardado em service_categories.icon) num componente
+// lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
+function CategoryIcon({ name, className = "h-5 w-5" }: { name: string | null; className?: string }) {
+  if (!name) return <Package className={className} />;
+  const key = name
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+  const Icon = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[key];
+  return Icon ? <Icon className={className} /> : <Package className={className} />;
+}
 
 export type { AppClyonTab };
 
@@ -889,33 +904,99 @@ function TabCatalogo({ authHeader }: { authHeader: Record<string, string> }) {
   if (loading) return <Spinner />;
   if (error) return <ErrBox msg={error} onRetry={load} />;
 
+  const totalCats = cats.length;
+  const activeCats = cats.filter((c) => c.is_active).length;
+  const archivedCats = totalCats - activeCats;
+  const totalPedidos = cats.reduce((s, c) => s + (c.request_count ?? 0), 0);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Cabeçalho com estatísticas */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Categorias</p>
+          <p className="mt-1 text-2xl font-bold text-cyan-300">{totalCats}</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Activas</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{activeCats}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-500/20 bg-slate-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Arquivadas</p>
+          <p className="mt-1 text-2xl font-bold text-slate-300">{archivedCats}</p>
+        </div>
+        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Pedidos totais</p>
+          <p className="mt-1 text-2xl font-bold text-violet-300">{totalPedidos}</p>
+        </div>
+      </div>
+
       {cats.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-600">Sem categorias em <code>service_categories</code>.</p>
+        <p className="py-10 text-center text-sm text-slate-600">
+          Sem categorias em <code className="rounded bg-white/[0.05] px-1 py-0.5">service_categories</code>.
+        </p>
       ) : (
-        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+        <div className="overflow-hidden rounded-2xl border border-white/[0.07]">
           {cats.map((cat, i) => (
-            <div key={cat.slug} className={`flex items-center gap-3 px-4 py-3 ${i < cats.length - 1 ? "border-b border-white/[0.04]" : ""} ${!cat.is_active ? "opacity-50" : ""}`}>
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-lg">{cat.icon || "📦"}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white">{cat.name}</p>
-                <p className="text-[10px] font-mono text-slate-600">{cat.slug}</p>
+            <div
+              key={cat.slug}
+              className={`grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-4 transition ${
+                i < cats.length - 1 ? "border-b border-white/[0.04]" : ""
+              } ${!cat.is_active ? "opacity-60" : "hover:bg-white/[0.02]"}`}
+            >
+              {/* Ícone */}
+              <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${
+                cat.is_active ? "bg-cyan-500/[0.08] text-cyan-300" : "bg-white/[0.04] text-slate-500"
+              }`}>
+                <CategoryIcon name={cat.icon} className="h-5 w-5" />
               </div>
-              <span className="text-xs font-bold text-white">{cat.request_count}</span>
-              <span className="text-[10px] text-slate-600 mr-2">pedidos</span>
+
+              {/* Nome + slug + descrição opcional */}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-white truncate">{cat.name}</p>
+                  {!cat.is_active && (
+                    <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      Arquivada
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 font-mono text-[10px] text-slate-600">{cat.slug}</p>
+                {cat.description && (
+                  <p className="mt-1 text-xs text-slate-500 line-clamp-1">{cat.description}</p>
+                )}
+              </div>
+
+              {/* Contagem de pedidos */}
+              <div className="text-right">
+                <p className={`text-lg font-bold ${cat.request_count > 0 ? "text-white" : "text-slate-600"}`}>
+                  {cat.request_count}
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  {cat.request_count === 1 ? "pedido" : "pedidos"}
+                </p>
+              </div>
+
+              {/* Botão Arquivar / Activar — largura fixa */}
               <button
                 onClick={() => toggle(cat)}
                 disabled={toggling === cat.slug}
-                className={`flex-shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${cat.is_active ? "border-red-500/30 text-red-400 hover:bg-red-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
+                className={`flex w-24 flex-shrink-0 items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                  cat.is_active
+                    ? "border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                }`}
               >
-                {toggling === cat.slug ? "..." : cat.is_active ? "Arquivar" : "Activar"}
+                {toggling === cat.slug ? "…" : cat.is_active ? "Arquivar" : "Activar"}
               </button>
             </div>
           ))}
         </div>
       )}
-      <p className="text-xs text-amber-300/60">Arquivar não apaga histórico — apenas impede novos pedidos dessa categoria.</p>
+
+      <p className="rounded-xl border border-amber-500/10 bg-amber-500/[0.03] px-3 py-2 text-xs text-amber-300/70">
+        Arquivar uma categoria não elimina o histórico — apenas impede novos pedidos dessa categoria.
+      </p>
     </div>
   );
 }
