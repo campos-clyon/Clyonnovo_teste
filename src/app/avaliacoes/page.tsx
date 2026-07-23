@@ -49,8 +49,8 @@ const aggregateRatingSchema = {
 
 const STATS = [
   { value: "5.0", label: "Classificação média", sub: "Google Business" },
-  { value: "32", label: "Avaliações Google", sub: "todas verificadas" },
-  { value: "156+", label: "Trabalhos realizados", sub: "e a contar" },
+  { value: "163", label: "Avaliações verificadas", sub: "combinadas" },
+  { value: "188+", label: "Trabalhos realizados", sub: "e a contar" },
   { value: "100%", label: "Recomendariam", sub: "com base nas respostas" },
 ];
 

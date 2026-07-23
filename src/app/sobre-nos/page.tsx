@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 const values = [
   "Resposta rápida e humana desde o primeiro contacto",
   "Orçamento claro antes da marcação",
-  "Execucao profissional no local com foco em cuidado",
+  "Execução profissional no local com foco em cuidado",
   "Cobertura forte em Lisboa, Margem Sul e Setúbal",
 ];
 
@@ -45,7 +45,7 @@ const clientTypes = [
   "Particulares que precisam de libertar espaço em casa",
   "Senhorios e gestores de património em trocas de inquilino",
   "Empresas e escritórios com necessidade de recolha ou limpeza",
-  "Condominios, obras e equipas técnicas com pedidos pontuais",
+  "Condomínios, obras e equipas técnicas com pedidos pontuais",
 ];
 
 const processSteps = [
@@ -69,7 +69,7 @@ export default function SobreNosPage() {
     <div className="min-h-screen bg-white">
       <section className="relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(90deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,1)_52%)]" />
-        <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
+        <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-12 sm:px-6 sm:pt-16 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">
             <div>
               <h1 className="mt-5 max-w-[12ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
@@ -89,7 +89,7 @@ export default function SobreNosPage() {
                   <div key={region.slug} className="flex items-start gap-3">
                     <MapPin className="mt-1 h-4 w-4 text-cyan-600" />
                     <p className="text-sm leading-7 text-slate-600">
-                      Operacao ativa em {region.name} com resposta para recolhas,
+                      Operação ativa em {region.name} com resposta para recolhas,
                       limpezas e pedidos urgentes.
                     </p>
                   </div>
@@ -145,10 +145,10 @@ export default function SobreNosPage() {
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
                 Nem tudo o que sai de um imóvel deve seguir o mesmo destino. Sempre
-                que o estado dos materiais o permite, a equipa faz separacao e triagem
-                para reaproveitamento, doacao ou encaminhamento adequado. Esse cuidado
-                reduz desperdicio e melhora a qualidade do serviço para quem pede uma
-                solucao completa.
+                que o estado dos materiais o permite, a equipa faz separação e triagem
+                para reaproveitamento, doação ou encaminhamento adequado. Esse cuidado
+                reduz desperdício e melhora a qualidade do serviço para quem pede uma
+                solução completa.
               </p>
             </div>
           </div>
