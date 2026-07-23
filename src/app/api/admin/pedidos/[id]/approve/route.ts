@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { approveSimulatorOrder, getSimulatorOrderById, updateSimulatorOrder, setOrcamentoToken } from "@/lib/db";
+import { approveSimulatorOrder, getSimulatorOrderById, updateSimulatorOrder, setOrcamentoToken, withConnection } from "@/lib/db";
 import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
 import { sendOrcamentoEmail } from "@/lib/email-orcamento";
+import { sendNewJobEmailToProvider } from "@/lib/email-parceiro";
+import { normalize } from "@/lib/coverage";
 
 export const runtime = "nodejs";
 
@@ -52,6 +54,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       token,
       orderId:       Number(id),
     }).catch(() => {});
+  }
+
+  // Notificar parceiros ativos nas zonas que cobrem a cidade do pedido
+  if (order?.city) {
+    const normalizedCity = normalize(order.city);
+    withConnection(async (conn) => {
+      // Buscar parceiros ativos que cobrem esta zona
+      const [providers] = await conn.execute(
+        `SELECT p.id, p.name, p.email
+         FROM providers p
+         INNER JOIN provider_coverage pc ON pc.providerId = p.id
+         WHERE p.isActive = 1 AND p.email IS NOT NULL AND p.email != '' AND pc.isActive = 1`,
+      ) as [Array<{ id: number; name: string; email: string | null }>, unknown];
+
+      for (const prov of providers) {
+        if (!prov.email) continue;
+        const [zones] = await conn.execute(
+          "SELECT zone FROM provider_coverage WHERE providerId = ? AND isActive = 1",
+          [prov.id],
+        ) as [Array<{ zone: string }>, unknown];
+        const coversCity = zones.some((z) => {
+          const nz = normalize(z.zone);
+          return normalizedCity.includes(nz) || nz.includes(normalizedCity);
+        });
+        if (coversCity) {
+          sendNewJobEmailToProvider({
+            to:           prov.email,
+            providerName: prov.name,
+            serviceType:  order.serviceType ?? null,
+            city:         order.city ?? null,
+            precoFinalIva: Number((order as any).precoFinalIva ?? 0) || null,
+            orderId:      Number(id),
+          }).catch(() => {});
+        }
+      }
+    }).catch((err) => console.error("[approve] falha ao notificar parceiros:", err));
   }
 
   return NextResponse.json({ ok: true, order });

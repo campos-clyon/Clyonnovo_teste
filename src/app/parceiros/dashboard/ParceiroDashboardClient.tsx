@@ -36,6 +36,7 @@ export default function ParceiroDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [ganhos, setGanhos] = useState<Ganhos | null>(null);
 
   const loadPedidos = useCallback(async () => {
@@ -92,6 +93,28 @@ export default function ParceiroDashboardClient() {
       setError("Erro de ligação. Tente novamente.");
     } finally {
       setAcceptingId(null);
+    }
+  }
+
+  async function handleUpdateStatus(orderId: number, action: "iniciar" | "concluir") {
+    setUpdatingId(orderId);
+    setError("");
+    try {
+      const res = await fetch(`/api/parceiros/pedidos/${orderId}/${action}`, {
+        method: "POST",
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Não foi possível atualizar o estado do pedido.");
+        return;
+      }
+      await loadPedidos();
+      await loadGanhos();
+    } catch {
+      setError("Erro de ligação. Tente novamente.");
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -203,16 +226,57 @@ export default function ParceiroDashboardClient() {
             <p className="text-sm text-slate-400">Ainda não aceitaste nenhum trabalho.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {mine.map((order) => (
-                <div
-                  key={order.id}
-                  className="rounded-[24px] border border-white/[0.08] bg-white/[0.02] p-5"
-                >
-                  <p className="text-sm font-semibold text-white">{order.serviceType ?? "Serviço"}</p>
-                  <p className="mt-1 text-xs text-slate-400">{order.city ?? "Zona não indicada"}</p>
-                  {order.address && <p className="mt-2 text-xs text-slate-500">{order.address}</p>}
-                </div>
-              ))}
+              {mine.map((order) => {
+                const isConcluido = order.status === "concluido";
+                const isEmExecucao = order.status === "em_execucao";
+                const statusLabel = isConcluido
+                  ? "Concluído"
+                  : isEmExecucao
+                  ? "Em curso"
+                  : "Aceite";
+                const statusColor = isConcluido
+                  ? "text-emerald-400"
+                  : isEmExecucao
+                  ? "text-amber-400"
+                  : "text-cyan-400";
+
+                return (
+                  <div
+                    key={order.id}
+                    className="rounded-[24px] border border-white/[0.08] bg-white/[0.02] p-5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white">{order.serviceType ?? "Serviço"}</p>
+                        <p className="mt-1 text-xs text-slate-400">{order.city ?? "Zona não indicada"}</p>
+                        {order.address && <p className="mt-1 text-xs text-slate-500">{order.address}</p>}
+                      </div>
+                      <span className={`shrink-0 text-xs font-semibold ${statusColor}`}>{statusLabel}</span>
+                    </div>
+
+                    {!isConcluido && (
+                      <div className="mt-4 flex gap-2">
+                        {!isEmExecucao && (
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, "iniciar")}
+                            disabled={updatingId === order.id}
+                            className="flex-1 rounded-xl border border-amber-500/30 py-2 text-xs font-semibold text-amber-400 transition hover:bg-amber-500/10 disabled:opacity-50"
+                          >
+                            {updatingId === order.id ? "..." : "Em Curso"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleUpdateStatus(order.id, "concluir")}
+                          disabled={updatingId === order.id}
+                          className="flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          {updatingId === order.id ? "..." : "Concluído ✓"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
