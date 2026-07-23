@@ -213,3 +213,151 @@ describe("mapeamento de redirects de rotas antigas", () => {
     expect(target).toContain("tab=pedidos");
   });
 });
+
+// ── 6. displayText — renderização defensiva contra React #31 ──────────────
+function displayText(value: unknown, fallback = "—"): string {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string") return value || fallback;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const joined = value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
+    return joined || fallback;
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== null && v !== undefined) {
+        parts.push(`${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
+      }
+    }
+    return parts.length > 0 ? parts.join("; ") : fallback;
+  }
+  return String(value) || fallback;
+}
+
+describe("displayText — renderização segura para JSX", () => {
+  it("devolve fallback para null", () => {
+    expect(displayText(null)).toBe("—");
+  });
+
+  it("devolve fallback para undefined", () => {
+    expect(displayText(undefined)).toBe("—");
+  });
+
+  it("devolve fallback para string vazia", () => {
+    expect(displayText("")).toBe("—");
+  });
+
+  it("devolve string quando é texto válido", () => {
+    expect(displayText("Limpar casa")).toBe("Limpar casa");
+  });
+
+  it("devolve número como string", () => {
+    expect(displayText(42)).toBe("42");
+  });
+
+  it("devolve boolean como string", () => {
+    expect(displayText(true)).toBe("true");
+  });
+
+  it("converte array de strings", () => {
+    expect(displayText(["a", "b"])).toBe("a, b");
+  });
+
+  it("converte array misto com JSON", () => {
+    const r = displayText(["texto", { x: 1 }]);
+    expect(r).toContain("texto");
+    expect(r).toContain("{");
+  });
+
+  it("converte o objecto real de produção (React #31) sem lançar erro", () => {
+    const prodDetails = {
+      items_max: 5,
+      items_min: 2,
+      distance_km: 12.5,
+      travel_cost: 8.00,
+      matched_keywords: ["entulho", "obra"],
+      pending_quote_id: "abc-123",
+    };
+    const result = displayText(prodDetails);
+    expect(typeof result).toBe("string");
+    expect(result).not.toBe("—");
+    expect(result).toContain("items_max");
+    expect(result).toContain("distance_km");
+    expect(result).not.toBe("[object Object]");
+  });
+
+  it("devolve fallback para objecto vazio", () => {
+    expect(displayText({})).toBe("—");
+  });
+
+  it("ignora chaves com valor null no objecto", () => {
+    const result = displayText({ a: 1, b: null });
+    expect(result).toBe("a: 1");
+  });
+
+  it("usa fallback personalizado", () => {
+    expect(displayText(null, "N/D")).toBe("N/D");
+  });
+});
+
+// ── 7. safeText (normalizador API) ────────────────────────────────────────
+function safeText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== null && v !== undefined) {
+        parts.push(`${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
+      }
+    }
+    return parts.length > 0 ? parts.join("; ") : null;
+  }
+  return String(value);
+}
+
+describe("safeText — normalizador API para campos de texto", () => {
+  it("preserva string", () => {
+    expect(safeText("hello")).toBe("hello");
+  });
+
+  it("devolve null para null", () => {
+    expect(safeText(null)).toBeNull();
+  });
+
+  it("converte número", () => {
+    expect(safeText(42)).toBe("42");
+  });
+
+  it("serializa objecto de produção como texto legível", () => {
+    const details = {
+      items_max: 5,
+      items_min: 2,
+      distance_km: 12.5,
+      travel_cost: 8.00,
+      matched_keywords: ["entulho", "obra"],
+      pending_quote_id: "abc-123",
+    };
+    const result = safeText(details);
+    expect(typeof result).toBe("string");
+    expect(result).not.toBeNull();
+    expect(result!).toContain("items_max: 5");
+    expect(result!).toContain("distance_km: 12.5");
+    expect(result!).toContain("pending_quote_id: abc-123");
+  });
+
+  it("devolve null para objecto vazio", () => {
+    expect(safeText({})).toBeNull();
+  });
+
+  it("serializa array", () => {
+    expect(safeText(["a", "b"])).toBe("a, b");
+  });
+});

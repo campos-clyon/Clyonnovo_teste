@@ -16,13 +16,35 @@ type AppStatus =
 
 type InlineOrder = {
   id: string; status: AppStatus; urgency: string;
-  details: string | null; notes: string | null;
-  address_line: string | null; city: string | null; region: string | null;
+  details: unknown; notes: unknown;
+  address_line: unknown; city: unknown; region: unknown;
   category_slug: string | null; estimated_price: number | null;
   scheduled_for: string | null; photos: string[]; created_at: string;
-  client_name: string | null; client_email: string | null; client_phone: string | null;
-  category_name: string | null; category_icon: string | null;
+  client_name: unknown; client_email: unknown; client_phone: unknown;
+  category_name: unknown; category_icon: string | null;
+  details_meta?: Record<string, unknown> | null;
 };
+
+function displayText(value: unknown, fallback = "—"): string {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string") return value || fallback;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const joined = value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
+    return joined || fallback;
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== null && v !== undefined) {
+        parts.push(`${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
+      }
+    }
+    return parts.length > 0 ? parts.join("; ") : fallback;
+  }
+  return String(value) || fallback;
+}
 
 type OpsEntry = {
   id: string; action_type: string; status_from: string | null; status_to: string | null;
@@ -193,12 +215,12 @@ function PedidoInlinePanel({
             <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Pedido original do cliente (só leitura)</p>
             <dl className="space-y-2 text-sm">
               {[
-                ["Categoria", order.category_name ?? order.category_slug ?? "—"],
-                ["Morada", order.address_line ?? "—"],
-                ["Cidade", order.city ?? "—"],
-                ["Região", order.region ?? "—"],
-                ["Descrição", order.details ?? "—"],
-                ["Notas", order.notes ?? "—"],
+                ["Categoria", displayText(order.category_name ?? order.category_slug)],
+                ["Morada", displayText(order.address_line)],
+                ["Cidade", displayText(order.city)],
+                ["Região", displayText(order.region)],
+                ["Descrição", displayText(order.details)],
+                ["Notas", displayText(order.notes)],
                 ["Criado", fmtDt(order.created_at)],
               ].map(([k, v]) => (
                 <div key={k} className="flex gap-2">
@@ -238,8 +260,8 @@ function PedidoInlinePanel({
         <div className="space-y-4">
           <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Cliente</p>
-            <p className="text-sm font-medium text-white">{order.client_name || "—"}</p>
-            {order.client_phone && (
+            <p className="text-sm font-medium text-white">{displayText(order.client_name)}</p>
+            {typeof order.client_phone === "string" && order.client_phone && (
               <a href={`tel:${order.client_phone}`} className="mt-2 flex items-center gap-1.5 text-xs text-cyan-400 hover:underline">
                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -247,7 +269,7 @@ function PedidoInlinePanel({
                 {order.client_phone}
               </a>
             )}
-            {order.client_email && (
+            {typeof order.client_email === "string" && order.client_email && (
               <a href={`mailto:${order.client_email}`} className="mt-1 flex items-center gap-1.5 text-xs text-cyan-400 hover:underline">
                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -317,11 +339,6 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Concluído", in_dispute: "Disputa", canceled: "Cancelado", rejected: "Rejeitado",
 };
 
-const COVERAGE_ZONES = [
-  "Lisboa", "Almada", "Setúbal", "Seixal", "Barreiro", "Montijo",
-  "Sesimbra", "Palmela", "Moita", "Alcochete", "Loures", "Amadora",
-  "Sintra", "Cascais", "Oeiras", "Vila Franca de Xira",
-];
 
 // ── Visão Geral ────────────────────────────────────────────────────────────
 type VisaoGeral = {
@@ -909,33 +926,6 @@ function TabContas({ authHeader }: { authHeader: Record<string, string> }) {
   );
 }
 
-// ── Configuração ───────────────────────────────────────────────────────────
-function TabConfig() {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
-        <p className="text-sm font-semibold text-white">Zonas de cobertura</p>
-        <p className="mb-3 text-xs text-slate-500">Fonte: código — sem tabela de configuração.</p>
-        <div className="flex flex-wrap gap-2">
-          {COVERAGE_ZONES.map((z) => (
-            <span key={z} className="rounded-full border border-white/[0.07] bg-white/[0.04] px-3 py-1 text-xs text-slate-300">{z}</span>
-          ))}
-        </div>
-      </div>
-      {[
-        { title: "Regras de triagem e SLA",  note: "N/D — sem tabela de SLA persistida." },
-        { title: "Modelos de comunicação",   note: "N/D — modelos não têm persistência configurável." },
-        { title: "Limites de orçamento",     note: "N/D — calculados em src/lib/pricing-helper.ts." },
-      ].map((s) => (
-        <div key={s.title} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
-          <p className="text-sm font-semibold text-white">{s.title}</p>
-          <p className="mt-1 text-xs text-slate-500">{s.note}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Métricas ───────────────────────────────────────────────────────────────
 type Metricas = {
   summary: { total: number; completed: number; cancelled: number; completionRate: number | null; cancellationRate: number | null };
@@ -1210,7 +1200,6 @@ export default function AppClyonEmbedded({
         {tab === "moedas"        && <TabMoedas />}
         {tab === "pagamentos"    && <TabPagamentos authHeader={authHeader} />}
         {tab === "contas"        && <TabContas authHeader={authHeader} />}
-        {tab === "config"        && <TabConfig />}
         {tab === "metricas"      && <TabMetricas authHeader={authHeader} />}
         {tab === "auditoria"     && <TabAuditoria authHeader={authHeader} />}
       </div>

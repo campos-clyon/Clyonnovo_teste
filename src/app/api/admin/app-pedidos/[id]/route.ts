@@ -21,9 +21,43 @@ async function requireAdmin(req: NextRequest) {
   return { err: null, colab };
 }
 
+function safeText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== null && v !== undefined) {
+        parts.push(`${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
+      }
+    }
+    return parts.length > 0 ? parts.join("; ") : null;
+  }
+  return String(value);
+}
+
+function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...row };
+  normalized.details = safeText(row.details);
+  normalized.notes = safeText(row.notes);
+  normalized.address_line = safeText(row.address_line);
+  normalized.city = safeText(row.city);
+  normalized.region = safeText(row.region);
+  if (row.details !== null && typeof row.details === "object") {
+    normalized.details_meta = row.details;
+  }
+  return normalized;
+}
+
 async function enrichOrder(sb: ReturnType<typeof getSupabaseAdmin>, row: Record<string, unknown>) {
-  const customerId = row.customer_id as string | null;
-  const categorySlug = row.category_slug as string | null;
+  const safe = normalizeOrder(row);
+  const customerId = safe.customer_id as string | null;
+  const categorySlug = safe.category_slug as string | null;
 
   const [profileRes, catRes] = await Promise.all([
     customerId
@@ -38,7 +72,7 @@ async function enrichOrder(sb: ReturnType<typeof getSupabaseAdmin>, row: Record<
   const cat = (catRes.data as Record<string, unknown> | null) ?? {};
 
   return {
-    ...row,
+    ...safe,
     client_name:    profile.full_name  ?? null,
     client_email:   profile.email      ?? null,
     client_phone:   profile.phone      ?? null,
