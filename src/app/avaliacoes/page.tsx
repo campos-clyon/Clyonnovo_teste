@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Star, Quote, MessageCircle } from "lucide-react";
 
+import HeroBackground from "@/components/HeroBackground";
 import { reviews } from "@/lib/reviews-data";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 
@@ -59,67 +60,88 @@ export default function AvaliacoesPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_30%),linear-gradient(160deg,rgba(236,254,255,0.9)_0%,rgba(255,255,255,1)_55%)]" />
+      <section className="relative overflow-hidden">
+        <HeroBackground />
 
-        <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pb-20">
-          <div className="mt-10 grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h1 className="mt-5 text-[2.4rem] font-bold leading-[1.06] tracking-tight text-[#0B1929] sm:text-5xl lg:text-[3.2rem]">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:grid lg:min-h-[560px] lg:grid-cols-[1fr_420px] lg:items-center lg:gap-12 lg:px-8 lg:py-0 xl:grid-cols-[1fr_460px]">
+
+            {/* ── Left: copy ───────────────────────────────────────────── */}
+            <div className="mb-8 lg:mb-0">
+
+              {/* H1 */}
+              <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[#0B1929] sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
                 O que dizem os clientes{" "}
-                <span className="text-cyan-500">sobre a CLYON</span>
+                <span className="text-cyan-600">sobre a CLYON</span>
               </h1>
-              <p className="mt-5 max-w-lg text-base leading-relaxed text-slate-500 sm:text-lg">
-                Rapidez, profissionalismo e preço justo — estes são os três temas que dominam as avaliações
-                de quem já usou a CLYON em Lisboa, Margem Sul e Setúbal.
+
+              {/* Subtitle */}
+              <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
+                Rapidez, profissionalismo e preço justo — estes são os três temas
+                que dominam as avaliações de quem já usou a CLYON em Lisboa,
+                Margem Sul e Setúbal.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
+
+              {/* CTAs */}
+              <div className="mt-5 flex flex-wrap gap-2 sm:mt-7 sm:gap-3">
                 <Link
                   href="/simulador"
-                  className="inline-flex h-11 items-center rounded-xl bg-cyan-500 px-6 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-cyan-400"
+                  className="inline-flex h-11 items-center rounded-xl bg-cyan-500 px-5 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-cyan-400"
                 >
-                  Pedir Orçamento Grátis
+                  Pedir orçamento grátis
                 </Link>
                 <a
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
+                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#25D366] px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
                 >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </a>
               </div>
+
+              {/* Trust signals */}
+              <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
+                <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
+                  <span className="text-amber-500">★★★★★</span>
+                  <span>5,0 · 163 avaliações</span>
+                </span>
+                <span className="text-slate-300">·</span>
+                <span className="text-xs text-slate-500 sm:text-sm">100% recomendariam</span>
+                <span className="hidden text-slate-300 sm:inline">·</span>
+                <span className="hidden text-xs text-slate-500 sm:inline sm:text-sm">Lisboa · Margem Sul · Setúbal</span>
+              </div>
             </div>
 
-            {/* Rating card */}
-            <div className="rounded-3xl border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-20px_rgba(14,116,144,0.15)]">
-              <div className="flex items-end gap-4">
-                <div className="text-7xl font-black leading-none text-[#0B1929]">5.0</div>
-                <div className="pb-2">
-                  <div className="flex gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-6 w-6 fill-amber-400 text-amber-400" />
-                    ))}
+            {/* ── Right: rating card ───────────────────────────────────── */}
+            <div className="lg:py-14">
+              <div className="rounded-3xl border border-cyan-100 bg-white/95 p-6 shadow-[0_24px_60px_-20px_rgba(14,116,144,0.18)] backdrop-blur-sm sm:p-7">
+                <div className="flex items-end gap-4">
+                  <div className="text-6xl font-black leading-none text-[#0B1929] sm:text-7xl">5.0</div>
+                  <div className="pb-2">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400 sm:h-6 sm:w-6" />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500 sm:text-sm">163 avaliações combinadas</p>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500">163 avaliações combinadas</p>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+                  Clientes destacam rapidez, simpatia, limpeza final e clareza no
+                  orçamento — serviço após serviço.
+                </p>
+                <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
+                  {STATS.map((s) => (
+                    <div key={s.label} className="rounded-2xl bg-[#F4F8FB] p-3 sm:p-4">
+                      <div className="text-xl font-black text-cyan-600 sm:text-2xl">{s.value}</div>
+                      <div className="mt-0.5 text-[11px] font-semibold text-[#0B1929] sm:text-xs">{s.label}</div>
+                      <div className="text-[10px] text-slate-400 sm:text-xs">{s.sub}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <p className="mt-5 text-base leading-7 text-slate-600">
-                Clientes destacam rapidez, simpatia, limpeza final e clareza no
-                orçamento. É assim que a CLYON constrói confiança, serviço após serviço.
-              </p>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                {STATS.map((s) => (
-                  <div key={s.label} className="rounded-2xl bg-[#F4F8FB] p-4">
-                    <div className="text-2xl font-black text-cyan-600">{s.value}</div>
-                    <div className="mt-0.5 text-xs font-semibold text-[#0B1929]">{s.label}</div>
-                    <div className="text-xs text-slate-400">{s.sub}</div>
-                  </div>
-                ))}
-              </div>
             </div>
-          </div>
         </div>
       </section>
 
