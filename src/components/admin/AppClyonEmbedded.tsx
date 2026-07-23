@@ -286,7 +286,7 @@ function PedidoInlinePanel({
                 <label className={IL}>Estado</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} className={INP}>
                   {INLINE_VALID_STATUSES.map((s) => (
-                    <option key={s} value={s} className="bg-[#0A1220]">{INLINE_STATUS_CFG[s].label}</option>
+                    <option key={s} value={s} className="bg-[#0E1830]">{INLINE_STATUS_CFG[s].label}</option>
                   ))}
                 </select>
               </div>
@@ -299,9 +299,9 @@ function PedidoInlinePanel({
               <div>
                 <label className={IL}>Urgência</label>
                 <select value={urgency} onChange={(e) => setUrgency(e.target.value)} className={INP}>
-                  <option value="normal" className="bg-[#0A1220]">Normal</option>
-                  <option value="urgent" className="bg-[#0A1220]">Urgente</option>
-                  <option value="flexible" className="bg-[#0A1220]">Flexível</option>
+                  <option value="normal" className="bg-[#0E1830]">Normal</option>
+                  <option value="urgent" className="bg-[#0E1830]">Urgente</option>
+                  <option value="flexible" className="bg-[#0E1830]">Flexível</option>
                 </select>
               </div>
               <div>
@@ -687,13 +687,22 @@ type Cupon = {
   active: boolean; created_at: string;
 };
 
+type CuponForm = {
+  code: string; discount_type: "percent" | "fixed"; discount_value: string;
+  ends_at: string; usage_limit: string; per_account_limit: string; minimum_order_amount: string;
+};
+
+const EMPTY_FORM: CuponForm = { code: "", discount_type: "percent", discount_value: "", ends_at: "", usage_limit: "", per_account_limit: "", minimum_order_amount: "" };
+
 function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
   const [cupons, setCupons] = useState<Cupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [form, setForm] = useState({ code: "", discount_type: "percent" as "percent" | "fixed", discount_value: "", ends_at: "", usage_limit: "" });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState<CuponForm>(EMPTY_FORM);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -708,9 +717,34 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleCreate(e: React.FormEvent) {
+  function openEdit(c: Cupon) {
+    setEditingId(c.id);
+    setShowCreate(false);
+    setForm({
+      code: c.code, discount_type: c.discount_type, discount_value: String(c.discount_value),
+      ends_at: c.ends_at ? c.ends_at.slice(0, 10) : "", usage_limit: c.usage_limit != null ? String(c.usage_limit) : "",
+      per_account_limit: c.per_account_limit != null ? String(c.per_account_limit) : "",
+      minimum_order_amount: c.minimum_order_amount != null ? String(c.minimum_order_amount) : "",
+    });
+    setSaveError(null);
+  }
+
+  function openCreate() {
+    setEditingId(null);
+    setShowCreate(true);
+    setForm(EMPTY_FORM);
+    setSaveError(null);
+  }
+
+  function closePanel() {
+    setEditingId(null);
+    setShowCreate(false);
+    setSaveError(null);
+  }
+
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setCreating(true); setCreateError(null);
+    setSaving(true); setSaveError(null);
     try {
       const payload: Record<string, unknown> = {
         code: form.code.trim(),
@@ -719,17 +753,22 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
       };
       if (form.ends_at) payload.ends_at = form.ends_at;
       if (form.usage_limit) payload.usage_limit = Number(form.usage_limit);
-      const res = await fetch("/api/admin/app-clyon/cupons", {
-        method: "POST",
+      if (form.per_account_limit) payload.per_account_limit = Number(form.per_account_limit);
+      if (form.minimum_order_amount) payload.minimum_order_amount = Number(form.minimum_order_amount);
+
+      const url = editingId ? `/api/admin/app-clyon/cupons/${editingId}` : "/api/admin/app-clyon/cupons";
+      const method = editingId ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { ...authHeader, "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
-      if (!res.ok) { setCreateError(json.error ?? "Erro ao criar."); return; }
-      setForm({ code: "", discount_type: "percent", discount_value: "", ends_at: "", usage_limit: "" });
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao guardar."); return; }
+      closePanel();
       await load();
-    } catch { setCreateError("Erro de ligação."); }
-    finally { setCreating(false); }
+    } catch { setSaveError("Erro de ligação."); }
+    finally { setSaving(false); }
   }
 
   async function toggleActive(c: Cupon) {
@@ -740,75 +779,190 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
         body: JSON.stringify({ active: !c.active }),
       });
       setCupons((prev) => prev.map((x) => x.id === c.id ? { ...x, active: !x.active } : x));
-    } catch { /* silently fail - will show on next load */ }
+    } catch { /* will show on next load */ }
   }
 
-  const INP = "h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
+  const panelOpen = showCreate || editingId !== null;
+  const activeCupons = cupons.filter((c) => c.active);
+  const totalUsage = cupons.reduce((s, c) => s + c.usage_count, 0);
+  const totalDiscount = cupons.reduce((s, c) => {
+    if (c.discount_type === "fixed") return s + c.discount_value * c.usage_count;
+    return s;
+  }, 0);
+
+  const INP = "h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
+  const LBL = "text-[10px] uppercase tracking-wider text-slate-500 block mb-1";
 
   if (loading) return <Spinner />;
   if (error) return <ErrBox msg={error} onRetry={load} />;
 
   return (
     <div className="space-y-5">
-      {/* Formulário de criação */}
-      <form onSubmit={handleCreate} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Novo cupão</p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Código</label>
-            <input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="EX: PROMO20" required className={`${INP} w-full`} />
-          </div>
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Tipo</label>
-            <select value={form.discount_type} onChange={(e) => setForm((f) => ({ ...f, discount_type: e.target.value as "percent" | "fixed" }))} className={`${INP} w-full`}>
-              <option value="percent" className="bg-[#0A1220]">Percentagem (%)</option>
-              <option value="fixed" className="bg-[#0A1220]">Valor fixo (€)</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Valor</label>
-            <input type="number" step="0.01" min="0.01" value={form.discount_value} onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))} required placeholder={form.discount_type === "percent" ? "20" : "5.00"} className={`${INP} w-full`} />
-          </div>
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Expira em</label>
-            <input type="date" value={form.ends_at} onChange={(e) => setForm((f) => ({ ...f, ends_at: e.target.value }))} className={`${INP} w-full`} />
-          </div>
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">Limite de usos</label>
-            <input type="number" min="1" value={form.usage_limit} onChange={(e) => setForm((f) => ({ ...f, usage_limit: e.target.value }))} placeholder="Ilimitado" className={`${INP} w-full`} />
-          </div>
+      {/* Stats cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Activos</p>
+          <p className="mt-1 text-2xl font-bold text-cyan-300">{activeCupons.length}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">{cupons.length} total criados</p>
         </div>
-        {createError && <p className="text-xs text-red-300">{createError}</p>}
-        <button type="submit" disabled={creating} className="rounded-xl bg-cyan-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition">
-          {creating ? "A criar..." : "Criar cupão"}
-        </button>
-      </form>
+        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Utilizações</p>
+          <p className="mt-1 text-2xl font-bold text-violet-300">{totalUsage}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">total acumulado</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desconto aplicado</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{totalDiscount > 0 ? `${totalDiscount.toFixed(0)} €` : "—"}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">valor fixo acumulado</p>
+        </div>
+      </div>
 
-      {/* Lista */}
-      {cupons.length === 0 ? (
-        <p className="py-8 text-center text-sm text-slate-600">Sem cupões criados.</p>
-      ) : (
-        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-          {cupons.map((c, i) => (
-            <div key={c.id} className={`flex items-center gap-3 px-4 py-3 ${i < cupons.length - 1 ? "border-b border-white/[0.04]" : ""} ${!c.active ? "opacity-50" : ""}`}>
-              <span className="font-mono text-sm font-bold text-white">{c.code}</span>
-              <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
-                {c.discount_type === "percent" ? `${c.discount_value}%` : `${c.discount_value} ${c.currency_code}`}
-              </span>
-              {c.ends_at && (
-                <span className="text-[10px] text-slate-500">até {new Date(c.ends_at).toLocaleDateString("pt-PT")}</span>
-              )}
-              <span className="text-[10px] text-slate-600 flex-1 text-right">{c.usage_count}{c.usage_limit ? `/${c.usage_limit}` : ""} usos</span>
-              <button
-                onClick={() => toggleActive(c)}
-                className={`flex-shrink-0 rounded-xl border px-3 py-1 text-[10px] font-semibold transition ${c.active ? "border-red-500/30 text-red-400 hover:bg-red-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
-              >
-                {c.active ? "Desactivar" : "Activar"}
+      {/* Header com botão novo */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-400">{cupons.length} cupões</p>
+        <button onClick={openCreate} className="rounded-xl bg-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 transition">
+          + Novo cupão
+        </button>
+      </div>
+
+      <div className={`grid gap-5 ${panelOpen ? "lg:grid-cols-[1fr_320px]" : ""}`}>
+        {/* Tabela */}
+        <div className="overflow-hidden rounded-2xl border border-white/[0.07]">
+          {cupons.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-slate-600">Sem cupões criados.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-white/[0.06] text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3 text-left">Código</th>
+                    <th className="px-3 py-3 text-left">Desconto</th>
+                    <th className="px-3 py-3 text-left">Validade</th>
+                    <th className="px-3 py-3 text-left">Utilizações</th>
+                    <th className="px-3 py-3 text-center">Lim/conta</th>
+                    <th className="px-3 py-3 text-center">Estado</th>
+                    <th className="px-3 py-3 text-right">Acções</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cupons.map((c) => {
+                    const usagePct = c.usage_limit ? Math.min(100, (c.usage_count / c.usage_limit) * 100) : 0;
+                    const isExpired = c.ends_at ? new Date(c.ends_at) < new Date() : false;
+                    return (
+                      <tr key={c.id} className={`border-b border-white/[0.03] transition hover:bg-white/[0.02] ${!c.active ? "opacity-50" : ""}`}>
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-sm font-bold text-white">{c.code}</span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-semibold text-slate-200">
+                            {c.discount_type === "percent" ? `${c.discount_value}%` : `${c.discount_value} €`}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          {c.ends_at ? (
+                            <span className={`text-xs ${isExpired ? "text-red-400" : "text-slate-400"}`}>
+                              {new Date(c.ends_at).toLocaleDateString("pt-PT")}
+                              {isExpired && <span className="ml-1 text-[9px]">(expirado)</span>}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-600">Sem limite</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-white">{c.usage_count}{c.usage_limit ? `/${c.usage_limit}` : ""}</span>
+                            {c.usage_limit && (
+                              <div className="w-16 rounded-full bg-white/[0.06]" style={{ height: 4 }}>
+                                <div className={`h-full rounded-full transition-all ${usagePct >= 90 ? "bg-red-400" : usagePct >= 60 ? "bg-amber-400" : "bg-cyan-400"}`} style={{ width: `${usagePct}%` }} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className="text-xs text-slate-400">{c.per_account_limit ?? "∞"}</span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                            c.active
+                              ? "bg-emerald-500/15 text-emerald-300"
+                              : "bg-slate-500/15 text-slate-400"
+                          }`}>
+                            <span className={`inline-block h-1.5 w-1.5 rounded-full ${c.active ? "bg-emerald-400" : "bg-slate-500"}`} />
+                            {c.active ? "Activo" : "Pausado"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => openEdit(c)} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-cyan-400 transition" title="Editar">
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                            <button onClick={() => toggleActive(c)} className={`rounded-lg p-1.5 transition ${c.active ? "text-slate-500 hover:bg-red-500/10 hover:text-red-400" : "text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"}`} title={c.active ? "Pausar" : "Activar"}>
+                              {c.active ? (
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              ) : (
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Painel lateral de edição/criação */}
+        {panelOpen && (
+          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-bold text-white">{editingId ? "Editar cupão" : "Novo cupão"}</p>
+              <button onClick={closePanel} className="rounded-lg p-1 text-slate-500 hover:text-white transition">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-          ))}
-        </div>
-      )}
+            <form onSubmit={handleSave} className="space-y-3">
+              <div>
+                <label className={LBL}>Código</label>
+                <input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="EX: PROMO20" required className={INP} disabled={!!editingId} />
+              </div>
+              <div>
+                <label className={LBL}>Tipo de desconto</label>
+                <select value={form.discount_type} onChange={(e) => setForm((f) => ({ ...f, discount_type: e.target.value as "percent" | "fixed" }))} className={INP}>
+                  <option value="percent" className="bg-[#0E1830]">Percentagem (%)</option>
+                  <option value="fixed" className="bg-[#0E1830]">Valor fixo (€)</option>
+                </select>
+              </div>
+              <div>
+                <label className={LBL}>Valor</label>
+                <input type="number" step="0.01" min="0.01" value={form.discount_value} onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))} required placeholder={form.discount_type === "percent" ? "20" : "5.00"} className={INP} />
+              </div>
+              <div>
+                <label className={LBL}>Validade</label>
+                <input type="date" value={form.ends_at} onChange={(e) => setForm((f) => ({ ...f, ends_at: e.target.value }))} className={INP} />
+              </div>
+              <div>
+                <label className={LBL}>Limite de usos (global)</label>
+                <input type="number" min="1" value={form.usage_limit} onChange={(e) => setForm((f) => ({ ...f, usage_limit: e.target.value }))} placeholder="Ilimitado" className={INP} />
+              </div>
+              <div>
+                <label className={LBL}>Limite por conta</label>
+                <input type="number" min="1" value={form.per_account_limit} onChange={(e) => setForm((f) => ({ ...f, per_account_limit: e.target.value }))} placeholder="Ilimitado" className={INP} />
+              </div>
+              <div>
+                <label className={LBL}>Valor mínimo de pedido (€)</label>
+                <input type="number" step="0.01" min="0" value={form.minimum_order_amount} onChange={(e) => setForm((f) => ({ ...f, minimum_order_amount: e.target.value }))} placeholder="0.00" className={INP} />
+              </div>
+              {saveError && <p className="text-xs text-red-300">{saveError}</p>}
+              <button type="submit" disabled={saving} className="w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition">
+                {saving ? "A guardar..." : editingId ? "Guardar alterações" : "Criar cupão"}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -816,32 +970,69 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
 // ── Moedas e preços ────────────────────────────────────────────────────────
 function TabMoedas() {
   return (
-    <div className="space-y-4">
-      <div className="rounded-[18px] border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
+    <div className="space-y-5">
+      {/* Moeda principal */}
+      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">€</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-lg font-bold text-emerald-300">€</div>
           <div>
             <p className="text-sm font-bold text-white">EUR — Euro</p>
             <p className="text-xs text-slate-400">Moeda principal activa</p>
           </div>
-          <span className="ml-auto rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">Activa</span>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "Código ISO",    value: "EUR" },
-            { label: "Símbolo",       value: "€" },
-            { label: "Casas decimais", value: "2" },
-          ].map((r) => (
-            <div key={r.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">{r.label}</p>
-              <p className="mt-1 text-sm font-bold text-white">{r.value}</p>
-            </div>
-          ))}
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-[10px] font-bold text-emerald-300">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Activa
+          </span>
         </div>
       </div>
-      <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-5">
-        <p className="text-sm font-semibold text-white">Multi-moeda</p>
-        <p className="mt-1 text-xs text-slate-500">A plataforma suporta extensão para múltiplas moedas. A tabela <code className="text-slate-400">cupons.currency_code</code> já aceita qualquer código ISO. A activação de uma segunda moeda requer configuração adicional no backend de pagamentos.</p>
+
+      {/* Detalhes da moeda */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Código ISO",     value: "EUR",          sub: "International Standard" },
+          { label: "Símbolo",        value: "€",            sub: "Sufixo no preço" },
+          { label: "Casas decimais", value: "2",            sub: "Cêntimos" },
+          { label: "Formato",        value: "1 234,56 €",   sub: "Separador vírgula" },
+        ].map((r) => (
+          <div key={r.label} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{r.label}</p>
+            <p className="mt-1.5 text-lg font-bold text-white">{r.value}</p>
+            <p className="mt-0.5 text-[10px] text-slate-600">{r.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Regras de preço */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Regras de preço</p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400">Arredondamento</p>
+            <p className="text-sm font-semibold text-white">0,01 € (cêntimo)</p>
+            <p className="text-[10px] text-slate-600">Arredondamento ao cêntimo mais próximo</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400">IVA incluído</p>
+            <p className="text-sm font-semibold text-white">Sim — 23%</p>
+            <p className="text-[10px] text-slate-600">Todos os preços incluem IVA a 23%</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400">Preço mínimo</p>
+            <p className="text-sm font-semibold text-white">Não definido</p>
+            <p className="text-[10px] text-slate-600">Sem valor mínimo de pedido</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Multi-moeda */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-sm text-violet-400">⊕</div>
+          <div>
+            <p className="text-sm font-semibold text-white">Multi-moeda</p>
+            <p className="text-xs text-slate-500">A tabela <code className="rounded bg-white/[0.04] px-1 py-0.5 text-slate-400">cupons.currency_code</code> já aceita qualquer código ISO. A activação de uma segunda moeda requer configuração adicional no backend de pagamentos.</p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1153,9 +1344,9 @@ export default function AppClyonEmbedded({
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#080F1A]">
+    <div className="overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#0C1525]">
       {/* Header */}
-      <div className="border-b border-white/[0.06] bg-[#0A1220] px-5 py-4">
+      <div className="border-b border-white/[0.06] bg-[#0E1830] px-5 py-4">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-500">App CLYON</p>
         <h2 className="mt-0.5 text-lg font-bold text-white">Gestão da Aplicação</h2>
       </div>
