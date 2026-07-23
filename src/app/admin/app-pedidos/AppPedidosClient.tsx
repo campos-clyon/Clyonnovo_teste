@@ -448,7 +448,13 @@ function DetailModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function AppPedidosClient({ externalAuthHeader }: { externalAuthHeader?: Record<string, string> } = {}) {
+export default function AppPedidosClient({
+  externalAuthHeader,
+  onRowClick,
+}: {
+  externalAuthHeader?: Record<string, string>;
+  onRowClick?: (id: string) => void;
+} = {}) {
   const ownAuth = useAdminAuth({ skip: !!externalAuthHeader });
   const ready = externalAuthHeader ? true : ownAuth.ready;
   const authHeader = externalAuthHeader ?? ownAuth.authHeader;
@@ -592,7 +598,11 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
         )}
 
         {!loading && filtered.map(order => (
-          <OrderRow key={order.id} order={order} onClick={() => setSelected(order)} />
+          <OrderRow
+            key={order.id}
+            order={order}
+            onClick={() => onRowClick ? onRowClick(order.id) : setSelected(order)}
+          />
         ))}
 
         {!loading && !error && filtered.length > 0 && (
@@ -602,7 +612,7 @@ export default function AppPedidosClient({ externalAuthHeader }: { externalAuthH
         )}
       </div>
 
-      {selected && (
+      {!onRowClick && selected && (
         <DetailModal
           order={selected}
           authHeader={authHeader}

@@ -33,6 +33,17 @@ type OrderDetail = {
   category_icon: string | null;
 };
 
+type OpsEntry = {
+  id: string;
+  action_type: string;
+  status_from: string | null;
+  status_to: string | null;
+  reason: string | null;
+  note: string | null;
+  colab_nome: string;
+  created_at: string;
+};
+
 const STATUS_CFG: Record<AppStatus, { label: string; color: string }> = {
   draft:                  { label: "Rascunho",            color: "text-slate-400" },
   received:               { label: "Recebido",            color: "text-amber-400" },
@@ -53,6 +64,7 @@ const STATUS_CFG: Record<AppStatus, { label: string; color: string }> = {
 };
 
 const VALID_STATUSES = Object.keys(STATUS_CFG) as AppStatus[];
+const CANCEL_STATUSES = new Set(["canceled", "rejected"]);
 
 const LABEL = "text-[10px] uppercase tracking-wider text-slate-500 block mb-1";
 
@@ -66,34 +78,41 @@ function fmt(iso: string) {
 export default function PedidoDetalheClient({ id }: { id: string }) {
   const { authHeader, ready } = useAdminAuth({ skip: false });
   const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [ops, setOps] = useState<OpsEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveOk, setSaveOk] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
-  // Campos editáveis
+  // Campos editáveis (apenas operacionais — dados originais do cliente são imutáveis)
   const [status, setStatus] = useState<AppStatus>("received");
   const [urgency, setUrgency] = useState("normal");
-  const [notes, setNotes] = useState("");
-  const [addressLine, setAddressLine] = useState("");
-  const [city, setCity] = useState("");
-  const [region, setRegion] = useState("");
   const [price, setPrice] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
+  const [adminNote, setAdminNote] = useState("");
+  const [reason, setReason] = useState("");
+
+  const needsReason = CANCEL_STATUSES.has(status);
 
   const load = useCallback(async () => {
     if (!ready) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/app-pedidos/${id}`, { headers: authHeader });
-      if (res.status === 404) { setError("Pedido não encontrado."); return; }
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Erro ao carregar."); return; }
+      const [orderRes, opsRes] = await Promise.all([
+        fetch(`/api/admin/app-pedidos/${id}`, { headers: authHeader }),
+        fetch(`/api/admin/app-clyon/pedidos/${id}/ops`, { headers: authHeader }),
+      ]);
 
-      // Enriquecer com dados de perfil e categoria se necessário
-      const row = data.order;
+      if (orderRes.status === 404) { setError("Pedido não encontrado."); return; }
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) { setError(orderData.error ?? "Erro ao carregar."); return; }
+
+      const opsData = await opsRes.json();
+      const row = orderData.order;
+
       const enriched: OrderDetail = {
         id: row.id,
         status: row.status,
@@ -116,14 +135,13 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
         category_icon: row.category_icon ?? null,
       };
       setOrder(enriched);
+      setOps(opsData.ops ?? []);
       setStatus(enriched.status);
       setUrgency(enriched.urgency);
-      setNotes(enriched.notes ?? "");
-      setAddressLine(enriched.address_line ?? "");
-      setCity(enriched.city ?? "");
-      setRegion(enriched.region ?? "");
       setPrice(enriched.estimated_price != null ? String(enriched.estimated_price) : "");
       setScheduledFor(enriched.scheduled_for ? String(enriched.scheduled_for).slice(0, 16) : "");
+      setAdminNote("");
+      setReason("");
     } catch {
       setError("Erro de ligação.");
     } finally {
@@ -137,17 +155,17 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
     if (!order) return;
     setSaving(true);
     setSaveError(null);
+    setSaveOk(false);
+
     const payload: Record<string, unknown> = {};
     if (status !== order.status) payload.status = status;
     if (urgency !== order.urgency) payload.urgency = urgency;
-    if (notes !== (order.notes ?? "")) payload.notes = notes;
-    if (addressLine !== (order.address_line ?? "")) payload.address_line = addressLine;
-    if (city !== (order.city ?? "")) payload.city = city;
-    if (region !== (order.region ?? "")) payload.region = region;
     const origPrice = order.estimated_price != null ? String(order.estimated_price) : "";
     if (price !== origPrice) payload.estimated_price = price === "" ? null : Number(price);
     const origDate = order.scheduled_for ? String(order.scheduled_for).slice(0, 16) : "";
     if (scheduledFor !== origDate) payload.scheduled_for = scheduledFor || null;
+    if (adminNote.trim()) payload.admin_note = adminNote.trim();
+    if (reason.trim()) payload.reason = reason.trim();
 
     if (Object.keys(payload).length === 0) {
       setSaveError("Nenhuma alteração detectada.");
@@ -162,7 +180,7 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
       });
       const data = await res.json();
       if (!res.ok) { setSaveError(data.error ?? "Erro ao guardar."); return; }
-      // Recarregar dados actualizados
+      setSaveOk(true);
       await load();
     } catch {
       setSaveError("Erro de ligação.");
@@ -170,6 +188,9 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
       setSaving(false);
     }
   }
+
+  const INP = "mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400";
+  const TA  = "mt-1 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 resize-none";
 
   return (
     <AppClyonShell>
@@ -233,11 +254,11 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                 </div>
               </div>
 
-              {/* 2. Pedido original do cliente */}
+              {/* 2. Pedido original do cliente — só leitura */}
               <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
                 <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">
                   Pedido original do cliente
-                  <span className="ml-2 font-normal normal-case text-slate-600">(dados originais — não editar aqui)</span>
+                  <span className="ml-2 font-normal normal-case text-slate-600">(só leitura)</span>
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
@@ -278,11 +299,9 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
               </div>
 
               {/* 3. Fotografias */}
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-                <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Fotografias</h3>
-                {order.photos.length === 0 ? (
-                  <p className="text-sm text-slate-600">Sem fotografias anexadas.</p>
-                ) : (
+              {order.photos.length > 0 && (
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+                  <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Fotografias</h3>
                   <div className="flex flex-wrap gap-2">
                     {order.photos.map((url, i) => (
                       <button
@@ -301,25 +320,62 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* 4. Respostas de profissionais */}
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Respostas de profissionais
-                </h3>
-                <p className="text-sm text-slate-600">
-                  N/D — tabela <code className="text-slate-500">provider_responses</code> não consumida por esta API.
-                  Implementar quando a relação estiver definida no esquema.
-                </p>
+              {/* 4. Histórico de operações */}
+              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+                <div className="border-b border-white/[0.05] px-5 py-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Histórico de operações</h3>
+                </div>
+                {ops.length === 0 ? (
+                  <p className="px-5 py-8 text-sm text-slate-600">Sem operações registadas.</p>
+                ) : (
+                  <div>
+                    {ops.map((op) => (
+                      <div key={op.id} className="border-b border-white/[0.03] px-5 py-3 last:border-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            {op.action_type === "status_change" && (
+                              <p className="text-sm text-white">
+                                <span className="text-slate-500">
+                                  {STATUS_CFG[op.status_from as AppStatus]?.label ?? op.status_from}
+                                </span>
+                                {" → "}
+                                <span className={STATUS_CFG[op.status_to as AppStatus]?.color ?? "text-white"}>
+                                  {STATUS_CFG[op.status_to as AppStatus]?.label ?? op.status_to}
+                                </span>
+                              </p>
+                            )}
+                            {op.action_type === "update" && (
+                              <p className="text-sm text-slate-400">Campos operacionais actualizados</p>
+                            )}
+                            {op.action_type === "note" && (
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Nota</p>
+                            )}
+                            {op.reason && (
+                              <p className="mt-0.5 text-xs text-amber-300/80">Motivo: {op.reason}</p>
+                            )}
+                            {op.note && (
+                              <p className="mt-0.5 text-sm text-slate-300">{op.note}</p>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-[10px] text-slate-500">{op.colab_nome}</p>
+                            <p className="text-[10px] text-slate-700">{fmt(op.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Coluna lateral — operação */}
             <div className="space-y-5">
 
-              {/* 3. Cliente */}
+              {/* Cliente */}
               <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
                 <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Cliente</h3>
                 <p className="text-sm font-medium text-white">{order.client_name || "—"}</p>
@@ -347,7 +403,7 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                 )}
               </div>
 
-              {/* 6. Operação — campos editáveis */}
+              {/* Campos de operação — apenas operacionais, dados do cliente imutáveis */}
               <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
                 <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Operação</h3>
                 <div className="space-y-3">
@@ -356,7 +412,7 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as AppStatus)}
-                      className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+                      className={INP}
                     >
                       {VALID_STATUSES.map((s) => (
                         <option key={s} value={s} className="bg-[#0F1729]">
@@ -366,56 +422,30 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                     </select>
                   </div>
 
+                  {needsReason && (
+                    <div>
+                      <label className={LABEL}>Motivo (obrigatório)</label>
+                      <textarea
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        rows={2}
+                        placeholder="Razão do cancelamento ou rejeição..."
+                        className={TA}
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <label className={LABEL}>Urgência</label>
                     <select
                       value={urgency}
                       onChange={(e) => setUrgency(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+                      className={INP}
                     >
                       <option value="normal" className="bg-[#0F1729]">Normal</option>
                       <option value="urgent" className="bg-[#0F1729]">Urgente</option>
                       <option value="flexible" className="bg-[#0F1729]">Flexível</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className={LABEL}>Notas internas (operação)</label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={3}
-                      placeholder="Notas para a equipa..."
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={LABEL}>Morada (ajuste operacional)</label>
-                    <input
-                      value={addressLine}
-                      onChange={(e) => setAddressLine(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className={LABEL}>Cidade</label>
-                      <input
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
-                      />
-                    </div>
-                    <div>
-                      <label className={LABEL}>Região</label>
-                      <input
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
-                      />
-                    </div>
                   </div>
 
                   <div>
@@ -426,7 +456,7 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                       min="0"
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+                      className={INP}
                     />
                   </div>
 
@@ -436,14 +466,31 @@ export default function PedidoDetalheClient({ id }: { id: string }) {
                       type="datetime-local"
                       value={scheduledFor}
                       onChange={(e) => setScheduledFor(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+                      className={INP}
                     />
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>Nota interna</label>
+                    <textarea
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                      rows={3}
+                      placeholder="Nota registada no histórico de operações..."
+                      className={TA}
+                    />
+                    <p className="mt-1 text-[10px] text-slate-600">Ficará registada no histórico e não altera os dados do cliente.</p>
                   </div>
                 </div>
 
                 {saveError && (
                   <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
                     {saveError}
+                  </div>
+                )}
+                {saveOk && (
+                  <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                    Guardado com sucesso.
                   </div>
                 )}
 
