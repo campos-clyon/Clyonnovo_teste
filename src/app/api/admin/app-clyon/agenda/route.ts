@@ -9,17 +9,25 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
 
+  const url = new URL(req.url);
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+
   try {
     const sb = getSupabaseAdmin();
 
-    // Pedidos com data confirmada, ordenados por data ASC
-    const { data, error } = await sb
+    let query = sb
       .from("service_requests")
       .select("id, details, notes, city, region, status, urgency, scheduled_for, estimated_price, customer_id, category_slug, created_at")
       .not("scheduled_for", "is", null)
       .not("status", "in", '("canceled","rejected","completed")')
       .order("scheduled_for", { ascending: true })
-      .limit(100);
+      .limit(200);
+
+    if (from) query = query.gte("scheduled_for", from);
+    if (to) query = query.lte("scheduled_for", to);
+
+    const { data, error } = await query;
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

@@ -414,76 +414,138 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
   );
 }
 
-// ── Agenda ─────────────────────────────────────────────────────────────────
+// ── Agenda (semana segunda→domingo, Europe/Lisbon) ────────────────────────
 type AgendaOrder = {
-  id: string; slug: string; status: string; scheduled_for: string;
-  address?: string | null; city?: string | null;
-  profiles?: { name?: string; phone?: string } | null;
+  id: string; title: string; status: string; urgency: string;
+  scheduled_for: string; city: string; client_name: string | null;
 };
 
+const WEEKDAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
+function getMonday(d: Date): Date {
+  const copy = new Date(d);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function fmtWeekRange(monday: Date): string {
+  const sunday = addDays(monday, 6);
+  const fmtD = (d: Date) => d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+  return `${fmtD(monday)} — ${fmtD(sunday)}`;
+}
+
 function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
+  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [orders, setOrders] = useState<AgendaOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
+    const from = weekStart.toISOString().slice(0, 10);
+    const to = addDays(weekStart, 7).toISOString().slice(0, 10);
     try {
-      const res = await fetch("/api/admin/app-clyon/agenda", { headers: authHeader });
+      const res = await fetch(`/api/admin/app-clyon/agenda?from=${from}&to=${to}`, { headers: authHeader });
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Erro."); return; }
       setOrders(json.orders ?? []);
     } catch { setError("Erro de ligação."); }
     finally { setLoading(false); }
-  }, [authHeader]);
+  }, [authHeader, weekStart]);
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <Spinner />;
-  if (error) return <ErrBox msg={error} onRetry={load} />;
+  const prevWeek = () => setWeekStart((w) => addDays(w, -7));
+  const nextWeek = () => setWeekStart((w) => addDays(w, 7));
+  const goToday = () => setWeekStart(getMonday(new Date()));
 
-  if (orders.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-2xl">📅</p>
-        <p className="mt-3 text-sm font-semibold text-white">Sem pedidos agendados</p>
-        <p className="mt-1 text-xs text-slate-500">Quando pedidos tiverem data definida aparecem aqui.</p>
-      </div>
-    );
-  }
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(weekStart, i);
+    const dateStr = date.toISOString().slice(0, 10);
+    const dayOrders = orders.filter((o) => o.scheduled_for.slice(0, 10) === dateStr);
+    const isToday = dateStr === new Date().toISOString().slice(0, 10);
+    return { date, dateStr, label: WEEKDAY_LABELS[i], dayOrders, isToday };
+  });
 
-  const byDay: Record<string, AgendaOrder[]> = {};
-  for (const o of orders) {
-    const day = o.scheduled_for.slice(0, 10);
-    if (!byDay[day]) byDay[day] = [];
-    byDay[day].push(o);
-  }
+  const totalWeek = orders.length;
 
   return (
     <div className="space-y-4">
-      {Object.entries(byDay).map(([day, list]) => (
-        <div key={day}>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            {new Date(day + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "long" })}
-          </p>
-          <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-            {list.map((o) => (
-              <div key={o.id} className="flex items-center gap-3 border-b border-white/[0.03] px-4 py-3 last:border-0">
-                <span className="min-w-[48px] text-sm font-bold text-cyan-400">
-                  {new Date(o.scheduled_for).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+      {/* Navegação da semana */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={prevWeek} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.08] transition">
+            ←
+          </button>
+          <button onClick={goToday} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.08] transition">
+            Hoje
+          </button>
+          <button onClick={nextWeek} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.08] transition">
+            →
+          </button>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-white">{fmtWeekRange(weekStart)}</p>
+          <p className="text-[10px] text-slate-500">{totalWeek} agendamento{totalWeek !== 1 ? "s" : ""}</p>
+        </div>
+      </div>
+
+      {loading ? <Spinner /> : error ? <ErrBox msg={error} onRetry={load} /> : (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
+          {days.map((d) => (
+            <div
+              key={d.dateStr}
+              className={`rounded-[18px] border p-3 min-h-[120px] ${
+                d.isToday
+                  ? "border-cyan-400/30 bg-cyan-500/[0.04]"
+                  : "border-white/[0.07] bg-white/[0.02]"
+              }`}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${d.isToday ? "text-cyan-400" : "text-slate-500"}`}>
+                  {d.label}
                 </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-white">{o.profiles?.name ?? "—"}</p>
-                  <p className="text-xs text-slate-500">{o.slug} · {o.city ?? "—"}</p>
-                </div>
-                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
-                  {STATUS_LABELS[o.status] ?? o.status}
+                <span className={`text-xs font-semibold ${d.isToday ? "text-cyan-400" : "text-slate-400"}`}>
+                  {d.date.getDate()}
                 </span>
               </div>
-            ))}
-          </div>
+              {d.dayOrders.length === 0 ? (
+                <p className="text-[10px] text-slate-600 italic">Sem agendamentos</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {d.dayOrders.map((o) => (
+                    <div key={o.id} className="rounded-lg bg-white/[0.04] px-2 py-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-cyan-400">
+                          {new Date(o.scheduled_for).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Lisbon" })}
+                        </span>
+                        {o.urgency === "urgent" && (
+                          <span className="text-[9px] font-bold text-red-400">URG</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-white truncate">{o.client_name ?? "—"}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{o.title}</p>
+                      {o.city && <p className="text-[10px] text-slate-600">{o.city}</p>}
+                      <span className="mt-0.5 inline-block rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] text-slate-400">
+                        {STATUS_LABELS[o.status] ?? o.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -1369,7 +1431,7 @@ export default function AppClyonEmbedded({
       </div>
 
       {/* Conteúdo */}
-      <div className="p-5">
+      <div className={tab === "pedidos" && selectedOrderId ? "" : "p-5"}>
         {tab === "visao-geral"   && <TabVisaoGeral authHeader={authHeader} />}
         {tab === "pedidos" && !selectedOrderId && (
           <AppPedidosClient
@@ -1378,11 +1440,23 @@ export default function AppClyonEmbedded({
           />
         )}
         {tab === "pedidos" && selectedOrderId && (
-          <PedidoInlinePanel
-            id={selectedOrderId}
-            authHeader={authHeader}
-            onBack={() => handlePedidoChange(null)}
-          />
+          <div className="flex flex-col md:flex-row">
+            <div className="hidden md:block md:w-[40%] md:border-r md:border-white/[0.06] overflow-y-auto max-h-[80vh]">
+              <AppPedidosClient
+                externalAuthHeader={authHeader}
+                onRowClick={(id) => handlePedidoChange(id)}
+                compact
+                selectedId={selectedOrderId}
+              />
+            </div>
+            <div className="w-full md:w-[60%] p-5 overflow-y-auto max-h-[80vh]">
+              <PedidoInlinePanel
+                id={selectedOrderId}
+                authHeader={authHeader}
+                onBack={() => handlePedidoChange(null)}
+              />
+            </div>
+          </div>
         )}
         {tab === "agenda"        && <TabAgenda authHeader={authHeader} />}
         {tab === "profissionais" && <TabProfissionais authHeader={authHeader} />}

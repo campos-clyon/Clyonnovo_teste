@@ -127,12 +127,14 @@ function MetricCard({ label, value, accent }: { label: string; value: string | n
 
 // ─── OrderRow ────────────────────────────────────────────────────────────────
 
-function OrderRow({ order, onClick }: { order: AppOrder; onClick: () => void }) {
+function OrderRow({ order, onClick, active, compact }: { order: AppOrder; onClick: () => void; active?: boolean; compact?: boolean }) {
   const urgency = URGENCY_CFG[order.urgency] ?? URGENCY_CFG.normal;
   return (
     <div
       onClick={onClick}
-      className="group flex cursor-pointer items-center gap-4 border-b border-white/[0.04] px-5 py-4 transition hover:bg-white/[0.03]"
+      className={`group flex cursor-pointer items-center gap-4 border-b border-white/[0.04] transition hover:bg-white/[0.03] ${
+        compact ? "px-3 py-3" : "px-5 py-4"
+      } ${active ? "bg-cyan-500/[0.06] border-l-2 border-l-cyan-400" : ""}`}
     >
       {/* ID curto + urgência */}
       <div className="w-16 flex-shrink-0">
@@ -160,17 +162,18 @@ function OrderRow({ order, onClick }: { order: AppOrder; onClick: () => void }) 
         </p>
       </div>
 
-      {/* Cliente */}
-      <div className="hidden w-36 flex-shrink-0 md:block">
-        <p className="truncate text-sm text-slate-300">{order.client_name ?? "—"}</p>
-        <p className="truncate text-xs text-slate-600">{order.client_phone ?? order.client_email ?? ""}</p>
-      </div>
-
-      {/* Respostas */}
-      <div className="hidden w-16 flex-shrink-0 text-center md:block">
-        <p className="text-sm font-semibold text-white">{order.responses_count}</p>
-        <p className="text-[10px] text-slate-600">respostas</p>
-      </div>
+      {!compact && (
+        <>
+          <div className="hidden w-36 flex-shrink-0 md:block">
+            <p className="truncate text-sm text-slate-300">{order.client_name ?? "—"}</p>
+            <p className="truncate text-xs text-slate-600">{order.client_phone ?? order.client_email ?? ""}</p>
+          </div>
+          <div className="hidden w-16 flex-shrink-0 text-center md:block">
+            <p className="text-sm font-semibold text-white">{order.responses_count}</p>
+            <p className="text-[10px] text-slate-600">respostas</p>
+          </div>
+        </>
+      )}
 
       {/* Status + data */}
       <div className="flex-shrink-0 text-right">
@@ -451,9 +454,13 @@ function DetailModal({
 export default function AppPedidosClient({
   externalAuthHeader,
   onRowClick,
+  compact,
+  selectedId,
 }: {
   externalAuthHeader?: Record<string, string>;
   onRowClick?: (id: string) => void;
+  compact?: boolean;
+  selectedId?: string | null;
 } = {}) {
   const ownAuth = useAdminAuth({ skip: !!externalAuthHeader });
   const ready = externalAuthHeader ? true : ownAuth.ready;
@@ -509,14 +516,16 @@ export default function AppPedidosClient({
   });
 
   return (
-    <div className="min-h-screen bg-[#0A1220] pb-16">
+    <div className={compact ? "pb-4" : "min-h-screen pb-16"}>
 
       {/* Header */}
-      <div className="border-b border-white/[0.05] px-5 py-5 md:px-8">
+      <div className={`border-b border-white/[0.05] ${compact ? "px-3 py-3" : "px-5 py-5 md:px-8"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-white">Pedidos — App Móvel</h1>
-            <p className="text-xs text-slate-500">Pedidos enviados pelos clientes via app CLYON</p>
+            <h1 className={`font-bold text-white ${compact ? "text-sm" : "text-lg"}`}>
+              {compact ? "Pedidos" : "Pedidos — App Móvel"}
+            </h1>
+            {!compact && <p className="text-xs text-slate-500">Pedidos enviados pelos clientes via app CLYON</p>}
           </div>
           <button
             onClick={() => fetchOrders()}
@@ -525,21 +534,22 @@ export default function AppPedidosClient({
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Actualizar
+            {compact ? "" : "Actualizar"}
           </button>
         </div>
 
-        {/* Métricas */}
-        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <MetricCard label="Total de pedidos" value={total} />
-          <MetricCard label="Abertos"           value={openCount}       accent="text-amber-400" />
-          <MetricCard label="Em curso"          value={inProgressCount} accent="text-sky-400" />
-          <MetricCard label="Urgentes abertos"  value={urgentCount}     accent={urgentCount > 0 ? "text-red-400" : "text-slate-400"} />
-        </div>
+        {!compact && (
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <MetricCard label="Total de pedidos" value={total} />
+            <MetricCard label="Abertos"           value={openCount}       accent="text-amber-400" />
+            <MetricCard label="Em curso"          value={inProgressCount} accent="text-sky-400" />
+            <MetricCard label="Urgentes abertos"  value={urgentCount}     accent={urgentCount > 0 ? "text-red-400" : "text-slate-400"} />
+          </div>
+        )}
       </div>
 
       {/* Filtros + Pesquisa */}
-      <div className="flex flex-col gap-3 border-b border-white/[0.04] px-5 py-3 md:flex-row md:items-center md:justify-between md:px-8">
+      <div className={`flex flex-col gap-3 border-b border-white/[0.04] py-3 ${compact ? "px-3" : "px-5 md:px-8"} md:flex-row md:items-center md:justify-between`}>
         <div className="flex items-center gap-1 overflow-x-auto">
           {FILTER_TABS.map(tab => {
             const count = tab.key === "todos"
@@ -602,6 +612,8 @@ export default function AppPedidosClient({
             key={order.id}
             order={order}
             onClick={() => onRowClick ? onRowClick(order.id) : setSelected(order)}
+            active={selectedId === order.id}
+            compact={compact}
           />
         ))}
 
