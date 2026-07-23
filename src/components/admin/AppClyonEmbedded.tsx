@@ -345,6 +345,7 @@ type VisaoGeral = {
   stats: {
     total: number; open: number; inProgress: number; completed: number;
     cancelled: number; urgent: number; unassigned: number; scheduledToday: number;
+    new7d?: number; revenue30d?: number; partnersActive?: number;
   };
   recent: Array<{ id: string; slug: string; status: string; created_at: string; profiles?: { name?: string } | null }>;
 };
@@ -382,9 +383,24 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
     { label: "Sem atribuição",  value: stats.unassigned,     color: "text-orange-400" },
     { label: "Agendados hoje",  value: stats.scheduledToday, color: "text-cyan-400" },
   ];
+  const highlightCards = [
+    { label: "Novos (7 dias)",       value: stats.new7d ?? 0,                             color: "text-cyan-300",    hint: "Pedidos criados" },
+    { label: "Receita 30d (est.)",   value: fmtMoney(stats.revenue30d ?? 0),              color: "text-emerald-300", hint: "Estimativas de concluídos" },
+    { label: "Profissionais activos",value: stats.partnersActive ?? 0,                    color: "text-violet-300",  hint: "Disponíveis agora" },
+  ];
 
   return (
     <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {highlightCards.map((c) => (
+          <div key={c.label} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{c.label}</p>
+            <p className={`mt-1.5 text-2xl font-bold ${c.color}`}>{c.value}</p>
+            <p className="mt-0.5 text-[10px] text-slate-600">{c.hint}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cards.map((c) => (
           <div key={c.label} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
@@ -550,11 +566,18 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
   );
 }
 
-// ── Profissionais (utilizadores app) ──────────────────────────────────────
-type AppProfile = { id: string; full_name: string | null; email: string | null; phone: string | null; created_at: string };
+// ── Profissionais (partners app) ──────────────────────────────────────────
+type PartnerProfile = {
+  id: string; full_name: string | null; email: string | null; phone: string | null; created_at: string;
+  availability_status: string | null; onboarding_status: string | null;
+  services: string[]; docs_total: number; docs_verified: number; docs_pending: number;
+  rating_avg: number; rating_count: number;
+};
+type PartnerStats = { total: number; active: number; docs_pending: number };
 
 function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }) {
-  const [profiles, setProfiles] = useState<AppProfile[]>([]);
+  const [profiles, setProfiles] = useState<PartnerProfile[]>([]);
+  const [stats, setStats] = useState<PartnerStats>({ total: 0, active: 0, docs_pending: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -568,6 +591,7 @@ function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Erro."); return; }
       setProfiles(json.profiles ?? []);
+      setStats(json.stats ?? { total: 0, active: 0, docs_pending: 0 });
     } catch { setError("Erro de ligação."); }
     finally { setLoading(false); }
   }, [authHeader, q]);
@@ -584,6 +608,22 @@ function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }
 
   return (
     <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
+          <p className="mt-1 text-2xl font-bold text-cyan-300">{stats.total}</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Disponíveis</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{stats.active}</p>
+        </div>
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Docs pendentes</p>
+          <p className="mt-1 text-2xl font-bold text-amber-300">{stats.docs_pending}</p>
+        </div>
+      </div>
+
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           value={search}
@@ -594,23 +634,62 @@ function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }
         <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30 transition">Pesquisar</button>
         {q && <button type="button" onClick={() => { setSearch(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
       </form>
+
       {profiles.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-600">Sem perfis encontrados.</p>
+        <p className="py-10 text-center text-sm text-slate-600">Sem profissionais registados. Verifica <code>partner_profiles</code> ou <code>user_roles</code> em Supabase.</p>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
           {profiles.map((p, i) => (
-            <div key={p.id} className={`flex items-center gap-3 px-4 py-3 ${i < profiles.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-300">
-                {(p.full_name ?? p.email ?? "?").charAt(0).toUpperCase()}
+            <div key={p.id} className={`px-4 py-3 ${i < profiles.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-300">
+                  {(p.full_name ?? p.email ?? "?").charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-white truncate">{p.full_name ?? "—"}</p>
+                    {p.availability_status && (
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                        p.availability_status === "available" || p.availability_status === "online"
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-slate-500/15 text-slate-400"
+                      }`}>
+                        {p.availability_status}
+                      </span>
+                    )}
+                    {p.onboarding_status && p.onboarding_status !== "completed" && (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                        {p.onboarding_status}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">{p.email ?? "—"} {p.phone ? `· ${p.phone}` : ""}</p>
+                </div>
+                <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-right">
+                  {p.rating_count > 0 && (
+                    <span className="text-xs text-amber-300">★ {p.rating_avg} <span className="text-slate-600">({p.rating_count})</span></span>
+                  )}
+                  <span className="text-[10px] text-slate-600">{new Date(p.created_at).toLocaleDateString("pt-PT")}</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{p.full_name ?? "—"}</p>
-                <p className="text-xs text-slate-500 truncate">{p.email ?? "—"}</p>
-              </div>
-              {p.phone && <p className="text-xs text-slate-500 flex-shrink-0">{p.phone}</p>}
-              <p className="text-[10px] text-slate-600 flex-shrink-0">
-                {new Date(p.created_at).toLocaleDateString("pt-PT")}
-              </p>
+              {(p.services.length > 0 || p.docs_total > 0) && (
+                <div className="mt-2 flex items-center gap-3 flex-wrap pl-13 ml-13">
+                  {p.services.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {p.services.slice(0, 5).map((s) => (
+                        <span key={s} className="rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] text-slate-400">{s}</span>
+                      ))}
+                      {p.services.length > 5 && <span className="text-[10px] text-slate-600">+{p.services.length - 5}</span>}
+                    </div>
+                  )}
+                  {p.docs_total > 0 && (
+                    <span className="text-[10px] text-slate-500">
+                      Docs: <span className="text-emerald-400">{p.docs_verified}</span>/<span className="text-white">{p.docs_total}</span>
+                      {p.docs_pending > 0 && <span className="text-amber-400"> · {p.docs_pending} pendente{p.docs_pending > 1 ? "s" : ""}</span>}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1100,81 +1179,245 @@ function TabMoedas() {
   );
 }
 
-// ── Pagamentos (internos — assistentes) ────────────────────────────────────
-function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
-  return <PagamentosPanel authHeader={authHeader} />;
-}
-
-// ── Contas (utilizadores da plataforma) ────────────────────────────────────
-type UserAccount = {
-  id: number; name: string | null; email: string;
-  phone: string | null; addressCity: string | null;
-  loginMethod: string; role: string; createdAt: string;
+// ── Pagamentos (clientes app) ─────────────────────────────────────────────
+type PagamentosData = {
+  stats: { total_paid: number; total_manual: number; total_earnings: number; count_paid: number; count_manual: number; count_earnings: number };
+  payments: Array<{ id: string; request_id?: string; amount: number; currency?: string; status?: string; method?: string; created_at: string }>;
+  manual: Array<{ id: string; request_id?: string; amount: number; currency?: string; method?: string; note?: string; created_at: string }>;
+  earnings: Array<{ id: string; partner_id?: string; request_id?: string; amount: number; currency?: string; status?: string; created_at: string }>;
+  days: number;
 };
 
-function TabContas({ authHeader }: { authHeader: Record<string, string> }) {
-  const [users, setUsers] = useState<UserAccount[]>([]);
+function fmtMoney(v: number, cur = "EUR") {
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: cur }).format(v);
+}
+
+function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
+  const [days, setDays] = useState(30);
+  const [data, setData] = useState<PagamentosData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"payments" | "manual" | "earnings">("payments");
+  const [showLegacy, setShowLegacy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch("/api/admin/users", { headers: authHeader });
+      const res = await fetch(`/api/admin/app-clyon/pagamentos?days=${days}`, { headers: authHeader });
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Erro."); return; }
-      setUsers(json.users ?? []);
+      setData(json);
     } catch { setError("Erro de ligação."); }
     finally { setLoading(false); }
-  }, [authHeader]);
+  }, [authHeader, days]);
 
   useEffect(() => { load(); }, [load]);
 
+  if (showLegacy) {
+    return (
+      <div className="space-y-3">
+        <button onClick={() => setShowLegacy(false)} className="text-xs text-cyan-400 hover:underline">← Voltar aos pagamentos do app</button>
+        <PagamentosPanel authHeader={authHeader} />
+      </div>
+    );
+  }
+
   if (loading) return <Spinner />;
   if (error) return <ErrBox msg={error} onRetry={load} />;
+  if (!data) return null;
 
-  const q = search.toLowerCase();
-  const visible = q
-    ? users.filter((u) => (u.name ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
-    : users;
+  const rows =
+    tab === "payments" ? data.payments :
+    tab === "manual"   ? data.manual :
+                         data.earnings;
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filtrar por nome ou e-mail…"
-          className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
-        />
-        <button onClick={load} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-400 hover:text-white transition">↻</button>
+    <div className="space-y-5">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {[7, 30, 90, 180].map((d) => (
+          <button
+            key={d}
+            onClick={() => setDays(d)}
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+              days === d ? "bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {d} dias
+          </button>
+        ))}
+        <button
+          onClick={() => setShowLegacy(true)}
+          className="ml-auto rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition"
+          title="Ver pagamentos internos a assistentes"
+        >
+          Pagamentos internos (legado)
+        </button>
       </div>
-      {visible.length === 0 ? (
-        <p className="py-8 text-center text-sm text-slate-600">Sem contas encontradas.</p>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Recebido de clientes</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{fmtMoney(data.stats.total_paid)}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">{data.stats.count_paid} pagamentos</p>
+        </div>
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Pagamentos manuais</p>
+          <p className="mt-1 text-2xl font-bold text-amber-300">{fmtMoney(data.stats.total_manual)}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">{data.stats.count_manual} registos</p>
+        </div>
+        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">A pagar a profissionais</p>
+          <p className="mt-1 text-2xl font-bold text-violet-300">{fmtMoney(data.stats.total_earnings)}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">{data.stats.count_earnings} earnings</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 border-b border-white/[0.05]">
+        {[
+          { k: "payments" as const, label: "Recebidos", count: data.payments.length },
+          { k: "manual" as const, label: "Manuais",    count: data.manual.length },
+          { k: "earnings" as const, label: "Earnings",  count: data.earnings.length },
+        ].map((t) => (
+          <button
+            key={t.k}
+            onClick={() => setTab(t.k)}
+            className={`border-b-2 px-4 py-2 text-xs font-semibold transition ${
+              tab === t.k ? "border-[#00BDEB] text-[#00BDEB]" : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {t.label} <span className="ml-1 rounded-full bg-white/[0.06] px-1.5 text-[10px]">{t.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="py-10 text-center text-sm text-slate-600">
+          Sem registos em <code>{tab === "payments" ? "payments" : tab === "manual" ? "manual_payments" : "professional_earnings"}</code> nos últimos {days} dias.
+        </p>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-          {visible.map((u, i) => (
-            <div key={u.id} className={`flex items-center gap-3 px-4 py-3 ${i < visible.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-slate-300">
-                {(u.name ?? u.email).charAt(0).toUpperCase()}
-              </div>
+          {rows.map((r: any, i) => (
+            <div key={r.id} className={`flex items-center gap-3 px-4 py-3 ${i < rows.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+              <span className="font-mono text-[10px] text-slate-600 w-16 truncate">{String(r.id).slice(0, 8)}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{u.name ?? "—"}</p>
-                <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                <p className="text-sm font-medium text-white">{fmtMoney(Number(r.amount ?? 0), r.currency || "EUR")}</p>
+                <p className="text-[10px] text-slate-500 truncate">
+                  {r.request_id ? `Pedido ${String(r.request_id).slice(0, 8)}` : ""}
+                  {r.partner_id ? ` · Partner ${String(r.partner_id).slice(0, 8)}` : ""}
+                  {r.method ? ` · ${r.method}` : ""}
+                  {r.note ? ` · ${r.note}` : ""}
+                </p>
               </div>
-              {u.addressCity && <span className="text-xs text-slate-600 flex-shrink-0">{u.addressCity}</span>}
-              <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${u.role === "admin" ? "bg-amber-500/10 text-amber-300" : "bg-white/[0.04] text-slate-400"}`}>
-                {u.role}
-              </span>
+              {r.status && (
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  r.status === "paid" || r.status === "succeeded" ? "bg-emerald-500/15 text-emerald-300" :
+                  r.status === "pending" ? "bg-amber-500/15 text-amber-300" :
+                  r.status === "failed" ? "bg-red-500/15 text-red-300" :
+                  "bg-slate-500/15 text-slate-400"
+                }`}>{r.status}</span>
+              )}
               <span className="text-[10px] text-slate-600 flex-shrink-0">
-                {new Date(u.createdAt).toLocaleDateString("pt-PT")}
+                {new Date(r.created_at).toLocaleDateString("pt-PT")}
               </span>
             </div>
           ))}
         </div>
       )}
-      <p className="text-xs text-slate-600">{visible.length} contas visíveis · A alteração de funções requer acesso de administrador geral.</p>
+    </div>
+  );
+}
+
+// ── Contas (clientes app) ─────────────────────────────────────────────────
+type ClientAccount = {
+  id: string; full_name: string | null; email: string | null; phone: string | null;
+  created_at: string; orders_count: number; last_order_at: string | null; active_30d: boolean;
+};
+type AccountsStats = { total: number; active_30d: number; no_orders: number };
+
+function TabContas({ authHeader }: { authHeader: Record<string, string> }) {
+  const [accounts, setAccounts] = useState<ClientAccount[]>([]);
+  const [stats, setStats] = useState<AccountsStats>({ total: 0, active_30d: 0, no_orders: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [q, setQ] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const url = q ? `/api/admin/app-clyon/contas?q=${encodeURIComponent(q)}` : "/api/admin/app-clyon/contas";
+      const res = await fetch(url, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      setAccounts(json.accounts ?? []);
+      setStats(json.stats ?? { total: 0, active_30d: 0, no_orders: 0 });
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, q]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function handleSearch(e: React.FormEvent) { e.preventDefault(); setQ(search.trim()); }
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrBox msg={error} onRetry={load} />;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total clientes</p>
+          <p className="mt-1 text-2xl font-bold text-cyan-300">{stats.total}</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Activos (30 dias)</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{stats.active_30d}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-500/20 bg-slate-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Sem pedidos</p>
+          <p className="mt-1 text-2xl font-bold text-slate-300">{stats.no_orders}</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Pesquisar por nome ou e-mail…"
+          className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
+        />
+        <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30 transition">Pesquisar</button>
+        {q && <button type="button" onClick={() => { setSearch(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
+      </form>
+
+      {accounts.length === 0 ? (
+        <p className="py-8 text-center text-sm text-slate-600">Sem contas de clientes encontradas.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
+          {accounts.map((a, i) => (
+            <div key={a.id} className={`flex items-center gap-3 px-4 py-3 ${i < accounts.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-slate-300">
+                {(a.full_name ?? a.email ?? "?").charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{a.full_name ?? "—"}</p>
+                <p className="text-xs text-slate-500 truncate">{a.email ?? "—"} {a.phone ? `· ${a.phone}` : ""}</p>
+              </div>
+              <div className="hidden sm:block text-right flex-shrink-0">
+                <p className="text-xs font-bold text-white">{a.orders_count}</p>
+                <p className="text-[10px] text-slate-600">pedido{a.orders_count !== 1 ? "s" : ""}</p>
+              </div>
+              {a.active_30d && (
+                <span className="flex-shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">Activo</span>
+              )}
+              <span className="text-[10px] text-slate-600 flex-shrink-0">
+                {a.last_order_at ? new Date(a.last_order_at).toLocaleDateString("pt-PT") : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-slate-600">{accounts.length} contas visíveis · Contas são criadas via app CLYON (Supabase Auth).</p>
     </div>
   );
 }
