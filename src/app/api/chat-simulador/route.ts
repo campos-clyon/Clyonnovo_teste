@@ -1,6 +1,8 @@
 import { generateText } from "ai";
 import type { ModelMessage } from "ai";
 import { NextRequest, NextResponse } from "next/server";
+import { calculateFastEstimate } from "@/lib/pricing-helper";
+import type { OrderData } from "@/app/simulador/types";
 
 const MODEL = process.env.GEMINI_MODEL || "google/gemini-2.0-flash";
 
@@ -13,6 +15,7 @@ interface GeminiResponse {
     hasElevator?: "yes" | "small" | "no" | "unknown";
     parkingDistance?: "door" | "under_20m" | "over_30m" | "difficult" | "unknown";
     urgency?: "no" | "today" | "tomorrow" | "this_week" | "flexible";
+    needsDismantling?: "no" | "simple" | "medium" | "complex" | "unknown";
     receiver?: {
       name?: string;
       phone?: string;
@@ -22,6 +25,7 @@ interface GeminiResponse {
       city?: string;
       formattedAddress?: string;
     };
+    heavyItems?: string[];
   };
   nextQuestion: string | null;
   quickReplies: string[];
@@ -31,6 +35,16 @@ interface GeminiResponse {
   canGenerateEstimate: boolean;
   status: "collecting" | "ready_to_estimate" | "needs_photos" | "onsite_recommended";
   internalNotes: string[];
+  liveEstimate?: {
+    minWithVat: number;
+    maxWithVat: number;
+    confidence: "high" | "medium" | "low";
+    label: string;
+  } | null;
+  photoAnalysis?: {
+    detectedItems: string[];
+    materialNotes: string;
+  } | null;
 }
 
 const SYSTEM_INSTRUCTION = `Tu és o Orçamentista CLYON — especializado EM RECOLHA DE MÓVEIS, MONOS, ENTULHO, ESVAZIAMENTOS E MUDANÇAS EM PORTUGAL.
@@ -52,7 +66,8 @@ const SYSTEM_INSTRUCTION = `Tu és o Orçamentista CLYON — especializado EM RE
   "shouldAskForAddress": false,
   "canGenerateEstimate": false,
   "status": "collecting",
-  "internalNotes": ["nota 1"]
+  "internalNotes": ["nota 1"],
+  "photoAnalysis": null
 }
 \`\`\`
 
@@ -63,32 +78,48 @@ const SYSTEM_INSTRUCTION = `Tu és o Orçamentista CLYON — especializado EM RE
 4. hasElevator: "yes" | "small" | "no" | "unknown"
 5. parkingDistance: "door" | "under_20m" | "over_30m" | "difficult" | "unknown"
 6. urgency: "no" | "today" | "tomorrow" | "this_week" | "flexible"
-7. receiver: { name, phone, email }
-8. address: { city, formattedAddress }
+7. needsDismantling: "no" | "simple" | "medium" | "complex" | "unknown"
+8. heavyItems: lista de itens pesados identificados (ex: ["sofá", "armário", "frigorífico"])
+9. receiver: { name, phone, email }
+10. address: { city, formattedAddress }
+
+== ANÁLISE DE FOTOS ==
+Quando receberes imagens do cliente:
+- Identifica TODOS os objetos/materiais visíveis nas fotos
+- Conta cada tipo de item (ex: 2 sofás, 1 armário, 3 caixas)
+- Avalia o estado do material (bom, danificado, volumoso)
+- Descreve materiais especiais (madeira, metal, entulho, plástico)
+- Preenche heavyItems com os itens identificados
+- Preenche a description com base nas fotos se ainda não existir
+- Devolve photoAnalysis com:
+  - detectedItems: lista de cada item detectado (ex: ["sofá 3 lugares", "armário de 2 portas"])
+  - materialNotes: notas sobre materiais especiais ou condições de acesso visíveis
 
 == REGRAS ==
 - Extrai TUDO o que o cliente escreveu. NÃO REPITAS perguntas já respondidas.
-- Se cliente enviou fotos: confirma recepção, extrai descrição, continua com próximo campo.
+- Se cliente enviou fotos: analisa o conteúdo, confirma recepção com descrição do que vês, continua com próximo campo.
 - Nunca inventes dados.
 - Uma pergunta por vez.
 - assistantMessage: linguagem natural, frases curtas, tom profissional.
 - Quando tiveres serviceType + description + floor + hasElevator + parkingDistance + urgency + receiver: readyToEstimate.
+- NÃO dês valores de preço no chat — o motor de preços calcula automaticamente.
 
-== EXEMPLO ==
-Cliente: "Oi, preciso recolher monos da garagem. Nome: João Silva, Telefone: 913456789, Email: joao@email.com"
+== EXEMPLO COM FOTO ==
+Cliente: [envia foto de sala com sofá e mesa] "Preciso recolher isto"
 \`\`\`json
 {
-  "assistantMessage": "Obrigado João! Recebi que vai recolher monos da sua garagem. Pode descrever em mais detalhe o que vai recolher?",
+  "assistantMessage": "Recebi a foto! Consigo ver um sofá de 3 lugares e uma mesa de jantar. Mais algum item para recolher?",
   "orderPatch": {
-    "serviceType": "recolha_monos",
-    "floor": "Garagem",
-    "receiver": {
-      "name": "João Silva",
-      "phone": "913456789",
-      "email": "joao@email.com"
-    }
+    "serviceType": "recolha_moveis",
+    "description": "1 sofá de 3 lugares, 1 mesa de jantar",
+    "heavyItems": ["sofá 3 lugares", "mesa de jantar"]
   },
-  "nextQuestion": "Pode descrever o que vai recolher? Quantidades, tamanho aproximado?",
+  "photoAnalysis": {
+    "detectedItems": ["sofá 3 lugares", "mesa de jantar"],
+    "materialNotes": "Sofá em tecido, mesa em madeira maciça. Ambos em bom estado."
+  },
+  "nextQuestion": "Em que andar se encontra o material?",
+  "quickReplies": ["Rés-do-chão", "1.º andar", "2.º andar", "3.º andar"],
   "status": "collecting"
 }
 \`\`\``;
@@ -121,6 +152,7 @@ function parseGeminiResponse(text: string): GeminiResponse {
       canGenerateEstimate: parsed.canGenerateEstimate ?? false,
       status: parsed.status ?? "collecting",
       internalNotes: Array.isArray(parsed.internalNotes) ? parsed.internalNotes : [],
+      photoAnalysis: parsed.photoAnalysis ?? null,
     };
   } catch (err) {
     console.error("[chat-simulador] Parse error:", err, "Text:", text);
@@ -139,6 +171,52 @@ function parseGeminiResponse(text: string): GeminiResponse {
   }
 }
 
+async function computeLiveEstimate(order: OrderData): Promise<GeminiResponse["liveEstimate"]> {
+  if (!order.serviceType) return null;
+
+  try {
+    const result = await calculateFastEstimate({
+      serviceType: order.serviceType,
+      description: order.description,
+      heavyItems: order.heavyItems,
+      volumeTier: order.volumeTier,
+      floor: order.floor,
+      hasElevator: order.hasElevator,
+      parkingDistance: order.parkingDistance,
+      needsDismantling: order.needsDismantling,
+      distanceFromBase: order.distanceFromBase,
+      movingDistance: order.movingDistance,
+      originAccess: order.originAccess,
+      destinationAccess: order.destinationAccess,
+      entulhoState: order.entulhoState,
+      entulhoQuantidade: order.entulhoQuantidade,
+      entulhoQuantidadeEnsacados: order.entulhoQuantidadeEnsacados,
+    });
+
+    if (!result.ok || !result.estimatedPriceWithVat) return null;
+
+    const minVat = result.estimateMinWithVat ?? Math.round(result.estimatedPriceWithVat * 0.9 * 100) / 100;
+    const maxVat = result.estimateMaxWithVat ?? Math.round(result.estimatedPriceWithVat * 1.1 * 100) / 100;
+
+    const hasAddress = !!order.distanceFromBase?.distanceKm;
+    const hasAccess = !!order.floor && order.hasElevator !== "unknown" && order.hasElevator !== undefined;
+
+    let confidence: "high" | "medium" | "low" = "low";
+    if (hasAddress && hasAccess) confidence = "high";
+    else if (hasAccess || order.description) confidence = "medium";
+
+    return {
+      minWithVat: Math.round(minVat),
+      maxWithVat: Math.round(maxVat),
+      confidence,
+      label: `${Math.round(minVat)}€ – ${Math.round(maxVat)}€`,
+    };
+  } catch (err) {
+    console.error("[chat-simulador] Erro liveEstimate:", err);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
@@ -151,24 +229,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
     }
 
+    const orderData = (order ?? {}) as OrderData;
+
     const knownFields: string[] = [];
-    if (order) {
-      if (order.serviceType) knownFields.push(`Serviço: ${order.serviceType}`);
-      if (order.description) knownFields.push(`Descrição: ${order.description}`);
-      if (order.floor) knownFields.push(`Andar: ${order.floor}`);
-      if (order.hasElevator && order.hasElevator !== "unknown") {
-        knownFields.push(`Elevador: ${order.hasElevator}`);
-      }
-      if (order.parkingDistance && order.parkingDistance !== "unknown") {
-        knownFields.push(`Estacionamento: ${order.parkingDistance}`);
-      }
-      if (order.urgency) knownFields.push(`Urgência: ${order.urgency}`);
-      if (order.city) knownFields.push(`Cidade: ${order.city}`);
-      const receiver = order.receiver as { name?: string; phone?: string; email?: string } | undefined;
-      if (receiver?.name) knownFields.push(`Nome: ${receiver.name}`);
-      if (receiver?.phone) knownFields.push(`Telefone: ${receiver.phone}`);
-      if (receiver?.email) knownFields.push(`Email: ${receiver.email}`);
+    if (orderData.serviceType) knownFields.push(`Serviço: ${orderData.serviceType}`);
+    if (orderData.description) knownFields.push(`Descrição: ${orderData.description}`);
+    if (orderData.floor) knownFields.push(`Andar: ${orderData.floor}`);
+    if (orderData.hasElevator && orderData.hasElevator !== "unknown") {
+      knownFields.push(`Elevador: ${orderData.hasElevator}`);
     }
+    if (orderData.parkingDistance && orderData.parkingDistance !== "unknown") {
+      knownFields.push(`Estacionamento: ${orderData.parkingDistance}`);
+    }
+    if (orderData.urgency) knownFields.push(`Urgência: ${orderData.urgency}`);
+    if (orderData.city) knownFields.push(`Cidade: ${orderData.city}`);
+    if (orderData.heavyItems?.length) knownFields.push(`Itens pesados: ${orderData.heavyItems.join(", ")}`);
+    const receiver = orderData.receiver;
+    if (receiver?.name) knownFields.push(`Nome: ${receiver.name}`);
+    if (receiver?.phone) knownFields.push(`Telefone: ${receiver.phone}`);
+    if (receiver?.email) knownFields.push(`Email: ${receiver.email}`);
 
     const systemWithContext =
       knownFields.length > 0
@@ -210,17 +289,35 @@ export async function POST(request: NextRequest) {
       (firstUserIdx >= 0 ? rawMessages.slice(firstUserIdx) : rawMessages) as ModelMessage[];
 
     console.log(`[chat-simulador] Chamando Gemini model=${MODEL}`);
-    const { text } = await generateText({
-      model: MODEL,
-      system: systemWithContext,
-      messages: safeMessages,
-    });
+
+    const [{ text }, liveEstimate] = await Promise.all([
+      generateText({
+        model: MODEL,
+        system: systemWithContext,
+        messages: safeMessages,
+      }),
+      computeLiveEstimate(orderData),
+    ]);
 
     if (!text) {
       throw new Error("Resposta vazia do Gemini");
     }
 
     const response = parseGeminiResponse(text);
+
+    // Merge heavyItems from photo analysis into orderPatch
+    if (response.photoAnalysis?.detectedItems?.length && !response.orderPatch.heavyItems?.length) {
+      response.orderPatch.heavyItems = response.photoAnalysis.detectedItems;
+    }
+
+    // After merging Gemini's patch, recalculate live estimate with updated data
+    const mergedOrder: OrderData = {
+      ...orderData,
+      ...(response.orderPatch as Partial<OrderData>),
+    };
+    const updatedEstimate = await computeLiveEstimate(mergedOrder);
+
+    response.liveEstimate = updatedEstimate ?? liveEstimate;
 
     return NextResponse.json(response);
   } catch (error) {
@@ -237,6 +334,8 @@ export async function POST(request: NextRequest) {
         canGenerateEstimate: false,
         status: "collecting",
         internalNotes: [String(error)],
+        liveEstimate: null,
+        photoAnalysis: null,
       } as GeminiResponse,
       { status: 500 }
     );

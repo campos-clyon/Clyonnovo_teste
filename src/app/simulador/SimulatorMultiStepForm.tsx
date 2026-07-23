@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, Upload, X, MapPin, Phone, CheckCircle } from "lucide-react";
 import type { UploadedFile } from "./types";
+import { extractVideoFrames } from "./videoFrames";
 
 interface FormData {
   serviceType: string;
@@ -162,6 +163,29 @@ export default function SimulatorMultiStepForm() {
 
     setIsSubmitting(true);
     try {
+      // Extract frames from video files → convert to image entries
+      const processedPhotos: UploadedFile[] = [];
+      for (const photo of formData.photos) {
+        if (photo.type === "video" && photo.file) {
+          try {
+            const frames = await extractVideoFrames(photo.file, 4);
+            frames.forEach((frame, i) => {
+              processedPhotos.push({
+                id: `${photo.id}-frame-${i}`,
+                name: `${photo.name}-frame-${i}.jpg`,
+                size: Math.round(frame.base64.length * 0.75),
+                mimeType: "image/jpeg",
+                type: "image",
+                base64: frame.base64,
+              });
+            });
+          } catch {
+            // Skip videos that fail frame extraction
+          }
+        } else {
+          processedPhotos.push(photo);
+        }
+      }
 
       const res = await fetch("/api/simulador/pedido", {
         method: "POST",
@@ -183,7 +207,7 @@ export default function SimulatorMultiStepForm() {
             hasElevator: formData.hasElevator,
             parkingDistance: formData.parkingDistance,
             urgency: formData.urgency,
-            files: formData.photos,
+            files: processedPhotos,
           },
           estimate: {
             status: "estimated",

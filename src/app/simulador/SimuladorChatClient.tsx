@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Loader2, Image as ImageIcon, X } from "lucide-react";
+import { ArrowRight, Loader2, Image as ImageIcon, X, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OrderData } from "./types";
 import { mergeOrderPatch, getMissingFields, isOrderComplete } from "./orderUtils";
+import { extractVideoFrames } from "./videoFrames";
 
 type Message = {
   id: string;
@@ -27,6 +28,16 @@ type GeminiResponse = {
   shouldAskForPhotos?: boolean;
   status?: "collecting" | "ready_to_estimate" | "needs_photos" | "onsite_recommended";
   internalNotes?: string[];
+  liveEstimate?: {
+    minWithVat: number;
+    maxWithVat: number;
+    confidence: "high" | "medium" | "low";
+    label: string;
+  } | null;
+  photoAnalysis?: {
+    detectedItems: string[];
+    materialNotes: string;
+  } | null;
 };
 
 export default function SimuladorChatClient() {
@@ -38,6 +49,7 @@ export default function SimuladorChatClient() {
   const [showContactForm, setShowContactForm] = useState(false);
   const [orderData, setOrderData] = useState<OrderData>({});
   const [formData, setFormData] = useState({ nome: "", whatsapp: "", email: "", morada: "" });
+  const [liveEstimate, setLiveEstimate] = useState<GeminiResponse["liveEstimate"]>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,8 +113,15 @@ export default function SimuladorChatClient() {
     const compressedImages: { url: string; file: File }[] = [];
 
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) {
-        setError("Por favor, selecione apenas ficheiros de imagem");
+      if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+        setError("Por favor, selecione ficheiros de imagem ou vídeo");
+        continue;
+      }
+
+      // Videos are stored as-is (no compression) for server-side frame extraction
+      if (file.type.startsWith("video/")) {
+        const url = URL.createObjectURL(file);
+        setImages((prev) => [...prev, { url, file }]);
         continue;
       }
 
@@ -149,10 +168,29 @@ export default function SimuladorChatClient() {
     setLoading(true);
 
     try {
-      // Converter imagens para base64
-      const messageParts = [{ text: input }];
+      // Converter imagens e vídeos para base64
+      type MimeType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      const messageParts: Array<{ text: string } | { inlineData: { mimeType: MimeType; data: string } }> = [{ text: input }];
 
       for (const img of images) {
+        if (img.file.type.startsWith("video/")) {
+          // Extract key frames from video
+          try {
+            const frames = await extractVideoFrames(img.file, 4);
+            for (const frame of frames) {
+              messageParts.push({
+                inlineData: {
+                  mimeType: frame.mimeType as MimeType,
+                  data: frame.base64,
+                },
+              });
+            }
+          } catch (err) {
+            console.warn("[chat] Erro ao extrair frames do vídeo:", err);
+          }
+          continue;
+        }
+
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => {
@@ -165,10 +203,10 @@ export default function SimuladorChatClient() {
 
         messageParts.push({
           inlineData: {
-            mimeType: img.file.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            mimeType: img.file.type as MimeType,
             data: base64,
           },
-        } as any);
+        });
       }
 
       // Converter histórico de mensagens para enviar à API
@@ -217,7 +255,7 @@ export default function SimuladorChatClient() {
       const response = await fetch("/api/chat-simulador", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messagesForAPI, order: orderData }),
+        body: JSON.stringify({ messages: messagesForAPI, order: orderData } as Record<string, unknown>),
       });
 
       const data: GeminiResponse = await response.json();
@@ -232,7 +270,16 @@ export default function SimuladorChatClient() {
 
       // Actualizar orderData com o patch extraído pelo Gemini
       if (data.orderPatch) {
-        setOrderData((prev) => mergeOrderPatch(prev, data.orderPatch as Partial<OrderData>));
+        const patch = data.orderPatch as Partial<OrderData>;
+        if (data.photoAnalysis?.detectedItems?.length && !patch.heavyItems?.length) {
+          patch.heavyItems = data.photoAnalysis.detectedItems;
+        }
+        setOrderData((prev) => mergeOrderPatch(prev, patch));
+      }
+
+      // Actualizar estimativa em tempo real
+      if (data.liveEstimate) {
+        setLiveEstimate(data.liveEstimate);
       }
 
       // Preencher automaticamente formulário se Gemini extraiu dados de contacto
@@ -359,6 +406,28 @@ export default function SimuladorChatClient() {
         </div>
       </div>
 
+      {/* Estimativa em tempo real */}
+      {liveEstimate && (
+        <div className="border-b border-white/10 bg-white/[0.02] px-6 py-3">
+          <div className="max-w-4xl mx-auto flex items-center gap-3">
+            <div className={cn(
+              "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium",
+              liveEstimate.confidence === "high"
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                : liveEstimate.confidence === "medium"
+                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                : "bg-slate-500/20 text-slate-300 border border-slate-500/30"
+            )}>
+              <TrendingUp className="h-4 w-4" />
+              <span>Estimativa: {liveEstimate.label}</span>
+            </div>
+            <span className="text-xs text-slate-500">
+              {liveEstimate.confidence === "high" ? "Alta confiança" : liveEstimate.confidence === "medium" ? "Confiança média — mais dados melhoram" : "Estimativa preliminar"}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Mensagens */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-4xl mx-auto space-y-4">
@@ -476,7 +545,7 @@ export default function SimuladorChatClient() {
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept="image/*"
+                  accept="image/*,video/*"
                   onChange={handleImageSelect}
                   disabled={loading}
                   className="hidden"

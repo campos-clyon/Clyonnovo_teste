@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import type { ModelMessage } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import type { OrderData } from "@/app/simulador/types";
+import { calculateFastEstimate } from "@/lib/pricing-helper";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,16 @@ export interface ChatResponse {
   canGenerateEstimate: boolean;
   status: "collecting" | "ready_to_estimate" | "needs_photos" | "onsite_recommended";
   internalNotes: string[];
+  liveEstimate?: {
+    minWithVat: number;
+    maxWithVat: number;
+    confidence: "high" | "medium" | "low";
+    label: string;
+  } | null;
+  photoAnalysis?: {
+    detectedItems: string[];
+    materialNotes: string;
+  } | null;
 }
 
 // ─── Fallback local quando a IA falha ────────────────────────────────────────
@@ -42,6 +53,8 @@ function buildFallback(order: OrderData): ChatResponse {
     canGenerateEstimate: false,
     status: "collecting",
     internalNotes: ["fallback_local"],
+    liveEstimate: null,
+    photoAnalysis: null,
   };
 }
 
@@ -51,6 +64,53 @@ function extractJson(text: string): ChatResponse | null {
   try {
     return JSON.parse(match[0]) as ChatResponse;
   } catch {
+    return null;
+  }
+}
+
+// ─── Motor B: estimativa em tempo real ───────────────────────────────────────
+async function computeLiveEstimate(order: OrderData): Promise<ChatResponse["liveEstimate"]> {
+  if (!order.serviceType) return null;
+
+  try {
+    const result = await calculateFastEstimate({
+      serviceType: order.serviceType,
+      description: order.description,
+      heavyItems: order.heavyItems,
+      volumeTier: order.volumeTier,
+      floor: order.floor,
+      hasElevator: order.hasElevator,
+      parkingDistance: order.parkingDistance,
+      needsDismantling: order.needsDismantling,
+      distanceFromBase: order.distanceFromBase,
+      movingDistance: order.movingDistance,
+      originAccess: order.originAccess,
+      destinationAccess: order.destinationAccess,
+      entulhoState: order.entulhoState,
+      entulhoQuantidade: order.entulhoQuantidade,
+      entulhoQuantidadeEnsacados: order.entulhoQuantidadeEnsacados,
+    });
+
+    if (!result.ok || !result.estimatedPriceWithVat) return null;
+
+    const minVat = result.estimateMinWithVat ?? Math.round(result.estimatedPriceWithVat * 0.9 * 100) / 100;
+    const maxVat = result.estimateMaxWithVat ?? Math.round(result.estimatedPriceWithVat * 1.1 * 100) / 100;
+
+    const hasAddress = !!order.distanceFromBase?.distanceKm;
+    const hasAccess = !!order.floor && order.hasElevator !== "unknown" && order.hasElevator !== undefined;
+
+    let confidence: "high" | "medium" | "low" = "low";
+    if (hasAddress && hasAccess) confidence = "high";
+    else if (hasAccess || order.description) confidence = "medium";
+
+    return {
+      minWithVat: Math.round(minVat),
+      maxWithVat: Math.round(maxVat),
+      confidence,
+      label: `${Math.round(minVat)}€ – ${Math.round(maxVat)}€`,
+    };
+  } catch (err) {
+    console.error("[simulator/chat] Erro liveEstimate:", err);
     return null;
   }
 }
@@ -84,6 +144,18 @@ Deves extrair automaticamente da mensagem do cliente:
 - nome, telefone, email
 - necessidade de visita presencial
 
+== ANÁLISE DE FOTOS ==
+Quando receberes imagens do cliente:
+- Identifica TODOS os objetos/materiais visíveis nas fotos
+- Conta cada tipo de item (ex: 2 sofás, 1 armário, 3 caixas)
+- Avalia o estado do material (bom, danificado, volumoso)
+- Descreve materiais especiais (madeira, metal, entulho, plástico)
+- Preenche heavyItems no orderPatch com os itens identificados
+- Preenche a description com base nas fotos se ainda não existir
+- Devolve photoAnalysis com:
+  - detectedItems: lista de cada item detectado (ex: ["sofá 3 lugares", "armário de 2 portas"])
+  - materialNotes: notas sobre materiais especiais ou condições de acesso visíveis
+
 Regras comerciais principais:
 - Todos os valores são sem IVA. O IVA (23%) deve ser destacado separadamente.
 - Serviço dedicado com carrinha/equipa nunca deve começar abaixo do mínimo da zona.
@@ -95,7 +167,7 @@ Regras comerciais principais:
 - Mais de 50 sacos, entulho pesado, obra grande ou acesso difícil: recomendar fotos/vídeo ou orçamento presencial.
 - Casa acumulada, T2/T3/T4 cheio, moradia, loja ou escritório grande: recomendar orçamento personalizado.
 - Sem elevador, escadas, distância longa, desmontagem, objetos pesados, triagem ou urgência aumentam o valor.
-- Não dês o preço concreto no chat. Diz apenas "já é possível calcular uma estimativa" ou "preciso de mais informação".
+- NÃO dês o preço concreto no chat — o motor de preços calcula automaticamente e mostra ao lado.
 
 Como deves conversar:
 - Se o cliente escrever tudo de uma vez, extrai tudo e pergunta só o que falta.
@@ -120,6 +192,7 @@ Quando responderes, devolve APENAS JSON válido neste formato exato (sem markdow
     "parkingDistance": "door | under_20m | over_30m | difficult | unknown",
     "needsDismantling": "no | simple | medium | complex | unknown",
     "urgency": "no | today | tomorrow | this_week | flexible",
+    "heavyItems": ["sofá", "armário"],
     "receiver": {
       "name": "",
       "phone": "",
@@ -133,7 +206,8 @@ Quando responderes, devolve APENAS JSON válido neste formato exato (sem markdow
   "shouldAskForAddress": false,
   "canGenerateEstimate": false,
   "status": "collecting",
-  "internalNotes": []
+  "internalNotes": [],
+  "photoAnalysis": null
 }
 
 Regras do JSON:
@@ -173,6 +247,7 @@ export async function POST(request: NextRequest) {
     if (order.parkingDistance && order.parkingDistance !== "unknown") known.push(`Estacionamento: ${order.parkingDistance}`);
     if (order.urgency && order.urgency !== "no") known.push(`Urgência: ${order.urgency}`);
     if (order.needsDismantling && order.needsDismantling !== "unknown") known.push(`Desmontagem: ${order.needsDismantling}`);
+    if (order.heavyItems?.length) known.push(`Itens pesados: ${order.heavyItems.join(", ")}`);
     if (order.receiver?.name) known.push(`Nome: ${order.receiver.name}`);
     if (order.receiver?.phone) known.push(`Telefone: ${order.receiver.phone}`);
     if (hasPhotos) known.push("Fotos: enviadas");
@@ -209,16 +284,21 @@ export async function POST(request: NextRequest) {
     const firstUserIdx = modelMessages.findIndex((m) => m.role === "user");
     const safeMessages = firstUserIdx >= 0 ? modelMessages.slice(firstUserIdx) : modelMessages;
 
-    const { text } = await generateText({
-      model: MODEL,
-      system: systemWithContext,
-      messages: safeMessages,
-    });
+    const [{ text }, liveEstimate] = await Promise.all([
+      generateText({
+        model: MODEL,
+        system: systemWithContext,
+        messages: safeMessages,
+      }),
+      computeLiveEstimate(order),
+    ]);
 
     const parsed = extractJson(text ?? "");
     if (!parsed) {
       console.error("[simulator/chat] JSON inválido do modelo:", text?.slice(0, 300));
-      return NextResponse.json(buildFallback(order));
+      const fallback = buildFallback(order);
+      fallback.liveEstimate = liveEstimate;
+      return NextResponse.json(fallback);
     }
 
     // Sanitizar orderPatch — remover campos undefined/vazios
@@ -232,6 +312,7 @@ export async function POST(request: NextRequest) {
     if (patch.parkingDistance && patch.parkingDistance !== "unknown") cleanPatch.parkingDistance = patch.parkingDistance;
     if (patch.needsDismantling && patch.needsDismantling !== "unknown") cleanPatch.needsDismantling = patch.needsDismantling;
     if (patch.urgency && patch.urgency !== "no") cleanPatch.urgency = patch.urgency;
+    if (Array.isArray(patch.heavyItems) && patch.heavyItems.length > 0) cleanPatch.heavyItems = patch.heavyItems;
     if (patch.receiver?.name || patch.receiver?.phone || patch.receiver?.email) {
       cleanPatch.receiver = {
         name: patch.receiver.name || undefined,
@@ -239,6 +320,16 @@ export async function POST(request: NextRequest) {
         email: patch.receiver.email || undefined,
       };
     }
+
+    // Merge photo analysis items into heavyItems
+    const photoAnalysis = parsed.photoAnalysis ?? null;
+    if (photoAnalysis?.detectedItems?.length && !cleanPatch.heavyItems?.length) {
+      cleanPatch.heavyItems = photoAnalysis.detectedItems;
+    }
+
+    // Recalculate estimate with merged data
+    const mergedOrder: OrderData = { ...order, ...cleanPatch };
+    const updatedEstimate = await computeLiveEstimate(mergedOrder);
 
     const response: ChatResponse = {
       assistantMessage: parsed.assistantMessage ?? "Pode continuar a descrever o serviço.",
@@ -251,11 +342,14 @@ export async function POST(request: NextRequest) {
       canGenerateEstimate: parsed.canGenerateEstimate === true,
       status: parsed.status ?? "collecting",
       internalNotes: Array.isArray(parsed.internalNotes) ? parsed.internalNotes : [],
+      liveEstimate: updatedEstimate ?? liveEstimate,
+      photoAnalysis,
     };
 
     return NextResponse.json(response);
   } catch (error) {
     console.error("[simulator/chat] Erro:", error);
-    return NextResponse.json(buildFallback(order));
+    const fallback = buildFallback(order);
+    return NextResponse.json(fallback);
   }
 }
