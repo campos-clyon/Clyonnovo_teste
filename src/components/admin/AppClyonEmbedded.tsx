@@ -1920,9 +1920,169 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
 }
 
 // ── Moedas e preços ────────────────────────────────────────────────────────
-function TabMoedas() {
+
+// Regras de custo em créditos por trabalho aceite (credit_fee_rules do Bridge).
+// O painel edita DADOS; calculate_job_credit_cost é a única fonte do custo.
+type CreditFeeRule = {
+  id: string;
+  min_job_amount_cents: number;
+  max_job_amount_cents: number | null;
+  fee_credits: number;
+  active: boolean;
+  updated_at?: string;
+};
+
+function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, string> }) {
+  const [rules, setRules] = useState<CreditFeeRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [editFee, setEditFee] = useState<Record<string, string>>({});
+  const [showNew, setShowNew] = useState(false);
+  const [newMin, setNewMin] = useState("");
+  const [newMax, setNewMax] = useState("");
+  const [newFee, setNewFee] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch("/api/admin/app-clyon/credit-fee-rules", { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro ao carregar regras."); return; }
+      setRules(json.rules ?? []);
+      setEditFee({});
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const post = async (payload: Record<string, unknown>, okMsg: string) => {
+    setBusy(true); setError(null); setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/app-clyon/credit-fee-rules", {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro ao guardar."); return; }
+      setSuccess(okMsg);
+      await load();
+    } catch { setError("Erro de ligação."); }
+    finally { setBusy(false); }
+  };
+
+  const eur = (cents: number | null) =>
+    cents == null ? "sem limite" : `${(cents / 100).toLocaleString("pt-PT", { minimumFractionDigits: 0 })} €`;
+
+  return (
+    <div className="rounded-2xl border border-[#00BDEB]/20 bg-[#00BDEB]/[0.03] p-5">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Custo por trabalho aceite (créditos)</p>
+        <button
+          onClick={() => setShowNew((v) => !v)}
+          className="rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40"
+        >
+          {showNew ? "Cancelar" : "+ Nova banda"}
+        </button>
+      </div>
+      <p className="mb-4 text-[11px] leading-relaxed text-slate-500">
+        Créditos descontados ao profissional quando aceita um trabalho, por banda de valor do serviço.
+        O custo é calculado pela função <code className="rounded bg-white/[0.04] px-1 py-0.5 text-slate-400">calculate_job_credit_cost</code> na
+        base de dados — este ecrã edita apenas as bandas. Bandas activas não se podem sobrepor.
+      </p>
+
+      {error && <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</div>}
+      {success && <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{success}</div>}
+
+      {showNew && (
+        <div className="mb-4 grid gap-3 rounded-xl border border-white/[0.07] bg-[#0C1C2E] p-4 sm:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Valor mín. (€)</label>
+            <input type="number" min="0" step="1" value={newMin} onChange={(e) => setNewMin(e.target.value)} placeholder="0"
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-white outline-none focus:border-[#00BDEB]" />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Valor máx. (€) — vazio = sem limite</label>
+            <input type="number" min="0" step="1" value={newMax} onChange={(e) => setNewMax(e.target.value)} placeholder="sem limite"
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-white outline-none focus:border-[#00BDEB]" />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Créditos</label>
+            <input type="number" min="1" step="1" value={newFee} onChange={(e) => setNewFee(e.target.value)} placeholder="7"
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-white outline-none focus:border-[#00BDEB]" />
+          </div>
+          <div className="flex items-end">
+            <button
+              disabled={busy || !newFee}
+              onClick={() => post({
+                action: "create",
+                min_job_amount_cents: Math.round(Number(newMin || 0) * 100),
+                max_job_amount_cents: newMax === "" ? null : Math.round(Number(newMax) * 100),
+                fee_credits: Number(newFee),
+                active: true,
+              }, "Banda criada.").then(() => { setShowNew(false); setNewMin(""); setNewMax(""); setNewFee(""); })}
+              className="h-9 w-full rounded-lg bg-[#00BDEB] px-3 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+            >
+              {busy ? "A criar..." : "Criar banda"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-xs text-slate-500">A carregar…</p>
+      ) : rules.length === 0 ? (
+        <p className="text-xs text-amber-300">Nenhuma regra encontrada — sem regras activas, os trabalhos não são cobrados.</p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+          {rules.map((r, i) => (
+            <div key={r.id} className={`flex flex-wrap items-center gap-3 px-3 py-2.5 ${r.active ? "bg-[#12263B]/60" : "bg-[#0C1C2E]/40 opacity-60"} ${i < rules.length - 1 ? "border-b border-white/[0.05]" : ""}`}>
+              <span className={`inline-flex h-2 w-2 flex-shrink-0 rounded-full ${r.active ? "bg-emerald-400" : "bg-slate-600"}`} />
+              <span className="min-w-[150px] text-sm text-white">
+                {eur(r.min_job_amount_cents)} → {eur(r.max_job_amount_cents)}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number" min="1" step="1"
+                  value={editFee[r.id] ?? String(r.fee_credits)}
+                  onChange={(e) => setEditFee((m) => ({ ...m, [r.id]: e.target.value }))}
+                  className="h-8 w-20 rounded-lg border border-white/[0.08] bg-[#12263B] px-2 text-center text-sm font-bold text-[#00BDEB] outline-none focus:border-[#00BDEB]"
+                />
+                <span className="text-[10px] uppercase tracking-wider text-slate-500">créditos</span>
+              </div>
+              {(editFee[r.id] !== undefined && editFee[r.id] !== String(r.fee_credits)) && (
+                <button
+                  disabled={busy}
+                  onClick={() => post({ action: "update", id: r.id, fee_credits: Number(editFee[r.id]) }, "Custo actualizado.")}
+                  className="rounded-lg bg-[#00BDEB] px-3 py-1.5 text-[11px] font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+                >
+                  Guardar
+                </button>
+              )}
+              <button
+                disabled={busy}
+                onClick={() => post({ action: "update", id: r.id, active: !r.active }, r.active ? "Regra desactivada." : "Regra activada.")}
+                className={`ml-auto rounded-lg border px-3 py-1.5 text-[11px] font-semibold ${r.active ? "border-red-500/25 text-red-300 hover:bg-red-500/10" : "border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/10"} disabled:opacity-50`}
+              >
+                {r.active ? "Desactivar" : "Activar"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabMoedas({ authHeader }: { authHeader: Record<string, string> }) {
   return (
     <div className="space-y-5">
+      {/* Custo em créditos por trabalho aceite */}
+      <CreditFeeRulesSection authHeader={authHeader} />
+
       {/* Moeda principal */}
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5">
         <div className="flex items-center gap-3">
@@ -2605,7 +2765,7 @@ export default function AppClyonEmbedded({
         {tab === "profissionais" && <TabProfissionais authHeader={authHeader} />}
         {tab === "catalogo"      && <TabCatalogo authHeader={authHeader} />}
         {tab === "cupons"        && <TabCupons authHeader={authHeader} />}
-        {tab === "moedas"        && <TabMoedas />}
+        {tab === "moedas"        && <TabMoedas authHeader={authHeader} />}
         {tab === "pagamentos"    && <TabPagamentos authHeader={authHeader} />}
         {tab === "contas"        && <TabContas authHeader={authHeader} />}
         {tab === "metricas"      && <TabMetricas authHeader={authHeader} />}
