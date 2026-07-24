@@ -37,6 +37,7 @@ type InlineOrder = {
   details: unknown; notes: unknown;
   address_line: unknown; city: unknown; region: unknown;
   category_slug: string | null; estimated_price: number | null;
+  final_price?: number | null;
   scheduled_for: string | null; photos: string[]; created_at: string;
   client_name: unknown; client_email: unknown; client_phone: unknown;
   category_name: unknown; category_icon: string | null;
@@ -463,7 +464,10 @@ function PedidoInlinePanel({
       setOps(opsJson.ops ?? []);
       setStatus(o.status);
       setUrgency(o.urgency ?? "normal");
-      setPrice(o.estimated_price != null ? String(o.estimated_price) : "");
+      // Pré-preencher com o valor aprovado (final_price) quando o orçamento
+      // estimado ainda não foi definido no painel — evita aprovações sem valor.
+      const effectivePrice = o.estimated_price ?? o.final_price ?? null;
+      setPrice(effectivePrice != null ? String(effectivePrice) : "");
       setScheduledFor(o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "");
       setAdminNote(""); setReason("");
     } catch { setError("Erro de ligação."); }
@@ -685,11 +689,37 @@ function PedidoInlinePanel({
             ) : (
               <p className="text-sm text-slate-400">{displayText(order.details)}</p>
             )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {meta?.totalSemIva != null && <FactChip label="Total s/ IVA" value={fmtMoney(meta.totalSemIva)} />}
-              {meta?.estimatedVolume != null && <FactChip label="Volume est." value={`${meta.estimatedVolume} m³`} />}
-              {meta?.bags != null && meta.bags > 0 && <FactChip label="Sacos" value={String(meta.bags)} />}
-            </div>
+            {(() => {
+              // Total s/IVA: usar o total do orçamento automático; quando vem a 0
+              // (ou ausente) mas os itens têm subtotais, somar os itens.
+              const itemsSum = (meta?.items ?? []).reduce((acc, it) => acc + (it.subtotal ?? 0), 0);
+              const displayTotal = meta?.totalSemIva != null && meta.totalSemIva > 0
+                ? meta.totalSemIva
+                : itemsSum > 0 ? itemsSum : null;
+              // Valor aprovado: orçamento definido no painel (estimated_price)
+              // ou aprovado no fluxo da app (final_price).
+              const approvedPrice = order.estimated_price ?? order.final_price ?? null;
+              return (
+                <>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {displayTotal != null && <FactChip label="Total s/ IVA" value={fmtMoney(displayTotal)} />}
+                    {meta?.estimatedVolume != null && <FactChip label="Volume est." value={`${meta.estimatedVolume} m³`} />}
+                    {meta?.bags != null && meta.bags > 0 && <FactChip label="Sacos" value={String(meta.bags)} />}
+                  </div>
+                  {approvedPrice != null && approvedPrice > 0 && (
+                    <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] px-3 py-2.5">
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300">Orçamento aprovado</p>
+                        <p className="text-[10px] text-slate-400">
+                          {fmtMoney(Math.round(approvedPrice * 1.23 * 100) / 100)} c/ IVA
+                        </p>
+                      </div>
+                      <p className="text-lg font-bold text-emerald-300">{fmtMoney(approvedPrice)} <span className="text-[10px] font-medium text-slate-400">s/ IVA</span></p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Local e acesso */}

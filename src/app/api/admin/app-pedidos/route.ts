@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
         district:        asString(row.region) ?? "",
         city:            asString(row.city) ?? "",
         urgency:         asString(row.urgency) ?? "normal",
-        budget_range:    row.estimated_price != null ? `€${row.estimated_price}` : null,
+        budget_range:    (row.estimated_price ?? row.final_price) != null ? `€${row.estimated_price ?? row.final_price}` : null,
         preferred_date:  asString(row.scheduled_for),
         status:          asString(row.status) ?? "open",
         photos:          Array.isArray(row.photos) ? row.photos.filter((p: any) => typeof p === "string") : [],
