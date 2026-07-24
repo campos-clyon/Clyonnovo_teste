@@ -310,20 +310,21 @@ describe("displayText — renderização segura para JSX", () => {
 
 // ── 7. Aprovação explícita de orçamento ────────────────────────────────────
 describe("aprovação de orçamento", () => {
-  it("só fica disponível para pedidos recebidos ou em análise", () => {
+  it("só fica disponível para rascunhos, recebidos ou em análise (CONTRATO.md §3)", () => {
+    expect(isQuoteApprovalAvailable("draft")).toBe(true);
     expect(isQuoteApprovalAvailable("received")).toBe(true);
     expect(isQuoteApprovalAvailable("in_review")).toBe(true);
     expect(isQuoteApprovalAvailable("awaiting_deposit")).toBe(false);
     expect(isQuoteApprovalAvailable("confirmed")).toBe(false);
   });
 
-  it("cria a operação de aprovação para aguardar depósito", () => {
+  it("cria a operação de aprovação para confirmed (publicação automática)", () => {
     const result = buildQuoteApprovalPayload("200.50", "Cliente informado por telefone.");
     expect(result.error).toBeNull();
     expect(result.payload).toEqual({
-      status: "awaiting_deposit",
+      status: "confirmed",
       estimated_price: 200.5,
-      admin_note: "Orçamento aprovado; pedido colocado a aguardar depósito. Cliente informado por telefone.",
+      admin_note: "Orçamento aprovado; pedido confirmado — publicação aos parceiros é automática. Cliente informado por telefone.",
     });
   });
 

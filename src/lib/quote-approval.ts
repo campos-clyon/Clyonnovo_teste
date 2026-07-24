@@ -1,6 +1,15 @@
-export const QUOTE_APPROVAL_SOURCE_STATUSES = ["received", "in_review"] as const;
-export const QUOTE_APPROVAL_TARGET_STATUS = "awaiting_deposit" as const;
-const QUOTE_VALUE_REQUIRED_STATUSES = [QUOTE_APPROVAL_TARGET_STATUS, "confirmed"] as const;
+import { APPROVAL_TARGET_STATUS } from "./order-status-flow";
+
+/**
+ * Aprovação de orçamento — alinhada com CONTRATO.md §3:
+ * admin_approve_request exige preço definido, rejeita se o pedido não
+ * estiver em received/in_review/draft, e coloca o pedido em "confirmed".
+ * A publicação aos parceiros é automática (trigger auto_match, §4) —
+ * o backoffice NÃO publica por sua conta.
+ */
+export const QUOTE_APPROVAL_SOURCE_STATUSES = ["draft", "received", "in_review"] as const;
+export const QUOTE_APPROVAL_TARGET_STATUS = APPROVAL_TARGET_STATUS;
+const QUOTE_VALUE_REQUIRED_STATUSES = ["awaiting_deposit", "confirmed"] as const;
 
 export type QuoteApprovalPayload = {
   status: typeof QUOTE_APPROVAL_TARGET_STATUS;
@@ -8,11 +17,6 @@ export type QuoteApprovalPayload = {
   admin_note: string;
 };
 
-/**
- * A aprovação de orçamento é o passo administrativo que comunica o valor ao
- * cliente e coloca o pedido em espera pelo respectivo depósito. O estado
- * `confirmed` fica reservado para a confirmação posterior dessa etapa.
- */
 export function isQuoteApprovalAvailable(status: string | null | undefined): boolean {
   return (QUOTE_APPROVAL_SOURCE_STATUSES as readonly string[]).includes(status ?? "");
 }
@@ -43,7 +47,7 @@ export function buildQuoteApprovalPayload(
 
   const normalizedPrice = validatedQuotePrice(price)!;
   const extraNote = typeof note === "string" ? note.trim() : "";
-  const approvalNote = "Orçamento aprovado; pedido colocado a aguardar depósito.";
+  const approvalNote = "Orçamento aprovado; pedido confirmado — publicação aos parceiros é automática.";
 
   return {
     payload: {

@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
 import { isValidTransition, validTargets } from "@/lib/order-status-flow";
-import { publishRequestToPartners, auditPartnerPublish } from "@/lib/partner-publish";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -237,20 +236,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!row) {
         return NextResponse.json({ error: "Pedido não encontrado.", correlation_id: correlationId }, { status: 404 });
       }
-      // "A atribuir" = publicar a oportunidade aos parceiros aprovados
-      let partnersInvited: number | null = null;
-      let publishWarning: string | null = null;
-      if (updates.status === "assignment_pending") {
-        const pub = await publishRequestToPartners(sb, id);
-        partnersInvited = pub.partnersInvited;
-        publishWarning = pub.warning;
-        if (pub.ok) await auditPartnerPublish(sb, id, colab!.id, colab!.nome, pub.partnersInvited);
-      }
-      return NextResponse.json({
-        order: await enrichOrder(sb, row as Record<string, unknown>),
-        ...(partnersInvited !== null ? { partners_invited: partnersInvited } : {}),
-        ...(publishWarning ? { publish_warning: publishWarning } : {}),
-      });
+      // Publicação aos parceiros: automática via trigger auto_match ao entrar
+      // em confirmed/assignment_pending (CONTRATO.md §4) — não duplicar aqui.
+      return NextResponse.json({ order: await enrichOrder(sb, row as Record<string, unknown>) });
     }
 
     // RPC inexistente (migração 004 ainda não executada) → fallback.
@@ -306,21 +294,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }, { status: 500 });
     }
 
-    // Publicação a parceiros também no caminho de fallback
-    let partnersInvitedFb: number | null = null;
-    let publishWarningFb: string | null = null;
-    if (updates.status === "assignment_pending") {
-      const pub = await publishRequestToPartners(sb, id);
-      partnersInvitedFb = pub.partnersInvited;
-      publishWarningFb = pub.warning;
-      if (pub.ok) await auditPartnerPublish(sb, id, colab!.id, colab!.nome, pub.partnersInvited);
-    }
-
-    return NextResponse.json({
-      order: await enrichOrder(sb, updated),
-      ...(partnersInvitedFb !== null ? { partners_invited: partnersInvitedFb } : {}),
-      ...(publishWarningFb ? { publish_warning: publishWarningFb } : {}),
-    });
+    return NextResponse.json({ order: await enrichOrder(sb, updated) });
   } catch (e: any) {
     console.error("[app-pedidos/[id] PATCH]", { correlationId, error: e });
     return NextResponse.json({ error: "Erro interno.", correlation_id: correlationId }, { status: 500 });

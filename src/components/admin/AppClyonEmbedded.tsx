@@ -492,13 +492,8 @@ function PedidoInlinePanel({
       if (!res.ok) { setSaveError(json.error ?? "Erro ao avançar a fase."); return; }
       const statusLabel = INLINE_STATUS_CFG[json.status as AppStatus]?.label ?? json.status;
       let msg = `Fase avançada: ${json.action}. Estado actual: ${statusLabel}.`;
-      if (typeof json.partners_invited === "number") {
-        msg += json.partners_invited > 0
-          ? ` Oportunidade publicada a ${json.partners_invited} parceiro(s) — já aparece na app dos profissionais.`
-          : " Todos os parceiros aprovados já tinham esta oferta activa.";
-      }
-      if (json.publish_warning) {
-        setSaveError(json.publish_warning);
+      if (json.status === "confirmed" || json.status === "assignment_pending") {
+        msg += " A publicação aos parceiros é automática.";
       }
       setSaveSuccess(msg);
       await load();
@@ -554,7 +549,7 @@ function PedidoInlinePanel({
       });
       const json = await res.json();
       if (!res.ok) { setSaveError(json.error ?? "Erro ao aprovar o orçamento."); return; }
-      setSaveSuccess("Orçamento aprovado. O pedido aguarda agora o depósito do cliente.");
+      setSaveSuccess("Orçamento aprovado. O pedido está confirmado — a publicação aos parceiros é automática.");
       await load();
     } catch {
       setSaveError("Erro de ligação.");
@@ -956,7 +951,7 @@ function PedidoInlinePanel({
                 <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3">
                   <p className="text-xs font-bold text-emerald-300">Aprovação do orçamento</p>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                    Confirma o valor acima, regista esta operação na Auditoria e altera o pedido para <span className="font-semibold text-amber-300">Aguarda depósito</span>.
+                    Confirma o valor acima, regista esta operação na Auditoria e altera o pedido para <span className="font-semibold text-sky-300">Confirmado</span> — a publicação aos parceiros é automática.
                   </p>
                   <button
                     type="button"

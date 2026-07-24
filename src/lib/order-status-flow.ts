@@ -1,19 +1,21 @@
 /**
  * Máquina de estados dos pedidos App CLYON (Supabase service_requests).
  *
- * O estado avança automaticamente pela sequência conforme as fases do
- * pedido são cumpridas — o admin marca o EVENTO da fase (ex: "Depósito
- * recebido") e o estado seguinte é aplicado pelo servidor, em vez de
- * escolher manualmente entre 16 estados num dropdown.
+ * ⚠️ GERADO A PARTIR DE CONTRATO.md (§2 — Máquina de estados).
+ * Não alterar a sequência aqui sem actualizar primeiro o contrato no
+ * projecto CLYON Bridge — o Bridge é o dono do contrato e das migrações.
  *
- * Sequência principal:
- *   in_review → awaiting_deposit → assignment_pending → partner_selected
- *   → confirmed → in_route → arrived → in_execution → awaiting_confirmation
- *   → completed
+ * Fluxo canónico (CONTRATO.md §2):
+ *   draft → received → in_review → confirmed → assignment_pending
+ *         → partner_selected → in_route → arrived → in_execution
+ *         → awaiting_confirmation → completed
  *
- * Entradas legadas: pedidos criados como "open" (app móvel) ou "received"
- * são promovidos automaticamente a "in_review" quando entram no painel —
- * quando o cliente envia, o pedido fica logo em análise.
+ * Ramos laterais: awaiting_deposit (à espera de pagamento do cliente),
+ * extra_review_requested, in_dispute, canceled, rejected.
+ *
+ * Publicação aos parceiros: feita pelo trigger trg_service_requests_auto_match
+ * ao entrar em confirmed/assignment_pending com preço > 0 (CONTRATO.md §4).
+ * O backoffice NÃO deve duplicar a publicação.
  */
 
 /** Estados que representam um pedido acabado de submeter pelo cliente. */
@@ -21,6 +23,12 @@ export const ENTRY_STATUSES = ["open", "received"] as const;
 
 /** Estado em que todo o pedido novo deve entrar: em análise. */
 export const ANALYSIS_STATUS = "in_review" as const;
+
+/**
+ * Estado canónico de aprovação (CONTRATO.md §3: admin_approve_request → confirmed).
+ * O trigger auto_match publica aos parceiros e avança para assignment_pending.
+ */
+export const APPROVAL_TARGET_STATUS = "confirmed" as const;
 
 export interface PhaseAdvance {
   /** Estado seguinte na sequência */
@@ -37,11 +45,12 @@ export const NEXT_PHASE: Record<string, PhaseAdvance | null> = {
   draft:                  { next: "in_review",             actionLabel: "Iniciar análise" },
   open:                   { next: "in_review",             actionLabel: "Iniciar análise" },
   received:               { next: "in_review",             actionLabel: "Iniciar análise" },
-  in_review:              { next: "awaiting_deposit",      actionLabel: "Aprovar orçamento" },
-  awaiting_deposit:       { next: "assignment_pending",    actionLabel: "Depósito recebido" },
+  in_review:              { next: "confirmed",             actionLabel: "Aprovar orçamento" },
+  awaiting_deposit:       { next: "confirmed",             actionLabel: "Depósito recebido" },
+  // Normalmente automático (trigger auto_match) — mantido como fallback manual
+  confirmed:              { next: "assignment_pending",    actionLabel: "Publicar aos parceiros" },
   assignment_pending:     { next: "partner_selected",      actionLabel: "Parceiro atribuído" },
-  partner_selected:       { next: "confirmed",             actionLabel: "Confirmar agendamento" },
-  confirmed:              { next: "in_route",              actionLabel: "Equipa a caminho" },
+  partner_selected:       { next: "in_route",              actionLabel: "Equipa a caminho" },
   in_route:               { next: "arrived",               actionLabel: "Chegou ao local" },
   arrived:                { next: "in_execution",          actionLabel: "Iniciar execução" },
   in_execution:           { next: "awaiting_confirmation", actionLabel: "Trabalho terminado" },
@@ -54,11 +63,12 @@ export const NEXT_PHASE: Record<string, PhaseAdvance | null> = {
 };
 
 /**
- * Transições laterais fora da sequência principal, sempre permitidas
- * a partir do estado indicado (além de canceled/rejected, permitidos
- * de qualquer estado activo, com motivo).
+ * Transições laterais fora da sequência principal (CONTRATO.md §2 — ramos),
+ * sempre permitidas a partir do estado indicado (além de canceled/rejected,
+ * permitidos de qualquer estado activo, com motivo).
  */
 const LATERAL_TRANSITIONS: Record<string, string[]> = {
+  in_review:             ["awaiting_deposit"],
   in_execution:          ["extra_review_requested"],
   awaiting_confirmation: ["in_dispute"],
   completed:             ["in_dispute"],
@@ -72,12 +82,11 @@ export function isTerminalStatus(status: string | null | undefined): boolean {
 
 /**
  * Estados que só existem DEPOIS do orçamento ter sido aprovado.
- * Usado para mostrar o selo "Aprovado" no painel — a partir de
- * awaiting_deposit, o pedido tem sempre um orçamento aprovado.
+ * Usado para mostrar o selo "Aprovado" no painel.
  */
 const POST_APPROVAL_STATUSES = new Set([
-  "awaiting_deposit", "assignment_pending", "partner_selected",
-  "confirmed", "in_route", "arrived", "in_execution",
+  "awaiting_deposit", "confirmed", "assignment_pending", "partner_selected",
+  "in_route", "arrived", "in_execution",
   "extra_review_requested", "awaiting_confirmation", "completed",
 ]);
 

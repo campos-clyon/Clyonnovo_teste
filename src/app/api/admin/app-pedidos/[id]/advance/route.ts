@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
 import { nextPhase, isTerminalStatus } from "@/lib/order-status-flow";
-import { publishRequestToPartners, auditPartnerPublish } from "@/lib/partner-publish";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,23 +100,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (!row) {
         return NextResponse.json({ error: "Pedido não encontrado.", correlation_id: correlationId }, { status: 404 });
       }
-      // "A atribuir" = publicar a oportunidade aos parceiros aprovados —
-      // é isto que faz o pedido aparecer na app dos profissionais.
-      let partnersInvited: number | null = null;
-      let publishWarning: string | null = null;
-      if (phase.next === "assignment_pending") {
-        const pub = await publishRequestToPartners(sb, id);
-        partnersInvited = pub.partnersInvited;
-        publishWarning = pub.warning;
-        if (pub.ok) await auditPartnerPublish(sb, id, colab!.id, colab!.nome, pub.partnersInvited);
-      }
+      // Publicação aos parceiros: automática via trigger auto_match ao entrar
+      // em confirmed/assignment_pending (CONTRATO.md §4) — não duplicar aqui.
       return NextResponse.json({
         ok: true,
         status: phase.next,
         action: phase.actionLabel,
         order: row,
-        ...(partnersInvited !== null ? { partners_invited: partnersInvited } : {}),
-        ...(publishWarning ? { publish_warning: publishWarning } : {}),
       });
     }
 
@@ -148,23 +137,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }, { status: 500 });
     }
 
-    // Publicação a parceiros também no caminho de fallback
-    let partnersInvitedFb: number | null = null;
-    let publishWarningFb: string | null = null;
-    if (phase.next === "assignment_pending") {
-      const pub = await publishRequestToPartners(sb, id);
-      partnersInvitedFb = pub.partnersInvited;
-      publishWarningFb = pub.warning;
-      if (pub.ok) await auditPartnerPublish(sb, id, colab!.id, colab!.nome, pub.partnersInvited);
-    }
-
     return NextResponse.json({
       ok: true,
       status: phase.next,
       action: phase.actionLabel,
       order: patched,
-      ...(partnersInvitedFb !== null ? { partners_invited: partnersInvitedFb } : {}),
-      ...(publishWarningFb ? { publish_warning: publishWarningFb } : {}),
     });
   } catch (e) {
     console.error("[app-pedidos/advance]", { correlationId, error: e });

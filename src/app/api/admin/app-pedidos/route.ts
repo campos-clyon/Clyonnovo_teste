@@ -17,8 +17,9 @@ async function autoPromoteEntryOrders(
   rows: Array<Record<string, unknown>>,
 ): Promise<void> {
   // Pedidos aprovados na app (final_price > 0) mas ainda em fase de entrada/
-  // análise: o estado deve reflectir a aprovação — avançam para
-  // "awaiting_deposit" (orçamento aprovado, aguarda depósito).
+  // análise: o estado deve reflectir a aprovação — avançam para "confirmed",
+  // o estado canónico de aprovação (CONTRATO.md §3). O trigger auto_match
+  // publica aos parceiros e avança para assignment_pending sozinho.
   const PRE_APPROVAL = new Set([...(ENTRY_STATUSES as readonly string[]), ANALYSIS_STATUS]);
   const toPromote = rows
     .map((row) => {
@@ -27,8 +28,8 @@ async function autoPromoteEntryOrders(
       if (PRE_APPROVAL.has(status) && finalPrice > 0) {
         return {
           row,
-          target: "awaiting_deposit",
-          note: "Orçamento aprovado na app — estado actualizado automaticamente para Aguarda depósito.",
+          target: "confirmed",
+          note: "Orçamento aprovado na app — estado actualizado automaticamente para Confirmado (publicação aos parceiros é automática).",
         };
       }
       if ((ENTRY_STATUSES as readonly string[]).includes(status)) {

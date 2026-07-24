@@ -11,7 +11,7 @@ import {
 } from "./order-status-flow";
 
 describe("nextPhase — sequência principal", () => {
-  it("percorre a sequência completa do pedido até concluído", () => {
+  it("percorre a sequência canónica do CONTRATO.md até concluído", () => {
     const path: string[] = [];
     let status = "in_review";
     while (nextPhase(status)) {
@@ -21,16 +21,19 @@ describe("nextPhase — sequência principal", () => {
       if (path.length > 20) break; // guarda contra ciclo infinito
     }
     expect(path).toEqual([
-      "awaiting_deposit",
+      "confirmed",
       "assignment_pending",
       "partner_selected",
-      "confirmed",
       "in_route",
       "arrived",
       "in_execution",
       "awaiting_confirmation",
       "completed",
     ]);
+  });
+
+  it("awaiting_deposit é ramo lateral que regressa a confirmed", () => {
+    expect(nextPhase("awaiting_deposit")?.next).toBe("confirmed");
   });
 
   it("estados de entrada (open/received/draft) avançam para análise", () => {
@@ -74,21 +77,29 @@ describe("isTerminalStatus", () => {
 
 describe("isValidTransition", () => {
   it("permite avanços sequenciais", () => {
-    expect(isValidTransition("in_review", "awaiting_deposit")).toBe(true);
-    expect(isValidTransition("awaiting_deposit", "assignment_pending")).toBe(true);
+    expect(isValidTransition("in_review", "confirmed")).toBe(true);
+    expect(isValidTransition("confirmed", "assignment_pending")).toBe(true);
+    expect(isValidTransition("assignment_pending", "partner_selected")).toBe(true);
+    expect(isValidTransition("partner_selected", "in_route")).toBe(true);
     expect(isValidTransition("in_route", "arrived")).toBe(true);
     expect(isValidTransition("awaiting_confirmation", "completed")).toBe(true);
   });
 
+  it("laterais de depósito: in_review → awaiting_deposit → confirmed", () => {
+    expect(isValidTransition("in_review", "awaiting_deposit")).toBe(true);
+    expect(isValidTransition("awaiting_deposit", "confirmed")).toBe(true);
+  });
+
   it("bloqueia saltos de fase", () => {
-    expect(isValidTransition("in_review", "confirmed")).toBe(false);
+    expect(isValidTransition("in_review", "assignment_pending")).toBe(false);
     expect(isValidTransition("awaiting_deposit", "completed")).toBe(false);
     expect(isValidTransition("received", "in_execution")).toBe(false);
   });
 
-  it("bloqueia retrocessos", () => {
+  it("bloqueia retrocessos e a sequência antiga (partner_selected → confirmed)", () => {
     expect(isValidTransition("confirmed", "in_review")).toBe(false);
     expect(isValidTransition("completed", "in_execution")).toBe(false);
+    expect(isValidTransition("partner_selected", "confirmed")).toBe(false);
   });
 
   it("permite cancelar/rejeitar de qualquer estado activo", () => {
@@ -104,9 +115,10 @@ describe("isValidTransition", () => {
   });
 
   it("received/open contam como in_review (promoção automática pendente)", () => {
-    expect(isValidTransition("received", "awaiting_deposit")).toBe(true);
-    expect(isValidTransition("open", "awaiting_deposit")).toBe(true);
+    expect(isValidTransition("received", "confirmed")).toBe(true);
+    expect(isValidTransition("open", "confirmed")).toBe(true);
     expect(isValidTransition("open", "in_review")).toBe(true);
+    expect(isValidTransition("received", "awaiting_deposit")).toBe(true);
   });
 
   it("laterais: disputa e revisão extra", () => {
@@ -125,8 +137,9 @@ describe("isValidTransition", () => {
 });
 
 describe("validTargets", () => {
-  it("in_review → avanço, cancelamento e rejeição", () => {
+  it("in_review → aprovação, depósito, cancelamento e rejeição", () => {
     const t = validTargets("in_review");
+    expect(t).toContain("confirmed");
     expect(t).toContain("awaiting_deposit");
     expect(t).toContain("canceled");
     expect(t).toContain("rejected");
