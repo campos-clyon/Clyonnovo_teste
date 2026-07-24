@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
-import { isValidTransition, validTargets } from "@/lib/order-status-flow";
+import { isValidTransition, validTargets, isPublishableStatus } from "@/lib/order-status-flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -184,6 +184,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({
           error: `Transição inválida: "${from}" → "${to}". A sequência de fases permite: ${validTargets(from).join(", ") || "nenhuma (estado terminal)"}. Usa o override manual para forçar.`,
           valid_targets: validTargets(from),
+        }, { status: 400 });
+      }
+    }
+
+    // Publicar exige aprovação do cliente — e o `force` NÃO isenta disto.
+    // `assignment_pending` publica tanto como `confirmed` (CONTRATO.md §4):
+    // foi assim que a admin_approve_request publicava sem escrever a palavra
+    // "confirmed". O trigger trg_valida_publicacao rejeita-o na base; aqui
+    // damos a explicação em vez de deixar passar um erro cru do Postgres.
+    const fromStatus = ((current as Record<string, unknown>).status as string) ?? "";
+    if (
+      isPublishableStatus(updates.status as string | undefined) &&
+      !isPublishableStatus(fromStatus) &&
+      fromStatus !== "awaiting_deposit"
+    ) {
+      const { data: accepted } = await sb
+        .from("price_proposals")
+        .select("id")
+        .eq("request_id", id)
+        .eq("status", "accepted")
+        .limit(1);
+
+      // Sem tabela (Bridge por aplicar) `accepted` vem null — nesse caso não
+      // bloqueamos, o fluxo antigo ainda está em vigor.
+      if (Array.isArray(accepted) && accepted.length === 0) {
+        return NextResponse.json({
+          error: `Não é possível publicar este pedido: o cliente ainda não aprovou nenhum preço. Envia-lhe uma proposta e aguarda a aceitação — "${updates.status}" torna o pedido visível aos profissionais.`,
+          requires_customer_approval: true,
         }, { status: 400 });
       }
     }

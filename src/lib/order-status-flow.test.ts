@@ -7,6 +7,7 @@ import {
   isTerminalStatus,
   isApprovedStatus,
   isWaitingOnCustomer,
+  isPublishableStatus,
   isValidTransition,
   validTargets,
 } from "./order-status-flow";
@@ -219,6 +220,29 @@ describe("isApprovedStatus", () => {
 
   it("proposta enviada ainda NÃO é acordo — o cliente não decidiu", () => {
     expect(isApprovedStatus("awaiting_customer_approval")).toBe(false);
+  });
+});
+
+describe("isPublishableStatus", () => {
+  // assignment_pending publica tanto como confirmed — foi assim que a
+  // admin_approve_request escapou à análise: publicava sem escrever "confirmed"
+  it("os dois estados que tornam o pedido visível aos profissionais", () => {
+    expect(isPublishableStatus("confirmed")).toBe(true);
+    expect(isPublishableStatus("assignment_pending")).toBe(true);
+  });
+
+  it("nenhum estado anterior à decisão do cliente publica", () => {
+    for (const s of ["draft", "received", "in_review", "awaiting_customer_approval", "awaiting_deposit"]) {
+      expect(isPublishableStatus(s), s).toBe(false);
+    }
+  });
+
+  it("nenhuma transição da negociação salta directamente para publicação", () => {
+    for (const from of ["in_review", "awaiting_customer_approval", "received", "draft"]) {
+      for (const to of ["confirmed", "assignment_pending"]) {
+        expect(isValidTransition(from, to), `${from} → ${to}`).toBe(false);
+      }
+    }
   });
 });
 

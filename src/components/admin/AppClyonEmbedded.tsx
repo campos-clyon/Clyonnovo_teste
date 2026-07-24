@@ -1044,7 +1044,9 @@ function PedidoInlinePanel({
                   </p>
                   {nego?.pending?.expires_at && (
                     <p className="mt-2 text-[10px] text-slate-500">
-                      Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")}
+                      Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")} — se
+                      expirar, o pedido volta a <span className="text-slate-400">Em análise</span> para
+                      nova proposta (não é cancelado).
                     </p>
                   )}
                 </div>

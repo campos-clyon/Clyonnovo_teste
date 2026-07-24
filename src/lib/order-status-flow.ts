@@ -38,6 +38,20 @@ export const CUSTOMER_APPROVAL_STATUS = "awaiting_customer_approval" as const;
  */
 export const APPROVAL_TARGET_STATUS = "confirmed" as const;
 
+/**
+ * Estados em que o pedido fica VISÍVEL aos profissionais. `assignment_pending`
+ * publica tanto como `confirmed` — foi por isso que a admin_approve_request
+ * escapou à primeira análise do Bridge: publicava sem nunca escrever a palavra
+ * "confirmed". O trigger trg_valida_publicacao rejeita a entrada em qualquer
+ * um dos dois sem aprovação do cliente (CONTRATO.md §4).
+ */
+export const PUBLISHABLE_STATUSES = ["confirmed", "assignment_pending"] as const;
+
+/** true quando o estado torna o pedido visível aos profissionais. */
+export function isPublishableStatus(status: string | null | undefined): boolean {
+  return (PUBLISHABLE_STATUSES as readonly string[]).includes(status ?? "");
+}
+
 export interface PhaseAdvance {
   /** Estado seguinte na sequência */
   next: string;

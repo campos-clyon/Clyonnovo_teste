@@ -32,10 +32,19 @@ os roles. Ver §7.
 ### Fluxo canónico
 
 ```
-draft → received → in_review → confirmed → assignment_pending
-      → partner_selected → in_route → arrived → in_execution
-      → awaiting_confirmation → completed
+draft → received → in_review → awaiting_customer_approval → awaiting_deposit
+      → confirmed → assignment_pending → partner_selected → in_route
+      → arrived → in_execution → awaiting_confirmation → completed
 ```
+
+**Alterado em 24-07-2026** com a negociação de preço
+([PLANO-NEGOCIACAO-PRECOS.md](PLANO-NEGOCIACAO-PRECOS.md)): entre `in_review` e
+`confirmed` entram dois passos. O admin **propõe**, o cliente **aceita ou
+contrapõe** (até 2 vezes), e só depois de aceitar **e pagar a reserva** o pedido
+é publicado.
+
+`in_review → confirmed` deixou de ser uma transição válida para pedidos criados a
+partir de 25-07-2026 — o trigger `trg_valida_publicacao` rejeita-a.
 
 ### Ramos laterais
 
@@ -77,7 +86,9 @@ as que os clientes devem usar.
 
 | Ação | Função | Efeito no estado |
 |---|---|---|
-| Aprovar pedido | `admin_approve_request(_request_id)` | → `confirmed`. Exige preço definido. Rejeita se não estiver em `received`/`in_review`/`draft` |
+| **Propor preço ao cliente** | `admin_send_price_proposal(_request_id, _amount, _message)` | → `awaiting_customer_approval`. `_message` **obrigatório** |
+| **Aceitar contraproposta** | `admin_accept_counter_proposal(_request_id)` | → `awaiting_deposit`, grava `final_price` |
+| ~~Aprovar pedido~~ | ~~`admin_approve_request(_request_id)`~~ | **BLOQUEADA** em pedidos novos. Escrevia `assignment_pending` diretamente — publicava sem o cliente ver o preço. O trigger rejeita-a a partir de 25-07-2026 |
 | Rejeitar pedido | `admin_reject_request(_request_id, _reason)` | → `rejected` |
 | Definir preço | `admin_update_request_price(_request_id, _final_price)` | não muda estado |
 | Editar detalhes | `admin_update_service_request_details(_request_id, _patch, _reason)` | não muda estado |
@@ -96,6 +107,9 @@ publicação acontece pelo trigger `trg_service_requests_auto_match` ao entrar e
 
 | Ação | Função |
 |---|---|
+| **Aceitar proposta de preço** | `customer_accept_proposal(_request_id)` → `awaiting_deposit` |
+| **Contrapor** (máx. 2) | `customer_counter_proposal(_request_id, _amount, _message)` → `in_review` |
+| **Recusar e cancelar** | `customer_reject_and_cancel(_request_id, _reason)` |
 | Aceitar orçamento | `customer_confirm_quote(_request_id)` |
 | Marcar depósito pago | `customer_mark_deposit_paid(_request_id)` |
 | Confirmar conclusão | `customer_confirm_completion(_request_id)` |
@@ -129,6 +143,7 @@ O que acontece sozinho quando alguém escreve. **Não replicar nos clientes.**
 
 | Trigger | Efeito |
 |---|---|
+| **`trg_valida_publicacao`** | **BEFORE UPDATE**: rejeita a entrada em `confirmed` **ou `assignment_pending`** se o cliente não tiver aprovado o preço. Só afeta pedidos criados a partir de 25-07-2026. Escapes: já estar publicado, vir de `awaiting_deposit`, ter proposta aceite, ou `set_config('clyon.via_fluxo_aprovado','on',true)` |
 | `trg_service_requests_auto_match` | em `confirmed` ou `assignment_pending` com preço > 0: cria ofertas para todos os parceiros aprovados e avança `confirmed` → `assignment_pending` |
 | `trg_service_requests_sync_booking` | sincroniza `bookings` a partir do estado |
 | `trg_audit_service_request_status` | regista em `admin_audit_log` |
@@ -253,9 +268,15 @@ preço** também fica invisível aos profissionais (o trigger não publica sem
 preço), e passava despercebido. Isso é atingível sempre que alguém escreva
 `status` diretamente em vez de usar `admin_approve_request`, que exige preço.
 
+⚠️ **Corrigido em 24-07-2026 (2.ª vez):** a versão anterior confundia *"o sistema
+falhou a publicar"* com *"toda a gente recusou"*. Um pedido cujas ofertas foram
+todas recusadas aparecia como defeito — e não é: é falta de profissionais, um
+problema de negócio real mas não um erro técnico. Um teste que dispara por
+motivos legítimos deixa de ser lido em duas semanas.
+
 ```sql
--- A) aprovado COM preço mas sem oferta ativa  → falha na publicação
-SELECT 'sem oferta ativa' AS causa,
+-- A) DEFEITO: aprovado, com preço, e NUNCA teve oferta nenhuma
+SELECT 'nunca publicado' AS causa,
        left(sr.id::text, 8) AS pedido, sr.status::text AS estado,
        coalesce(sr.final_price, sr.estimated_price, 0) AS preco
 FROM public.service_requests sr
@@ -265,13 +286,11 @@ WHERE sr.status IN ('confirmed'::public.request_status,
   AND NOT EXISTS (SELECT 1 FROM public.bookings b
                   WHERE b.request_id = sr.id AND b.status <> 'canceled')
   AND NOT EXISTS (SELECT 1 FROM public.job_offers jo
-                  WHERE jo.request_id = sr.id
-                    AND jo.status = 'pending'::public.job_offer_status
-                    AND (jo.expires_at IS NULL OR jo.expires_at > now()))
+                  WHERE jo.request_id = sr.id)   -- ← nenhuma, nem recusada
 
 UNION ALL
 
--- B) aprovado SEM preço → o trigger nunca publica; invisível e silencioso
+-- B) DEFEITO: aprovado SEM preço → o trigger nunca publica; silencioso
 SELECT 'aprovado sem preco',
        left(sr.id::text, 8), sr.status::text,
        coalesce(sr.final_price, sr.estimated_price, 0)
@@ -279,16 +298,87 @@ FROM public.service_requests sr
 WHERE sr.status IN ('confirmed'::public.request_status,
                     'assignment_pending'::public.request_status)
   AND coalesce(sr.final_price, sr.estimated_price, 0) <= 0
+
+UNION ALL
+
+-- C) DEFEITO: publicado sem o cliente aprovar (fluxo novo)
+SELECT 'publicado sem aprovacao',
+       left(sr.id::text, 8), sr.status::text,
+       coalesce(sr.final_price, sr.estimated_price, 0)
+FROM public.service_requests sr
+WHERE sr.status IN ('confirmed'::public.request_status,
+                    'assignment_pending'::public.request_status)
+  AND sr.created_at >= '2026-07-25'
+  AND NOT EXISTS (SELECT 1 FROM public.price_proposals p
+                  WHERE p.request_id = sr.id AND p.status = 'accepted')
 ORDER BY 1, 2;
 ```
 
-Estado em 24-07-2026 após correção: **0 linhas** ✅
+Estado em 24-07-2026: **0 linhas** ✅
+
+### Consulta separada: pedidos sem ninguém disponível
+
+Isto **não é defeito** — é a fila de trabalho comercial. Merece atenção humana,
+não alarme técnico.
+
+```sql
+SELECT left(sr.id::text, 8) AS pedido,
+       coalesce(sr.final_price, sr.estimated_price, 0) AS preco,
+       (SELECT count(*) FROM public.job_offers jo
+         WHERE jo.request_id = sr.id) AS ofertas_feitas
+FROM public.service_requests sr
+WHERE sr.status IN ('confirmed'::public.request_status,
+                    'assignment_pending'::public.request_status)
+  AND EXISTS (SELECT 1 FROM public.job_offers jo WHERE jo.request_id = sr.id)
+  AND NOT EXISTS (SELECT 1 FROM public.bookings b
+                  WHERE b.request_id = sr.id AND b.status <> 'canceled')
+  AND NOT EXISTS (SELECT 1 FROM public.job_offers jo
+                  WHERE jo.request_id = sr.id
+                    AND jo.status = 'pending'::public.job_offer_status
+                    AND (jo.expires_at IS NULL OR jo.expires_at > now()));
+```
+
+Em 24-07-2026 devolvia 2 pedidos (`a12e4a87`, `e5e1c163`), ambos com todas as
+ofertas recusadas e apenas **1 profissional aprovado** na plataforma. A solução
+não é técnica: é ter mais profissionais.
 
 Auditoria completa em [`supabase/audit/auditoria-estado-real.sql`](supabase/audit/auditoria-estado-real.sql).
 
 ---
 
-## 10. Divisão de responsabilidades
+## 10. Protocolo de alteração — obrigatório
+
+**Nenhuma alteração ao Supabase fica concluída enquanto os três sistemas não
+souberem dela.** Não basta aplicar a migração.
+
+Sempre que mudar esquema, função, trigger, política ou enum, produzir na mesma
+sessão:
+
+1. **O que mudou** e o que já está aplicado em produção
+2. **O que o site/backoffice tem de rever** — validações, chamadas que deixam de
+   ser necessárias, erros novos a tratar, campos que deixam de ter valor
+3. **O que a app tem de rever**
+4. **Uma verificação** que confirme o resultado nos três — de preferência uma
+   consulta que devolva zero linhas quando está bem
+
+Entregar como **ficheiro no repositório** (modelo: `NOTA-PARA-O-SITE.md`), não
+apenas como mensagem: o ficheiro é copiado para o projeto do site.
+
+No sentido inverso vale o mesmo — uma alteração na app que implique mudança no
+painel ou na base tem de o dizer explicitamente.
+
+**Porquê:** em 24-07-2026 um pedido de 240 € esteve dias invisível aos
+profissionais porque o painel escrevia `confirmed`, a app esperava
+`assignment_pending` e o trigger só tratava um deles. Cada peça estava correta
+isoladamente. Faltava o contrato entre elas.
+
+**Regra de ouro:** nunca declarar concluído com base num sinal verde
+(`BUILD SUCCESSFUL`, `Finished db push`, testes a passar). Verificar o efeito
+real — ler o bundle empacotado, consultar a base, medir no ecrã.
+
+---
+
+## 11. Divisão de responsabilidades
 
 | | Bridge (este repo) | Site / Backoffice |
 |---|---|---|
