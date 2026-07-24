@@ -246,10 +246,18 @@ bloqueia qualquer trabalho estruturado na base.
 ## 9. Teste de regressão
 
 Correr após **qualquer** alteração ao fluxo. Deve devolver **zero linhas**.
-Se devolver, há pedidos aprovados invisíveis aos profissionais.
+
+⚠️ **Duas causas distintas, uma só consulta.** A primeira versão deste teste só
+cobria pedidos com preço > 0 e tinha um ponto cego: um pedido aprovado **sem
+preço** também fica invisível aos profissionais (o trigger não publica sem
+preço), e passava despercebido. Isso é atingível sempre que alguém escreva
+`status` diretamente em vez de usar `admin_approve_request`, que exige preço.
 
 ```sql
-SELECT left(sr.id::text, 8) AS pedido, sr.status::text, sr.created_at
+-- A) aprovado COM preço mas sem oferta ativa  → falha na publicação
+SELECT 'sem oferta ativa' AS causa,
+       left(sr.id::text, 8) AS pedido, sr.status::text AS estado,
+       coalesce(sr.final_price, sr.estimated_price, 0) AS preco
 FROM public.service_requests sr
 WHERE sr.status IN ('confirmed'::public.request_status,
                     'assignment_pending'::public.request_status)
@@ -259,7 +267,19 @@ WHERE sr.status IN ('confirmed'::public.request_status,
   AND NOT EXISTS (SELECT 1 FROM public.job_offers jo
                   WHERE jo.request_id = sr.id
                     AND jo.status = 'pending'::public.job_offer_status
-                    AND (jo.expires_at IS NULL OR jo.expires_at > now()));
+                    AND (jo.expires_at IS NULL OR jo.expires_at > now()))
+
+UNION ALL
+
+-- B) aprovado SEM preço → o trigger nunca publica; invisível e silencioso
+SELECT 'aprovado sem preco',
+       left(sr.id::text, 8), sr.status::text,
+       coalesce(sr.final_price, sr.estimated_price, 0)
+FROM public.service_requests sr
+WHERE sr.status IN ('confirmed'::public.request_status,
+                    'assignment_pending'::public.request_status)
+  AND coalesce(sr.final_price, sr.estimated_price, 0) <= 0
+ORDER BY 1, 2;
 ```
 
 Estado em 24-07-2026 após correção: **0 linhas** ✅
