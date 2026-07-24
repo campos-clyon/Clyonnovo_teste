@@ -16,22 +16,14 @@ async function autoPromoteEntryOrders(
   sb: ReturnType<typeof getSupabaseAdmin>,
   rows: Array<Record<string, unknown>>,
 ): Promise<void> {
-  // Pedidos aprovados na app (final_price > 0) mas ainda em fase de entrada/
-  // análise: o estado deve reflectir a aprovação — avançam para "confirmed",
-  // o estado canónico de aprovação (CONTRATO.md §3). O trigger auto_match
-  // publica aos parceiros e avança para assignment_pending sozinho.
-  const PRE_APPROVAL = new Set([...(ENTRY_STATUSES as readonly string[]), ANALYSIS_STATUS]);
+  // Só a entrada em análise é automática. A promoção para "confirmed" foi
+  // REMOVIDA (plano de negociação §3): confirmar sem o cliente ter aceitado a
+  // proposta publicaria o pedido aos profissionais sem ele ter visto o preço —
+  // exactamente o que o fluxo de negociação existe para impedir. A única porta
+  // de entrada de `confirmed` passa a ser o pagamento da reserva.
   const toPromote = rows
     .map((row) => {
       const status = (row.status as string) ?? "";
-      const finalPrice = typeof row.final_price === "number" ? row.final_price : Number(row.final_price ?? 0);
-      if (PRE_APPROVAL.has(status) && finalPrice > 0) {
-        return {
-          row,
-          target: "confirmed",
-          note: "Orçamento aprovado na app — estado actualizado automaticamente para Confirmado (publicação aos parceiros é automática).",
-        };
-      }
       if ((ENTRY_STATUSES as readonly string[]).includes(status)) {
         return {
           row,

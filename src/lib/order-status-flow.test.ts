@@ -6,12 +6,13 @@ import {
   nextPhase,
   isTerminalStatus,
   isApprovedStatus,
+  isWaitingOnCustomer,
   isValidTransition,
   validTargets,
 } from "./order-status-flow";
 
 describe("nextPhase — sequência principal", () => {
-  it("percorre a sequência canónica do CONTRATO.md até concluído", () => {
+  it("o admin avança até à proposta e pára — a decisão é do cliente", () => {
     const path: string[] = [];
     let status = "in_review";
     while (nextPhase(status)) {
@@ -19,6 +20,21 @@ describe("nextPhase — sequência principal", () => {
       path.push(adv.next);
       status = adv.next;
       if (path.length > 20) break; // guarda contra ciclo infinito
+    }
+    // O admin envia a proposta e a sequência pára: aceitar/contrapor/cancelar
+    // são acções do cliente (plano de negociação §4)
+    expect(path).toEqual(["awaiting_customer_approval"]);
+    expect(nextPhase("awaiting_customer_approval")).toBeNull();
+  });
+
+  it("depois do depósito pago, o admin volta a conduzir até concluído", () => {
+    const path: string[] = [];
+    let status = "awaiting_deposit";
+    while (nextPhase(status)) {
+      const adv = nextPhase(status)!;
+      path.push(adv.next);
+      status = adv.next;
+      if (path.length > 20) break;
     }
     expect(path).toEqual([
       "confirmed",
@@ -32,7 +48,12 @@ describe("nextPhase — sequência principal", () => {
     ]);
   });
 
-  it("awaiting_deposit é ramo lateral que regressa a confirmed", () => {
+  it("a proposta é a fase seguinte de in_review, não a confirmação", () => {
+    expect(nextPhase("in_review")?.next).toBe("awaiting_customer_approval");
+    expect(nextPhase("in_review")?.actionLabel).toMatch(/proposta/i);
+  });
+
+  it("awaiting_deposit avança para confirmed (depósito recebido)", () => {
     expect(nextPhase("awaiting_deposit")?.next).toBe("confirmed");
   });
 
@@ -77,7 +98,8 @@ describe("isTerminalStatus", () => {
 
 describe("isValidTransition", () => {
   it("permite avanços sequenciais", () => {
-    expect(isValidTransition("in_review", "confirmed")).toBe(true);
+    expect(isValidTransition("in_review", "awaiting_customer_approval")).toBe(true);
+    expect(isValidTransition("awaiting_deposit", "confirmed")).toBe(true);
     expect(isValidTransition("confirmed", "assignment_pending")).toBe(true);
     expect(isValidTransition("assignment_pending", "partner_selected")).toBe(true);
     expect(isValidTransition("partner_selected", "in_route")).toBe(true);
@@ -85,15 +107,29 @@ describe("isValidTransition", () => {
     expect(isValidTransition("awaiting_confirmation", "completed")).toBe(true);
   });
 
-  it("laterais de depósito: in_review → awaiting_deposit → confirmed", () => {
+  it("negociação: cliente aceita, contrapõe, ou o admin aceita a contraproposta", () => {
+    // customer_accept_proposal
+    expect(isValidTransition("awaiting_customer_approval", "awaiting_deposit")).toBe(true);
+    // customer_counter_proposal — devolve o pedido ao admin
+    expect(isValidTransition("awaiting_customer_approval", "in_review")).toBe(true);
+    // admin_accept_counter_proposal — salta a proposta
     expect(isValidTransition("in_review", "awaiting_deposit")).toBe(true);
-    expect(isValidTransition("awaiting_deposit", "confirmed")).toBe(true);
+    // customer_reject_and_cancel / expiração
+    expect(isValidTransition("awaiting_customer_approval", "canceled")).toBe(true);
+  });
+
+  it("o cliente tem de decidir antes de publicar — sem atalho para confirmed", () => {
+    // A única porta de entrada de confirmed é awaiting_deposit (depósito pago)
+    expect(isValidTransition("in_review", "confirmed")).toBe(false);
+    expect(isValidTransition("awaiting_customer_approval", "confirmed")).toBe(false);
+    expect(isValidTransition("received", "confirmed")).toBe(false);
   });
 
   it("bloqueia saltos de fase", () => {
     expect(isValidTransition("in_review", "assignment_pending")).toBe(false);
     expect(isValidTransition("awaiting_deposit", "completed")).toBe(false);
     expect(isValidTransition("received", "in_execution")).toBe(false);
+    expect(isValidTransition("awaiting_customer_approval", "assignment_pending")).toBe(false);
   });
 
   it("bloqueia retrocessos e a sequência antiga (partner_selected → confirmed)", () => {
@@ -115,8 +151,8 @@ describe("isValidTransition", () => {
   });
 
   it("received/open contam como in_review (promoção automática pendente)", () => {
-    expect(isValidTransition("received", "confirmed")).toBe(true);
-    expect(isValidTransition("open", "confirmed")).toBe(true);
+    expect(isValidTransition("received", "awaiting_customer_approval")).toBe(true);
+    expect(isValidTransition("open", "awaiting_customer_approval")).toBe(true);
     expect(isValidTransition("open", "in_review")).toBe(true);
     expect(isValidTransition("received", "awaiting_deposit")).toBe(true);
   });
@@ -137,13 +173,22 @@ describe("isValidTransition", () => {
 });
 
 describe("validTargets", () => {
-  it("in_review → aprovação, depósito, cancelamento e rejeição", () => {
+  it("in_review → proposta, aceitar contraproposta, cancelar e rejeitar", () => {
     const t = validTargets("in_review");
-    expect(t).toContain("confirmed");
+    expect(t).toContain("awaiting_customer_approval");
     expect(t).toContain("awaiting_deposit");
     expect(t).toContain("canceled");
     expect(t).toContain("rejected");
+    expect(t).not.toContain("confirmed");
     expect(t).not.toContain("completed");
+  });
+
+  it("awaiting_customer_approval continua cancelável apesar de não avançar", () => {
+    const t = validTargets("awaiting_customer_approval");
+    expect(t).toContain("awaiting_deposit");
+    expect(t).toContain("in_review");
+    expect(t).toContain("canceled");
+    expect(t).toContain("rejected");
   });
 
   it("estados terminais só têm laterais definidas", () => {
@@ -170,6 +215,24 @@ describe("isApprovedStatus", () => {
     for (const s of ["draft", "open", "received", "in_review", "canceled", "rejected", "in_dispute"]) {
       expect(isApprovedStatus(s), s).toBe(false);
     }
+  });
+
+  it("proposta enviada ainda NÃO é acordo — o cliente não decidiu", () => {
+    expect(isApprovedStatus("awaiting_customer_approval")).toBe(false);
+  });
+});
+
+describe("isWaitingOnCustomer", () => {
+  it("só awaiting_customer_approval espera pelo cliente", () => {
+    expect(isWaitingOnCustomer("awaiting_customer_approval")).toBe(true);
+    for (const s of ["in_review", "awaiting_deposit", "confirmed", "completed"]) {
+      expect(isWaitingOnCustomer(s), s).toBe(false);
+    }
+  });
+
+  it("esperar pelo cliente não é estado terminal — dá para cancelar", () => {
+    expect(isTerminalStatus("awaiting_customer_approval")).toBe(false);
+    expect(isValidTransition("awaiting_customer_approval", "canceled")).toBe(true);
   });
 });
 

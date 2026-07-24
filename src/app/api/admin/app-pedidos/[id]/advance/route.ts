@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
-import { nextPhase, isTerminalStatus } from "@/lib/order-status-flow";
+import {
+  nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
+} from "@/lib/order-status-flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,8 +45,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const phase = nextPhase(fromStatus);
     if (!phase) {
+      if (isWaitingOnCustomer(fromStatus)) {
+        return NextResponse.json({
+          error: "A decisão está com o cliente — ele pode aceitar, contrapor ou cancelar. O admin não avança esta fase.",
+        }, { status: 400 });
+      }
       return NextResponse.json({
         error: `Estado desconhecido "${fromStatus}" — usa a alteração manual de estado.`,
+      }, { status: 400 });
+    }
+
+    // A proposta ao cliente NÃO pode ser criada por escrita de estado: sem uma
+    // linha em price_proposals o pedido ficaria "à espera do cliente" sem nada
+    // para ele decidir. Tem de passar por admin_send_price_proposal.
+    if (phase.next === CUSTOMER_APPROVAL_STATUS) {
+      return NextResponse.json({
+        error: "Para avançar daqui é preciso enviar uma proposta de preço ao cliente (com valor e justificação), no painel de negociação.",
+        requires_proposal: true,
       }, { status: 400 });
     }
 

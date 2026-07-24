@@ -7,8 +7,8 @@ import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
-import { buildQuoteApprovalPayload, isQuoteApprovalAvailable } from "@/lib/quote-approval";
-import { nextPhase, isTerminalStatus, isApprovedStatus } from "@/lib/order-status-flow";
+import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
+import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -27,7 +27,8 @@ export type { AppClyonTab };
 
 // ── Tipos partilhados ──────────────────────────────────────────────────────
 type AppStatus =
-  | "draft" | "received" | "in_review" | "awaiting_deposit" | "assignment_pending"
+  | "draft" | "received" | "in_review" | "awaiting_customer_approval"
+  | "awaiting_deposit" | "assignment_pending"
   | "partner_selected" | "confirmed" | "in_route" | "arrived" | "in_execution"
   | "extra_review_requested" | "awaiting_confirmation" | "completed"
   | "in_dispute" | "canceled" | "rejected";
@@ -367,10 +368,42 @@ type OpsEntry = {
   reason: string | null; note: string | null; colab_nome: string; created_at: string;
 };
 
+// ── Negociação de preço (tabela price_proposals do Bridge) ────────────────
+type ProposalRound = {
+  id: string;
+  round: number;
+  actor: "admin" | "customer";
+  amount: number;
+  message: string | null;
+  status: "pending" | "accepted" | "rejected" | "superseded" | "expired";
+  created_at: string;
+  responded_at: string | null;
+  expires_at: string | null;
+};
+
+type NegotiationState = {
+  rounds: ProposalRound[];
+  pending?: ProposalRound | null;
+  customerCounters?: number;
+  counterLimit?: number;
+  awaitingAdmin?: boolean;
+  unavailable?: boolean;
+  notice?: string;
+};
+
+const PROPOSAL_STATUS_LABEL: Record<string, string> = {
+  pending: "Pendente",
+  accepted: "Aceite",
+  rejected: "Recusada",
+  superseded: "Substituída",
+  expired: "Expirada",
+};
+
 const INLINE_STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft: { label: "Rascunho", color: "text-slate-400" },
   received: { label: "Recebido", color: "text-amber-400" },
   in_review: { label: "Em análise", color: "text-amber-400" },
+  awaiting_customer_approval: { label: "Proposta no cliente", color: "text-violet-400" },
   awaiting_deposit: { label: "Aguarda depósito", color: "text-amber-400" },
   assignment_pending: { label: "A atribuir", color: "text-amber-400" },
   partner_selected: { label: "Parceiro atribuído", color: "text-amber-400" },
@@ -447,14 +480,20 @@ function PedidoInlinePanel({
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [photoIdx, setPhotoIdx] = useState<number | null>(null);
 
+  // ── Negociação de preço (plano §8) ─────────────────────────────────────
+  const [nego, setNego] = useState<NegotiationState | null>(null);
+  const [proposalAmount, setProposalAmount] = useState("");
+  const [proposalMessage, setProposalMessage] = useState("");
+
   const needsReason = status === "canceled" || status === "rejected";
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [orderRes, opsRes] = await Promise.all([
+      const [orderRes, opsRes, negoRes] = await Promise.all([
         fetch(`/api/admin/app-pedidos/${id}`, { headers: authHeader }),
         fetch(`/api/admin/app-clyon/pedidos/${id}/ops`, { headers: authHeader }),
+        fetch(`/api/admin/app-pedidos/${id}/proposta`, { headers: authHeader }),
       ]);
       const orderJson = await orderRes.json();
       if (!orderRes.ok) { setError(orderJson.error ?? "Erro ao carregar pedido."); return; }
@@ -462,12 +501,16 @@ function PedidoInlinePanel({
       const o = orderJson.order as InlineOrder;
       setOrder(o);
       setOps(opsJson.ops ?? []);
+      setNego(negoRes.ok ? ((await negoRes.json()) as NegotiationState) : null);
+      setProposalMessage("");
       setStatus(o.status);
       setUrgency(o.urgency ?? "normal");
       // Pré-preencher com o valor aprovado (final_price) quando o orçamento
       // estimado ainda não foi definido no painel — evita aprovações sem valor.
       const effectivePrice = o.estimated_price ?? o.final_price ?? null;
       setPrice(effectivePrice != null ? String(effectivePrice) : "");
+      // A proposta parte do valor calculado; o admin corrige antes de enviar
+      setProposalAmount(effectivePrice != null ? String(effectivePrice) : "");
       setScheduledFor(o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "");
       setAdminNote(""); setReason("");
     } catch { setError("Erro de ligação."); }
@@ -530,27 +573,56 @@ function PedidoInlinePanel({
     finally { setSaving(false); }
   }
 
-  async function handleApproveQuote() {
+  // Envia uma proposta de preço ao cliente (RPC admin_send_price_proposal).
+  // O painel NÃO escreve status nem final_price — quem o faz é a RPC.
+  async function handleSendProposal() {
     if (!order) return;
 
-    const { payload, error: approvalError } = buildQuoteApprovalPayload(price, adminNote);
-    if (!payload) {
+    const check = validateProposal(proposalAmount, proposalMessage);
+    if (!check.ok) {
       setSaveSuccess(null);
-      setSaveError(approvalError ?? "Não foi possível aprovar o orçamento.");
+      setSaveError(check.error);
       return;
     }
 
     setSaving(true); setSaveError(null); setSaveSuccess(null);
     try {
-      const res = await fetch(`/api/admin/app-pedidos/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/admin/app-pedidos/${id}/proposta`, {
+        method: "POST",
         headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          action: "send",
+          amount: Number(proposalAmount),
+          message: proposalMessage.trim(),
+        }),
       });
       const json = await res.json();
-      if (!res.ok) { setSaveError(json.error ?? "Erro ao aprovar o orçamento."); return; }
-      setSaveSuccess("Orçamento aprovado. O pedido está confirmado — a publicação aos parceiros é automática.");
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao enviar a proposta."); return; }
+      setSaveSuccess(json.message ?? "Proposta enviada ao cliente.");
       await load();
+      onChanged?.();
+    } catch {
+      setSaveError("Erro de ligação.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Aceita a contraproposta do cliente (RPC admin_accept_counter_proposal)
+  async function handleAcceptCounter() {
+    if (!order) return;
+    setSaving(true); setSaveError(null); setSaveSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${id}/proposta`, {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept_counter" }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao aceitar a contraproposta."); return; }
+      setSaveSuccess(json.message ?? "Contraproposta aceite.");
+      await load();
+      onChanged?.();
     } catch {
       setSaveError("Erro de ligação.");
     } finally {
@@ -819,6 +891,63 @@ function PedidoInlinePanel({
             </div>
           )}
 
+          {/* Negociação de preço — rondas com o cliente */}
+          {nego && nego.rounds.length > 0 && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>
+                Negociação de preço
+                {typeof nego.customerCounters === "number" && typeof nego.counterLimit === "number" && (
+                  <span className="ml-2 font-normal text-slate-500">
+                    · cliente usou {nego.customerCounters} de {nego.counterLimit} contrapropostas
+                  </span>
+                )}
+              </p>
+              <div className="space-y-2">
+                {nego.rounds.map((r, i) => {
+                  const anterior = nego.rounds[i + 1];
+                  const isAdmin = r.actor === "admin";
+                  return (
+                    <div
+                      key={r.id}
+                      className={`rounded-xl border p-3 ${isAdmin ? "border-violet-500/20 bg-violet-500/[0.05]" : "border-white/[0.07] bg-[#12263B]/50"}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isAdmin ? "text-violet-300" : "text-[#00BDEB]"}`}>
+                          {isAdmin ? "CLYON" : "Cliente"}
+                        </span>
+                        <span className="text-[10px] text-slate-600">· ronda {r.round} · {fmtDt(r.created_at)}</span>
+                        <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                          r.status === "pending"  ? "bg-amber-500/15 text-amber-300"
+                          : r.status === "accepted" ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-white/[0.06] text-slate-400"
+                        }`}>
+                          {PROPOSAL_STATUS_LABEL[r.status] ?? r.status}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 flex items-baseline gap-2">
+                        <span className="text-base font-bold text-white">{fmtMoney(r.amount)}</span>
+                        {anterior && anterior.amount !== r.amount && (
+                          <span className="text-xs text-slate-600 line-through">{fmtMoney(anterior.amount)}</span>
+                        )}
+                      </p>
+                      {r.message && (
+                        <p className="mt-1 text-[11px] italic leading-relaxed text-slate-400">&ldquo;{r.message}&rdquo;</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Dependência do Bridge ainda não disponível */}
+          {nego?.unavailable && nego.notice && (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+              <p className="text-xs font-bold text-amber-300">Negociação de preço indisponível</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{nego.notice}</p>
+            </div>
+          )}
+
           {/* Detalhes técnicos colapsados */}
           {meta && <TechnicalDetails rest={meta.rest} />}
 
@@ -903,6 +1032,24 @@ function PedidoInlinePanel({
           <div className={CARD}>
             <p className={CARD_TITLE}>Operação</p>
             <div className="space-y-3">
+              {/* Bola do lado do cliente — o admin espera, não avança */}
+              {isWaitingOnCustomer(order.status) && !nego?.awaitingAdmin && (
+                <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
+                  <p className="text-xs font-bold text-violet-300">À espera do cliente</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                    A proposta{nego?.pending ? ` de ${fmtMoney(nego.pending.amount)}` : ""} está com o cliente.
+                    Ele pode aceitar, contrapor{typeof nego?.customerCounters === "number" && typeof nego?.counterLimit === "number"
+                      ? ` (usou ${nego.customerCounters} de ${nego.counterLimit})`
+                      : ""} ou cancelar. O pedido não é visível aos profissionais.
+                  </p>
+                  {nego?.pending?.expires_at && (
+                    <p className="mt-2 text-[10px] text-slate-500">
+                      Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Avanço automático de fase — o estado seguinte é determinado pela sequência */}
               {!canApproveQuote && !isTerminalStatus(order.status) && nextPhase(order.status) && (
                 <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/[0.07] p-3">
@@ -947,20 +1094,70 @@ function PedidoInlinePanel({
                 <label className={IL}>Valor do orçamento (€)</label>
                 <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={INP} />
               </div>
+              {/* Enviar proposta ao cliente — substitui a antiga aprovação directa */}
               {canApproveQuote && (
-                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3">
-                  <p className="text-xs font-bold text-emerald-300">Aprovação do orçamento</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                    Confirma o valor acima, regista esta operação na Auditoria e altera o pedido para <span className="font-semibold text-sky-300">Confirmado</span> — a publicação aos parceiros é automática.
+                <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
+                  <p className="text-xs font-bold text-violet-300">
+                    {nego?.awaitingAdmin ? "Contrapor ao cliente" : "Enviar proposta ao cliente"}
                   </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                    O cliente decide antes de o pedido ser publicado. Ao enviar, o pedido fica em{" "}
+                    <span className="font-semibold text-violet-300">Proposta no cliente</span> e{" "}
+                    <span className="font-semibold text-white">nenhum profissional o vê</span> até ele aceitar e pagar a reserva.
+                  </p>
+
+                  <label className={`${IL} mt-3`}>Valor da proposta (€)</label>
+                  <input
+                    type="number" step="0.01" min="0"
+                    value={proposalAmount}
+                    onChange={(e) => setProposalAmount(e.target.value)}
+                    className={INP}
+                  />
+
+                  <label className={`${IL} mt-2`}>Justificação para o cliente (obrigatória)</label>
+                  <textarea
+                    value={proposalMessage}
+                    onChange={(e) => setProposalMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Ex: Ajustámos para baixo — o acesso é fácil e não precisa de segundo operador."
+                    className={TA}
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    {proposalMessage.trim().length < PROPOSAL_MESSAGE_MIN_LENGTH
+                      ? `Faltam ${PROPOSAL_MESSAGE_MIN_LENGTH - proposalMessage.trim().length} caracteres — o cliente vê esta explicação.`
+                      : "O cliente vê esta explicação junto ao valor."}
+                  </p>
+
                   <button
                     type="button"
-                    onClick={handleApproveQuote}
+                    onClick={handleSendProposal}
+                    disabled={saving || !validateProposal(proposalAmount, proposalMessage).ok}
+                    className="mt-3 w-full rounded-lg bg-violet-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? "A enviar..." : nego?.awaitingAdmin ? "Enviar contraproposta" : "Enviar proposta ao cliente"}
+                  </button>
+                </div>
+              )}
+
+              {/* Contraproposta do cliente à espera de decisão do admin */}
+              {nego?.awaitingAdmin && nego.pending && (
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3">
+                  <p className="text-xs font-bold text-emerald-300">Contraproposta do cliente</p>
+                  <p className="mt-1 text-lg font-bold text-white">{fmtMoney(nego.pending.amount)}</p>
+                  {nego.pending.message && (
+                    <p className="mt-1 text-[11px] italic leading-relaxed text-slate-300">&ldquo;{nego.pending.message}&rdquo;</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAcceptCounter}
                     disabled={saving}
                     className="mt-3 w-full rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {saving ? "A aprovar..." : "Aprovar orçamento"}
+                    {saving ? "A aceitar..." : "Aceitar contraproposta"}
                   </button>
+                  <p className="mt-2 text-[10px] text-slate-500">
+                    Ou envia uma contraproposta no painel acima — o admin não tem limite de rondas.
+                  </p>
                 </div>
               )}
               <div>

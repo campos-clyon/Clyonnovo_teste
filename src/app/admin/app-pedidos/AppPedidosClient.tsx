@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { nextPhase, isTerminalStatus } from "@/lib/order-status-flow";
+import {
+  nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
+} from "@/lib/order-status-flow";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -10,6 +12,7 @@ type AppStatus =
   | "draft"
   | "received"
   | "in_review"
+  | "awaiting_customer_approval"
   | "awaiting_deposit"
   | "assignment_pending"
   | "partner_selected"
@@ -28,7 +31,7 @@ type FilterGroup = "todos" | "abertos" | "em_curso" | "concluidos" | "cancelados
 type Urgency   = "normal" | "urgent" | "flexible";
 
 const GROUP_STATUSES: Record<Exclude<FilterGroup, "todos">, AppStatus[]> = {
-  abertos:     ["draft", "received", "in_review", "awaiting_deposit", "assignment_pending", "partner_selected"],
+  abertos:     ["draft", "received", "in_review", "awaiting_customer_approval", "awaiting_deposit", "assignment_pending", "partner_selected"],
   em_curso:    ["confirmed", "in_route", "arrived", "in_execution", "extra_review_requested", "awaiting_confirmation"],
   concluidos:  ["completed"],
   cancelados:  ["canceled", "rejected", "in_dispute"],
@@ -59,6 +62,7 @@ type AppOrder = {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const AMBER  = { dot: "bg-amber-400",   badge: "bg-amber-400/10 border-amber-400/30 text-amber-300" };
+const VIOLET = { dot: "bg-violet-400",  badge: "bg-violet-400/10 border-violet-400/30 text-violet-300" };
 const SKY    = { dot: "bg-sky-400",     badge: "bg-sky-400/10 border-sky-400/30 text-sky-300" };
 const EMER   = { dot: "bg-emerald-400", badge: "bg-emerald-400/10 border-emerald-400/30 text-emerald-300" };
 const RED    = { dot: "bg-red-500",     badge: "bg-red-500/10 border-red-500/30 text-red-400" };
@@ -68,6 +72,7 @@ const STATUS_CFG: Record<AppStatus, { label: string; dot: string; badge: string 
   draft:                  { label: "Rascunho",        ...SLATE },
   received:               { label: "Recebido",        ...AMBER },
   in_review:              { label: "Em análise",      ...AMBER },
+  awaiting_customer_approval: { label: "Proposta no cliente", ...VIOLET },
   awaiting_deposit:       { label: "Aguarda depósito",...AMBER },
   assignment_pending:     { label: "A atribuir",      ...AMBER },
   partner_selected:       { label: "Parceiro atribuído",...AMBER },
@@ -467,7 +472,14 @@ function DetailModal({
         {/* Acções */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4">
           <div className="flex flex-wrap gap-2">
-            {!isTerminalStatus(order.status) && nextPhase(order.status) && (
+            {/* A proposta de preço exige valor + justificação — só no painel de
+                detalhe, onde existe o formulário de negociação. */}
+            {!isTerminalStatus(order.status) && nextPhase(order.status)?.next === CUSTOMER_APPROVAL_STATUS && (
+              <span className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-3 py-2 text-xs text-violet-300">
+                Para avançar, envia uma proposta ao cliente no painel do pedido (App CLYON → Pedidos).
+              </span>
+            )}
+            {!isTerminalStatus(order.status) && nextPhase(order.status) && nextPhase(order.status)!.next !== CUSTOMER_APPROVAL_STATUS && (
               <button
                 disabled={saving !== null}
                 onClick={avancarFase}
@@ -475,6 +487,11 @@ function DetailModal({
               >
                 {saving === "aprovar" ? "A avançar..." : nextPhase(order.status)!.actionLabel}
               </button>
+            )}
+            {isWaitingOnCustomer(order.status) && (
+              <span className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-3 py-2 text-xs text-violet-300">
+                À espera da decisão do cliente sobre a proposta.
+              </span>
             )}
             {!isTerminalStatus(order.status) && (
               <button

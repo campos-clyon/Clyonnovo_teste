@@ -1,21 +1,23 @@
 /**
  * Máquina de estados dos pedidos App CLYON (Supabase service_requests).
  *
- * ⚠️ GERADO A PARTIR DE CONTRATO.md (§2 — Máquina de estados).
- * Não alterar a sequência aqui sem actualizar primeiro o contrato no
- * projecto CLYON Bridge — o Bridge é o dono do contrato e das migrações.
+ * ⚠️ GERADO A PARTIR DE CONTRATO.md (§2 — Máquina de estados) + plano de
+ * negociação de preço de 24-07-2026 (§4). Não alterar a sequência aqui sem
+ * actualizar primeiro o contrato no projecto CLYON Bridge — o Bridge é o dono
+ * do contrato, das migrações e das RPCs.
  *
- * Fluxo canónico (CONTRATO.md §2):
- *   draft → received → in_review → confirmed → assignment_pending
- *         → partner_selected → in_route → arrived → in_execution
- *         → awaiting_confirmation → completed
+ * Fluxo com negociação de preço:
+ *   in_review → awaiting_customer_approval → awaiting_deposit → confirmed
+ *             → assignment_pending → partner_selected → in_route → arrived
+ *             → in_execution → awaiting_confirmation → completed
  *
- * Ramos laterais: awaiting_deposit (à espera de pagamento do cliente),
- * extra_review_requested, in_dispute, canceled, rejected.
+ * O cliente decide antes de publicar: só depois de aceitar a proposta E pagar
+ * a reserva é que o pedido chega a `confirmed` e o trigger publica aos
+ * profissionais. `confirmed` tem uma única porta de entrada legítima:
+ * customer_mark_deposit_paid.
  *
- * Publicação aos parceiros: feita pelo trigger trg_service_requests_auto_match
- * ao entrar em confirmed/assignment_pending com preço > 0 (CONTRATO.md §4).
- * O backoffice NÃO deve duplicar a publicação.
+ * Contrapropostas do cliente devolvem o pedido a `in_review` (máx. 2 rondas,
+ * contadas na tabela price_proposals do Bridge — nunca no painel).
  */
 
 /** Estados que representam um pedido acabado de submeter pelo cliente. */
@@ -25,8 +27,14 @@ export const ENTRY_STATUSES = ["open", "received"] as const;
 export const ANALYSIS_STATUS = "in_review" as const;
 
 /**
- * Estado canónico de aprovação (CONTRATO.md §3: admin_approve_request → confirmed).
- * O trigger auto_match publica aos parceiros e avança para assignment_pending.
+ * Estado onde o pedido espera pela decisão do cliente sobre a proposta de
+ * preço. Nenhum profissional o vê. Criado pelo Bridge (fase 1 do plano).
+ */
+export const CUSTOMER_APPROVAL_STATUS = "awaiting_customer_approval" as const;
+
+/**
+ * Estado canónico de publicação. Só alcançável por customer_mark_deposit_paid
+ * (plano §4). O painel não deve escrevê-lo directamente.
  */
 export const APPROVAL_TARGET_STATUS = "confirmed" as const;
 
@@ -38,24 +46,27 @@ export interface PhaseAdvance {
 }
 
 /**
- * Fase seguinte por estado actual. `null` = estado terminal (não avança).
- * Estados de entrada legados avançam directamente para análise.
+ * Fase seguinte por estado actual, na perspectiva do ADMIN.
+ * `null` = o admin não tem acção de avanço aqui (estado terminal, ou a bola
+ * está do lado do cliente).
  */
 export const NEXT_PHASE: Record<string, PhaseAdvance | null> = {
-  draft:                  { next: "in_review",             actionLabel: "Iniciar análise" },
-  open:                   { next: "in_review",             actionLabel: "Iniciar análise" },
-  received:               { next: "in_review",             actionLabel: "Iniciar análise" },
-  in_review:              { next: "confirmed",             actionLabel: "Aprovar orçamento" },
-  awaiting_deposit:       { next: "confirmed",             actionLabel: "Depósito recebido" },
+  draft:                  { next: "in_review",                actionLabel: "Iniciar análise" },
+  open:                   { next: "in_review",                actionLabel: "Iniciar análise" },
+  received:               { next: "in_review",                actionLabel: "Iniciar análise" },
+  in_review:              { next: CUSTOMER_APPROVAL_STATUS,   actionLabel: "Enviar proposta ao cliente" },
+  // Bola do lado do cliente — aceitar, contrapor ou cancelar são acções dele
+  awaiting_customer_approval: null,
+  awaiting_deposit:       { next: "confirmed",                actionLabel: "Depósito recebido" },
   // Normalmente automático (trigger auto_match) — mantido como fallback manual
-  confirmed:              { next: "assignment_pending",    actionLabel: "Publicar aos parceiros" },
-  assignment_pending:     { next: "partner_selected",      actionLabel: "Parceiro atribuído" },
-  partner_selected:       { next: "in_route",              actionLabel: "Equipa a caminho" },
-  in_route:               { next: "arrived",               actionLabel: "Chegou ao local" },
-  arrived:                { next: "in_execution",          actionLabel: "Iniciar execução" },
-  in_execution:           { next: "awaiting_confirmation", actionLabel: "Trabalho terminado" },
-  extra_review_requested: { next: "in_execution",          actionLabel: "Retomar execução" },
-  awaiting_confirmation:  { next: "completed",             actionLabel: "Concluir pedido" },
+  confirmed:              { next: "assignment_pending",       actionLabel: "Publicar aos parceiros" },
+  assignment_pending:     { next: "partner_selected",         actionLabel: "Parceiro atribuído" },
+  partner_selected:       { next: "in_route",                 actionLabel: "Equipa a caminho" },
+  in_route:               { next: "arrived",                  actionLabel: "Chegou ao local" },
+  arrived:                { next: "in_execution",             actionLabel: "Iniciar execução" },
+  in_execution:           { next: "awaiting_confirmation",    actionLabel: "Trabalho terminado" },
+  extra_review_requested: { next: "in_execution",             actionLabel: "Retomar execução" },
+  awaiting_confirmation:  { next: "completed",                actionLabel: "Concluir pedido" },
   completed:              null,
   in_dispute:             null,
   canceled:               null,
@@ -63,26 +74,48 @@ export const NEXT_PHASE: Record<string, PhaseAdvance | null> = {
 };
 
 /**
- * Transições laterais fora da sequência principal (CONTRATO.md §2 — ramos),
- * sempre permitidas a partir do estado indicado (além de canceled/rejected,
- * permitidos de qualquer estado activo, com motivo).
+ * Estados verdadeiramente terminais — o pedido acabou. Distinto de "sem acção
+ * de avanço do admin": em awaiting_customer_approval o pedido está vivo e pode
+ * ser cancelado, apenas espera pelo cliente.
+ */
+const TERMINAL_STATUSES = new Set(["completed", "in_dispute", "canceled", "rejected"]);
+
+/**
+ * Estados em que a decisão pertence ao cliente — o painel mostra "à espera
+ * do cliente" em vez de um botão de avanço.
+ */
+const WAITING_ON_CUSTOMER = new Set<string>([CUSTOMER_APPROVAL_STATUS]);
+
+/**
+ * Transições laterais fora da sequência principal (CONTRATO.md §2 — ramos;
+ * plano de negociação §4), sempre permitidas a partir do estado indicado.
+ * Cancelar/rejeitar são permitidos de qualquer estado não-terminal.
  */
 const LATERAL_TRANSITIONS: Record<string, string[]> = {
-  in_review:             ["awaiting_deposit"],
-  in_execution:          ["extra_review_requested"],
-  awaiting_confirmation: ["in_dispute"],
-  completed:             ["in_dispute"],
-  in_dispute:            ["completed", "canceled"],
+  // admin_accept_counter_proposal: aceita o valor do cliente e salta a proposta
+  in_review:                  ["awaiting_deposit"],
+  // customer_accept_proposal → awaiting_deposit; customer_counter_proposal → in_review
+  awaiting_customer_approval: ["awaiting_deposit", "in_review"],
+  in_execution:               ["extra_review_requested"],
+  awaiting_confirmation:      ["in_dispute"],
+  completed:                  ["in_dispute"],
+  in_dispute:                 ["completed", "canceled"],
 };
 
-/** Estados terminais — não têm fase seguinte na sequência. */
+/** Estados terminais — o pedido acabou (não confundir com "à espera do cliente"). */
 export function isTerminalStatus(status: string | null | undefined): boolean {
-  return NEXT_PHASE[status ?? ""] === null;
+  return TERMINAL_STATUSES.has(status ?? "");
+}
+
+/** true quando a decisão pertence ao cliente e o admin só pode esperar. */
+export function isWaitingOnCustomer(status: string | null | undefined): boolean {
+  return WAITING_ON_CUSTOMER.has(status ?? "");
 }
 
 /**
- * Estados que só existem DEPOIS do orçamento ter sido aprovado.
- * Usado para mostrar o selo "Aprovado" no painel.
+ * Estados que só existem DEPOIS do orçamento ter sido acordado com o cliente.
+ * Usado para mostrar o selo "Aprovado" no painel. `awaiting_customer_approval`
+ * NÃO conta — há proposta enviada, mas ainda não há acordo.
  */
 const POST_APPROVAL_STATUSES = new Set([
   "awaiting_deposit", "confirmed", "assignment_pending", "partner_selected",
@@ -90,12 +123,12 @@ const POST_APPROVAL_STATUSES = new Set([
   "extra_review_requested", "awaiting_confirmation", "completed",
 ]);
 
-/** true quando o estado implica que o orçamento já foi aprovado. */
+/** true quando o estado implica que o orçamento já foi aceite pelo cliente. */
 export function isApprovedStatus(status: string | null | undefined): boolean {
   return POST_APPROVAL_STATUSES.has(status ?? "");
 }
 
-/** Fase seguinte para o estado actual, ou null se terminal/desconhecido. */
+/** Fase seguinte para o estado actual, ou null se terminal/à espera do cliente. */
 export function nextPhase(status: string | null | undefined): PhaseAdvance | null {
   return NEXT_PHASE[status ?? ""] ?? null;
 }

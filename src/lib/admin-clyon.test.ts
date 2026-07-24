@@ -12,10 +12,11 @@
 import { describe, it, expect } from "vitest";
 import { CLYON_TABS, CLYON_TAB_IDS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
 import {
-  buildQuoteApprovalPayload,
+  validateProposal,
   isQuoteApprovalAvailable,
   quotePriceIsRequiredForStatus,
   validatedQuotePrice,
+  QUOTE_APPROVAL_TARGET_STATUS,
 } from "@/lib/quote-approval";
 
 // ── 1. Parser de URL ───────────────────────────────────────────────────────
@@ -308,31 +309,42 @@ describe("displayText — renderização segura para JSX", () => {
   });
 });
 
-// ── 7. Aprovação explícita de orçamento ────────────────────────────────────
-describe("aprovação de orçamento", () => {
-  it("só fica disponível para rascunhos, recebidos ou em análise (CONTRATO.md §3)", () => {
+// ── 7. Proposta de preço ao cliente (plano de negociação §3, §6, §9) ───────
+describe("proposta de preço ao cliente", () => {
+  it("só fica disponível para rascunhos, recebidos ou em análise", () => {
     expect(isQuoteApprovalAvailable("draft")).toBe(true);
     expect(isQuoteApprovalAvailable("received")).toBe(true);
+    // Após contraproposta do cliente o pedido volta a in_review — o admin
+    // pode enviar nova proposta a partir daí
     expect(isQuoteApprovalAvailable("in_review")).toBe(true);
+    expect(isQuoteApprovalAvailable("awaiting_customer_approval")).toBe(false);
     expect(isQuoteApprovalAvailable("awaiting_deposit")).toBe(false);
     expect(isQuoteApprovalAvailable("confirmed")).toBe(false);
   });
 
-  it("cria a operação de aprovação para confirmed (publicação automática)", () => {
-    const result = buildQuoteApprovalPayload("200.50", "Cliente informado por telefone.");
-    expect(result.error).toBeNull();
-    expect(result.payload).toEqual({
-      status: "confirmed",
-      estimated_price: 200.5,
-      admin_note: "Orçamento aprovado; pedido confirmado — publicação aos parceiros é automática. Cliente informado por telefone.",
-    });
+  it("a proposta leva o pedido a awaiting_customer_approval, não a confirmed", () => {
+    expect(QUOTE_APPROVAL_TARGET_STATUS).toBe("awaiting_customer_approval");
   });
 
-  it("rejeita uma aprovação sem orçamento positivo", () => {
-    expect(buildQuoteApprovalPayload("", null).error).toMatch(/superior a 0/);
-    expect(buildQuoteApprovalPayload(0, null).error).toMatch(/superior a 0/);
-    expect(buildQuoteApprovalPayload(-1, null).error).toMatch(/superior a 0/);
-    expect(buildQuoteApprovalPayload("abc", null).error).toMatch(/superior a 0/);
+  it("aceita uma proposta com valor positivo e justificação suficiente", () => {
+    const r = validateProposal("200.50", "Acesso fácil, sem segundo operador.");
+    expect(r.ok).toBe(true);
+    expect(r.error).toBeNull();
+  });
+
+  it("rejeita uma proposta sem valor positivo", () => {
+    const msg = "Justificação suficientemente longa.";
+    expect(validateProposal("", msg).error).toMatch(/superior a 0/);
+    expect(validateProposal(0, msg).error).toMatch(/superior a 0/);
+    expect(validateProposal(-1, msg).error).toMatch(/superior a 0/);
+    expect(validateProposal("abc", msg).error).toMatch(/superior a 0/);
+  });
+
+  it("exige justificação — um campo opcional acaba vazio quando há pressa", () => {
+    expect(validateProposal(200, "").error).toMatch(/justificação é obrigatória/i);
+    expect(validateProposal(200, "   ").error).toMatch(/justificação é obrigatória/i);
+    expect(validateProposal(200, "curto").error).toMatch(/justificação é obrigatória/i);
+    expect(validateProposal(200, null).error).toMatch(/justificação é obrigatória/i);
   });
 
   it("normaliza apenas preços finitos e positivos", () => {
@@ -349,6 +361,8 @@ describe("aprovação de orçamento", () => {
     // Sem preço, o trigger não publica e o pedido fica invisível sem erro —
     // o override manual para "A atribuir" também tem de exigir preço.
     expect(quotePriceIsRequiredForStatus("assignment_pending")).toBe(true);
+    // Enviar o cliente a decidir sem valor é absurdo
+    expect(quotePriceIsRequiredForStatus("awaiting_customer_approval")).toBe(true);
     expect(quotePriceIsRequiredForStatus("in_review")).toBe(false);
   });
 });
