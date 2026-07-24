@@ -197,7 +197,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         : (current as Record<string, unknown>).estimated_price;
       if (validatedQuotePrice(effectivePrice) === null) {
         return NextResponse.json({
-          error: "Indique um valor de orçamento superior a 0 € antes de colocar o pedido a aguardar depósito ou confirmá-lo.",
+          error: "Indique um valor de orçamento superior a 0 € antes de aprovar, confirmar ou colocar o pedido a atribuir — sem preço, o pedido fica invisível aos profissionais.",
         }, { status: 400 });
       }
     }

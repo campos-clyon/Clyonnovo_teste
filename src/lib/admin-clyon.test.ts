@@ -343,9 +343,12 @@ describe("aprovação de orçamento", () => {
     expect(validatedQuotePrice("NaN")).toBeNull();
   });
 
-  it("exige orçamento antes de aguardar depósito ou confirmar", () => {
+  it("exige orçamento em todos os estados publicáveis (NOTA-PARA-O-SITE §1)", () => {
     expect(quotePriceIsRequiredForStatus("awaiting_deposit")).toBe(true);
     expect(quotePriceIsRequiredForStatus("confirmed")).toBe(true);
+    // Sem preço, o trigger não publica e o pedido fica invisível sem erro —
+    // o override manual para "A atribuir" também tem de exigir preço.
+    expect(quotePriceIsRequiredForStatus("assignment_pending")).toBe(true);
     expect(quotePriceIsRequiredForStatus("in_review")).toBe(false);
   });
 });

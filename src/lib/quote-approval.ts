@@ -9,7 +9,11 @@ import { APPROVAL_TARGET_STATUS } from "./order-status-flow";
  */
 export const QUOTE_APPROVAL_SOURCE_STATUSES = ["draft", "received", "in_review"] as const;
 export const QUOTE_APPROVAL_TARGET_STATUS = APPROVAL_TARGET_STATUS;
-const QUOTE_VALUE_REQUIRED_STATUSES = ["awaiting_deposit", "confirmed"] as const;
+// NOTA-PARA-O-SITE.md §1: o trigger só publica com preço > 0. Um pedido em
+// confirmed/assignment_pending sem preço fica invisível aos profissionais SEM
+// ERRO NENHUM. Por isso o preço é obrigatório também para assignment_pending —
+// incluindo no override manual (force).
+const QUOTE_VALUE_REQUIRED_STATUSES = ["awaiting_deposit", "confirmed", "assignment_pending"] as const;
 
 export type QuoteApprovalPayload = {
   status: typeof QUOTE_APPROVAL_TARGET_STATUS;
