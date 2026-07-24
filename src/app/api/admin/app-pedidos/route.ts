@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { ENTRY_STATUSES, ANALYSIS_STATUS } from "@/lib/order-status-flow";
+import { ENTRY_STATUSES, ANALYSIS_STATUS, isApprovedStatus } from "@/lib/order-status-flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,18 +16,41 @@ async function autoPromoteEntryOrders(
   sb: ReturnType<typeof getSupabaseAdmin>,
   rows: Array<Record<string, unknown>>,
 ): Promise<void> {
-  const entryRows = rows.filter((r) =>
-    (ENTRY_STATUSES as readonly string[]).includes((r.status as string) ?? "")
-  );
-  if (entryRows.length === 0) return;
+  // Pedidos aprovados na app (final_price > 0) mas ainda em fase de entrada/
+  // análise: o estado deve reflectir a aprovação — avançam para
+  // "awaiting_deposit" (orçamento aprovado, aguarda depósito).
+  const PRE_APPROVAL = new Set([...(ENTRY_STATUSES as readonly string[]), ANALYSIS_STATUS]);
+  const toPromote = rows
+    .map((row) => {
+      const status = (row.status as string) ?? "";
+      const finalPrice = typeof row.final_price === "number" ? row.final_price : Number(row.final_price ?? 0);
+      if (PRE_APPROVAL.has(status) && finalPrice > 0) {
+        return {
+          row,
+          target: "awaiting_deposit",
+          note: "Orçamento aprovado na app — estado actualizado automaticamente para Aguarda depósito.",
+        };
+      }
+      if ((ENTRY_STATUSES as readonly string[]).includes(status)) {
+        return {
+          row,
+          target: ANALYSIS_STATUS,
+          note: "Entrada automática em análise — pedido submetido pelo cliente.",
+        };
+      }
+      return null;
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
 
-  await Promise.allSettled(entryRows.map(async (row) => {
+  if (toPromote.length === 0) return;
+
+  await Promise.allSettled(toPromote.map(async ({ row, target, note }) => {
     const id = row.id as string;
     const fromStatus = row.status as string;
 
     const { error: updErr } = await sb
       .from("service_requests")
-      .update({ status: ANALYSIS_STATUS })
+      .update({ status: target })
       .eq("id", id)
       .eq("status", fromStatus); // condicional — evita corrida com outra alteração
     if (updErr) {
@@ -36,7 +59,7 @@ async function autoPromoteEntryOrders(
     }
 
     // Reflectir na resposta desta listagem
-    row.status = ANALYSIS_STATUS;
+    row.status = target;
 
     const { error: opsErr } = await sb.from("service_request_ops").insert([{
       request_id:  id,
@@ -44,9 +67,9 @@ async function autoPromoteEntryOrders(
       colab_nome:  "Sistema",
       action_type: "status_change",
       status_from: fromStatus,
-      status_to:   ANALYSIS_STATUS,
+      status_to:   target,
       reason:      null,
-      note:        "Entrada automática em análise — pedido submetido pelo cliente.",
+      note,
       data_json:   { auto: true },
     }]);
     if (opsErr) console.error("[app-pedidos] auto-promote audit falhou", { id, opsErr });
@@ -148,6 +171,7 @@ export async function GET(req: NextRequest) {
         budget_range:    (row.estimated_price ?? row.final_price) != null ? `€${row.estimated_price ?? row.final_price}` : null,
         preferred_date:  asString(row.scheduled_for),
         status:          asString(row.status) ?? "open",
+        approved:        isApprovedStatus(asString(row.status)) || Number(row.final_price ?? 0) > 0,
         photos:          Array.isArray(row.photos) ? row.photos.filter((p: any) => typeof p === "string") : [],
         created_at:      asString(row.created_at) ?? "",
         updated_at:      asString(row.updated_at) ?? asString(row.created_at) ?? "",

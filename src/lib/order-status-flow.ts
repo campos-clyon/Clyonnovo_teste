@@ -70,6 +70,22 @@ export function isTerminalStatus(status: string | null | undefined): boolean {
   return NEXT_PHASE[status ?? ""] === null;
 }
 
+/**
+ * Estados que só existem DEPOIS do orçamento ter sido aprovado.
+ * Usado para mostrar o selo "Aprovado" no painel — a partir de
+ * awaiting_deposit, o pedido tem sempre um orçamento aprovado.
+ */
+const POST_APPROVAL_STATUSES = new Set([
+  "awaiting_deposit", "assignment_pending", "partner_selected",
+  "confirmed", "in_route", "arrived", "in_execution",
+  "extra_review_requested", "awaiting_confirmation", "completed",
+]);
+
+/** true quando o estado implica que o orçamento já foi aprovado. */
+export function isApprovedStatus(status: string | null | undefined): boolean {
+  return POST_APPROVAL_STATUSES.has(status ?? "");
+}
+
 /** Fase seguinte para o estado actual, ou null se terminal/desconhecido. */
 export function nextPhase(status: string | null | undefined): PhaseAdvance | null {
   return NEXT_PHASE[status ?? ""] ?? null;

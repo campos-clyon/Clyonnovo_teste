@@ -45,6 +45,7 @@ type AppOrder = {
   budget_range: string | null;
   preferred_date: string | null;
   status: AppStatus;
+  approved?: boolean;
   photos: string[];
   created_at: string;
   client_name: string | null;
@@ -105,12 +106,19 @@ function fmt(iso: string) {
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: AppStatus }) {
+function StatusBadge({ status, approved }: { status: AppStatus; approved?: boolean }) {
   const cfg = STATUS_CFG[status] ?? STATUS_CFG.received;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cfg.badge}`}>
-      <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${cfg.dot}`} />
-      {cfg.label}
+    <span className="inline-flex flex-wrap items-center justify-end gap-1">
+      {approved && (
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
+          ✓ Aprovado
+        </span>
+      )}
+      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cfg.badge}`}>
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${cfg.dot}`} />
+        {cfg.label}
+      </span>
     </span>
   );
 }
@@ -178,7 +186,7 @@ function OrderRow({ order, onClick, active, compact }: { order: AppOrder; onClic
 
       {/* Status + data */}
       <div className="flex-shrink-0 text-right">
-        <StatusBadge status={order.status} />
+        <StatusBadge status={order.status} approved={order.approved} />
         <p className="mt-1 text-[10px] text-slate-600">{fmt(order.created_at)}</p>
       </div>
     </div>
@@ -332,7 +340,7 @@ function DetailModal({
             </p>
             <h2 className="mt-0.5 text-lg font-bold text-white">{order.title}</h2>
             <div className="mt-1">
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} approved={order.approved} />
             </div>
           </div>
           <button

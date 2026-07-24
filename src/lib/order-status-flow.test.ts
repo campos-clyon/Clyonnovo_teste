@@ -5,6 +5,7 @@ import {
   ENTRY_STATUSES,
   nextPhase,
   isTerminalStatus,
+  isApprovedStatus,
   isValidTransition,
   validTargets,
 } from "./order-status-flow";
@@ -138,6 +139,24 @@ describe("validTargets", () => {
     const disputa = validTargets("in_dispute");
     expect(disputa).toContain("completed");
     expect(disputa).toContain("canceled");
+  });
+});
+
+describe("isApprovedStatus", () => {
+  it("estados pós-aprovação contam como aprovados", () => {
+    for (const s of [
+      "awaiting_deposit", "assignment_pending", "partner_selected",
+      "confirmed", "in_route", "arrived", "in_execution",
+      "extra_review_requested", "awaiting_confirmation", "completed",
+    ]) {
+      expect(isApprovedStatus(s), s).toBe(true);
+    }
+  });
+
+  it("estados pré-aprovação e terminais negativos NÃO contam", () => {
+    for (const s of ["draft", "open", "received", "in_review", "canceled", "rejected", "in_dispute"]) {
+      expect(isApprovedStatus(s), s).toBe(false);
+    }
   });
 });
 

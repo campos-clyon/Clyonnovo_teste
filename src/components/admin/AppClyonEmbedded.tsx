@@ -8,7 +8,7 @@ import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { buildQuoteApprovalPayload, isQuoteApprovalAvailable } from "@/lib/quote-approval";
-import { nextPhase, isTerminalStatus } from "@/lib/order-status-flow";
+import { nextPhase, isTerminalStatus, isApprovedStatus } from "@/lib/order-status-flow";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -654,9 +654,16 @@ function PedidoInlinePanel({
             #{order.id.slice(0, 8)} · criado {fmtDt(order.created_at)}
           </p>
         </div>
-        <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-bold ${statusCfg?.color ?? "text-white"}`}>
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
-          {statusCfg?.label ?? order.status}
+        <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
+          {(isApprovedStatus(order.status) || (order.final_price ?? 0) > 0) && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">
+              ✓ Aprovado
+            </span>
+          )}
+          <span className={`inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-bold ${statusCfg?.color ?? "text-white"}`}>
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
+            {statusCfg?.label ?? order.status}
+          </span>
         </span>
       </div>
 
