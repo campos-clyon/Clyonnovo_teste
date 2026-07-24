@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { nextPhase, isTerminalStatus } from "@/lib/order-status-flow";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -253,6 +254,35 @@ function DetailModal({
     }
   };
 
+  // Avança para a fase seguinte da sequência — o servidor determina o estado
+  const avancarFase = async () => {
+    setSaving("aprovar");
+    setErr(null);
+    try {
+      const body: Record<string, unknown> = {};
+      if (price !== "" && Number(price) > 0) body.estimated_price = Number(price);
+      const res = await fetch(`/api/admin/app-pedidos/${order.id}/advance`, {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error ?? "Erro ao avançar a fase."); return; }
+      onUpdated({ ...order, status: (data.status as AppStatus) ?? order.status });
+      onClose();
+    } catch {
+      setErr("Erro de rede.");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const rejeitar = () => {
+    const reason = window.prompt("Motivo da rejeição (obrigatório):")?.trim();
+    if (!reason) { setErr("Motivo obrigatório para rejeitar o pedido."); return; }
+    patch({ status: "rejected", reason, force: true }, "rejeitar");
+  };
+
   const guardar = () => {
     const payload: Record<string, unknown> = {};
     if (title !== order.title)                     payload.details = title;
@@ -261,7 +291,16 @@ function DetailModal({
     if (city !== order.city)                       payload.city = city;
     if (district !== order.district)               payload.region = district;
     if (urgency !== order.urgency)                 payload.urgency = urgency;
-    if (status !== order.status)                   payload.status = status;
+    // Alteração manual de estado = override explícito da sequência de fases
+    if (status !== order.status) {
+      payload.status = status;
+      payload.force = true;
+      if (status === "canceled" || status === "rejected") {
+        const reason = window.prompt("Motivo do cancelamento/rejeição (obrigatório):")?.trim();
+        if (!reason) { setErr("Motivo obrigatório ao cancelar ou rejeitar."); return; }
+        payload.reason = reason;
+      }
+    }
     const originalPrice = parsePrice(order.budget_range);
     if (price !== originalPrice) {
       payload.estimated_price = price === "" ? null : Number(price);
@@ -420,20 +459,24 @@ function DetailModal({
         {/* Acções */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4">
           <div className="flex flex-wrap gap-2">
-            <button
-              disabled={saving !== null}
-              onClick={() => patch({ status: "assignment_pending" }, "aprovar")}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-50"
-            >
-              {saving === "aprovar" ? "A aprovar..." : "Aprovar"}
-            </button>
-            <button
-              disabled={saving !== null}
-              onClick={() => patch({ status: "rejected" }, "rejeitar")}
-              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
-            >
-              {saving === "rejeitar" ? "A rejeitar..." : "Rejeitar"}
-            </button>
+            {!isTerminalStatus(order.status) && nextPhase(order.status) && (
+              <button
+                disabled={saving !== null}
+                onClick={avancarFase}
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-50"
+              >
+                {saving === "aprovar" ? "A avançar..." : nextPhase(order.status)!.actionLabel}
+              </button>
+            )}
+            {!isTerminalStatus(order.status) && (
+              <button
+                disabled={saving !== null}
+                onClick={rejeitar}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
+              >
+                {saving === "rejeitar" ? "A rejeitar..." : "Rejeitar"}
+              </button>
+            )}
           </div>
 
           <button

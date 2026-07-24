@@ -1,9 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { ENTRY_STATUSES, ANALYSIS_STATUS } from "@/lib/order-status-flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Promoção automática à entrada: pedidos submetidos pelo cliente chegam
+ * como "open" (app móvel) ou "received" — passam automaticamente a
+ * "in_review" (Em análise) assim que entram no painel, com auditoria.
+ * Não-bloqueante: uma falha aqui nunca impede a listagem.
+ */
+async function autoPromoteEntryOrders(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  rows: Array<Record<string, unknown>>,
+): Promise<void> {
+  const entryRows = rows.filter((r) =>
+    (ENTRY_STATUSES as readonly string[]).includes((r.status as string) ?? "")
+  );
+  if (entryRows.length === 0) return;
+
+  await Promise.allSettled(entryRows.map(async (row) => {
+    const id = row.id as string;
+    const fromStatus = row.status as string;
+
+    const { error: updErr } = await sb
+      .from("service_requests")
+      .update({ status: ANALYSIS_STATUS })
+      .eq("id", id)
+      .eq("status", fromStatus); // condicional — evita corrida com outra alteração
+    if (updErr) {
+      console.error("[app-pedidos] auto-promote falhou", { id, updErr });
+      return;
+    }
+
+    // Reflectir na resposta desta listagem
+    row.status = ANALYSIS_STATUS;
+
+    const { error: opsErr } = await sb.from("service_request_ops").insert([{
+      request_id:  id,
+      colab_id:    0,
+      colab_nome:  "Sistema",
+      action_type: "status_change",
+      status_from: fromStatus,
+      status_to:   ANALYSIS_STATUS,
+      reason:      null,
+      note:        "Entrada automática em análise — pedido submetido pelo cliente.",
+      data_json:   { auto: true },
+    }]);
+    if (opsErr) console.error("[app-pedidos] auto-promote audit falhou", { id, opsErr });
+  }));
+}
 
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
@@ -49,6 +97,9 @@ export async function GET(req: NextRequest) {
     }
 
     const rows = data ?? [];
+
+    // Novos pedidos entram automaticamente em análise
+    await autoPromoteEntryOrders(sb, rows as Array<Record<string, unknown>>);
 
     // Fetch customer profiles for all unique customer_ids
     const customerIds = [...new Set(rows.map((r: any) => r.customer_id).filter(Boolean))];

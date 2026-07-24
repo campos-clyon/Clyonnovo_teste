@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
+import { isValidTransition, validTargets } from "@/lib/order-status-flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -172,6 +173,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
     }
 
+    // Máquina de estados: a transição tem de respeitar a sequência de fases
+    // (in_review → awaiting_deposit → … → completed). Override manual
+    // explícito com force: true fica registado como tal na auditoria.
+    const isForced = body.force === true;
+    if (updates.status && !isForced) {
+      const from = ((current as Record<string, unknown>).status as string) ?? "";
+      const to = updates.status as string;
+      if (!isValidTransition(from, to)) {
+        return NextResponse.json({
+          error: `Transição inválida: "${from}" → "${to}". A sequência de fases permite: ${validTargets(from).join(", ") || "nenhuma (estado terminal)"}. Usa o override manual para forçar.`,
+          valid_targets: validTargets(from),
+        }, { status: 400 });
+      }
+    }
+
     // "Aguarda depósito" é o estado de orçamento aprovado; "Confirmado" é
     // a etapa seguinte. Ambos exigem que exista um valor positivo, mesmo se a
     // chamada vier de outra interface administrativa.
@@ -195,7 +211,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       status_to:   (updates.status as string | undefined) ?? null,
       reason:      typeof body.reason === "string" ? body.reason.trim() || null : null,
       note:        hasNote ? (body.admin_note as string).trim() : null,
-      data_json:   hasUpdates ? { changes: updates, correlation_id: correlationId } : { correlation_id: correlationId },
+      data_json:   hasUpdates
+        ? { changes: updates, correlation_id: correlationId, ...(isForced && updates.status ? { forced: true } : {}) }
+        : { correlation_id: correlationId },
     };
 
     // Caminho preferido: RPC transaccional (migração 004) — update + auditoria

@@ -8,6 +8,7 @@ import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { buildQuoteApprovalPayload, isQuoteApprovalAvailable } from "@/lib/quote-approval";
+import { nextPhase, isTerminalStatus } from "@/lib/order-status-flow";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -471,11 +472,33 @@ function PedidoInlinePanel({
 
   useEffect(() => { load(); }, [load]);
 
+  async function handleAdvancePhase() {
+    if (!order) return;
+    setSaving(true); setSaveError(null); setSaveSuccess(null);
+    try {
+      const body: Record<string, unknown> = {};
+      if (adminNote.trim()) body.note = adminNote.trim();
+      if (price !== "" && Number(price) > 0) body.estimated_price = Number(price);
+      const res = await fetch(`/api/admin/app-pedidos/${id}/advance`, {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao avançar a fase."); return; }
+      setSaveSuccess(`Fase avançada: ${json.action}. Estado actual: ${INLINE_STATUS_CFG[json.status as AppStatus]?.label ?? json.status}.`);
+      await load();
+      onChanged?.();
+    } catch { setSaveError("Erro de ligação."); }
+    finally { setSaving(false); }
+  }
+
   async function handleSave() {
     if (!order) return;
     setSaving(true); setSaveError(null); setSaveSuccess(null);
     const payload: Record<string, unknown> = {};
-    if (status !== order.status) payload.status = status;
+    // Alteração manual de estado = override explícito da sequência de fases
+    if (status !== order.status) { payload.status = status; payload.force = true; }
     if (urgency !== order.urgency) payload.urgency = urgency;
     const origPrice = order.estimated_price != null ? String(order.estimated_price) : "";
     if (price !== origPrice) payload.estimated_price = price === "" ? null : Number(price);
@@ -838,8 +861,26 @@ function PedidoInlinePanel({
           <div className={CARD}>
             <p className={CARD_TITLE}>Operação</p>
             <div className="space-y-3">
+              {/* Avanço automático de fase — o estado seguinte é determinado pela sequência */}
+              {!canApproveQuote && !isTerminalStatus(order.status) && nextPhase(order.status) && (
+                <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/[0.07] p-3">
+                  <p className="text-xs font-bold text-cyan-300">Fase seguinte</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                    Estado actual: <span className="font-semibold text-white">{INLINE_STATUS_CFG[order.status]?.label ?? order.status}</span>.
+                    Ao confirmar, o pedido avança para <span className="font-semibold text-cyan-300">{INLINE_STATUS_CFG[nextPhase(order.status)!.next as AppStatus]?.label ?? nextPhase(order.status)!.next}</span> e a operação fica na Auditoria.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAdvancePhase}
+                    disabled={saving}
+                    className="mt-3 w-full rounded-lg bg-cyan-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? "A avançar..." : nextPhase(order.status)!.actionLabel}
+                  </button>
+                </div>
+              )}
               <div>
-                <label className={IL}>Estado</label>
+                <label className={IL}>Estado (alteração manual — fora da sequência)</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} className={INP}>
                   {INLINE_VALID_STATUSES.map((s) => (
                     <option key={s} value={s} className="bg-[#0C1C2E]">{INLINE_STATUS_CFG[s].label}</option>
