@@ -486,7 +486,17 @@ function PedidoInlinePanel({
       });
       const json = await res.json();
       if (!res.ok) { setSaveError(json.error ?? "Erro ao avançar a fase."); return; }
-      setSaveSuccess(`Fase avançada: ${json.action}. Estado actual: ${INLINE_STATUS_CFG[json.status as AppStatus]?.label ?? json.status}.`);
+      const statusLabel = INLINE_STATUS_CFG[json.status as AppStatus]?.label ?? json.status;
+      let msg = `Fase avançada: ${json.action}. Estado actual: ${statusLabel}.`;
+      if (typeof json.partners_invited === "number") {
+        msg += json.partners_invited > 0
+          ? ` Oportunidade publicada a ${json.partners_invited} parceiro(s) — já aparece na app dos profissionais.`
+          : " Todos os parceiros aprovados já tinham esta oferta activa.";
+      }
+      if (json.publish_warning) {
+        setSaveError(json.publish_warning);
+      }
+      setSaveSuccess(msg);
       await load();
       onChanged?.();
     } catch { setSaveError("Erro de ligação."); }
