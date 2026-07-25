@@ -1904,134 +1904,552 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
 }
 
 // ── Profissionais (partners app) ──────────────────────────────────────────
+// O que aqui se edita é o que o cliente vê no perfil do profissional na app.
 type PartnerProfile = {
-  id: string; full_name: string | null; email: string | null; phone: string | null; created_at: string;
-  availability_status: string | null; onboarding_status: string | null;
-  services: string[]; docs_total: number; docs_verified: number; docs_pending: number;
-  rating_avg: number; rating_count: number;
+  id: string; user_id: string | null;
+  trade_name: string | null; legal_name: string | null; kind: string | null;
+  status: string | null; tier: string | null; trust_score: number | null;
+  earning_share: number | null; jobs_completed: number | null;
+  full_name: string | null; email: string | null; phone: string | null;
+  avatar_url: string | null; created_at: string | null;
+  regions: string[]; service_categories: string[];
+  services: string[]; services_active: number;
+  docs_total: number; docs_approved: number; docs_pending: number; docs_rejected: number;
+  verified: boolean; verification_reason: string | null; missing_badge_docs: string[];
+  description_needs_attention: boolean;
+  rating_avg: number; rating_count: number; has_vehicle: boolean | null;
 };
-type PartnerStats = { total: number; active: number; docs_pending: number };
+type PartnerStats = { total: number; approved: number; pending: number; docs_pending: number; sem_descricao: number };
 
-function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }) {
-  const [profiles, setProfiles] = useState<PartnerProfile[]>([]);
-  const [stats, setStats] = useState<PartnerStats>({ total: 0, active: 0, docs_pending: 0 });
+type PartnerDoc = {
+  id: string; doc_type: string; status: string; notes: string | null;
+  file_url: string | null; storage_path: string | null;
+  uploaded_at: string | null; approved_at: string | null; rejected_at: string | null;
+};
+type PartnerService = {
+  id: string; category_slug: string; active: boolean;
+  accepts_urgent: boolean; has_equipment: boolean; has_experience: boolean;
+  verified_at: string | null;
+};
+type PartnerDetail = {
+  partner: Record<string, unknown>;
+  profile: Record<string, unknown> | null;
+  services: PartnerService[];
+  documents: PartnerDoc[];
+  reviews: Array<{ id: string; rating: number; comment: string | null; status: string; created_at: string }>;
+  verification: { verified: boolean; missingDocs: string[]; reason: string | null };
+  description_state: { needsAttention: boolean; canCopyFromBio: boolean; message: string | null };
+  stats: { bookings_total: number; bookings_active: number; rating_avg: number | null; rating_count: number };
+};
+
+const PARTNER_STATUS_CFG: Record<string, { label: string; cls: string }> = {
+  pending:   { label: "Candidatura submetida", cls: "bg-amber-500/15 text-amber-300" },
+  in_review: { label: "Em análise",            cls: "bg-amber-500/15 text-amber-300" },
+  approved:  { label: "Aprovado",              cls: "bg-emerald-500/15 text-emerald-300" },
+  rejected:  { label: "Rejeitado",             cls: "bg-red-500/15 text-red-300" },
+  suspended: { label: "Suspenso",              cls: "bg-red-500/15 text-red-300" },
+};
+
+const DOC_LABELS: Record<string, string> = {
+  id: "Documento de identificação", nif: "NIF",
+  activity: "Início de actividade", iban: "Comprovativo de IBAN",
+};
+
+// Painel de gestão de um profissional — o que aqui se muda é o que o cliente
+// passa a ver na app.
+function ProfissionalPanel({
+  id, authHeader, onBack, onChanged,
+}: {
+  id: string; authHeader: Record<string, string>;
+  onBack: () => void; onChanged?: () => void;
+}) {
+  const [d, setD] = useState<PartnerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [tradeName, setTradeName] = useState("");
+  const [earningShare, setEarningShare] = useState("");
+  const [docReject, setDocReject] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const url = q ? `/api/admin/app-clyon/profissionais?q=${encodeURIComponent(q)}` : "/api/admin/app-clyon/profissionais";
-      const res = await fetch(url, { headers: authHeader });
+      const res = await fetch(`/api/admin/app-clyon/profissionais/${id}`, { headers: authHeader });
       const json = await res.json();
-      if (!res.ok) { setError(json.error ?? "Erro."); return; }
-      setProfiles(json.profiles ?? []);
-      setStats(json.stats ?? { total: 0, active: 0, docs_pending: 0 });
+      if (!res.ok) { setError(json.error ?? "Erro ao carregar."); return; }
+      setD(json as PartnerDetail);
+      const p = json.partner as Record<string, unknown>;
+      setDescricao(typeof p.description === "string" ? p.description : "");
+      setTradeName(typeof p.trade_name === "string" ? p.trade_name : "");
+      setEarningShare(p.earning_share != null ? String(p.earning_share) : "");
+      setReason(""); setDocReject({});
     } catch { setError("Erro de ligação."); }
     finally { setLoading(false); }
-  }, [authHeader, q]);
+  }, [id, authHeader]);
 
   useEffect(() => { load(); }, [load]);
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setQ(search.trim());
+  const patch = async (body: Record<string, unknown>, ok: string) => {
+    setBusy(true); setErrMsg(null); setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/app-clyon/profissionais/${id}`, {
+        method: "PATCH",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) { setErrMsg(json.error ?? "Erro ao guardar."); return; }
+      let extra = "";
+      if (json.verification && !json.verification.verified && json.verification.reason) {
+        extra = ` ${json.verification.reason}`;
+      }
+      setMsg(ok + extra);
+      await load(); onChanged?.();
+    } catch { setErrMsg("Erro de ligação."); }
+    finally { setBusy(false); }
+  };
+
+  const post = async (body: Record<string, unknown>, ok: string) => {
+    setBusy(true); setErrMsg(null); setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/app-clyon/profissionais/${id}`, {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) { setErrMsg(json.error ?? "Erro."); return; }
+      let extra = "";
+      if (json.verification?.reason) extra = ` ${json.verification.reason}`;
+      else if (json.verification?.verified) extra = " O selo de verificado já aparece no app.";
+      setMsg(ok + extra);
+      await load(); onChanged?.();
+    } catch { setErrMsg("Erro de ligação."); }
+    finally { setBusy(false); }
+  };
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrBox msg={error} onRetry={load} />;
+  if (!d) return null;
+
+  const p = d.partner;
+  const estado = String(p.status ?? "");
+  const cfg = PARTNER_STATUS_CFG[estado];
+  const nome = String(p.trade_name ?? d.profile?.full_name ?? "Profissional");
+  const IL2 = "text-[10px] uppercase tracking-wider text-[#97AABD] block mb-1";
+  const INP2 = "h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-[#F5FAFF] outline-none focus:border-[#00BDEB]";
+  const TA2 = "w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-2 text-sm text-[#F5FAFF] outline-none focus:border-[#00BDEB] resize-none";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={onBack} className="rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40">
+          ← Voltar
+        </button>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold text-[#F5FAFF]">{nome}</h3>
+            {d.verification.verified && (
+              <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-300">✓ Verificado</span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            {d.profile?.full_name ? String(d.profile.full_name) : "—"}
+            {d.profile?.email ? ` · ${d.profile.email}` : ""}
+            {d.profile?.phone ? ` · ${d.profile.phone}` : ""}
+          </p>
+        </div>
+        {cfg && (
+          <span className={`ml-auto rounded-full px-3 py-1.5 text-xs font-bold ${cfg.cls}`}>{cfg.label}</span>
+        )}
+      </div>
+
+      {errMsg && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{errMsg}</div>}
+      {msg && <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{msg}</div>}
+
+      {/* Selo de verificado — aprovar não chega */}
+      {!d.verification.verified && d.verification.reason && (
+        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-4">
+          <p className="text-xs font-bold text-amber-300">Selo de verificado não aparece no app</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{d.verification.reason}</p>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-[1fr_300px]">
+        <div className="space-y-4">
+          {/* Apresentação pública — o bug bio vs description */}
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Apresentação pública</p>
+            {d.description_state.needsAttention && d.description_state.message && (
+              <div className="mb-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3">
+                <p className="text-[11px] leading-relaxed text-amber-200/90">{d.description_state.message}</p>
+                {d.description_state.canCopyFromBio && (
+                  <button
+                    onClick={() => post({ action: "copy_bio" }, "Bio copiada para a descrição pública.")}
+                    disabled={busy}
+                    className="mt-2 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+                  >
+                    Copiar bio para a descrição
+                  </button>
+                )}
+              </div>
+            )}
+            <label className={IL2}>Descrição que o cliente vê</label>
+            <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} className={TA2}
+              placeholder="Ex: Recolhas e mudanças na Margem Sul há 15 anos. Equipa própria e carrinha de 12 m³." />
+            {typeof p.bio === "string" && p.bio.trim() && (
+              <p className="mt-1.5 text-[10px] leading-relaxed text-slate-600">
+                Bio escrita pelo profissional (não visível ao cliente): &ldquo;{p.bio}&rdquo;
+              </p>
+            )}
+            <label className={`${IL2} mt-3`}>Nome comercial</label>
+            <input value={tradeName} onChange={(e) => setTradeName(e.target.value)} className={INP2} />
+            <button
+              onClick={() => patch({ description: descricao.trim(), trade_name: tradeName.trim() }, "Perfil público actualizado.")}
+              disabled={busy}
+              className="mt-3 w-full rounded-lg bg-[#00BDEB] py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+            >
+              {busy ? "A guardar..." : "Guardar apresentação"}
+            </button>
+          </div>
+
+          {/* Documentos */}
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Documentos ({d.documents.length})</p>
+            {d.documents.length === 0 ? (
+              <p className="text-xs text-slate-500">O profissional ainda não submeteu documentos.</p>
+            ) : (
+              <div className="space-y-2">
+                {d.documents.map((doc) => (
+                  <div key={doc.id} className="rounded-xl border border-white/[0.07] bg-[#12263B]/50 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-[#F5FAFF]">{DOC_LABELS[doc.doc_type] ?? doc.doc_type}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                        doc.status === "approved" ? "bg-emerald-500/15 text-emerald-300"
+                        : doc.status === "rejected" ? "bg-red-500/15 text-red-300"
+                        : "bg-amber-500/15 text-amber-300"
+                      }`}>{doc.status}</span>
+                      {(doc.doc_type === "id" || doc.doc_type === "nif") && (
+                        <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[9px] text-sky-300">exigido para o selo</span>
+                      )}
+                      {doc.file_url && (
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                          className="ml-auto text-[11px] font-semibold text-[#00BDEB] hover:underline">Abrir</a>
+                      )}
+                    </div>
+                    {doc.notes && <p className="mt-1 text-[10px] italic text-slate-500">&ldquo;{doc.notes}&rdquo;</p>}
+                    {doc.status !== "approved" && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => post({ action: "document", document_id: doc.id, status: "approved" }, "Documento aprovado.")}
+                          disabled={busy}
+                          className="rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                        >Aprovar</button>
+                        <input
+                          value={docReject[doc.id] ?? ""}
+                          onChange={(e) => setDocReject((m) => ({ ...m, [doc.id]: e.target.value }))}
+                          placeholder="Motivo para rejeitar…"
+                          className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-[#0C1C2E] px-2 text-[11px] text-white outline-none focus:border-red-400"
+                        />
+                        <button
+                          onClick={() => post({ action: "document", document_id: doc.id, status: "rejected", notes: docReject[doc.id] }, "Documento rejeitado.")}
+                          disabled={busy || !(docReject[doc.id] ?? "").trim()}
+                          className="rounded-lg border border-red-500/30 px-3 py-1.5 text-[11px] font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+                        >Rejeitar</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Serviços */}
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Serviços ({d.services.length})</p>
+            {d.services.length === 0 ? (
+              <p className="text-xs text-slate-500">Sem serviços declarados — este profissional não recebe oportunidades.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {d.services.map((s) => (
+                  <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-white/[0.06] bg-[#12263B]/50 px-3 py-2">
+                    <span className="text-sm text-[#F5FAFF]">{s.category_slug}</span>
+                    {s.has_equipment && <span className="rounded bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-slate-400">equipamento</span>}
+                    {s.has_experience && <span className="rounded bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-slate-400">experiência</span>}
+                    {s.accepts_urgent && <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] text-amber-300">urgentes</span>}
+                    {s.verified_at && <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[9px] text-sky-300">verificado</span>}
+                    <div className="ml-auto flex gap-1.5">
+                      <button
+                        onClick={() => post({ action: "service", service_id: s.id, verified: !s.verified_at }, s.verified_at ? "Verificação removida." : "Serviço verificado.")}
+                        disabled={busy}
+                        className="rounded-lg border border-white/[0.08] px-2.5 py-1 text-[10px] font-semibold text-slate-300 hover:border-sky-400/40 disabled:opacity-50"
+                      >{s.verified_at ? "Retirar verificação" : "Verificar"}</button>
+                      <button
+                        onClick={() => post({ action: "service", service_id: s.id, active: !s.active }, s.active ? "Serviço desactivado." : "Serviço activado.")}
+                        disabled={busy}
+                        className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold disabled:opacity-50 ${
+                          s.active ? "border-red-500/25 text-red-300 hover:bg-red-500/10" : "border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/10"
+                        }`}
+                      >{s.active ? "Desactivar" : "Activar"}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Avaliações */}
+          {d.reviews.length > 0 && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>
+                Avaliações
+                {d.stats.rating_avg != null && (
+                  <span className="ml-2 font-normal text-amber-300">★ {d.stats.rating_avg} · {d.stats.rating_count}</span>
+                )}
+              </p>
+              <div className="space-y-2">
+                {d.reviews.slice(0, 6).map((r) => (
+                  <div key={r.id} className="rounded-xl border border-white/[0.06] bg-[#12263B]/50 p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-amber-300">{"★".repeat(Math.round(r.rating))}</span>
+                      <span className="text-[10px] text-slate-600">{fmtDt(r.created_at)}</span>
+                      <span className="ml-auto rounded-full bg-white/[0.05] px-2 py-0.5 text-[9px] text-slate-400">{r.status}</span>
+                    </div>
+                    {r.comment && <p className="mt-1 text-[11px] leading-relaxed text-slate-300">&ldquo;{r.comment}&rdquo;</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Coluna lateral — decisões administrativas */}
+        <div className="space-y-4">
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Estado da candidatura</p>
+            <div className="space-y-2">
+              {estado !== "approved" && (
+                <button
+                  onClick={() => patch({ status: "approved" }, "Profissional aprovado.")}
+                  disabled={busy}
+                  className="w-full rounded-lg bg-emerald-500 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                >Aprovar profissional</button>
+              )}
+              {estado !== "in_review" && estado !== "approved" && (
+                <button
+                  onClick={() => patch({ status: "in_review" }, "Passou a Em análise.")}
+                  disabled={busy}
+                  className="w-full rounded-lg border border-white/[0.08] bg-[#12263B] py-2 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40 disabled:opacity-50"
+                >Marcar em análise</button>
+              )}
+              <label className={`${IL2} mt-2`}>Motivo (obrigatório para rejeitar ou suspender)</label>
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2}
+                placeholder="O profissional vê este motivo…" className={TA2} />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => patch({ status: "rejected", reason }, "Profissional rejeitado.")}
+                  disabled={busy || !reason.trim() || estado === "rejected"}
+                  className="flex-1 rounded-lg border border-red-500/30 py-2 text-[11px] font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+                >Rejeitar</button>
+                <button
+                  onClick={() => patch({ status: "suspended", reason }, "Profissional suspenso.")}
+                  disabled={busy || !reason.trim() || estado === "suspended"}
+                  className="flex-1 rounded-lg border border-amber-500/30 py-2 text-[11px] font-semibold text-amber-300 hover:bg-amber-500/10 disabled:opacity-40"
+                >Suspender</button>
+              </div>
+              {typeof p.rejection_reason === "string" && p.rejection_reason && (
+                <p className="text-[10px] leading-relaxed text-red-300/80">Rejeitado: &ldquo;{p.rejection_reason}&rdquo;</p>
+              )}
+              {typeof p.suspension_reason === "string" && p.suspension_reason && (
+                <p className="text-[10px] leading-relaxed text-amber-300/80">Suspenso: &ldquo;{p.suspension_reason}&rdquo;</p>
+              )}
+            </div>
+          </div>
+
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Condições comerciais</p>
+            <label className={IL2}>Quota do profissional (0 a 1)</label>
+            <input type="number" step="0.01" min="0.01" max="1" value={earningShare}
+              onChange={(e) => setEarningShare(e.target.value)} className={INP2} />
+            <p className="mt-1 text-[10px] text-slate-600">
+              {earningShare && Number(earningShare) > 0
+                ? `${Math.round(Number(earningShare) * 100)}% do valor do trabalho para o profissional.`
+                : "Fracção do valor que fica para o profissional (ex: 0.65 = 65%)."}
+            </p>
+            <button
+              onClick={() => patch({ earning_share: Number(earningShare) }, "Quota actualizada.")}
+              disabled={busy || !earningShare || Number(earningShare) <= 0 || Number(earningShare) > 1}
+              className="mt-2 w-full rounded-lg bg-[#00BDEB] py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+            >Guardar quota</button>
+          </div>
+
+          <div className={CARD}>
+            <p className={CARD_TITLE}>Resumo</p>
+            <div className="space-y-1.5 text-[11px]">
+              <p className="text-slate-400">Trabalhos: <span className="text-white">{d.stats.bookings_active}</span> activos de {d.stats.bookings_total}</p>
+              <p className="text-slate-400">Tipo: <span className="text-white">{String(p.kind ?? "—")}</span></p>
+              <p className="text-slate-400">Escalão: <span className="text-white">{String(p.tier ?? "—")}</span></p>
+              <p className="text-slate-400">Confiança: <span className="text-white">{p.trust_score != null ? String(p.trust_score) : "—"}</span></p>
+              {Array.isArray(p.regions) && p.regions.length > 0 && (
+                <p className="text-slate-400">Zonas: <span className="text-white">{(p.regions as string[]).join(", ")}</span></p>
+              )}
+              {typeof p.base_address === "string" && p.base_address && (
+                <p className="text-slate-400">Base: <span className="text-white">{p.base_address}</span>
+                  {p.base_radius_km != null && <span className="text-slate-500"> · raio {String(p.base_radius_km)} km</span>}
+                </p>
+              )}
+              <p className="text-slate-400">Veículo: <span className="text-white">{p.has_vehicle ? "sim" : "não"}</span>
+                {p.vehicle_capacity_m3 != null && <span className="text-slate-500"> · {String(p.vehicle_capacity_m3)} m³</span>}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }) {
+  const [profiles, setProfiles] = useState<PartnerProfile[]>([]);
+  const [stats, setStats] = useState<PartnerStats>({ total: 0, approved: 0, pending: 0, docs_pending: 0, sem_descricao: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (statusFilter !== "todos") params.set("status", statusFilter);
+      const res = await fetch(`/api/admin/app-clyon/profissionais?${params}`, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? "Erro."); return; }
+      setProfiles(json.profiles ?? []);
+      setStats(json.stats ?? { total: 0, approved: 0, pending: 0, docs_pending: 0, sem_descricao: 0 });
+    } catch { setError("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, q, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (selected) {
+    return (
+      <ProfissionalPanel
+        id={selected}
+        authHeader={authHeader}
+        onBack={() => setSelected(null)}
+        onChanged={load}
+      />
+    );
   }
 
   if (loading) return <Spinner />;
   if (error) return <ErrBox msg={error} onRetry={load} />;
 
+  const FILTROS: Array<{ k: string; label: string }> = [
+    { k: "todos", label: "Todos" },
+    { k: "pending", label: "Candidaturas" },
+    { k: "in_review", label: "Em análise" },
+    { k: "approved", label: "Aprovados" },
+    { k: "suspended", label: "Suspensos" },
+  ];
+
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
           <p className="mt-1 text-2xl font-bold text-cyan-300">{stats.total}</p>
         </div>
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Disponíveis</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-300">{stats.active}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Aprovados</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{stats.approved}</p>
         </div>
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Docs pendentes</p>
-          <p className="mt-1 text-2xl font-bold text-amber-300">{stats.docs_pending}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">A aguardar decisão</p>
+          <p className="mt-1 text-2xl font-bold text-amber-300">{stats.pending}</p>
+        </div>
+        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Sem apresentação</p>
+          <p className="mt-1 text-2xl font-bold text-violet-300">{stats.sem_descricao}</p>
+          <p className="mt-0.5 text-[9px] leading-tight text-slate-600">o cliente vê texto genérico</p>
         </div>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Pesquisar por nome ou e-mail…"
-          className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
-        />
-        <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30 transition">Pesquisar</button>
+      <div className="flex flex-wrap items-center gap-2">
+        {FILTROS.map((f) => (
+          <button key={f.k} onClick={() => setStatusFilter(f.k)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              statusFilter === f.k ? "bg-[#00BDEB] text-slate-950" : "border border-white/[0.08] bg-[#12263B] text-slate-300 hover:border-[#00BDEB]/40"
+            }`}>{f.label}</button>
+        ))}
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); setQ(search.trim()); }} className="flex gap-2">
+        <input value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="Pesquisar por nome comercial, nome, e-mail ou telefone…"
+          className="h-9 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400" />
+        <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-500/30">Pesquisar</button>
         {q && <button type="button" onClick={() => { setSearch(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
       </form>
 
       {profiles.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-600">Sem profissionais registados. Verifica <code>partner_profiles</code> ou <code>user_roles</code> em Supabase.</p>
+        <p className="py-10 text-center text-sm text-slate-600">Sem profissionais para este filtro.</p>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-          {profiles.map((p, i) => (
-            <div key={p.id} className={`px-4 py-3 ${i < profiles.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-300">
-                  {(p.full_name ?? p.email ?? "?").charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-medium text-white truncate">{p.full_name ?? "—"}</p>
-                    {p.availability_status && (
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                        p.availability_status === "available" || p.availability_status === "online"
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-slate-500/15 text-slate-400"
-                      }`}>
-                        {p.availability_status}
-                      </span>
+          {profiles.map((p, i) => {
+            const cfg = PARTNER_STATUS_CFG[String(p.status ?? "")];
+            return (
+              <button key={p.id} onClick={() => setSelected(p.id)}
+                className={`w-full px-4 py-3 text-left transition hover:bg-white/[0.03] ${i < profiles.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-300">
+                    {(p.trade_name ?? p.full_name ?? p.email ?? "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-medium text-white">{p.trade_name ?? p.full_name ?? "—"}</p>
+                      {p.verified && <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[9px] font-bold text-sky-300">✓ Verificado</span>}
+                      {cfg && <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${cfg.cls}`}>{cfg.label}</span>}
+                      {p.description_needs_attention && (
+                        <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[9px] font-bold text-violet-300">sem apresentação</span>
+                      )}
+                    </div>
+                    <p className="truncate text-xs text-slate-500">
+                      {p.full_name && p.trade_name ? `${p.full_name} · ` : ""}{p.email ?? "—"}{p.phone ? ` · ${p.phone}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-shrink-0 flex-col items-end gap-0.5 text-right">
+                    {p.rating_count > 0 && (
+                      <span className="text-xs text-amber-300">★ {p.rating_avg} <span className="text-slate-600">({p.rating_count})</span></span>
                     )}
-                    {p.onboarding_status && p.onboarding_status !== "completed" && (
-                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold text-amber-300">
-                        {p.onboarding_status}
-                      </span>
+                    {p.docs_pending > 0 && (
+                      <span className="text-[10px] text-amber-400">{p.docs_pending} doc{p.docs_pending > 1 ? "s" : ""} pendente{p.docs_pending > 1 ? "s" : ""}</span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 truncate">{p.email ?? "—"} {p.phone ? `· ${p.phone}` : ""}</p>
                 </div>
-                <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-right">
-                  {p.rating_count > 0 && (
-                    <span className="text-xs text-amber-300">★ {p.rating_avg} <span className="text-slate-600">({p.rating_count})</span></span>
-                  )}
-                  <span className="text-[10px] text-slate-600">{new Date(p.created_at).toLocaleDateString("pt-PT")}</span>
-                </div>
-              </div>
-              {(p.services.length > 0 || p.docs_total > 0) && (
-                <div className="mt-2 flex items-center gap-3 flex-wrap pl-13 ml-13">
-                  {p.services.length > 0 && (
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {p.services.slice(0, 5).map((s) => (
-                        <span key={s} className="rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] text-slate-400">{s}</span>
-                      ))}
-                      {p.services.length > 5 && <span className="text-[10px] text-slate-600">+{p.services.length - 5}</span>}
-                    </div>
-                  )}
-                  {p.docs_total > 0 && (
-                    <span className="text-[10px] text-slate-500">
-                      Docs: <span className="text-emerald-400">{p.docs_verified}</span>/<span className="text-white">{p.docs_total}</span>
-                      {p.docs_pending > 0 && <span className="text-amber-400"> · {p.docs_pending} pendente{p.docs_pending > 1 ? "s" : ""}</span>}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                {p.services.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1 pl-13">
+                    {p.services.slice(0, 6).map((s) => (
+                      <span key={s} className="rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] text-slate-400">{s}</span>
+                    ))}
+                    {p.services.length > 6 && <span className="text-[10px] text-slate-600">+{p.services.length - 6}</span>}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
-      <p className="text-xs text-slate-600">Total visível: {profiles.length}</p>
+      <p className="text-xs text-slate-600">A mostrar {profiles.length} profissiona{profiles.length === 1 ? "l" : "is"}.</p>
     </div>
   );
 }
