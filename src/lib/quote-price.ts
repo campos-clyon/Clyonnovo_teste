@@ -153,6 +153,59 @@ export function hasUsablePrice(row: PricedRow | null | undefined): boolean {
   return v !== null && v > 0;
 }
 
+// ─── Fluxo legado do site (MySQL simulatorOrders) ────────────────────────
+// Mesma classe de problema, outros nomes de campo. `"0.00"` é uma string
+// truthy, por isso `if (!v)` deixava passar zeros e as cadeias `??` paravam
+// no primeiro valor não-nulo mesmo quando era 0 — e os intervalos
+// estimateMin/estimateMax, declarados no tipo, nunca eram consultados.
+
+/** Primeiro valor estritamente positivo de uma lista. */
+export function firstPositive(
+  ...values: Array<number | string | null | undefined>
+): number | null {
+  for (const v of values) {
+    const n = num(v);
+    if (n !== null && n > 0) return n;
+  }
+  return null;
+}
+
+export interface LegacyOrderPrice {
+  estimateTotal?: string | number | null;
+  estimateMin?: string | number | null;
+  estimateMax?: string | number | null;
+  precoFinal?: string | number | null;
+  precoFinalIva?: string | number | null;
+}
+
+/**
+ * Texto de preço para pedidos do fluxo legado. Cai para o intervalo quando
+ * os totais vêm a 0 — em vez de mostrar "0 €" ou "—" com o valor ali ao lado.
+ * `withVat` escolhe entre a coluna c/IVA e as s/IVA.
+ */
+export function legacyPriceText(
+  o: LegacyOrderPrice | null | undefined,
+  opts: { withVat?: boolean } = {},
+): string | null {
+  if (!o) return null;
+  const direct = opts.withVat
+    ? firstPositive(o.precoFinalIva, o.precoFinal, o.estimateTotal)
+    : firstPositive(o.precoFinal, o.estimateTotal);
+  if (direct !== null) return `${eur(direct)} €`;
+
+  const min = num(o.estimateMin);
+  const max = num(o.estimateMax);
+  if (min !== null && max !== null && min > 0 && max > 0) {
+    return min === max ? `${eur(min)} €` : `${eur(min)} – ${eur(max)} €`;
+  }
+  return null;
+}
+
+/** true quando há algum valor positivo, incluindo só o intervalo. */
+export function legacyHasPrice(o: LegacyOrderPrice | null | undefined): boolean {
+  return legacyPriceText(o) !== null;
+}
+
 /**
  * Alerta de prejuízo: o preço aprovado nunca deve descer abaixo do piso
  * anti-prejuízo do motor (NOTA-BRIDGE-MOTOR §3.3). Devolve null quando não

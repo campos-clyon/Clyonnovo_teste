@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
+import { firstPositive, legacyPriceText } from "@/lib/quote-price";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -172,10 +173,12 @@ function fmt(iso: string) {
     hour: "2-digit", minute: "2-digit",
   });
 }
+// `if (!v)` deixava passar "0"/"0.00" (strings truthy) e os cartões mostravam
+// "0,00 €". Zero não é preço — tratar como ausente para as cadeias `??` caírem.
 function fmtEur(v?: string | null) {
   if (!v) return null;
   const n = parseFloat(v);
-  return isNaN(n) ? null : `${n.toFixed(2)} €`;
+  return isNaN(n) || n <= 0 ? null : `${n.toFixed(2)} €`;
 }
 function parseEstimate(json?: string | null): GeminiEstimate | null {
   try { return json ? JSON.parse(json) : null; } catch { return null; }
@@ -1345,8 +1348,15 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   const destAddr = raw.destinationAddress?.formattedAddress ?? raw.destinationAddress?.address;
                   const movDist = raw.movingDistance?.distanceText ?? (order.distanceKm ? `${order.distanceKm} km` : null);
                   const estVal = parseEstimate(order.estimateJson);
-                  const vatAmount = estVal?.vatAmount ?? (order.estimateTotal ? parseFloat(order.estimateTotal) * 0.23 : null);
-                  const totalWithVat = estVal?.estimatedPriceWithVat ?? (order.estimateTotal ? parseFloat(order.estimateTotal) * 1.23 : null);
+                  // Base s/IVA: primeiro valor POSITIVO; se os totais vierem a
+                  // 0, cai para o extremo inferior do intervalo em vez de
+                  // calcular IVA sobre zero e mostrar três cartões a 0,00 €.
+                  const baseNoVat = firstPositive(
+                    order.precoFinal, order.estimateTotal, order.estimateMin,
+                  );
+                  const vatAmount = estVal?.vatAmount ?? (baseNoVat != null ? baseNoVat * 0.23 : null);
+                  const totalWithVat = estVal?.estimatedPriceWithVat ?? (baseNoVat != null ? baseNoVat * 1.23 : null);
+                  const priceText = legacyPriceText(order);
 
                   return (
                   <div className="space-y-5">
@@ -1371,14 +1381,16 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     </div>
 
                     {/* Estimate cards */}
-                    {(order.estimateTotal || order.precoFinal) && (
+                    {/* Guard por valor POSITIVO (ou intervalo): "0.00" é uma
+                        string truthy e mostrava os três cartões a zero */}
+                    {priceText && (
                       <div className="grid grid-cols-3 gap-3">
                         <div className="rounded-[16px] border border-emerald-400/20 bg-emerald-400/[0.06] p-4">
                           <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
-                            {order.precoFinal ? "Preço s/IVA" : "Estimativa s/IVA"}
+                            {fmtEur(order.precoFinal) ? "Preço s/IVA" : "Estimativa s/IVA"}
                           </p>
                           <p className="mt-1.5 text-xl font-bold text-emerald-700">
-                            {fmtEur(order.precoFinal) ?? fmtEur(order.estimateTotal) ?? "—"}
+                            {priceText}
                           </p>
                         </div>
                         <div className="rounded-[16px] border border-cyan-400/20 bg-cyan-400/[0.06] p-4">
@@ -2091,7 +2103,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             const componentsSum = (distance != null && labor != null)
                               ? distance + labor + 17 // overhead fixo (as internal notes indicam 17€)
                               : null;
-                            const breakEven = componentsSum ?? (finalPrice != null ? finalPrice / 1.4 : null);
+                            // Um break-even a 0 dizia ao operador que qualquer
+                            // valor está acima do limiar de prejuízo — a
+                            // defesa colapsava em silêncio. Só vale se > 0.
+                            const breakEvenRaw = componentsSum ?? (finalPrice != null ? finalPrice / 1.4 : null);
+                            const breakEven = breakEvenRaw != null && breakEvenRaw > 0 ? breakEvenRaw : null;
                             const profit = (finalPrice != null && breakEven != null) ? finalPrice - breakEven : null;
                             const marginPercent = (finalPrice != null && breakEven != null && breakEven > 0)
                               ? ((finalPrice - breakEven) / breakEven) * 100

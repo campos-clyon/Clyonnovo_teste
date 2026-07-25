@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { legacyPriceText } from "@/lib/quote-price";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,10 +78,12 @@ const FILTER_TABS: { key: OrderStatus | "todos" | "sem_assistente"; label: strin
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
+// `if (!v)` deixava passar "0"/"0.00" (strings truthy) e a lista mostrava 0€.
+// Zero não é preço — tratar como ausente para as cadeias `??` caírem.
 function fmtEur(v?: string | null) {
   if (!v) return null;
   const n = parseFloat(v);
-  return isNaN(n) ? null : `${n.toFixed(0)}€`;
+  return isNaN(n) || n <= 0 ? null : `${n.toFixed(0)}€`;
 }
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
@@ -309,8 +312,10 @@ export default function AdminPedidosClient() {
 
               {/* Valor + data */}
               <div className="flex-shrink-0 text-right hidden sm:block">
+                {/* A cadeia `??` parava no primeiro valor não-nulo mesmo a 0,
+                    e o intervalo estimateMin/Max nunca era consultado */}
                 <p className="text-sm font-semibold text-slate-200">
-                  {fmtEur(order.precoFinalIva ?? order.precoFinal ?? order.estimateTotal) ?? "—"}
+                  {legacyPriceText(order, { withVat: true }) ?? "—"}
                 </p>
                 <p className="mt-0.5 text-[11px] text-slate-500">{fmt(order.createdAt)}</p>
               </div>

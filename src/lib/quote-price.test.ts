@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { displayPrice, isBelowFloor, withVat, eur, gatePrice, hasUsablePrice } from "./quote-price";
+import {
+  displayPrice, isBelowFloor, withVat, eur, gatePrice, hasUsablePrice,
+  firstPositive, legacyPriceText, legacyHasPrice,
+} from "./quote-price";
 
 // Regra central da NOTA-BRIDGE-MOTOR §3.1: total = 0 já não significa
 // "sem preço". Estes testes existem para impedir que o painel volte a
@@ -135,6 +138,45 @@ describe("gatePrice / hasUsablePrice — validar operações", () => {
   it("respeita o fluxo antigo (price_status NULL com total)", () => {
     expect(gatePrice({ estimated_price: 220, price_status: null })).toBe(220);
     expect(hasUsablePrice({ final_price: 300, price_status: null })).toBe(true);
+  });
+});
+
+describe("fluxo legado (MySQL) — firstPositive / legacyPriceText", () => {
+  // "0.00" é uma string truthy: `if (!v)` deixava passar zeros e as cadeias
+  // `??` paravam no primeiro valor não-nulo mesmo sendo 0, com o intervalo
+  // estimateMin/Max declarado no tipo e nunca consultado.
+  it("firstPositive salta zeros e strings de zero", () => {
+    expect(firstPositive("0.00", "0", 150)).toBe(150);
+    expect(firstPositive(null, undefined, "", 0, "220.50")).toBe(220.5);
+    expect(firstPositive(0, "0.00", null)).toBeNull();
+  });
+
+  it("mostra o intervalo quando os totais vêm a zero", () => {
+    const o = { estimateTotal: "0.00", precoFinal: null, estimateMin: "196", estimateMax: "249" };
+    expect(legacyPriceText(o)).toBe("196 – 249 €");
+  });
+
+  it("prefere o valor fechado quando existe", () => {
+    const o = { estimateTotal: "180", precoFinal: "200", estimateMin: "150", estimateMax: "250" };
+    expect(legacyPriceText(o)).toBe("200 €");
+  });
+
+  it("c/IVA usa precoFinalIva quando pedido", () => {
+    const o = { precoFinalIva: "246", precoFinal: "200", estimateTotal: "180" };
+    expect(legacyPriceText(o, { withVat: true })).toBe("246 €");
+    expect(legacyPriceText(o)).toBe("200 €");
+  });
+
+  it("intervalo degenerado (min = max) mostra um só valor", () => {
+    expect(legacyPriceText({ estimateMin: "199", estimateMax: "199" })).toBe("199 €");
+  });
+
+  it("sem nenhum valor positivo devolve null (o ecrã mostra —)", () => {
+    expect(legacyPriceText({ estimateTotal: "0.00", precoFinal: "0" })).toBeNull();
+    expect(legacyPriceText({})).toBeNull();
+    expect(legacyPriceText(null)).toBeNull();
+    expect(legacyHasPrice({ estimateTotal: "0" })).toBe(false);
+    expect(legacyHasPrice({ estimateMin: "196", estimateMax: "249" })).toBe(true);
   });
 });
 
