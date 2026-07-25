@@ -18,7 +18,9 @@ export async function GET(req: NextRequest) {
 
     let query = sb
       .from("service_requests")
-      .select("id, details, notes, city, region, status, urgency, scheduled_for, estimated_price, customer_id, category_slug, created_at")
+      // Colunas do motor de preços incluídas: sem elas a agenda mostra 0 €
+      // em pedidos cujo valor vive em estimate_min/max (NOTA-BRIDGE-MOTOR §3.1)
+      .select("id, details, notes, city, region, status, urgency, scheduled_for, estimated_price, final_price, estimate_min, estimate_max, price_status, customer_id, category_slug, created_at")
       .not("scheduled_for", "is", null)
       .not("status", "in", '("canceled","rejected","completed")')
       .order("scheduled_for", { ascending: true })
@@ -53,6 +55,10 @@ export async function GET(req: NextRequest) {
         urgency: r.urgency ?? "normal",
         scheduled_for: r.scheduled_for,
         estimated_price: r.estimated_price,
+        final_price: r.final_price ?? null,
+        estimate_min: r.estimate_min ?? null,
+        estimate_max: r.estimate_max ?? null,
+        price_status: r.price_status ?? null,
         client_name: profile.full_name ?? null,
         client_phone: profile.phone ?? null,
         created_at: r.created_at,

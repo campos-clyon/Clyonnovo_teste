@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { gatePrice } from "@/lib/quote-price";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,9 @@ export async function GET(req: NextRequest) {
 
     const { data: allRows, error } = await sb
       .from("service_requests")
-      .select("id, status, urgency, scheduled_for, created_at, customer_id, estimated_price, category_slug")
+      // Colunas do motor: sem elas a receita conta 0 € por cada pedido cujo
+      // valor vive em estimate_min/max (NOTA-BRIDGE-MOTOR §3.1)
+      .select("id, status, urgency, scheduled_for, created_at, customer_id, estimated_price, final_price, estimate_min, estimate_max, price_status, category_slug")
       .order("created_at", { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -45,11 +48,14 @@ export async function GET(req: NextRequest) {
     // Novos pedidos nos últimos 7 dias
     const new7d = rows.filter((r) => r.created_at && new Date(r.created_at).getTime() >= cutoff7d).length;
 
-    // Receita estimada (soma de estimated_price dos concluídos nos últimos 30 dias)
+    // Receita estimada dos concluídos nos últimos 30 dias.
+    // Usa gatePrice (extremo inferior nos intervalos) em vez de
+    // estimated_price: somar só a coluna antiga contava 0 € por cada pedido
+    // do motor novo, subestimando a receita em silêncio.
     const cutoff30d = Date.now() - 30 * 86400_000;
     const revenue30d = rows
       .filter((r) => r.status === "completed" && r.created_at && new Date(r.created_at).getTime() >= cutoff30d)
-      .reduce((s, r) => s + Number(r.estimated_price ?? 0), 0);
+      .reduce((s, r) => s + (gatePrice(r as never) ?? 0), 0);
 
     // Contagem de partners activos (best-effort)
     let partnersActive = 0;

@@ -36,6 +36,37 @@ function bridgeDependencyError(error: { code?: string; message?: string }): stri
   return null;
 }
 
+/**
+ * Regista a linha de treino do motor quando o preço fica acordado.
+ * Chama a própria rota /motor para manter a lógica num sítio só.
+ * Nunca lança — o registo é secundário face à aceitação em si.
+ */
+async function recordApprovalOutcome(
+  req: NextRequest,
+  requestId: string,
+): Promise<{ ok: boolean; warning?: string }> {
+  try {
+    const auth = req.headers.get("authorization");
+    const res = await fetch(new URL(`/api/admin/app-pedidos/${requestId}/motor`, req.nextUrl.origin), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(auth ? { authorization: auth } : {}),
+      },
+      body: JSON.stringify({ action: "record_approval" }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.warn("[proposta] registo de pricing_outcomes falhou", { requestId, error: json?.error });
+      return { ok: false };
+    }
+    return { ok: true, warning: json?.warning };
+  } catch (e) {
+    console.warn("[proposta] registo de pricing_outcomes falhou", { requestId, e });
+    return { ok: false };
+  }
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { err } = await requireAdmin(req);
   if (err) return err;
@@ -95,10 +126,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         console.error("[proposta accept_counter]", { id, error });
         return NextResponse.json({ error: dep ?? `Não foi possível aceitar a contraproposta: ${error.message}` }, { status: dep ? 503 : 400 });
       }
+      // Preço acordado → linha de treino do motor (NOTA-BRIDGE-MOTOR §3.4).
+      // Não-bloqueante: falhar o registo não pode desfazer a aceitação.
+      const outcome = await recordApprovalOutcome(req, id);
+
       return NextResponse.json({
         ok: true,
         result: data,
         message: "Contraproposta aceite. O cliente avança para o pagamento da reserva; o pedido só é publicado depois disso.",
+        ...(outcome.warning ? { warning: outcome.warning } : {}),
       });
     }
 

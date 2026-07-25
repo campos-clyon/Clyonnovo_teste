@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await sb
       .from("service_requests")
-      .select("id, status, urgency, category_slug, city, created_at, estimated_price")
+      // estimated_price NÃO é lido nesta rota. Se um dia se acrescentar um KPI
+      // de receita aqui, usar gatePrice() de @/lib/quote-price — somar
+      // estimated_price conta 0 € por cada pedido do motor novo.
+      .select("id, status, urgency, category_slug, city, created_at")
       .gte("created_at", since)
       .order("created_at", { ascending: true });
 

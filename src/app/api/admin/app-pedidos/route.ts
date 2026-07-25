@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { ENTRY_STATUSES, ANALYSIS_STATUS, isApprovedStatus } from "@/lib/order-status-flow";
+import { hasUsablePrice } from "@/lib/quote-price";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -162,9 +163,18 @@ export async function GET(req: NextRequest) {
         city:            asString(row.city) ?? "",
         urgency:         asString(row.urgency) ?? "normal",
         budget_range:    (row.estimated_price ?? row.final_price) != null ? `€${row.estimated_price ?? row.final_price}` : null,
+        // Motor de preços (NOTA-BRIDGE-MOTOR §3.1): total = 0 já não significa
+        // "sem preço". Estas quatro colunas são a fonte real do valor.
+        estimated_price: row.estimated_price ?? null,
+        final_price:     row.final_price ?? null,
+        estimate_min:    row.estimate_min ?? null,
+        estimate_max:    row.estimate_max ?? null,
+        price_status:    asString(row.price_status),
         preferred_date:  asString(row.scheduled_for),
         status:          asString(row.status) ?? "open",
-        approved:        isApprovedStatus(asString(row.status)) || Number(row.final_price ?? 0) > 0,
+        // hasUsablePrice em vez de final_price: com o motor novo o preço pode
+        // viver só no intervalo e o pedido parecia não aprovado (§3.1)
+        approved:        isApprovedStatus(asString(row.status)) || hasUsablePrice(row as never),
         photos:          Array.isArray(row.photos) ? row.photos.filter((p: any) => typeof p === "string") : [],
         created_at:      asString(row.created_at) ?? "",
         updated_at:      asString(row.updated_at) ?? asString(row.created_at) ?? "",

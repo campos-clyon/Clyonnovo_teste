@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
 } from "@/lib/order-status-flow";
+import { displayPrice, eur, gatePrice } from "@/lib/quote-price";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,12 @@ type AppOrder = {
   city: string;
   urgency: Urgency;
   budget_range: string | null;
+  // Motor de preços (§3.1): total = 0 já não significa "sem preço"
+  estimated_price?: number | null;
+  final_price?: number | null;
+  estimate_min?: number | null;
+  estimate_max?: number | null;
+  price_status?: string | null;
   preferred_date: string | null;
   status: AppStatus;
   approved?: boolean;
@@ -182,6 +189,25 @@ function OrderRow({ order, onClick, active, compact }: { order: AppOrder; onClic
             <p className="truncate text-sm text-slate-300">{order.client_name ?? "—"}</p>
             <p className="truncate text-xs text-slate-600">{order.client_phone ?? order.client_email ?? ""}</p>
           </div>
+          {/* Preço do motor — nunca ler só o total (§3.1) */}
+          <div className="hidden w-28 flex-shrink-0 text-right md:block">
+            {(() => {
+              const p = displayPrice(order);
+              if (p.kind === "legado") return <p className="text-xs text-slate-600">—</p>;
+              return (
+                <>
+                  <p className={`truncate text-sm font-semibold ${
+                    p.kind === "revisao" ? "text-amber-300"
+                    : p.kind === "intervalo" ? "text-sky-300"
+                    : "text-white"
+                  }`}>
+                    {p.min !== p.max ? `${eur(p.min!)}–${eur(p.max!)} €` : `${eur(p.value!)} €`}
+                  </p>
+                  <p className="text-[10px] text-slate-600">{p.label}</p>
+                </>
+              );
+            })()}
+          </div>
           <div className="hidden w-16 flex-shrink-0 text-center md:block">
             <p className="text-sm font-semibold text-white">{order.responses_count}</p>
             <p className="text-[10px] text-slate-600">respostas</p>
@@ -229,7 +255,12 @@ function DetailModal({
   const [city, setCity]             = useState(order.city);
   const [district, setDistrict]     = useState(order.district);
   const [urgency, setUrgency]       = useState<Urgency>(order.urgency);
-  const [price, setPrice]           = useState(parsePrice(order.budget_range));
+  // Âncora do motor: parsePrice(budget_range) abria a 0 quando estimated_price
+  // vinha a 0, e vazio quando o valor vivia só no intervalo (§3.1)
+  const [price, setPrice]           = useState(() => {
+    const anchor = gatePrice(order);
+    return anchor != null ? String(anchor) : parsePrice(order.budget_range);
+  });
   const [preferredDate, setPreferredDate] = useState(order.preferred_date ?? "");
   const [saving, setSaving] = useState<null | "status" | "aprovar" | "rejeitar" | "guardar">(null);
   const [err, setErr] = useState<string | null>(null);
@@ -314,7 +345,8 @@ function DetailModal({
         payload.reason = reason;
       }
     }
-    const originalPrice = parsePrice(order.budget_range);
+    const anchorNow = gatePrice(order);
+    const originalPrice = anchorNow != null ? String(anchorNow) : parsePrice(order.budget_range);
     if (price !== originalPrice) {
       payload.estimated_price = price === "" ? null : Number(price);
     }

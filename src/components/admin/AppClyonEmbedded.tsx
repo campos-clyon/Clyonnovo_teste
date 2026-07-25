@@ -9,6 +9,7 @@ import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navig
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
 import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
+import { displayPrice, withVat, isBelowFloor, gatePrice, hasUsablePrice } from "@/lib/quote-price";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -39,6 +40,11 @@ type InlineOrder = {
   address_line: unknown; city: unknown; region: unknown;
   category_slug: string | null; estimated_price: number | null;
   final_price?: number | null;
+  // Motor de preços — total = 0 já não significa "sem preço" (§3.1)
+  estimate_min?: number | null;
+  estimate_max?: number | null;
+  price_status?: string | null;
+  request_facts?: Record<string, unknown> | null;
   scheduled_for: string | null; photos: string[]; created_at: string;
   client_name: unknown; client_email: unknown; client_phone: unknown;
   category_name: unknown; category_icon: string | null;
@@ -368,6 +374,38 @@ type OpsEntry = {
   reason: string | null; note: string | null; colab_nome: string; created_at: string;
 };
 
+// ── Motor de preços (NOTA-BRIDGE-MOTOR §3.3 / §3.4) ───────────────────────
+// quote_engine_trace e pricing_outcomes são SÓ ADMIN — o piso anti-prejuízo
+// é custo interno da CLYON e nunca pode chegar ao cliente.
+type EngineTrace = {
+  engine_floor: number | null;
+  engine_ceiling: number | null;
+  gemini_price: number | null;
+  engine_source: string | null;
+  engine_confidence: number | null;
+  engine_reasons: unknown;
+};
+
+type PricingOutcome = {
+  price_approved: number | null;
+  approved_at: string | null;
+  price_executed: number | null;
+  executed_at: string | null;
+  horas_reais: number | null;
+  pessoas_reais: number | null;
+  ajustes_no_local: string | null;
+  desvio_pct: number | null;
+};
+
+type MotorState = {
+  trace: EngineTrace | null;
+  quote: { total: number | null; estimate_min: number | null; estimate_max: number | null; price_status: string | null } | null;
+  request_facts: Record<string, unknown> | null;
+  outcome: PricingOutcome | null;
+  unavailable?: boolean;
+  notice?: string;
+};
+
 // ── Negociação de preço (tabela price_proposals do Bridge) ────────────────
 type ProposalRound = {
   id: string;
@@ -485,15 +523,23 @@ function PedidoInlinePanel({
   const [proposalAmount, setProposalAmount] = useState("");
   const [proposalMessage, setProposalMessage] = useState("");
 
+  // ── Motor de preços (NOTA-BRIDGE-MOTOR §3.3 / §3.4) ────────────────────
+  const [motor, setMotor] = useState<MotorState | null>(null);
+  const [execPrice, setExecPrice] = useState("");
+  const [execHoras, setExecHoras] = useState("");
+  const [execPessoas, setExecPessoas] = useState("");
+  const [execAjustes, setExecAjustes] = useState("");
+
   const needsReason = status === "canceled" || status === "rejected";
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [orderRes, opsRes, negoRes] = await Promise.all([
+      const [orderRes, opsRes, negoRes, motorRes] = await Promise.all([
         fetch(`/api/admin/app-pedidos/${id}`, { headers: authHeader }),
         fetch(`/api/admin/app-clyon/pedidos/${id}/ops`, { headers: authHeader }),
         fetch(`/api/admin/app-pedidos/${id}/proposta`, { headers: authHeader }),
+        fetch(`/api/admin/app-pedidos/${id}/motor`, { headers: authHeader }),
       ]);
       const orderJson = await orderRes.json();
       if (!orderRes.ok) { setError(orderJson.error ?? "Erro ao carregar pedido."); return; }
@@ -502,15 +548,23 @@ function PedidoInlinePanel({
       setOrder(o);
       setOps(opsJson.ops ?? []);
       setNego(negoRes.ok ? ((await negoRes.json()) as NegotiationState) : null);
+      const m = motorRes.ok ? ((await motorRes.json()) as MotorState) : null;
+      setMotor(m);
       setProposalMessage("");
+      // Pré-preencher a execução com o que já foi registado
+      setExecPrice(m?.outcome?.price_executed != null ? String(m.outcome.price_executed) : "");
+      setExecHoras(m?.outcome?.horas_reais != null ? String(m.outcome.horas_reais) : "");
+      setExecPessoas(m?.outcome?.pessoas_reais != null ? String(m.outcome.pessoas_reais) : "");
+      setExecAjustes(m?.outcome?.ajustes_no_local ?? "");
       setStatus(o.status);
       setUrgency(o.urgency ?? "normal");
-      // Pré-preencher com o valor aprovado (final_price) quando o orçamento
-      // estimado ainda não foi definido no painel — evita aprovações sem valor.
-      const effectivePrice = o.estimated_price ?? o.final_price ?? null;
-      setPrice(effectivePrice != null ? String(effectivePrice) : "");
+      // Âncora do motor: `estimated_price ?? final_price` abria a 0 quando a
+      // coluna antiga vinha a 0 (0 não é nullish) e vazio quando o valor vivia
+      // só no intervalo. gatePrice() resolve ambos (NOTA-BRIDGE-MOTOR §3.1).
+      const anchor = gatePrice(o);
+      setPrice(anchor != null ? String(anchor) : "");
       // A proposta parte do valor calculado; o admin corrige antes de enviar
-      setProposalAmount(effectivePrice != null ? String(effectivePrice) : "");
+      setProposalAmount(anchor != null ? String(anchor) : "");
       setScheduledFor(o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "");
       setAdminNote(""); setReason("");
     } catch { setError("Erro de ligação."); }
@@ -552,7 +606,10 @@ function PedidoInlinePanel({
     // Alteração manual de estado = override explícito da sequência de fases
     if (status !== order.status) { payload.status = status; payload.force = true; }
     if (urgency !== order.urgency) payload.urgency = urgency;
-    const origPrice = order.estimated_price != null ? String(order.estimated_price) : "";
+    // Comparar com a MESMA âncora que pré-preencheu o campo — senão um
+    // pedido cujo preço vive no intervalo era reescrito em cada gravação.
+    const anchorNow = gatePrice(order);
+    const origPrice = anchorNow != null ? String(anchorNow) : "";
     if (price !== origPrice) payload.estimated_price = price === "" ? null : Number(price);
     const origDate = order.scheduled_for ? String(order.scheduled_for).slice(0, 16) : "";
     if (scheduledFor !== origDate) payload.scheduled_for = scheduledFor || null;
@@ -606,6 +663,36 @@ function PedidoInlinePanel({
     } finally {
       setSaving(false);
     }
+  }
+
+  // Fecha a linha de treino do motor com o que aconteceu de facto (§3.4).
+  // Sem isto, pricing_outcomes fica vazia e não há como saber se o motor
+  // está a acertar — é calibrar com intuição em vez de dados.
+  async function handleRecordExecution() {
+    setSaving(true); setSaveError(null); setSaveSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${id}/motor`, {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "record_execution",
+          price_executed: Number(execPrice),
+          horas_reais: execHoras === "" ? null : Number(execHoras),
+          pessoas_reais: execPessoas === "" ? null : Number(execPessoas),
+          ajustes_no_local: execAjustes.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Erro ao registar a execução."); return; }
+      const desvio = json.outcome?.desvio_pct;
+      setSaveSuccess(
+        typeof desvio === "number"
+          ? `Execução registada. Desvio face ao aprovado: ${desvio > 0 ? "+" : ""}${desvio.toFixed(1)}%.`
+          : "Execução registada."
+      );
+      await load();
+    } catch { setSaveError("Erro de ligação."); }
+    finally { setSaving(false); }
   }
 
   // Aceita a contraproposta do cliente (RPC admin_accept_counter_proposal)
@@ -722,7 +809,7 @@ function PedidoInlinePanel({
           </p>
         </div>
         <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
-          {(isApprovedStatus(order.status) || (order.final_price ?? 0) > 0) && (
+          {(isApprovedStatus(order.status) || hasUsablePrice(order)) && (
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">
               ✓ Aprovado
             </span>
@@ -770,9 +857,14 @@ function PedidoInlinePanel({
               const displayTotal = meta?.totalSemIva != null && meta.totalSemIva > 0
                 ? meta.totalSemIva
                 : itemsSum > 0 ? itemsSum : null;
-              // Valor aprovado: orçamento definido no painel (estimated_price)
-              // ou aprovado no fluxo da app (final_price).
-              const approvedPrice = order.estimated_price ?? order.final_price ?? null;
+              // Preço do motor: NUNCA ler só o total — total = 0 já não
+              // significa "sem preço" (NOTA-BRIDGE-MOTOR §3.1)
+              const p = displayPrice(order);
+              const tone = p.kind === "revisao"
+                ? { border: "border-amber-500/25", bg: "bg-amber-500/[0.07]", text: "text-amber-300" }
+                : p.kind === "intervalo"
+                ? { border: "border-sky-500/25", bg: "bg-sky-500/[0.07]", text: "text-sky-300" }
+                : { border: "border-emerald-500/25", bg: "bg-emerald-500/[0.07]", text: "text-emerald-300" };
               return (
                 <>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -780,15 +872,27 @@ function PedidoInlinePanel({
                     {meta?.estimatedVolume != null && <FactChip label="Volume est." value={`${meta.estimatedVolume} m³`} />}
                     {meta?.bags != null && meta.bags > 0 && <FactChip label="Sacos" value={String(meta.bags)} />}
                   </div>
-                  {approvedPrice != null && approvedPrice > 0 && (
-                    <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] px-3 py-2.5">
-                      <div>
-                        <p className="text-xs font-bold text-emerald-300">Orçamento aprovado</p>
-                        <p className="text-[10px] text-slate-400">
-                          {fmtMoney(Math.round(approvedPrice * 1.23 * 100) / 100)} c/ IVA
-                        </p>
+                  {p.kind !== "legado" && (
+                    <div className={`mt-3 rounded-xl border ${tone.border} ${tone.bg} px-3 py-2.5`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className={`text-xs font-bold ${tone.text}`}>{p.label}</p>
+                          {p.value != null && (
+                            <p className="text-[10px] text-slate-400">
+                              {p.min !== p.max
+                                ? `${fmtMoney(withVat(p.min!))} – ${fmtMoney(withVat(p.max!))} c/ IVA`
+                                : `${fmtMoney(withVat(p.value))} c/ IVA`}
+                            </p>
+                          )}
+                        </div>
+                        <p className={`whitespace-nowrap text-lg font-bold ${tone.text}`}>{p.text}</p>
                       </div>
-                      <p className="text-lg font-bold text-emerald-300">{fmtMoney(approvedPrice)} <span className="text-[10px] font-medium text-slate-400">s/ IVA</span></p>
+                      {p.needsReview && (
+                        <p className="mt-2 text-[10px] leading-relaxed text-amber-200/70">
+                          O motor marcou este pedido para decisão humana — o valor é referência,
+                          não um preço fechado. Confirma antes de propor ao cliente.
+                        </p>
+                      )}
                     </div>
                   )}
                 </>
@@ -888,6 +992,185 @@ function PedidoInlinePanel({
                   <FactChip label="Confiança" value={`${meta.confidenceScore}/100`} tone={meta.confidenceScore >= 80 ? "ok" : "neutral"} />
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Notas escritas pelo cliente no wizard (§3.2) — até agora eram
+              descartadas e nunca chegavam a quem executa o serviço */}
+          {(() => {
+            const facts = (motor?.request_facts ?? order.request_facts ?? null) as Record<string, unknown> | null;
+            const notas = typeof facts?.notas_cliente === "string" ? facts.notas_cliente.trim() : "";
+            const local = (facts?.local ?? null) as Record<string, unknown> | null;
+            const semCoordenadas = local != null && local.lat == null;
+            if (!notas && !semCoordenadas) return null;
+            return (
+              <div className={CARD}>
+                <p className={CARD_TITLE}>Notas do cliente</p>
+                {notas && (
+                  <p className="text-sm italic leading-relaxed text-[#F5FAFF]">&ldquo;{notas}&rdquo;</p>
+                )}
+                {semCoordenadas && (
+                  <p className={`${notas ? "mt-2 " : ""}text-[11px] leading-relaxed text-amber-300`}>
+                    Morada escrita à mão (sem coordenadas) — o motor não calcula a deslocação
+                    e nunca fecha preço; sai sempre como estimativa.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Motor de preços — o raciocínio, não só o número (§3.3) */}
+          {motor?.trace && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>
+                Motor de preços
+                {motor.trace.engine_source && (
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                    motor.trace.engine_source === "gemini"
+                      ? "bg-violet-500/15 text-violet-300"
+                      : "bg-white/[0.06] text-slate-400"
+                  }`}>
+                    {motor.trace.engine_source === "gemini" ? "com IA" : "determinístico"}
+                  </span>
+                )}
+              </p>
+
+              {(() => {
+                const t = motor.trace!;
+                // O que o cliente viu: displayPrice sobre a cotação, não o
+                // total cru (que pode vir a 0 com o valor no intervalo)
+                const mostrado = displayPrice(motor.quote ?? order).value;
+                const abaixo = isBelowFloor(motor.outcome?.price_approved ?? mostrado, t.engine_floor);
+                const cells = [
+                  { label: "Piso", value: t.engine_floor, sub: "abaixo disto há prejuízo", tone: "text-red-300" },
+                  { label: "Sugestão IA", value: t.gemini_price, sub: t.gemini_price == null ? "IA não respondeu" : "antes do clamp", tone: "text-violet-300" },
+                  { label: "Mostrado", value: mostrado, sub: "o que o cliente viu", tone: "text-white" },
+                  { label: "Teto", value: t.engine_ceiling, sub: "limite superior", tone: "text-slate-300" },
+                ];
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {cells.map((c) => (
+                        <div key={c.label} className="rounded-xl border border-white/[0.06] bg-[#12263B]/50 p-2.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{c.label}</p>
+                          <p className={`mt-1 text-sm font-bold ${c.value == null ? "text-slate-600" : c.tone}`}>
+                            {c.value == null ? "—" : fmtMoney(Number(c.value))}
+                          </p>
+                          <p className="mt-0.5 text-[9px] leading-tight text-slate-600">{c.sub}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {abaixo === true && (
+                      <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+                        <p className="text-xs font-bold text-red-300">Preço abaixo do piso anti-prejuízo</p>
+                        <p className="mt-0.5 text-[11px] leading-relaxed text-red-200/80">
+                          Este trabalho está a ser cobrado abaixo do custo calculado pelo motor.
+                        </p>
+                      </div>
+                    )}
+
+                    {typeof t.engine_confidence === "number" && (
+                      <p className="mt-2 text-[10px] text-slate-500">
+                        Confiança do motor: {Math.round(t.engine_confidence * 100)}%
+                      </p>
+                    )}
+
+                    {Array.isArray(t.engine_reasons) && t.engine_reasons.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {(t.engine_reasons as unknown[]).map((r, i) => (
+                          <span key={i} className="rounded-full bg-white/[0.05] px-2 py-0.5 font-mono text-[9px] text-slate-400">
+                            {typeof r === "string" ? r : JSON.stringify(r)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Registo de execução — conjunto de treino do motor (§3.4) */}
+          {motor?.outcome?.approved_at && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>Resultado real do trabalho</p>
+              <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
+                Sem estes números o motor não aprende — é a diferença entre calibrar com
+                dados e calibrar com intuição. Preencher quando o trabalho fechar.
+              </p>
+
+              {motor.outcome.executed_at ? (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
+                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    <span className="text-sm font-bold text-emerald-300">
+                      Cobrado {fmtMoney(Number(motor.outcome.price_executed))}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      aprovado {fmtMoney(Number(motor.outcome.price_approved))}
+                    </span>
+                    {typeof motor.outcome.desvio_pct === "number" && (
+                      <span className={`text-[11px] font-semibold ${
+                        Math.abs(motor.outcome.desvio_pct) > 20 ? "text-amber-300" : "text-slate-400"
+                      }`}>
+                        desvio {motor.outcome.desvio_pct > 0 ? "+" : ""}{motor.outcome.desvio_pct.toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                  {(motor.outcome.horas_reais != null || motor.outcome.pessoas_reais != null) && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {motor.outcome.horas_reais != null && `${motor.outcome.horas_reais}h`}
+                      {motor.outcome.horas_reais != null && motor.outcome.pessoas_reais != null && " · "}
+                      {motor.outcome.pessoas_reais != null && `${motor.outcome.pessoas_reais} pessoas`}
+                    </p>
+                  )}
+                  {motor.outcome.ajustes_no_local && (
+                    <p className="mt-1 text-[11px] italic text-slate-400">&ldquo;{motor.outcome.ajustes_no_local}&rdquo;</p>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div>
+                    <label className={IL}>Cobrado (€ s/IVA)</label>
+                    <input type="number" step="0.01" min="0" value={execPrice}
+                      onChange={(e) => setExecPrice(e.target.value)} className={INP} />
+                  </div>
+                  <div>
+                    <label className={IL}>Horas reais</label>
+                    <input type="number" step="0.5" min="0" value={execHoras}
+                      onChange={(e) => setExecHoras(e.target.value)} className={INP} />
+                  </div>
+                  <div>
+                    <label className={IL}>Pessoas</label>
+                    <input type="number" step="1" min="0" value={execPessoas}
+                      onChange={(e) => setExecPessoas(e.target.value)} className={INP} />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className={IL}>Ajustes no local (opcional)</label>
+                    <textarea value={execAjustes} onChange={(e) => setExecAjustes(e.target.value)}
+                      rows={2} placeholder="Ex: apareceu um sofá extra; escada mais estreita do que o previsto."
+                      className={TA} />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <button
+                      type="button"
+                      onClick={handleRecordExecution}
+                      disabled={saving || execPrice === "" || Number(execPrice) <= 0}
+                      className="w-full rounded-lg bg-[#00BDEB] px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {saving ? "A registar..." : "Registar resultado real"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Motor indisponível */}
+          {motor?.unavailable && motor.notice && (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+              <p className="text-xs font-bold text-amber-300">Motor de preços indisponível</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{motor.notice}</p>
             </div>
           )}
 

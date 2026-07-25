@@ -5,6 +5,7 @@ import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-
 import {
   nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
 } from "@/lib/order-status-flow";
+import { hasUsablePrice } from "@/lib/quote-price";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,20 +68,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const updates: Record<string, unknown> = { status: phase.next };
 
-    // Avanço para awaiting_deposit/confirmed exige valor de orçamento —
-    // aceita o valor enviado no body ou o já existente no pedido.
+    // Avanço para awaiting_deposit/confirmed exige valor de orçamento.
+    // NÃO validar só por estimated_price: com o motor novo o preço pode
+    // viver em estimate_min/estimate_max, e bloquear aí obrigaria o operador
+    // a inventar um valor que passaria a divergir da cotação e de
+    // pricing_outcomes (NOTA-BRIDGE-MOTOR §3.1).
     if (quotePriceIsRequiredForStatus(phase.next)) {
       const bodyPrice = body.estimated_price;
-      const effectivePrice = bodyPrice !== undefined
-        ? bodyPrice
-        : (current as Record<string, unknown>).estimated_price;
-      const price = validatedQuotePrice(effectivePrice);
-      if (price === null) {
+      const ok = bodyPrice !== undefined
+        ? validatedQuotePrice(bodyPrice) !== null
+        : hasUsablePrice(current as never);
+      if (!ok) {
         return NextResponse.json({
           error: `Para avançar para "${phase.next}" é necessário um valor de orçamento superior a 0 €. Preenche o valor primeiro.`,
         }, { status: 400 });
       }
-      if (bodyPrice !== undefined) updates.estimated_price = price;
+      if (bodyPrice !== undefined) updates.estimated_price = validatedQuotePrice(bodyPrice)!;
     }
 
     const auditNote = note

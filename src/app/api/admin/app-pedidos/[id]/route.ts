@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
 import { isValidTransition, validTargets, isPublishableStatus } from "@/lib/order-status-flow";
+import { hasUsablePrice } from "@/lib/quote-price";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -220,10 +221,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // a etapa seguinte. Ambos exigem que exista um valor positivo, mesmo se a
     // chamada vier de outra interface administrativa.
     if (quotePriceIsRequiredForStatus(updates.status as string | undefined)) {
-      const effectivePrice = updates.estimated_price !== undefined
-        ? updates.estimated_price
-        : (current as Record<string, unknown>).estimated_price;
-      if (validatedQuotePrice(effectivePrice) === null) {
+      // NÃO validar só por estimated_price: com o motor novo o valor pode
+      // viver em estimate_min/estimate_max, e bloquear aí impede o operador
+      // de avançar um pedido que JÁ TEM preço (NOTA-BRIDGE-MOTOR §3.1).
+      const row = current as Record<string, unknown>;
+      const ok = updates.estimated_price !== undefined
+        ? validatedQuotePrice(updates.estimated_price) !== null
+        : hasUsablePrice(row as never);
+      if (!ok) {
         return NextResponse.json({
           error: "Indique um valor de orçamento superior a 0 € antes de aprovar, confirmar ou colocar o pedido a atribuir — sem preço, o pedido fica invisível aos profissionais.",
         }, { status: 400 });
