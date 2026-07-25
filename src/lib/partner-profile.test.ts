@@ -7,7 +7,30 @@ import {
   PARTNER_STATUSES,
   BADGE_DOC_TYPES,
   REQUIRED_DOC_TYPES,
+  toFiveStars,
+  REVIEW_SCALE_MAX,
 } from "./partner-profile";
+
+describe("toFiveStars — escala das avaliações", () => {
+  // A migração das avaliações do Bridge converte 1-5 → 0-10. Dividir por 2
+  // antes de ela correr mostraria 2,15★ onde há 4,3★ — desinforma. Por isso
+  // a constante fica em 5 e passa a 10 numa linha, DEPOIS do SQL.
+  it("na escala actual (5) devolve o valor tal como está", () => {
+    expect(REVIEW_SCALE_MAX).toBe(5);
+    expect(toFiveStars(4.3)).toBe(4.3);
+    expect(toFiveStars(5)).toBe(5);
+  });
+
+  it("arredonda a uma casa decimal", () => {
+    expect(toFiveStars(4.26)).toBe(4.3);
+  });
+
+  it("valores inválidos não rebentam", () => {
+    expect(toFiveStars(null)).toBeNull();
+    expect(toFiveStars(undefined)).toBeNull();
+    expect(toFiveStars(NaN)).toBeNull();
+  });
+});
 
 describe("verificationState — condição EXACTA do selo no app", () => {
   const docsCompletos = [

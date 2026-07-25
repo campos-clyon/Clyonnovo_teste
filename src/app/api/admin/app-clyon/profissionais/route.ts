@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { verificationState, publicDescriptionState } from "@/lib/partner-profile";
+import { verificationState, publicDescriptionState, toFiveStars } from "@/lib/partner-profile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -143,7 +143,11 @@ export async function GET(req: NextRequest) {
         verification_reason: verif.reason,
         missing_badge_docs: verif.missingDocs,
         description_needs_attention: desc.needsAttention,
-        rating_avg: rv && rv.count > 0 ? Math.round((rv.sum / rv.count) * 10) / 10 : (typeof p.rating === "number" ? p.rating : 0),
+        // Normalizado para 5 estrelas — reviews.rating passa a 0-10 quando a
+        // migração das avaliações correr (ver REVIEW_SCALE_MAX)
+        rating_avg: rv && rv.count > 0
+          ? (toFiveStars(rv.sum / rv.count) ?? 0)
+          : (typeof p.rating === "number" ? (toFiveStars(p.rating) ?? 0) : 0),
         rating_count: rv?.count ?? 0,
         has_vehicle: p.has_vehicle ?? null,
       };

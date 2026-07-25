@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   verificationState, publicDescriptionState,
   validateProfilePatch, statusSideEffects,
-  PARTNER_STATUSES, type PartnerStatus,
+  PARTNER_STATUSES, type PartnerStatus, toFiveStars,
 } from "@/lib/partner-profile";
 
 export const runtime = "nodejs";
@@ -86,8 +86,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const desc = publicDescriptionState(partner.description as string, partner.bio as string);
 
     const ratings = reviews.map((r) => r.rating).filter((r): r is number => typeof r === "number");
+    // Normalizado para 5 estrelas (ver REVIEW_SCALE_MAX)
     const ratingAvg = ratings.length > 0
-      ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 10) / 10
+      ? toFiveStars(ratings.reduce((s, r) => s + r, 0) / ratings.length)
       : null;
 
     return NextResponse.json({

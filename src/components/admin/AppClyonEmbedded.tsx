@@ -11,6 +11,7 @@ import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH
 import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
 import { displayPrice, withVat, isBelowFloor, gatePrice, orcamentoDoPedido } from "@/lib/quote-price";
 import { suggestJustifications, type RequestFacts } from "@/lib/proposal-suggestions";
+import { toFiveStars } from "@/lib/partner-profile";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -2329,7 +2330,11 @@ function ProfissionalPanel({
                 {d.reviews.slice(0, 6).map((r) => (
                   <div key={r.id} className="rounded-xl border border-white/[0.06] bg-[#12263B]/50 p-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-amber-300">{"★".repeat(Math.round(r.rating))}</span>
+                      {/* Normalizado: reviews.rating passa a 0-10 quando a
+                          migração das avaliações correr (REVIEW_SCALE_MAX) */}
+                      <span className="text-xs text-amber-300">
+                        {"★".repeat(Math.min(5, Math.max(0, Math.round(toFiveStars(r.rating) ?? 0))))}
+                      </span>
                       <span className="text-[10px] text-slate-600">{fmtDt(r.created_at)}</span>
                       <span className="ml-auto rounded-full bg-white/[0.05] px-2 py-0.5 text-[9px] text-slate-400">{r.status}</span>
                     </div>

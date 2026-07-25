@@ -25,6 +25,26 @@ export const PARTNER_STATUS_LABELS: Record<PartnerStatus, string> = {
   suspended: "Suspenso",
 };
 
+/**
+ * Escala em que `reviews.rating` está guardado.
+ *
+ * ⚠️ A migração das avaliações do Bridge converte a escala de 1-5 para 0-10
+ * ("a app recolhe 5 estrelas e multiplica por 2; mostrar sempre rating/2").
+ * Enquanto ESSA migração não correr, os valores continuam em 1-5.
+ *
+ * Dividir por 2 antes de a migração correr mostraria 2,15★ onde há 4,3★ —
+ * pior do que mostrar 8,6★ depois, porque desinforma em vez de só ficar feio.
+ * Por isso a constante fica em 5 e passa a 10 numa linha, depois do SQL.
+ */
+export const REVIEW_SCALE_MAX: 5 | 10 = 5;
+
+/** Converte uma avaliação guardada para a escala de 5 estrelas que se mostra. */
+export function toFiveStars(rating: number | null | undefined): number | null {
+  if (typeof rating !== "number" || !Number.isFinite(rating)) return null;
+  const v = REVIEW_SCALE_MAX === 10 ? rating / 2 : rating;
+  return Math.round(v * 10) / 10;
+}
+
 /** Estados de um documento (enum document_status). */
 export const DOCUMENT_STATUSES = ["pending", "approved", "rejected"] as const;
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
