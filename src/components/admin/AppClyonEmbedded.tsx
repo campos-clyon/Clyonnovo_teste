@@ -10,6 +10,7 @@ import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
 import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
 import { displayPrice, withVat, isBelowFloor, gatePrice } from "@/lib/quote-price";
+import { suggestJustifications, type RequestFacts } from "@/lib/proposal-suggestions";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -792,6 +793,17 @@ function PedidoInlinePanel({
         }))
     : [];
   const factsVolume = typeof carga?.volume_m3 === "number" ? carga.volume_m3 : null;
+
+  // Sugestões de justificação: saem dos factos do pedido e da direcção do
+  // ajuste face ao valor do motor. Um texto que cita o 3.º andar sem elevador
+  // do próprio cliente convence mais do que "devido às características".
+  const sugestoes = suggestJustifications({
+    proposalAmount: proposalAmount === "" ? null : Number(proposalAmount),
+    referencePrice: displayPrice(order).value,
+    engineFloor: motor?.trace?.engine_floor ?? null,
+    facts: facts as RequestFacts | null,
+    priceStatus: order.price_status ?? null,
+  });
   const morada = meta?.pickupAddress ?? displayText(order.address_line, "");
   // A mensagem do cliente aparece muitas vezes duplicada em notes — mostrar uma vez
   const notesText = displayText(order.notes, "");
@@ -1430,6 +1442,24 @@ function PedidoInlinePanel({
                     className={INP}
                   />
 
+                  {/* Diferença face ao valor do motor + sugestões de
+                      justificação que saem dos FACTOS deste pedido */}
+                  {sugestoes.direction !== "same" && (
+                    <p className={`mt-1.5 text-[10px] font-semibold ${
+                      sugestoes.direction === "up" ? "text-amber-300" : "text-emerald-300"
+                    }`}>
+                      {sugestoes.direction === "up" ? "▲" : "▼"} {sugestoes.deltaEur > 0 ? "+" : ""}
+                      {fmtMoney(sugestoes.deltaEur)} ({sugestoes.deltaPct > 0 ? "+" : ""}
+                      {sugestoes.deltaPct}%) face ao valor do motor
+                    </p>
+                  )}
+
+                  {sugestoes.belowFloorWarning && (
+                    <p className="mt-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[10px] leading-relaxed text-red-300">
+                      {sugestoes.belowFloorWarning}
+                    </p>
+                  )}
+
                   <label className={`${IL} mt-2`}>Justificação para o cliente (obrigatória)</label>
                   <textarea
                     value={proposalMessage}
@@ -1443,6 +1473,54 @@ function PedidoInlinePanel({
                       ? `Faltam ${PROPOSAL_MESSAGE_MIN_LENGTH - proposalMessage.trim().length} caracteres — o cliente vê esta explicação.`
                       : "O cliente vê esta explicação junto ao valor."}
                   </p>
+
+                  {sugestoes.suggestions.length > 0 && (
+                    <div className="mt-2.5">
+                      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#97AABD]">
+                        {sugestoes.direction === "up" ? "Porque é mais caro"
+                          : sugestoes.direction === "down" ? "Porque é mais barato"
+                          : "Explicar o valor"}
+                        <span className="ml-1.5 font-normal normal-case tracking-normal text-slate-600">
+                          — clica para usar
+                        </span>
+                      </p>
+                      <div className="space-y-1.5">
+                        {sugestoes.suggestions.map((sg) => {
+                          const usada = proposalMessage.includes(sg.text);
+                          return (
+                            <button
+                              key={sg.id}
+                              type="button"
+                              onClick={() => setProposalMessage((prev) => {
+                                const base = prev.trim();
+                                if (base.includes(sg.text)) {
+                                  // Segundo clique remove a sugestão
+                                  return base.replace(sg.text, "").replace(/\s{2,}/g, " ").trim();
+                                }
+                                return base ? `${base} ${sg.text}` : sg.text;
+                              })}
+                              className={`w-full rounded-lg border px-2.5 py-2 text-left transition ${
+                                usada
+                                  ? "border-violet-400/50 bg-violet-500/[0.14]"
+                                  : "border-white/[0.07] bg-[#12263B]/60 hover:border-violet-400/30 hover:bg-violet-500/[0.07]"
+                              }`}
+                            >
+                              <span className={`text-[9px] font-semibold uppercase tracking-wider ${
+                                sg.tone === "increase" ? "text-amber-300"
+                                : sg.tone === "decrease" ? "text-emerald-300"
+                                : "text-slate-400"
+                              }`}>
+                                {usada ? "✓ " : ""}{sg.basis}
+                              </span>
+                              <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-300">
+                                {sg.text}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <button
                     type="button"
