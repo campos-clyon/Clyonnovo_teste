@@ -887,9 +887,176 @@ function PedidoInlinePanel({
         </span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_280px]">
-        {/* Coluna principal */}
+      {saveError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">{saveError}</div>}
+      {saveSuccess && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">{saveSuccess}</div>}
+
+      <div className="grid gap-4 md:grid-cols-[1fr_300px]">
+        {/* Coluna principal — o que exige atenção e largura */}
         <div className="space-y-4">
+          {/* ── ACÇÃO EM CURSO ───────────────────────────────────────────
+              Fica no topo e na coluna larga: a proposta precisa de espaço
+              para o valor, a justificação e as sugestões. Antes estava
+              espremida em 280 px na lateral. */}
+
+          {/* Bola do lado do cliente — o admin espera, não avança */}
+          {isWaitingOnCustomer(order.status) && !nego?.awaitingAdmin && (
+            <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.07] p-4">
+              {order.status === "extra_review_requested" ? (
+                <>
+                  <p className="text-sm font-bold text-violet-300">Ajuste no local à espera do cliente</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+                    A equipa encontrou mais trabalho do que o orçamentado e o valor ultrapassou o
+                    tecto acordado. <span className="text-white">Quem decide é o cliente</span>, na app —
+                    não é uma fila do backoffice. Se ele aceitar, o trabalho retoma a execução.
+                    Ajustes dentro do tecto são aplicados sozinhos e nunca passam por aqui.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-violet-300">À espera da decisão do cliente</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+                    A proposta{nego?.pending ? ` de ${fmtMoney(nego.pending.amount)}` : ""} está com o cliente.
+                    Ele pode aceitar, contrapor{typeof nego?.customerCounters === "number" && typeof nego?.counterLimit === "number"
+                      ? ` (usou ${nego.customerCounters} de ${nego.counterLimit})` : ""} ou cancelar.
+                    O pedido não é visível aos profissionais.
+                    {nego?.pending?.expires_at && (
+                      <> Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")} — se
+                      expirar, volta a <span className="text-slate-300">Em análise</span> para nova
+                      proposta, não é cancelado.</>
+                    )}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Contraproposta do cliente à espera de decisão do admin */}
+          {nego?.awaitingAdmin && nego.pending && (
+            <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.07] p-4">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <p className="text-sm font-bold text-emerald-300">Contraproposta do cliente</p>
+                <p className="text-2xl font-bold text-white">{fmtMoney(nego.pending.amount)}</p>
+              </div>
+              {nego.pending.message && (
+                <p className="mt-1.5 text-xs italic leading-relaxed text-slate-300">&ldquo;{nego.pending.message}&rdquo;</p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={handleAcceptCounter} disabled={saving}
+                  className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50">
+                  {saving ? "A aceitar..." : "Aceitar contraproposta"}
+                </button>
+                <span className="text-[11px] text-slate-500">
+                  ou contrapõe abaixo — o admin não tem limite de rondas.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Avanço de fase */}
+          {!canApproveQuote && !isTerminalStatus(order.status) && nextPhase(order.status) && (
+            <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.07] p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-cyan-300">Fase seguinte</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                    De <span className="font-semibold text-white">{INLINE_STATUS_CFG[order.status]?.label ?? order.status}</span>
+                    {" → "}
+                    <span className="font-semibold text-cyan-300">{INLINE_STATUS_CFG[nextPhase(order.status)!.next as AppStatus]?.label ?? nextPhase(order.status)!.next}</span>.
+                    A operação fica registada na Auditoria.
+                  </p>
+                </div>
+                <button type="button" onClick={handleAdvancePhase} disabled={saving}
+                  className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50">
+                  {saving ? "A avançar..." : nextPhase(order.status)!.actionLabel}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Enviar proposta ao cliente — precisa da coluna larga */}
+          {canApproveQuote && (
+            <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.07] p-4">
+              <p className="text-sm font-bold text-violet-300">
+                {nego?.awaitingAdmin ? "Contrapor ao cliente" : "Enviar proposta ao cliente"}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                O cliente decide antes de o pedido ser publicado. Ao enviar, fica em{" "}
+                <span className="font-semibold text-violet-300">Proposta no cliente</span> e{" "}
+                <span className="font-semibold text-white">nenhum profissional o vê</span> até ele aceitar e pagar a reserva.
+              </p>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-[180px_1fr]">
+                <div>
+                  <label className={IL}>Valor da proposta (€)</label>
+                  <input type="number" step="0.01" min="0" value={proposalAmount}
+                    onChange={(e) => setProposalAmount(e.target.value)} className={INP} />
+                  {sugestoes.direction !== "same" && (
+                    <p className={`mt-1.5 text-[11px] font-semibold ${sugestoes.direction === "up" ? "text-amber-300" : "text-emerald-300"}`}>
+                      {sugestoes.direction === "up" ? "▲" : "▼"} {sugestoes.deltaEur > 0 ? "+" : ""}
+                      {fmtMoney(sugestoes.deltaEur)} ({sugestoes.deltaPct > 0 ? "+" : ""}{sugestoes.deltaPct}%)
+                      <span className="block font-normal text-slate-500">face ao motor</span>
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className={IL}>Justificação para o cliente (obrigatória)</label>
+                  <textarea value={proposalMessage} onChange={(e) => setProposalMessage(e.target.value)} rows={4}
+                    placeholder="Ex: Ajustámos para baixo — o acesso é fácil e não precisa de segundo operador."
+                    className={TA} />
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    {proposalMessage.trim().length < PROPOSAL_MESSAGE_MIN_LENGTH
+                      ? `Faltam ${PROPOSAL_MESSAGE_MIN_LENGTH - proposalMessage.trim().length} caracteres — o cliente vê esta explicação.`
+                      : "O cliente vê esta explicação junto ao valor."}
+                  </p>
+                </div>
+              </div>
+
+              {sugestoes.belowFloorWarning && (
+                <p className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] leading-relaxed text-red-300">
+                  {sugestoes.belowFloorWarning}
+                </p>
+              )}
+
+              {sugestoes.suggestions.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#97AABD]">
+                    {sugestoes.direction === "up" ? "Porque é mais caro"
+                      : sugestoes.direction === "down" ? "Porque é mais barato"
+                      : "Explicar o valor"}
+                    <span className="ml-1.5 font-normal normal-case tracking-normal text-slate-600">— clica para usar</span>
+                  </p>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {sugestoes.suggestions.map((sg) => {
+                      const usada = proposalMessage.includes(sg.text);
+                      return (
+                        <button key={sg.id} type="button"
+                          onClick={() => setProposalMessage((prev) => {
+                            const base = prev.trim();
+                            if (base.includes(sg.text)) return base.replace(sg.text, "").replace(/\s{2,}/g, " ").trim();
+                            return base ? `${base} ${sg.text}` : sg.text;
+                          })}
+                          className={`rounded-lg border px-2.5 py-2 text-left transition ${
+                            usada ? "border-violet-400/50 bg-violet-500/[0.14]"
+                              : "border-white/[0.07] bg-[#12263B]/60 hover:border-violet-400/30 hover:bg-violet-500/[0.07]"
+                          }`}>
+                          <span className={`text-[9px] font-semibold uppercase tracking-wider ${
+                            sg.tone === "increase" ? "text-amber-300" : sg.tone === "decrease" ? "text-emerald-300" : "text-slate-400"
+                          }`}>{usada ? "✓ " : ""}{sg.basis}</span>
+                          <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-300">{sg.text}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <button type="button" onClick={handleSendProposal}
+                disabled={saving || !validateProposal(proposalAmount, proposalMessage).ok}
+                className="mt-3 w-full rounded-lg bg-violet-500 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50">
+                {saving ? "A enviar..." : nego?.awaitingAdmin ? "Enviar contraproposta" : "Enviar proposta ao cliente"}
+              </button>
+            </div>
+          )}
           {/* Resumo do serviço */}
           <div className={CARD}>
             <p className={CARD_TITLE}>Resumo do serviço</p>
@@ -1465,75 +1632,8 @@ function PedidoInlinePanel({
           </div>
 
           <div className={CARD}>
-            <p className={CARD_TITLE}>Operação</p>
+            <p className={CARD_TITLE}>Dados do pedido</p>
             <div className="space-y-3">
-              {/* Bola do lado do cliente — o admin espera, não avança */}
-              {isWaitingOnCustomer(order.status) && !nego?.awaitingAdmin && (
-                order.status === "extra_review_requested" ? (
-                  <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
-                    <p className="text-xs font-bold text-violet-300">Ajuste no local à espera do cliente</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                      A equipa encontrou mais trabalho do que o orçamentado e o valor ultrapassou o
-                      tecto acordado. <span className="text-white">Quem decide é o cliente</span>, na
-                      app — não é uma fila do backoffice. Se ele aceitar, o trabalho retoma a execução.
-                    </p>
-                    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                      Ajustes dentro do tecto são aplicados sozinhos e nunca passam por aqui.
-                      Só intervém pelo estado manual se isto ficar parado tempo demais.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
-                    <p className="text-xs font-bold text-violet-300">À espera do cliente</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                      A proposta{nego?.pending ? ` de ${fmtMoney(nego.pending.amount)}` : ""} está com o cliente.
-                      Ele pode aceitar, contrapor{typeof nego?.customerCounters === "number" && typeof nego?.counterLimit === "number"
-                        ? ` (usou ${nego.customerCounters} de ${nego.counterLimit})`
-                        : ""} ou cancelar. O pedido não é visível aos profissionais.
-                    </p>
-                    {nego?.pending?.expires_at && (
-                      <p className="mt-2 text-[10px] text-slate-500">
-                        Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")} — se
-                        expirar, o pedido volta a <span className="text-slate-400">Em análise</span> para
-                        nova proposta (não é cancelado).
-                      </p>
-                    )}
-                  </div>
-                )
-              )}
-
-              {/* Avanço automático de fase — o estado seguinte é determinado pela sequência */}
-              {!canApproveQuote && !isTerminalStatus(order.status) && nextPhase(order.status) && (
-                <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/[0.07] p-3">
-                  <p className="text-xs font-bold text-cyan-300">Fase seguinte</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                    Estado actual: <span className="font-semibold text-white">{INLINE_STATUS_CFG[order.status]?.label ?? order.status}</span>.
-                    Ao confirmar, o pedido avança para <span className="font-semibold text-cyan-300">{INLINE_STATUS_CFG[nextPhase(order.status)!.next as AppStatus]?.label ?? nextPhase(order.status)!.next}</span> e a operação fica na Auditoria.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleAdvancePhase}
-                    disabled={saving}
-                    className="mt-3 w-full rounded-lg bg-cyan-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {saving ? "A avançar..." : nextPhase(order.status)!.actionLabel}
-                  </button>
-                </div>
-              )}
-              <div>
-                <label className={IL}>Estado (alteração manual — fora da sequência)</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} className={INP}>
-                  {INLINE_VALID_STATUSES.map((s) => (
-                    <option key={s} value={s} className="bg-[#0C1C2E]">{INLINE_STATUS_CFG[s].label}</option>
-                  ))}
-                </select>
-              </div>
-              {needsReason && (
-                <div>
-                  <label className={IL}>Motivo (obrigatório)</label>
-                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Razão do cancelamento / rejeição..." className={TA} />
-                </div>
-              )}
               <div>
                 <label className={IL}>Urgência</label>
                 <select value={urgency} onChange={(e) => setUrgency(e.target.value)} className={INP}>
@@ -1546,138 +1646,6 @@ function PedidoInlinePanel({
                 <label className={IL}>Valor do orçamento (€)</label>
                 <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={INP} />
               </div>
-              {/* Enviar proposta ao cliente — substitui a antiga aprovação directa */}
-              {canApproveQuote && (
-                <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
-                  <p className="text-xs font-bold text-violet-300">
-                    {nego?.awaitingAdmin ? "Contrapor ao cliente" : "Enviar proposta ao cliente"}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                    O cliente decide antes de o pedido ser publicado. Ao enviar, o pedido fica em{" "}
-                    <span className="font-semibold text-violet-300">Proposta no cliente</span> e{" "}
-                    <span className="font-semibold text-white">nenhum profissional o vê</span> até ele aceitar e pagar a reserva.
-                  </p>
-
-                  <label className={`${IL} mt-3`}>Valor da proposta (€)</label>
-                  <input
-                    type="number" step="0.01" min="0"
-                    value={proposalAmount}
-                    onChange={(e) => setProposalAmount(e.target.value)}
-                    className={INP}
-                  />
-
-                  {/* Diferença face ao valor do motor + sugestões de
-                      justificação que saem dos FACTOS deste pedido */}
-                  {sugestoes.direction !== "same" && (
-                    <p className={`mt-1.5 text-[10px] font-semibold ${
-                      sugestoes.direction === "up" ? "text-amber-300" : "text-emerald-300"
-                    }`}>
-                      {sugestoes.direction === "up" ? "▲" : "▼"} {sugestoes.deltaEur > 0 ? "+" : ""}
-                      {fmtMoney(sugestoes.deltaEur)} ({sugestoes.deltaPct > 0 ? "+" : ""}
-                      {sugestoes.deltaPct}%) face ao valor do motor
-                    </p>
-                  )}
-
-                  {sugestoes.belowFloorWarning && (
-                    <p className="mt-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[10px] leading-relaxed text-red-300">
-                      {sugestoes.belowFloorWarning}
-                    </p>
-                  )}
-
-                  <label className={`${IL} mt-2`}>Justificação para o cliente (obrigatória)</label>
-                  <textarea
-                    value={proposalMessage}
-                    onChange={(e) => setProposalMessage(e.target.value)}
-                    rows={3}
-                    placeholder="Ex: Ajustámos para baixo — o acesso é fácil e não precisa de segundo operador."
-                    className={TA}
-                  />
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    {proposalMessage.trim().length < PROPOSAL_MESSAGE_MIN_LENGTH
-                      ? `Faltam ${PROPOSAL_MESSAGE_MIN_LENGTH - proposalMessage.trim().length} caracteres — o cliente vê esta explicação.`
-                      : "O cliente vê esta explicação junto ao valor."}
-                  </p>
-
-                  {sugestoes.suggestions.length > 0 && (
-                    <div className="mt-2.5">
-                      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#97AABD]">
-                        {sugestoes.direction === "up" ? "Porque é mais caro"
-                          : sugestoes.direction === "down" ? "Porque é mais barato"
-                          : "Explicar o valor"}
-                        <span className="ml-1.5 font-normal normal-case tracking-normal text-slate-600">
-                          — clica para usar
-                        </span>
-                      </p>
-                      <div className="space-y-1.5">
-                        {sugestoes.suggestions.map((sg) => {
-                          const usada = proposalMessage.includes(sg.text);
-                          return (
-                            <button
-                              key={sg.id}
-                              type="button"
-                              onClick={() => setProposalMessage((prev) => {
-                                const base = prev.trim();
-                                if (base.includes(sg.text)) {
-                                  // Segundo clique remove a sugestão
-                                  return base.replace(sg.text, "").replace(/\s{2,}/g, " ").trim();
-                                }
-                                return base ? `${base} ${sg.text}` : sg.text;
-                              })}
-                              className={`w-full rounded-lg border px-2.5 py-2 text-left transition ${
-                                usada
-                                  ? "border-violet-400/50 bg-violet-500/[0.14]"
-                                  : "border-white/[0.07] bg-[#12263B]/60 hover:border-violet-400/30 hover:bg-violet-500/[0.07]"
-                              }`}
-                            >
-                              <span className={`text-[9px] font-semibold uppercase tracking-wider ${
-                                sg.tone === "increase" ? "text-amber-300"
-                                : sg.tone === "decrease" ? "text-emerald-300"
-                                : "text-slate-400"
-                              }`}>
-                                {usada ? "✓ " : ""}{sg.basis}
-                              </span>
-                              <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-300">
-                                {sg.text}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleSendProposal}
-                    disabled={saving || !validateProposal(proposalAmount, proposalMessage).ok}
-                    className="mt-3 w-full rounded-lg bg-violet-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {saving ? "A enviar..." : nego?.awaitingAdmin ? "Enviar contraproposta" : "Enviar proposta ao cliente"}
-                  </button>
-                </div>
-              )}
-
-              {/* Contraproposta do cliente à espera de decisão do admin */}
-              {nego?.awaitingAdmin && nego.pending && (
-                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3">
-                  <p className="text-xs font-bold text-emerald-300">Contraproposta do cliente</p>
-                  <p className="mt-1 text-lg font-bold text-white">{fmtMoney(nego.pending.amount)}</p>
-                  {nego.pending.message && (
-                    <p className="mt-1 text-[11px] italic leading-relaxed text-slate-300">&ldquo;{nego.pending.message}&rdquo;</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleAcceptCounter}
-                    disabled={saving}
-                    className="mt-3 w-full rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {saving ? "A aceitar..." : "Aceitar contraproposta"}
-                  </button>
-                  <p className="mt-2 text-[10px] text-slate-500">
-                    Ou envia uma contraproposta no painel acima — o admin não tem limite de rondas.
-                  </p>
-                </div>
-              )}
               <div>
                 <label className={IL}>Data/hora agendada</label>
                 <input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} className={INP} />
@@ -1686,9 +1654,29 @@ function PedidoInlinePanel({
                 <label className={IL}>Nota interna</label>
                 <textarea value={adminNote} onChange={(e) => setAdminNote(e.target.value)} rows={3} placeholder="Nota registada no histórico..." className={TA} />
               </div>
+
+              {/* Override manual — recolhido: a via normal é o botão de fase
+                  seguinte na coluna principal. Aqui é excepção, não rotina. */}
+              <details className="rounded-lg border border-white/[0.06] bg-[#0C1C2E]/60">
+                <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#97AABD] transition hover:text-slate-300">
+                  ⚙ Forçar estado
+                </summary>
+                <div className="space-y-2 border-t border-white/[0.06] p-3">
+                  <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} className={INP}>
+                    {INLINE_VALID_STATUSES.map((s) => (
+                      <option key={s} value={s} className="bg-[#0C1C2E]">{INLINE_STATUS_CFG[s].label}</option>
+                    ))}
+                  </select>
+                  {needsReason && (
+                    <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2}
+                      placeholder="Motivo do cancelamento / rejeição (obrigatório)…" className={TA} />
+                  )}
+                  <p className="text-[10px] leading-relaxed text-slate-600">
+                    Salta a validação da sequência e fica marcado como forçado na Auditoria.
+                  </p>
+                </div>
+              </details>
             </div>
-            {saveError && <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{saveError}</div>}
-            {saveSuccess && <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{saveSuccess}</div>}
             <button onClick={handleSave} disabled={saving} className="mt-4 w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50">
               {saving ? "A guardar..." : "Guardar"}
             </button>
