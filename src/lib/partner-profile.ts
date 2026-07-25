@@ -116,13 +116,19 @@ export function verificationState(
 }
 
 /**
- * A descrição pública que o cliente vê no app é `description`. Mas a app do
- * profissional grava o texto dele em `bio` e NUNCA escreve `description` —
- * resultado: o ecrã do cliente cai num texto de marketing fixo sobre
- * limpezas em Lisboa, errado para qualquer outra categoria.
+ * Apresentação pública do profissional.
  *
- * Enquanto o app não for corrigido, é o painel que resolve isto: mostra a
- * divergência e oferece copiar a bio para a descrição pública.
+ * Histórico: a app do profissional gravava só em `bio` e o ecrã do cliente
+ * lia `description` — resultado, um texto de marketing fixo sobre limpezas em
+ * Lisboa, errado para qualquer outra categoria.
+ *
+ * Corrigido no Bridge a 25-07-2026: a app passou a escrever `description`, e
+ * o ecrã do cliente passou a ler `bio` como segunda opção. Perfis antigos
+ * ficaram recuperados sem ninguém os reeditar.
+ *
+ * Por isso `needsAttention` só é verdade quando AMBOS estão vazios — nesse
+ * caso o cliente vê mesmo o texto genérico. Ter bio sem descrição deixou de
+ * ser urgente; continua a valer a pena arrumar, e o botão de copiar mantém-se.
  */
 export function publicDescriptionState(
   description: string | null | undefined,
@@ -135,16 +141,16 @@ export function publicDescriptionState(
 
   if (b.length > 0) {
     return {
-      needsAttention: true,
+      needsAttention: false,
       canCopyFromBio: true,
-      message: "O cliente não vê a apresentação deste profissional: ele escreveu-a na bio, mas o app mostra o campo «descrição pública», que está vazio. Copia a bio para o corrigir.",
+      message: "A apresentação deste profissional está na bio, e não no campo de descrição pública. O cliente vê-a na mesma (a app usa a bio como alternativa), mas convém arrumar.",
     };
   }
 
   return {
     needsAttention: true,
     canCopyFromBio: false,
-    message: "Sem descrição pública, o app mostra um texto genérico sobre limpezas em Lisboa — errado para qualquer outra categoria. Escreve uma apresentação.",
+    message: "Sem descrição nem bio, a app mostra um texto genérico sobre limpezas em Lisboa — errado para qualquer outra categoria. Escreve uma apresentação.",
   };
 }
 

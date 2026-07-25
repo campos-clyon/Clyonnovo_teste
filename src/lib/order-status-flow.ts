@@ -79,7 +79,9 @@ export const NEXT_PHASE: Record<string, PhaseAdvance | null> = {
   in_route:               { next: "arrived",                  actionLabel: "Chegou ao local" },
   arrived:                { next: "in_execution",             actionLabel: "Iniciar execução" },
   in_execution:           { next: "awaiting_confirmation",    actionLabel: "Trabalho terminado" },
-  extra_review_requested: { next: "in_execution",             actionLabel: "Retomar execução" },
+  // Ajuste no local acima do teto: quem decide é o CLIENTE, não o admin
+  // (NOTA-BRIDGE §2). Deixou de ser uma fila do backoffice.
+  extra_review_requested: null,
   awaiting_confirmation:  { next: "completed",                actionLabel: "Concluir pedido" },
   completed:              null,
   in_dispute:             null,
@@ -97,8 +99,16 @@ const TERMINAL_STATUSES = new Set(["completed", "in_dispute", "canceled", "rejec
 /**
  * Estados em que a decisão pertence ao cliente — o painel mostra "à espera
  * do cliente" em vez de um botão de avanço.
+ *
+ * `extra_review_requested` entrou aqui em 25-07-2026: o ajuste de preço no
+ * local acima do teto vai ao CLIENTE, não ao backoffice. Continua a existir
+ * `admin_review_adjustment` para os casos que ninguém resolve — mas é
+ * intervenção excepcional, não a fila normal.
  */
-const WAITING_ON_CUSTOMER = new Set<string>([CUSTOMER_APPROVAL_STATUS]);
+const WAITING_ON_CUSTOMER = new Set<string>([
+  CUSTOMER_APPROVAL_STATUS,
+  "extra_review_requested",
+]);
 
 /**
  * Transições laterais fora da sequência principal (CONTRATO.md §2 — ramos;
@@ -111,6 +121,9 @@ const LATERAL_TRANSITIONS: Record<string, string[]> = {
   // customer_accept_proposal → awaiting_deposit; customer_counter_proposal → in_review
   awaiting_customer_approval: ["awaiting_deposit", "in_review"],
   in_execution:               ["extra_review_requested"],
+  // O cliente aceita o ajuste → o trabalho retoma. Transição do CLIENTE,
+  // não do admin: por isso é lateral e não fase seguinte.
+  extra_review_requested:     ["in_execution"],
   awaiting_confirmation:      ["in_dispute"],
   completed:                  ["in_dispute"],
   in_dispute:                 ["completed", "canceled"],

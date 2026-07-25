@@ -68,21 +68,23 @@ describe("verificationState — condição EXACTA do selo no app", () => {
   });
 });
 
-describe("publicDescriptionState — o bug bio vs description", () => {
+describe("publicDescriptionState — depois da correcção do Bridge (25-07)", () => {
   it("descrição preenchida não pede atenção", () => {
     const s = publicDescriptionState("Recolhas e mudanças na Grande Lisboa.", "qualquer coisa");
     expect(s.needsAttention).toBe(false);
     expect(s.canCopyFromBio).toBe(false);
   });
 
-  it("bio preenchida e descrição vazia — oferece copiar", () => {
+  // A app passou a ler bio como segunda opção: o cliente VÊ a apresentação,
+  // por isso deixou de ser urgente — mas continua a valer a pena arrumar.
+  it("só bio preenchida — arrumar sim, urgente não", () => {
     const s = publicDescriptionState(null, "15 anos a fazer mudanças em Setúbal.");
-    expect(s.needsAttention).toBe(true);
+    expect(s.needsAttention).toBe(false);
     expect(s.canCopyFromBio).toBe(true);
     expect(s.message).toMatch(/bio/i);
   });
 
-  it("ambas vazias — avisa do texto genérico errado", () => {
+  it("ambas vazias — aí sim o cliente vê o texto genérico errado", () => {
     const s = publicDescriptionState("", "   ");
     expect(s.needsAttention).toBe(true);
     expect(s.canCopyFromBio).toBe(false);

@@ -450,7 +450,8 @@ const INLINE_STATUS_CFG: Record<string, { label: string; color: string }> = {
   in_route: { label: "A caminho", color: "text-sky-400" },
   arrived: { label: "Chegou", color: "text-sky-400" },
   in_execution: { label: "Em execução", color: "text-sky-400" },
-  extra_review_requested: { label: "Revisão extra", color: "text-sky-400" },
+  // Ajuste no local acima do teto — à espera da decisão do cliente
+  extra_review_requested: { label: "Ajuste no cliente", color: "text-violet-400" },
   awaiting_confirmation: { label: "Aguarda confirmação", color: "text-sky-400" },
   completed: { label: "Concluído", color: "text-emerald-400" },
   in_dispute: { label: "Em disputa", color: "text-red-400" },
@@ -794,6 +795,16 @@ function PedidoInlinePanel({
     : [];
   const factsVolume = typeof carga?.volume_m3 === "number" ? carga.volume_m3 : null;
 
+  // Preço marginal e premissas (NOTA-BRIDGE §3): details.breakdown.
+  // É o que a equipa diz ao cliente no local — e o que faz o preço subir
+  // sozinho durante o trabalho. O operador tem de ver isto ANTES de aprovar.
+  const breakdown = ((order.details_meta as Record<string, unknown> | null)?.breakdown ?? null) as Record<string, unknown> | null;
+  const marginal = (breakdown?.marginal ?? null) as Record<string, unknown> | null;
+  const inclui = Array.isArray(breakdown?.inclui) ? (breakdown.inclui as unknown[]).map(String) : [];
+  const teto = typeof breakdown?.teto_sem_nova_aprovacao === "number"
+    ? breakdown.teto_sem_nova_aprovacao
+    : null;
+
   // Sugestões de justificação: saem dos factos do pedido e da direcção do
   // ajuste face ao valor do motor. Um texto que cita o 3.º andar sem elevador
   // do próprio cliente convence mais do que "devido às características".
@@ -1036,6 +1047,51 @@ function PedidoInlinePanel({
                   <FactChip label="Confiança" value={`${meta.confidenceScore}/100`} tone={meta.confidenceScore >= 80 ? "ok" : "neutral"} />
                 )}
               </div>
+            </div>
+          )}
+
+          {/* O que o orçamento cobre e o que custa cada unidade a mais.
+              Sem isto, o operador aprova sem saber que o valor pode subir
+              sozinho no local — e é apanhado de surpresa. */}
+          {(marginal || inclui.length > 0 || teto != null) && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>O que este orçamento cobre</p>
+
+              {inclui.length > 0 && (
+                <ul className="space-y-1">
+                  {inclui.map((linha, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-[#F5FAFF]">
+                      <span className="mt-0.5 text-emerald-400">✓</span>
+                      <span>{linha}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {marginal && (
+                <div className="mt-3 rounded-xl border border-[#00BDEB]/20 bg-[#00BDEB]/[0.05] p-3">
+                  <p className="text-xs font-bold text-[#00BDEB]">Cada unidade a mais</p>
+                  <p className="mt-1 text-sm text-[#F5FAFF]">
+                    Até <span className="font-bold">{String(marginal.incluidas ?? "—")}</span>{" "}
+                    {String(marginal.unidade_plural ?? marginal.unidade ?? "unidades")} incluídos ·
+                    cada {String(marginal.unidade ?? "unidade")} adicional{" "}
+                    <span className="font-bold">{fmtMoney(Number(marginal.valor_adicional ?? 0))}</span>
+                    <span className="text-[10px] text-slate-500"> s/IVA</span>
+                  </p>
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400">
+                    É isto que a equipa diz ao cliente no local. O profissional declara quantas
+                    unidades encontrou — nunca um valor — e o preço recalcula-se sozinho.
+                  </p>
+                </div>
+              )}
+
+              {teto != null && (
+                <p className="mt-2 text-[11px] leading-relaxed text-amber-300/90">
+                  Tecto sem nova aprovação: <span className="font-bold">{fmtMoney(teto)}</span>.
+                  Abaixo disto o ajuste é aplicado automaticamente e o preço final muda sem
+                  passar por aqui; acima, vai à decisão do cliente.
+                </p>
+              )}
             </div>
           )}
 
@@ -1360,22 +1416,37 @@ function PedidoInlinePanel({
             <div className="space-y-3">
               {/* Bola do lado do cliente — o admin espera, não avança */}
               {isWaitingOnCustomer(order.status) && !nego?.awaitingAdmin && (
-                <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
-                  <p className="text-xs font-bold text-violet-300">À espera do cliente</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                    A proposta{nego?.pending ? ` de ${fmtMoney(nego.pending.amount)}` : ""} está com o cliente.
-                    Ele pode aceitar, contrapor{typeof nego?.customerCounters === "number" && typeof nego?.counterLimit === "number"
-                      ? ` (usou ${nego.customerCounters} de ${nego.counterLimit})`
-                      : ""} ou cancelar. O pedido não é visível aos profissionais.
-                  </p>
-                  {nego?.pending?.expires_at && (
-                    <p className="mt-2 text-[10px] text-slate-500">
-                      Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")} — se
-                      expirar, o pedido volta a <span className="text-slate-400">Em análise</span> para
-                      nova proposta (não é cancelado).
+                order.status === "extra_review_requested" ? (
+                  <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
+                    <p className="text-xs font-bold text-violet-300">Ajuste no local à espera do cliente</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                      A equipa encontrou mais trabalho do que o orçamentado e o valor ultrapassou o
+                      tecto acordado. <span className="text-white">Quem decide é o cliente</span>, na
+                      app — não é uma fila do backoffice. Se ele aceitar, o trabalho retoma a execução.
                     </p>
-                  )}
-                </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                      Ajustes dentro do tecto são aplicados sozinhos e nunca passam por aqui.
+                      Só intervém pelo estado manual se isto ficar parado tempo demais.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
+                    <p className="text-xs font-bold text-violet-300">À espera do cliente</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                      A proposta{nego?.pending ? ` de ${fmtMoney(nego.pending.amount)}` : ""} está com o cliente.
+                      Ele pode aceitar, contrapor{typeof nego?.customerCounters === "number" && typeof nego?.counterLimit === "number"
+                        ? ` (usou ${nego.customerCounters} de ${nego.counterLimit})`
+                        : ""} ou cancelar. O pedido não é visível aos profissionais.
+                    </p>
+                    {nego?.pending?.expires_at && (
+                      <p className="mt-2 text-[10px] text-slate-500">
+                        Expira em {new Date(nego.pending.expires_at).toLocaleDateString("pt-PT")} — se
+                        expirar, o pedido volta a <span className="text-slate-400">Em análise</span> para
+                        nova proposta (não é cancelado).
+                      </p>
+                    )}
+                  </div>
+                )
               )}
 
               {/* Avanço automático de fase — o estado seguinte é determinado pela sequência */}
@@ -1645,7 +1716,7 @@ const STATUS_LABELS: Record<string, string> = {
   awaiting_deposit: "Aguarda depósito", assignment_pending: "A atribuir",
   partner_selected: "Parceiro", confirmed: "Confirmado",
   in_route: "A caminho", arrived: "Chegou", in_execution: "Em execução",
-  extra_review_requested: "Revisão extra", awaiting_confirmation: "Ag. confirmação",
+  extra_review_requested: "Ajuste no cliente", awaiting_confirmation: "Ag. confirmação",
   completed: "Concluído", in_dispute: "Disputa", canceled: "Cancelado", rejected: "Rejeitado",
 };
 

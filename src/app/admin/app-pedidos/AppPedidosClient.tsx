@@ -87,7 +87,7 @@ const STATUS_CFG: Record<AppStatus, { label: string; dot: string; badge: string 
   in_route:               { label: "A caminho",       ...SKY },
   arrived:                { label: "Chegou",          ...SKY },
   in_execution:           { label: "Em execução",     ...SKY },
-  extra_review_requested: { label: "Revisão extra",   ...SKY },
+  extra_review_requested: { label: "Ajuste no cliente", ...VIOLET },
   awaiting_confirmation:  { label: "Aguarda confirmação",...SKY },
   completed:              { label: "Concluído",       ...EMER },
   in_dispute:             { label: "Em disputa",      ...RED },

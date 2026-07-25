@@ -71,8 +71,17 @@ describe("nextPhase — sequência principal", () => {
     expect(nextPhase("in_dispute")).toBeNull();
   });
 
-  it("revisão extra retoma a execução", () => {
-    expect(nextPhase("extra_review_requested")?.next).toBe("in_execution");
+  // Mudou em 25-07-2026: o ajuste no local acima do tecto vai ao CLIENTE,
+  // não ao backoffice. Deixou de ser uma fila do admin (NOTA-BRIDGE §2).
+  it("ajuste no local não tem avanço do admin — quem decide é o cliente", () => {
+    expect(nextPhase("extra_review_requested")).toBeNull();
+    expect(isWaitingOnCustomer("extra_review_requested")).toBe(true);
+  });
+
+  it("mas continua vivo: cancelável e retoma execução quando o cliente aceita", () => {
+    expect(isTerminalStatus("extra_review_requested")).toBe(false);
+    expect(isValidTransition("extra_review_requested", "in_execution")).toBe(true);
+    expect(isValidTransition("extra_review_requested", "canceled")).toBe(true);
   });
 
   it("cada avanço tem um rótulo de acção legível", () => {
