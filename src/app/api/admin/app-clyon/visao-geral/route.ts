@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     const cutoff7d = Date.now() - 7 * 86400_000;
 
     const OPEN_STATUSES = [
-      "draft", "received", "in_review", "awaiting_deposit",
-      "assignment_pending", "partner_selected",
+      "draft", "received", "in_review", "awaiting_customer_approval",
+      "awaiting_deposit", "assignment_pending", "partner_selected",
     ];
     const IN_PROGRESS_STATUSES = [
       "confirmed", "in_route", "arrived", "in_execution",

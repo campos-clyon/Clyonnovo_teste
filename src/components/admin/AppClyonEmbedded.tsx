@@ -1641,6 +1641,7 @@ function PedidoInlinePanel({
 // ── STATUS_LABELS ──────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
   draft: "Rascunho", received: "Recebido", in_review: "Em análise",
+  awaiting_customer_approval: "Proposta no cliente",
   awaiting_deposit: "Aguarda depósito", assignment_pending: "A atribuir",
   partner_selected: "Parceiro", confirmed: "Confirmado",
   in_route: "A caminho", arrived: "Chegou", in_execution: "Em execução",
