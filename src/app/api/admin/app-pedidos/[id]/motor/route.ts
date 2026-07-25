@@ -93,6 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     action?: "record_approval" | "record_execution";
     price_approved?: number | string;
     price_executed?: number | string;
+    valor_cobrado_real?: number | string;
     horas_reais?: number | string;
     pessoas_reais?: number | string;
     ajustes_no_local?: string;
@@ -161,34 +162,103 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // ── Execução: fecha a linha de treino com o que aconteceu de facto ─────
+    // NOTA-BRIDGE-CALIBRACAO §1: há DUAS razões diferentes para o preço final
+    // divergir, e pedem correcções opostas — negociação (o motor errou no
+    // mercado) e ajuste no local (errou no tamanho). Somadas num número só,
+    // um desvio de +20% não diz qual foi. Por isso o ajuste vai à parte.
     if (body.action === "record_execution") {
       const executed = toNum(body.price_executed);
       if (executed === null || executed <= 0) {
         return NextResponse.json({ error: "Indica o valor efectivamente cobrado (superior a 0 €)." }, { status: 400 });
       }
 
-      // desvio_pct é coluna gerada — NÃO escrever (NOTA-BRIDGE-MOTOR §2.4)
-      const { data, error: updErr } = await sb.from("pricing_outcomes").update({
+      // Só se divergir do valor do sistema (NULLIF do SQL da nota). No modelo
+      // de créditos o cliente paga em mão — se não guardarmos o valor real,
+      // ficamos cegos a cobranças fora da plataforma.
+      const cobradoReal = toNum(body.valor_cobrado_real);
+      const divergencia = cobradoReal !== null && cobradoReal !== executed ? cobradoReal : null;
+
+      // Ajustes aprovados no local — isolam o erro de MEDIÇÃO
+      let ajustesTotal: number | null = null;
+      let ajustesContagem: number | null = null;
+      try {
+        const [{ data: adjustments }, { data: sr }] = await Promise.all([
+          sb.from("service_adjustments").select("suggested_amount, status").eq("request_id", id).eq("status", "approved"),
+          sb.from("service_requests").select("estimated_price").eq("id", id).single(),
+        ]);
+        const base = toNum((sr as Record<string, unknown> | null)?.estimated_price) ?? 0;
+        const aprovados = (adjustments ?? []) as Array<Record<string, unknown>>;
+        if (aprovados.length > 0) {
+          ajustesContagem = aprovados.length;
+          // Fórmula da nota (§5): SUM(suggested_amount − estimated_price).
+          // ⚠️ Se `suggested_amount` for o TOTAL corrigido (e não o delta),
+          // dois ajustes no mesmo pedido subtraem a base duas vezes e o total
+          // fica inflacionado. Assinalado ao Bridge; mantida a fórmula do
+          // contrato até haver resposta — divergir em silêncio seria pior.
+          ajustesTotal = Math.round(
+            aprovados.reduce((s, a) => s + ((toNum(a.suggested_amount) ?? 0) - base), 0) * 100,
+          ) / 100;
+        }
+      } catch (e) {
+        console.warn("[motor] ajustes não calculados", { id, e });
+      }
+
+      const patchBase: Record<string, unknown> = {
         price_executed:   executed,
         horas_reais:      toNum(body.horas_reais),
         pessoas_reais:    toNum(body.pessoas_reais),
         ajustes_no_local: typeof body.ajustes_no_local === "string" ? body.ajustes_no_local.trim() || null : null,
         executed_at:      new Date().toISOString(),
         updated_at:       new Date().toISOString(),
-      }).eq("service_request_id", id).select("*").maybeSingle();
+        // desvio_pct é coluna gerada — NÃO escrever (NOTA-BRIDGE-MOTOR §2.4)
+      };
+      const patchNovo: Record<string, unknown> = {
+        ...patchBase,
+        ajustes_total:      ajustesTotal,
+        ajustes_contagem:   ajustesContagem,
+        valor_cobrado_real: divergencia,
+      };
 
-      if (updErr) {
-        const dep = dependencyNotice(updErr);
-        console.error("[motor record_execution]", { id, updErr });
-        return NextResponse.json({ error: dep ?? `Erro ao registar execução: ${updErr.message}` }, { status: dep ? 503 : 500 });
+      // As colunas novas podem ainda não existir (migração
+      // 20260725150000_outcomes_decompoe_desvio.sql por correr). Nesse caso
+      // grava-se o essencial e avisa-se, em vez de perder o registo todo.
+      let data: Record<string, unknown> | null = null;
+      let aviso: string | null = null;
+
+      const primeira = await sb.from("pricing_outcomes").update(patchNovo)
+        .eq("service_request_id", id).select("*").maybeSingle();
+
+      if (primeira.error && /column .* does not exist/i.test(primeira.error.message ?? "")) {
+        const fallback = await sb.from("pricing_outcomes").update(patchBase)
+          .eq("service_request_id", id).select("*").maybeSingle();
+        if (fallback.error) {
+          console.error("[motor record_execution] fallback", { id, error: fallback.error });
+          return NextResponse.json({ error: `Erro ao registar execução: ${fallback.error.message}` }, { status: 500 });
+        }
+        data = fallback.data as Record<string, unknown> | null;
+        aviso = "Execução registada, mas a decomposição do desvio ficou por gravar: as colunas ajustes_total / ajustes_contagem / valor_cobrado_real ainda não existem na base.";
+      } else if (primeira.error) {
+        const dep = dependencyNotice(primeira.error);
+        console.error("[motor record_execution]", { id, error: primeira.error });
+        return NextResponse.json({ error: dep ?? `Erro ao registar execução: ${primeira.error.message}` }, { status: dep ? 503 : 500 });
+      } else {
+        data = primeira.data as Record<string, unknown> | null;
       }
+
       if (!data) {
         return NextResponse.json({
           error: "Não existe linha de aprovação para este pedido — regista primeiro o preço aprovado.",
         }, { status: 400 });
       }
 
-      return NextResponse.json({ ok: true, outcome: data });
+      return NextResponse.json({
+        ok: true,
+        outcome: data,
+        ajustes_total: ajustesTotal,
+        ajustes_contagem: ajustesContagem,
+        ...(divergencia !== null ? { divergencia_cobranca: divergencia } : {}),
+        ...(aviso ? { warning: aviso } : {}),
+      });
     }
 
     return NextResponse.json({ error: "Acção inválida — usar record_approval ou record_execution." }, { status: 400 });

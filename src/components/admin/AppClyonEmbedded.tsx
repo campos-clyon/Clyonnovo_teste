@@ -396,6 +396,11 @@ type PricingOutcome = {
   pessoas_reais: number | null;
   ajustes_no_local: string | null;
   desvio_pct: number | null;
+  // Decomposição do desvio (NOTA-BRIDGE-CALIBRACAO §3) — podem não existir
+  // enquanto a migração 20260725150000 não correr.
+  ajustes_total?: number | null;
+  ajustes_contagem?: number | null;
+  valor_cobrado_real?: number | null;
 };
 
 type MotorState = {
@@ -528,6 +533,7 @@ function PedidoInlinePanel({
   // ── Motor de preços (NOTA-BRIDGE-MOTOR §3.3 / §3.4) ────────────────────
   const [motor, setMotor] = useState<MotorState | null>(null);
   const [execPrice, setExecPrice] = useState("");
+  const [execCobradoReal, setExecCobradoReal] = useState("");
   const [execHoras, setExecHoras] = useState("");
   const [execPessoas, setExecPessoas] = useState("");
   const [execAjustes, setExecAjustes] = useState("");
@@ -554,7 +560,19 @@ function PedidoInlinePanel({
       setMotor(m);
       setProposalMessage("");
       // Pré-preencher a execução com o que já foi registado
-      setExecPrice(m?.outcome?.price_executed != null ? String(m.outcome.price_executed) : "");
+      // Pré-preencher com o final_price — que já inclui os ajustes aplicados
+      // no local — mas SEM impor: no modelo de créditos o cliente paga em mão
+      // e o operador tem de poder corrigir (NOTA-BRIDGE-CALIBRACAO §2).
+      const jaRegistado = m?.outcome?.price_executed;
+      const doSistema = o.final_price ?? gatePrice(o);
+      setExecPrice(
+        jaRegistado != null ? String(jaRegistado)
+        : doSistema != null ? String(doSistema) : ""
+      );
+      setExecCobradoReal(
+        m?.outcome && "valor_cobrado_real" in m.outcome && m.outcome.valor_cobrado_real != null
+          ? String(m.outcome.valor_cobrado_real) : ""
+      );
       setExecHoras(m?.outcome?.horas_reais != null ? String(m.outcome.horas_reais) : "");
       setExecPessoas(m?.outcome?.pessoas_reais != null ? String(m.outcome.pessoas_reais) : "");
       setExecAjustes(m?.outcome?.ajustes_no_local ?? "");
@@ -679,6 +697,7 @@ function PedidoInlinePanel({
         body: JSON.stringify({
           action: "record_execution",
           price_executed: Number(execPrice),
+          valor_cobrado_real: execCobradoReal === "" ? null : Number(execCobradoReal),
           horas_reais: execHoras === "" ? null : Number(execHoras),
           pessoas_reais: execPessoas === "" ? null : Number(execPessoas),
           ajustes_no_local: execAjustes.trim() || null,
@@ -687,11 +706,18 @@ function PedidoInlinePanel({
       const json = await res.json();
       if (!res.ok) { setSaveError(json.error ?? "Erro ao registar a execução."); return; }
       const desvio = json.outcome?.desvio_pct;
-      setSaveSuccess(
-        typeof desvio === "number"
-          ? `Execução registada. Desvio face ao aprovado: ${desvio > 0 ? "+" : ""}${desvio.toFixed(1)}%.`
-          : "Execução registada."
-      );
+      const partes = ["Execução registada."];
+      if (typeof desvio === "number") {
+        partes.push(`Desvio face ao aprovado: ${desvio > 0 ? "+" : ""}${desvio.toFixed(1)}%.`);
+      }
+      if (typeof json.ajustes_contagem === "number" && json.ajustes_contagem > 0) {
+        partes.push(`${json.ajustes_contagem} ajuste(s) no local (${fmtMoney(Number(json.ajustes_total ?? 0))}) — erro de medição, não de preço.`);
+      }
+      if (json.divergencia_cobranca != null) {
+        partes.push(`⚠️ Valor cobrado diverge do sistema (${fmtMoney(Number(json.divergencia_cobranca))}).`);
+      }
+      if (json.warning) setSaveError(json.warning);
+      setSaveSuccess(partes.join(" "));
       await load();
     } catch { setSaveError("Erro de ligação."); }
     finally { setSaving(false); }
@@ -1216,6 +1242,20 @@ function PedidoInlinePanel({
                       </span>
                     )}
                   </div>
+                  {/* Decomposição: negociação (mercado) vs ajuste (medição) */}
+                  {(motor.outcome.ajustes_contagem ?? 0) > 0 && (
+                    <p className="mt-1.5 text-[11px] text-violet-300">
+                      {motor.outcome.ajustes_contagem} ajuste{(motor.outcome.ajustes_contagem ?? 0) > 1 ? "s" : ""} no local
+                      {motor.outcome.ajustes_total != null && ` · ${fmtMoney(motor.outcome.ajustes_total)}`}
+                      <span className="text-slate-500"> — erro de medição, não de preço</span>
+                    </p>
+                  )}
+                  {motor.outcome.valor_cobrado_real != null && (
+                    <p className="mt-1 rounded-lg border border-amber-500/25 bg-amber-500/[0.08] px-2 py-1 text-[11px] text-amber-300">
+                      Cobrança fora da plataforma: o profissional cobrou {fmtMoney(motor.outcome.valor_cobrado_real)},
+                      o sistema dizia {fmtMoney(Number(motor.outcome.price_executed))}.
+                    </p>
+                  )}
                   {(motor.outcome.horas_reais != null || motor.outcome.pessoas_reais != null) && (
                     <p className="mt-1 text-[11px] text-slate-500">
                       {motor.outcome.horas_reais != null && `${motor.outcome.horas_reais}h`}
@@ -1230,9 +1270,12 @@ function PedidoInlinePanel({
               ) : (
                 <div className="grid gap-2 sm:grid-cols-3">
                   <div>
-                    <label className={IL}>Cobrado (€ s/IVA)</label>
+                    <label className={IL}>Valor do sistema (€ s/IVA)</label>
                     <input type="number" step="0.01" min="0" value={execPrice}
                       onChange={(e) => setExecPrice(e.target.value)} className={INP} />
+                    <p className="mt-0.5 text-[9px] leading-tight text-slate-600">
+                      Já inclui ajustes aplicados no local. Confirma ou corrige.
+                    </p>
                   </div>
                   <div>
                     <label className={IL}>Horas reais</label>
@@ -1243,6 +1286,16 @@ function PedidoInlinePanel({
                     <label className={IL}>Pessoas</label>
                     <input type="number" step="1" min="0" value={execPessoas}
                       onChange={(e) => setExecPessoas(e.target.value)} className={INP} />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className={IL}>Cobrou valor diferente? (opcional)</label>
+                    <input type="number" step="0.01" min="0" value={execCobradoReal}
+                      onChange={(e) => setExecCobradoReal(e.target.value)} className={INP}
+                      placeholder="Deixa vazio se cobrou o valor acima" />
+                    <p className="mt-0.5 text-[9px] leading-tight text-slate-600">
+                      No pagamento em mão, o que o profissional cobrou pode não ser o do sistema.
+                      Preencher só quando divergir — é assim que se detecta cobrança fora da plataforma.
+                    </p>
                   </div>
                   <div className="sm:col-span-3">
                     <label className={IL}>Ajustes no local (opcional)</label>
