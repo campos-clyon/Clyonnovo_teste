@@ -8,11 +8,14 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
-// Rotas de landing de conversão (Google Ads) que não usam o chrome global
-const BARE_ROUTES = ["/orcamento-recolha-lisboa"];
+// Rotas sem chrome global: landings de conversão (Google Ads) e o backoffice.
+// O /admin tem cabeçalho próprio (BACKOFFICE CLYON, com os separadores e a
+// conta) — sobrepor-lhe o header público roubava altura e duplicava navegação
+// que o operador não usa.
+const BARE_ROUTES = ["/orcamento-recolha-lisboa", "/admin"];
 
 // Rotas internas (dashboard) que usam apenas o Header — sem Footer nem barra inferior
-const DASHBOARD_ROUTES = ["/colaboradores", "/simulador", "/conta", "/admin"];
+const DASHBOARD_ROUTES = ["/colaboradores", "/simulador", "/conta"];
 
 export default function SiteChrome({
   children,

@@ -153,6 +153,26 @@ export function hasUsablePrice(row: PricedRow | null | undefined): boolean {
   return v !== null && v > 0;
 }
 
+/**
+ * Valor a mostrar no campo "Valor do orçamento" do painel — o campo que
+ * EDITA `estimated_price`.
+ *
+ * ⚠️ Não usar displayPrice/gatePrice aqui: esses preferem `final_price`, que
+ * é o preço acordado com o cliente e muda por outras vias (aceitação da
+ * proposta, ajustes no local). Se o campo mostrasse esse, o operador escrevia
+ * 333, gravava com sucesso, e via 270 de volta ao recarregar — parecia que a
+ * gravação falhava quando não falhava.
+ *
+ * Regra: o que já está em `estimated_price` manda; o valor do motor só entra
+ * como âncora enquanto ninguém definiu orçamento.
+ */
+export function orcamentoDoPedido(row: PricedRow | null | undefined): number | null {
+  if (!row) return null;
+  const estimado = num(row.estimated_price);
+  if (estimado !== null && estimado > 0) return estimado;
+  return gatePrice(row);
+}
+
 // ─── Fluxo legado do site (MySQL simulatorOrders) ────────────────────────
 // Mesma classe de problema, outros nomes de campo. `"0.00"` é uma string
 // truthy, por isso `if (!v)` deixava passar zeros e as cadeias `??` paravam

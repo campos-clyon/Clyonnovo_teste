@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   displayPrice, isBelowFloor, withVat, eur, gatePrice, hasUsablePrice,
-  firstPositive, legacyPriceText, legacyHasPrice,
+  firstPositive, legacyPriceText, legacyHasPrice, orcamentoDoPedido,
 } from "./quote-price";
 
 // Regra central da NOTA-BRIDGE-MOTOR §3.1: total = 0 já não significa
@@ -138,6 +138,36 @@ describe("gatePrice / hasUsablePrice — validar operações", () => {
   it("respeita o fluxo antigo (price_status NULL com total)", () => {
     expect(gatePrice({ estimated_price: 220, price_status: null })).toBe(220);
     expect(hasUsablePrice({ final_price: 300, price_status: null })).toBe(true);
+  });
+});
+
+describe("orcamentoDoPedido — o campo que EDITA estimated_price mostra-o", () => {
+  // Regressão real: o campo mostrava gatePrice(), que prefere final_price.
+  // O operador escrevia 333, gravava com sucesso, e via 270 de volta ao
+  // recarregar — parecia que a gravação falhava quando não falhava.
+  it("mostra estimated_price mesmo quando final_price é diferente", () => {
+    const row = { estimated_price: 333, final_price: 270, price_status: null };
+    expect(orcamentoDoPedido(row)).toBe(333);
+    // gatePrice continua a preferir o acordado — é a diferença que causava o bug
+    expect(gatePrice(row)).toBe(270);
+  });
+
+  it("cai para o valor do motor enquanto ninguém definiu orçamento", () => {
+    expect(orcamentoDoPedido({ estimated_price: null, estimate_min: 196, estimate_max: 249, price_status: "intervalo" })).toBe(196);
+    expect(orcamentoDoPedido({ estimated_price: 0, final_price: 270, price_status: null })).toBe(270);
+  });
+
+  it("sem preço nenhum devolve null (campo vazio, não zero)", () => {
+    expect(orcamentoDoPedido({ estimated_price: null, price_status: null })).toBeNull();
+    expect(orcamentoDoPedido(null)).toBeNull();
+  });
+
+  it("gravar e recarregar mantém o valor escrito", () => {
+    const antes = { estimated_price: 270, final_price: 270, price_status: null };
+    const escrito = 333;
+    expect(String(orcamentoDoPedido(antes))).not.toBe(String(escrito)); // há alteração a enviar
+    const depois = { ...antes, estimated_price: escrito };
+    expect(orcamentoDoPedido(depois)).toBe(escrito); // e o campo mostra-a
   });
 });
 

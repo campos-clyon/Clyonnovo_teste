@@ -1065,7 +1065,7 @@ export default function ColaboradorAdminClient() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[linear-gradient(180deg,#07111d_0%,#0b1727_52%,#101d31_100%)] px-5 py-16 text-white">
-        <div className="mx-auto max-w-6xl animate-pulse space-y-5 [zoom:0.8]">
+        <div className="w-full animate-pulse space-y-5">
           <div className="h-10 w-72 rounded-full bg-white/10" />
           <div className="grid gap-4 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -1080,7 +1080,10 @@ export default function ColaboradorAdminClient() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-[1500px] px-3 py-5 [zoom:0.8] lg:px-6">
+      {/* Ecra inteiro: sem limite de largura e sem [zoom:0.8], que
+          encolhia todo o painel a 80% e era o que tornava as colunas
+          ilegiveis em ecras grandes. */}
+      <div className="w-full px-3 py-5 lg:px-6">
         <header className="rounded-[24px] border border-slate-800 bg-slate-900 px-5 py-4 shadow-lg">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-4">

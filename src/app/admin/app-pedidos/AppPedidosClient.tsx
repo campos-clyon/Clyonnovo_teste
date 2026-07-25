@@ -5,7 +5,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
 } from "@/lib/order-status-flow";
-import { displayPrice, eur, gatePrice } from "@/lib/quote-price";
+import { displayPrice, eur, orcamentoDoPedido } from "@/lib/quote-price";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -258,7 +258,7 @@ function DetailModal({
   // Âncora do motor: parsePrice(budget_range) abria a 0 quando estimated_price
   // vinha a 0, e vazio quando o valor vivia só no intervalo (§3.1)
   const [price, setPrice]           = useState(() => {
-    const anchor = gatePrice(order);
+    const anchor = orcamentoDoPedido(order);
     return anchor != null ? String(anchor) : parsePrice(order.budget_range);
   });
   const [preferredDate, setPreferredDate] = useState(order.preferred_date ?? "");
@@ -345,7 +345,7 @@ function DetailModal({
         payload.reason = reason;
       }
     }
-    const anchorNow = gatePrice(order);
+    const anchorNow = orcamentoDoPedido(order);
     const originalPrice = anchorNow != null ? String(anchorNow) : parsePrice(order.budget_range);
     if (price !== originalPrice) {
       payload.estimated_price = price === "" ? null : Number(price);

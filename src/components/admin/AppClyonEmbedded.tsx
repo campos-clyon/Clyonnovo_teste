@@ -9,7 +9,7 @@ import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navig
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
 import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
-import { displayPrice, withVat, isBelowFloor, gatePrice } from "@/lib/quote-price";
+import { displayPrice, withVat, isBelowFloor, gatePrice, orcamentoDoPedido } from "@/lib/quote-price";
 import { suggestJustifications, type RequestFacts } from "@/lib/proposal-suggestions";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
@@ -578,13 +578,15 @@ function PedidoInlinePanel({
       setExecAjustes(m?.outcome?.ajustes_no_local ?? "");
       setStatus(o.status);
       setUrgency(o.urgency ?? "normal");
-      // Âncora do motor: `estimated_price ?? final_price` abria a 0 quando a
-      // coluna antiga vinha a 0 (0 não é nullish) e vazio quando o valor vivia
-      // só no intervalo. gatePrice() resolve ambos (NOTA-BRIDGE-MOTOR §3.1).
-      const anchor = gatePrice(o);
-      setPrice(anchor != null ? String(anchor) : "");
+      // ⚠️ O campo "Valor do orçamento" EDITA estimated_price, logo tem de
+      // MOSTRAR estimated_price. Mostrar gatePrice() dava a ilusão de que a
+      // gravação falhava: gatePrice prefere final_price, por isso ao recarregar
+      // o campo voltava ao valor antigo — apesar de o novo estar gravado.
+      // O valor do motor só entra como âncora quando ainda não há orçamento.
+      const orcamento = orcamentoDoPedido(o);
+      setPrice(orcamento != null ? String(orcamento) : "");
       // A proposta parte do valor calculado; o admin corrige antes de enviar
-      setProposalAmount(anchor != null ? String(anchor) : "");
+      setProposalAmount(orcamento != null ? String(orcamento) : "");
       setScheduledFor(o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "");
       setAdminNote(""); setReason("");
     } catch { setError("Erro de ligação."); }
@@ -626,10 +628,10 @@ function PedidoInlinePanel({
     // Alteração manual de estado = override explícito da sequência de fases
     if (status !== order.status) { payload.status = status; payload.force = true; }
     if (urgency !== order.urgency) payload.urgency = urgency;
-    // Comparar com a MESMA âncora que pré-preencheu o campo — senão um
-    // pedido cujo preço vive no intervalo era reescrito em cada gravação.
-    const anchorNow = gatePrice(order);
-    const origPrice = anchorNow != null ? String(anchorNow) : "";
+    // Comparar com a MESMA origem que pré-preencheu o campo, senão ou se
+    // reescreve o valor em cada gravação, ou se descarta a alteração.
+    const orcamentoAtual = orcamentoDoPedido(order);
+    const origPrice = orcamentoAtual != null ? String(orcamentoAtual) : "";
     if (price !== origPrice) payload.estimated_price = price === "" ? null : Number(price);
     const origDate = order.scheduled_for ? String(order.scheduled_for).slice(0, 16) : "";
     if (scheduledFor !== origDate) payload.scheduled_for = scheduledFor || null;
