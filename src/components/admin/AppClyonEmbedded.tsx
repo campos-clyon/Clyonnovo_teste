@@ -9,7 +9,7 @@ import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navig
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
 import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
-import { displayPrice, withVat, isBelowFloor, gatePrice, hasUsablePrice } from "@/lib/quote-price";
+import { displayPrice, withVat, isBelowFloor, gatePrice } from "@/lib/quote-price";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -777,6 +777,21 @@ function PedidoInlinePanel({
 
   const statusCfg = INLINE_STATUS_CFG[order.status];
   const meta = curateMeta(order.details_meta);
+
+  // Ficha do pedido do motor (request_facts) — contrato único entre a app,
+  // o motor e a IA (NOTA-BRIDGE-MOTOR §3.2). Serve de origem alternativa
+  // quando details_meta não traz itens.
+  const facts = (motor?.request_facts ?? order.request_facts ?? null) as Record<string, unknown> | null;
+  const carga = (facts?.carga ?? null) as Record<string, unknown> | null;
+  const factsItems: Array<{ nome: string; qtd: number }> = Array.isArray(carga?.itens)
+    ? (carga.itens as unknown[])
+        .filter((it): it is Record<string, unknown> => !!it && typeof it === "object")
+        .map((it) => ({
+          nome: String(it.nome ?? it.name ?? "Item"),
+          qtd: Number(it.qtd ?? it.qty ?? 1) || 1,
+        }))
+    : [];
+  const factsVolume = typeof carga?.volume_m3 === "number" ? carga.volume_m3 : null;
   const morada = meta?.pickupAddress ?? displayText(order.address_line, "");
   // A mensagem do cliente aparece muitas vezes duplicada em notes — mostrar uma vez
   const notesText = displayText(order.notes, "");
@@ -809,7 +824,9 @@ function PedidoInlinePanel({
           </p>
         </div>
         <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
-          {(isApprovedStatus(order.status) || hasUsablePrice(order)) && (
+          {/* "Aprovado" = cliente aceitou o preço. Ter preço calculado pelo
+              motor NÃO é aprovação — senão o selo aparece até em recusados. */}
+          {(isApprovedStatus(order.status) || Number(order.final_price ?? 0) > 0) && (
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">
               ✓ Aprovado
             </span>
@@ -847,6 +864,19 @@ function PedidoInlinePanel({
                   </div>
                 ))}
               </div>
+            ) : factsItems.length > 0 ? (
+              /* Sem details_meta, os itens vêm da ficha do motor
+                 (request_facts.carga.itens) — antes mostrava só "—" */
+              <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+                {factsItems.map((it, i) => (
+                  <div key={i} className={`flex items-center gap-3 bg-[#12263B]/60 px-3 py-2.5 ${i < factsItems.length - 1 ? "border-b border-white/[0.05]" : ""}`}>
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#00BDEB]/10 text-xs font-bold text-[#00BDEB]">
+                      {it.qtd}×
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-[#F5FAFF]">{it.nome}</p>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-sm text-slate-400">{displayText(order.details)}</p>
             )}
@@ -869,7 +899,9 @@ function PedidoInlinePanel({
                 <>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {displayTotal != null && <FactChip label="Total s/ IVA" value={fmtMoney(displayTotal)} />}
-                    {meta?.estimatedVolume != null && <FactChip label="Volume est." value={`${meta.estimatedVolume} m³`} />}
+                    {(meta?.estimatedVolume ?? factsVolume) != null && (
+                      <FactChip label="Volume est." value={`${meta?.estimatedVolume ?? factsVolume} m³`} />
+                    )}
                     {meta?.bags != null && meta.bags > 0 && <FactChip label="Sacos" value={String(meta.bags)} />}
                   </div>
                   {p.kind !== "legado" && (
@@ -998,7 +1030,6 @@ function PedidoInlinePanel({
           {/* Notas escritas pelo cliente no wizard (§3.2) — até agora eram
               descartadas e nunca chegavam a quem executa o serviço */}
           {(() => {
-            const facts = (motor?.request_facts ?? order.request_facts ?? null) as Record<string, unknown> | null;
             const notas = typeof facts?.notas_cliente === "string" ? facts.notas_cliente.trim() : "";
             const local = (facts?.local ?? null) as Record<string, unknown> | null;
             const semCoordenadas = local != null && local.lat == null;

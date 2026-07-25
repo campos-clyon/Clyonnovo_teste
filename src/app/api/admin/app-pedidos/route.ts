@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { ENTRY_STATUSES, ANALYSIS_STATUS, isApprovedStatus } from "@/lib/order-status-flow";
-import { hasUsablePrice } from "@/lib/quote-price";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -172,9 +171,11 @@ export async function GET(req: NextRequest) {
         price_status:    asString(row.price_status),
         preferred_date:  asString(row.scheduled_for),
         status:          asString(row.status) ?? "open",
-        // hasUsablePrice em vez de final_price: com o motor novo o preço pode
-        // viver só no intervalo e o pedido parecia não aprovado (§3.1)
-        approved:        isApprovedStatus(asString(row.status)) || hasUsablePrice(row as never),
+        // "Aprovado" = o cliente aceitou o preço, NÃO "existe um preço".
+        // Com o motor todos os pedidos têm preço calculado; usar isso aqui
+        // punha o selo em pedidos recusados e em análise. Quem sinaliza a
+        // aprovação é final_price, escrito pela negociação ao aceitar.
+        approved:        isApprovedStatus(asString(row.status)) || Number(row.final_price ?? 0) > 0,
         photos:          Array.isArray(row.photos) ? row.photos.filter((p: any) => typeof p === "string") : [],
         created_at:      asString(row.created_at) ?? "",
         updated_at:      asString(row.updated_at) ?? asString(row.created_at) ?? "",
