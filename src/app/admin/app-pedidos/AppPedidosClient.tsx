@@ -56,6 +56,9 @@ type AppOrder = {
   preferred_date: string | null;
   status: AppStatus;
   approved?: boolean;
+  // Visibilidade real na app dos profissionais
+  publishable?: boolean;
+  open_offers?: number;
   photos: string[];
   created_at: string;
   client_name: string | null;
@@ -218,6 +221,15 @@ function OrderRow({ order, onClick, active, compact }: { order: AppOrder; onClic
       {/* Status + data */}
       <div className="flex-shrink-0 text-right">
         <StatusBadge status={order.status} approved={order.approved} />
+        {/* "Aprovado" = tem preco. Isto responde a outra pergunta: os
+            profissionais chegam a ver este pedido? */}
+        {order.publishable && (
+          <p className={`mt-1 text-[10px] font-semibold ${(order.open_offers ?? 0) > 0 ? "text-emerald-400" : "text-amber-400"}`}>
+            {(order.open_offers ?? 0) > 0
+              ? `Visível a ${order.open_offers} profissional${(order.open_offers ?? 0) > 1 ? "is" : ""}`
+              : "Publicável, sem ofertas activas"}
+          </p>
+        )}
         <p className="mt-1 text-[10px] text-slate-600">{fmt(order.created_at)}</p>
       </div>
     </div>

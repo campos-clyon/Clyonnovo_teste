@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { ENTRY_STATUSES, ANALYSIS_STATUS, isApprovedStatus } from "@/lib/order-status-flow";
+import { ENTRY_STATUSES, ANALYSIS_STATUS, isApprovedStatus, isPublishableStatus } from "@/lib/order-status-flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,8 +114,38 @@ export async function GET(req: NextRequest) {
 
     const rows = data ?? [];
 
+    const asString = (v: any): string | null => {
+      if (v === null || v === undefined) return null;
+      if (typeof v === "string") return v;
+      if (typeof v === "number" || typeof v === "boolean") return String(v);
+      return null; // discard objects/arrays — cannot be safely rendered as text
+    };
+
+
     // Novos pedidos entram automaticamente em análise
     await autoPromoteEntryOrders(sb, rows as Array<Record<string, unknown>>);
+
+    // "Vê-se na app dos profissionais?" — é a pergunta que o operador faz
+    // todos os dias, e não se responde só pelo estado: é preciso estar num
+    // estado publicável E ter oferta pendente em job_offers.
+    const ofertasPorPedido: Record<string, number> = {};
+    const idsPublicaveis = rows
+      .filter((r: any) => isPublishableStatus(asString(r.status)))
+      .map((r: any) => String(r.id));
+    if (idsPublicaveis.length > 0) {
+      const { data: ofertas } = await sb
+        .from("job_offers")
+        .select("request_id, status, expires_at")
+        .in("request_id", idsPublicaveis)
+        .eq("status", "pending");
+      const agora = Date.now();
+      for (const o of (ofertas ?? []) as Array<Record<string, unknown>>) {
+        const expira = o.expires_at ? new Date(String(o.expires_at)).getTime() : null;
+        if (expira !== null && expira <= agora) continue; // caducada não conta
+        const rid = String(o.request_id);
+        ofertasPorPedido[rid] = (ofertasPorPedido[rid] ?? 0) + 1;
+      }
+    }
 
     // Fetch customer profiles for all unique customer_ids
     const customerIds = [...new Set(rows.map((r: any) => r.customer_id).filter(Boolean))];
@@ -142,13 +172,6 @@ export async function GET(req: NextRequest) {
         categoriesMap[c.slug] = c;
       }
     }
-
-    const asString = (v: any): string | null => {
-      if (v === null || v === undefined) return null;
-      if (typeof v === "string") return v;
-      if (typeof v === "number" || typeof v === "boolean") return String(v);
-      return null; // discard objects/arrays — cannot be safely rendered as text
-    };
 
     const orders = rows.map((row: any) => {
       const profile = profilesMap[row.customer_id] ?? {};
@@ -186,6 +209,9 @@ export async function GET(req: NextRequest) {
         category_icon:   asString(cat.icon),
         archived_at:     asString(row.archived_at),
         responses_count: 0,
+        // Visibilidade real na app dos profissionais
+        publishable:     isPublishableStatus(asString(row.status)),
+        open_offers:     ofertasPorPedido[String(row.id ?? "")] ?? 0,
       };
     });
 
