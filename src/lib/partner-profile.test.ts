@@ -9,26 +9,54 @@ import {
   REQUIRED_DOC_TYPES,
   toFiveStars,
   REVIEW_SCALE_MAX,
+  isSystemPartner,
+  SYSTEM_PARTNER_TRADE_NAME,
 } from "./partner-profile";
 
-describe("toFiveStars — escala das avaliações", () => {
-  // A migração das avaliações do Bridge converte 1-5 → 0-10. Dividir por 2
-  // antes de ela correr mostraria 2,15★ onde há 4,3★ — desinforma. Por isso
-  // a constante fica em 5 e passa a 10 numa linha, DEPOIS do SQL.
-  it("na escala actual (5) devolve o valor tal como está", () => {
-    expect(REVIEW_SCALE_MAX).toBe(5);
-    expect(toFiveStars(4.3)).toBe(4.3);
-    expect(toFiveStars(5)).toBe(5);
+describe("toFiveStars — escala 0-10 é o canónico desde 26-07-2026", () => {
+  it("converte a escala guardada para as 5 estrelas que se mostram", () => {
+    expect(REVIEW_SCALE_MAX).toBe(10);
+    expect(toFiveStars(10)).toBe(5);   // 5 estrelas
+    expect(toFiveStars(8.6)).toBe(4.3);
+    expect(toFiveStars(6)).toBe(3);    // "razoável"
+    expect(toFiveStars(2)).toBe(1);
+  });
+
+  it("o limiar de suspensão (média < 4/10) corresponde a 2 estrelas", () => {
+    // Três clientes a dar 3 estrelas gravam 6/10 e NÃO suspendem —
+    // era isto que a escala errada partia
+    expect(toFiveStars(6)).toBe(3);
+    expect(toFiveStars(4)).toBe(2);
   });
 
   it("arredonda a uma casa decimal", () => {
-    expect(toFiveStars(4.26)).toBe(4.3);
+    expect(toFiveStars(8.52)).toBe(4.3);
   });
 
   it("valores inválidos não rebentam", () => {
     expect(toFiveStars(null)).toBeNull();
     expect(toFiveStars(undefined)).toBeNull();
     expect(toFiveStars(NaN)).toBeNull();
+  });
+});
+
+describe("isSystemPartner — a linha técnica não é um profissional", () => {
+  // Se aparecesse nas listagens entrava na fila de aprovação, e o gatilho
+  // que a protege devolvia um erro sem contexto ao administrador.
+  it("reconhece pela coluna is_system", () => {
+    expect(isSystemPartner({ is_system: true, trade_name: "Outro nome" })).toBe(true);
+  });
+
+  it("reconhece pelo nome enquanto a coluna não existir", () => {
+    expect(isSystemPartner({ trade_name: SYSTEM_PARTNER_TRADE_NAME })).toBe(true);
+    expect(isSystemPartner({ trade_name: `  ${SYSTEM_PARTNER_TRADE_NAME}  ` })).toBe(true);
+  });
+
+  it("não confunde profissionais reais", () => {
+    expect(isSystemPartner({ trade_name: "Silva & Filhos", is_system: false })).toBe(false);
+    expect(isSystemPartner({ trade_name: "CLYON Mudanças" })).toBe(false);
+    expect(isSystemPartner({})).toBe(false);
+    expect(isSystemPartner(null)).toBe(false);
   });
 });
 

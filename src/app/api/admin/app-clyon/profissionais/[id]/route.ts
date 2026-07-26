@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   verificationState, publicDescriptionState,
   validateProfilePatch, statusSideEffects,
-  PARTNER_STATUSES, type PartnerStatus, toFiveStars,
+  PARTNER_STATUSES, type PartnerStatus, toFiveStars, isSystemPartner,
 } from "@/lib/partner-profile";
 
 export const runtime = "nodejs";
@@ -80,6 +80,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const sb = getSupabaseAdmin();
     const data = await loadPartner(sb, id);
     if (!data) return NextResponse.json({ error: "Profissional não encontrado." }, { status: 404 });
+    if (isSystemPartner(data.partner)) {
+      return NextResponse.json({
+        error: "Esta linha é o titular de espera das reservas da CLYON, não um profissional — não tem ficha para gerir.",
+      }, { status: 400 });
+    }
 
     const { partner, profile, services, docs, bookings, reviews } = data;
     const verif = verificationState(partner.status as string, docs as never);
@@ -128,6 +133,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .from("partner_profiles").select("*").eq("id", id).single();
     if (fetchErr || !current) {
       return NextResponse.json({ error: "Profissional não encontrado." }, { status: 404 });
+    }
+
+    if (isSystemPartner(current as Record<string, unknown>)) {
+      return NextResponse.json({
+        error: "O titular de espera das reservas não é um profissional real e não pode ser aprovado, suspenso nem editado.",
+      }, { status: 400 });
     }
 
     const check = validateProfilePatch(patchInput);

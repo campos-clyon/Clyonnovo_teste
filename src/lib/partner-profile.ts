@@ -26,17 +26,32 @@ export const PARTNER_STATUS_LABELS: Record<PartnerStatus, string> = {
 };
 
 /**
- * Escala em que `reviews.rating` está guardado.
+ * Escala em que `reviews.rating` está guardado: **0-10 é o canónico**.
  *
- * ⚠️ A migração das avaliações do Bridge converte a escala de 1-5 para 0-10
- * ("a app recolhe 5 estrelas e multiplica por 2; mostrar sempre rating/2").
- * Enquanto ESSA migração não correr, os valores continuam em 1-5.
+ * A app recolhe 5 estrelas e multiplica por 2 ao gravar. A migração
+ * `20260725190000_perfis_e_avaliacoes.sql` — aplicada em produção a
+ * 26-07-2026 — converteu também as linhas antigas.
  *
- * Dividir por 2 antes de a migração correr mostraria 2,15★ onde há 4,3★ —
- * pior do que mostrar 8,6★ depois, porque desinforma em vez de só ficar feio.
- * Por isso a constante fica em 5 e passa a 10 numa linha, depois do SQL.
+ * `quality_rating`, `punctuality_rating` e `communication_rating` seguem a
+ * mesma escala.
  */
-export const REVIEW_SCALE_MAX: 5 | 10 = 5;
+export const REVIEW_SCALE_MAX: 5 | 10 = 10;
+
+/**
+ * Linha técnica da CLYON em `partner_profiles`: o titular das reservas criadas
+ * no checkout antes de haver profissional atribuído. NÃO é um profissional.
+ *
+ * A coluna `is_system` só existe depois da migração `20260726100000`; até lá
+ * o nome comercial é o único marcador. Testar os dois torna a exclusão
+ * correcta antes e depois do SQL correr.
+ */
+export const SYSTEM_PARTNER_TRADE_NAME = "CLYON — por atribuir";
+
+export function isSystemPartner(row: Record<string, unknown> | null | undefined): boolean {
+  if (!row) return false;
+  if (row.is_system === true) return true;
+  return String(row.trade_name ?? "").trim() === SYSTEM_PARTNER_TRADE_NAME;
+}
 
 /** Converte uma avaliação guardada para a escala de 5 estrelas que se mostra. */
 export function toFiveStars(rating: number | null | undefined): number | null {

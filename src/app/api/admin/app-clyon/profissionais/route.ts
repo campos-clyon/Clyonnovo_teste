@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { verificationState, publicDescriptionState, toFiveStars } from "@/lib/partner-profile";
+import { verificationState, publicDescriptionState, toFiveStars, isSystemPartner } from "@/lib/partner-profile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +49,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: `Erro ao carregar profissionais: ${error.message}` }, { status: 500 });
     }
 
-    const rows = (partners ?? []) as Array<Record<string, unknown>>;
+    // A linha técnica "CLYON — por atribuir" NÃO é um profissional: é o
+    // titular das reservas criadas no checkout antes de haver profissional
+    // atribuído. Se aparecesse aqui, entrava na fila de aprovação e o
+    // administrador levava um erro sem contexto do gatilho que a protege.
+    const rows = ((partners ?? []) as Array<Record<string, unknown>>)
+      .filter((r) => !isSystemPartner(r));
     if (rows.length === 0) {
       return NextResponse.json({ profiles: [], stats: { total: 0, approved: 0, pending: 0, docs_pending: 0, sem_descricao: 0 } });
     }
