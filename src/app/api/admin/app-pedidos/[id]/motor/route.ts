@@ -178,26 +178,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const cobradoReal = toNum(body.valor_cobrado_real);
       const divergencia = cobradoReal !== null && cobradoReal !== executed ? cobradoReal : null;
 
-      // Ajustes aprovados no local — isolam o erro de MEDIÇÃO
+      // Ajustes aprovados no local — isolam o erro de MEDIÇÃO.
+      //
+      // ⚠️ CORRIGIDO 26-07-2026: a fórmula SUM(suggested_amount −
+      // estimated_price) que eu tinha (e que assinalei como suspeita) dá
+      // sempre 0. `suggested_amount` é o TOTAL corrigido, e o ajuste
+      // SOBRESCREVE estimated_price — deduzir depois é reconstruir
+      // informação já deitada fora. Existe agora `amount_delta`, que é o
+      // acréscimo real de cada ajuste.
       let ajustesTotal: number | null = null;
       let ajustesContagem: number | null = null;
       try {
-        const [{ data: adjustments }, { data: sr }] = await Promise.all([
-          sb.from("service_adjustments").select("suggested_amount, status").eq("request_id", id).eq("status", "approved"),
-          sb.from("service_requests").select("estimated_price").eq("id", id).single(),
-        ]);
-        const base = toNum((sr as Record<string, unknown> | null)?.estimated_price) ?? 0;
-        const aprovados = (adjustments ?? []) as Array<Record<string, unknown>>;
-        if (aprovados.length > 0) {
-          ajustesContagem = aprovados.length;
-          // Fórmula da nota (§5): SUM(suggested_amount − estimated_price).
-          // ⚠️ Se `suggested_amount` for o TOTAL corrigido (e não o delta),
-          // dois ajustes no mesmo pedido subtraem a base duas vezes e o total
-          // fica inflacionado. Assinalado ao Bridge; mantida a fórmula do
-          // contrato até haver resposta — divergir em silêncio seria pior.
-          ajustesTotal = Math.round(
-            aprovados.reduce((s, a) => s + ((toNum(a.suggested_amount) ?? 0) - base), 0) * 100,
-          ) / 100;
+        const { data: adjustments, error: adjErr } = await sb
+          .from("service_adjustments")
+          .select("amount_delta, amount_before, suggested_amount, status")
+          .eq("request_id", id).eq("status", "approved");
+
+        if (adjErr && /column .* does not exist/i.test(adjErr.message ?? "")) {
+          // Colunas novas ainda não existem — não inventar um valor errado
+          console.warn("[motor] amount_delta indisponível; ajustes não decompostos", { id });
+        } else {
+          const aprovados = (adjustments ?? []) as Array<Record<string, unknown>>;
+          if (aprovados.length > 0) {
+            ajustesContagem = aprovados.length;
+            ajustesTotal = Math.round(
+              aprovados.reduce((s, a) => s + (toNum(a.amount_delta) ?? 0), 0) * 100,
+            ) / 100;
+          }
         }
       } catch (e) {
         console.warn("[motor] ajustes não calculados", { id, e });

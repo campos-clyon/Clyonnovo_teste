@@ -3390,6 +3390,178 @@ function fmtMoney(v: number, cur = "EUR") {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: cur }).format(v);
 }
 
+// ── Reconciliação de referências de pagamento ─────────────────────────────
+// O cliente escreve a referência na descrição da transferência ou do MB WAY.
+// Ela aparece no extracto bancário e é por aí que o operador chega ao pedido.
+type PaymentRef = {
+  id: string | null;
+  reference: string | null;
+  method: string;
+  method_label: string;
+  amount: number | null;
+  created_at: string | null;
+  request_id: string | null;
+  request_status: string | null;
+  client_name: string | null;
+  client_phone: string | null;
+  account_code: string | null;
+  conciliado: boolean;
+  pago_em: string | null;
+  valor_recebido: number | null;
+  divergencia_valor: number | null;
+};
+
+function ReconciliacaoReferencias({
+  authHeader, onAbrirPedido,
+}: {
+  authHeader: Record<string, string>;
+  onAbrirPedido?: (id: string) => void;
+}) {
+  const [refs, setRefs] = useState<PaymentRef[]>([]);
+  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, com_divergencia: 0 });
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [q, setQ] = useState("");
+  const [aberto, setAberto] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true); setNotice(null);
+    try {
+      const url = q
+        ? `/api/admin/app-clyon/referencias?q=${encodeURIComponent(q)}`
+        : "/api/admin/app-clyon/referencias";
+      const res = await fetch(url, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setNotice(json.error ?? "Erro ao carregar referências."); return; }
+      if (json.unavailable) { setNotice(json.notice ?? null); setRefs([]); return; }
+      setRefs(json.references ?? []);
+      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, com_divergencia: 0 });
+    } catch { setNotice("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, q]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="rounded-2xl border border-[#00BDEB]/20 bg-[#00BDEB]/[0.03] p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Reconciliação de pagamentos</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            Cola a referência do extracto bancário para chegar ao pedido.
+          </p>
+        </div>
+        <button onClick={() => setAberto((v) => !v)}
+          className="rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40">
+          {aberto ? "Recolher" : "Abrir"}
+        </button>
+      </div>
+
+      {aberto && (
+        <>
+          {notice && (
+            <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-[11px] text-amber-300">
+              {notice}
+            </p>
+          )}
+
+          <form onSubmit={(e) => { e.preventDefault(); setQ(busca.trim()); }} className="mt-3 flex gap-2">
+            <input value={busca} onChange={(e) => setBusca(e.target.value.toUpperCase())}
+              placeholder="Referência do extracto — ex: AAABD07"
+              className="h-9 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 font-mono text-sm uppercase tracking-wider text-white outline-none focus:border-cyan-400" />
+            <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30">Procurar</button>
+            {q && <button type="button" onClick={() => { setBusca(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
+          </form>
+
+          {!notice && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] text-slate-400">{stats.total} referências</span>
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-300">{stats.conciliadas} conciliadas</span>
+              <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] text-amber-300">{stats.por_conciliar} por conciliar</span>
+              {stats.com_divergencia > 0 && (
+                <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-[10px] text-red-300">{stats.com_divergencia} com valor divergente</span>
+              )}
+            </div>
+          )}
+
+          {loading ? (
+            <p className="mt-3 text-xs text-slate-500">A carregar…</p>
+          ) : refs.length === 0 ? (
+            <p className="mt-3 text-xs text-slate-600">{q ? "Nenhuma referência encontrada." : "Ainda não há referências emitidas."}</p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/[0.08] text-[10px] uppercase tracking-wider text-slate-500">
+                    <th className="py-2 pr-3">Referência</th>
+                    <th className="py-2 pr-3">Cliente</th>
+                    <th className="py-2 pr-3">Método</th>
+                    <th className="py-2 pr-3 text-right">Valor</th>
+                    <th className="py-2 pr-3">Estado</th>
+                    <th className="py-2">Pedido</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refs.map((r) => (
+                    <tr key={String(r.id ?? r.reference)} className="border-b border-white/[0.04]">
+                      <td className="py-2 pr-3">
+                        <span className="font-mono text-sm font-bold tracking-wider text-white">{r.reference ?? "—"}</span>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <p className="text-slate-300">{r.client_name ?? "—"}</p>
+                        {r.account_code && (
+                          <span className="font-mono text-[10px] text-slate-600">{r.account_code}</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-slate-400">{r.method_label}</td>
+                      <td className="py-2 pr-3 text-right">
+                        <span className="text-slate-200">{r.amount != null ? fmtMoney(r.amount) : "—"}</span>
+                        {r.divergencia_valor !== null && (
+                          <p className="text-[10px] text-red-300">
+                            recebido {fmtMoney(r.valor_recebido ?? 0)} ({r.divergencia_valor > 0 ? "+" : ""}{fmtMoney(r.divergencia_valor)})
+                          </p>
+                        )}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {r.conciliado ? (
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                            Recebido{r.pago_em ? ` · ${new Date(r.pago_em).toLocaleDateString("pt-PT")}` : ""}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">Por conciliar</span>
+                        )}
+                      </td>
+                      <td className="py-2">
+                        {r.request_id ? (
+                          <button onClick={() => onAbrirPedido?.(r.request_id!)}
+                            className="font-mono text-[11px] text-[#00BDEB] hover:underline">
+                            #{r.request_id.slice(0, 8)}
+                          </button>
+                        ) : "—"}
+                        {r.request_status && (
+                          <p className="text-[10px] text-slate-600">{STATUS_LABELS[r.request_status] ?? r.request_status}</p>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+            &ldquo;Recebido&rdquo; é <span className="text-slate-500">derivado</span> de um pagamento já
+            capturado para o mesmo pedido — não há ainda uma marca de conciliação própria.
+            Dados de recebimento: MB WAY/Revolut <span className="text-slate-400">931632622</span> ·
+            IBAN <span className="text-slate-400">LT72 3250 0157 4466 0473</span>
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<PagamentosData | null>(null);
@@ -3437,6 +3609,9 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
 
   return (
     <div className="space-y-5">
+      {/* Reconciliação primeiro: é o trabalho diário, os relatórios vêm depois */}
+      <ReconciliacaoReferencias authHeader={authHeader} />
+
       <div className="flex items-center gap-1.5 flex-wrap">
         {[7, 30, 90, 180].map((d) => (
           <button
@@ -3550,6 +3725,8 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
 // ── Contas (clientes app) ─────────────────────────────────────────────────
 type ClientAccount = {
   id: string; full_name: string | null; email: string | null; phone: string | null;
+  // Codigo publico e permanente da conta — entra nas referencias de pagamento
+  account_code?: string | null;
   created_at: string; orders_count: number; last_order_at: string | null; active_30d: boolean;
 };
 type AccountsStats = { total: number; active_30d: number; no_orders: number };
@@ -3603,7 +3780,7 @@ function TabContas({ authHeader }: { authHeader: Record<string, string> }) {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Pesquisar por nome ou e-mail…"
+          placeholder="Pesquisar por nome, e-mail, telefone ou código de conta…"
           className="flex-1 h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-400"
         />
         <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30 transition">Pesquisar</button>
@@ -3620,8 +3797,15 @@ function TabContas({ authHeader }: { authHeader: Record<string, string> }) {
                 {(a.full_name ?? a.email ?? "?").charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{a.full_name ?? "—"}</p>
-                <p className="text-xs text-slate-500 truncate">{a.email ?? "—"} {a.phone ? `· ${a.phone}` : ""}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-medium text-white">{a.full_name ?? "—"}</p>
+                  {a.account_code && (
+                    <span className="rounded bg-[#00BDEB]/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-[#00BDEB]">
+                      {a.account_code}
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-xs text-slate-500">{a.email ?? "—"} {a.phone ? `· ${a.phone}` : ""}</p>
               </div>
               <div className="hidden sm:block text-right flex-shrink-0">
                 <p className="text-xs font-bold text-white">{a.orders_count}</p>

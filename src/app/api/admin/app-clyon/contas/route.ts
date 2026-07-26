@@ -20,18 +20,22 @@ export async function GET(req: NextRequest) {
 
     // Identificar partners para os excluir
     const partnerIds = new Set<string>();
-    const { data: pp } = await sb.from("partner_profiles").select("id");
-    for (const r of pp ?? []) if (r?.id) partnerIds.add(String(r.id));
+    // partner_profiles.id e a PK do PARCEIRO; o utilizador esta em user_id.
+    // Excluir por `id` deixava os profissionais na lista de clientes.
+    const { data: pp } = await sb.from("partner_profiles").select("user_id");
+    for (const r of pp ?? []) if (r?.user_id) partnerIds.add(String(r.user_id));
     const { data: roles } = await sb.from("user_roles").select("user_id, role").eq("role", "partner");
     for (const r of roles ?? []) if (r?.user_id) partnerIds.add(String(r.user_id));
 
     // Todos os profiles
     let query = sb
       .from("profiles")
-      .select("id, full_name, email, phone, created_at")
+      .select("id, full_name, email, phone, account_code, created_at")
       .order("created_at", { ascending: false })
       .limit(limit);
-    if (search) query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+    // account_code entra na pesquisa: e por ai que se chega ao cliente
+    // a partir de uma referencia de pagamento do extracto bancario.
+    if (search) query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,account_code.ilike.%${search}%`);
 
     const { data: profiles, error } = await query;
     if (error) return NextResponse.json({ accounts: [], stats: { total: 0, active_30d: 0, no_orders: 0 } });
@@ -67,6 +71,7 @@ export async function GET(req: NextRequest) {
         full_name: c.full_name ?? null,
         email: c.email ?? null,
         phone: c.phone ?? null,
+        account_code: c.account_code ?? null,
         created_at: c.created_at,
         orders_count: o.count,
         last_order_at: o.last,
