@@ -413,6 +413,35 @@ type MotorState = {
   notice?: string;
 };
 
+// ── Propostas de horário (tabela schedule_proposals do Bridge) ────────────
+// O profissional pode propor outra hora depois de aceitar. Uma proposta
+// `pending` significa que o pedido está à espera do CLIENTE — nada é
+// aplicado automaticamente, ao contrário dos ajustes de preço.
+type ScheduleProposal = {
+  id: string;
+  previous_for: string | null;
+  proposed_for: string;
+  reason: string | null;
+  status: "pending" | "accepted" | "rejected" | "canceled";
+  created_at: string;
+  responded_at: string | null;
+  partner_name: string | null;
+};
+
+type ScheduleState = {
+  proposals: ScheduleProposal[];
+  pending?: ScheduleProposal | null;
+  awaitingCustomer?: boolean;
+  unavailable?: boolean;
+};
+
+const SCHEDULE_STATUS_LABEL: Record<string, string> = {
+  pending:  "À espera do cliente",
+  accepted: "Aceite",
+  rejected: "Recusada",
+  canceled: "Substituída",
+};
+
 // ── Negociação de preço (tabela price_proposals do Bridge) ────────────────
 type ProposalRound = {
   id: string;
@@ -533,6 +562,7 @@ function PedidoInlinePanel({
 
   // ── Motor de preços (NOTA-BRIDGE-MOTOR §3.3 / §3.4) ────────────────────
   const [motor, setMotor] = useState<MotorState | null>(null);
+  const [horario, setHorario] = useState<ScheduleState | null>(null);
   const [execPrice, setExecPrice] = useState("");
   const [execCobradoReal, setExecCobradoReal] = useState("");
   const [execHoras, setExecHoras] = useState("");
@@ -544,11 +574,12 @@ function PedidoInlinePanel({
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [orderRes, opsRes, negoRes, motorRes] = await Promise.all([
+      const [orderRes, opsRes, negoRes, motorRes, horarioRes] = await Promise.all([
         fetch(`/api/admin/app-pedidos/${id}`, { headers: authHeader }),
         fetch(`/api/admin/app-clyon/pedidos/${id}/ops`, { headers: authHeader }),
         fetch(`/api/admin/app-pedidos/${id}/proposta`, { headers: authHeader }),
         fetch(`/api/admin/app-pedidos/${id}/motor`, { headers: authHeader }),
+        fetch(`/api/admin/app-pedidos/${id}/horario`, { headers: authHeader }),
       ]);
       const orderJson = await orderRes.json();
       if (!orderRes.ok) { setError(orderJson.error ?? "Erro ao carregar pedido."); return; }
@@ -559,6 +590,7 @@ function PedidoInlinePanel({
       setNego(negoRes.ok ? ((await negoRes.json()) as NegotiationState) : null);
       const m = motorRes.ok ? ((await motorRes.json()) as MotorState) : null;
       setMotor(m);
+      setHorario(horarioRes.ok ? ((await horarioRes.json()) as ScheduleState) : null);
       setProposalMessage("");
       // Pré-preencher a execução com o que já foi registado
       // Pré-preencher com o final_price — que já inclui os ajustes aplicados
@@ -930,6 +962,28 @@ function PedidoInlinePanel({
                   </p>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Proposta de horário à espera do cliente — não há tolerância
+              automática: uma hora ou serve ou não serve, e só ele sabe */}
+          {horario?.pending && (
+            <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.07] p-4">
+              <p className="text-sm font-bold text-violet-300">Nova hora proposta pelo profissional</p>
+              <div className="mt-2 flex flex-wrap items-baseline gap-3">
+                {horario.pending.previous_for && (
+                  <span className="text-sm text-slate-500 line-through">{fmtDt(horario.pending.previous_for)}</span>
+                )}
+                <span className="text-lg font-bold text-white">{fmtDt(horario.pending.proposed_for)}</span>
+              </div>
+              {horario.pending.reason && (
+                <p className="mt-1.5 text-xs italic leading-relaxed text-slate-300">&ldquo;{horario.pending.reason}&rdquo;</p>
+              )}
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                Proposta por <span className="text-white">{horario.pending.partner_name ?? "profissional"}</span> ·
+                à espera da decisão do cliente. <span className="text-white">A data agendada só muda se ele aceitar</span> —
+                não há aplicação automática como nos ajustes de preço.
+              </p>
             </div>
           )}
 
@@ -1493,6 +1547,43 @@ function PedidoInlinePanel({
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
               <p className="text-xs font-bold text-amber-300">Motor de preços indisponível</p>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{motor.notice}</p>
+            </div>
+          )}
+
+          {/* Histórico de propostas de horário */}
+          {horario && horario.proposals.length > 0 && (
+            <div className={CARD}>
+              <p className={CARD_TITLE}>Propostas de horário</p>
+              <div className="space-y-2">
+                {horario.proposals.map((sp) => (
+                  <div key={sp.id} className={`rounded-xl border p-3 ${
+                    sp.status === "pending" ? "border-violet-500/20 bg-violet-500/[0.05]" : "border-white/[0.06] bg-[#12263B]/50"
+                  }`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {sp.partner_name ?? "Profissional"}
+                      </span>
+                      <span className="text-[10px] text-slate-600">· {fmtDt(sp.created_at)}</span>
+                      <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        sp.status === "pending"  ? "bg-violet-500/15 text-violet-300"
+                        : sp.status === "accepted" ? "bg-emerald-500/15 text-emerald-300"
+                        : "bg-white/[0.06] text-slate-400"
+                      }`}>
+                        {SCHEDULE_STATUS_LABEL[sp.status] ?? sp.status}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 flex flex-wrap items-baseline gap-2">
+                      <span className="text-sm font-bold text-white">{fmtDt(sp.proposed_for)}</span>
+                      {sp.previous_for && (
+                        <span className="text-xs text-slate-600 line-through">{fmtDt(sp.previous_for)}</span>
+                      )}
+                    </p>
+                    {sp.reason && (
+                      <p className="mt-1 text-[11px] italic leading-relaxed text-slate-400">&ldquo;{sp.reason}&rdquo;</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
