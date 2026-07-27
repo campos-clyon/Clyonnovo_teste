@@ -102,9 +102,19 @@ export const DEPENDENCIAS: Dependencia[] = [
     usadoEm: "Confirmar um pagamento — é o que publica o pedido aos profissionais",
   },
   { nome: "processa_reservas_por_pagar", tipo: "funcao", argumentos: [], usadoEm: "Botão de processar prazos das reservas por pagar" },
-  { nome: "patch_request_with_audit", tipo: "funcao", usadoEm: "Alterar um pedido deixando rasto" },
-  { nome: "admin_send_price_proposal", tipo: "funcao", usadoEm: "Enviar proposta de preço ao cliente" },
-  { nome: "admin_accept_counter_proposal", tipo: "funcao", usadoEm: "Aceitar a contraproposta do cliente" },
+  {
+    nome: "patch_request_with_audit",
+    tipo: "funcao",
+    argumentos: [
+      "p_request_id", "p_updates", "p_colab_id", "p_colab_nome", "p_action_type",
+      "p_status_from", "p_status_to", "p_reason", "p_note", "p_data_json",
+    ],
+    // Sem ela o painel escreve o pedido e a auditoria em duas transacções, com
+    // uma janela em que podem divergir. É a migração 004 deste repositório.
+    usadoEm: "Alterar um pedido e gravar a auditoria no mesmo commit",
+  },
+  { nome: "admin_send_price_proposal", tipo: "funcao", argumentos: ["_request_id", "_amount", "_message"], usadoEm: "Enviar proposta de preço ao cliente" },
+  { nome: "admin_accept_counter_proposal", tipo: "funcao", argumentos: ["_request_id"], usadoEm: "Aceitar a contraproposta do cliente" },
 ];
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
