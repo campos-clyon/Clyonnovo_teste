@@ -8,20 +8,24 @@ export const dynamic = "force-dynamic";
 /**
  * Conciliação de pagamentos — referências emitidas pela app.
  *
- * Desde 27-07-2026 um pedido NÃO avança sozinho quando o cliente carrega em
- * "Pagar reserva": com MB WAY, Revolut e transferência o pagamento é
- * assíncrono, e nesse instante ainda não entrou dinheiro nenhum. O pedido
- * fica em `awaiting_deposit` até alguém confirmar que o dinheiro chegou —
- * e esse alguém é este ecrã.
+ * Um pedido NÃO avança sozinho quando o cliente carrega em "Pagar reserva":
+ * o pagamento é assíncrono e nesse instante ainda não entrou dinheiro nenhum.
+ * O pedido fica em `awaiting_deposit` até alguém confirmar que chegou — e
+ * confirmar é o que dispara a publicação aos profissionais.
  *
- * Confirmar é o que dispara a publicação aos profissionais. Sem isso, os
- * pedidos ficam parados para sempre.
+ * Desde 27-07-2026 há euPago: MB WAY e Multibanco confirmam-se sozinhos por
+ * webhook. Sobra a transferência bancária, que ninguém vê senão no extracto —
+ * é essa que este ecrã existe para destravar.
  */
 
 const METODO_LABEL: Record<string, string> = {
   mbway: "MB WAY", card: "Revolut", transfer: "Transferência", cash: "Dinheiro",
+  multibanco: "Multibanco", mb: "Multibanco",
   M: "MB WAY", R: "Revolut", T: "Transferência", D: "Dinheiro",
 };
+
+/** Métodos que a euPago fecha sozinha — aqui só aparecem para consulta. */
+const METODOS_AUTOMATICOS = new Set(["mbway", "multibanco", "mb", "M"]);
 
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
@@ -49,7 +53,7 @@ export async function GET(req: NextRequest) {
       if (error.code === "42P01" || /relation .* does not exist/i.test(error.message ?? "")) {
         return NextResponse.json({
           references: [], unavailable: true,
-          notice: "A vista payment_reconciliation ainda não existe nesta base — aplica a migração 20260727100000.",
+          notice: "A vista payment_reconciliation não existe nesta base. A migração 20260727100000 cria-a — confirma que foi aplicada neste ambiente e não só noutro.",
         });
       }
       console.error("[referencias]", error);
@@ -75,9 +79,22 @@ export async function GET(req: NextRequest) {
       request_id:       r.request_id ?? null,
       estado_do_pedido: r.estado_do_pedido ?? null,
       category_slug:    r.category_slug ?? null,
+      confirmado_por:   r.confirmado_por ?? null,
+      provider:         r.provider ?? null,
+      entidade:         r.entidade ?? null,
+      referencia_mb:    r.referencia_mb ?? null,
+      comissao:         r.comissao != null ? Number(r.comissao) : null,
+      expires_at:       r.expires_at ?? null,
+      // Quem tem provider fecha-se por webhook. O método é só a intenção do
+      // cliente; o provider é quem de facto vai confirmar — e manda.
+      automatico:       r.provider != null
+        ? String(r.provider) === "eupago"
+        : METODOS_AUTOMATICOS.has(String(r.method ?? "")),
     }));
 
     const porConciliar = references.filter((r) => !r.conciliada);
+    // O que realmente exige trabalho humano: pendentes que a euPago não fecha
+    const manuais = porConciliar.filter((r) => !r.automatico);
 
     return NextResponse.json({
       references,
@@ -85,6 +102,7 @@ export async function GET(req: NextRequest) {
         total: references.length,
         conciliadas: references.length - porConciliar.length,
         por_conciliar: porConciliar.length,
+        a_aguardar_operador: manuais.length,
         // Dinheiro à espera de confirmação — é o que trava a publicação
         valor_por_conciliar: Math.round(
           porConciliar.reduce((s, r) => s + (r.valor_esperado ?? 0), 0) * 100,
@@ -97,6 +115,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Erro interno." }, { status: 500 });
   }
 }
+
+/**
+ * A função é `painel_confirmar_pagamento` — a variante que não precisa de
+ * `auth.uid()`, porque o admin do painel é um colaborador do MySQL e não um
+ * utilizador Supabase. Não está concedida a `authenticated`: quem verifica a
+ * identidade somos nós, aqui no servidor, antes de chegar a este ponto.
+ *
+ * A ordem dos argumentos é conhecida (referência, quem confirma, valor,
+ * quando, nota) mas o PostgREST só aceita nomes. Tentamos os nomes prováveis
+ * e ficamos com o que a base aceitar — se nenhum servir, devolvemos a
+ * assinatura real que o PostgREST indica, em vez de um erro cego.
+ */
+const CANDIDATOS_RPC: Array<[string, string, string, string, string]> = [
+  ["p_reference", "p_confirmado_por", "p_valor", "p_pago_em", "p_nota"],
+  ["p_reference", "p_confirmed_by_staff", "p_valor", "p_pago_em", "p_nota"],
+  ["p_reference", "p_staff", "p_valor", "p_pago_em", "p_nota"],
+];
+let assinaturaRpc: (typeof CANDIDATOS_RPC)[number] | null = null;
 
 /** Confirma que o dinheiro chegou — e é isto que publica o pedido. */
 export async function POST(req: NextRequest) {
@@ -125,37 +161,39 @@ export async function POST(req: NextRequest) {
   try {
     const sb = getSupabaseAdmin();
 
-    // A nota leva quem confirmou: o painel autentica com JWT de colaborador
-    // (MySQL), não com um utilizador Supabase — não há auth.uid() para
-    // preencher `confirmed_by`. Até existir um parâmetro _admin_id, o rasto
-    // fica aqui e no admin_audit_log.
     const notaBase = typeof body.nota === "string" ? body.nota.trim() : "";
-    const nota = notaBase
-      ? `${notaBase} — confirmado por ${colab!.nome} (#${colab!.id})`
-      : `Confirmado por ${colab!.nome} (#${colab!.id})`;
+    // Vai para `confirmed_by_staff` (texto). O id do colaborador é um inteiro
+    // do MySQL e não cabe no `confirmed_by` uuid — este é o rasto que fica.
+    const staff = `${colab!.nome} (#${colab!.id})`;
 
-    const { data, error } = await sb.rpc("admin_confirmar_pagamento", {
-      p_reference: reference,
-      p_valor: valor,
-      p_pago_em: body.pago_em ?? null,
-      p_nota: nota,
-    });
+    const ordem = assinaturaRpc ? [assinaturaRpc] : CANDIDATOS_RPC;
+    let data: unknown = null;
+    let error: { code?: string; message?: string; hint?: string } | null = null;
+
+    for (const nomes of ordem) {
+      const [pRef, pStaff, pValor, pQuando, pNota] = nomes;
+      const res = await sb.rpc("painel_confirmar_pagamento", {
+        [pRef]: reference,
+        [pStaff]: staff,
+        [pValor]: valor,
+        [pQuando]: body.pago_em ?? null,
+        [pNota]: notaBase || null,
+      });
+      // PGRST202 aqui significa "nenhuma função com estes nomes de argumento"
+      if (res.error?.code === "PGRST202") { error = res.error; continue; }
+      assinaturaRpc = nomes;
+      data = res.data; error = res.error;
+      break;
+    }
 
     if (error) {
       const msg = error.message ?? "";
 
-      // Bloqueio conhecido: a função exige has_role(auth.uid(), 'admin') e o
-      // painel chama com service_role, onde auth.uid() é NULL.
-      if (error.code === "42501" || /administrador pode confirmar|auth\.uid/i.test(msg)) {
+      if (error.code === "PGRST202") {
+        console.error("[referencias POST] nomes de argumento não encontrados", error);
         return NextResponse.json({
-          error: "A base recusou a confirmação por falta de identidade de administrador. O painel autentica com um JWT de colaborador (não é um utilizador Supabase), por isso auth.uid() é NULL. É preciso a variante da função que aceita o id do admin por parâmetro.",
-          needs_admin_id_param: true,
-        }, { status: 501 });
-      }
-
-      if (error.code === "PGRST202" || /function .* does not exist/i.test(msg)) {
-        return NextResponse.json({
-          error: "A função admin_confirmar_pagamento ainda não existe nesta base — aplica a migração 20260727100000.",
+          error: "A base não reconheceu os nomes dos argumentos de painel_confirmar_pagamento. O PostgREST só aceita argumentos por nome, e a nota do Bridge deu-os por posição.",
+          hint: error.hint ?? null,
         }, { status: 503 });
       }
 

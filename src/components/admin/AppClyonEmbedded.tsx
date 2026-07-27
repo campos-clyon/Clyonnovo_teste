@@ -3391,10 +3391,10 @@ function fmtMoney(v: number, cur = "EUR") {
 }
 
 // ── Conciliação de pagamentos ─────────────────────────────────────────────
-// Desde 27-07-2026 um pedido NÃO avança sozinho quando o cliente carrega em
-// "Pagar reserva": com MB WAY, Revolut e transferência o dinheiro é
-// assíncrono. O pedido fica em "Aguarda depósito" até alguém confirmar aqui —
-// e é essa confirmação que o publica aos profissionais.
+// Um pedido não avança quando o cliente carrega em "Pagar reserva" — fica em
+// "Aguarda depósito" até o dinheiro chegar. Com a euPago (27-07-2026) o MB WAY
+// e o Multibanco fecham-se sozinhos por webhook; sobra a transferência
+// bancária, que ninguém vê senão no extracto. É essa que se destrava aqui.
 type PaymentRef = {
   reference: string | null;
   method: string;
@@ -3411,11 +3411,18 @@ type PaymentRef = {
   request_id: string | null;
   estado_do_pedido: string | null;
   category_slug: string | null;
+  confirmado_por: string | null;
+  provider: string | null;
+  entidade: string | null;
+  referencia_mb: string | null;
+  comissao: number | null;
+  expires_at: string | null;
+  automatico: boolean;
 };
 
 function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, string> }) {
   const [refs, setRefs] = useState<PaymentRef[]>([]);
-  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, valor_por_conciliar: 0, com_divergencia: 0 });
+  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, valor_por_conciliar: 0, com_divergencia: 0 });
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -3439,7 +3446,7 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
       if (!res.ok) { setNotice(json.error ?? "Erro ao carregar."); return; }
       if (json.unavailable) { setNotice(json.notice ?? null); setRefs([]); return; }
       setRefs(json.references ?? []);
-      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, valor_por_conciliar: 0, com_divergencia: 0 });
+      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, valor_por_conciliar: 0, com_divergencia: 0 });
     } catch { setNotice("Erro de ligação."); }
     finally { setLoading(false); }
   }, [authHeader, q, soPendentes]);
@@ -3476,13 +3483,18 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
           <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
             Cola a referência do extracto para encontrar o pedido. <span className="text-white">Confirmar
             o pagamento é o que publica o trabalho aos profissionais</span> — sem isso fica parado
-            em Aguarda depósito.
+            em Aguarda depósito. MB WAY e Multibanco fecham-se sozinhos pela euPago.
           </p>
         </div>
         {stats.por_conciliar > 0 && (
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-right">
             <p className="text-lg font-bold text-amber-300">{fmtMoney(stats.valor_por_conciliar)}</p>
-            <p className="text-[10px] text-amber-200/70">{stats.por_conciliar} por conciliar</p>
+            <p className="text-[10px] text-amber-200/70">
+              {stats.por_conciliar} por conciliar
+              {stats.a_aguardar_operador > 0 && stats.a_aguardar_operador !== stats.por_conciliar
+                ? ` · ${stats.a_aguardar_operador} contigo`
+                : ""}
+            </p>
           </div>
         )}
       </div>
@@ -3526,7 +3538,9 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
             const divergente = r.diferenca != null && Math.abs(r.diferenca) > 0.01;
             return (
               <div key={String(r.reference)} className={`rounded-xl border p-3 ${
-                r.conciliada ? "border-white/[0.06] bg-[#12263B]/40" : "border-amber-500/20 bg-amber-500/[0.04]"
+                r.conciliada ? "border-white/[0.06] bg-[#12263B]/40"
+                  : r.automatico ? "border-white/[0.08] bg-[#12263B]/40"
+                  : "border-amber-500/20 bg-amber-500/[0.04]"
               }`}>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="font-mono text-base font-bold tracking-wider text-white">{r.reference ?? "—"}</span>
@@ -3534,6 +3548,10 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
                   {r.conciliada ? (
                     <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
                       Recebido{r.paid_at ? ` · ${new Date(r.paid_at).toLocaleDateString("pt-PT")}` : ""}
+                    </span>
+                  ) : r.automatico ? (
+                    <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-300">
+                      A aguardar euPago
                     </span>
                   ) : (
                     <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">Por conciliar</span>
@@ -3558,9 +3576,25 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
                       {STATUS_LABELS[r.estado_do_pedido] ?? r.estado_do_pedido}
                     </span>
                   )}
+                  {/* Referência Multibanco: é o que o cliente digita no ATM */}
+                  {r.entidade && r.referencia_mb && (
+                    <span className="font-mono text-[10px] text-slate-400">
+                      MB {r.entidade} · {r.referencia_mb}
+                    </span>
+                  )}
+                  {r.confirmado_por && <span>por {r.confirmado_por}</span>}
+                  {r.comissao != null && r.comissao > 0 && <span>comissão {fmtMoney(r.comissao)}</span>}
                 </div>
 
-                {!r.conciliada && (
+                {!r.conciliada && r.automatico && (
+                  <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                    Confirma-se sozinha quando a euPago avisar
+                    {r.expires_at ? ` — a referência expira a ${new Date(r.expires_at).toLocaleDateString("pt-PT")}` : ""}.
+                    Só confirmes à mão se o dinheiro entrou e o webhook falhou.
+                  </p>
+                )}
+
+                {!r.conciliada && !r.automatico && (
                   estaAberta ? (
                     <div className="mt-3 rounded-lg border border-white/[0.07] bg-[#0C1C2E] p-3">
                       <div className="grid gap-2 sm:grid-cols-2">
