@@ -68,18 +68,41 @@ export async function GET(req: NextRequest) {
       ).length;
     } catch { /* tabela pode não existir */ }
 
-    // Pedidos recentes (últimos 10, abertos ou urgentes)
-    const recent = rows
+    // Pedidos que esperam por alguém. Ordenados pelo mais parado primeiro:
+    // uma lista de trabalho responde "o que atendo já", e o que está há mais
+    // tempo à espera é o que arrisca mais.
+    const aEsperar = rows
       .filter((r) => OPEN_STATUSES.includes(r.status) || r.urgency === "urgent")
-      .slice(0, 10)
-      .map((r) => ({
+      .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
+      .slice(0, 10);
+
+    // O nome do cliente vem de `profiles.full_name`. A lista mostrava sempre
+    // "—" porque lia um campo que a API nunca chegou a devolver.
+    const clienteIds = [...new Set(aEsperar.map((r) => r.customer_id).filter(Boolean))];
+    const clientes: Record<string, { full_name: string | null; phone: string | null }> = {};
+    if (clienteIds.length > 0) {
+      const { data: perfis } = await sb
+        .from("profiles").select("id, full_name, phone").in("id", clienteIds);
+      for (const p of perfis ?? []) clientes[p.id] = { full_name: p.full_name, phone: p.phone };
+    }
+
+    const recent = aEsperar.map((r) => {
+      const criado = r.created_at ? new Date(r.created_at).getTime() : null;
+      return {
         id: r.id,
         slug: r.category_slug,
         status: r.status,
         urgency: r.urgency,
         created_at: r.created_at,
         scheduled_for: r.scheduled_for,
-      }));
+        client_name: clientes[r.customer_id]?.full_name ?? null,
+        // gatePrice: o extremo inferior, quando o preço ainda é um intervalo
+        valor: gatePrice(r as never),
+        price_status: r.price_status ?? null,
+        // Horas à espera — é isto que ordena o trabalho, não a ordem alfabética
+        horas_a_espera: criado ? Math.floor((Date.now() - criado) / 3_600_000) : null,
+      };
+    });
 
     return NextResponse.json({
       stats: {

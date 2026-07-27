@@ -426,3 +426,49 @@ describe("safeText — normalizador API para campos de texto", () => {
     expect(safeText(["a", "b"])).toBe("a, b");
   });
 });
+
+// ── 7. Fila de trabalho da visão geral ─────────────────────────────────────
+// A lista mostrava o nome do cliente a partir de `profiles.name`, um campo
+// que a API nunca devolveu — daí o traço em todas as linhas.
+function haQuantoTempo(horas: number | null): string {
+  if (horas === null) return "";
+  if (horas < 1) return "agora mesmo";
+  if (horas < 24) return `há ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return `há ${dias} dia${dias === 1 ? "" : "s"}`;
+}
+
+describe("haQuantoTempo — o tempo à espera lê-se de relance", () => {
+  it("menos de uma hora não inventa números", () => {
+    expect(haQuantoTempo(0)).toBe("agora mesmo");
+  });
+
+  it("horas dentro do primeiro dia", () => {
+    expect(haQuantoTempo(3)).toBe("há 3 h");
+    expect(haQuantoTempo(23)).toBe("há 23 h");
+  });
+
+  it("passa a dias às 24 h, no singular", () => {
+    expect(haQuantoTempo(24)).toBe("há 1 dia");
+    expect(haQuantoTempo(47)).toBe("há 1 dia");
+    expect(haQuantoTempo(48)).toBe("há 2 dias");
+  });
+
+  it("sem data não afirma nada", () => {
+    expect(haQuantoTempo(null)).toBe("");
+  });
+});
+
+describe("ordenação da fila — o mais parado primeiro", () => {
+  it("o pedido mais antigo encabeça a lista", () => {
+    const rows = [
+      { id: "b", created_at: "2026-07-20T10:00:00Z" },
+      { id: "a", created_at: "2026-07-18T10:00:00Z" },
+      { id: "c", created_at: "2026-07-25T10:00:00Z" },
+    ];
+    const ordenado = [...rows].sort((x, y) =>
+      String(x.created_at ?? "").localeCompare(String(y.created_at ?? "")),
+    );
+    expect(ordenado.map((r) => r.id)).toEqual(["a", "b", "c"]);
+  });
+});

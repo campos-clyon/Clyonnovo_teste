@@ -1867,10 +1867,28 @@ type VisaoGeral = {
     cancelled: number; urgent: number; unassigned: number; scheduledToday: number;
     new7d?: number; revenue30d?: number; partnersActive?: number;
   };
-  recent: Array<{ id: string; slug: string; status: string; created_at: string; profiles?: { name?: string } | null }>;
+  recent: Array<{
+    id: string; slug: string; status: string; urgency: string; created_at: string;
+    scheduled_for: string | null; client_name: string | null;
+    valor: number | null; price_status: string | null; horas_a_espera: number | null;
+  }>;
 };
 
-function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
+/** "há 3 h", "há 2 dias" — o número cru não diz se é urgente. */
+function haQuantoTempo(horas: number | null): string {
+  if (horas === null) return "";
+  if (horas < 1) return "agora mesmo";
+  if (horas < 24) return `há ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return `há ${dias} dia${dias === 1 ? "" : "s"}`;
+}
+
+function TabVisaoGeral({
+  authHeader, onAbrirPedido,
+}: {
+  authHeader: Record<string, string>;
+  onAbrirPedido?: (id: string) => void;
+}) {
   const [data, setData] = useState<VisaoGeral | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1921,6 +1939,21 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
         ))}
       </div>
 
+      {/* Dois números que só dizem alguma coisa juntos: pedidos à espera de
+          profissional e nenhum profissional disponível é risco de execução,
+          não duas contagens independentes. */}
+      {stats.unassigned > 0 && (stats.partnersActive ?? 0) === 0 && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3">
+          <p className="text-xs font-semibold text-amber-300">
+            {stats.unassigned} pedido{stats.unassigned === 1 ? "" : "s"} à espera de profissional, e nenhum disponível agora.
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+            Ninguém os vai aceitar enquanto isto se mantiver. Vale a pena ver os
+            profissionais dessa zona — conta disponível, documentos válidos, categoria activa.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cards.map((c) => (
           <div key={c.label} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4">
@@ -1932,18 +1965,48 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
       {recent.length > 0 && (
         <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.02]">
           <div className="border-b border-white/[0.05] px-4 py-3">
-            <p className="text-xs font-semibold text-slate-400">Pedidos recentes — abertos/urgentes</p>
+            <p className="text-xs font-semibold text-slate-400">À espera de alguém — o mais parado primeiro</p>
+            <p className="mt-0.5 text-[10px] text-slate-600">
+              Pedidos abertos ou urgentes. Clica para abrir.
+            </p>
           </div>
-          {recent.map((r) => (
-            <div key={r.id} className="flex items-center gap-3 border-b border-white/[0.03] px-4 py-3 last:border-0">
-              <span className="font-mono text-xs text-slate-600">{r.id.slice(0, 8)}</span>
-              <span className="flex-1 text-sm text-white">{r.profiles?.name ?? "—"}</span>
-              <span className="text-xs text-slate-400">{r.slug}</span>
-              <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
-                {STATUS_LABELS[r.status] ?? r.status}
-              </span>
-            </div>
-          ))}
+          {recent.map((r) => {
+            // A próxima acção sai da máquina de estados, não de uma etiqueta:
+            // é o que o painel espera que aconteça a seguir neste pedido.
+            const proxima = nextPhase(r.status);
+            const bolaDoCliente = isWaitingOnCustomer(r.status);
+            const parado = (r.horas_a_espera ?? 0) >= 48;
+            return (
+              <button
+                key={r.id}
+                onClick={() => onAbrirPedido?.(r.id)}
+                disabled={!onAbrirPedido}
+                className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-b border-white/[0.03] px-4 py-3 text-left last:border-0 hover:bg-white/[0.03] disabled:hover:bg-transparent"
+              >
+                {r.urgency === "urgent" && (
+                  <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-400">URGENTE</span>
+                )}
+                <span className="text-sm font-medium text-white">{displayText(r.client_name)}</span>
+                <span className="text-xs text-slate-400">{displayText(r.slug, "")}</span>
+                {r.valor != null && r.valor > 0 && (
+                  <span className="text-xs font-semibold text-slate-300">{fmtMoney(r.valor)}</span>
+                )}
+                <span className={`text-[11px] ${parado ? "font-semibold text-amber-400" : "text-slate-600"}`}>
+                  {haQuantoTempo(r.horas_a_espera)}
+                </span>
+                <span className="ml-auto flex items-center gap-2">
+                  <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
+                    {STATUS_LABELS[r.status] ?? r.status}
+                  </span>
+                  {/* Distinguir "espero por ti" de "espero pelo cliente" é o
+                      que separa uma fila de trabalho de uma lista de estados */}
+                  <span className={`text-[10px] ${bolaDoCliente ? "text-slate-600" : "text-[#00BDEB]"}`}>
+                    {bolaDoCliente ? "com o cliente" : proxima?.actionLabel ?? "—"}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -4348,7 +4411,14 @@ export default function AppClyonEmbedded({
 
       {/* Conteúdo */}
       <div className={tab === "pedidos" && selectedOrderId ? "" : "p-5"}>
-        {tab === "visao-geral"   && <TabVisaoGeral authHeader={authHeader} />}
+        {tab === "visao-geral" && (
+          <SecaoErrorBoundary seccao="a visão geral">
+            <TabVisaoGeral
+              authHeader={authHeader}
+              onAbrirPedido={(id) => { handleTabChange("pedidos"); handlePedidoChange(id); }}
+            />
+          </SecaoErrorBoundary>
+        )}
         {tab === "pedidos" && !selectedOrderId && (
           <AppPedidosClient
             key={pedidosRefresh}
