@@ -54,7 +54,7 @@ export const DEPENDENCIAS: Dependencia[] = [
     nome: "profiles",
     tipo: "tabela",
     // full_name, não `name` — este engano deixou a visão geral sem clientes
-    colunas: ["id", "full_name", "email", "phone"],
+    colunas: ["id", "full_name", "email", "phone", "account_code"],
     usadoEm: "Nome do cliente em pedidos, agenda, visão geral e contas",
   },
   {
@@ -94,6 +94,19 @@ export const DEPENDENCIAS: Dependencia[] = [
   { nome: "price_quotes", tipo: "tabela", colunas: ["id"], usadoEm: "Orçamento do motor, alcançado por service_requests.price_quote_id" },
   { nome: "cupons", tipo: "tabela", colunas: ["id", "code", "active"], usadoEm: "Separador de cupões: lista, criação e activação" },
   { nome: "user_roles", tipo: "tabela", colunas: ["user_id", "role"], usadoEm: "Papéis de utilizador" },
+  // A receita da CLYON. provider_payment_id É a referência da euPago — é por
+  // ela que o callback encontra a ordem. checkout_url/return_url ficam sempre
+  // a NULL (modelo de redireccionamento que nunca existiu) e não se mostram.
+  {
+    nome: "credit_purchase_orders",
+    tipo: "tabela",
+    colunas: [
+      "id", "partner_id", "status", "package_name", "credits", "price_cents",
+      "method", "provider_entity", "provider_payment_id", "provider_txn",
+      "provider_fee", "expires_at", "paid_at", "failure_reason", "created_at",
+    ],
+    usadoEm: "Ecrã de venda de créditos — a receita da CLYON",
+  },
 
   // ── Funções ──────────────────────────────────────────────────────────────
   // Os nomes dos argumentos fazem parte do contrato: o PostgREST envia JSON e
@@ -109,6 +122,9 @@ export const DEPENDENCIAS: Dependencia[] = [
   // de pé quando aparecerem pedidos sem reserva nenhuma
   { nome: "customer_confirmar_em_dinheiro", tipo: "funcao", usadoEm: "Publicar um pedido em dinheiro, sem reserva (chamada pela app)" },
   { nome: "valor_do_profissional", tipo: "funcao", usadoEm: "Quanto o profissional recebe conforme o modo de pagamento" },
+  // Nunca chamada pelo painel: confirma dinheiro sem verificar quem chama, e
+  // é do webhook. Declarada para saber se a compra de créditos está de pé.
+  { nome: "sistema_confirmar_compra_creditos", tipo: "funcao", usadoEm: "Webhook da euPago credita a carteira do profissional" },
   {
     nome: "patch_request_with_audit",
     tipo: "funcao",

@@ -3828,6 +3828,181 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
   );
 }
 
+// ── Compra de créditos pelos profissionais ────────────────────────────────
+// A receita da CLYON. O profissional fica com 100% do serviço e paga a taxa
+// de aceitação em créditos; é aqui que esse dinheiro entra. A confirmação é
+// do webhook da euPago — o painel só olha.
+type CreditOrder = {
+  id: string;
+  estado: string;
+  estado_label: string;
+  metodo: string;
+  metodo_label: string | null;
+  pacote: string | null;
+  creditos: number | null;
+  euros: number | null;
+  entidade: string | null;
+  referencia: string | null;
+  comissao: number | null;
+  expires_at: string | null;
+  paid_at: string | null;
+  motivo_falha: string | null;
+  criada_em: string | null;
+  profissional: string | null;
+  account_code: string | null;
+};
+
+function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, string>; days: number }) {
+  const [orders, setOrders] = useState<CreditOrder[]>([]);
+  const [stats, setStats] = useState({
+    receita: 0, creditos_vendidos: 0, comissao_eupago: 0,
+    count_pagas: 0, count_pendentes: 0, valor_pendente: 0, count_falhadas: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [soProblemas, setSoProblemas] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/app-clyon/creditos?days=${days}`, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setNotice(json.error ?? "Erro ao carregar."); return; }
+      if (json.unavailable) { setNotice(json.notice ?? null); setOrders([]); return; }
+      setOrders(json.orders ?? []);
+      if (json.stats) setStats(json.stats);
+    } catch { setNotice("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, days]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const visiveis = soProblemas
+    ? orders.filter((o) => o.estado === "failed" || o.estado === "pending")
+    : orders;
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">Venda de créditos</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+            É daqui que vem a receita da CLYON. Os créditos entram sozinhos quando a euPago
+            confirma — <span className="text-white">nunca creditar à mão uma ordem já paga</span>,
+            ficaria saldo a dobrar sem rasto de que foi engano.
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-emerald-300">{fmtMoney(stats.receita)}</p>
+          <p className="text-[10px] text-slate-500">
+            {stats.count_pagas} compra{stats.count_pagas === 1 ? "" : "s"} · {stats.creditos_vendidos} créditos
+          </p>
+        </div>
+      </div>
+
+      {notice && (
+        <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-[11px] leading-relaxed text-amber-300">{notice}</p>
+      )}
+
+      {!notice && (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/[0.06] bg-[#12263B]/50 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Por pagar</p>
+              <p className="mt-0.5 text-sm font-bold text-amber-300">{fmtMoney(stats.valor_pendente)}</p>
+              <p className="text-[10px] text-slate-600">{stats.count_pendentes} ordens</p>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-[#12263B]/50 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Comissão euPago</p>
+              <p className="mt-0.5 text-sm font-bold text-slate-300">{fmtMoney(stats.comissao_eupago)}</p>
+              <p className="text-[10px] text-slate-600">já descontada</p>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-[#12263B]/50 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Recusadas</p>
+              <p className={`mt-0.5 text-sm font-bold ${stats.count_falhadas > 0 ? "text-red-300" : "text-slate-500"}`}>
+                {stats.count_falhadas}
+              </p>
+              <p className="text-[10px] text-slate-600">nos {days} dias</p>
+            </div>
+          </div>
+
+          {orders.length > 0 && (
+            <button onClick={() => setSoProblemas((v) => !v)}
+              className={`mt-3 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                soProblemas ? "bg-[#00BDEB] text-slate-950" : "border border-white/[0.08] bg-[#12263B] text-slate-300 hover:border-[#00BDEB]/40"
+              }`}>
+              {soProblemas ? "Só por pagar e recusadas" : "Todas as ordens"}
+            </button>
+          )}
+
+          {loading ? (
+            <p className="mt-3 text-xs text-slate-500">A carregar…</p>
+          ) : visiveis.length === 0 ? (
+            <p className="mt-4 text-xs text-slate-600">
+              {orders.length === 0
+                ? `Nenhuma compra de créditos nos últimos ${days} dias.`
+                : "Nada por pagar nem recusado."}
+            </p>
+          ) : (
+            <div className="mt-3 space-y-1.5">
+              {visiveis.map((o) => (
+                <div key={String(o.id)} className={`rounded-xl border px-3 py-2 ${
+                  o.estado === "paid"   ? "border-white/[0.06] bg-[#12263B]/40" :
+                  o.estado === "failed" ? "border-red-500/20 bg-red-500/[0.05]" :
+                                          "border-amber-500/20 bg-amber-500/[0.04]"
+                }`}>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-sm font-semibold text-white">
+                      {o.euros != null ? fmtMoney(o.euros) : "—"}
+                    </span>
+                    {o.creditos != null && (
+                      <span className="text-xs text-slate-400">{o.creditos} créditos</span>
+                    )}
+                    {o.pacote && <span className="text-xs text-slate-500">{displayText(o.pacote, "")}</span>}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      o.estado === "paid"   ? "bg-emerald-500/15 text-emerald-300" :
+                      o.estado === "failed" ? "bg-red-500/15 text-red-300" :
+                                              "bg-amber-500/15 text-amber-300"
+                    }`}>
+                      {o.estado_label}
+                    </span>
+                    {o.metodo_label && (
+                      <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">{o.metodo_label}</span>
+                    )}
+                    <span className="ml-auto text-[10px] text-slate-600">
+                      {o.paid_at ?? o.criada_em ? fmtDt(String(o.paid_at ?? o.criada_em)) : ""}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                    <span className="text-slate-300">{displayText(o.profissional)}</span>
+                    {o.account_code && <span className="font-mono text-[10px] text-[#00BDEB]">{o.account_code}</span>}
+                    {/* A referência é por onde o callback encontra a ordem —
+                        é o que se pede ao profissional quando algo falha */}
+                    {o.referencia && (
+                      <span className="font-mono text-[10px]">
+                        {o.entidade ? `MB ${o.entidade} · ` : ""}{o.referencia}
+                      </span>
+                    )}
+                    {o.comissao != null && o.comissao > 0 && <span>comissão {fmtMoney(o.comissao)}</span>}
+                  </div>
+                  {o.motivo_falha && (
+                    <p className="mt-1 text-[11px] leading-relaxed text-red-300/90">{displayText(o.motivo_falha, "")}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+            Se uma compra ficar por pagar com o dinheiro já entrado, o caminho é reprocessar
+            pela referência — não somar créditos por fora. O ajuste manual existe para o que é
+            mesmo excepcional: um crédito promocional, um acerto depois de uma disputa.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<PagamentosData | null>(null);
@@ -3922,9 +4097,11 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
           a receita mudou de sítio. */}
       <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[10px] leading-relaxed text-slate-500">
         O profissional recebe <span className="text-slate-300">100%</span> do valor do trabalho — por isso
-        estes dois totais são próximos. A receita da CLYON é a venda de créditos, não uma comissão sobre
-        o serviço, e não está neste ecrã.
+        estes dois totais são próximos. Não é a CLYON a perder dinheiro: a receita é a venda de créditos,
+        em baixo.
       </p>
+
+      <CompraDeCreditos authHeader={authHeader} days={days} />
 
       <div className="flex items-center gap-1 border-b border-white/[0.05]">
         {[
