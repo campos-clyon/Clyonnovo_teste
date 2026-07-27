@@ -181,6 +181,14 @@ describe("validateProfilePatch — o painel não escreve o que não deve", () =>
     expect(validateProfilePatch({ earning_share: 1 }).ok).toBe(true);
   });
 
+  // NULL não é "campo por preencher": é dizer que este profissional segue o
+  // padrão da plataforma. Sem isto, não havia como voltar atrás num acordo.
+  it("earning_share aceita null — volta ao padrão da plataforma", () => {
+    const r = validateProfilePatch({ earning_share: null });
+    expect(r.ok).toBe(true);
+    expect(r.allowed).toEqual({ earning_share: null });
+  });
+
   it("patch vazio não passa", () => {
     expect(validateProfilePatch({}).error).toMatch(/Nada para alterar/i);
   });

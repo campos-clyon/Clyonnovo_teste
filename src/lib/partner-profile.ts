@@ -218,7 +218,11 @@ export function validateProfilePatch(
     return { ok: false, error: `Estado inválido: "${allowed.status}".`, allowed: {} };
   }
 
-  if (allowed.earning_share !== undefined) {
+  // NULL é uma escolha, não um vazio: significa "usa o padrão da plataforma".
+  // Enquanto a coluna era NOT NULL DEFAULT 0.65 não havia como distinguir
+  // "ninguém escolheu" de "acordámos 65%" — e foi essa ambiguidade que fez o
+  // valor errado sobreviver a uma migração inteira.
+  if (allowed.earning_share !== undefined && allowed.earning_share !== null) {
     const n = Number(allowed.earning_share);
     if (!Number.isFinite(n) || n <= 0 || n > 1) {
       return {

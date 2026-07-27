@@ -85,6 +85,8 @@ export async function GET(req: NextRequest) {
       referencia_mb:    r.referencia_mb ?? null,
       comissao:         r.comissao != null ? Number(r.comissao) : null,
       expires_at:       r.expires_at ?? null,
+      // NULL = o lembrete das 24 h ainda não saiu
+      reminded_at:      r.reminded_at ?? null,
       // Quem tem provider fecha-se por webhook. O método é só a intenção do
       // cliente; o provider é quem de facto vai confirmar — e manda.
       automatico:       r.provider != null
@@ -96,6 +98,18 @@ export async function GET(req: NextRequest) {
     // O que realmente exige trabalho humano: pendentes que a euPago não fecha
     const manuais = porConciliar.filter((r) => !r.automatico);
 
+    // Desde 27-07-2026 um pedido por pagar é cancelado ao fim de 7 dias pelo
+    // agendador. Uma linha por conciliar mais velha do que isso significa que
+    // o agendador não correu — é um sintoma, não uma referência antiga.
+    const LIMITE_DIAS = 7;
+    const agora = Date.now();
+    const encalhadas = porConciliar.filter((r) => {
+      if (!r.emitida_em) return false;
+      const t = new Date(String(r.emitida_em)).getTime();
+      if (Number.isNaN(t)) return false;
+      return (agora - t) / 86_400_000 > LIMITE_DIAS;
+    }).length;
+
     return NextResponse.json({
       references,
       stats: {
@@ -103,6 +117,7 @@ export async function GET(req: NextRequest) {
         conciliadas: references.length - porConciliar.length,
         por_conciliar: porConciliar.length,
         a_aguardar_operador: manuais.length,
+        encalhadas,
         // Dinheiro à espera de confirmação — é o que trava a publicação
         valor_por_conciliar: Math.round(
           porConciliar.reduce((s, r) => s + (r.valor_esperado ?? 0), 0) * 100,

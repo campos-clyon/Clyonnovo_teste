@@ -19,11 +19,39 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .order("created_at", { ascending: false })
       .limit(50);
 
+    // O histórico do painel só via as operações dos colaboradores. Há coisas
+    // que acontecem sem ninguém carregar em nada — o webhook da euPago a
+    // confirmar um pagamento, o agendador a cancelar uma reserva por pagar ao
+    // fim de 7 dias. Sem estas linhas, o pedido parecia cancelar-se sozinho.
+    const { data: eventos } = await sb
+      .from("request_events")
+      .select("id, event_type, actor_role, note, created_at")
+      .eq("request_id", id)
+      .eq("actor_role", "system")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const doSistema = (eventos ?? []).map((e: Record<string, unknown>) => ({
+      id: `evt:${String(e.id)}`,
+      action_type: String(e.event_type ?? "system"),
+      status_from: null,
+      status_to: null,
+      reason: null,
+      note: typeof e.note === "string" ? e.note : null,
+      data_json: null,
+      colab_nome: "Sistema",
+      created_at: e.created_at,
+    }));
+
     if (error) {
-      // Tabela pode não existir ainda (migração pendente); retorna lista vazia
-      return NextResponse.json({ ops: [] });
+      // Tabela pode não existir ainda (migração pendente)
+      return NextResponse.json({ ops: doSistema });
     }
-    return NextResponse.json({ ops: data ?? [] });
+
+    const ops = [...(data ?? []), ...doSistema].sort((a, b) =>
+      String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")),
+    );
+    return NextResponse.json({ ops });
   } catch {
     return NextResponse.json({ ops: [] });
   }

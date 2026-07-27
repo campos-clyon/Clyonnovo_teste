@@ -1656,7 +1656,10 @@ function PedidoInlinePanel({
                 {ops.map((op) => (
                   <div key={op.id} className="rounded-xl border border-white/[0.05] bg-[#12263B]/60 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-300">{op.colab_nome}</span>
+                      {/* "Sistema" = webhook ou agendador, não um colaborador */}
+                      <span className={`text-xs font-semibold ${op.colab_nome === "Sistema" ? "text-slate-500" : "text-slate-300"}`}>
+                        {op.colab_nome === "Sistema" ? "⚙ Sistema" : op.colab_nome}
+                      </span>
                       <span className="text-[10px] text-slate-600">{fmtDt(op.created_at)}</span>
                     </div>
                     {op.status_from && op.status_to && (
@@ -2559,17 +2562,23 @@ function ProfissionalPanel({
             <p className={CARD_TITLE}>Condições comerciais</p>
             <label className={IL2}>Quota do profissional (0 a 1)</label>
             <input type="number" step="0.01" min="0.01" max="1" value={earningShare}
-              onChange={(e) => setEarningShare(e.target.value)} className={INP2} />
-            <p className="mt-1 text-[10px] text-slate-600">
+              onChange={(e) => setEarningShare(e.target.value)} className={INP2}
+              placeholder="padrão da plataforma" />
+            {/* Vazio grava NULL — "usa o padrão", que é o caso normal. Um
+                valor aqui é um acordo específico com este profissional. */}
+            <p className="mt-1 text-[10px] leading-relaxed text-slate-600">
               {earningShare && Number(earningShare) > 0
-                ? `${Math.round(Number(earningShare) * 100)}% do valor do trabalho para o profissional.`
-                : "Fracção do valor que fica para o profissional (ex: 0.65 = 65%)."}
+                ? `${Math.round(Number(earningShare) * 100)}% do valor do trabalho para este profissional — acordo específico, fora do padrão.`
+                : "A seguir o padrão da plataforma. Preenche só se acordaste uma quota diferente com este profissional."}
             </p>
             <button
-              onClick={() => patch({ earning_share: Number(earningShare) }, "Quota actualizada.")}
-              disabled={busy || !earningShare || Number(earningShare) <= 0 || Number(earningShare) > 1}
+              onClick={() => patch(
+                { earning_share: earningShare.trim() === "" ? null : Number(earningShare) },
+                earningShare.trim() === "" ? "Passa a seguir o padrão da plataforma." : "Quota actualizada.",
+              )}
+              disabled={busy || (earningShare.trim() !== "" && (Number(earningShare) <= 0 || Number(earningShare) > 1))}
               className="mt-2 w-full rounded-lg bg-[#00BDEB] py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
-            >Guardar quota</button>
+            >{earningShare.trim() === "" ? "Usar o padrão da plataforma" : "Guardar quota"}</button>
           </div>
 
           <div className={CARD}>
@@ -3492,12 +3501,13 @@ type PaymentRef = {
   referencia_mb: string | null;
   comissao: number | null;
   expires_at: string | null;
+  reminded_at: string | null;
   automatico: boolean;
 };
 
 function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, string> }) {
   const [refs, setRefs] = useState<PaymentRef[]>([]);
-  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, valor_por_conciliar: 0, com_divergencia: 0 });
+  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, encalhadas: 0, valor_por_conciliar: 0, com_divergencia: 0 });
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -3509,6 +3519,7 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
   const [valorRecebido, setValorRecebido] = useState("");
   const [nota, setNota] = useState("");
   const [aConfirmar, setAConfirmar] = useState(false);
+  const [aVarrer, setAVarrer] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setNotice(null);
@@ -3521,12 +3532,26 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
       if (!res.ok) { setNotice(json.error ?? "Erro ao carregar."); return; }
       if (json.unavailable) { setNotice(json.notice ?? null); setRefs([]); return; }
       setRefs(json.references ?? []);
-      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, valor_por_conciliar: 0, com_divergencia: 0 });
+      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, encalhadas: 0, valor_por_conciliar: 0, com_divergencia: 0 });
     } catch { setNotice("Erro de ligação."); }
     finally { setLoading(false); }
   }, [authHeader, q, soPendentes]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function correrAgendador() {
+    setAVarrer(true); setErro(null); setSucesso(null);
+    try {
+      const res = await fetch("/api/admin/app-clyon/reservas-por-pagar", {
+        method: "POST", headers: authHeader,
+      });
+      const json = await res.json();
+      if (!res.ok) { setErro(json.error ?? "Não foi possível correr."); return; }
+      setSucesso(json.message ?? "Feito.");
+      await load();
+    } catch { setErro("Erro de ligação."); }
+    finally { setAVarrer(false); }
+  }
 
   async function confirmar(r: PaymentRef) {
     if (!r.reference) return;
@@ -3582,6 +3607,21 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
       )}
       {sucesso && (
         <p className="mt-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">{sucesso}</p>
+      )}
+
+      {/* Aos 7 dias o agendador cancela o pedido. Uma linha por conciliar mais
+          velha do que isso quer dizer que ele não correu. */}
+      {stats.encalhadas > 0 && (
+        <div className="mt-3 rounded-lg border border-red-500/25 bg-red-500/[0.07] px-3 py-2">
+          <p className="text-[11px] leading-relaxed text-red-300">
+            {stats.encalhadas} referência{stats.encalhadas === 1 ? "" : "s"} por conciliar há mais de 7 dias.
+            A esta altura o pedido já devia ter sido cancelado sozinho — o agendador pode não estar a correr.
+          </p>
+          <button onClick={correrAgendador} disabled={aVarrer}
+            className="mt-2 rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200 hover:bg-red-500/30 disabled:opacity-50">
+            {aVarrer ? "A processar..." : "Processar prazos agora"}
+          </button>
+        </div>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -3658,6 +3698,9 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
                     </span>
                   )}
                   {r.confirmado_por && <span>por {r.confirmado_por}</span>}
+                  {!r.conciliada && r.reminded_at && (
+                    <span className="text-slate-400">lembrete enviado</span>
+                  )}
                   {r.comissao != null && r.comissao > 0 && <span>comissão {fmtMoney(r.comissao)}</span>}
                 </div>
 
@@ -3810,6 +3853,15 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
           <p className="mt-0.5 text-[10px] text-slate-500">{data.stats.count_earnings} earnings</p>
         </div>
       </div>
+
+      {/* Desde 27-07-2026 o profissional fica com 100% do trabalho. Estes dois
+          números passam a andar juntos, e isso não é a CLYON a perder dinheiro:
+          a receita mudou de sítio. */}
+      <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[10px] leading-relaxed text-slate-500">
+        O profissional recebe <span className="text-slate-300">100%</span> do valor do trabalho — por isso
+        estes dois totais são próximos. A receita da CLYON é a venda de créditos, não uma comissão sobre
+        o serviço, e não está neste ecrã.
+      </p>
 
       <div className="flex items-center gap-1 border-b border-white/[0.05]">
         {[
