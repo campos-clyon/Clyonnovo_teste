@@ -18,14 +18,21 @@ export const dynamic = "force-dynamic";
  * é essa que este ecrã existe para destravar.
  */
 
+/**
+ * Como o cliente paga a RESERVA à CLYON — não confundir com
+ * `service_requests.payment_mode`, que é como paga o SERVIÇO ao profissional.
+ *
+ * `cash` saiu daqui a 27-07-2026: um pedido em dinheiro não tem reserva
+ * nenhuma para pagar, logo não gera referência. O Multibanco entrou (letra B).
+ */
 const METODO_LABEL: Record<string, string> = {
-  mbway: "MB WAY", card: "Revolut", transfer: "Transferência", cash: "Dinheiro",
-  multibanco: "Multibanco", mb: "Multibanco",
-  M: "MB WAY", R: "Revolut", T: "Transferência", D: "Dinheiro",
+  mbway: "MB WAY", card: "Revolut", transfer: "Transferência",
+  multibanco: "Multibanco",
+  M: "MB WAY", R: "Revolut", T: "Transferência", B: "Multibanco",
 };
 
 /** Métodos que a euPago fecha sozinha — aqui só aparecem para consulta. */
-const METODOS_AUTOMATICOS = new Set(["mbway", "multibanco", "mb", "M"]);
+const METODOS_AUTOMATICOS = new Set(["mbway", "multibanco", "M", "B"]);
 
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);

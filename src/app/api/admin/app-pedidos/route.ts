@@ -212,6 +212,11 @@ export async function GET(req: NextRequest) {
         // Visibilidade real na app dos profissionais
         publishable:     isPublishableStatus(asString(row.status)),
         open_offers:     ofertasPorPedido[String(row.id ?? "")] ?? 0,
+        // Como o cliente paga o SERVIÇO ao profissional. Em dinheiro não há
+        // reserva nem referência: o pedido salta awaiting_deposit e vai
+        // directo a confirmed. Sem isto, um confirmed sem pagamento nenhum
+        // parece um erro no painel — e não é.
+        payment_mode:    asString(row.payment_mode) ?? "electronic",
       };
     });
 

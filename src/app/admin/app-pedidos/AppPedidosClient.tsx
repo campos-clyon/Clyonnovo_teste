@@ -59,6 +59,8 @@ type AppOrder = {
   // Visibilidade real na app dos profissionais
   publishable?: boolean;
   open_offers?: number;
+  /** Como o cliente paga o SERVIÇO: "electronic" ou "cash". */
+  payment_mode?: string | null;
   photos: string[];
   created_at: string;
   client_name: string | null;
@@ -221,6 +223,12 @@ function OrderRow({ order, onClick, active, compact }: { order: AppOrder; onClic
       {/* Status + data */}
       <div className="flex-shrink-0 text-right">
         <StatusBadge status={order.status} approved={order.approved} />
+        {/* Um pedido em dinheiro não tem reserva nem referência: salta
+            awaiting_deposit e vai directo a confirmed. Sem esta etiqueta
+            parece um pedido confirmado sem ninguém ter pago. */}
+        {order.payment_mode === "cash" && (
+          <p className="mt-1 text-[10px] font-semibold text-amber-300">Pagamento em dinheiro</p>
+        )}
         {/* "Aprovado" = tem preco. Isto responde a outra pergunta: os
             profissionais chegam a ver este pedido? */}
         {order.publishable && (

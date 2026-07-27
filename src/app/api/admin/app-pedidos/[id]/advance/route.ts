@@ -133,10 +133,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const rpcMissing = rpcErr.code === "PGRST202" || /function .* does not exist/i.test(rpcErr.message ?? "");
     if (!rpcMissing) {
       console.error("[app-pedidos/advance] rpc failed", { correlationId, rpcErr });
+
+      // As regras de negócio da base vêm com uma mensagem escrita para quem
+      // opera — ex.: um pedido em dinheiro sem telemóvel do cliente. Engolir
+      // essa frase deixa o operador com "erro ao avançar" e nada para fazer.
+      // P0001 é o RAISE EXCEPTION de um gatilho; 23514 é um CHECK.
+      const daRegra = rpcErr.code === "P0001" || rpcErr.code === "23514";
       return NextResponse.json({
-        error: "Erro ao avançar a fase (transacção revertida).",
+        error: daRegra && rpcErr.message
+          ? rpcErr.message
+          : "Erro ao avançar a fase (transacção revertida).",
         correlation_id: correlationId,
-      }, { status: 500 });
+      }, { status: daRegra ? 400 : 500 });
     }
 
     // Fallback de compensação (migração 004 pendente)

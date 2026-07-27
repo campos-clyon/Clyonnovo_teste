@@ -75,9 +75,9 @@ describe("verificationState — condição EXACTA do selo no app", () => {
   });
 
   it("aprovado mas sem os documentos do selo — explica porque não aparece", () => {
-    const v = verificationState("approved", [{ doc_type: "id", status: "approved" }]);
+    const v = verificationState("approved", [{ doc_type: "nif", status: "approved" }]);
     expect(v.verified).toBe(false);
-    expect(v.missingDocs).toEqual(["nif"]);
+    expect(v.missingDocs).toEqual(["id"]);
     expect(v.reason).toMatch(/não aparece no app/i);
   });
 
@@ -89,18 +89,17 @@ describe("verificationState — condição EXACTA do selo no app", () => {
   });
 
   it("documento rejeitado não conta como aprovado", () => {
+    const v = verificationState("approved", [{ doc_type: "id", status: "rejected" }]);
+    expect(v.verified).toBe(false);
+    expect(v.missingDocs).toContain("id");
+  });
+
+  // Desde 27-07-2026 a CLYON não transfere dinheiro ao profissional, e o app
+  // deixou de pedir IBAN e NIF. Nada disso pode travar o selo aqui.
+  it("nif, activity e iban não bloqueiam o selo — só o id", () => {
     const v = verificationState("approved", [
       { doc_type: "id", status: "approved" },
       { doc_type: "nif", status: "rejected" },
-    ]);
-    expect(v.verified).toBe(false);
-    expect(v.missingDocs).toContain("nif");
-  });
-
-  it("activity e iban não bloqueiam o selo (só id e nif)", () => {
-    const v = verificationState("approved", [
-      { doc_type: "id", status: "approved" },
-      { doc_type: "nif", status: "approved" },
       { doc_type: "activity", status: "rejected" },
       { doc_type: "iban", status: "rejected" },
     ]);
@@ -109,13 +108,15 @@ describe("verificationState — condição EXACTA do selo no app", () => {
 
   it("sem documentos nenhuns não rebenta", () => {
     expect(verificationState("approved", []).verified).toBe(false);
-    expect(verificationState("approved", null).missingDocs).toEqual(["id", "nif"]);
+    expect(verificationState("approved", null).missingDocs).toEqual(["id"]);
     expect(verificationState(null, undefined).verified).toBe(false);
   });
 
-  it("o selo exige exactamente dois documentos, dos quatro pedidos", () => {
-    expect(BADGE_DOC_TYPES).toEqual(["id", "nif"]);
-    expect(REQUIRED_DOC_TYPES).toHaveLength(4);
+  // O painel não pode ser mais exigente do que o app: se o for, mostra como
+  // não verificado quem o cliente já vê com selo.
+  it("o selo exige o mesmo que o app — só o documento de identificação", () => {
+    expect(BADGE_DOC_TYPES).toEqual(["id"]);
+    expect(REQUIRED_DOC_TYPES).toEqual(["id"]);
   });
 });
 

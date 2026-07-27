@@ -64,8 +64,15 @@ export function toFiveStars(rating: number | null | undefined): number | null {
 export const DOCUMENT_STATUSES = ["pending", "approved", "rejected"] as const;
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
-/** Tipos de documento pedidos ao profissional no onboarding. */
-export const REQUIRED_DOC_TYPES = ["id", "nif", "activity", "iban"] as const;
+/**
+ * Tipos de documento pedidos ao profissional no onboarding.
+ *
+ * Desde 27-07-2026 a CLYON não paga ao profissional — o cliente entrega-lhe o
+ * valor directamente. Sem transferência, não há IBAN a recolher, e o app
+ * deixou de o pedir. Fica na lista de rótulos para os documentos já enviados
+ * continuarem a ter nome, mas não é exigido a ninguém.
+ */
+export const REQUIRED_DOC_TYPES = ["id"] as const;
 
 export const DOC_TYPE_LABELS: Record<string, string> = {
   id:       "Documento de identificação",
@@ -76,10 +83,13 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
 
 /**
  * Documentos que o app exige para mostrar o selo de verificado ao cliente.
- * Aprovar o profissional NÃO chega — o selo só aparece com estes dois
- * documentos aprovados, e o painel tem de o dizer ao operador.
+ * Aprovar o profissional NÃO chega — o selo só aparece com este documento
+ * aprovado, e o painel tem de o dizer ao operador.
+ *
+ * Era `["id", "nif"]`. Enquanto o painel exigir mais do que o app, mostra
+ * profissionais como não verificados quando o cliente já lhes vê o selo.
  */
-export const BADGE_DOC_TYPES = ["id", "nif"] as const;
+export const BADGE_DOC_TYPES = ["id"] as const;
 
 /**
  * Campos que SÓ o admin pode alterar. O profissional edita o resto pela app

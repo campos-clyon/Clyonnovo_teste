@@ -44,6 +44,9 @@ export const DEPENDENCIAS: Dependencia[] = [
       "estimated_price", "final_price", "estimate_min", "estimate_max", "price_status",
       // Ponte para o motor: sem esta coluna o separador do motor não abre
       "price_quote_id",
+      // electronic | cash — como o cliente paga o SERVIÇO ao profissional.
+      // Não confundir com payment_references.method, que é a RESERVA.
+      "payment_mode",
     ],
     usadoEm: "Todo o painel de pedidos, agenda, visão geral e métricas",
   },
@@ -102,6 +105,10 @@ export const DEPENDENCIAS: Dependencia[] = [
     usadoEm: "Confirmar um pagamento — é o que publica o pedido aos profissionais",
   },
   { nome: "processa_reservas_por_pagar", tipo: "funcao", argumentos: [], usadoEm: "Botão de processar prazos das reservas por pagar" },
+  // O painel não a chama — declarada para saber se o fluxo em dinheiro está
+  // de pé quando aparecerem pedidos sem reserva nenhuma
+  { nome: "customer_confirmar_em_dinheiro", tipo: "funcao", usadoEm: "Publicar um pedido em dinheiro, sem reserva (chamada pela app)" },
+  { nome: "valor_do_profissional", tipo: "funcao", usadoEm: "Quanto o profissional recebe conforme o modo de pagamento" },
   {
     nome: "patch_request_with_audit",
     tipo: "funcao",
