@@ -42,6 +42,8 @@ export const DEPENDENCIAS: Dependencia[] = [
       "customer_id", "category_slug", "scheduled_for", "created_at",
       // Motor de preços (§3.1): sem estas, o painel conta 0 € em silêncio
       "estimated_price", "final_price", "estimate_min", "estimate_max", "price_status",
+      // Ponte para o motor: sem esta coluna o separador do motor não abre
+      "price_quote_id",
     ],
     usadoEm: "Todo o painel de pedidos, agenda, visão geral e métricas",
   },
@@ -64,7 +66,9 @@ export const DEPENDENCIAS: Dependencia[] = [
     usadoEm: "Profissionais: perfil, verificação, condições comerciais",
   },
   { nome: "partner_documents", tipo: "tabela", colunas: ["id", "partner_id", "doc_type", "status"], usadoEm: "Verificação e distintivo do profissional" },
-  { nome: "partner_services", tipo: "tabela", colunas: ["partner_id", "category_slug", "is_active"], usadoEm: "Elegibilidade do profissional por categoria" },
+  // `active`, não `is_active` — a base usa as duas convenções conforme a
+  // tabela, e o painel tem de escrever o nome que cada uma usa
+  { nome: "partner_services", tipo: "tabela", colunas: ["partner_id", "category_slug", "active"], usadoEm: "Elegibilidade do profissional por categoria" },
   // reviews não tem partner_id: chega-se ao parceiro por booking_id → bookings
   { nome: "reviews", tipo: "tabela", colunas: ["id", "booking_id", "rating"], usadoEm: "Avaliações no perfil do profissional" },
   { nome: "bookings", tipo: "tabela", colunas: ["id", "request_id", "partner_id", "status", "reservation_status"], usadoEm: "Reservas; bloqueiam a publicação de um pedido" },
@@ -78,14 +82,14 @@ export const DEPENDENCIAS: Dependencia[] = [
   { nome: "payments", tipo: "tabela", colunas: ["id", "request_id", "status", "amount"], usadoEm: "Relatório de pagamentos" },
   { nome: "manual_payments", tipo: "tabela", colunas: ["id", "amount", "internal_note"], usadoEm: "Pagamentos registados à mão" },
   { nome: "professional_earnings", tipo: "tabela", colunas: ["id", "partner_id", "gross_amount", "partner_share_pct", "partner_amount", "status"], usadoEm: "Quanto há a pagar a profissionais" },
-  { nome: "credit_fee_rules", tipo: "tabela", colunas: ["id", "fee_credits", "is_active"], usadoEm: "Bandas de custo por trabalho aceite" },
+  { nome: "credit_fee_rules", tipo: "tabela", colunas: ["id", "min_job_amount_cents", "max_job_amount_cents", "fee_credits", "active"], usadoEm: "Bandas de custo por trabalho aceite — sobreposição de bandas é erro" },
   { nome: "price_proposals", tipo: "tabela", colunas: ["id", "request_id", "amount", "status"], usadoEm: "Negociação de preço" },
   { nome: "schedule_proposals", tipo: "tabela", colunas: ["id", "request_id", "status"], usadoEm: "Propostas de horário" },
   { nome: "service_adjustments", tipo: "tabela", colunas: ["id", "request_id", "amount_delta"], usadoEm: "Ajustes no local — a soma usa amount_delta" },
-  { nome: "pricing_outcomes", tipo: "tabela", colunas: ["id", "request_id"], usadoEm: "Calibração do motor de preços" },
-  { nome: "quote_engine_trace", tipo: "tabela", colunas: ["id", "request_id"], usadoEm: "Diagnóstico do motor" },
-  { nome: "price_quotes", tipo: "tabela", colunas: ["id", "request_id"], usadoEm: "Orçamentos do motor" },
-  { nome: "cupons", tipo: "tabela", colunas: ["id", "code", "is_active"], usadoEm: "Separador de cupões: lista, criação e activação" },
+  { nome: "pricing_outcomes", tipo: "tabela", colunas: ["id", "service_request_id"], usadoEm: "Calibração do motor: liga o preço real ao estimado" },
+  { nome: "quote_engine_trace", tipo: "tabela", colunas: ["quote_id"], usadoEm: "Diagnóstico do motor — indexado por quote_id, não pelo pedido" },
+  { nome: "price_quotes", tipo: "tabela", colunas: ["id"], usadoEm: "Orçamento do motor, alcançado por service_requests.price_quote_id" },
+  { nome: "cupons", tipo: "tabela", colunas: ["id", "code", "active"], usadoEm: "Separador de cupões: lista, criação e activação" },
   { nome: "user_roles", tipo: "tabela", colunas: ["user_id", "role"], usadoEm: "Papéis de utilizador" },
 
   // ── Funções ──────────────────────────────────────────────────────────────
