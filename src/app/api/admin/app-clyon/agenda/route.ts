@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { safeText, metaOf } from "@/lib/safe-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,9 +49,12 @@ export async function GET(req: NextRequest) {
       const profile = profilesMap[r.customer_id] ?? {};
       return {
         id: r.id,
-        title: r.details || r.category_slug || "Pedido",
-        city: r.city ?? "",
-        region: r.region ?? "",
+        title: safeText(r.details) || safeText(r.category_slug) || "Pedido",
+        // O objecto continua disponível para o detalhe, mas nunca chega ao
+        // JSX como filho directo.
+        details_meta: metaOf(r.details),
+        city: safeText(r.city) ?? "",
+        region: safeText(r.region) ?? "",
         status: r.status,
         urgency: r.urgency ?? "normal",
         scheduled_for: r.scheduled_for,
@@ -59,8 +63,8 @@ export async function GET(req: NextRequest) {
         estimate_min: r.estimate_min ?? null,
         estimate_max: r.estimate_max ?? null,
         price_status: r.price_status ?? null,
-        client_name: profile.full_name ?? null,
-        client_phone: profile.phone ?? null,
+        client_name: safeText(profile.full_name),
+        client_phone: safeText(profile.phone),
         created_at: r.created_at,
       };
     });

@@ -5,6 +5,7 @@ import * as LucideIcons from "lucide-react";
 import { Package } from "lucide-react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
+import SecaoErrorBoundary from "@/components/admin/SecaoErrorBoundary";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
@@ -1947,10 +1948,20 @@ function TabVisaoGeral({ authHeader }: { authHeader: Record<string, string> }) {
 }
 
 // ── Agenda (semana segunda→domingo, Europe/Lisbon) ────────────────────────
+// `title` e `city` são unknown de propósito: vêm de colunas jsonb e a API já
+// os sanitiza, mas o tipo não deve prometer o que a base não garante — foi
+// dessa promessa que nasceu o React #31 nesta secção.
 type AgendaOrder = {
-  id: string; title: string; status: string; urgency: string;
-  scheduled_for: string; city: string; client_name: string | null;
+  id: string; title: unknown; status: string; urgency: string;
+  scheduled_for: string; city: unknown; client_name: unknown;
 };
+
+/** Hora em Lisboa, tolerante a datas inválidas — não deita a agenda abaixo. */
+function horaLisboa(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+}
 
 const WEEKDAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 const TZ = "Europe/Lisbon";
@@ -2001,9 +2012,16 @@ function fmtWeekRange(monday: Date): string {
   return `${fmtD(monday)} — ${fmtD(sunday)}`;
 }
 
-function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
+function TabAgenda({
+  authHeader, vistaInicial = "calendario",
+}: {
+  authHeader: Record<string, string>;
+  /** O limite de erro remonta esta secção em lista quando o calendário falha. */
+  vistaInicial?: "calendario" | "lista";
+}) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [orders, setOrders] = useState<AgendaOrder[]>([]);
+  const [vista, setVista] = useState<"calendario" | "lista">(vistaInicial);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -2030,7 +2048,12 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i);
     const dateStr = lisbonDateStr(date);
-    const dayOrders = orders.filter((o) => lisbonDateStr(new Date(o.scheduled_for)) === dateStr);
+    // Uma data inválida na base fazia o Intl atirar RangeError e levar a
+    // agenda toda; aqui o pedido apenas não entra em nenhum dia.
+    const dayOrders = orders.filter((o) => {
+      const quando = new Date(o.scheduled_for);
+      return !Number.isNaN(quando.getTime()) && lisbonDateStr(quando) === dateStr;
+    });
     const isToday = dateStr === todayStr;
     return { date, dateStr, label: WEEKDAY_LABELS[i], dayOrders, isToday };
   });
@@ -2052,13 +2075,63 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
             →
           </button>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold text-white">{fmtWeekRange(weekStart)}</p>
-          <p className="text-[10px] text-slate-500">{totalWeek} agendamento{totalWeek !== 1 ? "s" : ""}</p>
+        <div className="flex items-center gap-3">
+          {/* Duas vistas dos mesmos dados: se uma falhar, a outra serve */}
+          <div className="flex rounded-xl border border-white/10 p-0.5">
+            {([["calendario", "Calendário"], ["lista", "Lista"]] as const).map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setVista(v)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  vista === v ? "bg-[#00BDEB] text-slate-950" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold text-white">{fmtWeekRange(weekStart)}</p>
+            <p className="text-[10px] text-slate-500">{totalWeek} agendamento{totalWeek !== 1 ? "s" : ""}</p>
+          </div>
         </div>
       </div>
 
-      {loading ? <Spinner /> : error ? <ErrBox msg={error} onRetry={load} /> : (
+      {loading ? <Spinner /> : error ? <ErrBox msg={error} onRetry={load} /> : vista === "lista" ? (
+        totalWeek === 0 ? (
+          <p className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 text-center text-xs text-slate-500">
+            Sem agendamentos nesta semana.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {days.filter((d) => d.dayOrders.length > 0).map((d) => (
+              <div key={d.dateStr}>
+                <p className={`mb-1.5 text-[11px] font-bold uppercase tracking-wider ${d.isToday ? "text-cyan-400" : "text-slate-500"}`}>
+                  {d.label} {lisbonParts(d.date).d}{d.isToday ? " · hoje" : ""}
+                </p>
+                <div className="space-y-1.5">
+                  {d.dayOrders.map((o) => (
+                    <div key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
+                      <span className="font-mono text-sm font-bold text-cyan-400">
+                        {horaLisboa(o.scheduled_for)}
+                      </span>
+                      {o.urgency === "urgent" && (
+                        <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-400">URGENTE</span>
+                      )}
+                      <span className="text-sm text-white">{displayText(o.client_name)}</span>
+                      <span className="min-w-0 flex-1 truncate text-xs text-slate-400">{displayText(o.title, "")}</span>
+                      {displayText(o.city, "") && <span className="text-xs text-slate-500">{displayText(o.city, "")}</span>}
+                      <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
+                        {STATUS_LABELS[o.status] ?? o.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
           {days.map((d) => (
             <div
@@ -2085,15 +2158,17 @@ function TabAgenda({ authHeader }: { authHeader: Record<string, string> }) {
                     <div key={o.id} className="rounded-lg bg-white/[0.04] px-2 py-1.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] font-bold text-cyan-400">
-                          {new Date(o.scheduled_for).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Lisbon" })}
+                          {horaLisboa(o.scheduled_for)}
                         </span>
                         {o.urgency === "urgent" && (
                           <span className="text-[9px] font-bold text-red-400">URG</span>
                         )}
                       </div>
-                      <p className="text-[11px] text-white truncate">{o.client_name ?? "—"}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{o.title}</p>
-                      {o.city && <p className="text-[10px] text-slate-600">{o.city}</p>}
+                      {/* displayText: `title` vem de details (jsonb) e já
+                          rebentou aqui com o React #31 */}
+                      <p className="text-[11px] text-white truncate">{displayText(o.client_name)}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{displayText(o.title, "")}</p>
+                      {displayText(o.city, "") && <p className="text-[10px] text-slate-600">{displayText(o.city, "")}</p>}
                       <span className="mt-0.5 inline-block rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] text-slate-400">
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
@@ -4250,15 +4325,23 @@ export default function AppClyonEmbedded({
             </div>
           </div>
         )}
-        {tab === "agenda"        && <TabAgenda authHeader={authHeader} />}
-        {tab === "profissionais" && <TabProfissionais authHeader={authHeader} />}
-        {tab === "catalogo"      && <TabCatalogo authHeader={authHeader} />}
-        {tab === "cupons"        && <TabCupons authHeader={authHeader} />}
-        {tab === "moedas"        && <TabMoedas authHeader={authHeader} />}
-        {tab === "pagamentos"    && <TabPagamentos authHeader={authHeader} />}
-        {tab === "contas"        && <TabContas authHeader={authHeader} />}
-        {tab === "metricas"      && <TabMetricas authHeader={authHeader} />}
-        {tab === "auditoria"     && <TabAuditoria authHeader={authHeader} />}
+        {/* Um separador que rebente fica contido: o painel continua de pé */}
+        {tab === "agenda" && (
+          <SecaoErrorBoundary
+            seccao="o calendário"
+            fallback={<TabAgenda authHeader={authHeader} vistaInicial="lista" />}
+          >
+            <TabAgenda authHeader={authHeader} />
+          </SecaoErrorBoundary>
+        )}
+        {tab === "profissionais" && <SecaoErrorBoundary seccao="os profissionais"><TabProfissionais authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "catalogo"      && <SecaoErrorBoundary seccao="o catálogo"><TabCatalogo authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "cupons"        && <SecaoErrorBoundary seccao="os cupões"><TabCupons authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "moedas"        && <SecaoErrorBoundary seccao="as moedas e preços"><TabMoedas authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "pagamentos"    && <SecaoErrorBoundary seccao="os pagamentos"><TabPagamentos authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "contas"        && <SecaoErrorBoundary seccao="as contas"><TabContas authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "metricas"      && <SecaoErrorBoundary seccao="as métricas"><TabMetricas authHeader={authHeader} /></SecaoErrorBoundary>}
+        {tab === "auditoria"     && <SecaoErrorBoundary seccao="a auditoria"><TabAuditoria authHeader={authHeader} /></SecaoErrorBoundary>}
       </div>
     </div>
   );

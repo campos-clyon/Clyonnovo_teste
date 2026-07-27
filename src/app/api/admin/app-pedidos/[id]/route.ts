@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { quotePriceIsRequiredForStatus, validatedQuotePrice } from "@/lib/quote-approval";
 import { isValidTransition, validTargets, isPublishableStatus } from "@/lib/order-status-flow";
 import { hasUsablePrice } from "@/lib/quote-price";
+import { safeText, metaOf } from "@/lib/safe-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,17 +18,6 @@ const VALID_STATUSES = [
 
 const CANCEL_STATUSES = new Set(["canceled", "rejected"]);
 
-function safeText(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) {
-    return value.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ");
-  }
-  if (typeof value === "object") return null;
-  return String(value);
-}
-
 function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...row };
   normalized.details = safeText(row.details);
@@ -35,9 +25,8 @@ function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
   normalized.address_line = safeText(row.address_line);
   normalized.city = safeText(row.city);
   normalized.region = safeText(row.region);
-  if (row.details !== null && typeof row.details === "object") {
-    normalized.details_meta = row.details;
-  }
+  const meta = metaOf(row.details);
+  if (meta) normalized.details_meta = meta;
   return normalized;
 }
 
