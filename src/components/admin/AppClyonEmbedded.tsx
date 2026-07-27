@@ -3390,174 +3390,225 @@ function fmtMoney(v: number, cur = "EUR") {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: cur }).format(v);
 }
 
-// ── Reconciliação de referências de pagamento ─────────────────────────────
-// O cliente escreve a referência na descrição da transferência ou do MB WAY.
-// Ela aparece no extracto bancário e é por aí que o operador chega ao pedido.
+// ── Conciliação de pagamentos ─────────────────────────────────────────────
+// Desde 27-07-2026 um pedido NÃO avança sozinho quando o cliente carrega em
+// "Pagar reserva": com MB WAY, Revolut e transferência o dinheiro é
+// assíncrono. O pedido fica em "Aguarda depósito" até alguém confirmar aqui —
+// e é essa confirmação que o publica aos profissionais.
 type PaymentRef = {
-  id: string | null;
   reference: string | null;
   method: string;
   method_label: string;
-  amount: number | null;
-  created_at: string | null;
-  request_id: string | null;
-  request_status: string | null;
-  client_name: string | null;
-  client_phone: string | null;
-  account_code: string | null;
-  conciliado: boolean;
-  pago_em: string | null;
+  valor_esperado: number | null;
   valor_recebido: number | null;
-  divergencia_valor: number | null;
+  diferenca: number | null;
+  conciliada: boolean;
+  emitida_em: string | null;
+  paid_at: string | null;
+  cliente: string | null;
+  account_code: string | null;
+  phone: string | null;
+  request_id: string | null;
+  estado_do_pedido: string | null;
+  category_slug: string | null;
 };
 
-function ReconciliacaoReferencias({
-  authHeader, onAbrirPedido,
-}: {
-  authHeader: Record<string, string>;
-  onAbrirPedido?: (id: string) => void;
-}) {
+function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, string> }) {
   const [refs, setRefs] = useState<PaymentRef[]>([]);
-  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, com_divergencia: 0 });
+  const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, valor_por_conciliar: 0, com_divergencia: 0 });
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [q, setQ] = useState("");
-  const [aberto, setAberto] = useState(true);
+  const [soPendentes, setSoPendentes] = useState(true);
+  const [aberta, setAberta] = useState<string | null>(null);
+  const [valorRecebido, setValorRecebido] = useState("");
+  const [nota, setNota] = useState("");
+  const [aConfirmar, setAConfirmar] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setNotice(null);
     try {
-      const url = q
-        ? `/api/admin/app-clyon/referencias?q=${encodeURIComponent(q)}`
-        : "/api/admin/app-clyon/referencias";
-      const res = await fetch(url, { headers: authHeader });
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (soPendentes) params.set("pendentes", "1");
+      const res = await fetch(`/api/admin/app-clyon/referencias?${params}`, { headers: authHeader });
       const json = await res.json();
-      if (!res.ok) { setNotice(json.error ?? "Erro ao carregar referências."); return; }
+      if (!res.ok) { setNotice(json.error ?? "Erro ao carregar."); return; }
       if (json.unavailable) { setNotice(json.notice ?? null); setRefs([]); return; }
       setRefs(json.references ?? []);
-      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, com_divergencia: 0 });
+      setStats(json.stats ?? { total: 0, conciliadas: 0, por_conciliar: 0, valor_por_conciliar: 0, com_divergencia: 0 });
     } catch { setNotice("Erro de ligação."); }
     finally { setLoading(false); }
-  }, [authHeader, q]);
+  }, [authHeader, q, soPendentes]);
 
   useEffect(() => { load(); }, [load]);
 
+  async function confirmar(r: PaymentRef) {
+    if (!r.reference) return;
+    setAConfirmar(true); setErro(null); setSucesso(null);
+    try {
+      const res = await fetch("/api/admin/app-clyon/referencias", {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference: r.reference,
+          valor_recebido: valorRecebido === "" ? null : Number(valorRecebido),
+          nota: nota.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setErro(json.error ?? "Não foi possível confirmar."); return; }
+      setSucesso(json.message ?? "Pagamento confirmado.");
+      setAberta(null); setValorRecebido(""); setNota("");
+      await load();
+    } catch { setErro("Erro de ligação."); }
+    finally { setAConfirmar(false); }
+  }
+
   return (
-    <div className="rounded-2xl border border-[#00BDEB]/20 bg-[#00BDEB]/[0.03] p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="rounded-2xl border border-[#00BDEB]/25 bg-[#00BDEB]/[0.04] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Reconciliação de pagamentos</p>
-          <p className="mt-0.5 text-[11px] text-slate-500">
-            Cola a referência do extracto bancário para chegar ao pedido.
+          <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Conciliação de pagamentos</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+            Cola a referência do extracto para encontrar o pedido. <span className="text-white">Confirmar
+            o pagamento é o que publica o trabalho aos profissionais</span> — sem isso fica parado
+            em Aguarda depósito.
           </p>
         </div>
-        <button onClick={() => setAberto((v) => !v)}
-          className="rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40">
-          {aberto ? "Recolher" : "Abrir"}
+        {stats.por_conciliar > 0 && (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-right">
+            <p className="text-lg font-bold text-amber-300">{fmtMoney(stats.valor_por_conciliar)}</p>
+            <p className="text-[10px] text-amber-200/70">{stats.por_conciliar} por conciliar</p>
+          </div>
+        )}
+      </div>
+
+      {notice && (
+        <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-[11px] leading-relaxed text-amber-300">{notice}</p>
+      )}
+      {erro && (
+        <p className="mt-3 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] leading-relaxed text-red-300">{erro}</p>
+      )}
+      {sucesso && (
+        <p className="mt-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">{sucesso}</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); setQ(busca.trim()); }} className="flex min-w-0 flex-1 gap-2">
+          <input value={busca} onChange={(e) => setBusca(e.target.value.toUpperCase())}
+            placeholder="Referência do extracto — ex: AAAAM01"
+            className="h-9 min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 font-mono text-sm uppercase tracking-wider text-white outline-none focus:border-cyan-400" />
+          <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30">Procurar</button>
+          {q && <button type="button" onClick={() => { setBusca(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
+        </form>
+        <button onClick={() => setSoPendentes((v) => !v)}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            soPendentes ? "bg-[#00BDEB] text-slate-950" : "border border-white/[0.08] bg-[#12263B] text-slate-300 hover:border-[#00BDEB]/40"
+          }`}>
+          {soPendentes ? "Só por conciliar" : "Todas"}
         </button>
       </div>
 
-      {aberto && (
-        <>
-          {notice && (
-            <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-[11px] text-amber-300">
-              {notice}
-            </p>
-          )}
+      {loading ? (
+        <p className="mt-3 text-xs text-slate-500">A carregar…</p>
+      ) : refs.length === 0 ? (
+        <p className="mt-4 text-xs text-slate-600">
+          {q ? "Nenhuma referência encontrada." : soPendentes ? "Nada por conciliar." : "Ainda não há referências emitidas."}
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {refs.map((r) => {
+            const estaAberta = aberta === r.reference;
+            const divergente = r.diferenca != null && Math.abs(r.diferenca) > 0.01;
+            return (
+              <div key={String(r.reference)} className={`rounded-xl border p-3 ${
+                r.conciliada ? "border-white/[0.06] bg-[#12263B]/40" : "border-amber-500/20 bg-amber-500/[0.04]"
+              }`}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-mono text-base font-bold tracking-wider text-white">{r.reference ?? "—"}</span>
+                  <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">{r.method_label}</span>
+                  {r.conciliada ? (
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      Recebido{r.paid_at ? ` · ${new Date(r.paid_at).toLocaleDateString("pt-PT")}` : ""}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">Por conciliar</span>
+                  )}
+                  <span className="ml-auto text-right">
+                    <span className="text-sm font-bold text-white">{r.valor_esperado != null ? fmtMoney(r.valor_esperado) : "—"}</span>
+                    {divergente && (
+                      <span className="block text-[10px] text-red-300">
+                        recebido {fmtMoney(r.valor_recebido ?? 0)} ({r.diferenca! > 0 ? "+" : ""}{fmtMoney(r.diferenca!)})
+                      </span>
+                    )}
+                  </span>
+                </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); setQ(busca.trim()); }} className="mt-3 flex gap-2">
-            <input value={busca} onChange={(e) => setBusca(e.target.value.toUpperCase())}
-              placeholder="Referência do extracto — ex: AAABD07"
-              className="h-9 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 font-mono text-sm uppercase tracking-wider text-white outline-none focus:border-cyan-400" />
-            <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30">Procurar</button>
-            {q && <button type="button" onClick={() => { setBusca(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
-          </form>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                  <span className="text-slate-300">{r.cliente ?? "—"}</span>
+                  {r.account_code && <span className="font-mono text-[10px] text-[#00BDEB]">{r.account_code}</span>}
+                  {r.phone && <span>{r.phone}</span>}
+                  {r.request_id && <span className="font-mono text-[10px]">#{String(r.request_id).slice(0, 8)}</span>}
+                  {r.estado_do_pedido && (
+                    <span className="rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px]">
+                      {STATUS_LABELS[r.estado_do_pedido] ?? r.estado_do_pedido}
+                    </span>
+                  )}
+                </div>
 
-          {!notice && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] text-slate-400">{stats.total} referências</span>
-              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-300">{stats.conciliadas} conciliadas</span>
-              <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] text-amber-300">{stats.por_conciliar} por conciliar</span>
-              {stats.com_divergencia > 0 && (
-                <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-[10px] text-red-300">{stats.com_divergencia} com valor divergente</span>
-              )}
-            </div>
-          )}
-
-          {loading ? (
-            <p className="mt-3 text-xs text-slate-500">A carregar…</p>
-          ) : refs.length === 0 ? (
-            <p className="mt-3 text-xs text-slate-600">{q ? "Nenhuma referência encontrada." : "Ainda não há referências emitidas."}</p>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/[0.08] text-[10px] uppercase tracking-wider text-slate-500">
-                    <th className="py-2 pr-3">Referência</th>
-                    <th className="py-2 pr-3">Cliente</th>
-                    <th className="py-2 pr-3">Método</th>
-                    <th className="py-2 pr-3 text-right">Valor</th>
-                    <th className="py-2 pr-3">Estado</th>
-                    <th className="py-2">Pedido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {refs.map((r) => (
-                    <tr key={String(r.id ?? r.reference)} className="border-b border-white/[0.04]">
-                      <td className="py-2 pr-3">
-                        <span className="font-mono text-sm font-bold tracking-wider text-white">{r.reference ?? "—"}</span>
-                      </td>
-                      <td className="py-2 pr-3">
-                        <p className="text-slate-300">{r.client_name ?? "—"}</p>
-                        {r.account_code && (
-                          <span className="font-mono text-[10px] text-slate-600">{r.account_code}</span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-slate-400">{r.method_label}</td>
-                      <td className="py-2 pr-3 text-right">
-                        <span className="text-slate-200">{r.amount != null ? fmtMoney(r.amount) : "—"}</span>
-                        {r.divergencia_valor !== null && (
-                          <p className="text-[10px] text-red-300">
-                            recebido {fmtMoney(r.valor_recebido ?? 0)} ({r.divergencia_valor > 0 ? "+" : ""}{fmtMoney(r.divergencia_valor)})
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3">
-                        {r.conciliado ? (
-                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                            Recebido{r.pago_em ? ` · ${new Date(r.pago_em).toLocaleDateString("pt-PT")}` : ""}
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">Por conciliar</span>
-                        )}
-                      </td>
-                      <td className="py-2">
-                        {r.request_id ? (
-                          <button onClick={() => onAbrirPedido?.(r.request_id!)}
-                            className="font-mono text-[11px] text-[#00BDEB] hover:underline">
-                            #{r.request_id.slice(0, 8)}
-                          </button>
-                        ) : "—"}
-                        {r.request_status && (
-                          <p className="text-[10px] text-slate-600">{STATUS_LABELS[r.request_status] ?? r.request_status}</p>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
-            &ldquo;Recebido&rdquo; é <span className="text-slate-500">derivado</span> de um pagamento já
-            capturado para o mesmo pedido — não há ainda uma marca de conciliação própria.
-            Dados de recebimento: MB WAY/Revolut <span className="text-slate-400">931632622</span> ·
-            IBAN <span className="text-slate-400">LT72 3250 0157 4466 0473</span>
-          </p>
-        </>
+                {!r.conciliada && (
+                  estaAberta ? (
+                    <div className="mt-3 rounded-lg border border-white/[0.07] bg-[#0C1C2E] p-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Valor recebido (€)</label>
+                          <input type="number" step="0.01" min="0" value={valorRecebido}
+                            onChange={(e) => setValorRecebido(e.target.value)}
+                            placeholder={r.valor_esperado != null ? String(r.valor_esperado) : ""}
+                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-white outline-none focus:border-[#00BDEB]" />
+                          <p className="mt-0.5 text-[9px] text-slate-600">Vazio usa o esperado. Se receberes menos, escreve o real — fica registado.</p>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Nota (opcional)</label>
+                          <input value={nota} onChange={(e) => setNota(e.target.value)}
+                            placeholder="Ex: recebido no Revolut"
+                            className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-white outline-none focus:border-[#00BDEB]" />
+                        </div>
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <button onClick={() => confirmar(r)} disabled={aConfirmar}
+                          className="flex-1 rounded-lg bg-emerald-500 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50">
+                          {aConfirmar ? "A confirmar..." : "Confirmar recebimento e publicar"}
+                        </button>
+                        <button onClick={() => { setAberta(null); setValorRecebido(""); setNota(""); }}
+                          disabled={aConfirmar}
+                          className="rounded-lg border border-white/[0.08] px-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 disabled:opacity-50">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setAberta(r.reference); setValorRecebido(""); setNota(""); setErro(null); setSucesso(null); }}
+                      className="mt-2 rounded-lg border border-emerald-500/30 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/10">
+                      Confirmar recebimento
+                    </button>
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
+
+      <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+        Confirmar é idempotente — carregar duas vezes não duplica nem republica.
+        Recebimento: MB WAY/Revolut <span className="text-slate-400">931632622</span> ·
+        IBAN <span className="text-slate-400">LT72 3250 0157 4466 0473</span>
+      </p>
     </div>
   );
 }
