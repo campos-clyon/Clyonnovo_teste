@@ -122,18 +122,11 @@ export async function GET(req: NextRequest) {
  * utilizador Supabase. Não está concedida a `authenticated`: quem verifica a
  * identidade somos nós, aqui no servidor, antes de chegar a este ponto.
  *
- * A ordem dos argumentos é conhecida (referência, quem confirma, valor,
- * quando, nota) mas o PostgREST só aceita nomes. Tentamos os nomes prováveis
- * e ficamos com o que a base aceitar — se nenhum servir, devolvemos a
- * assinatura real que o PostgREST indica, em vez de um erro cego.
+ * Assinatura confirmada em pg_proc — o PostgREST só aceita argumentos por
+ * nome, e estes começam por underscore, não por `p_`:
+ *   _reference text, _staff text, _amount numeric,
+ *   _paid_at timestamptz, _notes text
  */
-const CANDIDATOS_RPC: Array<[string, string, string, string, string]> = [
-  ["p_reference", "p_confirmado_por", "p_valor", "p_pago_em", "p_nota"],
-  ["p_reference", "p_confirmed_by_staff", "p_valor", "p_pago_em", "p_nota"],
-  ["p_reference", "p_staff", "p_valor", "p_pago_em", "p_nota"],
-];
-let assinaturaRpc: (typeof CANDIDATOS_RPC)[number] | null = null;
-
 /** Confirma que o dinheiro chegou — e é isto que publica o pedido. */
 export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
@@ -166,34 +159,20 @@ export async function POST(req: NextRequest) {
     // do MySQL e não cabe no `confirmed_by` uuid — este é o rasto que fica.
     const staff = `${colab!.nome} (#${colab!.id})`;
 
-    const ordem = assinaturaRpc ? [assinaturaRpc] : CANDIDATOS_RPC;
-    let data: unknown = null;
-    let error: { code?: string; message?: string; hint?: string } | null = null;
-
-    for (const nomes of ordem) {
-      const [pRef, pStaff, pValor, pQuando, pNota] = nomes;
-      const res = await sb.rpc("painel_confirmar_pagamento", {
-        [pRef]: reference,
-        [pStaff]: staff,
-        [pValor]: valor,
-        [pQuando]: body.pago_em ?? null,
-        [pNota]: notaBase || null,
-      });
-      // PGRST202 aqui significa "nenhuma função com estes nomes de argumento"
-      if (res.error?.code === "PGRST202") { error = res.error; continue; }
-      assinaturaRpc = nomes;
-      data = res.data; error = res.error;
-      break;
-    }
+    const { data, error } = await sb.rpc("painel_confirmar_pagamento", {
+      _reference: reference,
+      _staff: staff,
+      _amount: valor,
+      _paid_at: body.pago_em ?? null,
+      _notes: notaBase || null,
+    });
 
     if (error) {
       const msg = error.message ?? "";
 
-      if (error.code === "PGRST202") {
-        console.error("[referencias POST] nomes de argumento não encontrados", error);
+      if (error.code === "PGRST202" || /function .* does not exist/i.test(msg)) {
         return NextResponse.json({
-          error: "A base não reconheceu os nomes dos argumentos de painel_confirmar_pagamento. O PostgREST só aceita argumentos por nome, e a nota do Bridge deu-os por posição.",
-          hint: error.hint ?? null,
+          error: "A função painel_confirmar_pagamento não existe nesta base — confirma que a migração 20260727100000 foi aplicada neste ambiente.",
         }, { status: 503 });
       }
 
