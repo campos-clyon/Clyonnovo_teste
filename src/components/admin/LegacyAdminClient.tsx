@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
-import { origemDoPedido } from "@/lib/acesso";
+import { origemDoPedido, origemDoLead } from "@/lib/acesso";
 import ContasPanel from "@/components/admin/ContasPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
@@ -2603,9 +2603,7 @@ export default function ColaboradorAdminClient() {
                                 <td className="px-4 py-3 text-xs">
                                   {/* Formulário de origem */}
                                   <span className="block text-slate-300">
-                                    {lead.origem
-                                      ? lead.origem.replace(/_/g, " ")
-                                      : lead.pagePath || "—"}
+                                    {origemDoLead(lead)}
                                   </span>
                                   {/* Canal */}
                                   {lead.canal && (

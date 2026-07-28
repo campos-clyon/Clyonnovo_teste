@@ -41,6 +41,7 @@ export function isUnknownAccessValue(value: unknown, valores: readonly string[])
  */
 const ORIGEM_LABELS: Record<string, string> = {
   hero_quote_form: "Formulário",
+  formulario_site: "Formulário do site",
   formulario_contactos: "Contactos",
   quero_contratar: "Contratar",
   quero_contratar_header: "Contratar",
@@ -62,4 +63,27 @@ export function origemDoPedido(rawOrderJson: string | null | undefined): OrigemP
   } catch {
     return { label: "Simulador", slug: "simulador" };
   }
+}
+
+/**
+ * De onde veio um lead, para a coluna "Origem".
+ *
+ * A coluna `leads.origem` existia e ninguém a preenchia, por isso o painel
+ * caía no caminho da página — e mostrava `/` a todos os leads da homepage,
+ * que não diz nada a quem está a trabalhar.
+ */
+export function origemDoLead(
+  lead: { origem?: string | null; pagePath?: string | null; utmSource?: string | null },
+): string {
+  const o = lead.origem?.trim();
+  if (o) return ORIGEM_LABELS[o] ?? o.replace(/_/g, " ");
+
+  // Sem origem gravada (leads antigos), a página serve — mas escrita de
+  // forma legível. A raiz é a homepage, não uma barra.
+  const p = lead.pagePath?.trim();
+  if (p) return p === "/" ? "Página inicial" : p;
+
+  const utm = lead.utmSource?.trim();
+  if (utm) return `Campanha · ${utm}`;
+  return "—";
 }

@@ -126,6 +126,10 @@ export async function POST(req: NextRequest) {
       tipoServico:         SERVICE_LABELS[tipoServico] ?? tipoServico,
       preferenciaContacto: "telefone",
       mensagem:            descricao ?? null,
+      // A coluna `origem` existia e ninguém a preenchia: o painel caía no
+      // pagePath e mostrava "/" a todos os leads da homepage.
+      origem:              "hero_quote_form",
+      canal:               "telefone",
       pagePath:            pagePath ?? "/",
       pageUrl:             pagePath ? `${SITE_URL}${pagePath}` : SITE_URL,
       utmSource:           utmSource ?? null,

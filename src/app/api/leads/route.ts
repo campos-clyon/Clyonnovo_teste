@@ -17,6 +17,10 @@ const LeadSchema = z.object({
   utmMedium:           z.string().max(120).optional(),
   utmCampaign:         z.string().max(120).optional(),
   gclid:               z.string().max(255).optional(),
+  // De onde veio e por que via. O zod descarta o que não declara, por isso
+  // sem estas duas linhas os campos nunca chegariam ao createLead.
+  origem:              z.string().max(120).optional(),
+  canal:               z.string().max(60).optional(),
 });
 
 // POST /api/leads — criar novo lead
@@ -41,7 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
     const { nome, telefone, email, localidade, tipoServico, preferenciaContacto,
-            mensagem, pagePath, pageUrl, utmSource, utmMedium, utmCampaign, gclid } = parsed.data;
+            mensagem, pagePath, pageUrl, utmSource, utmMedium, utmCampaign, gclid,
+            origem, canal } = parsed.data;
 
     await createLead({
       nome,
@@ -51,6 +56,10 @@ export async function POST(request: NextRequest) {
       tipoServico,
       preferenciaContacto,
       mensagem: mensagem ?? null,
+      // Sem isto o painel mostrava só o caminho da página — que para a
+      // homepage é "/" e não diz nada a ninguém.
+      origem: origem ?? "formulario_site",
+      canal: canal ?? (preferenciaContacto || null),
       pagePath: pagePath ?? null,
       pageUrl: pageUrl ?? null,
       utmSource: utmSource ?? null,

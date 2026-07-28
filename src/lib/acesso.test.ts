@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   ELEVATOR_VALUES, PARKING_VALUES,
-  elevatorLabel, parkingLabel, isUnknownAccessValue, origemDoPedido,
+  elevatorLabel, parkingLabel, isUnknownAccessValue, origemDoPedido, origemDoLead,
 } from "./acesso";
 import { tFloor } from "./translations";
 
@@ -133,5 +133,35 @@ describe("andar e elevador obrigatórios no formulário da homepage", () => {
   // "0" é o rés-do-chão e o dicionário já o traduz — não inventámos valor novo
   it("o valor do rés-do-chão tem tradução", () => {
     expect(tFloor("0")).toBe("Rés-do-chão");
+  });
+});
+
+describe("origemDoLead — a coluna Origem mostrava '/' a toda a gente", () => {
+  it("usa a origem gravada quando existe", () => {
+    expect(origemDoLead({ origem: "hero_quote_form", pagePath: "/" })).toBe("Formulário");
+    expect(origemDoLead({ origem: "formulario_contactos" })).toBe("Contactos");
+  });
+
+  it("uma origem desconhecida fica legível em vez de crua", () => {
+    expect(origemDoLead({ origem: "campanha_natal_2026" })).toBe("campanha natal 2026");
+  });
+
+  // Leads antigos não têm origem gravada. A página serve de recurso — mas a
+  // raiz é a página inicial, não uma barra solta.
+  it("a raiz do site é a página inicial", () => {
+    expect(origemDoLead({ pagePath: "/" })).toBe("Página inicial");
+  });
+
+  it("outras páginas aparecem pelo caminho", () => {
+    expect(origemDoLead({ pagePath: "/recolha-moveis-lisboa" })).toBe("/recolha-moveis-lisboa");
+  });
+
+  it("sem página, a campanha ainda diz alguma coisa", () => {
+    expect(origemDoLead({ utmSource: "google" })).toBe("Campanha · google");
+  });
+
+  it("sem nada, não inventa", () => {
+    expect(origemDoLead({})).toBe("—");
+    expect(origemDoLead({ origem: "  ", pagePath: "" })).toBe("—");
   });
 });
