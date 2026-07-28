@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import PageViewTracker from "@/components/PageViewTracker";
 
 import SiteChrome from "@/components/SiteChrome";
 import { TrpcProvider } from "@/components/TrpcProvider";
@@ -262,6 +263,9 @@ export default function RootLayout({
           </AuthClientProvider>
         </LocationProvider>
         <Analytics />
+        {/* Vistas de página na nossa base — o painel deixa de depender de uma
+            conta externa para saber de que páginas vêm os pedidos */}
+        <PageViewTracker />
       </body>
     </html>
   );

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
     const where = `WHERE ${conditions.join(" AND ")}`;
 
-    const { events, totals } = await withConnection(async (conn) => {
+    const { events, totals, paginas } = await withConnection(async (conn) => {
       const [eventsRows] = await conn.execute(
         `SELECT id, eventType, action, pagePath, label, phone, email, name,
                 serviceType, location, contactPreference,
@@ -90,18 +90,33 @@ export async function GET(request: NextRequest) {
           SUM(CASE WHEN eventType LIKE 'form_submit%'       AND createdAt >= ?   THEN 1 ELSE 0 END) AS formSemana,
           SUM(CASE WHEN eventType = 'click_email'           AND createdAt >= ?   THEN 1 ELSE 0 END) AS emailSemana,
           SUM(CASE WHEN eventType LIKE 'simulator_%'        AND createdAt >= ?   THEN 1 ELSE 0 END) AS simuladorSemana,
+          SUM(CASE WHEN eventType = 'page_view'             AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS paginasHoje,
+          SUM(CASE WHEN eventType = 'page_view'             AND createdAt >= ?   THEN 1 ELSE 0 END) AS paginasSemana,
           COUNT(*) AS total
          FROM leadEvents`,
-        [hoje, hoje, hoje, hoje, hoje, hoje, semanaStart, semanaStart, semanaStart, semanaStart, semanaStart, semanaStart],
+        [hoje, hoje, hoje, hoje, hoje, hoje, semanaStart, semanaStart, semanaStart, semanaStart, semanaStart, semanaStart, hoje, semanaStart],
+      );
+
+      // De que páginas vem o tráfego — a pergunta que o cartão sozinho não
+      // responde. Só a semana, e só o top: é o que cabe num ecrã.
+      const [paginasRows] = await conn.execute(
+        `SELECT pagePath, COUNT(*) AS visitas
+           FROM leadEvents
+          WHERE eventType = 'page_view' AND createdAt >= ? AND pagePath IS NOT NULL
+          GROUP BY pagePath
+          ORDER BY visitas DESC
+          LIMIT 15`,
+        [semanaStart],
       );
 
       return {
         events: Array.isArray(eventsRows) ? eventsRows : [],
         totals: Array.isArray(totalsRows) ? (totalsRows as any[])[0] : {},
+        paginas: Array.isArray(paginasRows) ? paginasRows : [],
       };
     });
 
-    return NextResponse.json({ events, totals });
+    return NextResponse.json({ events, totals, paginas });
   } catch (error) {
     console.error("[api/admin/lead-events] GET error:", error);
     return NextResponse.json({ events: [], totals: {}, error: "Erro ao carregar eventos" }, { status: 500 });

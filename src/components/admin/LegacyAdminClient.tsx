@@ -130,6 +130,8 @@ type EventTotals = {
   formHoje?: number;
   emailHoje?: number;
   simuladorHoje?: number;
+  paginasHoje?: number;
+  paginasSemana?: number;
   whatsappSemana?: number;
   ligarSemana?: number;
   ctaSemana?: number;
@@ -420,6 +422,8 @@ export default function ColaboradorAdminClient() {
   const [leadEvents, setLeadEvents] = useState<LeadEvent[]>([]);
   const [leadTotals, setLeadTotals] = useState<LeadTotals>({});
   const [eventTotals, setEventTotals] = useState<EventTotals>({});
+  // De que páginas vem o tráfego — a análise que faltava por completo
+  const [paginasTop, setPaginasTop] = useState<Array<{ pagePath: string; visitas: number }>>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadsError, setLeadsError] = useState<string | null>(null);
   const [leadPeriodo, setLeadPeriodo] = useState("7d");
@@ -791,6 +795,7 @@ export default function ColaboradorAdminClient() {
           if (!data.error) {
             setLeadEvents(data.events || []);
             setEventTotals(data.totals || {});
+            setPaginasTop(data.paginas || []);
           }
         } catch { /* silencioso */ }
       }
@@ -2406,6 +2411,35 @@ export default function ColaboradorAdminClient() {
                 })}
               </div>
 
+              {/* Páginas mais vistas — responde "de onde vem o tráfego",
+                  que os cartões sozinhos não dizem */}
+              {paginasTop.length > 0 && (
+                <div className="rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Páginas mais vistas · últimos 7 dias
+                  </p>
+                  <div className="space-y-1.5">
+                    {paginasTop.map((pg) => {
+                      const maximo = paginasTop[0]?.visitas || 1;
+                      return (
+                        <div key={pg.pagePath} className="flex items-center gap-3">
+                          <span className="w-1/2 truncate font-mono text-[11px] text-slate-300" title={pg.pagePath}>
+                            {pg.pagePath}
+                          </span>
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                            <div
+                              className="h-full rounded-full bg-cyan-400/70"
+                              style={{ width: `${Math.max(3, (pg.visitas / maximo) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="w-10 text-right text-[11px] font-semibold text-white">{pg.visitas}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Cards de eventos */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {[
@@ -2415,6 +2449,7 @@ export default function ColaboradorAdminClient() {
                   { label: "Forms", hoje: eventTotals.formHoje ?? 0, semana: eventTotals.formSemana ?? 0, icon: ReceiptText },
                   { label: "Email", hoje: eventTotals.emailHoje ?? 0, semana: eventTotals.emailSemana ?? 0, icon: Mail },
                   { label: "Simulador", hoje: eventTotals.simuladorHoje ?? 0, semana: eventTotals.simuladorSemana ?? 0, icon: Sparkles },
+                  { label: "Páginas", hoje: eventTotals.paginasHoje ?? 0, semana: eventTotals.paginasSemana ?? 0, icon: FileText },
                 ].map((stat) => {
                   const Icon = stat.icon;
                   return (

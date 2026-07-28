@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Clock3, Mail, MapPin, MessageCircle, Phone, CheckCircle2 } from "lucide-react";
+import {
+  trackLeadFormSubmit, trackWhatsAppClick, trackPhoneCall, trackEmailClick,
+} from "@/lib/analytics";
 
 export default function ContactosClient() {
   const [form, setForm] = useState({ nome: "", telemovel: "", email: "", morada: "" });
@@ -39,6 +42,9 @@ export default function ContactosClient() {
         throw new Error(data?.error || "Erro ao enviar pedido.");
       }
 
+      // Sem isto, o pedido entra mas o canal não fica registado: o painel
+      // mostrava "Forms 0" com formulários a chegar todos os dias.
+      trackLeadFormSubmit("contactos", "outro");
       setStatus("success");
       setForm({ nome: "", telemovel: "", email: "", morada: "" });
     } catch (err) {
@@ -95,7 +101,11 @@ export default function ContactosClient() {
                 </span>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Telefone</p>
-                  <a href="tel:+351931632622" className="text-sm font-bold text-slate-900 hover:text-cyan-600">
+                  <a
+                    href="tel:+351931632622"
+                    onClick={() => trackPhoneCall("contactos_lista", "+351931632622")}
+                    className="text-sm font-bold text-slate-900 hover:text-cyan-600"
+                  >
                     +351 931 632 622
                   </a>
                   <p className="text-xs text-slate-400">Pedidos rápidos e marcações</p>
@@ -107,7 +117,11 @@ export default function ContactosClient() {
                 </span>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Email</p>
-                  <a href="mailto:geral@clyon.pt" className="text-sm font-bold text-slate-900 hover:text-cyan-600">
+                  <a
+                    href="mailto:geral@clyon.pt"
+                    onClick={() => trackEmailClick("contactos_lista", "geral@clyon.pt")}
+                    className="text-sm font-bold text-slate-900 hover:text-cyan-600"
+                  >
                     geral@clyon.pt
                   </a>
                   <p className="text-xs text-slate-400">Pedidos detalhados e dúvidas</p>
@@ -137,6 +151,7 @@ export default function ContactosClient() {
             <div className="mt-6 flex gap-3">
               <a
                 href="tel:+351931632622"
+                onClick={() => trackPhoneCall("contactos_botao", "+351931632622")}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-500 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-400"
               >
                 <Phone className="h-4 w-4" />
@@ -146,6 +161,7 @@ export default function ContactosClient() {
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick("contactos_botao", "orcamento")}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-sm font-semibold text-white transition hover:bg-[#1ebe5d]"
               >
                 <MessageCircle className="h-4 w-4" />

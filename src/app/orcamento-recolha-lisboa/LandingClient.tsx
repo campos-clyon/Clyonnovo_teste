@@ -28,6 +28,9 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import {
+  trackWhatsAppClick, trackPhoneCall, trackEmailClick, trackCTAClick,
+} from "@/lib/analytics";
 
 const PHONE_DISPLAY = "+351 931 632 622";
 const PHONE_TEL = "+351931632622";
@@ -61,20 +64,30 @@ function trackLeadConversion() {
   });
 }
 
+// Estas quatro funções empurravam o evento só para o dataLayer do Google.
+// Nenhum dos nove botões desta landing chegava à nossa base — o painel
+// mostrava WhatsApp 0, Ligar 0 e Email 0 com a campanha a correr.
+// Agora vão aos dois sítios: o GTM continua a receber, e o backoffice
+// também. Os nomes de evento são os que o painel conta.
 function trackWhatsApp(location: string) {
   pushDataLayer({ event: "click_whatsapp", location });
+  trackWhatsAppClick(`landing_${location}`, "orcamento_recolha_lisboa");
 }
 
 function trackCall(location: string) {
   pushDataLayer({ event: "click_call", location });
+  trackPhoneCall(`landing_${location}`, PHONE_TEL);
 }
 
 function trackSms(location: string) {
   pushDataLayer({ event: "click_sms", location });
+  // O SMS não tem cartão próprio no painel; entra como CTA para não se perder
+  trackCTAClick("SMS", `landing_${location}`);
 }
 
 function trackEmail(location: string) {
   pushDataLayer({ event: "click_email", location });
+  trackEmailClick(`landing_${location}`);
 }
 
 const EMAIL_SUBJECT = "Pedido de Orçamento - CLYON";
