@@ -30,6 +30,7 @@ import {
   getRelatedCities,
   parseCityServiceSlug,
 } from "@/lib/seo-data";
+import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
 
 type Props = {
   params: Promise<{ slug: string[] }>;
@@ -306,9 +307,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   );
   const canonical = `${SITE_URL}/${getCityServiceSlug(service.slug, city.slug)}`;
 
+  // A descrição base é a mesma frase para toda a gente, com o nome da terra
+  // trocado — o Google vê 73 iguais. Nomear as freguesias reais dá-lhe algo
+  // que só existe nesta página, e ao cliente a confirmação de que cobrimos
+  // a rua dele.
+  const zonas = getCidadeLocal(city.slug)?.zonas ?? [];
+  const descricaoLocal = zonas.length >= 2
+    ? `${description} Servimos ${zonas.slice(0, 3).join(", ")} e restantes zonas de ${city.name}.`.slice(0, 320)
+    : description;
+
   return {
     title,
-    description,
+    description: descricaoLocal,
     keywords: [
       ...service.keywords,
       `${service.primaryKeyword} ${city.name.toLowerCase()}`,
@@ -367,6 +377,12 @@ export default async function ServiceCityPage({ params }: Props) {
   const cityBaseContent = getCityBaseContent(city.slug);
   const isPriorityPage = hasPriorityContent(city.slug, service.slug);
   
+  // O que só é verdade nesta zona: freguesias, acessos, estacionamento e
+  // destino dos resíduos. É isto que distingue esta página das outras 72.
+  const local = getCidadeLocal(city.slug);
+  const tempo = local ? tempoAproximado(local.distanciaKm) : "";
+  const notaServico = local?.porServico?.[service.slug as ServicoSlug] ?? null;
+
   const includedItems = getIncludedItems(service.name, city.name, service.slug);
   const excludedItems = getExcludedItems(service.slug);
   const pricingCopy = getPricingCopy(service.name, city.name, service.slug);
@@ -676,6 +692,62 @@ export default async function ServiceCityPage({ params }: Props) {
             </div>
           </div>
         </div>
+
+        {/* ── O que só é verdade nesta zona ──────────────────────────────
+            Sem isto, esta página era o mesmo texto de outras 72 com o nome
+            da terra trocado — e o Google tratava-a como tal. */}
+        {local && (
+          <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
+            <h2 className="text-3xl font-bold text-slate-950">
+              {service.shortName} em {city.name}: o que muda por ser aqui
+            </h2>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                  Onde chegamos
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  Cobrimos {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
+                  Da nossa base em Fernão Ferro são cerca de {local.distanciaKm} km — {tempo} de
+                  viagem, sem trânsito.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                  Acessos
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{local.acesso}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                  Estacionamento
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{local.estacionamento}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                  Para onde vai
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  O que recolhemos em {city.name} é encaminhado para o{" "}
+                  <span className="font-semibold text-slate-800">{local.destinoResiduos.nome}</span>{" "}
+                  ({local.destinoResiduos.entidade}) ou para operador licenciado, conforme o tipo de
+                  resíduo. Entregamos o comprovativo de destino sempre que o pedir.
+                </p>
+              </div>
+            </div>
+
+            {notaServico && (
+              <div className="mt-6 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-5">
+                <p className="text-sm leading-7 text-slate-700">{notaServico}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
