@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { translate, tElevator, tParking, tUrgency, tService, tFloor, FIELD_TRANSLATIONS } from "@/lib/translations";
+import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -870,19 +871,23 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 <Field label="Elevador">
                   <select value={editHasElevator} onChange={(e) => setEditHasElevator(e.target.value)} className={selectCls}>
                     <option value="" className={optionCls}>Não informado</option>
-                    <option value="yes" className={optionCls}>Sim, funciona</option>
-                    <option value="small" className={optionCls}>Sim, pequeno</option>
-                    <option value="no" className={optionCls}>Não tem</option>
-                    <option value="unknown" className={optionCls}>Não sei</option>
+                    {ELEVATOR_VALUES.map((v) => (
+                      <option key={v} value={v} className={optionCls}>{tElevator(v)}</option>
+                    ))}
+                    {isUnknownAccessValue(editHasElevator, ELEVATOR_VALUES) && (
+                      <option value={editHasElevator} className={optionCls}>{editHasElevator} (valor antigo)</option>
+                    )}
                   </select>
                 </Field>
                 <Field label="Estacionamento">
                   <select value={editParkingDistance} onChange={(e) => setEditParkingDistance(e.target.value)} className={selectCls}>
                     <option value="" className={optionCls}>Não informado</option>
-                    <option value="door" className={optionCls}>Mesmo à porta</option>
-                    <option value="under_20m" className={optionCls}>Sim, até 20 metros</option>
-                    <option value="over_30m" className={optionCls}>Mais de 30 metros</option>
-                    <option value="difficult" className={optionCls}>Estacionamento difícil</option>
+                    {PARKING_VALUES.map((v) => (
+                      <option key={v} value={v} className={optionCls}>{tParking(v)}</option>
+                    ))}
+                    {isUnknownAccessValue(editParkingDistance, PARKING_VALUES) && (
+                      <option value={editParkingDistance} className={optionCls}>{editParkingDistance} (valor antigo)</option>
+                    )}
                   </select>
                 </Field>
               </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
+import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1847,19 +1848,27 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             <input type="text" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className={inputCls} placeholder="Ex: 3º andar" />
                           </Field>
                           <Field label="Elevador">
+                            {/* Vocabulário partilhado: o que aqui se grava é
+                                lido pelo motor de preços e pelo simulador */}
                             <select value={editHasElevator} onChange={(e) => setEditHasElevator(e.target.value)} className={selectCls}>
                               <option value="" className={optionCls}>Não informado</option>
-                              <option value="sim" className={optionCls}>Sim</option>
-                              <option value="nao" className={optionCls}>Não</option>
+                              {ELEVATOR_VALUES.map((v) => (
+                                <option key={v} value={v} className={optionCls}>{tElevator(v)}</option>
+                              ))}
+                              {isUnknownAccessValue(editHasElevator, ELEVATOR_VALUES) && (
+                                <option value={editHasElevator} className={optionCls}>{editHasElevator} (valor antigo)</option>
+                              )}
                             </select>
                           </Field>
                           <Field label="Distância de estacionamento">
                             <select value={editParkingDistance} onChange={(e) => setEditParkingDistance(e.target.value)} className={selectCls}>
                               <option value="" className={optionCls}>Não informado</option>
-                              <option value="porta" className={optionCls}>À porta</option>
-                              <option value="proximo" className={optionCls}>Próximo (até 50m)</option>
-                              <option value="medio" className={optionCls}>Médio (50-200m)</option>
-                              <option value="longe" className={optionCls}>Longe (mais de 200m)</option>
+                              {PARKING_VALUES.map((v) => (
+                                <option key={v} value={v} className={optionCls}>{tParking(v)}</option>
+                              ))}
+                              {isUnknownAccessValue(editParkingDistance, PARKING_VALUES) && (
+                                <option value={editParkingDistance} className={optionCls}>{editParkingDistance} (valor antigo)</option>
+                              )}
                             </select>
                           </Field>
                         </div>

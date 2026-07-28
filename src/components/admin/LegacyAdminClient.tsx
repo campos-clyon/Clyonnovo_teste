@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
+import { origemDoPedido } from "@/lib/acesso";
 import ContasPanel from "@/components/admin/ContasPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
@@ -1578,19 +1579,17 @@ export default function ColaboradorAdminClient() {
                             baixa: "text-slate-400",
                           };
 
-                          let origemLabel = "Simulador";
-                          let origemStyle = "bg-violet-50 text-violet-700 border-violet-200";
-                          try {
-                            const raw = p.rawOrderJson ? JSON.parse(p.rawOrderJson) : null;
-                            const orig = raw?.origemPedido ?? null;
-                            if (orig === "formulario_contactos") {
-                              origemLabel = "Contactos";
-                              origemStyle = "bg-cyan-50 text-cyan-700 border-cyan-200";
-                            } else if (orig === "quero_contratar_header" || orig === "quero_contratar") {
-                              origemLabel = "Contratar";
-                              origemStyle = "bg-amber-50 text-amber-700 border-amber-200";
-                            }
-                          } catch { /* rawOrderJson inválido */ }
+                          // O formulário da homepage marca a origem em
+                          // `_source`, não em `origemPedido` — só se lia o
+                          // segundo, por isso TODOS apareciam como "Simulador".
+                          const origem = origemDoPedido(p.rawOrderJson);
+                          const origemLabel = origem.label;
+                          const origemStyle =
+                            origem.slug === "hero_quote_form" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                            origem.slug === "formulario_contactos" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                            origem.slug.startsWith("quero_contratar") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            origem.slug === "simulador" ? "bg-violet-50 text-violet-700 border-violet-200" :
+                            "bg-slate-100 text-slate-600 border-slate-200";
 
                           return (
                             <tr
