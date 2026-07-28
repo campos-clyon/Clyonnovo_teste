@@ -472,3 +472,50 @@ describe("ordenação da fila — o mais parado primeiro", () => {
     expect(ordenado.map((r) => r.id)).toEqual(["a", "b", "c"]);
   });
 });
+
+// ── 8. Filtro "Novos" da lista de pedidos ─────────────────────────────────
+// O cartão contava viewedAt IS NULL (servidor) e a lista filtrava
+// status === "pendente" (cliente). Duas definições para a mesma palavra: o
+// cartão dizia 4 e a lista aparecia vazia.
+function pedidoNoFiltro(
+  p: { status: string; viewedAt?: string | null; assignedToId?: number | null },
+  filtro: string,
+): boolean {
+  if (p.status === "arquivado") return filtro === "arquivado";
+  if (filtro === "todos") return true;
+  if (filtro === "pendente") return !p.viewedAt;
+  if (filtro === "sem_assistente") return !p.assignedToId;
+  return p.status === filtro;
+}
+
+describe("pedidoNoFiltro — Novos é o que ninguém abriu", () => {
+  it("um pedido nunca aberto é novo, seja qual for o estado", () => {
+    expect(pedidoNoFiltro({ status: "sem_assistente", viewedAt: null }, "pendente")).toBe(true);
+    expect(pedidoNoFiltro({ status: "atribuido", viewedAt: null }, "pendente")).toBe(true);
+  });
+
+  it("depois de aberto deixa de ser novo, mesmo com status pendente", () => {
+    expect(pedidoNoFiltro({ status: "pendente", viewedAt: "2026-07-28T10:00:00Z" }, "pendente")).toBe(false);
+  });
+
+  it("arquivados só aparecem no seu próprio filtro", () => {
+    expect(pedidoNoFiltro({ status: "arquivado", viewedAt: null }, "pendente")).toBe(false);
+    expect(pedidoNoFiltro({ status: "arquivado" }, "todos")).toBe(false);
+    expect(pedidoNoFiltro({ status: "arquivado" }, "arquivado")).toBe(true);
+  });
+
+  it("sem assistente é fila geral, não um estado", () => {
+    expect(pedidoNoFiltro({ status: "em_analise", assignedToId: null }, "sem_assistente")).toBe(true);
+    expect(pedidoNoFiltro({ status: "em_analise", assignedToId: 3 }, "sem_assistente")).toBe(false);
+  });
+
+  it("os estados de fecho são filtráveis", () => {
+    expect(pedidoNoFiltro({ status: "concluido" }, "concluido")).toBe(true);
+    expect(pedidoNoFiltro({ status: "rejeitado" }, "rejeitado")).toBe(true);
+    expect(pedidoNoFiltro({ status: "concluido" }, "rejeitado")).toBe(false);
+  });
+
+  it("um pedido fechado continua a contar em todos", () => {
+    expect(pedidoNoFiltro({ status: "concluido" }, "todos")).toBe(true);
+  });
+});

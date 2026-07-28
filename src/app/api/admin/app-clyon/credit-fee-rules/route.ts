@@ -145,12 +145,19 @@ export async function POST(req: NextRequest) {
       const vErr = validateRule(updated);
       if (vErr) return NextResponse.json({ error: vErr }, { status: 400 });
 
-      // Impedir zero regras activas — deixaria de se cobrar em silêncio
+      // Esta guarda existia para impedir zero bandas activas, que na altura
+      // significava deixar de cobrar em silêncio. Desde 25-07-2026 já não
+      // significa: a calculate_job_credit_cost passou a usar uma percentagem
+      // contínua e não lê esta tabela. Zero activas é agora o estado NORMAL.
+      //
+      // Enquanto cá esteve, tornou impossível guardar o custo de qualquer
+      // banda — o botão "Guardar" não envia `active`, herda o `false` da
+      // linha, e a guarda recusava com uma frase que o próprio ecrã desmente.
       const activeAfter = existing.filter((r) => (r.id === updated.id ? updated.active : r.active));
-      if (activeAfter.length === 0) {
-        return NextResponse.json({
-          error: "Tem de existir pelo menos uma regra activa — sem regras, os trabalhos deixam de ser cobrados em silêncio. Activa outra regra antes de desactivar esta.",
-        }, { status: 400 });
+      const eraAUltimaActiva = activeAfter.length === 0 && current.active && updated.active === false;
+      if (eraAUltimaActiva) {
+        // Não bloqueia: informa. Voltar a zero activas é uma escolha válida.
+        console.info("[credit-fee-rules] última banda activa desactivada — os escalões ficam sem nenhuma activa");
       }
 
       // Sobreposição entre bandas activas

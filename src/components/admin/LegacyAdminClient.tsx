@@ -326,6 +326,26 @@ function maskEmail(email: string | null | undefined): string {
   return local.charAt(0) + "***@" + domain.charAt(0) + "***";
 }
 
+/**
+ * Um pedido corresponde ao filtro escolhido no ecrã de pedidos.
+ *
+ * "Novos" NÃO é o estado `pendente`: é um pedido que ainda ninguém abriu
+ * (`viewedAt` por preencher). O cartão sempre contou assim — do lado do
+ * servidor, em `countSimulatorOrdersByStatus` — mas a lista filtrava por
+ * `status === "pendente"`. Duas definições para a mesma palavra: o cartão
+ * dizia 4 e a lista aparecia vazia.
+ */
+function pedidoNoFiltro(
+  p: { status: string; viewedAt?: string | null; assignedToId?: number | null },
+  filtro: string,
+): boolean {
+  if (p.status === "arquivado") return filtro === "arquivado";
+  if (filtro === "todos") return true;
+  if (filtro === "pendente") return !p.viewedAt;
+  if (filtro === "sem_assistente") return !p.assignedToId;
+  return p.status === filtro;
+}
+
 export default function ColaboradorAdminClient() {
   const router = useRouter();
 
@@ -443,6 +463,8 @@ export default function ColaboradorAdminClient() {
     assignedToId?: number | null;
     assignedToName?: string | null;
     assignedAt?: string | null;
+    /** Quando alguém abriu o pedido pela primeira vez. NULL = novo. */
+    viewedAt?: string | null;
     rawOrderJson?: string | null;
     createdAt: string;
     updatedAt: string;
@@ -451,7 +473,8 @@ export default function ColaboradorAdminClient() {
   const [pedidosCounts, setPedidosCounts] = useState<Record<string, number>>({});
   const [pedidosLoading, setPedidosLoading] = useState(false);
   const [pedidosError, setPedidosError] = useState<string | null>(null);
-  const [pedidoStatusFilter, setPedidoStatusFilter] = useState("todos");
+  // Abre nos novos: o que ninguém viu ainda é o que precisa de atenção
+  const [pedidoStatusFilter, setPedidoStatusFilter] = useState("pendente");
   const [pedidoSearch, setPedidoSearch] = useState("");
   const [pedidoSearchDebounced, setPedidoSearchDebounced] = useState("");
   const [selectedPedido, setSelectedPedido] = useState<SimulatorOrder | null>(null);
@@ -670,6 +693,40 @@ export default function ColaboradorAdminClient() {
       if (!silent) setPedidosError("Não foi possível carregar os pedidos.");
     } finally {
       if (!silent) setPedidosLoading(false);
+    }
+  };
+
+  /**
+   * Fecha um pedido: realizado ou rejeitado.
+   *
+   * "concluido" não é só uma etiqueta — dispara a exportação para a folha do
+   * Google (ver updateSimulatorOrder). Por isso pede confirmação e diz o que
+   * vai acontecer, em vez de um "tem a certeza?" vazio.
+   */
+  const fecharPedido = async (
+    p: { id: number; status: string; contactName?: string | null },
+    novoEstado: "concluido" | "rejeitado",
+  ) => {
+    if (!token || !p.id) return;
+    const quem = p.contactName ? ` de ${p.contactName}` : "";
+    const pergunta = novoEstado === "concluido"
+      ? `Marcar o pedido${quem} como realizado? Sai da lista activa e entra na folha de trabalhos concluídos.`
+      : `Marcar o pedido${quem} como rejeitado? Sai da lista activa e não volta a aparecer na fila.`;
+    if (!confirm(pergunta)) return;
+    try {
+      const r = await fetch(`/api/admin/pedidos`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: p.id, status: novoEstado }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        alert(`Erro: ${j?.message ?? j?.error ?? r.statusText}`);
+        return;
+      }
+      await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+    } catch (err) {
+      alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -1277,6 +1334,9 @@ export default function ColaboradorAdminClient() {
                         enviado_cliente: "Enviado",
                         confirmado: "Confirmado",
                         cancelado: "Cancelado",
+                        concluido: "Realizado",
+                        rejeitado: "Rejeitado",
+                        arquivado: "Arquivado",
                       };
                       return (
                         <button
@@ -1482,6 +1542,8 @@ export default function ColaboradorAdminClient() {
                   <option value="atribuido">Atribuídos</option>
                   <option value="em_analise">Em análise</option>
                   <option value="sem_assistente">Sem assistente</option>
+                  <option value="concluido">Realizados</option>
+                  <option value="rejeitado">Rejeitados</option>
                   <option value="precisa_info">Precisa informação</option>
                   <option value="presencial_recomendado">Presencial recomendado</option>
                   <option value="estimativa_pronta">Estimativa pronta</option>
@@ -1501,11 +1563,7 @@ export default function ColaboradorAdminClient() {
               )}
               {pedidosLoading ? (
                 <div className="py-10 text-center text-sm text-slate-500">A carregar pedidos...</div>
-              ) : pedidos.filter((p) => {
-                if (pedidoStatusFilter === "todos") return p.status !== "arquivado";
-                if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId && p.status !== "arquivado";
-                return p.status === pedidoStatusFilter;
-              }).length === 0 ? (
+              ) : pedidos.filter((p) => pedidoNoFiltro(p, pedidoStatusFilter)).length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 py-12 text-center">
                   <FileText className="h-10 w-10 text-slate-300" />
                   <div>
@@ -1533,15 +1591,12 @@ export default function ColaboradorAdminClient() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {pedidos
-                        .filter((p) => {
-                          if (pedidoStatusFilter === "sem_assistente") return !p.assignedToId && p.status !== "arquivado";
-                          if (pedidoStatusFilter === "todos") return p.status !== "arquivado";
-                          if (pedidoStatusFilter !== "todos") return p.status === pedidoStatusFilter;
-                          return true;
-                        })
+                        .filter((p) => pedidoNoFiltro(p, pedidoStatusFilter))
                         .map((p) => {
                           const statusColors: Record<string, string> = {
                             sem_assistente: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                            concluido: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            rejeitado: "bg-slate-100 text-slate-600 border-slate-200",
                             pendente: "bg-blue-50 text-blue-700 border-blue-200",
                             atribuido: "bg-purple-50 text-purple-700 border-purple-200",
                             em_analise: "bg-amber-50 text-amber-700 border-amber-200",
@@ -1565,6 +1620,9 @@ export default function ColaboradorAdminClient() {
                             enviado_cliente: "Enviado",
                             confirmado: "Confirmado",
                             cancelado: "Cancelado",
+                            concluido: "Realizado",
+                            rejeitado: "Rejeitado",
+                            arquivado: "Arquivado",
                           };
                           const urgencyDot: Record<string, string> = {
                             urgente: "bg-rose-500",
@@ -1731,6 +1789,27 @@ export default function ColaboradorAdminClient() {
                                     >
                                       {p.status === "arquivado" ? "Restaurar" : "Arquivar"}
                                     </button>
+                                  )}
+                                  {/* Fechar o pedido: realizado ou rejeitado.
+                                      Só aparecem enquanto houver o que fechar —
+                                      num pedido já fechado seriam ruído. */}
+                                  {isAdminGeral && !["concluido", "rejeitado", "arquivado", "cancelado"].includes(p.status) && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                                        onClick={(e) => { e.stopPropagation(); fecharPedido(p, "concluido"); }}
+                                      >
+                                        Realizado
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="rounded-[8px] border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition"
+                                        onClick={(e) => { e.stopPropagation(); fecharPedido(p, "rejeitado"); }}
+                                      >
+                                        Rejeitado
+                                      </button>
+                                    </>
                                   )}
                                   {isAdminGeral && (
                                     <button
