@@ -31,6 +31,7 @@ import {
   LogOut,
   Mail,
   MapPin,
+  Menu,
   MessageCircle,
   MousePointerClick,
   Pencil,
@@ -155,6 +156,21 @@ const adminNavItems: Array<{
   { id: "pagamentos", icon: Wallet },
   { id: "contas",     icon: UserPlus },
   { id: "configs",   icon: Settings2 },
+];
+
+/**
+ * A barra lateral agrupa as secções pelo trabalho que servem, não pela ordem
+ * em que foram construídas.
+ *
+ * "O que se faz todos os dias" fica em cima e é onde o operador vive: pedidos
+ * que entram, a app, e o resumo. "Quem contacta" é o funil comercial. "Gerir"
+ * é o que se abre uma vez por semana — equipa, dinheiro e definições — e por
+ * isso fica no fim, longe do clique acidental.
+ */
+const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
+  { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
+  { titulo: "Quem contacta", itens: ["leads", "contas"] },
+  { titulo: "Gerir", itens: ["equipa", "pagamentos", "configs"] },
 ];
 
 const sectionLabels: Record<AdminSection, string> = {
@@ -360,6 +376,8 @@ export default function ColaboradorAdminClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
+  // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
+  const [menuAberto, setMenuAberto] = useState(false);
   const [activeClyonTab, setActiveClyonTab] = useState<AppClyonTab>("visao-geral");
   const [activePedidoId, setActivePedidoId] = useState<string | null>(null);
   const urlSyncReady = useRef(false);
@@ -1143,82 +1161,147 @@ export default function ColaboradorAdminClient() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Ecra inteiro: sem limite de largura e sem [zoom:0.8], que
-          encolhia todo o painel a 80% e era o que tornava as colunas
-          ilegiveis em ecras grandes. */}
-      <div className="w-full px-3 py-5 lg:px-6">
-        <header className="rounded-[24px] border border-slate-800 bg-slate-900 px-5 py-4 shadow-lg">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-sky-500 text-white">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-400">
-                  Backoffice CLYON
-                </p>
-                <h2 className="mt-0.5 text-xl font-semibold text-white">Painel administrativo</h2>
-                <p className="mt-0.5 text-xs capitalize text-slate-500">{hojeLabel}</p>
-              </div>
+      {/* Fundo escuro quando o menu abre em ecrã pequeno */}
+      {menuAberto && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/70 lg:hidden"
+          onClick={() => setMenuAberto(false)}
+          aria-hidden
+        />
+      )}
+
+      <div className="flex">
+        {/* ── Barra lateral ──────────────────────────────────────────────
+            Fixa a partir de lg; em ecrã pequeno desliza por cima e o fundo
+            escurece. Os oito destinos estavam em linha no topo, todos com o
+            mesmo peso — agrupados, cada um está onde se procura. */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-800 bg-slate-900 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+            menuAberto ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          {/* Marca */}
+          <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-4">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[14px] bg-sky-500 text-white">
+              <ShieldCheck className="h-5 w-5" />
             </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400">
+                Backoffice
+              </p>
+              <p className="truncate text-sm font-semibold text-white">CLYON</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMenuAberto(false)}
+              className="ml-auto rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-white lg:hidden"
+              aria-label="Fechar menu"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            <nav className="flex flex-wrap gap-1.5">
-              {adminNavItems
-                .filter((item) => isAdminGeral || item.id === "pedidos")
-                .map((item) => {
-                  const Icon = item.icon;
-                  const active = activeSection === item.id;
+          {/* Destinos */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4">
+            {NAV_GRUPOS.map((grupo) => {
+              const itens = grupo.itens
+                .map((id) => adminNavItems.find((i) => i.id === id))
+                .filter((i): i is (typeof adminNavItems)[number] => Boolean(i))
+                // Uma assistente só vê pedidos — um grupo que fique vazio não
+                // deve deixar o título órfão no ecrã.
+                .filter((i) => isAdminGeral || i.id === "pedidos");
+              if (itens.length === 0) return null;
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveSection(item.id);
-                        // Sincronizar a sub-tab de operação com o item de nav escolhido
-                        if (item.id === "equipa") setOperacaoTab("equipa");
-                        if (item.id === "pagamentos") setOperacaoTab("pagamentos");
-                      }}
-                      className={`flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium transition ${
-                        active
-                          ? "bg-sky-500 text-white shadow-md"
-                          : "border border-slate-800 bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {sectionLabels[item.id]}
-                    </button>
-                  );
-                })}
-            </nav>
+              return (
+                <div key={grupo.titulo} className="mb-5 last:mb-0">
+                  <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                    {grupo.titulo}
+                  </p>
+                  <div className="space-y-0.5">
+                    {itens.map((item) => {
+                      const Icon = item.icon;
+                      const active = activeSection === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveSection(item.id);
+                            if (item.id === "equipa") setOperacaoTab("equipa");
+                            if (item.id === "pagamentos") setOperacaoTab("pagamentos");
+                            setMenuAberto(false);
+                          }}
+                          aria-current={active ? "page" : undefined}
+                          className={`flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition ${
+                            active
+                              ? "bg-sky-500 text-white shadow-md"
+                              : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{sectionLabels[item.id]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </nav>
 
-            <div className="flex items-center gap-3 rounded-[18px] border border-slate-800 bg-slate-800/60 px-4 py-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 text-xs font-bold text-white">
+          {/* Quem está a trabalhar, e a saída */}
+          <div className="border-t border-slate-800 px-3 py-3">
+            <div className="flex items-center gap-3 rounded-[14px] px-2 py-1.5">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-sky-500 text-xs font-bold text-white">
                 {getInitials(adminNome)}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{adminNome}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] text-slate-500">
                   {isAdminGeral ? "Admin geral" : "Assistente"}
                 </p>
               </div>
               <Button
                 onClick={handleLogout}
                 variant="ghost"
-                className="h-9 rounded-[10px] px-3 text-slate-400 hover:bg-slate-700 hover:text-white"
+                className="h-8 w-8 flex-shrink-0 rounded-[10px] p-0 text-slate-500 hover:bg-slate-800 hover:text-white"
+                title="Sair"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        </header>
+        </aside>
 
-        <main className="mt-4 min-w-0 space-y-5">
-          {error && (
-            <div className="rounded-[22px] border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-              {error}
+        {/* ── Conteúdo ────────────────────────────────────────────────── */}
+        <div className="min-w-0 flex-1">
+          <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur lg:px-6">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMenuAberto(true)}
+                className="rounded-lg border border-slate-800 p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+                aria-label="Abrir menu"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+              <div className="min-w-0">
+                {/* O título diz onde se está: com a navegação de lado, o
+                    cabeçalho deixa de ter de repetir a marca. */}
+                <h2 className="truncate text-lg font-semibold text-white">
+                  {sectionLabels[activeSection]}
+                </h2>
+                <p className="text-xs capitalize text-slate-500">{hojeLabel}</p>
+              </div>
             </div>
-          )}
+          </header>
+
+          <main className="min-w-0 space-y-5 px-3 py-5 lg:px-6">
+            {error && (
+              <div className="rounded-[22px] border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                {error}
+              </div>
+            )}
 
           {activeSection === "overview" && (
             <>
@@ -3275,6 +3358,7 @@ export default function ColaboradorAdminClient() {
             </section>
           )}
         </main>
+        </div>
       </div>
 
       {/* Drawer lateral: detalhes do lead */}
