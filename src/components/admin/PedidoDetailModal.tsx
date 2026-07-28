@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
-import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
+import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1086,7 +1086,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   <div className="min-w-0 flex items-center gap-3 flex-wrap">
                     <div className="min-w-0">
                       <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 leading-tight">
-                        #{order.id} · Simulador
+                        {/* Dizia "Simulador" a todos os pedidos. Um contacto
+                            de quatro campos parecia um pedido do simulador com
+                            tudo em falta — e a equipa procurava dados que
+                            nunca tinham sido pedidos. */}
+                        #{order.id} · {origemDoPedido(order.rawOrderJson).label}
                       </p>
                       <h2 className="text-base font-bold text-slate-900 truncate leading-tight">
                         {shouldMask ? _maskName(order.contactName) : (order.contactName ?? "Cliente sem nome")}
@@ -1834,6 +1838,16 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     ) : (
                       <div className="space-y-4">
                         <h3 className="text-base font-bold text-slate-900">Morada e acesso</h3>
+                        {/* Um contacto de quatro campos não perdeu dados: nunca
+                            os pediu. Sem isto, a equipa procura o que não
+                            existe em vez de levantar o telefone. */}
+                        {origemDoPedido(order.rawOrderJson).slug === "formulario_contactos" && (
+                          <p className="rounded-[16px] border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-relaxed text-sky-900">
+                            Este pedido veio da <span className="font-semibold">página de contactos</span>, que só
+                            pede nome, telemóvel, email, morada e tipo de serviço. Andar, elevador e
+                            estacionamento não chegaram porque não foram perguntados — confirma-os com o cliente.
+                          </p>
+                        )}
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <Field label="Morada completa">
                             <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className={inputCls} placeholder="Rua, número, andar..." />
@@ -2280,6 +2294,25 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     {/* Fotos */}
                     <div className="space-y-4">
                       <h3 className="text-base font-bold text-slate-900">Fotos e ficheiros</h3>
+                      {/* O cliente escolheu fotos e o upload falhou. Sem isto,
+                          a equipa via "nenhuma foto" e o cliente jurava tê-las
+                          enviado — e ninguém tinha razão nem prova. */}
+                      {(() => {
+                        const raw = parseRawOrder(order.rawOrderJson);
+                        const perdidas = Number((raw as Record<string, unknown>)?.fotosNaoEnviadas ?? 0);
+                        if (!perdidas) return null;
+                        return (
+                          <div className="rounded-[16px] border border-amber-300 bg-amber-50 p-4">
+                            <p className="text-sm font-semibold text-amber-900">
+                              O cliente enviou {perdidas} foto{perdidas === 1 ? "" : "s"} que não chegaram.
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                              Falhou o carregamento no envio do pedido. Ele foi avisado no ecrã final
+                              e convidado a reenviá-las por WhatsApp — vale a pena confirmar.
+                            </p>
+                          </div>
+                        );
+                      })()}
                       {files.length === 0 ? (
                         <div className="flex flex-col items-center justify-center rounded-[20px] border border-dashed border-white/10 py-16 text-center">
                           <svg className="mb-3 h-10 w-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">

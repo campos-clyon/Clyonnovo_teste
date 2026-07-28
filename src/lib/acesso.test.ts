@@ -84,3 +84,19 @@ describe("origemDoPedido — o formulário deixa de se disfarçar de simulador",
     expect(origemDoPedido("{isto não é json").label).toBe("Simulador");
   });
 });
+
+describe("origemDoPedido — o painel deixa de chamar simulador a tudo", () => {
+  // O cabeçalho do detalhe dizia "#131 · Simulador" a um pedido de quatro
+  // campos vindo da página de contactos. A equipa procurava dados que nunca
+  // tinham sido pedidos.
+  it("um contacto directo não é um pedido do simulador", () => {
+    const o = origemDoPedido(JSON.stringify({ origemPedido: "formulario_contactos" }));
+    expect(o.label).toBe("Contactos");
+    expect(o.label).not.toBe("Simulador");
+  });
+
+  it("o slug serve para decidir o que mostrar no ecrã", () => {
+    expect(origemDoPedido(JSON.stringify({ origemPedido: "formulario_contactos" })).slug)
+      .toBe("formulario_contactos");
+  });
+});

@@ -48,6 +48,8 @@ export default function SimulatorThreePhaseForm() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [countdown, setCountdown] = useState(0); // contagem regressiva do envio (20→0)
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
+  // Fotos que o cliente escolheu mas que não chegaram a subir
+  const [fotosNaoEnviadas, setFotosNaoEnviadas] = useState(0);
   const [successAssignedTo] = useState<{ id: number; name: string } | null>(null);
   const [addressValue, setAddressValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -301,23 +303,28 @@ export default function SimulatorThreePhaseForm() {
       // 2) Upload das fotos/vídeos ao Vercel Blob (se existirem) antes de guardar o pedido.
       let uploadedFiles: Array<{ url: string; name: string; size: number; type?: string }> = [];
       const rawFiles = (formData.files ?? []).filter((f) => f?.file instanceof File);
-      console.info(`[simulador] Tem ${rawFiles.length} ficheiros para upload`);
+      // Quantas fotos o cliente TENTOU enviar, e quantas ficaram pelo caminho.
+      // Sem isto, uma falha no upload dava um pedido sem fotos e sem sinal
+      // nenhum de que alguma vez as houve — a equipa via "nenhuma foto" e o
+      // cliente jurava tê-las enviado.
+      let fotosPerdidas = 0;
       if (rawFiles.length > 0) {
         try {
           const fd = new FormData();
           rawFiles.forEach((f) => fd.append("fotos", f.file as File, f.name));
           const upRes = await fetch("/api/simulador/upload-fotos", { method: "POST", body: fd });
           const upData = await upRes.json().catch(() => null);
-          if (upRes.ok && upData) {
-            uploadedFiles = (upData.files ?? []) as typeof uploadedFiles;
-            console.info(`[simulador] Upload OK: ${uploadedFiles.length} URLs`);
-          } else {
-            console.error(`[simulador] Upload falhou (${upRes.status}):`, upData?.error ?? upData);
+          uploadedFiles = (upData?.files ?? []) as typeof uploadedFiles;
+          fotosPerdidas = rawFiles.length - uploadedFiles.length;
+          if (fotosPerdidas > 0) {
+            console.error(`[simulador] ${fotosPerdidas} de ${rawFiles.length} fotos não subiram`, upData?.falhados ?? upData?.error);
           }
         } catch (err) {
+          fotosPerdidas = rawFiles.length;
           console.error("[simulador] Erro de rede no upload:", err);
         }
       }
+      setFotosNaoEnviadas(fotosPerdidas);
 
       // 3) Guardar o pedido (com a estimativa quando disponível).
       try {
@@ -337,22 +344,18 @@ export default function SimulatorThreePhaseForm() {
         // Substituir os File objects por metadata + URL (o servidor recebe JSON puro).
         const orderPayload = {
           ...formData,
-          files: uploadedFiles.length > 0
-            ? uploadedFiles.map((f, i) => ({
-                id: String(i),
-                url: f.url,
-                name: f.name,
-                size: f.size,
-                type: f.type,
-                mimeType: f.type,
-              }))
-            : (formData.files ?? []).map((f) => ({
-                id: f.id,
-                name: f.name,
-                size: f.size,
-                type: f.type,
-                mimeType: f.mimeType,
-              })),
+          // Só ficheiros COM url. Uma entrada sem url não é uma foto: é uma
+          // linha que faz o painel dizer que há fotos quando não há nenhuma.
+          files: uploadedFiles.map((f, i) => ({
+            id: String(i),
+            url: f.url,
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            mimeType: f.type,
+          })),
+          // Fica no pedido para a equipa saber que houve fotos e pedi-las
+          fotosNaoEnviadas: fotosPerdidas,
         };
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",
@@ -438,6 +441,32 @@ export default function SimulatorThreePhaseForm() {
               </div>
             )}
           </div>
+
+          {/* As fotos que não subiram: dizê-lo aqui evita a conversa em que
+              o cliente jura que as enviou e a equipa jura que não chegaram. */}
+          {fotosNaoEnviadas > 0 && (
+            <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">
+                {fotosNaoEnviadas === 1
+                  ? "Uma foto não chegou a ser enviada"
+                  : `${fotosNaoEnviadas} fotos não chegaram a ser enviadas`}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                O pedido foi registado à mesma. Se puder, envie-as por WhatsApp com o número
+                do pedido — ajudam-nos a dar um preço mais certo e evitam uma visita.
+              </p>
+              <a
+                href={`https://wa.me/351931632622?text=${encodeURIComponent(
+                  `Olá! Envio as fotos do pedido${successOrderId > 0 ? ` #${successOrderId}` : ""}.`,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center justify-center rounded-xl bg-[#25D366] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Enviar fotos por WhatsApp
+              </a>
+            </div>
+          )}
 
           {/* Combined info card */}
           <div className="bg-white rounded-2xl border border-blue-100 p-4 sm:p-5 shadow-sm mb-5 space-y-3">

@@ -7,7 +7,10 @@ import {
 } from "@/lib/analytics";
 
 export default function ContactosClient() {
-  const [form, setForm] = useState({ nome: "", telemovel: "", email: "", morada: "" });
+  // O tipo de serviço entra aqui porque sem ele TODOS os pedidos deste
+  // formulário chegavam ao painel como "Outro", e alguém tinha de telefonar
+  // só para saber do que se tratava.
+  const [form, setForm] = useState({ nome: "", telemovel: "", email: "", morada: "", servico: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -22,7 +25,7 @@ export default function ContactosClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           order: {
-            serviceType: "outro",
+            serviceType: form.servico || "outro",
             origemPedido: "formulario_contactos",
             description: `Contacto direto via página de contactos. Morada: ${form.morada}`,
             address: { formattedAddress: form.morada },
@@ -44,9 +47,9 @@ export default function ContactosClient() {
 
       // Sem isto, o pedido entra mas o canal não fica registado: o painel
       // mostrava "Forms 0" com formulários a chegar todos os dias.
-      trackLeadFormSubmit("contactos", "outro");
+      trackLeadFormSubmit("contactos", form.servico || "outro");
       setStatus("success");
-      setForm({ nome: "", telemovel: "", email: "", morada: "" });
+      setForm({ nome: "", telemovel: "", email: "", morada: "", servico: "" });
     } catch (err) {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Erro inesperado.");
@@ -197,6 +200,26 @@ export default function ContactosClient() {
                   {field("telemovel", "Telemóvel", "tel", "+351 9xx xxx xxx")}
                   {field("email", "Email", "email", "ana@exemplo.com")}
                   {field("morada", "Morada do serviço", "text", "Rua ..., Lisboa")}
+
+                  <div>
+                    <label htmlFor="servico" className="mb-1 block text-xs font-semibold text-slate-700">
+                      Tipo de serviço
+                    </label>
+                    <select
+                      id="servico"
+                      required
+                      value={form.servico}
+                      onChange={(e) => setForm((f) => ({ ...f, servico: e.target.value }))}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                    >
+                      <option value="">Escolha o serviço…</option>
+                      <option value="recolha_moveis">Recolha de móveis</option>
+                      <option value="recolha_entulho">Recolha de entulho</option>
+                      <option value="esvaziamento_apartamento">Esvaziamento de apartamento</option>
+                      <option value="mudanca">Mudança</option>
+                      <option value="outro">Outro serviço</option>
+                    </select>
+                  </div>
 
                   {status === "error" && (
                     <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-600">

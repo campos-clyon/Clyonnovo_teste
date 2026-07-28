@@ -27,7 +27,11 @@ export async function POST(request: NextRequest) {
   try {
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return NextResponse.json(
-        { error: "UPLOAD_DISABLED", message: "Vercel Blob não está configurado." },
+        {
+          error: "UPLOAD_DISABLED",
+          message: "O armazenamento de fotos não está configurado neste ambiente.",
+          falhados: [], recebidos: 0, files: [], urls: [],
+        },
         { status: 501 }
       );
     }
@@ -41,36 +45,44 @@ export async function POST(request: NextRequest) {
     }
 
     const uploaded: Array<{ url: string; name: string; size: number; type: string }> = [];
+    const falhados: Array<{ name: string; motivo: string }> = [];
 
+    // Um ficheiro a mais de 30MB, ou um formato que o telemóvel gravou de
+    // forma estranha, derrubava o lote inteiro — e o cliente ficava sem
+    // NENHUMA foto, sem aviso nenhum. Cada ficheiro passa a valer por si.
     for (const file of files) {
       if (file.size > MAX_SIZE) {
-        return NextResponse.json({ error: `Ficheiro "${file.name}" maior que 30MB.` }, { status: 413 });
+        falhados.push({ name: file.name, motivo: "maior que 30 MB" });
+        continue;
       }
       if (file.type && !ALLOWED_MIME.has(file.type)) {
-        return NextResponse.json({ error: `Tipo não permitido: ${file.type}` }, { status: 415 });
+        falhados.push({ name: file.name, motivo: `formato não suportado (${file.type})` });
+        continue;
       }
 
       const safeName = file.name.replace(/[^\w.\-]/g, "_").slice(-80);
       const key = `simulador/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
 
-      const blob = await put(key, file, {
-        access: "public",
-        contentType: file.type || "application/octet-stream",
-        addRandomSuffix: false,
-      });
-
-      uploaded.push({
-        url: blob.url,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      });
+      try {
+        const blob = await put(key, file, {
+          access: "public",
+          contentType: file.type || "application/octet-stream",
+          addRandomSuffix: false,
+        });
+        uploaded.push({ url: blob.url, name: file.name, size: file.size, type: file.type });
+      } catch (err) {
+        console.error("[upload-fotos] falhou um ficheiro:", file.name, err);
+        falhados.push({ name: file.name, motivo: "erro ao guardar" });
+      }
     }
 
     return NextResponse.json({
-      ok: true,
+      ok: uploaded.length > 0,
       urls: uploaded.map((f) => f.url),
       files: uploaded,
+      // Quem chama tem de poder dizer ao cliente o que não passou
+      falhados,
+      recebidos: files.length,
     });
   } catch (err) {
     console.error("[upload-fotos] erro:", err);
