@@ -240,3 +240,32 @@ describe("IVA e formatação", () => {
     expect(eur(249.99)).toBe("249,99");
   });
 });
+
+// ── Fechar o preço depois da revisão humana ───────────────────────────────
+// Com price_status = "revisao" a app recusa-se a cobrar a reserva: mostra ao
+// cliente "este pedido precisa de validação humana" e espera. O painel não
+// escrevia esta coluna, por isso o pedido ficava parado à espera de um botão
+// que não existia em lado nenhum.
+describe("price_status — o que a app lê para deixar pagar", () => {
+  it("revisao pede decisão humana e mostra intervalo", () => {
+    const p = displayPrice({ price_status: "revisao", estimate_min: 490, estimate_max: 980 });
+    expect(p.needsReview).toBe(true);
+    expect(p.kind).toBe("revisao");
+  });
+
+  it("fechar o preço tira o pedido da revisão e dá um valor único", () => {
+    const p = displayPrice({ price_status: "firme", final_price: 799, estimate_min: 490, estimate_max: 980 });
+    expect(p.needsReview).toBe(false);
+    expect(p.value).toBe(799);
+    expect(p.min).toBe(p.max);
+  });
+
+  // O valor fechado é o que o cliente paga: tem de ser o que o painel mostra
+  // e o que o campo do orçamento pré-preenche, senão gravam-se valores
+  // diferentes dos que se vêem.
+  it("o valor fechado manda sobre o intervalo antigo", () => {
+    const row = { price_status: "firme", final_price: 799, estimate_min: 490, estimate_max: 980 };
+    expect(gatePrice(row)).toBe(799);
+    expect(hasUsablePrice(row)).toBe(true);
+  });
+});

@@ -686,6 +686,41 @@ function PedidoInlinePanel({
     finally { setSaving(false); }
   }
 
+  /**
+   * Fecha o preço de um pedido que o motor mandou rever.
+   *
+   * Com `price_status = 'revisao'` a app recusa-se a cobrar a reserva: diz ao
+   * cliente que o pedido precisa de validação humana e espera. Este é o botão
+   * que dá essa validação — sem ele, o pedido fica parado para sempre à
+   * espera de uma acção que não existia no painel.
+   */
+  async function handleConfirmarPreco() {
+    if (!order) return;
+    const valor = price.trim() === "" ? null : Number(price);
+    if (valor === null || !Number.isFinite(valor) || valor <= 0) {
+      setSaveSuccess(null);
+      setSaveError("Escreve o valor final no campo do orçamento antes de fechar o preço. É esse valor que o cliente vai pagar.");
+      return;
+    }
+    setSaving(true); setSaveError(null); setSaveSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/app-pedidos/${id}`, {
+        method: "PATCH",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price_status: "firme",
+          final_price: valor,
+          reason: "Preço fechado após revisão humana",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSaveError(json.error ?? "Não foi possível fechar o preço."); return; }
+      setSaveSuccess(`Preço fechado em ${fmtMoney(valor)}. O cliente já pode pagar a reserva.`);
+      await load();
+    } catch { setSaveError("Erro de ligação."); }
+    finally { setSaving(false); }
+  }
+
   // Envia uma proposta de preço ao cliente (RPC admin_send_price_proposal).
   // O painel NÃO escreve status nem final_price — quem o faz é a RPC.
   async function handleSendProposal() {
@@ -1194,10 +1229,24 @@ function PedidoInlinePanel({
                         <p className={`whitespace-nowrap text-lg font-bold ${tone.text}`}>{p.text}</p>
                       </div>
                       {p.needsReview && (
-                        <p className="mt-2 text-[10px] leading-relaxed text-amber-200/70">
-                          O motor marcou este pedido para decisão humana — o valor é referência,
-                          não um preço fechado. Confirma antes de propor ao cliente.
-                        </p>
+                        <>
+                          <p className="mt-2 text-[10px] leading-relaxed text-amber-200/70">
+                            O motor marcou este pedido para decisão humana — o valor é referência,
+                            não um preço fechado. <span className="text-amber-200">Enquanto isto durar, a app
+                            não deixa o cliente pagar a reserva.</span>
+                          </p>
+                          <button
+                            onClick={handleConfirmarPreco}
+                            disabled={saving}
+                            className="mt-2 w-full rounded-lg bg-amber-500 py-2 text-xs font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+                          >
+                            {saving ? "A fechar..." : "Fechar preço e libertar o pagamento"}
+                          </button>
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            Usa o valor que está no campo <span className="text-slate-400">Valor do orçamento</span>,
+                            à direita. É esse que o cliente vai pagar.
+                          </p>
+                        </>
                       )}
                     </div>
                   )}

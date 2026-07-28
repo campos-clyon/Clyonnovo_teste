@@ -18,6 +18,9 @@ const VALID_STATUSES = [
 
 const CANCEL_STATUSES = new Set(["canceled", "rejected"]);
 
+/** Estados de preço do motor (NOTA-BRIDGE-MOTOR §3.1). */
+const PRICE_STATUSES = ["firme", "intervalo", "revisao"] as const;
+
 function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...row };
   normalized.details = safeText(row.details);
@@ -137,6 +140,36 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
   if (body.scheduled_for !== undefined) updates.scheduled_for = body.scheduled_for;
+
+  // Fechar o preço de um pedido que o motor mandou rever.
+  //
+  // Com price_status = 'revisao' a app RECUSA-SE a cobrar a reserva: mostra
+  // ao cliente "este pedido precisa de validação humana" e espera. O painel
+  // nunca escrevia esta coluna, por isso essa validação não existia em lado
+  // nenhum — o pedido ficava parado à espera de um botão que não havia.
+  if (body.price_status !== undefined) {
+    const ps = body.price_status;
+    if (ps !== null && !PRICE_STATUSES.includes(ps as (typeof PRICE_STATUSES)[number])) {
+      return NextResponse.json({
+        error: `Estado de preço inválido: "${ps}". Os valores do motor são: ${PRICE_STATUSES.join(", ")}.`,
+      }, { status: 400 });
+    }
+    // Fechar o preço sem dizer qual deixaria a app com um intervalo e o
+    // cliente sem saber quanto paga.
+    if (ps === "firme") {
+      const valor = validatedQuotePrice(
+        body.final_price !== undefined ? body.final_price : body.estimated_price,
+      );
+      if (valor === null) {
+        return NextResponse.json({
+          error: "Para fechar o preço é preciso indicar o valor final, superior a 0 €. É esse valor que o cliente vai pagar.",
+        }, { status: 400 });
+      }
+      updates.final_price = valor;
+      updates.estimated_price = valor;
+    }
+    updates.price_status = ps;
+  }
 
   if (updates.status && CANCEL_STATUSES.has(updates.status as string)) {
     const reason = typeof body.reason === "string" ? body.reason.trim() : "";
