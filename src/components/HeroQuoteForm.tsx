@@ -13,14 +13,21 @@ const SERVICE_OPTIONS = [
 ];
 
 const ELEVATOR_OPTIONS = [
+  // "Não sei" continua a ser resposta válida — há quem não saiba mesmo. O que
+  // muda é deixar de ser a resposta por omissão de quem nunca olhou.
+  { value: "",        label: "Escolha…" },
   { value: "yes",     label: "Sim" },
   { value: "small",   label: "Pequeno" },
   { value: "no",      label: "Não" },
   { value: "unknown", label: "Não sei" },
 ];
 
+// "" era rés-do-chão, e por isso quem não escolhesse nada parecia ter dito
+// que era no rés-do-chão. Agora "" significa apenas "ainda não respondeu", e o
+// rés-do-chão tem valor próprio — "0", que o dicionário já traduz.
 const ANDAR_OPTIONS = [
-  { value: "",    label: "Rés-do-chão" },
+  { value: "",    label: "Escolha o andar…" },
+  { value: "0",   label: "Rés-do-chão" },
   { value: "1",   label: "1.º andar" },
   { value: "2",   label: "2.º andar" },
   { value: "3",   label: "3.º andar" },
@@ -60,7 +67,8 @@ type FormData = {
   codigoPostal: string;
   numeroPosta: string;
   andar: string;
-  elevador: "yes" | "small" | "no" | "unknown";
+  /** "" enquanto o cliente não escolher — o andar sem elevador muda o preço. */
+  elevador: "" | "yes" | "small" | "no" | "unknown";
   descricao: string;
 };
 
@@ -90,7 +98,7 @@ export default function HeroQuoteForm() {
     codigoPostal: "",
     numeroPosta: "",
     andar: "",
-    elevador: "unknown",
+    elevador: "",
     descricao: "",
   });
   const [errors, setErrors] = useState<Errors>({});
@@ -152,6 +160,11 @@ export default function HeroQuoteForm() {
     const e: Errors = {};
     if (form.rua.trim().length < 3)          e.rua          = "Mínimo 3 caracteres";
     if (form.codigoPostal.trim().length < 4) e.codigoPostal = "Código postal inválido";
+    // Andar e elevador mudam o preço mais do que quase tudo o resto: um 4.º
+    // sem elevador não é o mesmo trabalho que um rés-do-chão. Deixá-los por
+    // responder dava orçamentos que não se aguentavam no local.
+    if (!form.andar)                         e.andar        = "Indique o andar";
+    if (!form.elevador)                      e.elevador     = "Indique se há elevador";
     if (form.descricao.length > 300)         e.descricao    = "Máximo 300 caracteres";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -208,7 +221,7 @@ export default function HeroQuoteForm() {
       setForm({
         primeiroNome: "", ultimoNome: "", indicativo: "+351", telefone: "",
         tipoServico: "", rua: "", codigoPostal: "", numeroPosta: "",
-        andar: "", elevador: "unknown", descricao: "",
+        andar: "", elevador: "", descricao: "",
       });
       setImages([]);
       setErrors({});
@@ -400,21 +413,23 @@ export default function HeroQuoteForm() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label>Andar</Label>
-                  <select className={selectCls()} value={form.andar}
+                  <select className={selectCls(errors.andar)} value={form.andar}
                     onChange={(e) => set("andar", e.target.value)}>
                     {ANDAR_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                  <Err msg={errors.andar} />
                 </div>
                 <div>
                   <Label>Elevador</Label>
-                  <select className={selectCls()} value={form.elevador}
+                  <select className={selectCls(errors.elevador)} value={form.elevador}
                     onChange={(e) => set("elevador", e.target.value as FormData["elevador"])}>
                     {ELEVATOR_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                  <Err msg={errors.elevador} />
                 </div>
               </div>
 

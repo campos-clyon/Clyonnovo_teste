@@ -3,6 +3,7 @@ import {
   ELEVATOR_VALUES, PARKING_VALUES,
   elevatorLabel, parkingLabel, isUnknownAccessValue, origemDoPedido,
 } from "./acesso";
+import { tFloor } from "./translations";
 
 describe("vocabulário de acesso — o mesmo em todo o lado", () => {
   // O backoffice oferecia sim/nao e porta/proximo/medio/longe. Nada disso
@@ -98,5 +99,39 @@ describe("origemDoPedido — o painel deixa de chamar simulador a tudo", () => {
   it("o slug serve para decidir o que mostrar no ecrã", () => {
     expect(origemDoPedido(JSON.stringify({ origemPedido: "formulario_contactos" })).slug)
       .toBe("formulario_contactos");
+  });
+});
+
+describe("andar e elevador obrigatórios no formulário da homepage", () => {
+  // Réplica da validação do passo 2. O que se protege aqui é a distinção
+  // entre "não respondeu" e "respondeu rés-do-chão": enquanto o rés-do-chão
+  // era o valor vazio, quem não escolhesse nada passava por ter respondido.
+  function validaAcesso(f: { andar: string; elevador: string }): string[] {
+    const erros: string[] = [];
+    if (!f.andar) erros.push("andar");
+    if (!f.elevador) erros.push("elevador");
+    return erros;
+  }
+
+  it("recusa o formulário sem andar nem elevador", () => {
+    expect(validaAcesso({ andar: "", elevador: "" })).toEqual(["andar", "elevador"]);
+  });
+
+  it("rés-do-chão é uma resposta, não uma ausência", () => {
+    expect(validaAcesso({ andar: "0", elevador: "no" })).toEqual([]);
+  });
+
+  it("'não sei' continua a valer como resposta deliberada", () => {
+    expect(validaAcesso({ andar: "3", elevador: "unknown" })).toEqual([]);
+  });
+
+  it("um dos dois em falta chega para recusar", () => {
+    expect(validaAcesso({ andar: "2", elevador: "" })).toEqual(["elevador"]);
+    expect(validaAcesso({ andar: "", elevador: "yes" })).toEqual(["andar"]);
+  });
+
+  // "0" é o rés-do-chão e o dicionário já o traduz — não inventámos valor novo
+  it("o valor do rés-do-chão tem tradução", () => {
+    expect(tFloor("0")).toBe("Rés-do-chão");
   });
 });

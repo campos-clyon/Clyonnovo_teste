@@ -26,7 +26,9 @@ const HeroQuoteSchema = z.object({
   rua:             z.string().min(2).max(200),
   codigoPostal:    z.string().min(4).max(12),
   numeroPosta:     z.string().max(20),
-  andar:           z.string().max(20),
+  // Obrigatórios: o andar e o elevador mudam o preço mais do que quase tudo
+  // o resto, e uma validação que vive só no browser não é validação.
+  andar:           z.string().min(1, "Indique o andar").max(20),
   elevador:        z.enum(["yes", "small", "no", "unknown"]),
   tipoServico:     z.string().min(2).max(80),
   descricao:       z.string().max(300).optional(),
