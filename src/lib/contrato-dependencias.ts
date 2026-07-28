@@ -125,6 +125,26 @@ export const DEPENDENCIAS: Dependencia[] = [
   // Nunca chamada pelo painel: confirma dinheiro sem verificar quem chama, e
   // é do webhook. Declarada para saber se a compra de créditos está de pé.
   { nome: "sistema_confirmar_compra_creditos", tipo: "funcao", usadoEm: "Webhook da euPago credita a carteira do profissional" },
+  // Dois gestos diferentes, duas funções. Ver o comentário da rota
+  // creditos/acoes: um botão só levaria a creditar a dobrar.
+  {
+    nome: "painel_confirmar_compra_creditos",
+    tipo: "funcao",
+    argumentos: ["_order_id", "_staff", "_notes"],
+    usadoEm: "Fechar uma compra paga cujo callback se perdeu — idempotente",
+  },
+  {
+    nome: "painel_creditar_manual",
+    tipo: "funcao",
+    argumentos: ["_partner_id", "_creditos", "_motivo", "_staff"],
+    usadoEm: "Dar créditos sem compra por trás: promoção, acerto de disputa",
+  },
+  // A fórmula da reserva viveu em duas cópias durante um dia e divergiu.
+  // Se o painel precisar de a mostrar, chama esta — não a repete.
+  { nome: "valor_da_reserva", tipo: "funcao", usadoEm: "Valor da reserva do cliente — fonte única da fórmula" },
+  // admin_adjust_partner_credits NÃO é declarada de propósito: exige
+  // has_role(auth.uid(), 'admin') e o admin do painel é um colaborador do
+  // MySQL, onde auth.uid() é sempre NULL. Nunca funcionou daqui.
   {
     nome: "patch_request_with_audit",
     tipo: "funcao",

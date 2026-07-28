@@ -2408,6 +2408,224 @@ const DOC_LABELS: Record<string, string> = {
 
 // Painel de gestão de um profissional — o que aqui se muda é o que o cliente
 // passa a ver na app.
+// ── Créditos do profissional ──────────────────────────────────────────────
+// Dois gestos, dois botões, de propósito.
+//
+// «Pagou e não creditou» fecha a ordem pelo caminho do webhook e é
+// idempotente. «Dar créditos» soma sem ordem nenhuma por trás. Com um só
+// botão, o operador usaria o segundo para o primeiro caso — e a ordem ficava
+// aberta à espera de um callback que credita segunda vez.
+function CreditosDoProfissional({
+  partnerId, authHeader,
+}: {
+  partnerId: string;
+  authHeader: Record<string, string>;
+}) {
+  const [orders, setOrders] = useState<CreditOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [aConfirmar, setAConfirmar] = useState<string | null>(null);
+  const [notaConfirmacao, setNotaConfirmacao] = useState("");
+  const [abrirManual, setAbrirManual] = useState(false);
+  const [creditos, setCreditos] = useState("");
+  const [motivo, setMotivo] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/app-clyon/creditos?partner=${encodeURIComponent(partnerId)}`, { headers: authHeader });
+      const json = await res.json();
+      if (!res.ok) { setNotice(json.error ?? "Erro ao carregar."); return; }
+      if (json.unavailable) { setNotice(json.notice ?? null); setOrders([]); return; }
+      setOrders(json.orders ?? []);
+    } catch { setNotice("Erro de ligação."); }
+    finally { setLoading(false); }
+  }, [authHeader, partnerId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function acao(body: Record<string, unknown>) {
+    setBusy(true); setErro(null); setSucesso(null); setAviso(null);
+    try {
+      const res = await fetch("/api/admin/app-clyon/creditos/acoes", {
+        method: "POST",
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) { setErro(json.error ?? "Não foi possível."); return; }
+      setSucesso(json.message ?? "Feito.");
+      // O aviso das compras por pagar é para ser lido, não escondido
+      if (json.aviso) setAviso(json.aviso);
+      setAConfirmar(null); setNotaConfirmacao("");
+      setAbrirManual(false); setCreditos(""); setMotivo("");
+      await load();
+    } catch { setErro("Erro de ligação."); }
+    finally { setBusy(false); }
+  }
+
+  const pendentes = orders.filter((o) => o.estado === "pending");
+
+  return (
+    <div className={CARD}>
+      <p className={CARD_TITLE}>Créditos</p>
+
+      {erro && <p className="mb-2 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] leading-relaxed text-red-300">{erro}</p>}
+      {sucesso && <p className="mb-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">{sucesso}</p>}
+      {aviso && <p className="mb-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-300">{aviso}</p>}
+      {notice && <p className="mb-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-[11px] leading-relaxed text-amber-300">{notice}</p>}
+
+      {loading ? (
+        <p className="text-xs text-slate-500">A carregar…</p>
+      ) : (
+        <>
+          {orders.length === 0 ? (
+            <p className="text-[11px] text-slate-600">Ainda não comprou créditos.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {orders.slice(0, 6).map((o) => (
+                <div key={String(o.id)} className={`rounded-lg border px-2.5 py-2 ${
+                  o.estado === "paid"   ? "border-white/[0.06] bg-[#12263B]/40" :
+                  o.estado === "failed" ? "border-red-500/20 bg-red-500/[0.05]" :
+                                          "border-amber-500/20 bg-amber-500/[0.05]"
+                }`}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-xs font-semibold text-white">
+                      {o.euros != null ? fmtMoney(o.euros) : "—"}
+                    </span>
+                    {o.creditos != null && <span className="text-[11px] text-slate-400">{o.creditos} cr.</span>}
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                      o.estado === "paid"   ? "bg-emerald-500/15 text-emerald-300" :
+                      o.estado === "failed" ? "bg-red-500/15 text-red-300" :
+                                              "bg-amber-500/15 text-amber-300"
+                    }`}>
+                      {o.estado_label}
+                    </span>
+                    <span className="ml-auto text-[9px] text-slate-600">
+                      {o.paid_at ?? o.criada_em ? fmtDt(String(o.paid_at ?? o.criada_em)) : ""}
+                    </span>
+                  </div>
+                  {o.referencia && (
+                    <p className="mt-0.5 font-mono text-[9px] text-slate-500">
+                      {o.entidade ? `MB ${o.entidade} · ` : ""}{o.referencia}
+                    </p>
+                  )}
+                  {o.motivo_falha && (
+                    <p className="mt-0.5 text-[10px] leading-relaxed text-red-300/90">{displayText(o.motivo_falha, "")}</p>
+                  )}
+
+                  {o.estado === "pending" && (
+                    aConfirmar === String(o.id) ? (
+                      <div className="mt-2 space-y-1.5">
+                        <input
+                          value={notaConfirmacao}
+                          onChange={(e) => setNotaConfirmacao(e.target.value)}
+                          placeholder="Nota (opcional) — ex: comprovativo no e-mail"
+                          className="h-8 w-full rounded-lg border border-white/[0.08] bg-[#0C1C2E] px-2 text-[11px] text-white outline-none focus:border-[#00BDEB]"
+                        />
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => acao({ action: "confirmar_compra", order_id: o.id, nota: notaConfirmacao })}
+                            disabled={busy}
+                            className="flex-1 rounded-lg bg-emerald-500 py-1.5 text-[11px] font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                          >
+                            {busy ? "A confirmar..." : "Confirmar"}
+                          </button>
+                          <button
+                            onClick={() => { setAConfirmar(null); setNotaConfirmacao(""); }}
+                            disabled={busy}
+                            className="rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11px] text-slate-400 hover:text-slate-200 disabled:opacity-50"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setAConfirmar(String(o.id)); setErro(null); setSucesso(null); }}
+                        className="mt-1.5 w-full rounded-lg border border-emerald-500/30 py-1.5 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/10"
+                      >
+                        Confirmar pagamento recebido
+                      </button>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Separado do botão de cima de propósito: este não fecha compra
+              nenhuma, e usá-lo para uma compra por pagar credita a dobrar
+              quando o callback atrasado chegar. */}
+          <div className="mt-3 border-t border-white/[0.06] pt-3">
+            {abrirManual ? (
+              <div className="space-y-2">
+                <p className="text-[10px] leading-relaxed text-slate-500">
+                  Para promoção, acerto depois de disputa ou correcção.
+                  {pendentes.length > 0 && (
+                    <span className="text-amber-300">
+                      {" "}Este profissional tem {pendentes.length} compra{pendentes.length === 1 ? "" : "s"} por
+                      pagar — se ele pagou, usa o botão de confirmar em vez deste.
+                    </span>
+                  )}
+                </p>
+                <div className="grid gap-2 sm:grid-cols-[100px_1fr]">
+                  <input
+                    type="number" step="1" value={creditos}
+                    onChange={(e) => setCreditos(e.target.value)}
+                    placeholder="Créditos"
+                    className="h-8 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-2 text-sm text-white outline-none focus:border-[#00BDEB]"
+                  />
+                  <input
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Motivo (obrigatório)"
+                    className="h-8 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-2 text-[11px] text-white outline-none focus:border-[#00BDEB]"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-600">
+                  Um valor negativo reverte. O motivo fica visível na carteira do profissional.
+                </p>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => acao({
+                      action: "creditar_manual",
+                      partner_id: partnerId,
+                      creditos: Number(creditos),
+                      motivo,
+                    })}
+                    disabled={busy || creditos.trim() === "" || motivo.trim() === ""}
+                    className="flex-1 rounded-lg bg-[#00BDEB] py-1.5 text-[11px] font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+                  >
+                    {busy ? "A creditar..." : "Confirmar atribuição"}
+                  </button>
+                  <button
+                    onClick={() => { setAbrirManual(false); setCreditos(""); setMotivo(""); }}
+                    disabled={busy}
+                    className="rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11px] text-slate-400 hover:text-slate-200 disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setAbrirManual(true); setErro(null); setSucesso(null); }}
+                className="w-full rounded-lg border border-white/[0.10] py-1.5 text-[11px] font-semibold text-slate-300 hover:border-[#00BDEB]/40 hover:text-white"
+              >
+                Dar créditos
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 function ProfissionalPanel({
   id, authHeader, onBack, onChanged,
 }: {
@@ -2747,6 +2965,8 @@ function ProfissionalPanel({
               className="mt-2 w-full rounded-lg bg-[#00BDEB] py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
             >{earningShare.trim() === "" ? "Usar o padrão da plataforma" : "Guardar quota"}</button>
           </div>
+
+          <CreditosDoProfissional partnerId={id} authHeader={authHeader} />
 
           <div className={CARD}>
             <p className={CARD_TITLE}>Resumo</p>
@@ -3459,11 +3679,26 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
           {showNew ? "Cancelar" : "+ Nova banda"}
         </button>
       </div>
-      <p className="mb-4 text-[11px] leading-relaxed text-slate-500">
-        Créditos descontados ao profissional quando aceita um trabalho, por banda de valor do serviço.
-        O custo é calculado pela função <code className="rounded bg-white/[0.04] px-1 py-0.5 text-slate-400">calculate_job_credit_cost</code> na
-        base de dados — este ecrã edita apenas as bandas. Bandas activas não se podem sobrepor.
-      </p>
+      {/* Desde 25-07-2026 esta tabela está fora de uso. A
+          calculate_job_credit_cost deixou de ler escalões e passou a uma
+          percentagem contínua — os degraus criavam um penhasco: um trabalho de
+          100 € custava 10 € a desbloquear e um de 101 € custava 25 €, e o
+          profissional recusava tudo o que caísse logo acima do limiar.
+          A tabela ficou para se poder voltar atrás sem mexer em código. */}
+      <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5">
+        <p className="text-[11px] font-semibold text-amber-300">Estas bandas estão fora de uso desde 25-07-2026.</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+          O custo de aceitar um trabalho passou a ser uma percentagem contínua do valor do serviço,
+          sem degraus. Editar, activar ou criar uma banda aqui <span className="text-white">não altera
+          o que o profissional paga</span> — a função que calcula já não lê esta tabela.
+          O que manda é <code className="rounded bg-white/[0.04] px-1 py-0.5 text-slate-400">pricing_parameters.credit_unlock_percent</code>,
+          hoje a <span className="text-white">10%</span>, e altera-se na base de dados.
+        </p>
+        <p className="mt-1 text-[10px] leading-relaxed text-slate-600">
+          A tabela ficou aqui para se poder voltar aos escalões sem mexer em código. Até lá, as
+          sobreposições que vês são reais mas inertes.
+        </p>
+      </div>
 
       {error && <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</div>}
       {success && <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{success}</div>}
@@ -3533,10 +3768,21 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
                   Guardar
                 </button>
               )}
+              {/* "Activar" activava a linha na tabela, não o escalão: a
+                  função de cálculo já não a lê. Dizê-lo no próprio botão
+                  evita a conclusão errada de que ficou a valer. */}
               <button
                 disabled={busy}
-                onClick={() => post({ action: "update", id: r.id, active: !r.active }, r.active ? "Regra desactivada." : "Regra activada.")}
-                className={`ml-auto rounded-lg border px-3 py-1.5 text-[11px] font-semibold ${r.active ? "border-red-500/25 text-red-300 hover:bg-red-500/10" : "border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/10"} disabled:opacity-50`}
+                onClick={() => post(
+                  { action: "update", id: r.id, active: !r.active },
+                  r.active
+                    ? "Banda desactivada. Não altera o que o profissional paga."
+                    : "Banda marcada como activa — mas os escalões continuam fora de uso, o custo real não muda.",
+                )}
+                title={r.active
+                  ? "Marca a linha como inactiva. Não altera o custo real."
+                  : "Marca a linha como activa. Não altera o custo real — os escalões estão fora de uso."}
+                className={`ml-auto rounded-lg border px-3 py-1.5 text-[11px] font-semibold ${r.active ? "border-red-500/25 text-red-300 hover:bg-red-500/10" : "border-white/[0.10] text-slate-400 hover:bg-white/[0.04]"} disabled:opacity-50`}
               >
                 {r.active ? "Desactivar" : "Activar"}
               </button>

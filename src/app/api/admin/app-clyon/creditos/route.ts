@@ -35,16 +35,23 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const days = Math.min(365, Math.max(1, Number(url.searchParams.get("days") ?? "30")));
   const desde = new Date(Date.now() - days * 86_400_000).toISOString();
+  // Um profissional em concreto: a ficha dele mostra as suas compras, e é daí
+  // que se confirma uma que ficou por creditar.
+  const partner = url.searchParams.get("partner")?.trim() || null;
 
   try {
     const sb = getSupabaseAdmin();
 
-    const { data, error } = await sb
+    let query = sb
       .from("credit_purchase_orders")
       .select("id, partner_id, status, method, package_name, credits, price_cents, provider_entity, provider_payment_id, provider_fee, expires_at, paid_at, failure_reason, created_at")
-      .gte("created_at", desde)
       .order("created_at", { ascending: false })
       .limit(200);
+    // Na ficha de um profissional o histórico interessa todo, não só 30 dias
+    if (partner) query = query.eq("partner_id", partner);
+    else query = query.gte("created_at", desde);
+
+    const { data, error } = await query;
 
     if (error) {
       if (error.code === "42P01" || /relation .* does not exist/i.test(error.message ?? "")) {
@@ -87,6 +94,8 @@ export async function GET(req: NextRequest) {
       const metodo = String(r.method ?? "");
       return {
         id: r.id,
+        // Necessário para confirmar a compra e para creditar à mão
+        partner_id: r.partner_id ?? null,
         estado: String(r.status ?? ""),
         estado_label: ESTADO_LABEL[String(r.status ?? "")] ?? String(r.status ?? ""),
         metodo,
