@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { Package } from "lucide-react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import SecaoErrorBoundary from "@/components/admin/SecaoErrorBoundary";
+import { useAutoRefresh, textoDesde } from "@/components/admin/useAutoRefresh";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
 import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
@@ -572,8 +573,19 @@ function PedidoInlinePanel({
 
   const needsReason = status === "canceled" || status === "rejected";
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
+  /**
+   * O que os campos tinham quando vieram da base.
+   *
+   * A actualização automática não pode escrever por cima do que o operador
+   * está a preencher. Comparar o valor actual com este permite distinguir
+   * "não lhe tocaram, dá para actualizar" de "está a ser editado, não
+   * mexer" — sem isso, um valor a meio de ser escrito desaparecia sozinho.
+   */
+  const doServidor = useRef({ status: "", urgency: "", price: "", scheduledFor: "" });
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError(null);
     try {
       const [orderRes, opsRes, negoRes, motorRes, horarioRes] = await Promise.all([
         fetch(`/api/admin/app-pedidos/${id}`, { headers: authHeader }),
@@ -583,7 +595,12 @@ function PedidoInlinePanel({
         fetch(`/api/admin/app-pedidos/${id}/horario`, { headers: authHeader }),
       ]);
       const orderJson = await orderRes.json();
-      if (!orderRes.ok) { setError(orderJson.error ?? "Erro ao carregar pedido."); return; }
+      if (!orderRes.ok) {
+        // Numa actualização de fundo, uma falha não interrompe o trabalho:
+        // fica o que já estava no ecrã e o ciclo seguinte tenta outra vez.
+        if (!silent) setError(orderJson.error ?? "Erro ao carregar pedido.");
+        return;
+      }
       const opsJson = await opsRes.json();
       const o = orderJson.order as InlineOrder;
       setOrder(o);
@@ -592,42 +609,71 @@ function PedidoInlinePanel({
       const m = motorRes.ok ? ((await motorRes.json()) as MotorState) : null;
       setMotor(m);
       setHorario(horarioRes.ok ? ((await horarioRes.json()) as ScheduleState) : null);
-      setProposalMessage("");
+      if (!silent) setProposalMessage("");
       // Pré-preencher a execução com o que já foi registado
       // Pré-preencher com o final_price — que já inclui os ajustes aplicados
       // no local — mas SEM impor: no modelo de créditos o cliente paga em mão
       // e o operador tem de poder corrigir (NOTA-BRIDGE-CALIBRACAO §2).
-      const jaRegistado = m?.outcome?.price_executed;
-      const doSistema = o.final_price ?? gatePrice(o);
-      setExecPrice(
-        jaRegistado != null ? String(jaRegistado)
-        : doSistema != null ? String(doSistema) : ""
-      );
-      setExecCobradoReal(
-        m?.outcome && "valor_cobrado_real" in m.outcome && m.outcome.valor_cobrado_real != null
-          ? String(m.outcome.valor_cobrado_real) : ""
-      );
-      setExecHoras(m?.outcome?.horas_reais != null ? String(m.outcome.horas_reais) : "");
-      setExecPessoas(m?.outcome?.pessoas_reais != null ? String(m.outcome.pessoas_reais) : "");
-      setExecAjustes(m?.outcome?.ajustes_no_local ?? "");
-      setStatus(o.status);
-      setUrgency(o.urgency ?? "normal");
+      // Os campos de execução são preenchidos pelo operador no local — uma
+      // actualização de fundo nunca lhes toca.
+      if (!silent) {
+        const jaRegistado = m?.outcome?.price_executed;
+        const doSistema = o.final_price ?? gatePrice(o);
+        setExecPrice(
+          jaRegistado != null ? String(jaRegistado)
+          : doSistema != null ? String(doSistema) : ""
+        );
+        setExecCobradoReal(
+          m?.outcome && "valor_cobrado_real" in m.outcome && m.outcome.valor_cobrado_real != null
+            ? String(m.outcome.valor_cobrado_real) : ""
+        );
+        setExecHoras(m?.outcome?.horas_reais != null ? String(m.outcome.horas_reais) : "");
+        setExecPessoas(m?.outcome?.pessoas_reais != null ? String(m.outcome.pessoas_reais) : "");
+        setExecAjustes(m?.outcome?.ajustes_no_local ?? "");
+      }
       // ⚠️ O campo "Valor do orçamento" EDITA estimated_price, logo tem de
       // MOSTRAR estimated_price. Mostrar gatePrice() dava a ilusão de que a
       // gravação falhava: gatePrice prefere final_price, por isso ao recarregar
       // o campo voltava ao valor antigo — apesar de o novo estar gravado.
       // O valor do motor só entra como âncora quando ainda não há orçamento.
       const orcamento = orcamentoDoPedido(o);
-      setPrice(orcamento != null ? String(orcamento) : "");
-      // A proposta parte do valor calculado; o admin corrige antes de enviar
-      setProposalAmount(orcamento != null ? String(orcamento) : "");
-      setScheduledFor(o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "");
-      setAdminNote(""); setReason("");
-    } catch { setError("Erro de ligação."); }
-    finally { setLoading(false); }
-  }, [id, authHeader]);
+      const novos = {
+        status: o.status,
+        urgency: o.urgency ?? "normal",
+        price: orcamento != null ? String(orcamento) : "",
+        scheduledFor: o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "",
+      };
 
-  useEffect(() => { load(); }, [load]);
+      // Um campo só é actualizado se continuar igual ao que veio da base.
+      // Se o operador lhe mexeu, o que ele escreveu manda — mesmo que a base
+      // tenha mudado entretanto; quem decide se descarta é ele, ao gravar.
+      const anterior = doServidor.current;
+      if (!silent || status === anterior.status) setStatus(novos.status);
+      if (!silent || urgency === anterior.urgency) setUrgency(novos.urgency);
+      if (!silent || price === anterior.price) setPrice(novos.price);
+      if (!silent || scheduledFor === anterior.scheduledFor) setScheduledFor(novos.scheduledFor);
+      doServidor.current = novos;
+
+      if (!silent) {
+        // A proposta parte do valor calculado; o admin corrige antes de enviar
+        setProposalAmount(orcamento != null ? String(orcamento) : "");
+        setAdminNote(""); setReason("");
+      }
+    } catch {
+      if (!silent) setError("Erro de ligação.");
+    }
+    finally { if (!silent) setLoading(false); }
+  }, [id, authHeader, status, urgency, price, scheduledFor]);
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [id]);
+
+  // O cliente responde quando quer, e o operador não deve andar a carregar em
+  // F5 para saber. Pausa enquanto se está a gravar, para não trazer por cima
+  // um estado anterior ao que acabou de ser escrito.
+  const { lastRefresh, refreshing, relogio } = useAutoRefresh(
+    useCallback(() => load(true), [load]),
+    { paused: saving || actionBusy !== null },
+  );
 
   async function handleAdvancePhase() {
     if (!order) return;
@@ -942,6 +988,15 @@ function PedidoInlinePanel({
           <p className="mt-0.5 font-mono text-[10px] text-slate-500">
             #{order.id.slice(0, 8)} · criado {fmtDt(order.created_at)}
           </p>
+          {/* Discreto de propósito: diz que o ecrã está vivo sem chamar a
+              atenção. O ponto acende enquanto vai buscar dados novos —
+              nada bloqueia, nada pisca. */}
+          {lastRefresh > 0 && (
+            <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-600">
+              <span className={`inline-block h-1 w-1 rounded-full ${refreshing ? "bg-[#00BDEB]" : "bg-slate-700"}`} />
+              actualizado {textoDesde(lastRefresh, relogio)}
+            </p>
+          )}
         </div>
         <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
           {/* "Aprovado" = cliente aceitou o preço. Ter preço calculado pelo

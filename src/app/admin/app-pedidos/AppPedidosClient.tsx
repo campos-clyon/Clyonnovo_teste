@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAutoRefresh, textoDesde } from "@/components/admin/useAutoRefresh";
 import {
   nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
 } from "@/lib/order-status-flow";
@@ -595,24 +596,33 @@ export default function AppPedidosClient({
   const [selected, setSelected] = useState<AppOrder | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (silent = false) => {
     if (!ready) return;
-    setLoading(true);
-    setError(null);
+    // Em silêncio não há spinner: a lista continua no ecrã, clicável, e os
+    // dados trocam por baixo. O operador não pode perder o que está a ler
+    // de três em três minutos.
+    if (!silent) { setLoading(true); setError(null); }
     try {
       const res = await fetch(`/api/admin/app-pedidos?limit=200${showArchived ? "&archived=1" : ""}`, { headers: authHeader });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Erro ao carregar."); return; }
+      if (!res.ok) { if (!silent) setError(data.error ?? "Erro ao carregar."); return; }
       setOrders(data.orders ?? []);
       setTotal(data.total ?? 0);
     } catch {
-      setError("Erro de rede.");
+      if (!silent) setError("Erro de rede.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [ready, authHeader, showArchived]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // O cliente aceita, contrapõe ou paga quando quer. Sem isto, o operador só
+  // sabia disso se carregasse em F5 — e passava o dia a fazê-lo.
+  const { lastRefresh, refreshing, relogio } = useAutoRefresh(
+    useCallback(() => fetchOrders(true), [fetchOrders]),
+    { enabled: ready },
+  );
 
   // Contagens por grupo para os tabs
   const countInGroup = (g: Exclude<FilterGroup, "todos">) =>
@@ -755,8 +765,14 @@ export default function AppPedidosClient({
         ))}
 
         {!loading && !error && filtered.length > 0 && (
-          <p className="px-5 py-4 text-xs text-slate-600">
-            A mostrar {filtered.length} de {total} pedido{total !== 1 ? "s" : ""}
+          <p className="flex flex-wrap items-center gap-x-2 px-5 py-4 text-xs text-slate-600">
+            <span>A mostrar {filtered.length} de {total} pedido{total !== 1 ? "s" : ""}</span>
+            {lastRefresh > 0 && (
+              <span className="flex items-center gap-1.5 text-[11px] text-slate-700">
+                <span className={`inline-block h-1 w-1 rounded-full ${refreshing ? "bg-[#00BDEB]" : "bg-slate-700"}`} />
+                actualizado {textoDesde(lastRefresh, relogio)}
+              </span>
+            )}
           </p>
         )}
       </div>
