@@ -74,8 +74,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const localPages = CITIES.flatMap((city) =>
     SERVICES.filter((service) => {
-      // Excluir mudanças para todas as cidades EXCETO Lisboa
-      if (service.slug === "mudancas" && city.slug !== "lisboa") {
+      // Nenhuma combinação de mudanças entra por aqui.
+      //
+      // Estas geram URLs com hífen (/mudancas-lisboa) que hoje redirecionam
+      // para /mudancas/lisboa. Um sitemap com um redirect ensina o Google a
+      // desconfiar do sitemap todo — e as páginas a sério já entram mais
+      // abaixo, em mudancasCidadePages, com o caminho canónico.
+      if (service.slug === "mudancas") {
         return false;
       }
       // Incluir todas as outras combinações

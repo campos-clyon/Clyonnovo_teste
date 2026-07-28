@@ -1,0 +1,54 @@
+import { describe, it, expect } from "vitest";
+import robots from "@/app/robots";
+import sitemap from "@/app/sitemap";
+
+describe("robots.txt — o grupo específico não pode anular as restrições", () => {
+  // Em robots.txt vence o grupo de user-agent mais específico, e um robô só
+  // lê esse. Um grupo `Googlebot` com `Allow: /` e sem `Disallow` fazia o
+  // Google ignorar a lista toda — e rastrear /api/, /_next/ e /auth.
+  const r = robots();
+  const regras = Array.isArray(r.rules) ? r.rules : [r.rules];
+
+  it("há um único grupo, para não haver um mais específico a ganhar", () => {
+    expect(regras).toHaveLength(1);
+    expect(regras[0]?.userAgent).toBe("*");
+  });
+
+  it("nenhum grupo permite tudo sem restrições", () => {
+    for (const regra of regras) {
+      const bloqueado = regra?.disallow;
+      const lista = Array.isArray(bloqueado) ? bloqueado : bloqueado ? [bloqueado] : [];
+      expect(lista.length, `grupo ${String(regra?.userAgent)} sem disallow`).toBeGreaterThan(0);
+    }
+  });
+
+  it("bloqueia o que queimava orçamento de rastreio", () => {
+    const lista = regras[0]?.disallow as string[];
+    for (const caminho of ["/api/", "/_next/", "/auth", "/colaboradores/", "/admin"]) {
+      expect(lista, caminho).toContain(caminho);
+    }
+  });
+});
+
+describe("sitemap — só URLs canónicos", () => {
+  const urls = sitemap().map((e) => e.url);
+
+  it("não inclui o /mudancas-lisboa com hífen, que redirecciona", () => {
+    expect(urls).not.toContain("https://clyon.pt/mudancas-lisboa");
+  });
+
+  it("inclui as páginas de cidade no caminho canónico", () => {
+    expect(urls).toContain("https://clyon.pt/mudancas/lisboa");
+    expect(urls).toContain("https://clyon.pt/mudancas/sesimbra");
+  });
+
+  // Um sitemap com um redirect ensina o Google a desconfiar do sitemap todo
+  it("nenhum URL de mudanças usa a forma com hífen", () => {
+    const comHifen = urls.filter((u) => /\/mudancas-[a-z-]+$/.test(u));
+    expect(comHifen).toEqual([]);
+  });
+
+  it("não há URLs repetidos", () => {
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+});
