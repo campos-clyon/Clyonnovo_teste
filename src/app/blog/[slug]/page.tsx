@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { getAllBlogPosts, getBlogPost } from "@/lib/blog-data";
 import { BUSINESS_NAME, CONTACT_PATH, SITE_URL } from "@/lib/seo-data";
+import { zonasDoArtigo } from "@/lib/blog-zonas";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -79,6 +80,8 @@ export default async function BlogPostPage({ params }: Props) {
   };
 
   const relatedPosts = getAllBlogPosts().filter((item) => item.slug !== post.slug).slice(0, 3);
+  // Zonas onde este serviço se faz — só para artigos com serviço associado
+  const { zonas } = zonasDoArtigo(post.slug);
 
   return (
     <div className="min-h-screen bg-white">
@@ -185,6 +188,35 @@ export default async function BlogPostPage({ params }: Props) {
           </aside>
         </div>
       </section>
+
+      {/* Zonas onde fazemos isto.
+          Os artigos são as páginas que o Google visita mais; as de cidade são
+          as que ele descobriu e decidiu não visitar. Ligar umas às outras
+          passa autoridade de quem a tem para quem precisa dela — e dá ao
+          leitor o passo seguinte concreto: a página da zona dele. */}
+      {zonas.length > 0 && (
+        <section className="border-t border-cyan-100 bg-white py-16">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold text-slate-950">Onde fazemos este serviço</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              Cada zona tem os seus acessos, o seu estacionamento e o seu ecocentro.
+              Abra a da sua e veja o que muda por ser aí.
+            </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {zonas.map((zona) => (
+                <Link
+                  key={zona.href}
+                  href={zona.href}
+                  className="rounded-[22px] border border-cyan-100 bg-cyan-50/50 p-4 transition hover:border-cyan-300 hover:bg-cyan-50"
+                >
+                  <p className="text-sm font-bold text-slate-900">{zona.cidade}</p>
+                  <p className="mt-1 text-xs leading-6 text-slate-600">{zona.nota}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="bg-slate-50 py-16">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">

@@ -9,6 +9,7 @@ import {
 } from "@/lib/seo-data";
 import { getAllBlogPosts } from "@/lib/blog-data";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
+import { dataDoConteudo } from "@/lib/conteudo-datas.generated";
 
 const staticPages = [
   { url: `${SITE_URL}`, priority: 1.0, changeFrequency: "weekly" as const },
@@ -43,11 +44,19 @@ const staticPages = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // `lastModified` deixou de ser a data do build. Carimbar hoje em todas as
+  // páginas a cada deploy diz ao Google que 157 mudaram — o que é falso, e
+  // ensina-o a ignorar o campo. Estas datas vêm do histórico do git e só
+  // mudam quando o conteúdo muda (ver scripts/gerar-datas-conteudo.mjs).
   const now = new Date();
+  const dataCidadeServico = dataDoConteudo("cidadeServico");
+  const dataMudancasCidade = dataDoConteudo("mudancasCidade");
+  const dataRegioes = dataDoConteudo("regioes");
+  const dataEstaticas = dataDoConteudo("estaticas");
 
   const regionPages = REGIONS.map((region) => ({
     url: `${SITE_URL}/regioes/${region.slug}`,
-    lastModified: now,
+    lastModified: dataRegioes,
     changeFrequency: "weekly" as const,
     priority: 0.9,
   }));
@@ -91,7 +100,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       
       return {
         url: `${SITE_URL}/${slug}`,
-        lastModified: now,
+        lastModified: dataCidadeServico,
         changeFrequency: isPriority ? "weekly" as const : "monthly" as const,
         priority:
           // Páginas prioritárias do Search Console
@@ -126,13 +135,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Páginas por cidade em /mudancas/[cidade] — pSEO real com conteúdo único
   const mudancasCidadePages = getAllCidadeSlugs().map((slug) => ({
     url: `${SITE_URL}/mudancas/${slug}`,
-    lastModified: now,
+    lastModified: dataMudancasCidade,
     changeFrequency: "weekly" as const,
     priority: 0.94,
   }));
 
   return [
-    ...staticPages.map((page) => ({ ...page, lastModified: now })),
+    ...staticPages.map((page) => ({ ...page, lastModified: dataEstaticas })),
     ...regionPages,
     ...blogPages,
     ...localPages,
