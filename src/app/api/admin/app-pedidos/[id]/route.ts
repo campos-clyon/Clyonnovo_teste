@@ -156,6 +156,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     // Fechar o preço sem dizer qual deixaria a app com um intervalo e o
     // cliente sem saber quanto paga.
+    //
+    // ⚠️ NÃO REMOVER O final_price DESTE CAMINHO. Desde 28-07-2026 existe o
+    // gatilho trg_preco_fechado_sai_de_revisao, que dispara em
+    // `UPDATE OF final_price` e limpa também o `quote_status` — o segundo
+    // campo que ficava preso e o que, na verdade, bloqueava o pagamento.
+    // Escrever só price_status não o acorda, e o pedido continuaria parado
+    // com o preço aparentemente fechado.
     if (ps === "firme") {
       const valor = validatedQuotePrice(
         body.final_price !== undefined ? body.final_price : body.estimated_price,

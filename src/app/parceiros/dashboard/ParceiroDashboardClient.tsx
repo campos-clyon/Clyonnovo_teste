@@ -21,10 +21,11 @@ interface ProviderOrder {
 }
 
 interface Ganhos {
-  commissionRate: number;
   jobsConcluded: number;
+  /** O que o profissional recebeu dos clientes, por inteiro. */
   grossTotal: number;
-  netTotal: number;
+  /** Taxa de aceitação em percentagem — o que ELE paga, não o total da CLYON. */
+  taxaAceitacaoPct: number;
   ratingAvg: number | null;
   ratingCount: number;
 }
@@ -151,10 +152,15 @@ export default function ParceiroDashboardClient() {
         {ganhos && (
           <section className="mb-10 grid gap-4 sm:grid-cols-3">
             <div className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,25,42,0.98)_0%,rgba(9,18,32,0.98)_100%)] p-5">
-              <p className="text-xs font-medium text-slate-400">Ganhos líquidos</p>
-              <p className="mt-1 text-2xl font-bold text-cyan-400">{ganhos.netTotal.toFixed(2)} €</p>
+              {/* Dizia "Ganhos líquidos" com 15% descontados ao bruto. Errado
+                  duas vezes: a CLYON não retém nada ao profissional, e 15% é o
+                  total da casa somando as duas pontas — a taxa que ELE paga é
+                  10%. Escrever 15 na página dele sobrestima o custo em metade. */}
+              <p className="text-xs font-medium text-slate-400">Recebido dos clientes</p>
+              <p className="mt-1 text-2xl font-bold text-cyan-400">{ganhos.grossTotal.toFixed(2)} €</p>
               <p className="mt-1 text-xs text-slate-500">
-                {ganhos.grossTotal.toFixed(2)} € brutos · comissão {ganhos.commissionRate}%
+                O valor acordado, por inteiro. A taxa de aceitação
+                ({ganhos.taxaAceitacaoPct}%) sai da carteira quando aceita o trabalho.
               </p>
             </div>
             <div className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,25,42,0.98)_0%,rgba(9,18,32,0.98)_100%)] p-5">

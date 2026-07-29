@@ -70,3 +70,43 @@ describe("pacotes 1:1 — o saldo é o que se pagou", () => {
     expect(paraEuros(elite.credits)).toBe(100);
   });
 });
+
+describe("o que o profissional paga é 10%, não 15%", () => {
+  // 15% é o total da CLYON somando as duas pontas: 5% de reserva que o
+  // CLIENTE paga por cima, mais 10% de taxa que o profissional paga da
+  // carteira. Escrever 15 na página dele sobrestima o custo em metade.
+  const TAXA_ACEITACAO = 0.10;   // paga o profissional
+  const RESERVA = 0.05;          // paga o cliente, por cima
+
+  const trabalho = 400;
+
+  it("o profissional recebe o valor acordado por inteiro", () => {
+    expect(trabalho).toBe(400);
+  });
+
+  it("paga 10% de taxa e fica com 360", () => {
+    const taxa = trabalho * TAXA_ACEITACAO;
+    expect(taxa).toBe(40);
+    expect(trabalho - taxa).toBe(360);
+  });
+
+  it("a reserva é ACRESCENTADA ao cliente, não abatida ao profissional", () => {
+    const clientePaga = trabalho + trabalho * RESERVA;
+    expect(clientePaga).toBe(420);
+    // O erro que estava no portal: descontar a reserva ao profissional
+    expect(trabalho - trabalho * RESERVA).not.toBe(trabalho - trabalho * TAXA_ACEITACAO);
+  });
+
+  it("a CLYON fica com 15%, somando as duas pontas", () => {
+    const daClyon = trabalho * RESERVA + trabalho * TAXA_ACEITACAO;
+    expect(daClyon).toBe(60);
+    expect(daClyon / trabalho).toBeCloseTo(0.15, 5);
+  });
+
+  // O portal calculava bruto × 0,85 e chamava-lhe "ganhos líquidos"
+  it("a conta antiga dava 340 — vinte euros a menos do que a verdade", () => {
+    const antiga = trabalho * (1 - 0.15);
+    expect(antiga).toBe(340);
+    expect(trabalho - trabalho * TAXA_ACEITACAO - antiga).toBe(20);
+  });
+});
