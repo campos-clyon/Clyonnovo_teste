@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
@@ -389,6 +389,9 @@ export default function ColaboradorAdminClient() {
 
   // Filtros da página Equipa
   const [teamSearch, setTeamSearch] = useState("");
+  /** Ids marcados na tabela da equipa, para acções em lote. */
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
+  const [aRemoverLote, setARemoverLote] = useState(false);
   const [teamFuncao, setTeamFuncao] = useState<"todas" | Colaborador["funcao"]>("todas");
 
   const [operacaoTab, setOperacaoTab] = useState<OperacaoTab>("equipa");
@@ -926,6 +929,28 @@ export default function ColaboradorAdminClient() {
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [teamRows, teamSearch, teamFuncao]);
 
+  /**
+   * Quem pode entrar numa remoção em lote.
+   *
+   * Fora: administradores e a conta com que se está autenticado. Remover o
+   * último administrador por um clique numa caixa deixa o painel sem ninguém
+   * que lá possa entrar, e isso não tem desfazer. Um a um continua possível
+   * pelo botão da linha, onde há confirmação com o nome à frente.
+   */
+  const podeSerRemovido = useCallback(
+    (row: { id: number; funcao: string; isAdmin?: number; nome: string }) => {
+      if (row.isAdmin === 1 || row.funcao === "admin") return false;
+      if (adminNome && row.nome.toUpperCase() === adminNome.toUpperCase()) return false;
+      return true;
+    },
+    [adminNome],
+  );
+
+  const selecionaveis = useMemo(
+    () => teamRowsFiltered.filter(podeSerRemovido),
+    [teamRowsFiltered, podeSerRemovido],
+  );
+
   const teamStats = useMemo(() => {
     return {
       total: colaboradores.length,
@@ -1051,6 +1076,64 @@ export default function ColaboradorAdminClient() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível remover o colaborador.");
     }
+  };
+
+  /**
+   * Remove vários colaboradores de uma vez.
+   *
+   * Sequencial e não em paralelo de propósito: se o quinto falhar, os quatro
+   * primeiros já foram removidos e o operador tem de saber exactamente
+   * quais. Um Promise.all daria "algo correu mal" sem dizer o quê.
+   *
+   * Administradores e a própria conta nunca entram na selecção — ver
+   * `podeSerRemovido`. Perder o último acesso ao painel por um clique numa
+   * caixa é o género de engano que não tem desfazer.
+   */
+  const removerSelecionados = async () => {
+    const ids = [...selecionados];
+    if (ids.length === 0) return;
+
+    const nomes = ids
+      .map((id) => colaboradores.find((c) => c.id === id)?.nome ?? `#${id}`);
+    const lista = nomes.length <= 5
+      ? nomes.join(", ")
+      : `${nomes.slice(0, 5).join(", ")} e mais ${nomes.length - 5}`;
+    if (!confirm(`Remover ${ids.length} colaborador${ids.length === 1 ? "" : "es"}?
+
+${lista}
+
+Não há como desfazer.`)) return;
+
+    setARemoverLote(true);
+    setError("");
+    const falhados: string[] = [];
+    let removidos = 0;
+
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/colaboradores/${id}/deletar`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          falhados.push(`${colaboradores.find((c) => c.id === id)?.nome ?? id}: ${data.error ?? res.statusText}`);
+        } else {
+          removidos += 1;
+        }
+      } catch {
+        falhados.push(`${colaboradores.find((c) => c.id === id)?.nome ?? id}: erro de ligação`);
+      }
+    }
+
+    setSelecionados(new Set());
+    setARemoverLote(false);
+    // Dizer o que passou E o que não passou. "Algo correu mal" obrigaria a
+    // conferir a lista à mão para saber o que ficou por fazer.
+    if (falhados.length > 0) {
+      setError(`${removidos} removido${removidos === 1 ? "" : "s"}. Falharam ${falhados.length}: ${falhados.join(" · ")}`);
+    }
+    await carregarDados(token);
   };
 
   const criarNovoColaborador = async () => {
@@ -2341,11 +2424,54 @@ export default function ColaboradorAdminClient() {
                 </Card>
               )}
 
+              {/* Barra de acção em lote — só aparece com algo marcado, para
+                  não ocupar espaço nem sugerir uma acção quando não há alvo */}
+              {selecionados.size > 0 && (
+                <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-rose-300/25 bg-rose-400/[0.08] px-4 py-3">
+                  <p className="text-sm font-semibold text-white">
+                    {selecionados.size} seleccionado{selecionados.size === 1 ? "" : "s"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelecionados(new Set())}
+                    className="text-xs font-medium text-slate-300 underline-offset-2 hover:underline"
+                  >
+                    Limpar selecção
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removerSelecionados}
+                    disabled={aRemoverLote}
+                    className="ml-auto inline-flex items-center gap-2 rounded-[12px] border border-rose-300/30 bg-rose-500/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {aRemoverLote ? "A remover..." : `Remover ${selecionados.size}`}
+                  </button>
+                </div>
+              )}
+
               {/* Tabela compacta de colaboradores */}
               <div className="overflow-x-auto rounded-[20px] border border-white/10 bg-white/[0.02]">
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="text-left text-slate-400">
+                      <th className="w-10 px-3 py-3">
+                        {/* Marca só os que podem ser removidos — administradores
+                            e a própria conta ficam sempre de fora */}
+                        <input
+                          type="checkbox"
+                          aria-label="Seleccionar todos"
+                          checked={selecionaveis.length > 0 && selecionados.size === selecionaveis.length}
+                          ref={(el) => {
+                            if (el) el.indeterminate = selecionados.size > 0 && selecionados.size < selecionaveis.length;
+                          }}
+                          onChange={(e) =>
+                            setSelecionados(e.target.checked ? new Set(selecionaveis.map((r) => r.id)) : new Set())
+                          }
+                          disabled={selecionaveis.length === 0}
+                          className="h-4 w-4 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+                        />
+                      </th>
                       <th className="px-3 py-3 font-medium">Nome</th>
                       <th className="px-3 py-3 font-medium">Função</th>
                       <th className="px-3 py-3 font-medium">Valor/hora</th>
@@ -2355,13 +2481,33 @@ export default function ColaboradorAdminClient() {
                   <tbody>
                     {teamRowsFiltered.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-3 py-8 text-center text-slate-400">
+                        <td colSpan={5} className="px-3 py-8 text-center text-slate-400">
                           Nenhum colaborador corresponde aos filtros.
                         </td>
                       </tr>
                     ) : (
-                      teamRowsFiltered.map((row) => (
-                        <tr key={row.id} className="border-t border-white/10 text-slate-200">
+                      teamRowsFiltered.map((row) => {
+                        const marcavel = podeSerRemovido(row);
+                        const marcado = selecionados.has(row.id);
+                        return (
+                        <tr key={row.id} className={`border-t border-white/10 text-slate-200 ${marcado ? "bg-cyan-400/[0.06]" : ""}`}>
+                          <td className="px-3 py-3">
+                            <input
+                              type="checkbox"
+                              aria-label={`Seleccionar ${row.nome}`}
+                              checked={marcado}
+                              disabled={!marcavel}
+                              title={marcavel ? undefined : "Administradores e a sua própria conta não podem ser removidos em lote"}
+                              onChange={(e) => {
+                                setSelecionados((antes) => {
+                                  const novo = new Set(antes);
+                                  if (e.target.checked) novo.add(row.id); else novo.delete(row.id);
+                                  return novo;
+                                });
+                              }}
+                              className="h-4 w-4 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-30"
+                            />
+                          </td>
                           <td className="px-3 py-3">
                             <div className="flex items-center gap-2 text-left font-medium text-white">
                               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400 text-xs font-semibold text-slate-950">
@@ -2400,7 +2546,8 @@ export default function ColaboradorAdminClient() {
                             </div>
                           </td>
                         </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
