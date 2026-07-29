@@ -1160,7 +1160,13 @@ export default function ColaboradorAdminClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    /* A casca ocupa o ecrã e não rola. Só o <main> rola.
+       Antes o documento inteiro é que rolava, com a barra e o cabeçalho em
+       `sticky` — e `sticky` deixa de funcionar se qualquer antepassado tiver
+       overflow definido, que é o caso aqui. Em vez de caçar esse
+       antepassado, a altura fixa resolve o problema na origem: o que está
+       fora do <main> não tem para onde rolar. */
+    <div className="flex h-screen overflow-hidden bg-slate-950 text-white">
       {/* Fundo escuro quando o menu abre em ecrã pequeno */}
       {menuAberto && (
         <div
@@ -1170,13 +1176,12 @@ export default function ColaboradorAdminClient() {
         />
       )}
 
-      <div className="flex">
-        {/* ── Barra lateral ──────────────────────────────────────────────
+      {/* ── Barra lateral ──────────────────────────────────────────────
             Fixa a partir de lg; em ecrã pequeno desliza por cima e o fundo
             escurece. Os oito destinos estavam em linha no topo, todos com o
             mesmo peso — agrupados, cada um está onde se procura. */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-800 bg-slate-900 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-800 bg-slate-900 transition-transform lg:relative lg:translate-x-0 ${
             menuAberto ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -1274,8 +1279,8 @@ export default function ColaboradorAdminClient() {
         </aside>
 
         {/* ── Conteúdo ────────────────────────────────────────────────── */}
-        <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur lg:px-6">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="z-30 flex-shrink-0 border-b border-slate-800 bg-slate-900 px-4 py-3 lg:px-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -1296,7 +1301,7 @@ export default function ColaboradorAdminClient() {
             </div>
           </header>
 
-          <main className="min-w-0 space-y-5 px-3 py-5 lg:px-6">
+          <main className="min-w-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 lg:px-6">
             {error && (
               <div className="rounded-[22px] border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
                 {error}
@@ -3358,7 +3363,6 @@ export default function ColaboradorAdminClient() {
             </section>
           )}
         </main>
-        </div>
       </div>
 
       {/* Drawer lateral: detalhes do lead */}
