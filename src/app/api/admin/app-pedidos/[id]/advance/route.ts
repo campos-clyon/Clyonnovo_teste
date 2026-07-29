@@ -7,6 +7,21 @@ import {
 } from "@/lib/order-status-flow";
 import { hasUsablePrice } from "@/lib/quote-price";
 
+/**
+ * Códigos que a base usa quando recusa por uma REGRA, não por avaria.
+ * A mensagem destes é para o operador ler e agir; as outras levam o código
+ * à frente para quem for investigar.
+ */
+const REGRAS_DE_NEGOCIO = new Set([
+  "P0001", // RAISE EXCEPTION de um gatilho
+  "P0002", // não encontrado
+  "23514", // CHECK violado
+  "23503", // chave estrangeira
+  "23505", // duplicado
+  "22023", // parâmetro inválido
+  "42501", // sem permissão
+]);
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -137,11 +152,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // As regras de negócio da base vêm com uma mensagem escrita para quem
       // opera — ex.: um pedido em dinheiro sem telemóvel do cliente. Engolir
       // essa frase deixa o operador com "erro ao avançar" e nada para fazer.
-      // P0001 é o RAISE EXCEPTION de um gatilho; 23514 é um CHECK.
-      const daRegra = rpcErr.code === "P0001" || rpcErr.code === "23514";
+      //
+      // Isto já filtrou por P0001 e 23514, e foi pouco: um gatilho que rejeite
+      // com outro código voltava a dar a frase genérica, e o operador ficava
+      // outra vez sem saber o que fazer. O erro passa a ir sempre, com o
+      // código à frente para quem investigar.
+      //
+      // Não é fuga de informação: estas mensagens são escritas pelos nossos
+      // gatilhos para serem lidas, e o ecrã está atrás de autenticação de
+      // colaborador.
+      const daRegra = REGRAS_DE_NEGOCIO.has(rpcErr.code ?? "");
+      const detalhe = rpcErr.message?.trim();
       return NextResponse.json({
-        error: daRegra && rpcErr.message
-          ? rpcErr.message
+        error: detalhe
+          ? (daRegra ? detalhe : `Não foi possível avançar: ${detalhe} (${rpcErr.code ?? "sem código"})`)
           : "Erro ao avançar a fase (transacção revertida).",
         correlation_id: correlationId,
       }, { status: daRegra ? 400 : 500 });
