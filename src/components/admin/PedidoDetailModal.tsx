@@ -1036,12 +1036,15 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   // ─── Render ───────────────────────────────────────────────────────────────���
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#ccccff]/50 backdrop-blur-sm p-2"
-    >
+    // Ecrã inteiro, como o resto do backoffice.
+    //
+    // Estava limitado a 1800px de largura e 97% da altura, com margem à
+    // volta e cantos arredondados. Num monitor grande sobrava moldura e
+    // faltava espaço à informação — e o pedido é o ecrã onde se trabalha
+    // mais tempo, não uma caixa de confirmação.
+    <div className="fixed inset-0 z-50 bg-[#e8e8ff]">
       <div
-        className="relative flex w-full flex-col overflow-hidden rounded-[28px] border border-[#ccccff] bg-[#e8e8ff] shadow-[0_40px_120px_rgba(204,204,255,0.4)]"
-        style={{ maxWidth: "min(1800px, 98vw)", maxHeight: "97vh", height: "97vh" }}
+        className="relative flex h-full w-full flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Loading ── */}
