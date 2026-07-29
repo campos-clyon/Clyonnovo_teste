@@ -376,13 +376,26 @@ export function getService(slug: string) {
   return SERVICES.find((service) => service.slug === slug);
 }
 
+/**
+ * Combinações cidade×serviço que geram página própria.
+ *
+ * `mudancas-<cidade>` fica de fora: essas URLs são apanhadas por redirects
+ * no next.config e nunca chegam a servir esta rota. Estavam a gerar 18
+ * páginas HTML que ninguém podia ver — e que, se um redirect falhasse,
+ * apareceriam como conteúdo duplicado de /mudancas/<cidade>, que é a página
+ * a sério, com conteúdo próprio por cidade.
+ */
+const SERVICOS_COM_PAGINA_PROPRIA = new Set(["mudancas"]);
+
 export function getAllCityServiceSlugs() {
   return CITIES.flatMap((city) =>
-    SERVICES.map((service) => ({
-      slug: [`${service.slug}-${city.slug}`],
-      city,
-      service,
-    })),
+    SERVICES
+      .filter((service) => !SERVICOS_COM_PAGINA_PROPRIA.has(service.slug))
+      .map((service) => ({
+        slug: [`${service.slug}-${city.slug}`],
+        city,
+        service,
+      })),
   );
 }
 

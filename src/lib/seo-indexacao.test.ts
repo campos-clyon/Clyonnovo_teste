@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
+import { getAllCityServiceSlugs } from "@/lib/seo-data";
 
 describe("robots.txt — o grupo específico não pode anular as restrições", () => {
   // Em robots.txt vence o grupo de user-agent mais específico, e um robô só
@@ -50,5 +51,22 @@ describe("sitemap — só URLs canónicos", () => {
 
   it("não há URLs repetidos", () => {
     expect(new Set(urls).size).toBe(urls.length);
+  });
+});
+
+describe("páginas geradas — nenhuma que um redirect torne invisível", () => {
+  // Geravam-se 18 páginas mudancas-<cidade> que nunca chegavam a servir: os
+  // redirects do next.config apanham-nas antes. Se um redirect falhasse,
+  // apareceriam como duplicado de /mudancas/<cidade>, que é a página a sério.
+  it("não se geram páginas mudancas-<cidade>", () => {
+    const slugs = getAllCityServiceSlugs().map((e) => e.slug.join("/"));
+    expect(slugs.filter((s) => s.startsWith("mudancas-"))).toEqual([]);
+  });
+
+  it("os outros serviços continuam a ter página por cidade", () => {
+    const slugs = getAllCityServiceSlugs().map((e) => e.slug.join("/"));
+    expect(slugs).toContain("recolha-moveis-benfica");
+    expect(slugs).toContain("esvaziamento-casas-almada");
+    expect(slugs.length).toBeGreaterThan(90);
   });
 });
