@@ -2408,13 +2408,16 @@ const DOC_LABELS: Record<string, string> = {
 
 // Painel de gestão de um profissional — o que aqui se muda é o que o cliente
 // passa a ver na app.
-// ── Créditos do profissional ──────────────────────────────────────────────
+// ── Carteira do profissional ──────────────────────────────────────────────
 // Dois gestos, dois botões, de propósito.
 //
-// «Pagou e não creditou» fecha a ordem pelo caminho do webhook e é
-// idempotente. «Dar créditos» soma sem ordem nenhuma por trás. Com um só
-// botão, o operador usaria o segundo para o primeiro caso — e a ordem ficava
-// aberta à espera de um callback que credita segunda vez.
+// «Pagou e não entrou» fecha o carregamento pelo caminho do webhook e é
+// idempotente. «Creditar carteira» soma sem carregamento nenhum por trás. Com
+// um só botão, o operador usaria o segundo para o primeiro caso — e o
+// carregamento ficava aberto à espera de um callback que credita segunda vez.
+//
+// O valor escreve-se em EUROS. A base guarda cêntimos desde 29-07-2026 e a
+// rota converte; aqui ninguém tem de pensar nisso.
 function CreditosDoProfissional({
   partnerId, authHeader,
 }: {
@@ -2431,7 +2434,7 @@ function CreditosDoProfissional({
   const [aConfirmar, setAConfirmar] = useState<string | null>(null);
   const [notaConfirmacao, setNotaConfirmacao] = useState("");
   const [abrirManual, setAbrirManual] = useState(false);
-  const [creditos, setCreditos] = useState("");
+  const [euros, setEuros] = useState("");
   const [motivo, setMotivo] = useState("");
 
   const load = useCallback(async () => {
@@ -2462,7 +2465,7 @@ function CreditosDoProfissional({
       // O aviso das compras por pagar é para ser lido, não escondido
       if (json.aviso) setAviso(json.aviso);
       setAConfirmar(null); setNotaConfirmacao("");
-      setAbrirManual(false); setCreditos(""); setMotivo("");
+      setAbrirManual(false); setEuros(""); setMotivo("");
       await load();
     } catch { setErro("Erro de ligação."); }
     finally { setBusy(false); }
@@ -2472,7 +2475,7 @@ function CreditosDoProfissional({
 
   return (
     <div className={CARD}>
-      <p className={CARD_TITLE}>Créditos</p>
+      <p className={CARD_TITLE}>Carteira</p>
 
       {erro && <p className="mb-2 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] leading-relaxed text-red-300">{erro}</p>}
       {sucesso && <p className="mb-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">{sucesso}</p>}
@@ -2484,7 +2487,7 @@ function CreditosDoProfissional({
       ) : (
         <>
           {orders.length === 0 ? (
-            <p className="text-[11px] text-slate-600">Ainda não comprou créditos.</p>
+            <p className="text-[11px] text-slate-600">Ainda não carregou a carteira.</p>
           ) : (
             <div className="space-y-1.5">
               {orders.slice(0, 6).map((o) => (
@@ -2497,7 +2500,7 @@ function CreditosDoProfissional({
                     <span className="text-xs font-semibold text-white">
                       {o.euros != null ? fmtMoney(o.euros) : "—"}
                     </span>
-                    {o.creditos != null && <span className="text-[11px] text-slate-400">{o.creditos} cr.</span>}
+                    {o.carregado != null && <span className="text-[11px] text-slate-400">{fmtMoney(o.carregado)}</span>}
                     <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                       o.estado === "paid"   ? "bg-emerald-500/15 text-emerald-300" :
                       o.estado === "failed" ? "bg-red-500/15 text-red-300" :
@@ -2568,16 +2571,16 @@ function CreditosDoProfissional({
                   Para promoção, acerto depois de disputa ou correcção.
                   {pendentes.length > 0 && (
                     <span className="text-amber-300">
-                      {" "}Este profissional tem {pendentes.length} compra{pendentes.length === 1 ? "" : "s"} por
+                      {" "}Este profissional tem {pendentes.length} carregamento{pendentes.length === 1 ? "" : "s"} por
                       pagar — se ele pagou, usa o botão de confirmar em vez deste.
                     </span>
                   )}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-[100px_1fr]">
                   <input
-                    type="number" step="1" value={creditos}
-                    onChange={(e) => setCreditos(e.target.value)}
-                    placeholder="Créditos"
+                    type="number" step="0.01" value={euros}
+                    onChange={(e) => setEuros(e.target.value)}
+                    placeholder="Euros"
                     className="h-8 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-2 text-sm text-white outline-none focus:border-[#00BDEB]"
                   />
                   <input
@@ -2588,23 +2591,24 @@ function CreditosDoProfissional({
                   />
                 </div>
                 <p className="text-[10px] text-slate-600">
-                  Um valor negativo reverte. O motivo fica visível na carteira do profissional.
+                  Valor em euros — ex: 25,50. Um valor negativo reverte. O motivo fica visível
+                  na carteira do profissional.
                 </p>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => acao({
                       action: "creditar_manual",
                       partner_id: partnerId,
-                      creditos: Number(creditos),
+                      euros: Number(euros),
                       motivo,
                     })}
-                    disabled={busy || creditos.trim() === "" || motivo.trim() === ""}
+                    disabled={busy || euros.trim() === "" || motivo.trim() === ""}
                     className="flex-1 rounded-lg bg-[#00BDEB] py-1.5 text-[11px] font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
                   >
                     {busy ? "A creditar..." : "Confirmar atribuição"}
                   </button>
                   <button
-                    onClick={() => { setAbrirManual(false); setCreditos(""); setMotivo(""); }}
+                    onClick={() => { setAbrirManual(false); setEuros(""); setMotivo(""); }}
                     disabled={busy}
                     className="rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11px] text-slate-400 hover:text-slate-200 disabled:opacity-50"
                   >
@@ -2617,7 +2621,7 @@ function CreditosDoProfissional({
                 onClick={() => { setAbrirManual(true); setErro(null); setSucesso(null); }}
                 className="w-full rounded-lg border border-white/[0.10] py-1.5 text-[11px] font-semibold text-slate-300 hover:border-[#00BDEB]/40 hover:text-white"
               >
-                Dar créditos
+                Creditar carteira
               </button>
             )}
           </div>
@@ -3671,7 +3675,7 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
   return (
     <div className="rounded-2xl border border-[#00BDEB]/20 bg-[#00BDEB]/[0.03] p-5">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Custo por trabalho aceite (créditos)</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Custo por trabalho aceite — bandas antigas</p>
         <button
           onClick={() => setShowNew((v) => !v)}
           className="rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40"
@@ -3692,7 +3696,8 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
           sem degraus. Editar, activar ou criar uma banda aqui <span className="text-white">não altera
           o que o profissional paga</span> — a função que calcula já não lê esta tabela.
           O que manda é <code className="rounded bg-white/[0.04] px-1 py-0.5 text-slate-400">pricing_parameters.credit_unlock_percent</code>,
-          hoje a <span className="text-white">10%</span>, e altera-se na base de dados.
+          hoje a <span className="text-white">10%</span> do valor do trabalho, sem piso, e
+          altera-se na base de dados. Desde 29-07-2026 a carteira é em euros — já não há créditos.
         </p>
         <p className="mt-1 text-[10px] leading-relaxed text-slate-600">
           A tabela ficou aqui para se poder voltar aos escalões sem mexer em código. Até lá, as
@@ -4178,10 +4183,14 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
   );
 }
 
-// ── Compra de créditos pelos profissionais ────────────────────────────────
-// A receita da CLYON. O profissional fica com 100% do serviço e paga a taxa
-// de aceitação em créditos; é aqui que esse dinheiro entra. A confirmação é
-// do webhook da euPago — o painel só olha.
+// ── Carregamentos da carteira ─────────────────────────────────────────────
+// A receita da CLYON. O profissional fica com 100% do serviço e paga 10% ao
+// aceitar um trabalho; é aqui que esse dinheiro entra. A confirmação é do
+// webhook da euPago — o painel só olha.
+//
+// ⚠️ Desde 29-07-2026 acabaram os créditos: a carteira é em euros. As colunas
+// da base ficaram com o mesmo nome mas passaram a guardar CÊNTIMOS, e a rota
+// já os converte. Aqui trabalha-se sempre em euros.
 type CreditOrder = {
   id: string;
   estado: string;
@@ -4189,7 +4198,8 @@ type CreditOrder = {
   metodo: string;
   metodo_label: string | null;
   pacote: string | null;
-  creditos: number | null;
+  /** Valor carregado na carteira, em euros (a base guarda cêntimos). */
+  carregado: number | null;
   euros: number | null;
   entidade: string | null;
   referencia: string | null;
@@ -4205,7 +4215,7 @@ type CreditOrder = {
 function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, string>; days: number }) {
   const [orders, setOrders] = useState<CreditOrder[]>([]);
   const [stats, setStats] = useState({
-    receita: 0, creditos_vendidos: 0, comissao_eupago: 0,
+    receita: 0, total_carregado: 0, comissao_eupago: 0,
     count_pagas: 0, count_pendentes: 0, valor_pendente: 0, count_falhadas: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -4235,17 +4245,17 @@ function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, str
     <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">Venda de créditos</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">Carregamentos da carteira</p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
-            É daqui que vem a receita da CLYON. Os créditos entram sozinhos quando a euPago
-            confirma — <span className="text-white">nunca creditar à mão uma ordem já paga</span>,
-            ficaria saldo a dobrar sem rasto de que foi engano.
+            É daqui que vem a receita da CLYON. O dinheiro entra sozinho quando a euPago
+            confirma — <span className="text-white">nunca creditar à mão um carregamento já
+            pago</span>, ficaria saldo a dobrar sem rasto de que foi engano.
           </p>
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-emerald-300">{fmtMoney(stats.receita)}</p>
           <p className="text-[10px] text-slate-500">
-            {stats.count_pagas} compra{stats.count_pagas === 1 ? "" : "s"} · {stats.creditos_vendidos} créditos
+            {stats.count_pagas} carregamento{stats.count_pagas === 1 ? "" : "s"} · {fmtMoney(stats.total_carregado)} em carteiras
           </p>
         </div>
       </div>
@@ -4281,7 +4291,7 @@ function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, str
               className={`mt-3 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 soProblemas ? "bg-[#00BDEB] text-slate-950" : "border border-white/[0.08] bg-[#12263B] text-slate-300 hover:border-[#00BDEB]/40"
               }`}>
-              {soProblemas ? "Só por pagar e recusadas" : "Todas as ordens"}
+              {soProblemas ? "Só por pagar e recusados" : "Todos os carregamentos"}
             </button>
           )}
 
@@ -4290,7 +4300,7 @@ function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, str
           ) : visiveis.length === 0 ? (
             <p className="mt-4 text-xs text-slate-600">
               {orders.length === 0
-                ? `Nenhuma compra de créditos nos últimos ${days} dias.`
+                ? `Nenhum carregamento nos últimos ${days} dias.`
                 : "Nada por pagar nem recusado."}
             </p>
           ) : (
@@ -4305,8 +4315,8 @@ function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, str
                     <span className="text-sm font-semibold text-white">
                       {o.euros != null ? fmtMoney(o.euros) : "—"}
                     </span>
-                    {o.creditos != null && (
-                      <span className="text-xs text-slate-400">{o.creditos} créditos</span>
+                    {o.carregado != null && (
+                      <span className="text-xs text-slate-400">{fmtMoney(o.carregado)} em carteira</span>
                     )}
                     {o.pacote && <span className="text-xs text-slate-500">{displayText(o.pacote, "")}</span>}
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -4344,9 +4354,9 @@ function CompraDeCreditos({ authHeader, days }: { authHeader: Record<string, str
           )}
 
           <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
-            Se uma compra ficar por pagar com o dinheiro já entrado, o caminho é reprocessar
-            pela referência — não somar créditos por fora. O ajuste manual existe para o que é
-            mesmo excepcional: um crédito promocional, um acerto depois de uma disputa.
+            Se um carregamento ficar por pagar com o dinheiro já entrado, o caminho é reprocessar
+            pela referência — não somar à mão. O ajuste manual existe para o que é mesmo
+            excepcional: uma promoção, um acerto depois de uma disputa.
           </p>
         </>
       )}
@@ -4447,8 +4457,8 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
           a receita mudou de sítio. */}
       <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[10px] leading-relaxed text-slate-500">
         O profissional recebe <span className="text-slate-300">100%</span> do valor do trabalho — por isso
-        estes dois totais são próximos. Não é a CLYON a perder dinheiro: a receita é a venda de créditos,
-        em baixo.
+        estes dois totais são próximos. Não é a CLYON a perder dinheiro: a receita são os
+        carregamentos da carteira, em baixo, mais a reserva de 5% que o cliente paga por cima.
       </p>
 
       <CompraDeCreditos authHeader={authHeader} days={days} />

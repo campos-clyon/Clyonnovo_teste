@@ -6,12 +6,17 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Compras de créditos pelos profissionais.
+ * Carregamentos da carteira pelos profissionais.
  *
- * Desde 27-07-2026 é isto a receita da CLYON: o profissional fica com 100% do
- * serviço e paga uma taxa de aceitação em créditos. O ecrã de pagamentos
- * mostra dinheiro que passa por nós a caminho do profissional; o que é
- * nosso está aqui.
+ * É isto a receita da CLYON: o profissional fica com 100% do serviço e paga
+ * uma taxa de 10% ao aceitar um trabalho. O ecrã de pagamentos mostra
+ * dinheiro que passa por nós a caminho do profissional; o que é nosso está
+ * aqui.
+ *
+ * ⚠️ UNIDADE, desde 29-07-2026: acabaram os créditos. A coluna `credits`
+ * ficou com o mesmo nome mas passou a guardar CÊNTIMOS — um `3300` é 33,00 €,
+ * não 3300 créditos. Nenhuma tabela mudou; mudou o significado. Ler o número
+ * cru mostraria 3300 onde estão 33 euros.
  *
  * Só leitura. A confirmação é do webhook da euPago, e creditar à mão uma
  * ordem já paga dava saldo a dobrar sem deixar rasto de que foi engano.
@@ -102,7 +107,8 @@ export async function GET(req: NextRequest) {
         // Ordens anteriores à euPago não têm método — não inventar um
         metodo_label: metodo ? (METODO_LABEL[metodo] ?? metodo) : null,
         pacote: r.package_name ?? null,
-        creditos: r.credits != null ? Number(r.credits) : null,
+        // `credits` são cêntimos desde 29-07-2026 — o ecrã mostra euros
+        carregado: r.credits != null ? Number(r.credits) / 100 : null,
         euros: r.price_cents != null ? Number(r.price_cents) / 100 : null,
         entidade: r.provider_entity ?? null,
         // provider_payment_id é a referência da euPago: os 9 dígitos que o
@@ -128,7 +134,7 @@ export async function GET(req: NextRequest) {
       stats: {
         // O que entrou mesmo. É a receita da CLYON no período.
         receita: cent(pagas.reduce((s, o) => s + (o.euros ?? 0), 0)),
-        creditos_vendidos: pagas.reduce((s, o) => s + (o.creditos ?? 0), 0),
+        total_carregado: cent(pagas.reduce((s, o) => s + (o.carregado ?? 0), 0)),
         comissao_eupago: cent(pagas.reduce((s, o) => s + (o.comissao ?? 0), 0)),
         count_pagas: pagas.length,
         count_pendentes: pendentes.length,

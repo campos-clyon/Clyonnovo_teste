@@ -6,12 +6,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Créditos: confirmar uma compra, ou dar créditos à mão.
+ * Carteira: confirmar um carregamento, ou creditar à mão.
  *
  * São dois gestos diferentes e é deliberado que sejam duas acções separadas:
  *
- *   · `confirmar_compra` — o profissional PAGOU e os créditos não entraram
- *     (callback perdido). Fecha a ordem pelo mesmo caminho do webhook, por
+ *   · `confirmar_compra` — o profissional PAGOU e o dinheiro não entrou na
+ *     carteira (callback perdido). Fecha a ordem pelo mesmo caminho do webhook, por
  *     isso é idempotente: se o callback atrasado chegar depois, encontra a
  *     ordem paga e não soma segunda vez.
  *
@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
     action?: string;
     order_id?: string;
     partner_id?: string;
-    creditos?: number | string;
+    /** Em EUROS. Converte-se a cêntimos antes de chegar à base. */
+    euros?: number | string;
     motivo?: string;
     nota?: string;
   };
@@ -97,42 +98,54 @@ export async function POST(req: NextRequest) {
         ok: true,
         resultado: r,
         message: jaCreditado
-          ? "Esta compra já estava confirmada — nada foi creditado duas vezes."
-          : `Compra confirmada. ${r?.creditos ?? 0} créditos entraram na carteira.`,
+          ? "Este carregamento já estava confirmado — nada entrou duas vezes."
+          : `Carregamento confirmado. ${
+              typeof r?.creditos === "number"
+                ? `${(r.creditos / 100).toFixed(2).replace(".", ",")} €`
+                : "O valor"
+            } entrou na carteira.`,
       });
     }
 
-    // ── Dar créditos sem compra por trás ──────────────────────────────────
+    // ── Creditar a carteira sem compra por trás ───────────────────────────
+    //
+    // ⚠️ O painel recebe EUROS de quem opera e envia CÊNTIMOS à base. Desde
+    // 29-07-2026 `_creditos` já não são créditos: são cêntimos. Sem esta
+    // conversão, escrever "50" daria 0,50 € — ou, ao contrário, escrever 50
+    // cêntimos daria 50 euros a quem não os devia receber.
     if (body.action === "creditar_manual") {
       const partnerId = typeof body.partner_id === "string" ? body.partner_id.trim() : "";
-      const creditos = Number(body.creditos);
+      const euros = Number(body.euros);
       const motivo = typeof body.motivo === "string" ? body.motivo.trim() : "";
 
       if (!partnerId) {
         return NextResponse.json({ error: "Falta o profissional." }, { status: 400 });
       }
-      if (!Number.isInteger(creditos) || creditos === 0) {
+      if (!Number.isFinite(euros) || euros === 0) {
         return NextResponse.json({
-          error: "Indica um número inteiro de créditos, diferente de zero. Um valor negativo reverte.",
+          error: "Indica um valor em euros diferente de zero. Um valor negativo reverte.",
         }, { status: 400 });
       }
+      // Arredondar ao cêntimo antes de enviar: a base guarda inteiros, e
+      // 12,345 € viraria 1234,5 cêntimos — que o Postgres recusaria.
+      const centimos = Math.round(euros * 100);
       // A base também o exige; validar aqui dá uma mensagem melhor do que um
       // 22023 cru, e evita a ida à base para nada.
       if (!motivo) {
         return NextResponse.json({
-          error: "O motivo é obrigatório. Dar créditos é dar dinheiro — daqui a um mês ninguém se lembra porquê.",
+          error: "O motivo é obrigatório. Creditar a carteira é dar dinheiro — daqui a um mês ninguém se lembra porquê.",
         }, { status: 400 });
       }
 
       const { data, error } = await sb.rpc("painel_creditar_manual", {
         _partner_id: partnerId,
-        _creditos: creditos,
+        _creditos: centimos,
         _motivo: motivo,
         _staff: staff,
       });
 
       if (error) {
-        console.error("[creditos/acoes manual]", { partnerId, creditos, error });
+        console.error("[creditos/acoes manual]", { partnerId, centimos, error });
         const e = erroDaBase(error, "Não foi possível creditar");
         return NextResponse.json({ error: e.error }, { status: e.status });
       }
@@ -142,7 +155,7 @@ export async function POST(req: NextRequest) {
       await registarAuditoria(sb, {
         action: "creditar_manual",
         entity_id: partnerId,
-        new_value: { ...r, creditos, _by: `${colab!.id}:${colab!.nome}` },
+        new_value: { ...r, euros, centimos, _by: `${colab!.id}:${colab!.nome}` },
         reason: motivo,
       });
 
@@ -152,9 +165,14 @@ export async function POST(req: NextRequest) {
         // O aviso vem da base quando o profissional tem compras por pagar —
         // quase sempre sinal de que o gesto certo era confirmar a compra.
         aviso: typeof r?.aviso === "string" ? r.aviso : null,
-        message: creditos > 0
-          ? `${creditos} créditos atribuídos. Saldo: ${r?.saldo ?? "—"}.`
-          : `${Math.abs(creditos)} créditos removidos. Saldo: ${r?.saldo ?? "—"}.`,
+        // O saldo devolvido também vem em cêntimos
+        message: (() => {
+          const eur = (n: number) => n.toFixed(2).replace(".", ",");
+          const saldo = typeof r?.saldo === "number" ? ` Saldo: ${eur(r.saldo / 100)} €.` : "";
+          return euros > 0
+            ? `${eur(euros)} € creditados na carteira.${saldo}`
+            : `${eur(Math.abs(euros))} € removidos da carteira.${saldo}`;
+        })(),
       });
     }
 

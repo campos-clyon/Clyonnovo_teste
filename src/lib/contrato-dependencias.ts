@@ -97,6 +97,11 @@ export const DEPENDENCIAS: Dependencia[] = [
   // A receita da CLYON. provider_payment_id É a referência da euPago — é por
   // ela que o callback encontra a ordem. checkout_url/return_url ficam sempre
   // a NULL (modelo de redireccionamento que nunca existiu) e não se mostram.
+  //
+  // ⚠️ `credits` guarda CÊNTIMOS desde 29-07-2026. A coluna não mudou de nome
+  // nem de tipo, só de significado — é o género de mudança que nenhuma
+  // verificação de esquema apanha, e que faz um ecrã mostrar 4000 onde estão
+  // 40 euros. Quem a lê divide por 100.
   {
     nome: "credit_purchase_orders",
     tipo: "tabela",
@@ -105,7 +110,7 @@ export const DEPENDENCIAS: Dependencia[] = [
       "method", "provider_entity", "provider_payment_id", "provider_txn",
       "provider_fee", "expires_at", "paid_at", "failure_reason", "created_at",
     ],
-    usadoEm: "Ecrã de venda de créditos — a receita da CLYON",
+    usadoEm: "Ecrã de carregamentos da carteira — a receita da CLYON",
   },
 
   // ── Funções ──────────────────────────────────────────────────────────────
@@ -136,9 +141,14 @@ export const DEPENDENCIAS: Dependencia[] = [
   {
     nome: "painel_creditar_manual",
     tipo: "funcao",
+    // `_creditos` são CÊNTIMOS desde 29-07-2026, apesar do nome. O painel
+    // recebe euros de quem opera e converte antes de chamar.
     argumentos: ["_partner_id", "_creditos", "_motivo", "_staff"],
-    usadoEm: "Dar créditos sem compra por trás: promoção, acerto de disputa",
+    usadoEm: "Creditar a carteira sem carregamento por trás: promoção, acerto de disputa",
   },
+  // Não é chamada pelo painel; declarada para a verificação apanhar se
+  // desaparecer, porque a app depende dela para o cliente poder pagar.
+  { nome: "preparar_reserva", tipo: "funcao", usadoEm: "Cria a reserva e o pagamento do cliente — o painel não escreve bookings à mão" },
   // A fórmula da reserva viveu em duas cópias durante um dia e divergiu.
   // Se o painel precisar de a mostrar, chama esta — não a repete.
   { nome: "valor_da_reserva", tipo: "funcao", usadoEm: "Valor da reserva do cliente — fonte única da fórmula" },
