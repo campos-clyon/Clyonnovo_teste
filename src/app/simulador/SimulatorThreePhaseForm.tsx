@@ -476,7 +476,7 @@ export default function SimulatorThreePhaseForm() {
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
                 {successAssignedTo ? (
-                  <>A equipa vai avaliar o pedido. Assistente responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>. Entramos em contacto por telefone ou email.</>
+                  <>A equipa vai avaliar o pedido. Responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>. Entramos em contacto por telefone ou email.</>
                 ) : (
                   <>A equipa CLYON vai avaliar o pedido em breve e entrar em contacto por telefone ou email.</>
                 )}

@@ -478,13 +478,12 @@ describe("ordenação da fila — o mais parado primeiro", () => {
 // status === "pendente" (cliente). Duas definições para a mesma palavra: o
 // cartão dizia 4 e a lista aparecia vazia.
 function pedidoNoFiltro(
-  p: { status: string; viewedAt?: string | null; assignedToId?: number | null },
+  p: { status: string; viewedAt?: string | null },
   filtro: string,
 ): boolean {
   if (p.status === "arquivado") return filtro === "arquivado";
   if (filtro === "todos") return true;
   if (filtro === "pendente") return !p.viewedAt;
-  if (filtro === "sem_assistente") return !p.assignedToId;
   return p.status === filtro;
 }
 
@@ -504,9 +503,12 @@ describe("pedidoNoFiltro — Novos é o que ninguém abriu", () => {
     expect(pedidoNoFiltro({ status: "arquivado" }, "arquivado")).toBe(true);
   });
 
-  it("sem assistente é fila geral, não um estado", () => {
-    expect(pedidoNoFiltro({ status: "em_analise", assignedToId: null }, "sem_assistente")).toBe(true);
-    expect(pedidoNoFiltro({ status: "em_analise", assignedToId: 3 }, "sem_assistente")).toBe(false);
+  // O filtro "sem assistente" desapareceu com a função. O ESTADO
+  // sem_assistente continua a existir — é com ele que um pedido nasce — e
+  // passa a filtrar-se como qualquer outro.
+  it("sem_assistente filtra-se como estado, não como vista", () => {
+    expect(pedidoNoFiltro({ status: "sem_assistente" }, "sem_assistente")).toBe(true);
+    expect(pedidoNoFiltro({ status: "em_analise" }, "sem_assistente")).toBe(false);
   });
 
   it("os estados de fecho são filtráveis", () => {

@@ -555,7 +555,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 )}
                 {order.assignedToName && (
                   <span className="text-xs text-slate-500">
-                    Assistente: <span className="font-semibold text-sky-400">{order.assignedToName}</span>
+                    Responsável: <span className="font-semibold text-sky-400">{order.assignedToName}</span>
                   </span>
                 )}
                 <span className="text-xs text-slate-600">{fmt(order.createdAt)}</span>
@@ -682,7 +682,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                   { label: "Status", value: STATUS_CFG[order.status]?.label ?? order.status },
                   { label: "Prioridade", value: FIELD_TRANSLATIONS.priority?.[order.priority ?? "normal"] ?? order.priority ?? "Normal" },
                   { label: "Urgência", value: tUrgency(displayUrgency) },
-                  { label: "Assistente", value: order.assignedToName ?? "Não atribuído" },
+                  { label: "Responsável", value: order.assignedToName ?? "Não atribuído" },
                   { label: "Origem", value: "Simulador" },
                   { label: "Data de entrada", value: fmt(order.createdAt) },
                 ].map((item) => (
@@ -1204,20 +1204,9 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                   <input type="datetime-local" value={editDataAgendada} onChange={(e) => setEditDataAgendada(e.target.value)} className={inputCls} />
                 </Field>
               </div>
-              {/* Leitura apenas — atribuição */}
               <div className="grid grid-cols-2 gap-3">
-                <ReadonlyField label="Assistente atribuída" value={order.assignedToName ?? "Não atribuído"} />
-                <ReadonlyField label="Atribuído em" value={order.assignedAt ? fmt(order.assignedAt) : null} />
                 <ReadonlyField label="Última atualização" value={fmt(order.updatedAt)} />
                 <ReadonlyField label="Criado em" value={fmt(order.createdAt)} />
-                {order.assignedToName && (
-                  <ReadonlyField
-                    label="Pagamento ao assistente"
-                    value={(order as any).valorPagoAssistente != null
-                      ? `${parseFloat(String((order as any).valorPagoAssistente)).toFixed(2)} € (fixo por trabalho)`
-                      : "7,00 € (fixo por trabalho)"}
-                  />
-                )}
               </div>
               <Field label="Notas internas (visíveis apenas no backoffice)">
                 <textarea rows={4} value={editNotasInternas} onChange={(e) => setEditNotasInternas(e.target.value)} className={inputCls} placeholder="Notas para o equipa..." />
@@ -1264,7 +1253,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600 pl-6">Linha do tempo automática</p>
                 {[
                   { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
-                  ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "assistente"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
+                  ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "alguém da equipa"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
                   ...(order.status === "aprovado" ? [{ label: "Orçamento aprovado", date: order.updatedAt, color: "bg-emerald-400" }] : []),
                   ...(order.status === "confirmado" ? [{ label: "Pedido confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
                 ].map((item, i) => (

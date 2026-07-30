@@ -111,7 +111,7 @@ type GeminiEstimate = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<OrderStatus, { label: string; dot: string; badge: string }> = {
-  sem_assistente:         { label: "Fila geral",          dot: "bg-yellow-500",  badge: "bg-yellow-50 border-yellow-200 text-yellow-700" },
+  sem_assistente:         { label: "Por atribuir",        dot: "bg-yellow-500",  badge: "bg-yellow-50 border-yellow-200 text-yellow-700" },
   pendente:               { label: "Pendente",            dot: "bg-amber-500",   badge: "bg-amber-50 border-amber-200 text-amber-700" },
   atribuido:              { label: "Atribuído",           dot: "bg-sky-500",     badge: "bg-sky-50 border-sky-200 text-sky-700" },
   em_analise:             { label: "Em análise",          dot: "bg-violet-500",  badge: "bg-violet-50 border-violet-200 text-violet-700" },
@@ -147,7 +147,7 @@ const TABS = [
   { id: "geral",           label: "Geral" },
   { id: "cliente_morada",  label: "Cliente e Morada" },
   { id: "servico_fotos",   label: "Serviço e Fotos" },
-  { id: "atribuicao",      label: "Atribuição" },
+  { id: "atribuicao",      label: "Estado e notas" },
   { id: "historico",       label: "Histórico" },
 ] as const;
 
@@ -279,7 +279,6 @@ type Props = {
   /** ID do colaborador autenticado (para verificar atribuição) */
   colabId?: number;
   /** Função do colaborador: "assistente" | "admin" | etc. */
-  colabFuncao?: string;
   onClose: () => void;
   onDeleted?: (id: number) => void;
   onUpdated?: (order: PedidoOrder) => void;
@@ -302,7 +301,7 @@ function _maskEmail(email: string | null | undefined): string {
   return !dom ? "***@***" : l.charAt(0) + "***@" + dom.charAt(0) + "***";
 }
 
-export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFuncao, onClose, onDeleted, onUpdated }: Props) {
+export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose, onDeleted, onUpdated }: Props) {
   const authHeader = { Authorization: `Bearer ${token}` };
 
   const [order, setOrder] = useState<PedidoOrder | null>(null);
@@ -347,8 +346,6 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   const [editDataAgendada, setEditDataAgendada] = useState("");
 
   // Assistentes (para dropdown de atribuição — apenas admin)
-  const [assistants, setAssistants] = useState<{ id: number; nome: string; activePedidos?: number }[]>([]);
-  const [editAssignedToId, setEditAssignedToId] = useState<number | null>(null);
 
   // Calendar / scheduling state (Atribuição tab block)
   const [schedDate, setSchedDate] = useState("");
@@ -425,7 +422,6 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
     setEditStatus(o.status);
     setEditPriority(o.priority ?? "normal");
     setEditDataAgendada(o.dataAgendada ? o.dataAgendada.slice(0, 16) : "");
-    setEditAssignedToId(o.assignedToId ?? null);
     setSchedDate(o.scheduledDate ?? "");
     setSchedStart(o.scheduledStartTime ?? "");
     setSchedEnd(o.scheduledEndTime ?? "");
@@ -451,19 +447,6 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
   }, [id, token]);
 
   useEffect(() => { void fetchOrder(); }, [fetchOrder]);
-
-  // Fetch lista de assistentes quando admin abre a aba de atribuição
-  useEffect(() => {
-    if (!isAdmin || (activeTab !== "atribuicao") || assistants.length > 0) return;
-    fetch("/api/admin/assistentes", { headers: authHeader })
-      .then((r) => r.json())
-      .then((data) => {
-        const list = data?.assistants ?? data?.assistentes ?? [];
-        setAssistants(list);
-      })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, activeTab]);
 
   // Close on ESC
   useEffect(() => {
@@ -736,16 +719,6 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
       if (isAdmin) {
         body.precoFinal = editPrecoFinal || null;
         body.precoFinalIva = editPrecoFinalIva || null;
-        // Atribuição de assistente — deriva o nome a partir da lista carregada
-        body.assignedToId = editAssignedToId ?? null;
-        body.assignedToName = editAssignedToId
-          ? (assistants.find((a) => a.id === editAssignedToId)?.nome ?? order.assignedToName ?? null)
-          : null;
-        // Se estamos a atribuir e o pedido ainda está sem assistente, muda status para atribuido
-        if (editAssignedToId && !order.assignedToId && body.status === "sem_assistente") {
-          body.status = "atribuido";
-          setEditStatus("atribuido");
-        }
       }
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
         method: "PATCH",
@@ -1119,31 +1092,21 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                   </div>
 
                   <div className="flex flex-shrink-0 flex-wrap items-center gap-1.5">
-                    {/* Aceitar pedido — visível apenas para assistentes quando pedido está na fila geral */}
-                    {!isAdmin && colabFuncao === "assistente" && !order.assignedToId && (
+                    {/* Aceitar — marca o pedido como tomado por quem está a
+                        trabalhar nele. Antes só aparecia ao assistente com o
+                        pedido na fila geral; sem essa função, é a administração
+                        que o toma. */}
+                    {!order.assignedToId && (
                       <button
                         onClick={handleAccept}
                         disabled={accepting}
                         className="flex items-center gap-1.5 rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
                       >
-                        {accepting ? (
-                          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                        ) : (
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         {accepting ? "A aceitar..." : "Aceitar pedido"}
                       </button>
-                    )}
-                    {/* Pedido já atribuído a outra assistente */}
-                    {!isAdmin && colabFuncao === "assistente" && order.assignedToId && order.assignedToId !== colabId && (
-                      <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
-                        Atribuído a {order.assignedToName}
-                      </span>
                     )}
                     {/* Guardar */}
                     <button
@@ -1222,9 +1185,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         WhatsApp
                       </a>
                     )}
-                    {/* Agendar serviço — admin ou assistente responsável, pedido aprovado/confirmado/em_execucao */}
-                    {(isAdmin || (colabFuncao === "assistente" && order.assignedToId === colabId)) &&
-                      (["aprovado", "confirmado", "em_execucao"].includes(order.status) || !!order.scheduledDate) && (
+                    {/* Agendar serviço — pedido aprovado/confirmado/em_execucao */}
+                    {(["aprovado", "confirmado", "em_execucao"].includes(order.status) || !!order.scheduledDate) && (
                         /* Both states (scheduled or not) open the confirm modal.
                            "Abrir no Google Calendar" is shown after scheduling inside the modal itself. */
                         <button
@@ -1621,7 +1583,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Resumo rápido</p>
                           {[
-                            { label: "Assistente", value: order.assignedToName ?? "Fila geral" },
+                            { label: "Responsável", value: order.assignedToName ?? "Por atribuir" },
                             { label: "Prioridade", value: order.priority === "urgente" ? "Urgente" : order.priority === "alta" ? "Alta" : order.priority === "baixa" ? "Baixa" : "Normal" },
                             { label: "Urgência", value: tUrgency(order.urgency) ?? "Normal" },
                             ...(estVal?.difficultyLevel ? [{ label: "Complexidade", value: DIFFICULTY_LABEL[estVal.difficultyLevel] ?? String(estVal.difficultyLevel) }] : []),
@@ -1721,7 +1683,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                             <div className="absolute left-3 top-1 bottom-1 w-px bg-white/[0.06]" />
                             {[
                               { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
-                              ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "assistente"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
+                              ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "alguém da equipa"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
                               ...(order.status === "aprovado" ? [{ label: "Orçamento aprovado", date: order.updatedAt, color: "bg-emerald-400" }] : []),
                               ...(order.status === "confirmado" ? [{ label: "Confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
                               ...(order.status === "em_execucao" ? [{ label: "Em execução", date: order.updatedAt, color: "bg-lime-400" }] : []),
@@ -2363,7 +2325,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                 {/* Atribuição */}
                 {activeTab === "atribuicao" && (
                   <div className="space-y-6">
-                    <h3 className="text-base font-bold text-slate-900">Atribuição e status</h3>
+                    <h3 className="text-base font-bold text-slate-900">Estado do pedido</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Status do pedido">
                         <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as OrderStatus)} className={selectCls}>
@@ -2384,43 +2346,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                         <input type="datetime-local" value={editDataAgendada} onChange={(e) => setEditDataAgendada(e.target.value)} className={inputCls} />
                       </Field>
                     </div>
-                    {/* Atribuição de assistente — editável apenas para admin */}
-                    {isAdmin ? (
-                      <div className="space-y-3">
-                        <Field label="Assistente responsável">
-                          <select
-                            value={editAssignedToId ?? ""}
-                            onChange={(e) => setEditAssignedToId(e.target.value ? Number(e.target.value) : null)}
-                            className={selectCls}
-                          >
-                            <option value="" className={optionCls}>Sem atribuição (fila geral)</option>
-                            {assistants.map((a) => (
-                              <option key={a.id} value={a.id} className={optionCls}>
-                                {a.nome}{a.activePedidos !== undefined ? ` — ${a.activePedidos} pedido${a.activePedidos !== 1 ? "s" : ""} activo${a.activePedidos !== 1 ? "s" : ""}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                          {assistants.length === 0 && (
-                            <p className="mt-1.5 text-[11px] text-slate-500">A carregar assistentes...</p>
-                          )}
-                        </Field>
-                        <div className="grid grid-cols-2 gap-3">
-                          <ReadonlyField label="Atribuído em" value={order.assignedAt ? fmt(order.assignedAt) : null} />
-                          <ReadonlyField label="Criado em" value={fmt(order.createdAt)} />
-                          <ReadonlyField label="Última atualização" value={fmt(order.updatedAt)} />
-                          {(order as any).acceptedAt && (
-                            <ReadonlyField label="Aceite em" value={fmt((order as any).acceptedAt)} />
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        <ReadonlyField label="Assistente atribuída" value={order.assignedToName ?? "Fila geral"} />
-                        <ReadonlyField label="Atribuído em" value={order.assignedAt ? fmt(order.assignedAt) : null} />
-                        <ReadonlyField label="Última atualização" value={fmt(order.updatedAt)} />
-                        <ReadonlyField label="Criado em" value={fmt(order.createdAt)} />
-                      </div>
-                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <ReadonlyField label="Criado em" value={fmt(order.createdAt)} />
+                      <ReadonlyField label="Última atualização" value={fmt(order.updatedAt)} />
+                      {(order as any).acceptedAt && (
+                        <ReadonlyField label="Aceite em" value={fmt((order as any).acceptedAt)} />
+                      )}
+                    </div>
                     <Field label="Notas internas (visíveis apenas no backoffice)">
                       <textarea rows={4} value={editNotasInternas} onChange={(e) => setEditNotasInternas(e.target.value)} className={inputCls} placeholder="Notas para a equipa..." />
                     </Field>
@@ -2431,7 +2363,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                     </div>
 
                     {/* ── Agenda do serviço ──────────────────────────────── */}
-                    {(isAdmin || (colabFuncao === "assistente" && order.assignedToId === colabId)) && (
+                    {isAdmin && (
                       <div className="rounded-[20px] border border-violet-400/20 bg-violet-400/[0.03] p-5 space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-bold text-violet-700 flex items-center gap-2">
@@ -2624,7 +2556,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, colabFu
                       <p className="mb-3 pl-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Linha do tempo automática</p>
                       {[
                         { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
-                        ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "assistente"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
+                        ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "alguém da equipa"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
                         ...(order.status === "aprovado" ? [{ label: "Orçamento aprovado", date: order.updatedAt, color: "bg-emerald-400" }] : []),
                         ...(order.status === "confirmado" ? [{ label: "Pedido confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
                       ].map((item, i) => (

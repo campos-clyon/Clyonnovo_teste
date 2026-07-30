@@ -1,11 +1,10 @@
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
-import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import { origemDoPedido, origemDoLead } from "@/lib/acesso";
 import ContasPanel from "@/components/admin/ContasPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
@@ -14,7 +13,6 @@ import {
   AlertTriangle,
   Archive,
   ArrowRight,
-  Briefcase,
   Building2,
   CheckCircle2,
   ChevronRight,
@@ -34,7 +32,6 @@ import {
   Menu,
   MessageCircle,
   MousePointerClick,
-  Pencil,
   Phone,
   ReceiptText,
   RefreshCw,
@@ -43,25 +40,14 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
-  Trash2,
   TrendingUp,
   UserPlus,
   Users,
-  Wallet,
   Wrench,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-type Colaborador = {
-  id: number;
-  nome: string;
-  funcao: "motorista" | "ajudante" | "admin" | "assistente";
-  valorHora: string;
-  isAdmin: number;
-  createdAt?: string;
-};
 
 type SimulatorSetting = {
   key: string;
@@ -72,8 +58,7 @@ type SimulatorSetting = {
   description?: string | null;
 };
 
-type AdminSection = "overview" | "pedidos" | "app_clyon" | "operacao" | "leads" | "site" | "equipa" | "pagamentos" | "configs" | "contas";
-type OperacaoTab = "equipa" | "pagamentos" | "funcoes";
+type AdminSection = "overview" | "pedidos" | "app_clyon" | "leads" | "site" | "configs" | "contas";
 
 type Lead = {
   id: number;
@@ -142,7 +127,6 @@ type EventTotals = {
   total?: number;
 };
 
-const functionOptions: Array<Colaborador["funcao"]> = ["admin", "assistente", "motorista", "ajudante"];
 
 const adminNavItems: Array<{
   id: AdminSection;
@@ -152,8 +136,6 @@ const adminNavItems: Array<{
   { id: "pedidos",   icon: FileText },
   { id: "app_clyon", icon: Smartphone },
   { id: "leads",     icon: TrendingUp },
-  { id: "equipa",    icon: Users },
-  { id: "pagamentos", icon: Wallet },
   { id: "contas",     icon: UserPlus },
   { id: "configs",   icon: Settings2 },
 ];
@@ -164,24 +146,21 @@ const adminNavItems: Array<{
  *
  * "O que se faz todos os dias" fica em cima e é onde o operador vive: pedidos
  * que entram, a app, e o resumo. "Quem contacta" é o funil comercial. "Gerir"
- * é o que se abre uma vez por semana — equipa, dinheiro e definições — e por
- * isso fica no fim, longe do clique acidental.
+ * é o que se abre uma vez por semana — e por isso fica no fim, longe do
+ * clique acidental.
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
   { titulo: "Quem contacta", itens: ["leads", "contas"] },
-  { titulo: "Gerir", itens: ["equipa", "pagamentos", "configs"] },
+  { titulo: "Gerir", itens: ["configs"] },
 ];
 
 const sectionLabels: Record<AdminSection, string> = {
   overview:   "Início",
   pedidos:    "Pedidos",
   app_clyon:  "App CLYON",
-  operacao:   "Operação",   // mantido internamente (aliases apontam para ele)
   leads:      "Leads",
   site:       "Configurações",
-  equipa:     "Equipa",
-  pagamentos: "Pagamentos",
   contas:     "Contas",
   configs:    "Configs",
 };
@@ -272,9 +251,6 @@ const simulatorDisplayGroups = [
   },
 ] as const;
 
-const money = (value: number) =>
-  new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
-
 const decimal = (value: number) =>
   new Intl.NumberFormat("pt-PT", {
     minimumFractionDigits: 2,
@@ -318,13 +294,6 @@ function normalizeServiceTypeLabel(value?: string | null): string {
   return value.trim();
 }
 
-const formatRoleLabel = (role: Colaborador["funcao"]) => {
-  if (role === "admin") return "Administrador";
-  if (role === "assistente") return "Assistente";
-  if (role === "motorista") return "Motorista";
-  return "Ajudante";
-};
-
 function maskName(name: string | null | undefined): string {
   if (!name) return "—";
   const parts = name.trim().split(/\s+/);
@@ -354,13 +323,12 @@ function maskEmail(email: string | null | undefined): string {
  * dizia 4 e a lista aparecia vazia.
  */
 function pedidoNoFiltro(
-  p: { status: string; viewedAt?: string | null; assignedToId?: number | null },
+  p: { status: string; viewedAt?: string | null },
   filtro: string,
 ): boolean {
   if (p.status === "arquivado") return filtro === "arquivado";
   if (filtro === "todos") return true;
   if (filtro === "pendente") return !p.viewedAt;
-  if (filtro === "sem_assistente") return !p.assignedToId;
   return p.status === filtro;
 }
 
@@ -370,9 +338,7 @@ export default function ColaboradorAdminClient() {
   const [token, setToken] = useState("");
   const [adminNome, setAdminNome] = useState("");
   const [colabId, setColabId] = useState<number | null>(null);
-  const [colabFuncao, setColabFuncao] = useState<string>("");
   const [isAdminGeral, setIsAdminGeral] = useState(false);
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
@@ -387,36 +353,6 @@ export default function ColaboradorAdminClient() {
     "simulador" | "funcoes" | "imagens" | "seguranca" | "empresa"
   >("simulador");
 
-  // Filtros da página Equipa
-  const [teamSearch, setTeamSearch] = useState("");
-  /** Ids marcados na tabela da equipa, para acções em lote. */
-  const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
-  const [aRemoverLote, setARemoverLote] = useState(false);
-  const [teamFuncao, setTeamFuncao] = useState<"todas" | Colaborador["funcao"]>("todas");
-
-  const [operacaoTab, setOperacaoTab] = useState<OperacaoTab>("equipa");
-  const [criarNovoVisivel, setCriarNovoVisivel] = useState(false);
-  const [loadingCriar, setLoadingCriar] = useState(false);
-  const [novoNome, setNovoNome] = useState("");
-  const [novoValorHora, setNovoValorHora] = useState("");
-  const [novoValorDiaria, setNovoValorDiaria] = useState("");
-  const [novoFuncao, setNovoFuncao] = useState<Colaborador["funcao"]>("ajudante");
-  const [novoSenha, setNovoSenha] = useState("");
-  const [novoIsAdmin, setNovoIsAdmin] = useState(false);
-  const [mostrarSenhaNovoUsuario, setMostrarSenhaNovoUsuario] = useState(false);
-  // Campos de comissão (assistente)
-  const [novoCommissionType, setNovoCommissionType] = useState<"profit_percent"|"gross_percent"|"fixed_per_closed_request"|"none">("gross_percent");
-  const [novoCommissionPercent, setNovoCommissionPercent] = useState("");
-  const [novoCommissionFixed, setNovoCommissionFixed] = useState("");
-  const [novoCommissionNotes, setNovoCommissionNotes] = useState("");
-
-  const [editandoId, setEditandoId] = useState<number | null>(null);
-  const [editNome, setEditNome] = useState("");
-  const [editValorHora, setEditValorHora] = useState("");
-  const [editFuncao, setEditFuncao] = useState<Colaborador["funcao"]>("ajudante");
-  const [editSenha, setEditSenha] = useState("");
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [loadingEdicao, setLoadingEdicao] = useState(false);
   const [senhaAtualAdmin, setSenhaAtualAdmin] = useState("");
   const [novaSenhaAdmin, setNovaSenhaAdmin] = useState("");
   const [confirmacaoSenhaAdmin, setConfirmacaoSenhaAdmin] = useState("");
@@ -504,12 +440,7 @@ export default function ColaboradorAdminClient() {
   const [pedidoSearchDebounced, setPedidoSearchDebounced] = useState("");
   const [selectedPedido, setSelectedPedido] = useState<SimulatorOrder | null>(null);
   const [pedidoDetalheOpen, setPedidoDetalheOpen] = useState(false);
-  const [assistentes, setAssistentes] = useState<Array<{ id: number; nome: string; funcao: string }>>([]);
   const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
-  const [billing, setBilling] = useState<{ acceptedCount: number; costPerOrder: number; totalOwed: number; totalPaid: number; balance: number } | null>(null);
-  const [adminBilling, setAdminBilling] = useState<Array<{ id: number; nome: string; costPerAcceptedOrder: string; totalPaid: string; acceptedCount: number }>>([]);
-  const [billingPaymentAmounts, setBillingPaymentAmounts] = useState<Record<number, string>>({});
-  const [billingCostEdits, setBillingCostEdits] = useState<Record<number, string>>({});
   const pedidoSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlePedidoSearch = (value: string) => {
     setPedidoSearch(value);
@@ -554,8 +485,6 @@ export default function ColaboradorAdminClient() {
     const sectionParam = searchParams.get("section") as AdminSection | null;
     if (sectionParam && adminNavItems.some(item => item.id === sectionParam)) {
       setActiveSection(sectionParam);
-      if (sectionParam === "equipa") setOperacaoTab("equipa");
-      if (sectionParam === "pagamentos") setOperacaoTab("pagamentos");
     }
     const tabParam = searchParams.get("tab") as AppClyonTab | null;
     if (tabParam && CLYON_TAB_IDS.includes(tabParam)) {
@@ -565,18 +494,10 @@ export default function ColaboradorAdminClient() {
     if (pedidoParam) setActivePedidoId(pedidoParam);
     urlSyncReady.current = true;
 
-    // Admin geral carrega dados da equipa e configurações; assistente começa directamente nos pedidos
-    if (isAdminGeral) {
-      void carregarDados(storedToken);
-      void carregarSimulatorSettings(storedToken);
-      void carregarImageStats(storedToken);
-    } else {
-      // Assistente: só tem acesso à aba pedidos (definir se ainda não foi definido via URL)
-      if (!sectionParam) {
-        setActiveSection("pedidos");
-      }
-      setLoading(false);
-    }
+    // Quem chega aqui é administrador — o ramo alternativo era do assistente.
+    void carregarSimulatorSettings(storedToken);
+    void carregarImageStats(storedToken);
+    setLoading(false);
 
     return () => {
       document.head.removeChild(metaRobots);
@@ -608,32 +529,6 @@ export default function ColaboradorAdminClient() {
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
-
-  const carregarDados = async (authToken: string) => {
-    try {
-      setLoading(true);
-      setError(""); // Limpar erro anterior
-      const response = await fetch("/api/colaboradores/admin/todos", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("[v0] carregarDados erro:", response.status, errorData);
-        throw new Error(errorData?.error || `Erro ao carregar dados: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setColaboradores(Array.isArray(data) ? data : data.colaboradores || []);
-      setError("");
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Não foi possível carregar os dados do painel.";
-      console.error("[v0] carregarDados catch:", errorMsg);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const carregarSimulatorSettings = async (authToken: string) => {
     try {
@@ -755,31 +650,6 @@ export default function ColaboradorAdminClient() {
     }
   };
 
-  const carregarAssistentes = async (authToken: string) => {
-    try {
-      const res = await fetch("/api/admin/assistentes", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAssistentes(data.assistentes ?? []);
-      }
-    } catch {}
-  };
-
-  const carregarBilling = async (authToken: string) => {
-    try {
-      const res = await fetch("/api/admin/billing", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.balance !== undefined) setBilling(data);
-        if (data.assistants) setAdminBilling(data.assistants);
-      }
-    } catch {}
-  };
-
   const carregarLeads = async (authToken: string, periodo = leadPeriodo, status = leadStatusFilter, silent = false) => {
     if (!authToken) return;
     try {
@@ -859,8 +729,6 @@ export default function ColaboradorAdminClient() {
   useEffect(() => {
     if (activeSection !== "pedidos" || !token) return;
     carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
-    carregarAssistentes(token);
-    if (!isAdminGeral) carregarBilling(token);
     const interval = setInterval(() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true), 120000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -872,15 +740,6 @@ export default function ColaboradorAdminClient() {
     carregarPedidos(token, "todos", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  // Carregar billing admin quando entra em Settings > Funções
-  useEffect(() => {
-    if (!token || !isAdminGeral) return;
-    if ((activeSection === "site" || activeSection === "configs") && settingsTab === "funcoes") {
-      carregarBilling(token);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, settingsTab, token, isAdminGeral]);
 
   const simulatorGroups = useMemo(() => {
     const settingsMap = new Map(simulatorSettings.map((setting) => [setting.key, setting]));
@@ -913,107 +772,9 @@ export default function ColaboradorAdminClient() {
 
 
   // ---- Página Equipa: dados derivados por colaborador ----
-  const teamRows = useMemo(() => {
-    return colaboradores.map((colaborador) => {
-      return {
-        ...colaborador,
-      };
-    });
-  }, [colaboradores]);
-
-  const teamRowsFiltered = useMemo(() => {
-    const term = teamSearch.trim().toLowerCase();
-    return teamRows
-      .filter((row) => (term ? row.nome.toLowerCase().includes(term) : true))
-      .filter((row) => (teamFuncao === "todas" ? true : row.funcao === teamFuncao))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [teamRows, teamSearch, teamFuncao]);
-
-  /**
-   * Quem pode entrar numa remoção em lote.
-   *
-   * Fora: administradores e a conta com que se está autenticado. Remover o
-   * último administrador por um clique numa caixa deixa o painel sem ninguém
-   * que lá possa entrar, e isso não tem desfazer. Um a um continua possível
-   * pelo botão da linha, onde há confirmação com o nome à frente.
-   */
-  const podeSerRemovido = useCallback(
-    (row: { id: number; funcao: string; isAdmin?: number; nome: string }) => {
-      if (row.isAdmin === 1 || row.funcao === "admin") return false;
-      if (adminNome && row.nome.toUpperCase() === adminNome.toUpperCase()) return false;
-      return true;
-    },
-    [adminNome],
-  );
-
-  const selecionaveis = useMemo(
-    () => teamRowsFiltered.filter(podeSerRemovido),
-    [teamRowsFiltered, podeSerRemovido],
-  );
-
-  const teamStats = useMemo(() => {
-    return {
-      total: colaboradores.length,
-      motoristas: colaboradores.filter((c) => c.funcao === "motorista").length,
-      ajudantes: colaboradores.filter((c) => c.funcao === "ajudante").length,
-      admins: colaboradores.filter((c) => c.isAdmin === 1 || c.funcao === "admin").length,
-    };
-  }, [colaboradores]);
-
-
   const handleLogout = () => {
     clearColaboradorStorage();
     router.push("/admin/login");
-  };
-
-  const abrirEdicao = (colaborador: Colaborador) => {
-    setEditandoId(colaborador.id);
-    setEditNome(colaborador.nome);
-    setEditValorHora(String(colaborador.valorHora));
-    setEditFuncao(colaborador.funcao);
-    setEditSenha("");
-    setMostrarSenha(false);
-  };
-
-  const editarUsuario = async (id: number) => {
-    if (!editNome || !editValorHora) {
-      setError("Preencha nome e valor/hora antes de guardar.");
-      return;
-    }
-
-    setLoadingEdicao(true);
-    try {
-      const body: Record<string, unknown> = {
-        nome: editNome.toUpperCase(),
-        valorHora: parseFloat(editValorHora),
-        funcao: editFuncao,
-      };
-
-      if (editSenha) body.senha = editSenha;
-
-      const response = await fetch(`/api/colaboradores/${id}/editar`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Não foi possível atualizar o colaborador.");
-      }
-
-      setEditandoId(null);
-      setEditSenha("");
-      setError("");
-      await carregarDados(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível atualizar o colaborador.");
-    } finally {
-      setLoadingEdicao(false);
-    }
   };
 
   const alterarMinhaSenha = async () => {
@@ -1056,146 +817,6 @@ export default function ColaboradorAdminClient() {
       setAlterandoSenhaAdmin(false);
     }
   };
-
-  const deletarUsuario = async (id: number, nome: string) => {
-    if (!confirm(`Tem a certeza de que deseja remover ${nome}?`)) return;
-
-    try {
-      const response = await fetch(`/api/colaboradores/${id}/deletar`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Não foi possível remover o colaborador.");
-      }
-
-      setError("");
-      await carregarDados(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível remover o colaborador.");
-    }
-  };
-
-  /**
-   * Remove vários colaboradores de uma vez.
-   *
-   * Sequencial e não em paralelo de propósito: se o quinto falhar, os quatro
-   * primeiros já foram removidos e o operador tem de saber exactamente
-   * quais. Um Promise.all daria "algo correu mal" sem dizer o quê.
-   *
-   * Administradores e a própria conta nunca entram na selecção — ver
-   * `podeSerRemovido`. Perder o último acesso ao painel por um clique numa
-   * caixa é o género de engano que não tem desfazer.
-   */
-  const removerSelecionados = async () => {
-    const ids = [...selecionados];
-    if (ids.length === 0) return;
-
-    const nomes = ids
-      .map((id) => colaboradores.find((c) => c.id === id)?.nome ?? `#${id}`);
-    const lista = nomes.length <= 5
-      ? nomes.join(", ")
-      : `${nomes.slice(0, 5).join(", ")} e mais ${nomes.length - 5}`;
-    if (!confirm(`Remover ${ids.length} colaborador${ids.length === 1 ? "" : "es"}?
-
-${lista}
-
-Não há como desfazer.`)) return;
-
-    setARemoverLote(true);
-    setError("");
-    const falhados: string[] = [];
-    let removidos = 0;
-
-    for (const id of ids) {
-      try {
-        const res = await fetch(`/api/colaboradores/${id}/deletar`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          falhados.push(`${colaboradores.find((c) => c.id === id)?.nome ?? id}: ${data.error ?? res.statusText}`);
-        } else {
-          removidos += 1;
-        }
-      } catch {
-        falhados.push(`${colaboradores.find((c) => c.id === id)?.nome ?? id}: erro de ligação`);
-      }
-    }
-
-    setSelecionados(new Set());
-    setARemoverLote(false);
-    // Dizer o que passou E o que não passou. "Algo correu mal" obrigaria a
-    // conferir a lista à mão para saber o que ficou por fazer.
-    if (falhados.length > 0) {
-      setError(`${removidos} removido${removidos === 1 ? "" : "s"}. Falharam ${falhados.length}: ${falhados.join(" · ")}`);
-    }
-    await carregarDados(token);
-  };
-
-  const criarNovoColaborador = async () => {
-    if (!novoNome.trim()) { setError("Preencha o nome do colaborador."); return; }
-    if (!novoSenha.trim()) { setError("Preencha a palavra-passe inicial."); return; }
-    if (["motorista", "ajudante"].includes(novoFuncao) && !novoValorHora && !novoValorDiaria) {
-      setError("Preencha o valor por hora ou diária para motoristas e ajudantes.");
-      return;
-    }
-
-    setLoadingCriar(true);
-    setError("");
-    try {
-      const isAssistente = novoFuncao === "assistente";
-      const isAdminFuncao = novoFuncao === "admin";
-      const payload: Record<string, unknown> = {
-        nome: novoNome.toUpperCase().trim(),
-        senha: novoSenha,
-        funcao: novoFuncao,
-        isAdmin: novoIsAdmin ? 1 : 0,
-      };
-
-      if (isAssistente) {
-        payload.paymentModel = "commission";
-        payload.valorHora = null;
-        payload.canReceiveSimulatorRequests = 1;
-        payload.participatesInTimeTracking = 0;
-      } else if (isAdminFuncao) {
-        payload.paymentModel = "none";
-        payload.valorHora = null;
-      } else {
-        payload.paymentModel = novoValorDiaria && !novoValorHora ? "daily" : "hourly";
-        payload.valorHora = novoValorHora ? parseFloat(novoValorHora) : null;
-        payload.valorDiaria = novoValorDiaria ? parseFloat(novoValorDiaria) : null;
-        payload.canReceiveSimulatorRequests = 0;
-        payload.participatesInTimeTracking = 1;
-      }
-
-      const response = await fetch("/api/colaboradores/criar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error || "Não foi possível criar o colaborador.");
-      }
-
-      setCriarNovoVisivel(false);
-      setNovoNome(""); setNovoValorHora(""); setNovoValorDiaria("");
-      setNovoFuncao("ajudante"); setNovoSenha(""); setNovoIsAdmin(false);
-      setNovoCommissionType("gross_percent"); setNovoCommissionPercent("");
-      setNovoCommissionFixed(""); setNovoCommissionNotes("");
-      await carregarDados(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar o colaborador.");
-    } finally {
-      setLoadingCriar(false);
-    }
-  };
-
 
   const guardarSimulatorSetting = async (setting: SimulatorSetting) => {
     setSavingSettingKey(setting.key);
@@ -1294,10 +915,7 @@ Não há como desfazer.`)) return;
             {NAV_GRUPOS.map((grupo) => {
               const itens = grupo.itens
                 .map((id) => adminNavItems.find((i) => i.id === id))
-                .filter((i): i is (typeof adminNavItems)[number] => Boolean(i))
-                // Uma assistente só vê pedidos — um grupo que fique vazio não
-                // deve deixar o título órfão no ecrã.
-                .filter((i) => isAdminGeral || i.id === "pedidos");
+                .filter((i): i is (typeof adminNavItems)[number] => Boolean(i));
               if (itens.length === 0) return null;
 
               return (
@@ -1315,8 +933,6 @@ Não há como desfazer.`)) return;
                           type="button"
                           onClick={() => {
                             setActiveSection(item.id);
-                            if (item.id === "equipa") setOperacaoTab("equipa");
-                            if (item.id === "pagamentos") setOperacaoTab("pagamentos");
                             setMenuAberto(false);
                           }}
                           aria-current={active ? "page" : undefined}
@@ -1345,9 +961,7 @@ Não há como desfazer.`)) return;
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{adminNome}</p>
-                <p className="text-[11px] text-slate-500">
-                  {isAdminGeral ? "Admin geral" : "Assistente"}
-                </p>
+                <p className="text-[11px] text-slate-500">Administração</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -1408,18 +1022,6 @@ Não há como desfazer.`)) return;
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setCriarNovoVisivel(true);
-                      setOperacaoTab("equipa");
-                      setActiveSection("operacao");
-                    }}
-                    className="h-11 rounded-[14px] bg-sky-500 px-4 text-white hover:bg-sky-400"
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Novo colaborador
-                  </Button>
                 </div>
               </section>
 
@@ -1499,7 +1101,7 @@ Não há como desfazer.`)) return;
                         presencial_recomendado: "bg-orange-500/20 text-orange-300",
                       };
                       const statusLabel: Record<string, string> = {
-                        sem_assistente: "Sem assistente",
+                        sem_assistente: "Por atribuir",
                         pendente: "Novo",
                         atribuido: "Atribuído",
                         em_analise: "Em análise",
@@ -1588,7 +1190,6 @@ Não há como desfazer.`)) return;
 
                   {/* Ações rápidas */}
                   <ActionCard title="Ações rápidas" description="Atalhos operacionais." compact>
-                    <QuickAction icon={Users} label="Ver colaboradores" onClick={() => { setOperacaoTab("equipa"); setActiveSection("equipa"); }} />
                     <QuickAction icon={TrendingUp} label="Ver leads e contactos" onClick={() => setActiveSection("leads")} />
                     <QuickAction icon={Settings2} label="Configurações" onClick={() => setActiveSection("configs")} />
                   </ActionCard>
@@ -1652,7 +1253,6 @@ Não há como desfazer.`)) return;
                 </button>
                 {[
                   { label: "Novos", key: "pendente", color: "text-blue-600", bg: "border-blue-200 bg-blue-50", pct: "pendente" },
-                  { label: "Sem assistente", key: "sem_assistente", color: "text-rose-600", bg: "border-rose-200 bg-rose-50", pct: "sem_assistente" },
                   { label: "Aprovados", key: "aprovado", color: "text-emerald-600 font-semibold", bg: "border-emerald-200 bg-emerald-50", pct: "aprovado" },
                   { label: "Confirmados", key: "confirmado", color: "text-green-600", bg: "border-green-200 bg-green-50", pct: "confirmado" },
                 ].map((m) => {
@@ -1674,29 +1274,6 @@ Não há como desfazer.`)) return;
                 })}
               </div>
 
-              {/* Billing card — assistente only */}
-              {!isAdminGeral && billing && (
-                <div className="flex items-center gap-4 rounded-[16px] border border-amber-200 bg-amber-50 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Euro className="h-4 w-4 text-amber-600" />
-                    <span className="text-sm font-semibold text-slate-700">Pedidos aceites: <span className="text-amber-700">{billing.acceptedCount}</span></span>
-                  </div>
-                  <span className="text-xs text-slate-500">×</span>
-                  <span className="text-sm text-slate-600">{billing.costPerOrder.toFixed(2)} €/pedido</span>
-                  <span className="text-xs text-slate-500">=</span>
-                  <span className="text-sm font-bold text-slate-800">{billing.totalOwed.toFixed(2)} €</span>
-                  {billing.totalPaid > 0 && (
-                    <>
-                      <span className="text-xs text-slate-400">−</span>
-                      <span className="text-sm text-emerald-700">{billing.totalPaid.toFixed(2)} € pago</span>
-                    </>
-                  )}
-                  <span className="ml-auto rounded-full border border-amber-300 bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-800">
-                    Saldo: {billing.balance.toFixed(2)} €
-                  </span>
-                </div>
-              )}
-
               {/* Filtros e pesquisa */}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1">
@@ -1717,7 +1294,6 @@ Não há como desfazer.`)) return;
                   <option value="pendente">Novos</option>
                   <option value="atribuido">Atribuídos</option>
                   <option value="em_analise">Em análise</option>
-                  <option value="sem_assistente">Sem assistente</option>
                   <option value="concluido">Realizados</option>
                   <option value="rejeitado">Rejeitados</option>
                   <option value="precisa_info">Precisa informação</option>
@@ -1760,7 +1336,7 @@ Não há como desfazer.`)) return;
                   <table className="w-full min-w-[860px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/70">
-                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Status", "Origem", "Assistente", "Data", "Ação"].map((h) => (
+                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Status", "Origem", "Data", "Ação"].map((h) => (
                           <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 first:pl-4 last:pr-4 last:text-right">{h}</th>
                         ))}
                       </tr>
@@ -1785,7 +1361,7 @@ Não há como desfazer.`)) return;
                             cancelado: "bg-slate-100 text-slate-500 border-slate-200",
                           };
                           const statusLabel: Record<string, string> = {
-                            sem_assistente: "Sem assistente",
+                            sem_assistente: "Por atribuir",
                             pendente: "Novo",
                             atribuido: "Atribuído",
                             em_analise: "Em análise",
@@ -1883,17 +1459,6 @@ Não há como desfazer.`)) return;
                                 <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${origemStyle}`}>
                                   {origemLabel}
                                 </span>
-                              </td>
-                              {/* Assistente */}
-                              <td className="px-2 py-3.5">
-                                {p.assignedToName ? (
-                                  <span className="text-xs font-medium text-slate-700">{p.assignedToName}</span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                                    Fila geral
-                                  </span>
-                                )}
                               </td>
                               {/* Data */}
                               <td className="px-2 py-3.5 text-[11px] text-slate-400">
@@ -2008,7 +1573,7 @@ Não há como desfazer.`)) return;
             </section>
           )}
 
-          {/* Modal de confirmação de aceitar pedido (assistente) */}
+          {/* Modal de confirmação de aceitar pedido */}
           {confirmAcceptPedido && token && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="w-full max-w-sm rounded-[24px] border border-slate-200 bg-white p-6 shadow-xl">
@@ -2069,7 +1634,6 @@ Não há como desfazer.`)) return;
               token={token}
               isAdmin={isAdminGeral}
               colabId={colabId ?? undefined}
-              colabFuncao={colabFuncao}
               onClose={() => { setPedidoDetalheOpen(false); setSelectedPedido(null); }}
               onDeleted={(deletedId) => {
                 setPedidos((prev) => prev.filter((p) => p.id !== deletedId));
@@ -2083,494 +1647,6 @@ Não há como desfazer.`)) return;
             />
           )}
 
-
-          {(activeSection === "operacao" || activeSection === "equipa" || activeSection === "pagamentos") && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              {/* Header e sub-navegação da Operação */}
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                    {operacaoTab === "equipa" || operacaoTab === "pagamentos" ? sectionLabels[activeSection] || "Operação" : "Operação"}
-                  </p>
-                  <h2 className="mt-1 text-2xl font-semibold text-white">
-                    {operacaoTab === "equipa" ? "Equipa" : operacaoTab === "pagamentos" ? "Pagamentos" : "Funções"}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {operacaoTab === "equipa" ? "Gestão de colaboradores: assistentes, motoristas e ajudantes." : operacaoTab === "pagamentos" ? "Ganhos fixos por trabalho atribuído no período seleccionado." : "Funções e valores padrão por tipo de colaborador."}
-                  </p>
-                </div>
-                {/* Sub-tabs */}
-                <div className="flex flex-wrap gap-2 border-b border-slate-700/50 pb-3">
-                  {(["equipa", "pagamentos", "funcoes"] as OperacaoTab[]).map((tab) => {
-                    const labels: Record<OperacaoTab, string> = { equipa: "Equipa", pagamentos: "Pagamentos", funcoes: "Funções" };
-                    return (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => {
-                          setOperacaoTab(tab);
-                          // Reflectir na nav de topo: equipa e pagamentos têm item próprio
-                          if (tab === "equipa") setActiveSection("equipa");
-                          else if (tab === "pagamentos") setActiveSection("pagamentos");
-                          else setActiveSection("operacao");
-                        }}
-                        className={`rounded-[10px] px-4 py-2 text-sm font-medium transition ${
-                          operacaoTab === tab
-                            ? "bg-sky-500 text-white shadow-sm"
-                            : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
-                        }`}
-                      >
-                        {labels[tab]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Sub-aba Equipa */}
-              {operacaoTab === "equipa" && (
-              <div className="space-y-4">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div />
-                <Button
-                  type="button"
-                  onClick={() => setCriarNovoVisivel((state) => !state)}
-                  className="h-11 rounded-[14px] bg-sky-500 px-5 text-white hover:bg-sky-400"
-                >
-                  {criarNovoVisivel ? <X className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                  {criarNovoVisivel ? "Fechar criação" : "Novo colaborador"}
-                </Button>
-              </div>
-
-              {criarNovoVisivel && (
-                <Card className="rounded-[24px] border-slate-700/60 bg-slate-900/90 text-white shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-xl font-semibold text-white">Novo colaborador</CardTitle>
-                    <CardDescription className="text-slate-400">
-                      Os campos exibidos adaptam-se automaticamente à função seleccionada.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    {/* Função — primeiro para adaptar os outros campos */}
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Função</p>
-                      <div className="flex flex-wrap gap-2">
-                        {(["assistente", "motorista", "ajudante", "admin"] as Array<Colaborador["funcao"]>).map((funcao) => {
-                          const descricoes: Record<Colaborador["funcao"], string> = {
-                            assistente: "Recebe pedidos do simulador, pagamento fixo por trabalho atribuído",
-                            motorista: "Operação, horários, valor por hora ou diária",
-                            ajudante: "Operação, horários, valor por hora ou diária",
-                            admin: "Acesso total ao backoffice",
-                          };
-                          return (
-                            <button
-                              key={funcao}
-                              type="button"
-                              onClick={() => setNovoFuncao(funcao)}
-                              title={descricoes[funcao]}
-                              className={`rounded-[12px] border px-4 py-2.5 text-sm font-medium transition ${
-                                novoFuncao === funcao
-                                  ? "border-sky-500 bg-sky-500/20 text-sky-300"
-                                  : "border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-                              }`}
-                            >
-                              {formatRoleLabel(funcao)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">
-                        {novoFuncao === "assistente" && "Assistentes recebem pedidos do simulador. O pagamento é fixo por trabalho atribuído (configurável em Definições)."}
-                        {novoFuncao === "motorista" && "Motoristas participam na operação e podem receber por hora ou diária."}
-                        {novoFuncao === "ajudante" && "Ajudantes participam na operação e podem receber por hora ou diária."}
-                        {novoFuncao === "admin" && "Administradores têm acesso total ao backoffice."}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field label="Nome">
-                        <input
-                          value={novoNome}
-                          onChange={(event) => setNovoNome(event.target.value)}
-                          className="h-11 w-full rounded-[12px] border border-slate-700 bg-slate-800/60 px-4 text-white outline-none transition focus:border-sky-500 placeholder:text-slate-500"
-                          placeholder="Ex.: MIRIAM"
-                        />
-                      </Field>
-                      <Field label="Palavra-passe inicial">
-                        <div className="relative">
-                          <input
-                            // type="text" — o utilizador é o admin a criar conta de outra pessoa,
-                            // não é a login do próprio, pelo que não deve ser um password input.
-                            // Isto evita que o Chrome dispare o aviso de vazamento de senha (HIBP).
-                            type={mostrarSenhaNovoUsuario ? "text" : "password"}
-                            value={novoSenha}
-                            onChange={(event) => setNovoSenha(event.target.value)}
-                            // Impede Chrome de tratar como campo de login e verificar contra HIBP
-                            autoComplete="off"
-                            name="clyon-new-user-password"
-                            data-lpignore="true"
-                            data-form-type="other"
-                            className="h-11 w-full rounded-[12px] border border-slate-700 bg-slate-800/60 px-4 pr-24 text-white outline-none transition focus:border-sky-500 placeholder:text-slate-500 font-mono"
-                            placeholder="Palavra-passe inicial"
-                          />
-                          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                // Gerar senha forte: 14 chars, minúsculas + maiúsculas + números,
-                                // sem símbolos ambíguos que dão problemas em partilha por telefone.
-                                const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-                                let pwd = "";
-                                const arr = new Uint32Array(14);
-                                crypto.getRandomValues(arr);
-                                for (const n of arr) pwd += chars[n % chars.length];
-                                setNovoSenha(pwd);
-                                setMostrarSenhaNovoUsuario(true);
-                              }}
-                              title="Gerar palavra-passe segura"
-                              className="rounded-md border border-slate-600 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition"
-                            >
-                              Gerar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setMostrarSenhaNovoUsuario((s) => !s)}
-                              className="text-slate-400 hover:text-white p-1"
-                              aria-label={mostrarSenhaNovoUsuario ? "Esconder" : "Mostrar"}
-                            >
-                              {mostrarSenhaNovoUsuario ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </div>
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          Use <strong>Gerar</strong> para criar uma senha forte. Envie-a ao colaborador por canal seguro — ele muda depois no primeiro login.
-                        </p>
-                      </Field>
-                    </div>
-
-                    {/* Campos condicionais por função */}
-                    {(novoFuncao === "motorista" || novoFuncao === "ajudante") && (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <Field label="Valor por hora (€)">
-                          <input
-                            type="number" step="0.01" min="0"
-                            value={novoValorHora}
-                            onChange={(e) => setNovoValorHora(e.target.value)}
-                            className="h-11 w-full rounded-[12px] border border-slate-700 bg-slate-800/60 px-4 text-white outline-none transition focus:border-sky-500 placeholder:text-slate-500"
-                            placeholder="Ex.: 8.50"
-                          />
-                        </Field>
-                        <Field label="Valor por diária (€) — opcional">
-                          <input
-                            type="number" step="0.01" min="0"
-                            value={novoValorDiaria}
-                            onChange={(e) => setNovoValorDiaria(e.target.value)}
-                            className="h-11 w-full rounded-[12px] border border-slate-700 bg-slate-800/60 px-4 text-white outline-none transition focus:border-sky-500 placeholder:text-slate-500"
-                            placeholder="Ex.: 60.00"
-                          />
-                        </Field>
-                      </div>
-                    )}
-
-                    {novoFuncao === "assistente" && (
-                      <div className="rounded-[16px] border border-sky-500/20 bg-sky-500/5 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-sky-400 mb-2">Modelo de pagamento</p>
-                        <p className="text-sm text-slate-400">
-                          Pagamento fixo por trabalho atribuído. O valor por trabalho é configurável globalmente em{" "}
-                          <span className="font-semibold text-sky-300">Definições → Pagamento assistente por trabalho</span>.
-                        </p>
-                      </div>
-                    )}
-
-                    {novoFuncao === "admin" && (
-                      <div className="rounded-[16px] border border-slate-700/50 bg-slate-800/30 p-4">
-                        <button
-                          type="button"
-                          onClick={() => setNovoIsAdmin((s) => !s)}
-                          className={`flex items-center gap-3 text-sm transition ${novoIsAdmin ? "text-sky-300" : "text-slate-400 hover:text-slate-200"}`}
-                        >
-                          <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${novoIsAdmin ? "border-sky-400 bg-sky-400" : "border-slate-600"}`}>
-                            {novoIsAdmin && <span className="text-xs font-bold text-slate-900">✓</span>}
-                          </div>
-                          Dar acesso total de administrador a este utilizador
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end gap-3 pt-2">
-                      <Button type="button" variant="outline" onClick={() => setCriarNovoVisivel(false)}
-                        className="h-10 rounded-[12px] border-slate-700 bg-transparent px-5 text-slate-300 hover:bg-slate-800">
-                        Cancelar
-                      </Button>
-                      <Button type="button" disabled={loadingCriar} onClick={criarNovoColaborador}
-                        className="h-10 rounded-[12px] bg-sky-500 px-6 text-white hover:bg-sky-400">
-                        {loadingCriar ? "A criar..." : "Criar colaborador"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Cards de resumo da equipa */}
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <SummaryStat icon={Users} label="Colaboradores" value={String(teamStats.total)} helper="no total" />
-                <SummaryStat icon={Briefcase} label="Motoristas" value={String(teamStats.motoristas)} helper="na equipa" />
-                <SummaryStat icon={Users} label="Ajudantes" value={String(teamStats.ajudantes)} helper="na equipa" />
-                <SummaryStat icon={ShieldCheck} label="Administradores" value={String(teamStats.admins)} helper="com acesso total" tone="cyan" />
-              </div>
-
-              {/* Filtros */}
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  value={teamSearch}
-                  onChange={(event) => setTeamSearch(event.target.value)}
-                  placeholder="Pesquisar colaborador..."
-                  className="h-11 min-w-[200px] flex-1 rounded-[14px] border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300"
-                />
-                <select
-                  value={teamFuncao}
-                  onChange={(event) => setTeamFuncao(event.target.value as typeof teamFuncao)}
-                  className="h-11 rounded-[14px] border border-cyan-300/20 bg-[#0d1f35] px-3 text-sm font-medium text-white outline-none focus:border-cyan-400 [color-scheme:dark]"
-                >
-                  <option value="todas">Todas as funções</option>
-                  <option value="admin">Administradores</option>
-                  <option value="assistente">Assistentes</option>
-                  <option value="motorista">Motoristas</option>
-                  <option value="ajudante">Ajudantes</option>
-                </select>
-              </div>
-
-              {/* Formulário de edição (aparece ao editar) */}
-              {editandoId !== null && (
-                <Card className="rounded-[24px] border-cyan-300/20 bg-[linear-gradient(180deg,rgba(12,34,52,0.96)_0%,rgba(9,27,43,0.94)_100%)] text-white">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-xl text-white">Editar colaborador</CardTitle>
-                    <CardDescription className="text-slate-400">
-                      A editar {colaboradores.find((c) => c.id === editandoId)?.nome}.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 md:grid-cols-2">
-                    <Field label="Nome">
-                      <input
-                        value={editNome}
-                        onChange={(event) => setEditNome(event.target.value)}
-                        className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Valor por hora">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={editValorHora}
-                        onChange={(event) => setEditValorHora(event.target.value)}
-                        className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                      />
-                    </Field>
-                    <Field label="Função">
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        {functionOptions.map((funcao) => (
-                          <button
-                            key={funcao}
-                            type="button"
-                            onClick={() => setEditFuncao(funcao)}
-                            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
-                              editFuncao === funcao
-                                ? "border-cyan-300 bg-cyan-400 text-slate-950"
-                                : "border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            {formatRoleLabel(funcao)}
-                          </button>
-                        ))}
-                      </div>
-                    </Field>
-                    <Field label="Nova palavra-passe (opcional)">
-                      <div className="relative">
-                        <input
-                          type={mostrarSenha ? "text" : "password"}
-                          value={editSenha}
-                          onChange={(event) => setEditSenha(event.target.value)}
-                          className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 pr-12 text-white outline-none transition focus:border-cyan-300"
-                          placeholder="Deixe vazio para manter"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setMostrarSenha((state) => !state)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-white"
-                        >
-                          {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                        </button>
-                      </div>
-                    </Field>
-                    <div className="flex items-end justify-end gap-3 md:col-span-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setEditandoId(null)}
-                        className="h-12 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={loadingEdicao}
-                        onClick={() => editarUsuario(editandoId)}
-                        className="h-12 rounded-2xl bg-cyan-400 px-6 text-slate-950 hover:bg-cyan-300"
-                      >
-                        {loadingEdicao ? "A guardar..." : "Guardar alterações"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Barra de acção em lote — só aparece com algo marcado, para
-                  não ocupar espaço nem sugerir uma acção quando não há alvo */}
-              {selecionados.size > 0 && (
-                <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-rose-300/25 bg-rose-400/[0.08] px-4 py-3">
-                  <p className="text-sm font-semibold text-white">
-                    {selecionados.size} seleccionado{selecionados.size === 1 ? "" : "s"}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setSelecionados(new Set())}
-                    className="text-xs font-medium text-slate-300 underline-offset-2 hover:underline"
-                  >
-                    Limpar selecção
-                  </button>
-                  <button
-                    type="button"
-                    onClick={removerSelecionados}
-                    disabled={aRemoverLote}
-                    className="ml-auto inline-flex items-center gap-2 rounded-[12px] border border-rose-300/30 bg-rose-500/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {aRemoverLote ? "A remover..." : `Remover ${selecionados.size}`}
-                  </button>
-                </div>
-              )}
-
-              {/* Tabela compacta de colaboradores */}
-              <div className="overflow-x-auto rounded-[20px] border border-white/10 bg-white/[0.02]">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-slate-400">
-                      <th className="w-10 px-3 py-3">
-                        {/* Marca só os que podem ser removidos — administradores
-                            e a própria conta ficam sempre de fora */}
-                        <input
-                          type="checkbox"
-                          aria-label="Seleccionar todos"
-                          checked={selecionaveis.length > 0 && selecionados.size === selecionaveis.length}
-                          ref={(el) => {
-                            if (el) el.indeterminate = selecionados.size > 0 && selecionados.size < selecionaveis.length;
-                          }}
-                          onChange={(e) =>
-                            setSelecionados(e.target.checked ? new Set(selecionaveis.map((r) => r.id)) : new Set())
-                          }
-                          disabled={selecionaveis.length === 0}
-                          className="h-4 w-4 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-                        />
-                      </th>
-                      <th className="px-3 py-3 font-medium">Nome</th>
-                      <th className="px-3 py-3 font-medium">Função</th>
-                      <th className="px-3 py-3 font-medium">Valor/hora</th>
-                      <th className="px-3 py-3 text-right font-medium">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teamRowsFiltered.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-3 py-8 text-center text-slate-400">
-                          Nenhum colaborador corresponde aos filtros.
-                        </td>
-                      </tr>
-                    ) : (
-                      teamRowsFiltered.map((row) => {
-                        const marcavel = podeSerRemovido(row);
-                        const marcado = selecionados.has(row.id);
-                        return (
-                        <tr key={row.id} className={`border-t border-white/10 text-slate-200 ${marcado ? "bg-cyan-400/[0.06]" : ""}`}>
-                          <td className="px-3 py-3">
-                            <input
-                              type="checkbox"
-                              aria-label={`Seleccionar ${row.nome}`}
-                              checked={marcado}
-                              disabled={!marcavel}
-                              title={marcavel ? undefined : "Administradores e a sua própria conta não podem ser removidos em lote"}
-                              onChange={(e) => {
-                                setSelecionados((antes) => {
-                                  const novo = new Set(antes);
-                                  if (e.target.checked) novo.add(row.id); else novo.delete(row.id);
-                                  return novo;
-                                });
-                              }}
-                              className="h-4 w-4 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-30"
-                            />
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2 text-left font-medium text-white">
-                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400 text-xs font-semibold text-slate-950">
-                                {getInitials(row.nome)}
-                              </span>
-                              {row.nome}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 capitalize">
-                            {formatRoleLabel(row.funcao)}
-                            {row.isAdmin === 1 && (
-                              <span className="ml-2 rounded-full border border-cyan-300/30 bg-cyan-400/[0.14] px-2 py-0.5 text-[10px] text-cyan-100">
-                                Admin
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 font-medium text-white">{row.funcao === "assistente" ? <span className="text-slate-500">---</span> : money(parseFloat(row.valorHora || "0"))}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                type="button"
-                                onClick={() => abrirEdicao(row)}
-                                title="Editar"
-                                className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-white transition hover:bg-white/[0.08]"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deletarUsuario(row.id, row.nome)}
-                                title="Remover"
-                                className="rounded-[10px] border border-rose-300/20 bg-rose-400/[0.08] p-2 text-rose-100 transition hover:bg-rose-400/[0.14]"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              </div>
-              )}
-
-              {/* Sub-aba Pagamentos */}
-              {operacaoTab === "pagamentos" && (
-                <PagamentosPanel authHeader={token ? { Authorization: `Bearer ${token}` } : {}} />
-              )}
-
-              {/* Sub-aba Funções */}
-              {operacaoTab === "funcoes" && (
-              <div className="rounded-[18px] border border-slate-700/50 bg-slate-800/40 p-6 text-center">
-                <Settings2 className="mx-auto mb-3 h-10 w-10 text-slate-500" />
-                <p className="text-base font-semibold text-slate-300">Funções — em construção</p>
-                <p className="mt-1 text-sm text-slate-500">Esta área permitirá definir valores padrão por tipo de função.</p>
-              </div>
-              )}
-
-            </section>
-          )}
 
           {/* ═══════════════════════ APP CLYON ═══════════════════════ */}
           {activeSection === "app_clyon" && (
@@ -3160,164 +2236,6 @@ Não há como desfazer.`)) return;
               </ActionCard>
               )}
 
-              {/* Aba: Funções e colaboradores */}
-              {settingsTab === "funcoes" && (
-                <ActionCard
-                  title="Funções e colaboradores"
-                  description="Defina quais as funções disponíveis e consulte os colaboradores por função. A criação e edição de colaboradores está disponível na página Equipa."
-                >
-                  <div className="space-y-4">
-                    <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-5">
-                      <h3 className="mb-4 text-base font-semibold text-white">Funções disponíveis no sistema</h3>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {functionOptions.map((funcao) => {
-                          const count = colaboradores.filter((c) => c.funcao === funcao).length;
-                          return (
-                            <div key={funcao} className="rounded-[16px] border border-white/10 bg-white/[0.04] px-4 py-4">
-                              <p className="text-sm font-semibold capitalize text-white">{formatRoleLabel(funcao)}</p>
-                              <p className="mt-1 text-2xl font-semibold text-cyan-200">{count}</p>
-                              <p className="mt-0.5 text-xs text-slate-400">
-                                {count === 1 ? "colaborador" : "colaboradores"}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="rounded-[16px] border border-cyan-300/20 bg-cyan-400/[0.06] px-4 py-3 text-sm text-cyan-100">
-                      Para adicionar, editar ou remover colaboradores, vá à página <strong>Equipa</strong>. Para alterar permissões de administrador, edite o colaborador diretamente.
-                    </div>
-                    <div className="overflow-x-auto rounded-[20px] border border-white/10">
-                      <table className="w-full min-w-[500px] border-collapse text-sm">
-                        <thead>
-                          <tr className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wide text-slate-400">
-                            <th className="px-4 py-3 font-semibold">Nome</th>
-                            <th className="px-4 py-3 font-semibold">Função</th>
-                            <th className="px-4 py-3 font-semibold">Acesso</th>
-                            <th className="px-4 py-3 font-semibold">Valor/hora</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {colaboradores
-                            .slice()
-                            .sort((a, b) => a.nome.localeCompare(b.nome))
-                            .map((colaborador) => (
-                              <tr key={colaborador.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                <td className="px-4 py-3 font-semibold text-white">{colaborador.nome}</td>
-                                <td className="px-4 py-3 capitalize text-slate-300">{formatRoleLabel(colaborador.funcao)}</td>
-                                <td className="px-4 py-3">
-                                  {colaborador.isAdmin === 1 ? (
-                                    <span className="rounded-full border border-cyan-300/30 bg-cyan-400/[0.14] px-2.5 py-1 text-[11px] font-semibold text-cyan-100">
-                                      Administrador
-                                    </span>
-                                  ) : (
-                                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-400">
-                                      Colaborador
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-white">{colaborador.funcao === "assistente" ? <span className="text-slate-500">—</span> : money(parseFloat(colaborador.valorHora || "0"))}</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Billing — gestão de custos por pedido aceite */}
-                    {adminBilling.length > 0 && (
-                      <div className="rounded-[20px] border border-amber-400/20 bg-amber-400/[0.04] p-5 space-y-4">
-                        <h3 className="text-base font-semibold text-amber-200">Faturação de assistentes</h3>
-                        <p className="text-xs text-slate-400">Valor por pedido aceite e pagamentos registados. O saldo acumula até que registe um pagamento.</p>
-                        <div className="overflow-x-auto">
-                          <table className="w-full min-w-[600px] border-collapse text-sm">
-                            <thead>
-                              <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wide text-slate-400">
-                                <th className="px-3 py-2 font-semibold">Assistente</th>
-                                <th className="px-3 py-2 font-semibold">Aceites</th>
-                                <th className="px-3 py-2 font-semibold">€/pedido</th>
-                                <th className="px-3 py-2 font-semibold">Total</th>
-                                <th className="px-3 py-2 font-semibold">Pago</th>
-                                <th className="px-3 py-2 font-semibold">Saldo</th>
-                                <th className="px-3 py-2 font-semibold">Registar pagamento</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {adminBilling.map((a) => {
-                                const cost = parseFloat(a.costPerAcceptedOrder ?? "6");
-                                const paid = parseFloat(a.totalPaid ?? "0");
-                                const total = a.acceptedCount * cost;
-                                const balance = total - paid;
-                                return (
-                                  <tr key={a.id} className="border-b border-white/5">
-                                    <td className="px-3 py-2 font-semibold text-white">{a.nome}</td>
-                                    <td className="px-3 py-2 text-white">{a.acceptedCount}</td>
-                                    <td className="px-3 py-2">
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        className="w-20 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-sm text-white"
-                                        value={billingCostEdits[a.id] ?? cost.toFixed(2)}
-                                        onChange={(e) => setBillingCostEdits((prev) => ({ ...prev, [a.id]: e.target.value }))}
-                                        onBlur={async () => {
-                                          const newCost = billingCostEdits[a.id];
-                                          if (newCost === undefined || parseFloat(newCost) === cost) return;
-                                          await fetch("/api/admin/billing", {
-                                            method: "PATCH",
-                                            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                                            body: JSON.stringify({ assistantId: a.id, costPerAcceptedOrder: parseFloat(newCost) }),
-                                          });
-                                          carregarBilling(token);
-                                        }}
-                                      />
-                                    </td>
-                                    <td className="px-3 py-2 font-semibold text-amber-300">{total.toFixed(2)} €</td>
-                                    <td className="px-3 py-2 text-emerald-400">{paid.toFixed(2)} €</td>
-                                    <td className={`px-3 py-2 font-bold ${balance > 0 ? "text-red-400" : "text-emerald-400"}`}>{balance.toFixed(2)} €</td>
-                                    <td className="px-3 py-2">
-                                      <div className="flex items-center gap-1">
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          placeholder="€"
-                                          className="w-20 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-sm text-white placeholder:text-slate-500"
-                                          value={billingPaymentAmounts[a.id] ?? ""}
-                                          onChange={(e) => setBillingPaymentAmounts((prev) => ({ ...prev, [a.id]: e.target.value }))}
-                                        />
-                                        <button
-                                          type="button"
-                                          className="rounded-lg bg-emerald-500 px-2 py-1 text-xs font-bold text-white hover:bg-emerald-400 transition disabled:opacity-40"
-                                          disabled={!billingPaymentAmounts[a.id] || parseFloat(billingPaymentAmounts[a.id]) <= 0}
-                                          onClick={async () => {
-                                            const amount = parseFloat(billingPaymentAmounts[a.id]);
-                                            if (!amount || amount <= 0) return;
-                                            await fetch("/api/admin/billing", {
-                                              method: "PATCH",
-                                              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                                              body: JSON.stringify({ assistantId: a.id, addPayment: amount }),
-                                            });
-                                            setBillingPaymentAmounts((prev) => ({ ...prev, [a.id]: "" }));
-                                            carregarBilling(token);
-                                          }}
-                                        >
-                                          Pagar
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </ActionCard>
-              )}
-
-              {/* Aba: Imagens do site */}
               {settingsTab === "imagens" && (
                 <ActionCard
                   title="Imagens do site"

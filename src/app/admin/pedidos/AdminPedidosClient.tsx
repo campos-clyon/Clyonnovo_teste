@@ -69,7 +69,6 @@ const FILTER_TABS: { key: OrderStatus | "todos" | "sem_assistente"; label: strin
   { key: "pendente",            label: "Novos" },
   { key: "atribuido",           label: "Atribuídos" },
   { key: "em_analise",          label: "Em análise" },
-  { key: "sem_assistente",      label: "Sem assistente" },
   { key: "aprovado",            label: "Aprovados" },
   { key: "confirmado",          label: "Confirmados" },
   { key: "presencial_recomendado", label: "Presencial" },
@@ -303,11 +302,6 @@ export default function AdminPedidosClient() {
                   {order.serviceType ?? "Serviço não especificado"}
                   {order.address ? ` · ${order.address}` : order.city ? ` · ${order.city}` : ""}
                 </p>
-                {order.assignedToName && (
-                  <p className="mt-0.5 text-[10px] text-sky-400/80">
-                    Assistente: {order.assignedToName}
-                  </p>
-                )}
               </div>
 
               {/* Valor + data */}

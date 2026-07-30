@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertWandersonAdmin, ensureColaboradoresSchema, ensureSimulatorSettingsTable, resetSimulatorTableEnsuredFlag, ensureGalleryMediaTable, ensureSimulatorOrdersTable, getEffectiveRole, getPool } from "@/lib/db";
+import { upsertWandersonAdmin, ensureColaboradoresSchema, ensureSimulatorSettingsTable, resetSimulatorTableEnsuredFlag, ensureGalleryMediaTable, ensureSimulatorOrdersTable } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -47,43 +47,12 @@ export async function POST(req: NextRequest) {
 
     await ensureGalleryMediaTable();
 
-    // 3. Configurar valores por função
-    const pool = await getPool();
-    if (pool) {
-      // Assistentes: commission, sem horas, recebem pedidos
-      await pool.execute(
-        `UPDATE colaboradores 
-         SET paymentModel = 'commission', 
-             canReceiveSimulatorRequests = 1, 
-             participatesInTimeTracking = 0,
-             active = 1
-         WHERE funcao = 'assistente'`
-      ).catch(() => {});
-
-      // Motoristas/Ajudantes: hourly, com horas, sem pedidos
-      await pool.execute(
-        `UPDATE colaboradores 
-         SET paymentModel = 'hourly', 
-             canReceiveSimulatorRequests = 0, 
-             participatesInTimeTracking = 1,
-             active = 1
-         WHERE funcao IN ('motorista', 'ajudante')`
-      ).catch(() => {});
-
-      // Admin: none, sem horas, sem pedidos
-      await pool.execute(
-        `UPDATE colaboradores 
-         SET paymentModel = 'none', 
-             canReceiveSimulatorRequests = 0, 
-             participatesInTimeTracking = 0,
-             active = 1
-         WHERE funcao = 'admin' AND isAdmin = 0`
-      ).catch(() => {});
-    }
-
-    // 4. Garantir que WANDERSON existe e tem isAdmin=1
+    // 3. Garantir que WANDERSON existe e tem isAdmin=1
+    //
+    // Aqui havia três UPDATEs a afinar paymentModel, horas e recepção de
+    // pedidos por função — assistente, motorista/ajudante, admin. As funções
+    // acabaram; só o administrador entra.
     const admin = await upsertWandersonAdmin();
-    const effectiveRole = getEffectiveRole({ isAdmin: admin.isAdmin, funcao: admin.funcao });
 
     return NextResponse.json({
       ok: true,
@@ -94,13 +63,11 @@ export async function POST(req: NextRequest) {
         "Tabela simulatorOrders (postalCode, city, parkingDistance, priority, ...)",
         "Tabela simulatorSettings (defaults actualizados: custo_km=0.50, overhead=17.00)",
         "Tabela galleryMedia",
-        "Configuração de funções",
         "Admin WANDERSON",
       ],
       admin: {
         nome: admin.nome,
         isAdmin: admin.isAdmin === 1,
-        effectiveRole,
       },
     });
   } catch (err) {

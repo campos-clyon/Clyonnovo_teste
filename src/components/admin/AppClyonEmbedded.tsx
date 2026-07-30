@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { Package } from "lucide-react";
 import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
-import PagamentosPanel from "@/components/admin/PagamentosPanel";
 import SecaoErrorBoundary from "@/components/admin/SecaoErrorBoundary";
 import { useAutoRefresh, textoDesde } from "@/components/admin/useAutoRefresh";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
@@ -3140,51 +3139,6 @@ function TabProfissionais({ authHeader }: { authHeader: Record<string, string> }
 }
 
 // ── Equipa interna (colaboradores) ─────────────────────────────────────────
-type Assistente = { id: number; nome: string; funcao: string; isAdmin: number };
-
-function TabEquipa({ authHeader }: { authHeader: Record<string, string> }) {
-  const [list, setList] = useState<Assistente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch("/api/admin/assistentes", { headers: authHeader });
-      const json = await res.json();
-      if (!res.ok) { setError(json.error ?? "Erro."); return; }
-      setList(json.assistentes ?? []);
-    } catch { setError("Erro de ligação."); }
-    finally { setLoading(false); }
-  }, [authHeader]);
-
-  useEffect(() => { load(); }, [load]);
-
-  if (loading) return <Spinner />;
-  if (error) return <ErrBox msg={error} onRetry={load} />;
-
-  return (
-    <div className="overflow-hidden rounded-[18px] border border-white/[0.07]">
-      {list.length === 0 ? (
-        <p className="px-4 py-8 text-center text-sm text-slate-600">Sem colaboradores encontrados.</p>
-      ) : list.map((a, i) => (
-        <div key={a.id} className={`flex items-center gap-3 px-4 py-3 ${i < list.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">
-            {a.nome.charAt(0)}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">{a.nome}</p>
-            <p className="text-xs text-slate-500">{a.funcao}</p>
-          </div>
-          {a.isAdmin === 1 && (
-            <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-400">Admin</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Catálogo ───────────────────────────────────────────────────────────────
 type Category = {
   slug: string; name: string; icon: string | null;
@@ -4369,7 +4323,6 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"payments" | "manual" | "earnings">("payments");
-  const [showLegacy, setShowLegacy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -4389,15 +4342,6 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
   }, [authHeader, days]);
 
   useEffect(() => { load(); }, [load]);
-
-  if (showLegacy) {
-    return (
-      <div className="space-y-3">
-        <button onClick={() => setShowLegacy(false)} className="text-xs text-cyan-400 hover:underline">← Voltar aos pagamentos do app</button>
-        <PagamentosPanel authHeader={authHeader} />
-      </div>
-    );
-  }
 
   if (loading) return <Spinner />;
   if (error) return <ErrBox msg={error} onRetry={load} />;
@@ -4425,13 +4369,6 @@ function TabPagamentos({ authHeader }: { authHeader: Record<string, string> }) {
             {d} dias
           </button>
         ))}
-        <button
-          onClick={() => setShowLegacy(true)}
-          className="ml-auto rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition"
-          title="Ver pagamentos internos a assistentes"
-        >
-          Pagamentos internos (legado)
-        </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

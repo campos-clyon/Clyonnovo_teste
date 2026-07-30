@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
     await appendOrderHistory(id, {
       type: "created",
       by: null,
-      message: `Pedido criado via simulador. Fila geral (sem assistente). Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.`
+      message: `Pedido criado via simulador. Por atribuir. Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.`
         + (recurrenceFrequency ? ` Marcação recorrente (${recurrenceFrequency}, desconto de ${recurringDiscountPercent}% já aplicado à estimativa).` : ""),
     });
 
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
       assignedToName: null,
       createdAt: created.createdAt,
       queue: "general",
-      message: "Pedido enviado com sucesso. A equipa CLYON irá analisar e uma assistente aceitará o pedido em breve.",
+      message: "Pedido enviado com sucesso. A equipa CLYON vai analisar e entra em contacto em breve.",
     });
   } catch (err: any) {
     // A mensagem crua do MySQL ia para o browser numa rota pública: dizia o
