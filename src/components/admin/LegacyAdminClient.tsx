@@ -527,27 +527,27 @@ export default function ColaboradorAdminClient() {
     const storedToken = getColaboradorItem("token");
     const storedNome = getColaboradorItem("nome");
     const storedIsAdmin = getColaboradorItem("isAdmin");
-    const storedFuncao = getColaboradorItem("funcao") ?? "";
 
     if (!storedToken) {
       router.push("/admin/login");
       return;
     }
 
-    // Motorista e ajudante não têm acesso a esta área — redirecionar para o dashboard
-    const isAdminGeral = storedIsAdmin === "1";
-    const isAssistente = storedFuncao === "assistente";
-    if (!isAdminGeral && !isAssistente) {
-      router.push("/colaboradores/dashboard");
+    // Só administradores. Antes, quem não fosse admin nem assistente era
+    // mandado para /colaboradores/dashboard; essa área desapareceu com as
+    // funções de motorista e ajudante. Uma sessão antiga guardada no browser
+    // é limpa e volta ao ecrã de entrada.
+    if (storedIsAdmin !== "1") {
+      clearColaboradorStorage();
+      router.push("/admin/login");
       return;
     }
 
     setToken(storedToken);
     setAdminNome(storedNome || "Administração");
-    setIsAdminGeral(isAdminGeral);
+    setIsAdminGeral(true);
     const storedId = getColaboradorItem("id");
     if (storedId) setColabId(Number(storedId));
-    setColabFuncao(storedFuncao);
 
     // Verificar se há section/tab/pedido no URL
     const searchParams = new URLSearchParams(window.location.search);

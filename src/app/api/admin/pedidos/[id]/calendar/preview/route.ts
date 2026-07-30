@@ -26,10 +26,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // endereço e um token de qualquer conta, dava para percorrer 1, 2, 3… e
   // recolher os dados pessoais de todos os clientes.
   //
-  // A rota irmã, GET /api/admin/pedidos/[id], já bloqueava motoristas e
-  // ajudantes e limitava o assistente aos pedidos dele. Esta devolve o mesmo
-  // conteúdo e não fazia nem uma coisa nem outra.
-  if (colab.isAdmin !== 1 && colab.funcao !== "assistente") {
+  // A rota irmã, GET /api/admin/pedidos/[id], já verificava quem entrava.
+  // Esta devolve o mesmo conteúdo e não verificava nada.
+  if (colab.isAdmin !== 1) {
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
@@ -41,13 +40,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const order = await getSimulatorOrderById(orderId);
   if (!order) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
-
-  // O assistente vê os pedidos dele e os da fila geral — a mesma regra da
-  // rota irmã. Sem isto, um assistente lia a ficha de qualquer cliente.
-  const semAssistente = !order.assignedToId;
-  if (colab.isAdmin !== 1 && order.assignedToId !== colab.id && !semAssistente) {
-    return NextResponse.json({ error: "Sem permissão para ver este pedido." }, { status: 403 });
-  }
 
   let operationalSummary = "";
   let geminiUsed = false;

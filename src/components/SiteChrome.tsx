@@ -15,7 +15,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 const BARE_ROUTES = ["/orcamento-recolha-lisboa", "/admin"];
 
 // Rotas internas (dashboard) que usam apenas o Header — sem Footer nem barra inferior
-const DASHBOARD_ROUTES = ["/colaboradores", "/simulador", "/conta"];
+const DASHBOARD_ROUTES = ["/admin", "/simulador", "/conta"];
 
 export default function SiteChrome({
   children,

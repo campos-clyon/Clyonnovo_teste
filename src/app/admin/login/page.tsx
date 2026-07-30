@@ -31,15 +31,20 @@ export default function AdminLoginPage() {
         setError(data.error || "Credenciais inválidas.");
         return;
       }
-      // Qualquer colaborador pode aceder ao painel (admin ou assistente)
-      // A distinção de permissões é feita dentro do painel e nas APIs
-      // Guardar credenciais no formato colaborador-storage
-      const isAdminNorm = data.colaborador.isAdmin === 1 || data.colaborador.isAdmin === true ? "1" : "0";
+      // Só administradores entram no backoffice. As funções de assistente,
+      // motorista e ajudante deixaram de existir — a conta que não seja de
+      // administrador não tem para onde ir, e é melhor dizê-lo aqui do que
+      // deixar entrar e falhar em cada ecrã lá dentro.
+      const isAdmin = data.colaborador.isAdmin === 1 || data.colaborador.isAdmin === true;
+      if (!isAdmin) {
+        setError("Esta conta não tem acesso ao backoffice.");
+        return;
+      }
       localStorage.setItem("colaborador_token", data.token);
       localStorage.setItem("colaborador_nome", data.colaborador.nome);
       localStorage.setItem("colaborador_id", String(data.colaborador.id));
-      localStorage.setItem("colaborador_isAdmin", isAdminNorm);
-      localStorage.setItem("colaborador_funcao", data.colaborador.funcao ?? "");
+      localStorage.setItem("colaborador_isAdmin", "1");
+      localStorage.removeItem("colaborador_funcao");
       router.push("/admin");
     } catch {
       setError("Erro de ligação. Tente novamente.");

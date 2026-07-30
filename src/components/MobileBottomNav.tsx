@@ -11,7 +11,7 @@ import { Home, LayoutGrid, Star, User, Sparkles } from "lucide-react";
  * têm o seu próprio shell (backoffice, portal de parceiros, simulador).
  */
 
-const HIDDEN_PREFIXES = ["/colaboradores", "/parceiros", "/simulador"];
+const HIDDEN_PREFIXES = ["/admin", "/parceiros", "/simulador"];
 
 const LEFT = [
   { href: "/", label: "Início", icon: Home, exact: true },

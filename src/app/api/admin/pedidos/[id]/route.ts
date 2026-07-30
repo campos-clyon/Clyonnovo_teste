@@ -8,8 +8,8 @@ async function authenticate(req: NextRequest) {
   const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!colab) return { err: NextResponse.json({ error: "Não autorizado" }, { status: 401 }), colab: null };
 
-  // Admin geral passa sempre; assistente passa; motorista/ajudante são bloqueados
-  if (colab.isAdmin !== 1 && colab.funcao !== "assistente") {
+  // Só administradores — as outras funções deixaram de existir
+  if (colab.isAdmin !== 1) {
     return {
       err: NextResponse.json({ error: "Acesso negado." }, { status: 403 }),
       colab: null,
@@ -20,7 +20,6 @@ async function authenticate(req: NextRequest) {
 }
 
 // GET /api/admin/pedidos/[id]
-// Admin vê qualquer pedido; assistente vê apenas os seus.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { err, colab } = await authenticate(req);
   if (err) return err;
@@ -28,12 +27,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const order = await getSimulatorOrderById(Number(id));
   if (!order) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
-
-  // Assistente pode ver: (1) pedidos atribuídos a si, (2) pedidos da fila geral (sem assistente)
-  const isUnassigned = !order.assignedToId;
-  if (!colab!.isAdmin && order.assignedToId !== colab!.id && !isUnassigned) {
-    return NextResponse.json({ error: "Sem permissão para ver este pedido" }, { status: 403 });
-  }
 
   // Mark as viewed when opened (if not already viewed)
   if (order.viewedAt === null || order.viewedAt === undefined) {
@@ -44,7 +37,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 // PATCH /api/admin/pedidos/[id]
-// Admin pode alterar qualquer campo; assistente só pode alterar campos permitidos dos seus pedidos.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { err, colab } = await authenticate(req);
   if (err) return err;
@@ -53,12 +45,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const order = await getSimulatorOrderById(Number(id));
   if (!order) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
 
-  // Assistente pode editar: pedidos atribuídos a si. Pedidos da fila geral são editados
-  // apenas via /accept — aqui bloqueamos para evitar race conditions.
-  if (!colab!.isAdmin && order.assignedToId !== colab!.id) {
-    return NextResponse.json({ error: "Sem permissão para editar este pedido. Use o botão 'Aceitar' primeiro." }, { status: 403 });
-  }
-
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -66,23 +52,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ ok: false, message: "Body JSON inválido." }, { status: 400 });
   }
 
-  // Se o admin está a atribuir um assistente mas não enviou assignedAt, preenche agora
-  if (colab!.isAdmin && body.assignedToId != null && !body.assignedAt) {
+  // Ao tomar um pedido sem enviar assignedAt, preenche agora
+  if (body.assignedToId != null && !body.assignedAt) {
     body.assignedAt = new Date().toISOString();
-  }
-
-  // Assistente não pode alterar atribuição nem aprovar
-  if (!colab!.isAdmin) {
-    delete body.assignedToId;
-    delete body.assignedToName;
-    delete body.assignedAt;
-    delete body.precoFinal;
-    delete body.precoFinalIva;
-    // Assistente pode marcar como em_analise ou precisa_info
-    const allowedStatuses = ["em_analise", "precisa_info"];
-    if (body.status && !allowedStatuses.includes(body.status as string)) {
-      delete body.status;
-    }
   }
 
   try {

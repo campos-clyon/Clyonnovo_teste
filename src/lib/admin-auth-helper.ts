@@ -5,7 +5,6 @@ export type AdminColab = {
   id: number;
   nome: string;
   isAdmin: number;
-  funcao?: string;
 };
 
 type AuthResult =

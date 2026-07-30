@@ -54,7 +54,7 @@ export async function POST(
 
   await appendOrderHistory(orderId, {
     type: "archived",
-    by: { id: jwt.id, nome: jwt.nome, role: jwt.funcao ?? "assistente" },
+    by: { id: jwt.id, nome: jwt.nome, role: "admin" },
     message: `Pedido arquivado por ${jwt.nome}.`,
   });
 

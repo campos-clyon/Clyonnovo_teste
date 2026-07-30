@@ -110,11 +110,25 @@ export async function POST(req: NextRequest) {
     // Login bem-sucedido: limpa o contador de tentativas deste IP.
     limparTentativas(ip);
 
+    // As funções de assistente, motorista e ajudante deixaram de existir. As
+    // contas antigas continuam na tabela — não se apagam registos de pessoas
+    // que trabalharam connosco — mas deixam de poder entrar.
+    //
+    // Aceita-se `funcao === "admin"` além de `isAdmin === 1` porque houve
+    // contas gravadas só com a função, com isAdmin a 0; o token normaliza para
+    // 1. Sem isto, um administrador antigo ficava fechado fora do painel.
+    const eAdministrador = colaborador.isAdmin === 1 || colaborador.funcao === "admin";
+    if (!eAdministrador) {
+      return NextResponse.json(
+        { error: "Esta conta não tem acesso ao backoffice." },
+        { status: 403 },
+      );
+    }
+
     const token = await new jose.SignJWT({
       id: colaborador.id,
       nome: colaborador.nome,
-      funcao: colaborador.funcao,
-      isAdmin: colaborador.isAdmin,
+      isAdmin: 1,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime(manterSessao ? "30d" : "8h")
@@ -125,9 +139,7 @@ export async function POST(req: NextRequest) {
       colaborador: {
         id: colaborador.id,
         nome: colaborador.nome,
-        funcao: colaborador.funcao,
-        valorHora: colaborador.valorHora,
-        isAdmin: colaborador.isAdmin,
+        isAdmin: 1,
       },
     });
   } catch (error) {

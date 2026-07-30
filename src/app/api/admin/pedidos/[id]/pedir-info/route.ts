@@ -12,8 +12,8 @@ export const runtime = "nodejs";
  * POST /api/admin/pedidos/[id]/pedir-info
  * Body: { message: string }
  *
- * Permite a admin ou assistente (mesmo sem ter aceite o pedido) enviar
- * uma mensagem de pedido de informação ao cliente. Marca o pedido como
+ * Permite ao admin enviar uma mensagem de pedido de informação ao
+ * cliente. Marca o pedido como
  * "precisa_info" e guarda a mensagem em mensagemCliente para aparecer
  * na conta do cliente.
  */
@@ -24,9 +24,7 @@ export async function POST(
   const jwt = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!jwt) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
 
-  const isAdmin = Number(jwt.isAdmin) === 1;
-  const isAssistente = jwt.funcao === "assistente";
-  if (!isAdmin && !isAssistente) {
+  if (Number(jwt.isAdmin) !== 1) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 
@@ -54,7 +52,7 @@ export async function POST(
 
   await appendOrderHistory(orderId, {
     type: "info_requested",
-    by: { id: jwt.id, nome: jwt.nome, role: jwt.funcao ?? "assistente" },
+    by: { id: jwt.id, nome: jwt.nome, role: "admin" },
     message: `Pedido de informação enviado ao cliente: "${message.slice(0, 200)}${message.length > 200 ? "…" : ""}"`,
   });
 

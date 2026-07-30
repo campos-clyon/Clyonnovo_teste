@@ -80,13 +80,12 @@ describe("verifyColaboradorToken", () => {
   });
 
   it("retorna payload para token válido", async () => {
-    const token = await mintToken({ id: 42, nome: "Admin", isAdmin: 1, funcao: "gestor" });
+    const token = await mintToken({ id: 42, nome: "Admin", isAdmin: 1 });
     const payload = await verifyColaboradorToken(token);
     expect(payload).not.toBeNull();
     expect(payload?.id).toBe(42);
     expect(payload?.nome).toBe("Admin");
     expect(payload?.isAdmin).toBe(1);
-    expect(payload?.funcao).toBe("gestor");
   });
 
   it("colaborador isAdmin=0 — payload retornado mas isAdmin é 0", async () => {

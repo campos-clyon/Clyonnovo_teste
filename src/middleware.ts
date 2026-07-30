@@ -48,12 +48,10 @@ export async function middleware(request: NextRequest) {
   const forwardedProto = headers.get("x-forwarded-proto") ?? nextUrl.protocol.replace(":", "");
 
   // 1. Força HTTPS e sem www (redirect to canonical domain)
-  // Excluir rotas /api/ e /colaboradores/ do redirect — são chamadas internas
-  // onde o Authorization header seria perdido no redirect.
+  // Excluir rotas /api/ do redirect — são chamadas internas onde o
+  // Authorization header seria perdido no redirect.
   // Excluir localhost/127.0.0.1 — nunca ocorre em produção, só permite dev local.
-  const isApiOrInternal =
-    nextUrl.pathname.startsWith("/api/") ||
-    nextUrl.pathname.startsWith("/colaboradores/");
+  const isApiOrInternal = nextUrl.pathname.startsWith("/api/");
   const isLocalDev = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host);
   // Deployments de teste no Vercel (preview/staging) não devem ser forçados para o domínio de produção.
   const isVercelPreview = host.endsWith(".vercel.app");

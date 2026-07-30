@@ -1,11 +1,12 @@
 /**
- * Configuração ÚNICA do NextAuth v4 — serve clientes e colaboradores.
+ * NextAuth v4 — autenticação dos CLIENTES (Google).
  *
- * O callback signIn retorna true para qualquer conta Google; a distinção é feita
- * DEPOIS do login:
- *   - Clientes: entram por /entrar → callbackUrl /conta (conta criada automaticamente).
- *   - Colaboradores: entram por /colaboradores/entrar → EntrarForm.tsx faz fetch a
- *     /api/colaboradores/verify-email; se o email não estiver autorizado → signOut.
+ * Entram por /entrar → callbackUrl /conta, com a conta criada automaticamente.
+ *
+ * O backoffice não passa por aqui: a administração entra em /admin/login com
+ * email e senha, contra a tabela `colaboradores`, e recebe um JWT próprio.
+ * O login Google de colaborador (/colaboradores/entrar + verify-email) existia
+ * quando havia assistentes, motoristas e ajudantes — foi removido com eles.
  *
  * Nota: existia uma segunda instância (/api/auth/cliente) para clientes, removida
  * porque o NextAuth no Vercel ignora basePaths personalizados ao construir o
@@ -34,10 +35,7 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn() {
-      // Permitir qualquer login Google neste handler.
-      // A verificação de autorização de colaborador é feita em EntrarForm.tsx
-      // via fetch a /api/colaboradores/verify-email após o redirect do OAuth,
-      // evitando que este callback bloqueie logins de clientes no handler separado.
+      // Qualquer conta Google pode ser cliente — não há lista de autorizados.
       return true;
     },
 
@@ -49,16 +47,15 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Após login bem-sucedido de colaborador → ir para /admin
       if (url.startsWith(baseUrl)) return url;
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      return `${baseUrl}/admin`;
+      return `${baseUrl}/conta`;
     },
   },
 
   pages: {
-    signIn: "/colaboradores/entrar",
-    error:  "/colaboradores/entrar",
+    signIn: "/entrar",
+    error:  "/entrar",
   },
 
   session: { strategy: "jwt" },

@@ -155,7 +155,7 @@ export default function ImageManagerClient() {
 
   useEffect(() => {
     const token = getColaboradorItem("token");
-    if (!token) { router.push("/colaboradores"); return; }
+    if (!token) { router.push("/admin/login"); return; }
     void loadGallery(token);
   }, [router]);
 
@@ -175,7 +175,7 @@ export default function ImageManagerClient() {
       setError(nextError);
       if (nextError.includes("Não autorizado") || nextError.includes("Acesso negado")) {
         clearColaboradorStorage();
-        router.push("/colaboradores");
+        router.push("/admin/login");
       }
     } finally {
       setLoading(false);
@@ -189,7 +189,7 @@ export default function ImageManagerClient() {
 
   async function handleRefresh() {
     const token = getColaboradorItem("token");
-    if (!token) { router.push("/colaboradores"); return; }
+    if (!token) { router.push("/admin/login"); return; }
     setRefreshing(true); setMessage(""); setError("");
     try { await reloadAfterMutation(token); setMessage("Galeria atualizada."); }
     finally { setRefreshing(false); }
@@ -223,7 +223,7 @@ export default function ImageManagerClient() {
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const token = getColaboradorItem("token");
-    if (!token) { router.push("/colaboradores"); return; }
+    if (!token) { router.push("/admin/login"); return; }
     if (!newFile && !newItem.imageUrl.trim()) { setError("Escolha uma imagem ou indique um URL público."); return; }
     setSaving(true); setError(""); setMessage("");
     try {
@@ -264,7 +264,7 @@ export default function ImageManagerClient() {
 
   async function handleSaveItem(item: GalleryItem) {
     const token = getColaboradorItem("token");
-    if (!token) { router.push("/colaboradores"); return; }
+    if (!token) { router.push("/admin/login"); return; }
     setSaving(true); setError(""); setMessage("");
     try {
       const replacementFile = replacementFiles[item.id];
@@ -304,7 +304,7 @@ export default function ImageManagerClient() {
 
   async function handleDeleteItem(id: string) {
     const token = getColaboradorItem("token");
-    if (!token) { router.push("/colaboradores"); return; }
+    if (!token) { router.push("/admin/login"); return; }
     if (!window.confirm("Apagar esta imagem da galeria?")) return;
     setSaving(true); setError(""); setMessage("");
     try {

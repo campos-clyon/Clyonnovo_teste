@@ -4,8 +4,6 @@ export type ColaboradorTokenPayload = {
   id: number;
   nome: string;
   isAdmin: number;
-  /** Funcao do colaborador — colocada no JWT pelo login route */
-  funcao?: string;
 };
 
 /**

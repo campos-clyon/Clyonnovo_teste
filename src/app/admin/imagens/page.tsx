@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ImageManagerClient from "@/app/colaboradores/admin/ImageManagerClient";
+import ImageManagerClient from "@/components/admin/ImageManagerClient";
 
 export const metadata: Metadata = {
   title: "Gestor de Imagens",

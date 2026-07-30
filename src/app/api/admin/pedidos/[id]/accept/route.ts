@@ -46,54 +46,24 @@ export async function POST(
   const colab = colabFromDb ?? {
     id: jwt.id,
     nome: jwt.nome,
-    funcao: jwt.funcao ?? null,
     isAdmin: jwt.isAdmin ?? 0,
     active: 1 as number | null,
   };
 
-  const isAdmin = Number(colab.isAdmin) === 1;
-  const isAssistente = colab.funcao === "assistente";
-
-  // Auto-activar canReceiveSimulatorRequests=1 para assistentes com default antigo de 0
-  if (isAssistente && colabFromDb && Number(colabFromDb.canReceiveSimulatorRequests) === 0) {
-    try {
-      const pool = await getPool();
-      if (pool) {
-        await pool.execute(
-          `UPDATE colaboradores SET canReceiveSimulatorRequests = 1 WHERE id = ? AND funcao = 'assistente'`,
-          [colab.id]
-        );
-      }
-    } catch { /* silencioso */ }
-  }
-
-  // Apenas assistentes activos e admins podem aceitar pedidos
-  if (!isAdmin && !isAssistente) {
+  // Só administradores entram no backoffice — as funções de assistente,
+  // motorista e ajudante deixaram de existir. Toda a lógica que distinguia
+  // "assistente activo" de "admin" desapareceu com elas.
+  if (Number(colab.isAdmin) !== 1) {
     return NextResponse.json(
-      { ok: false, message: "Apenas assistentes podem aceitar pedidos." },
-      { status: 403 }
-    );
-  }
-  if (!isAdmin && colab.active != null && Number(colab.active) === 0) {
-    return NextResponse.json(
-      { ok: false, message: "A sua conta está inativa." },
+      { ok: false, message: "Sem permissão para aceitar pedidos." },
       { status: 403 }
     );
   }
 
-  // Pedido já aceite por outra assistente?
+  // Pedido já tomado por outra pessoa da administração
   if (order.assignedToId && order.assignedToId !== colab.id) {
     return NextResponse.json(
-      { ok: false, message: `Este pedido já foi aceite por ${order.assignedToName ?? "outra assistente"}.` },
-      { status: 409 }
-    );
-  }
-
-  // Só aceitar pedidos em fila
-  const acceptableStatuses = ["sem_assistente", "pendente", "novo"];
-  if (!acceptableStatuses.includes(order.status) && !isAdmin) {
-    return NextResponse.json(
-      { ok: false, message: `Pedido com status "${order.status}" não pode ser aceite desta forma.` },
+      { ok: false, message: `Este pedido já foi aceite por ${order.assignedToName ?? "outra pessoa"}.` },
       { status: 409 }
     );
   }
@@ -118,7 +88,7 @@ export async function POST(
 
   await appendOrderHistory(orderId, {
     type: "accepted",
-    by: { id: colab.id, nome: colab.nome, role: colab.funcao ?? "assistente" },
+    by: { id: colab.id, nome: colab.nome, role: "admin" },
     message: `Pedido aceite por ${colab.nome}. Status alterado para "Atribuído".`,
   });
 

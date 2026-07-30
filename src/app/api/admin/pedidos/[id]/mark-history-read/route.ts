@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 
 /**
  * POST /api/admin/pedidos/[id]/mark-history-read
- * Marca o histórico do pedido como lido pelo assistente (agora). Usado para
- * limpar o badge de "novas respostas do cliente".
+ * Marca o histórico do pedido como lido. Usado para limpar o badge de "novas
+ * respostas do cliente".
  */
 export async function POST(
   req: NextRequest,
@@ -16,9 +16,7 @@ export async function POST(
   const jwt = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!jwt) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
 
-  const isAdmin = Number(jwt.isAdmin) === 1;
-  const isAssistente = jwt.funcao === "assistente";
-  if (!isAdmin && !isAssistente) {
+  if (Number(jwt.isAdmin) !== 1) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 

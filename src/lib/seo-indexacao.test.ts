@@ -26,7 +26,8 @@ describe("robots.txt — o grupo específico não pode anular as restrições", 
 
   it("bloqueia o que queimava orçamento de rastreio", () => {
     const lista = regras[0]?.disallow as string[];
-    for (const caminho of ["/api/", "/_next/", "/auth", "/colaboradores/", "/admin"]) {
+    // /colaboradores/ saiu da lista quando as páginas foram removidas
+    for (const caminho of ["/api/", "/_next/", "/auth", "/admin"]) {
       expect(lista, caminho).toContain(caminho);
     }
   });
