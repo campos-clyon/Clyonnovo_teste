@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTrabalho, updateTrabalho, deleteTrabalho } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth-helper";
+
+// Alterar e apagar exigem administrador. Sem isto, qualquer pessoa podia
+// apagar a galeria de trabalhos do site com um pedido DELETE.
 
 export async function GET(
   _request: NextRequest,
@@ -20,6 +24,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -38,9 +45,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const { id } = await params;
     await deleteTrabalho(Number(id));

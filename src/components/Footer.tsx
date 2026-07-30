@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MessageCircle, ArrowRight, Lock, CreditCard, Smartphone, Building } from "lucide-react";
+import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building } from "lucide-react";
 
 import { trackWhatsAppClick, trackPhoneCall } from "@/lib/analytics";
 import { BUSINESS_PHONE, BUSINESS_EMAIL } from "@/lib/seo-data";
@@ -129,14 +129,6 @@ export default function Footer() {
                 <ArrowRight style={{ width: "16px", height: "16px", color: "#22d3ee" }} className="group-hover:text-white" />
                 <span style={{ color: "#ffffff" }}>Pedir orçamento</span>
               </Link>
-              <Link
-                href="/colaboradores"
-                className="site-btn-footer group"
-                style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#1e293b", padding: "12px 14px", borderRadius: "8px", color: "#ffffff", fontSize: "14px", textDecoration: "none", transition: "all 0.2s ease" }}
-              >
-                <Lock style={{ width: "16px", height: "16px", color: "#94a3b8" }} className="group-hover:text-white" />
-                <span style={{ color: "#ffffff" }}>Área de colaboradores</span>
-              </Link>
             </div>
           </div>
         </div>
@@ -237,14 +229,6 @@ export default function Footer() {
               >
                 <ArrowRight style={{ width: "16px", height: "16px", color: "#22d3ee" }} className="group-hover:text-white" />
                 <span style={{ color: "#ffffff" }}>Pedir orçamento</span>
-              </Link>
-              <Link
-                href="/colaboradores"
-                className="site-btn-footer group"
-                style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#1e293b", padding: "12px 14px", borderRadius: "8px", color: "#ffffff", fontSize: "14px", textDecoration: "none", transition: "all 0.2s ease" }}
-              >
-                <Lock style={{ width: "16px", height: "16px", color: "#94a3b8" }} className="group-hover:text-white" />
-                <span style={{ color: "#ffffff" }}>Área de colaboradores</span>
               </Link>
             </div>
           </div>

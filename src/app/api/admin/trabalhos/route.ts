@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listTrabalhos, createTrabalho } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth-helper";
+
+/**
+ * Galeria de trabalhos.
+ *
+ * ⚠️ Estas rotas estavam sob /api/admin e não verificavam nada. Qualquer
+ * pessoa na internet podia criar, alterar e apagar trabalhos publicados no
+ * site — e o upload aceitava ficheiros sem autenticação, o que é
+ * armazenamento aberto a quem o descobrisse.
+ *
+ * O GET fica público porque a galeria do site o consome; a escrita não.
+ */
 
 export async function GET() {
   try {
@@ -12,6 +24,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const body = await request.json();
     const { fotos, tipoServico, localidade, descricao, publicado } = body;

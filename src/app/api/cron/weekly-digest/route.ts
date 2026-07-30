@@ -14,12 +14,16 @@ export const dynamic = "force-dynamic";
  * Configurar o agendamento em vercel.json.
  */
 export async function GET(req: NextRequest) {
+  // Falha fechada. Estava `if (secret)`: sem CRON_SECRET definido, a rota
+  // ficava aberta a qualquer pessoa — e esta envia emails a clientes reais.
+  // Uma configuração em falta não pode transformar-se em porta aberta.
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
+  if (!secret) {
+    console.error("[cron/weekly-digest] CRON_SECRET não definido — recusado");
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
   await ensureSimulatorOrdersTable();

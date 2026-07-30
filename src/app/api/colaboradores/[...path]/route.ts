@@ -5,9 +5,22 @@ import { eq } from "drizzle-orm";
 
 import { getDb, getSimulatorSettings, upsertSimulatorSetting, createColaborador, updateColaborador, deleteColaborador } from "@/lib/db";
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
+import { getColaboradorSecretKey } from "@/lib/colaborador-auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { colaboradores } from "../../../../../drizzle/schema";
 
-const JWT_SECRET = process.env.JWT_SECRET || "clyon-secret-2026";
+// ⚠️ Havia aqui `process.env.JWT_SECRET || "clyon-secret-2026"`.
+//
+// Um segredo escrito no código não é um segredo: está no repositório, no
+// histórico do git e em qualquer cópia que alguém tenha feito. Se a variável
+// de ambiente faltasse num ambiente — um preview, uma migração de projecto —
+// a aplicação continuava a arrancar e passava a aceitar tokens assinados com
+// uma frase pública. Qualquer pessoa podia forjar um JWT de administrador e
+// entrar no painel.
+//
+// A verificação passa a usar a mesma fonte que todo o resto do backoffice,
+// que rebenta se a variável não existir. Falhar a arrancar é preferível a
+// arrancar sem tranca.
 
 type JwtPayload = { id: number; nome: string; isAdmin: number };
 type RouteContext = { params: Promise<{ path: string[] }> };
@@ -17,8 +30,7 @@ async function verifyToken(req: NextRequest) {
   if (!token) return null;
 
   try {
-    const secretKey = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jose.jwtVerify(token, secretKey);
+    const { payload } = await jose.jwtVerify(token, getColaboradorSecretKey());
     return payload as unknown as JwtPayload;
   } catch {
     return null;
@@ -26,11 +38,10 @@ async function verifyToken(req: NextRequest) {
 }
 
 async function generateToken(payload: Record<string, unknown>) {
-  const secretKey = new TextEncoder().encode(JWT_SECRET);
   return new jose.SignJWT(payload as jose.JWTPayload)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("24h")
-    .sign(secretKey);
+    .sign(getColaboradorSecretKey());
 }
 
 async function handleRequest(req: NextRequest, path: string[]) {
@@ -41,6 +52,18 @@ async function handleRequest(req: NextRequest, path: string[]) {
   }
 
   if (route === "login" && req.method === "POST") {
+    // Esta é a segunda porta para a mesma conta: /api/colaboradores/login
+    // já tinha limite de tentativas, esta não tinha nenhum — e quem
+    // atacasse usava a que não trava.
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`colab-login-path:${ip}`, 5, 900);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Demasiadas tentativas. Aguarde uns minutos antes de tentar de novo." },
+        { status: 429 },
+      );
+    }
+
     const { nome, senha } = await req.json();
     if (!nome || !senha) {
       return NextResponse.json({ error: "Nome e palavra-passe sao obrigatorios." }, { status: 400 });
@@ -51,13 +74,17 @@ async function handleRequest(req: NextRequest, path: string[]) {
       .from(colaboradores)
       .where(eq(colaboradores.nome, String(nome).toUpperCase()));
 
-    if (!colaborador) {
-      return NextResponse.json({ error: "Colaborador nao encontrado." }, { status: 401 });
-    }
-
-    const passwordMatches = await bcrypt.compare(String(senha), colaborador.senha);
-    if (!passwordMatches) {
-      return NextResponse.json({ error: "Palavra-passe incorreta." }, { status: 401 });
+    // Uma mensagem só, e a comparação corre sempre. Distinguir "não existe"
+    // de "palavra-passe errada" diz a quem tenta quais os nomes reais da
+    // equipa; responder mais depressa quando o nome não existe diz o mesmo
+    // sem escrever nada.
+    const hashFicticio = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+    const passwordMatches = await bcrypt.compare(
+      String(senha),
+      colaborador?.senha || hashFicticio,
+    );
+    if (!colaborador || !passwordMatches) {
+      return NextResponse.json({ error: "Nome ou palavra-passe incorretos." }, { status: 401 });
     }
 
     const token = await generateToken({
