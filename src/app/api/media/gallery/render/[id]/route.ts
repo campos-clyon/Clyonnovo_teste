@@ -10,6 +10,24 @@ export const revalidate = 0;
 const LONG_CACHE_HEADER = "public, max-age=31536000, immutable";
 const NOINDEX_HEADER = "noindex, nofollow, noimageindex, noarchive";
 
+/**
+ * Tipos que esta rota aceita servir.
+ *
+ * Antes bastava o data: URL começar por "data:image/" e o tipo declarado ia
+ * directo para o cabeçalho Content-Type. "data:image/svg+xml" passava — e um
+ * SVG é um documento que executa script. Como a resposta sai de clyon.pt, com
+ * cache de um ano, quem conseguisse gravar um item na galeria ficava com
+ * alojamento de script permanente no nosso domínio, útil para enganar clientes
+ * e parceiros atraídos ao endereço.
+ */
+const TIPOS_PERMITIDOS = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+]);
+
 function decodeDataUrl(value: string) {
   const match = value.match(/^data:(.+?);base64,(.+)$/);
 
@@ -57,9 +75,19 @@ export async function GET(request: Request, context: RouteContext) {
     });
   }
 
+  if (!TIPOS_PERMITIDOS.has(decoded.contentType.trim().toLowerCase())) {
+    return new NextResponse("Unsupported image type", {
+      status: 415,
+      headers: { "X-Robots-Tag": NOINDEX_HEADER },
+    });
+  }
+
   return new NextResponse(decoded.buffer, {
     headers: {
       "Content-Type": decoded.contentType,
+      // Mesmo com a lista branca: se um dia entrar aqui algo que o browser
+      // decida interpretar, que seja descarregado e não renderizado.
+      "X-Content-Type-Options": "nosniff",
       "Cache-Control": LONG_CACHE_HEADER,
       "X-Robots-Tag": NOINDEX_HEADER,
     },

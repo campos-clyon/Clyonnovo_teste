@@ -140,6 +140,20 @@ export async function PATCH(req: NextRequest) {
     if (fields.status && !isAccepting) {
       delete fields.status;
     }
+
+    // A rota por id (PATCH /api/admin/pedidos/[id]) já retirava estes campos ao
+    // assistente. Esta escrevia tudo o que viesse no corpo, e as duas gravam na
+    // mesma tabela — bastava mudar de endereço para contornar o controlo:
+    //
+    //   precoFinal / precoFinalIva  o preço final é decisão do admin, e é o que
+    //                               o cliente vê em /orcamento/[token]
+    //   assignedToName / assignedAt  metadados da atribuição, escritos por quem
+    //                                atribui, não por quem é atribuído
+    //   contactEmail                 é para onde seguem os emails de estado do
+    //                                pedido; reescrevê-lo desvia-os do cliente
+    for (const campo of ["precoFinal", "precoFinalIva", "assignedToName", "assignedAt", "contactEmail"]) {
+      delete fields[campo];
+    }
   }
 
   const updateData: Record<string, unknown> = { ...fields };

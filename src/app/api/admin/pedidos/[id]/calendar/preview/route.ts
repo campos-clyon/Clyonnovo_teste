@@ -19,10 +19,35 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!colab) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
+  // ⚠️ Isto verificava apenas que existia um token válido, e mais nada.
+  //
+  // A resposta traz a descrição completa do pedido — nome, telefone, email,
+  // morada, andar, elevador e observações do cliente. Com um id na barra do
+  // endereço e um token de qualquer conta, dava para percorrer 1, 2, 3… e
+  // recolher os dados pessoais de todos os clientes.
+  //
+  // A rota irmã, GET /api/admin/pedidos/[id], já bloqueava motoristas e
+  // ajudantes e limitava o assistente aos pedidos dele. Esta devolve o mesmo
+  // conteúdo e não fazia nem uma coisa nem outra.
+  if (colab.isAdmin !== 1 && colab.funcao !== "assistente") {
+    return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
+  }
+
   const { id } = await params;
   const orderId = Number(id);
+  if (!Number.isFinite(orderId)) {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
   const order = await getSimulatorOrderById(orderId);
   if (!order) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+
+  // O assistente vê os pedidos dele e os da fila geral — a mesma regra da
+  // rota irmã. Sem isto, um assistente lia a ficha de qualquer cliente.
+  const semAssistente = !order.assignedToId;
+  if (colab.isAdmin !== 1 && order.assignedToId !== colab.id && !semAssistente) {
+    return NextResponse.json({ error: "Sem permissão para ver este pedido." }, { status: 403 });
+  }
 
   let operationalSummary = "";
   let geminiUsed = false;

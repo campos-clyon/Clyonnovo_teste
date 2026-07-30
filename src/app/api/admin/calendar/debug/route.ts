@@ -26,10 +26,16 @@ function getCalendarClient() {
 }
 
 export async function GET(req: NextRequest) {
-  // Auth — only admins/colaboradores may call this
+  // Diagnóstico da integração com o Google Calendar: devolve a configuração
+  // do calendário da empresa. Um motorista não tem nada a fazer aqui, e o
+  // comentário antigo dizia "admins/colaboradores" enquanto o código aceitava
+  // qualquer conta com token.
   const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!colab) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  if (colab.isAdmin !== 1) {
+    return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
   const configuredCalendarId = process.env.CLYON_GOOGLE_CALENDAR_ID ?? "(not set)";

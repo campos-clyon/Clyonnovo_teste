@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,6 +18,7 @@ const ALLOWED_MIME = new Set([
   "video/webm",
 ]);
 const MAX_SIZE = 30 * 1024 * 1024; // 30 MB por ficheiro
+const MAX_FICHEIROS = 20;          // por pedido — um cliente não envia mais que isto
 
 /**
  * POST /api/simulador/upload-fotos
@@ -25,6 +27,18 @@ const MAX_SIZE = 30 * 1024 * 1024; // 30 MB por ficheiro
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rota aberta por necessidade — quem preenche o simulador ainda não tem
+    // conta. Sem limite, era gravar ficheiros de 30 MB num bucket público em
+    // ciclo, à nossa conta. 10 lotes por IP a cada 5 minutos chega para quem
+    // está mesmo a pedir um orçamento.
+    const rl = await checkRateLimit(`upload-fotos:${getClientIp(request)}`, 10, 300);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Demasiados envios. Aguarde um momento e tente novamente." },
+        { status: 429, headers: { "Retry-After": "300" } },
+      );
+    }
+
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return NextResponse.json(
         {
@@ -43,6 +57,12 @@ export async function POST(request: NextRequest) {
     if (files.length === 0) {
       return NextResponse.json({ error: "Nenhum ficheiro recebido." }, { status: 400 });
     }
+    if (files.length > MAX_FICHEIROS) {
+      return NextResponse.json(
+        { error: `Máximo de ${MAX_FICHEIROS} ficheiros por envio.` },
+        { status: 400 },
+      );
+    }
 
     const uploaded: Array<{ url: string; name: string; size: number; type: string }> = [];
     const falhados: Array<{ name: string; motivo: string }> = [];
@@ -55,8 +75,12 @@ export async function POST(request: NextRequest) {
         falhados.push({ name: file.name, motivo: "maior que 30 MB" });
         continue;
       }
-      if (file.type && !ALLOWED_MIME.has(file.type)) {
-        falhados.push({ name: file.name, motivo: `formato não suportado (${file.type})` });
+      // Era `if (file.type && ...)`: uma parte multipart com o Content-Type
+      // vazio tinha type "" e passava ao lado da lista inteira. O tipo tem de
+      // estar declarado e tem de constar da lista — sem excepção.
+      const tipo = file.type.trim().toLowerCase();
+      if (!ALLOWED_MIME.has(tipo)) {
+        falhados.push({ name: file.name, motivo: `formato não suportado (${tipo || "sem tipo"})` });
         continue;
       }
 
@@ -66,7 +90,7 @@ export async function POST(request: NextRequest) {
       try {
         const blob = await put(key, file, {
           access: "public",
-          contentType: file.type || "application/octet-stream",
+          contentType: tipo,
           addRandomSuffix: false,
         });
         uploaded.push({ url: blob.url, name: file.name, size: file.size, type: file.type });
@@ -86,9 +110,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[upload-fotos] erro:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Erro no upload." },
-      { status: 500 }
-    );
+    // Sem a mensagem crua: numa rota pública ela só serve para descrever a
+    // nossa infraestrutura a quem estiver a sondá-la.
+    return NextResponse.json({ error: "Erro no upload." }, { status: 500 });
   }
 }

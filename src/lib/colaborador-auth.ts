@@ -25,12 +25,37 @@ export function getColaboradorSecretKey() {
   return new TextEncoder().encode(secret);
 }
 
+/**
+ * ⚠️ O token de PARCEIRO é assinado com o MESMO JWT_SECRET (ver
+ * provider-auth.ts). O comentário lá diz que o campo `type: "provider"`
+ * impede que seja aceite como token de colaborador — mas só o lado dos
+ * parceiros verificava o `type`. Este não verificava nada além da assinatura,
+ * por isso um token de parceiro passava aqui como se fosse um colaborador.
+ *
+ * Em qualquer rota que se limite a `if (!colab) 401`, isso significa que um
+ * parceiro externo com conta válida entrava. As rotas que usam requireAdmin
+ * escapavam por acidente — o payload de parceiro não tem `isAdmin`, e o
+ * `!colab.isAdmin` recusava — mas não é aceitável depender de acidentes
+ * quando quem verifica é a porta de casa.
+ *
+ * A verificação passa a ser explícita nos dois sentidos.
+ */
 export async function verifyColaboradorToken(token?: string | null) {
   if (!token) return null;
 
   try {
     const { payload } = await jose.jwtVerify(token, getColaboradorSecretKey());
-    return payload as unknown as ColaboradorTokenPayload;
+
+    // Um token de outro domínio (parceiro, cliente) não é um colaborador,
+    // por muito que a assinatura confira.
+    if (typeof (payload as Record<string, unknown>).type === "string") return null;
+
+    // Um colaborador tem sempre id e nome. Um payload sem eles não é um
+    // token nosso, venha de onde vier.
+    const colab = payload as unknown as ColaboradorTokenPayload;
+    if (typeof colab.id !== "number" || typeof colab.nome !== "string") return null;
+
+    return colab;
   } catch {
     return null;
   }

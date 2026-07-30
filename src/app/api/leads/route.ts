@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { z } from "zod";
 import { createLead, createLeadEvent, getAllLeads, updateLeadStatus } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -88,8 +89,22 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/leads — listar leads (apenas para uso interno/admin)
-export async function GET() {
+/**
+ * GET /api/leads — a lista de leads.
+ *
+ * ⚠️ Dizia "apenas para uso interno/admin" no comentário e não verificava
+ * nada. Um `curl https://clyon.pt/api/leads` sem cabeçalho nenhum devolvia
+ * os 500 leads mais recentes com nome, telefone, email, localidade, a
+ * mensagem que a pessoa escreveu, as NOTAS INTERNAS da equipa e a atribuição
+ * de campanha (gclid, UTM). Dados pessoais de clientes ao alcance de
+ * qualquer pessoa, e o mapa das campanhas para qualquer concorrente.
+ *
+ * Um comentário não é uma tranca.
+ */
+export async function GET(request: NextRequest) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const items = await getAllLeads();
     return NextResponse.json({ leads: items });
@@ -99,8 +114,13 @@ export async function GET() {
   }
 }
 
-// PATCH /api/leads — atualizar status de um lead
+// PATCH /api/leads — atualizar status de um lead.
+// Também estava aberto: qualquer pessoa podia marcar leads como perdidos e
+// escrever nas notas internas da equipa.
 export async function PATCH(request: NextRequest) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const body = await request.json();
     const { id, status, notasInternas } = body;

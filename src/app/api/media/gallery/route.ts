@@ -8,6 +8,7 @@ import {
   gallerySections,
   listGalleryItems,
   saveGalleryFile,
+  imagemDataUrlPermitida,
 } from "@/lib/work-gallery";
 
 export const runtime = "nodejs";
@@ -106,6 +107,13 @@ export async function POST(request: NextRequest) {
 
   if (!title.trim() || !alt.trim() || !String(body.imageUrl || "").trim()) {
     return jsonError("Título, texto alternativo e URL da imagem são obrigatórios");
+  }
+
+  // Um data: URL de SVG entrava aqui e ficava alojado em clyon.pt como
+  // documento com script. Recusa-se à entrada, com mensagem, em vez de rebentar
+  // lá dentro no normalizeGalleryItem.
+  if (!imagemDataUrlPermitida(String(body.imageUrl).trim())) {
+    return jsonError("Formato de imagem não suportado. Use PNG, JPEG, WebP, GIF ou AVIF.");
   }
 
   const item = await createGalleryItem({

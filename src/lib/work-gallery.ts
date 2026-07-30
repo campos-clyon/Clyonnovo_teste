@@ -171,9 +171,26 @@ async function ensureGalleryUploadStorage() {
   await fs.mkdir(GALLERY_UPLOAD_DIR, { recursive: true });
 }
 
+/**
+ * Formatos que a galeria guarda. Sem esta lista, um data: URL de
+ * "image/svg+xml" entrava — e um SVG executa script quando servido como
+ * documento, a partir do nosso domínio. A rota que serve estas imagens já o
+ * recusa; recusar também na escrita evita guardar o que nunca vai ser servido.
+ */
+const TIPOS_DE_IMAGEM = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+
+export function imagemDataUrlPermitida(valor: string) {
+  if (!valor.startsWith("data:")) return true; // caminhos e URLs normais não passam por aqui
+  const tipo = valor.slice(5).split(";")[0].trim().toLowerCase();
+  return TIPOS_DE_IMAGEM.has(tipo);
+}
+
 async function fileToDataUrl(file: File) {
+  const mimeType = file.type.trim().toLowerCase();
+  if (!TIPOS_DE_IMAGEM.has(mimeType)) {
+    throw new Error(`Formato de imagem não suportado: ${mimeType || "sem tipo"}`);
+  }
   const buffer = Buffer.from(await file.arrayBuffer());
-  const mimeType = file.type || "image/jpeg";
   return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }
 
@@ -262,6 +279,9 @@ export async function writeGalleryData(data: GalleryData) {
 }
 
 export function normalizeGalleryItem(input: GalleryItemInput) {
+  if (!imagemDataUrlPermitida(input.imageUrl.trim())) {
+    throw new Error("Formato de imagem não suportado.");
+  }
   return {
     id: input.id || randomUUID(),
     section: input.section,

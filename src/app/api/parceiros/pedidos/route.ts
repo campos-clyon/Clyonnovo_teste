@@ -38,8 +38,16 @@ export async function GET(req: NextRequest) {
     ) as [Array<{ zone: string }>, unknown];
     const normalizedZones = zoneRows.map((z) => normalize(z.zone));
 
+    // Trabalhos por atribuir: SEM a morada.
+    //
+    // O painel do parceiro já só mostrava a morada nos trabalhos aceites — mas
+    // a ocultação estava só no ecrã, e a API entregava o campo a quem chamasse
+    // o endereço directamente. Qualquer parceiro activo podia recolher, em
+    // ciclo, as moradas de casa de todos os clientes da zona dele sem aceitar
+    // um único trabalho. A morada aparece quando o trabalho é aceite — que é o
+    // momento em que o parceiro fica comprometido com ele.
     const [candidateRows] = await conn.execute(
-      `SELECT id, serviceType, description, address, city, floor, hasElevator, urgency,
+      `SELECT id, serviceType, description, city, floor, hasElevator, urgency,
               precoFinal, precoFinalIva, status, providerAcceptedAt, createdAt
        FROM simulatorOrders
        WHERE status = 'aprovado' AND providerId IS NULL

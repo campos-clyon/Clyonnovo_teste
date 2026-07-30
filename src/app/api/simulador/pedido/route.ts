@@ -197,7 +197,15 @@ export async function POST(req: NextRequest) {
       message: "Pedido enviado com sucesso. A equipa CLYON irá analisar e uma assistente aceitará o pedido em breve.",
     });
   } catch (err: any) {
-    console.error("[v0] POST /api/simulador/pedido: erro:", err.message);
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    // A mensagem crua do MySQL ia para o browser numa rota pública: dizia o
+    // nome da tabela, os nomes e os limites das colunas — e, se a ligação
+    // falhasse, o host e o utilizador da base de dados. Quem quisesse mapear
+    // o esquema só tinha de enviar valores inválidos e ler a resposta.
+    // O detalhe fica no log; ao cliente vai uma frase que ele possa usar.
+    console.error("[simulador/pedido] erro ao gravar:", err);
+    return NextResponse.json(
+      { ok: false, error: "Não foi possível registar o pedido. Tente novamente ou fale connosco." },
+      { status: 500 },
+    );
   }
 }

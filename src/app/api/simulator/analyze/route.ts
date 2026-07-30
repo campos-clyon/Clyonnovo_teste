@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { NextRequest } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { buscarImagemExterna } from "@/lib/url-externo-seguro";
 import type { OrderData, EstimateResult, ExternalMarketEstimate, AnalysisSource } from "../../../simulador/types";
 import {
   getActivePricingRulesForGemini,
@@ -294,15 +295,14 @@ export async function POST(req: NextRequest) {
           return data.length > 0 ? { inlineData: { mimeType, data } } : null;
         }
         if (f.previewUrl) {
-          const imgRes = await Promise.race([
-            fetch(f.previewUrl),
-            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("IMG_TIMEOUT")), 2000)),
-          ]);
-          if (imgRes.ok) {
-            const buf = await imgRes.arrayBuffer();
-            const data = Buffer.from(buf).toString("base64");
-            const mimeType = imgRes.headers.get("content-type") ?? f.mimeType ?? "image/jpeg";
-            return data.length > 0 ? { inlineData: { mimeType, data } } : null;
+          // Este `fetch` era directo ao que viesse no corpo do pedido: o
+          // servidor ia buscar qualquer endereço que lhe mandassem, incluindo
+          // os da rede interna, e a resposta dizia ao atacante se o sítio
+          // existia. Agora só vai ao nosso armazenamento — ver
+          // src/lib/url-externo-seguro.ts.
+          const imagem = await buscarImagemExterna(f.previewUrl);
+          if (imagem) {
+            return { inlineData: { mimeType: imagem.mimeType, data: imagem.buffer.toString("base64") } };
           }
         }
         return null;
