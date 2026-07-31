@@ -64,6 +64,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         author_role:  "admin",
         author_label: etiquetaAutor(colab!),
         body:         texto,
+        // `attachments` é NOT NULL na tabela. Se não tiver DEFAULT '{}', não
+        // o enviar faz o insert falhar com "null value in column attachments
+        // violates not-null constraint" — e a resposta nunca grava. Mandar um
+        // array vazio funciona nos dois casos, com default ou sem ele.
+        attachments:  [],
         created_at:   agora,
       })
       .select("id, ticket_id, author_role, author_label, body, created_at")
