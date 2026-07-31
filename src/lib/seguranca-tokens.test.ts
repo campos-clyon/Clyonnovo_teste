@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import * as jose from "jose";
-import { verifyColaboradorToken } from "./colaborador-auth";
+import { sessaoDeAdminValida, verifyColaboradorToken } from "./colaborador-auth";
 
 /**
  * O token de parceiro é assinado com o MESMO JWT_SECRET do colaborador.
@@ -68,5 +68,44 @@ describe("verifyColaboradorToken — só aceita colaboradores", () => {
   it("vazio é vazio", async () => {
     expect(await verifyColaboradorToken(null)).toBeNull();
     expect(await verifyColaboradorToken("")).toBeNull();
+  });
+});
+
+/**
+ * O portão do backoffice. Até aqui, /admin era servido a quem o pedisse e o
+ * JavaScript da página é que decidia — a olhar para o localStorage, que quem
+ * está no browser escreve à mão.
+ */
+describe("sessaoDeAdminValida — o que abre a porta do painel", () => {
+  it("aceita o token de um administrador", async () => {
+    expect(await assinar({ id: 1, nome: "WANDERSON", isAdmin: 1 }).then(sessaoDeAdminValida)).toBe(true);
+  });
+
+  it("recusa uma conta sem isAdmin", async () => {
+    expect(await assinar({ id: 2, nome: "OUTRO", isAdmin: 0 }).then(sessaoDeAdminValida)).toBe(false);
+    expect(await assinar({ id: 2, nome: "OUTRO" }).then(sessaoDeAdminValida)).toBe(false);
+  });
+
+  it("recusa isAdmin em texto — não basta parecer verdadeiro", async () => {
+    expect(await assinar({ id: 3, nome: "X", isAdmin: "sim" }).then(sessaoDeAdminValida)).toBe(false);
+  });
+
+  it("recusa um token de parceiro que se diga administrador", async () => {
+    const t = await assinar({ providerId: 9, name: "P", type: "provider", isAdmin: 1 });
+    expect(await sessaoDeAdminValida(t)).toBe(false);
+  });
+
+  it("recusa um token expirado", async () => {
+    const t = await new jose.SignJWT({ id: 1, nome: "X", isAdmin: 1 })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime(Math.floor(Date.now() / 1000) - 60)
+      .sign(chave());
+    expect(await sessaoDeAdminValida(t)).toBe(false);
+  });
+
+  it("sem cookie não há sessão", async () => {
+    expect(await sessaoDeAdminValida(undefined)).toBe(false);
+    expect(await sessaoDeAdminValida("")).toBe(false);
+    expect(await sessaoDeAdminValida("nao-e-um-jwt")).toBe(false);
   });
 });

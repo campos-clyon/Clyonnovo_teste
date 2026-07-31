@@ -1,11 +1,12 @@
 /**
  * Utilitário para leitura/escrita consistente das credenciais do colaborador.
  *
- * - localStorage  → sessão persistente (rememberMe = true, JWT 30d)
- * - sessionStorage → sessão temporária (rememberMe = false, JWT 8h)
+ * A leitura tenta localStorage primeiro; se não encontrar, tenta
+ * sessionStorage — sessões antigas ficaram gravadas nos dois sítios.
  *
- * A leitura tenta localStorage primeiro; se não encontrar, tenta sessionStorage.
- * Isto garante que o dashboard funciona independentemente de qual storage foi usado.
+ * Isto guarda o nome e o id para o painel mostrar quem está a trabalhar. Quem
+ * decide se a pessoa entra é o cookie httpOnly que o middleware verifica; o
+ * que está aqui é comodidade, não é tranca.
  */
 
 const KEYS = {
@@ -26,11 +27,21 @@ export function getColaboradorItem(key: keyof typeof KEYS): string | null {
   return localStorage.getItem(KEYS[key]) ?? sessionStorage.getItem(KEYS[key]);
 }
 
-/** Remove as credenciais de ambos os storages (usado no logout). */
+/**
+ * Termina a sessão: os dois storages e o cookie.
+ *
+ * O cookie de sessão é httpOnly, portanto não se apaga daqui — pede-se ao
+ * servidor. Isto vive dentro desta função de propósito: há sete sítios que a
+ * chamam (sair, palavra-passe alterada, 401 numa chamada, conta sem
+ * permissão…) e qualquer um deles que se esquecesse do cookie deixava a
+ * porta aberta com o painel a dizer que a sessão tinha terminado.
+ */
 export function clearColaboradorStorage() {
   if (!isBrowser()) return;
   Object.values(KEYS).forEach((k) => {
     localStorage.removeItem(k);
     sessionStorage.removeItem(k);
   });
+  // keepalive: o pedido chega mesmo que a navegação a seguir seja imediata
+  void fetch("/api/admin/sessao/sair", { method: "POST", keepalive: true }).catch(() => {});
 }

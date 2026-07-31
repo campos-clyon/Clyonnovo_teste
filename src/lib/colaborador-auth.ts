@@ -7,6 +7,25 @@ export type ColaboradorTokenPayload = {
 };
 
 /**
+ * Cookie de sessão do backoffice.
+ *
+ * O token do painel vivia só no localStorage. Isso quer dizer que o servidor
+ * não o via: qualquer pedido a /admin recebia o HTML do painel, e o que
+ * decidia se entrava era JavaScript no browser a olhar para uma chave que o
+ * próprio browser guarda. Escrever `colaborador_isAdmin = "1"` na consola
+ * bastava para o painel desenhar — vazio, porque as APIs verificam o token,
+ * mas a desenhar.
+ *
+ * O mesmo token passa a ir também num cookie httpOnly, que o JavaScript da
+ * página não lê nem escreve, para o middleware poder verificar a assinatura
+ * antes de servir seja o que for.
+ */
+export const COOKIE_SESSAO_ADMIN = "clyon_admin";
+
+/** 8 horas — o mesmo que o JWT. Expiram juntos, de propósito. */
+export const DURACAO_SESSAO_ADMIN_SEGUNDOS = 8 * 60 * 60;
+
+/**
  * Fonte única de verdade para o segredo JWT dos colaboradores.
  * A verificação é lazy (em runtime) para não falhar durante o build do Next.js,
  * quando as variáveis de ambiente de runtime ainda não estão disponíveis.
@@ -57,6 +76,19 @@ export async function verifyColaboradorToken(token?: string | null) {
   } catch {
     return null;
   }
+}
+
+/**
+ * O middleware usa isto para decidir se serve o backoffice.
+ *
+ * Passa pelo mesmo `verifyColaboradorToken` das APIs — assinatura, token de
+ * outro domínio, id e nome — e acrescenta o que aqui interessa: tem de ser
+ * administrador. Ter uma segunda implementação da mesma verificação era
+ * garantir que um dia as duas discordavam.
+ */
+export async function sessaoDeAdminValida(token?: string | null) {
+  const colab = await verifyColaboradorToken(token);
+  return colab !== null && Number(colab.isAdmin) === 1;
 }
 
 export async function verifyColaboradorAuthHeader(authHeader?: string | null) {

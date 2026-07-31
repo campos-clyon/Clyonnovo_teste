@@ -8,9 +8,17 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [passwordChanged, setPasswordChanged] = useState(false);
   const [nome, setNome] = useState("");
+  /** Página a que ia dar quando o middleware o mandou entrar primeiro. */
+  const [proximo, setProximo] = useState("/admin");
 
   useEffect(() => {
-    setPasswordChanged(new URLSearchParams(window.location.search).get("passwordChanged") === "1");
+    const params = new URLSearchParams(window.location.search);
+    setPasswordChanged(params.get("passwordChanged") === "1");
+    // Só caminhos internos — um "proximo" com http:// levava daqui para fora
+    const destino = params.get("proximo");
+    if (destino && destino.startsWith("/") && !destino.startsWith("//")) {
+      setProximo(destino);
+    }
   }, []);
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,7 +53,7 @@ export default function AdminLoginPage() {
       localStorage.setItem("colaborador_id", String(data.colaborador.id));
       localStorage.setItem("colaborador_isAdmin", "1");
       localStorage.removeItem("colaborador_funcao");
-      router.push("/admin");
+      router.push(proximo);
     } catch {
       setError("Erro de ligação. Tente novamente.");
     } finally {

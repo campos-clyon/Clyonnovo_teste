@@ -3,7 +3,7 @@ import * as bcrypt from "bcryptjs";
 import * as jose from "jose";
 
 import { getColaboradorByNome, getDb } from "@/lib/db";
-import { getColaboradorSecretKey } from "@/lib/colaborador-auth";
+import { COOKIE_SESSAO_ADMIN, DURACAO_SESSAO_ADMIN_SEGUNDOS, getColaboradorSecretKey } from "@/lib/colaborador-auth";
 
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       .setExpirationTime(manterSessao ? "30d" : "8h")
       .sign(getColaboradorSecretKey());
 
-    return NextResponse.json({
+    const resposta = NextResponse.json({
       token,
       colaborador: {
         id: colaborador.id,
@@ -142,6 +142,19 @@ export async function POST(req: NextRequest) {
         isAdmin: 1,
       },
     });
+
+    // O mesmo token, agora também onde o servidor o vê. httpOnly para que
+    // nenhum script da página lhe toque; sameSite lax para sobreviver a vir
+    // de um link externo sem servir para pedidos cruzados.
+    resposta.cookies.set(COOKIE_SESSAO_ADMIN, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: DURACAO_SESSAO_ADMIN_SEGUNDOS,
+    });
+
+    return resposta;
   } catch (error) {
     console.error("[Colaborador Login]", error);
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });

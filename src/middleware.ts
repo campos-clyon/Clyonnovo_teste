@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { COOKIE_SESSAO_ADMIN, sessaoDeAdminValida } from "@/lib/colaborador-auth";
 
 const CANONICAL_HOST = "clyon.pt";
 
@@ -28,8 +29,36 @@ const MUDANCAS_CITIES_WITH_PAGE = [
   "setubal",
 ];
 
+/**
+ * O backoffice é servido a quem tiver sessão — verificada aqui, no servidor.
+ *
+ * Até agora nada verificava nada antes de entregar o HTML de /admin: o painel
+ * chegava ao browser e só depois o JavaScript olhava para o localStorage e
+ * decidia se mandava a pessoa para o ecrã de entrada. Quem soubesse disso
+ * escrevia duas chaves na consola e via o painel desenhar.
+ *
+ * A assinatura é verificada aqui à custa do cookie httpOnly que o login põe.
+ * Se não houver cookie, se a assinatura não conferir, se o token tiver
+ * expirado ou se não for de administrador, o pedido nem chega à página.
+ */
+async function temSessaoDeAdmin(request: NextRequest) {
+  return sessaoDeAdminValida(request.cookies.get(COOKIE_SESSAO_ADMIN)?.value);
+}
+
 export async function middleware(request: NextRequest) {
   const { nextUrl, headers } = request;
+
+  // Proteger o backoffice — /admin/login é a única porta aberta
+  if (nextUrl.pathname === "/admin" || nextUrl.pathname.startsWith("/admin/")) {
+    if (nextUrl.pathname !== "/admin/login" && !(await temSessaoDeAdmin(request))) {
+      const entrada = new URL("/admin/login", request.url);
+      // Voltar ao sítio onde ia dar depois de entrar
+      if (nextUrl.pathname !== "/admin") {
+        entrada.searchParams.set("proximo", nextUrl.pathname + nextUrl.search);
+      }
+      return NextResponse.redirect(entrada);
+    }
+  }
 
   // Proteger /conta — requer sessão de cliente Google
   // (startsWith("/conta") apanharia também "/contactos" — por isso a checagem exata + "/conta/")
