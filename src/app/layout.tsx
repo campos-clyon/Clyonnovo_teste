@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/next";
 import PageViewTracker from "@/components/PageViewTracker";
 
 import SiteChrome from "@/components/SiteChrome";
-import { TrpcProvider } from "@/components/TrpcProvider";
 import AuthClientProvider from "@/components/AuthClientProvider";
 import { LocationProvider } from "@/contexts/LocationContext";
 import {
@@ -257,9 +256,7 @@ export default function RootLayout({
         </Script>
         <LocationProvider>
           <AuthClientProvider>
-            <TrpcProvider>
-              <SiteChrome>{children}</SiteChrome>
-            </TrpcProvider>
+            <SiteChrome>{children}</SiteChrome>
           </AuthClientProvider>
         </LocationProvider>
         <Analytics />

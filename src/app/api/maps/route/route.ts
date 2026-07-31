@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,6 +31,9 @@ const FRIENDLY_ERROR = NextResponse.json(
 export const revalidate = 0;
 
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "maps-route", 30, 60);
+  if (limite.erro) return limite.erro;
+
   const key = process.env.GOOGLE_MAPS_SERVER_API_KEY;
   if (!key) {
     console.error("[maps/route] GOOGLE_MAPS_SERVER_API_KEY não configurada.");

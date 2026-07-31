@@ -3,6 +3,7 @@ import type { ModelMessage } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import type { OrderData } from "@/app/simulador/types";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 const MODEL = process.env.GEMINI_MODEL || "google/gemini-2.0-flash";
 
@@ -218,6 +219,9 @@ async function computeLiveEstimate(order: OrderData): Promise<GeminiResponse["li
 }
 
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "chat-simulador", 20, 60);
+  if (limite.erro) return limite.erro;
+
   try {
     const body = (await request.json()) as {
       messages: IncomingMessage[];

@@ -687,12 +687,27 @@ export async function upsertWandersonAdmin(senhaHash?: string): Promise<{ id: nu
     return { id: existing.id, nome: "WANDERSON", isAdmin: 1, funcao: "admin" };
   }
 
-  // Criar WANDERSON se não existir
-  const bcrypt = await import("bcryptjs");
-  const senha = senhaHash ?? await bcrypt.hash("wanderson2026", 10);
+  // Criar WANDERSON se não existir.
+  //
+  // ⚠️ Aqui estava uma palavra-passe de administrador escrita à mão no
+  // código, passada ao bcrypt como valor por omissão. Um segredo no código
+  // não é um segredo: fica no repositório, no histórico do git e em qualquer
+  // cópia que alguém tenha. Se a conta de produção tivesse nascido por este
+  // caminho e nunca tivesse sido mudada, quem lesse o código entrava no
+  // backoffice como administrador.
+  //
+  // Passa a ser obrigatório dizer qual é. Sem hash, esta função recusa criar
+  // a conta em vez de a criar com uma palavra-passe que toda a gente sabe.
+  if (!senhaHash) {
+    throw new Error(
+      "upsertWandersonAdmin: a conta WANDERSON não existe e não foi indicada uma palavra-passe. " +
+      "Criar uma conta de administrador com palavra-passe por omissão não é aceitável — " +
+      "passe um hash bcrypt em senhaHash.",
+    );
+  }
   await pool.execute(
     "INSERT INTO colaboradores (nome, senha, funcao, valorHora, isAdmin) VALUES (?, ?, 'admin', '0', 1)",
-    ["WANDERSON", senha]
+    ["WANDERSON", senhaHash]
   );
   const [[created]] = await pool.execute(
     "SELECT id, nome, funcao, isAdmin FROM colaboradores WHERE nome = ? LIMIT 1",
@@ -1216,6 +1231,23 @@ export async function markOrderAsViewed(id: number): Promise<void> {
   );
 }
 
+/**
+ * Colunas de simulatorOrders que o backoffice pode escrever.
+ *
+ * Gerada a partir do tipo aceite por updateSimulatorOrder — se um campo for
+ * acrescentado ao tipo tem de ser acrescentado aqui, de propósito: é esta
+ * lista, e não o corpo do pedido, que decide o que entra no SQL.
+ */
+const COLUNAS_PEDIDO_EDITAVEIS = new Set<string>([
+  "status", "priority", "notasInternas", "precoFinal", "precoFinalIva", "mensagemCliente",
+  "colaboradorId", "dataAgendada", "assignedToId", "assignedToName", "assignedAt", "serviceType",
+  "description", "contactName", "contactPhone", "contactEmail", "address", "city",
+  "postalCode", "floor", "hasElevator", "parkingDistance", "urgency", "rawOrderJson",
+  "acceptedAt", "scheduledDate", "scheduledStartTime", "scheduledEndTime", "calendarEventId", "calendarEventUrl",
+  "calendarStatus", "calendarNotes", "analysisJsonExtended", "calendarTargetId", "calendarTargetName", "recurrenceFrequency",
+  "recurringDiscountPercent", "clientRating", "clientRatingComment", "historyReadAt",
+]);
+
 export async function updateSimulatorOrder(
   id: number,
   data: Partial<{
@@ -1278,7 +1310,19 @@ export async function updateSimulatorOrder(
     prevForNotify = prevRows[0] ?? null;
   }
 
-  const entries = Object.entries(data).filter(([, v]) => v !== undefined);
+  // ⚠️ As chaves deste objecto vão para a LISTA DE COLUNAS do SQL, e uma
+  // consulta preparada parametriza valores, não identificadores. Como o
+  // PATCH de /api/admin/pedidos faz `const { id, ...fields } = body` e passa
+  // isto directamente, os nomes das colunas vinham do corpo do pedido: uma
+  // chave como `status = 'x', outraColuna` acrescentava SQL à instrução.
+  //
+  // Só um administrador autenticado lá chegava — mas o updateColaborador,
+  // logo acima neste ficheiro, já filtra por lista de permitidos, e não há
+  // razão para este ser a excepção. Uma coluna que não esteja na lista é
+  // ignorada em silêncio, como já acontecia com campos desconhecidos.
+  const entries = Object.entries(data).filter(
+    ([k, v]) => v !== undefined && COLUNAS_PEDIDO_EDITAVEIS.has(k),
+  );
   if (!entries.length) return;
   const sets = entries.map(([k]) => `${k} = ?`).join(", ");
   const vals = [...entries.map(([, v]) => v), id];

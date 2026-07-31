@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLeadEvent } from "@/lib/db";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 // POST /api/leads/events — registar evento de tracking de contacto
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "leads-events", 40, 60);
+  if (limite.erro) return limite.erro;
+
   try {
     const body = await request.json();
     const {
@@ -42,7 +46,9 @@ export async function POST(request: NextRequest) {
       name: name ? String(name).slice(0, 160) : null,
       serviceType: serviceType ? String(serviceType).slice(0, 80) : null,
       location: location ? String(location).slice(0, 120) : null,
-      message: message ? String(message) : null,
+      // Era `String(message)` sem corte: numa rota aberta, isso é deixar
+      // alguém escolher o tamanho das nossas linhas na base de dados.
+      message: message ? String(message).slice(0, 4000) : null,
       simulatorData: simulatorData ? (typeof simulatorData === "string" ? simulatorData : JSON.stringify(simulatorData)) : null,
       contactPreference: contactPreference ? String(contactPreference).slice(0, 30) : null,
       utmSource: utmSource ? String(utmSource).slice(0, 120) : null,

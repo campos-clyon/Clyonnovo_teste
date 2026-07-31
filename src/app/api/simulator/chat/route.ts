@@ -3,6 +3,7 @@ import type { ModelMessage } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import type { OrderData } from "@/app/simulador/types";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
 
@@ -223,6 +224,9 @@ Regras do JSON:
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "simulator-chat", 20, 60);
+  if (limite.erro) return limite.erro;
+
   let order: OrderData = {};
 
   try {

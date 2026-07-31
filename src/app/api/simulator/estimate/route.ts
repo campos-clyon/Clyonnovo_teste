@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import type { OrderData } from "@/app/simulador/types";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
 
 // Motor C foi unificado com Motor B (calculateFastEstimate).
 // Este endpoint delega directamente para o motor activo.
 export async function POST(req: NextRequest) {
+  const limite = await limitarRotaPublica(req, "simulator-estimate", 30, 60);
+  if (limite.erro) return limite.erro;
+
   try {
     const body = await req.json();
     const order: OrderData = body.order ?? {};

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getMapsApiKey } from "@/lib/maps-config";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const revalidate = 0;
 
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "maps-autocomplete", 60, 60);
+  if (limite.erro) return limite.erro;
+
   const { input } = await request.json();
   const query = typeof input === "string" ? input.trim() : "";
 

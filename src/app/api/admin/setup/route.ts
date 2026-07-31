@@ -27,8 +27,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const provided = req.headers.get("x-admin-setup-secret");
-  if (provided !== secret) {
+  // Comparação em tempo constante: `!==` sai no primeiro carácter diferente,
+  // e o tempo de resposta passa a dizer quantos caracteres estavam certos.
+  // Pela rede o sinal é fraco, mas esta rota corre migrações de schema e não
+  // custa nada fechá-la bem.
+  const provided = req.headers.get("x-admin-setup-secret") ?? "";
+  const { timingSafeEqual } = await import("crypto");
+  const a = Buffer.from(provided);
+  const b = Buffer.from(secret);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 interface NominatimResult {
   display_name: string;
@@ -35,6 +36,9 @@ interface AddressSuggestion {
  * }
  */
 export async function GET(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "address-search", 60, 60);
+  if (limite.erro) return limite.erro;
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 interface NominatimResponse {
   address?: {
@@ -35,6 +36,9 @@ interface NominatimResponse {
  * }
  */
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "address-reverse", 40, 60);
+  if (limite.erro) return limite.erro;
+
   try {
     const body = await request.json();
     const { lat, lng } = body;

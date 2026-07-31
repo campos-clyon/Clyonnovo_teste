@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 /**
  * GET /api/location/guess
@@ -55,6 +56,9 @@ function decodeHeader(value: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "location-guess", 30, 60);
+  if (limite.erro) return limite.erro;
+
   try {
     const countryCode = decodeHeader(
       request.headers.get("x-vercel-ip-country"),

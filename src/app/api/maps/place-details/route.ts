@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getMapsApiKey } from "@/lib/maps-config";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const revalidate = 0;
 
@@ -18,6 +19,9 @@ function findComponent(
 }
 
 export async function POST(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "maps-place", 40, 60);
+  if (limite.erro) return limite.erro;
+
   const { placeId } = await request.json();
 
   if (typeof placeId !== "string" || !placeId) {
