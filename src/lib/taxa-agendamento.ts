@@ -100,3 +100,49 @@ export function formatarTaxa(valor: number): string {
     maximumFractionDigits: 2,
   }).format(valor);
 }
+
+/**
+ * ⚠️ TRADUÇÃO OBRIGATÓRIA para a app. Nunca enviar a urgência do site em cru.
+ *
+ * A palavra `flexivel` quer dizer coisas DIFERENTES nos dois lados:
+ *
+ *   no site  → "sem pressa", e vale 0 €
+ *   na app   → "marcou entre 8 e 30 dias", e vale 9,99 €
+ *
+ * Enquanto o simulador só mostra números, a diferença não faz mal. No dia em
+ * que criar um service_request, faz: o estimate-request escreve
+ * `scheduling_fee` a partir de `facts.quando.urgencia`, e um `flexivel` vindo
+ * daqui sai de lá com 9,99 € cobrados a alguém a quem mostrámos zero.
+ *
+ * "Sem pressa" traduz-se para `esta_semana`, que vale 0 € nos dois sistemas —
+ * é a única combinação segura enquanto o site perguntar categorias em vez de
+ * um dia. Quando o simulador tiver a faixa de dias, isto deixa de ser preciso:
+ * o dia determina a taxa e há uma regra só.
+ */
+export type UrgenciaApp = "hoje" | "amanha" | "esta_semana" | "flexivel";
+
+export function urgenciaDoSiteParaApp(urgenciaDoSite: string | null | undefined): UrgenciaApp {
+  switch (urgenciaDoSite) {
+    case "today":     return "hoje";
+    case "tomorrow":  return "amanha";
+    // "this_week", "flexible", "no", vazio — tudo o que no site significa
+    // "não tenho pressa" vai como esta_semana. NUNCA como flexivel.
+    default:          return "esta_semana";
+  }
+}
+
+/**
+ * A taxa que a app vai cobrar pela urgência que lhe mandarmos.
+ *
+ * Serve para uma coisa só: garantir que o valor mostrado no site é o mesmo
+ * que o cliente acaba por pagar. Se estes dois números divergirem, mostrámos
+ * um preço e cobrámos outro.
+ */
+export function taxaQueAppVaiCobrar(urgencia: UrgenciaApp): number {
+  switch (urgencia) {
+    case "hoje":        return 29.99;
+    case "amanha":      return 14.99;
+    case "esta_semana": return 0;
+    case "flexivel":    return 9.99;
+  }
+}

@@ -169,3 +169,51 @@ describe("simulator/analyze — a taxa não vem do modelo", () => {
     expect(rota).toContain("schedulingFee: fastEstimate.schedulingFee");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// A armadilha do "flexivel"
+// ─────────────────────────────────────────────────────────────────────────
+import { urgenciaDoSiteParaApp, taxaQueAppVaiCobrar } from "./taxa-agendamento";
+
+describe("urgenciaDoSiteParaApp — a mesma palavra, dois significados", () => {
+  /**
+   * No site, "flexible" é "sem pressa" e vale 0 €.
+   * Na app, "flexivel" é "marcou entre 8 e 30 dias" e vale 9,99 €.
+   *
+   * Mandar a palavra em cru fazia o cliente pagar 9,99 € depois de lhe termos
+   * mostrado zero. Este é o teste que impede isso de voltar.
+   */
+  it("NUNCA envia flexivel — nem para o flexible do site", () => {
+    for (const u of ["flexible", "this_week", "no", "normal", "", null, undefined]) {
+      expect(urgenciaDoSiteParaApp(u)).not.toBe("flexivel");
+      expect(urgenciaDoSiteParaApp(u)).toBe("esta_semana");
+    }
+  });
+
+  it("hoje e amanhã atravessam sem mudar de sentido", () => {
+    expect(urgenciaDoSiteParaApp("today")).toBe("hoje");
+    expect(urgenciaDoSiteParaApp("tomorrow")).toBe("amanha");
+  });
+});
+
+describe("o que mostramos é o que a app cobra", () => {
+  /**
+   * Se estes dois números divergirem, mostrámos um preço e cobrámos outro.
+   * É a única garantia que temos enquanto os dois sistemas calcularem a taxa
+   * cada um por si.
+   */
+  it("para cada urgência do site, o valor mostrado é o valor cobrado", () => {
+    for (const u of ["today", "tomorrow", "this_week", "flexible", "no", ""]) {
+      const mostrado = taxaPorUrgencia(u);
+      const cobrado = taxaQueAppVaiCobrar(urgenciaDoSiteParaApp(u));
+      expect(cobrado, `divergência em "${u}": mostrado ${mostrado} €, cobrado ${cobrado} €`).toBe(mostrado);
+    }
+  });
+
+  it("o flexivel da app é o único escalão que o site nunca alcança", () => {
+    expect(taxaQueAppVaiCobrar("flexivel")).toBe(9.99);
+    const alcancaveis = ["today", "tomorrow", "this_week", "flexible", "no"]
+      .map((u) => taxaQueAppVaiCobrar(urgenciaDoSiteParaApp(u)));
+    expect(alcancaveis).not.toContain(9.99);
+  });
+});
