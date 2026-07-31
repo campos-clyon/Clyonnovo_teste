@@ -441,6 +441,9 @@ export default function ColaboradorAdminClient() {
   const [selectedPedido, setSelectedPedido] = useState<SimulatorOrder | null>(null);
   const [pedidoDetalheOpen, setPedidoDetalheOpen] = useState(false);
   const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
+  /** Ids marcados na tabela de pedidos, para acções em lote. */
+  const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
+  const [aExecutarLote, setAExecutarLote] = useState<string | null>(null);
   const pedidoSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlePedidoSearch = (value: string) => {
     setPedidoSearch(value);
@@ -582,6 +585,20 @@ export default function ColaboradorAdminClient() {
     }
   };
 
+  /**
+   * Vai buscar os pedidos sem tirar do ecrã os que já lá estão.
+   *
+   * Antes, qualquer carregamento que não fosse o automático punha
+   * pedidosLoading a true, e o ecrã trocava a tabela inteira por
+   * "A carregar pedidos...". Isso acontecia ao mudar de filtro, ao escrever
+   * na pesquisa e depois de cada arquivar/realizado/rejeitado — ou seja, a
+   * tabela desaparecia a cada clique, e com a base a demorar mais de um
+   * segundo era tempo suficiente para dar a sensação de que o painel tinha
+   * ido abaixo.
+   *
+   * A lista antiga fica à vista enquanto a nova não chega. Quem decide se
+   * mostra o ecrã de espera é o render, e só quando não há nada para mostrar.
+   */
   const carregarPedidos = async (authToken: string, status = "todos", search = "", silent = false) => {
     if (!authToken) return;
     try {
@@ -617,6 +634,95 @@ export default function ColaboradorAdminClient() {
   };
 
   /**
+   * Os pedidos que estão à vista com o filtro e a pesquisa actuais.
+   *
+   * A selecção em lote trabalha sobre isto, e não sobre a lista toda: marcar
+   * "todos" tem de querer dizer os que a pessoa está mesmo a ver.
+   */
+  const pedidosVisiveis = useMemo(
+    () => pedidos.filter((p) => pedidoNoFiltro(p, pedidoStatusFilter)),
+    [pedidos, pedidoStatusFilter],
+  );
+
+  const marcarPedido = (id: number) => {
+    setPedidosMarcados((antes) => {
+      const novo = new Set(antes);
+      if (novo.has(id)) novo.delete(id); else novo.add(id);
+      return novo;
+    });
+  };
+
+  const todosMarcados = pedidosVisiveis.length > 0
+    && pedidosVisiveis.every((p) => pedidosMarcados.has(p.id));
+
+  const alternarTodosPedidos = () => {
+    setPedidosMarcados(todosMarcados ? new Set() : new Set(pedidosVisiveis.map((p) => p.id)));
+  };
+
+  /**
+   * Aplica a mesma acção a todos os pedidos marcados.
+   *
+   * Uma confirmação para o lote inteiro, com o número à frente — não uma por
+   * pedido. Os pedidos são tratados um a um e conta-se o que falhou, porque
+   * um erro a meio não deve deixar a pessoa sem saber o que passou e o que
+   * não passou. No fim, uma recarga silenciosa: a lista actualiza-se sem o
+   * ecrã piscar.
+   */
+  const acaoEmLote = async (
+    acao: "concluido" | "rejeitado" | "arquivar" | "apagar",
+  ) => {
+    if (!token || pedidosMarcados.size === 0) return;
+    const ids = [...pedidosMarcados];
+    const n = ids.length;
+    const plural = n === 1 ? "1 pedido" : `${n} pedidos`;
+
+    const perguntas: Record<typeof acao, string> = {
+      concluido: `Marcar ${plural} como realizados? Saem da lista activa e entram na folha de trabalhos concluídos.`,
+      rejeitado: `Marcar ${plural} como rejeitados? Saem da lista activa e não voltam a aparecer na fila.`,
+      arquivar:  `Arquivar ${plural}? Deixam de aparecer na lista principal, mas podem ser vistos em "Arquivados".`,
+      apagar:    `APAGAR ${plural} definitivamente? Isto não tem desfazer — os dados do cliente e o histórico desaparecem.`,
+    };
+    if (!confirm(perguntas[acao])) return;
+
+    setAExecutarLote(acao);
+    let falhas = 0;
+    try {
+      for (const id of ids) {
+        try {
+          let r: Response;
+          if (acao === "apagar") {
+            r = await fetch(`/api/admin/pedidos?id=${id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } else if (acao === "arquivar") {
+            r = await fetch(`/api/admin/pedidos/${id}/reject`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } else {
+            r = await fetch(`/api/admin/pedidos`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ id, status: acao }),
+            });
+          }
+          if (!r.ok) falhas += 1;
+        } catch {
+          falhas += 1;
+        }
+      }
+      setPedidosMarcados(new Set());
+      await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
+      if (falhas > 0) {
+        alert(`${n - falhas} de ${n} tratados. ${falhas} falharam — verifique a lista.`);
+      }
+    } finally {
+      setAExecutarLote(null);
+    }
+  };
+
+  /**
    * Fecha um pedido: realizado ou rejeitado.
    *
    * "concluido" não é só uma etiqueta — dispara a exportação para a folha do
@@ -644,7 +750,7 @@ export default function ColaboradorAdminClient() {
         alert(`Erro: ${j?.message ?? j?.error ?? r.statusText}`);
         return;
       }
-      await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+      await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
     } catch (err) {
       alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -729,6 +835,9 @@ export default function ColaboradorAdminClient() {
   useEffect(() => {
     if (activeSection !== "pedidos" || !token) return;
     carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+    // Mudar de filtro ou de pesquisa muda o que está à vista. Manter a
+    // marcação seria agir sobre linhas que a pessoa já não vê.
+    setPedidosMarcados(new Set());
     const interval = setInterval(() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true), 120000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1227,11 +1336,12 @@ export default function ColaboradorAdminClient() {
                   </button>
                   <button
                     type="button"
+                    disabled={pedidosLoading}
                     onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
-                    className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
                   >
-                    <RefreshCw className="h-4 w-4" />
-                    Actualizar
+                    <RefreshCw className={`h-4 w-4 ${pedidosLoading ? "animate-spin" : ""}`} />
+                    {pedidosLoading ? "A actualizar…" : "Actualizar"}
                   </button>
                 </div>
               </div>
@@ -1313,9 +1423,61 @@ export default function ColaboradorAdminClient() {
                   {pedidosError}
                 </div>
               )}
-              {pedidosLoading ? (
+              {pedidosMarcados.size > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-[16px] border border-cyan-200 bg-cyan-50 px-4 py-3">
+                  <span className="text-sm font-semibold text-cyan-900">
+                    {pedidosMarcados.size} {pedidosMarcados.size === 1 ? "pedido marcado" : "pedidos marcados"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPedidosMarcados(new Set())}
+                    className="text-xs font-medium text-cyan-700 underline underline-offset-2 hover:text-cyan-900"
+                  >
+                    limpar
+                  </button>
+                  <div className="ml-auto flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={aExecutarLote !== null}
+                      onClick={() => acaoEmLote("concluido")}
+                      className="rounded-[10px] border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                    >
+                      {aExecutarLote === "concluido" ? "A marcar…" : "Marcar realizados"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aExecutarLote !== null}
+                      onClick={() => acaoEmLote("rejeitado")}
+                      className="rounded-[10px] border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {aExecutarLote === "rejeitado" ? "A marcar…" : "Marcar rejeitados"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aExecutarLote !== null}
+                      onClick={() => acaoEmLote("arquivar")}
+                      className="rounded-[10px] border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:opacity-50"
+                    >
+                      {aExecutarLote === "arquivar" ? "A arquivar…" : "Arquivar"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aExecutarLote !== null}
+                      onClick={() => acaoEmLote("apagar")}
+                      className="rounded-[10px] border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {aExecutarLote === "apagar" ? "A apagar…" : "Apagar"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* O ecrã de espera é só para a primeira vez, quando não há
+                  mesmo nada para mostrar. Com dados no ecrã, a lista antiga
+                  fica e esmaece enquanto a nova não chega. */}
+              {pedidosLoading && pedidos.length === 0 ? (
                 <div className="py-10 text-center text-sm text-slate-500">A carregar pedidos...</div>
-              ) : pedidos.filter((p) => pedidoNoFiltro(p, pedidoStatusFilter)).length === 0 ? (
+              ) : pedidosVisiveis.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 py-12 text-center">
                   <FileText className="h-10 w-10 text-slate-300" />
                   <div>
@@ -1336,14 +1498,22 @@ export default function ColaboradorAdminClient() {
                   <table className="w-full min-w-[860px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/70">
+                        <th className="pl-4 pr-2 py-3 text-left">
+                          <input
+                            type="checkbox"
+                            aria-label="Marcar todos os pedidos à vista"
+                            checked={todosMarcados}
+                            onChange={alternarTodosPedidos}
+                            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-cyan-600"
+                          />
+                        </th>
                         {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Status", "Origem", "Data", "Ação"].map((h) => (
-                          <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 first:pl-4 last:pr-4 last:text-right">{h}</th>
+                          <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 last:pr-4 last:text-right">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {pedidos
-                        .filter((p) => pedidoNoFiltro(p, pedidoStatusFilter))
+                      {pedidosVisiveis
                         .map((p) => {
                           const statusColors: Record<string, string> = {
                             sem_assistente: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -1404,11 +1574,21 @@ export default function ColaboradorAdminClient() {
                           return (
                             <tr
                               key={p.id}
-                              className="group cursor-pointer transition-colors hover:bg-slate-50"
+                              className={`group cursor-pointer transition-colors ${pedidosMarcados.has(p.id) ? "bg-cyan-50/70" : "hover:bg-slate-50"}`}
                               onClick={() => { setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                             >
+                              {/* Marcar — o clique não pode abrir o pedido */}
+                              <td className="pl-4 pr-2 py-3.5" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Marcar pedido #${p.id}`}
+                                  checked={pedidosMarcados.has(p.id)}
+                                  onChange={() => marcarPedido(p.id)}
+                                  className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-cyan-600"
+                                />
+                              </td>
                               {/* # */}
-                              <td className="pl-4 pr-2 py-3.5">
+                              <td className="px-2 py-3.5">
                                 <span className="font-mono text-[11px] font-semibold text-slate-400">#{p.id}</span>
                               </td>
                               {/* Cliente */}
@@ -1491,7 +1671,7 @@ export default function ColaboradorAdminClient() {
                                             method: "POST",
                                             headers: { Authorization: `Bearer ${token}` },
                                           });
-                                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+                                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
                                         } catch { /* silent */ }
                                       }}
                                     >
@@ -1522,7 +1702,7 @@ export default function ColaboradorAdminClient() {
                                             alert(`Erro: ${j?.message ?? j?.error ?? r.statusText}`);
                                             return;
                                           }
-                                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+                                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
                                         } catch (err) {
                                           alert(`Erro: ${err instanceof Error ? err.message : String(err)}`);
                                         }
@@ -1610,7 +1790,7 @@ export default function ColaboradorAdminClient() {
                         if (r.ok && data?.ok) {
                           const updated = data.order ?? { ...p, assignedToId: colabId, assignedToName: adminNome, status: "atribuido" };
                           setPedidos((prev) => prev.map((x) => x.id === p.id ? { ...x, ...updated } : x));
-                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
+                          await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
                         } else {
                           alert(`Erro ${r.status}: ${data?.message ?? "Não foi possível aceitar."}`);
                         }
