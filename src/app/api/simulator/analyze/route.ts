@@ -485,6 +485,12 @@ export async function POST(req: NextRequest) {
     // O Gemini não calcula este campo — vem sempre do motor local (calculateFastEstimate).
     recommendedPriceWithoutVat: fastEstimate.recommendedPriceWithoutVat,
     recommendedPriceWithVat: fastEstimate.recommendedPriceWithVat,
+    // A taxa de agendamento é uma tabela, não uma estimativa: 29,99 hoje,
+    // 14,99 amanhã, 0 até aos 7 dias, 9,99 dos 8 aos 30. Vem sempre do motor
+    // local. Se viesse do Gemini, um dia ele inventava um valor e passávamos
+    // a cobrar o que um modelo achou — e nem um teste apanharia isso.
+    schedulingFee: fastEstimate.schedulingFee,
+    schedulingFeeLabel: fastEstimate.schedulingFeeLabel,
     // Incluir referência externa APENAS quando existir — backoffice lê este campo
     ...(externalMarketEstimate ? { externalMarketEstimate } : {}),
   };

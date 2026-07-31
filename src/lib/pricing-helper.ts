@@ -159,11 +159,15 @@ ENTULHO: mínimo fixo 90 € s/IVA — sem mínimo de zona
 MUDANÇA: mínimo fixo ${mudanca3PessHora * mudancaMinHoras} € s/IVA (${mudancaMinHoras}h × ${mudanca3PessHora} €/h, 3 colaboradores) — sem mínimo de zona
 
 AGRAVAMENTOS (adicionais ao preço final s/IVA):
-  - Urgência hoje: +40 €
-  - Urgência amanhã: +20 €
   - Estacionamento difícil (taxa fixa): +15 €
   - Desmontagem simples: +30 €
   - Desmontagem complexa: +80 €
+
+A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO.
+  Marcar para hoje ou amanhã tem uma taxa de agendamento da CLYON, cobrada
+  à parte com a reserva, sem IVA. NÃO a somes ao preço: o preço do trabalho
+  é do profissional e é o mesmo em qualquer dia. A taxa é calculada pelo
+  sistema, não por ti.
 
 IVA: 23% → preco_com_iva = preco_sem_iva × 1.23
 
@@ -214,6 +218,8 @@ AGRAVAMENTOS: Urgência hoje +40€ | amanhã +20€ | Estacionamento difícil +
 // ESTIMATIVA RÁPIDA LOCAL (sem Gemini)
 // Devolve resultado em < 50ms a partir do preçário em memória.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { taxaPorUrgencia, formatarTaxa } from "./taxa-agendamento";
 
 export interface FastEstimateInput {
   serviceType?: string;
@@ -267,6 +273,16 @@ export interface FastEstimateResult {
   internalNotes: string[];
   analysisSource: "local_fast_estimate" | "fallback_reference";
   confidence?: "high" | "medium" | "low";
+  /**
+   * Taxa de agendamento — o que a CLYON cobra por guardar o dia.
+   *
+   * FORA do preço do trabalho e SEM IVA, de propósito: o preço do trabalho é
+   * do profissional e a taxa é da CLYON. Somar as duas num total só é
+   * correcto se ninguém aplicar IVA à segunda.
+   */
+  schedulingFee?: number;
+  /** O mesmo em texto, já formatado, para não haver arredondamentos pelo caminho. */
+  schedulingFeeLabel?: string;
 }
 
 // ─── Ranges de referência por tipo de serviço ─────────────────────────────────
@@ -960,10 +976,19 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   }
 
   // ── 7. Agravamentos adicionais (taxas fixas do documento) ────────────────────
+  //
+  // ⚠️ A URGÊNCIA SAIU DAQUI. Somava +40 € (hoje) e +20 € (amanhã) ao preço
+  // do trabalho, e isso estava errado de duas maneiras:
+  //
+  //   1. O preço do trabalho é do profissional. Com a urgência lá dentro, ele
+  //      ganhava mais por um trabalho de hoje do que pelo mesmo trabalho
+  //      daqui a duas semanas — quando o trabalho é exactamente o mesmo.
+  //   2. Levava IVA. Uma taxa de 40 € chegava ao cliente como 49,20 €.
+  //
+  // Passa a ser taxa de agendamento, 100% da CLYON, sem IVA, cobrada com a
+  // reserva — devolvida à parte em `schedulingFee` (ver taxa-agendamento.ts).
+  // Os valores também mudaram: 40/20 já não existem em lado nenhum.
   let extras = sacoCost;
-  const urgency = (input as any).urgency ?? "";
-  if (urgency === "today")    { extras += 40; assumptions.push("Urgência hoje: +40 €"); }
-  if (urgency === "tomorrow") { extras += 20; assumptions.push("Urgência amanhã: +20 €"); }
   if (input.parkingDistance === "difficult") { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
@@ -1038,6 +1063,12 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // Intervalo mínimo/médio/máximo — o mínimo NUNCA pode ficar abaixo do
   // mínimo comercial aplicável (zona/entulho/mudança/por item), para nunca
   // gerar prejuízo; o máximo dá margem de ±10% sobre o valor médio calculado.
+  // Taxa de agendamento — à parte do preço do trabalho e sem IVA.
+  const taxaAgendamento = taxaPorUrgencia((input as any).urgency);
+  if (taxaAgendamento > 0) {
+    assumptions.push(`Taxa de agendamento CLYON: ${formatarTaxa(taxaAgendamento)} (sem IVA, paga com a reserva — não entra no preço do trabalho)`);
+  }
+
   const minVal = Math.max(minimumThreshold, Math.round(finalSemIva * 0.90 * 100) / 100);
   const maxVal = Math.round(finalSemIva * 1.10 * 100) / 100;
   const minValWithVat = Math.round(minVal * (1 + vatRate) * 100) / 100;
@@ -1070,11 +1101,16 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
       `Itens identificados: ${itemCount} (${isFull ? "carga completa" : "itens soltos"})`,
       `Total s/IVA: ${finalSemIva}€ | IVA 23%: ${vat}€ | Total c/IVA: ${withVat}€`,
       `Intervalo: ${minVal}€ a ${maxVal}€ s/IVA (${minValWithVat}€ a ${maxValWithVat}€ c/IVA)`,
+      ...(taxaAgendamento > 0
+        ? [`Taxa de agendamento (CLYON, s/IVA, fora do preço do trabalho): ${formatarTaxa(taxaAgendamento)}`]
+        : []),
       ...(recSemIva > finalSemIva
         ? [`Valor recomendado (acima do calculado): ${recSemIva}€ s/IVA (${recComIva}€ c/IVA)`]
         : []),
     ],
     analysisSource: "local_fast_estimate",
+    schedulingFee: taxaAgendamento,
+    schedulingFeeLabel: taxaAgendamento > 0 ? formatarTaxa(taxaAgendamento) : undefined,
   };
 }
 

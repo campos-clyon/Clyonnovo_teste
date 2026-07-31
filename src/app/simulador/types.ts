@@ -170,6 +170,15 @@ export interface EstimateResult {
   estimatedPriceWithoutVat: number | null;
   vatAmount: number | null;
   estimatedPriceWithVat: number | null;
+  /**
+   * Taxa de agendamento da CLYON — FORA do preço do trabalho e SEM IVA.
+   *
+   * Não somar ao total com IVA nem aplicar-lhe 23%: o preço do trabalho é do
+   * profissional e leva IVA; a taxa é da CLYON, é exacta ao cêntimo e paga-se
+   * com a reserva. São duas contas diferentes, mostradas à parte de propósito.
+   */
+  schedulingFee?: number;
+  schedulingFeeLabel?: string;
   /** Limite inferior do intervalo estimado (sem IVA) */
   estimateMinWithoutVat?: number | null;
   /** Limite superior do intervalo estimado (sem IVA) */

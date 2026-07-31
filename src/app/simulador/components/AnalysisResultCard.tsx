@@ -93,6 +93,29 @@ export default function AnalysisResultCard({
               <span className="text-green-700">€{analysis.estimatedPriceWithVat.toFixed(2)}</span>
             </div>
           </div>
+
+          {/*
+            Taxa de agendamento — linha à parte, e não somada ao total.
+
+            Antes isto era +40 € ou +20 € somados ao preço do trabalho: levava
+            IVA (40 € chegavam como 49,20 €) e ia parar ao profissional, que
+            passava a ganhar mais por um trabalho de hoje. Agora é da CLYON,
+            sem IVA, e o profissional recebe o mesmo em qualquer dia.
+          */}
+          {analysis.schedulingFee != null && analysis.schedulingFee > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold text-amber-900">Taxa de agendamento</span>
+                <span className="text-sm font-bold text-amber-900">
+                  {analysis.schedulingFeeLabel ?? `€${analysis.schedulingFee.toFixed(2)}`}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-amber-800">
+                Por marcar para um dia próximo. Não leva IVA e não entra no preço do trabalho —
+                paga-se à CLYON com a reserva. Escolher um dia a partir de depois de amanhã não tem taxa.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
