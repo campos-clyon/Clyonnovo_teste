@@ -81,9 +81,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (!colaborador.senha || !BCRYPT_HASH_REGEX.test(colaborador.senha)) {
-      console.error("[Colaborador Login] Invalid password hash", {
+      // Só o id: o nome é a credencial de entrada deste painel, e escrevê-lo
+      // nos registos é dar metade do par a quem os leia.
+      console.error("[Colaborador Login] hash de palavra-passe inválido", {
         colaboradorId: colaborador.id,
-        nome: colaborador.nome,
       });
       return NextResponse.json(
         { error: "As credenciais deste colaborador precisam de ser repostas." },

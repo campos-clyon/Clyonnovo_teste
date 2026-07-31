@@ -6,6 +6,7 @@
 
 import { Resend } from "resend";
 import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
+import { e } from "./escapar-html";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:            "Recolha de móveis",
@@ -69,7 +70,7 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
         <tr>
           <td style="padding:36px 36px 24px;">
             <p style="margin:0 0 16px;font-size:17px;color:#1a2332;font-weight:600;">
-              Olá, ${p.clienteName.split(" ")[0]}!
+              Olá, ${e(p.clienteName.split(" ")[0])}!
             </p>
             <p style="margin:0 0 24px;font-size:15px;color:#4a5568;line-height:1.6;">
               Analisámos o seu pedido e preparámos um orçamento personalizado. Consulte os detalhes abaixo e confirme ou cancele a sua reserva.
@@ -86,19 +87,19 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td style="padding:5px 0;font-size:14px;color:#4a5568;width:40%;">Serviço</td>
-                      <td style="padding:5px 0;font-size:14px;color:#1a2332;font-weight:600;">${servico}</td>
+                      <td style="padding:5px 0;font-size:14px;color:#1a2332;font-weight:600;">${e(servico)}</td>
                     </tr>
                     ${p.address ? `<tr>
                       <td style="padding:5px 0;font-size:14px;color:#4a5568;">Morada</td>
-                      <td style="padding:5px 0;font-size:14px;color:#1a2332;">${p.address}</td>
+                      <td style="padding:5px 0;font-size:14px;color:#1a2332;">${e(p.address)}</td>
                     </tr>` : ""}
                     ${p.description ? `<tr>
                       <td style="padding:5px 0;font-size:14px;color:#4a5568;vertical-align:top;">Descrição</td>
-                      <td style="padding:5px 0;font-size:14px;color:#1a2332;">${p.description}</td>
+                      <td style="padding:5px 0;font-size:14px;color:#1a2332;">${e(p.description)}</td>
                     </tr>` : ""}
                     <tr>
                       <td style="padding:5px 0;font-size:14px;color:#4a5568;">Data</td>
-                      <td style="padding:5px 0;font-size:14px;color:#1a2332;">${data}</td>
+                      <td style="padding:5px 0;font-size:14px;color:#1a2332;">${e(data)}</td>
                     </tr>
                   </table>
                   <!-- Preço destaque -->

@@ -6,6 +6,7 @@
 
 import { Resend } from "resend";
 import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
+import { e } from "./escapar-html";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:           "Recolha de móveis",
@@ -76,13 +77,13 @@ function buildHtml(p: SendStatusEmailParams): string {
             <span style="display:inline-block;background:${msg.color}1a;color:${msg.color};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:6px 12px;border-radius:999px;margin-bottom:16px;">
               ${msg.title}
             </span>
-            <p style="margin:0 0 16px;font-size:17px;color:#1a2332;font-weight:600;">Olá, ${primeiroNome}!</p>
+            <p style="margin:0 0 16px;font-size:17px;color:#1a2332;font-weight:600;">Olá, ${e(primeiroNome)}!</p>
             <p style="margin:0 0 24px;font-size:15px;color:#4a5568;line-height:1.6;">${msg.body}</p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f9ff;border-radius:10px;border:1px solid #e0f0fb;margin-bottom:28px;">
               <tr><td style="padding:18px 24px;">
                 <p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#0077B6;">Pedido #${p.orderId}</p>
-                <p style="margin:0;font-size:15px;color:#1a2332;font-weight:600;">${servico}</p>
+                <p style="margin:0;font-size:15px;color:#1a2332;font-weight:600;">${e(servico)}</p>
               </td></tr>
             </table>
 

@@ -8,6 +8,7 @@
  */
 import { Resend } from "resend";
 import { SITE_URL } from "./seo-data";
+import { e } from "./escapar-html";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:           "Recolha de móveis",
@@ -56,9 +57,9 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
         </tr>
         <tr>
           <td style="padding:36px;">
-            <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Olá, <strong>${params.clienteName.split(" ")[0]}</strong>!</p>
+            <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Olá, <strong>${e(params.clienteName.split(" ")[0])}</strong>!</p>
             <p style="color:#475569;font-size:14px;margin:0 0 24px;line-height:1.6;">
-              O teu serviço de <strong>${servico}</strong> foi concluído. Adorávamos saber a tua opinião — a tua avaliação ajuda-nos a manter a qualidade e a escolher os melhores parceiros.
+              O teu serviço de <strong>${e(servico)}</strong> foi concluído. Adorávamos saber a tua opinião — a tua avaliação ajuda-nos a manter a qualidade e a escolher os melhores parceiros.
             </p>
             <p style="text-align:center;margin:0 0 24px;">
               <a href="${contaUrl}"

@@ -52,7 +52,9 @@ function getCalendarClient() {
     throw new Error("GOOGLE_SERVICE_ACCOUNT_EMAIL não configurado.");
   }
 
-  console.log("[calendar] Service Account email:", clientEmail);
+  // O email da service account identifica a nossa integração com o Google e
+  // era escrito nos registos a cada chamada. Não é segredo, mas também não
+  // faz falta nenhuma no caminho normal.
   console.log("[calendar] Private key starts OK:", privateKey.startsWith("-----BEGIN"));
 
   const auth = new google.auth.JWT({

@@ -10,10 +10,19 @@ import {
 import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  // Rota aberta por necessidade — quem preenche o simulador ainda não tem
+  // conta. Mas cada chamada grava uma linha completa na base e dispara email
+  // e WhatsApp para a equipa: sem travão, qualquer pessoa enche o backoffice
+  // de pedidos falsos e gasta a quota de notificações. Dez por IP a cada
+  // cinco minutos é muito mais do que alguém precisa para pedir orçamento.
+  const limite = await limitarRotaPublica(req, "simulador-pedido", 10, 300);
+  if (limite.erro) return limite.erro;
+
   try {
     const { order, estimate, chatHistory } = await req.json();
     if (!order) {

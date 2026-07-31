@@ -216,7 +216,11 @@ export async function PATCH(request: NextRequest) {
       ) as [{ affectedRows: number; changedRows: number }, unknown];
 
       // affectedRows = 1 → INSERT novo; 2 → UPDATE feito; 0 → UPDATE sem alteração (dados iguais)
-      console.log(`[v0] PATCH OK — affectedRows=${result.affectedRows} changedRows=${result.changedRows} email=${userEmail}`);
+      // Era `email=${userEmail}` — o email do cliente escrito nos registos a
+      // cada gravação de perfil, no caminho normal, sem ninguém precisar dele.
+      // Registos guardam-se, exportam-se e vêem-se por mais gente do que a
+      // base de dados. O que interessa para diagnóstico é o resultado.
+      console.log(`[users/me] PATCH ok — affectedRows=${result.affectedRows} changedRows=${result.changedRows}`);
 
       return NextResponse.json({ success: true, affectedRows: result.affectedRows });
     });

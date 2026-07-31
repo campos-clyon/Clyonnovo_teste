@@ -4,6 +4,17 @@ import { Resend } from "resend";
 import { BUSINESS_EMAIL } from "@/lib/seo-data";
 import { createLead } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { e } from "@/lib/escapar-html";
+
+/**
+ * O assunto vem de campos do formulário. Quebras de linha num cabeçalho de
+ * email são o que permite acrescentar cabeçalhos por baixo; a API do Resend
+ * recebe JSON e trata disso, mas um assunto de 4 KB com mudanças de linha
+ * também não serve para nada. Fica numa linha e com tamanho.
+ */
+function assuntoSeguro(texto: string) {
+  return texto.replace(/\s+/g, " ").trim().slice(0, 180);
+}
 
 const ContactSchema = z.object({
   nome:                z.string().min(2).max(120),
@@ -118,7 +129,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
                         </td>
                         <td style="padding-left: 12px;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Nome</p>
-                          <p style="margin: 4px 0 0; color: #1e293b; font-size: 16px; font-weight: 600;">${nome}</p>
+                          <p style="margin: 4px 0 0; color: #1e293b; font-size: 16px; font-weight: 600;">${e(nome)}</p>
                         </td>
                       </tr>
                     </table>
@@ -134,7 +145,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
                         <td style="padding-left: 12px;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Telemóvel</p>
                           <p style="margin: 4px 0 0; color: #1e293b; font-size: 16px; font-weight: 600;">
-                            <a href="tel:${telemovel}" style="color: #0891b2; text-decoration: none;">${telemovel}</a>
+                            <a href="tel:${e(telemovel)}" style="color: #0891b2; text-decoration: none;">${e(telemovel)}</a>
                           </p>
                         </td>
                       </tr>
@@ -150,7 +161,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
                         </td>
                         <td style="padding-left: 12px;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Endereço</p>
-                          <p style="margin: 4px 0 0; color: #1e293b; font-size: 16px; font-weight: 600;">${endereco}</p>
+                          <p style="margin: 4px 0 0; color: #1e293b; font-size: 16px; font-weight: 600;">${e(endereco)}</p>
                         </td>
                       </tr>
                     </table>
@@ -166,7 +177,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
             <td style="padding: 0 40px 32px;">
               <h2 style="margin: 0 0 16px; color: #1e293b; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Mensagem do Cliente</h2>
               <div style="background-color: #fffbeb; border-radius: 12px; padding: 20px; border-left: 4px solid #f59e0b;">
-                <p style="margin: 0; color: #78350f; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${mensagem}</p>
+                <p style="margin: 0; color: #78350f; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${e(mensagem)}</p>
               </div>
             </td>
           </tr>
@@ -208,7 +219,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
     const { data, error } = await resend.emails.send({
       from: "CLYON Website <noreply@clyon.pt>",
       to: [BUSINESS_EMAIL],
-      subject: `Novo pedido: ${servico} - ${endereco}`,
+      subject: assuntoSeguro(`Novo pedido: ${servico} - ${endereco}`),
       text: plainText,
       html: htmlContent,
     });
