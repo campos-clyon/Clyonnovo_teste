@@ -26,7 +26,6 @@ const PRIVADO = [
   "/admin",
   "/admin/",
   "/painel/",
-  "/parceiros/",
   "/conta",
   // Ecrãs de autenticação
   "/auth",

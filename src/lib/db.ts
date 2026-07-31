@@ -1374,7 +1374,8 @@ export async function updateSimulatorOrder(
   // Import dinâmico para evitar dependência circular no módulo (db.ts <-> google-sheets.ts).
   if (data.status === "concluido") {
     const [rows] = await pool.execute(
-      `SELECT id, createdAt, serviceType, city, estimateTotal, precoFinal, precoFinalIva, providerId
+      `SELECT id, createdAt, serviceType, city, estimateTotal, precoFinal, precoFinalIva, providerId,
+              contactName, contactEmail
        FROM simulatorOrders WHERE id = ? LIMIT 1`,
       [id],
     ) as [any[], unknown];
@@ -1383,6 +1384,23 @@ export async function updateSimulatorOrder(
       import("@/lib/google-sheets")
         .then(({ exportCompletedOrderToSheet }) => exportCompletedOrderToSheet(orderForExport))
         .catch((err) => console.error("[updateSimulatorOrder] falha ao carregar google-sheets:", err));
+
+      // Pedido de avaliação ao cliente.
+      //
+      // Isto vivia no botão "concluir" do portal dos parceiros. Com o portal
+      // fechado, quem marca um trabalho como concluído é a administração — e
+      // sem mudar isto de sítio, o cliente deixava de ser convidado a avaliar
+      // e o ecrã de avaliação da conta dele ficava sem ninguém a chegar lá.
+      if (orderForExport.contactEmail) {
+        import("@/lib/email-avaliacao")
+          .then(({ sendReviewRequestEmail }) => sendReviewRequestEmail({
+            to:          orderForExport.contactEmail,
+            clienteName: orderForExport.contactName ?? "Cliente",
+            serviceType: orderForExport.serviceType ?? null,
+            orderId:     Number(id),
+          }))
+          .catch((err) => console.error("[updateSimulatorOrder] falha no email de avaliação:", err));
+      }
     }
   }
 }

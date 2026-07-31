@@ -24,7 +24,7 @@ import { trackLeadEvent } from "@/lib/track-contact";
  */
 
 /** Prefixos que nunca são registados. */
-const PRIVADOS = ["/admin", "/conta", "/parceiros", "/api"];
+const PRIVADOS = ["/admin", "/conta", "/api"];
 
 export default function PageViewTracker() {
   const pathname = usePathname();

@@ -3,11 +3,12 @@ import * as jose from "jose";
 import { sessaoDeAdminValida, verifyColaboradorToken } from "./colaborador-auth";
 
 /**
- * O token de parceiro é assinado com o MESMO JWT_SECRET do colaborador.
- * O comentário em provider-auth.ts dizia que o campo `type: "provider"`
- * impedia a confusão — mas só o lado dos parceiros o verificava. Um token de
- * parceiro passava como colaborador em qualquer rota que só perguntasse
- * "existe token válido?".
+ * Houve um token de parceiro assinado com o MESMO JWT_SECRET do colaborador,
+ * e só o lado dos parceiros verificava o discriminador — um token de parceiro
+ * passava como colaborador em qualquer rota que só perguntasse "existe token
+ * válido?". O portal dos parceiros já não existe, mas os testes ficam: o que
+ * eles fixam é que a assinatura por si só nunca chega, e isso vale para
+ * qualquer token que venha a partilhar esta chave no futuro.
  */
 const SEGREDO = "segredo-de-teste-com-tamanho-suficiente-1234567890";
 
@@ -31,7 +32,7 @@ describe("verifyColaboradorToken — só aceita colaboradores", () => {
   });
 
   // O caso que estava explorável: assinatura válida, domínio errado
-  it("recusa um token de PARCEIRO, apesar de a assinatura conferir", async () => {
+  it("recusa um token de outro domínio, apesar de a assinatura conferir", async () => {
     const t = await assinar({ providerId: 7, name: "Parceiro X", type: "provider" });
     expect(await verifyColaboradorToken(t)).toBeNull();
   });
@@ -90,7 +91,7 @@ describe("sessaoDeAdminValida — o que abre a porta do painel", () => {
     expect(await assinar({ id: 3, nome: "X", isAdmin: "sim" }).then(sessaoDeAdminValida)).toBe(false);
   });
 
-  it("recusa um token de parceiro que se diga administrador", async () => {
+  it("recusa um token de outro domínio que se diga administrador", async () => {
     const t = await assinar({ providerId: 9, name: "P", type: "provider", isAdmin: 1 });
     expect(await sessaoDeAdminValida(t)).toBe(false);
   });

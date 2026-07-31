@@ -43,19 +43,20 @@ export function getColaboradorSecretKey() {
 }
 
 /**
- * ⚠️ O token de PARCEIRO é assinado com o MESMO JWT_SECRET (ver
- * provider-auth.ts). O comentário lá diz que o campo `type: "provider"`
- * impede que seja aceite como token de colaborador — mas só o lado dos
- * parceiros verificava o `type`. Este não verificava nada além da assinatura,
- * por isso um token de parceiro passava aqui como se fosse um colaborador.
+ * Verifica um token de colaborador — e recusa tudo o que não o seja.
  *
- * Em qualquer rota que se limite a `if (!colab) 401`, isso significa que um
- * parceiro externo com conta válida entrava. As rotas que usam requireAdmin
- * escapavam por acidente — o payload de parceiro não tem `isAdmin`, e o
- * `!colab.isAdmin` recusava — mas não é aceitável depender de acidentes
- * quando quem verifica é a porta de casa.
+ * A história vale a pena: havia um token de PARCEIRO assinado com este mesmo
+ * JWT_SECRET. O ficheiro dos parceiros dizia que o campo `type: "provider"`
+ * impedia a confusão, mas só o lado deles é que verificava o `type`. Este não
+ * verificava nada além da assinatura, e por isso um token de parceiro passava
+ * aqui como se fosse um colaborador — em qualquer rota que se limitasse a
+ * `if (!colab) 401`, um parceiro externo entrava.
  *
- * A verificação passa a ser explícita nos dois sentidos.
+ * O portal dos parceiros já não existe, portanto esse token deixou de ser
+ * emitido. As verificações ficam à mesma: são elas que garantem que um token
+ * assinado com esta chave, vindo de onde vier, tem mesmo de ser de um
+ * colaborador para valer. A porta de casa não deve depender de não existir
+ * ninguém lá fora.
  */
 export async function verifyColaboradorToken(token?: string | null) {
   if (!token) return null;
