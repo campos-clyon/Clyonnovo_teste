@@ -2562,15 +2562,6 @@ export default function ColaboradorAdminClient() {
                 </div>
               </div>
 
-              {/* A app grava os pedidos mas ainda não mostra as respostas.
-                  Dizê-lo aqui evita que alguém responda a pensar que o
-                  cliente vai ler — hoje ainda não vai. */}
-              <div className="rounded-[16px] border border-amber-400/25 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100">
-                A app ainda não mostra as respostas ao cliente — o ecrã da conversa está a ser feito do lado da app.
-                O que escrever aqui fica gravado e aparece lá quando esse ecrã existir. Até então, para chegar mesmo
-                à pessoa, use o telefone ou o email que estão na ficha.
-              </div>
-
               {ticketErro && (
                 <div className="rounded-[16px] border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
                   {ticketErro}
