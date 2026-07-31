@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import { origemDoPedido, origemDoLead } from "@/lib/acesso";
+import {
+  ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
+  type EstadoTicket,
+} from "@/lib/suporte";
 import ContasPanel from "@/components/admin/ContasPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
@@ -25,6 +29,7 @@ import {
   Filter,
   ImagePlus,
   LayoutDashboard,
+  LifeBuoy,
   ListChecks,
   LogOut,
   Mail,
@@ -58,7 +63,7 @@ type SimulatorSetting = {
   description?: string | null;
 };
 
-type AdminSection = "overview" | "pedidos" | "app_clyon" | "leads" | "site" | "configs" | "contas";
+type AdminSection = "overview" | "pedidos" | "app_clyon" | "leads" | "site" | "configs" | "contas" | "suporte";
 
 type Lead = {
   id: number;
@@ -128,6 +133,34 @@ type EventTotals = {
 };
 
 
+type TicketSuporte = {
+  id: string;
+  user_id: string | null;
+  user_role: string | null;
+  subject: string | null;
+  description: string | null;
+  category: string | null;
+  status: string;
+  request_id: string | null;
+  created_at: string;
+  autorNome: string | null;
+  autorEmail: string | null;
+  mensagens: number;
+};
+
+type MensagemTicket = {
+  id: string;
+  author_role: string | null;
+  author_label: string | null;
+  body: string | null;
+  created_at: string;
+};
+
+type TicketDetalhe = {
+  ticket: TicketSuporte & { autorTelefone: string | null; resolved_at: string | null };
+  mensagens: MensagemTicket[];
+};
+
 const adminNavItems: Array<{
   id: AdminSection;
   icon: ComponentType<{ className?: string }>;
@@ -137,6 +170,7 @@ const adminNavItems: Array<{
   { id: "app_clyon", icon: Smartphone },
   { id: "leads",     icon: TrendingUp },
   { id: "contas",     icon: UserPlus },
+  { id: "suporte",   icon: LifeBuoy },
   { id: "configs",   icon: Settings2 },
 ];
 
@@ -151,7 +185,7 @@ const adminNavItems: Array<{
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
-  { titulo: "Quem contacta", itens: ["leads", "contas"] },
+  { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["configs"] },
 ];
 
@@ -162,6 +196,7 @@ const sectionLabels: Record<AdminSection, string> = {
   leads:      "Leads",
   site:       "Configurações",
   contas:     "Contas",
+  suporte:    "Suporte",
   configs:    "Configs",
 };
 
@@ -441,6 +476,15 @@ export default function ColaboradorAdminClient() {
   const [selectedPedido, setSelectedPedido] = useState<SimulatorOrder | null>(null);
   const [pedidoDetalheOpen, setPedidoDetalheOpen] = useState(false);
   const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
+  const [tickets, setTickets] = useState<TicketSuporte[]>([]);
+  const [ticketsPorTratar, setTicketsPorTratar] = useState(0);
+  const [ticketsFiltro, setTicketsFiltro] = useState<"por_tratar" | "todos" | EstadoTicket>("por_tratar");
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketAberto, setTicketAberto] = useState<TicketDetalhe | null>(null);
+  const [ticketResposta, setTicketResposta] = useState("");
+  const [ticketAEnviar, setTicketAEnviar] = useState(false);
+  const [ticketErro, setTicketErro] = useState<string | null>(null);
+
   /** Ids marcados na tabela de pedidos, para acções em lote. */
   const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
   const [aExecutarLote, setAExecutarLote] = useState<string | null>(null);
@@ -630,6 +674,88 @@ export default function ColaboradorAdminClient() {
       if (!silent) setPedidosError("Não foi possível carregar os pedidos.");
     } finally {
       if (!silent) setPedidosLoading(false);
+    }
+  };
+
+  const carregarTickets = async (authToken: string, filtro = ticketsFiltro, silencioso = false) => {
+    if (!authToken) return;
+    if (!silencioso) setTicketsLoading(true);
+    try {
+      const r = await fetch(`/api/admin/suporte?estado=${filtro}&_=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const d = await r.json();
+      if (r.ok) {
+        setTickets(d.tickets ?? []);
+        setTicketsPorTratar(d.porTratar ?? 0);
+        setTicketErro(null);
+      } else {
+        setTicketErro(d.error ?? "Não foi possível carregar o suporte.");
+      }
+    } catch {
+      setTicketErro("Erro de ligação ao carregar o suporte.");
+    } finally {
+      if (!silencioso) setTicketsLoading(false);
+    }
+  };
+
+  const abrirTicket = async (id: string) => {
+    if (!token) return;
+    setTicketResposta("");
+    setTicketErro(null);
+    try {
+      const r = await fetch(`/api/admin/suporte/${id}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json();
+      if (r.ok) setTicketAberto(d as TicketDetalhe);
+      else setTicketErro(d.error ?? "Não foi possível abrir este pedido.");
+    } catch {
+      setTicketErro("Erro de ligação.");
+    }
+  };
+
+  const responderTicket = async () => {
+    if (!token || !ticketAberto || !ticketResposta.trim()) return;
+    setTicketAEnviar(true);
+    setTicketErro(null);
+    try {
+      const r = await fetch(`/api/admin/suporte/${ticketAberto.ticket.id}/mensagens`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ body: ticketResposta.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setTicketErro(d.error ?? "Não foi possível enviar a resposta.");
+        return;
+      }
+      setTicketResposta("");
+      await abrirTicket(ticketAberto.ticket.id);
+      await carregarTickets(token, ticketsFiltro, true);
+    } catch {
+      setTicketErro("Erro de ligação ao enviar.");
+    } finally {
+      setTicketAEnviar(false);
+    }
+  };
+
+  const mudarEstadoTicket = async (id: string, status: EstadoTicket) => {
+    if (!token) return;
+    try {
+      const r = await fetch(`/api/admin/suporte/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setTicketErro(d.error ?? "Não foi possível mudar o estado."); return; }
+      if (ticketAberto?.ticket.id === id) await abrirTicket(id);
+      await carregarTickets(token, ticketsFiltro, true);
+    } catch {
+      setTicketErro("Erro de ligação.");
     }
   };
 
@@ -843,6 +969,22 @@ export default function ColaboradorAdminClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, pedidoStatusFilter, pedidoSearchDebounced]);
 
+  // O contador do menu tem de estar certo mesmo sem se abrir a secção — é
+  // essa a razão de ele existir. Sem isto voltávamos ao mesmo: ninguém abre
+  // o que não sabe que tem coisas lá dentro.
+  useEffect(() => {
+    if (!token) return;
+    carregarTickets(token, ticketsFiltro, true);
+    const intervalo = setInterval(() => carregarTickets(token, ticketsFiltro, true), 120000);
+    return () => clearInterval(intervalo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, ticketsFiltro]);
+
+  useEffect(() => {
+    if (activeSection === "suporte" && token) carregarTickets(token, ticketsFiltro);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, ticketsFiltro]);
+
   // Carregar resumo de pedidos para o overview (5 mais recentes)
   useEffect(() => {
     if (!token) return;
@@ -1053,6 +1195,16 @@ export default function ColaboradorAdminClient() {
                         >
                           <Icon className="h-4 w-4 flex-shrink-0" />
                           <span className="truncate">{sectionLabels[item.id]}</span>
+                          {item.id === "suporte" && ticketsPorTratar > 0 && (
+                            <span
+                              className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                active ? "bg-white/25 text-white" : "bg-rose-500 text-white"
+                              }`}
+                              title={`${ticketsPorTratar} por tratar`}
+                            >
+                              {ticketsPorTratar}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -1753,6 +1905,136 @@ export default function ColaboradorAdminClient() {
             </section>
           )}
 
+          {/* Ticket de suporte aberto — descrição, conversa e resposta */}
+          {ticketAberto && (
+            <div
+              className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm"
+              onClick={() => setTicketAberto(null)}
+            >
+              <div
+                className="my-8 w-full max-w-3xl rounded-[24px] border border-white/10 bg-slate-900 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-400">
+                      {rotuloQuemEscreve(ticketAberto.ticket.user_role)} · {rotuloCategoria(ticketAberto.ticket.category)}
+                    </p>
+                    <h3 className="mt-1 truncate text-xl font-semibold text-white">
+                      {ticketAberto.ticket.subject || "(sem assunto)"}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {ticketAberto.ticket.autorNome ?? "—"}
+                      {ticketAberto.ticket.autorEmail && <> · {ticketAberto.ticket.autorEmail}</>}
+                      {ticketAberto.ticket.autorTelefone && <> · {ticketAberto.ticket.autorTelefone}</>}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      Aberto {haQuantoTempo(ticketAberto.ticket.created_at)}
+                      {ticketAberto.ticket.resolved_at && <> · fechado em {new Date(ticketAberto.ticket.resolved_at).toLocaleDateString("pt-PT")}</>}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTicketAberto(null)}
+                    className="flex-shrink-0 rounded-[10px] p-2 text-slate-500 transition hover:bg-white/5 hover:text-white"
+                    aria-label="Fechar"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 p-5">
+                  {/* Atalho para o pedido, quando a app o tiver preenchido */}
+                  {ticketAberto.ticket.request_id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicketAberto(null);
+                        setActiveClyonTab("pedidos");
+                        setActivePedidoId(ticketAberto.ticket.request_id);
+                        setActiveSection("app_clyon");
+                      }}
+                      className="w-full rounded-[14px] border border-violet-400/25 bg-violet-400/[0.07] px-4 py-2.5 text-left text-sm font-semibold text-violet-200 transition hover:bg-violet-400/15"
+                    >
+                      Ver o pedido relacionado →
+                    </button>
+                  )}
+
+                  {/* O que a pessoa escreveu */}
+                  <div className="rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">O pedido</p>
+                    <p className="whitespace-pre-wrap text-sm text-slate-200">{ticketAberto.ticket.description || "—"}</p>
+                  </div>
+
+                  {/* A conversa */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Conversa {ticketAberto.mensagens.length === 0 && "— ainda sem respostas"}
+                    </p>
+                    {ticketAberto.mensagens.map((m) => {
+                      const daCasa = m.author_role === "admin";
+                      return (
+                        <div
+                          key={m.id}
+                          className={`rounded-[14px] border p-3 ${
+                            daCasa
+                              ? "border-sky-400/25 bg-sky-400/[0.07] ml-8"
+                              : "border-white/10 bg-white/[0.03] mr-8"
+                          }`}
+                        >
+                          <p className="mb-1 text-[11px] font-semibold text-slate-400">
+                            {daCasa ? (m.author_label ?? "CLYON") : rotuloQuemEscreve(m.author_role)}
+                            <span className="ml-2 font-normal text-slate-600">
+                              {new Date(m.created_at).toLocaleString("pt-PT")}
+                            </span>
+                          </p>
+                          <p className="whitespace-pre-wrap text-sm text-slate-200">{m.body}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Responder */}
+                  <div className="space-y-2">
+                    <textarea
+                      rows={4}
+                      value={ticketResposta}
+                      onChange={(e) => setTicketResposta(e.target.value)}
+                      placeholder="Escreva a resposta…"
+                      className="w-full rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-sky-400/40"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        disabled={ticketAEnviar || !ticketResposta.trim()}
+                        onClick={responderTicket}
+                        className="h-10 rounded-[12px] bg-sky-500 px-5 text-white hover:bg-sky-400 disabled:opacity-50"
+                      >
+                        {ticketAEnviar ? "A enviar…" : "Responder"}
+                      </Button>
+                      <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                        {ESTADOS_TICKET.filter((e) => e !== ticketAberto.ticket.status).map((e) => (
+                          <button
+                            key={e}
+                            type="button"
+                            onClick={() => mudarEstadoTicket(ticketAberto.ticket.id, e)}
+                            className={`rounded-[10px] border px-3 py-1.5 text-[11px] font-semibold transition ${
+                              e === "closed"
+                                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20"
+                                : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
+                            }`}
+                          >
+                            {ROTULO_ESTADO[e]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Modal de confirmação de aceitar pedido */}
           {confirmAcceptPedido && token && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -2245,6 +2527,121 @@ export default function ColaboradorAdminClient() {
             </section>
           )}
           {/* ══════════════════════════════════════════════════════════════ */}
+
+          {activeSection === "suporte" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">Centro de suporte</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-white">Pedidos de ajuda</h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    O que os clientes e profissionais escrevem na app. Mais antigo primeiro — quem espera há mais tempo aparece em cima.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={ticketsFiltro}
+                    onChange={(e) => setTicketsFiltro(e.target.value as typeof ticketsFiltro)}
+                    className="h-10 rounded-[12px] border border-white/10 bg-white/[0.05] px-3 text-sm text-white outline-none"
+                  >
+                    <option value="por_tratar" className="bg-slate-900">Por tratar</option>
+                    {ESTADOS_TICKET.map((e) => (
+                      <option key={e} value={e} className="bg-slate-900">{ROTULO_ESTADO[e]}</option>
+                    ))}
+                    <option value="todos" className="bg-slate-900">Todos</option>
+                  </select>
+                  <Button
+                    type="button"
+                    disabled={ticketsLoading}
+                    onClick={() => carregarTickets(token, ticketsFiltro)}
+                    className="h-10 rounded-[12px] bg-sky-500 px-4 text-white hover:bg-sky-400 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${ticketsLoading ? "animate-spin" : ""}`} />
+                    {ticketsLoading ? "A actualizar…" : "Actualizar"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* A app grava os pedidos mas ainda não mostra as respostas.
+                  Dizê-lo aqui evita que alguém responda a pensar que o
+                  cliente vai ler — hoje ainda não vai. */}
+              <div className="rounded-[16px] border border-amber-400/25 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100">
+                A app ainda não mostra as respostas ao cliente — o ecrã da conversa está a ser feito do lado da app.
+                O que escrever aqui fica gravado e aparece lá quando esse ecrã existir. Até então, para chegar mesmo
+                à pessoa, use o telefone ou o email que estão na ficha.
+              </div>
+
+              {ticketErro && (
+                <div className="rounded-[16px] border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                  {ticketErro}
+                </div>
+              )}
+
+              {ticketsLoading && tickets.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-500">A carregar pedidos de suporte…</p>
+              ) : tickets.length === 0 ? (
+                <div className="rounded-[18px] border border-dashed border-white/10 py-12 text-center">
+                  <LifeBuoy className="mx-auto mb-3 h-10 w-10 text-slate-600" />
+                  <p className="text-base font-semibold text-slate-300">Nada por tratar</p>
+                  <p className="mt-1 text-sm text-slate-500">Quando alguém escrever pelo centro de suporte da app, aparece aqui.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-[18px] border border-white/[0.07]">
+                  <table className="w-full min-w-[820px] border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-left text-[10px] uppercase tracking-[0.18em] text-slate-500">
+                        {["Assunto", "Quem escreveu", "Tipo", "Categoria", "Estado", "À espera", "Ação"].map((h) => (
+                          <th key={h} className="px-3 py-3 font-semibold first:pl-4 last:pr-4 last:text-right">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tickets.map((t) => (
+                        <tr
+                          key={t.id}
+                          className="cursor-pointer border-b border-white/5 transition hover:bg-white/[0.03]"
+                          onClick={() => abrirTicket(t.id)}
+                        >
+                          <td className="max-w-[260px] py-3 pl-4 pr-3">
+                            <p className="truncate font-semibold text-white">{t.subject || "(sem assunto)"}</p>
+                            <p className="mt-0.5 truncate text-[11px] text-slate-500">{t.description}</p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <p className="text-white">{t.autorNome ?? "—"}</p>
+                            {t.autorEmail && <p className="text-[11px] text-slate-500">{t.autorEmail}</p>}
+                          </td>
+                          <td className="px-3 py-3 text-slate-300">{rotuloQuemEscreve(t.user_role)}</td>
+                          <td className="px-3 py-3 text-slate-300">{rotuloCategoria(t.category)}</td>
+                          <td className="px-3 py-3">
+                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                              t.status === "open" ? "border-rose-400/30 bg-rose-500/15 text-rose-200"
+                              : t.status === "closed" ? "border-white/10 bg-white/[0.05] text-slate-400"
+                              : "border-amber-400/30 bg-amber-400/10 text-amber-200"
+                            }`}>
+                              {ROTULO_ESTADO[t.status as EstadoTicket] ?? t.status}
+                            </span>
+                            {t.mensagens > 0 && (
+                              <span className="ml-1.5 text-[11px] text-slate-500">{t.mensagens} msg</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-slate-400">{haQuantoTempo(t.created_at)}</td>
+                          <td className="py-3 pl-3 pr-4 text-right">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); abrirTicket(t.id); }}
+                              className="rounded-[10px] border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold text-sky-200 transition hover:bg-sky-400/20"
+                            >
+                              Abrir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
 
           {activeSection === "contas" && (
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">

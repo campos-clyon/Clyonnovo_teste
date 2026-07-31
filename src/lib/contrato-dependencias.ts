@@ -35,6 +35,28 @@ export type Dependencia = {
 
 export const DEPENDENCIAS: Dependencia[] = [
   {
+    nome: "support_tickets",
+    tipo: "tabela",
+    colunas: [
+      "id", "user_id", "user_role", "subject", "description", "category",
+      "priority", "status", "request_id", "assigned_to", "resolved_at",
+      "created_at", "updated_at",
+    ],
+    usadoEm: "Centro de suporte do painel — a lista, o contador e a mudança de estado",
+  },
+  {
+    nome: "support_ticket_messages",
+    tipo: "tabela",
+    colunas: [
+      "id", "ticket_id", "author_id", "author_role", "body", "attachments", "created_at",
+      // ⚠️ author_label é acrescentada por migração do nosso lado: author_id é
+      // um uuid de auth.users e quem responde no painel é um colaborador do
+      // MySQL, com id inteiro. Mesma solução de payment_references.confirmed_by_label.
+      "author_label",
+    ],
+    usadoEm: "A conversa do suporte; é aqui que a resposta do painel fica gravada",
+  },
+  {
     nome: "service_requests",
     tipo: "tabela",
     colunas: [
