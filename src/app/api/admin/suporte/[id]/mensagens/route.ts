@@ -6,6 +6,13 @@ import { etiquetaAutor } from "@/lib/suporte";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/**
+ * A tabela tem um gatilho (trg_avisar_resposta_do_suporte) que escreve em
+ * notifications. Se alguma coisa nesse caminho bloquear, é melhor a função
+ * morrer com erro do que ficar pendurada — do outro lado há uma pessoa a
+ * olhar para um botão parado.
+ */
+export const maxDuration = 20;
 
 const MAX_CARACTERES = 5000;
 

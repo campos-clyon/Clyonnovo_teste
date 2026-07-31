@@ -717,27 +717,55 @@ export default function ColaboradorAdminClient() {
     }
   };
 
+  /**
+   * Envia a resposta — e desiste ao fim de 25 segundos.
+   *
+   * Sem isto, um pedido que não volta deixa o botão em "A enviar…" para
+   * sempre: o ecrã não diz que falhou, não deixa tentar outra vez, e quem
+   * está a operar fica sem saber se a mensagem foi ou não. Um erro visível é
+   * sempre melhor do que um botão parado.
+   *
+   * 25 s é de propósito mais do que o limite da função no Vercel: se for o
+   * servidor a desistir primeiro, recebemos o erro dele, que diz mais.
+   */
   const responderTicket = async () => {
     if (!token || !ticketAberto || !ticketResposta.trim()) return;
+    const idTicket = ticketAberto.ticket.id;
     setTicketAEnviar(true);
     setTicketErro(null);
+
+    const desistir = new AbortController();
+    const relogio = setTimeout(() => desistir.abort(), 25000);
+
     try {
-      const r = await fetch(`/api/admin/suporte/${ticketAberto.ticket.id}/mensagens`, {
+      const r = await fetch(`/api/admin/suporte/${idTicket}/mensagens`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ body: ticketResposta.trim() }),
+        signal: desistir.signal,
       });
-      const d = await r.json();
+      const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setTicketErro(d.error ?? "Não foi possível enviar a resposta.");
+        setTicketErro(d.error ?? `Não foi possível enviar a resposta (${r.status}).`);
         return;
       }
       setTicketResposta("");
-      await abrirTicket(ticketAberto.ticket.id);
+      await abrirTicket(idTicket);
       await carregarTickets(token, ticketsFiltro, true);
-    } catch {
-      setTicketErro("Erro de ligação ao enviar.");
+    } catch (e) {
+      const desistiu = e instanceof DOMException && e.name === "AbortError";
+      setTicketErro(
+        desistiu
+          // A mensagem pode ter sido gravada e só a resposta não ter voltado.
+          // Dizer "tente outra vez" sem avisar disto leva a duplicados.
+          ? "O envio demorou demasiado e foi cancelado. Feche e volte a abrir o pedido para ver se a resposta ficou gravada antes de a escrever outra vez."
+          : "Erro de ligação ao enviar a resposta.",
+      );
+      // Recarregar mostra o que ficou mesmo gravado, em vez de deixar o ecrã
+      // a dizer "ainda sem respostas" quando talvez já haja uma.
+      await abrirTicket(idTicket).catch(() => {});
     } finally {
+      clearTimeout(relogio);
       setTicketAEnviar(false);
     }
   };
