@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { tipoDoFicheiro } from "@/lib/tipo-ficheiro";
+import { obterTokenDoBlob } from "@/lib/blob-token";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,12 +31,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    // O nome da variável depende do prefixo com que o store foi ligado — ver
+    // blob-token.ts. Procurar só por BLOB_READ_WRITE_TOKEN dava "não
+    // configurado" com o store ligado ali ao lado, e nenhuma foto era gravada.
+    const tokenBlob = obterTokenDoBlob();
+    if (!tokenBlob.ok) {
+      console.error("[upload-fotos] sem token de escrita:", tokenBlob.motivo);
       return NextResponse.json(
         {
           error: "UPLOAD_DISABLED",
-          message: "O armazenamento de fotos não está configurado neste ambiente (falta BLOB_READ_WRITE_TOKEN).",
-          motivoTecnico: "BLOB_READ_WRITE_TOKEN em falta no ambiente",
+          message: "O armazenamento de fotos não está configurado neste ambiente.",
+          motivoTecnico: tokenBlob.motivo,
           falhados: [], recebidos: 0, files: [], urls: [],
         },
         { status: 501 }
@@ -86,6 +92,9 @@ export async function POST(request: NextRequest) {
           access: "public",
           contentType: tipo,
           addRandomSuffix: false,
+          // Explícito: sem isto o SDK só olha para BLOB_READ_WRITE_TOKEN, e o
+          // nosso pode chamar-se outra coisa.
+          token: tokenBlob.token,
         });
         uploaded.push({ url: blob.url, name: file.name, size: file.size, type: file.type });
       } catch (err) {
