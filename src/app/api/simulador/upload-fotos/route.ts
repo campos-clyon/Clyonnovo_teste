@@ -10,7 +10,22 @@ export const maxDuration = 60;
 // A lista de tipos aceites vive em src/lib/tipo-ficheiro.ts, que também
 // sabe deduzir pela extensão quando o browser não declara nada.
 const MAX_SIZE = 30 * 1024 * 1024; // 30 MB por ficheiro
-const MAX_FICHEIROS = 20;          // por pedido — um cliente não envia mais que isto
+const MAX_FICHEIROS = 20; // por pedido — um cliente não envia mais que isto
+
+/**
+ * A mensagem de erro do SDK, sem nada que se pareça com uma credencial.
+ *
+ * Isto sai numa resposta HTTP de uma rota pública. Um token do Vercel Blob
+ * começa por `vercel_blob_rw_`; qualquer coisa com essa forma é apagada antes
+ * de sair daqui, aconteça o que acontecer à mensagem do SDK no futuro.
+ */
+function limparSegredos(err: unknown): string {
+  const bruto = err instanceof Error ? err.message : String(err);
+  return bruto
+    .replace(/vercel_blob_rw_[A-Za-z0-9_-]+/g, "[token]")
+    .replace(/\b[A-Za-z0-9_-]{40,}\b/g, "[valor removido]")
+    .slice(0, 200);
+}
 
 /**
  * POST /api/simulador/upload-fotos
@@ -99,7 +114,12 @@ export async function POST(request: NextRequest) {
         uploaded.push({ url: blob.url, name: file.name, size: file.size, type: file.type });
       } catch (err) {
         console.error("[upload-fotos] falhou um ficheiro:", file.name, err);
-        falhados.push({ name: file.name, motivo: "erro ao guardar" });
+        // "erro ao guardar" e mais nada obrigava a adivinhar de que lado
+        // estava o problema — token errado, store errado, sem permissão de
+        // escrita. A frase do SDK diz qual é. Vai sem o token lá dentro: as
+        // mensagens do Vercel Blob às vezes ecoam o que receberam, e isto sai
+        // numa resposta HTTP pública.
+        falhados.push({ name: file.name, motivo: `erro ao guardar: ${limparSegredos(err)}` });
       }
     }
 

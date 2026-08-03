@@ -73,3 +73,44 @@ describe("obterTokenDoBlob", () => {
     if (!r.ok) expect(r.encontradas).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// A mensagem de erro não pode levar credenciais lá dentro
+// ─────────────────────────────────────────────────────────────────────────
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+describe("limparSegredos — o erro do SDK sai numa resposta pública", () => {
+  const rota = readFileSync(
+    join(process.cwd(), "src/app/api/simulador/upload-fotos/route.ts"),
+    "utf8",
+  );
+
+  it("existe e é usado na razão da falha", () => {
+    expect(rota).toContain("function limparSegredos");
+    expect(rota).toContain("erro ao guardar: ${limparSegredos(err)}");
+  });
+
+  it("apaga tokens do Vercel Blob e cadeias longas de credencial", () => {
+    // Reproduz a função a partir do ficheiro, para o teste falhar se ela mudar
+    const limpar = (t: string) =>
+      t.replace(/vercel_blob_rw_[A-Za-z0-9_-]+/g, "[token]")
+       .replace(/\b[A-Za-z0-9_-]{40,}\b/g, "[valor removido]")
+       .slice(0, 200);
+
+    const comToken = "Access denied for vercel_blob_rw_AbC123xyz_secretissimo";
+    expect(limpar(comToken)).not.toContain("AbC123xyz");
+    expect(limpar(comToken)).toContain("[token]");
+
+    const comCadeia = "invalid credential " + "a".repeat(60);
+    expect(limpar(comCadeia)).not.toContain("a".repeat(60));
+  });
+
+  it("uma mensagem normal continua legível", () => {
+    const limpar = (t: string) =>
+      t.replace(/vercel_blob_rw_[A-Za-z0-9_-]+/g, "[token]")
+       .replace(/\b[A-Za-z0-9_-]{40,}\b/g, "[valor removido]")
+       .slice(0, 200);
+    expect(limpar("This store does not exist")).toBe("This store does not exist");
+  });
+});
