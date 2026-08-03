@@ -308,6 +308,11 @@ export default function SimulatorThreePhaseForm() {
       // nenhum de que alguma vez as houve — a equipa via "nenhuma foto" e o
       // cliente jurava tê-las enviado.
       let fotosPerdidas = 0;
+      // A RAZÃO por que falharam. Sem isto, o painel diz "falhou o
+      // carregamento" e ninguém sabe se foi o tamanho, o formato, a rede ou
+      // uma variável de ambiente em falta — e da próxima vez volta-se a
+      // adivinhar. Vai com o pedido.
+      let motivoFalhaFotos: string | null = null;
       if (rawFiles.length > 0) {
         try {
           const fd = new FormData();
@@ -317,10 +322,15 @@ export default function SimulatorThreePhaseForm() {
           uploadedFiles = (upData?.files ?? []) as typeof uploadedFiles;
           fotosPerdidas = rawFiles.length - uploadedFiles.length;
           if (fotosPerdidas > 0) {
-            console.error(`[simulador] ${fotosPerdidas} de ${rawFiles.length} fotos não subiram`, upData?.falhados ?? upData?.error);
+            const porFicheiro = (upData?.falhados ?? []) as Array<{ name: string; motivo: string }>;
+            motivoFalhaFotos = porFicheiro.length > 0
+              ? porFicheiro.map((f) => `${f.name}: ${f.motivo}`).join(" | ")
+              : (upData?.motivoTecnico ?? upData?.message ?? upData?.error ?? `resposta ${upRes.status} do servidor`);
+            console.error(`[simulador] ${fotosPerdidas} de ${rawFiles.length} fotos não subiram`, motivoFalhaFotos);
           }
         } catch (err) {
           fotosPerdidas = rawFiles.length;
+          motivoFalhaFotos = `erro de rede: ${err instanceof Error ? err.message : String(err)}`;
           console.error("[simulador] Erro de rede no upload:", err);
         }
       }
@@ -356,6 +366,7 @@ export default function SimulatorThreePhaseForm() {
           })),
           // Fica no pedido para a equipa saber que houve fotos e pedi-las
           fotosNaoEnviadas: fotosPerdidas,
+          motivoFotosNaoEnviadas: motivoFalhaFotos,
         };
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",

@@ -2265,6 +2265,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       {(() => {
                         const raw = parseRawOrder(order.rawOrderJson);
                         const perdidas = Number((raw as Record<string, unknown>)?.fotosNaoEnviadas ?? 0);
+                        const motivo = (raw as Record<string, unknown>)?.motivoFotosNaoEnviadas;
                         if (!perdidas) return null;
                         return (
                           <div className="rounded-[16px] border border-amber-300 bg-amber-50 p-4">
@@ -2272,9 +2273,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               O cliente enviou {perdidas} foto{perdidas === 1 ? "" : "s"} que não chegaram.
                             </p>
                             <p className="mt-1 text-xs leading-relaxed text-amber-800">
-                              Falhou o carregamento no envio do pedido. Ele foi avisado no ecrã final
-                              e convidado a reenviá-las por WhatsApp — vale a pena confirmar.
+                              Ele foi avisado no ecrã final e convidado a reenviá-las por WhatsApp — vale a pena confirmar.
                             </p>
+                            {typeof motivo === "string" && motivo && (
+                              <p className="mt-2 rounded-[10px] bg-amber-100 px-3 py-2 font-mono text-[11px] leading-relaxed text-amber-900">
+                                {motivo}
+                              </p>
+                            )}
                           </div>
                         );
                       })()}

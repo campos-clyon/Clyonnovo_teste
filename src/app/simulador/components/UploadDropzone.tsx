@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import type { UploadedFile } from "../types";
+import { tipoDoFicheiro } from "@/lib/tipo-ficheiro";
 
 interface UploadDropzoneProps {
   files: UploadedFile[];
@@ -37,12 +38,17 @@ export default function UploadDropzone({
         setError(`"${file.name}" excede ${maxSizeMB} MB.`);
         return;
       }
-      const isImage = file.type.startsWith("image/");
-      const isVideo = file.type.startsWith("video/");
-      if (!isImage && !isVideo) {
+      // Era `file.type.startsWith("image/")`. O `type` vem do browser e nem
+      // sempre vem preenchido — fotos de certas galerias de telemóvel, HEIC
+      // em Android — e nesses casos a foto era recusada aqui, antes sequer de
+      // sair do ecrã. O mesmo critério do servidor: lista fechada, com a
+      // extensão a decidir quando o tipo não vem.
+      const veredicto = tipoDoFicheiro(file.name, file.type);
+      if (!veredicto.ok) {
         setError(`"${file.name}" não é suportado.`);
         return;
       }
+      const isImage = veredicto.tipo.startsWith("image/");
       toAdd.push({
         id: `${Date.now()}-${Math.random()}`,
         file,
