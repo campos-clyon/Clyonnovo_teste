@@ -40,24 +40,21 @@ export async function loadContaData(email: string, name: string | null) {
       const pool = await getPool();
       if (!pool) return { orders: [], summary: null };
 
-      const [summaryRows] = await pool.execute(
-        `SELECT
+      // Estas duas eram sequenciais: o resumo ia e voltava, e só depois é
+      // que os pedidos partiam. Numa base remota é uma ida e volta inteira
+      // de espera por nada — uma não depende da outra.
+      const [[summaryRows], [rows]] = await Promise.all([
+        pool.execute(
+          `SELECT
            COUNT(*) AS totalOrders,
            SUM(CASE WHEN status NOT IN ('concluido','cancelado','rejeitado') THEN 1 ELSE 0 END) AS activeOrders,
            MAX(createdAt) AS lastOrderDate
          FROM simulatorOrders
          WHERE LOWER(TRIM(contactEmail)) = ?`,
-        [emailNorm],
-      ) as [Array<{ totalOrders: number; activeOrders: number | null; lastOrderDate: string | null }>, unknown];
-
-      const summary = {
-        totalOrders:   Number(summaryRows[0]?.totalOrders ?? 0),
-        activeOrders:  Number(summaryRows[0]?.activeOrders ?? 0),
-        lastOrderDate: summaryRows[0]?.lastOrderDate ?? null,
-      };
-
-      const [rows] = await pool.execute(
-        `SELECT
+          [emailNorm],
+        ) as Promise<[Array<{ totalOrders: number; activeOrders: number | null; lastOrderDate: string | null }>, unknown]>,
+        pool.execute(
+          `SELECT
            o.id, o.serviceType, o.address, o.city, o.postalCode, o.status,
            o.estimateMin, o.estimateMax, o.estimateTotal,
            o.precoFinal, o.precoFinalIva,
@@ -76,8 +73,15 @@ export async function loadContaData(email: string, name: string | null) {
          WHERE LOWER(TRIM(o.contactEmail)) = ?
          ORDER BY o.createdAt DESC
          LIMIT 10`,
-        [emailNorm],
-      ) as [Array<Record<string, unknown>>, unknown];
+          [emailNorm],
+        ) as Promise<[Array<Record<string, unknown>>, unknown]>,
+      ]);
+
+      const summary = {
+        totalOrders:   Number(summaryRows[0]?.totalOrders ?? 0),
+        activeOrders:  Number(summaryRows[0]?.activeOrders ?? 0),
+        lastOrderDate: summaryRows[0]?.lastOrderDate ?? null,
+      };
 
       return { orders: rows, summary };
     })(),

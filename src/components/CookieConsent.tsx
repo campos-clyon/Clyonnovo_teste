@@ -113,7 +113,17 @@ export default function CookieConsent() {
   return (
     <>
       {visible ? (
-        <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-white/10 bg-[#121c33] shadow-[0_-12px_36px_-18px_rgba(15,23,42,0.45)]">
+        // A faixa ficava em bottom-0 com z-70, e a navegação de baixo está em
+        // bottom-0 com z-50 — ou seja, em telemóvel a faixa tapava a barra
+        // inteira. Tocar em "Conta" acertava no botão de aceitar cookies, e o
+        // menu parecia partido a toda a gente que ainda não tinha respondido
+        // ao aviso, que é quase toda a gente que chega ao site pela primeira
+        // vez.
+        //
+        // Em telemóvel a faixa sobe acima da barra (63px medidos, mais a área
+        // segura dos ecrãs com entalhe). A partir de md a barra não existe e a
+        // faixa volta ao fundo.
+        <div className="fixed inset-x-0 bottom-[calc(3.9375rem+env(safe-area-inset-bottom))] z-[70] border-t border-white/10 bg-[#121c33] shadow-[0_-12px_36px_-18px_rgba(15,23,42,0.45)] md:bottom-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
             <div className="max-w-4xl">
               <div className="flex items-start gap-3">
