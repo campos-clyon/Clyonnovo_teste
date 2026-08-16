@@ -67,6 +67,25 @@ describe("obterTokenDoBlob", () => {
     }
   });
 
+  /**
+   * O separador .env.local do Vercel mostra BLOB_READ_WRITE_TOKEN="vercel_..."
+   * e copiar com as aspas é o erro mais fácil de cometer. O resultado não é um
+   * erro de configuração legível — é "Access denied" vindo da API, como se o
+   * token fosse de outra pessoa.
+   */
+  it("tira as aspas que vêm agarradas ao colar do .env.local", () => {
+    for (const bruto of ['"vercel_blob_rw_abc"', "'vercel_blob_rw_abc'", '  vercel_blob_rw_abc  ', ' "vercel_blob_rw_abc" ']) {
+      const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: bruto });
+      expect(r.ok, bruto).toBe(true);
+      if (r.ok) expect(r.token, bruto).toBe('vercel_blob_rw_abc');
+    }
+  });
+
+  it("aspas a mais não passam a valer por token", () => {
+    expect(obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: '""' }).ok).toBe(false);
+    expect(obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: '" "' }).ok).toBe(false);
+  });
+
   it("ambiente vazio dá uma mensagem clara", () => {
     const r = obterTokenDoBlob({});
     expect(r.ok).toBe(false);

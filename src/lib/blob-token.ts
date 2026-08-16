@@ -23,22 +23,44 @@ export type TokenDoBlob =
 
 const NOME_PADRAO = "BLOB_READ_WRITE_TOKEN";
 
+/**
+ * Limpa o valor tal como ele costuma chegar de um copiar-colar.
+ *
+ * O separador `.env.local` do Vercel mostra a linha assim:
+ *
+ *     BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
+ *
+ * Copiar o valor com as aspas é o erro mais fácil de cometer, e o resultado
+ * não é um erro de configuração legível — é "Access denied" vindo da API,
+ * como se o token fosse de outra pessoa. Espaços à volta dão o mesmo.
+ *
+ * Isto não é indulgência: um token com aspas nunca é válido, portanto
+ * removê-las não aceita nada que devesse ser recusado.
+ */
+function limpar(valor: string): string {
+  let v = valor.trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
+}
+
 export function obterTokenDoBlob(env: Record<string, string | undefined> = process.env): TokenDoBlob {
   const padrao = env[NOME_PADRAO];
-  if (padrao && padrao.trim()) {
-    return { ok: true, token: padrao.trim(), variavel: NOME_PADRAO };
+  if (padrao && limpar(padrao)) {
+    return { ok: true, token: limpar(padrao), variavel: NOME_PADRAO };
   }
 
   // Qualquer <PREFIXO>_READ_WRITE_TOKEN serve. Ordenado para que a escolha
   // seja sempre a mesma entre arranques — duas variáveis e um sorteio
   // diferente a cada instância seria pior do que nenhuma.
   const candidatas = Object.keys(env)
-    .filter((k) => k.endsWith("_READ_WRITE_TOKEN") && (env[k] ?? "").trim())
+    .filter((k) => k.endsWith("_READ_WRITE_TOKEN") && limpar(env[k] ?? ""))
     .sort();
 
   if (candidatas.length > 0) {
     const nome = candidatas[0];
-    return { ok: true, token: (env[nome] as string).trim(), variavel: nome };
+    return { ok: true, token: limpar(env[nome] as string), variavel: nome };
   }
 
   // Nomes que ajudam a perceber o que está lá — sem valores, só nomes.
