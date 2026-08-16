@@ -17,8 +17,24 @@
  * aparecer no diagnóstico: saber QUAL variável está a ser usada vale mais do
  * que saber que há uma.
  */
+/**
+ * Como é que nos autenticamos no Blob.
+ *
+ * Há duas formas, e o Vercel mudou de uma para a outra:
+ *
+ *   "token"  — um BLOB_READ_WRITE_TOKEN, o modelo antigo
+ *   "oidc"   — um BLOB_STORE_ID e a identidade do próprio deployment
+ *              (VERCEL_OIDC_TOKEN, injectada pelo Vercel em tempo de
+ *              execução, que nunca vemos nem guardamos)
+ *
+ * O OIDC é melhor: não há segredo de longa duração para alguém copiar, colar
+ * no sítio errado ou deixar num ecrã. É por isso que o separador .env.local
+ * do store já só mostra o BLOB_STORE_ID — o token deixou de existir nesse
+ * modelo, e eu andei voltas a pedi-lo.
+ */
 export type TokenDoBlob =
-  | { ok: true; token: string; variavel: string }
+  | { ok: true; modo: "token"; token: string; variavel: string }
+  | { ok: true; modo: "oidc"; storeId: string }
   | { ok: false; motivo: string; encontradas: string[] };
 
 const NOME_PADRAO = "BLOB_READ_WRITE_TOKEN";
@@ -75,7 +91,7 @@ function padraoLimpo(env: Record<string, string | undefined>): string {
 export function obterTokenDoBlob(env: Record<string, string | undefined> = process.env): TokenDoBlob {
   const padrao = padraoLimpo(env);
   if (padrao && pareceToken(padrao)) {
-    return { ok: true, token: padrao, variavel: NOME_PADRAO };
+    return { ok: true, modo: "token", token: padrao, variavel: NOME_PADRAO };
   }
 
   // ⚠️ Se o nome padrão tiver lá um valor QUE NÃO É UM TOKEN, não se desiste
@@ -101,10 +117,19 @@ export function obterTokenDoBlob(env: Record<string, string | undefined> = proce
 
   if (candidatas.length > 0) {
     const nome = candidatas[0];
-    return { ok: true, token: limpar(env[nome] as string), variavel: nome };
+    return { ok: true, modo: "token", token: limpar(env[nome] as string), variavel: nome };
   }
 
-  // Chegou aqui: não há token bom em lado nenhum. Se o nome padrão tinha um
+  // Sem token, mas com store id: é o modelo novo. O SDK usa a identidade do
+  // deployment (VERCEL_OIDC_TOKEN) e nós não precisamos de guardar segredo
+  // nenhum. Isto vem DEPOIS do token de propósito: se alguém ainda tiver um
+  // token válido configurado, respeita-se o que lá está.
+  const storeId = limpar(env.BLOB_STORE_ID ?? "");
+  if (storeId) {
+    return { ok: true, modo: "oidc", storeId };
+  }
+
+  // Chegou aqui: não há token bom nem store id. Se o nome padrão tinha um
   // valor errado, é isso que interessa dizer — é o mais provável de estar a
   // causar o problema.
   if (padraoInvalido) {

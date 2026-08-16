@@ -103,13 +103,20 @@ export async function POST(request: NextRequest) {
       const key = `simulador/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
 
       try {
+        // Duas formas de autenticar, conforme o que existe no ambiente:
+        //
+        //   token  — BLOB_READ_WRITE_TOKEN, o modelo antigo. Passa-se
+        //            explicitamente porque o nosso pode ter outro nome.
+        //   oidc   — BLOB_STORE_ID mais a identidade do deployment, que o
+        //            Vercel injecta e nós nunca vemos. É o modelo novo, e é
+        //            o que o painel do Vercel configura hoje.
         const blob = await put(key, file, {
           access: "public",
           contentType: tipo,
           addRandomSuffix: false,
-          // Explícito: sem isto o SDK só olha para BLOB_READ_WRITE_TOKEN, e o
-          // nosso pode chamar-se outra coisa.
-          token: tokenBlob.token,
+          ...(tokenBlob.modo === "token"
+            ? { token: tokenBlob.token }
+            : { storeId: tokenBlob.storeId }),
         });
         uploaded.push({ url: blob.url, name: file.name, size: file.size, type: file.type });
       } catch (err) {
@@ -128,7 +135,14 @@ export async function POST(request: NextRequest) {
         // O resto do valor nunca sai daqui.
         falhados.push({
           name: file.name,
-          motivo: `erro ao guardar: ${limparSegredos(err)} [token: ${tokenBlob.variavel}, prefixo "${tokenBlob.token.slice(0, 15)}", ${tokenBlob.token.length} caracteres]`,
+          motivo:
+            `erro ao guardar: ${limparSegredos(err)} ` +
+            (tokenBlob.modo === "token"
+              // A forma do token distingue casos que dão todos "Access
+              // denied": um token de leitura tem outro prefixo, um cortado a
+              // meio tem outro comprimento. `vercel_blob_rw_` é público.
+              ? `[token: ${tokenBlob.variavel}, prefixo "${tokenBlob.token.slice(0, 15)}", ${tokenBlob.token.length} caracteres]`
+              : `[autenticação por OIDC, store ${tokenBlob.storeId}]`),
         });
       }
     }

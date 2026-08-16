@@ -5,7 +5,7 @@ describe("obterTokenDoBlob", () => {
   it("usa o nome padrão quando existe", () => {
     const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_' + 'a'.repeat(40) });
     expect(r.ok).toBe(true);
-    if (r.ok) {
+    if (r.ok && r.modo === "token") {
       expect(r.token).toBe('vercel_blob_rw_' + 'a'.repeat(40));
       expect(r.variavel).toBe("BLOB_READ_WRITE_TOKEN");
     }
@@ -25,7 +25,7 @@ describe("obterTokenDoBlob", () => {
       CLYONFOTOS_READ_WRITE_TOKEN: "vercel_blob_rw_" + "z".repeat(40),
     });
     expect(r.ok).toBe(true);
-    if (r.ok) {
+    if (r.ok && r.modo === "token") {
       expect(r.token).toBe("vercel_blob_rw_" + "z".repeat(40));
       expect(r.variavel).toBe("CLYONFOTOS_READ_WRITE_TOKEN");
     }
@@ -38,8 +38,8 @@ describe("obterTokenDoBlob", () => {
     };
     const primeira = obterTokenDoBlob(env);
     const segunda = obterTokenDoBlob(env);
-    expect(primeira.ok && primeira.variavel).toBe("A_READ_WRITE_TOKEN");
-    expect(primeira.ok && primeira.token).toBe(segunda.ok && segunda.token);
+    expect(primeira.ok && primeira.modo === "token" && primeira.variavel).toBe("A_READ_WRITE_TOKEN");
+    expect(primeira.ok && primeira.modo === "token" && primeira.token).toBe(segunda.ok && segunda.modo === "token" && segunda.token);
   });
 
   it("o padrão ganha às outras, mesmo com prefixadas presentes", () => {
@@ -47,24 +47,48 @@ describe("obterTokenDoBlob", () => {
       AAA_READ_WRITE_TOKEN: "vercel_blob_rw_" + "p".repeat(40),
       BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_" + "d".repeat(40),
     });
-    expect(r.ok && r.variavel).toBe("BLOB_READ_WRITE_TOKEN");
+    expect(r.ok && r.modo === "token" && r.variavel).toBe("BLOB_READ_WRITE_TOKEN");
   });
 
   it("uma variável vazia não conta como token", () => {
     expect(obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: "   " }).ok).toBe(false);
   });
 
-  it("sem token, diz que variáveis do store existem — sem mostrar valores", () => {
+  /**
+   * O modelo novo do Vercel: o separador .env.local do store mostra SÓ o
+   * BLOB_STORE_ID, porque o token deixou de existir. O SDK autentica com a
+   * identidade do próprio deployment (VERCEL_OIDC_TOKEN), que o Vercel
+   * injecta e nós nunca vemos nem guardamos.
+   *
+   * Eu andei três voltas a pedir um token que já não existe.
+   */
+  it("só com BLOB_STORE_ID, autentica por OIDC em vez de falhar", () => {
     const r = obterTokenDoBlob({
       BLOB_STORE_ID: "store_123",
+      BLOB_WEBHOOK_PUBLIC_KEY: "pk_xyz",
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.modo).toBe("oidc");
+      if (r.modo === "oidc") expect(r.storeId).toBe("store_123");
+    }
+  });
+
+  it("um token válido ganha ao OIDC — respeita-se o que está configurado", () => {
+    const bom = "vercel_blob_rw_" + "m".repeat(40);
+    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: bom, BLOB_STORE_ID: "store_123" });
+    expect(r.ok && r.modo).toBe("token");
+  });
+
+  it("sem token e sem store id, a mensagem não mostra valores nem outros segredos", () => {
+    const r = obterTokenDoBlob({
       BLOB_WEBHOOK_PUBLIC_KEY: "pk_xyz",
       JWT_SECRET: "nao-deve-aparecer",
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.motivo).toContain("BLOB_STORE_ID");
       expect(r.motivo).toContain("BLOB_WEBHOOK_PUBLIC_KEY");
-      expect(r.motivo).not.toContain("store_123");
+      expect(r.motivo).not.toContain("pk_xyz");
       expect(r.motivo).not.toContain("nao-deve-aparecer");
       expect(r.motivo).not.toContain("JWT_SECRET");
     }
@@ -81,7 +105,7 @@ describe("obterTokenDoBlob", () => {
     for (const bruto of [`"${bom}"`, `'${bom}'`, `  ${bom}  `, ` "${bom}" `]) {
       const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: bruto });
       expect(r.ok, bruto).toBe(true);
-      if (r.ok) expect(r.token, bruto).toBe(bom);
+      if (r.ok && r.modo === "token") expect(r.token, bruto).toBe(bom);
     }
   });
 
@@ -118,7 +142,7 @@ describe("obterTokenDoBlob", () => {
     const bom = 'vercel_blob_rw_' + 'x'.repeat(40);
     const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: bom });
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.token).toBe(bom);
+    if (r.ok && r.modo === "token") expect(r.token).toBe(bom);
   });
 
   it("uma candidata por sufixo também tem de ter forma de token", () => {
@@ -143,17 +167,28 @@ describe("obterTokenDoBlob", () => {
       CLYONPLATAFORMA_READ_WRITE_TOKEN: bom,
     });
     expect(r.ok).toBe(true);
-    if (r.ok) {
+    if (r.ok && r.modo === "token") {
       expect(r.token).toBe(bom);
       expect(r.variavel).toBe("CLYONPLATAFORMA_READ_WRITE_TOKEN");
     }
   });
 
-  it("sem nenhum bom, a queixa é sobre o valor errado do nome padrão", () => {
+  /**
+   * Foi exactamente isto que estava configurado: uma BLOB_READ_WRITE_TOKEN
+   * criada à mão com o ID do store lá dentro, e o BLOB_STORE_ID ao lado.
+   * Agora o valor errado é ignorado e o OIDC assume.
+   */
+  it("com o ID do store no lugar do token, o OIDC salva a situação", () => {
     const r = obterTokenDoBlob({
       BLOB_READ_WRITE_TOKEN: "store_XUlxxzTOgAbCdEfGh",
       BLOB_STORE_ID: "store_XUlxxzTOgAbCdEfGh",
     });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.modo).toBe("oidc");
+  });
+
+  it("sem OIDC nem token bom, a queixa é sobre o valor errado", () => {
+    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: "store_XUlxxzTOgAbCdEfGh" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.motivo).toContain("ID DE STORE");
   });
