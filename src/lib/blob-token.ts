@@ -45,17 +45,47 @@ function limpar(valor: string): string {
   return v;
 }
 
+/**
+ * Um token do Vercel Blob começa por `vercel_blob_rw_` e tem umas dezenas de
+ * caracteres. Um ID de store começa por `store_` e tem 22.
+ *
+ * São fáceis de trocar: aparecem lado a lado no painel do Vercel, e ambos
+ * parecem "a coisa do Blob que é preciso copiar". A API não ajuda — devolve
+ * "Access denied, please provide a valid token", que soa a permissões e manda
+ * quem está a resolver procurar no sítio errado. Aconteceu-nos.
+ */
+const PREFIXO_TOKEN = "vercel_blob_rw_";
+
+function pareceToken(v: string): boolean {
+  return v.startsWith(PREFIXO_TOKEN) && v.length > 30;
+}
+
+function descreverValorErrado(v: string, variavel: string): string {
+  if (v.startsWith("store_")) {
+    return `A variável ${variavel} tem um ID DE STORE, não um token: começa por "store_" e tem ${v.length} caracteres. O token está no separador .env.local do store, na linha ${NOME_PADRAO}, e começa por "${PREFIXO_TOKEN}".`;
+  }
+  return `A variável ${variavel} não tem a forma de um token do Blob (esperado começar por "${PREFIXO_TOKEN}"; tem ${v.length} caracteres).`;
+}
+
+function padraoLimpo(env: Record<string, string | undefined>): string {
+  const v = env[NOME_PADRAO];
+  return v ? limpar(v) : "";
+}
+
 export function obterTokenDoBlob(env: Record<string, string | undefined> = process.env): TokenDoBlob {
-  const padrao = env[NOME_PADRAO];
-  if (padrao && limpar(padrao)) {
-    return { ok: true, token: limpar(padrao), variavel: NOME_PADRAO };
+  const padrao = padraoLimpo(env);
+  if (padrao) {
+    if (!pareceToken(padrao)) {
+      return { ok: false, motivo: descreverValorErrado(padrao, NOME_PADRAO), encontradas: [NOME_PADRAO] };
+    }
+    return { ok: true, token: padrao, variavel: NOME_PADRAO };
   }
 
   // Qualquer <PREFIXO>_READ_WRITE_TOKEN serve. Ordenado para que a escolha
   // seja sempre a mesma entre arranques — duas variáveis e um sorteio
   // diferente a cada instância seria pior do que nenhuma.
   const candidatas = Object.keys(env)
-    .filter((k) => k.endsWith("_READ_WRITE_TOKEN") && limpar(env[k] ?? ""))
+    .filter((k) => k.endsWith("_READ_WRITE_TOKEN") && pareceToken(limpar(env[k] ?? "")))
     .sort();
 
   if (candidatas.length > 0) {

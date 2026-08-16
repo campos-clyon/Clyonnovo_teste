@@ -3,10 +3,10 @@ import { obterTokenDoBlob } from "./blob-token";
 
 describe("obterTokenDoBlob", () => {
   it("usa o nome padrão quando existe", () => {
-    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_abc" });
+    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_' + 'a'.repeat(40) });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.token).toBe("vercel_blob_rw_abc");
+      expect(r.token).toBe('vercel_blob_rw_' + 'a'.repeat(40));
       expect(r.variavel).toBe("BLOB_READ_WRITE_TOKEN");
     }
   });
@@ -22,17 +22,20 @@ describe("obterTokenDoBlob", () => {
     const r = obterTokenDoBlob({
       BLOB_STORE_ID: "store_123",
       BLOB_WEBHOOK_PUBLIC_KEY: "pk_xyz",
-      CLYONFOTOS_READ_WRITE_TOKEN: "vercel_blob_rw_zzz",
+      CLYONFOTOS_READ_WRITE_TOKEN: "vercel_blob_rw_" + "z".repeat(40),
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.token).toBe("vercel_blob_rw_zzz");
+      expect(r.token).toBe("vercel_blob_rw_" + "z".repeat(40));
       expect(r.variavel).toBe("CLYONFOTOS_READ_WRITE_TOKEN");
     }
   });
 
   it("com duas candidatas escolhe sempre a mesma", () => {
-    const env = { B_READ_WRITE_TOKEN: "dois", A_READ_WRITE_TOKEN: "um" };
+    const env = {
+      B_READ_WRITE_TOKEN: "vercel_blob_rw_" + "b".repeat(40),
+      A_READ_WRITE_TOKEN: "vercel_blob_rw_" + "a".repeat(40),
+    };
     const primeira = obterTokenDoBlob(env);
     const segunda = obterTokenDoBlob(env);
     expect(primeira.ok && primeira.variavel).toBe("A_READ_WRITE_TOKEN");
@@ -41,8 +44,8 @@ describe("obterTokenDoBlob", () => {
 
   it("o padrão ganha às outras, mesmo com prefixadas presentes", () => {
     const r = obterTokenDoBlob({
-      AAA_READ_WRITE_TOKEN: "prefixada",
-      BLOB_READ_WRITE_TOKEN: "padrao",
+      AAA_READ_WRITE_TOKEN: "vercel_blob_rw_" + "p".repeat(40),
+      BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_" + "d".repeat(40),
     });
     expect(r.ok && r.variavel).toBe("BLOB_READ_WRITE_TOKEN");
   });
@@ -74,16 +77,53 @@ describe("obterTokenDoBlob", () => {
    * token fosse de outra pessoa.
    */
   it("tira as aspas que vêm agarradas ao colar do .env.local", () => {
-    for (const bruto of ['"vercel_blob_rw_abc"', "'vercel_blob_rw_abc'", '  vercel_blob_rw_abc  ', ' "vercel_blob_rw_abc" ']) {
+    const bom = "vercel_blob_rw_" + "a".repeat(40);
+    for (const bruto of [`"${bom}"`, `'${bom}'`, `  ${bom}  `, ` "${bom}" `]) {
       const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: bruto });
       expect(r.ok, bruto).toBe(true);
-      if (r.ok) expect(r.token, bruto).toBe('vercel_blob_rw_abc');
+      if (r.ok) expect(r.token, bruto).toBe(bom);
     }
   });
 
   it("aspas a mais não passam a valer por token", () => {
     expect(obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: '""' }).ok).toBe(false);
     expect(obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: '" "' }).ok).toBe(false);
+  });
+
+  /**
+   * O caso real, e o que custou mais tempo de todos.
+   *
+   * No painel do Vercel o ID do store e o token aparecem lado a lado, e ambos
+   * parecem "a coisa do Blob que é preciso copiar". Foi colado o ID no lugar
+   * do token. A API respondeu "Access denied, please provide a valid token",
+   * que soa a permissões e manda procurar no sítio errado — andámos três
+   * voltas até perceber que o valor nem sequer tinha forma de token.
+   */
+  it("apanha um ID de store colado no lugar do token", () => {
+    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: 'store_XUlxxzTOgAbCdEfGh' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.motivo).toContain('ID DE STORE');
+      expect(r.motivo).toContain('vercel_blob_rw_');
+    }
+  });
+
+  it("recusa qualquer valor sem forma de token, e diz o comprimento", () => {
+    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: 'abc123' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.motivo).toContain('6 caracteres');
+  });
+
+  it("um token com a forma certa passa", () => {
+    const bom = 'vercel_blob_rw_' + 'x'.repeat(40);
+    const r = obterTokenDoBlob({ BLOB_READ_WRITE_TOKEN: bom });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.token).toBe(bom);
+  });
+
+  it("uma candidata por sufixo também tem de ter forma de token", () => {
+    const r = obterTokenDoBlob({ XPTO_READ_WRITE_TOKEN: 'store_1234567890123456' });
+    expect(r.ok).toBe(false);
   });
 
   it("ambiente vazio dá uma mensagem clara", () => {
