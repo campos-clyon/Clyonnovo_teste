@@ -119,7 +119,17 @@ export async function POST(request: NextRequest) {
         // escrita. A frase do SDK diz qual é. Vai sem o token lá dentro: as
         // mensagens do Vercel Blob às vezes ecoam o que receberam, e isto sai
         // numa resposta HTTP pública.
-        falhados.push({ name: file.name, motivo: `erro ao guardar: ${limparSegredos(err)}` });
+        // A forma do token, para distinguir os casos que dão todos "Access
+        // denied": um token de LEITURA tem outro prefixo, um token cortado a
+        // meio tem outro comprimento, e um token de outro store tem a forma
+        // certa. Sem isto, os três são indistinguíveis de fora.
+        //
+        // `vercel_blob_rw_` é um prefixo público e constante — não é segredo.
+        // O resto do valor nunca sai daqui.
+        falhados.push({
+          name: file.name,
+          motivo: `erro ao guardar: ${limparSegredos(err)} [token: ${tokenBlob.variavel}, prefixo "${tokenBlob.token.slice(0, 15)}", ${tokenBlob.token.length} caracteres]`,
+        });
       }
     }
 
