@@ -521,3 +521,62 @@ describe("pedidoNoFiltro — Novos é o que ninguém abriu", () => {
     expect(pedidoNoFiltro({ status: "concluido" }, "todos")).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// A coluna Origem dizia "Simulador" a toda a gente
+// ─────────────────────────────────────────────────────────────────────────
+import { origemPeloSlug, origemDoPedido } from "./acesso";
+import { readFileSync as lerFicheiro } from "node:fs";
+import { join as juntar } from "node:path";
+
+describe("origemPeloSlug — a lista não recebe o JSON inteiro", () => {
+  it("traduz os slugs que existem nos dados", () => {
+    expect(origemPeloSlug("formulario_contactos").label).toBe("Contactos");
+    expect(origemPeloSlug("hero_quote_form").label).toBe("Formulário");
+    expect(origemPeloSlug("simulador").label).toBe("Simulador");
+  });
+
+  it("uma origem nova aparece como veio, em vez de virar 'Simulador'", () => {
+    expect(origemPeloSlug("campanha_verao").label).toBe("campanha_verao");
+  });
+
+  it("sem slug, é mesmo do simulador", () => {
+    expect(origemPeloSlug(null).label).toBe("Simulador");
+    expect(origemPeloSlug("  ").label).toBe("Simulador");
+  });
+
+  /**
+   * O detalhe e a lista mostravam etiquetas diferentes para o MESMO pedido:
+   * "#188 · CONTACTOS" no topo do detalhe, "Simulador" na lista. As duas
+   * funções passam a dar o mesmo, porque partilham o mapa de rótulos.
+   */
+  it("dá o mesmo que o caminho do detalhe, para o mesmo pedido", () => {
+    const raw = JSON.stringify({ _source: "formulario_contactos" });
+    expect(origemPeloSlug("formulario_contactos").label).toBe(origemDoPedido(raw).label);
+  });
+});
+
+describe("a consulta da lista traz o que a lista mostra", () => {
+  const db = lerFicheiro(juntar(process.cwd(), "src/lib/db.ts"), "utf8");
+  const consulta = db.slice(
+    db.indexOf("export async function getAllSimulatorOrders"),
+    db.indexOf("export async function getSimulatorOrderById"),
+  );
+
+  /**
+   * Faltavam quatro campos e o ecrã mentia sem dar erro nenhum: Origem dizia
+   * sempre "Simulador", Localidade e Urgência estavam sempre a "—", e o
+   * filtro "Novos" (que é `!viewedAt` no cliente) mostrava tudo.
+   */
+  it.each(["city", "urgency", "viewedAt", "origemSlug"])(
+    "a lista precisa de %s e a consulta traz",
+    (campo) => {
+      expect(consulta).toContain(campo);
+    },
+  );
+
+  it("continua sem trazer os JSON grandes", () => {
+    expect(consulta).not.toMatch(/SELECT[^`]*chatHistory/);
+    expect(consulta).not.toMatch(/SELECT \*/);
+  });
+});

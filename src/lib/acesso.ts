@@ -50,6 +50,20 @@ const ORIGEM_LABELS: Record<string, string> = {
 
 export type OrigemPedido = { label: string; slug: string };
 
+/**
+ * A origem a partir do slug já extraído.
+ *
+ * A lista de pedidos não recebe o rawOrderJson inteiro — traria 100 objectos
+ * completos para mostrar uma etiqueta. Recebe só o slug, extraído em SQL, e
+ * usa isto. O mapa de rótulos é o mesmo dos dois lados, que é o que impede a
+ * lista e o detalhe de voltarem a discordar como discordavam.
+ */
+export function origemPeloSlug(slug: string | null | undefined): OrigemPedido {
+  const s = (slug ?? "").trim();
+  if (!s) return { label: "Simulador", slug: "simulador" };
+  return { label: ORIGEM_LABELS[s] ?? s, slug: s };
+}
+
 export function origemDoPedido(rawOrderJson: string | null | undefined): OrigemPedido {
   if (!rawOrderJson) return { label: "Simulador", slug: "simulador" };
   try {

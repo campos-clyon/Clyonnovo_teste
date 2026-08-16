@@ -1201,11 +1201,30 @@ export async function getAllSimulatorOrders(filters?: {
     params.push(s, s, s, s);
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  // OPTIMIZATION: Select only essential fields (exclude large JSON fields like chatHistory, estimate)
-  // This dramatically reduces payload size and improves dashboard load time
+  // Só os campos que a lista mostra — os JSON grandes (chatHistory, estimate)
+  // ficam de fora de propósito, que é o que mantém o ecrã rápido.
+  //
+  // ⚠️ MAS FALTAVAM QUATRO QUE A LISTA USA, e o ecrã mentia sem dar erro:
+  //
+  //   rawOrderJson  → a coluna Origem dizia "Simulador" a TODOS os pedidos,
+  //                   incluindo os que vieram do formulário de contactos
+  //   city          → a coluna Localidade estava sempre a "—"
+  //   urgency       → a coluna Urgência estava sempre a "—"
+  //   viewedAt      → o filtro "Novos" é `!viewedAt` no cliente; sem o campo,
+  //                   TODOS os pedidos passavam por novos
+  //
+  // O rawOrderJson não vem inteiro: só se extrai dele o slug da origem, em
+  // SQL. Trazer o JSON completo de 100 pedidos para mostrar uma etiqueta era
+  // desfazer a optimização para resolver o sintoma.
   const [rows] = await pool.execute(
-    `SELECT id, contactName, contactPhone, address, serviceType, status, precoFinal, estimateTotal, 
-            createdAt, dataAgendada, assignedToId, assignedToName, priority 
+    `SELECT id, contactName, contactPhone, address, serviceType, status, precoFinal, estimateTotal,
+            createdAt, dataAgendada, assignedToId, assignedToName, priority,
+            city, urgency, viewedAt,
+            CASE WHEN JSON_VALID(rawOrderJson) THEN COALESCE(
+              JSON_UNQUOTE(JSON_EXTRACT(rawOrderJson, '$.origemPedido')),
+              JSON_UNQUOTE(JSON_EXTRACT(rawOrderJson, '$._source')),
+              JSON_UNQUOTE(JSON_EXTRACT(rawOrderJson, '$.source'))
+            ) ELSE NULL END AS origemSlug
      FROM simulatorOrders ${where} ORDER BY createdAt DESC LIMIT 100`,
     params,
   ) as any[];

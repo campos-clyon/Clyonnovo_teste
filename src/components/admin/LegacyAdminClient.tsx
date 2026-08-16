@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
-import { origemDoPedido, origemDoLead } from "@/lib/acesso";
+import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 import {
   ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
   type EstadoTicket,
@@ -1742,7 +1742,13 @@ export default function ColaboradorAdminClient() {
                           // O formulário da homepage marca a origem em
                           // `_source`, não em `origemPedido` — só se lia o
                           // segundo, por isso TODOS apareciam como "Simulador".
-                          const origem = origemDoPedido(p.rawOrderJson);
+                          // A lista recebe o slug já extraído (origemSlug);
+                          // o rawOrderJson só vem no detalhe. Antes usava-se
+                          // só o segundo, que aqui é sempre vazio — e a
+                          // coluna dizia "Simulador" a toda a gente.
+                          const origem = (p as { origemSlug?: string | null }).origemSlug
+                            ? origemPeloSlug((p as { origemSlug?: string | null }).origemSlug)
+                            : origemDoPedido(p.rawOrderJson);
                           const origemLabel = origem.label;
                           const origemStyle =
                             origem.slug === "hero_quote_form" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
