@@ -126,6 +126,38 @@ describe("obterTokenDoBlob", () => {
     expect(r.ok).toBe(false);
   });
 
+  /**
+   * O caso que nos prendeu mais tempo.
+   *
+   * O separador .env.local do store mostra SÓ o BLOB_STORE_ID — o token não
+   * está lá. Quem está a resolver copia o que vê e cria uma
+   * BLOB_READ_WRITE_TOKEN com o ID do store. Essa variável manual tapa a que
+   * o Vercel injecta sozinho quando o store está ligado ao projecto.
+   *
+   * Desistir no nome padrão fazia-nos ignorar a boa que estava ali ao lado.
+   */
+  it("com o nome padrão errado, encontra o token bom noutra variável", () => {
+    const bom = "vercel_blob_rw_" + "k".repeat(40);
+    const r = obterTokenDoBlob({
+      BLOB_READ_WRITE_TOKEN: "store_XUlxxzTOgAbCdEfGh",
+      CLYONPLATAFORMA_READ_WRITE_TOKEN: bom,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.token).toBe(bom);
+      expect(r.variavel).toBe("CLYONPLATAFORMA_READ_WRITE_TOKEN");
+    }
+  });
+
+  it("sem nenhum bom, a queixa é sobre o valor errado do nome padrão", () => {
+    const r = obterTokenDoBlob({
+      BLOB_READ_WRITE_TOKEN: "store_XUlxxzTOgAbCdEfGh",
+      BLOB_STORE_ID: "store_XUlxxzTOgAbCdEfGh",
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.motivo).toContain("ID DE STORE");
+  });
+
   it("ambiente vazio dá uma mensagem clara", () => {
     const r = obterTokenDoBlob({});
     expect(r.ok).toBe(false);

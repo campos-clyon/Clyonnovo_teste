@@ -74,12 +74,23 @@ function padraoLimpo(env: Record<string, string | undefined>): string {
 
 export function obterTokenDoBlob(env: Record<string, string | undefined> = process.env): TokenDoBlob {
   const padrao = padraoLimpo(env);
-  if (padrao) {
-    if (!pareceToken(padrao)) {
-      return { ok: false, motivo: descreverValorErrado(padrao, NOME_PADRAO), encontradas: [NOME_PADRAO] };
-    }
+  if (padrao && pareceToken(padrao)) {
     return { ok: true, token: padrao, variavel: NOME_PADRAO };
   }
+
+  // ⚠️ Se o nome padrão tiver lá um valor QUE NÃO É UM TOKEN, não se desiste
+  // aqui — procura-se noutro lado antes de dar erro.
+  //
+  // A razão é real e aconteceu: o Vercel injecta o token sozinho quando o
+  // store está ligado ao projecto, mas quem estivesse a resolver o problema à
+  // mão podia ter criado uma BLOB_READ_WRITE_TOKEN com o valor errado (o ID
+  // do store, que é o que o separador .env.local mostra). Essa variável
+  // manual TAPA a que o Vercel injecta, e desistir na primeira faz-nos
+  // ignorar a boa que está mesmo ali ao lado.
+  //
+  // O valor errado fica guardado para entrar na mensagem de erro, se no fim
+  // não houver nenhum bom — porque é a pista mais útil que temos.
+  const padraoInvalido = padrao && !pareceToken(padrao) ? padrao : null;
 
   // Qualquer <PREFIXO>_READ_WRITE_TOKEN serve. Ordenado para que a escolha
   // seja sempre a mesma entre arranques — duas variáveis e um sorteio
@@ -91,6 +102,17 @@ export function obterTokenDoBlob(env: Record<string, string | undefined> = proce
   if (candidatas.length > 0) {
     const nome = candidatas[0];
     return { ok: true, token: limpar(env[nome] as string), variavel: nome };
+  }
+
+  // Chegou aqui: não há token bom em lado nenhum. Se o nome padrão tinha um
+  // valor errado, é isso que interessa dizer — é o mais provável de estar a
+  // causar o problema.
+  if (padraoInvalido) {
+    return {
+      ok: false,
+      motivo: descreverValorErrado(padraoInvalido, NOME_PADRAO),
+      encontradas: [NOME_PADRAO],
+    };
   }
 
   // Nomes que ajudam a perceber o que está lá — sem valores, só nomes.
