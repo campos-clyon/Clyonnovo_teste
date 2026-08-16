@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createSimulatorOrder, createLead, createLeadEvent, appendOrderHistory, calculateOrderPriority } from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
+import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
@@ -77,31 +78,12 @@ export async function POST(req: NextRequest) {
   // ── Motor de preços (rápido, sem Gemini) ─────────────────────────────────────
   // Estimativa de distância a partir do código postal relativamente à base CLYON em Fernão Ferro.
   // Fernão Ferro (2865) é a origem → zonas adjacentes têm km reduzidos.
-  function estimateKmFromPostal(cp: string): number {
-    const digits = cp.replace(/\D/g, "");
-    const prefix4 = parseInt(digits.slice(0, 4), 10);
-    if (isNaN(prefix4)) return 25;
-    // Fernão Ferro / Amora / Seixal imediato — base muito próxima
-    if (prefix4 >= 2845 && prefix4 <= 2869) return 7;
-    // Corroios / Belverde / Miratejo
-    if (prefix4 >= 2836 && prefix4 <= 2844) return 10;
-    // Almada / Pragal / Cacilhas
-    if (prefix4 >= 2800 && prefix4 <= 2835) return 18;
-    // Barreiro / Moita / Montijo
-    if (prefix4 >= 2830 && prefix4 <= 2839) return 15;
-    if (prefix4 >= 2870 && prefix4 <= 2899) return 12; // Costa da Caparica / Trafaria
-    // Setúbal
-    if (prefix4 >= 2900 && prefix4 <= 2959) return 45;
-    // Palmela / Sesimbra
-    if (prefix4 >= 2960 && prefix4 <= 2999) return 35;
-    // Lisboa — distância variável pela ponte
-    if (prefix4 >= 1000 && prefix4 <= 1799) return 35;
-    if (prefix4 >= 1800 && prefix4 <= 1999) return 25; // Margem Norte próxima
-    // Outras zonas Portugal
-    return 30;
-  }
-
-  const estimatedKm = codigoPostal ? estimateKmFromPostal(codigoPostal) : 25;
+  // A tabela de distâncias vivia aqui dentro. É regra de negócio e não
+  // detalhe desta rota — passou para src/lib/distancia-estimada.ts, para o
+  // formulário de contactos a usar também em vez de nascer uma segunda cópia
+  // com outros números. (Havia faixas sobrepostas na versão antiga: 2830-2839
+  // e 2836-2844 cruzavam-se, e ganhava a primeira condição escrita.)
+  const { km: estimatedKm } = kmParaOrcamento({ codigoPostal, morada: null });
 
   let estimate: Awaited<ReturnType<typeof calculateFastEstimate>> | null = null;
   try {

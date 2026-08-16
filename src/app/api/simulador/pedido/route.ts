@@ -11,6 +11,8 @@ import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { calculateFastEstimate } from "@/lib/pricing-helper";
+import { kmParaOrcamento } from "@/lib/distancia-estimada";
 
 export const runtime = "nodejs";
 
@@ -39,10 +41,71 @@ export async function POST(req: NextRequest) {
     const formEmail = order.receiver?.email?.trim().toLowerCase() ?? null;
     const contactEmail = sessionEmail ?? formEmail;
 
+    // ── O motor de preços, para TODOS os pedidos ──────────────────────────────
+    //
+    // Esta rota é a porta comum: o simulador entra por aqui, e também o
+    // formulário de contactos e o "quero contratar". Só que o simulador
+    // calcula a estimativa no browser ANTES de gravar e manda-a no corpo; os
+    // formulários não mandam nada.
+    //
+    // Resultado: um pedido de contactos chegava ao painel com preço zero,
+    // sem análise e com o botão de recalcular sem nada para recalcular — e
+    // alguém tinha de o orçamentar de cabeça. Foi o que aconteceu ao #188.
+    //
+    // Agora, se não vier estimativa, calcula-se aqui. Nunca por cima da que
+    // vem do simulador: essa passou pelas fotos e pela distância medida, e é
+    // melhor do que qualquer coisa que se faça a partir de texto.
+    //
+    // A origem do pedido não é tocada — continua a ser gravada tal como veio,
+    // e é o que distingue "Contactos" de "Simulador" no painel.
+    let estimativa = estimate ?? null;
+    let estimativaDoServidor = false;
+    if (!estimativa) {
+      try {
+        const morada =
+          order.address?.formattedAddress ??
+          (typeof order.address === "string" ? order.address : null);
+        const { km, origem: origemKm } = kmParaOrcamento({
+          distanciaMedidaKm: order.distanceFromBase?.distanceKm ?? null,
+          codigoPostal: order.address?.postalCode ?? order.postalCode ?? null,
+          morada,
+        });
+
+        const calculada = await calculateFastEstimate({
+          serviceType: order.serviceType ?? "outro",
+          description: order.description ?? "",
+          floor: order.floor || undefined,
+          hasElevator: order.hasElevator,
+          parkingDistance: order.parkingDistance,
+          urgency: order.urgency,
+          distanceFromBase: { distanceKm: km },
+        } as Parameters<typeof calculateFastEstimate>[0]);
+
+        estimativa = {
+          ...calculada,
+          internalNotes: [
+            ...(calculada.internalNotes ?? []),
+            // Quem abrir isto tem de saber com o que está a lidar: um número
+            // tirado de texto não vale o mesmo que um tirado de fotos.
+            `Estimativa calculada no servidor a partir dos dados do formulário (origem: ${order.origemPedido ?? order._source ?? "desconhecida"}).`,
+            origemKm === "medida"
+              ? `Distância medida: ${km} km.`
+              : origemKm === "codigo_postal"
+                ? `Distância estimada pelo código postal: ${km} km — confirmar com a morada exacta.`
+                : `Sem morada utilizável: assumidos ${km} km. Confirmar antes de fechar o preço.`,
+          ],
+        };
+        estimativaDoServidor = true;
+      } catch (e) {
+        // Um pedido sem estimativa é mau; um pedido perdido é pior.
+        console.error("[simulador/pedido] motor de preços falhou:", e);
+      }
+    }
+
     const priority = calculateOrderPriority({
       urgency: order.urgency,
       description: order.description,
-      estimateTotal: estimate?.estimatedPriceWithVat?.toString() ?? null,
+      estimateTotal: estimativa?.estimatedPriceWithVat?.toString() ?? null,
     });
 
     // ── Marcação recorrente: aplica desconto à estimativa guardada ────────────
@@ -112,31 +175,31 @@ export async function POST(req: NextRequest) {
       // Prioridade: email da conta autenticada → email do formulário
       contactEmail,
       urgency: order.urgency || null,
-      estimateMin: applyDiscount(estimate?.estimatedPriceWithoutVat)?.toString() ?? null,
-      estimateMax: applyDiscount(estimate?.estimatedPriceWithVat)?.toString() ?? null,
-      estimateTotal: applyDiscount(estimate?.estimatedPriceWithVat)?.toString() ?? null,
-      estimateJson: estimate ? JSON.stringify(estimate) : null,
+      estimateMin: applyDiscount(estimativa?.estimatedPriceWithoutVat)?.toString() ?? null,
+      estimateMax: applyDiscount(estimativa?.estimatedPriceWithVat)?.toString() ?? null,
+      estimateTotal: applyDiscount(estimativa?.estimatedPriceWithVat)?.toString() ?? null,
+      estimateJson: estimativa ? JSON.stringify(estimativa) : null,
       recurrenceFrequency,
       recurringDiscountPercent: recurringDiscountPercent != null ? recurringDiscountPercent.toFixed(2) : null,
       // Guardar análise completa incluindo externalMarketEstimate, analysisSource e confidence
       // Este campo é APENAS para uso interno no backoffice — nunca exposto ao cliente
-      analysisJsonExtended: estimate
+      analysisJsonExtended: estimativa
         ? JSON.stringify({
-            analysisSource: estimate.analysisSource ?? null,
-            confidence: estimate.confidence ?? null,
+            analysisSource: estimativa.analysisSource ?? null,
+            confidence: estimativa.confidence ?? null,
             clyonEstimate: {
-              status: estimate.status,
-              estimatedPriceWithoutVat: estimate.estimatedPriceWithoutVat,
-              vatAmount: estimate.vatAmount,
-              estimatedPriceWithVat: estimate.estimatedPriceWithVat,
-              difficultyLevel: estimate.difficultyLevel,
-              summary: estimate.summary,
-              assumptions: estimate.assumptions,
-              missingFields: estimate.missingFields,
-              internalNotes: estimate.internalNotes,
-              labor: estimate.labor ?? null,
+              status: estimativa.status,
+              estimatedPriceWithoutVat: estimativa.estimatedPriceWithoutVat,
+              vatAmount: estimativa.vatAmount,
+              estimatedPriceWithVat: estimativa.estimatedPriceWithVat,
+              difficultyLevel: estimativa.difficultyLevel,
+              summary: estimativa.summary,
+              assumptions: estimativa.assumptions,
+              missingFields: estimativa.missingFields,
+              internalNotes: estimativa.internalNotes,
+              labor: estimativa.labor ?? null,
             },
-            externalMarketEstimate: estimate.externalMarketEstimate ?? null,
+            externalMarketEstimate: estimativa.externalMarketEstimate ?? null,
             savedAt: new Date().toISOString(),
           })
         : null,
@@ -178,7 +241,16 @@ export async function POST(req: NextRequest) {
     await appendOrderHistory(id, {
       type: "created",
       by: null,
-      message: `Pedido criado via simulador. Por atribuir. Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.`
+      // A origem é a que veio no pedido. Dizer "via simulador" a um contacto
+      // da página de contactos era escrever no histórico uma coisa que não
+      // aconteceu — e o histórico é onde se vai procurar quando algo não bate
+      // certo.
+      message:
+        `Pedido criado (${order.origemPedido ?? order._source ?? "simulador"}). ` +
+        `Por atribuir. Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.` +
+        (estimativaDoServidor
+          ? " Estimativa calculada pelo motor a partir dos dados do formulário — confirmar a morada antes de fechar o preço."
+          : "")
         + (recurrenceFrequency ? ` Marcação recorrente (${recurrenceFrequency}, desconto de ${recurringDiscountPercent}% já aplicado à estimativa).` : ""),
     });
 
