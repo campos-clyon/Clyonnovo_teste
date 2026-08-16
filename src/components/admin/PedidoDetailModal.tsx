@@ -5,6 +5,7 @@ import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
+import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1050,8 +1051,23 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
           const history = parseHistory(order.historyJson);
           const files = parseFiles(order.filesJson);
           const waPhone = (order.contactPhone ?? BUSINESS_PHONE).replace(/\D/g, "");
+          // Era uma frase igual para toda a gente, com o nome completo e o
+          // nome interno do serviço ("recolha_moveis"). Quem a usava tinha de
+          // escrever tudo à mão a seguir. Agora parte do que foi recolhido.
           const waMsg = encodeURIComponent(
-            `Olá ${order.contactName ?? "cliente"}, a CLYON está a contactar relativamente ao seu pedido #${order.id} de ${order.serviceType ?? "serviço"}.`
+            mensagemWhatsApp({
+              id: order.id,
+              contactName: order.contactName,
+              serviceType: order.serviceType,
+              address: order.address,
+              city: order.city,
+              urgency: order.urgency,
+              fotosRecebidas: files.length,
+              fotosNaoEnviadas: Number(
+                (parseRawOrder(order.rawOrderJson) as Record<string, unknown>)?.fotosNaoEnviadas ?? 0,
+              ),
+              precoFinalIva: order.precoFinalIva,
+            }),
           );
 
           return (

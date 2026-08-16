@@ -6,6 +6,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { translate, tElevator, tParking, tUrgency, tService, tFloor, FIELD_TRANSLATIONS } from "@/lib/translations";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
+import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -514,8 +515,19 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
   const displayCity        = order.city || rawOrder.address?.city || rawOrder.city || null;
 
   const waPhone = (order.contactPhone ?? BUSINESS_PHONE).replace(/\D/g, "");
+  // Mesma mensagem do modal de pedidos — uma só fonte, para não voltarem a
+  // divergir. Ver src/lib/mensagem-whatsapp.ts.
   const waMsg = encodeURIComponent(
-    `Olá ${order.contactName ?? "cliente"}, a CLYON está a contactar relativamente ao seu pedido #${order.id} de ${tService(displayServiceType) ?? "serviço"}.`
+    mensagemWhatsApp({
+      id: order.id,
+      contactName: order.contactName,
+      serviceType: displayServiceType,
+      address: order.address,
+      city: displayCity,
+      urgency: order.urgency,
+      fotosNaoEnviadas: Number((rawOrder as Record<string, unknown>)?.fotosNaoEnviadas ?? 0),
+      precoFinalIva: order.precoFinalIva,
+    }),
   );
 
   // ─── JSX ───────────────────────────────────────────────────────────────────
