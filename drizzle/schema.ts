@@ -313,4 +313,18 @@ export interface InsertSimulatorOrder {
   analysisJsonExtended?: string | null;
   calendarTargetId?: string | null;
   calendarTargetName?: string | null;
+
+  // ── Plataforma (16-08-2026) ──────────────────────────────────────────────
+  // O que o cliente está disposto a pagar. Não confundir com estimateMin /
+  // estimateMax, que são a opinião do motor de preços sobre quanto custa.
+  // Ver src/lib/pedido-valores.ts.
+  /** Público ao profissional, como «o que o cliente quer pagar». */
+  valorMinimoCliente?: string | null;
+  /** PRIVADO. Nunca pode sair numa resposta que um profissional leia. */
+  valorMaximoCliente?: string | null;
+  precisaFatura?: boolean | number | null;
+  precisaGuiaTransporte?: boolean | number | null;
+  /** Só o hash. O token em claro vive no link e mais lado nenhum. */
+  acessoTokenHash?: string | null;
+  acessoTokenExpiraEm?: Date | null;
 }

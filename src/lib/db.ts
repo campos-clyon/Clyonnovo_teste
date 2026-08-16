@@ -1042,8 +1042,12 @@ export async function createLeadEvent(data: {
 // ─── SimulatorOrders ────────────────────────────────���─────────────────────────
 
 let _simulatorOrdersEnsured = false;
-// Bump this version number any time new migrations are added so the guard re-runs
-const MIGRATION_VERSION = 6;
+// Bump this version number any time new migrations are added so the guard re-runs.
+// Esteve em 6 durante as migrações v7 a v11: como cada ALTER é idempotente e o
+// guarda reinicia a cada arranque frio, elas acabaram por correr na mesma — mas
+// num processo que ficasse quente nunca teriam corrido. Agora acompanha a
+// última migração da lista.
+const MIGRATION_VERSION = 12;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -1142,11 +1146,27 @@ export async function ensureSimulatorOrdersTable() {
     // v11 migrations — quando o assistente abriu pela última vez a aba Histórico
     // (usado para contar respostas de cliente por ler e mostrar badge)
     `ALTER TABLE simulatorOrders ADD COLUMN historyReadAt DATETIME NULL DEFAULT NULL`,
+    // v12 — plataforma: o cliente passa a dizer quanto quer pagar, e o pedido
+    // passa a abrir-se por link. O máximo é privado: ver pedido-valores.ts,
+    // que é onde a regra está escrita e testada.
+    `ALTER TABLE simulatorOrders ADD COLUMN valorMinimoCliente DECIMAL(10,2) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN valorMaximoCliente DECIMAL(10,2) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN precisaFatura TINYINT(1) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN precisaGuiaTransporte TINYINT(1) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN acessoTokenHash VARCHAR(64) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN acessoTokenExpiraEm DATETIME NULL DEFAULT NULL`,
+    // Sem índice, abrir um link obrigava a varrer a tabela inteira a cada
+    // visita — e o link é a porta normal de entrada do cliente, não um caso raro.
+    `CREATE INDEX idx_simulatorOrders_acessoTokenHash ON simulatorOrders (acessoTokenHash)`,
   ];
   for (const sql of migrations) {
     try { await pool.execute(sql); } catch (e: any) {
-      // Log only non-"duplicate column" errors so we can see real problems
-      if (!e?.message?.includes("Duplicate column")) {
+      // Log only non-"duplicate column" errors so we can see real problems.
+      // "Duplicate key name" entra na mesma lista desde que há CREATE INDEX:
+      // é o mesmo caso — a migração já correu — e enchia o log a cada arranque.
+      const jaExistia =
+        e?.message?.includes("Duplicate column") || e?.message?.includes("Duplicate key name");
+      if (!jaExistia) {
         console.error("[v0] migration skipped:", e?.message);
       }
     }
@@ -1237,6 +1257,27 @@ export async function getSimulatorOrderById(id: number): Promise<SimulatorOrder 
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = await pool.execute("SELECT * FROM simulatorOrders WHERE id = ? LIMIT 1", [id]) as any[];
+  return (rows as SimulatorOrder[])[0];
+}
+
+/**
+ * Procura o pedido a que um link de acesso corresponde.
+ *
+ * Procura-se pelo *hash* porque é isso que está gravado — o token em claro
+ * existe só dentro do link que o cliente recebeu. Quem calcula o hash é o
+ * chamador, com `hashDeToken`, e é ele que verifica a validade com
+ * `verificarTokenDeAcesso`: aqui só se faz a leitura.
+ */
+export async function getSimulatorOrderByAcessoTokenHash(
+  hash: string,
+): Promise<SimulatorOrder | undefined> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    "SELECT * FROM simulatorOrders WHERE acessoTokenHash = ? LIMIT 1",
+    [hash],
+  ) as any[];
   return (rows as SimulatorOrder[])[0];
 }
 
