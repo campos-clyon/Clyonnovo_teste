@@ -16,8 +16,8 @@
  */
 
 import { Resend } from "resend";
-import { SITE_URL } from "./seo-data";
 import { e } from "./escapar-html";
+import { urlDeAccao } from "./url-do-site";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -75,7 +75,7 @@ function linha(rotulo: string, valor: string | null): string {
 }
 
 function montarHtml(p: AvisoDePedido): string {
-  const url = `${SITE_URL.replace(/\/+$/, "")}/profissionais/pedidos/${p.token}`;
+  const url = `${urlDeAccao()}/profissionais/pedidos/${p.token}`;
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const quer = euros(p.valorMinimoCliente);
   const recebe = euros(p.recebeLiquido);

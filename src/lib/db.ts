@@ -793,6 +793,112 @@ export async function gravarNegociacao(
 }
 
 /**
+ * Substitui o token de acesso de um pedido.
+ *
+ * Existe porque só guardamos o hash: se o email não chegar — spam, endereço
+ * errado, Resend em baixo — o token em claro perde-se e o cliente fica sem
+ * forma de voltar ao próprio pedido. Não havia como reenviar, e isso era uma
+ * falha do desenho, não um caso raro.
+ *
+ * Emitir um token novo invalida o antigo, o que também serve para revogar um
+ * link que tenha sido reencaminhado por engano.
+ */
+export async function substituirTokenDoPedido(
+  pedidoId: number,
+  hash: string,
+  expiraEm: Date,
+): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    "UPDATE simulatorOrders SET acessoTokenHash = ?, acessoTokenExpiraEm = ? WHERE id = ?",
+    [hash, expiraEm, pedidoId],
+  );
+}
+
+/** O mesmo, para o link de um profissional a um pedido. */
+export async function substituirTokenDaNegociacao(
+  negociacaoId: number,
+  hash: string,
+  expiraEm: Date,
+): Promise<void> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    "UPDATE negociacoes SET acessoTokenHash = ?, acessoTokenExpiraEm = ? WHERE id = ?",
+    [hash, expiraEm, negociacaoId],
+  );
+}
+
+/** Pedidos recentes com as negociações de cada um, para o painel. */
+export async function pedidosComNegociacoes(limite = 30): Promise<
+  Array<{
+    id: number;
+    serviceType: string | null;
+    city: string | null;
+    contactName: string | null;
+    contactEmail: string | null;
+    valorMinimoCliente: string | null;
+    createdAt: Date;
+    negociacoes: Array<{
+      id: number;
+      providerId: number;
+      profissionalNome: string;
+      profissionalEmail: string | null;
+      estado: string;
+      valorAcordado: string | null;
+    }>;
+  }>
+> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+
+  const [pedidos] = await pool.execute(
+    `SELECT id, serviceType, city, contactName, contactEmail, valorMinimoCliente, createdAt
+       FROM simulatorOrders
+      WHERE valorMinimoCliente IS NOT NULL
+      ORDER BY createdAt DESC
+      LIMIT ?`,
+    [String(limite)],
+  ) as any[];
+
+  const linhas = pedidos as Array<Record<string, unknown>>;
+  if (linhas.length === 0) return [];
+
+  const ids = linhas.map((p) => Number(p.id));
+  const [negs] = await pool.execute(
+    `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado,
+            p.name AS profissionalNome, p.email AS profissionalEmail
+       FROM negociacoes n
+       JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})`,
+    ids,
+  ) as any[];
+
+  const porPedido = new Map<number, any[]>();
+  for (const n of negs as Array<Record<string, unknown>>) {
+    const k = Number(n.pedidoId);
+    if (!porPedido.has(k)) porPedido.set(k, []);
+    porPedido.get(k)!.push(n);
+  }
+
+  return linhas.map((p) => ({
+    id: Number(p.id),
+    serviceType: (p.serviceType as string) ?? null,
+    city: (p.city as string) ?? null,
+    contactName: (p.contactName as string) ?? null,
+    contactEmail: (p.contactEmail as string) ?? null,
+    valorMinimoCliente: (p.valorMinimoCliente as string) ?? null,
+    createdAt: p.createdAt as Date,
+    negociacoes: porPedido.get(Number(p.id)) ?? [],
+  }));
+}
+
+/**
  * Fecha as restantes negociações de um pedido quando uma é fechada.
  *
  * Sem isto, o cliente contratava alguém e os outros profissionais continuavam

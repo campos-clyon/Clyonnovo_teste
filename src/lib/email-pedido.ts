@@ -14,9 +14,9 @@
  */
 
 import { Resend } from "resend";
-import { SITE_URL } from "./seo-data";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
+import { urlDeAccao } from "./url-do-site";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -46,7 +46,10 @@ function euros(valor: number | null): string | null {
 }
 
 function montarHtml(p: LinkDoPedidoParams): string {
-  const url = linkDoPedido(SITE_URL, p.token);
+  // urlDeAccao e não SITE_URL: um email enviado de um preview tem de trazer o
+  // link desse preview, senão manda a pessoa para produção — onde o pedido que
+  // ela acabou de criar não existe.
+  const url = linkDoPedido(urlDeAccao(), p.token);
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const nome = p.nomeDoCliente?.trim().split(/\s+/)[0] ?? null;
   const minimo = euros(p.valorMinimoCliente);
