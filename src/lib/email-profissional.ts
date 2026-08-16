@@ -44,6 +44,8 @@ export type AvisoDePedido = {
   paraEmail: string;
   paraNome: string;
   pedidoId: number;
+  /** O link dele para este pedido. Não tem conta — o token é o acesso. */
+  token: string;
   serviceType: string | null;
   /** Zona, nunca a morada. */
   zona: string | null;
@@ -73,12 +75,7 @@ function linha(rotulo: string, valor: string | null): string {
 }
 
 function montarHtml(p: AvisoDePedido): string {
-  // TODO: apontar para /profissionais/pedidos/[token] quando o portal existir.
-  // Enquanto não existe, o botão vai para a página de profissionais em vez de
-  // um 404 — um link partido no primeiro email que ele recebe de nós é a pior
-  // primeira impressão possível, e o motor de negociação já está escrito mas
-  // ainda não tem ecrã nem forma de o autenticar.
-  const url = `${SITE_URL.replace(/\/+$/, "")}/profissionais`;
+  const url = `${SITE_URL.replace(/\/+$/, "")}/profissionais/pedidos/${p.token}`;
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const quer = euros(p.valorMinimoCliente);
   const recebe = euros(p.recebeLiquido);
@@ -145,7 +142,7 @@ function montarHtml(p: AvisoDePedido): string {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td align="center">
               <a href="${url}" style="display:inline-block;background:#00B4CC;color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:10px;font-size:15px;font-weight:600;">
-                Abrir a CLYON
+                Ver e responder
               </a>
             </td></tr>
           </table>

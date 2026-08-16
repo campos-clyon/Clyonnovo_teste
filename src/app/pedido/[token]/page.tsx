@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Camera, Lock, MapPin, Clock, FileText, Truck } from "lucide-react";
-import { getSimulatorOrderByAcessoTokenHash } from "@/lib/db";
+import { getSimulatorOrderByAcessoTokenHash, negociacoesDoPedido } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import type { Proposta } from "@/lib/negociacao";
+import PropostasRecebidas from "./PropostasRecebidas";
 
 /**
  * O pedido, aberto pelo link.
@@ -43,6 +45,16 @@ function euros(valor: unknown): string | null {
   const n = typeof valor === "string" ? Number(valor) : typeof valor === "number" ? valor : NaN;
   if (!Number.isFinite(n)) return null;
   return n.toFixed(2).replace(".", ",") + " €";
+}
+
+function propostasDe(json: string | null): Proposta[] {
+  if (!json) return [];
+  try {
+    const l = JSON.parse(json);
+    return Array.isArray(l) ? (l as Proposta[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 function fotosDoPedido(filesJson: unknown): Array<{ url: string; name?: string }> {
@@ -102,6 +114,19 @@ export default async function PaginaDoPedido({
     SERVICE_CATEGORIES.find((c) => c.id === pedido.serviceType)?.label ??
     pedido.serviceType ??
     "Serviço";
+
+  // As negociações a decorrer. O cliente pode ter várias — é isso que torna o
+  // segundo passo do aperto de mão necessário.
+  const negociacoesDoCliente = (await negociacoesDoPedido(pedido.id)).map((n) => ({
+    id: n.id,
+    estado: n.estado,
+    valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+    propostas: propostasDe(n.propostasJson),
+    profissionalNome: n.profissionalNome,
+    emiteFatura: Number(n.emiteFatura) === 1,
+    guiaVerificada: n.guiaVerificadaEm != null,
+  }));
+
   const fotos = fotosDoPedido(pedido.filesJson);
   const minimo = euros(pedido.valorMinimoCliente);
   const estimativa = euros(pedido.estimateTotal ?? pedido.estimateMax);
@@ -113,11 +138,9 @@ export default async function PaginaDoPedido({
           Pedido #{pedido.id}
         </span>
         <h1 className="mt-1 text-2xl font-bold text-[#0B1929] sm:text-3xl">{servico}</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Ainda não há propostas. Assim que um profissional responder, aparece aqui —
-          e avisamos por email.
-        </p>
       </header>
+
+      <PropostasRecebidas token={token} negociacoesIniciais={negociacoesDoCliente} />
 
       {/* Criar conta: convida, nunca obriga. */}
       <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">

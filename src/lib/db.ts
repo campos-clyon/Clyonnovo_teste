@@ -664,6 +664,157 @@ export async function profissionaisActivos(): Promise<ProfissionalNaBase[]> {
   }));
 }
 
+// ── Negociações ─────────────────────────────────────────────────────────────
+
+let negociacoesEnsured = false;
+
+/**
+ * Uma negociação por par (pedido, profissional).
+ *
+ * As propostas ficam em JSON e não numa tabela própria de propósito: lêem-se e
+ * escrevem-se sempre inteiras, o motor em `negociacao.ts` trabalha sobre o
+ * array completo, e não há consulta nenhuma que precise de uma proposta
+ * isolada. Uma tabela filha traria junções e uma ordem para garantir, a troco
+ * de nada.
+ *
+ * O token é o acesso do profissional a este pedido — mesmo desenho do link do
+ * cliente: 256 bits, só o hash guardado. Ele não tem conta, e obrigá-lo a
+ * criar uma antes de responder era perder a resposta.
+ */
+export async function ensureNegociacoesTable(): Promise<void> {
+  if (negociacoesEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS negociacoes (
+      id                  INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      pedidoId            INT NOT NULL,
+      providerId          INT UNSIGNED NOT NULL,
+      acessoTokenHash     VARCHAR(64) NOT NULL,
+      acessoTokenExpiraEm DATETIME NULL DEFAULT NULL,
+      estado              VARCHAR(30) NOT NULL DEFAULT 'aberta',
+      valorAcordado       DECIMAL(10,2) NULL DEFAULT NULL,
+      propostasJson       LONGTEXT NULL,
+      createdAt           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY negociacoes_pedido_provider (pedidoId, providerId),
+      KEY negociacoes_token (acessoTokenHash),
+      KEY negociacoes_pedido (pedidoId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  negociacoesEnsured = true;
+}
+
+export type NegociacaoNaBase = {
+  id: number;
+  pedidoId: number;
+  providerId: number;
+  acessoTokenHash: string;
+  acessoTokenExpiraEm: Date | string | null;
+  estado: string;
+  valorAcordado: string | null;
+  propostasJson: string | null;
+};
+
+export async function criarNegociacao(dados: {
+  pedidoId: number;
+  providerId: number;
+  acessoTokenHash: string;
+  acessoTokenExpiraEm: Date;
+  propostasJson: string;
+}): Promise<number> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  // Se o pedido for redistribuído ao mesmo profissional, não se cria outra
+  // negociação nem se apaga a que existe — o histórico de propostas dele é o
+  // que dá sentido ao estado actual.
+  const [res] = await pool.execute(
+    `INSERT INTO negociacoes
+       (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
+    [
+      dados.pedidoId,
+      dados.providerId,
+      dados.acessoTokenHash,
+      dados.acessoTokenExpiraEm,
+      dados.propostasJson,
+    ],
+  ) as any[];
+
+  return Number(res.insertId);
+}
+
+export async function negociacaoPorTokenHash(
+  hash: string,
+): Promise<NegociacaoNaBase | undefined> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    "SELECT * FROM negociacoes WHERE acessoTokenHash = ? LIMIT 1",
+    [hash],
+  ) as any[];
+  return (rows as NegociacaoNaBase[])[0];
+}
+
+export async function negociacoesDoPedido(pedidoId: number): Promise<
+  Array<NegociacaoNaBase & { profissionalNome: string; emiteFatura: number; guiaVerificadaEm: Date | null }>
+> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT n.*, p.name AS profissionalNome, p.emiteFatura, p.guiaVerificadaEm
+       FROM negociacoes n
+       JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId = ?
+      ORDER BY n.updatedAt DESC`,
+    [pedidoId],
+  ) as any[];
+  return rows as any[];
+}
+
+export async function gravarNegociacao(
+  id: number,
+  dados: { estado: string; valorAcordado: number | null; propostasJson: string },
+): Promise<void> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
+    [dados.estado, dados.valorAcordado, dados.propostasJson, id],
+  );
+}
+
+/**
+ * Fecha as restantes negociações de um pedido quando uma é fechada.
+ *
+ * Sem isto, o cliente contratava alguém e os outros profissionais continuavam
+ * a ver o pedido em aberto — a propor valores para um trabalho que já tinha
+ * dono. É a promessa que o ecrã do cliente faz, e tem de ser verdade.
+ */
+export async function encerrarOutrasNegociacoes(
+  pedidoId: number,
+  excepto: number,
+): Promise<number> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [res] = await pool.execute(
+    `UPDATE negociacoes
+        SET estado = 'morta'
+      WHERE pedidoId = ? AND id <> ? AND estado IN ('aberta', 'aguarda_contratacao')`,
+    [pedidoId, excepto],
+  ) as any[];
+  return Number(res.affectedRows ?? 0);
+}
+
 /** Marca a guia de transporte como verificada por alguém. */
 export async function verificarGuiaDeTransporte(
   providerId: number,

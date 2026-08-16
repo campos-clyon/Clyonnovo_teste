@@ -1,8 +1,10 @@
-import { profissionaisActivos, type ProfissionalNaBase } from "./db";
+import { profissionaisActivos, criarNegociacao, type ProfissionalNaBase } from "./db";
 import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel";
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
 import { avisarProfissional } from "./email-profissional";
 import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
+import { gerarTokenDeAcesso } from "./pedido-acesso";
+import { negociacaoNova } from "./negociacao";
 
 /**
  * Levar um pedido a quem o pode fazer.
@@ -101,25 +103,52 @@ export async function distribuirPedido(
   const recebe = quantoRecebe(pedido.valorMinimoCliente);
 
   const envios = await Promise.all(
-    elegiveis.map((c) =>
-      c.profissional.email
-        ? avisarProfissional({
-            paraEmail: c.profissional.email,
-            paraNome: c.profissional.name,
-            pedidoId: pedido.id,
-            serviceType: pedido.serviceType,
-            zona: pedido.city,
-            urgencia: pedido.urgency,
-            descricao: pedido.description,
-            quantidadeDeFotos: pedido.quantidadeDeFotos,
-            valorMinimoCliente: pedido.valorMinimoCliente,
-            recebeLiquido: recebe,
-            distanciaKm: c.distanciaKm,
-            precisaFatura: pedido.precisaFatura,
-            precisaGuiaTransporte: pedido.precisaGuiaTransporte,
-          })
-        : Promise.resolve(false),
-    ),
+    elegiveis.map(async (c) => {
+      if (!c.profissional.email) return false;
+
+      // Uma negociação por profissional, cada uma com o seu link. O primeiro
+      // lance já está na mesa: é o valor que o cliente pediu. Sem isto, a
+      // negociação começava vazia e alguém tinha de dar o primeiro passo sem
+      // saber sobre o quê.
+      let token: string;
+      try {
+        const acesso = gerarTokenDeAcesso();
+        await criarNegociacao({
+          pedidoId: pedido.id,
+          providerId: c.profissional.id,
+          acessoTokenHash: acesso.hash,
+          acessoTokenExpiraEm: acesso.expiraEm,
+          propostasJson: JSON.stringify(
+            negociacaoNova(pedido.valorMinimoCliente ?? 0, new Date()).propostas,
+          ),
+        });
+        token = acesso.token;
+      } catch (err) {
+        console.error(
+          "[distribuir] não criou negociação para o profissional",
+          c.profissional.id,
+          err,
+        );
+        return false;
+      }
+
+      return avisarProfissional({
+        paraEmail: c.profissional.email,
+        paraNome: c.profissional.name,
+        pedidoId: pedido.id,
+        token,
+        serviceType: pedido.serviceType,
+        zona: pedido.city,
+        urgencia: pedido.urgency,
+        descricao: pedido.description,
+        quantidadeDeFotos: pedido.quantidadeDeFotos,
+        valorMinimoCliente: pedido.valorMinimoCliente,
+        recebeLiquido: recebe,
+        distanciaKm: c.distanciaKm,
+        precisaFatura: pedido.precisaFatura,
+        precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+      });
+    }),
   );
 
   const avisados = envios.filter(Boolean).length;
