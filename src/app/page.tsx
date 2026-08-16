@@ -602,16 +602,12 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
-                  "Olá! Quero inscrever-me como profissional na CLYON.",
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/profissionais"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
               >
                 Quero receber pedidos
-              </a>
+              </Link>
             </div>
           </div>
         </div>

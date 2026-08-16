@@ -424,6 +424,53 @@ export async function ensureProvidersSchema(): Promise<void> {
     // Colunas adicionadas depois da criação inicial (idempotente)
     const providerColumnsToAdd: Array<{ name: string; sql: string }> = [
       { name: "passwordHash", sql: "ALTER TABLE providers ADD COLUMN passwordHash VARCHAR(255) NULL" },
+
+      // ── Plataforma (16-08-2026) ──────────────────────────────────────────
+      // Estes profissionais são os do SITE, em MySQL. Não confundir com os
+      // partner_profiles do Supabase, que são os da app e cujo esquema é do
+      // Bridge — ver partner-profile.ts. São sistemas separados de propósito:
+      // o site testa o modelo novo antes de lhe tocar na app.
+      {
+        name: "categorias",
+        sql: "ALTER TABLE providers ADD COLUMN categorias TEXT NULL",
+      },
+      {
+        name: "raioKm",
+        sql: "ALTER TABLE providers ADD COLUMN raioKm INT NULL",
+      },
+      {
+        name: "zonas",
+        sql: "ALTER TABLE providers ADD COLUMN zonas TEXT NULL",
+      },
+      {
+        name: "emiteFatura",
+        sql: "ALTER TABLE providers ADD COLUMN emiteFatura TINYINT(1) NOT NULL DEFAULT 0",
+      },
+      {
+        name: "emiteGuiaTransporte",
+        sql: "ALTER TABLE providers ADD COLUMN emiteGuiaTransporte TINYINT(1) NOT NULL DEFAULT 0",
+      },
+      {
+        name: "numeroTransportador",
+        sql: "ALTER TABLE providers ADD COLUMN numeroTransportador VARCHAR(60) NULL",
+      },
+      // A verificação vive numa coluna própria, e não num booleano junto da
+      // declaração, porque são coisas diferentes: uma é o que ele diz, a outra
+      // é o que nós confirmámos. Um distintivo que o próprio liga sozinho vale
+      // menos do que nenhum — o cliente confia nele.
+      {
+        name: "guiaVerificadaEm",
+        sql: "ALTER TABLE providers ADD COLUMN guiaVerificadaEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "guiaVerificadaPor",
+        sql: "ALTER TABLE providers ADD COLUMN guiaVerificadaPor VARCHAR(120) NULL",
+      },
+      // Ninguém entra aprovado. 'pendente' → 'aprovado' | 'rejeitado' | 'suspenso'.
+      {
+        name: "estado",
+        sql: "ALTER TABLE providers ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'pendente'",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -481,6 +528,104 @@ export async function ensureProvidersSchema(): Promise<void> {
 
   providersSchemaEnsured = true;
   console.log("[ensureProvidersSchema] schema verificado com sucesso");
+}
+
+// ── Profissionais do site (plataforma) ──────────────────────────────────────
+
+export type InscricaoDeProfissional = {
+  name: string;
+  slug: string;
+  email: string;
+  phone: string | null;
+  nif: string | null;
+  city: string | null;
+  categorias: string[];
+  zonas: string[];
+  raioKm: number | null;
+  emiteFatura: boolean;
+  emiteGuiaTransporte: boolean;
+  numeroTransportador: string | null;
+};
+
+/**
+ * Grava uma inscrição.
+ *
+ * Entra sempre como `pendente` e com a guia **por verificar**, mesmo que ele
+ * a tenha declarado e tenha escrito o número. Confirmar o registo de
+ * transportador é trabalho de uma pessoa, e é o que separa um distintivo em
+ * que o cliente pode confiar de um que qualquer um liga sozinho.
+ */
+export async function criarProfissional(dados: InscricaoDeProfissional): Promise<number> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [res] = await pool.execute(
+    `INSERT INTO providers
+       (name, slug, email, phone, nif, city, categorias, zonas, raioKm,
+        emiteFatura, emiteGuiaTransporte, numeroTransportador, estado, isActive, isClyon)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+    [
+      dados.name,
+      dados.slug,
+      dados.email,
+      dados.phone,
+      dados.nif,
+      dados.city,
+      JSON.stringify(dados.categorias),
+      JSON.stringify(dados.zonas),
+      dados.raioKm,
+      dados.emiteFatura ? 1 : 0,
+      dados.emiteGuiaTransporte ? 1 : 0,
+      dados.numeroTransportador,
+    ],
+  ) as any[];
+
+  return Number(res.insertId);
+}
+
+/** Já existe alguém inscrito com este email? */
+export async function profissionalPorEmail(email: string): Promise<{ id: number } | undefined> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    "SELECT id FROM providers WHERE email = ? LIMIT 1",
+    [email],
+  ) as any[];
+  return (rows as Array<{ id: number }>)[0];
+}
+
+/**
+ * Constrói um slug livre a partir do nome.
+ *
+ * A coluna é UNIQUE: dois "Transportes Silva" a inscreverem-se rebentavam o
+ * INSERT do segundo com um erro de chave duplicada que ele leria como "o site
+ * está avariado".
+ */
+export async function slugLivreParaProfissional(nome: string): Promise<string> {
+  await ensureProvidersSchema();
+  const base =
+    nome
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "profissional";
+
+  const pool = await getPool();
+  if (!pool) return base;
+
+  for (let n = 0; n < 50; n++) {
+    const tentativa = n === 0 ? base : `${base}-${n + 1}`;
+    const [rows] = await pool.execute(
+      "SELECT 1 FROM providers WHERE slug = ? LIMIT 1",
+      [tentativa],
+    ) as any[];
+    if ((rows as unknown[]).length === 0) return tentativa;
+  }
+  return `${base}-${Date.now()}`;
 }
 
 export async function upsertUser(values: InsertUser) {
