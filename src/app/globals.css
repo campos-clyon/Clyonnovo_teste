@@ -501,10 +501,6 @@ footer .text-white {
   0%   { transform: scale(1);   opacity: 0.6; }
   100% { transform: scale(1.8); opacity: 0; }
 }
-@keyframes step-line-flow {
-  0%   { background-position: 0 0; }
-  100% { background-position: 16px 0; }
-}
 .step-icon {
   animation: step-float 3.6s ease-in-out infinite;
 }
@@ -513,12 +509,6 @@ footer .text-white {
 }
 .step-pulse-ring {
   animation: step-pulse-ring 2.4s ease-out infinite;
-}
-.step-line {
-  background-image: linear-gradient(to right, #06B6D4 50%, transparent 50%);
-  background-size: 16px 2px;
-  background-repeat: repeat-x;
-  animation: step-line-flow 1.2s linear infinite;
 }
 
 /* Homepage — animações da secção "Garantias" */
