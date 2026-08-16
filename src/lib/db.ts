@@ -471,6 +471,17 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "estado",
         sql: "ALTER TABLE providers ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'pendente'",
       },
+      // Onde fica a base dele. Sem coordenadas o raioKm não passa de um número
+      // no formulário: não há como medir distância, e a elegibilidade fica
+      // reduzida a comparar nomes de cidades.
+      {
+        name: "baseLat",
+        sql: "ALTER TABLE providers ADD COLUMN baseLat DECIMAL(10,7) NULL DEFAULT NULL",
+      },
+      {
+        name: "baseLng",
+        sql: "ALTER TABLE providers ADD COLUMN baseLng DECIMAL(10,7) NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -545,6 +556,8 @@ export type InscricaoDeProfissional = {
   emiteFatura: boolean;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string | null;
+  baseLat: number | null;
+  baseLng: number | null;
 };
 
 /**
@@ -563,8 +576,9 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
   const [res] = await pool.execute(
     `INSERT INTO providers
        (name, slug, email, phone, nif, city, categorias, zonas, raioKm,
-        emiteFatura, emiteGuiaTransporte, numeroTransportador, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+        emiteFatura, emiteGuiaTransporte, numeroTransportador,
+        baseLat, baseLng, estado, isActive, isClyon)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -578,10 +592,101 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.emiteFatura ? 1 : 0,
       dados.emiteGuiaTransporte ? 1 : 0,
       dados.numeroTransportador,
+      dados.baseLat,
+      dados.baseLng,
     ],
   ) as any[];
 
   return Number(res.insertId);
+}
+
+/** Uma linha de `providers` na forma que a regra de elegibilidade entende. */
+export type ProfissionalNaBase = {
+  id: number;
+  name: string;
+  email: string | null;
+  isActive: boolean;
+  estado: string | null;
+  categorias: string[];
+  zonas: string[];
+  raioKm: number | null;
+  emiteFatura: boolean;
+  emiteGuiaTransporte: boolean;
+  guiaVerificadaEm: Date | string | null;
+  baseLat: number | null;
+  baseLng: number | null;
+};
+
+function listaDeJson(valor: unknown): string[] {
+  if (typeof valor !== "string") return [];
+  try {
+    const lista = JSON.parse(valor);
+    return Array.isArray(lista) ? lista.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Os profissionais candidatos a receber um pedido.
+ *
+ * Filtra no SQL só o que é barato e não muda por pedido — activos e aprovados.
+ * O resto (categoria, distância, documentos) fica para a regra em
+ * `profissional-elegivel.ts`, que é onde está escrita e testada. Duplicá-la
+ * aqui em SQL era garantir que um dia as duas discordavam.
+ */
+export async function profissionaisActivos(): Promise<ProfissionalNaBase[]> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return [];
+
+  const [rows] = await pool.execute(
+    `SELECT id, name, email, isActive, estado, categorias, zonas, raioKm,
+            emiteFatura, emiteGuiaTransporte, guiaVerificadaEm, baseLat, baseLng
+       FROM providers
+      WHERE isActive = 1 AND estado = 'aprovado' AND isClyon = 0`,
+  ) as any[];
+
+  return (rows as Array<Record<string, unknown>>).map((r) => ({
+    id: Number(r.id),
+    name: String(r.name ?? ""),
+    email: (r.email as string) ?? null,
+    isActive: Number(r.isActive) === 1,
+    estado: (r.estado as string) ?? null,
+    categorias: listaDeJson(r.categorias),
+    zonas: listaDeJson(r.zonas),
+    raioKm: r.raioKm == null ? null : Number(r.raioKm),
+    emiteFatura: Number(r.emiteFatura) === 1,
+    emiteGuiaTransporte: Number(r.emiteGuiaTransporte) === 1,
+    guiaVerificadaEm: (r.guiaVerificadaEm as Date | null) ?? null,
+    baseLat: r.baseLat == null ? null : Number(r.baseLat),
+    baseLng: r.baseLng == null ? null : Number(r.baseLng),
+  }));
+}
+
+/** Marca a guia de transporte como verificada por alguém. */
+export async function verificarGuiaDeTransporte(
+  providerId: number,
+  quem: string,
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    "UPDATE providers SET guiaVerificadaEm = NOW(), guiaVerificadaPor = ? WHERE id = ?",
+    [quem.slice(0, 120), providerId],
+  );
+}
+
+/** Aprova, rejeita ou suspende um profissional. */
+export async function definirEstadoDoProfissional(
+  providerId: number,
+  estado: "pendente" | "aprovado" | "rejeitado" | "suspenso",
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute("UPDATE providers SET estado = ? WHERE id = ?", [estado, providerId]);
 }
 
 /** Já existe alguém inscrito com este email? */

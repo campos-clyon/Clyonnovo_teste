@@ -16,6 +16,7 @@ import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { validarValoresDoCliente } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
+import { distribuirPedido } from "@/lib/distribuir-pedido";
 
 export const runtime = "nodejs";
 
@@ -342,6 +343,55 @@ export async function POST(req: NextRequest) {
           type: "created",
           by: null,
           message: "O email com o link de acesso NÃO foi enviado. Reenviar ao cliente.",
+        });
+      }
+    }
+
+    // ── Levar o pedido a quem o pode fazer ────────────────────────────────────
+    //
+    // Só para pedidos do formulário novo: os outros não têm valor pedido nem
+    // negociação, e um profissional que recebesse um deles abria um ecrã que
+    // não lhe dizia nada.
+    //
+    // Corre depois da resposta estar praticamente montada e nunca a bloqueia
+    // com um erro: se a distribuição falhar, o pedido existe e reenvia-se. O
+    // contrário — o cliente ver um erro porque um email não saiu — seria pior.
+    if (clienteIndicouValores) {
+      try {
+        const distribuicao = await distribuirPedido({
+          id,
+          serviceType: row.serviceType ?? null,
+          description: row.description ?? null,
+          city: row.city ?? null,
+          urgency: row.urgency ?? null,
+          quantidadeDeFotos: order.files?.length ?? 0,
+          valorMinimoCliente: valoresParaGravar.valorMinimoCliente
+            ? Number(valoresParaGravar.valorMinimoCliente)
+            : null,
+          precisaFatura: order.precisaFatura === true,
+          precisaGuiaTransporte: order.precisaGuiaTransporte === true,
+          lat: order.address?.lat ?? null,
+          lng: order.address?.lng ?? null,
+        });
+
+        // Um pedido que não chega a ninguém fica publicado e sem propostas,
+        // igualzinho a um que ninguém quis. Isto deixa escrito qual dos dois é.
+        await appendOrderHistory(id, {
+          type: "created",
+          by: null,
+          message:
+            distribuicao.avisados > 0
+              ? `Enviado a ${distribuicao.avisados} profissional(is) de ${distribuicao.candidatos} activos.` +
+                (distribuicao.falhados > 0 ? ` ${distribuicao.falhados} email(s) falharam.` : "")
+              : `NÃO chegou a nenhum profissional (${distribuicao.candidatos} activos). ` +
+                `Motivos: ${JSON.stringify(distribuicao.motivos)}`,
+        });
+      } catch (err) {
+        console.error("[simulador/pedido] distribuição falhou:", err);
+        await appendOrderHistory(id, {
+          type: "created",
+          by: null,
+          message: "A distribuição aos profissionais falhou. Reenviar.",
         });
       }
     }

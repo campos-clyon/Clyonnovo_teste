@@ -6,6 +6,7 @@ import {
   slugLivreParaProfissional,
 } from "@/lib/db";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { geocodificarLocalidade } from "@/lib/geocodificar";
 
 export const runtime = "nodejs";
 
@@ -57,6 +58,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Onde fica a base dele, para o raio que indicou poder ser medido. Falhar
+    // aqui não impede a inscrição: sem coordenadas a elegibilidade cai nas
+    // zonas, que continuam a funcionar. É degradação, não avaria.
+    const base = await geocodificarLocalidade(d.cidade);
+    if (!base) {
+      console.warn(
+        "[profissionais/inscricao] sem coordenadas para",
+        d.cidade,
+        "— elegibilidade por zonas.",
+      );
+    }
+
     const id = await criarProfissional({
       name: d.nome,
       slug: await slugLivreParaProfissional(d.nome),
@@ -70,6 +83,8 @@ export async function POST(req: NextRequest) {
       emiteFatura: d.emiteFatura,
       emiteGuiaTransporte: d.emiteGuiaTransporte,
       numeroTransportador: d.numeroTransportador,
+      baseLat: base?.lat ?? null,
+      baseLng: base?.lng ?? null,
     });
 
     return NextResponse.json({
