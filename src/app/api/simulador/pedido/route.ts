@@ -13,6 +13,9 @@ import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
+import { validarValoresDoCliente } from "@/lib/pedido-valores";
+import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
+import { enviarLinkDoPedido } from "@/lib/email-pedido";
 
 export const runtime = "nodejs";
 
@@ -125,6 +128,43 @@ export async function POST(req: NextRequest) {
     // Pedidos entram sempre na fila geral. Uma assistente deve aceitar
     // manualmente via POST /api/admin/pedidos/[id]/accept.
 
+    // ── Quanto o cliente quer pagar ───────────────────────────────────────────
+    //
+    // Validado outra vez aqui, e não só no formulário. O ecrã impede a pessoa
+    // distraída; não impede quem chame a rota directamente, e esta é pública
+    // por necessidade. Um pedido gravado com o máximo abaixo do mínimo, ou com
+    // um valor absurdo vindo de um campo de texto, é lixo que alguém teria de
+    // limpar à mão mais tarde.
+    //
+    // Pedidos que não vêm do formulário novo (a página de contactos, por
+    // exemplo) continuam a entrar sem valores — daí o `null` em vez de erro
+    // quando os dois campos vêm vazios.
+    let valoresParaGravar: {
+      valorMinimoCliente?: string | null;
+      valorMaximoCliente?: string | null;
+    } = {};
+    const clienteIndicouValores =
+      order.valorMinimoCliente != null || order.valorMaximoCliente != null;
+    if (clienteIndicouValores) {
+      const validacao = validarValoresDoCliente(
+        order.valorMinimoCliente,
+        order.valorMaximoCliente,
+      );
+      if (!validacao.ok) {
+        return NextResponse.json(
+          { ok: false, error: validacao.erros[0].mensagem, erros: validacao.erros },
+          { status: 400 },
+        );
+      }
+      valoresParaGravar = {
+        valorMinimoCliente: String(validacao.valores.valorMinimoCliente),
+        valorMaximoCliente: String(validacao.valores.valorMaximoCliente),
+      };
+    }
+
+    // O token que vai no link. Aqui fica só o hash — ver pedido-acesso.ts.
+    const acesso = gerarTokenDeAcesso();
+
     const row: InsertSimulatorOrder = {
       serviceType: order.serviceType || null,
       description: order.description || null,
@@ -223,6 +263,13 @@ export async function POST(req: NextRequest) {
       // Guardar todo o JSON do formulário para preservar dados de mudança
       // (originAddress, destinationAddress, originAccess, destinationAccess, movingDistance, heavyItems, etc.)
       rawOrderJson: JSON.stringify(order),
+
+      // ── Plataforma ──────────────────────────────────────────────────────
+      ...valoresParaGravar,
+      precisaFatura: order.precisaFatura === true ? 1 : 0,
+      precisaGuiaTransporte: order.precisaGuiaTransporte === true ? 1 : 0,
+      acessoTokenHash: acesso.hash,
+      acessoTokenExpiraEm: acesso.expiraEm,
     };
 
     const id = await createSimulatorOrder(row);
@@ -266,6 +313,39 @@ export async function POST(req: NextRequest) {
       backofficeUrl:   `${SITE_URL}/admin/pedidos/${id}`,
     });
 
+    // ── O link de acesso ──────────────────────────────────────────────────────
+    //
+    // Só para pedidos que trazem valores, ou seja, os que vêm do formulário
+    // novo. Um contacto da página de contactos não tem negociação a que voltar,
+    // e mandar-lhe um link para um pedido sem propostas era prometer um ecrã
+    // que não lhe diz nada.
+    //
+    // Não bloqueia a resposta: o pedido está gravado, e um email que falhe não
+    // pode transformar-se num erro de criação aos olhos do cliente.
+    let linkEnviado = false;
+    if (clienteIndicouValores && contactEmail) {
+      linkEnviado = await enviarLinkDoPedido({
+        para: contactEmail,
+        nomeDoCliente: row.contactName ?? null,
+        pedidoId: id,
+        serviceType: row.serviceType ?? null,
+        token: acesso.token,
+        valorMinimoCliente: valoresParaGravar.valorMinimoCliente
+          ? Number(valoresParaGravar.valorMinimoCliente)
+          : null,
+      });
+      if (!linkEnviado) {
+        // Fica no histórico porque é recuperável à mão: o pedido existe, o
+        // token existe, e alguém pode reenviar. Sem este registo, o cliente
+        // desaparecia sem ninguém perceber que nunca chegou a receber nada.
+        await appendOrderHistory(id, {
+          type: "created",
+          by: null,
+          message: "O email com o link de acesso NÃO foi enviado. Reenviar ao cliente.",
+        });
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       id: created.id,
@@ -275,7 +355,14 @@ export async function POST(req: NextRequest) {
       assignedToName: null,
       createdAt: created.createdAt,
       queue: "general",
-      message: "Pedido enviado com sucesso. A equipa CLYON vai analisar e entra em contacto em breve.",
+      linkEnviado,
+      // O token vai na resposta para o formulário poder levar o cliente ao
+      // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
+      // que o criou — nunca numa listagem nem numa leitura posterior.
+      acessoToken: clienteIndicouValores ? acesso.token : undefined,
+      message: linkEnviado
+        ? "Pedido criado. Enviámos o link de acesso para o seu email."
+        : "Pedido criado com sucesso.",
     });
   } catch (err: any) {
     // A mensagem crua do MySQL ia para o browser numa rota pública: dizia o

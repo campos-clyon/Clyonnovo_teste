@@ -22,8 +22,10 @@ import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
+import ValoresEFaturacao from "./components/ValoresEFaturacao";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { validarValoresDoCliente, type ErroDeValor } from "@/lib/pedido-valores";
 import {
   trackSimulatorStart,
   trackSimulatorContact,
@@ -48,12 +50,19 @@ export default function SimulatorThreePhaseForm() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [countdown, setCountdown] = useState(0); // contagem regressiva do envio (20→0)
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
+  // O token vem na resposta da criação para o cliente poder abrir o pedido sem
+  // esperar pelo email. Vive só neste ecrã e nunca é guardado.
+  const [acessoToken, setAcessoToken] = useState<string | null>(null);
   // Fotos que o cliente escolheu mas que não chegaram a subir
   const [fotosNaoEnviadas, setFotosNaoEnviadas] = useState(0);
   const [successAssignedTo] = useState<{ id: number; name: string } | null>(null);
   const [addressValue, setAddressValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase2Attempted, setPhase2Attempted] = useState(false);
+  // Os erros dos valores só aparecem depois de a pessoa tentar enviar. Acusar
+  // "o máximo não pode ser menor que o mínimo" enquanto ela ainda está a
+  // escrever o primeiro dígito do máximo é ruído, não ajuda.
+  const [phase3Attempted, setPhase3Attempted] = useState(false);
 
   // Limpar localStorage ao inicializar (F5 sempre reseta)
   useEffect(() => {
@@ -246,15 +255,38 @@ export default function SimulatorThreePhaseForm() {
     return formData.address?.formattedAddress && formData.floor && elevatorValid && formData.parkingDistance;
   };
 
+  /**
+   * O email passou a ser obrigatório: é por ele que chega o link que abre o
+   * pedido. E os valores também — sem eles não há a partir de quanto os
+   * profissionais respondem, e o pedido nascia sem o campo que o define.
+   */
   const isPhase3Valid = () => {
-    return formData.receiver?.name && formData.receiver?.phone && formData.urgency;
+    const valores = validarValoresDoCliente(
+      formData.valorMinimoCliente,
+      formData.valorMaximoCliente,
+    );
+    return Boolean(
+      formData.receiver?.name &&
+        formData.receiver?.phone &&
+        formData.receiver?.email &&
+        formData.urgency &&
+        valores.ok,
+    );
   };
 
   const canProceedToPhase2 = isPhase1Valid();
   const canProceedToPhase3 = isPhase2Valid();
   const canAnalyze = isPhase3Valid();
 
+  const validacaoDosValores = validarValoresDoCliente(
+    formData.valorMinimoCliente,
+    formData.valorMaximoCliente,
+  );
+  const errosDeValor: ErroDeValor[] =
+    phase3Attempted && !validacaoDosValores.ok ? validacaoDosValores.erros : [];
+
   const handleAnalyze = async () => {
+    setPhase3Attempted(true);
     if (!canAnalyze) {
       setError("Por favor, preencha todos os campos obrigatórios");
       return;
@@ -375,6 +407,7 @@ export default function SimulatorThreePhaseForm() {
         });
         if (saveRes.ok) {
           const saved = await saveRes.json();
+          if (typeof saved.acessoToken === "string") setAcessoToken(saved.acessoToken);
           return (saved.id as number) ?? null;
         }
       } catch {
@@ -479,20 +512,35 @@ export default function SimulatorThreePhaseForm() {
             </div>
           )}
 
-          {/* Combined info card */}
+          {/* O que acontece a seguir. Deixou de ser "a equipa entra em contacto":
+              agora o pedido vai aos profissionais e o cliente volta pelo link. */}
           <div className="bg-white rounded-2xl border border-blue-100 p-4 sm:p-5 shadow-sm mb-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 shrink-0 bg-emerald-50 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                Enviámos para o seu email um <strong>link que abre este pedido</strong>.
+                Não precisa de conta para o usar.
+              </p>
+            </div>
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 shrink-0 bg-blue-50 rounded-lg flex items-center justify-center">
                 <CheckCircle className="w-4 h-4 text-blue-600" />
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                {successAssignedTo ? (
-                  <>A equipa vai avaliar o pedido. Responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>. Entramos em contacto por telefone ou email.</>
-                ) : (
-                  <>A equipa CLYON vai avaliar o pedido em breve e entrar em contacto por telefone ou email.</>
-                )}
+                Os profissionais da sua zona vão responder com valores. Aceita o que
+                quiser, ou propõe outro — só paga se contratar alguém.
               </p>
             </div>
+            {acessoToken && (
+              <a
+                href={`/pedido/${acessoToken}`}
+                className="block rounded-xl bg-cyan-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-cyan-400"
+              >
+                Abrir o meu pedido
+              </a>
+            )}
             <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
               Guarde o número <span className="font-mono font-semibold text-gray-700">#{successOrderId}</span> para referência.
             </p>
@@ -598,6 +646,7 @@ export default function SimulatorThreePhaseForm() {
                   formData={formData}
                   updateField={updateField}
                   session={session}
+                  errosDeValor={errosDeValor}
                 />
               )}
 
@@ -1312,16 +1361,30 @@ function Phase3Contact({
   formData,
   updateField,
   session,
+  errosDeValor,
 }: {
   formData: FormState;
   updateField: (field: string, value: unknown) => void;
   session: any;
+  errosDeValor: ErroDeValor[];
 }) {
   const isLoggedIn = !!session?.user?.email;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Contacto e revisão</h2>
+      <h2 className="text-2xl font-bold text-gray-900">Quanto, e para onde enviamos</h2>
+
+      <ValoresEFaturacao
+        serviceType={formData.serviceType}
+        valorMinimoCliente={formData.valorMinimoCliente}
+        valorMaximoCliente={formData.valorMaximoCliente}
+        precisaFatura={formData.precisaFatura}
+        precisaGuiaTransporte={formData.precisaGuiaTransporte}
+        erros={errosDeValor}
+        onChange={updateField}
+      />
+
+      <hr className="border-slate-200" />
 
       {/* Info Box: Not Logged In */}
       {!isLoggedIn && (
@@ -1329,16 +1392,16 @@ function Phase3Contact({
           <span className="text-lg">ℹ️</span>
           <div className="flex-1">
             <p className="text-sm text-amber-900">
-              Tem conta CLYON?{" "}
+              Não precisa de conta — o link que vai receber abre o pedido. Mas com{" "}
               <a
                 href="/entrar"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-cyan-600 hover:text-cyan-700 underline"
               >
-                Entrar com Google
+                conta Google
               </a>{" "}
-              para acompanhar o seu pedido online.
+              fica com todos os pedidos no mesmo sítio, sem depender do email.
             </p>
           </div>
         </div>
@@ -1384,15 +1447,21 @@ function Phase3Contact({
         </div>
       </div>
 
+      {/* Deixou de ser opcional. É por aqui que chega o link que abre o pedido —
+          sem email, o cliente ficava sem forma de lá voltar. */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-900">Email (opcional)</label>
+        <label className="block text-sm font-medium text-gray-900">Email *</label>
         <input
           type="email"
           value={formData.receiver?.email || ""}
           onChange={(e) => updateField("receiver", { ...formData.receiver, email: e.target.value })}
           placeholder="Ex: exemplo@email.com"
+          autoComplete="email"
           className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
         />
+        <p className="text-xs text-slate-500">
+          É para aqui que enviamos o link de acesso ao pedido.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -1429,7 +1498,9 @@ function Phase3Contact({
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
-          <strong>Nota:</strong> Após enviar o pedido, a equipa CLYON irá analisar os dados e entrar em contacto através do telefone ou email fornecido.
+          <strong>O que acontece a seguir:</strong> recebe um link por email que abre
+          este pedido. Os profissionais da sua zona vêem-no e respondem com valores —
+          aceita o que quiser, ou propõe outro. Só paga se contratar alguém.
         </p>
       </div>
     </div>
