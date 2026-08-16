@@ -6,6 +6,7 @@ import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/transla
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
+import { linkGoogleMaps } from "@/lib/morada";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1668,7 +1669,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             <p className="text-[11px] text-slate-400">{[order.city, order.postalCode].filter(Boolean).join(" · ")}</p>
                           )}
                           {order.address && (
-                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer"
+                            <a href={linkGoogleMaps({ street: order.address, postalCode: order.postalCode, city: order.city, formattedAddress: order.address }) ?? "#"} target="_blank" rel="noreferrer"
                               className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-700 transition">
                               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                               Ver no mapa
@@ -1838,6 +1839,38 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           </Field>
                           <Field label="Código postal">
                             <input type="text" value={editPostalCode} onChange={(e) => setEditPostalCode(e.target.value)} className={inputCls} placeholder="1234-567" />
+                          </Field>
+                          {/* Abre no Maps com o que está NOS CAMPOS neste
+                              momento, não com o que foi gravado. Quem corrige
+                              a morada aqui quer confirmar a correcção, não a
+                              versão antiga. */}
+                          <Field label="Confirmar no mapa">
+                            {(() => {
+                              const url = linkGoogleMaps({
+                                street: editAddress,
+                                postalCode: editPostalCode,
+                                city: editCity,
+                                formattedAddress: editAddress,
+                              });
+                              if (!url) {
+                                return (
+                                  <p className="px-1 py-2.5 text-xs text-slate-400">
+                                    Preencha a morada para abrir o mapa.
+                                  </p>
+                                );
+                              }
+                              return (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-400/20"
+                                >
+                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                  Abrir no Google Maps
+                                </a>
+                              );
+                            })()}
                           </Field>
                           <Field label="Andar">
                             <input type="text" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className={inputCls} placeholder="Ex: 3º andar" />
