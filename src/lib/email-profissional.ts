@@ -165,8 +165,12 @@ function montarHtml(p: AvisoDePedido): string {
  * criação do pedido nem impedir que os outros sejam avisados.
  */
 export async function avisarProfissional(p: AvisoDePedido): Promise<boolean> {
-  const chave = process.env.RESEND_API_KEY;
-  if (!chave) return false;
+  // Mesmo nome que o resto do projecto usa — ver a nota em email-pedido.ts.
+  const chave = process.env.RESEND_API_KEY_clyonsite ?? process.env.RESEND_API_KEY;
+  if (!chave) {
+    console.warn("[email-profissional] RESEND_API_KEY_clyonsite em falta — aviso não enviado.");
+    return false;
+  }
   if (!p.paraEmail || !p.paraEmail.includes("@")) return false;
 
   try {

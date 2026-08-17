@@ -135,9 +135,14 @@ function montarHtml(p: LinkDoPedidoParams): string {
  * falhou. A falha fica no log, e o link continua a existir na base.
  */
 export async function enviarLinkDoPedido(p: LinkDoPedidoParams): Promise<boolean> {
-  const chave = process.env.RESEND_API_KEY;
+  // A chave do projecto chama-se RESEND_API_KEY_clyonsite — é o nome que os
+  // outros cinco ficheiros de email usam. Eu tinha escrito RESEND_API_KEY, um
+  // nome que também existe no Vercel mas de uma chave mais antiga: os emails
+  // ou não saíam, ou saíam por uma conta diferente da do resto do site. O
+  // recurso ao nome curto fica para não quebrar quem só tenha esse.
+  const chave = process.env.RESEND_API_KEY_clyonsite ?? process.env.RESEND_API_KEY;
   if (!chave) {
-    console.warn("[email-pedido] RESEND_API_KEY em falta — link não enviado.");
+    console.warn("[email-pedido] RESEND_API_KEY_clyonsite em falta — link não enviado.");
     return false;
   }
   if (!p.para || !p.para.includes("@")) {
