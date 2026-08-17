@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function AdminLoginPage() {
     }
   }, []);
   const [senha, setSenha] = useState("");
+  const [senhaVisivel, setSenhaVisivel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -106,18 +108,43 @@ export default function AdminLoginPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <label
+                htmlFor="senha"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"
+              >
                 Palavra-passe
               </label>
-              <input
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
-              />
+              {/*
+                Mostrar a palavra-passe é uma ajuda a sério e não um luxo: com o
+                campo mascarado, um erro de digitação é indistinguível de uma
+                palavra-passe errada, e a pessoa fica a tentar sem saber qual dos
+                dois é. Começa oculta, e quem a mostra fá-lo de propósito.
+              */}
+              <div className="relative">
+                <input
+                  id="senha"
+                  type={senhaVisivel ? "text" : "password"}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSenhaVisivel((v) => !v)}
+                  aria-label={senhaVisivel ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+                  aria-pressed={senhaVisivel}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-400/30"
+                >
+                  {senhaVisivel ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {error && (
