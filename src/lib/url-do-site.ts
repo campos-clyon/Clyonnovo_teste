@@ -23,12 +23,17 @@ export function urlDeAccao(): string {
   const explicito = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (explicito) return explicito.replace(/\/+$/, "");
 
-  // Vercel: `VERCEL_ENV` é "production", "preview" ou "development", e
-  // `VERCEL_URL` é o host daquele deployment específico, sem protocolo.
+  // Vercel: `VERCEL_ENV` é "production", "preview" ou "development".
+  //
+  // Preferimos o `VERCEL_BRANCH_URL` ao `VERCEL_URL`, e a diferença conta num
+  // email: o `VERCEL_URL` é o host daquele deployment em concreto e muda a cada
+  // publicação, portanto um link enviado hoje aponta para o código de hoje e
+  // não para o do ramo. O `VERCEL_BRANCH_URL` é estável por ramo — o link
+  // continua a abrir a versão mais recente depois de publicar outra vez.
   const ambiente = process.env.VERCEL_ENV;
-  const host = process.env.VERCEL_URL?.trim();
-  if (ambiente && ambiente !== "production" && host) {
-    return `https://${host.replace(/\/+$/, "")}`;
+  if (ambiente && ambiente !== "production") {
+    const host = process.env.VERCEL_BRANCH_URL?.trim() || process.env.VERCEL_URL?.trim();
+    if (host) return `https://${host.replace(/\/+$/, "")}`;
   }
 
   // Fora do Vercel e fora de produção: a máquina de quem está a desenvolver.

@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { urlDeAccao } from "./url-do-site";
 import { SITE_URL } from "./seo-data";
 
-const CHAVES = ["NEXT_PUBLIC_SITE_URL", "VERCEL_ENV", "VERCEL_URL", "NODE_ENV", "PORT"] as const;
+const CHAVES = [
+  "NEXT_PUBLIC_SITE_URL",
+  "VERCEL_ENV",
+  "VERCEL_URL",
+  "VERCEL_BRANCH_URL",
+  "NODE_ENV",
+  "PORT",
+] as const;
 
 /**
  * O `NODE_ENV` está tipado como só de leitura pelo @types/node, e o `tsc`
@@ -38,7 +45,17 @@ describe("urlDeAccao", () => {
   // para clyon.pt, onde o pedido acabado de criar não existe.
   it("num preview usa o host do preview", () => {
     process.env.VERCEL_ENV = "preview";
-    process.env.VERCEL_URL = "clyon-site-git-plataforma.vercel.app";
+    process.env.VERCEL_URL = "clyon-site-abc123.vercel.app";
+    expect(urlDeAccao()).toBe("https://clyon-site-abc123.vercel.app");
+  });
+
+  // O VERCEL_URL muda a cada publicação; o BRANCH_URL não. Num email isso é a
+  // diferença entre um link que abre a versão de hoje e um que continua a
+  // abrir a mais recente do ramo.
+  it("prefere o endereço estável do ramo ao do deployment", () => {
+    process.env.VERCEL_ENV = "preview";
+    process.env.VERCEL_URL = "clyon-site-abc123.vercel.app";
+    process.env.VERCEL_BRANCH_URL = "clyon-site-git-plataforma.vercel.app";
     expect(urlDeAccao()).toBe("https://clyon-site-git-plataforma.vercel.app");
   });
 
