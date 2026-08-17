@@ -98,6 +98,41 @@ export default function AdminNegociacoesPanel() {
     }
   }
 
+  async function redistribuir(pedidoId: number) {
+    if (!token) return;
+    setOcupado(`r${pedidoId}`);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/redistribuir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível redistribuir.");
+        return;
+      }
+      if (dados.avisados === 0) {
+        // Sem isto, carregar no botão e não acontecer nada parecia avaria.
+        // Os motivos vêm da mesma regra que decidiu, portanto são exactos.
+        const motivos = Object.entries(dados.motivos ?? {})
+          .filter(([, n]) => Number(n) > 0)
+          .map(([m, n]) => `${m.replace(/_/g, " ")}: ${n}`)
+          .join(", ");
+        setErro(
+          `Continua sem chegar a ninguém de ${dados.candidatos} profissionais activos.` +
+            (motivos ? ` Motivos — ${motivos}.` : ""),
+        );
+      }
+      await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
   if (!ready || aCarregar) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-400">
@@ -171,10 +206,27 @@ export default function AdminNegociacoesPanel() {
 
               <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
                 {p.negociacoes.length === 0 && (
-                  <p className="text-xs text-slate-400">
-                    Nenhum profissional foi notificado. Veja o histórico do pedido para
-                    perceber porquê.
-                  </p>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                    <p className="text-xs font-semibold text-amber-200">
+                      Nenhum profissional foi notificado.
+                    </p>
+                    <p className="mt-0.5 text-xs text-amber-300">
+                      O histórico do pedido diz o motivo — categoria, distância, fatura ou
+                      guia. Depois de corrigir, redistribua.
+                    </p>
+                    <button
+                      onClick={() => redistribuir(p.id)}
+                      disabled={ocupado === `r${p.id}`}
+                      className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+                    >
+                      {ocupado === `r${p.id}` ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                      Redistribuir
+                    </button>
+                  </div>
                 )}
                 {p.negociacoes.map((n) => {
                   const chave = `n${n.id}`;

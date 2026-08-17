@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
-import Script from "next/script";
-import { Analytics } from "@vercel/analytics/next";
+import RastreioConsentido from "@/components/RastreioConsentido";
 import PageViewTracker from "@/components/PageViewTracker";
 
 import SiteChrome from "@/components/SiteChrome";
@@ -207,8 +206,6 @@ const websiteSchema = {
   inLanguage: "pt-PT",
 };
 
-const GOOGLE_ADS_ID = "AW-18221538324";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -218,8 +215,9 @@ export default function RootLayout({
     <html lang="pt-PT" className={`${jakarta.variable} ${poppins.variable}`}>
       <head>
         <meta name="color-scheme" content="light" />
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-        <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
+        {/* Sem dns-prefetch nem preconnect ao googletagmanager: abriam ligação
+            ao Google no carregamento da página, antes de haver consentimento.
+            Não enviam cookies, mas revelam o IP de quem ainda não decidiu. */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -241,25 +239,15 @@ export default function RootLayout({
         />
       </head>
       <body className="site-aqua-shell min-h-screen bg-white text-slate-900 antialiased overflow-x-hidden">
-        <Script
-          id="gtag-src"
-          strategy="lazyOnload"
-          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
-        />
-        <Script id="gtag-init" strategy="lazyOnload">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${GOOGLE_ADS_ID}');
-          `}
-        </Script>
+        {/* O Google e o Vercel Analytics passaram para aqui dentro, onde só
+            carregam depois de a pessoa consentir. Estavam soltos neste ficheiro
+            a carregar sempre, com um banner ao lado a prometer o contrário. */}
+        <RastreioConsentido />
         <LocationProvider>
           <AuthClientProvider>
             <SiteChrome>{children}</SiteChrome>
           </AuthClientProvider>
         </LocationProvider>
-        <Analytics />
         {/* Vistas de página na nossa base — o painel deixa de depender de uma
             conta externa para saber de que páginas vêm os pedidos */}
         <PageViewTracker />

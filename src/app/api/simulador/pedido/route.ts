@@ -191,7 +191,12 @@ export async function POST(req: NextRequest) {
         order.serviceType === "mudanca"
           ? (order.originAddress?.formattedAddress ?? order.address?.formattedAddress ?? null)
           : (order.address?.formattedAddress ?? null),
-      city: order.city || order.address?.city || order.originAddress?.city || null,
+      // A morada que o cliente escolheu manda sobre o `order.city`, que vem do
+      // selector de localização do cabeçalho — uma preferência de navegação,
+      // muitas vezes adivinhada pelo IP. No pedido #191 gravou "Gauchy", uma
+      // vila francesa, enquanto a morada escolhida dizia Lisboa: a zona do
+      // pedido ficou errada, e com ela a comparação por zonas na distribuição.
+      city: order.address?.city || order.originAddress?.city || order.city || null,
       // postalCode: não existe como coluna separada na DB — guardado em rawOrderJson
       floor: (() => {
         const v = order.serviceType === "mudanca"
