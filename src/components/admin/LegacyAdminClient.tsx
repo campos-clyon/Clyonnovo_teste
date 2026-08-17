@@ -3,6 +3,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
@@ -50,6 +51,8 @@ import {
   Users,
   Wrench,
   X,
+  BadgeCheck,
+  HandCoins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1240,6 +1243,36 @@ export default function ColaboradorAdminClient() {
                 </div>
               );
             })}
+
+            {/*
+              Plataforma — páginas próprias, não secções deste componente.
+              São rotas separadas (/admin/profissionais, /admin/negociacoes) e
+              por isso navegam para fora em vez de trocarem de secção. Sem estes
+              links só se chegava lá escrevendo o endereço à mão.
+            */}
+            <div className="mb-5 last:mb-0">
+              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                Plataforma
+              </p>
+              <div className="space-y-0.5">
+                <Link
+                  href="/admin/profissionais"
+                  onClick={() => setMenuAberto(false)}
+                  className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
+                >
+                  <BadgeCheck className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Profissionais</span>
+                </Link>
+                <Link
+                  href="/admin/negociacoes"
+                  onClick={() => setMenuAberto(false)}
+                  className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
+                >
+                  <HandCoins className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Negociações</span>
+                </Link>
+              </div>
+            </div>
           </nav>
 
           {/* Quem está a trabalhar, e a saída */}
