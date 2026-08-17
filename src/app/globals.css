@@ -348,11 +348,26 @@ a.bg-\[\#25D366\] span {
   color: #ffffff !important;
 }
 
-/* Botões cyan (primários CLYON) - TODOS os estados */
-a[class*="bg-cyan-"] svg,
-a[class*="bg-cyan-"] span,
-button[class*="bg-cyan-"] svg,
-button[class*="bg-cyan-"] span,
+/* Botões cyan (primários CLYON) - TODOS os estados
+ *
+ * Os tons são listados um a um em vez de `[class*="bg-cyan-"]`.
+ *
+ * O selector largo apanhava também `bg-cyan-50` e `bg-cyan-100`, que são tons
+ * quase brancos, e forçava o ícone a branco — ícone branco sobre fundo branco.
+ * Havia mais abaixo uma regra a tentar repor a cor nos tons claros, mas perdia
+ * por especificidade: `button[class*=…] svg` conta mais do que `[class*=…] svg`,
+ * e com os dois `!important` é a especificidade que decide.
+ *
+ * O resultado eram ícones fantasma pelo site fora: o botão "Tirar foto" do
+ * pedido, o cartão de volume seleccionado, e qualquer outro com fundo cyan
+ * claro. Percebia-se como "o ícone não aparece" e não como uma regra de CSS.
+ */
+a.bg-cyan-500 svg, a.bg-cyan-500 span,
+a.bg-cyan-600 svg, a.bg-cyan-600 span,
+a.bg-cyan-700 svg, a.bg-cyan-700 span,
+button.bg-cyan-500 svg, button.bg-cyan-500 span,
+button.bg-cyan-600 svg, button.bg-cyan-600 span,
+button.bg-cyan-700 svg, button.bg-cyan-700 span,
 a.bg-\[\#0891b2\] svg,
 a.bg-\[\#0891b2\] span {
   color: #ffffff !important;
@@ -437,9 +452,14 @@ a.rounded-full[class*="border-cyan"] {
   color: #0e7490 !important;
 }
 
-/* Icons inside cyan-50 containers */
-[class*="bg-cyan-50"] svg,
-div[class*="bg-cyan-50"][class*="text-cyan-"] svg {
+/* Ícones dentro de caixas cyan claras.
+ *
+ * Fica como rede de segurança para os tons claros, agora que a regra dos
+ * botões sólidos já não lhes toca. Não se aplica quando o ícone traz uma cor
+ * própria — daí o :not(), que evita apagar uma escolha deliberada como um
+ * ícone branco dentro de um círculo cheio. */
+[class*="bg-cyan-50"] svg:not([class*="text-"]),
+div[class*="bg-cyan-50"][class*="text-cyan-"] svg:not([class*="text-"]) {
   color: #0891b2 !important; /* cyan-600 for icons */
 }
 

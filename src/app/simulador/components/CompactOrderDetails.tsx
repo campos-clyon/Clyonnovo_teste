@@ -143,24 +143,32 @@ export default function CompactOrderDetails({
           }}
         />
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        {/* O ícone vai dentro de um círculo cheio e não solto sobre o fundo.
+            Num telemóvel, um traço fino de 1,5 px sobre fundo claro
+            desaparece — e o que devia ser o botão mais óbvio do formulário
+            passava a ser uma caixa com texto. */}
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
           <button
             type="button"
             disabled={cheio}
             onClick={() => camaraRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-cyan-300 bg-cyan-50/60 px-3 py-5 text-cyan-800 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-cyan-400 bg-cyan-50 px-3 py-4 transition active:scale-[0.98] hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Camera className="h-6 w-6" aria-hidden="true" />
-            <span className="text-xs font-bold sm:text-sm">Tirar foto</span>
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-600 shadow-md shadow-cyan-600/25">
+              <Camera className="h-6 w-6 text-white" strokeWidth={2} aria-hidden="true" />
+            </span>
+            <span className="text-sm font-bold text-cyan-900">Tirar foto</span>
           </button>
           <button
             type="button"
             disabled={cheio}
             onClick={() => galeriaRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-5 text-slate-700 transition hover:border-cyan-400 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-400 bg-slate-50 px-3 py-4 transition active:scale-[0.98] hover:border-cyan-400 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <ImagePlus className="h-6 w-6" aria-hidden="true" />
-            <span className="text-xs font-bold sm:text-sm">Da galeria</span>
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 shadow-md shadow-slate-700/20">
+              <ImagePlus className="h-6 w-6 text-white" strokeWidth={2} aria-hidden="true" />
+            </span>
+            <span className="text-sm font-bold text-slate-800">Da galeria</span>
           </button>
         </div>
 
