@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getPool, ensureProvidersSchema } from "@/lib/db";
+import { getPool, ensureProvidersSchema, actividadeDosProfissionais } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 /**
- * Lista os profissionais do site para o painel.
+ * Lista os profissionais do site para o painel, com a actividade de cada um.
  *
- * Existe porque a verificação do número de transportador é trabalho de uma
- * pessoa, e sem um ecrã só se fazia por SQL à mão — que é como se esquece de
- * o fazer, e um pedido com guia obrigatória não chega a ninguém sem se
- * perceber porquê.
+ * A actividade não é enfeite: sem ela não se distingue um profissional que
+ * trabalha de um que recebe pedidos e nunca responde, ou de um que nunca
+ * recebeu nada — e cada um desses casos pede uma acção diferente do
+ * administrador. Vem de uma consulta agregada às negociações, e não de uma por
+ * profissional.
  *
- * Devolve o número de transportador, o NIF e o email, que são dados pessoais
- * e comerciais — daí exigir sessão de administrador e não apenas de
- * colaborador.
+ * Devolve email, telefone, NIF e número de transportador, que são dados
+ * pessoais e comerciais — daí exigir sessão de administrador.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
@@ -40,7 +40,15 @@ export async function GET(req: NextRequest) {
         LIMIT 500`,
     ) as any[];
 
-    return NextResponse.json({ profissionais: rows });
+    const actividade = await actividadeDosProfissionais();
+
+    const profissionais = (rows as Array<Record<string, unknown>>).map((p) => ({
+      ...p,
+      actividade:
+        actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
+    }));
+
+    return NextResponse.json({ profissionais });
   } catch (error) {
     console.error("[api/admin/profissionais GET]", error);
     return NextResponse.json({ error: "Erro ao listar profissionais" }, { status: 500 });

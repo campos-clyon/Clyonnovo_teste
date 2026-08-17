@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { verificarGuiaDeTransporte, definirEstadoDoProfissional } from "@/lib/db";
+import {
+  verificarGuiaDeTransporte,
+  definirEstadoDoProfissional,
+  actualizarProfissional,
+  definirBaseDoProfissional,
+  getPool,
+} from "@/lib/db";
+import { validarEdicao, estadoValido, afectaDistribuicao } from "@/lib/edicao-profissional";
+import { geocodificarLocalidade } from "@/lib/geocodificar";
 
 export const runtime = "nodejs";
 
-const ESTADOS = ["pendente", "aprovado", "rejeitado", "suspenso"] as const;
-type Estado = (typeof ESTADOS)[number];
-
 /**
- * Aprovar um profissional, e confirmar o número de transportador.
+ * Gerir um profissional: estado, perfil, verificação da guia, coordenadas.
  *
- * As duas coisas são separadas de propósito. Aprovar diz "pode receber
- * pedidos"; verificar a guia diz "confirmámos que ele pode legalmente
- * transportar resíduos". Alguém pode estar aprovado sem guia verificada — só
- * não recebe os pedidos que a exigem.
+ * Uma rota com várias acções em vez de quatro rotas, porque o painel altera
+ * frequentemente duas coisas ao mesmo tempo — aprovar e verificar a guia, por
+ * exemplo — e duas chamadas separadas deixavam um estado intermédio possível.
  *
- * Quem verifica fica gravado. Um distintivo em que o cliente confia tem de ter
- * um nome por trás: se um dia se descobrir que o número não presta, é preciso
- * saber quem o deu por bom.
+ * Aprovar e verificar continuam a ser acções DISTINTAS. Aprovar diz "pode
+ * receber pedidos"; verificar diz "confirmámos que pode legalmente transportar
+ * resíduos". Alguém pode estar aprovado sem guia verificada — só não recebe os
+ * pedidos que a exigem.
  */
 export async function PATCH(
   req: NextRequest,
@@ -41,25 +46,82 @@ export async function PATCH(
 
   try {
     const feito: string[] = [];
+    let avisoDeDistribuicao = false;
 
+    // ── Estado ───────────────────────────────────────────────────────────────
+    if (corpo.estado !== undefined) {
+      if (!estadoValido(corpo.estado)) {
+        return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
+      }
+      await definirEstadoDoProfissional(providerId, corpo.estado);
+      feito.push(`estado: ${corpo.estado}`);
+    }
+
+    // ── Verificação da guia ──────────────────────────────────────────────────
     if (corpo.verificarGuia === true) {
       await verificarGuiaDeTransporte(providerId, colab.nome);
       feito.push("guia verificada");
     }
 
-    if (typeof corpo.estado === "string") {
-      if (!ESTADOS.includes(corpo.estado as Estado)) {
-        return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
+    // ── Re-geocodificar a base ───────────────────────────────────────────────
+    //
+    // A geocodificação na inscrição é "melhor esforço" e pode ter falhado — o
+    // Nominatim fora de serviço, ou um nome de localidade que ele não conhece.
+    // Sem coordenadas o raio não é aplicado e o profissional só recebe por
+    // zona, o que é pior do que ele pediu. Isto dá uma segunda tentativa.
+    if (corpo.regeocodificar === true) {
+      const pool = await getPool();
+      const [linhas] = pool
+        ? ((await pool.execute("SELECT city FROM providers WHERE id = ? LIMIT 1", [
+            providerId,
+          ])) as any[])
+        : [[]];
+      const cidade = (linhas as Array<{ city: string | null }>)[0]?.city;
+      if (!cidade) {
+        return NextResponse.json(
+          { error: "Este profissional não tem cidade indicada." },
+          { status: 400 },
+        );
       }
-      await definirEstadoDoProfissional(providerId, corpo.estado as Estado);
-      feito.push(`estado: ${corpo.estado}`);
+      const base = await geocodificarLocalidade(cidade);
+      if (!base) {
+        return NextResponse.json(
+          { error: `Não foi possível localizar "${cidade}". Continua a receber por zona.` },
+          { status: 422 },
+        );
+      }
+      await definirBaseDoProfissional(providerId, base.lat, base.lng);
+      feito.push("coordenadas actualizadas");
+      avisoDeDistribuicao = true;
+    }
+
+    // ── Perfil ───────────────────────────────────────────────────────────────
+    const CAMPOS_DE_PERFIL = [
+      "categorias",
+      "zonas",
+      "raioKm",
+      "emiteFatura",
+      "emiteGuiaTransporte",
+      "numeroTransportador",
+    ];
+    if (CAMPOS_DE_PERFIL.some((k) => k in corpo)) {
+      const validacao = validarEdicao(corpo);
+      if (!validacao.ok) {
+        return NextResponse.json(
+          { error: validacao.erros[0].mensagem, erros: validacao.erros },
+          { status: 400 },
+        );
+      }
+      await actualizarProfissional(providerId, validacao.alteracoes);
+      feito.push("perfil actualizado");
+      if (afectaDistribuicao(validacao.alteracoes)) avisoDeDistribuicao = true;
     }
 
     if (feito.length === 0) {
       return NextResponse.json({ error: "Nada para alterar" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, feito });
+    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao });
   } catch (error) {
     console.error("[api/admin/profissionais PATCH]", error);
     return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });

@@ -3,7 +3,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
@@ -12,6 +11,8 @@ import {
   type EstadoTicket,
 } from "@/lib/suporte";
 import ContasPanel from "@/components/admin/ContasPanel";
+import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
+import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -66,7 +67,20 @@ type SimulatorSetting = {
   description?: string | null;
 };
 
-type AdminSection = "overview" | "pedidos" | "app_clyon" | "leads" | "site" | "configs" | "contas" | "suporte";
+type AdminSection =
+  | "overview"
+  | "pedidos"
+  | "app_clyon"
+  | "leads"
+  | "site"
+  | "configs"
+  | "contas"
+  | "suporte"
+  // Plataforma. São secções e não rotas próprias de propósito: abrem na área
+  // da direita, como as outras, e quem está a trabalhar não perde a barra nem
+  // o contexto ao mudar de assunto.
+  | "profissionais"
+  | "negociacoes";
 
 type Lead = {
   id: number;
@@ -175,6 +189,8 @@ const adminNavItems: Array<{
   { id: "contas",     icon: UserPlus },
   { id: "suporte",   icon: LifeBuoy },
   { id: "configs",   icon: Settings2 },
+  { id: "profissionais", icon: BadgeCheck },
+  { id: "negociacoes",   icon: HandCoins },
 ];
 
 /**
@@ -188,6 +204,7 @@ const adminNavItems: Array<{
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["configs"] },
 ];
@@ -201,6 +218,8 @@ const sectionLabels: Record<AdminSection, string> = {
   contas:     "Contas",
   suporte:    "Suporte",
   configs:    "Configs",
+  profissionais: "Profissionais",
+  negociacoes:   "Negociações",
 };
 
 const siteModules = [
@@ -1244,35 +1263,6 @@ export default function ColaboradorAdminClient() {
               );
             })}
 
-            {/*
-              Plataforma — páginas próprias, não secções deste componente.
-              São rotas separadas (/admin/profissionais, /admin/negociacoes) e
-              por isso navegam para fora em vez de trocarem de secção. Sem estes
-              links só se chegava lá escrevendo o endereço à mão.
-            */}
-            <div className="mb-5 last:mb-0">
-              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                Plataforma
-              </p>
-              <div className="space-y-0.5">
-                <Link
-                  href="/admin/profissionais"
-                  onClick={() => setMenuAberto(false)}
-                  className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
-                >
-                  <BadgeCheck className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">Profissionais</span>
-                </Link>
-                <Link
-                  href="/admin/negociacoes"
-                  onClick={() => setMenuAberto(false)}
-                  className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
-                >
-                  <HandCoins className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">Negociações</span>
-                </Link>
-              </div>
-            </div>
           </nav>
 
           {/* Quem está a trabalhar, e a saída */}
@@ -2708,6 +2698,43 @@ export default function ColaboradorAdminClient() {
           )}
 
           {/* ══════════════════════════════════════════════════════════════ */}
+
+          {/* ══════════════════════════════════════════════════════════════ */}
+
+          {activeSection === "profissionais" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Profissionais</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Quem se inscreveu para receber pedidos. Aprovar dá-lhe acesso à fila;
+                  verificar a guia deixa-o receber os pedidos que exigem transporte de
+                  resíduos.
+                </p>
+              </div>
+              <AdminProfissionaisPanel />
+            </section>
+          )}
+
+          {activeSection === "negociacoes" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Pedidos e negociações
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Os pedidos criados pelo formulário novo e as propostas de cada
+                  profissional. Reenviar emite um link novo e invalida o anterior.
+                </p>
+              </div>
+              <AdminNegociacoesPanel />
+            </section>
+          )}
 
           {(activeSection === "site" || activeSection === "configs") && (
             <section className="space-y-4 rounded-[28px] border border-cyan-300/16 bg-[linear-gradient(180deg,rgba(9,25,40,0.94)_0%,rgba(11,30,47,0.92)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.22)]">

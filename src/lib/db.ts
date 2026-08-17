@@ -935,6 +935,123 @@ export async function verificarGuiaDeTransporte(
   );
 }
 
+/**
+ * Altera o perfil de um profissional — só os campos que vierem.
+ *
+ * Constrói o UPDATE a partir do que foi pedido, e não a partir de um objecto
+ * completo: com um objecto completo, mudar o raio reescrevia as categorias com
+ * o que estivesse em memória no painel, que pode estar desactualizado.
+ */
+export async function actualizarProfissional(
+  providerId: number,
+  alteracoes: {
+    categorias?: string[];
+    zonas?: string[];
+    raioKm?: number;
+    emiteFatura?: boolean;
+    emiteGuiaTransporte?: boolean;
+    numeroTransportador?: string | null;
+  },
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const partes: string[] = [];
+  const valores: unknown[] = [];
+
+  if (alteracoes.categorias !== undefined) {
+    partes.push("categorias = ?");
+    valores.push(JSON.stringify(alteracoes.categorias));
+  }
+  if (alteracoes.zonas !== undefined) {
+    partes.push("zonas = ?");
+    valores.push(JSON.stringify(alteracoes.zonas));
+  }
+  if (alteracoes.raioKm !== undefined) {
+    partes.push("raioKm = ?");
+    valores.push(alteracoes.raioKm);
+  }
+  if (alteracoes.emiteFatura !== undefined) {
+    partes.push("emiteFatura = ?");
+    valores.push(alteracoes.emiteFatura ? 1 : 0);
+  }
+  if (alteracoes.emiteGuiaTransporte !== undefined) {
+    partes.push("emiteGuiaTransporte = ?");
+    valores.push(alteracoes.emiteGuiaTransporte ? 1 : 0);
+    // Desligar a guia apaga também a verificação: o que foi confirmado foi um
+    // número que ele já não declara ter. Manter o distintivo seria mentir.
+    if (!alteracoes.emiteGuiaTransporte) {
+      partes.push("guiaVerificadaEm = NULL", "guiaVerificadaPor = NULL");
+    }
+  }
+  if (alteracoes.numeroTransportador !== undefined) {
+    partes.push("numeroTransportador = ?");
+    valores.push(alteracoes.numeroTransportador);
+    // Um número novo não vem verificado. Se ficasse verificado, bastava trocar
+    // o número depois da confirmação para ter um distintivo sobre um registo
+    // que ninguém viu.
+    if (alteracoes.numeroTransportador) {
+      partes.push("guiaVerificadaEm = NULL", "guiaVerificadaPor = NULL");
+    }
+  }
+
+  if (partes.length === 0) return;
+
+  valores.push(providerId);
+  await pool.execute(`UPDATE providers SET ${partes.join(", ")} WHERE id = ?`, valores);
+}
+
+/** Guarda as coordenadas da base, para quando a geocodificação corre mais tarde. */
+export async function definirBaseDoProfissional(
+  providerId: number,
+  lat: number,
+  lng: number,
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute("UPDATE providers SET baseLat = ?, baseLng = ? WHERE id = ?", [
+    lat,
+    lng,
+    providerId,
+  ]);
+}
+
+/**
+ * Quanta actividade cada profissional teve.
+ *
+ * É o que separa um painel de gestão de uma lista de nomes: sem isto não se
+ * sabe se um profissional está a trabalhar, se recebe pedidos e nunca responde,
+ * ou se nunca recebeu nada — e cada um desses casos pede uma acção diferente.
+ */
+export async function actividadeDosProfissionais(): Promise<
+  Map<number, { recebidos: number; comProposta: number; fechados: number }>
+> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  const mapa = new Map<number, { recebidos: number; comProposta: number; fechados: number }>();
+  if (!pool) return mapa;
+
+  const [rows] = await pool.execute(
+    `SELECT providerId,
+            COUNT(*) AS recebidos,
+            SUM(JSON_LENGTH(propostasJson) > 1) AS comProposta,
+            SUM(estado = 'acordada') AS fechados
+       FROM negociacoes
+      GROUP BY providerId`,
+  ) as any[];
+
+  for (const r of rows as Array<Record<string, unknown>>) {
+    mapa.set(Number(r.providerId), {
+      recebidos: Number(r.recebidos ?? 0),
+      comProposta: Number(r.comProposta ?? 0),
+      fechados: Number(r.fechados ?? 0),
+    });
+  }
+  return mapa;
+}
+
 /** Aprova, rejeita ou suspende um profissional. */
 export async function definirEstadoDoProfissional(
   providerId: number,
