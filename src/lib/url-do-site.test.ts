@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { urlDeAccao } from "./url-do-site";
+import { urlDeAccao, urlDeAccaoDoPedido } from "./url-do-site";
 import { SITE_URL } from "./seo-data";
 
 const CHAVES = [
@@ -32,6 +32,49 @@ afterEach(() => {
     if (original[k] === undefined) delete process.env[k];
     else definir(k, original[k]!);
   }
+});
+
+describe("urlDeAccaoDoPedido", () => {
+  // O caso real: num preview sem as variáveis de sistema expostas, o
+  // urlDeAccao() caía em clyon.pt e o email levava a pessoa para produção,
+  // onde o pedido acabado de criar não existe — 404. Os cabeçalhos do pedido
+  // sabem sempre onde ela está.
+  it("usa o anfitrião do próprio pedido", () => {
+    const h = new Headers({ host: "clyon-site-abc.vercel.app", "x-forwarded-proto": "https" });
+    expect(urlDeAccaoDoPedido(h)).toBe("https://clyon-site-abc.vercel.app");
+  });
+
+  it("prefere o x-forwarded-host, que é o que o proxy reescreve", () => {
+    const h = new Headers({
+      host: "interno:3000",
+      "x-forwarded-host": "clyon.pt",
+      "x-forwarded-proto": "https",
+    });
+    expect(urlDeAccaoDoPedido(h)).toBe("https://clyon.pt");
+  });
+
+  it("assume http em localhost e https no resto", () => {
+    expect(urlDeAccaoDoPedido(new Headers({ host: "localhost:3000" }))).toBe(
+      "http://localhost:3000",
+    );
+    expect(urlDeAccaoDoPedido(new Headers({ host: "clyon.pt" }))).toBe("https://clyon.pt");
+  });
+
+  it("fica com o primeiro protocolo quando vem uma lista", () => {
+    const h = new Headers({ host: "clyon.pt", "x-forwarded-proto": "https,http" });
+    expect(urlDeAccaoDoPedido(h)).toBe("https://clyon.pt");
+  });
+
+  it("o NEXT_PUBLIC_SITE_URL continua a mandar", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://teste.clyon.pt";
+    const h = new Headers({ host: "seja-o-que-for.vercel.app" });
+    expect(urlDeAccaoDoPedido(h)).toBe("https://teste.clyon.pt");
+  });
+
+  it("sem cabeçalhos nenhuns cai no caminho antigo", () => {
+    definir("NODE_ENV", "production");
+    expect(urlDeAccaoDoPedido(new Headers())).toBe(SITE_URL);
+  });
 });
 
 describe("urlDeAccao", () => {

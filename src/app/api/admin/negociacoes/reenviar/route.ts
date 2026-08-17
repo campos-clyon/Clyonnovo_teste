@@ -12,6 +12,7 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { avisarProfissional } from "@/lib/email-profissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
 
   const acesso = gerarTokenDeAcesso();
+  const baseUrl = urlDeAccaoDoPedido(req.headers);
 
   try {
     // ── O link do cliente ───────────────────────────────────────────────────
@@ -62,6 +64,7 @@ export async function POST(req: NextRequest) {
         pedidoId,
         serviceType: pedido.serviceType ?? null,
         token: acesso.token,
+        baseUrl,
         valorMinimoCliente:
           pedido.valorMinimoCliente != null ? Number(pedido.valorMinimoCliente) : null,
       });
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
       paraNome: profissional?.name ?? "",
       pedidoId,
       token: acesso.token,
+      baseUrl,
       serviceType: pedido.serviceType ?? null,
       zona: pedido.city ?? null,
       urgencia: pedido.urgency ?? null,

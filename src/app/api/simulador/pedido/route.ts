@@ -17,6 +17,7 @@ import { validarValoresDoCliente } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { distribuirPedido } from "@/lib/distribuir-pedido";
+import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
 
@@ -323,6 +324,10 @@ export async function POST(req: NextRequest) {
     //
     // Não bloqueia a resposta: o pedido está gravado, e um email que falhe não
     // pode transformar-se num erro de criação aos olhos do cliente.
+    // O endereço deste deployment, tirado dos cabeçalhos: é o único sítio que
+    // sabe com certeza onde a pessoa está.
+    const baseUrl = urlDeAccaoDoPedido(req.headers);
+
     let linkEnviado = false;
     if (clienteIndicouValores && contactEmail) {
       linkEnviado = await enviarLinkDoPedido({
@@ -331,6 +336,7 @@ export async function POST(req: NextRequest) {
         pedidoId: id,
         serviceType: row.serviceType ?? null,
         token: acesso.token,
+        baseUrl,
         valorMinimoCliente: valoresParaGravar.valorMinimoCliente
           ? Number(valoresParaGravar.valorMinimoCliente)
           : null,
@@ -372,6 +378,7 @@ export async function POST(req: NextRequest) {
           precisaGuiaTransporte: order.precisaGuiaTransporte === true,
           lat: order.address?.lat ?? null,
           lng: order.address?.lng ?? null,
+          baseUrl,
         });
 
         // Um pedido que não chega a ninguém fica publicado e sem propostas,

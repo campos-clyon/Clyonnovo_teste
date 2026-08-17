@@ -59,6 +59,8 @@ export type AvisoDePedido = {
   distanciaKm: number | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
+  /** O endereço deste deployment, tirado do pedido HTTP. */
+  baseUrl?: string;
 };
 
 function euros(valor: number | null): string | null {
@@ -75,7 +77,7 @@ function linha(rotulo: string, valor: string | null): string {
 }
 
 function montarHtml(p: AvisoDePedido): string {
-  const url = `${urlDeAccao()}/profissionais/pedidos/${p.token}`;
+  const url = `${p.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${p.token}`;
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const quer = euros(p.valorMinimoCliente);
   const recebe = euros(p.recebeLiquido);

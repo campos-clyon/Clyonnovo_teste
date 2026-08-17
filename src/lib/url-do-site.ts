@@ -18,6 +18,41 @@ import { SITE_URL } from "./seo-data";
  * profissional apontavam para `clyon.pt` a partir de qualquer ambiente, o que
  * tornava impossível testar o fluxo sem publicar em produção primeiro.
  */
+/**
+ * O endereço a partir do pedido HTTP que está a decorrer.
+ *
+ * É a fonte mais fiável de todas, e por isso a primeira a tentar: o email é
+ * gerado durante um pedido feito ao próprio deployment, e os cabeçalhos dizem
+ * exactamente em que endereço a pessoa está.
+ *
+ * As variáveis `VERCEL_URL` e `VERCEL_BRANCH_URL` são variáveis de SISTEMA e só
+ * existem se o projecto tiver ligada a opção que as expõe. Neste não tinha — e
+ * o resultado foi um link de preview a apontar para clyon.pt, onde o pedido
+ * acabado de criar não existe. Isto deixa de depender dessa definição.
+ */
+export function urlDeAccaoDoPedido(cabecalhos: Headers): string {
+  // Um NEXT_PUBLIC_SITE_URL explícito continua a mandar: quem o define está a
+  // dizer de propósito qual é o endereço público.
+  const explicito = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicito) return explicito.replace(/\/+$/, "");
+
+  const anfitriao =
+    cabecalhos.get("x-forwarded-host")?.trim() || cabecalhos.get("host")?.trim();
+
+  if (anfitriao) {
+    // Confia-se no cabeçalho porque estas rotas correm atrás do proxy da Vercel,
+    // que o reescreve. Fora daí um Host forjado só afectaria o link enviado a
+    // quem fez o pedido — e nunca um destino externo, porque o caminho é sempre
+    // nosso.
+    const protocolo =
+      cabecalhos.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+      (anfitriao.startsWith("localhost") || anfitriao.startsWith("127.") ? "http" : "https");
+    return `${protocolo}://${anfitriao.replace(/\/+$/, "")}`;
+  }
+
+  return urlDeAccao();
+}
+
 export function urlDeAccao(): string {
   // Escotilha manual, para quando nada disto adivinha bem.
   const explicito = process.env.NEXT_PUBLIC_SITE_URL?.trim();

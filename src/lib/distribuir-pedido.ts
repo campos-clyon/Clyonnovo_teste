@@ -32,6 +32,8 @@ export type PedidoParaDistribuicao = {
   /** Coordenadas do trabalho, quando o cliente escolheu a morada na pesquisa. */
   lat: number | null;
   lng: number | null;
+  /** O endereço deste deployment, para os links do email. */
+  baseUrl?: string;
 };
 
 export type ResultadoDaDistribuicao = {
@@ -137,6 +139,7 @@ export async function distribuirPedido(
         paraNome: c.profissional.name,
         pedidoId: pedido.id,
         token,
+        baseUrl: pedido.baseUrl,
         serviceType: pedido.serviceType,
         zona: pedido.city,
         urgencia: pedido.urgency,

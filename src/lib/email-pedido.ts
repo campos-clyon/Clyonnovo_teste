@@ -38,6 +38,8 @@ export interface LinkDoPedidoParams {
   serviceType: string | null;
   token: string;
   valorMinimoCliente: number | null;
+  /** O endereço deste deployment, tirado do pedido HTTP. */
+  baseUrl?: string;
 }
 
 function euros(valor: number | null): string | null {
@@ -49,7 +51,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
   // urlDeAccao e não SITE_URL: um email enviado de um preview tem de trazer o
   // link desse preview, senão manda a pessoa para produção — onde o pedido que
   // ela acabou de criar não existe.
-  const url = linkDoPedido(urlDeAccao(), p.token);
+  const url = linkDoPedido(p.baseUrl ?? urlDeAccao(), p.token);
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const nome = p.nomeDoCliente?.trim().split(/\s+/)[0] ?? null;
   const minimo = euros(p.valorMinimoCliente);
