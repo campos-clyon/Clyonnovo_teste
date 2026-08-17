@@ -145,16 +145,37 @@ export default function InscricaoForm() {
             <label htmlFor="telefone" className="block text-sm font-medium text-gray-900">
               Telefone *
             </label>
-            <input
-              id="telefone"
-              type="tel"
-              autoComplete="tel"
-              value={form.telefone}
-              onChange={(e) => set("telefone", e.target.value)}
-              placeholder="912 345 678"
-              className={`mt-1.5 ${inputCls(erro("telefone"))}`}
-            />
-            {erro("telefone") && <p className="mt-1 text-xs text-red-600">{erro("telefone")}</p>}
+            {/*
+              O prefixo é fixo e não um campo a preencher, porque a validação só
+              aceita números portugueses de qualquer maneira — dar um campo
+              editável era convidar a escrever um indicativo que ia ser
+              recusado a seguir.
+            */}
+            <div
+              className={`mt-1.5 flex items-stretch overflow-hidden rounded-xl border-2 bg-white transition focus-within:border-cyan-600 focus-within:ring-2 focus-within:ring-cyan-600/20 ${
+                erro("telefone") ? "border-red-400" : "border-gray-300"
+              }`}
+            >
+              <span className="flex select-none items-center border-r border-gray-200 bg-slate-50 px-3 text-base font-medium text-slate-500">
+                +351
+              </span>
+              <input
+                id="telefone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                value={form.telefone}
+                onChange={(e) => set("telefone", e.target.value)}
+                placeholder="912 345 678"
+                aria-describedby={erro("telefone") ? "erro-telefone" : undefined}
+                className="w-full min-w-0 bg-white px-3 py-2.5 text-base text-slate-900 outline-none"
+              />
+            </div>
+            {erro("telefone") && (
+              <p id="erro-telefone" className="mt-1 text-xs text-red-600">
+                {erro("telefone")}
+              </p>
+            )}
           </div>
         </div>
       </fieldset>
