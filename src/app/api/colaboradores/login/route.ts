@@ -74,6 +74,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // O segredo verifica-se ANTES de comparar a palavra-passe, e não no fim
+    // quando se assina o token.
+    //
+    // Estava a ser usado só no fim, e o resultado era o pior diagnóstico
+    // possível: num ambiente sem JWT_SECRET — um preview onde a variável não
+    // foi copiada, por exemplo — a palavra-passe certa passava a comparação e
+    // rebentava a seguir, devolvendo "Erro interno do servidor". Quem estava a
+    // entrar concluía, com toda a razão, que a palavra-passe não funcionava.
+    if (!process.env.JWT_SECRET) {
+      console.error("[Colaborador Login] JWT_SECRET não está definido neste ambiente");
+      return NextResponse.json(
+        {
+          error:
+            "Área interna mal configurada: falta o JWT_SECRET neste ambiente. " +
+            "A palavra-passe não é o problema.",
+        },
+        { status: 503 },
+      );
+    }
+
     const colaborador = await getColaboradorByNome(nomeNormalizado);
     if (!colaborador) {
       registarTentativa(ip);
