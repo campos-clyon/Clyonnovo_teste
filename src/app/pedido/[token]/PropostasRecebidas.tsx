@@ -287,7 +287,9 @@ export default function PropostasRecebidas({
                 {accoes.includes("propor") && (
                   <div className="border-t border-slate-100 pt-3">
                     <p className="mb-2 text-sm font-medium text-slate-700">
-                      Ou proponha outro valor
+                      {accoes.includes("aceitar") || accoes.includes("contratar")
+                        ? "Ou proponha outro valor"
+                        : "Proponha um valor"}
                     </p>
                     <EscolherValor
                       referencia={emCima}

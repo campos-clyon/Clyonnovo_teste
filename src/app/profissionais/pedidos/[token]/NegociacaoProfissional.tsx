@@ -211,7 +211,7 @@ export default function NegociacaoProfissional({
         {podePropor && (
           <div>
             <p className="mb-2 text-sm font-medium text-slate-900">
-              Ou proponha outro valor
+              {podeAceitar ? "Ou proponha outro valor" : "Proponha um valor"}
             </p>
             <EscolherValor
               referencia={valorEmCima}
