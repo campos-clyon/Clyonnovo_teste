@@ -26,6 +26,7 @@ import ValoresEFaturacao from "./components/ValoresEFaturacao";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { validarValoresDoCliente, type ErroDeValor } from "@/lib/pedido-valores";
+import { reduzirImagem } from "@/lib/reduzir-imagem";
 import {
   trackSimulatorStart,
   trackSimulatorContact,
@@ -346,24 +347,58 @@ export default function SimulatorThreePhaseForm() {
       // adivinhar. Vai com o pedido.
       let motivoFalhaFotos: string | null = null;
       if (rawFiles.length > 0) {
-        try {
-          const fd = new FormData();
-          rawFiles.forEach((f) => fd.append("fotos", f.file as File, f.name));
-          const upRes = await fetch("/api/simulador/upload-fotos", { method: "POST", body: fd });
-          const upData = await upRes.json().catch(() => null);
-          uploadedFiles = (upData?.files ?? []) as typeof uploadedFiles;
-          fotosPerdidas = rawFiles.length - uploadedFiles.length;
-          if (fotosPerdidas > 0) {
-            const porFicheiro = (upData?.falhados ?? []) as Array<{ name: string; motivo: string }>;
-            motivoFalhaFotos = porFicheiro.length > 0
-              ? porFicheiro.map((f) => `${f.name}: ${f.motivo}`).join(" | ")
-              : (upData?.motivoTecnico ?? upData?.message ?? upData?.error ?? `resposta ${upRes.status} do servidor`);
-            console.error(`[simulador] ${fotosPerdidas} de ${rawFiles.length} fotos não subiram`, motivoFalhaFotos);
+        // UMA foto por pedido, e reduzida antes de sair.
+        //
+        // Iam todas juntas num só envio, e o Vercel recusa qualquer pedido com
+        // mais de 4,5 MB de corpo — recusa-o à entrada, com 413, sem o ficheiro
+        // chegar à nossa função. Duas fotos de telemóvel bastavam para
+        // rebentar o lote inteiro, e o cliente ficava sem nenhuma.
+        //
+        // Uma de cada vez: cada envio é pequeno, e uma que falhe não leva as
+        // outras atrás. Reduzida a 1920 px, uma foto passa de vários MB para
+        // algumas centenas de KB — mais do que suficiente para avaliar um
+        // trabalho, e muito mais rápido em dados móveis.
+        const motivos: string[] = [];
+
+        for (const f of rawFiles) {
+          const original = f.file as File;
+          try {
+            const { ficheiro } = await reduzirImagem(original);
+
+            const fd = new FormData();
+            fd.append("fotos", ficheiro, ficheiro.name);
+            const upRes = await fetch("/api/simulador/upload-fotos", {
+              method: "POST",
+              body: fd,
+            });
+            const upData = await upRes.json().catch(() => null);
+            const subidos = (upData?.files ?? []) as typeof uploadedFiles;
+
+            if (subidos.length > 0) {
+              uploadedFiles.push(...subidos);
+            } else {
+              fotosPerdidas += 1;
+              const porFicheiro = (upData?.falhados ?? []) as Array<{ name: string; motivo: string }>;
+              motivos.push(
+                porFicheiro.length > 0
+                  ? porFicheiro.map((x) => `${x.name}: ${x.motivo}`).join(" | ")
+                  : `${original.name}: ${upData?.motivoTecnico ?? upData?.message ?? upData?.error ?? `resposta ${upRes.status} do servidor`}`,
+              );
+            }
+          } catch (err) {
+            fotosPerdidas += 1;
+            motivos.push(
+              `${original.name}: erro de rede — ${err instanceof Error ? err.message : String(err)}`,
+            );
           }
-        } catch (err) {
-          fotosPerdidas = rawFiles.length;
-          motivoFalhaFotos = `erro de rede: ${err instanceof Error ? err.message : String(err)}`;
-          console.error("[simulador] Erro de rede no upload:", err);
+        }
+
+        if (motivos.length > 0) {
+          motivoFalhaFotos = motivos.join(" | ");
+          console.error(
+            `[simulador] ${fotosPerdidas} de ${rawFiles.length} fotos não subiram`,
+            motivoFalhaFotos,
+          );
         }
       }
       setFotosNaoEnviadas(fotosPerdidas);
