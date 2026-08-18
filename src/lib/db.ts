@@ -391,6 +391,12 @@ export async function ensureUsersSchema(): Promise<void> {
 // ─── Providers (empresas parceiras) ──────────────────────────────────────────
 
 let providersSchemaEnsured = false;
+// Sobe sempre que a lista de colunas cresce. O guarda booleano sozinho só
+// deixava as migrações correr em arranques frios — um processo já quente
+// continuava a servir pedidos contra uma tabela sem as colunas novas, e a
+// falhar em consultas que as nomeiam.
+const VERSAO_DOS_PROFISSIONAIS = 2;
+let versaoDosProfissionais = 0;
 
 /**
  * Garante que as tabelas `providers` e `provider_coverage` existem.
@@ -400,7 +406,7 @@ let providersSchemaEnsured = false;
  * condicional, para instâncias que já tenham uma versão anterior da tabela.
  */
 export async function ensureProvidersSchema(): Promise<void> {
-  if (providersSchemaEnsured) return;
+  if (providersSchemaEnsured && versaoDosProfissionais >= VERSAO_DOS_PROFISSIONAIS) return;
 
   await withConnection(async (conn) => {
     await conn.execute(`
@@ -572,6 +578,7 @@ export async function ensureProvidersSchema(): Promise<void> {
   });
 
   providersSchemaEnsured = true;
+  versaoDosProfissionais = VERSAO_DOS_PROFISSIONAIS;
   console.log("[ensureProvidersSchema] schema verificado com sucesso");
 }
 

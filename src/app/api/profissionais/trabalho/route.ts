@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { registarExecucao, negociacoesDoProfissional, appendOrderHistory } from "@/lib/db";
+import {
+  registarExecucao,
+  negociacoesDoProfissional,
+  appendOrderHistory,
+  getSimulatorOrderById,
+  substituirTokenDoPedido,
+} from "@/lib/db";
 import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
-import { podeEnviarProva } from "@/lib/trabalho";
+import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
+import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
+import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
 
@@ -88,6 +97,32 @@ export async function POST(req: NextRequest) {
       by: null,
       message: `${sessao.nome} marcou o trabalho como feito (${fotos.length} fotografia(s)).`,
     });
+
+    // O cliente tem de saber que o prazo começou a correr. Sem este email, os
+    // sete dias passavam sem ele saber que existiam — e a libertação automática
+    // deixava de ser um prazo para ser uma surpresa.
+    //
+    // O link vai novo porque o antigo não é recuperável: guardamos o hash, não
+    // o token. O email diz que substitui o anterior.
+    try {
+      const doPedido = await getSimulatorOrderById(trabalho.pedidoId);
+      if (doPedido?.contactEmail) {
+        const novo = gerarTokenDeAcesso();
+        await substituirTokenDoPedido(trabalho.pedidoId, novo.hash, novo.expiraEm);
+        await pedirConfirmacaoAoCliente({
+          paraEmail: doPedido.contactEmail,
+          paraNome: doPedido.contactName ?? null,
+          pedidoId: trabalho.pedidoId,
+          profissionalNome: sessao.nome,
+          token: novo.token,
+          quantasFotos: fotos.length,
+          diasParaConfirmar: DIAS_ATE_LIBERTAR_SOZINHO,
+          baseUrl: urlDeAccaoDoPedido(req.headers),
+        });
+      }
+    } catch (err) {
+      console.error("[profissionais/trabalho] pedido de confirmação não saiu:", err);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

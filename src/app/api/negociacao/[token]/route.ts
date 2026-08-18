@@ -7,6 +7,8 @@ import {
   encerrarOutrasNegociacoes,
   appendOrderHistory,
   confirmarExecucao,
+  getSimulatorOrderById,
+  perfilDoProfissional,
 } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import {
@@ -19,6 +21,9 @@ import {
   type Lado,
 } from "@/lib/negociacao";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { avisarQueFoiContratado } from "@/lib/email-trabalho";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
 
@@ -68,6 +73,7 @@ export async function POST(
   let lado: Lado;
   let negociacaoId: number;
   let pedidoId: number;
+  let providerId: number;
   let linha: { estado: string; valorAcordado: string | null; propostasJson: string | null };
 
   const doProfissional = await negociacaoPorTokenHash(hash);
@@ -84,6 +90,7 @@ export async function POST(
     lado = "profissional";
     negociacaoId = doProfissional.id;
     pedidoId = doProfissional.pedidoId;
+    providerId = doProfissional.providerId;
     linha = doProfissional;
   } else {
     // Não é de profissional — pode ser o link do cliente. Aí a acção precisa de
@@ -111,6 +118,7 @@ export async function POST(
     lado = "cliente";
     negociacaoId = escolhida.id;
     pedidoId = pedido.id;
+    providerId = escolhida.providerId;
     linha = escolhida;
   }
 
@@ -209,6 +217,32 @@ export async function POST(
           `Negociação #${negociacaoId} fechada em ${nova.valorAcordado} € (contratado pelo cliente).` +
           (encerradas > 0 ? ` ${encerradas} outra(s) negociação(ões) encerrada(s).` : ""),
       });
+
+      // O profissional tem de saber que foi contratado sem depender de abrir o
+      // site — e é agora que a morada lhe pode ser dada. Um email que falhe não
+      // desfaz o negócio: fica no log e o trabalho continua na conta dele.
+      try {
+        const [alvo, doPedido] = await Promise.all([
+          perfilDoProfissional(providerId),
+          getSimulatorOrderById(pedidoId),
+        ]);
+        if (alvo?.email) {
+          await avisarQueFoiContratado({
+            paraEmail: String(alvo.email),
+            paraNome: String(alvo.name ?? ""),
+            pedidoId,
+            serviceType: doPedido?.serviceType ?? null,
+            morada: doPedido?.address ?? null,
+            contactoNome: doPedido?.contactName ?? null,
+            contactoTelefone: doPedido?.contactPhone ?? null,
+            recebeLiquido:
+              nova.valorAcordado != null ? quantoOProfissionalRecebe(nova.valorAcordado) : null,
+            baseUrl: urlDeAccaoDoPedido(req.headers),
+          });
+        }
+      } catch (err) {
+        console.error("[negociacao] aviso de contratação não saiu:", err);
+      }
     }
   } catch (err) {
     console.error("[negociacao] falha ao gravar:", err);
