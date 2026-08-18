@@ -13,6 +13,7 @@ import {
 } from "@/lib/negociacao";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
+import Nota from "@/components/Nota";
 
 /**
  * A negociação, do lado do profissional.
@@ -251,10 +252,11 @@ export default function NegociacaoProfissional({
         )}
       </div>
 
-      <p className="mt-4 text-xs leading-relaxed text-slate-400">
-        A negociação é só de valores. Não há mensagens — é o que impede combinações
-        fora da plataforma, e o que garante que o pagamento fica protegido.
-      </p>
+      <Nota titulo="Porque é que não há mensagens" className="mt-4">
+        A negociação é só de valores. Sem conversa não há combinação por fora — e
+        é isso que mantém o pagamento garantido de ambos os lados. Tem cinco
+        propostas e 48 horas para responder a cada uma.
+      </Nota>
     </section>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@/lib/negociacao";
 import { quantoOClientePaga, decomporIva, TAXA_IVA } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
+import Nota from "@/components/Nota";
 
 /**
  * As propostas que o cliente recebeu.
@@ -311,10 +312,11 @@ export default function PropostasRecebidas({
         })}
       </div>
 
-      <p className="mt-4 text-center text-xs leading-relaxed text-slate-400">
-        Aceitar ou contratar fecha o trabalho com esse profissional. As outras
-        negociações terminam.
-      </p>
+      <Nota titulo="O que acontece quando aceita" className="mt-4">
+        Aceitar ou contratar fecha o trabalho com esse profissional, e as outras
+        negociações terminam nesse momento. Tem cinco propostas de cada lado e 48
+        horas para responder a cada uma.
+      </Nota>
     </section>
   );
 }

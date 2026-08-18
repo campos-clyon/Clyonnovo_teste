@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
 import {
   negociacaoPorTokenHash,
   getSimulatorOrderById,
@@ -10,6 +10,7 @@ import { vistaDoProfissional } from "@/lib/pedido-valores";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import type { Proposta } from "@/lib/negociacao";
+import Nota from "@/components/Nota";
 import NegociacaoProfissional from "./NegociacaoProfissional";
 
 export const metadata: Metadata = {
@@ -143,9 +144,12 @@ export default async function PaginaDoPedidoProfissional({
           </div>
         )}
 
-        <p className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
-          A morada exacta e o contacto do cliente aparecem depois de ele o contratar.
-        </p>
+        <Nota titulo="Morada e contacto: depois de ser contratado" icone={Lock} className="mt-5">
+          Vê a zona para saber se lhe serve e quanto custa lá chegar. A morada
+          exacta e o telefone do cliente chegam-lhe por email assim que ele o
+          contratar — é o que impede que um pedido seja usado como lista de
+          contactos.
+        </Nota>
       </section>
 
       <NegociacaoProfissional

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Camera, Lock, MapPin, Clock, FileText, Truck } from "lucide-react";
+import { Camera, Link2, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { getSimulatorOrderByAcessoTokenHash, negociacoesDoPedido } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import type { Proposta } from "@/lib/negociacao";
+import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
 
 /**
@@ -19,10 +20,9 @@ import PropostasRecebidas from "./PropostasRecebidas";
  *
  *   · não é indexável. Um pedido no Google com morada e telefone dentro seria
  *     uma fuga de dados pessoais feita por nós;
- *   · não mostra o valor máximo. Não porque o cliente não o possa ver — pode,
- *     foi ele que o escreveu — mas porque esta página é a que mais
- *     provavelmente é mostrada a outra pessoa, e o link acaba reencaminhado.
- *     O máximo é a peça que estraga a negociação se sair do sítio.
+ *   · não explica a plataforma em caixas fixas. As explicações estão em notas
+ *     que se abrem — num telemóvel, cada parágrafo permanente empurra os
+ *     botões para fora do ecrã.
  */
 
 export const metadata: Metadata = {
@@ -129,7 +129,7 @@ export default async function PaginaDoPedido({
   }));
 
   const fotos = fotosDoPedido(pedido.filesJson);
-  const minimo = euros(pedido.valorDesejadoCliente);
+  const desejado = euros(pedido.valorDesejadoCliente);
   const estimativa = euros(pedido.estimateTotal ?? pedido.estimateMax);
 
   return (
@@ -143,17 +143,22 @@ export default async function PaginaDoPedido({
 
       <PropostasRecebidas token={token} negociacoesIniciais={negociacoesDoCliente} />
 
-      {/* Criar conta: convida, nunca obriga. */}
-      <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-        <p className="text-sm leading-relaxed text-cyan-900">
-          <strong>Guarde este link.</strong> É a sua forma de voltar ao pedido sem conta.
-          Se preferir tê-los todos no mesmo sítio,{" "}
-          <Link href="/entrar" className="font-semibold underline">
-            entre com a conta Google
-          </Link>{" "}
-          — leva um toque e não precisa de palavra-passe.
-        </p>
-      </div>
+      {/* Criar conta: convida, nunca obriga — e deixa de convidar quando
+          fecham a nota. Repetir o convite a cada visita é insistência. */}
+      <Nota
+        titulo="Guarde este link — é como volta ao pedido"
+        icone={Link2}
+        tom="info"
+        chave="guardar-link"
+        className="mb-6 mt-4"
+      >
+        Não precisa de conta para voltar aqui: basta este endereço. Se preferir
+        ter os pedidos todos no mesmo sítio,{" "}
+        <Link href="/entrar" className="font-semibold underline">
+          entre com a conta Google
+        </Link>{" "}
+        — leva um toque e não precisa de palavra-passe.
+      </Nota>
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
@@ -222,34 +227,27 @@ export default async function PaginaDoPedido({
         </h2>
 
         <div className="mt-3 space-y-3">
-          {minimo && (
+          {desejado && (
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm text-slate-600">Quer pagar a partir de</span>
-              <span className="text-lg font-bold text-[#0B1929]">{minimo}</span>
+              <span className="text-sm text-slate-600">O valor que indicou</span>
+              <span className="text-lg font-bold text-[#0B1929]">{desejado}</span>
             </div>
           )}
-
-          <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
-            <p className="text-xs leading-relaxed text-emerald-900">
-              O máximo que indicou fica guardado do nosso lado e não é mostrado a
-              nenhum profissional — nem aqui, porque este link pode acabar noutras
-              mãos.
-            </p>
-          </div>
 
           {estimativa && (
-            <div className="border-t border-slate-100 pt-3">
-              <div className="flex items-baseline justify-between gap-4">
-                <span className="text-sm text-slate-600">A nossa estimativa</span>
-                <span className="text-lg font-semibold text-cyan-600">{estimativa}</span>
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                É informativa e não muda nada — serve para ter uma referência antes
-                das propostas. Quem decide o preço são vocês os dois.
-              </p>
+            <div className="flex items-baseline justify-between gap-4 border-t border-slate-100 pt-3">
+              <span className="text-sm text-slate-600">A nossa estimativa</span>
+              <span className="text-lg font-semibold text-cyan-600">{estimativa}</span>
             </div>
           )}
+
+          <Nota titulo="De onde vêm estes números">
+            O valor que indicou é o ponto de partida: é o que os profissionais
+            veem quando o pedido lhes chega, e a partir dele fazem propostas. A
+            estimativa é nossa, é informativa e não muda nada — serve de
+            referência antes das propostas. Quem decide o preço são vocês os
+            dois.
+          </Nota>
         </div>
       </section>
 
