@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import InscricaoForm from "./InscricaoForm";
 
@@ -64,6 +65,15 @@ export default function ProfissionaisPage() {
             Sem investir em publicidade e sem comprar contactos. O cliente descreve o
             trabalho com fotografias e diz quanto quer pagar — você responde com um
             valor.
+          </p>
+          <p className="mt-5 text-sm text-slate-500">
+            Já se inscreveu?{" "}
+            <Link
+              href="/profissionais/entrar"
+              className="font-semibold text-cyan-600 hover:underline"
+            >
+              Entrar no painel
+            </Link>
           </p>
         </div>
       </section>

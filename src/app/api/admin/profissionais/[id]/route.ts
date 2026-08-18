@@ -5,10 +5,17 @@ import {
   definirEstadoDoProfissional,
   actualizarProfissional,
   definirBaseDoProfissional,
+  guardarTokenDePalavraPasse,
   getPool,
 } from "@/lib/db";
 import { validarEdicao, estadoValido, afectaDistribuicao } from "@/lib/edicao-profissional";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
+import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
+import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
+import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+
+/** Dias que o link de criação de palavra-passe dura. */
+const DIAS_DO_LINK_DE_SENHA = 7;
 
 export const runtime = "nodejs";
 
@@ -49,12 +56,18 @@ export async function PATCH(
     let avisoDeDistribuicao = false;
 
     // ── Estado ───────────────────────────────────────────────────────────────
+    let convitePorEnviar = false;
     if (corpo.estado !== undefined) {
       if (!estadoValido(corpo.estado)) {
         return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
       }
       await definirEstadoDoProfissional(providerId, corpo.estado);
       feito.push(`estado: ${corpo.estado}`);
+
+      // Aprovar é o momento em que ele passa a ter conta. Antes disso não faz
+      // sentido dar-lhe palavra-passe: não recebe pedidos, e o painel estaria
+      // vazio.
+      if (corpo.estado === "aprovado") convitePorEnviar = true;
     }
 
     // ── Verificação da guia ──────────────────────────────────────────────────
@@ -117,11 +130,43 @@ export async function PATCH(
       if (afectaDistribuicao(validacao.alteracoes)) avisoDeDistribuicao = true;
     }
 
+    // ── O convite para criar palavra-passe ───────────────────────────────────
+    //
+    // Depois de tudo o resto estar gravado: se o email falhar, a aprovação não
+    // se desfaz. O convite reenvia-se; a aprovação não se repete.
+    let conviteEnviado: boolean | undefined;
+    if (convitePorEnviar) {
+      const pool = await getPool();
+      const [linhas] = pool
+        ? ((await pool.execute(
+            "SELECT name, email, passwordHash FROM providers WHERE id = ? LIMIT 1",
+            [providerId],
+          )) as any[])
+        : [[]];
+      const p = (linhas as Array<{ name: string; email: string | null; passwordHash: string | null }>)[0];
+
+      // Quem já tem palavra-passe não precisa de convite — reaprovar alguém que
+      // esteve suspenso não lhe deve mandar criar outra.
+      if (p?.email && !p.passwordHash) {
+        const acesso = gerarTokenDeAcesso();
+        const expira = new Date(Date.now() + DIAS_DO_LINK_DE_SENHA * 24 * 3600_000);
+        await guardarTokenDePalavraPasse(providerId, acesso.hash, expira);
+        conviteEnviado = await enviarEmailDeAprovacao({
+          para: p.email,
+          nome: p.name,
+          token: acesso.token,
+          baseUrl: urlDeAccaoDoPedido(req.headers),
+          diasDeValidade: DIAS_DO_LINK_DE_SENHA,
+        });
+        feito.push(conviteEnviado ? "convite enviado" : "convite NÃO enviado");
+      }
+    }
+
     if (feito.length === 0) {
       return NextResponse.json({ error: "Nada para alterar" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao });
+    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao, conviteEnviado });
   } catch (error) {
     console.error("[api/admin/profissionais PATCH]", error);
     return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });

@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { COOKIE_SESSAO_ADMIN, sessaoDeAdminValida } from "@/lib/colaborador-auth";
+import {
+  COOKIE_SESSAO_PROFISSIONAL,
+  verificarSessaoDoProfissional,
+} from "@/lib/profissional-auth";
 
 const CANONICAL_HOST = "clyon.pt";
 
@@ -45,6 +49,21 @@ async function temSessaoDeAdmin(request: NextRequest) {
   return sessaoDeAdminValida(request.cookies.get(COOKIE_SESSAO_ADMIN)?.value);
 }
 
+/**
+ * O mesmo, para o profissional.
+ *
+ * A verificação exige `type: "profissional"` no token. Um cookie de
+ * administrador colocado à mão neste nome não abre o painel dele — nem o
+ * contrário, porque o verificador do colaborador recusa tudo o que traga um
+ * `type`. Este projecto já teve um token de um domínio a passar por outro.
+ */
+async function temSessaoDeProfissional(request: NextRequest) {
+  const sessao = await verificarSessaoDoProfissional(
+    request.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
+  );
+  return sessao !== null;
+}
+
 export async function middleware(request: NextRequest) {
   const { nextUrl, headers } = request;
 
@@ -73,6 +92,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
   }
+  // Proteger o painel do profissional.
+  //
+  // Só o /painel: a inscrição, a entrada e o link para definir palavra-passe
+  // têm de continuar abertos — é por eles que se chega aqui. E o
+  // /profissionais/pedidos/[token] também, porque o token É a credencial.
+  if (nextUrl.pathname.startsWith("/profissionais/painel")) {
+    if (!(await temSessaoDeProfissional(request))) {
+      const entrada = new URL("/profissionais/entrar", request.url);
+      return NextResponse.redirect(entrada);
+    }
+  }
+
   const host = headers.get("host") ?? nextUrl.host;
   const forwardedProto = headers.get("x-forwarded-proto") ?? nextUrl.protocol.replace(":", "");
 

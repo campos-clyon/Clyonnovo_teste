@@ -482,6 +482,22 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "baseLng",
         sql: "ALTER TABLE providers ADD COLUMN baseLng DECIMAL(10,7) NULL DEFAULT NULL",
       },
+      // Definir a palavra-passe por link, e nunca por palavra-passe enviada
+      // por email: um email é copiado, reencaminhado e fica na caixa para
+      // sempre. O que vai no email é um token de uso único, guardado com hash
+      // como todos os outros deste projecto.
+      {
+        name: "senhaTokenHash",
+        sql: "ALTER TABLE providers ADD COLUMN senhaTokenHash VARCHAR(64) NULL DEFAULT NULL",
+      },
+      {
+        name: "senhaTokenExpiraEm",
+        sql: "ALTER TABLE providers ADD COLUMN senhaTokenExpiraEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "ultimoAcesso",
+        sql: "ALTER TABLE providers ADD COLUMN ultimoAcesso DATETIME NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -1050,6 +1066,143 @@ export async function actividadeDosProfissionais(): Promise<
     });
   }
   return mapa;
+}
+
+/**
+ * Guarda o token com que o profissional vai definir a palavra-passe.
+ *
+ * Só o hash, como em todos os tokens deste projecto. O valor em claro existe
+ * apenas dentro do link que segue no email.
+ */
+export async function guardarTokenDePalavraPasse(
+  providerId: number,
+  hash: string,
+  expiraEm: Date,
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    "UPDATE providers SET senhaTokenHash = ?, senhaTokenExpiraEm = ? WHERE id = ?",
+    [hash, expiraEm, providerId],
+  );
+}
+
+export type ProfissionalPorToken = {
+  id: number;
+  name: string;
+  email: string | null;
+  estado: string;
+  senhaTokenHash: string | null;
+  senhaTokenExpiraEm: Date | string | null;
+};
+
+export async function profissionalPorTokenDeSenha(
+  hash: string,
+): Promise<ProfissionalPorToken | undefined> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    `SELECT id, name, email, estado, senhaTokenHash, senhaTokenExpiraEm
+       FROM providers WHERE senhaTokenHash = ? LIMIT 1`,
+    [hash],
+  ) as any[];
+  return (rows as ProfissionalPorToken[])[0];
+}
+
+/**
+ * Grava a palavra-passe e queima o token.
+ *
+ * Queimar é a parte que importa: um token de definição que continuasse válido
+ * depois de usado deixava quem apanhasse o email antigo trocar a palavra-passe
+ * outra vez, e ficar com a conta.
+ */
+export async function definirPalavraPasseDoProfissional(
+  providerId: number,
+  passwordHash: string,
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `UPDATE providers
+        SET passwordHash = ?, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL
+      WHERE id = ?`,
+    [passwordHash, providerId],
+  );
+}
+
+export type ProfissionalParaEntrar = {
+  id: number;
+  name: string;
+  email: string | null;
+  estado: string;
+  isActive: number;
+  passwordHash: string | null;
+};
+
+export async function profissionalParaEntrar(
+  email: string,
+): Promise<ProfissionalParaEntrar | undefined> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    `SELECT id, name, email, estado, isActive, passwordHash
+       FROM providers WHERE email = ? AND isClyon = 0 LIMIT 1`,
+    [email],
+  ) as any[];
+  return (rows as ProfissionalParaEntrar[])[0];
+}
+
+export async function registarAcessoDoProfissional(providerId: number): Promise<void> {
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE providers SET ultimoAcesso = NOW() WHERE id = ?", [providerId]);
+}
+
+/**
+ * Os pedidos que este profissional tem em mão.
+ *
+ * É a lista que faltava: com um link por email e por pedido, quem tivesse cinco
+ * pedidos em aberto tinha cinco emails e nenhuma vista de conjunto.
+ */
+export async function negociacoesDoProfissional(providerId: number): Promise<
+  Array<{
+    id: number;
+    pedidoId: number;
+    estado: string;
+    valorAcordado: string | null;
+    propostasJson: string | null;
+    updatedAt: Date;
+    serviceType: string | null;
+    city: string | null;
+    urgency: string | null;
+    description: string | null;
+    valorMinimoCliente: string | null;
+    precisaFatura: number | null;
+    precisaGuiaTransporte: number | null;
+    filesJson: string | null;
+  }>
+> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
+            o.serviceType, o.city, o.urgency, o.description, o.valorMinimoCliente,
+            o.precisaFatura, o.precisaGuiaTransporte, o.filesJson
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.providerId = ?
+      ORDER BY
+        FIELD(n.estado, 'aberta', 'aguarda_contratacao', 'acordada', 'desistida', 'morta'),
+        n.updatedAt DESC
+      LIMIT 200`,
+    [providerId],
+  ) as any[];
+  return rows as any[];
 }
 
 /** Aprova, rejeita ou suspende um profissional. */
