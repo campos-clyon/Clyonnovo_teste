@@ -1,8 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Copy, Loader2, Mail, RefreshCw } from "lucide-react";
+import {
+  Camera,
+  CheckCircle2,
+  ChevronDown,
+  Copy,
+  Loader2,
+  Mail,
+  RefreshCw,
+} from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+
+type Proposta = {
+  por: "cliente" | "profissional";
+  valor: number;
+  em: string;
+  estado: string;
+};
 
 type Negociacao = {
   id: number;
@@ -11,6 +26,49 @@ type Negociacao = {
   profissionalEmail: string | null;
   estado: string;
   valorAcordado: string | null;
+  propostasJson: string | null;
+  execucaoEnviadaEm: string | null;
+  provaJson: string | null;
+  confirmadoEm: string | null;
+  pagoEm: string | null;
+  criadaEm: string;
+  actualizadaEm: string;
+};
+
+function propostasDe(json: string | null): Proposta[] {
+  if (!json) return [];
+  try {
+    const l = JSON.parse(json);
+    return Array.isArray(l) ? (l as Proposta[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json);
+    return {
+      fotos: Array.isArray(p?.fotos) ? p.fotos.filter((f: unknown) => typeof f === "string") : [],
+      nota: typeof p?.nota === "string" ? p.nota : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function quando(v: string | null): string {
+  if (!v) return "";
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("pt-PT");
+}
+
+const ESTADO_DA_PROPOSTA: Record<string, string> = {
+  pendente: "à espera de resposta",
+  aceite: "aceite",
+  recusada: "recusada",
+  expirada: "expirou",
 };
 
 type Pedido = {
@@ -39,6 +97,9 @@ export default function AdminNegociacoesPanel() {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [linksEmClaro, setLinksEmClaro] = useState<Record<string, string>>({});
+  // Qual das negociações está aberta. Uma de cada vez: abrir todas dava uma
+  // parede de valores onde não se distingue a que interessa.
+  const [aberta, setAberta] = useState<number | null>(null);
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -233,7 +294,19 @@ export default function AdminNegociacoesPanel() {
                   return (
                     <div key={n.id}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
+                        {/* A linha inteira abre a troca — o alvo do rato é a
+                            linha, não um triângulo de doze píxeis. */}
+                        <button
+                          onClick={() => setAberta((a) => (a === n.id ? null : n.id))}
+                          aria-expanded={aberta === n.id}
+                          className="flex flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-slate-800/60"
+                        >
+                          <ChevronDown
+                            className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
+                              aberta === n.id ? "rotate-180" : ""
+                            }`}
+                            aria-hidden="true"
+                          />
                           <span className="text-sm font-medium text-slate-100">
                             {n.profissionalNome}
                           </span>
@@ -247,7 +320,11 @@ export default function AdminNegociacoesPanel() {
                           {n.valorAcordado && (
                             <span className="text-xs text-slate-500">{n.valorAcordado} €</span>
                           )}
-                        </div>
+                          <span className="text-xs text-slate-600">
+                            {propostasDe(n.propostasJson).length} proposta
+                            {propostasDe(n.propostasJson).length === 1 ? "" : "s"}
+                          </span>
+                        </button>
                         <button
                           onClick={() =>
                             reenviar(chave, { pedidoId: p.id, negociacaoId: n.id })
@@ -269,6 +346,8 @@ export default function AdminNegociacoesPanel() {
                           aviso="O email não saiu. Use este link."
                         />
                       )}
+
+                      {aberta === n.id && <TrocaDePropostas negociacao={n} />}
                     </div>
                   );
                 })}
@@ -277,6 +356,91 @@ export default function AdminNegociacoesPanel() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A troca de propostas de uma negociação, e o que veio depois.
+ *
+ * O painel mostrava o desfecho — "acordada, 300 €" — e escondia como se lá
+ * chegou. É precisamente o caminho que interessa quando alguém liga a
+ * reclamar: quem propôs o quê, quando, e onde é que uma das partes desistiu.
+ *
+ * Os valores são os brutos, os que os dois viram. A taxa não entra aqui: não
+ * fazia parte da conversa deles.
+ */
+function TrocaDePropostas({ negociacao }: { negociacao: Negociacao }) {
+  const propostas = propostasDe(negociacao.propostasJson);
+  const prova = provaDe(negociacao.provaJson);
+
+  return (
+    <div className="mt-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      {propostas.length === 0 ? (
+        <p className="text-xs text-slate-500">
+          Ainda não houve propostas — o profissional foi avisado a{" "}
+          {quando(negociacao.criadaEm)} e não respondeu.
+        </p>
+      ) : (
+        <ol className="space-y-1.5">
+          {propostas.map((p, i) => (
+            <li key={i} className="flex items-center gap-3 text-xs">
+              <span
+                className={`w-24 shrink-0 font-semibold ${
+                  p.por === "cliente" ? "text-cyan-300" : "text-amber-300"
+                }`}
+              >
+                {p.por === "cliente" ? "Cliente" : "Profissional"}
+              </span>
+              <span
+                className={`w-20 shrink-0 font-bold ${
+                  p.estado === "pendente" ? "text-white" : "text-slate-500 line-through"
+                }`}
+              >
+                {Number(p.valor).toFixed(2).replace(".", ",")} €
+              </span>
+              <span className="w-40 shrink-0 text-slate-500">
+                {ESTADO_DA_PROPOSTA[p.estado] ?? p.estado}
+              </span>
+              <span className="text-slate-600">{quando(p.em)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {/* Depois do acordo: a prova e a confirmação. */}
+      {(negociacao.execucaoEnviadaEm || negociacao.confirmadoEm) && (
+        <div className="mt-3 border-t border-slate-800 pt-3">
+          {negociacao.execucaoEnviadaEm && (
+            <p className="flex items-center gap-1.5 text-xs text-slate-400">
+              <Camera className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+              Prova enviada a {quando(negociacao.execucaoEnviadaEm)}
+              {prova?.nota ? ` — "${prova.nota}"` : ""}
+            </p>
+          )}
+          {prova && prova.fotos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {prova.fotos.map((url, i) => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Prova ${i + 1}`}
+                    className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+          {negociacao.confirmadoEm && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-300">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Cliente confirmou a {quando(negociacao.confirmadoEm)}
+              {negociacao.pagoEm ? ` · pago a ${quando(negociacao.pagoEm)}` : " · saldo disponível"}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

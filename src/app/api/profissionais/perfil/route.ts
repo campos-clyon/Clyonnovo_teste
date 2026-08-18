@@ -41,6 +41,27 @@ function lista(v: unknown): string[] {
   return v.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
 }
 
+/**
+ * As categorias e as zonas estão gravadas como JSON — é o que `db.ts` escreve
+ * na inscrição e o que `listaDeJson` lê para decidir a elegibilidade.
+ *
+ * Eu tinha escrito isto a separar por vírgulas. Não dava erro nenhum: gravava,
+ * o ecrã mostrava tudo bem, e no dia seguinte o profissional deixava de receber
+ * pedidos porque a regra de elegibilidade já não conseguia ler as categorias
+ * dele. O tolerar-vírgulas aqui é só para o caso de alguma linha já ter sido
+ * gravada assim.
+ */
+function listaGravada(v: unknown): string[] {
+  if (typeof v !== "string" || !v.trim()) return [];
+  try {
+    const l = JSON.parse(v);
+    if (Array.isArray(l)) return l.filter((x): x is string => typeof x === "string");
+  } catch {
+    /* não é JSON — cai para o formato antigo */
+  }
+  return v.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
 export async function GET(req: NextRequest) {
   const sessao = await verificarSessaoDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
@@ -60,8 +81,8 @@ export async function GET(req: NextRequest) {
         telefone: p.phone ?? "",
         nif: p.nif ?? "",
         cidade: p.city ?? "",
-        categorias: typeof p.categorias === "string" && p.categorias ? p.categorias.split(",") : [],
-        zonas: typeof p.zonas === "string" && p.zonas ? p.zonas.split(",") : [],
+        categorias: listaGravada(p.categorias),
+        zonas: listaGravada(p.zonas),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
         emiteFatura: Number(p.emiteFatura) === 1,
         regimeIva: String(p.regimeIva ?? "isento"),
@@ -130,7 +151,7 @@ export async function PUT(req: NextRequest) {
     if (cats.length === 0) {
       erros.push({ campo: "categorias", mensagem: "Escolha pelo menos um serviço." });
     } else {
-      mudancas.categorias = cats.join(",");
+      mudancas.categorias = JSON.stringify(cats);
     }
   }
 
@@ -140,7 +161,7 @@ export async function PUT(req: NextRequest) {
     // A cidade de base entra sempre. Quem apagasse as zonas todas deixava de
     // receber o que quer que fosse, incluindo da sua própria terra.
     const todas = cidade && !zonas.includes(cidade) ? [cidade, ...zonas] : zonas;
-    mudancas.zonas = todas.join(",");
+    mudancas.zonas = JSON.stringify(Array.from(new Set(todas)));
   }
 
   if ("raioKm" in corpo) {

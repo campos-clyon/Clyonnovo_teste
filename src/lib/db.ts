@@ -934,6 +934,13 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
       profissionalEmail: string | null;
       estado: string;
       valorAcordado: string | null;
+      propostasJson: string | null;
+      execucaoEnviadaEm: Date | null;
+      provaJson: string | null;
+      confirmadoEm: Date | null;
+      pagoEm: Date | null;
+      criadaEm: Date;
+      actualizadaEm: Date;
     }>;
   }>
 > {
@@ -956,7 +963,12 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
 
   const ids = linhas.map((p) => Number(p.id));
   const [negs] = await pool.execute(
-    `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado,
+    // As propostas vêm inteiras: sem elas o painel mostra o desfecho e esconde
+    // como se lá chegou — que é justamente o que se quer ver quando uma
+    // negociação corre mal.
+    `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.propostasJson,
+            n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+            n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
