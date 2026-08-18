@@ -505,6 +505,17 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "regimeIva",
         sql: "ALTER TABLE providers ADD COLUMN regimeIva VARCHAR(10) NOT NULL DEFAULT 'isento'",
       },
+
+      // ── Carteira (18-08-2026) ────────────────────────────────────────────
+      // Para onde vai o dinheiro dele. Guardado inteiro porque é preciso
+      // inteiro para transferir; ao ecrã só volta encurtado — ver iban.ts.
+      { name: "iban", sql: "ALTER TABLE providers ADD COLUMN iban VARCHAR(34) NULL DEFAULT NULL" },
+      // O nome do titular pode não ser o do profissional (conta da empresa, do
+      // cônjuge), e um nome que não bate com o IBAN é transferência devolvida.
+      {
+        name: "ibanTitular",
+        sql: "ALTER TABLE providers ADD COLUMN ibanTitular VARCHAR(120) NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -692,6 +703,11 @@ export async function profissionaisActivos(): Promise<ProfissionalNaBase[]> {
 // ── Negociações ─────────────────────────────────────────────────────────────
 
 let negociacoesEnsured = false;
+// Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
+// nunca corria as migrações novas — o guarda booleano sozinho garantia que só
+// arranques frios as viam.
+const VERSAO_DAS_NEGOCIACOES = 2;
+let versaoDasNegociacoes = 0;
 
 /**
  * Uma negociação por par (pedido, profissional).
@@ -707,7 +723,7 @@ let negociacoesEnsured = false;
  * criar uma antes de responder era perder a resposta.
  */
 export async function ensureNegociacoesTable(): Promise<void> {
-  if (negociacoesEnsured) return;
+  if (negociacoesEnsured && versaoDasNegociacoes >= VERSAO_DAS_NEGOCIACOES) return;
   const pool = await getPool();
   if (!pool) return;
 
@@ -729,7 +745,29 @@ export async function ensureNegociacoesTable(): Promise<void> {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // v2 (18-08-2026) — o que acontece DEPOIS de fechado.
+  //
+  // A fase do trabalho lê-se destas datas e não de uma coluna de estado: duas
+  // fontes para o mesmo facto acabam sempre por discordar. A regra está em
+  // trabalho.ts, com testes.
+  const colunas = [
+    `ALTER TABLE negociacoes ADD COLUMN execucaoEnviadaEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN provaJson LONGTEXT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN confirmadoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN pagoEm DATETIME NULL DEFAULT NULL`,
+  ];
+  for (const sql of colunas) {
+    try {
+      await pool.execute(sql);
+    } catch (e: any) {
+      if (!e?.message?.includes("Duplicate column")) {
+        console.error("[negociacoes] migração ignorada:", e?.message);
+      }
+    }
+  }
+
   negociacoesEnsured = true;
+  versaoDasNegociacoes = VERSAO_DAS_NEGOCIACOES;
 }
 
 export type NegociacaoNaBase = {
@@ -741,6 +779,10 @@ export type NegociacaoNaBase = {
   estado: string;
   valorAcordado: string | null;
   propostasJson: string | null;
+  execucaoEnviadaEm?: Date | string | null;
+  provaJson?: string | null;
+  confirmadoEm?: Date | string | null;
+  pagoEm?: Date | string | null;
 };
 
 export async function criarNegociacao(dados: {
@@ -1190,6 +1232,10 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     valorAcordado: string | null;
     propostasJson: string | null;
     updatedAt: Date;
+    execucaoEnviadaEm: Date | null;
+    provaJson: string | null;
+    confirmadoEm: Date | null;
+    pagoEm: Date | null;
     serviceType: string | null;
     city: string | null;
     urgency: string | null;
@@ -1198,6 +1244,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     precisaFatura: number | null;
     precisaGuiaTransporte: number | null;
     filesJson: string | null;
+    address: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -1205,8 +1254,12 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   if (!pool) return [];
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
+            n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
-            o.precisaFatura, o.precisaGuiaTransporte, o.filesJson
+            o.precisaFatura, o.precisaGuiaTransporte, o.filesJson,
+            -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e
+            -- vistaParaOEstado, e so quando o trabalho e mesmo dele.
+            o.address, o.contactName, o.contactPhone
        FROM negociacoes n
        JOIN simulatorOrders o ON o.id = n.pedidoId
       WHERE n.providerId = ?
@@ -1217,6 +1270,289 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     [providerId],
   ) as any[];
   return rows as any[];
+}
+
+// ── Execução do trabalho e carteira ───────────────────────────────
+
+/**
+ * O profissional diz que está feito, e prova-o.
+ *
+ * A condição está no UPDATE e não em código antes dele. Ler o estado, decidir
+ * em JavaScript e só depois gravar deixa uma janela entre a leitura e a escrita
+ * — e é nessa janela que dois toques no mesmo botão gravam duas vezes. Aqui, a
+ * segunda tentativa não encontra linha nenhuma para actualizar.
+ *
+ * O providerId vem da sessão. Sem ele na cláusula, um id no corpo do pedido
+ * dava para marcar como feito o trabalho de outra pessoa.
+ */
+export async function registarExecucao(
+  negociacaoId: number,
+  providerId: number,
+  provaJson: string,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `UPDATE negociacoes
+        SET execucaoEnviadaEm = NOW(), provaJson = ?
+      WHERE id = ? AND providerId = ? AND estado = 'acordada'
+        AND execucaoEnviadaEm IS NULL`,
+    [provaJson, negociacaoId, providerId],
+  ) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * O cliente confirma que está feito, e o valor deixa de estar preso.
+ *
+ * O pedidoId é a prova de que quem confirma é o dono do pedido: quem chega aqui
+ * veio pelo token do pedido, e o token não abre outro.
+ */
+export async function confirmarExecucao(
+  negociacaoId: number,
+  pedidoId: number,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `UPDATE negociacoes
+        SET confirmadoEm = NOW()
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
+    [negociacaoId, pedidoId],
+  ) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * Grava a libertação por prazo dos trabalhos a que o cliente nunca voltou.
+ *
+ * A carteira já os conta como libertados a partir da data — ver carteira.ts —
+ * mas convém que a base concorde com o ecrã: quem for ler a tabela daqui a um
+ * ano não tem de saber a regra de cor.
+ */
+export async function libertarTrabalhosPorPrazo(dias: number): Promise<number> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [res] = await pool.execute(
+    `UPDATE negociacoes
+        SET confirmadoEm = NOW()
+      WHERE estado = 'acordada' AND confirmadoEm IS NULL
+        AND execucaoEnviadaEm IS NOT NULL
+        AND execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+    [dias],
+  ) as any[];
+  return Number(res.affectedRows ?? 0);
+}
+
+let levantamentosEnsured = false;
+
+/**
+ * Os pedidos de transferência do saldo.
+ *
+ * Uma linha por pedido, e o estado nunca se apaga: um pedido recusado tem de
+ * continuar a ver-se, com o motivo, senão o profissional só sabe que o dinheiro
+ * voltou e não porquê.
+ *
+ * O IBAN fica copiado na linha. Guardar só o do perfil parecia mais limpo até
+ * ao dia em que alguém o muda entre o pedido e a transferência — e depois não
+ * há forma de saber para onde o dinheiro foi realmente enviado.
+ */
+export async function ensureLevantamentosTable(): Promise<void> {
+  if (levantamentosEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS levantamentos (
+      id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      providerId    INT UNSIGNED NOT NULL,
+      valor         DECIMAL(10,2) NOT NULL,
+      iban          VARCHAR(34) NOT NULL,
+      titular       VARCHAR(120) NULL,
+      estado        VARCHAR(20) NOT NULL DEFAULT 'pedido',
+      nota          VARCHAR(255) NULL,
+      processadoPor VARCHAR(120) NULL,
+      processadoEm  DATETIME NULL DEFAULT NULL,
+      createdAt     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY levantamentos_provider (providerId),
+      KEY levantamentos_estado (estado)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  levantamentosEnsured = true;
+}
+
+export type LevantamentoNaBase = {
+  id: number;
+  providerId: number;
+  valor: string;
+  iban: string;
+  titular: string | null;
+  estado: string;
+  nota: string | null;
+  processadoPor: string | null;
+  processadoEm: Date | null;
+  createdAt: Date;
+};
+
+export async function levantamentosDoProfissional(
+  providerId: number,
+): Promise<LevantamentoNaBase[]> {
+  await ensureLevantamentosTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT * FROM levantamentos WHERE providerId = ? ORDER BY createdAt DESC LIMIT 200`,
+    [providerId],
+  ) as any[];
+  return rows as LevantamentoNaBase[];
+}
+
+export async function criarLevantamento(dados: {
+  providerId: number;
+  valor: number;
+  iban: string;
+  titular: string | null;
+}): Promise<number> {
+  await ensureLevantamentosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `INSERT INTO levantamentos (providerId, valor, iban, titular) VALUES (?, ?, ?, ?)`,
+    [dados.providerId, dados.valor, dados.iban, dados.titular],
+  ) as any[];
+  return Number(res.insertId);
+}
+
+/** Os pedidos de transferência, para o backoffice. */
+export async function levantamentosParaAdmin(): Promise<
+  Array<LevantamentoNaBase & { profissionalNome: string | null }>
+> {
+  await ensureLevantamentosTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT l.*, p.name AS profissionalNome
+       FROM levantamentos l
+       LEFT JOIN providers p ON p.id = l.providerId
+      ORDER BY FIELD(l.estado, 'pedido', 'pago', 'recusado'), l.createdAt DESC
+      LIMIT 200`,
+  ) as any[];
+  return rows as any[];
+}
+
+export async function marcarLevantamento(
+  id: number,
+  estado: "pago" | "recusado",
+  quem: string,
+  nota?: string,
+): Promise<boolean> {
+  await ensureLevantamentosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `UPDATE levantamentos
+        SET estado = ?, processadoPor = ?, processadoEm = NOW(), nota = ?
+      WHERE id = ? AND estado = 'pedido'`,
+    [estado, quem, nota ?? null, id],
+  ) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * O hash da palavra-passe, para quem já tem sessão e quer mudá-la.
+ *
+ * Por id e não por email: a sessão guarda o id, e ir buscar o email primeiro
+ * para depois procurar por ele era dar duas oportunidades de trocar de pessoa
+ * pelo caminho.
+ */
+export async function palavraPasseGuardada(providerId: number): Promise<string | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = await pool.execute(
+    "SELECT passwordHash FROM providers WHERE id = ? LIMIT 1",
+    [providerId],
+  ) as any[];
+  const linha = (rows as Array<{ passwordHash: string | null }>)[0];
+  return linha?.passwordHash ?? null;
+}
+
+/** O perfil completo do profissional, para ele próprio ver e editar. */
+export async function perfilDoProfissional(
+  providerId: number,
+): Promise<Record<string, unknown> | undefined> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    `SELECT id, name, email, phone, nif, city, categorias, zonas, raioKm,
+            emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
+            guiaVerificadaEm, estado, isActive, iban, ibanTitular, createdAt
+       FROM providers WHERE id = ? LIMIT 1`,
+    [providerId],
+  ) as any[];
+  return (rows as Array<Record<string, unknown>>)[0];
+}
+
+/**
+ * O profissional muda os seus próprios dados.
+ *
+ * Só as colunas desta lista. O `estado` e o `guiaVerificadaEm` não estão cá —
+ * um profissional que se pudesse aprovar a si próprio, ou dar-se a guia por
+ * verificada, tornava a verificação um enfeite.
+ */
+export async function actualizarPerfilDoProfissional(
+  providerId: number,
+  dados: Record<string, unknown>,
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const permitidas = [
+    "name",
+    "phone",
+    "nif",
+    "city",
+    "categorias",
+    "zonas",
+    "raioKm",
+    "emiteFatura",
+    "regimeIva",
+    "emiteGuiaTransporte",
+    "numeroTransportador",
+    "iban",
+    "ibanTitular",
+    "baseLat",
+    "baseLng",
+  ];
+  const colunas = permitidas.filter((c) => dados[c] !== undefined);
+  if (colunas.length === 0) return;
+
+  await pool.execute(
+    `UPDATE providers SET ${colunas.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`,
+    [...colunas.map((c) => dados[c]), providerId],
+  );
+}
+
+/**
+ * Mexer no número de transportador põe a guia outra vez por verificar.
+ *
+ * Sem isto, bastava inscrever-se com um número verdadeiro, ser verificado, e
+ * trocá-lo depois — e o distintivo que o cliente vê passava a garantir um
+ * número que ninguém confirmou.
+ */
+export async function invalidarVerificacaoDaGuia(providerId: number): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "UPDATE providers SET guiaVerificadaEm = NULL, guiaVerificadaPor = NULL WHERE id = ?",
+    [providerId],
+  );
 }
 
 /** Aprova, rejeita ou suspende um profissional. */

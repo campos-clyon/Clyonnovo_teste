@@ -1,0 +1,221 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  perfilDoProfissional,
+  actualizarPerfilDoProfissional,
+  invalidarVerificacaoDaGuia,
+} from "@/lib/db";
+import {
+  verificarSessaoDoProfissional,
+  COOKIE_SESSAO_PROFISSIONAL,
+} from "@/lib/profissional-auth";
+import {
+  nifValido,
+  telefoneValido,
+  regimeDeIvaValido,
+  CATEGORIAS_VALIDAS,
+  RAIO_MAXIMO_KM,
+  RAIO_MINIMO_KM,
+} from "@/lib/inscricao-profissional";
+import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
+
+export const runtime = "nodejs";
+
+/**
+ * O perfil do profissional, visto e mudado por ele próprio.
+ *
+ * O que está aqui decide a que pedidos ele chega: categorias, zonas e raio.
+ * Sem esta página, mudar de área ou passar a fazer mais um serviço obrigava a
+ * escrever-nos — e o mais provável era simplesmente deixar de receber trabalho
+ * sem perceber porquê.
+ *
+ * O que NÃO se muda aqui: o estado da conta e a verificação da guia. Um
+ * profissional que se aprovasse a si próprio tornava a aprovação um enfeite.
+ */
+
+function texto(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function lista(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
+}
+
+export async function GET(req: NextRequest) {
+  const sessao = await verificarSessaoDoProfissional(
+    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
+  );
+  if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  try {
+    const p = await perfilDoProfissional(sessao.providerId);
+    if (!p) return NextResponse.json({ error: "Perfil não encontrado" }, { status: 404 });
+
+    const iban = typeof p.iban === "string" ? p.iban : "";
+
+    return NextResponse.json({
+      perfil: {
+        nome: p.name ?? "",
+        email: p.email ?? "",
+        telefone: p.phone ?? "",
+        nif: p.nif ?? "",
+        cidade: p.city ?? "",
+        categorias: typeof p.categorias === "string" && p.categorias ? p.categorias.split(",") : [],
+        zonas: typeof p.zonas === "string" && p.zonas ? p.zonas.split(",") : [],
+        raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
+        emiteFatura: Number(p.emiteFatura) === 1,
+        regimeIva: String(p.regimeIva ?? "isento"),
+        emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
+        numeroTransportador: p.numeroTransportador ?? "",
+        guiaVerificada: p.guiaVerificadaEm != null,
+        estado: String(p.estado ?? "pendente"),
+        // Nunca o IBAN completo: esta resposta abre-se em qualquer sítio onde
+        // ele deixe a sessão iniciada.
+        iban: iban ? ibanEncurtado(iban) : "",
+        temIban: Boolean(iban),
+        ibanTitular: p.ibanTitular ?? "",
+        desde: p.createdAt ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("[profissionais/perfil GET]", error);
+    return NextResponse.json({ error: "Erro ao carregar o perfil" }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  const sessao = await verificarSessaoDoProfissional(
+    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
+  );
+  if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  let corpo: Record<string, unknown>;
+  try {
+    corpo = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  const erros: Array<{ campo: string; mensagem: string }> = [];
+  const mudancas: Record<string, unknown> = {};
+
+  // Cada campo só é tocado se vier no corpo. Um PUT parcial é o que permite ao
+  // ecrã gravar uma secção de cada vez sem apagar o resto por omissão.
+  if ("nome" in corpo) {
+    const nome = texto(corpo.nome);
+    if (nome.length < 2) erros.push({ campo: "nome", mensagem: "Indique o nome." });
+    else mudancas.name = nome;
+  }
+
+  if ("telefone" in corpo) {
+    const t = texto(corpo.telefone);
+    if (!telefoneValido(t)) erros.push({ campo: "telefone", mensagem: "Telefone inválido." });
+    else mudancas.phone = t;
+  }
+
+  if ("nif" in corpo) {
+    const nif = texto(corpo.nif);
+    if (nif && !nifValido(nif)) erros.push({ campo: "nif", mensagem: "NIF inválido." });
+    else mudancas.nif = nif || null;
+  }
+
+  if ("cidade" in corpo) {
+    const c = texto(corpo.cidade);
+    if (!c) erros.push({ campo: "cidade", mensagem: "Indique a cidade." });
+    else mudancas.city = c;
+  }
+
+  if ("categorias" in corpo) {
+    const cats = lista(corpo.categorias).filter((c) => CATEGORIAS_VALIDAS.includes(c));
+    if (cats.length === 0) {
+      erros.push({ campo: "categorias", mensagem: "Escolha pelo menos um serviço." });
+    } else {
+      mudancas.categorias = cats.join(",");
+    }
+  }
+
+  if ("zonas" in corpo) {
+    const zonas = lista(corpo.zonas);
+    const cidade = texto(corpo.cidade) || texto(mudancas.city);
+    // A cidade de base entra sempre. Quem apagasse as zonas todas deixava de
+    // receber o que quer que fosse, incluindo da sua própria terra.
+    const todas = cidade && !zonas.includes(cidade) ? [cidade, ...zonas] : zonas;
+    mudancas.zonas = todas.join(",");
+  }
+
+  if ("raioKm" in corpo) {
+    const r = Number(corpo.raioKm);
+    if (!Number.isFinite(r) || r < RAIO_MINIMO_KM || r > RAIO_MAXIMO_KM) {
+      erros.push({ campo: "raioKm", mensagem: `O raio vai de ${RAIO_MINIMO_KM} a ${RAIO_MAXIMO_KM} km.` });
+    } else {
+      mudancas.raioKm = Math.round(r);
+    }
+  }
+
+  if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;
+
+  if ("regimeIva" in corpo) {
+    if (!regimeDeIvaValido(corpo.regimeIva)) {
+      erros.push({ campo: "regimeIva", mensagem: "Escolha o regime de IVA." });
+    } else {
+      mudancas.regimeIva = corpo.regimeIva;
+    }
+  }
+
+  // Quem emite fatura tem de ter NIF — a fatura sem NIF não existe.
+  const emitiraFatura =
+    "emiteFatura" in corpo ? Boolean(corpo.emiteFatura) : undefined;
+  if (emitiraFatura === true) {
+    const nifFinal = "nif" in corpo ? texto(corpo.nif) : null;
+    if (nifFinal !== null && !nifFinal) {
+      erros.push({ campo: "nif", mensagem: "Para emitir fatura é preciso o NIF." });
+    }
+  }
+
+  let guiaMudou = false;
+  if ("emiteGuiaTransporte" in corpo) {
+    mudancas.emiteGuiaTransporte = corpo.emiteGuiaTransporte ? 1 : 0;
+    guiaMudou = true;
+  }
+  if ("numeroTransportador" in corpo) {
+    const n = texto(corpo.numeroTransportador);
+    if (corpo.emiteGuiaTransporte && n.length < 3) {
+      erros.push({
+        campo: "numeroTransportador",
+        mensagem: "Indique o número de registo de transportador.",
+      });
+    } else {
+      mudancas.numeroTransportador = n || null;
+      guiaMudou = true;
+    }
+  }
+
+  if ("iban" in corpo) {
+    const bruto = texto(corpo.iban);
+    if (!bruto) {
+      mudancas.iban = null;
+    } else if (!ibanValido(bruto)) {
+      erros.push({ campo: "iban", mensagem: "IBAN inválido. Confirme os dígitos." });
+    } else {
+      mudancas.iban = normalizarIban(bruto);
+    }
+  }
+  if ("ibanTitular" in corpo) mudancas.ibanTitular = texto(corpo.ibanTitular) || null;
+
+  if (erros.length > 0) {
+    return NextResponse.json({ error: erros[0].mensagem, erros }, { status: 400 });
+  }
+
+  try {
+    await actualizarPerfilDoProfissional(sessao.providerId, mudancas);
+
+    // Mexer na guia volta a pôr a verificação por fazer. O distintivo que o
+    // cliente vê tem de continuar a garantir um número que alguém confirmou.
+    if (guiaMudou) await invalidarVerificacaoDaGuia(sessao.providerId);
+
+    return NextResponse.json({ ok: true, guiaPorVerificar: guiaMudou });
+  } catch (error) {
+    console.error("[profissionais/perfil PUT]", error);
+    return NextResponse.json({ error: "Não foi possível guardar" }, { status: 500 });
+  }
+}

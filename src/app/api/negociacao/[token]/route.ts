@@ -6,6 +6,7 @@ import {
   negociacoesDoPedido,
   encerrarOutrasNegociacoes,
   appendOrderHistory,
+  confirmarExecucao,
 } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import {
@@ -111,6 +112,40 @@ export async function POST(
     negociacaoId = escolhida.id;
     pedidoId = pedido.id;
     linha = escolhida;
+  }
+
+  // ── Confirmar que o trabalho está feito ───────────────────────────────────
+  //
+  // Não passa pelo motor de negociação: a negociação acabou quando ele foi
+  // contratado. Isto é a fase seguinte, e a regra dela está em trabalho.ts.
+  if (corpo.accao === "confirmar") {
+    if (lado !== "cliente") {
+      return NextResponse.json(
+        { ok: false, error: "Só o cliente confirma o trabalho." },
+        { status: 403 },
+      );
+    }
+    try {
+      const gravou = await confirmarExecucao(negociacaoId, pedidoId);
+      if (!gravou) {
+        return NextResponse.json(
+          { ok: false, error: "Este trabalho não está à espera de confirmação." },
+          { status: 409 },
+        );
+      }
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message: `Cliente confirmou o trabalho da negociação #${negociacaoId}. Valor libertado.`,
+      });
+      return NextResponse.json({ ok: true, confirmado: true });
+    } catch (err) {
+      console.error("[negociacao] falha ao confirmar:", err);
+      return NextResponse.json(
+        { ok: false, error: "Não foi possível confirmar. Tente novamente." },
+        { status: 500 },
+      );
+    }
   }
 
   // ── Aplicar a acção ───────────────────────────────────────────────────────

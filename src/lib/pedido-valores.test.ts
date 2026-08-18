@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   validarValorDesejado,
   vistaDoProfissional,
+  vistaDoProfissionalContratado,
+  vistaParaOEstado,
   CAMPOS_VISIVEIS_AO_PROFISSIONAL,
   VALOR_MAXIMO_ACEITE,
   VALOR_MINIMO_ACEITE,
@@ -118,5 +120,50 @@ describe("vistaDoProfissional", () => {
   it("omite campos ausentes em vez de os pôr a undefined", () => {
     const vista = vistaDoProfissional({ id: 1, serviceType: "mudanca" });
     expect(Object.keys(vista)).toEqual(["id", "serviceType"]);
+  });
+});
+
+describe("depois de contratado", () => {
+  const pedido = {
+    id: 7,
+    serviceType: "recolha_moveis",
+    city: "Lisboa",
+    address: "Rua das Flores 12, 3.º Esq.",
+    contactName: "Ana",
+    contactPhone: "912345678",
+    contactEmail: "ana@exemplo.pt",
+    valorMaximoCliente: 400,
+  };
+
+  it("abre a morada e o contacto", () => {
+    const v = vistaDoProfissionalContratado(pedido) as Record<string, unknown>;
+    expect(v.address).toBe("Rua das Flores 12, 3.º Esq.");
+    expect(v.contactName).toBe("Ana");
+    expect(v.contactPhone).toBe("912345678");
+  });
+
+  // Ser contratado dá acesso ao que é preciso para lá chegar, e a mais nada.
+  it("continua a não abrir o resto", () => {
+    const v = vistaDoProfissionalContratado(pedido) as Record<string, unknown>;
+    expect(v.valorMaximoCliente).toBeUndefined();
+    expect(v.contactEmail).toBeUndefined();
+  });
+
+  it("antes de contratado a morada não sai", () => {
+    const v = vistaDoProfissional(pedido) as Record<string, unknown>;
+    expect(v.address).toBeUndefined();
+    expect(v.contactPhone).toBeUndefined();
+    expect(v.city).toBe("Lisboa");
+  });
+
+  // A decisão "já pode ver a morada?" está numa função só. Espalhada por cada
+  // rota, um dia uma delas engana-se — e a que se engana é a que expõe.
+  it("vistaParaOEstado escolhe pelo estado da negociação", () => {
+    for (const estado of ["aberta", "aguarda_contratacao", "desistida", "morta"]) {
+      expect((vistaParaOEstado(pedido, estado) as Record<string, unknown>).address).toBeUndefined();
+    }
+    expect((vistaParaOEstado(pedido, "acordada") as Record<string, unknown>).address).toBe(
+      "Rua das Flores 12, 3.º Esq.",
+    );
   });
 });

@@ -143,3 +143,51 @@ export function vistaDoProfissional(pedido: Record<string, unknown>): VistaDoPro
   }
   return vista;
 }
+
+/**
+ * O que se abre DEPOIS de o cliente o contratar.
+ *
+ * A morada e o telefone entram aqui e em mais lado nenhum. Não é um detalhe de
+ * cortesia: é a diferença entre um pedido e uma lista de contactos. Enquanto a
+ * negociação está aberta, qualquer profissional da zona vê o pedido — se a
+ * morada saísse aí, bastava inscrever-se para colher moradas de casa com
+ * telefone ao lado.
+ *
+ * Depois de contratado é outra coisa: há um acordo, um valor retido, e ele tem
+ * de lá chegar.
+ */
+export const CAMPOS_VISIVEIS_DEPOIS_DE_CONTRATADO = [
+  ...CAMPOS_VISIVEIS_AO_PROFISSIONAL,
+  "address",
+  "contactName",
+  "contactPhone",
+] as const;
+
+export type CampoDepoisDeContratado = (typeof CAMPOS_VISIVEIS_DEPOIS_DE_CONTRATADO)[number];
+
+export type VistaDeContratado = Partial<Record<CampoDepoisDeContratado, unknown>>;
+
+export function vistaDoProfissionalContratado(
+  pedido: Record<string, unknown>,
+): VistaDeContratado {
+  const vista: VistaDeContratado = {};
+  for (const campo of CAMPOS_VISIVEIS_DEPOIS_DE_CONTRATADO) {
+    if (pedido[campo] !== undefined) vista[campo] = pedido[campo];
+  }
+  return vista;
+}
+
+/**
+ * A vista certa para o estado em que a negociação está.
+ *
+ * Uma função só, para que a decisão "já pode ver a morada?" não seja tomada em
+ * cada rota à sua maneira — que é como um dia uma delas se engana.
+ */
+export function vistaParaOEstado(
+  pedido: Record<string, unknown>,
+  estadoDaNegociacao: string,
+): VistaDeContratado {
+  return estadoDaNegociacao === "acordada"
+    ? vistaDoProfissionalContratado(pedido)
+    : vistaDoProfissional(pedido);
+}
