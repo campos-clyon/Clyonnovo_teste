@@ -20,8 +20,16 @@ import { quantoOClientePaga } from "@/lib/taxas-plataforma";
  * entra em casa — e é esse o segundo passo do aperto de mão duplo: um
  * profissional aceitar não fecha nada.
  *
- * Os valores são sempre o que ele vai pagar, taxa incluída. Um número e uma
- * linha, como na Vinted — sem contas para fazer.
+ * Os valores da negociação são CRUS — o que foi proposto, sem taxa. É como a
+ * Vinted faz: na conversa vêem-se as propostas tal como foram feitas, e a taxa
+ * aparece onde se compra.
+ *
+ * Somá-la em cada proposta fazia o número dançar a cada contraproposta por uma
+ * razão que não é a negociação, e o cliente deixava de saber sobre que valor
+ * estava a discutir com o profissional.
+ *
+ * No fecho é ao contrário: aí é o momento de pagar, e mostra-se a conta toda —
+ * acordado, taxa e total.
  */
 
 export type NegociacaoDoCliente = {
@@ -89,10 +97,30 @@ export default function PropostasRecebidas({
         <h2 className="mt-2 text-lg font-bold text-emerald-900">
           Contratou {acordada.profissionalNome}
         </h2>
-        <p className="mt-1 text-sm text-emerald-800">
-          Total a pagar: {euros(quantoOClientePaga(acordada.valorAcordado ?? 0))}
-          <span className="block text-xs">inclui a taxa CLYON</span>
-        </p>
+        {/* Aqui sim: é o momento de pagar, e o total tem de ser o total. */}
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
+          <div className="flex items-baseline justify-between gap-4 text-sm">
+            <span className="text-slate-600">Valor acordado</span>
+            <span className="font-semibold text-slate-900">
+              {euros(acordada.valorAcordado)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+            <span className="text-slate-600">Taxa CLYON</span>
+            <span className="font-semibold text-slate-900">
+              {euros(
+                quantoOClientePaga(acordada.valorAcordado ?? 0) -
+                  (acordada.valorAcordado ?? 0),
+              )}
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
+            <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+            <span className="text-lg font-bold text-emerald-700">
+              {euros(quantoOClientePaga(acordada.valorAcordado ?? 0))}
+            </span>
+          </div>
+        </div>
         <p className="mt-3 text-xs leading-relaxed text-emerald-700">
           O valor fica retido na CLYON e só chega ao profissional depois de confirmar
           que o trabalho está feito.
@@ -175,11 +203,19 @@ export default function PropostasRecebidas({
                   </div>
                 </div>
 
+                {/*
+                  O valor CRU do que está em cima da mesa, sem taxa.
+                  É como a Vinted faz: na conversa vêem-se os valores das
+                  propostas, e a taxa aparece onde se compra. Somá-la aqui
+                  fazia o número dançar a cada contraproposta por uma razão
+                  que não é a negociação — e o cliente deixava de saber sobre
+                  que valor estava a discutir.
+                */}
                 <div className="text-right">
-                  <div className="text-xl font-bold text-[#0B1929]">
-                    {euros(emCima != null ? quantoOClientePaga(emCima) : null)}
+                  <div className="text-xl font-bold text-[#0B1929]">{euros(emCima)}</div>
+                  <div className="text-xs text-slate-400">
+                    {pendente?.por === "profissional" ? "proposta dele" : "a sua proposta"}
                   </div>
-                  <div className="text-xs text-slate-400">inclui a taxa CLYON</div>
                 </div>
               </div>
 
