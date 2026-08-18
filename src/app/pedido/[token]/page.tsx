@@ -6,6 +6,7 @@ import { getSimulatorOrderByAcessoTokenHash, negociacoesDoPedido } from "@/lib/d
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import type { Proposta } from "@/lib/negociacao";
+import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
 
@@ -117,16 +118,26 @@ export default async function PaginaDoPedido({
 
   // As negociações a decorrer. O cliente pode ter várias — é isso que torna o
   // segundo passo do aperto de mão necessário.
-  const negociacoesDoCliente = (await negociacoesDoPedido(pedido.id)).map((n) => ({
-    id: n.id,
-    estado: n.estado,
-    valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
-    propostas: propostasDe(n.propostasJson),
-    profissionalNome: n.profissionalNome,
-    emiteFatura: Number(n.emiteFatura) === 1,
-    regimeIva: String(n.regimeIva ?? "isento"),
-    guiaVerificada: n.guiaVerificadaEm != null,
-  }));
+  const agora = new Date();
+  const negociacoesDoCliente = (await negociacoesDoPedido(pedido.id)).map((n) => {
+    const contratado = n.estado === "acordada";
+    return {
+      id: n.id,
+      estado: n.estado,
+      valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+      propostas: propostasDe(n.propostasJson),
+      profissionalNome: n.profissionalNome,
+      // O contacto do profissional só depois de o contratar — a simetria do que
+      // fazemos com a morada do cliente do outro lado.
+      profissionalTelefone: contratado ? (n.profissionalTelefone ?? null) : null,
+      emiteFatura: Number(n.emiteFatura) === 1,
+      regimeIva: String(n.regimeIva ?? "isento"),
+      guiaVerificada: n.guiaVerificadaEm != null,
+      fase: faseDoTrabalho(n),
+      provaJson: n.provaJson ?? null,
+      diasAteLibertar: diasAteLibertar(n, agora),
+    };
+  });
 
   const fotos = fotosDoPedido(pedido.filesJson);
   const desejado = euros(pedido.valorDesejadoCliente);

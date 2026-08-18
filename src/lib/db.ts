@@ -830,13 +830,24 @@ export async function negociacaoPorTokenHash(
 }
 
 export async function negociacoesDoPedido(pedidoId: number): Promise<
-  Array<NegociacaoNaBase & { profissionalNome: string; emiteFatura: number; regimeIva: string; guiaVerificadaEm: Date | null }>
+  Array<
+    NegociacaoNaBase & {
+      profissionalNome: string;
+      profissionalTelefone: string | null;
+      emiteFatura: number;
+      regimeIva: string;
+      guiaVerificadaEm: Date | null;
+    }
+  >
 > {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = await pool.execute(
-    `SELECT n.*, p.name AS profissionalNome, p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
+    // O telefone sai da consulta mas só chega ao ecrã depois de contratado —
+    // quem decide isso é quem monta a resposta, não esta função.
+    `SELECT n.*, p.name AS profissionalNome, p.phone AS profissionalTelefone,
+            p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId = ?

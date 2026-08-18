@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, CheckCircle2, FileText, HandCoins, Loader2 } from "lucide-react";
+import {
+  BadgeCheck,
+  Camera,
+  CheckCircle2,
+  Clock,
+  FileText,
+  HandCoins,
+  Loader2,
+  Phone,
+} from "lucide-react";
 import {
   accoesDisponiveis,
   propostasRestantes,
@@ -44,7 +53,25 @@ export type NegociacaoDoCliente = {
   /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
   regimeIva: string;
   guiaVerificada: boolean;
+  /** Só depois de o contratar. */
+  profissionalTelefone: string | null;
+  fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
+  provaJson: string | null;
+  diasAteLibertar: number | null;
 };
+
+function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json);
+    return {
+      fotos: Array.isArray(p?.fotos) ? p.fotos.filter((f: unknown) => typeof f === "string") : [],
+      nota: typeof p?.nota === "string" ? p.nota : "",
+    };
+  } catch {
+    return null;
+  }
+}
 
 function euros(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -78,9 +105,16 @@ export default function PropostasRecebidas({
       }
       setNegociacoes((lista) =>
         lista.map((n) =>
-          n.id === id
-            ? { ...n, estado: dados.estado, valorAcordado: dados.valorAcordado, propostas: dados.propostas }
-            : n,
+          n.id !== id
+            ? n
+            : dados.confirmado
+              ? { ...n, fase: "confirmado" as const, diasAteLibertar: null }
+              : {
+                  ...n,
+                  estado: dados.estado,
+                  valorAcordado: dados.valorAcordado,
+                  propostas: dados.propostas,
+                },
         ),
       );
     } catch {
@@ -93,6 +127,7 @@ export default function PropostasRecebidas({
   const acordada = negociacoes.find((n) => n.estado === "acordada");
 
   if (acordada) {
+    const prova = provaDe(acordada.provaJson);
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
@@ -158,10 +193,99 @@ export default function PropostasRecebidas({
             </span>
           </div>
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-emerald-700">
-          O valor fica retido na CLYON e só chega ao profissional depois de confirmar
-          que o trabalho está feito.
-        </p>
+        {/* ── O que falta acontecer ───────────────────────────────────────── */}
+        {acordada.fase === "a_executar" && (
+          <div className="mt-4 text-left">
+            <p className="text-xs leading-relaxed text-emerald-700">
+              O valor fica retido na CLYON e só chega a {acordada.profissionalNome} depois
+              de o trabalho estar feito e de si o confirmar aqui.
+            </p>
+            {acordada.profissionalTelefone && (
+              <a
+                href={`tel:${acordada.profissionalTelefone}`}
+                className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-300 bg-white px-4 font-semibold text-emerald-800 transition active:bg-emerald-50"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                Ligar a {acordada.profissionalNome}
+              </a>
+            )}
+          </div>
+        )}
+
+        {acordada.fase === "a_confirmar" && (
+          <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-4 text-left">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-[#0B1929]">
+              <Camera className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              {acordada.profissionalNome} diz que está feito
+            </h3>
+
+            {/* A prova em grande. É sobre isto que se decide confirmar — numa
+                miniatura de sessenta píxeis não se vê se ficou feito. */}
+            {prova && prova.fotos.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={prova.fotos[0]}
+                  alt="Fotografia do trabalho feito"
+                  className="max-h-72 w-full rounded-xl object-cover ring-1 ring-slate-200"
+                />
+                {prova.fotos.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {prova.fotos.slice(1).map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={url}
+                        src={url}
+                        alt={`Fotografia ${i + 2} do trabalho feito`}
+                        className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {prova?.nota && (
+              <p className="mt-3 whitespace-pre-line rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                {prova.nota}
+              </p>
+            )}
+
+            {erro && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {erro}
+              </p>
+            )}
+
+            <button
+              onClick={() => agir(acordada.id, "confirmar")}
+              disabled={aEnviar === acordada.id}
+              className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white transition active:bg-emerald-700 disabled:opacity-50"
+            >
+              {aEnviar === acordada.id && (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              )}
+              <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+              Está bem feito, libertar o pagamento
+            </button>
+
+            {acordada.diasAteLibertar != null && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
+                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Se não disser nada, o valor é libertado sozinho daqui a{" "}
+                {Math.ceil(acordada.diasAteLibertar)} dia
+                {Math.ceil(acordada.diasAteLibertar) === 1 ? "" : "s"}. Se alguma coisa
+                estiver mal, fale connosco antes disso.
+              </p>
+            )}
+          </div>
+        )}
+
+        {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
+          <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
+            Confirmou que está feito e o pagamento foi libertado. Obrigado.
+          </p>
+        )}
       </section>
     );
   }

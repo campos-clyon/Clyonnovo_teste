@@ -13,6 +13,7 @@ import {
 import ContasPanel from "@/components/admin/ContasPanel";
 import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
+import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -54,6 +55,7 @@ import {
   X,
   BadgeCheck,
   HandCoins,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,7 +82,8 @@ type AdminSection =
   // da direita, como as outras, e quem está a trabalhar não perde a barra nem
   // o contexto ao mudar de assunto.
   | "profissionais"
-  | "negociacoes";
+  | "negociacoes"
+  | "levantamentos";
 
 type Lead = {
   id: number;
@@ -191,6 +194,7 @@ const adminNavItems: Array<{
   { id: "configs",   icon: Settings2 },
   { id: "profissionais", icon: BadgeCheck },
   { id: "negociacoes",   icon: HandCoins },
+  { id: "levantamentos", icon: Wallet },
 ];
 
 /**
@@ -204,7 +208,7 @@ const adminNavItems: Array<{
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["configs"] },
 ];
@@ -220,6 +224,7 @@ const sectionLabels: Record<AdminSection, string> = {
   configs:    "Configs",
   profissionais: "Profissionais",
   negociacoes:   "Negociações",
+  levantamentos: "Levantamentos",
 };
 
 const siteModules = [
@@ -2733,6 +2738,25 @@ export default function ColaboradorAdminClient() {
                 </p>
               </div>
               <AdminNegociacoesPanel />
+            </section>
+          )}
+
+          {activeSection === "levantamentos" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Levantamentos
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Os profissionais pedem para receber o saldo confirmado. Copie o IBAN,
+                  faça a transferência no banco e marque como paga — enquanto não houver
+                  ligação directa, é aqui que o dinheiro sai.
+                </p>
+              </div>
+              <AdminLevantamentosPanel />
             </section>
           )}
 
