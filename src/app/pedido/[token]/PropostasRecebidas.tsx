@@ -11,6 +11,7 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { quantoOClientePaga, decomporIva, TAXA_IVA } from "@/lib/taxas-plataforma";
+import EscolherValor from "@/components/EscolherValor";
 
 /**
  * As propostas que o cliente recebeu.
@@ -58,7 +59,6 @@ export default function PropostasRecebidas({
 }) {
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
   const [aEnviar, setAEnviar] = useState<number | null>(null);
-  const [contraproposta, setContraproposta] = useState<Record<number, string>>({});
   const [erro, setErro] = useState("");
 
   async function agir(id: number, accao: string, valor?: string) {
@@ -82,7 +82,6 @@ export default function PropostasRecebidas({
             : n,
         ),
       );
-      setContraproposta((c) => ({ ...c, [id]: "" }));
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -286,37 +285,23 @@ export default function PropostasRecebidas({
                 )}
 
                 {accoes.includes("propor") && (
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                        €
-                      </span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={contraproposta[n.id] ?? ""}
-                        onChange={(e) =>
-                          setContraproposta((c) => ({ ...c, [n.id]: e.target.value }))
-                        }
-                        placeholder="Contraproposta"
-                        aria-label={`Contraproposta a ${n.profissionalNome}`}
-                        className="w-full rounded-xl border-2 border-gray-300 bg-white py-2.5 pl-9 pr-3 text-base outline-none transition focus:border-cyan-600"
-                      />
-                    </div>
-                    <button
-                      onClick={() => agir(n.id, "propor", contraproposta[n.id])}
-                      disabled={aEnviar === n.id || !(contraproposta[n.id] ?? "").trim()}
-                      className="rounded-xl bg-cyan-500 px-5 text-sm font-bold text-white transition hover:bg-cyan-400 disabled:opacity-40"
-                    >
-                      Propor
-                    </button>
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="mb-2 text-sm font-medium text-slate-700">
+                      Ou proponha outro valor
+                    </p>
+                    <EscolherValor
+                      referencia={emCima}
+                      direccao="abaixo"
+                      aEnviar={aEnviar === n.id}
+                      legendaDoValor={(v) =>
+                        `Se ele aceitar, paga ${euros(quantoOClientePaga(v))} com a taxa CLYON.`
+                      }
+                      onPropor={(valor) => agir(n.id, "propor", valor)}
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
+                    </p>
                   </div>
-                )}
-
-                {accoes.includes("propor") && (
-                  <p className="text-xs text-slate-500">
-                    {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
-                  </p>
                 )}
               </div>
             </article>

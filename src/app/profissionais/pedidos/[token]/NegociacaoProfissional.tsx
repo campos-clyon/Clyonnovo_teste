@@ -12,6 +12,7 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import EscolherValor from "@/components/EscolherValor";
 
 /**
  * A negociação, do lado do profissional.
@@ -51,7 +52,6 @@ export default function NegociacaoProfissional({
     valorAcordado,
     propostas: propostasIniciais,
   });
-  const [valor, setValor] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -79,7 +79,6 @@ export default function NegociacaoProfissional({
         valorAcordado: dados.valorAcordado,
         propostas: dados.propostas,
       });
-      setValor("");
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -211,38 +210,17 @@ export default function NegociacaoProfissional({
 
         {podePropor && (
           <div>
-            <label htmlFor="contra" className="block text-sm font-medium text-slate-900">
+            <p className="mb-2 text-sm font-medium text-slate-900">
               Ou proponha outro valor
-            </label>
-            <div className="mt-1.5 flex gap-2">
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  €
-                </span>
-                <input
-                  id="contra"
-                  type="text"
-                  inputMode="decimal"
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                  placeholder="120"
-                  className="w-full rounded-xl border-2 border-gray-300 bg-white py-2.5 pl-9 pr-3 text-base outline-none transition focus:border-cyan-600"
-                />
-              </div>
-              <button
-                onClick={() => agir("propor", valor)}
-                disabled={aEnviar || !valor.trim()}
-                className="rounded-xl bg-cyan-500 px-5 text-sm font-bold text-white transition hover:bg-cyan-400 disabled:opacity-40"
-              >
-                Propor
-              </button>
-            </div>
-            {valor.trim() && Number(valor.replace(",", ".")) > 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                Recebe {euros(quantoOProfissionalRecebe(Number(valor.replace(",", "."))))}
-              </p>
-            )}
-            <p className="mt-1.5 text-xs text-slate-500">
+            </p>
+            <EscolherValor
+              referencia={valorEmCima}
+              direccao="acima"
+              aEnviar={aEnviar}
+              legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}
+              onPropor={(v) => agir("propor", v)}
+            />
+            <p className="mt-2 text-xs text-slate-500">
               {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
             </p>
           </div>
