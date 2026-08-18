@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     const pedidos = linhas.map((l) => {
       const vista = vistaDoProfissional(l as unknown as Record<string, unknown>);
-      const minimo = l.valorMinimoCliente != null ? Number(l.valorMinimoCliente) : null;
+      const minimo = l.valorDesejadoCliente != null ? Number(l.valorDesejadoCliente) : null;
       const acordado = l.valorAcordado != null ? Number(l.valorAcordado) : null;
 
       return {

@@ -1,22 +1,19 @@
 /**
- * O mínimo e o máximo que o cliente está disposto a pagar.
+ * Quanto o cliente quer pagar.
  *
- * São dois números com destinos opostos, e é essa a razão deste ficheiro
- * existir em vez de a validação viver solta na rota:
+ * **Um número só.** Foram dois — um mínimo público e um máximo privado — e o
+ * máximo saiu por decisão de 18-08-2026.
  *
- *   · o **mínimo** é público para o profissional, apresentado como «o que o
- *     cliente quer pagar»;
- *   · o **máximo** nunca sai daqui. Se o profissional o visse, nenhum proporia
- *     abaixo dele — o máximo deixava de ser um tecto e passava a ser o preço,
- *     e a negociação era teatro. Serve-nos para aceitar automaticamente uma
- *     proposta que caia dentro dele e para decidir a quem vale a pena mostrar
- *     o pedido.
+ * O que se perdeu: o máximo servia para aceitar automaticamente uma proposta
+ * que caísse dentro dele e para decidir a quem valia a pena mostrar o pedido.
+ * Nenhuma das duas chegou a ser construída, portanto a perda é teórica; o que
+ * se ganhou é concreto — uma pergunta em vez de duas, e nenhuma explicação
+ * sobre por que razão pedimos um tecto que não mostramos a ninguém.
  *
  * Não confundir com `estimateMin` / `estimateMax`, que são o intervalo que o
  * motor de preços calcula. Esses são uma opinião nossa sobre quanto custa;
- * estes são uma decisão do cliente sobre quanto quer gastar. Por isso os
- * campos aqui chamam-se `valorMinimoCliente` e `valorMaximoCliente` — o sufixo
- * existe para que ninguém volte a trocá-los numa consulta.
+ * este é uma decisão do cliente sobre quanto quer gastar. Daí o sufixo no nome
+ * do campo — para que ninguém os volte a trocar numa consulta.
  */
 
 /** Tecto de sanidade. Acima disto é engano de digitação, não um pedido. */
@@ -26,12 +23,11 @@ export const VALOR_MAXIMO_ACEITE = 100_000;
 export const VALOR_MINIMO_ACEITE = 5;
 
 export type ValoresDoCliente = {
-  valorMinimoCliente: number;
-  valorMaximoCliente: number;
+  valorDesejadoCliente: number;
 };
 
 export type ErroDeValor = {
-  campo: "valorMinimoCliente" | "valorMaximoCliente";
+  campo: "valorDesejadoCliente";
   mensagem: string;
 };
 
@@ -56,60 +52,41 @@ function aosCentimos(n: number): number {
 }
 
 /**
- * Valida o par que o cliente indicou. Aceita string com vírgula decimal porque
- * é o que um teclado português produz — rejeitar "80,50" seria rejeitar a
- * forma normal de escrever.
+ * Valida o valor que o cliente indicou.
+ *
+ * Aceita string com vírgula decimal porque é o que um teclado português
+ * produz — rejeitar "80,50" seria rejeitar a forma normal de escrever.
  */
-export function validarValoresDoCliente(
-  minimoBruto: unknown,
-  maximoBruto: unknown,
-): ResultadoDeValidacao {
-  const erros: ErroDeValor[] = [];
+export function validarValorDesejado(valorBruto: unknown): ResultadoDeValidacao {
+  const valor = comoNumero(valorBruto);
 
-  const minimo = comoNumero(minimoBruto);
-  const maximo = comoNumero(maximoBruto);
-
-  if (minimo === null) {
-    erros.push({ campo: "valorMinimoCliente", mensagem: "Indique quanto quer pagar." });
-  } else if (minimo < VALOR_MINIMO_ACEITE) {
-    erros.push({
-      campo: "valorMinimoCliente",
-      mensagem: `O mínimo é ${VALOR_MINIMO_ACEITE} €.`,
-    });
-  } else if (minimo > VALOR_MAXIMO_ACEITE) {
-    erros.push({
-      campo: "valorMinimoCliente",
-      mensagem: `O valor não pode passar de ${VALOR_MAXIMO_ACEITE} €.`,
-    });
+  if (valor === null) {
+    return {
+      ok: false,
+      erros: [{ campo: "valorDesejadoCliente", mensagem: "Indique quanto quer pagar." }],
+    };
+  }
+  if (valor < VALOR_MINIMO_ACEITE) {
+    return {
+      ok: false,
+      erros: [
+        { campo: "valorDesejadoCliente", mensagem: `O mínimo é ${VALOR_MINIMO_ACEITE} €.` },
+      ],
+    };
+  }
+  if (valor > VALOR_MAXIMO_ACEITE) {
+    return {
+      ok: false,
+      erros: [
+        {
+          campo: "valorDesejadoCliente",
+          mensagem: `O valor não pode passar de ${VALOR_MAXIMO_ACEITE} €.`,
+        },
+      ],
+    };
   }
 
-  if (maximo === null) {
-    erros.push({ campo: "valorMaximoCliente", mensagem: "Indique o máximo que aceita pagar." });
-  } else if (maximo > VALOR_MAXIMO_ACEITE) {
-    erros.push({
-      campo: "valorMaximoCliente",
-      mensagem: `O valor não pode passar de ${VALOR_MAXIMO_ACEITE} €.`,
-    });
-  }
-
-  // Só faz sentido comparar se os dois passaram nas regras individuais —
-  // senão dizíamos "o máximo é menor que o mínimo" a quem deixou um em branco.
-  if (minimo !== null && maximo !== null && erros.length === 0 && maximo < minimo) {
-    erros.push({
-      campo: "valorMaximoCliente",
-      mensagem: "O máximo não pode ser menor do que o mínimo.",
-    });
-  }
-
-  if (erros.length > 0) return { ok: false, erros };
-
-  return {
-    ok: true,
-    valores: {
-      valorMinimoCliente: aosCentimos(minimo as number),
-      valorMaximoCliente: aosCentimos(maximo as number),
-    },
-  };
+  return { ok: true, valores: { valorDesejadoCliente: aosCentimos(valor) } };
 }
 
 /**
@@ -141,7 +118,7 @@ export const CAMPOS_VISIVEIS_AO_PROFISSIONAL = [
   "estimateMin",
   "estimateMax",
   "estimateTotal",
-  "valorMinimoCliente",
+  "valorDesejadoCliente",
   "precisaFatura",
   "precisaGuiaTransporte",
   "status",
@@ -156,7 +133,7 @@ export type VistaDoProfissional = Partial<Record<CampoVisivelAoProfissional, unk
  * Reduz um pedido àquilo que o profissional pode ver.
  *
  * Chamar isto é obrigatório em qualquer resposta de API que um profissional
- * consiga ler. Esconder o máximo no ecrã não conta: quem abre as ferramentas
+ * consiga ler. Esconder um campo no ecrã não conta: quem abre as ferramentas
  * do browser vê a resposta inteira.
  */
 export function vistaDoProfissional(pedido: Record<string, unknown>): VistaDoProfissional {

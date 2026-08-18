@@ -25,7 +25,7 @@ import CompactOrderDetails from "./components/CompactOrderDetails";
 import ValoresEFaturacao from "./components/ValoresEFaturacao";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { validarValoresDoCliente, type ErroDeValor } from "@/lib/pedido-valores";
+import { validarValorDesejado, type ErroDeValor } from "@/lib/pedido-valores";
 import { reduzirImagem } from "@/lib/reduzir-imagem";
 import {
   trackSimulatorStart,
@@ -262,10 +262,7 @@ export default function SimulatorThreePhaseForm() {
    * profissionais respondem, e o pedido nascia sem o campo que o define.
    */
   const isPhase3Valid = () => {
-    const valores = validarValoresDoCliente(
-      formData.valorMinimoCliente,
-      formData.valorMaximoCliente,
-    );
+    const valores = validarValorDesejado(formData.valorDesejadoCliente);
     return Boolean(
       formData.receiver?.name &&
         formData.receiver?.phone &&
@@ -279,10 +276,7 @@ export default function SimulatorThreePhaseForm() {
   const canProceedToPhase3 = isPhase2Valid();
   const canAnalyze = isPhase3Valid();
 
-  const validacaoDosValores = validarValoresDoCliente(
-    formData.valorMinimoCliente,
-    formData.valorMaximoCliente,
-  );
+  const validacaoDosValores = validarValorDesejado(formData.valorDesejadoCliente);
   const errosDeValor: ErroDeValor[] =
     phase3Attempted && !validacaoDosValores.ok ? validacaoDosValores.erros : [];
 
@@ -1411,8 +1405,7 @@ function Phase3Contact({
 
       <ValoresEFaturacao
         serviceType={formData.serviceType}
-        valorMinimoCliente={formData.valorMinimoCliente}
-        valorMaximoCliente={formData.valorMaximoCliente}
+        valorDesejadoCliente={formData.valorDesejadoCliente}
         precisaFatura={formData.precisaFatura}
         precisaGuiaTransporte={formData.precisaGuiaTransporte}
         erros={errosDeValor}

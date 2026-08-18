@@ -53,7 +53,7 @@ export type AvisoDePedido = {
   descricao: string | null;
   quantidadeDeFotos: number;
   /** O que o cliente quer pagar. O mínimo — o máximo não existe deste lado. */
-  valorMinimoCliente: number | null;
+  valorDesejadoCliente: number | null;
   /** Quanto ele recebe se fechar por esse valor, já líquido. */
   recebeLiquido: number | null;
   distanciaKm: number | null;
@@ -79,7 +79,7 @@ function linha(rotulo: string, valor: string | null): string {
 function montarHtml(p: AvisoDePedido): string {
   const url = `${p.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${p.token}`;
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
-  const quer = euros(p.valorMinimoCliente);
+  const quer = euros(p.valorDesejadoCliente);
   const recebe = euros(p.recebeLiquido);
 
   const documentos = [

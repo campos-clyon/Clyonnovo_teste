@@ -856,7 +856,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     city: string | null;
     contactName: string | null;
     contactEmail: string | null;
-    valorMinimoCliente: string | null;
+    valorDesejadoCliente: string | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -874,9 +874,9 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
   if (!pool) return [];
 
   const [pedidos] = await pool.execute(
-    `SELECT id, serviceType, city, contactName, contactEmail, valorMinimoCliente, createdAt
+    `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt
        FROM simulatorOrders
-      WHERE valorMinimoCliente IS NOT NULL
+      WHERE valorDesejadoCliente IS NOT NULL
       ORDER BY createdAt DESC
       LIMIT ?`,
     [String(limite)],
@@ -908,7 +908,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     city: (p.city as string) ?? null,
     contactName: (p.contactName as string) ?? null,
     contactEmail: (p.contactEmail as string) ?? null,
-    valorMinimoCliente: (p.valorMinimoCliente as string) ?? null,
+    valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
@@ -1180,7 +1180,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     city: string | null;
     urgency: string | null;
     description: string | null;
-    valorMinimoCliente: string | null;
+    valorDesejadoCliente: string | null;
     precisaFatura: number | null;
     precisaGuiaTransporte: number | null;
     filesJson: string | null;
@@ -1191,7 +1191,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   if (!pool) return [];
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
-            o.serviceType, o.city, o.urgency, o.description, o.valorMinimoCliente,
+            o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson
        FROM negociacoes n
        JOIN simulatorOrders o ON o.id = n.pedidoId
@@ -1824,7 +1824,7 @@ let _simulatorOrdersEnsured = false;
 // guarda reinicia a cada arranque frio, elas acabaram por correr na mesma — mas
 // num processo que ficasse quente nunca teriam corrido. Agora acompanha a
 // última migração da lista.
-const MIGRATION_VERSION = 12;
+const MIGRATION_VERSION = 13;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -1935,6 +1935,14 @@ export async function ensureSimulatorOrdersTable() {
     // Sem índice, abrir um link obrigava a varrer a tabela inteira a cada
     // visita — e o link é a porta normal de entrada do cliente, não um caso raro.
     `CREATE INDEX idx_simulatorOrders_acessoTokenHash ON simulatorOrders (acessoTokenHash)`,
+    // v13 — o mínimo e o máximo dão lugar a UM valor desejado (18-08-2026).
+    // As colunas antigas ficam: apagá-las perdia o histórico dos pedidos já
+    // criados, e não custam nada onde estão.
+    `ALTER TABLE simulatorOrders ADD COLUMN valorDesejadoCliente DECIMAL(10,2) NULL DEFAULT NULL`,
+    // Os pedidos que já existem passam a ter o valor desejado igual ao que
+    // pediram como mínimo — era esse o número que o profissional via.
+    `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
+      WHERE valorDesejadoCliente IS NULL AND valorMinimoCliente IS NOT NULL`,
   ];
   for (const sql of migrations) {
     try { await pool.execute(sql); } catch (e: any) {

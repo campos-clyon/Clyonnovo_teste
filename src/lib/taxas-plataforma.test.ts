@@ -6,6 +6,8 @@ import {
   TAXA_CLIENTE,
   TAXA_PROFISSIONAL,
   TAXA_TOTAL,
+  TAXA_IVA,
+  decomporIva,
 } from "./taxas-plataforma";
 
 describe("taxas da plataforma", () => {
@@ -44,5 +46,40 @@ describe("taxas da plataforma", () => {
   it("zero continua zero", () => {
     expect(quantoOClientePaga(0)).toBe(0);
     expect(quantoOProfissionalRecebe(0)).toBe(0);
+  });
+});
+
+describe("IVA — sempre 23%, decomposto e não somado", () => {
+  it("decompõe 350 € em base e IVA que somam exactamente 350", () => {
+    const { base, iva } = decomporIva(350);
+    expect(base).toBe(284.55);
+    expect(iva).toBe(65.45);
+    expect(base + iva).toBe(350);
+  });
+
+  // O IVA sai por diferença e não por multiplicação, senão o arredondamento
+  // deixava um cêntimo a sobrar e a conta no ecrã não fechava.
+  it("base mais IVA dá sempre o valor de partida, sem cêntimos a sobrar", () => {
+    for (const v of [5, 33.33, 99.99, 100, 237.5, 1000, 12345.67]) {
+      const { base, iva } = decomporIva(v);
+      expect(Number((base + iva).toFixed(2))).toBe(v);
+    }
+  });
+
+  it("a taxa é a normal portuguesa", () => {
+    expect(TAXA_IVA).toBe(0.23);
+  });
+
+  // O valor negociado JÁ inclui o IVA. Se fosse somado, 350 combinados
+  // passavam a 430,50 na confirmação — um salto que ninguém aceita depois de
+  // ter fechado um número.
+  it("a base é menor do que o valor acordado, nunca maior", () => {
+    for (const v of [10, 350, 5000]) {
+      expect(decomporIva(v).base).toBeLessThan(v);
+    }
+  });
+
+  it("zero continua zero", () => {
+    expect(decomporIva(0)).toEqual({ base: 0, iva: 0 });
   });
 });

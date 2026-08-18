@@ -128,7 +128,7 @@ export default async function PaginaDoPedido({
   }));
 
   const fotos = fotosDoPedido(pedido.filesJson);
-  const minimo = euros(pedido.valorMinimoCliente);
+  const minimo = euros(pedido.valorDesejadoCliente);
   const estimativa = euros(pedido.estimateTotal ?? pedido.estimateMax);
 
   return (

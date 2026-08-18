@@ -92,7 +92,7 @@ export default async function PaginaDoPedidoProfissional({
     "Serviço";
   const fotos = fotosDe(vista.filesJson);
   const minimo =
-    vista.valorMinimoCliente != null ? Number(vista.valorMinimoCliente) : null;
+    vista.valorDesejadoCliente != null ? Number(vista.valorDesejadoCliente) : null;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">

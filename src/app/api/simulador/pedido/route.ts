@@ -13,7 +13,7 @@ import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
-import { validarValoresDoCliente } from "@/lib/pedido-valores";
+import { validarValorDesejado } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { distribuirPedido } from "@/lib/distribuir-pedido";
@@ -134,24 +134,16 @@ export async function POST(req: NextRequest) {
     //
     // Validado outra vez aqui, e não só no formulário. O ecrã impede a pessoa
     // distraída; não impede quem chame a rota directamente, e esta é pública
-    // por necessidade. Um pedido gravado com o máximo abaixo do mínimo, ou com
-    // um valor absurdo vindo de um campo de texto, é lixo que alguém teria de
-    // limpar à mão mais tarde.
+    // por necessidade. Um valor absurdo vindo de um campo de texto é lixo que
+    // alguém teria de limpar à mão mais tarde.
     //
     // Pedidos que não vêm do formulário novo (a página de contactos, por
-    // exemplo) continuam a entrar sem valores — daí o `null` em vez de erro
-    // quando os dois campos vêm vazios.
-    let valoresParaGravar: {
-      valorMinimoCliente?: string | null;
-      valorMaximoCliente?: string | null;
-    } = {};
-    const clienteIndicouValores =
-      order.valorMinimoCliente != null || order.valorMaximoCliente != null;
+    // exemplo) continuam a entrar sem valor — daí o `null` em vez de erro
+    // quando o campo vem vazio.
+    let valoresParaGravar: { valorDesejadoCliente?: string | null } = {};
+    const clienteIndicouValores = order.valorDesejadoCliente != null;
     if (clienteIndicouValores) {
-      const validacao = validarValoresDoCliente(
-        order.valorMinimoCliente,
-        order.valorMaximoCliente,
-      );
+      const validacao = validarValorDesejado(order.valorDesejadoCliente);
       if (!validacao.ok) {
         return NextResponse.json(
           { ok: false, error: validacao.erros[0].mensagem, erros: validacao.erros },
@@ -159,8 +151,7 @@ export async function POST(req: NextRequest) {
         );
       }
       valoresParaGravar = {
-        valorMinimoCliente: String(validacao.valores.valorMinimoCliente),
-        valorMaximoCliente: String(validacao.valores.valorMaximoCliente),
+        valorDesejadoCliente: String(validacao.valores.valorDesejadoCliente),
       };
     }
 
@@ -342,8 +333,8 @@ export async function POST(req: NextRequest) {
         serviceType: row.serviceType ?? null,
         token: acesso.token,
         baseUrl,
-        valorMinimoCliente: valoresParaGravar.valorMinimoCliente
-          ? Number(valoresParaGravar.valorMinimoCliente)
+        valorDesejadoCliente: valoresParaGravar.valorDesejadoCliente
+          ? Number(valoresParaGravar.valorDesejadoCliente)
           : null,
       });
       if (!linkEnviado) {
@@ -376,8 +367,8 @@ export async function POST(req: NextRequest) {
           city: row.city ?? null,
           urgency: row.urgency ?? null,
           quantidadeDeFotos: order.files?.length ?? 0,
-          valorMinimoCliente: valoresParaGravar.valorMinimoCliente
-            ? Number(valoresParaGravar.valorMinimoCliente)
+          valorDesejadoCliente: valoresParaGravar.valorDesejadoCliente
+            ? Number(valoresParaGravar.valorDesejadoCliente)
             : null,
           precisaFatura: order.precisaFatura === true,
           precisaGuiaTransporte: order.precisaGuiaTransporte === true,

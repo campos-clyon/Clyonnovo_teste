@@ -10,7 +10,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { quantoOClientePaga } from "@/lib/taxas-plataforma";
+import { quantoOClientePaga, decomporIva, TAXA_IVA } from "@/lib/taxas-plataforma";
 
 /**
  * As propostas que o cliente recebeu.
@@ -97,10 +97,23 @@ export default function PropostasRecebidas({
         <h2 className="mt-2 text-lg font-bold text-emerald-900">
           Contratou {acordada.profissionalNome}
         </h2>
-        {/* Aqui sim: é o momento de pagar, e o total tem de ser o total. */}
+        {/* Aqui sim: é o momento de pagar, e o total tem de ser o total —
+            com o IVA decomposto do valor acordado, não somado a ele. */}
         <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
           <div className="flex items-baseline justify-between gap-4 text-sm">
-            <span className="text-slate-600">Valor acordado</span>
+            <span className="text-slate-600">Serviço (sem IVA)</span>
+            <span className="text-slate-900">
+              {euros(decomporIva(acordada.valorAcordado ?? 0).base)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+            <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
+            <span className="text-slate-900">
+              {euros(decomporIva(acordada.valorAcordado ?? 0).iva)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-slate-100 pt-1 text-sm">
+            <span className="font-medium text-slate-700">Valor acordado</span>
             <span className="font-semibold text-slate-900">
               {euros(acordada.valorAcordado)}
             </span>

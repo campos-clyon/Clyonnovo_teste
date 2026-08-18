@@ -126,14 +126,12 @@ export interface OrderData {
    * Quanto o cliente está disposto a pagar. Não confundir com a estimativa do
    * motor: esta é a decisão dele, aquela é a opinião nossa.
    *
-   * Guardados como texto porque é o que o input devolve, e converter a cada
+   * Guardado como texto porque é o que o input devolve, e converter a cada
    * tecla estragava "80," a meio de ser escrito. A validação é feita por
-   * `validarValoresDoCliente` (src/lib/pedido-valores.ts) — no envio, e outra
-   * vez no servidor.
+   * `validarValorDesejado` (src/lib/pedido-valores.ts) — no envio, e outra vez
+   * no servidor.
    */
-  valorMinimoCliente?: string;
-  /** PRIVADO. O profissional nunca o vê — a regra está em pedido-valores.ts. */
-  valorMaximoCliente?: string;
+  valorDesejadoCliente?: string;
   /** Se precisa de fatura. Filtra a quem o pedido é mostrado. */
   precisaFatura?: boolean;
   /** Se precisa de guia de transporte (e-GAR) — exige transportador licenciado. */

@@ -37,7 +37,7 @@ export interface LinkDoPedidoParams {
   pedidoId: number;
   serviceType: string | null;
   token: string;
-  valorMinimoCliente: number | null;
+  valorDesejadoCliente: number | null;
   /** O endereço deste deployment, tirado do pedido HTTP. */
   baseUrl?: string;
 }
@@ -54,7 +54,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
   const url = linkDoPedido(p.baseUrl ?? urlDeAccao(), p.token);
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const nome = p.nomeDoCliente?.trim().split(/\s+/)[0] ?? null;
-  const minimo = euros(p.valorMinimoCliente);
+  const minimo = euros(p.valorDesejadoCliente);
 
   return `<!DOCTYPE html>
 <html lang="pt">

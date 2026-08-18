@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
 
-  if (pedido.valorMinimoCliente == null) {
+  if (pedido.valorDesejadoCliente == null) {
     return NextResponse.json(
       { error: "Este pedido não tem valores — não é um pedido da plataforma." },
       { status: 400 },
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       city: pedido.city ?? null,
       urgency: pedido.urgency ?? null,
       quantidadeDeFotos: fotos,
-      valorMinimoCliente: Number(pedido.valorMinimoCliente),
+      valorDesejadoCliente: Number(pedido.valorDesejadoCliente),
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
       lat,

@@ -26,7 +26,7 @@ export type PedidoParaDistribuicao = {
   city: string | null;
   urgency: string | null;
   quantidadeDeFotos: number;
-  valorMinimoCliente: number | null;
+  valorDesejadoCliente: number | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
   /** Coordenadas do trabalho, quando o cliente escolheu a morada na pesquisa. */
@@ -102,7 +102,7 @@ export async function distribuirPedido(
     comDistancia.filter((c) => !elegiveis.includes(c)).map((c) => c.profissional),
   );
 
-  const recebe = quantoRecebe(pedido.valorMinimoCliente);
+  const recebe = quantoRecebe(pedido.valorDesejadoCliente);
 
   const envios = await Promise.all(
     elegiveis.map(async (c) => {
@@ -121,7 +121,7 @@ export async function distribuirPedido(
           acessoTokenHash: acesso.hash,
           acessoTokenExpiraEm: acesso.expiraEm,
           propostasJson: JSON.stringify(
-            negociacaoNova(pedido.valorMinimoCliente ?? 0, new Date()).propostas,
+            negociacaoNova(pedido.valorDesejadoCliente ?? 0, new Date()).propostas,
           ),
         });
         token = acesso.token;
@@ -145,7 +145,7 @@ export async function distribuirPedido(
         urgencia: pedido.urgency,
         descricao: pedido.description,
         quantidadeDeFotos: pedido.quantidadeDeFotos,
-        valorMinimoCliente: pedido.valorMinimoCliente,
+        valorDesejadoCliente: pedido.valorDesejadoCliente,
         recebeLiquido: recebe,
         distanciaKm: c.distanciaKm,
         precisaFatura: pedido.precisaFatura,

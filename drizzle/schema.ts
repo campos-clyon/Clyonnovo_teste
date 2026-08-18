@@ -220,7 +220,7 @@ export interface SimulatorOrder {
    * estimateMax, que são a opinião do motor de preços sobre quanto custa.
    * O MySQL devolve DECIMAL como string — daí o tipo.
    */
-  valorMinimoCliente?: string | null;
+  valorDesejadoCliente?: string | null;
   /**
    * PRIVADO. Nunca pode sair numa resposta que um profissional leia — passar
    * sempre por `vistaDoProfissional` (src/lib/pedido-valores.ts), que é uma
@@ -340,7 +340,7 @@ export interface InsertSimulatorOrder {
   // estimateMax, que são a opinião do motor de preços sobre quanto custa.
   // Ver src/lib/pedido-valores.ts.
   /** Público ao profissional, como «o que o cliente quer pagar». */
-  valorMinimoCliente?: string | null;
+  valorDesejadoCliente?: string | null;
   /** PRIVADO. Nunca pode sair numa resposta que um profissional leia. */
   valorMaximoCliente?: string | null;
   precisaFatura?: boolean | number | null;

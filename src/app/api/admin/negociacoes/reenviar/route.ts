@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
         serviceType: pedido.serviceType ?? null,
         token: acesso.token,
         baseUrl,
-        valorMinimoCliente:
-          pedido.valorMinimoCliente != null ? Number(pedido.valorMinimoCliente) : null,
+        valorDesejadoCliente:
+          pedido.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null,
       });
 
       await appendOrderHistory(pedidoId, {
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const profissional = (linhas as Array<{ name: string; email: string | null }>)[0];
 
     const minimo =
-      pedido.valorMinimoCliente != null ? Number(pedido.valorMinimoCliente) : null;
+      pedido.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null;
 
     const enviado = await avisarProfissional({
       paraEmail: profissional?.email ?? "",
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       urgencia: pedido.urgency ?? null,
       descricao: pedido.description ?? null,
       quantidadeDeFotos: 0,
-      valorMinimoCliente: minimo,
+      valorDesejadoCliente: minimo,
       recebeLiquido: minimo != null ? quantoOProfissionalRecebe(minimo) : null,
       distanciaKm: null,
       precisaFatura: Boolean(pedido.precisaFatura),

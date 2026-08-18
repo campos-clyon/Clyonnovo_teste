@@ -19,7 +19,7 @@ type Pedido = {
   city: string | null;
   contactName: string | null;
   contactEmail: string | null;
-  valorMinimoCliente: string | null;
+  valorDesejadoCliente: string | null;
   createdAt: string;
   negociacoes: Negociacao[];
 };
@@ -180,7 +180,7 @@ export default function AdminNegociacoesPanel() {
                   </h2>
                   <p className="mt-0.5 text-sm text-slate-500">
                     {p.contactName} · {p.contactEmail} · {p.city ?? "—"}
-                    {p.valorMinimoCliente && ` · quer pagar ${p.valorMinimoCliente} €`}
+                    {p.valorDesejadoCliente && ` · quer pagar ${p.valorDesejadoCliente} €`}
                   </p>
                 </div>
                 <button
