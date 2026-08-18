@@ -498,6 +498,13 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "ultimoAcesso",
         sql: "ALTER TABLE providers ADD COLUMN ultimoAcesso DATETIME NULL DEFAULT NULL",
       },
+      // O regime de IVA é DELE, não nosso — ver inscricao-profissional.ts.
+      // 'isento' por omissão: entre mostrar imposto a mais e a menos, o
+      // primeiro é o que cria um problema a alguém.
+      {
+        name: "regimeIva",
+        sql: "ALTER TABLE providers ADD COLUMN regimeIva VARCHAR(10) NOT NULL DEFAULT 'isento'",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -570,6 +577,7 @@ export type InscricaoDeProfissional = {
   zonas: string[];
   raioKm: number | null;
   emiteFatura: boolean;
+  regimeIva: string;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string | null;
   baseLat: number | null;
@@ -592,9 +600,9 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
   const [res] = await pool.execute(
     `INSERT INTO providers
        (name, slug, email, phone, nif, city, categorias, zonas, raioKm,
-        emiteFatura, emiteGuiaTransporte, numeroTransportador,
+        emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
         baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -606,6 +614,7 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       JSON.stringify(dados.zonas),
       dados.raioKm,
       dados.emiteFatura ? 1 : 0,
+      dados.regimeIva,
       dados.emiteGuiaTransporte ? 1 : 0,
       dados.numeroTransportador,
       dados.baseLat,
@@ -779,13 +788,13 @@ export async function negociacaoPorTokenHash(
 }
 
 export async function negociacoesDoPedido(pedidoId: number): Promise<
-  Array<NegociacaoNaBase & { profissionalNome: string; emiteFatura: number; guiaVerificadaEm: Date | null }>
+  Array<NegociacaoNaBase & { profissionalNome: string; emiteFatura: number; regimeIva: string; guiaVerificadaEm: Date | null }>
 > {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = await pool.execute(
-    `SELECT n.*, p.name AS profissionalNome, p.emiteFatura, p.guiaVerificadaEm
+    `SELECT n.*, p.name AS profissionalNome, p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId = ?
@@ -965,6 +974,7 @@ export async function actualizarProfissional(
     zonas?: string[];
     raioKm?: number;
     emiteFatura?: boolean;
+    regimeIva?: string;
     emiteGuiaTransporte?: boolean;
     numeroTransportador?: string | null;
   },
@@ -991,6 +1001,10 @@ export async function actualizarProfissional(
   if (alteracoes.emiteFatura !== undefined) {
     partes.push("emiteFatura = ?");
     valores.push(alteracoes.emiteFatura ? 1 : 0);
+  }
+  if (alteracoes.regimeIva !== undefined) {
+    partes.push("regimeIva = ?");
+    valores.push(alteracoes.regimeIva);
   }
   if (alteracoes.emiteGuiaTransporte !== undefined) {
     partes.push("emiteGuiaTransporte = ?");

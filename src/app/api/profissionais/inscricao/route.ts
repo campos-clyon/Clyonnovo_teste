@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
       zonas: d.zonas,
       raioKm: d.raioKm,
       emiteFatura: d.emiteFatura,
+      regimeIva: d.regimeIva,
       emiteGuiaTransporte: d.emiteGuiaTransporte,
       numeroTransportador: d.numeroTransportador,
       baseLat: base?.lat ?? null,

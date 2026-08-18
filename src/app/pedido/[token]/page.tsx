@@ -124,6 +124,7 @@ export default async function PaginaDoPedido({
     propostas: propostasDe(n.propostasJson),
     profissionalNome: n.profissionalNome,
     emiteFatura: Number(n.emiteFatura) === 1,
+    regimeIva: String(n.regimeIva ?? "isento"),
     guiaVerificada: n.guiaVerificadaEm != null,
   }));
 

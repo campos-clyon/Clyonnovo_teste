@@ -32,6 +32,7 @@ type Profissional = {
   zonas: string | null;
   raioKm: number | null;
   emiteFatura: number;
+  regimeIva: string;
   emiteGuiaTransporte: number;
   numeroTransportador: string | null;
   guiaVerificadaEm: string | null;
@@ -466,6 +467,7 @@ function Editor({
   const [zonas, setZonas] = useState(lista(p.zonas).join(", "));
   const [raioKm, setRaioKm] = useState(String(p.raioKm ?? 30));
   const [emiteFatura, setEmiteFatura] = useState(p.emiteFatura === 1);
+  const [regimeIva, setRegimeIva] = useState(p.regimeIva === "normal" ? "normal" : "isento");
   const [emiteGuia, setEmiteGuia] = useState(p.emiteGuiaTransporte === 1);
   const [numero, setNumero] = useState(p.numeroTransportador ?? "");
 
@@ -550,6 +552,30 @@ function Editor({
           />
           Emite fatura
         </label>
+        {emiteFatura && (
+          <div className="ml-6">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Regime de IVA
+            </span>
+            <div className="mt-1.5 flex gap-2">
+              {(["isento", "normal"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRegimeIva(r)}
+                  aria-pressed={regimeIva === r}
+                  className={`rounded-lg border-2 px-3 py-1.5 text-xs font-semibold transition ${
+                    regimeIva === r
+                      ? "border-cyan-600 bg-cyan-50 text-cyan-900"
+                      : "border-slate-700 bg-slate-900 text-slate-400 hover:border-cyan-400"
+                  }`}
+                >
+                  {r === "isento" ? "Isento (art. 53.º)" : "Normal — IVA 23%"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
           <input
             type="checkbox"
@@ -587,6 +613,7 @@ function Editor({
               .filter(Boolean),
             raioKm,
             emiteFatura,
+            regimeIva,
             emiteGuiaTransporte: emiteGuia,
             numeroTransportador: emiteGuia ? numero : null,
           })

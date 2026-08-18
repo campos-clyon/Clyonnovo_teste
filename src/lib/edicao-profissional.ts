@@ -1,5 +1,7 @@
 import {
   CATEGORIAS_VALIDAS,
+  regimeDeIvaValido,
+  type RegimeDeIva,
   RAIO_MAXIMO_KM,
   RAIO_MINIMO_KM,
   type ErroDeInscricao,
@@ -42,6 +44,7 @@ export type CamposEditaveis = {
   zonas?: string[];
   raioKm?: number;
   emiteFatura?: boolean;
+  regimeIva?: RegimeDeIva;
   emiteGuiaTransporte?: boolean;
   numeroTransportador?: string | null;
 };
@@ -104,6 +107,14 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
 
   if ("emiteFatura" in c) {
     alteracoes.emiteFatura = c.emiteFatura === true;
+  }
+
+  if ("regimeIva" in c) {
+    if (!regimeDeIvaValido(c.regimeIva)) {
+      erros.push({ campo: "regimeIva", mensagem: "Regime de IVA inválido." });
+    } else {
+      alteracoes.regimeIva = c.regimeIva;
+    }
   }
 
   if ("emiteGuiaTransporte" in c) {

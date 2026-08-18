@@ -24,6 +24,7 @@ export default function InscricaoForm() {
     zonas: "",
     raioKm: "30",
     emiteFatura: false,
+    regimeIva: "" as "" | "isento" | "normal",
     emiteGuiaTransporte: false,
     numeroTransportador: "",
   });
@@ -288,7 +289,54 @@ export default function InscricaoForm() {
         </label>
 
         {form.emiteFatura && (
-          <div>
+          <div className="space-y-3">
+            <div>
+              <span className="block text-sm font-medium text-gray-900">
+                O seu regime de IVA *
+              </span>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+                Determina o que o cliente vê na confirmação. Nós não cobramos IVA sobre o
+                seu serviço — quem o liquida, se for o caso, é você.
+              </p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {[
+                  {
+                    valor: "isento" as const,
+                    titulo: "Isento",
+                    nota: "Art. 53.º — não liquido IVA",
+                  },
+                  {
+                    valor: "normal" as const,
+                    titulo: "Regime normal",
+                    nota: "Liquido IVA a 23%",
+                  },
+                ].map((op) => (
+                  <label
+                    key={op.valor}
+                    className="flex cursor-pointer items-start gap-2.5 rounded-xl border-2 border-gray-300 bg-white p-3 transition hover:border-cyan-400 has-[:checked]:border-cyan-600 has-[:checked]:bg-cyan-50"
+                  >
+                    <input
+                      type="radio"
+                      name="regimeIva"
+                      value={op.valor}
+                      checked={form.regimeIva === op.valor}
+                      onChange={() => set("regimeIva", op.valor)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-cyan-600"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">
+                        {op.titulo}
+                      </span>
+                      <span className="block text-xs text-slate-600">{op.nota}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {erro("regimeIva") && (
+                <p className="mt-1 text-xs text-red-600">{erro("regimeIva")}</p>
+              )}
+            </div>
+
             <label htmlFor="nif" className="block text-sm font-medium text-gray-900">
               NIF *
             </label>

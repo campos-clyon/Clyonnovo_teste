@@ -17,6 +17,7 @@ const valida = {
   zonas: ["Lisboa", "Sintra"],
   raioKm: 30,
   emiteFatura: true,
+  regimeIva: "isento",
   emiteGuiaTransporte: false,
   numeroTransportador: "",
 };
@@ -121,6 +122,29 @@ describe("validarInscricao", () => {
   describe("fatura", () => {
     it("quem emite fatura tem de dar NIF", () => {
       expect(erros(com({ emiteFatura: true, nif: "" }))).toContain("nif");
+    });
+
+    // O IVA é do regime DELE. Assumi-lo por nós mostrava 23% a quem contrata
+    // um isento — um imposto que não é devido e que ninguém pode entregar.
+    it("quem emite fatura tem de dizer o regime de IVA", () => {
+      expect(erros(com({ emiteFatura: true, regimeIva: undefined }))).toContain("regimeIva");
+      expect(erros(com({ emiteFatura: true, regimeIva: "inventado" }))).toContain("regimeIva");
+    });
+
+    it("aceita os dois regimes", () => {
+      for (const r of ["isento", "normal"]) {
+        const x = com({ emiteFatura: true, regimeIva: r });
+        expect(x.ok).toBe(true);
+        if (x.ok) expect(x.dados.regimeIva).toBe(r);
+      }
+    });
+
+    // Quem não emite fatura não tem regime nenhum a declarar. Fica isento por
+    // omissão, que é o que não mostra imposto ao cliente.
+    it("quem não emite fatura não precisa de regime, e fica isento", () => {
+      const x = com({ emiteFatura: false, nif: "", regimeIva: undefined });
+      expect(x.ok).toBe(true);
+      if (x.ok) expect(x.dados.regimeIva).toBe("isento");
     });
 
     it("quem não emite fatura pode não dar NIF", () => {

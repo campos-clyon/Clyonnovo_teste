@@ -20,6 +20,27 @@ export const RAIO_MINIMO_KM = 1;
 
 export type ErroDeInscricao = { campo: string; mensagem: string };
 
+/**
+ * O regime de IVA do profissional.
+ *
+ * Quem presta o serviço é ele, e o IVA é do regime DELE — não nosso. Um
+ * profissional em isenção pelo art. 53.º do CIVA não liquida IVA nenhum; um
+ * coletado liquida 23 %.
+ *
+ * Perguntar é a única forma honesta de o saber. A alternativa que esteve em
+ * cima da mesa — assumir 23 % para todos — mostrava a quem contrata um isento
+ * um imposto que não é devido e que ninguém pode entregar ao Estado.
+ *
+ * Por omissão, `isento`: entre mostrar imposto a mais e imposto a menos, o
+ * primeiro é o que cria um problema a alguém.
+ */
+export const REGIMES_DE_IVA = ["isento", "normal"] as const;
+export type RegimeDeIva = (typeof REGIMES_DE_IVA)[number];
+
+export function regimeDeIvaValido(valor: unknown): valor is RegimeDeIva {
+  return typeof valor === "string" && (REGIMES_DE_IVA as readonly string[]).includes(valor);
+}
+
 export type DadosDeInscricao = {
   nome: string;
   email: string;
@@ -30,6 +51,7 @@ export type DadosDeInscricao = {
   zonas: string[];
   raioKm: number;
   emiteFatura: boolean;
+  regimeIva: RegimeDeIva;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string | null;
 };
@@ -127,6 +149,20 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
     erros.push({ campo: "nif", mensagem: "Para emitir fatura é preciso o NIF." });
   }
 
+  // Só se pergunta a quem emite fatura: para quem não emite, a pergunta não
+  // tem sentido nem consequência.
+  let regimeIva: RegimeDeIva = "isento";
+  if (emiteFatura) {
+    if (!regimeDeIvaValido(c.regimeIva)) {
+      erros.push({
+        campo: "regimeIva",
+        mensagem: "Indique se está isento de IVA ou no regime normal.",
+      });
+    } else {
+      regimeIva = c.regimeIva;
+    }
+  }
+
   // Quem declara emitir guia tem de dizer qual é o registo. Sem número não há
   // nada para verificar, e sem verificação a declaração não vale — não vamos
   // ligar um cliente a quem talvez não possa transportar resíduos.
@@ -160,6 +196,7 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       zonas: Array.from(new Set([cidade, ...listaDeTextos(c.zonas)])),
       raioKm,
       emiteFatura,
+      regimeIva,
       emiteGuiaTransporte,
       numeroTransportador,
     },

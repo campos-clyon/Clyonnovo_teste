@@ -39,6 +39,8 @@ export type NegociacaoDoCliente = {
   propostas: Proposta[];
   profissionalNome: string;
   emiteFatura: boolean;
+  /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
+  regimeIva: string;
   guiaVerificada: boolean;
 };
 
@@ -100,24 +102,46 @@ export default function PropostasRecebidas({
         {/* Aqui sim: é o momento de pagar, e o total tem de ser o total —
             com o IVA decomposto do valor acordado, não somado a ele. */}
         <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
-          <div className="flex items-baseline justify-between gap-4 text-sm">
-            <span className="text-slate-600">Serviço (sem IVA)</span>
-            <span className="text-slate-900">
-              {euros(decomporIva(acordada.valorAcordado ?? 0).base)}
-            </span>
-          </div>
-          <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
-            <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
-            <span className="text-slate-900">
-              {euros(decomporIva(acordada.valorAcordado ?? 0).iva)}
-            </span>
-          </div>
-          <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-slate-100 pt-1 text-sm">
-            <span className="font-medium text-slate-700">Valor acordado</span>
-            <span className="font-semibold text-slate-900">
-              {euros(acordada.valorAcordado)}
-            </span>
-          </div>
+          {/*
+            O IVA só aparece a quem o liquida. O regime é do profissional, não
+            nosso: um isento pelo art. 53.º não cobra IVA nenhum, e mostrar uma
+            linha de 23% a quem o contrata seria mostrar-lhe um imposto que não
+            deve — e que ninguém pode entregar ao Estado.
+          */}
+          {acordada.regimeIva === "normal" ? (
+            <>
+              <div className="flex items-baseline justify-between gap-4 text-sm">
+                <span className="text-slate-600">Serviço (sem IVA)</span>
+                <span className="text-slate-900">
+                  {euros(decomporIva(acordada.valorAcordado ?? 0).base)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+                <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
+                <span className="text-slate-900">
+                  {euros(decomporIva(acordada.valorAcordado ?? 0).iva)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-slate-100 pt-1 text-sm">
+                <span className="font-medium text-slate-700">Valor acordado</span>
+                <span className="font-semibold text-slate-900">
+                  {euros(acordada.valorAcordado)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-baseline justify-between gap-4 text-sm">
+              <span className="text-slate-600">
+                Valor acordado
+                <span className="block text-xs text-slate-400">
+                  isento de IVA (art. 53.º)
+                </span>
+              </span>
+              <span className="font-semibold text-slate-900">
+                {euros(acordada.valorAcordado)}
+              </span>
+            </div>
+          )}
           <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
             <span className="text-slate-600">Taxa CLYON</span>
             <span className="font-semibold text-slate-900">

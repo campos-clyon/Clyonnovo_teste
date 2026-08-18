@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
     const [rows] = await pool.execute(
       `SELECT id, name, email, phone, nif, city, categorias, zonas, raioKm,
-              emiteFatura, emiteGuiaTransporte, numeroTransportador,
+              emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
               baseLat, baseLng, createdAt
          FROM providers
