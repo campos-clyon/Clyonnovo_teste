@@ -31,11 +31,17 @@ import { SITE_URL } from "./seo-data";
  * acabado de criar não existe. Isto deixa de depender dessa definição.
  */
 export function urlDeAccaoDoPedido(cabecalhos: Headers): string {
-  // Um NEXT_PUBLIC_SITE_URL explícito continua a mandar: quem o define está a
-  // dizer de propósito qual é o endereço público.
-  const explicito = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (explicito) return explicito.replace(/\/+$/, "");
-
+  // O anfitrião do pedido vem PRIMEIRO, e o NEXT_PUBLIC_SITE_URL só depois.
+  //
+  // Tinha-os pela ordem inversa, a tratar a variável como escotilha de
+  // emergência — e foi essa escotilha que partiu o fluxo: o projecto tem
+  // NEXT_PUBLIC_SITE_URL=https://clyon.pt no Vercel, para todos os ambientes,
+  // e por isso o email de aprovação enviado de um preview levava um link para
+  // produção, onde a rota nem existe.
+  //
+  // Uma variável estática não pode saber em que deployment a pessoa está; o
+  // cabeçalho do pedido sabe sempre. A variável fica como último recurso, para
+  // quando não há cabeçalho nenhum — um cron, por exemplo.
   const anfitriao =
     cabecalhos.get("x-forwarded-host")?.trim() || cabecalhos.get("host")?.trim();
 
@@ -49,6 +55,9 @@ export function urlDeAccaoDoPedido(cabecalhos: Headers): string {
       (anfitriao.startsWith("localhost") || anfitriao.startsWith("127.") ? "http" : "https");
     return `${protocolo}://${anfitriao.replace(/\/+$/, "")}`;
   }
+
+  const explicito = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicito) return explicito.replace(/\/+$/, "");
 
   return urlDeAccao();
 }

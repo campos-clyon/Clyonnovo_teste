@@ -65,10 +65,19 @@ describe("urlDeAccaoDoPedido", () => {
     expect(urlDeAccaoDoPedido(h)).toBe("https://clyon.pt");
   });
 
-  it("o NEXT_PUBLIC_SITE_URL continua a mandar", () => {
+  // O caso que partiu o convite de aprovação: o projecto tem
+  // NEXT_PUBLIC_SITE_URL=https://clyon.pt para TODOS os ambientes, e por isso um
+  // email enviado do preview levava um link para produção. O cabeçalho sabe
+  // onde a pessoa está; a variável é um palpite estático.
+  it("o anfitrião do pedido ganha ao NEXT_PUBLIC_SITE_URL", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://clyon.pt";
+    const h = new Headers({ host: "clyon-site-git-plataforma.vercel.app" });
+    expect(urlDeAccaoDoPedido(h)).toBe("https://clyon-site-git-plataforma.vercel.app");
+  });
+
+  it("sem cabeçalho, o NEXT_PUBLIC_SITE_URL serve de recurso", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://teste.clyon.pt";
-    const h = new Headers({ host: "seja-o-que-for.vercel.app" });
-    expect(urlDeAccaoDoPedido(h)).toBe("https://teste.clyon.pt");
+    expect(urlDeAccaoDoPedido(new Headers())).toBe("https://teste.clyon.pt");
   });
 
   it("sem cabeçalhos nenhuns cai no caminho antigo", () => {
