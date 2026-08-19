@@ -47,6 +47,7 @@ export function LinhaDeMenu({
   aviso,
   onClick,
   tom = "normal",
+  activo = false,
 }: {
   icone: LucideIcon;
   rotulo: string;
@@ -57,12 +58,21 @@ export function LinhaDeMenu({
   aviso?: boolean;
   onClick: () => void;
   tom?: "normal" | "perigo";
+  /**
+   * A secção que está aberta. Só faz diferença no desenho de secretária, onde
+   * o menu fica sempre à vista: sem marca nenhuma, olha-se para a lista e não
+   * se sabe o que se está a ver do outro lado.
+   */
+  activo?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left transition active:bg-slate-50"
+      aria-current={activo ? "page" : undefined}
+      className={`flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left transition active:bg-slate-50 ${
+        activo ? "bg-cyan-50" : ""
+      }`}
     >
       <Icone
         className={`h-5 w-5 shrink-0 ${tom === "perigo" ? "text-red-500" : "text-cyan-600"}`}
@@ -106,12 +116,15 @@ export function CabecalhoDeEcra({
   accao?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-1 border-b border-slate-100 bg-white/95 px-2 py-2 backdrop-blur sm:-mx-6 sm:px-4">
+    <header className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-1 border-b border-slate-100 bg-white/95 px-2 py-2 backdrop-blur sm:-mx-6 sm:px-4 lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:pt-0">
+      {/* Num ecrã grande o menu está sempre à vista e a seta não tem para onde
+          voltar — o backoffice também não a tem. Num telemóvel é a única
+          forma de sair do ecrã aberto. */}
       <button
         type="button"
         onClick={onVoltar}
         aria-label="Voltar"
-        className="flex h-11 w-11 items-center justify-center rounded-full text-slate-600 transition active:bg-slate-100"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-slate-600 transition active:bg-slate-100 lg:hidden"
       >
         <ChevronLeft className="h-6 w-6" aria-hidden="true" />
       </button>
