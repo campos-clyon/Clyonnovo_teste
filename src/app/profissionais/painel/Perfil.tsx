@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
@@ -428,7 +428,7 @@ export default function Perfil({
               }
             />
 
-            <Nota titulo="Porque é que o IVA é o seu regime" icone={AlertTriangle}>
+            <Nota titulo="Porque é que o IVA é o seu regime" icone="aviso">
               O imposto é liquidado por si, não por nós. Um isento pelo artigo 53.º não
               cobra IVA nenhum — mostrar 23 % ao cliente seria mostrar-lhe um imposto que
               não é devido e que ninguém pode entregar ao Estado.

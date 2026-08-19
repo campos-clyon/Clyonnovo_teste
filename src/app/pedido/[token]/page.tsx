@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Camera, Link2, MapPin, Clock, FileText, Truck } from "lucide-react";
+import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { getSimulatorOrderByAcessoTokenHash, negociacoesDoPedido } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -158,7 +158,7 @@ export default async function PaginaDoPedido({
           fecham a nota. Repetir o convite a cada visita é insistência. */}
       <Nota
         titulo="Guarde este link — é como volta ao pedido"
-        icone={Link2}
+        icone="ligacao"
         tom="info"
         chave="guardar-link"
         className="mb-6 mt-4"

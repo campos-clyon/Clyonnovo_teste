@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
-import { ChevronDown, Info, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, ChevronDown, Info, Link2, Lock, X } from "lucide-react";
 
 /**
  * Nota — a explicação que ajuda uma vez e depois estorva.
@@ -18,7 +18,21 @@ import { ChevronDown, Info, X } from "lucide-react";
  *
  * O que NÃO se esconde aqui: valores, prazos e o que muda com um clique. Isso
  * é o ecrã, não é nota.
+ *
+ * O ícone escolhe-se por NOME e não passando o componente. Isto é um componente
+ * de cliente, e metade dos sítios que o usam são páginas de servidor: uma função
+ * não atravessa essa fronteira — o React rebenta a renderizar, com um erro que
+ * não diz qual foi a propriedade. Um nome é texto, e texto atravessa.
  */
+
+const ICONES = {
+  info: Info,
+  cadeado: Lock,
+  ligacao: Link2,
+  aviso: AlertTriangle,
+} as const;
+
+export type NomeDoIcone = keyof typeof ICONES;
 
 const TONS = {
   neutro: {
@@ -47,14 +61,14 @@ const PREFIXO = "clyon.nota.";
 
 export default function Nota({
   titulo,
-  icone: Icone = Info,
+  icone = "info",
   tom = "neutro",
   chave,
   className = "",
   children,
 }: {
   titulo: string;
-  icone?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  icone?: NomeDoIcone;
   tom?: TomDaNota;
   /** Se existir, a nota pode ser fechada de vez neste dispositivo. */
   chave?: string;
@@ -88,6 +102,7 @@ export default function Nota({
   if (dispensada !== false) return null;
 
   const t = TONS[tom];
+  const Icone = ICONES[icone] ?? Info;
 
   return (
     <div className={`rounded-xl border ${t.caixa} ${className}`}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Building2, History, Info, Loader2, Lock } from "lucide-react";
+import { ArrowRight, Building2, History, Info, Loader2 } from "lucide-react";
 import { CabecalhoDeEcra, BotaoRedondo, euros } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
 import { MINIMO_PARA_LEVANTAR } from "@/lib/carteira";
@@ -128,7 +128,7 @@ export default function Carteira({
         </p>
       )}
 
-      <Nota titulo="Porque é que há dinheiro cativo" icone={Lock} className="mt-3">
+      <Nota titulo="Porque é que há dinheiro cativo" icone="cadeado" className="mt-3">
         Quando o cliente o contrata, paga logo à CLYON — e o valor fica retido. É a
         garantia dele de que o trabalho é feito, e a sua de que o dinheiro existe e não
         depende de ninguém se lembrar de pagar. Assim que ele confirmar, ou ao fim de sete

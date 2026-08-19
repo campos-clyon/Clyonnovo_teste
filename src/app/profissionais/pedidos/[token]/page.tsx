@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Clock, Lock } from "lucide-react";
+import { Clock } from "lucide-react";
 import {
   negociacaoPorTokenHash,
   getSimulatorOrderById,
@@ -144,7 +144,7 @@ export default async function PaginaDoPedidoProfissional({
           </div>
         )}
 
-        <Nota titulo="Morada e contacto: depois de ser contratado" icone={Lock} className="mt-5">
+        <Nota titulo="Morada e contacto: depois de ser contratado" icone="cadeado" className="mt-5">
           Vê a zona para saber se lhe serve e quanto custa lá chegar. A morada
           exacta e o telefone do cliente chegam-lhe por email assim que ele o
           contratar — é o que impede que um pedido seja usado como lista de
