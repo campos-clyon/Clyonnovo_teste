@@ -354,6 +354,40 @@ export default function Perfil({
                   />
                 </Campo>
 
+                {/* A morada da declaração de actividade. Pode não ser a
+                    cidade onde trabalha — essa serve para calcular distâncias,
+                    esta vai na fatura ao cliente. */}
+                <Campo etiqueta="Morada fiscal">
+                  <input
+                    className={CAIXA}
+                    value={dados.moradaFiscal}
+                    onChange={(e) => mudar("moradaFiscal", e.target.value)}
+                    placeholder="Rua e número, andar"
+                    autoComplete="street-address"
+                  />
+                </Campo>
+
+                <div className="grid grid-cols-[minmax(0,7.5rem)_1fr] gap-3">
+                  <Campo etiqueta="Código postal">
+                    <input
+                      className={CAIXA}
+                      inputMode="numeric"
+                      value={dados.codigoPostalFiscal}
+                      onChange={(e) => mudar("codigoPostalFiscal", e.target.value)}
+                      placeholder="2700-123"
+                      autoComplete="postal-code"
+                    />
+                  </Campo>
+                  <Campo etiqueta="Localidade">
+                    <input
+                      className={CAIXA}
+                      value={dados.localidadeFiscal}
+                      onChange={(e) => mudar("localidadeFiscal", e.target.value)}
+                      placeholder="Amadora"
+                    />
+                  </Campo>
+                </div>
+
                 <div>
                   <span className="text-sm font-medium text-slate-700">Regime de IVA</span>
                   <div className="mt-2 space-y-2">
@@ -421,6 +455,9 @@ export default function Perfil({
                 gravar({
                   emiteFatura: dados.emiteFatura,
                   nif: dados.nif,
+                  moradaFiscal: dados.moradaFiscal,
+                  codigoPostalFiscal: dados.codigoPostalFiscal,
+                  localidadeFiscal: dados.localidadeFiscal,
                   regimeIva: dados.regimeIva,
                   emiteGuiaTransporte: dados.emiteGuiaTransporte,
                   numeroTransportador: dados.numeroTransportador,

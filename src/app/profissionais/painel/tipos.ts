@@ -60,6 +60,9 @@ export type Perfil = {
   telefone: string;
   nif: string;
   cidade: string;
+  moradaFiscal: string;
+  codigoPostalFiscal: string;
+  localidadeFiscal: string;
   categorias: string[];
   zonas: string[];
   raioKm: number;

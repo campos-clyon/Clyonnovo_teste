@@ -591,6 +591,9 @@ export type InscricaoDeProfissional = {
   phone: string | null;
   nif: string | null;
   city: string | null;
+  moradaFiscal: string | null;
+  codigoPostalFiscal: string | null;
+  localidadeFiscal: string | null;
   categorias: string[];
   zonas: string[];
   raioKm: number | null;
@@ -617,10 +620,12 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
 
   const [res] = await pool.execute(
     `INSERT INTO providers
-       (name, slug, email, phone, nif, city, categorias, zonas, raioKm,
+       (name, slug, email, phone, nif, city,
+        moradaFiscal, codigoPostalFiscal, localidadeFiscal,
+        categorias, zonas, raioKm,
         emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
         baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -628,6 +633,9 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.phone,
       dados.nif,
       dados.city,
+      dados.moradaFiscal,
+      dados.codigoPostalFiscal,
+      dados.localidadeFiscal,
       JSON.stringify(dados.categorias),
       JSON.stringify(dados.zonas),
       dados.raioKm,
@@ -1518,7 +1526,9 @@ export async function perfilDoProfissional(
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = await pool.execute(
-    `SELECT id, name, email, phone, nif, city, categorias, zonas, raioKm,
+    `SELECT id, name, email, phone, nif, city,
+            moradaFiscal, codigoPostalFiscal, localidadeFiscal,
+            categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, createdAt
        FROM providers WHERE id = ? LIMIT 1`,
@@ -1554,6 +1564,9 @@ export async function actualizarPerfilDoProfissional(
     "regimeIva",
     "emiteGuiaTransporte",
     "numeroTransportador",
+    "moradaFiscal",
+    "codigoPostalFiscal",
+    "localidadeFiscal",
     "iban",
     "ibanTitular",
     "baseLat",

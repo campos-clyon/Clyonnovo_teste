@@ -12,6 +12,8 @@ import {
   nifValido,
   telefoneValido,
   regimeDeIvaValido,
+  codigoPostalValido,
+  normalizarCodigoPostal,
   CATEGORIAS_VALIDAS,
   RAIO_MAXIMO_KM,
   RAIO_MINIMO_KM,
@@ -81,6 +83,9 @@ export async function GET(req: NextRequest) {
         telefone: p.phone ?? "",
         nif: p.nif ?? "",
         cidade: p.city ?? "",
+        moradaFiscal: p.moradaFiscal ?? "",
+        codigoPostalFiscal: p.codigoPostalFiscal ?? "",
+        localidadeFiscal: p.localidadeFiscal ?? "",
         categorias: listaGravada(p.categorias),
         zonas: listaGravada(p.zonas),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
@@ -173,6 +178,30 @@ export async function PUT(req: NextRequest) {
     }
   }
 
+  if ("moradaFiscal" in corpo) {
+    const m = texto(corpo.moradaFiscal);
+    if (!m) mudancas.moradaFiscal = null;
+    else if (m.length < 5) {
+      erros.push({ campo: "moradaFiscal", mensagem: "Indique a rua e o número." });
+    } else {
+      mudancas.moradaFiscal = m;
+    }
+  }
+
+  if ("codigoPostalFiscal" in corpo) {
+    const cp = texto(corpo.codigoPostalFiscal);
+    if (!cp) mudancas.codigoPostalFiscal = null;
+    else if (!codigoPostalValido(cp)) {
+      erros.push({ campo: "codigoPostalFiscal", mensagem: "Código postal inválido (0000-000)." });
+    } else {
+      mudancas.codigoPostalFiscal = normalizarCodigoPostal(cp);
+    }
+  }
+
+  if ("localidadeFiscal" in corpo) {
+    mudancas.localidadeFiscal = texto(corpo.localidadeFiscal) || null;
+  }
+
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;
 
   if ("regimeIva" in corpo) {
@@ -190,6 +219,10 @@ export async function PUT(req: NextRequest) {
     const nifFinal = "nif" in corpo ? texto(corpo.nif) : null;
     if (nifFinal !== null && !nifFinal) {
       erros.push({ campo: "nif", mensagem: "Para emitir fatura é preciso o NIF." });
+    }
+    // Uma fatura sem a morada do emitente não é uma fatura.
+    if ("moradaFiscal" in corpo && !texto(corpo.moradaFiscal)) {
+      erros.push({ campo: "moradaFiscal", mensagem: "Para emitir fatura é preciso a morada fiscal." });
     }
   }
 

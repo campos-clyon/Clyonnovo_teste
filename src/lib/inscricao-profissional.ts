@@ -47,6 +47,10 @@ export type DadosDeInscricao = {
   telefone: string;
   nif: string | null;
   cidade: string;
+  /** Morada fiscal — a da declaração, que pode não ser onde ele trabalha. */
+  moradaFiscal: string | null;
+  codigoPostalFiscal: string | null;
+  localidadeFiscal: string | null;
   categorias: string[];
   zonas: string[];
   raioKm: number;
@@ -84,6 +88,22 @@ export function nifValido(nif: string): boolean {
   const resto = soma % 11;
   const controlo = resto < 2 ? 0 : 11 - resto;
   return controlo === Number(limpo[8]);
+}
+
+/**
+ * Código postal português: quatro dígitos, traço, três dígitos.
+ *
+ * Aceita-se sem traço porque é assim que muita gente o escreve — normaliza-se
+ * na saída. Recusar "2950123" era recusar um código postal certo por causa de
+ * um traço.
+ */
+export function codigoPostalValido(cp: string): boolean {
+  return /^\d{4}-?\d{3}$/.test(cp.replace(/\s/g, ""));
+}
+
+export function normalizarCodigoPostal(cp: string): string {
+  const limpo = cp.replace(/[\s-]/g, "");
+  return limpo.length === 7 ? `${limpo.slice(0, 4)}-${limpo.slice(4)}` : cp.trim();
 }
 
 export function emailValido(email: string): boolean {
@@ -163,6 +183,37 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
     }
   }
 
+  // A morada fiscal é a da declaração de actividade, e pode não ser onde ele
+  // trabalha — daí ser um campo próprio e não a cidade de base. É obrigatória
+  // para quem emite fatura: uma fatura sem morada do emitente não é uma fatura.
+  const moradaBruta = texto(c.moradaFiscal);
+  const cpBruto = texto(c.codigoPostalFiscal);
+  const localidadeBruta = texto(c.localidadeFiscal);
+
+  let moradaFiscal: string | null = null;
+  let codigoPostalFiscal: string | null = null;
+  let localidadeFiscal: string | null = null;
+
+  const declarouAlgumaCoisa = Boolean(moradaBruta || cpBruto || localidadeBruta);
+
+  if (emiteFatura || declarouAlgumaCoisa) {
+    if (moradaBruta.length < 5) {
+      erros.push({ campo: "moradaFiscal", mensagem: "Indique a morada fiscal (rua e número)." });
+    } else {
+      moradaFiscal = moradaBruta;
+    }
+    if (!codigoPostalValido(cpBruto)) {
+      erros.push({ campo: "codigoPostalFiscal", mensagem: "Código postal inválido (0000-000)." });
+    } else {
+      codigoPostalFiscal = normalizarCodigoPostal(cpBruto);
+    }
+    if (localidadeBruta.length < 2) {
+      erros.push({ campo: "localidadeFiscal", mensagem: "Indique a localidade." });
+    } else {
+      localidadeFiscal = localidadeBruta;
+    }
+  }
+
   // Quem declara emitir guia tem de dizer qual é o registo. Sem número não há
   // nada para verificar, e sem verificação a declaração não vale — não vamos
   // ligar um cliente a quem talvez não possa transportar resíduos.
@@ -190,6 +241,9 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       telefone,
       nif,
       cidade,
+      moradaFiscal,
+      codigoPostalFiscal,
+      localidadeFiscal,
       categorias,
       // A cidade de base conta sempre como zona coberta: é o mínimo, e sem
       // isto quem não escrevesse zonas nenhumas não recebia nada.

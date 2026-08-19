@@ -3,6 +3,8 @@ import {
   validarInscricao,
   nifValido,
   emailValido,
+  codigoPostalValido,
+  normalizarCodigoPostal,
   telefoneValido,
   RAIO_MAXIMO_KM,
 } from "./inscricao-profissional";
@@ -13,6 +15,9 @@ const valida = {
   telefone: "912345678",
   nif: "501442600",
   cidade: "Amadora",
+  moradaFiscal: "Rua das Oliveiras 14, 2.º Dto.",
+  codigoPostalFiscal: "2700-123",
+  localidadeFiscal: "Amadora",
   categorias: ["recolha_moveis", "recolha_monos"],
   zonas: ["Lisboa", "Sintra"],
   raioKm: 30,
@@ -210,5 +215,73 @@ describe("validarInscricao", () => {
   it("acumula os erros todos em vez de parar no primeiro", () => {
     const r = validarInscricao({});
     expect(erros(r).length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+describe("código postal", () => {
+  it("aceita com e sem traço", () => {
+    expect(codigoPostalValido("2700-123")).toBe(true);
+    expect(codigoPostalValido("2700123")).toBe(true);
+    expect(codigoPostalValido(" 2700 - 123 ")).toBe(true);
+  });
+
+  it("recusa o que não é um código postal português", () => {
+    for (const cp of ["270-123", "27000-123", "2700-12", "abcd-efg", ""]) {
+      expect(codigoPostalValido(cp)).toBe(false);
+    }
+  });
+
+  it("normaliza para 0000-000", () => {
+    expect(normalizarCodigoPostal("2700123")).toBe("2700-123");
+    expect(normalizarCodigoPostal("2700-123")).toBe("2700-123");
+  });
+});
+
+describe("morada fiscal", () => {
+  // Uma fatura sem morada do emitente não é uma fatura. Aceitar a inscrição
+  // sem ela era deixá-lo emitir documentos que não servem ao cliente.
+  it("quem emite fatura tem de a dar inteira", () => {
+    expect(erros(com({ moradaFiscal: "" }))).toContain("moradaFiscal");
+    expect(erros(com({ codigoPostalFiscal: "" }))).toContain("codigoPostalFiscal");
+    expect(erros(com({ localidadeFiscal: "" }))).toContain("localidadeFiscal");
+  });
+
+  it("recusa código postal mal escrito", () => {
+    expect(erros(com({ codigoPostalFiscal: "27-123" }))).toContain("codigoPostalFiscal");
+  });
+
+  it("guarda o código postal normalizado", () => {
+    const r = com({ codigoPostalFiscal: "2700123" });
+    if (r.ok) expect(r.dados.codigoPostalFiscal).toBe("2700-123");
+  });
+
+  // Quem não emite fatura não é obrigado a declarar morada nenhuma — mas se
+  // começar a escrevê-la, tem de a acabar. Meia morada não serve para nada.
+  it("quem não emite fatura pode não a dar", () => {
+    const r = com({
+      emiteFatura: false,
+      nif: "",
+      regimeIva: undefined,
+      moradaFiscal: "",
+      codigoPostalFiscal: "",
+      localidadeFiscal: "",
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.dados.moradaFiscal).toBeNull();
+  });
+
+  it("meia morada é recusada mesmo sem emitir fatura", () => {
+    const e = erros(
+      com({
+        emiteFatura: false,
+        nif: "",
+        regimeIva: undefined,
+        moradaFiscal: "Rua sem fim 3",
+        codigoPostalFiscal: "",
+        localidadeFiscal: "",
+      }),
+    );
+    expect(e).toContain("codigoPostalFiscal");
+    expect(e).toContain("localidadeFiscal");
   });
 });

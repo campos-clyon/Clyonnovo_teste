@@ -20,6 +20,9 @@ export default function InscricaoForm() {
     telefone: "",
     nif: "",
     cidade: "",
+    moradaFiscal: "",
+    codigoPostalFiscal: "",
+    localidadeFiscal: "",
     categorias: [] as string[],
     zonas: "",
     raioKm: "30",
@@ -349,6 +352,66 @@ export default function InscricaoForm() {
               className={`mt-1.5 ${inputCls(erro("nif"))}`}
             />
             {erro("nif") && <p className="mt-1 text-xs text-red-600">{erro("nif")}</p>}
+
+            {/* A morada da declaração de actividade, que pode não ser a cidade
+                onde ele trabalha — daí serem campos diferentes. Uma fatura sem
+                morada do emitente não é uma fatura. */}
+            <div className="mt-4">
+              <label htmlFor="moradaFiscal" className="block text-sm font-medium text-gray-900">
+                Morada fiscal *
+              </label>
+              <input
+                id="moradaFiscal"
+                value={form.moradaFiscal}
+                onChange={(e) => set("moradaFiscal", e.target.value)}
+                placeholder="Rua e número, andar"
+                autoComplete="street-address"
+                className={`mt-1.5 ${inputCls(erro("moradaFiscal"))}`}
+              />
+              {erro("moradaFiscal") && (
+                <p className="mt-1 text-xs text-red-600">{erro("moradaFiscal")}</p>
+              )}
+            </div>
+
+            <div className="mt-3 grid grid-cols-[minmax(0,7rem)_1fr] gap-3">
+              <div>
+                <label
+                  htmlFor="codigoPostalFiscal"
+                  className="block text-sm font-medium text-gray-900"
+                >
+                  Código postal *
+                </label>
+                <input
+                  id="codigoPostalFiscal"
+                  inputMode="numeric"
+                  value={form.codigoPostalFiscal}
+                  onChange={(e) => set("codigoPostalFiscal", e.target.value)}
+                  placeholder="2700-123"
+                  autoComplete="postal-code"
+                  className={`mt-1.5 ${inputCls(erro("codigoPostalFiscal"))}`}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="localidadeFiscal"
+                  className="block text-sm font-medium text-gray-900"
+                >
+                  Localidade *
+                </label>
+                <input
+                  id="localidadeFiscal"
+                  value={form.localidadeFiscal}
+                  onChange={(e) => set("localidadeFiscal", e.target.value)}
+                  placeholder="Amadora"
+                  className={`mt-1.5 ${inputCls(erro("localidadeFiscal"))}`}
+                />
+              </div>
+            </div>
+            {(erro("codigoPostalFiscal") || erro("localidadeFiscal")) && (
+              <p className="mt-1 text-xs text-red-600">
+                {erro("codigoPostalFiscal") ?? erro("localidadeFiscal")}
+              </p>
+            )}
           </div>
         )}
 
