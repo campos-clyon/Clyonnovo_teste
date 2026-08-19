@@ -12,6 +12,7 @@
 import { Resend } from "resend";
 import { e } from "./escapar-html";
 import { urlDeAccao } from "./url-do-site";
+import { comChave } from "./acesso-mvp";
 
 export interface AprovacaoParams {
   para: string;
@@ -24,7 +25,12 @@ export interface AprovacaoParams {
 }
 
 function montarHtml(p: AprovacaoParams): string {
-  const url = `${p.baseUrl ?? urlDeAccao()}/profissionais/definir-senha/${p.token}`;
+  // O caminho de definir a palavra-passe está aberto pelo token, mas assim
+  // que ele a define cai no painel — que está atrás da chave. Levá-la no link
+  // é o que evita que a conta seja criada e a porta seguinte dê 404.
+  const url = comChave(
+    `${p.baseUrl ?? urlDeAccao()}/profissionais/definir-senha/${p.token}`,
+  );
   const primeiroNome = p.nome.trim().split(/\s+/)[0] ?? p.nome;
 
   return `<!DOCTYPE html>

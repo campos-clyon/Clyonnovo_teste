@@ -7,20 +7,20 @@ import HeroBackground from "@/components/HeroBackground";
 import {
   BadgeCheck,
   Building2,
-  Camera,
-  Gavel,
-  HandCoins,
+  CheckCircle2,
+  Clock,
+  ClipboardList,
+  Hammer,
   HardHat,
   Home,
   Leaf,
-  Hammer,
-  Lock,
   MessageCircle,
   Package,
-  ShieldCheck,
+  Shield,
   Sofa,
   Star,
   Truck,
+  Users,
   Wrench,
 } from "lucide-react";
 
@@ -29,14 +29,14 @@ import { reviews } from "@/lib/reviews-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const metadata: Metadata = {
-  title: "CLYON — Diga o que precisa, os profissionais fazem propostas",
+  title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
   description:
-    "Plataforma que liga clientes a profissionais de recolhas, mudanças e esvaziamentos em Lisboa, Margem Sul e Setúbal. Descreva o trabalho, receba propostas e escolha. O dinheiro só chega ao profissional depois de confirmar que está feito.",
+    "Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Retiramos sofás, armários, colchões e eletrodomésticos. Orçamento gratuito em 24h. 188 trabalhos concluídos com 5,0 ★.",
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
-    title: "CLYON — Diga o que precisa, os profissionais fazem propostas",
+    title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
     description:
-      "Descreva o trabalho com fotografias, diga quanto quer pagar e receba propostas de profissionais verificados. Pagamento seguro: o dinheiro só sai quando confirmar.",
+      "Retiramos sofás, armários, colchões, monos e tudo o que já não precisa. Orçamento gratuito em 24h. Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt",
   },
 };
@@ -65,22 +65,16 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   manutencao_casa: { bg: "bg-sky-50", text: "text-sky-600" },
 };
 
-/**
- * Deixaram de ser tabela de preços e passaram a ser referência: o preço é
- * negociado entre o cliente e o profissional, e isto diz apenas por onde os
- * pedidos costumam fechar. Prometer um preço que já não somos nós a praticar
- * era a forma mais rápida de o site mentir.
- */
-const CATEGORY_RANGES: Record<string, string> = {
+const CATEGORY_PRICES: Record<string, string> = {
   recolha_moveis: "40 – 100 €",
   recolha_monos: "50 – 120 €",
-  recolha_entulho: "3 – 5 €/saco",
+  recolha_entulho: "3 – 5 €",
   esvaziamento_casa: "180 – 280 €",
   esvaziamento_apartamento: "200 – 350 €",
-  mudanca: "150 – 400 €",
-  montagem_moveis: "45 – 90 €",
-  jardinagem: "60 – 140 €",
-  manutencao_casa: "55 – 120 €",
+  mudanca: "50 €/h · mín. 3h",
+  montagem_moveis: "desde 49 €",
+  jardinagem: "desde 64 €",
+  manutencao_casa: "desde 57 €",
 };
 
 const HERO_PILLS = [
@@ -100,61 +94,55 @@ const PLATFORM_STATS = [
 
 const HOW_IT_WORKS = [
   {
-    icon: Camera,
-    title: "Descreva e mostre",
+    icon: ClipboardList,
+    title: "Descreva o trabalho",
     description:
-      "Diga o que precisa e junte fotografias. É o que mais conta: com fotos o preço fecha, sem fotos fica um intervalo.",
+      "Use o simulador em 2 minutos: tipo de serviço, morada, acesso e fotos. Quanto mais detalhe, mais preciso o orçamento.",
   },
   {
-    icon: HandCoins,
-    title: "Diga quanto quer pagar",
+    icon: CheckCircle2,
+    title: "Confirmamos preço e data",
     description:
-      "Indica um mínimo e um máximo. O máximo é só seu — nenhum profissional chega a vê-lo.",
+      "Um assistente confirma o orçamento e agenda a data consigo. Nada avança sem a sua aprovação explícita.",
   },
   {
-    icon: Gavel,
-    title: "Receba propostas e escolha",
+    icon: Truck,
+    title: "Profissional na sua porta",
     description:
-      "Os profissionais respondem com valores. Aceita, ou propõe outro. Quem entra em sua casa é escolha sua.",
-  },
-  {
-    icon: Lock,
-    title: "Pague em segurança",
-    description:
-      "O dinheiro fica retido na CLYON e só chega ao profissional depois de confirmar que o trabalho está feito.",
+      "Um profissional verificado executa o trabalho na data acordada. O espaço fica limpo e pronto a usar.",
   },
 ];
 
 const GUARANTEES = [
   {
-    icon: Lock,
-    title: "O dinheiro só sai quando confirmar",
-    stat: "0 €",
-    statLabel: "libertados antes do trabalho",
-    description:
-      "Paga na plataforma quando contrata, mas o valor fica retido. O profissional envia prova do trabalho feito e só depois da sua confirmação é que o recebe.",
-    gradient: "from-emerald-400 to-emerald-500",
-    glow: "shadow-emerald-500/40",
-    iconBg: "bg-gradient-to-br from-emerald-400 to-emerald-600",
-  },
-  {
     icon: BadgeCheck,
     title: "Profissionais verificados",
     stat: "100%",
-    statLabel: "com identidade confirmada",
+    statLabel: "com historial verificado",
     description:
-      "Identidade verificada antes de poderem responder a pedidos. Quem declara emitir fatura ou guia de transporte tem esse registo confirmado por nós, não apenas declarado.",
+      "Todos os operacionais passam por verificação de identidade e avaliação de qualidade contínua. Nenhum profissional sem historial entra na plataforma.",
     gradient: "from-cyan-400 to-cyan-500",
     glow: "shadow-cyan-500/40",
     iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
   },
   {
-    icon: ShieldCheck,
-    title: "Sem chamadas nem regateio",
-    stat: "5",
-    statLabel: "propostas de cada lado",
+    icon: Shield,
+    title: "Preço confirmado, sem surpresas",
+    stat: "€0",
+    statLabel: "de adicionais no final",
     description:
-      "A negociação é só de valores, dentro da plataforma. Sem telefonemas, sem insistência e sem combinar por fora — cada lado tem cinco propostas e um prazo para responder.",
+      "O orçamento é fechado antes do serviço começar. Não há adicionais no final, nem negociações no dia da recolha.",
+    gradient: "from-emerald-400 to-emerald-500",
+    glow: "shadow-emerald-500/40",
+    iconBg: "bg-gradient-to-br from-emerald-400 to-emerald-600",
+  },
+  {
+    icon: Clock,
+    title: "Resposta em menos de 48 horas",
+    stat: "<48h",
+    statLabel: "tempo médio de resposta",
+    description:
+      "A maioria dos pedidos em Lisboa e Margem Sul recebe confirmação de data no próprio dia. Cobertura em mais de 24 localidades.",
     gradient: "from-violet-400 to-violet-500",
     glow: "shadow-violet-500/40",
     iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
@@ -163,34 +151,34 @@ const GUARANTEES = [
 
 const homeFaqs = [
   {
-    question: "A CLYON faz a recolha?",
+    question: "Quanto custa a recolha de monos ou móveis?",
     answer:
-      "Não. A CLYON é a plataforma onde encontra quem a faça. O trabalho é executado por profissionais independentes que respondem ao seu pedido — é a si que eles apresentam a proposta, e é você que escolhe qual contrata.",
+      "O valor depende do volume, acessos, tipo de material, urgência e necessidade de desmontagem. A forma mais rápida de obter um valor exato é usar o simulador — leva 2 minutos.",
   },
   {
-    question: "Quanto custa usar a plataforma?",
+    question: "Recolhem no mesmo dia?",
     answer:
-      "Criar o pedido, receber propostas e negociar é gratuito. Só há custo quando contrata: ao valor acordado com o profissional soma-se a taxa CLYON de 6%. O total aparece antes de pagar, sem nada acrescentado depois.",
+      "Quando existe disponibilidade operacional, sim. Muitos pedidos em Lisboa, Grande Lisboa, Margem Sul e Setúbal conseguem resposta no próprio dia ou no dia seguinte.",
   },
   {
-    question: "Porque é que me pedem um valor mínimo e um máximo?",
+    question: "Retiram sofás, colchões e eletrodomésticos?",
     answer:
-      "O mínimo é o que mostramos aos profissionais como aquilo que quer pagar. O máximo fica só do nosso lado — serve para percebermos a que profissionais faz sentido mostrar o pedido, e nunca é revelado a ninguém. Se fosse visível, ninguém proporia abaixo dele.",
+      "Sim. A CLYON retira sofás, camas, colchões, armários, eletrodomésticos e outros volumes grandes desde que identificados no orçamento.",
   },
   {
-    question: "Quando é que o profissional recebe o dinheiro?",
+    question: "Fazem desmontagem de móveis?",
     answer:
-      "Depois de confirmar que o trabalho está feito. O valor fica retido desde que contrata, o profissional envia uma imagem como prova de execução, e a libertação acontece com a sua confirmação. Se nada disser, há um prazo após a data do serviço ao fim do qual é libertado automaticamente — e pode abrir uma disputa que o suspende.",
+      "Sim. Quando necessário, a equipa desmonta móveis e trata da retirada a partir do interior do imóvel.",
   },
   {
-    question: "Preciso de criar conta?",
+    question: "Atendem empresas e condomínios?",
     answer:
-      "Não para acompanhar o pedido. Assim que o cria, recebe um link por email e por mensagem que lhe dá acesso sem palavra-passe. Criar conta com o Google demora um toque e passa a ter todos os pedidos no mesmo sítio.",
+      "Sim. A operação serve particulares, senhorios, empresas, equipas de obra e condomínios com necessidade de recolha, limpeza ou esvaziamento.",
   },
   {
-    question: "Consigo fatura e guia de transporte?",
+    question: "O destino dos resíduos é responsável?",
     answer:
-      "Quem emite a fatura é o profissional, porque é ele que presta o serviço — e o IVA depende do regime dele. Ao criar o pedido diz se precisa de fatura e de guia de transporte, e nós só mostramos o pedido a profissionais que as emitam. A CLYON fatura apenas a sua própria comissão.",
+      "Sempre que possível separamos materiais para reaproveitamento ou encaminhamento adequado. O restante segue para destino responsável e legal.",
   },
 ];
 
@@ -221,16 +209,15 @@ export default function HomePage() {
 
             {/* H1 */}
             <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[#0B1929] sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
-              Diga o que precisa.{" "}
-              <span className="text-cyan-600">Os profissionais</span>{" "}
-              fazem propostas.
+              Recolha de móveis{" "}
+              <span className="text-cyan-600">e esvaziamento</span>{" "}
+              em Lisboa
             </h1>
 
             {/* Subtitle */}
             <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
-              Recolhas, mudanças e esvaziamentos em Lisboa, Margem Sul e Setúbal.
-              Você diz quanto quer pagar, eles respondem com valores — e o dinheiro
-              só chega a quem trabalha depois de confirmar que está feito.
+              Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
+              Orçamento gratuito em 24&nbsp;horas. Serviço em Lisboa, Margem Sul e Setúbal.
             </p>
 
             {/* Category pills */}
@@ -259,9 +246,17 @@ export default function HomePage() {
                 <span>5,0 · 188 trabalhos</span>
               </span>
               <span className="text-slate-300">·</span>
-              <span className="text-xs text-slate-500 sm:text-sm">Criar pedido é grátis</span>
+              <span className="text-xs text-slate-500 sm:text-sm">Resposta em &lt;24&nbsp;h</span>
               <span className="hidden text-slate-300 sm:inline">·</span>
-              <span className="hidden text-sm text-slate-500 sm:inline">Pagamento retido até confirmar</span>
+              <a
+                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-cyan-600 sm:flex"
+              >
+                <MessageCircle className="h-4 w-4" />
+                WhatsApp
+              </a>
             </div>
           </div>
 
@@ -292,14 +287,21 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center sm:mb-16">
             <h2 className="text-2xl font-bold tracking-tight text-[#0B1929] sm:text-4xl lg:text-5xl">
-              Como funciona
+              Simples do início ao fim
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
-              Do pedido ao trabalho feito — sem telefonemas, sem regateio e sem pagar adiantado.
+              Do pedido à porta fechada — sem chamadas desnecessárias, sem orçamentos que nunca chegam.
             </p>
           </div>
 
-          <div className="relative grid gap-10 sm:grid-cols-2 md:gap-8 lg:grid-cols-4">
+          <div className="relative grid gap-10 md:grid-cols-3 md:gap-8">
+            {/* Dashed animated line — only between steps on desktop */}
+            <div
+              className="step-line pointer-events-none absolute top-[40px] hidden h-[2px] md:block lg:top-[52px]"
+              style={{ left: "18%", right: "18%" }}
+              aria-hidden="true"
+            />
+
             {HOW_IT_WORKS.map((step, i) => (
               <div
                 key={step.title}
@@ -314,18 +316,18 @@ export default function HomePage() {
                     aria-hidden="true"
                   />
                   <div
-                    className="step-icon relative z-10 flex h-[80px] w-[80px] items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-xl shadow-cyan-500/30 transition-transform duration-300 hover:scale-110 hover:rotate-3 sm:h-[96px] sm:w-[96px] sm:rounded-3xl"
+                    className="step-icon relative z-10 flex h-[80px] w-[80px] items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-xl shadow-cyan-500/30 transition-transform duration-300 hover:scale-110 hover:rotate-3 sm:h-[104px] sm:w-[104px] sm:rounded-3xl"
                     style={{ animationDelay: `${i * 400}ms` }}
                   >
-                    <step.icon className="h-9 w-9 text-white sm:h-11 sm:w-11" strokeWidth={2.2} />
+                    <step.icon className="h-9 w-9 text-white sm:h-12 sm:w-12" strokeWidth={2.2} />
                     <span className="absolute -right-2 -top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-[#0B1929] text-xs font-bold text-white shadow-md ring-4 ring-[#F4F8FB] sm:h-8 sm:w-8 sm:text-sm">
                       {i + 1}
                     </span>
                   </div>
                 </div>
 
-                <h3 className="mt-5 text-lg font-bold text-[#0B1929] sm:mt-7 sm:text-xl">{step.title}</h3>
-                <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500 sm:mt-3 sm:text-sm">
+                <h3 className="mt-5 text-lg font-bold text-[#0B1929] sm:mt-8 sm:text-2xl">{step.title}</h3>
+                <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500 sm:mt-3 sm:text-base">
                   {step.description}
                 </p>
               </div>
@@ -337,55 +339,8 @@ export default function HomePage() {
               href="/simulador"
               className="inline-flex items-center rounded-xl bg-cyan-500 px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
             >
-              Criar pedido grátis
+              Iniciar pedido agora
             </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── O DINHEIRO ────────────────────────────────────────────── */}
-      <section className="bg-white py-10 sm:py-16">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
-              O que paga, e quando
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
-              Um número e uma linha. Sem contas para fazer, sem valores que aparecem no fim.
-            </p>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] sm:rounded-3xl">
-            <div className="grid gap-px bg-[#E2EEF3] sm:grid-cols-3">
-              <div className="bg-white px-6 py-7 text-center">
-                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  Combina com o profissional
-                </div>
-                <div className="mt-2 text-3xl font-bold text-[#0B1929] sm:text-4xl">200 €</div>
-                <p className="mt-2 text-xs text-slate-500">O valor que os dois aceitaram</p>
-              </div>
-              <div className="bg-white px-6 py-7 text-center">
-                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  Paga
-                </div>
-                <div className="mt-2 text-3xl font-bold text-cyan-600 sm:text-4xl">212 €</div>
-                <p className="mt-2 text-xs text-slate-500">Inclui a taxa CLYON de 6%</p>
-              </div>
-              <div className="bg-white px-6 py-7 text-center">
-                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  Sai da retenção
-                </div>
-                <div className="mt-2 text-3xl font-bold text-emerald-600 sm:text-4xl">quando confirmar</div>
-                <p className="mt-2 text-xs text-slate-500">Nem um euro antes disso</p>
-              </div>
-            </div>
-
-            <div className="border-t border-[#E2EEF3] bg-[#F4F8FB] px-6 py-5 text-center">
-              <p className="text-xs leading-relaxed text-slate-500 sm:text-sm">
-                A fatura do serviço é emitida pelo profissional, que é quem o presta — o IVA
-                depende do regime dele. A CLYON fatura apenas a sua comissão.
-              </p>
-            </div>
           </div>
         </div>
       </section>
@@ -393,21 +348,11 @@ export default function HomePage() {
       {/* ── SERVICES ──────────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] py-8 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 text-center">
-            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
-              O que se pede por aqui
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base">
-              Os valores são referência do que os pedidos costumam fechar — o preço é
-              sempre negociado entre si e o profissional.
-            </p>
-          </div>
-
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
               const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-cyan-600" };
-              const range = CATEGORY_RANGES[cat.id];
+              const price = CATEGORY_PRICES[cat.id];
               return (
                 <Link
                   key={cat.id}
@@ -423,10 +368,9 @@ export default function HomePage() {
                   <p className="mt-2 flex-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
                     {cat.description}
                   </p>
-                  {range && (
-                    <div className="mt-2.5">
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">costuma fechar</div>
-                      <div className={`text-xs font-bold sm:text-sm ${colors.text}`}>{range}</div>
+                  {price && (
+                    <div className={`mt-2.5 text-xs font-bold sm:text-sm ${colors.text}`}>
+                      {price}
                     </div>
                   )}
                 </Link>
@@ -444,8 +388,7 @@ export default function HomePage() {
               Construída para inspirar confiança
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
-              Numa plataforma, a confiança não se promete — constrói-se nas regras.
-              Estas são as nossas.
+              Cada detalhe foi pensado para eliminar incerteza — no preço, no profissional e no resultado.
             </p>
           </div>
 
@@ -581,18 +524,17 @@ export default function HomePage() {
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
               <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
-                Trabalha por conta própria ou tem equipa?
+                Tem uma empresa de remoções ou transportes?
               </h2>
               <p className="mt-3 text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
-                Receba pedidos da sua zona com fotografias, morada aproximada e o valor
-                que o cliente quer pagar. Responde com um valor — e sabe o que recebe
-                antes de aceitar.
+                Receba pedidos verificados na sua zona. Sem investimento em publicidade, sem
+                leads frios — só trabalho real com clientes confirmados.
               </p>
               <div className="mt-7 flex flex-wrap gap-6">
                 {[
-                  { icon: Camera, label: "Pedidos com fotografias" },
-                  { icon: HandCoins, label: "Sabe o que recebe" },
-                  { icon: ShieldCheck, label: "Pagamento garantido" },
+                  { icon: Users, label: "Clientes verificados" },
+                  { icon: Shield, label: "Sem leads falhados" },
+                  { icon: BadgeCheck, label: "Pagamento garantido" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-700">
                     <item.icon className="h-4 w-4 text-cyan-600" />
@@ -602,12 +544,16 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <Link
-                href="/profissionais"
+              <a
+                href={`https://wa.me/351931632622?text=${encodeURIComponent(
+                  "Olá! Sou uma empresa de remoções/transportes e quero saber mais sobre ser parceiro CLYON.",
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
               >
-                Quero receber pedidos
-              </Link>
+                Tornar-me parceiro
+              </a>
             </div>
           </div>
         </div>
@@ -621,7 +567,7 @@ export default function HomePage() {
               Perguntas frequentes
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base">
-              Como funciona a plataforma, quanto custa e quando é que o dinheiro muda de mãos.
+              Respostas às dúvidas mais comuns sobre recolha de móveis, entulho e esvaziamento em Lisboa.
             </p>
           </div>
           <div className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] px-4 sm:px-6 lg:px-8">
@@ -653,17 +599,17 @@ export default function HomePage() {
               Pronto para libertar espaço?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
-              Criar o pedido demora dois minutos e não custa nada. Só paga se contratar alguém.
+              Orçamento online, sem telefonemas. Confirme os detalhes e receba uma resposta clara.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center">
               <Link
                 href="/simulador"
                 className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-500 px-6 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-cyan-400 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
               >
-                Criar pedido grátis
+                Pedir Orçamento Grátis
               </Link>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Tenho%20uma%20d%C3%BAvida%20sobre%20a%20CLYON."
+                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] sm:h-12 sm:w-auto sm:px-8 sm:text-base"

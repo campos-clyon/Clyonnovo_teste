@@ -120,6 +120,22 @@ export interface OrderData {
   movelItemsMedio?: number;
   /** Nº de itens grandes (sofá, armário, frigorífico, máquina de lavar…) — 60 €/un */
   movelItemsGrande?: number;
+
+  // ── Plataforma (16-08-2026) ──────────────────────────────────────────────
+  /**
+   * Quanto o cliente está disposto a pagar. Não confundir com a estimativa do
+   * motor: esta é a decisão dele, aquela é a opinião nossa.
+   *
+   * Guardado como texto porque é o que o input devolve, e converter a cada
+   * tecla estragava "80," a meio de ser escrito. A validação é feita por
+   * `validarValorDesejado` (src/lib/pedido-valores.ts) — no envio, e outra vez
+   * no servidor.
+   */
+  valorDesejadoCliente?: string;
+  /** Se precisa de fatura. Filtra a quem o pedido é mostrado. */
+  precisaFatura?: boolean;
+  /** Se precisa de guia de transporte (e-GAR) — exige transportador licenciado. */
+  precisaGuiaTransporte?: boolean;
 }
 
 export type EstimateStatus = "estimated" | "needs_more_info" | "onsite_required";

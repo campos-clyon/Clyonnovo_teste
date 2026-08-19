@@ -84,10 +84,6 @@ export default function Footer() {
               <li><Link href="/faq" style={linkStyleInline}>FAQ</Link></li>
               <li><Link href="/blog" style={linkStyleInline}>Blog</Link></li>
               <li><Link href="/contactos" style={linkStyleInline}>Contactos</Link></li>
-              {/* A porta dos profissionais. Estava só numa ligação a meio da
-                  homepage: quem era aprovado recebia o email e depois não tinha
-                  por onde voltar à conta. */}
-              <li><Link href="/profissionais" style={linkStyleInline}>Sou profissional</Link></li>
             </ul>
           </div>
 
@@ -192,7 +188,6 @@ export default function Footer() {
                 <li><Link href="/faq" style={linkStyleInline}>FAQ</Link></li>
                 <li><Link href="/contactos" style={linkStyleInline}>Contactos</Link></li>
                 <li><Link href="/avaliacoes" style={linkStyleInline}>Avaliações</Link></li>
-                <li><Link href="/profissionais" style={linkStyleInline}>Sou profissional</Link></li>
               </ul>
             </div>
           </div>

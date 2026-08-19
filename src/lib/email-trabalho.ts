@@ -18,6 +18,7 @@ import { Resend } from "resend";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
+import { comChave } from "./acesso-mvp";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -154,7 +155,7 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
 
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td align="center">
-        <a href="${base}/profissionais/painel?ecra=trabalhos" style="display:inline-block;background:#00B4CC;color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:10px;font-size:15px;font-weight:600;">
+        <a href="${comChave(`${base}/profissionais/painel?ecra=trabalhos`)}" style="display:inline-block;background:#00B4CC;color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:10px;font-size:15px;font-weight:600;">
           Ver o trabalho
         </a>
       </td></tr>

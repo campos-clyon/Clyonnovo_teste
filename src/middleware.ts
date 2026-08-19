@@ -5,6 +5,12 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
   verificarSessaoDoProfissional,
 } from "@/lib/profissional-auth";
+import {
+  COOKIE_CHAVE_MVP,
+  COOKIE_SESSAO_TESTE,
+  chaveConfere,
+  verificarSessaoDeTeste,
+} from "@/lib/acesso-mvp";
 
 const CANONICAL_HOST = "clyon.pt";
 
@@ -64,8 +70,113 @@ async function temSessaoDeProfissional(request: NextRequest) {
   return sessao !== null;
 }
 
+/**
+ * Tudo o que vive atrás do portão do MVP, em duas camadas.
+ *
+ * Escrito como listas explícitas e não como "tudo menos o site" — uma regra por
+ * exclusão deixa passar o que for criado amanhã, e o que for criado amanhã é
+ * precisamente a parte nova.
+ *
+ * A CAMADA DE CIMA (chave + credenciais de testador) guarda o que não tem
+ * autenticação nenhuma por baixo: a bancada de testes e o formulário de pedido,
+ * onde qualquer pessoa que lá chegasse podia criar pedidos reais na base.
+ *
+ * A CAMADA DE BAIXO (só a chave) guarda o que já tem identidade própria: as
+ * páginas dos profissionais, onde a segunda prova de quem é são as credenciais
+ * DELE. Exigir-lhe também uma conta de testador dava-lhe duas palavras-passe
+ * para o mesmo sítio e partia todos os links que lhe enviamos por email.
+ */
+function exigeTestador(caminho: string): boolean {
+  return (
+    caminho === "/plataforma" ||
+    caminho.startsWith("/plataforma/") ||
+    // A inscrição é a única escrita da plataforma que não exige sessão de
+    // ninguém. Sem o portão à frente, quem descobrisse o endereço inscrevia
+    // profissionais na base a partir de uma linha de comandos.
+    caminho === "/api/profissionais/inscricao"
+  );
+}
+
+function exigeChave(caminho: string): boolean {
+  return caminho === "/profissionais" || caminho.startsWith("/profissionais/");
+}
+
+/**
+ * O que fica de fora de tudo isto.
+ *
+ * Os links com token são credenciais por si: 256 bits aleatórios, guardados em
+ * hash. São mais fortes do que qualquer palavra-passe que alguém escolha, e
+ * pô-los atrás do portão obrigava o cliente de teste a ter conta — deixávamos
+ * de estar a testar o fluxo real, que é um cliente sem conta nenhuma a abrir o
+ * link que lhe chegou por email.
+ */
+function abertoPorToken(caminho: string): boolean {
+  return caminho.startsWith("/profissionais/pedidos/") ||
+    caminho.startsWith("/profissionais/definir-senha/");
+}
+
 export async function middleware(request: NextRequest) {
   const { nextUrl, headers } = request;
+
+  // Marcado pelo portão e aplicado a toda a resposta que saia daqui.
+  let semIndexacao = false;
+
+  // ── O portão do ambiente de testes ────────────────────────────────────────
+  //
+  // Duas fechaduras. A chave no endereço diz que a pessoa sabe onde é; as
+  // credenciais dizem quem é. Sem a primeira, responde-se 404: um 403
+  // confirmaria a quem anda a sondar que ali existe qualquer coisa.
+  const precisaDeTestador = exigeTestador(nextUrl.pathname);
+  const precisaDeChave = precisaDeTestador || exigeChave(nextUrl.pathname);
+
+  if (precisaDeChave && !abertoPorToken(nextUrl.pathname)) {
+    const chaveNoEndereco = nextUrl.searchParams.get("chave");
+    const chaveNoCookie = request.cookies.get(COOKIE_CHAVE_MVP)?.value;
+    const sabeOEndereco = chaveConfere(chaveNoEndereco) || chaveConfere(chaveNoCookie);
+
+    if (!sabeOEndereco) {
+      return new NextResponse(null, { status: 404 });
+    }
+
+    // A chave passa a cookie e sai do endereço — senão viaja em cada partilha
+    // de ecrã, fica no histórico e aparece no cabeçalho Referer de tudo o que
+    // a página carregue.
+    if (chaveNoEndereco) {
+      const limpo = new URL(request.url);
+      limpo.searchParams.delete("chave");
+      const resposta = NextResponse.redirect(limpo);
+      resposta.cookies.set(COOKIE_CHAVE_MVP, chaveNoEndereco, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 30 * 24 * 60 * 60,
+      });
+      return resposta;
+    }
+
+    const temSessao =
+      !precisaDeTestador ||
+      (await verificarSessaoDeTeste(request.cookies.get(COOKIE_SESSAO_TESTE)?.value)) !== null;
+
+    if (!temSessao && nextUrl.pathname !== "/plataforma/entrar") {
+      // Uma API responde com um código, não com um desvio para um ecrã de
+      // entrada — quem está a chamá-la não tem browser para o seguir.
+      if (nextUrl.pathname.startsWith("/api/")) {
+        return new NextResponse(null, { status: 404 });
+      }
+      const entrada = new URL("/plataforma/entrar", request.url);
+      entrada.searchParams.set("proximo", nextUrl.pathname + nextUrl.search);
+      return NextResponse.redirect(entrada);
+    }
+
+    // NÃO se devolve aqui uma resposta. Passar o portão não é chegar ao
+    // destino: as verificações que vêm a seguir — a sessão do profissional
+    // para o painel dele, por exemplo — têm de correr na mesma. Devolver
+    // `next()` aqui saltava-as todas, e uma conta de testador passava a abrir
+    // o painel de um profissional.
+    semIndexacao = true;
+  }
 
   // Proteger o backoffice — /admin/login é a única porta aberta
   if (nextUrl.pathname === "/admin" || nextUrl.pathname.startsWith("/admin/")) {
@@ -224,7 +335,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/mudancas", request.url), 301);
   }
 
-  return NextResponse.next();
+  const resposta = NextResponse.next();
+  if (semIndexacao) {
+    resposta.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    resposta.headers.set("Cache-Control", "no-store, private");
+  }
+  return resposta;
 }
 
 export const config = {

@@ -18,6 +18,7 @@
 import { Resend } from "resend";
 import { e } from "./escapar-html";
 import { urlDeAccao } from "./url-do-site";
+import { comChave } from "./acesso-mvp";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",

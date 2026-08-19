@@ -23,10 +23,15 @@ interface EntulhoDetailsProps {
 
 // Estimativas de volume (etiquetas visíveis ao cliente; a conversão para sacos
 // é feita no formulário-pai e nunca é mostrada).
-const VOLUME_TIERS: { key: EntulhoVolume; label: string; sub: string; scale: string }[] = [
-  { key: "carrinha",     label: "Enche uma carrinha",         sub: "Poucos móveis / alguns sacos", scale: "text-base" },
-  { key: "camiao_caixa", label: "Enche a caixa de um camião", sub: "Carga média",                  scale: "text-lg" },
-  { key: "camiao_lixo",  label: "Enche um camião",            sub: "Grande volume",                scale: "text-xl" },
+/**
+ * O camião cresce com o volume — a pista visual que faz esta escolha
+ * perceber-se sem ler. Estava aqui //, que são
+ * tamanhos de LETRA e não mexem num SVG: saíam os três do mesmo tamanho.
+ */
+const VOLUME_TIERS: { key: EntulhoVolume; label: string; sub: string; tamanho: string }[] = [
+  { key: "carrinha",     label: "Enche uma carrinha",         sub: "Poucos móveis / alguns sacos", tamanho: "h-6 w-6" },
+  { key: "camiao_caixa", label: "Enche a caixa de um camião", sub: "Carga média",                  tamanho: "h-8 w-8" },
+  { key: "camiao_lixo",  label: "Enche um camião",            sub: "Grande volume",                tamanho: "h-10 w-10" },
 ];
 
 export default function EntulhoDetails({
@@ -146,13 +151,18 @@ export default function EntulhoDetails({
                       key={tier.key}
                       type="button"
                       onClick={() => onVolumeChange?.(tier.key)}
-                      className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2.5 text-center transition-all ${
+                      aria-pressed={volume === tier.key}
+                      className={`flex min-h-[104px] flex-col items-center justify-center gap-1.5 rounded-lg border-2 p-2.5 text-center transition-all ${
                         volume === tier.key
-                          ? "border-blue-500 bg-white"
-                          : "border-slate-200 bg-white hover:border-blue-300"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-slate-300 bg-white hover:border-blue-400"
                       }`}
                     >
-                      <Truck className={`${tier.scale} text-slate-500`} strokeWidth={1.5} />
+                      <Truck
+                        className={`${tier.tamanho} ${volume === tier.key ? "text-blue-600" : "text-slate-600"}`}
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
                       <span className="text-[11px] font-semibold leading-tight text-slate-900">{tier.label}</span>
                       <span className="text-[10px] leading-tight text-slate-500">{tier.sub}</span>
                     </button>
@@ -162,13 +172,13 @@ export default function EntulhoDetails({
                 <button
                   type="button"
                   onClick={() => onVolumeChange?.("incerto")}
-                  className={`flex w-full items-center justify-center gap-2 rounded-lg border-2 p-2.5 transition-all ${
+                  className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-lg border-2 p-3 transition-all ${
                     volume === "incerto"
                       ? "border-blue-500 bg-white"
                       : "border-slate-200 bg-white hover:border-blue-300"
                   }`}
                 >
-                  <HelpCircle className="h-4 w-4 text-slate-500" />
+                  <HelpCircle className="h-5 w-5 text-slate-600" strokeWidth={2} aria-hidden="true" />
                   <span className="text-xs font-semibold text-slate-900">Não tenho a certeza</span>
                 </button>
                 <p className="text-[10px] text-slate-500">

@@ -109,20 +109,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
         </div>
       </div>
 
-      {/* Esta página é a dos clientes, e entra-se por Google. Um profissional
-          que aterre aqui não tem conta Google associada e fica sem saída — daí
-          o desvio explícito para a entrada dele. */}
       <p className="mt-5 text-center text-sm text-slate-500">
-        É profissional?{" "}
-        <Link
-          href="/profissionais/entrar"
-          className="font-semibold text-cyan-600 transition-colors hover:text-cyan-700 hover:underline"
-        >
-          Entre na sua conta
-        </Link>
-      </p>
-
-      <p className="mt-2 text-center text-sm text-slate-500">
         <Link
           href="/"
           className="font-semibold text-cyan-600 transition-colors hover:text-cyan-700 hover:underline"

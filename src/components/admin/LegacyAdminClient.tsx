@@ -14,6 +14,7 @@ import ContasPanel from "@/components/admin/ContasPanel";
 import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
+import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -56,6 +57,7 @@ import {
   BadgeCheck,
   HandCoins,
   Wallet,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,7 +85,8 @@ type AdminSection =
   // o contexto ao mudar de assunto.
   | "profissionais"
   | "negociacoes"
-  | "levantamentos";
+  | "levantamentos"
+  | "testadores";
 
 type Lead = {
   id: number;
@@ -195,6 +198,7 @@ const adminNavItems: Array<{
   { id: "profissionais", icon: BadgeCheck },
   { id: "negociacoes",   icon: HandCoins },
   { id: "levantamentos", icon: Wallet },
+  { id: "testadores",    icon: FlaskConical },
 ];
 
 /**
@@ -208,7 +212,7 @@ const adminNavItems: Array<{
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes", "levantamentos", "testadores"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["configs"] },
 ];
@@ -225,6 +229,7 @@ const sectionLabels: Record<AdminSection, string> = {
   profissionais: "Profissionais",
   negociacoes:   "Negociações",
   levantamentos: "Levantamentos",
+  testadores:    "Acesso aos testes",
 };
 
 const siteModules = [
@@ -2757,6 +2762,23 @@ export default function ColaboradorAdminClient() {
                 </p>
               </div>
               <AdminLevantamentosPanel />
+            </section>
+          )}
+
+          {activeSection === "testadores" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Acesso aos testes</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  A plataforma está fechada ao público: só entra quem tiver o link com a
+                  chave <em>e</em> credenciais próprias. Aqui criam-se e retiram-se essas
+                  credenciais — desactivar uma pessoa não expulsa as outras.
+                </p>
+              </div>
+              <AdminTestadoresPanel />
             </section>
           )}
 

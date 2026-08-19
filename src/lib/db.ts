@@ -1310,6 +1310,126 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   return rows as any[];
 }
 
+// ── Testadores do MVP ───────────────────────────────────────────────────────
+
+let testadoresEnsured = false;
+
+/**
+ * Quem pode entrar no ambiente de testes.
+ *
+ * Tabela própria, e não os `colaboradores`: um colaborador entra no backoffice,
+ * e um testador não pode. Reaproveitar a tabela era dar as chaves da gestão a
+ * quem só devia poder experimentar o fluxo do cliente.
+ *
+ * A palavra-passe é definida por quem cria a conta, no backoffice, e entregue
+ * fora do sistema. Sem convite por email de propósito: durante o MVP os
+ * testadores são pessoas conhecidas, e um email a menos é uma superfície a
+ * menos.
+ */
+export async function ensureTestadoresTable(): Promise<void> {
+  if (testadoresEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS testadoresMvp (
+      id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      nome         VARCHAR(120) NOT NULL,
+      utilizador   VARCHAR(60) NOT NULL,
+      passwordHash VARCHAR(255) NOT NULL,
+      papel        VARCHAR(20) NOT NULL DEFAULT 'cliente',
+      activo       TINYINT(1) NOT NULL DEFAULT 1,
+      ultimoAcesso DATETIME NULL DEFAULT NULL,
+      criadoPor    VARCHAR(120) NULL,
+      createdAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY testadores_utilizador (utilizador)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  testadoresEnsured = true;
+}
+
+export type TestadorNaBase = {
+  id: number;
+  nome: string;
+  utilizador: string;
+  passwordHash: string;
+  papel: string;
+  activo: number;
+  ultimoAcesso: Date | null;
+  criadoPor: string | null;
+  createdAt: Date;
+};
+
+export async function testadorPorUtilizador(
+  utilizador: string,
+): Promise<TestadorNaBase | undefined> {
+  await ensureTestadoresTable();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    "SELECT * FROM testadoresMvp WHERE utilizador = ? LIMIT 1",
+    [utilizador],
+  ) as any[];
+  return (rows as TestadorNaBase[])[0];
+}
+
+export async function listarTestadores(): Promise<TestadorNaBase[]> {
+  await ensureTestadoresTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT id, nome, utilizador, papel, activo, ultimoAcesso, criadoPor, createdAt,
+            '' AS passwordHash
+       FROM testadoresMvp ORDER BY createdAt DESC LIMIT 100`,
+  ) as any[];
+  return rows as TestadorNaBase[];
+}
+
+export async function criarTestador(dados: {
+  nome: string;
+  utilizador: string;
+  passwordHash: string;
+  papel: string;
+  criadoPor: string;
+}): Promise<number> {
+  await ensureTestadoresTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `INSERT INTO testadoresMvp (nome, utilizador, passwordHash, papel, criadoPor)
+     VALUES (?, ?, ?, ?, ?)`,
+    [dados.nome, dados.utilizador, dados.passwordHash, dados.papel, dados.criadoPor],
+  ) as any[];
+  return Number(res.insertId);
+}
+
+export async function definirEstadoDoTestador(id: number, activo: boolean): Promise<void> {
+  await ensureTestadoresTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE testadoresMvp SET activo = ? WHERE id = ?", [activo ? 1 : 0, id]);
+}
+
+export async function definirPalavraPasseDoTestador(
+  id: number,
+  passwordHash: string,
+): Promise<void> {
+  await ensureTestadoresTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE testadoresMvp SET passwordHash = ? WHERE id = ?", [passwordHash, id]);
+}
+
+export async function registarAcessoDoTestador(id: number): Promise<void> {
+  await ensureTestadoresTable();
+  const pool = await getPool();
+  if (!pool) return;
+  try {
+    await pool.execute("UPDATE testadoresMvp SET ultimoAcesso = NOW() WHERE id = ?", [id]);
+  } catch {
+    /* saber quando alguém entrou é útil, não é crítico */
+  }
+}
+
 // ── Execução do trabalho e carteira ───────────────────────────────
 
 /**
