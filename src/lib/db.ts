@@ -748,7 +748,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 2;
+const VERSAO_DAS_NEGOCIACOES = 3;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -797,6 +797,14 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN provaJson LONGTEXT NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN confirmadoEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN pagoEm DATETIME NULL DEFAULT NULL`,
+    // v3 (20-08-2026) — a avaliação do profissional, pelo cliente.
+    //
+    // Vive na negociação e não numa tabela à parte: uma avaliação é sempre de
+    // UM trabalho, e é o trabalho que prova que houve serviço. Sem essa
+    // ligação, qualquer pessoa avalia qualquer profissional.
+    `ALTER TABLE negociacoes ADD COLUMN estrelas TINYINT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN comentario VARCHAR(600) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN avaliadoEm DATETIME NULL DEFAULT NULL`,
   ];
   for (const sql of colunas) {
     try {
@@ -1375,6 +1383,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     provaJson: string | null;
     confirmadoEm: Date | null;
     pagoEm: Date | null;
+    estrelas: number | null;
+    comentario: string | null;
     serviceType: string | null;
     city: string | null;
     urgency: string | null;
@@ -1394,6 +1404,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+            n.estrelas, n.comentario,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson,
             -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e
@@ -1738,6 +1749,51 @@ export async function marcarConviteEnviado(id: number, enviado: boolean): Promis
     enviado ? 1 : 0,
     id,
   ]);
+}
+
+/**
+ * O cliente avalia o profissional.
+ *
+ * A condição está no UPDATE: só se avalia um trabalho fechado, confirmado, e
+ * ainda não avaliado. Ler antes e decidir em JavaScript deixava a janela onde
+ * dois toques no botão gravam duas vezes — e uma segunda avaliação por cima da
+ * primeira apagava o que a pessoa tinha escrito.
+ */
+export async function avaliarProfissional(
+  negociacaoId: number,
+  pedidoId: number,
+  estrelas: number,
+  comentario: string | null,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `UPDATE negociacoes
+        SET estrelas = ?, comentario = ?, avaliadoEm = NOW()
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NOT NULL AND avaliadoEm IS NULL`,
+    [estrelas, comentario, negociacaoId, pedidoId],
+  ) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/** As avaliações de um profissional, da mais recente para a mais antiga. */
+export async function avaliacoesDoProfissional(providerId: number): Promise<
+  Array<{ estrelas: number; comentario: string | null; avaliadoEm: Date }>
+> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT estrelas, comentario, avaliadoEm
+       FROM negociacoes
+      WHERE providerId = ? AND avaliadoEm IS NOT NULL
+      ORDER BY avaliadoEm DESC
+      LIMIT 100`,
+    [providerId],
+  ) as any[];
+  return rows as any[];
 }
 
 // ── Testadores do MVP ───────────────────────────────────────────────────────

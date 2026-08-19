@@ -8,8 +8,10 @@ import {
   encerrarOutrasNegociacoes,
   appendOrderHistory,
   confirmarExecucao,
+  avaliarProfissional,
 } from "@/lib/db";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
+import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
   propor,
@@ -93,6 +95,31 @@ export async function POST(req: NextRequest) {
         message: `Cliente confirmou o trabalho da negociação #${negociacaoId}. Valor libertado.`,
       });
       return NextResponse.json({ ok: true, confirmado: true });
+    }
+
+    // ── Avaliar o profissional ───────────────────────────────────────────
+    //
+    // Só depois de confirmar. Uma avaliação de quem não chegou a ser servido
+    // não diz nada sobre o trabalho, e é a porta por onde entram as avaliações
+    // compradas e as vinganças.
+    if (corpo.accao === "avaliar") {
+      const validacao = validarAvaliacao(corpo);
+      if (!validacao.ok) {
+        return NextResponse.json({ error: validacao.erros[0].mensagem }, { status: 400 });
+      }
+      const gravou = await avaliarProfissional(
+        negociacaoId,
+        pedidoId,
+        validacao.dados.estrelas,
+        validacao.dados.comentario,
+      );
+      if (!gravou) {
+        return NextResponse.json(
+          { error: "Só pode avaliar depois de confirmar o trabalho, e uma vez." },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ ok: true, avaliado: true });
     }
 
     const agora = new Date();

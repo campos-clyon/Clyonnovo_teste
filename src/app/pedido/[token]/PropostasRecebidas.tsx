@@ -10,6 +10,7 @@ import {
   HandCoins,
   Loader2,
   Phone,
+  Star,
 } from "lucide-react";
 import {
   accoesDisponiveis,
@@ -58,6 +59,8 @@ export type NegociacaoDoCliente = {
   fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
   provaJson: string | null;
   diasAteLibertar: number | null;
+  /** A avaliação que ele já deu, se deu. */
+  estrelas?: number | null;
 };
 
 function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
@@ -100,6 +103,8 @@ export default function PropostasRecebidas({
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
   const [aEnviar, setAEnviar] = useState<number | null>(null);
   const [erro, setErro] = useState("");
+  const [estrelas, setEstrelas] = useState(0);
+  const [comentario, setComentario] = useState("");
 
   async function agir(id: number, accao: string, valor?: string) {
     setAEnviar(id);
@@ -110,7 +115,13 @@ export default function PropostasRecebidas({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accao, valor, negociacaoId: id, pedidoId }),
+          body: JSON.stringify({
+            accao,
+            valor,
+            negociacaoId: id,
+            pedidoId,
+            ...(accao === "avaliar" ? { estrelas, comentario } : {}),
+          }),
         },
       );
       const dados = await res.json();
@@ -125,6 +136,8 @@ export default function PropostasRecebidas({
             ? n
             : dados.confirmado
               ? { ...n, fase: "confirmado" as const, diasAteLibertar: null }
+            : dados.avaliado
+              ? { ...n, estrelas }
               : {
                   ...n,
                   estado: dados.estado,
@@ -298,9 +311,81 @@ export default function PropostasRecebidas({
         )}
 
         {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
-          <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
-            Confirmou que está feito e o pagamento foi libertado. Obrigado.
-          </p>
+          <>
+            <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
+              Confirmou que está feito e o pagamento foi libertado. Obrigado.
+            </p>
+
+            {/* A avaliação, depois de confirmar e só depois.
+                É a única coisa que um profissional novo não pode comprar, e é
+                o que faz o preço deixar de ser o único critério. Pedida agora,
+                que é quando a memória do trabalho ainda está fresca. */}
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 text-left">
+              {acordada.estrelas ? (
+                <p className="flex items-center justify-center gap-1 text-sm text-slate-600">
+                  A sua avaliação:
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`h-4 w-4 ${
+                        n <= (acordada.estrelas ?? 0)
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-slate-300"
+                      }`}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </p>
+              ) : (
+                <>
+                  <p className="text-center text-sm font-semibold text-[#0B1929]">
+                    Como correu com {acordada.profissionalNome}?
+                  </p>
+                  <div className="mt-2 flex justify-center gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setEstrelas(n)}
+                        aria-label={`${n} de 5 estrelas`}
+                        className="p-1"
+                      >
+                        <Star
+                          className={`h-8 w-8 transition ${
+                            n <= estrelas
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-slate-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  {estrelas > 0 && (
+                    <>
+                      <textarea
+                        value={comentario}
+                        onChange={(ev) => setComentario(ev.target.value)}
+                        rows={2}
+                        placeholder="Quer deixar uma palavra? (opcional)"
+                        className="mt-3 w-full rounded-xl border-2 border-gray-300 p-3 text-sm outline-none focus:border-cyan-600"
+                      />
+                      <button
+                        onClick={() => agir(acordada.id, "avaliar")}
+                        disabled={aEnviar === acordada.id}
+                        className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
+                      >
+                        {aEnviar === acordada.id && (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        )}
+                        Enviar avaliação
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </>
         )}
       </section>
     );

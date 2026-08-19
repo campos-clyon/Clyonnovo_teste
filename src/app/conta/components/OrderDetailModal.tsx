@@ -165,6 +165,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           pagoEm: n.pagoEm,
         }),
         provaJson: n.provaJson,
+        estrelas: n.estrelas ?? null,
         diasAteLibertar: diasAteLibertar(
           {
             estado: n.estado,

@@ -12,6 +12,7 @@ import {
   LogOut,
   MapPin,
   RefreshCw,
+  Star,
   UserCog,
   Wallet,
 } from "lucide-react";
@@ -190,6 +191,18 @@ export default function PainelDoProfissional() {
                 }`}
               >
                 {(ESTADO_DA_CONTA[perfil.estado] ?? ESTADO_DA_CONTA.pendente).texto}
+              </span>
+            )}
+            {/* A média com o número de avaliações ao lado. A média sozinha
+                mente: 5,0 de uma avaliação não é melhor do que 4,6 de
+                quarenta. */}
+            {perfil?.avaliacao != null && (
+              <span className="flex items-center gap-1 text-sm font-semibold text-slate-700">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                {perfil.avaliacao.toFixed(1).replace(".", ",")}
+                <span className="font-normal text-slate-400">
+                  ({perfil.quantasAvaliacoes})
+                </span>
               </span>
             )}
           </p>

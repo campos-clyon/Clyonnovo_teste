@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   perfilDoProfissional,
+  avaliacoesDoProfissional,
   actualizarPerfilDoProfissional,
   invalidarVerificacaoDaGuia,
 } from "@/lib/db";
@@ -19,6 +20,7 @@ import {
   RAIO_MINIMO_KM,
 } from "@/lib/inscricao-profissional";
 import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
+import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
 
 export const runtime = "nodejs";
 
@@ -74,6 +76,13 @@ export async function GET(req: NextRequest) {
     const p = await perfilDoProfissional(sessao.providerId);
     if (!p) return NextResponse.json({ error: "Perfil não encontrado" }, { status: 404 });
 
+    // A média e quantas. A média sozinha mente: 5,0 de uma avaliação não é
+    // melhor do que 4,6 de quarenta.
+    const avaliacoes = await avaliacoesDoProfissional(sessao.providerId);
+    const reputacao = mediaDasAvaliacoes(
+      avaliacoes.map((a) => ({ estrelas: Number(a.estrelas) })),
+    );
+
     const iban = typeof p.iban === "string" ? p.iban : "";
 
     return NextResponse.json({
@@ -101,6 +110,13 @@ export async function GET(req: NextRequest) {
         temIban: Boolean(iban),
         ibanTitular: p.ibanTitular ?? "",
         desde: p.createdAt ?? null,
+        avaliacao: reputacao.media,
+        quantasAvaliacoes: reputacao.quantas,
+        ultimasAvaliacoes: avaliacoes.slice(0, 5).map((a) => ({
+          estrelas: Number(a.estrelas),
+          comentario: a.comentario,
+          em: a.avaliadoEm,
+        })),
       },
     });
   } catch (error) {

@@ -7,6 +7,7 @@ import {
   encerrarOutrasNegociacoes,
   appendOrderHistory,
   confirmarExecucao,
+  avaliarProfissional,
   getSimulatorOrderById,
   perfilDoProfissional,
 } from "@/lib/db";
@@ -23,6 +24,7 @@ import {
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { avisarQueFoiContratado } from "@/lib/email-trabalho";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
+import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
@@ -152,6 +154,44 @@ export async function POST(
       console.error("[negociacao] falha ao confirmar:", err);
       return NextResponse.json(
         { ok: false, error: "Não foi possível confirmar. Tente novamente." },
+        { status: 500 },
+      );
+    }
+  }
+
+  // ── Avaliar o profissional ────────────────────────────────────────────────
+  if (corpo.accao === "avaliar") {
+    if (lado !== "cliente") {
+      return NextResponse.json(
+        { ok: false, error: "Só o cliente avalia." },
+        { status: 403 },
+      );
+    }
+    const validacao = validarAvaliacao(corpo);
+    if (!validacao.ok) {
+      return NextResponse.json(
+        { ok: false, error: validacao.erros[0].mensagem },
+        { status: 400 },
+      );
+    }
+    try {
+      const gravou = await avaliarProfissional(
+        negociacaoId,
+        pedidoId,
+        validacao.dados.estrelas,
+        validacao.dados.comentario,
+      );
+      if (!gravou) {
+        return NextResponse.json(
+          { ok: false, error: "Só pode avaliar depois de confirmar o trabalho, e uma vez." },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ ok: true, avaliado: true });
+    } catch (err) {
+      console.error("[negociacao] falha ao avaliar:", err);
+      return NextResponse.json(
+        { ok: false, error: "Não foi possível guardar a avaliação." },
         { status: 500 },
       );
     }

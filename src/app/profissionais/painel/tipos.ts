@@ -80,6 +80,9 @@ export type Perfil = {
   temIban: boolean;
   ibanTitular: string;
   desde: string | null;
+  /** Média das avaliações, ou null enquanto não houver nenhuma. */
+  avaliacao: number | null;
+  quantasAvaliacoes: number;
 };
 
 export const URGENCIA: Record<string, string> = {

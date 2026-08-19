@@ -79,6 +79,8 @@ export interface NegociacaoDoPedido {
   emiteFatura: number;
   regimeIva: string;
   guiaVerificadaEm: string | null;
+  /** A avaliação que o cliente já deu a este trabalho, se deu. */
+  estrelas?: number | null;
 }
 
 export interface OrderHistoryEntry {
