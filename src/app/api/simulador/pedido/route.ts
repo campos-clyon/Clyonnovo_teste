@@ -141,9 +141,30 @@ export async function POST(req: NextRequest) {
     // exemplo) continuam a entrar sem valor — daí o `null` em vez de erro
     // quando o campo vem vazio.
     let valoresParaGravar: { valorDesejadoCliente?: string | null } = {};
-    const clienteIndicouValores = order.valorDesejadoCliente != null;
+    // Vazio é o mesmo que não ter respondido. O campo é opcional no simulador
+    // público, e um `""` a contar como "indicou um valor" fazia a validação
+    // recusar o pedido com 400 — ou seja, quem não respondesse à pergunta
+    // opcional não conseguia enviar o formulário de todo.
+    const valorBruto = order.valorDesejadoCliente;
+    const clienteIndicouValores =
+      valorBruto != null && String(valorBruto).trim() !== "";
+
+    /*
+     * Ter valor NÃO é o mesmo que ser um pedido de plataforma.
+     *
+     * O simulador público passou a perguntar quanto a pessoa conta gastar — é
+     * uma pergunta de orçamento, e ajuda a equipa a responder. Mas quem a
+     * responde não pediu para entrar num mercado: não pode ficar com o pedido
+     * distribuído a estranhos e a receber propostas por email sem nunca ter
+     * escolhido isso.
+     *
+     * Quem inicia negociação é o formulário da plataforma, que se identifica na
+     * origem. O resto recolhe o valor e fica à espera de uma decisão nossa —
+     * há um botão no backoffice para isso.
+     */
+    const daPlataforma = (order as Record<string, unknown>).origemPedido === "plataforma";
     if (clienteIndicouValores) {
-      const validacao = validarValorDesejado(order.valorDesejadoCliente);
+      const validacao = validarValorDesejado(valorBruto);
       if (!validacao.ok) {
         return NextResponse.json(
           { ok: false, error: validacao.erros[0].mensagem, erros: validacao.erros },
@@ -325,7 +346,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = urlDeAccaoDoPedido(req.headers);
 
     let linkEnviado = false;
-    if (clienteIndicouValores && contactEmail) {
+    if (daPlataforma && clienteIndicouValores && contactEmail) {
       linkEnviado = await enviarLinkDoPedido({
         para: contactEmail,
         nomeDoCliente: row.contactName ?? null,
@@ -358,7 +379,7 @@ export async function POST(req: NextRequest) {
     // Corre depois da resposta estar praticamente montada e nunca a bloqueia
     // com um erro: se a distribuição falhar, o pedido existe e reenvia-se. O
     // contrário — o cliente ver um erro porque um email não saiu — seria pior.
-    if (clienteIndicouValores) {
+    if (daPlataforma && clienteIndicouValores) {
       try {
         const distribuicao = await distribuirPedido({
           id,

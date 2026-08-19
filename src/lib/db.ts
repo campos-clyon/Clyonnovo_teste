@@ -973,6 +973,7 @@ export async function pedidosPorPromover(limite = 20): Promise<
     contactName: string | null;
     contactEmail: string | null;
     estimateTotal: string | null;
+    valorDesejadoCliente: string | null;
     urgency: string | null;
     createdAt: Date;
   }>
@@ -980,13 +981,20 @@ export async function pedidosPorPromover(limite = 20): Promise<
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return [];
+  await ensureNegociacoesTable();
+  // O critério é NÃO TER NEGOCIAÇÕES, e não "não ter valor". Desde que o
+  // simulador público passou a perguntar quanto a pessoa conta gastar, um
+  // pedido pode ter valor e continuar sem ter ido a lado nenhum — e era
+  // precisamente esse que desaparecia desta lista.
   const [rows] = await pool.execute(
-    `SELECT id, serviceType, city, contactName, contactEmail, estimateTotal, urgency, createdAt
-       FROM simulatorOrders
-      WHERE valorDesejadoCliente IS NULL
-        AND contactEmail IS NOT NULL
-        AND (status IS NULL OR status NOT IN ('cancelado', 'concluido', 'arquivado'))
-      ORDER BY createdAt DESC
+    `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
+            o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt
+       FROM simulatorOrders o
+       LEFT JOIN negociacoes n ON n.pedidoId = o.id
+      WHERE n.id IS NULL
+        AND o.contactEmail IS NOT NULL
+        AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
+      ORDER BY o.createdAt DESC
       LIMIT ?`,
     [String(limite)],
   ) as any[];
@@ -1005,10 +1013,15 @@ export async function promoverPedidoAPlataforma(
   if (!pool) throw new Error("DB not available");
   // A condição no UPDATE evita promover duas vezes o mesmo pedido — o duplo
   // toque no botão, que criaria um segundo token e invalidaria o primeiro.
+  // O token só se emite se não houver um. Substituí-lo cegamente invalidava o
+  // link que o cliente pode já ter recebido — e ele ficava sem forma de
+  // responder às propostas que o botão acabou de provocar.
   const [res] = await pool.execute(
     `UPDATE simulatorOrders
-        SET valorDesejadoCliente = ?, acessoTokenHash = ?, acessoTokenExpiraEm = ?
-      WHERE id = ? AND valorDesejadoCliente IS NULL`,
+        SET valorDesejadoCliente = ?,
+            acessoTokenHash = COALESCE(acessoTokenHash, ?),
+            acessoTokenExpiraEm = COALESCE(acessoTokenExpiraEm, ?)
+      WHERE id = ?`,
     [valorDesejado, hash, expiraEm, pedidoId],
   ) as any[];
   return Number(res.affectedRows ?? 0) > 0;

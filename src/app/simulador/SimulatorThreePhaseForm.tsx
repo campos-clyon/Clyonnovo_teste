@@ -39,6 +39,17 @@ interface FormState extends OrderData {
   distanceFromBase?: DistanceFromBase;
   distanceStatus?: DistanceStatus;
   addressStatus?: AddressStatus;
+  /**
+   * Quanto a pessoa conta gastar.
+   *
+   * É uma pergunta de orçamento, não um leilão: ajuda a equipa a responder com
+   * um número realista em vez de adivinhar, e poupa a chamada em que se
+   * descobre que o que ela tinha em mente era metade.
+   *
+   * Opcional de propósito. Muita gente não faz ideia, e obrigá-la a inventar um
+   * número para poder enviar o pedido é perder o pedido.
+   */
+  valorDesejadoCliente?: string;
 }
 
 export default function SimulatorThreePhaseForm() {
@@ -1335,6 +1346,35 @@ function Phase3Contact({
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Contacto e revisão</h2>
+
+      {/* Quanto conta gastar. Opcional: quem não faz ideia não fica travado, e
+          quem faz diz-nos antes de nós telefonarmos. */}
+      <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
+        <label
+          htmlFor="valorDesejadoCliente"
+          className="block text-sm font-semibold text-gray-900"
+        >
+          Quanto conta gastar? <span className="font-normal text-slate-500">(opcional)</span>
+        </label>
+        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+          Ajuda-nos a responder com um valor realista. Não é um compromisso — o preço final
+          é sempre combinado consigo.
+        </p>
+        <div className="relative mt-2 max-w-[12rem]">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">
+            €
+          </span>
+          <input
+            id="valorDesejadoCliente"
+            type="text"
+            inputMode="decimal"
+            value={formData.valorDesejadoCliente ?? ""}
+            onChange={(e) => updateField("valorDesejadoCliente", e.target.value)}
+            placeholder="150"
+            className="w-full rounded-xl border-2 border-gray-300 bg-white py-3 pl-10 pr-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-cyan-600"
+          />
+        </div>
+      </div>
 
       {/* Info Box: Not Logged In */}
       {!isLoggedIn && (
