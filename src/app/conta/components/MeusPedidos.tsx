@@ -59,6 +59,28 @@ export default function MeusPedidos() {
 
   const handleFilter = (f: string) => { setFilter(f); setPage(1); };
 
+  /*
+   * Ou a lista, ou o detalhe — nunca os dois, e nunca um por cima do outro.
+   *
+   * É o que o backoffice faz e o que o resto desta conta já fazia: o menu à
+   * esquerda fica onde está, e o que se escolhe abre à direita. Assim o detalhe
+   * herda a largura da área de conteúdo em vez de a inventar.
+   */
+  if (selected) {
+    return (
+      <OrderDetailModal
+        order={selected}
+        onClose={() => setSelected(null)}
+        onOrderChange={(patch) => {
+          setSelected((cur) => (cur ? ({ ...cur, ...patch } as Order) : cur));
+          setOrders((cur) =>
+            cur.map((o) => (o.id === selected.id ? ({ ...o, ...patch } as Order) : o)),
+          );
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -188,16 +210,6 @@ export default function MeusPedidos() {
         </>
       )}
 
-      {selected && (
-        <OrderDetailModal
-          order={selected}
-          onClose={() => setSelected(null)}
-          onOrderChange={(patch) => {
-            setSelected((cur) => (cur ? { ...cur, ...patch } as Order : cur));
-            setOrders((cur) => cur.map((o) => o.id === selected.id ? { ...o, ...patch } as Order : o));
-          }}
-        />
-      )}
     </div>
   );
 }

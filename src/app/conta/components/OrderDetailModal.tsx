@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { CalendarDays, History, MapPin, MessageCircle, Send, Star, X, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
+import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { SERVICE_LABELS, type Order, type OrderHistoryEntry } from "./types";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -82,16 +81,14 @@ interface Props {
 export default function OrderDetailModal({ order, onClose, onOrderChange }: Props) {
   const preco = order.precoFinalIva ?? order.precoFinal ?? order.estimateTotal;
 
-  // Bloquear scroll da página por trás enquanto o modal está aberto.
+  // O detalhe já não é uma sobreposição: bloquear o scroll da página aqui
+  // deixava-a presa com o conteúdo à vista e sem forma de o rolar.
+  //
+  // Abrir um pedido leva ao topo. Quem carrega num pedido a meio da lista
+  // aterrava a meio do detalhe, sem perceber que a página tinha mudado.
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  // O portal precisa do document, que no servidor não existe.
-  const [montado, setMontado] = useState(false);
-  useEffect(() => setMontado(true), []);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [order.id]);
 
   const [rating, setRating] = useState<number | null>(order.clientRating);
   const [ratingSaving, setRatingSaving] = useState(false);
@@ -182,80 +179,65 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   }
 
   /*
-   * O painel é desenhado no <body>, e não onde este componente vive.
+   * O detalhe abre NA ÁREA DE CONTEÚDO, e não por cima de tudo.
    *
-   * `position: fixed` só se agarra ao ecrã se NENHUM antepassado tiver
-   * transform, filter ou perspective — basta um para o elemento passar a
-   * posicionar-se dentro dele. Foi o que aconteceu: a animação de entrada das
-   * secções da conta deixava um transform aplicado, e o painel, que pedia o
-   * ecrã inteiro, aparecia encolhido dentro da área de conteúdo.
+   * Esteve como caixa ao centro, e depois como painel a cobrir o ecrã inteiro.
+   * Nenhum dos dois é o que esta página é: à esquerda fica o menu, à direita
+   * abre-se o que se escolheu — o mesmo gesto do backoffice, e o mesmo que o
+   * resto da conta já faz. Uma sobreposição tapava o menu e obrigava a fechar
+   * para voltar a ver onde se estava.
    *
-   * Já tirei o transform dessa animação. O portal é a outra metade: garante
-   * que isto continua a funcionar mesmo que amanhã alguém ponha um transform
-   * num contentor qualquer lá acima, sem fazer ideia de que o partiu.
+   * A seta para trás substitui o X: não se está a fechar uma janela, está-se a
+   * voltar à lista.
    */
-  if (!montado) return null;
-
-  return createPortal(
-    /*
-     * Painel lateral, e não uma caixa ao centro.
-     *
-     * Estava como modal centrado com `max-h-[92vh]`: num pedido com fotografias
-     * e histórico, o conteúdo passava da altura e ficava cortado — via-se metade
-     * de um cartão e não havia como chegar ao resto. Um painel de altura total,
-     * com a barra e as acções fixas e só o meio a correr, não tem esse
-     * problema, e aproveita a largura em vez de a desperdiçar em duas margens.
-     */
-    <div
-      className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Detalhe do pedido"
-    >
-      <div className="painel-lateral absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col bg-white shadow-2xl">
-        <div className="flex flex-shrink-0 items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
-          <div>
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">
-                {SERVICE_LABELS[order.serviceType] ?? order.serviceType}
-              </h3>
-              <StatusBadge status={order.status} />
-            </div>
-            <p className="mt-0.5 text-xs text-slate-400">Pedido #{order.id} · Criado a {formatDate(order.createdAt)}</p>
-          </div>
-
-          <div className="flex items-start gap-4">
-            {/* O valor no topo, e não numa linha no fim. É a primeira coisa que
-                se procura ao abrir um pedido — tê-la a seguir a três ecrãs de
-                rolo era escondê-la. */}
-            {preco != null ? (
-              <div className="hidden text-right sm:block">
-                <div className="text-xl font-bold leading-none text-slate-900">
-                  {Number(preco).toFixed(2)} €
-                </div>
-                <div className="mt-1 text-[11px] text-slate-400">sem IVA</div>
-              </div>
-            ) : order.estimateMin != null && order.estimateMax != null ? (
-              <div className="hidden text-right sm:block">
-                <div className="text-xl font-bold leading-none text-slate-900">
-                  {Number(order.estimateMin).toFixed(0)}–{Number(order.estimateMax).toFixed(0)} €
-                </div>
-                <div className="mt-1 text-[11px] text-slate-400">estimativa</div>
-              </div>
-            ) : null}
-
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Voltar aos pedidos"
+              className="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
             >
-              <X className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-900">
+                  {SERVICE_LABELS[order.serviceType] ?? order.serviceType}
+                </h2>
+                <StatusBadge status={order.status} />
+              </div>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Pedido #{order.id} · Criado a {formatDate(order.createdAt)}
+              </p>
+            </div>
           </div>
+
+          {/* O valor no topo, e não numa linha no fim. É a primeira coisa que
+              se procura ao abrir um pedido — tê-la a seguir a três ecrãs de
+              rolo era escondê-la. */}
+          {preco != null ? (
+            <div className="text-right">
+              <div className="text-xl font-bold leading-none text-slate-900">
+                {Number(preco).toFixed(2)} €
+              </div>
+              <div className="mt-1 text-[11px] text-slate-400">sem IVA</div>
+            </div>
+          ) : order.estimateMin != null && order.estimateMax != null ? (
+            <div className="text-right">
+              <div className="text-xl font-bold leading-none text-slate-900">
+                {Number(order.estimateMin).toFixed(0)}–{Number(order.estimateMax).toFixed(0)} €
+              </div>
+              <div className="mt-1 text-[11px] text-slate-400">estimativa</div>
+            </div>
+          ) : null}
         </div>
-        {/* Só o meio corre. A barra de cima e o que estiver em baixo ficam. */}
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm">
+      </div>
+
+      <div className="space-y-5 text-sm">
           {/* Grelha de detalhes principais. Em ecrã largo cabem três colunas —
               é para isso que serve o espaço que o painel ganhou. */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -527,9 +509,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               </span>
             )}
           </div>
-        </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }

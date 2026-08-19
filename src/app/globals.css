@@ -567,17 +567,6 @@ footer .text-white {
  *
  * Sem a animação, aparecer de repente a cobrir metade do ecrã lê-se como um
  * salto de página e não como um painel que se abre sobre o que está atrás. */
-@keyframes painel-lateral-entra {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
-}
-.painel-lateral {
-  animation: painel-lateral-entra 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .painel-lateral { animation: none; }
-}
-
 /* Ocultar scrollbar nas tabs mobile sem perder funcionalidade */
 .scrollbar-hide {
   -ms-overflow-style: none;
