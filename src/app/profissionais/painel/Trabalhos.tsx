@@ -53,6 +53,51 @@ function servicoDe(p: Pedido): string {
   return SERVICE_CATEGORIES.find((c) => c.id === p.serviceType)?.label ?? p.serviceType ?? "Serviço";
 }
 
+/**
+ * Em que separador é que este pedido cai.
+ *
+ * A conta dele era uma lista corrida com tudo lá dentro — o que espera
+ * resposta, o que já está fechado e o que morreu há duas semanas, tudo com o
+ * mesmo peso. Ao quinto pedido, o que precisa de resposta hoje some no meio.
+ *
+ * "Novo" é o que ainda não tocou: chegou-lhe e ele não propôs nada. É o único
+ * que tem prazo a correr contra si, e por isso é o que se destaca.
+ */
+type Separador = "novos" | "negociacao" | "contratados" | "terminados";
+
+function separadorDe(p: Pedido): Separador {
+  if (p.estado === "acordada") return "contratados";
+  if (p.estado === "desistida" || p.estado === "morta") return "terminados";
+  const propostas = propostasDe(p.propostas);
+  const jaRespondeu = propostas.some((x) => x.por === "profissional");
+  return jaRespondeu || p.estado === "aguarda_contratacao" ? "negociacao" : "novos";
+}
+
+const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
+  { id: "novos", rotulo: "Novos" },
+  { id: "negociacao", rotulo: "Em negociação" },
+  { id: "contratados", rotulo: "Contratados" },
+  { id: "terminados", rotulo: "Terminados" },
+];
+
+const VAZIO: Record<Separador, string> = {
+  novos: "Nenhum pedido novo. Assim que entrar um na sua zona e nas categorias que faz, aparece aqui — e avisamos por email.",
+  negociacao: "Não há nenhuma negociação a decorrer.",
+  contratados: "Ainda não fechou nenhum trabalho.",
+  terminados: "Nada terminado por agora.",
+};
+
+/** Há quanto tempo, em palavras. Um pedido de "há 3 dias" já não é novo. */
+function haQuantoTempo(iso: string): string {
+  const minutos = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(minutos) || minutos < 0) return "";
+  if (minutos < 60) return `há ${Math.max(1, minutos)} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `há ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? "há 1 dia" : `há ${dias} dias`;
+}
+
 export default function Trabalhos({
   pedidos,
   onVoltar,
@@ -63,6 +108,7 @@ export default function Trabalhos({
   onRecarregar: () => void;
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
+  const [separador, setSeparador] = useState<Separador>("novos");
 
   const escolhido = pedidos.find((p) => p.negociacaoId === aberto);
   if (escolhido) {
@@ -75,32 +121,77 @@ export default function Trabalhos({
     );
   }
 
+  const porSeparador = (id: Separador) => pedidos.filter((p) => separadorDe(p) === id);
+  const visiveis = porSeparador(separador);
+
   return (
     <>
       <CabecalhoDeEcra titulo="Os meus trabalhos" onVoltar={onVoltar} />
 
-      {pedidos.length === 0 && (
+      {/* Separadores, com a conta ao lado.
+          O número não é enfeite: é o que lhe diz onde há trabalho à espera sem
+          ter de abrir cada um para ver. */}
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {SEPARADORES.map((sep) => {
+          const quantos = porSeparador(sep.id).length;
+          const activo = separador === sep.id;
+          return (
+            <button
+              key={sep.id}
+              type="button"
+              onClick={() => setSeparador(sep.id)}
+              aria-pressed={activo}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+                activo
+                  ? "bg-[#0B1929] text-white"
+                  : "bg-slate-100 text-slate-600 active:bg-slate-200"
+              }`}
+            >
+              {sep.rotulo}
+              {quantos > 0 && (
+                <span
+                  className={`rounded-full px-1.5 text-xs ${
+                    activo
+                      ? "bg-white/20"
+                      : sep.id === "novos"
+                        ? "bg-amber-400 text-amber-950"
+                        : "bg-slate-300 text-slate-700"
+                  }`}
+                >
+                  {quantos}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {visiveis.length === 0 && (
         <div className="rounded-2xl border border-[#E2EEF3] bg-white p-8 text-center">
-          <p className="text-sm leading-relaxed text-slate-500">
-            Ainda não há pedidos para si. Assim que entrar um na sua zona e nas categorias
-            que faz, aparece aqui — e avisamos por email.
-          </p>
+          <p className="text-sm leading-relaxed text-slate-500">{VAZIO[separador]}</p>
         </div>
       )}
 
       <div className="space-y-3">
-        {pedidos.map((p) => {
+        {visiveis.map((p) => {
           const estado = ESTADO[p.estado] ?? { texto: p.estado, cls: "bg-slate-100 text-slate-500" };
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
+          const novo = separadorDe(p) === "novos";
 
           return (
             <button
               key={p.negociacaoId}
               onClick={() => setAberto(p.negociacaoId)}
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
-                fechado ? "border-emerald-300 ring-1 ring-emerald-100" : "border-[#E2EEF3]"
+                fechado
+                  ? "border-emerald-300 ring-1 ring-emerald-100"
+                  : novo
+                    // A barra à esquerda é o que faz o olho parar aqui primeiro
+                    // ao percorrer a lista. É o pedido com prazo a correr.
+                    ? "border-l-4 border-l-amber-400 border-y-[#E2EEF3] border-r-[#E2EEF3]"
+                    : "border-[#E2EEF3]"
               }`}
             >
               <div className="flex gap-3">
@@ -127,8 +218,20 @@ export default function Trabalhos({
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-[15px] font-bold text-[#0B1929]">{servicoDe(p)}</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="truncate text-[15px] font-bold text-[#0B1929]">
+                      {servicoDe(p)}
+                    </h3>
+                    <span className="shrink-0 text-[11px] text-slate-400">
+                      {haQuantoTempo(p.actualizadoEm)}
+                    </span>
+                  </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
+                    {novo && (
+                      <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950">
+                        novo
+                      </span>
+                    )}
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${estado.cls}`}>
                       {estado.texto}
                     </span>

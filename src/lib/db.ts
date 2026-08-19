@@ -1337,6 +1337,127 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   return rows as any[];
 }
 
+// ── Pedidos de ajuda da plataforma ──────────────────────────────────────────
+
+let ajudaEnsured = false;
+
+/**
+ * Os pedidos de ajuda de quem usa a plataforma.
+ *
+ * Tabela nossa, em MySQL, e não os `support_tickets` do Supabase: esses são da
+ * app, e a app é do Bridge. Escrever lá dentro obrigava-nos a inventar um
+ * `user_id` para alguém que não existe naquela base — os profissionais da
+ * plataforma vivem aqui, em `providers`.
+ *
+ * O backoffice mostra as duas origens na mesma lista. Quem atende não tem de
+ * saber de que base veio o pedido; quem mantém o código tem.
+ */
+export async function ensureAjudaTable(): Promise<void> {
+  if (ajudaEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS pedidosDeAjuda (
+      id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      origem      VARCHAR(20) NOT NULL DEFAULT 'profissional',
+      providerId  INT UNSIGNED NULL DEFAULT NULL,
+      nome        VARCHAR(120) NULL,
+      email       VARCHAR(200) NULL,
+      assunto     VARCHAR(40) NOT NULL,
+      mensagem    TEXT NOT NULL,
+      estado      VARCHAR(20) NOT NULL DEFAULT 'open',
+      respostaJson LONGTEXT NULL,
+      tratadoPor  VARCHAR(120) NULL,
+      fechadoEm   DATETIME NULL DEFAULT NULL,
+      createdAt   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY ajuda_estado (estado),
+      KEY ajuda_provider (providerId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  ajudaEnsured = true;
+}
+
+export type PedidoDeAjudaNaBase = {
+  id: number;
+  origem: string;
+  providerId: number | null;
+  nome: string | null;
+  email: string | null;
+  assunto: string;
+  mensagem: string;
+  estado: string;
+  respostaJson: string | null;
+  tratadoPor: string | null;
+  fechadoEm: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export async function criarPedidoDeAjuda(dados: {
+  origem: string;
+  providerId: number | null;
+  nome: string | null;
+  email: string | null;
+  assunto: string;
+  mensagem: string;
+}): Promise<number> {
+  await ensureAjudaTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `INSERT INTO pedidosDeAjuda (origem, providerId, nome, email, assunto, mensagem)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [dados.origem, dados.providerId, dados.nome, dados.email, dados.assunto, dados.mensagem],
+  ) as any[];
+  return Number(res.insertId);
+}
+
+/** Os pedidos de ajuda de um profissional, para ele ver o que já escreveu. */
+export async function ajudasDoProfissional(providerId: number): Promise<PedidoDeAjudaNaBase[]> {
+  await ensureAjudaTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    "SELECT * FROM pedidosDeAjuda WHERE providerId = ? ORDER BY createdAt DESC LIMIT 50",
+    [providerId],
+  ) as any[];
+  return rows as PedidoDeAjudaNaBase[];
+}
+
+export async function ajudasParaAdmin(estado?: string): Promise<PedidoDeAjudaNaBase[]> {
+  await ensureAjudaTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  // Mais antigo primeiro: numa lista de apoio, quem espera há mais tempo é
+  // quem tem de aparecer em cima. É a mesma ordem da lista do Supabase.
+  const [rows] = estado
+    ? ((await pool.execute(
+        "SELECT * FROM pedidosDeAjuda WHERE estado = ? ORDER BY createdAt ASC LIMIT 200",
+        [estado],
+      )) as any[])
+    : ((await pool.execute(
+        "SELECT * FROM pedidosDeAjuda ORDER BY createdAt ASC LIMIT 200",
+      )) as any[]);
+  return rows as PedidoDeAjudaNaBase[];
+}
+
+export async function responderPedidoDeAjuda(
+  id: number,
+  dados: { respostaJson: string; estado: string; tratadoPor: string },
+): Promise<void> {
+  await ensureAjudaTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `UPDATE pedidosDeAjuda
+        SET respostaJson = ?, estado = ?, tratadoPor = ?,
+            fechadoEm = CASE WHEN ? = 'closed' THEN NOW() ELSE NULL END
+      WHERE id = ?`,
+    [dados.respostaJson, dados.estado, dados.tratadoPor, dados.estado, id],
+  );
+}
+
 // ── Convites a profissionais ────────────────────────────────────────────────
 
 let convitesEnsured = false;

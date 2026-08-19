@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   Briefcase,
   Building2,
@@ -21,7 +20,8 @@ import Trabalhos from "./Trabalhos";
 import Carteira from "./Carteira";
 import Historico from "./Historico";
 import PerfilEcra, { type SeccaoDoPerfil } from "./Perfil";
-import type { DadosDaCarteira, Pedido, Perfil } from "./tipos";
+import Ajuda from "./Ajuda";
+import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
 
 /**
  * O painel do profissional.
@@ -37,13 +37,14 @@ import type { DadosDaCarteira, Pedido, Perfil } from "./tipos";
  * pode ser aberta por link directo, de um email ou de outra página.
  */
 
-type Ecra = "menu" | "trabalhos" | "carteira" | "historico" | SeccaoDoPerfil;
+type Ecra = "menu" | "trabalhos" | "carteira" | "historico" | "ajuda" | SeccaoDoPerfil;
 
 const ECRAS_VALIDOS: Ecra[] = [
   "menu",
   "trabalhos",
   "carteira",
   "historico",
+  "ajuda",
   "dados",
   "servicos",
   "faturacao",
@@ -123,7 +124,12 @@ export default function PainelDoProfissional() {
     );
   }
 
-  const aResponder = pedidos.filter((p) => p.estado === "aberta").length;
+  // Novo é o que lhe chegou e a que ainda não respondeu. Contar todas as
+  // "abertas" incluía as que já têm proposta dele à espera do cliente — e o
+  // número no menu dizia mais trabalho do que o que havia mesmo.
+  const aResponder = pedidos.filter(
+    (p) => p.estado === "aberta" && !propostasDe(p.propostas).some((x) => x.por === "profissional"),
+  ).length;
   const porFazer = pedidos.filter((p) => p.estado === "acordada" && p.fase === "a_executar").length;
   const noMenu = ecra === "menu";
 
@@ -245,15 +251,16 @@ export default function PainelDoProfissional() {
       </GrupoDeLinhas>
 
       <GrupoDeLinhas>
-        <Link
-          href="/contactos"
-          className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 transition active:bg-slate-50"
-        >
-          <HelpCircle className="h-5 w-5 shrink-0 text-cyan-600" aria-hidden="true" />
-          <span className="flex-1 text-[15px] font-medium text-[#0B1929]">
-            Ajuda e contactos
-          </span>
-        </Link>
+        {/* Era uma ligação para a página de contactos do site — mandava-o para
+            fora da conta para descobrir um número de telefone. Agora abre as
+            perguntas com resposta, e a caixa para escrever quando nenhuma
+            serve. */}
+        <LinhaDeMenu
+          icone={HelpCircle}
+          rotulo="Ajuda"
+          activo={ecra === "ajuda"}
+          onClick={() => abrir("ajuda")}
+        />
         <LinhaDeMenu icone={LogOut} rotulo="Sair" tom="perigo" onClick={sair} />
       </GrupoDeLinhas>
 
@@ -298,6 +305,8 @@ export default function PainelDoProfissional() {
         {ecra === "historico" && carteira && (
           <Historico movimentos={carteira.movimentos} onVoltar={() => abrir("carteira")} />
         )}
+
+        {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}
 
         {["dados", "servicos", "faturacao", "banco", "seguranca"].includes(ecra) && perfil && (
           <PerfilEcra
