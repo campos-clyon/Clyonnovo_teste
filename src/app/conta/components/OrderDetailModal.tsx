@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, MapPin, MessageCircle, Send, Star, X, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
+import { createPortal } from "react-dom";
+import { CalendarDays, History, MapPin, MessageCircle, Send, Star, X, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { SERVICE_LABELS, type Order, type OrderHistoryEntry } from "./types";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -88,6 +89,10 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  // O portal precisa do document, que no servidor não existe.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+
   const [rating, setRating] = useState<number | null>(order.clientRating);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [ratingError, setRatingError] = useState("");
@@ -96,6 +101,24 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   const [reply, setReply] = useState("");
   const [replySending, setReplySending] = useState(false);
   const [replyError, setReplyError] = useState("");
+
+  /**
+   * Tudo o que aconteceu ao pedido, tirando a conversa — essa tem secção
+   * própria em cima e apareceria duas vezes.
+   *
+   * Do mais antigo para o mais recente: é uma história, e uma história lê-se
+   * pelo princípio. As mensagens são o contrário, porque aí o que interessa é
+   * a última.
+   */
+  const historico = useMemo(
+    () =>
+      parseHistory(historyJson)
+        .filter((e) => !CONVERSATION_TYPES.has(e.type))
+        .sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        ),
+    [historyJson],
+  );
 
   const conversation = useMemo(() =>
     parseHistory(historyJson).filter((e) => CONVERSATION_TYPES.has(e.type)),
@@ -158,7 +181,22 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
     }
   }
 
-  return (
+  /*
+   * O painel é desenhado no <body>, e não onde este componente vive.
+   *
+   * `position: fixed` só se agarra ao ecrã se NENHUM antepassado tiver
+   * transform, filter ou perspective — basta um para o elemento passar a
+   * posicionar-se dentro dele. Foi o que aconteceu: a animação de entrada das
+   * secções da conta deixava um transform aplicado, e o painel, que pedia o
+   * ecrã inteiro, aparecia encolhido dentro da área de conteúdo.
+   *
+   * Já tirei o transform dessa animação. O portal é a outra metade: garante
+   * que isto continua a funcionar mesmo que amanhã alguém ponha um transform
+   * num contentor qualquer lá acima, sem fazer ideia de que o partiu.
+   */
+  if (!montado) return null;
+
+  return createPortal(
     /*
      * Painel lateral, e não uma caixa ao centro.
      *
@@ -175,7 +213,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
       aria-modal="true"
       aria-label="Detalhe do pedido"
     >
-      <div className="painel-lateral absolute inset-y-0 right-0 flex w-full max-w-4xl flex-col bg-white shadow-2xl">
+      <div className="painel-lateral absolute inset-y-0 right-0 flex w-full max-w-5xl flex-col bg-white shadow-2xl">
         <div className="flex flex-shrink-0 items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
           <div>
             <div className="flex items-center gap-3">
@@ -186,13 +224,35 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             </div>
             <p className="mt-0.5 text-xs text-slate-400">Pedido #{order.id} · Criado a {formatDate(order.createdAt)}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
+
+          <div className="flex items-start gap-4">
+            {/* O valor no topo, e não numa linha no fim. É a primeira coisa que
+                se procura ao abrir um pedido — tê-la a seguir a três ecrãs de
+                rolo era escondê-la. */}
+            {preco != null ? (
+              <div className="hidden text-right sm:block">
+                <div className="text-xl font-bold leading-none text-slate-900">
+                  {Number(preco).toFixed(2)} €
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">sem IVA</div>
+              </div>
+            ) : order.estimateMin != null && order.estimateMax != null ? (
+              <div className="hidden text-right sm:block">
+                <div className="text-xl font-bold leading-none text-slate-900">
+                  {Number(order.estimateMin).toFixed(0)}–{Number(order.estimateMax).toFixed(0)} €
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">estimativa</div>
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         {/* Só o meio corre. A barra de cima e o que estiver em baixo ficam. */}
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm">
@@ -424,6 +484,38 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             </div>
           )}
 
+          {/* ── O que aconteceu ao pedido ──────────────────────────────────
+              As mensagens em cima são a conversa; isto é tudo o resto — quando
+              foi aprovado, quando foi agendado, quando mudou de mão. O cliente
+              perguntava-nos por telefone o que se estava a passar com o pedido
+              dele, e a resposta já estava gravada. */}
+          {historico.length > 0 && (
+            <div className="rounded-xl border border-slate-100 bg-white p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <History className="h-3.5 w-3.5" /> O que já aconteceu
+              </div>
+              <ol className="mt-2.5 space-y-2.5">
+                {historico.map((h, i) => (
+                  <li key={i} className="flex gap-3">
+                    <div className="flex flex-col items-center pt-1">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-[#0077B6]" />
+                      {i < historico.length - 1 && (
+                        <span className="mt-1 w-px flex-1 bg-slate-200" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 pb-1">
+                      <p className="text-sm leading-snug text-slate-700">{h.message}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">
+                        {formatDateTime(h.createdAt)}
+                        {h.by?.nome ? ` · ${h.by.nome}` : ""}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border-t border-slate-100 pt-3">
             <span className="text-xs text-slate-400">Criado a {formatDate(order.createdAt)}</span>
             {preco != null && (
@@ -437,6 +529,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

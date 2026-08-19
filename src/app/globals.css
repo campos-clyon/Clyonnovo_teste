@@ -500,9 +500,19 @@ footer .text-white {
 }
 
 /* /conta — transição entre secções */
+/*
+ * Aparecer sem deslocar.
+ *
+ * Tinha um `translateY(4px)` e `animation-fill-mode: both`, o que deixa o
+ * `transform` aplicado para sempre depois de a animação acabar. Um elemento com
+ * transform passa a ser o contentor de qualquer `position: fixed` lá dentro —
+ * e o painel do detalhe do pedido, que devia ocupar o ecrã todo, ficava
+ * encolhido dentro da área de conteúdo. Quatro píxeis de deslize não valem uma
+ * armadilha destas em cada elemento fixo que venha a existir aqui dentro.
+ */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .animate-fade-in {
   animation: fade-in 150ms ease-out both;
