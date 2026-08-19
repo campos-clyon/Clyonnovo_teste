@@ -137,6 +137,11 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
              <tr><td style="padding:16px 18px;">
                <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Onde</p>
                <p style="margin:0;font-size:15px;line-height:1.5;color:#0B1929;">${e(p.morada)}</p>
+               <p style="margin:10px 0 0;font-size:14px;">
+                 <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.morada)}" style="color:#0077B6;text-decoration:none;font-weight:600;">Abrir no Google Maps</a>
+                 <span style="color:#cbd5e1;"> &nbsp;·&nbsp; </span>
+                 <a href="https://waze.com/ul?q=${encodeURIComponent(p.morada)}&navigate=yes" style="color:#0077B6;text-decoration:none;font-weight:600;">Abrir no Waze</a>
+               </p>
                ${
                  p.contactoNome || p.contactoTelefone
                    ? `<p style="margin:10px 0 0;font-size:15px;color:#0B1929;">

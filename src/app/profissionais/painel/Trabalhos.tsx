@@ -10,6 +10,8 @@ import {
   HandCoins,
   Loader2,
   MapPin,
+  MessageCircle,
+  Navigation,
   Phone,
   Truck,
   User,
@@ -436,16 +438,63 @@ function DetalheDoTrabalho({
             <p className="mt-1.5 flex items-center gap-2 text-sm text-emerald-900">
               <User className="h-4 w-4 shrink-0" aria-hidden="true" />
               {pedido.contactoNome}
+              {pedido.contactoTelefone && (
+                <span className="text-emerald-700">· {pedido.contactoTelefone}</span>
+              )}
             </p>
           )}
-          {pedido.contactoTelefone && (
+
+          {/* Levar lá.
+              A morada escrita não serve de nada a alguém que está a sair de
+              casa com a carrinha: teria de a copiar, abrir o mapa e colar. Dois
+              botões poupam esse minuto, e o minuto é dele.
+
+              Waze e Maps, os dois: quem conduz todos os dias tem um deles
+              instalado e não muda por nossa causa. Os dois links funcionam no
+              browser se a aplicação não estiver lá. */}
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <a
-              href={`tel:${pedido.contactoTelefone}`}
-              className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 font-semibold text-white transition active:bg-emerald-700"
+              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pedido.morada)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border-2 border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition active:bg-emerald-50"
             >
-              <Phone className="h-4 w-4" aria-hidden="true" />
-              Ligar a {pedido.contactoNome ?? "o cliente"}
+              <Navigation className="h-4 w-4" aria-hidden="true" />
+              Google Maps
             </a>
+            <a
+              href={`https://waze.com/ul?q=${encodeURIComponent(pedido.morada)}&navigate=yes`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border-2 border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition active:bg-emerald-50"
+            >
+              <Navigation className="h-4 w-4" aria-hidden="true" />
+              Waze
+            </a>
+          </div>
+
+          {pedido.contactoTelefone && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <a
+                href={`tel:${pedido.contactoTelefone}`}
+                className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white transition active:bg-emerald-700"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                Ligar
+              </a>
+              {/* O número vai sem espaços nem sinais: o WhatsApp recusa
+                  qualquer coisa que não sejam dígitos, e um "+351 912..."
+                  colado tal e qual abria uma conversa vazia. */}
+              <a
+                href={`https://wa.me/${pedido.contactoTelefone.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 text-sm font-semibold text-white transition active:brightness-95"
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                WhatsApp
+              </a>
+            </div>
           )}
         </section>
       )}
