@@ -16,6 +16,7 @@ import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
+import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -2613,7 +2614,8 @@ export default function ColaboradorAdminClient() {
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">Centro de suporte</p>
                   <h2 className="mt-1 text-2xl font-semibold text-white">Pedidos de ajuda</h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    O que os clientes e profissionais escrevem na app. Mais antigo primeiro — quem espera há mais tempo aparece em cima.
+                    O que os clientes e profissionais escrevem — na app e na plataforma.
+                    Mais antigo primeiro: quem espera há mais tempo aparece em cima.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2709,6 +2711,18 @@ export default function ColaboradorAdminClient() {
                   </table>
                 </div>
               )}
+
+              {/* ── Da plataforma ──────────────────────────────────────────
+                  Vêm da nossa base e não do Supabase: são os pedidos de ajuda
+                  escritos na conta do profissional. Ficam na mesma secção
+                  porque quem atende não tem de saber de que base veio o
+                  pedido — separados, porque as acções não são as mesmas. */}
+              <div className="border-t border-slate-700/60 pt-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                  Da plataforma
+                </h3>
+                <AdminAjudaPanel />
+              </div>
             </section>
           )}
 
