@@ -1411,6 +1411,30 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   return rows as any[];
 }
 
+/**
+ * Existe uma conta com este email?
+ *
+ * Decide para onde apontar um aviso de proposta: quem tem conta vai para
+ * /conta, e o link que ele guardou continua válido. Quem não tem precisa de um
+ * token novo — e cada token novo mata o anterior, por isso só se emite quando
+ * não há alternativa.
+ */
+export async function existeContaComEmail(email: string): Promise<boolean> {
+  const pool = await getPool();
+  if (!pool) return false;
+  try {
+    const [rows] = await pool.execute(
+      "SELECT 1 FROM users WHERE LOWER(TRIM(email)) = ? AND deletedAt IS NULL LIMIT 1",
+      [email.trim().toLowerCase()],
+    ) as any[];
+    return (rows as unknown[]).length > 0;
+  } catch {
+    // Sem resposta, assume-se que não tem: um token novo funciona sempre, e
+    // um link para /conta que peça login a quem não a tem é um beco.
+    return false;
+  }
+}
+
 // ── Pedidos de ajuda da plataforma ──────────────────────────────────────────
 
 let ajudaEnsured = false;

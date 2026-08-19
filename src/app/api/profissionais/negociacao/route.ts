@@ -9,6 +9,8 @@ import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
+import { avisarDaProposta } from "@/lib/avisar-da-proposta";
+import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
   propor,
   aceitar,
@@ -117,6 +119,23 @@ export async function POST(req: NextRequest) {
           `Negociação #${negociacaoId} fechada em ${nova.valorAcordado} €.` +
           (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
       });
+    }
+
+
+    // Avisar o outro lado. Uma proposta que ninguém vê expira em 48 horas, e
+    // perder um trabalho porque ninguém foi ver a página é a pior forma de o
+    // perder. Nunca lança: a proposta já está gravada.
+    if (corpo.accao === "propor" && nova.valorAcordado == null) {
+      const ultima = nova.propostas[nova.propostas.length - 1];
+      if (ultima) {
+        await avisarDaProposta({
+          pedidoId: linha.pedidoId,
+          negociacaoId: negociacaoId,
+          quemPropos: "profissional",
+          valor: ultima.valor,
+          baseUrl: urlDeAccaoDoPedido(req.headers),
+        });
+      }
     }
 
     return NextResponse.json({

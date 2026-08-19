@@ -22,6 +22,7 @@ import {
 } from "@/lib/negociacao";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { avisarQueFoiContratado } from "@/lib/email-trabalho";
+import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
@@ -251,6 +252,23 @@ export async function POST(
       { status: 500 },
     );
   }
+
+
+    // Avisar o outro lado. Uma proposta que ninguém vê expira em 48 horas, e
+    // perder um trabalho porque ninguém foi ver a página é a pior forma de o
+    // perder. Nunca lança: a proposta já está gravada.
+    if (corpo.accao === "propor" && nova.valorAcordado == null) {
+      const ultima = nova.propostas[nova.propostas.length - 1];
+      if (ultima) {
+        await avisarDaProposta({
+          pedidoId: pedidoId,
+          negociacaoId: negociacaoId,
+          quemPropos: lado,
+          valor: ultima.valor,
+          baseUrl: urlDeAccaoDoPedido(req.headers),
+        });
+      }
+    }
 
   return NextResponse.json({
     ok: true,
