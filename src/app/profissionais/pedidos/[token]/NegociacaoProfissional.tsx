@@ -35,18 +35,30 @@ function euros(v: number | null | undefined): string {
 
 export default function NegociacaoProfissional({
   token,
+  negociacaoId,
   estadoInicial,
   propostasIniciais,
   valorAcordado,
   minimoDoCliente,
   recebeSeAceitar,
+  onMudou,
 }: {
-  token: string;
+  /**
+   * O token do link do email, quando se chega por aí.
+   *
+   * Dentro do painel não há token nenhum — há sessão. Aí passa-se o
+   * `negociacaoId` e a rota autenticada trata do resto. É a mesma negociação e
+   * o mesmo motor: muda só como se prova quem está a falar.
+   */
+  token?: string;
+  negociacaoId?: number;
   estadoInicial: string;
   propostasIniciais: Proposta[];
   valorAcordado: number | null;
   minimoDoCliente: number | null;
   recebeSeAceitar: number | null;
+  /** Para o painel recarregar a lista depois de uma acção. */
+  onMudou?: () => void;
 }) {
   const [negociacao, setNegociacao] = useState<Negociacao>({
     estado: estadoInicial as Negociacao["estado"],
@@ -65,11 +77,14 @@ export default function NegociacaoProfissional({
     setAEnviar(true);
     setErro("");
     try {
-      const res = await fetch(`/api/negociacao/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accao, valor: valorProposto }),
-      });
+      const res = await fetch(
+        token ? `/api/negociacao/${token}` : "/api/profissionais/negociacao",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accao, valor: valorProposto, negociacaoId }),
+        },
+      );
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível.");
@@ -80,6 +95,7 @@ export default function NegociacaoProfissional({
         valorAcordado: dados.valorAcordado,
         propostas: dados.propostas,
       });
+      onMudou?.();
     } catch {
       setErro("Erro de rede.");
     } finally {

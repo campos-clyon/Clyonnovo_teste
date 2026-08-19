@@ -1,3 +1,5 @@
+import type { Proposta } from "@/lib/negociacao";
+
 /** O que os ecrãs do painel do profissional partilham. */
 
 export type Pedido = {
@@ -7,6 +9,8 @@ export type Pedido = {
   fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
   diasAteLibertar: number | null;
   provaJson: string | null;
+  /** O JSON das propostas, tal como vem da base. */
+  propostas: string | null;
   actualizadoEm: string;
   serviceType: string | null;
   city: string | null;
@@ -106,5 +110,22 @@ export function provaDe(json: string | null): { fotos: string[]; nota: string; e
     };
   } catch {
     return null;
+  }
+}
+
+/**
+ * As propostas tal como estão gravadas.
+ *
+ * O tipo é o do motor — `Proposta` de negociacao.ts — e não um parecido escrito
+ * aqui. Um tipo paralelo aceita o que o motor recusa, e a divergência só
+ * aparece quando alguém abre uma negociação e vê os valores errados.
+ */
+export function propostasDe(json: string | null): Proposta[] {
+  if (!json) return [];
+  try {
+    const l = JSON.parse(json);
+    return Array.isArray(l) ? (l as Proposta[]) : [];
+  } catch {
+    return [];
   }
 }

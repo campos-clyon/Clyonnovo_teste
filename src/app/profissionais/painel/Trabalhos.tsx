@@ -18,7 +18,9 @@ import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
 import EnviarFotos, { type FotoEnviada } from "@/components/EnviarFotos";
 import Nota from "@/components/Nota";
-import { URGENCIA, fotosDe, provaDe, type Pedido } from "./tipos";
+import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { URGENCIA, fotosDe, propostasDe, provaDe, type Pedido } from "./tipos";
 
 /**
  * Os trabalhos do profissional.
@@ -403,11 +405,22 @@ function DetalheDoTrabalho({
         </section>
       )}
 
-      {!fechado && (
-        <Nota titulo="Como respondo a este pedido" className="mt-3">
-          A negociação abre-se pelo link que lhe enviámos por email — é a sua chave para
-          este pedido. Aqui vê o estado de tudo; lá propõe e aceita valores.
-        </Nota>
+      {/* A negociação, aqui dentro.
+          Vivia só no link do email, e isso obrigava-o a guardar mensagens
+          antigas para trabalhar — ao terceiro pedido já não sabia qual era
+          qual. O link continua a funcionar; deixou é de ser o único caminho. */}
+      {!fechado && pedido.estado !== "desistida" && pedido.estado !== "morta" && (
+        <NegociacaoProfissional
+          negociacaoId={pedido.negociacaoId}
+          estadoInicial={pedido.estado}
+          propostasIniciais={propostasDe(pedido.propostas)}
+          valorAcordado={null}
+          minimoDoCliente={pedido.querPagar}
+          recebeSeAceitar={
+            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
+          }
+          onMudou={onRecarregar}
+        />
       )}
     </>
   );
