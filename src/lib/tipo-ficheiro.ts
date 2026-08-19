@@ -20,11 +20,21 @@
  */
 
 /** Tipo declarado → aceite. É a lista que manda. */
-const TIPOS_PERMITIDOS = new Set([
+/**
+ * Os tipos aceites, como lista.
+ *
+ * A autorização de envio directo precisa deles em array, e não em Set. Uma
+ * segunda lista escrita à mão nesse ficheiro acabaria por divergir desta — e a
+ * divergência aparecia como "este ficheiro não é aceite" num caminho e não no
+ * outro, sem nada que explicasse porquê.
+ */
+export const TIPOS_ACEITES = [
   "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
   "image/heic", "image/heif",
   "video/mp4", "video/quicktime", "video/webm",
-]);
+] as const;
+
+const TIPOS_PERMITIDOS = new Set<string>(TIPOS_ACEITES);
 
 /** Extensão → tipo, para quando o browser não declara nada. */
 const POR_EXTENSAO: Record<string, string> = {

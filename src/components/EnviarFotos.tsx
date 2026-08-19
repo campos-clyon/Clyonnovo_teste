@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Camera, Loader2, X } from "lucide-react";
-import { reduzirImagem } from "@/lib/reduzir-imagem";
+import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 
 /**
  * Escolher fotografias e enviá-las, uma de cada vez.
@@ -51,18 +51,9 @@ export default function EnviarFotos({
     const falhas: string[] = [];
 
     for (const original of porEnviar) {
-      try {
-        const { ficheiro } = await reduzirImagem(original);
-        const fd = new FormData();
-        fd.append("fotos", ficheiro, ficheiro.name);
-        const res = await fetch("/api/simulador/upload-fotos", { method: "POST", body: fd });
-        const dados = await res.json().catch(() => null);
-        const subidos = (dados?.files ?? []) as FotoEnviada[];
-        if (subidos.length > 0) novas.push(...subidos);
-        else falhas.push(original.name);
-      } catch {
-        falhas.push(original.name);
-      }
+      const r = await enviarFicheiro(original);
+      if (r.ok) novas.push({ url: r.ficheiro.url, name: r.ficheiro.name });
+      else falhas.push(original.name);
       setAEnviar((n) => n - 1);
     }
 

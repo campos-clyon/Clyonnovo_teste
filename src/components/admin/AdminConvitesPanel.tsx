@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, Loader2, Mail, RefreshCw, Send, X } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Mail, RefreshCw, Send, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { TIPOS_DE_VEICULO, etiquetaDoVeiculo } from "@/lib/convite-profissional";
 
@@ -49,6 +49,8 @@ export default function AdminConvitesPanel() {
   const [ocupado, setOcupado] = useState<number | "novo" | null>(null);
   const [erro, setErro] = useState("");
   const [linkEmClaro, setLinkEmClaro] = useState("");
+  const [linkDeEntrada, setLinkDeEntrada] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -69,6 +71,7 @@ export default function AdminConvitesPanel() {
         return;
       }
       setConvites(dados.convites ?? []);
+      setLinkDeEntrada(dados.linkDeEntrada ?? "");
       setErro("");
     } catch {
       setErro("Erro de rede.");
@@ -154,6 +157,43 @@ export default function AdminConvitesPanel() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── A porta deles ─────────────────────────────────────────────────
+          O endereço por onde um profissional entra na conta. Enquanto o MVP
+          estiver fechado leva a chave lá dentro — sem ela dá 404, e quem o
+          partilha não tem de se lembrar de a colar à mão. */}
+      {linkDeEntrada && (
+        <section className="mb-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <KeyRound className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+            Link de entrada dos profissionais
+          </h3>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-slate-950 px-3 py-2 font-mono text-[11px] text-slate-300">
+              {linkDeEntrada}
+            </code>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(linkDeEntrada);
+                setCopiado(true);
+                setTimeout(() => setCopiado(false), 2000);
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800"
+            >
+              {copiado ? (
+                <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {copiado ? "copiado" : "copiar"}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Para quem já tem conta e perdeu o email. Abre uma vez e aquele telemóvel
+            fica autorizado 30 dias.
+          </p>
+        </section>
       )}
 
       {/* ── Convidar ──────────────────────────────────────────────────────── */}

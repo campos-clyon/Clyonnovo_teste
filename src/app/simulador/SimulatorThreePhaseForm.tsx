@@ -24,7 +24,7 @@ import MovelItemSelector from "./components/MovelItemSelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { reduzirImagem } from "@/lib/reduzir-imagem";
+import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import {
   trackSimulatorStart,
   trackSimulatorContact,
@@ -330,34 +330,12 @@ export default function SimulatorThreePhaseForm() {
 
         for (const f of rawFiles) {
           const original = f.file as File;
-          try {
-            const { ficheiro } = await reduzirImagem(original);
-
-            const fd = new FormData();
-            fd.append("fotos", ficheiro, ficheiro.name);
-            const upRes = await fetch("/api/simulador/upload-fotos", {
-              method: "POST",
-              body: fd,
-            });
-            const upData = await upRes.json().catch(() => null);
-            const subidos = (upData?.files ?? []) as typeof uploadedFiles;
-
-            if (subidos.length > 0) {
-              uploadedFiles.push(...subidos);
-            } else {
-              fotosPerdidas += 1;
-              const porFicheiro = (upData?.falhados ?? []) as Array<{ name: string; motivo: string }>;
-              motivos.push(
-                porFicheiro.length > 0
-                  ? porFicheiro.map((x) => `${x.name}: ${x.motivo}`).join(" | ")
-                  : `${original.name}: ${upData?.motivoTecnico ?? upData?.message ?? upData?.error ?? `resposta ${upRes.status} do servidor`}`,
-              );
-            }
-          } catch (err) {
+          const r = await enviarFicheiro(original);
+          if (r.ok) {
+            uploadedFiles.push(r.ficheiro);
+          } else {
             fotosPerdidas += 1;
-            motivos.push(
-              `${original.name}: erro de rede — ${err instanceof Error ? err.message : String(err)}`,
-            );
+            motivos.push(`${original.name}: ${r.motivo}`);
           }
         }
 
