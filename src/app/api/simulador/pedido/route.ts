@@ -18,6 +18,7 @@ import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { distribuirPedido } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { moradaCompleta } from "@/lib/morada";
 
 export const runtime = "nodejs";
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     if (!estimativa || semDistancia) {
       try {
         const morada =
-          order.address?.formattedAddress ??
+          moradaCompleta(order.address ?? {}) ||
           (typeof order.address === "string" ? order.address : null);
         const { km, origem: origemKm } = kmParaOrcamento({
           distanciaMedidaKm: order.distanceFromBase?.distanceKm ?? null,
@@ -243,10 +244,20 @@ export async function POST(req: NextRequest) {
           )
         : null,
       // Morada principal: para mudança guardamos a origem; para outros o endereço único
+      /*
+       * O número de porta entra aqui.
+       *
+       * O cliente escreve-o num campo à parte quando a pesquisa não o traz —
+       * e o `formattedAddress` do Google nunca é reescrito. Guardar só esse
+       * deixava o número no ecrã e fora da base: o profissional recebia a rua
+       * sem porta, que é exactamente o que se estava a tentar corrigir.
+       */
       address:
         order.serviceType === "mudanca"
-          ? (order.originAddress?.formattedAddress ?? order.address?.formattedAddress ?? null)
-          : (order.address?.formattedAddress ?? null),
+          ? (moradaCompleta(order.originAddress ?? {}) ||
+             moradaCompleta(order.address ?? {}) ||
+             null)
+          : (moradaCompleta(order.address ?? {}) || null),
       // A morada que o cliente escolheu manda sobre o `order.city`, que vem do
       // selector de localização do cabeçalho — uma preferência de navegação,
       // muitas vezes adivinhada pelo IP. No pedido #191 gravou "Gauchy", uma

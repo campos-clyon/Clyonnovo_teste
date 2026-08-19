@@ -16,6 +16,13 @@ import type {
   ServiceType,
 } from "./types";
 import AddressAutocomplete from "./components/AddressAutocomplete";
+import {
+  moradaServeParaTrabalhar,
+  precisaoDaMorada,
+  numeroDePortaValido,
+  moradaCompleta,
+  partirViaENumero,
+} from "@/lib/morada";
 import OrderSummaryCard from "./components/OrderSummaryCard";
 import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
@@ -193,7 +200,16 @@ export default function SimulatorThreePhaseForm() {
   };
 
   const handleAddressSelect = (data: AddressData) => {
-    updateField("address", data);
+    // O caminho sem chave do Google devolve a morada numa linha só. Sem
+    // recuperar a via daí, a precisão dava sempre "localidade" e o formulário
+    // pedia à pessoa que escolhesse a rua na lista — mesmo tendo ela escrito
+    // a rua certa.
+    const partido = partirViaENumero(data.formattedAddress, data.city);
+    updateField("address", {
+      ...data,
+      street: data.street || partido.street,
+      streetNumber: data.streetNumber || partido.streetNumber,
+    });
     updateField("addressStatus", "selected");
     setAddressValue(data.formattedAddress || "");
   };
@@ -267,7 +283,20 @@ export default function SimulatorThreePhaseForm() {
     }
     // Outros serviços: apenas uma morada
     const elevatorValid = formData.floor === "rés-do-chão" ? true : !!formData.hasElevator;
-    return formData.address?.formattedAddress && formData.floor && elevatorValid && formData.parkingDistance;
+    /*
+     * A morada tem de chegar para bater à porta.
+     *
+     * A pesquisa devolve muitas vezes só "Montijo, Setúbal, Portugal". Isso era
+     * aceite, e o preço saía de uma distância calculada até ao meio da vila —
+     * depois o profissional chegava lá sem saber onde era. A regra está escrita
+     * e testada em morada.ts desde antes do pivot; só faltava chamá-la.
+     */
+    return (
+      moradaServeParaTrabalhar(formData.address ?? {}) &&
+      formData.floor &&
+      elevatorValid &&
+      formData.parkingDistance
+    );
   };
 
   const isPhase3Valid = () => {
@@ -1238,13 +1267,18 @@ function Phase2Location({
 
   // ── Outros serviços: layout original ────────────────────────────────────
   const missingAddress = showValidationErrors && !formData.address?.formattedAddress;
+  const numeroEscrito = formData.address?.streetNumber ?? "";
+  const numeroMauFeitio = numeroEscrito.trim() !== "" && !numeroDePortaValido(numeroEscrito);
   const missingFloor = showValidationErrors && !formData.floor;
   const missingElevator = showValidationErrors && formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator;
   const missingParking = showValidationErrors && !formData.parkingDistance;
 
   // Calcular lista de campos em falta para mostrar mensagem única
+  const precisao = precisaoDaMorada(formData.address ?? {});
+
   const missingFields: string[] = [];
-  if (!formData.address?.formattedAddress) missingFields.push("Morada");
+  if (precisao === "nenhuma" || precisao === "localidade") missingFields.push("Morada");
+  else if (precisao === "rua") missingFields.push("Número de porta");
   if (!formData.floor) missingFields.push("Andar");
   if (formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator) missingFields.push("Elevador");
   if (!formData.parkingDistance) missingFields.push("Estacionamento");
@@ -1276,6 +1310,56 @@ function Phase2Location({
           placeholder="Escreva a rua, número e localidade..."
         />
         {missingAddress && <p className="text-xs text-red-600 mt-1">Morada obrigatória</p>}
+
+        {/* Só aparece a quem falta.
+            Pedir o número a toda a gente seria pedir duas vezes o mesmo à
+            maioria — a pesquisa já o traz quando existe. Quem escolheu uma
+            localidade não vê um campo de número: vê que tem de escrever a rua,
+            que é o passo que lhe falta mesmo. */}
+        {precisao === "rua" && (
+          <div className="mt-3 rounded-xl border-2 border-[#00B4CC] bg-cyan-50/60 p-3">
+            <label
+              htmlFor="numero-de-porta"
+              className="block text-sm font-semibold text-[#0B1929]"
+            >
+              Número de porta *
+            </label>
+            <p className="mt-0.5 text-xs text-gray-600">
+              A morada ficou sem número. Sem ele não sabemos a que porta bater.
+            </p>
+            <input
+              id="numero-de-porta"
+              type="text"
+              inputMode="text"
+              autoComplete="address-line2"
+              value={numeroEscrito}
+              onChange={(e) =>
+                updateField("address", {
+                  ...formData.address,
+                  streetNumber: e.target.value,
+                })
+              }
+              placeholder="Ex.: 12, 12-A, Lote 4"
+              className={`mt-2 min-h-[48px] w-full rounded-xl border-2 px-4 text-base outline-none ${
+                numeroMauFeitio
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-gray-300 focus:border-[#00B4CC]"
+              }`}
+            />
+            {numeroMauFeitio && (
+              <p className="mt-1 text-xs text-red-600">
+                Escreva só o número, não a morada toda.
+              </p>
+            )}
+          </div>
+        )}
+
+        {precisao === "localidade" && formData.address?.formattedAddress && (
+          <p className="mt-2 rounded-xl border border-orange-300 bg-orange-50 px-3 py-2 text-xs text-orange-800">
+            Isto é uma localidade, não uma morada. Escreva o nome da rua e
+            escolha-a na lista.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

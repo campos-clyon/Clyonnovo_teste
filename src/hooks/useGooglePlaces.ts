@@ -44,6 +44,16 @@ export interface PlacePrediction {
 
 export interface ResolvedPlace {
   formattedAddress: string;
+  /**
+   * A via e o número, separados.
+   *
+   * Já vinham nos `address_components` e eram deitados fora — ficava só o
+   * `formattedAddress`, de onde não se consegue saber se há número de porta
+   * sem adivinhar por expressões regulares. Sem eles, não havia como perguntar
+   * "falta o número?" só a quem falta.
+   */
+  street: string;
+  streetNumber: string;
   city: string;
   postalCode: string;
   countryCode: string;
@@ -188,6 +198,8 @@ function placeResultToResolved(
     "";
   return {
     formattedAddress: place.formatted_address ?? place.name ?? "",
+    street: pickComponent(comps, "route"),
+    streetNumber: pickComponent(comps, "street_number"),
     city,
     postalCode: pickComponent(comps, "postal_code"),
     countryCode: pickComponent(comps, "country", true),
@@ -314,6 +326,11 @@ async function proxySearch(input: string): Promise<PlacePrediction[]> {
         secondaryText: [s.city, s.postalCode].filter(Boolean).join(" • "),
         resolved: {
           formattedAddress: s.address || s.label,
+          // O Nominatim não separa via e número nesta resposta. Fica vazio, e
+          // a regra de precisão trata isto como "falta o número" — que é a
+          // conclusão certa quando não sabemos.
+          street: "",
+          streetNumber: "",
           city: s.city,
           postalCode: s.postalCode,
           countryCode: "PT",
@@ -340,6 +357,8 @@ async function proxyResolve(placeId: string): Promise<ResolvedPlace | null> {
     if (!data.ok) return null;
     return {
       formattedAddress: data.formattedAddress ?? "",
+      street: data.street ?? "",
+      streetNumber: data.streetNumber ?? "",
       city: data.city ?? "",
       postalCode: data.postalCode ?? "",
       countryCode: data.countryCode ?? "",

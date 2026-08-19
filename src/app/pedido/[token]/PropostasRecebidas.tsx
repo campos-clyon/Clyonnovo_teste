@@ -329,7 +329,7 @@ export default function PropostasRecebidas({
                       key={n}
                       className={`h-4 w-4 ${
                         n <= (acordada.estrelas ?? 0)
-                          ? "fill-amber-400 text-amber-400"
+                          ? "fill-[#00B4CC] text-[#00B4CC]"
                           : "text-slate-300"
                       }`}
                       aria-hidden="true"
@@ -353,7 +353,7 @@ export default function PropostasRecebidas({
                         <Star
                           className={`h-8 w-8 transition ${
                             n <= estrelas
-                              ? "fill-amber-400 text-amber-400"
+                              ? "fill-[#00B4CC] text-[#00B4CC]"
                               : "text-slate-300"
                           }`}
                         />

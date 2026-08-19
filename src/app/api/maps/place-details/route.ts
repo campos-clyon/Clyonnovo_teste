@@ -70,6 +70,11 @@ export async function POST(request: NextRequest) {
       "";
 
     const postalCode = findComponent(components, "postal_code") || "";
+    // A via e o número, separados. Sem eles não há como saber se a morada tem
+    // número de porta — e uma morada sem número manda o profissional para o
+    // meio da rua.
+    const street = findComponent(components, "route") || "";
+    const streetNumber = findComponent(components, "street_number") || "";
     const countryCode =
       components.find((c) => c.types.includes("country"))?.short_name || "";
 
@@ -79,6 +84,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       formattedAddress: result.formatted_address ?? "",
+      street,
+      streetNumber,
       city,
       postalCode,
       countryCode,

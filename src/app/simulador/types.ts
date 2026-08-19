@@ -25,6 +25,10 @@ export interface UploadedFile {
 
 export interface AddressData {
   formattedAddress?: string;
+  /** A via, sem número. */
+  street?: string;
+  /** O número de porta — o que a pesquisa devolveu, ou o que o cliente escreveu. */
+  streetNumber?: string;
   city?: string;
   postalCode?: string;
   lat?: number;

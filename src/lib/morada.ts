@@ -142,3 +142,57 @@ export function linkGoogleMaps(
   if (!texto) return null;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(texto)}`;
 }
+
+/**
+ * A rua, quando a pesquisa não a separou.
+ *
+ * O caminho alternativo (sem chave do Google) devolve a morada numa linha só.
+ * Sem isto, a precisão dava sempre "localidade" e o formulário mandava a pessoa
+ * "escolher a rua na lista" — mesmo tendo ela escrito a rua certa. Ficava presa
+ * sem saída.
+ *
+ * Corta no primeiro pedaço da linha e aceita-o como via, a menos que seja
+ * apenas o nome da terra — porque aí é mesmo uma localidade e não uma morada.
+ */
+export function ruaProvavel(
+  formattedAddress: string | null | undefined,
+  city: string | null | undefined,
+): string {
+  const primeiro = limpo((formattedAddress ?? "").split(",")[0]);
+  if (!primeiro) return "";
+
+  const igualACidade =
+    limpo(city).toLowerCase() === primeiro.toLowerCase();
+
+  // Uma via tem sempre mais do que uma palavra em português ("Rua do Ouro").
+  // Uma palavra só é quase sempre a terra: "Montijo", "Almada".
+  const umaPalavraSo = primeiro.split(/\s+/).length === 1;
+
+  return igualACidade || umaPalavraSo ? "" : primeiro;
+}
+
+/**
+ * Parte "Rua do Ouro 12" em via e número.
+ *
+ * Sem isto, o caminho sem componentes pedia o número de porta a quem já o
+ * tinha escrito — o número estava lá, colado ao nome da rua, e nós não
+ * olhávamos. Perguntar duas vezes a mesma coisa é a maneira mais rápida de
+ * alguém desistir do formulário.
+ */
+export function partirViaENumero(
+  formattedAddress: string | null | undefined,
+  city: string | null | undefined,
+): { street: string; streetNumber: string } {
+  const via = ruaProvavel(formattedAddress, city);
+  if (!via) return { street: "", streetNumber: "" };
+
+  // O número vem no fim: "Rua do Ouro 12", "Av. da Liberdade 200-A".
+  const m = via.match(/^(.*?)[,\s]+(\d+[A-Za-z]?(?:[-\s]?[A-Za-z0-9]+)?)$/);
+  if (!m) return { street: via, streetNumber: "" };
+
+  const nome = limpo(m[1]);
+  // "Rua 25" é o nome todo, não uma rua sem nome com o número 25.
+  if (!nome || nome.split(/\s+/).length < 2) return { street: via, streetNumber: "" };
+
+  return { street: nome, streetNumber: limpo(m[2]) };
+}

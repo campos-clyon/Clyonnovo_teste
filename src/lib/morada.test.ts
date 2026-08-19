@@ -6,6 +6,8 @@ import {
   moradaServeParaTrabalhar,
   numeroDePortaValido,
   linkGoogleMaps,
+  ruaProvavel,
+  partirViaENumero,
 } from "./morada";
 
 /**
@@ -121,5 +123,57 @@ describe("linkGoogleMaps", () => {
   it("sem morada nenhuma não inventa um link", () => {
     expect(linkGoogleMaps({})).toBeNull();
     expect(linkGoogleMaps({ street: "   " })).toBeNull();
+  });
+});
+
+describe("ruaProvavel", () => {
+  it("aceita o primeiro pedaço como via", () => {
+    expect(ruaProvavel("Rua do Ouro 12, 1100-060 Lisboa", "Lisboa")).toBe("Rua do Ouro 12");
+  });
+
+  // O caso que prendia a pessoa: escrever "Montijo" e o formulário responder
+  // "escolha a rua na lista" quando ela não escreveu rua nenhuma.
+  it("não inventa uma via a partir do nome da terra", () => {
+    expect(ruaProvavel("Montijo, Setúbal, Portugal", "Montijo")).toBe("");
+    expect(ruaProvavel("Almada", "")).toBe("");
+  });
+
+  it("aguenta o vazio", () => {
+    expect(ruaProvavel("", "Lisboa")).toBe("");
+    expect(ruaProvavel(null, null)).toBe("");
+    expect(ruaProvavel(undefined, undefined)).toBe("");
+  });
+});
+
+describe("partirViaENumero", () => {
+  it("separa o número colado ao nome da rua", () => {
+    expect(partirViaENumero("Rua do Ouro 12, 1100-060 Lisboa", "Lisboa")).toEqual({
+      street: "Rua do Ouro",
+      streetNumber: "12",
+    });
+    expect(partirViaENumero("Avenida da Liberdade 200-A, Lisboa", "Lisboa")).toEqual({
+      street: "Avenida da Liberdade",
+      streetNumber: "200-A",
+    });
+  });
+
+  it("uma via sem número fica inteira", () => {
+    expect(partirViaENumero("Rua das Flores, Porto", "Porto")).toEqual({
+      street: "Rua das Flores",
+      streetNumber: "",
+    });
+  });
+
+  // "Rua 25 de Abril" não tem número de porta nenhum — e cortar ali daria
+  // uma rua chamada "Rua" com o número 25.
+  it("não parte um nome que acaba em número", () => {
+    expect(partirViaENumero("Rua 25, Setúbal", "Setúbal").streetNumber).toBe("");
+  });
+
+  it("não inventa nada a partir do nome da terra", () => {
+    expect(partirViaENumero("Montijo, Setúbal, Portugal", "Montijo")).toEqual({
+      street: "",
+      streetNumber: "",
+    });
   });
 });

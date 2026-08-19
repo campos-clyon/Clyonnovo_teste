@@ -112,6 +112,8 @@ export default function AddressAutocomplete({
       }
       addressData = {
         formattedAddress: resolved.formattedAddress,
+        street: resolved.street,
+        streetNumber: resolved.streetNumber,
         city: resolved.city,
         postalCode: resolved.postalCode,
         lat: resolved.lat ?? undefined,

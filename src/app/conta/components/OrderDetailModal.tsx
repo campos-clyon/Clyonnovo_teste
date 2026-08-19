@@ -543,7 +543,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                     <Star
                       className={`h-5 w-5 ${
                         rating != null && star <= rating
-                          ? "fill-amber-400 text-amber-400"
+                          ? "fill-[#00B4CC] text-[#00B4CC]"
                           : "text-slate-300"
                       }`}
                     />
