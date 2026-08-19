@@ -65,7 +65,19 @@ export async function POST(req: NextRequest) {
     // e é o que distingue "Contactos" de "Simulador" no painel.
     let estimativa = estimate ?? null;
     let estimativaDoServidor = false;
-    if (!estimativa) {
+    /*
+     * Recalcular também quando a estimativa do browser veio sem distância.
+     *
+     * O #199 chegou com "combustível estimado a 0 €": a pesquisa devolveu
+     * "Lisboa, Portugal" sem coordenadas, o browser não tinha distância para
+     * dar, e o preço caiu no mínimo de zona — como se o trabalho fosse ao lado
+     * da base. Lisboa são trinta e cinco quilómetros e uma ponte.
+     *
+     * Aqui há sempre uma resposta: código postal, nome da cidade, ou o valor
+     * por omissão. Nenhuma é a medição real, e todas são melhores do que zero.
+     */
+    const semDistancia = !(Number(order.distanceFromBase?.distanceKm) > 0);
+    if (!estimativa || semDistancia) {
       try {
         const morada =
           order.address?.formattedAddress ??
@@ -74,6 +86,7 @@ export async function POST(req: NextRequest) {
           distanciaMedidaKm: order.distanceFromBase?.distanceKm ?? null,
           codigoPostal: order.address?.postalCode ?? order.postalCode ?? null,
           morada,
+          cidade: order.city ?? null,
         });
 
         const calculada = await calculateFastEstimate({
@@ -97,7 +110,9 @@ export async function POST(req: NextRequest) {
               ? `Distância medida: ${km} km.`
               : origemKm === "codigo_postal"
                 ? `Distância estimada pelo código postal: ${km} km — confirmar com a morada exacta.`
-                : `Sem morada utilizável: assumidos ${km} km. Confirmar antes de fechar o preço.`,
+                : origemKm === "cidade"
+                  ? `Morada sem número nem código postal: assumidos ${km} km pela localidade. Confirmar antes de fechar o preço.`
+                  : `Sem morada utilizável: assumidos ${km} km. Confirmar antes de fechar o preço.`,
           ],
         };
         estimativaDoServidor = true;
@@ -141,6 +156,16 @@ export async function POST(req: NextRequest) {
     // exemplo) continuam a entrar sem valor — daí o `null` em vez de erro
     // quando o campo vem vazio.
     let valoresParaGravar: { valorDesejadoCliente?: string | null } = {};
+    /**
+     * O valor de partida da negociação.
+     *
+     * É o que o cliente escreveu, quando escreveu. Quando deixou o campo em
+     * branco — a maioria — vale a estimativa: sem número nenhum não há
+     * negociação possível, porque o profissional não tem sobre o que propor.
+     *
+     * A estimativa é a nossa, calculada a partir do que ele nos disse. Começar
+     * a conversa por aí é começá-la no sítio mais honesto que temos.
+     */
     // Vazio é o mesmo que não ter respondido. O campo é opcional no simulador
     // público, e um `""` a contar como "indicou um valor" fazia a validação
     // recusar o pedido com 400 — ou seja, quem não respondesse à pergunta
@@ -150,19 +175,17 @@ export async function POST(req: NextRequest) {
       valorBruto != null && String(valorBruto).trim() !== "";
 
     /*
-     * Ter valor NÃO é o mesmo que ser um pedido de plataforma.
+     * Todos os pedidos vão aos profissionais (19-08-2026, decisão dele).
      *
-     * O simulador público passou a perguntar quanto a pessoa conta gastar — é
-     * uma pergunta de orçamento, e ajuda a equipa a responder. Mas quem a
-     * responde não pediu para entrar num mercado: não pode ficar com o pedido
-     * distribuído a estranhos e a receber propostas por email sem nunca ter
-     * escolhido isso.
+     * Esteve meio dia atrás de um botão no backoffice, para não empurrar quem
+     * pediu um orçamento à CLYON para dentro de um mercado sem ter escolhido.
+     * A decisão passou a ser a outra: os pedidos aparecem aos dois lados — à
+     * equipa no painel e aos profissionais na conta deles — e a CLYON continua
+     * a poder responder como sempre respondeu.
      *
-     * Quem inicia negociação é o formulário da plataforma, que se identifica na
-     * origem. O resto recolhe o valor e fica à espera de uma decisão nossa —
-     * há um botão no backoffice para isso.
+     * O botão fica onde está, para os pedidos antigos e para os que, por
+     * qualquer motivo, não cheguem a ninguém à primeira.
      */
-    const daPlataforma = (order as Record<string, unknown>).origemPedido === "plataforma";
     if (clienteIndicouValores) {
       const validacao = validarValorDesejado(valorBruto);
       if (!validacao.ok) {
@@ -174,6 +197,27 @@ export async function POST(req: NextRequest) {
       valoresParaGravar = {
         valorDesejadoCliente: String(validacao.valores.valorDesejadoCliente),
       };
+    }
+
+    // Sem valor escrito, arranca-se pela estimativa. Um pedido sem número
+    // nenhum não pode ser negociado: o profissional não teria sobre o que
+    // propor, e o cliente abriria um ecrã em branco.
+    const valorDeArranque: number | null = clienteIndicouValores
+      ? Number(valoresParaGravar.valorDesejadoCliente)
+      : (() => {
+          const daEstimativa = Number(
+            estimativa?.total ?? estimativa?.max ?? estimativa?.min ?? 0,
+          );
+          return Number.isFinite(daEstimativa) && daEstimativa > 0
+            ? Math.round(daEstimativa * 100) / 100
+            : null;
+        })();
+
+    // O valor de arranque fica gravado: é o ponto de partida que o
+    // profissional vê, e sem ele na base a negociação não teria referência
+    // nenhuma depois de a resposta desta rota desaparecer.
+    if (valorDeArranque != null && !clienteIndicouValores) {
+      valoresParaGravar = { valorDesejadoCliente: String(valorDeArranque) };
     }
 
     // O token que vai no link. Aqui fica só o hash — ver pedido-acesso.ts.
@@ -346,7 +390,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = urlDeAccaoDoPedido(req.headers);
 
     let linkEnviado = false;
-    if (daPlataforma && clienteIndicouValores && contactEmail) {
+    if (valorDeArranque != null && contactEmail) {
       linkEnviado = await enviarLinkDoPedido({
         para: contactEmail,
         nomeDoCliente: row.contactName ?? null,
@@ -379,7 +423,7 @@ export async function POST(req: NextRequest) {
     // Corre depois da resposta estar praticamente montada e nunca a bloqueia
     // com um erro: se a distribuição falhar, o pedido existe e reenvia-se. O
     // contrário — o cliente ver um erro porque um email não saiu — seria pior.
-    if (daPlataforma && clienteIndicouValores) {
+    if (valorDeArranque != null) {
       try {
         const distribuicao = await distribuirPedido({
           id,

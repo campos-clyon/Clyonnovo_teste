@@ -65,16 +65,62 @@ export function extrairCodigoPostal(texto: string | null | undefined): string | 
  * um código postal ganha a um palpite. Devolve também de onde veio o número,
  * para o painel poder dizer à equipa em que é que pode confiar.
  */
+/**
+ * Distância aproximada a partir do NOME da cidade.
+ *
+ * A pesquisa de moradas devolve muitas vezes só "Lisboa, Portugal" — sem
+ * número de porta e sem código postal. Nesse caso não havia nada a fazer e a
+ * conta caía no valor por omissão, que trata Lisboa e Fernão Ferro por igual.
+ *
+ * A cidade é uma pista pior do que o código postal e melhor do que nada: um
+ * pedido em Lisboa atravessa a ponte, e isso são trinta e cinco quilómetros
+ * que não podem valer zero no combustível.
+ */
+const KM_POR_CIDADE: Array<{ nomes: string[]; km: number }> = [
+  { nomes: ["fernão ferro", "fernao ferro"], km: 5 },
+  { nomes: ["amora", "seixal", "arrentela", "cruz de pau"], km: 7 },
+  { nomes: ["corroios", "miratejo", "belverde"], km: 10 },
+  { nomes: ["costa da caparica", "trafaria", "charneca"], km: 12 },
+  { nomes: ["barreiro", "moita", "montijo", "alhos vedros", "baixa da banheira"], km: 15 },
+  { nomes: ["almada", "cacilhas", "pragal", "laranjeiro", "feijó", "feijo"], km: 18 },
+  { nomes: ["odivelas", "amadora", "loures", "sacavém", "sacavem", "queluz"], km: 30 },
+  { nomes: ["palmela", "sesimbra", "quinta do conde"], km: 35 },
+  { nomes: ["lisboa", "lisbon"], km: 35 },
+  { nomes: ["oeiras", "carnaxide", "algés", "alges", "cascais", "sintra"], km: 45 },
+  { nomes: ["setúbal", "setubal"], km: 45 },
+];
+
+export function kmPorCidade(texto: string | null | undefined): number | null {
+  const t = (texto ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!t.trim()) return null;
+  for (const entrada of KM_POR_CIDADE) {
+    for (const nome of entrada.nomes) {
+      const semAcentos = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (t.includes(semAcentos)) return entrada.km;
+    }
+  }
+  return null;
+}
+
 export function kmParaOrcamento(dados: {
   distanciaMedidaKm?: number | null;
   codigoPostal?: string | null;
   morada?: string | null;
-}): { km: number; origem: "medida" | "codigo_postal" | "omissao" } {
+  cidade?: string | null;
+}): { km: number; origem: "medida" | "codigo_postal" | "cidade" | "omissao" } {
   const medida = Number(dados.distanciaMedidaKm ?? 0);
   if (medida > 0) return { km: medida, origem: "medida" };
 
   const cp = dados.codigoPostal?.trim() || extrairCodigoPostal(dados.morada);
   if (cp) return { km: kmPorCodigoPostal(cp), origem: "codigo_postal" };
+
+  // A morada primeiro: "Rua X, Almada" é mais preciso do que a localidade que
+  // o selector do cabeçalho tiver adivinhado pelo IP.
+  const porCidade = kmPorCidade(dados.morada) ?? kmPorCidade(dados.cidade);
+  if (porCidade != null) return { km: porCidade, origem: "cidade" };
 
   return { km: KM_POR_OMISSAO, origem: "omissao" };
 }

@@ -18,6 +18,7 @@ import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
 import EnviarFotos, { type FotoEnviada } from "@/components/EnviarFotos";
 import Nota from "@/components/Nota";
+import VisorDeFotos from "@/components/VisorDeFotos";
 import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { URGENCIA, fotosDe, propostasDe, provaDe, type Pedido } from "./tipos";
@@ -287,6 +288,8 @@ function DetalheDoTrabalho({
 }) {
   const [fotos, setFotos] = useState<FotoEnviada[]>([]);
   const [nota, setNota] = useState("");
+  /** Qual foto está aberta em ecrã inteiro, ou null. */
+  const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -332,25 +335,52 @@ function DetalheDoTrabalho({
       {/* O que o cliente enviou, em grande. É por aqui que se decide o preço. */}
       {doCliente.length > 0 && (
         <section className="mb-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={doCliente[0].url}
-            alt="Fotografia do pedido"
-            className="max-h-80 w-full rounded-2xl object-cover ring-1 ring-slate-200"
-          />
+          {/* A foto INTEIRA, sem cortar.
+              Estava com `object-cover` e ficava recortada em cima e em baixo —
+              e é sobre a fotografia que se decide o preço de uma recolha. O que
+              fica fora do enquadramento é o que faz a viagem render menos do
+              que devia. Fundo escuro porque uma foto ao alto deixa faixas dos
+              lados, e cinzento-claro faz parecer que falta lá alguma coisa. */}
+          <button
+            type="button"
+            onClick={() => setAVer({ lista: doCliente.map((f) => f.url), i: 0 })}
+            className="block w-full overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-slate-200"
+            aria-label="Abrir fotografia em ecrã inteiro"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={doCliente[0].url}
+              alt="Fotografia do pedido"
+              className="mx-auto max-h-96 w-auto max-w-full object-contain"
+            />
+          </button>
+
           {doCliente.length > 1 && (
             <div className="mt-2 grid grid-cols-4 gap-2">
               {doCliente.slice(1).map((f, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <button
                   key={f.url}
-                  src={f.url}
-                  alt={`Fotografia ${i + 2} do pedido`}
-                  className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
-                />
+                  type="button"
+                  onClick={() =>
+                    setAVer({ lista: doCliente.map((x) => x.url), i: i + 1 })
+                  }
+                  className="block overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200"
+                  aria-label={`Abrir fotografia ${i + 2}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={f.url}
+                    alt={`Fotografia ${i + 2} do pedido`}
+                    className="aspect-square w-full object-cover"
+                  />
+                </button>
               ))}
             </div>
           )}
+
+          <p className="mt-1.5 text-center text-xs text-slate-400">
+            Toque para ver em ecrã inteiro
+          </p>
         </section>
       )}
 
@@ -481,13 +511,16 @@ function DetalheDoTrabalho({
           {prova && prova.fotos.length > 0 && (
             <div className="mt-3 grid grid-cols-4 gap-2">
               {prova.fotos.map((url, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <button
                   key={url}
-                  src={url}
-                  alt={`Prova ${i + 1}`}
-                  className="aspect-square w-full rounded-lg object-cover ring-1 ring-amber-200"
-                />
+                  type="button"
+                  onClick={() => setAVer({ lista: prova.fotos, i })}
+                  className="block overflow-hidden rounded-lg bg-slate-900 ring-1 ring-amber-200"
+                  aria-label={`Abrir prova ${i + 1}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Prova ${i + 1}`} className="aspect-square w-full object-cover" />
+                </button>
               ))}
             </div>
           )}
@@ -523,6 +556,14 @@ function DetalheDoTrabalho({
             pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
           }
           onMudou={onRecarregar}
+        />
+      )}
+
+      {aVer && (
+        <VisorDeFotos
+          fotos={aVer.lista}
+          indiceInicial={aVer.i}
+          onFechar={() => setAVer(null)}
         />
       )}
     </>
