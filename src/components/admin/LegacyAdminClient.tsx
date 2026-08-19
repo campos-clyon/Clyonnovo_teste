@@ -1197,20 +1197,27 @@ export default function ColaboradorAdminClient() {
             escurece. Os oito destinos estavam em linha no topo, todos com o
             mesmo peso — agrupados, cada um está onde se procura. */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-800 bg-slate-900 transition-transform lg:relative lg:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-900 transition-transform lg:relative lg:translate-x-0 ${
             menuAberto ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          {/* Marca */}
-          <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-4">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[14px] bg-sky-500 text-white">
-              <ShieldCheck className="h-5 w-5" />
+          {/* Marca.
+              A altura é a MESMA do cabeçalho da direita (h-12) e está escrita
+              nos dois sítios como número fixo. Com padding, cada lado crescia
+              conforme o texto que lá estivesse e os dois desalinhavam-se — que
+              era o degrau que se via. Sem linha por baixo e sem linha ao lado:
+              a faixa lê-se como uma só, de ponta a ponta. */}
+          <div className="flex h-12 flex-shrink-0 items-center gap-2.5 px-4">
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[9px] bg-sky-500 text-white">
+              <ShieldCheck className="h-4 w-4" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400">
+            <div className="min-w-0 leading-none">
+              <p className="text-[9px] font-semibold uppercase leading-none tracking-[0.2em] text-sky-400">
                 Backoffice
               </p>
-              <p className="truncate text-sm font-semibold text-white">CLYON</p>
+              <p className="mt-0.5 truncate text-[13px] font-semibold leading-none text-white">
+                CLYON
+              </p>
             </div>
             <button
               type="button"
@@ -1222,8 +1229,11 @@ export default function ColaboradorAdminClient() {
             </button>
           </div>
 
-          {/* Destinos */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {/* Destinos.
+              A borda direita vive aqui e no bloco de baixo, e não no <aside>:
+              assim a linha começa por baixo da faixa do cabeçalho em vez de a
+              cortar ao meio. */}
+          <nav className="flex-1 overflow-y-auto border-r border-slate-800 px-3 py-4">
             {NAV_GRUPOS.map((grupo) => {
               const itens = grupo.itens
                 .map((id) => adminNavItems.find((i) => i.id === id))
@@ -1277,7 +1287,7 @@ export default function ColaboradorAdminClient() {
           </nav>
 
           {/* Quem está a trabalhar, e a saída */}
-          <div className="border-t border-slate-800 px-3 py-3">
+          <div className="border-r border-t border-slate-800 px-3 py-3">
             <div className="flex items-center gap-3 rounded-[14px] px-2 py-1.5">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-sky-500 text-xs font-bold text-white">
                 {getInitials(adminNome)}
@@ -1300,25 +1310,24 @@ export default function ColaboradorAdminClient() {
 
         {/* ── Conteúdo ────────────────────────────────────────────────── */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="z-30 flex-shrink-0 border-b border-slate-800 bg-slate-900 px-4 py-3 lg:px-6">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setMenuAberto(true)}
-                className="rounded-lg border border-slate-800 p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
-                aria-label="Abrir menu"
-              >
-                <Menu className="h-4 w-4" />
-              </button>
-              <div className="min-w-0">
-                {/* O título diz onde se está: com a navegação de lado, o
-                    cabeçalho deixa de ter de repetir a marca. */}
-                <h2 className="truncate text-lg font-semibold text-white">
-                  {sectionLabels[activeSection]}
-                </h2>
-                <p className="text-xs capitalize text-slate-500">{hojeLabel}</p>
-              </div>
-            </div>
+          {/* A mesma altura da marca, à esquerda — e nenhuma linha entre as
+              duas. O título e a data ficam na mesma linha: empilhados, pediam
+              mais altura do que a faixa tem para dar. */}
+          <header className="z-30 flex h-12 flex-shrink-0 items-center gap-2.5 bg-slate-900 px-4 lg:px-6">
+            <button
+              type="button"
+              onClick={() => setMenuAberto(true)}
+              className="-ml-1 rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+              aria-label="Abrir menu"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <h2 className="truncate text-[15px] font-semibold leading-none text-white">
+              {sectionLabels[activeSection]}
+            </h2>
+            <p className="hidden truncate text-xs capitalize leading-none text-slate-500 sm:block">
+              {hojeLabel}
+            </p>
           </header>
 
           <main className="min-w-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 lg:px-6">
