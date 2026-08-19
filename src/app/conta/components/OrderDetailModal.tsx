@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
 import StatusBadge from "./StatusBadge";
-import { SERVICE_LABELS, type Order, type OrderHistoryEntry } from "./types";
+import {
+  SERVICE_LABELS,
+  estadoNaPlataforma,
+  type Order,
+  type OrderHistoryEntry,
+} from "./types";
 import PropostasRecebidas, {
   type NegociacaoDoCliente,
 } from "@/app/pedido/[token]/PropostasRecebidas";
@@ -94,7 +99,18 @@ interface Props {
 }
 
 export default function OrderDetailModal({ order, onClose, onOrderChange }: Props) {
-  const preco = order.precoFinalIva ?? order.precoFinal ?? order.estimateTotal;
+  /*
+   * O valor que manda é o acordado, quando existe.
+   *
+   * O cabeçalho continuava a mostrar a estimativa — 741,99 € — enquanto o
+   * bloco do acordo, três centímetros abaixo, dizia "Total a pagar 636,00 €".
+   * Dois números no mesmo ecrã para a mesma pergunta, e o mais visível era o
+   * que já não valia.
+   */
+  const naPlataforma = estadoNaPlataforma(order);
+  const preco =
+    naPlataforma.valor ?? order.precoFinalIva ?? order.precoFinal ?? order.estimateTotal;
+  const precoEAcordado = naPlataforma.legenda === "acordado";
 
   // O detalhe já não é uma sobreposição: bloquear o scroll da página aqui
   // deixava-a presa com o conteúdo à vista e sem forma de o rolar.
@@ -279,7 +295,9 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               <div className="text-xl font-bold leading-none text-slate-900">
                 {Number(preco).toFixed(2)} €
               </div>
-              <div className="mt-1 text-[11px] text-slate-400">sem IVA</div>
+              <div className="mt-1 text-[11px] text-slate-400">
+                {precoEAcordado ? "total a pagar" : "sem IVA"}
+              </div>
             </div>
           ) : order.estimateMin != null && order.estimateMax != null ? (
             <div className="text-right">
@@ -570,7 +588,9 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           <div className="flex items-center justify-between border-t border-slate-100 pt-3">
             <span className="text-xs text-slate-400">Criado a {formatDate(order.createdAt)}</span>
             {preco != null && (
-              <span className="text-base font-bold text-slate-900">{Number(preco).toFixed(2)} € s/IVA</span>
+              <span className="text-base font-bold text-slate-900">
+                {Number(preco).toFixed(2)} € {precoEAcordado ? "a pagar" : "s/IVA"}
+              </span>
             )}
             {preco == null && order.estimateMin != null && order.estimateMax != null && (
               <span className="text-sm font-semibold text-slate-700">

@@ -296,6 +296,14 @@ function DetalheDoTrabalho({
   const [nota, setNota] = useState("");
   /** Qual foto está aberta em ecrã inteiro, ou null. */
   const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
+  /**
+   * Se o mapa chegou.
+   *
+   * Sem chave da Google configurada, a rota responde 204 — e um 204 no `src`
+   * de uma imagem não é "nada": é o ícone de imagem partida, com o texto
+   * alternativo ao lado. Pior do que não ter mapa nenhum.
+   */
+  const [semMapa, setSemMapa] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -435,21 +443,24 @@ function DetalheDoTrabalho({
               à pergunta que ele faz primeiro — "isto é longe?" — antes de
               ler uma palavra. É uma imagem estática servida por nós, para a
               chave da Google não sair para o browser. */}
-          <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pedido.morada)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 block overflow-hidden rounded-xl ring-1 ring-emerald-200"
-            aria-label="Abrir a morada no mapa"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/mapa?q=${encodeURIComponent(pedido.morada)}&w=640&h=200`}
-              alt={`Mapa de ${pedido.morada}`}
-              className="h-36 w-full bg-emerald-100/50 object-cover"
-              loading="lazy"
-            />
-          </a>
+          {!semMapa && (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pedido.morada)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 block overflow-hidden rounded-xl ring-1 ring-emerald-200"
+              aria-label="Abrir a morada no mapa"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/mapa?q=${encodeURIComponent(pedido.morada)}&w=640&h=200`}
+                alt=""
+                className="h-36 w-full bg-emerald-100/50 object-cover"
+                loading="lazy"
+                onError={() => setSemMapa(true)}
+              />
+            </a>
+          )}
 
           <p className="mt-2.5 flex items-start gap-2 text-sm text-emerald-900">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
