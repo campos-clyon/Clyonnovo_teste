@@ -205,10 +205,24 @@ export default function PainelDoProfissional() {
               aviso={porFazer > 0}
               onClick={() => abrir("trabalhos")}
             />
+            {/* Enquanto nada está disponível, a linha mostrava 0,00 € e parecia
+                que ele não tinha ganho nada — quando o dinheiro existe e está
+                à espera da confirmação do cliente. */}
             <LinhaDeMenu
               icone={Wallet}
               rotulo="A minha carteira"
-              valor={carteira ? euros(carteira.carteira.disponivel) : undefined}
+              valor={
+                carteira && carteira.carteira.disponivel > 0
+                  ? euros(carteira.carteira.disponivel)
+                  : undefined
+              }
+              destaque={
+                carteira && carteira.carteira.disponivel === 0 && carteira.carteira.cativo > 0
+                  ? `${euros(carteira.carteira.cativo)} cativo`
+                  : carteira && carteira.carteira.disponivel === 0
+                    ? "0,00 €"
+                    : undefined
+              }
               onClick={() => abrir("carteira")}
             />
           </GrupoDeLinhas>
