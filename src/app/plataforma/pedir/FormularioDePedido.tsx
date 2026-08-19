@@ -428,6 +428,11 @@ export default function SimulatorThreePhaseForm() {
           // Fica no pedido para a equipa saber que houve fotos e pedi-las
           fotosNaoEnviadas: fotosPerdidas,
           motivoFotosNaoEnviadas: motivoFalhaFotos,
+          // Assina a origem. Os pedidos da plataforma caem na MESMA lista dos
+          // reais, e durante o MVP são todos de teste — sem esta marca, alguém
+          // liga a um cliente que não existe ou manda uma carrinha a uma morada
+          // inventada. A lista mostra-os com etiqueta própria.
+          origemPedido: "plataforma",
         };
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",

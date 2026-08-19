@@ -46,6 +46,11 @@ const ORIGEM_LABELS: Record<string, string> = {
   quero_contratar: "Contratar",
   quero_contratar_header: "Contratar",
   simulador: "Simulador",
+  // Enquanto o MVP estiver fechado, estes pedidos são de teste e caem na mesma
+  // lista dos reais. Sem uma etiqueta que salte à vista, alguém da equipa
+  // liga a um cliente que não existe, ou manda uma carrinha a uma morada
+  // inventada.
+  plataforma: "TESTE · plataforma",
 };
 
 export type OrigemPedido = { label: string; slug: string };

@@ -529,6 +529,24 @@ import { origemPeloSlug, origemDoPedido } from "./acesso";
 import { readFileSync as lerFicheiro } from "node:fs";
 import { join as juntar } from "node:path";
 
+describe("origem: os pedidos de teste têm de saltar à vista", () => {
+  // Durante o MVP fechado, um pedido da plataforma é um teste — e cai na mesma
+  // lista dos reais. Sem etiqueta, alguém liga a um cliente que não existe.
+  it("a plataforma tem rótulo próprio e diz TESTE", () => {
+    expect(origemPeloSlug("plataforma").label).toContain("TESTE");
+    expect(origemDoPedido(JSON.stringify({ origemPedido: "plataforma" })).slug).toBe(
+      "plataforma",
+    );
+  });
+
+  it("um pedido do simulador público continua a ser Simulador", () => {
+    expect(origemDoPedido(JSON.stringify({}))).toEqual({
+      label: "Simulador",
+      slug: "simulador",
+    });
+  });
+});
+
 describe("origemPeloSlug — a lista não recebe o JSON inteiro", () => {
   it("traduz os slugs que existem nos dados", () => {
     expect(origemPeloSlug("formulario_contactos").label).toBe("Contactos");

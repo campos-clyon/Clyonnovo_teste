@@ -1787,6 +1787,7 @@ export default function ColaboradorAdminClient() {
                             origem.slug === "hero_quote_form" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                             origem.slug === "formulario_contactos" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
                             origem.slug.startsWith("quero_contratar") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            origem.slug === "plataforma" ? "bg-red-100 text-red-800 border-red-300" :
                             origem.slug === "simulador" ? "bg-violet-50 text-violet-700 border-violet-200" :
                             "bg-slate-100 text-slate-600 border-slate-200";
 
