@@ -23,6 +23,32 @@ function toWhatsAppNumber(phone: string) {
   return phone.replace(/[^\d]/g, "");
 }
 
+/**
+ * A morada, sem repetir o que já lá está.
+ *
+ * Juntava-se `address`, `city` e `postalCode` com vírgulas, às cegas. Como a
+ * morada escolhida na pesquisa já traz a localidade e o país, saía coisas como
+ * "…Marvila, Lisboa, Portugal, Gauchy" — com o `Gauchy` vindo do selector de
+ * localização do cabeçalho, que era outro problema, mas mesmo com a cidade
+ * certa saía "Lisboa, Portugal, Lisboa".
+ */
+function moradaCompleta(
+  morada: string | null | undefined,
+  cidade: string | null | undefined,
+  codigoPostal: string | null | undefined,
+): string {
+  const base = (morada ?? "").trim();
+  const partes = [base];
+
+  const jaContem = (valor: string) =>
+    base.toLowerCase().includes(valor.trim().toLowerCase());
+
+  if (cidade?.trim() && !jaContem(cidade)) partes.push(cidade.trim());
+  if (codigoPostal?.trim() && !jaContem(codigoPostal)) partes.push(codigoPostal.trim());
+
+  return partes.filter(Boolean).join(", ");
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-PT", {
     day: "2-digit", month: "short", year: "numeric",
@@ -133,12 +159,24 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   }
 
   return (
+    /*
+     * Painel lateral, e não uma caixa ao centro.
+     *
+     * Estava como modal centrado com `max-h-[92vh]`: num pedido com fotografias
+     * e histórico, o conteúdo passava da altura e ficava cortado — via-se metade
+     * de um cartão e não havia como chegar ao resto. Um painel de altura total,
+     * com a barra e as acções fixas e só o meio a correr, não tem esse
+     * problema, e aproveita a largura em vez de a desperdiçar em duas margens.
+     */
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detalhe do pedido"
     >
-      <div className="relative w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
+      <div className="painel-lateral absolute inset-y-0 right-0 flex w-full max-w-4xl flex-col bg-white shadow-2xl">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
           <div>
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-semibold text-slate-900">
@@ -156,16 +194,18 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="space-y-5 px-6 py-5 text-sm">
-          {/* Grelha de detalhes principais */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Só o meio corre. A barra de cima e o que estiver em baixo ficam. */}
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm">
+          {/* Grelha de detalhes principais. Em ecrã largo cabem três colunas —
+              é para isso que serve o espaço que o painel ganhou. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {order.address && (
               <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
                 <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <MapPin className="h-3.5 w-3.5" /> Morada
                 </div>
                 <p className="mt-1 text-sm text-slate-800">
-                  {[order.address, order.city, order.postalCode].filter(Boolean).join(", ")}
+                  {moradaCompleta(order.address, order.city, order.postalCode)}
                 </p>
               </div>
             )}

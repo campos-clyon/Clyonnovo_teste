@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import ContaSidebar   from "./components/ContaSidebar";
-import MobileTabs     from "./components/MobileTabs";
+import MenuMovel      from "./components/MenuMovel";
+import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import VisaoGeral     from "./components/VisaoGeral";
 import MeusPedidos    from "./components/MeusPedidos";
 import DadosPessoais  from "./components/DadosPessoais";
@@ -19,6 +20,16 @@ interface Props {
   initialOrders?: Order[];
   initialSummary?: OrderSummary | null;
 }
+
+/** O título do ecrã aberto, no telemóvel. */
+const TITULOS_MOVEIS: Record<Section, string> = {
+  "visao-geral": "A minha conta",
+  pedidos: "Os meus pedidos",
+  "dados-pessoais": "Dados pessoais",
+  faturacao: "Faturação",
+  notificacoes: "Notificações",
+  seguranca: "Segurança",
+};
 
 export default function ContaCliente({
   nome, email, avatar,
@@ -90,20 +101,34 @@ export default function ContaCliente({
         </main>
       </div>
 
-      {/* Layout mobile: tabs horizontais + conteúdo */}
+      {/* Layout mobile: menu de linhas, e cada secção abre por cima com seta
+          para trás — o gesto das aplicações que já têm no telemóvel. */}
       <div className="lg:hidden">
-        <MobileTabs section={section} onSection={setSection} />
-        <main className="px-4 py-6">
-          <SectionContent
-            section={section}
-            user={effectiveUser}
-            googleAvatar={avatar}
-            orders={orders}
-            summary={summary}
+        {section === "visao-geral" ? (
+          <MenuMovel
+            nome={effectiveUser.name ?? nome}
+            email={email}
+            avatar={effectiveUser.avatarUrl ?? avatar}
+            pedidosAbertos={summary?.activeOrders ?? 0}
             onSection={setSection}
-            onUpdate={handleUpdate}
           />
-        </main>
+        ) : (
+          <main className="px-4 pb-16">
+            <CabecalhoDeEcra
+              titulo={TITULOS_MOVEIS[section]}
+              onVoltar={() => setSection("visao-geral")}
+            />
+            <SectionContent
+              section={section}
+              user={effectiveUser}
+              googleAvatar={avatar}
+              orders={orders}
+              summary={summary}
+              onSection={setSection}
+              onUpdate={handleUpdate}
+            />
+          </main>
+        )}
       </div>
     </div>
   );

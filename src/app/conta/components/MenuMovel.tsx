@@ -1,0 +1,86 @@
+"use client";
+
+import { signOut } from "next-auth/react";
+import UserAvatar from "@/components/UserAvatar";
+import {
+  Bell,
+  ClipboardList,
+  HelpCircle,
+  LogOut,
+  Receipt,
+  Shield,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { GrupoDeLinhas, LinhaDeMenu } from "@/components/portal/Portal";
+import type { Section } from "./types";
+
+/**
+ * A conta do cliente, no telemóvel: um menu de linhas.
+ *
+ * Estavam aqui dois separadores no topo — "Geral" e "Pedidos" — e as outras
+ * quatro secções viviam escondidas dentro do primeiro. Quem procurava as
+ * notificações tinha de descobrir que estavam lá dentro.
+ *
+ * Uma lista mostra tudo o que existe de uma vez, cada linha abre um ecrã com
+ * seta para trás, e é o desenho que estas pessoas já têm no telemóvel. O mesmo
+ * do lado do profissional — a mesma casa, os mesmos gestos.
+ */
+
+export default function MenuMovel({
+  nome,
+  email,
+  avatar,
+  pedidosAbertos,
+  onSection,
+}: {
+  nome: string;
+  email: string;
+  avatar: string | null;
+  pedidosAbertos: number;
+  onSection: (s: Section) => void;
+}) {
+  return (
+    <div className="px-4 pb-16 pt-5">
+      <header className="mb-5 flex items-center gap-3">
+        <UserAvatar src={avatar} name={nome} size={56} />
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold text-[#0B1929]">{nome}</h1>
+          <p className="truncate text-sm text-slate-500">{email}</p>
+        </div>
+      </header>
+
+      <GrupoDeLinhas className="mb-4">
+        <LinhaDeMenu
+          icone={ClipboardList}
+          rotulo="Os meus pedidos"
+          destaque={pedidosAbertos > 0 ? `${pedidosAbertos} a decorrer` : undefined}
+          onClick={() => onSection("pedidos")}
+        />
+      </GrupoDeLinhas>
+
+      <GrupoDeLinhas titulo="A minha conta" className="mb-4">
+        <LinhaDeMenu icone={User} rotulo="Dados pessoais" onClick={() => onSection("dados-pessoais")} />
+        <LinhaDeMenu icone={Receipt} rotulo="Faturação" onClick={() => onSection("faturacao")} />
+        <LinhaDeMenu icone={Bell} rotulo="Notificações" onClick={() => onSection("notificacoes")} />
+        <LinhaDeMenu icone={Shield} rotulo="Segurança" onClick={() => onSection("seguranca")} />
+      </GrupoDeLinhas>
+
+      <GrupoDeLinhas>
+        <Link
+          href="/contactos"
+          className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 transition active:bg-slate-50"
+        >
+          <HelpCircle className="h-5 w-5 shrink-0 text-cyan-600" aria-hidden="true" />
+          <span className="flex-1 text-[15px] font-medium text-[#0B1929]">Ajuda e contactos</span>
+        </Link>
+        <LinhaDeMenu
+          icone={LogOut}
+          rotulo="Sair"
+          tom="perigo"
+          onClick={() => signOut({ callbackUrl: "/" })}
+        />
+      </GrupoDeLinhas>
+    </div>
+  );
+}

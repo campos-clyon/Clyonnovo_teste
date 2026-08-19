@@ -1,0 +1,446 @@
+"use client";
+
+import { useState } from "react";
+import {
+  BadgeCheck,
+  Camera,
+  CheckCircle2,
+  Clock,
+  FileText,
+  HandCoins,
+  Loader2,
+  Phone,
+} from "lucide-react";
+import {
+  accoesDisponiveis,
+  propostasRestantes,
+  propostaPendente,
+  MAX_PROPOSTAS_POR_LADO,
+  type Negociacao,
+  type Proposta,
+} from "@/lib/negociacao";
+import { quantoOClientePaga, decomporIva, TAXA_IVA } from "@/lib/taxas-plataforma";
+import EscolherValor from "@/components/EscolherValor";
+import Nota from "@/components/Nota";
+
+/**
+ * As propostas que o cliente recebeu.
+ *
+ * Vários profissionais podem estar a negociar o mesmo pedido ao mesmo tempo, e
+ * é por isso que isto é uma lista e não um ecrã só. O cliente escolhe quem lhe
+ * entra em casa — e é esse o segundo passo do aperto de mão duplo: um
+ * profissional aceitar não fecha nada.
+ *
+ * Os valores da negociação são CRUS — o que foi proposto, sem taxa. É como a
+ * Vinted faz: na conversa vêem-se as propostas tal como foram feitas, e a taxa
+ * aparece onde se compra.
+ *
+ * Somá-la em cada proposta fazia o número dançar a cada contraproposta por uma
+ * razão que não é a negociação, e o cliente deixava de saber sobre que valor
+ * estava a discutir com o profissional.
+ *
+ * No fecho é ao contrário: aí é o momento de pagar, e mostra-se a conta toda —
+ * acordado, taxa e total.
+ */
+
+export type NegociacaoDoCliente = {
+  id: number;
+  estado: string;
+  valorAcordado: number | null;
+  propostas: Proposta[];
+  profissionalNome: string;
+  emiteFatura: boolean;
+  /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
+  regimeIva: string;
+  guiaVerificada: boolean;
+  /** Só depois de o contratar. */
+  profissionalTelefone: string | null;
+  fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
+  provaJson: string | null;
+  diasAteLibertar: number | null;
+};
+
+function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json);
+    return {
+      fotos: Array.isArray(p?.fotos) ? p.fotos.filter((f: unknown) => typeof f === "string") : [],
+      nota: typeof p?.nota === "string" ? p.nota : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function euros(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return v.toFixed(2).replace(".", ",") + " €";
+}
+
+export default function PropostasRecebidas({
+  token,
+  negociacoesIniciais,
+}: {
+  token: string;
+  negociacoesIniciais: NegociacaoDoCliente[];
+}) {
+  const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
+  const [aEnviar, setAEnviar] = useState<number | null>(null);
+  const [erro, setErro] = useState("");
+
+  async function agir(id: number, accao: string, valor?: string) {
+    setAEnviar(id);
+    setErro("");
+    try {
+      const res = await fetch(`/api/negociacao/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accao, valor, negociacaoId: id }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível.");
+        return;
+      }
+      setNegociacoes((lista) =>
+        lista.map((n) =>
+          n.id !== id
+            ? n
+            : dados.confirmado
+              ? { ...n, fase: "confirmado" as const, diasAteLibertar: null }
+              : {
+                  ...n,
+                  estado: dados.estado,
+                  valorAcordado: dados.valorAcordado,
+                  propostas: dados.propostas,
+                },
+        ),
+      );
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(null);
+    }
+  }
+
+  const acordada = negociacoes.find((n) => n.estado === "acordada");
+
+  if (acordada) {
+    const prova = provaDe(acordada.provaJson);
+    return (
+      <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+        <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
+        <h2 className="mt-2 text-lg font-bold text-emerald-900">
+          Contratou {acordada.profissionalNome}
+        </h2>
+        {/* Aqui sim: é o momento de pagar, e o total tem de ser o total —
+            com o IVA decomposto do valor acordado, não somado a ele. */}
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
+          {/*
+            O IVA só aparece a quem o liquida. O regime é do profissional, não
+            nosso: um isento pelo art. 53.º não cobra IVA nenhum, e mostrar uma
+            linha de 23% a quem o contrata seria mostrar-lhe um imposto que não
+            deve — e que ninguém pode entregar ao Estado.
+          */}
+          {acordada.regimeIva === "normal" ? (
+            <>
+              <div className="flex items-baseline justify-between gap-4 text-sm">
+                <span className="text-slate-600">Serviço (sem IVA)</span>
+                <span className="text-slate-900">
+                  {euros(decomporIva(acordada.valorAcordado ?? 0).base)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+                <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
+                <span className="text-slate-900">
+                  {euros(decomporIva(acordada.valorAcordado ?? 0).iva)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-slate-100 pt-1 text-sm">
+                <span className="font-medium text-slate-700">Valor acordado</span>
+                <span className="font-semibold text-slate-900">
+                  {euros(acordada.valorAcordado)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-baseline justify-between gap-4 text-sm">
+              <span className="text-slate-600">
+                Valor acordado
+                <span className="block text-xs text-slate-400">
+                  isento de IVA (art. 53.º)
+                </span>
+              </span>
+              <span className="font-semibold text-slate-900">
+                {euros(acordada.valorAcordado)}
+              </span>
+            </div>
+          )}
+          <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+            <span className="text-slate-600">Taxa CLYON</span>
+            <span className="font-semibold text-slate-900">
+              {euros(
+                quantoOClientePaga(acordada.valorAcordado ?? 0) -
+                  (acordada.valorAcordado ?? 0),
+              )}
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
+            <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+            <span className="text-lg font-bold text-emerald-700">
+              {euros(quantoOClientePaga(acordada.valorAcordado ?? 0))}
+            </span>
+          </div>
+        </div>
+        {/* ── O que falta acontecer ───────────────────────────────────────── */}
+        {acordada.fase === "a_executar" && (
+          <div className="mt-4 text-left">
+            <p className="text-xs leading-relaxed text-emerald-700">
+              O valor fica retido na CLYON e só chega a {acordada.profissionalNome} depois
+              de o trabalho estar feito e de si o confirmar aqui.
+            </p>
+            {acordada.profissionalTelefone && (
+              <a
+                href={`tel:${acordada.profissionalTelefone}`}
+                className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-300 bg-white px-4 font-semibold text-emerald-800 transition active:bg-emerald-50"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                Ligar a {acordada.profissionalNome}
+              </a>
+            )}
+          </div>
+        )}
+
+        {acordada.fase === "a_confirmar" && (
+          <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-4 text-left">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-[#0B1929]">
+              <Camera className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              {acordada.profissionalNome} diz que está feito
+            </h3>
+
+            {/* A prova em grande. É sobre isto que se decide confirmar — numa
+                miniatura de sessenta píxeis não se vê se ficou feito. */}
+            {prova && prova.fotos.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={prova.fotos[0]}
+                  alt="Fotografia do trabalho feito"
+                  className="max-h-72 w-full rounded-xl object-cover ring-1 ring-slate-200"
+                />
+                {prova.fotos.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {prova.fotos.slice(1).map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={url}
+                        src={url}
+                        alt={`Fotografia ${i + 2} do trabalho feito`}
+                        className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {prova?.nota && (
+              <p className="mt-3 whitespace-pre-line rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                {prova.nota}
+              </p>
+            )}
+
+            {erro && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {erro}
+              </p>
+            )}
+
+            <button
+              onClick={() => agir(acordada.id, "confirmar")}
+              disabled={aEnviar === acordada.id}
+              className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white transition active:bg-emerald-700 disabled:opacity-50"
+            >
+              {aEnviar === acordada.id && (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              )}
+              <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+              Está bem feito, libertar o pagamento
+            </button>
+
+            {acordada.diasAteLibertar != null && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
+                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Se não disser nada, o valor é libertado sozinho daqui a{" "}
+                {Math.ceil(acordada.diasAteLibertar)} dia
+                {Math.ceil(acordada.diasAteLibertar) === 1 ? "" : "s"}. Se alguma coisa
+                estiver mal, fale connosco antes disso.
+              </p>
+            )}
+          </div>
+        )}
+
+        {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
+          <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
+            Confirmou que está feito e o pagamento foi libertado. Obrigado.
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  const activas = negociacoes.filter(
+    (n) => n.estado === "aberta" || n.estado === "aguarda_contratacao",
+  );
+
+  if (activas.length === 0) {
+    return (
+      <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 text-center shadow-sm">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">Propostas</h2>
+        <p className="mt-3 text-sm text-slate-500">
+          Ainda não há propostas. Assim que um profissional responder, aparece aqui — e
+          avisamos por email.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-4">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">
+        {activas.length} {activas.length === 1 ? "profissional" : "profissionais"} a responder
+      </h2>
+
+      {erro && (
+        <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {activas.map((n) => {
+          const estado: Negociacao = {
+            estado: n.estado as Negociacao["estado"],
+            valorAcordado: n.valorAcordado,
+            propostas: n.propostas,
+          };
+          const agora = new Date();
+          const accoes = accoesDisponiveis(estado, "cliente", agora);
+          const pendente = propostaPendente(estado, agora);
+          const restantes = propostasRestantes(estado, "cliente", agora);
+          const emCima = pendente?.valor ?? n.valorAcordado;
+          const aguarda = n.estado === "aguarda_contratacao";
+
+          return (
+            <article
+              key={n.id}
+              className={`rounded-2xl border bg-white p-5 shadow-sm ${
+                aguarda ? "border-emerald-300 ring-1 ring-emerald-200" : "border-[#E2EEF3]"
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-[#0B1929]">{n.profissionalNome}</h3>
+                  {/* O distintivo está sempre à vista, e não ao fim de cinco
+                      propostas — não pode ser uma descoberta tardia. */}
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        n.emiteFatura
+                          ? "bg-blue-50 text-blue-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      <FileText className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                      {n.emiteFatura ? "emite fatura" : "não emite fatura"}
+                    </span>
+                    {n.guiaVerificada && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        <BadgeCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                        guia verificada
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/*
+                  O valor CRU do que está em cima da mesa, sem taxa.
+                  É como a Vinted faz: na conversa vêem-se os valores das
+                  propostas, e a taxa aparece onde se compra. Somá-la aqui
+                  fazia o número dançar a cada contraproposta por uma razão
+                  que não é a negociação — e o cliente deixava de saber sobre
+                  que valor estava a discutir.
+                */}
+                <div className="text-right">
+                  <div className="text-xl font-bold text-[#0B1929]">{euros(emCima)}</div>
+                  <div className="text-xs text-slate-400">
+                    {pendente?.por === "profissional" ? "proposta dele" : "a sua proposta"}
+                  </div>
+                </div>
+              </div>
+
+              {aguarda && (
+                <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                  <strong>Aceitou o seu valor.</strong> Falta confirmar que o contrata.
+                </p>
+              )}
+
+              <div className="mt-4 space-y-2">
+                {accoes.includes("contratar") && (
+                  <button
+                    onClick={() => agir(n.id, "contratar")}
+                    disabled={aEnviar === n.id}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {aEnviar === n.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                    Contratar este profissional
+                  </button>
+                )}
+
+                {accoes.includes("aceitar") && (
+                  <button
+                    onClick={() => agir(n.id, "aceitar")}
+                    disabled={aEnviar === n.id}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    <HandCoins className="h-4 w-4" aria-hidden="true" />
+                    Aceitar e contratar
+                  </button>
+                )}
+
+                {accoes.includes("propor") && (
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="mb-2 text-sm font-medium text-slate-700">
+                      {accoes.includes("aceitar") || accoes.includes("contratar")
+                        ? "Ou proponha outro valor"
+                        : "Proponha um valor"}
+                    </p>
+                    <EscolherValor
+                      referencia={emCima}
+                      direccao="abaixo"
+                      aEnviar={aEnviar === n.id}
+                      legendaDoValor={(v) =>
+                        `Se ele aceitar, paga ${euros(quantoOClientePaga(v))} com a taxa CLYON.`
+                      }
+                      onPropor={(valor) => agir(n.id, "propor", valor)}
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <Nota titulo="O que acontece quando aceita" className="mt-4">
+        Aceitar ou contratar fecha o trabalho com esse profissional, e as outras
+        negociações terminam nesse momento. Tem cinco propostas de cada lado e 48
+        horas para responder a cada uma.
+      </Nota>
+    </section>
+  );
+}

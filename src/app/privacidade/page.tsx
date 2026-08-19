@@ -178,12 +178,31 @@ export default function PrivacidadePage() {
                 Os dados dos clientes são partilhados apenas com:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>
-                    <strong>Equipas operacionais internas da CLYON</strong> que executam a recolha,
-                    esvaziamento ou mudança contratados.
+                    <strong>Profissionais independentes</strong> que respondem ao pedido. Antes de os
+                    contratar veem a zona, as fotografias e o valor que indicou — nunca a morada
+                    exacta nem o seu contacto, que só passam depois de os escolher.
                   </li>
                   <li>
-                    <strong>Fornecedores de infra-estrutura</strong> — alojamento cloud (Vercel), base
-                    de dados, ferramentas de comunicação (WhatsApp Business).
+                    <strong>Alojamento e base de dados</strong> — Vercel (alojamento do site) e
+                    Railway (base de dados), ambos na União Europeia.
+                  </li>
+                  <li>
+                    <strong>Envio de email</strong> — Resend, para lhe enviar o link do pedido e os
+                    avisos de propostas.
+                  </li>
+                  <li>
+                    <strong>Comunicação</strong> — WhatsApp Business (Meta), quando fala connosco por
+                    essa via.
+                  </li>
+                  <li>
+                    <strong>Mapas e moradas</strong> — Google Maps e OpenStreetMap/Nominatim, para
+                    sugerir a morada e calcular distâncias.
+                  </li>
+                  <li>
+                    <strong>Medição e publicidade</strong> — Google Analytics, Google Ads e Vercel
+                    Analytics. <strong>Só carregam se aceitar</strong> os cookies de analítica ou de
+                    marketing; se recusar, ou enquanto não responder ao aviso de cookies, não são
+                    carregados de todo.
                   </li>
                   <li>
                     <strong>Contabilidade e autoridades fiscais</strong> — quando aplicável para

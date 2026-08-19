@@ -11,6 +11,11 @@ import {
   type EstadoTicket,
 } from "@/lib/suporte";
 import ContasPanel from "@/components/admin/ContasPanel";
+import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
+import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
+import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
+import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
+import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -50,6 +55,10 @@ import {
   Users,
   Wrench,
   X,
+  BadgeCheck,
+  HandCoins,
+  Wallet,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +72,22 @@ type SimulatorSetting = {
   description?: string | null;
 };
 
-type AdminSection = "overview" | "pedidos" | "app_clyon" | "leads" | "site" | "configs" | "contas" | "suporte";
+type AdminSection =
+  | "overview"
+  | "pedidos"
+  | "app_clyon"
+  | "leads"
+  | "site"
+  | "configs"
+  | "contas"
+  | "suporte"
+  // Plataforma. São secções e não rotas próprias de propósito: abrem na área
+  // da direita, como as outras, e quem está a trabalhar não perde a barra nem
+  // o contexto ao mudar de assunto.
+  | "profissionais"
+  | "negociacoes"
+  | "levantamentos"
+  | "testadores";
 
 type Lead = {
   id: number;
@@ -172,6 +196,10 @@ const adminNavItems: Array<{
   { id: "contas",     icon: UserPlus },
   { id: "suporte",   icon: LifeBuoy },
   { id: "configs",   icon: Settings2 },
+  { id: "profissionais", icon: BadgeCheck },
+  { id: "negociacoes",   icon: HandCoins },
+  { id: "levantamentos", icon: Wallet },
+  { id: "testadores",    icon: FlaskConical },
 ];
 
 /**
@@ -185,6 +213,7 @@ const adminNavItems: Array<{
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes", "levantamentos", "testadores"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["configs"] },
 ];
@@ -198,6 +227,10 @@ const sectionLabels: Record<AdminSection, string> = {
   contas:     "Contas",
   suporte:    "Suporte",
   configs:    "Configs",
+  profissionais: "Profissionais",
+  negociacoes:   "Negociações",
+  levantamentos: "Levantamentos",
+  testadores:    "Acesso aos testes",
 };
 
 const siteModules = [
@@ -1240,6 +1273,7 @@ export default function ColaboradorAdminClient() {
                 </div>
               );
             })}
+
           </nav>
 
           {/* Quem está a trabalhar, e a saída */}
@@ -1754,6 +1788,7 @@ export default function ColaboradorAdminClient() {
                             origem.slug === "hero_quote_form" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                             origem.slug === "formulario_contactos" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
                             origem.slug.startsWith("quero_contratar") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            origem.slug === "plataforma" ? "bg-red-100 text-red-800 border-red-300" :
                             origem.slug === "simulador" ? "bg-violet-50 text-violet-700 border-violet-200" :
                             "bg-slate-100 text-slate-600 border-slate-200";
 
@@ -2675,6 +2710,88 @@ export default function ColaboradorAdminClient() {
           )}
 
           {/* ══════════════════════════════════════════════════════════════ */}
+
+          {/* ══════════════════════════════════════════════════════════════ */}
+
+          {activeSection === "profissionais" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Profissionais</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  A inscrição não está aberta: entra-se por convite. Convide em baixo,
+                  e o registo que ele preencher volta aqui para aprovação — aprovar
+                  dá-lhe acesso à fila, verificar a guia deixa-o receber os pedidos que
+                  exigem transporte de resíduos.
+                </p>
+              </div>
+
+              <AdminConvitesPanel />
+
+              <div className="border-t border-slate-700/60 pt-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                  Inscritos
+                </h3>
+                <AdminProfissionaisPanel />
+              </div>
+            </section>
+          )}
+
+          {activeSection === "negociacoes" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Pedidos e negociações
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Os pedidos criados pelo formulário novo e as propostas de cada
+                  profissional. Reenviar emite um link novo e invalida o anterior.
+                </p>
+              </div>
+              <AdminNegociacoesPanel />
+            </section>
+          )}
+
+          {activeSection === "levantamentos" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Levantamentos
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Os profissionais pedem para receber o saldo confirmado. Copie o IBAN,
+                  faça a transferência no banco e marque como paga — enquanto não houver
+                  ligação directa, é aqui que o dinheiro sai.
+                </p>
+              </div>
+              <AdminLevantamentosPanel />
+            </section>
+          )}
+
+          {activeSection === "testadores" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Acesso aos testes</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  A plataforma está fechada ao público: só entra quem tiver o link com a
+                  chave <em>e</em> credenciais próprias. Aqui criam-se e retiram-se essas
+                  credenciais — desactivar uma pessoa não expulsa as outras.
+                </p>
+              </div>
+              <AdminTestadoresPanel />
+            </section>
+          )}
 
           {(activeSection === "site" || activeSection === "configs") && (
             <section className="space-y-4 rounded-[28px] border border-cyan-300/16 bg-[linear-gradient(180deg,rgba(9,25,40,0.94)_0%,rgba(11,30,47,0.92)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.22)]">

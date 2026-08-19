@@ -213,6 +213,27 @@ export interface SimulatorOrder {
   calendarTargetId?: string | null;
   /** Human-readable name of the target calendar (e.g. "CLYON — Agenda da Empresa"). From CLYON_GOOGLE_CALENDAR_NAME env var. */
   calendarTargetName?: string | null;
+
+  // ── Plataforma (16-08-2026) ──────────────────────────────────────────────
+  /**
+   * O que o cliente está disposto a pagar. Não confundir com estimateMin /
+   * estimateMax, que são a opinião do motor de preços sobre quanto custa.
+   * O MySQL devolve DECIMAL como string — daí o tipo.
+   */
+  valorDesejadoCliente?: string | null;
+  /**
+   * PRIVADO. Nunca pode sair numa resposta que um profissional leia — passar
+   * sempre por `vistaDoProfissional` (src/lib/pedido-valores.ts), que é uma
+   * lista de permissões e por isso não o deixa passar por esquecimento.
+   */
+  valorMaximoCliente?: string | null;
+  /** 0/1 no MySQL. Filtra a quem o pedido é mostrado. */
+  precisaFatura?: number | null;
+  /** 0/1 no MySQL. Exige transportador licenciado (e-GAR). */
+  precisaGuiaTransporte?: number | null;
+  /** SHA-256 do token de acesso. O token em claro vive só no link. */
+  acessoTokenHash?: string | null;
+  acessoTokenExpiraEm?: Date | string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -313,4 +334,18 @@ export interface InsertSimulatorOrder {
   analysisJsonExtended?: string | null;
   calendarTargetId?: string | null;
   calendarTargetName?: string | null;
+
+  // ── Plataforma (16-08-2026) ──────────────────────────────────────────────
+  // O que o cliente está disposto a pagar. Não confundir com estimateMin /
+  // estimateMax, que são a opinião do motor de preços sobre quanto custa.
+  // Ver src/lib/pedido-valores.ts.
+  /** Público ao profissional, como «o que o cliente quer pagar». */
+  valorDesejadoCliente?: string | null;
+  /** PRIVADO. Nunca pode sair numa resposta que um profissional leia. */
+  valorMaximoCliente?: string | null;
+  precisaFatura?: boolean | number | null;
+  precisaGuiaTransporte?: boolean | number | null;
+  /** Só o hash. O token em claro vive no link e mais lado nenhum. */
+  acessoTokenHash?: string | null;
+  acessoTokenExpiraEm?: Date | null;
 }

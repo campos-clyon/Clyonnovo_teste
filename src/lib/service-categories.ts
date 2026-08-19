@@ -1,10 +1,15 @@
 /**
- * Categorias de serviço do simulador. As 7 originais vêm do MVP
- * (CLYON_Plano_Mestre_Definitivo v3.0, secção 3); montagem_moveis, jardinagem e
- * manutencao_casa foram adicionadas como categorias adjacentes a remoções/casa,
- * mantendo o posicionamento de especialista (não um marketplace generalista).
- * Fonte única partilhada pelo simulador e pela homepage — evita arrays duplicados
- * a divergir entre si.
+ * Categorias de serviço do pedido. As 7 originais vêm do MVP; montagem_moveis,
+ * jardinagem e manutencao_casa foram acrescentadas como categorias adjacentes a
+ * remoções e casa.
+ *
+ * As descrições estão escritas na terceira pessoa de propósito. A CLYON deixou
+ * de ser quem executa e passou a ser onde se encontra quem execute — dizer
+ * "retiramos" ou "montamos" aqui punha o site a prometer um trabalho que não é
+ * nosso, e estas linhas aparecem tanto na homepage como nas páginas de serviço.
+ *
+ * Fonte única partilhada pelo formulário de pedido e pelas páginas públicas —
+ * evita arrays duplicados a divergir entre si.
  */
 export interface ServiceCategory {
   id: string;
@@ -38,7 +43,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "recolha-entulho",
     label: "Recolha de entulho",
     emoji: "🏗️",
-    description: "Retiramos restos de obra, sacos e materiais mistos com resposta rápida.",
+    description: "Restos de obra, sacos e materiais mistos, com transportador licenciado.",
     href: "/recolha-de-entulho",
   },
   {
@@ -70,7 +75,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "montagem-moveis",
     label: "Montagem e desmontagem de móveis",
     emoji: "🔧",
-    description: "Montamos e desmontamos móveis, roupeiros e camas com todo o cuidado.",
+    description: "Montagem e desmontagem de móveis, roupeiros e camas com cuidado.",
     href: "/simulador",
   },
   {
@@ -94,7 +99,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "outro-servico",
     label: "Outro serviço",
     emoji: "⭐",
-    description: "Não encontrou o que precisa? Descreva o serviço e preparamos um orçamento à medida.",
+    description: "Não encontrou o que precisa? Descreva o serviço e receba propostas à medida.",
     href: "/simulador",
   },
 ];
