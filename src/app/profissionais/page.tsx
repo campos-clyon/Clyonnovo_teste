@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
-import InscricaoForm from "./InscricaoForm";
 
 export const metadata: Metadata = {
   title: "Receba pedidos na sua zona — CLYON para profissionais",
@@ -137,18 +136,36 @@ export default function ProfissionaisPage() {
         </div>
       </section>
 
-      {/* ── Inscrição ─────────────────────────────────────────────────── */}
+      {/* ── Como se entra ─────────────────────────────────────────────── */}
       <section className="py-10 sm:py-14">
         <div className="mx-auto max-w-2xl px-4 sm:px-6">
-          <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">Inscrição</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Demora dois minutos. Analisamos o registo antes de começar a receber
-            pedidos — é o que permite dizer ao cliente que quem lhe aparece foi
+          <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">
+            Entra-se por convite
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Não há inscrição aberta. Fale connosco, deixe o nome e o email, e enviamos-lhe
+            o link do registo. Depois de o preencher, confirmamos os dados e avisamo-lo
+            quando a conta ficar activa.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-500">
+            É de propósito: assim cada profissional na plataforma é alguém com quem já
+            falámos — e é isso que permite dizer ao cliente que quem lhe aparece foi
             verificado.
           </p>
 
-          <div className="mt-6">
-            <InscricaoForm />
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/contactos"
+              className="flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-cyan-600 px-6 text-base font-bold text-white transition hover:bg-cyan-500"
+            >
+              Quero receber o convite
+            </Link>
+            <Link
+              href="/profissionais/entrar"
+              className="flex min-h-[52px] flex-1 items-center justify-center rounded-xl border-2 border-slate-200 px-6 text-base font-semibold text-slate-700 transition hover:border-slate-300"
+            >
+              Já tenho conta
+            </Link>
           </div>
         </div>
       </section>

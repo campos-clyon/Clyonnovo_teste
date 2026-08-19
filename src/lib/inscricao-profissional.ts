@@ -16,6 +16,22 @@ export const CATEGORIAS_VALIDAS = SERVICE_CATEGORIES.map((c) => c.id);
 
 /** Ninguém se desloca 500 km para levar um sofá. Acima disto é engano. */
 export const RAIO_MAXIMO_KM = 200;
+
+/**
+ * Os ids dos veículos aceites.
+ *
+ * A lista com os rótulos está em `convite-profissional.ts`. Aqui só os ids,
+ * porque esse ficheiro importa deste — importá-lo de volta fechava um ciclo.
+ */
+export const TIPOS_DE_VEICULO_VALIDOS: string[] = [
+  "carrinha_pequena",
+  "carrinha_media",
+  "carrinha_grande",
+  "camiao",
+  "camiao_grua",
+  "varios",
+  "sem_veiculo",
+];
 export const RAIO_MINIMO_KM = 1;
 
 export type ErroDeInscricao = { campo: string; mensagem: string };
@@ -51,6 +67,7 @@ export type DadosDeInscricao = {
   moradaFiscal: string | null;
   codigoPostalFiscal: string | null;
   localidadeFiscal: string | null;
+  tipoVeiculo: string | null;
   categorias: string[];
   zonas: string[];
   raioKm: number;
@@ -214,6 +231,20 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
     }
   }
 
+  // O veículo não é ficha técnica: um sofá de três lugares não entra numa
+  // carrinha pequena, e mandar-lhe esse pedido é fazer-lhe perder a viagem.
+  const veiculoBruto = texto(c.tipoVeiculo);
+  let tipoVeiculo: string | null = null;
+  if (veiculoBruto) {
+    if (!TIPOS_DE_VEICULO_VALIDOS.includes(veiculoBruto)) {
+      erros.push({ campo: "tipoVeiculo", mensagem: "Escolha o tipo de veículo." });
+    } else {
+      tipoVeiculo = veiculoBruto;
+    }
+  } else {
+    erros.push({ campo: "tipoVeiculo", mensagem: "Indique com que veículo trabalha." });
+  }
+
   // Quem declara emitir guia tem de dizer qual é o registo. Sem número não há
   // nada para verificar, e sem verificação a declaração não vale — não vamos
   // ligar um cliente a quem talvez não possa transportar resíduos.
@@ -244,6 +275,7 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       moradaFiscal,
       codigoPostalFiscal,
       localidadeFiscal,
+      tipoVeiculo,
       categorias,
       // A cidade de base conta sempre como zona coberta: é o mínimo, e sem
       // isto quem não escrevesse zonas nenhumas não recebia nada.

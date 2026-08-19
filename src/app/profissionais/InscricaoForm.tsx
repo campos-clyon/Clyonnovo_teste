@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CheckCircle2, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, type ErroDeInscricao } from "@/lib/inscricao-profissional";
+import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 
 const CATEGORIAS = SERVICE_CATEGORIES.filter((c) => c.id !== "outro");
 
@@ -13,11 +14,33 @@ function inputCls(erro?: string) {
   }`;
 }
 
-export default function InscricaoForm() {
+/**
+ * O formulário de inscrição, aberto pelo link do convite.
+ *
+ * O nome e o email vêm já preenchidos — foram eles que usámos para o convidar,
+ * e voltar a pedi-los era fazer a pessoa escrever o que nós já sabemos. O email
+ * não se edita: é a chave do convite, e trocá-lo aqui criava uma conta que não
+ * corresponde a ninguém com quem falámos.
+ */
+export default function InscricaoForm({
+  convite,
+  nomeConvidado = "",
+  emailConvidado = "",
+  telefoneConvidado = "",
+  veiculoConvidado = "",
+}: {
+  /** O token do convite. Sem ele a API recusa a inscrição. */
+  convite: string;
+  nomeConvidado?: string;
+  emailConvidado?: string;
+  telefoneConvidado?: string;
+  veiculoConvidado?: string;
+}) {
   const [form, setForm] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
+    nome: nomeConvidado,
+    email: emailConvidado,
+    telefone: telefoneConvidado,
+    tipoVeiculo: veiculoConvidado,
     nif: "",
     cidade: "",
     moradaFiscal: "",
@@ -65,6 +88,7 @@ export default function InscricaoForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          convite,
           zonas: form.zonas
             .split(",")
             .map((z) => z.trim())
@@ -132,17 +156,27 @@ export default function InscricaoForm() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-900">
               Email *
             </label>
+            {/* Não se edita: é o endereço para onde o convite foi, e trocá-lo
+                aqui criava uma conta que não corresponde a ninguém com quem
+                falámos. */}
             <input
               id="email"
               type="email"
               autoComplete="email"
               value={form.email}
+              readOnly={Boolean(emailConvidado)}
               onChange={(e) => set("email", e.target.value)}
               placeholder="geral@exemplo.pt"
-              className={`mt-1.5 ${inputCls(erro("email"))}`}
+              className={`mt-1.5 ${inputCls(erro("email"))} ${
+                emailConvidado ? "bg-slate-50 text-slate-600" : ""
+              }`}
             />
             {erro("email") && <p className="mt-1 text-xs text-red-600">{erro("email")}</p>}
-            <p className="mt-1 text-xs text-slate-500">É por aqui que os pedidos chegam.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {emailConvidado
+                ? "É o email do convite. Para o mudar, fale connosco."
+                : "É por aqui que os pedidos chegam."}
+            </p>
           </div>
 
           <div>
@@ -214,6 +248,31 @@ export default function InscricaoForm() {
           })}
         </div>
         {erro("categorias") && <p className="text-xs text-red-600">{erro("categorias")}</p>}
+
+        {/* O veículo decide o que lhe podemos mandar: um sofá de três lugares
+            não entra numa carrinha pequena, e mandar-lhe esse pedido é
+            fazer-lhe perder a viagem — e ao cliente, o dia. */}
+        <div>
+          <label htmlFor="tipoVeiculo" className="block text-sm font-medium text-gray-900">
+            Com que veículo trabalha *
+          </label>
+          <select
+            id="tipoVeiculo"
+            value={form.tipoVeiculo}
+            onChange={(e) => set("tipoVeiculo", e.target.value)}
+            className={`mt-1.5 ${inputCls(erro("tipoVeiculo"))}`}
+          >
+            <option value="">Escolha…</option>
+            {TIPOS_DE_VEICULO.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          {erro("tipoVeiculo") && (
+            <p className="mt-1 text-xs text-red-600">{erro("tipoVeiculo")}</p>
+          )}
+        </div>
       </fieldset>
 
       {/* ── Onde trabalha ───────────────────────────────────────────── */}

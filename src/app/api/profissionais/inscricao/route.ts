@@ -4,19 +4,25 @@ import {
   criarProfissional,
   profissionalPorEmail,
   slugLivreParaProfissional,
+  convitePorTokenHash,
+  marcarConviteUsado,
 } from "@/lib/db";
+import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
 
 export const runtime = "nodejs";
 
 /**
- * Inscrição de um profissional.
+ * Inscrição de um profissional — só por convite.
  *
- * Rota pública por necessidade — quem se inscreve ainda não tem conta. Cada
- * chamada escreve uma linha na base, e por isso leva travão: sem ele, uma
- * pessoa enche a tabela de profissionais falsos e passa a ser preciso limpá-la
- * à mão antes de aprovar seja quem for.
+ * Deixou de ser aberta em 19-08-2026. Quem se inscreve tem de trazer o token do
+ * convite que lhe enviámos por email, e o convite gasta-se ao ser usado.
+ *
+ * O que isso muda: o email do convite passa a ser prova de que falámos com esta
+ * pessoa. Sem ele, esta rota era o único sítio do sistema onde um desconhecido
+ * escrevia uma linha na tabela de profissionais — e alguém tinha de a apagar à
+ * mão antes de aprovar seja quem for.
  *
  * Ninguém entra aprovado, e a guia de transporte entra sempre por verificar,
  * mesmo declarada e com número. A verificação é de uma pessoa.
@@ -30,6 +36,41 @@ export async function POST(req: NextRequest) {
     corpo = await req.json();
   } catch {
     return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
+  }
+
+  // ── O convite ────────────────────────────────────────────────────────────
+  const token = (corpo as Record<string, unknown>)?.convite;
+  if (typeof token !== "string" || !token) {
+    return NextResponse.json(
+      { ok: false, error: "A inscrição é por convite. Fale connosco para receber o link." },
+      { status: 403 },
+    );
+  }
+
+  const convite = await convitePorTokenHash(hashDeToken(token));
+  const verificacao = verificarTokenDeAcesso(
+    token,
+    convite?.tokenHash ?? null,
+    convite?.expiraEm ?? null,
+  );
+
+  if (!convite || !verificacao.valido) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          verificacao.valido === false && verificacao.motivo === "expirado"
+            ? "Este convite expirou. Peça-nos outro."
+            : "Convite inválido.",
+      },
+      { status: 403 },
+    );
+  }
+  if (convite.usadoEm || convite.revogadoEm) {
+    return NextResponse.json(
+      { ok: false, error: "Este convite já foi usado." },
+      { status: 409 },
+    );
   }
 
   const validacao = validarInscricao(corpo);
@@ -80,6 +121,7 @@ export async function POST(req: NextRequest) {
       moradaFiscal: d.moradaFiscal,
       codigoPostalFiscal: d.codigoPostalFiscal,
       localidadeFiscal: d.localidadeFiscal,
+      tipoVeiculo: d.tipoVeiculo,
       categorias: d.categorias,
       zonas: d.zonas,
       raioKm: d.raioKm,
@@ -90,6 +132,10 @@ export async function POST(req: NextRequest) {
       baseLat: base?.lat ?? null,
       baseLng: base?.lng ?? null,
     });
+
+    // O convite gasta-se. A condição está no UPDATE — dois envios do formulário
+    // ao mesmo tempo, que é o duplo toque no botão, só gravam o primeiro.
+    await marcarConviteUsado(convite.id, id);
 
     return NextResponse.json({
       ok: true,

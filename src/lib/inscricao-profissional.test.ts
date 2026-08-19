@@ -18,6 +18,7 @@ const valida = {
   moradaFiscal: "Rua das Oliveiras 14, 2.º Dto.",
   codigoPostalFiscal: "2700-123",
   localidadeFiscal: "Amadora",
+  tipoVeiculo: "carrinha_grande",
   categorias: ["recolha_moveis", "recolha_monos"],
   zonas: ["Lisboa", "Sintra"],
   raioKm: 30,
@@ -283,5 +284,24 @@ describe("morada fiscal", () => {
     );
     expect(e).toContain("codigoPostalFiscal");
     expect(e).toContain("localidadeFiscal");
+  });
+});
+
+describe("veículo", () => {
+  // Um sofá de três lugares não entra numa carrinha pequena. Sem este campo,
+  // mandávamos-lhe o pedido e ele perdia a viagem — e o cliente, o dia.
+  it("é obrigatório", () => {
+    expect(erros(com({ tipoVeiculo: "" }))).toContain("tipoVeiculo");
+    expect(erros(com({ tipoVeiculo: undefined }))).toContain("tipoVeiculo");
+  });
+
+  it("recusa um tipo que não existe", () => {
+    expect(erros(com({ tipoVeiculo: "helicoptero" }))).toContain("tipoVeiculo");
+  });
+
+  it("aceita quem não tem veículo próprio", () => {
+    const r = com({ tipoVeiculo: "sem_veiculo" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.dados.tipoVeiculo).toBe("sem_veiculo");
   });
 });

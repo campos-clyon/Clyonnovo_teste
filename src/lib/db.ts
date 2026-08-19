@@ -395,7 +395,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 2;
+const VERSAO_DOS_PROFISSIONAIS = 3;
 let versaoDosProfissionais = 0;
 
 /**
@@ -522,6 +522,31 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "ibanTitular",
         sql: "ALTER TABLE providers ADD COLUMN ibanTitular VARCHAR(120) NULL DEFAULT NULL",
       },
+
+      // ── Morada fiscal (19-08-2026) ───────────────────────────────────────
+      // A da declaração de actividade, que pode não ser onde ele trabalha. Vai
+      // na fatura ao cliente. Separada da cidade de base de propósito: essa
+      // serve para calcular distâncias, esta para documentos.
+      {
+        name: "moradaFiscal",
+        sql: "ALTER TABLE providers ADD COLUMN moradaFiscal VARCHAR(200) NULL DEFAULT NULL",
+      },
+      {
+        name: "codigoPostalFiscal",
+        sql: "ALTER TABLE providers ADD COLUMN codigoPostalFiscal VARCHAR(12) NULL DEFAULT NULL",
+      },
+      {
+        name: "localidadeFiscal",
+        sql: "ALTER TABLE providers ADD COLUMN localidadeFiscal VARCHAR(120) NULL DEFAULT NULL",
+      },
+
+      // Com que veículo trabalha. Não é ficha técnica: um sofá de três lugares
+      // não entra numa carrinha pequena, e mandar-lhe esse pedido é fazer-lhe
+      // perder a viagem — e ao cliente, o dia.
+      {
+        name: "tipoVeiculo",
+        sql: "ALTER TABLE providers ADD COLUMN tipoVeiculo VARCHAR(60) NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -594,6 +619,7 @@ export type InscricaoDeProfissional = {
   moradaFiscal: string | null;
   codigoPostalFiscal: string | null;
   localidadeFiscal: string | null;
+  tipoVeiculo: string | null;
   categorias: string[];
   zonas: string[];
   raioKm: number | null;
@@ -621,11 +647,11 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
   const [res] = await pool.execute(
     `INSERT INTO providers
        (name, slug, email, phone, nif, city,
-        moradaFiscal, codigoPostalFiscal, localidadeFiscal,
+        moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
         categorias, zonas, raioKm,
         emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
         baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -636,6 +662,7 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.moradaFiscal,
       dados.codigoPostalFiscal,
       dados.localidadeFiscal,
+      dados.tipoVeiculo,
       JSON.stringify(dados.categorias),
       JSON.stringify(dados.zonas),
       dados.raioKm,
@@ -1310,6 +1337,190 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   return rows as any[];
 }
 
+// ── Convites a profissionais ────────────────────────────────────────────────
+
+let convitesEnsured = false;
+
+/**
+ * O convite que abre a inscrição.
+ *
+ * Tabela própria e não uma linha em `providers` com estado "convidado": quem
+ * foi convidado ainda não é profissional nenhum — não tem categorias, não tem
+ * zonas, e não pode aparecer em consulta nenhuma de distribuição. Uma linha
+ * meia-feita na tabela principal acaba sempre por escapar para um sítio onde
+ * não devia estar.
+ *
+ * Do token guarda-se só o hash, como em todos os outros deste projecto. O que
+ * seguiu no email não volta a existir de nosso lado.
+ */
+export async function ensureConvitesTable(): Promise<void> {
+  if (convitesEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS convitesProfissionais (
+      id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      nome        VARCHAR(120) NOT NULL,
+      email       VARCHAR(200) NOT NULL,
+      telefone    VARCHAR(30) NULL,
+      tipoVeiculo VARCHAR(60) NULL,
+      nota        VARCHAR(500) NULL,
+      tokenHash   VARCHAR(64) NOT NULL,
+      expiraEm    DATETIME NOT NULL,
+      usadoEm     DATETIME NULL DEFAULT NULL,
+      providerId  INT UNSIGNED NULL DEFAULT NULL,
+      revogadoEm  DATETIME NULL DEFAULT NULL,
+      emailEnviado TINYINT(1) NOT NULL DEFAULT 0,
+      criadoPor   VARCHAR(120) NULL,
+      createdAt   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY convites_token (tokenHash),
+      KEY convites_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  convitesEnsured = true;
+}
+
+export type ConviteNaBase = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  tipoVeiculo: string | null;
+  nota: string | null;
+  tokenHash: string;
+  expiraEm: Date;
+  usadoEm: Date | null;
+  providerId: number | null;
+  revogadoEm: Date | null;
+  emailEnviado: number;
+  criadoPor: string | null;
+  createdAt: Date;
+};
+
+export async function criarConvite(dados: {
+  nome: string;
+  email: string;
+  telefone: string | null;
+  tipoVeiculo: string | null;
+  nota: string | null;
+  tokenHash: string;
+  expiraEm: Date;
+  criadoPor: string;
+}): Promise<number> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `INSERT INTO convitesProfissionais
+       (nome, email, telefone, tipoVeiculo, nota, tokenHash, expiraEm, criadoPor)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      dados.nome,
+      dados.email,
+      dados.telefone,
+      dados.tipoVeiculo,
+      dados.nota,
+      dados.tokenHash,
+      dados.expiraEm,
+      dados.criadoPor,
+    ],
+  ) as any[];
+  return Number(res.insertId);
+}
+
+export async function convitePorTokenHash(hash: string): Promise<ConviteNaBase | undefined> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    "SELECT * FROM convitesProfissionais WHERE tokenHash = ? LIMIT 1",
+    [hash],
+  ) as any[];
+  return (rows as ConviteNaBase[])[0];
+}
+
+/** Um convite por usar para este email, se existir. */
+export async function convitePorEmail(email: string): Promise<ConviteNaBase | undefined> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = await pool.execute(
+    `SELECT * FROM convitesProfissionais
+      WHERE email = ? AND usadoEm IS NULL AND revogadoEm IS NULL
+      ORDER BY createdAt DESC LIMIT 1`,
+    [email],
+  ) as any[];
+  return (rows as ConviteNaBase[])[0];
+}
+
+export async function listarConvites(): Promise<ConviteNaBase[]> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT * FROM convitesProfissionais
+      ORDER BY (usadoEm IS NULL AND revogadoEm IS NULL) DESC, createdAt DESC
+      LIMIT 200`,
+  ) as any[];
+  return rows as ConviteNaBase[];
+}
+
+/**
+ * Marca o convite como usado, e a quem deu origem.
+ *
+ * A condição vai no UPDATE: dois envios do formulário ao mesmo tempo — o duplo
+ * toque no botão, que acontece — só conseguem gravar o primeiro.
+ */
+export async function marcarConviteUsado(id: number, providerId: number): Promise<boolean> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = await pool.execute(
+    `UPDATE convitesProfissionais
+        SET usadoEm = NOW(), providerId = ?
+      WHERE id = ? AND usadoEm IS NULL AND revogadoEm IS NULL`,
+    [providerId, id],
+  ) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+export async function revogarConvite(id: number): Promise<void> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "UPDATE convitesProfissionais SET revogadoEm = NOW() WHERE id = ? AND usadoEm IS NULL",
+    [id],
+  );
+}
+
+/** Um token novo para o mesmo convite — o anterior deixa de servir. */
+export async function renovarConvite(
+  id: number,
+  tokenHash: string,
+  expiraEm: Date,
+): Promise<void> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `UPDATE convitesProfissionais
+        SET tokenHash = ?, expiraEm = ?, revogadoEm = NULL
+      WHERE id = ? AND usadoEm IS NULL`,
+    [tokenHash, expiraEm, id],
+  );
+}
+
+export async function marcarConviteEnviado(id: number, enviado: boolean): Promise<void> {
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE convitesProfissionais SET emailEnviado = ? WHERE id = ?", [
+    enviado ? 1 : 0,
+    id,
+  ]);
+}
+
 // ── Testadores do MVP ───────────────────────────────────────────────────────
 
 let testadoresEnsured = false;
@@ -1647,7 +1858,7 @@ export async function perfilDoProfissional(
   if (!pool) return undefined;
   const [rows] = await pool.execute(
     `SELECT id, name, email, phone, nif, city,
-            moradaFiscal, codigoPostalFiscal, localidadeFiscal,
+            moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
             categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, createdAt
@@ -1687,6 +1898,7 @@ export async function actualizarPerfilDoProfissional(
     "moradaFiscal",
     "codigoPostalFiscal",
     "localidadeFiscal",
+    "tipoVeiculo",
     "iban",
     "ibanTitular",
     "baseLat",

@@ -15,6 +15,7 @@ import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel"
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
+import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -2720,12 +2721,21 @@ export default function ColaboradorAdminClient() {
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-white">Profissionais</h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Quem se inscreveu para receber pedidos. Aprovar dá-lhe acesso à fila;
-                  verificar a guia deixa-o receber os pedidos que exigem transporte de
-                  resíduos.
+                  A inscrição não está aberta: entra-se por convite. Convide em baixo,
+                  e o registo que ele preencher volta aqui para aprovação — aprovar
+                  dá-lhe acesso à fila, verificar a guia deixa-o receber os pedidos que
+                  exigem transporte de resíduos.
                 </p>
               </div>
-              <AdminProfissionaisPanel />
+
+              <AdminConvitesPanel />
+
+              <div className="border-t border-slate-700/60 pt-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                  Inscritos
+                </h3>
+                <AdminProfissionaisPanel />
+              </div>
             </section>
           )}
 
