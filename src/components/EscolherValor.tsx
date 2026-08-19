@@ -93,13 +93,15 @@ export default function EscolherValor({
                   setAEscrever(false);
                 }}
                 aria-pressed={activo}
-                className={`flex min-h-[72px] flex-col items-start justify-center rounded-xl border-2 px-3 py-2 text-left transition ${
+                className={`flex min-h-[72px] flex-col items-start justify-center rounded-xl border-2 px-2.5 py-2 text-left transition sm:px-3 ${
                   activo
                     ? "border-cyan-600 bg-cyan-50"
                     : "border-slate-300 bg-white hover:border-cyan-400"
                 }`}
               >
-                <span className="text-base font-bold text-slate-900">{euros(a.valor)}</span>
+                <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
+                  {euros(a.valor)}
+                </span>
                 <span className="text-xs leading-tight text-cyan-700">
                   {direccao === "abaixo" ? "−" : "+"}
                   {Math.round(a.passo * 100)}%
@@ -115,13 +117,15 @@ export default function EscolherValor({
               setEscolhido(null);
             }}
             aria-pressed={aEscrever}
-            className={`flex min-h-[72px] flex-col items-start justify-center rounded-xl border-2 px-3 py-2 text-left transition ${
+            className={`flex min-h-[72px] flex-col items-start justify-center rounded-xl border-2 px-2.5 py-2 text-left transition sm:px-3 ${
               aEscrever
                 ? "border-cyan-600 bg-cyan-50"
                 : "border-slate-300 bg-white hover:border-cyan-400"
             }`}
           >
-            <span className="text-base font-bold text-slate-900">Outro</span>
+            <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
+              Outro
+            </span>
             <span className="text-xs leading-tight text-cyan-700">Escrever</span>
           </button>
         </div>

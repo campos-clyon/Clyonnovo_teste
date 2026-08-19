@@ -218,10 +218,16 @@ export default function NegociacaoProfissional({
           <button
             onClick={() => agir("aceitar")}
             disabled={aEnviar}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+            className="flex w-full flex-wrap items-center justify-center gap-x-2 rounded-xl bg-emerald-600 px-3 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
           >
             {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            Aceitar {euros(valorEmCima)} · recebe {euros(recebeSeFechar)}
+            {/* Duas linhas num ecrã estreito em vez de uma que transborda. O
+                que ele recebe é o número que decide, e não pode ser o que sai
+                fora do botão. */}
+            <span>Aceitar {euros(valorEmCima)}</span>
+            <span className="text-sm font-semibold text-emerald-50">
+              recebe {euros(recebeSeFechar)}
+            </span>
           </button>
         )}
 

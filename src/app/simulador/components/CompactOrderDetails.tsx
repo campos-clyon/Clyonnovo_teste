@@ -96,12 +96,15 @@ export default function CompactOrderDetails({
           onChange={(e) => processFiles(e.target.files)}
         />
 
+        {/* 30 píxeis de altura no botão mais importante do formulário — é a
+            fotografia que decide o preço. Abaixo de 44 não se acerta com o
+            polegar sem olhar. */}
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 hover:border-blue-300 transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-600 transition-colors hover:border-blue-300 hover:bg-blue-100"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="h-4 w-4" />
           Adicionar fotos
         </button>
 

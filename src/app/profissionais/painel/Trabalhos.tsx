@@ -134,7 +134,11 @@ export default function Trabalhos({
       {/* Separadores, com a conta ao lado.
           O número não é enfeite: é o que lhe diz onde há trabalho à espera sem
           ter de abrir cada um para ver. */}
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      {/* Dobram de linha em vez de saírem do ecrã.
+          Estavam a rolar na horizontal: num telemóvel, "Terminados" ficava
+          cortado na margem e a barra de rolagem aparecia por baixo. Ninguém
+          arrasta um separador que não sabe que existe. */}
+      <div className="mb-4 flex flex-wrap gap-2">
         {SEPARADORES.map((sep) => {
           const quantos = porSeparador(sep.id).length;
           const activo = separador === sep.id;
@@ -144,7 +148,7 @@ export default function Trabalhos({
               type="button"
               onClick={() => setSeparador(sep.id)}
               aria-pressed={activo}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition sm:px-3.5 sm:text-sm ${
                 activo
                   ? "bg-[#0B1929] text-white"
                   : "bg-slate-100 text-slate-600 active:bg-slate-200"
