@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { SERVICE_LABELS, type Order } from "./types";
 
 const FILTER_TABS = [
@@ -33,29 +34,67 @@ export default function MeusPedidos() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
 
-  const fetchOrders = useCallback(async (f: string, p: number) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/users/me/orders?status=${f}&page=${p}`, { credentials: "include" });
-      const data = await res.json() as {
-        orders: Order[];
-        total: number;
-        pages: number;
-        summary?: { totalOrders?: number };
-      };
-      setOrders(data.orders ?? []);
-      setTotal(data.total ?? 0);
-      setPages(data.pages ?? 1);
-      // Total geral (todos os pedidos) — independente do filtro ativo.
-      if (typeof data.summary?.totalOrders === "number") {
-        setGrandTotal(data.summary.totalOrders);
+  /**
+   * @param silencioso Sem mostrar "a carregar". É como o ciclo automático
+   * corre: quem está a ler não pode ver a lista desaparecer de minuto a
+   * minuto para voltar igual.
+   */
+  const fetchOrders = useCallback(
+    async (f: string, p: number, silencioso = false) => {
+      if (!silencioso) setLoading(true);
+      try {
+        const res = await fetch(`/api/users/me/orders?status=${f}&page=${p}`, {
+          credentials: "include",
+        });
+        const data = (await res.json()) as {
+          orders: Order[];
+          total: number;
+          pages: number;
+          summary?: { totalOrders?: number };
+        };
+
+        // Só se troca o que mudou. Substituir sempre fazia a lista redesenhar-se
+        // inteira a cada minuto, e o detalhe aberto perder o que estivesse a ser
+        // escrito na caixa de mensagem.
+        const novos = data.orders ?? [];
+        setOrders((antes) =>
+          JSON.stringify(antes) === JSON.stringify(novos) ? antes : novos,
+        );
+
+        // O pedido aberto acompanha: é aí que aparece a proposta que o
+        // profissional acabou de fazer, sem ser preciso fechar e abrir.
+        setSelected((aberto) => {
+          if (!aberto) return aberto;
+          const actualizado = novos.find((o) => o.id === aberto.id);
+          if (!actualizado) return aberto;
+          return JSON.stringify(aberto) === JSON.stringify(actualizado)
+            ? aberto
+            : actualizado;
+        });
+
+        setTotal(data.total ?? 0);
+        setPages(data.pages ?? 1);
+        // Total geral (todos os pedidos) — independente do filtro ativo.
+        if (typeof data.summary?.totalOrders === "number") {
+          setGrandTotal(data.summary.totalOrders);
+        }
+      } finally {
+        if (!silencioso) setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => { void fetchOrders(filter, page); }, [filter, page, fetchOrders]);
+
+  /*
+   * De minuto a minuto, sem dar por isso.
+   *
+   * As propostas dos profissionais chegam enquanto o cliente está a olhar para
+   * o pedido. Sem isto, ele via um ecrã parado e concluía que ninguém tinha
+   * respondido — e a proposta tem 48 horas de prazo a correr.
+   */
+  useAutoRefresh(() => fetchOrders(filter, page, true), { intervalMs: 60_000 });
 
   const handleFilter = (f: string) => { setFilter(f); setPage(1); };
 

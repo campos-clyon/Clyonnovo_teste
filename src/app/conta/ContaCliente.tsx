@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import ContaSidebar   from "./components/ContaSidebar";
 import MenuMovel      from "./components/MenuMovel";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
@@ -60,6 +61,41 @@ export default function ContaCliente({
       })
       .catch(() => { /* falha silenciosa */ });
   }, [initialOrders.length, initialSummary]);
+
+  /*
+   * A conta não fica parada no tempo.
+   *
+   * Os números da visão geral e os últimos pedidos são lidos uma vez, na
+   * abertura. Quem deixasse o separador aberto durante a tarde via os mesmos
+   * dados da manhã — e a esta altura já há propostas a chegar enquanto ele
+   * está a olhar.
+   *
+   * Só se troca o que mudou de facto: um objecto novo a cada minuto obrigava
+   * o React a redesenhar tudo, e os formulários da conta a serem remontados
+   * por baixo de quem estivesse a escrever.
+   */
+  const recarregar = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users/me/orders?page=1", { credentials: "include" });
+      if (!res.ok) return;
+      const d = (await res.json()) as { orders?: Order[]; summary?: OrderSummary };
+      if (d.orders) {
+        const dez = d.orders.slice(0, 10);
+        setOrders((antes) =>
+          JSON.stringify(antes) === JSON.stringify(dez) ? antes : dez,
+        );
+      }
+      if (d.summary) {
+        setSummary((antes) =>
+          JSON.stringify(antes) === JSON.stringify(d.summary) ? antes : d.summary!,
+        );
+      }
+    } catch {
+      /* uma falha de rede num ciclo automático não é notícia — o próximo resolve */
+    }
+  }, []);
+
+  useAutoRefresh(recarregar, { intervalMs: 60_000 });
 
   const handleUpdate = (updated: Partial<UserProfile>) => {
     setUser((prev) => prev ? { ...prev, ...updated } : prev);
