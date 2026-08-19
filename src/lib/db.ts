@@ -953,6 +953,67 @@ export async function substituirTokenDaNegociacao(
 }
 
 /** Pedidos recentes com as negociações de cada um, para o painel. */
+/**
+ * Pedidos do simulador que ainda não são da plataforma.
+ *
+ * São os que entraram pelo formulário de orçamento do site: têm estimativa mas
+ * não têm valor pedido pelo cliente, e por isso nunca foram distribuídos a
+ * ninguém. Aparecem no backoffice para se poder decidir, um a um, quais valem
+ * a pena mandar aos profissionais.
+ *
+ * Um a um de propósito. Quem preencheu o simulador pediu um orçamento à CLYON,
+ * não pediu para entrar num mercado — promover o pedido faz-lhe chegar um email
+ * com propostas de terceiros, e isso não pode acontecer por omissão.
+ */
+export async function pedidosPorPromover(limite = 20): Promise<
+  Array<{
+    id: number;
+    serviceType: string | null;
+    city: string | null;
+    contactName: string | null;
+    contactEmail: string | null;
+    estimateTotal: string | null;
+    urgency: string | null;
+    createdAt: Date;
+  }>
+> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = await pool.execute(
+    `SELECT id, serviceType, city, contactName, contactEmail, estimateTotal, urgency, createdAt
+       FROM simulatorOrders
+      WHERE valorDesejadoCliente IS NULL
+        AND contactEmail IS NOT NULL
+        AND (status IS NULL OR status NOT IN ('cancelado', 'concluido', 'arquivado'))
+      ORDER BY createdAt DESC
+      LIMIT ?`,
+    [String(limite)],
+  ) as any[];
+  return rows as any[];
+}
+
+/** Passa um pedido do simulador a pedido da plataforma. */
+export async function promoverPedidoAPlataforma(
+  pedidoId: number,
+  valorDesejado: number,
+  hash: string,
+  expiraEm: Date,
+): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  // A condição no UPDATE evita promover duas vezes o mesmo pedido — o duplo
+  // toque no botão, que criaria um segundo token e invalidaria o primeiro.
+  const [res] = await pool.execute(
+    `UPDATE simulatorOrders
+        SET valorDesejadoCliente = ?, acessoTokenHash = ?, acessoTokenExpiraEm = ?
+      WHERE id = ? AND valorDesejadoCliente IS NULL`,
+    [valorDesejado, hash, expiraEm, pedidoId],
+  ) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
 export async function pedidosComNegociacoes(limite = 30): Promise<
   Array<{
     id: number;
