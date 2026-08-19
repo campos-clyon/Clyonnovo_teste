@@ -1,3 +1,5 @@
+import { quantoOClientePaga } from "@/lib/taxas-plataforma";
+
 export interface UserProfile {
   id: number;
   name: string | null;
@@ -93,7 +95,18 @@ export interface OrderSummary {
 }
 
 export type Section =
-  | "visao-geral"
+  /**
+   * A raiz.
+   *
+   * No telemóvel é o menu de linhas; num ecrã grande não é escolhível — a área
+   * da direita mostra os pedidos, que é o que se vem cá ver.
+   *
+   * Chamava-se "visao-geral" e tinha um ecrã próprio, com métricas, um cartão
+   * de boas-vindas e uma lista dos últimos pedidos — a mesma lista que estava
+   * na secção ao lado. Duas páginas a mostrar o mesmo, e a pior a ser a
+   * primeira que se via.
+   */
+  | "menu"
   | "pedidos"
   | "dados-pessoais"
   | "faturacao"
@@ -175,4 +188,89 @@ export function propostasAEsperaDoCliente(order: Order): number {
       return false;
     }
   }).length;
+}
+
+/**
+ * O que este pedido está mesmo a fazer, do ponto de vista do cliente.
+ *
+ * O cartão mostrava a estimativa e o estado interno da equipa — "Novo" — e
+ * ignorava tudo o que se passava na plataforma. Um pedido já contratado por
+ * 600 € continuava a dizer "Novo · 741,99 €": os dois números errados e nenhum
+ * sinal de que havia alguém do outro lado.
+ *
+ * A negociação é a fonte quando existe. O estado interno continua a valer para
+ * os pedidos que a equipa trata à mão, que são a maioria dos antigos.
+ */
+export type EstadoNaPlataforma = {
+  /** O que se mostra no cartão, ou null quando não há nada a dizer. */
+  etiqueta: string | null;
+  /** Destaque forte: há algo à espera dele. */
+  urgente: boolean;
+  /** O valor a mostrar, quando a negociação manda nele. */
+  valor: number | null;
+  /** O que esse valor é, para a legenda não mentir. */
+  legenda: "acordado" | null;
+};
+
+export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
+  const negs = order.negociacoes ?? [];
+  if (negs.length === 0) {
+    return { etiqueta: null, urgente: false, valor: null, legenda: null };
+  }
+
+  const fechada = negs.find((n) => n.estado === "acordada");
+  if (fechada) {
+    const acordado = fechada.valorAcordado != null ? Number(fechada.valorAcordado) : null;
+    // O que ele paga, não o que o profissional recebe: é o número que sai da
+    // carteira dele, e é o mesmo que o detalhe mostra em "Total a pagar".
+    //
+    // A conta vem de quantoOClientePaga e não de um 1.06 escrito aqui: a taxa
+    // muda num sítio só, e uma cópia à mão passaria a mentir no dia seguinte.
+    const paga = acordado != null ? quantoOClientePaga(acordado) : null;
+
+    if (fechada.confirmadoEm || fechada.pagoEm) {
+      return {
+        etiqueta: "Concluído",
+        urgente: false,
+        valor: paga,
+        legenda: "acordado",
+      };
+    }
+    if (fechada.execucaoEnviadaEm) {
+      // A única coisa nesta lista que espera uma acção dele com prazo a correr.
+      return {
+        etiqueta: "Confirmar trabalho",
+        urgente: true,
+        valor: paga,
+        legenda: "acordado",
+      };
+    }
+    return {
+      etiqueta: `Contratou ${fechada.profissionalNome}`,
+      urgente: false,
+      valor: paga,
+      legenda: "acordado",
+    };
+  }
+
+  const aEsperar = propostasAEsperaDoCliente(order);
+  if (aEsperar > 0) {
+    return {
+      etiqueta: aEsperar === 1 ? "1 proposta nova" : `${aEsperar} propostas novas`,
+      urgente: true,
+      valor: null,
+      legenda: null,
+    };
+  }
+
+  const abertas = negs.filter((n) => n.estado === "aberta").length;
+  return {
+    etiqueta:
+      abertas > 0
+        ? `${abertas} profissional${abertas === 1 ? "" : "is"} a responder`
+        : null,
+    urgente: false,
+    valor: null,
+    legenda: null,
+  };
 }

@@ -3,7 +3,6 @@
 import { signOut } from "next-auth/react";
 import UserAvatar from "@/components/UserAvatar";
 import {
-  LayoutDashboard,
   ClipboardList,
   User,
   Receipt,
@@ -14,7 +13,6 @@ import {
 import type { Section } from "./types";
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: "visao-geral",    label: "Visão Geral",      icon: LayoutDashboard },
   { id: "pedidos",        label: "Os meus pedidos",  icon: ClipboardList },
   { id: "dados-pessoais", label: "Dados pessoais",   icon: User },
   { id: "faturacao",      label: "Faturação",        icon: Receipt },
@@ -68,7 +66,10 @@ export default function ContaSidebar({
       <nav className="flex-1 px-2 py-4">
         <ul className="space-y-0.5">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
-            const active = section === id;
+            // "menu" é a raiz e mostra os pedidos na área da direita — a
+            // linha dos pedidos tem de aparecer marcada, senão o menu diz que
+            // não está nada aberto quando está.
+            const active = section === id || (section === "menu" && id === "pedidos");
             return (
               <li key={id}>
                 <button

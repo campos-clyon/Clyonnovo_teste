@@ -5,7 +5,6 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import ContaSidebar   from "./components/ContaSidebar";
 import MenuMovel      from "./components/MenuMovel";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
-import VisaoGeral     from "./components/VisaoGeral";
 import MeusPedidos    from "./components/MeusPedidos";
 import DadosPessoais  from "./components/DadosPessoais";
 import Faturacao      from "./components/Faturacao";
@@ -30,7 +29,7 @@ interface Props {
 
 /** O título do ecrã aberto, no telemóvel. */
 const TITULOS_MOVEIS: Record<Section, string> = {
-  "visao-geral": "A minha conta",
+  menu: "A minha conta",
   pedidos: "Os meus pedidos",
   "dados-pessoais": "Dados pessoais",
   faturacao: "Faturação",
@@ -42,7 +41,7 @@ export default function ContaCliente({
   nome, email, avatar,
   initialUser = null, initialOrders = [], initialSummary = null,
 }: Props) {
-  const [section, setSection] = useState<Section>("visao-geral");
+  const [section, setSection] = useState<Section>("menu");
   const [user,    setUser]    = useState<UserProfile | null>(initialUser);
   const [orders,  setOrders]  = useState<Order[]>(initialOrders);
   const [summary, setSummary] = useState<OrderSummary | null>(initialSummary);
@@ -154,7 +153,7 @@ export default function ContaCliente({
       {/* Layout mobile: menu de linhas, e cada secção abre por cima com seta
           para trás — o gesto das aplicações que já têm no telemóvel. */}
       <div className="lg:hidden">
-        {section === "visao-geral" ? (
+        {section === "menu" ? (
           <MenuMovel
             nome={effectiveUser.name ?? nome}
             email={email}
@@ -167,7 +166,7 @@ export default function ContaCliente({
           <main className="px-4 pb-16">
             <CabecalhoDeEcra
               titulo={TITULOS_MOVEIS[section]}
-              onVoltar={() => setSection("visao-geral")}
+              onVoltar={() => setSection("menu")}
             />
             <SectionContent
               section={section}
@@ -201,8 +200,11 @@ function SectionContent({
 
   return (
     <div key={key} className="animate-fade-in">
-      {section === "visao-geral"    && <VisaoGeral user={user} googleAvatar={googleAvatar} orders={orders} summary={summary} onSection={onSection} />}
-      {section === "pedidos"        && <MeusPedidos />}
+      {/* Num ecrã grande a área da direita nunca fica vazia: sem nada
+          escolhido mostra os pedidos, que é o que se vem cá ver. No telemóvel
+          esta função nunca é chamada com "menu" — lá a raiz é a lista de
+          linhas. */}
+      {(section === "pedidos" || section === "menu") && <MeusPedidos resumo={summary} />}
       {section === "dados-pessoais" && <DadosPessoais user={user} googleAvatar={googleAvatar} onUpdate={onUpdate} />}
       {section === "faturacao"      && <Faturacao user={user} onUpdate={onUpdate} />}
       {section === "notificacoes"   && <Notificacoes user={user} onUpdate={onUpdate} />}

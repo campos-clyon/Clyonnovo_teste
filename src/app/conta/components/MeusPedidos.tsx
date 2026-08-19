@@ -6,7 +6,12 @@ import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight } from "lucide-reac
 import StatusBadge from "./StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { SERVICE_LABELS, type Order, propostasAEsperaDoCliente } from "./types";
+import {
+  SERVICE_LABELS,
+  estadoNaPlataforma,
+  type Order,
+  type OrderSummary,
+} from "./types";
 
 const FILTER_TABS = [
   { value: "todos",      label: "Todos" },
@@ -24,7 +29,16 @@ function formatDate(iso: string) {
   });
 }
 
-export default function MeusPedidos() {
+function Metrica({ rotulo, valor }: { rotulo: string; valor: string | number }) {
+  return (
+    <div className="flex-1 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+      <p className="text-xs text-slate-400">{rotulo}</p>
+      <p className="mt-0.5 text-lg font-bold text-slate-900">{valor}</p>
+    </div>
+  );
+}
+
+export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }) {
   const [filter, setFilter]   = useState("todos");
   const [page, setPage]       = useState(1);
   const [orders, setOrders]   = useState<Order[]>([]);
@@ -127,6 +141,26 @@ export default function MeusPedidos() {
         <p className="mt-0.5 text-sm text-slate-500">{grandTotal} {grandTotal === 1 ? "pedido" : "pedidos"} no total</p>
       </div>
 
+      {/* As três contas que vinham da Visão Geral. É o que ela tinha de útil e
+          que a lista não diz — o resto era a mesma lista outra vez. */}
+      {resumo && resumo.totalOrders > 0 && (
+        <div className="flex gap-3">
+          <Metrica rotulo="Pedidos" valor={resumo.totalOrders} />
+          <Metrica rotulo="A decorrer" valor={resumo.activeOrders} />
+          <Metrica
+            rotulo="Último"
+            valor={
+              resumo.lastOrderDate
+                ? new Date(resumo.lastOrderDate).toLocaleDateString("pt-PT", {
+                    day: "2-digit",
+                    month: "short",
+                  })
+                : "—"
+            }
+          />
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="flex flex-wrap gap-2">
         {FILTER_TABS.map((t) => (
@@ -176,13 +210,15 @@ export default function MeusPedidos() {
         <>
           <ul className="space-y-3">
             {orders.map((o) => {
-              const preco = o.precoFinalIva ?? o.precoFinal ?? o.estimateTotal;
+              const plataforma = estadoNaPlataforma(o);
+              const preco =
+                plataforma.valor ?? o.precoFinalIva ?? o.precoFinal ?? o.estimateTotal;
               const local = o.city ?? o.address?.split(",").pop()?.trim();
               // Uma proposta à espera dele é a única coisa nesta lista com
               // prazo a correr — 48 horas. Sem nada que a distinga, o pedido
               // com uma proposta em cima da mesa parece igual ao que está
               // simplesmente à espera de alguém.
-              const aEsperar = propostasAEsperaDoCliente(o);
+              const aEsperar = plataforma.urgente ? 1 : 0;
               return (
                 <li
                   key={o.id}
@@ -199,13 +235,18 @@ export default function MeusPedidos() {
                         <span className="text-sm font-semibold text-slate-800">
                           {SERVICE_LABELS[o.serviceType] ?? o.serviceType}
                         </span>
-                        <StatusBadge status={o.status} />
-                        {aEsperar > 0 && (
-                          <span className="rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
-                            {aEsperar === 1
-                              ? "1 proposta nova"
-                              : `${aEsperar} propostas novas`}
+                        {plataforma.etiqueta ? (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                              plataforma.urgente
+                                ? "bg-[#00B4CC] text-white"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {plataforma.etiqueta}
                           </span>
+                        ) : (
+                          <StatusBadge status={o.status} />
                         )}
                       </div>
                       {local && <p className="mt-0.5 text-xs text-slate-400">{local}</p>}
@@ -222,7 +263,9 @@ export default function MeusPedidos() {
                         {preco != null && (
                           <p className="text-sm font-bold text-slate-900">{Number(preco).toFixed(2)} €</p>
                         )}
-                        <p className="text-xs text-slate-400">{formatDate(o.createdAt)}</p>
+                        <p className="text-xs text-slate-400">
+                          {plataforma.legenda === "acordado" ? "a pagar" : formatDate(o.createdAt)}
+                        </p>
                       </div>
                       <button
                         type="button"
