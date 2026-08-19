@@ -28,9 +28,18 @@ interface Props {
   nome: string;
   email: string;
   avatar: string | null;
+  /** Propostas à espera de resposta dele. Zero não mostra nada. */
+  propostasPorResponder?: number;
 }
 
-export default function ContaSidebar({ section, onSection, nome, email, avatar }: Props) {
+export default function ContaSidebar({
+  section,
+  onSection,
+  nome,
+  email,
+  avatar,
+  propostasPorResponder = 0,
+}: Props) {
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-100 bg-white">
       {/* Utilizador */}
@@ -72,7 +81,15 @@ export default function ContaSidebar({ section, onSection, nome, email, avatar }
                   }`}
                 >
                   <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[#00B4D8]" : "text-slate-400"}`} />
-                  {label}
+                  <span className="flex-1 text-left">{label}</span>
+                  {/* O contador só nos pedidos, e só quando há mesmo alguma
+                      coisa à espera dele. Um distintivo que está sempre lá
+                      deixa de ser lido ao terceiro dia. */}
+                  {id === "pedidos" && propostasPorResponder > 0 && (
+                    <span className="rounded-full bg-[#00B4CC] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                      {propostasPorResponder}
+                    </span>
+                  )}
                 </button>
               </li>
             );

@@ -88,7 +88,7 @@ export function LinhaDeMenu({
       {destaque && (
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            aviso ? "bg-amber-100 text-amber-800" : "bg-cyan-100 text-cyan-800"
+            aviso ? "bg-[#00B4CC] text-white" : "bg-cyan-100 text-cyan-800"
           }`}
         >
           {destaque}

@@ -11,7 +11,13 @@ import DadosPessoais  from "./components/DadosPessoais";
 import Faturacao      from "./components/Faturacao";
 import Notificacoes   from "./components/Notificacoes";
 import Seguranca      from "./components/Seguranca";
-import type { UserProfile, Order, OrderSummary, Section } from "./components/types";
+import {
+  propostasAEsperaDoCliente,
+  type UserProfile,
+  type Order,
+  type OrderSummary,
+  type Section,
+} from "./components/types";
 
 interface Props {
   nome:   string;
@@ -97,6 +103,13 @@ export default function ContaCliente({
 
   useAutoRefresh(recarregar, { intervalMs: 60_000 });
 
+  // Quantas propostas esperam por ele, somadas. É o que o distintivo mostra —
+  // e é o mesmo número em qualquer sítio onde apareça.
+  const propostasPorResponder = orders.reduce(
+    (soma, o) => soma + propostasAEsperaDoCliente(o),
+    0,
+  );
+
   const handleUpdate = (updated: Partial<UserProfile>) => {
     setUser((prev) => prev ? { ...prev, ...updated } : prev);
   };
@@ -121,6 +134,7 @@ export default function ContaCliente({
           nome={effectiveUser.name ?? nome}
           email={email}
           avatar={effectiveUser.avatarUrl ?? avatar}
+          propostasPorResponder={propostasPorResponder}
         />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-2xl px-8 py-10">
@@ -146,6 +160,7 @@ export default function ContaCliente({
             email={email}
             avatar={effectiveUser.avatarUrl ?? avatar}
             pedidosAbertos={summary?.activeOrders ?? 0}
+            propostasPorResponder={propostasPorResponder}
             onSection={setSection}
           />
         ) : (

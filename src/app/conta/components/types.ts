@@ -152,3 +152,27 @@ export const SERVICE_LABELS: Record<string, string> = {
   jardinagem:               "Jardinagem",
   manutencao_casa:          "Manutenção da Casa",
 };
+
+/**
+ * Quantas propostas estão à espera de resposta DELE.
+ *
+ * Só conta a proposta pendente feita pelo profissional: uma proposta sua à
+ * espera de resposta não é trabalho seu, e contá-la faria o distintivo dizer
+ * que há algo a fazer quando não há — que é a forma mais rápida de o tornar
+ * ignorável.
+ */
+export function propostasAEsperaDoCliente(order: Order): number {
+  return (order.negociacoes ?? []).filter((n) => {
+    if (n.estado === "aguarda_contratacao") return true;
+    if (n.estado !== "aberta") return false;
+    try {
+      const l = JSON.parse(n.propostasJson ?? "[]") as Array<{
+        por: string;
+        estado: string;
+      }>;
+      return l.some((p) => p.por === "profissional" && p.estado === "pendente");
+    } catch {
+      return false;
+    }
+  }).length;
+}

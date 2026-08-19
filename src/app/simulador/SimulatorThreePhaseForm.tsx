@@ -50,6 +50,18 @@ interface FormState extends OrderData {
    * número para poder enviar o pedido é perder o pedido.
    */
   valorDesejadoCliente?: string;
+  /**
+   * Se o cliente precisa de fatura.
+   *
+   * Não é um detalhe administrativo: decide QUEM pode fazer o trabalho. Um
+   * profissional que não emite fatura não recebe estes pedidos, e descobrir
+   * isso no fim — com o trabalho feito e o cliente a pedir o documento — é o
+   * pior sítio possível para o descobrir.
+   *
+   * `undefined` enquanto não responder: é o que distingue "ainda não disse" de
+   * "disse que não".
+   */
+  precisaFatura?: boolean;
 }
 
 export default function SimulatorThreePhaseForm() {
@@ -259,7 +271,15 @@ export default function SimulatorThreePhaseForm() {
   };
 
   const isPhase3Valid = () => {
-    return formData.receiver?.name && formData.receiver?.phone && formData.urgency;
+    return (
+      formData.receiver?.name &&
+      formData.receiver?.phone &&
+      formData.urgency &&
+      // Sem resposta à fatura não se envia: é ela que decide quem pode fazer o
+      // trabalho, e descobri-lo no fim — com o serviço feito e o cliente a
+      // pedir o documento — é o pior sítio possível para o descobrir.
+      typeof formData.precisaFatura === "boolean"
+    );
   };
 
   const canProceedToPhase2 = isPhase1Valid();
@@ -1346,6 +1366,42 @@ function Phase3Contact({
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Contacto e revisão</h2>
+
+      {/* Precisa de fatura?
+          Antes do valor, porque é a resposta que decide quem pode fazer o
+          trabalho — e é a que não se pode adivinhar. Duas escolhas explícitas
+          em vez de uma caixa: uma caixa por marcar é indistinguível de uma
+          pergunta que a pessoa não viu. */}
+      <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
+        <p className="text-sm font-semibold text-gray-900">Precisa de fatura? *</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+          A fatura é emitida por quem presta o serviço. Dizer-nos agora garante que só lhe
+          propomos quem a possa passar.
+        </p>
+        <div className="mt-2.5 grid grid-cols-2 gap-2">
+          {[
+            { valor: true, rotulo: "Sim, preciso" },
+            { valor: false, rotulo: "Não é preciso" },
+          ].map((op) => {
+            const activo = formData.precisaFatura === op.valor;
+            return (
+              <button
+                key={String(op.valor)}
+                type="button"
+                onClick={() => updateField("precisaFatura", op.valor)}
+                aria-pressed={activo}
+                className={`min-h-[48px] rounded-xl border-2 px-4 text-sm font-semibold transition ${
+                  activo
+                    ? "border-cyan-600 bg-cyan-50 text-cyan-900"
+                    : "border-gray-300 bg-white text-slate-700 hover:border-cyan-400"
+                }`}
+              >
+                {op.rotulo}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Quanto conta gastar.
           Opcional, e sem efeito nenhum no preço — tem de o dizer com todas as

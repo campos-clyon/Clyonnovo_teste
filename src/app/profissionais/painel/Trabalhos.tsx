@@ -37,7 +37,7 @@ import { URGENCIA, fotosDe, propostasDe, provaDe, type Pedido } from "./tipos";
 
 const ESTADO: Record<string, { texto: string; cls: string }> = {
   aberta: { texto: "à espera da sua resposta", cls: "bg-blue-50 text-blue-700" },
-  aguarda_contratacao: { texto: "à espera do cliente", cls: "bg-amber-50 text-amber-700" },
+  aguarda_contratacao: { texto: "à espera do cliente", cls: "bg-cyan-50 text-cyan-700" },
   acordada: { texto: "é seu", cls: "bg-emerald-50 text-emerald-700" },
   desistida: { texto: "terminada", cls: "bg-slate-100 text-slate-500" },
   morta: { texto: "fechada com outro", cls: "bg-slate-100 text-slate-500" },
@@ -45,7 +45,7 @@ const ESTADO: Record<string, { texto: string; cls: string }> = {
 
 const FASE: Record<string, { texto: string; cls: string }> = {
   a_executar: { texto: "por fazer", cls: "bg-cyan-50 text-cyan-700" },
-  a_confirmar: { texto: "à espera da confirmação", cls: "bg-amber-50 text-amber-700" },
+  a_confirmar: { texto: "à espera da confirmação", cls: "bg-cyan-50 text-cyan-700" },
   confirmado: { texto: "confirmado", cls: "bg-emerald-50 text-emerald-700" },
   pago: { texto: "pago", cls: "bg-slate-100 text-slate-500" },
 };
@@ -155,7 +155,7 @@ export default function Trabalhos({
                     activo
                       ? "bg-white/20"
                       : sep.id === "novos"
-                        ? "bg-amber-400 text-amber-950"
+                        ? "bg-[#00B4CC] text-white"
                         : "bg-slate-300 text-slate-700"
                   }`}
                 >
@@ -191,7 +191,11 @@ export default function Trabalhos({
                   : novo
                     // A barra à esquerda é o que faz o olho parar aqui primeiro
                     // ao percorrer a lista. É o pedido com prazo a correr.
-                    ? "border-l-4 border-l-amber-400 border-y-[#E2EEF3] border-r-[#E2EEF3]"
+                    //
+                    // Ciano da marca, e não âmbar: a CLYON não tem amarelo, e
+                    // uma cor que não é da casa lê-se como aviso de sistema em
+                    // vez de destaque.
+                    ? "border-l-4 border-l-[#00B4CC] border-y-[#E2EEF3] border-r-[#E2EEF3]"
                     : "border-[#E2EEF3]"
               }`}
             >
@@ -229,7 +233,7 @@ export default function Trabalhos({
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {novo && (
-                      <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950">
+                      <span className="rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
                         novo
                       </span>
                     )}
@@ -496,11 +500,11 @@ function DetalheDoTrabalho({
       )}
 
       {fechado && pedido.fase === "a_confirmar" && (
-        <section className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <h2 className="flex items-center gap-2 text-base font-bold text-amber-900">
+        <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+          <h2 className="flex items-center gap-2 text-base font-bold text-cyan-900">
             <Clock className="h-5 w-5" aria-hidden="true" />À espera do cliente
           </h2>
-          <p className="mt-1 text-sm leading-relaxed text-amber-800">
+          <p className="mt-1 text-sm leading-relaxed text-cyan-800">
             Enviou a prova. O valor fica cativo até ele confirmar
             {pedido.diasAteLibertar != null && (
               <> — e liberta-se sozinho ao fim de {Math.ceil(pedido.diasAteLibertar)} dia
@@ -515,7 +519,7 @@ function DetalheDoTrabalho({
                   key={url}
                   type="button"
                   onClick={() => setAVer({ lista: prova.fotos, i })}
-                  className="block overflow-hidden rounded-lg bg-slate-900 ring-1 ring-amber-200"
+                  className="block overflow-hidden rounded-lg bg-slate-900 ring-1 ring-cyan-200"
                   aria-label={`Abrir prova ${i + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}

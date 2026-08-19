@@ -83,7 +83,48 @@ export async function loadContaData(email: string, name: string | null) {
         lastOrderDate: summaryRows[0]?.lastOrderDate ?? null,
       };
 
-      return { orders: rows, summary };
+      /*
+       * As negociações de cada pedido — as mesmas que a API devolve.
+       *
+       * Faltavam aqui, e o efeito era subtil: a Visão Geral, que é servida
+       * por esta consulta, abria o pedido sem propostas nenhumas; a lista
+       * "Os meus pedidos", que vai à API, abria o mesmo pedido com elas. O
+       * cliente via duas versões do mesmo ecrã conforme o caminho por onde
+       * lá chegou.
+       */
+      const ids = rows.map((r) => Number(r.id)).filter((n) => Number.isInteger(n));
+      const porPedido = new Map<number, unknown[]>();
+      if (ids.length > 0) {
+        const [negs] = (await pool.execute(
+          `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
+                  n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+                  p.name AS profissionalNome, p.phone AS profissionalTelefone,
+                  p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
+             FROM negociacoes n
+             JOIN providers p ON p.id = n.providerId
+            WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
+            ORDER BY n.updatedAt DESC`,
+          ids,
+        )) as [Array<Record<string, unknown>>, unknown];
+
+        for (const n of negs) {
+          const k = Number(n.pedidoId);
+          if (!porPedido.has(k)) porPedido.set(k, []);
+          // O telefone do profissional só depois de contratado.
+          porPedido.get(k)!.push({
+            ...n,
+            profissionalTelefone: n.estado === "acordada" ? n.profissionalTelefone : null,
+          });
+        }
+      }
+
+      return {
+        orders: rows.map((r) => ({
+          ...r,
+          negociacoes: porPedido.get(Number(r.id)) ?? [],
+        })),
+        summary,
+      };
     })(),
   ]);
 

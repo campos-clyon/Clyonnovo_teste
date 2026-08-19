@@ -32,12 +32,15 @@ export default function MenuMovel({
   email,
   avatar,
   pedidosAbertos,
+  propostasPorResponder = 0,
   onSection,
 }: {
   nome: string;
   email: string;
   avatar: string | null;
   pedidosAbertos: number;
+  /** Propostas à espera de resposta dele. */
+  propostasPorResponder?: number;
   onSection: (s: Section) => void;
 }) {
   return (
@@ -54,7 +57,16 @@ export default function MenuMovel({
         <LinhaDeMenu
           icone={ClipboardList}
           rotulo="Os meus pedidos"
-          destaque={pedidosAbertos > 0 ? `${pedidosAbertos} a decorrer` : undefined}
+          destaque={
+            propostasPorResponder > 0
+              ? propostasPorResponder === 1
+                ? "1 proposta nova"
+                : `${propostasPorResponder} propostas novas`
+              : pedidosAbertos > 0
+                ? `${pedidosAbertos} a decorrer`
+                : undefined
+          }
+          aviso={propostasPorResponder > 0}
           onClick={() => onSection("pedidos")}
         />
       </GrupoDeLinhas>

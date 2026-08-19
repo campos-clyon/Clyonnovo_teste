@@ -6,7 +6,7 @@ import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight } from "lucide-reac
 import StatusBadge from "./StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { SERVICE_LABELS, type Order } from "./types";
+import { SERVICE_LABELS, type Order, propostasAEsperaDoCliente } from "./types";
 
 const FILTER_TABS = [
   { value: "todos",      label: "Todos" },
@@ -178,11 +178,20 @@ export default function MeusPedidos() {
             {orders.map((o) => {
               const preco = o.precoFinalIva ?? o.precoFinal ?? o.estimateTotal;
               const local = o.city ?? o.address?.split(",").pop()?.trim();
+              // Uma proposta à espera dele é a única coisa nesta lista com
+              // prazo a correr — 48 horas. Sem nada que a distinga, o pedido
+              // com uma proposta em cima da mesa parece igual ao que está
+              // simplesmente à espera de alguém.
+              const aEsperar = propostasAEsperaDoCliente(o);
               return (
                 <li
                   key={o.id}
                   onClick={() => setSelected(o)}
-                  className="cursor-pointer rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:border-[#0077B6]/30 hover:shadow-md"
+                  className={`cursor-pointer rounded-2xl border bg-white shadow-sm transition hover:shadow-md ${
+                    aEsperar > 0
+                      ? "border-l-4 border-l-[#00B4CC] border-y-slate-100 border-r-slate-100 ring-1 ring-[#00B4CC]/20"
+                      : "border-slate-100 hover:border-[#0077B6]/30"
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-4 px-5 py-4">
                     <div className="min-w-0 flex-1">
@@ -191,6 +200,13 @@ export default function MeusPedidos() {
                           {SERVICE_LABELS[o.serviceType] ?? o.serviceType}
                         </span>
                         <StatusBadge status={o.status} />
+                        {aEsperar > 0 && (
+                          <span className="rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
+                            {aEsperar === 1
+                              ? "1 proposta nova"
+                              : `${aEsperar} propostas novas`}
+                          </span>
+                        )}
                       </div>
                       {local && <p className="mt-0.5 text-xs text-slate-400">{local}</p>}
                       {o.scheduledDate && (
