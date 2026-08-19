@@ -567,6 +567,29 @@ footer .text-white {
  *
  * Sem a animação, aparecer de repente a cobrir metade do ecrã lê-se como um
  * salto de página e não como um painel que se abre sobre o que está atrás. */
+/*
+ * A altura mínima de uma página.
+ *
+ * A classe existia no SiteChrome e não estava definida em lado nenhum — era
+ * um nome sem regra. Sem altura mínima, uma página curta, ou uma que ainda
+ * está a carregar, deixa o rodapé a subir até ao meio do ecrã com o vazio por
+ * baixo. Parece avaria, e é a primeira coisa que se nota.
+ *
+ * Desconta a altura do cabeçalho fixo, que já está no padding do <main>.
+ * `svh` e não `vh`: num telemóvel, `vh` conta a barra do browser como se ela
+ * nunca estivesse lá, e a página fica sempre um pouco mais alta do que o ecrã.
+ */
+.site-page-shell {
+  min-height: calc(100vh - 53px);
+  min-height: calc(100svh - 53px);
+}
+@media (min-width: 640px) {
+  .site-page-shell {
+    min-height: calc(100vh - 61px);
+    min-height: calc(100svh - 61px);
+  }
+}
+
 /* Ocultar scrollbar nas tabs mobile sem perder funcionalidade */
 .scrollbar-hide {
   -ms-overflow-style: none;

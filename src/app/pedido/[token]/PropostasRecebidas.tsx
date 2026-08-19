@@ -80,10 +80,22 @@ function euros(v: number | null | undefined): string {
 
 export default function PropostasRecebidas({
   token,
+  pedidoId,
   negociacoesIniciais,
+  onMudou,
 }: {
-  token: string;
+  /**
+   * O token do link do email, quando se chega por aí.
+   *
+   * Dentro da conta não há token — há sessão. Aí passa-se o `pedidoId` e a rota
+   * autenticada confirma que o pedido é de quem está a falar. É a mesma
+   * negociação e o mesmo motor: muda só como se prova quem é.
+   */
+  token?: string;
+  pedidoId?: number;
   negociacoesIniciais: NegociacaoDoCliente[];
+  /** Para a conta recarregar a lista depois de uma acção. */
+  onMudou?: () => void;
 }) {
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
   const [aEnviar, setAEnviar] = useState<number | null>(null);
@@ -93,16 +105,20 @@ export default function PropostasRecebidas({
     setAEnviar(id);
     setErro("");
     try {
-      const res = await fetch(`/api/negociacao/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accao, valor, negociacaoId: id }),
-      });
+      const res = await fetch(
+        token ? `/api/negociacao/${token}` : "/api/users/me/negociacao",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accao, valor, negociacaoId: id, pedidoId }),
+        },
+      );
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível.");
         return;
       }
+      onMudou?.();
       setNegociacoes((lista) =>
         lista.map((n) =>
           n.id !== id

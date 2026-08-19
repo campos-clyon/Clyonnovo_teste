@@ -14,8 +14,26 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 // que o operador não usa.
 const BARE_ROUTES = ["/orcamento-recolha-lisboa", "/admin"];
 
-// Rotas internas (dashboard) que usam apenas o Header — sem Footer nem barra inferior
-const DASHBOARD_ROUTES = ["/admin", "/simulador", "/conta"];
+/**
+ * Rotas internas (dashboard) que usam apenas o Header — sem Footer nem barra
+ * inferior.
+ *
+ * O rodapé é da página de marketing: serviços, cobertura, "peça orçamento".
+ * Numa conta já iniciada não serve para nada, e num painel a carregar era o que
+ * se via — subia até ao meio do ecrã com o vazio por baixo, e parecia avaria.
+ *
+ * A entrada e a inscrição dos profissionais NÃO estão aqui: essas ainda são
+ * páginas onde alguém chega de fora, e aí o rodapé faz o seu trabalho.
+ */
+const DASHBOARD_ROUTES = [
+  "/admin",
+  "/simulador",
+  "/conta",
+  "/plataforma",
+  "/profissionais/painel",
+  "/profissionais/pedidos",
+  "/pedido",
+];
 
 export default function SiteChrome({
   children,

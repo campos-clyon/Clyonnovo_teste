@@ -56,6 +56,26 @@ function MetricCard({ label, value }: { label: string; value: string | number })
 
 export default function VisaoGeral({ user, googleAvatar, orders, summary, onSection }: Props) {
   const [selected, setSelected] = useState<Order | null>(null);
+
+  /*
+   * O detalhe SUBSTITUI a visão geral, não se acrescenta a ela.
+   *
+   * Era uma sobreposição, e ninguém dava pelo problema. Desde que passou a
+   * abrir na área de conteúdo, ficava desenhado por baixo das boas-vindas, das
+   * métricas e da lista — três ecrãs de rolo até chegar ao que se carregou
+   * para ver.
+   */
+  if (selected) {
+    return (
+      <OrderDetailModal
+        order={selected}
+        onClose={() => setSelected(null)}
+        onOrderChange={(patch) =>
+          setSelected((cur) => (cur ? ({ ...cur, ...patch } as Order) : cur))
+        }
+      />
+    );
+  }
   const nome = user.name ?? user.email.split("@")[0];
   const primeiroNome = nome.split(" ")[0];
   const avatar = user.avatarUrl ?? googleAvatar;
@@ -76,23 +96,13 @@ export default function VisaoGeral({ user, googleAvatar, orders, summary, onSect
 
   return (
     <div className="space-y-8">
-      {/* Card de boas-vindas */}
-      <div className="flex items-center gap-5 overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <UserAvatar
-          src={avatar}
-          name={nome}
-          size={72}
-          className="shrink-0 ring-2 ring-[#00B4D8]/20"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-slate-400">Bem-vindo de volta</p>
-          <h2 className="text-2xl font-bold text-slate-900">{primeiroNome}</h2>
-          <p className="mt-0.5 truncate text-sm text-slate-500" title={user.email}>{user.email}</p>
-          <p className="mt-0.5 text-xs text-slate-400">
-            Membro desde {formatDate(user.createdAt)}
-          </p>
-        </div>
-      </div>
+      {/*
+        O cartão de boas-vindas saiu daqui.
+        Dizia o nome, o email e o avatar — exactamente o que a barra lateral já
+        diz, três centímetros à esquerda e sempre à vista. Ocupava o topo da
+        página com informação que a pessoa acabou de usar para entrar, e
+        empurrava para baixo o que ela vem cá ver: os pedidos.
+      */}
 
       {/* Métricas */}
       <div className="flex gap-4">
@@ -199,13 +209,6 @@ export default function VisaoGeral({ user, googleAvatar, orders, summary, onSect
         </div>
       </div>
 
-      {selected && (
-        <OrderDetailModal
-          order={selected}
-          onClose={() => setSelected(null)}
-          onOrderChange={(patch) => setSelected((cur) => (cur ? { ...cur, ...patch } as Order : cur))}
-        />
-      )}
     </div>
   );
 }

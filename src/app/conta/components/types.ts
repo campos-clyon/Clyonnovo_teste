@@ -57,6 +57,26 @@ export interface Order {
   distanceKm: number | null;
   distanceText: string | null;
   filesJson: string | null;
+  /** As propostas dos profissionais, quando o pedido está na plataforma. */
+  negociacoes?: NegociacaoDoPedido[];
+}
+
+export interface NegociacaoDoPedido {
+  id: number;
+  pedidoId: number;
+  estado: string;
+  valorAcordado: string | null;
+  propostasJson: string | null;
+  execucaoEnviadaEm: string | null;
+  provaJson: string | null;
+  confirmadoEm: string | null;
+  pagoEm: string | null;
+  profissionalNome: string;
+  /** Só depois de o contratar. */
+  profissionalTelefone: string | null;
+  emiteFatura: number;
+  regimeIva: string;
+  guiaVerificadaEm: string | null;
 }
 
 export interface OrderHistoryEntry {

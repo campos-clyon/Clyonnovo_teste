@@ -4,8 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { SERVICE_LABELS, type Order, type OrderHistoryEntry } from "./types";
+import PropostasRecebidas, {
+  type NegociacaoDoCliente,
+} from "@/app/pedido/[token]/PropostasRecebidas";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tFloor } from "@/lib/translations";
+import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -61,6 +65,17 @@ function formatDateTime(iso: string) {
   });
 }
 
+/** As propostas gravadas, na forma que o motor de negociação entende. */
+function parseHistoryLike(json: string | null): never[] {
+  if (!json) return [];
+  try {
+    const l = JSON.parse(json);
+    return Array.isArray(l) ? (l as never[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function parseHistory(json: string | null): OrderHistoryEntry[] {
   if (!json) return [];
   try {
@@ -107,6 +122,46 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
    * pelo princípio. As mensagens são o contrário, porque aí o que interessa é
    * a última.
    */
+  /**
+   * As negociações na forma que o componente das propostas entende.
+   *
+   * A conversão vive aqui e não na API: a API devolve a linha da base tal como
+   * está, e quem a desenha decide o que dela precisa. Duas formas do mesmo
+   * objecto acabam por divergir — e a que diverge é sempre a que ninguém está
+   * a olhar.
+   */
+  const propostas: NegociacaoDoCliente[] = useMemo(
+    () =>
+      (order.negociacoes ?? []).map((n) => ({
+        id: n.id,
+        estado: n.estado,
+        valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+        propostas: parseHistoryLike(n.propostasJson),
+        profissionalNome: n.profissionalNome,
+        profissionalTelefone: n.profissionalTelefone,
+        emiteFatura: Number(n.emiteFatura) === 1,
+        regimeIva: String(n.regimeIva ?? "isento"),
+        guiaVerificada: n.guiaVerificadaEm != null,
+        fase: faseDoTrabalho({
+          estado: n.estado,
+          execucaoEnviadaEm: n.execucaoEnviadaEm,
+          confirmadoEm: n.confirmadoEm,
+          pagoEm: n.pagoEm,
+        }),
+        provaJson: n.provaJson,
+        diasAteLibertar: diasAteLibertar(
+          {
+            estado: n.estado,
+            execucaoEnviadaEm: n.execucaoEnviadaEm,
+            confirmadoEm: n.confirmadoEm,
+            pagoEm: n.pagoEm,
+          },
+          new Date(),
+        ),
+      })),
+    [order.negociacoes],
+  );
+
   const historico = useMemo(
     () =>
       parseHistory(historyJson)
@@ -238,6 +293,20 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
       </div>
 
       <div className="space-y-5 text-sm">
+        {/* ── As propostas ─────────────────────────────────────────────────
+            Estavam apenas no link do email. Quem tem conta não devia ter de
+            ir procurar uma mensagem antiga para responder a alguém que já lhe
+            respondeu — os pedidos estão aqui, e é aqui que a resposta faz
+            sentido. É a mesma negociação e o mesmo motor; muda só como se
+            prova quem está a falar. */}
+        {propostas.length > 0 && (
+          <PropostasRecebidas
+            pedidoId={order.id}
+            negociacoesIniciais={propostas}
+            onMudou={() => onOrderChange?.({})}
+          />
+        )}
+
           {/* Grelha de detalhes principais. Em ecrã largo cabem três colunas —
               é para isso que serve o espaço que o painel ganhou. */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">

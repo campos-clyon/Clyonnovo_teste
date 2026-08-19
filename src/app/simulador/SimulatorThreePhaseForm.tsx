@@ -1347,8 +1347,13 @@ function Phase3Contact({
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Contacto e revisão</h2>
 
-      {/* Quanto conta gastar. Opcional: quem não faz ideia não fica travado, e
-          quem faz diz-nos antes de nós telefonarmos. */}
+      {/* Quanto conta gastar.
+          Opcional, e sem efeito nenhum no preço — tem de o dizer com todas as
+          letras. A pergunta a seguir a uma estimativa parece um regateio: quem
+          escrever 80 fica à espera de pagar 80, e quem escrever 500 receia
+          que o orçamento suba para lá. Nenhuma das duas coisas acontece: o
+          número que damos sai das medidas do trabalho, e este só nos diz se
+          estamos longe do que a pessoa tinha em mente. */}
       <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
         <label
           htmlFor="valorDesejadoCliente"
@@ -1357,8 +1362,10 @@ function Phase3Contact({
           Quanto conta gastar? <span className="font-normal text-slate-500">(opcional)</span>
         </label>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          Ajuda-nos a responder com um valor realista. Não é um compromisso — o preço final
-          é sempre combinado consigo.
+          <strong className="font-semibold text-slate-600">Não entra no cálculo.</strong>{" "}
+          O valor do orçamento é calculado a partir do que nos disse — volume, distância,
+          andar, acesso — e não muda por causa do que escrever aqui. Isto fica só para nós,
+          para sabermos se o que temos a propor está longe do que tinha em mente.
         </p>
         <div className="relative mt-2 max-w-[12rem]">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">

@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { GrupoDeLinhas, LinhaDeMenu, euros } from "@/components/portal/Portal";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import Trabalhos from "./Trabalhos";
 import Carteira from "./Carteira";
 import Historico from "./Historico";
@@ -87,12 +88,34 @@ export default function PainelDoProfissional() {
       }
 
       const [dp, dc, df] = await Promise.all([rp.json(), rc.json(), rf.json()]);
+
+      /*
+       * Só se troca o que mudou de facto.
+       *
+       * O ciclo automático corre a cada minuto, e na esmagadora maioria das
+       * vezes traz exactamente o mesmo. Substituir o estado na mesma faria o
+       * React redesenhar a lista toda de sessenta em sessenta segundos: a
+       * fotografia a piscar, o que estivesse aberto a fechar-se, e a leitura a
+       * saltar. Comparar primeiro custa uma comparação de texto e evita tudo
+       * isso — o que aparece é o que é novo, e mais nada se mexe.
+       */
       if (rp.ok) {
         setNome(dp.nome ?? "");
-        setPedidos(dp.pedidos ?? []);
+        setPedidos((antes) => {
+          const novos = (dp.pedidos ?? []) as Pedido[];
+          return JSON.stringify(antes) === JSON.stringify(novos) ? antes : novos;
+        });
       }
-      if (rc.ok) setCarteira(dc);
-      if (rf.ok) setPerfil(df.perfil);
+      if (rc.ok) {
+        setCarteira((antes) =>
+          JSON.stringify(antes) === JSON.stringify(dc) ? antes : dc,
+        );
+      }
+      if (rf.ok) {
+        setPerfil((antes) =>
+          JSON.stringify(antes) === JSON.stringify(df.perfil) ? antes : df.perfil,
+        );
+      }
       setErro(rp.ok ? "" : (dp.error ?? "Erro ao carregar."));
     } catch {
       setErro("Erro de rede.");
@@ -104,6 +127,17 @@ export default function PainelDoProfissional() {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  /*
+   * De minuto a minuto, sem dar por isso.
+   *
+   * Um pedido tem 48 horas de prazo, mas quem está com o painel aberto à
+   * espera de trabalho não devia ter de carregar em F5 para o ver chegar. O
+   * ciclo pára com o separador escondido e vai buscar assim que ele volta à
+   * frente — um ecrã minimizado não gasta pedidos, e ao voltar não mostra
+   * dados de há uma hora.
+   */
+  useAutoRefresh(carregar, { intervalMs: 60_000 });
 
   function abrir(destino: Ecra) {
     router.push(

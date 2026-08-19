@@ -121,8 +121,41 @@ export async function GET(request: NextRequest) {
       params,
     ) as [Array<Record<string, unknown>>, unknown];
 
+    // As negociações de cada pedido. Sem elas, a conta mostra o pedido e
+    // esconde as propostas — e o cliente tem de ir procurar o email para
+    // responder a alguém que já lhe respondeu.
+    const ids = rows.map((r) => Number(r.id)).filter((n) => Number.isInteger(n));
+    const negociacoesPorPedido = new Map<number, unknown[]>();
+    if (ids.length > 0) {
+      const [negs] = (await pool.execute(
+        `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
+                n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+                p.name AS profissionalNome, p.phone AS profissionalTelefone,
+                p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
+           FROM negociacoes n
+           JOIN providers p ON p.id = n.providerId
+          WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
+          ORDER BY n.updatedAt DESC`,
+        ids,
+      )) as [Array<Record<string, unknown>>, unknown];
+
+      for (const n of negs) {
+        const k = Number(n.pedidoId);
+        if (!negociacoesPorPedido.has(k)) negociacoesPorPedido.set(k, []);
+        // O telefone do profissional só depois de ele ser contratado — a mesma
+        // regra que aplicamos à morada do cliente do outro lado.
+        negociacoesPorPedido.get(k)!.push({
+          ...n,
+          profissionalTelefone: n.estado === "acordada" ? n.profissionalTelefone : null,
+        });
+      }
+    }
+
     return NextResponse.json({
-      orders: rows,
+      orders: rows.map((r) => ({
+        ...r,
+        negociacoes: negociacoesPorPedido.get(Number(r.id)) ?? [],
+      })),
       total,
       page,
       pages: Math.ceil(total / limit),
