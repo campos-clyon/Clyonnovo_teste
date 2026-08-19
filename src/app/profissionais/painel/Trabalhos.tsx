@@ -430,7 +430,28 @@ function DetalheDoTrabalho({
           <h2 className="text-xs font-bold uppercase tracking-wide text-emerald-700">
             Onde e com quem
           </h2>
-          <p className="mt-2 flex items-start gap-2 text-sm text-emerald-900">
+          {/* O mapa antes da morada.
+              Uma morada escrita obriga a imaginar onde fica; um mapa responde
+              à pergunta que ele faz primeiro — "isto é longe?" — antes de
+              ler uma palavra. É uma imagem estática servida por nós, para a
+              chave da Google não sair para o browser. */}
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pedido.morada)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 block overflow-hidden rounded-xl ring-1 ring-emerald-200"
+            aria-label="Abrir a morada no mapa"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/mapa?q=${encodeURIComponent(pedido.morada)}&w=640&h=200`}
+              alt={`Mapa de ${pedido.morada}`}
+              className="h-36 w-full bg-emerald-100/50 object-cover"
+              loading="lazy"
+            />
+          </a>
+
+          <p className="mt-2.5 flex items-start gap-2 text-sm text-emerald-900">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             {pedido.morada}
           </p>
