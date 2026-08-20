@@ -136,6 +136,9 @@ export default async function PaginaDoPedido({
       fase: faseDoTrabalho(n),
       provaJson: n.provaJson ?? null,
       diasAteLibertar: diasAteLibertar(n, agora),
+      execucaoEnviadaEm: n.execucaoEnviadaEm ?? null,
+      confirmadoEm: n.confirmadoEm ?? null,
+      pagoEm: n.pagoEm ?? null,
     };
   });
 

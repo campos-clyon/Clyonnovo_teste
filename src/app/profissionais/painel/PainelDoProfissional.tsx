@@ -257,7 +257,7 @@ export default function PainelDoProfissional() {
       <GrupoDeLinhas titulo="A minha conta" className="mb-4">
         <LinhaDeMenu
           icone={UserCog}
-          rotulo="Os meus dados"
+          rotulo="Perfil"
           activo={ecra === "dados"}
           onClick={() => abrir("dados")}
         />

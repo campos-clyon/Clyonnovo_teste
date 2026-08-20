@@ -23,6 +23,7 @@ import {
 import { quantoOClientePaga, decomporIva, TAXA_IVA } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
+import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
  * As propostas que o cliente recebeu.
@@ -61,6 +62,11 @@ export type NegociacaoDoCliente = {
   diasAteLibertar: number | null;
   /** A avaliação que ele já deu, se deu. */
   estrelas?: number | null;
+  /** As datas do fim, para o histórico contar a história toda. */
+  execucaoEnviadaEm?: Date | string | null;
+  confirmadoEm?: Date | string | null;
+  pagoEm?: Date | string | null;
+  avaliadoEm?: Date | string | null;
 };
 
 function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
@@ -532,6 +538,22 @@ export default function PropostasRecebidas({
                   </div>
                 )}
               </div>
+
+              {/* O mesmo registo que o profissional vê do lado dele. Um
+                  histórico em que cada lado lê uma versão diferente não serve
+                  para resolver nada quando houver desacordo. */}
+              <HistoricoDaNegociacao
+                propostas={n.propostas}
+                marcos={{
+                  execucaoEnviadaEm: n.execucaoEnviadaEm,
+                  confirmadoEm: n.confirmadoEm,
+                  pagoEm: n.pagoEm,
+                  avaliadoEm: n.avaliadoEm,
+                  estrelas: n.estrelas,
+                  valorAcordado: n.valorAcordado,
+                }}
+                euSou="cliente"
+              />
             </article>
           );
         })}

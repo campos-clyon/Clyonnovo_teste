@@ -54,6 +54,19 @@ export async function GET(req: NextRequest) {
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,
+        /*
+         * As datas do fim, para o histórico da negociação.
+         *
+         * Não são dados do cliente — são do trabalho dele, e é ele que as
+         * provocou. Sem elas o histórico ficava pelas propostas e parava no
+         * momento do acordo, que é onde a maior parte da história começa.
+         */
+        execucaoEnviadaEm: l.execucaoEnviadaEm ?? null,
+        confirmadoEm: l.confirmadoEm ?? null,
+        pagoEm: l.pagoEm ?? null,
+        avaliadoEm: l.avaliadoEm ?? null,
+        estrelas: l.estrelas ?? null,
+        valorAcordado: acordado,
         propostas: l.propostasJson,
         // Só chegam preenchidos quando o trabalho é dele.
         morada: (vista.address as string | undefined) ?? null,

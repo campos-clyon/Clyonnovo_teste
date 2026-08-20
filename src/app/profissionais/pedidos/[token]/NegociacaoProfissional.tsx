@@ -69,6 +69,7 @@ export default function NegociacaoProfissional({
   const [erro, setErro] = useState("");
 
   const agora = new Date();
+
   const accoes = accoesDisponiveis(negociacao, "profissional", agora);
   const pendente = propostaPendente(negociacao, agora);
   const restantes = propostasRestantes(negociacao, "profissional", agora);
@@ -181,30 +182,6 @@ export default function NegociacaoProfissional({
           </p>
         )}
       </div>
-
-      {/* Histórico — só valores, é o que existe */}
-      {negociacao.propostas.length > 1 && (
-        <ol className="mt-4 space-y-1.5">
-          {negociacao.propostas.map((p, i) => (
-            <li key={i} className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">
-                {p.por === "cliente" ? "Cliente" : "Você"}
-                {p.estado === "expirada" && " (expirou)"}
-                {p.estado === "recusada" && " (recusada)"}
-              </span>
-              <span
-                className={
-                  p.estado === "pendente"
-                    ? "font-bold text-[#0B1929]"
-                    : "text-slate-400 line-through"
-                }
-              >
-                {euros(p.valor)}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
 
       {erro && (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

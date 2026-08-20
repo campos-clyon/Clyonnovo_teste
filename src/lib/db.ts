@@ -1406,6 +1406,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     pagoEm: Date | null;
     estrelas: number | null;
     comentario: string | null;
+    avaliadoEm: Date | null;
     serviceType: string | null;
     city: string | null;
     urgency: string | null;
@@ -1425,7 +1426,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
-            n.estrelas, n.comentario,
+            n.estrelas, n.comentario, n.avaliadoEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson,
             -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e

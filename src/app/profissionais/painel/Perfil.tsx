@@ -26,7 +26,7 @@ import type { Perfil as PerfilTipo } from "./tipos";
 export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seguranca";
 
 const TITULOS: Record<SeccaoDoPerfil, string> = {
-  dados: "Os meus dados",
+  dados: "Perfil",
   servicos: "Serviços e zonas",
   faturacao: "Faturação e IVA",
   banco: "Conta bancária",
@@ -379,7 +379,7 @@ export default function Perfil({
               }
             />
 
-            <Nota titulo="É isto que decide o que lhe chega">
+            <Nota titulo="É isto que decide o que lhe chega" comecaAberta>
               Um pedido só lhe aparece se for de um serviço que faz e de uma zona onde
               trabalha. Apertar demasiado o raio ou tirar uma categoria faz o trabalho
               deixar de aparecer sem nada avisar.
@@ -519,7 +519,7 @@ export default function Perfil({
               }
             />
 
-            <Nota titulo="Porque é que o IVA é o seu regime" icone="aviso">
+            <Nota titulo="Porque é que o IVA é o seu regime" icone="aviso" comecaAberta>
               O imposto é liquidado por si, não por nós. Um isento pelo artigo 53.º não
               cobra IVA nenhum — mostrar 23 % ao cliente seria mostrar-lhe um imposto que
               não é devido e que ninguém pode entregar ao Estado.
@@ -564,7 +564,7 @@ export default function Perfil({
               rotulo="Guardar conta"
             />
 
-            <Nota titulo="Quem vê o seu IBAN">
+            <Nota titulo="Quem vê o seu IBAN" comecaAberta>
               Fica guardado connosco e só é usado para lhe transferir o saldo. Não é
               mostrado a clientes nem a outros profissionais, e neste ecrã só voltam a
               aparecer os últimos quatro dígitos.

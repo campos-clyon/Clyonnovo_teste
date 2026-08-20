@@ -12,6 +12,7 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import type { Proposta } from "@/lib/negociacao";
 import Nota from "@/components/Nota";
 import NegociacaoProfissional from "./NegociacaoProfissional";
+import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 export const metadata: Metadata = {
   title: "Pedido — CLYON profissionais",
@@ -159,6 +160,19 @@ export default async function PaginaDoPedidoProfissional({
         valorAcordado={negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null}
         minimoDoCliente={minimo}
         recebeSeAceitar={minimo != null ? quantoOProfissionalRecebe(minimo) : null}
+      />
+
+      {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email
+          não pode dar uma versão diferente da história. */}
+      <HistoricoDaNegociacao
+        propostas={propostasDe(negociacao.propostasJson)}
+        marcos={{
+          execucaoEnviadaEm: negociacao.execucaoEnviadaEm,
+          confirmadoEm: negociacao.confirmadoEm,
+          pagoEm: negociacao.pagoEm,
+          valorAcordado: negociacao.valorAcordado,
+        }}
+        euSou="profissional"
       />
     </main>
   );

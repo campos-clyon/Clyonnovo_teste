@@ -64,6 +64,7 @@ export default function Nota({
   icone = "info",
   tom = "neutro",
   chave,
+  comecaAberta = false,
   className = "",
   children,
 }: {
@@ -72,10 +73,21 @@ export default function Nota({
   tom?: TomDaNota;
   /** Se existir, a nota pode ser fechada de vez neste dispositivo. */
   chave?: string;
+  /**
+   * Nasce aberta.
+   *
+   * O fechado por omissão é para os ecrãs onde a nota compete com um botão
+   * pelo espaço do telemóvel. Nas definições da conta não compete com nada: a
+   * pessoa veio aqui de propósito perceber o que cada campo faz, e obrigá-la a
+   * tocar para ler é esconder a resposta atrás da pergunta.
+   *
+   * Continua a fechar-se — o que muda é só onde começa.
+   */
+  comecaAberta?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
-  const [aberta, setAberta] = useState(false);
+  const [aberta, setAberta] = useState(comecaAberta);
   // Enquanto não se sabe se foi dispensada, não se desenha nada: mostrar e
   // esconder logo a seguir é pior do que aparecer um instante depois.
   const [dispensada, setDispensada] = useState<boolean | null>(chave ? null : false);

@@ -12,6 +12,13 @@ export type Pedido = {
   /** O JSON das propostas, tal como vem da base. */
   propostas: string | null;
   actualizadoEm: string;
+  /** As datas do fim do trabalho — entram no histórico da negociação. */
+  execucaoEnviadaEm: string | null;
+  confirmadoEm: string | null;
+  pagoEm: string | null;
+  avaliadoEm: string | null;
+  estrelas: number | null;
+  valorAcordado: number | null;
   serviceType: string | null;
   city: string | null;
   urgency: string | null;

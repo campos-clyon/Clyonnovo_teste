@@ -24,6 +24,7 @@ import VisorDeFotos from "@/components/VisorDeFotos";
 import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { URGENCIA, fotosDe, propostasDe, provaDe, type Pedido } from "./tipos";
+import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
  * Os trabalhos do profissional.
@@ -639,7 +640,7 @@ function DetalheDoTrabalho({
           negociacaoId={pedido.negociacaoId}
           estadoInicial={pedido.estado}
           propostasIniciais={propostasDe(pedido.propostas)}
-          valorAcordado={null}
+          valorAcordado={pedido.valorAcordado}
           minimoDoCliente={pedido.querPagar}
           recebeSeAceitar={
             pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
@@ -647,6 +648,23 @@ function DetalheDoTrabalho({
           onMudou={onRecarregar}
         />
       )}
+
+      {/* O histórico fica FORA da negociação, e por isso sobrevive-lhe.
+          A negociação deixa de ser desenhada quando o trabalho fecha — tem lá
+          dentro os botões de propor e aceitar — e levava o registo com ela.
+          O que aconteceu é justamente o que tem de ficar depois de acabar. */}
+      <HistoricoDaNegociacao
+        propostas={propostasDe(pedido.propostas)}
+        marcos={{
+          execucaoEnviadaEm: pedido.execucaoEnviadaEm,
+          confirmadoEm: pedido.confirmadoEm,
+          pagoEm: pedido.pagoEm,
+          avaliadoEm: pedido.avaliadoEm,
+          estrelas: pedido.estrelas,
+          valorAcordado: pedido.valorAcordado,
+        }}
+        euSou="profissional"
+      />
 
       {aVer && (
         <VisorDeFotos
