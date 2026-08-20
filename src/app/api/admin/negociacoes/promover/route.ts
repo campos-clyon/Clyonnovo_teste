@@ -7,6 +7,7 @@ import {
   appendOrderHistory,
 } from "@/lib/db";
 import { distribuirPedido } from "@/lib/distribuir-pedido";
+import { negociacoesDoPedido } from "@/lib/db";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
@@ -61,9 +62,24 @@ export async function POST(req: NextRequest) {
 
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
-  if (pedido.valorDesejadoCliente != null) {
+  /*
+   * Está na plataforma quem CHEGOU a alguém, não quem tem um número.
+   *
+   * Esta guarda olhava para `valorDesejadoCliente != null`. A lista ao lado
+   * usa outro critério — não ter negociações — e as duas discordavam:
+   *
+   *   1. o admin carrega em "Enviar aos profissionais";
+   *   2. o valor fica gravado, mas a distribuição não chega a ninguém;
+   *   3. o pedido continua na lista, porque continua sem negociações;
+   *   4. carregar outra vez responde "Este pedido já está na plataforma".
+   *
+   * O pedido ficava preso: visível, por enviar, e impossível de enviar. Foi o
+   * que aconteceu ao #202. O critério passa a ser o mesmo dos dois lados.
+   */
+  const jaTemNegociacoes = (await negociacoesDoPedido(pedidoId)).length > 0;
+  if (jaTemNegociacoes) {
     return NextResponse.json(
-      { error: "Este pedido já está na plataforma." },
+      { error: "Este pedido já foi enviado aos profissionais." },
       { status: 409 },
     );
   }
@@ -113,6 +129,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+
     const baseUrl = urlDeAccaoDoPedido(req.headers);
 
     // O link primeiro: sem ele o cliente recebe propostas e não tem onde
@@ -152,8 +169,16 @@ export async function POST(req: NextRequest) {
         (emailSaiu ? "" : " O email do link ao cliente NÃO saiu."),
     });
 
+    /*
+     * Zero profissionais não é sucesso.
+     *
+     * O ecrã mostrava "enviado" e a lista mantinha o pedido lá — sem dizer
+     * porquê. Quem estava do outro lado concluía que o botão não fazia nada.
+     * Os motivos já eram contados pela regra; faltava alguém mostrá-los.
+     */
     return NextResponse.json({
       ok: true,
+      chegouAAlguem: r.avisados > 0,
       valor,
       emailSaiu,
       ...r,

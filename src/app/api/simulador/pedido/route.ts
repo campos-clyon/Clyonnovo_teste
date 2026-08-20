@@ -17,6 +17,7 @@ import { validarValorDesejado } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { distribuirPedido } from "@/lib/distribuir-pedido";
+import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arranque";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
 
@@ -203,16 +204,10 @@ export async function POST(req: NextRequest) {
     // Sem valor escrito, arranca-se pela estimativa. Um pedido sem número
     // nenhum não pode ser negociado: o profissional não teria sobre o que
     // propor, e o cliente abriria um ecrã em branco.
-    const valorDeArranque: number | null = clienteIndicouValores
-      ? Number(valoresParaGravar.valorDesejadoCliente)
-      : (() => {
-          const daEstimativa = Number(
-            estimativa?.total ?? estimativa?.max ?? estimativa?.min ?? 0,
-          );
-          return Number.isFinite(daEstimativa) && daEstimativa > 0
-            ? Math.round(daEstimativa * 100) / 100
-            : null;
-        })();
+    const valorDeArranque: number | null = valorDeArranqueCalculado(
+      clienteIndicouValores ? valoresParaGravar.valorDesejadoCliente : null,
+      estimativa,
+    );
 
     // O valor de arranque fica gravado: é o ponto de partida que o
     // profissional vê, e sem ele na base a negociação não teria referência

@@ -40,6 +40,20 @@ export type PedidoOrder = {
   contactPhone?: string | null;
   contactEmail?: string | null;
   urgency?: string | null;
+  /**
+   * As duas perguntas do fim do simulador.
+   *
+   * A fatura decide quem pode sequer receber o pedido — um profissional que
+   * não a passa é excluído pela regra de elegibilidade, e sem isto à vista
+   * ninguém no backoffice percebia porque é que um pedido chegou a menos
+   * gente do que era de esperar.
+   *
+   * O valor que o cliente conta gastar não entra em cálculo nenhum: serve
+   * para sabermos se o que temos para propor está longe do que ele tinha em
+   * mente, antes de gastar uma proposta a descobri-lo.
+   */
+  precisaFatura?: boolean | number | null;
+  valorDesejadoCliente?: string | number | null;
   estimateTotal?: string | null;
   estimateMin?: string | null;
   estimateMax?: string | null;
@@ -1414,6 +1428,36 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Urgência</p>
                               <p className="mt-1 text-sm font-semibold text-slate-800">{tUrgency(order.urgency) ?? "Normal"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Precisa de fatura</p>
+                              {order.precisaFatura == null ? (
+                                <p className="mt-1 text-sm text-slate-400">Não respondeu</p>
+                              ) : (
+                                <p
+                                  className={`mt-1 text-sm font-semibold ${
+                                    order.precisaFatura ? "text-[#00B4CC]" : "text-slate-800"
+                                  }`}
+                                >
+                                  {order.precisaFatura ? "Sim — só a quem a passa" : "Não é preciso"}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">
+                                Conta gastar
+                              </p>
+                              {order.valorDesejadoCliente == null ||
+                              order.valorDesejadoCliente === "" ? (
+                                <p className="mt-1 text-sm text-slate-400">Não disse</p>
+                              ) : (
+                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                  {Number(order.valorDesejadoCliente).toFixed(2)} €
+                                  <span className="ml-1 font-normal text-slate-500">
+                                    (não entra no cálculo)
+                                  </span>
+                                </p>
+                              )}
                             </div>
                           </div>
                           {order.description && (

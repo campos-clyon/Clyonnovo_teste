@@ -1019,20 +1019,41 @@ export async function promoverPedidoAPlataforma(
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  // A condição no UPDATE evita promover duas vezes o mesmo pedido — o duplo
-  // toque no botão, que criaria um segundo token e invalidaria o primeiro.
-  // O token só se emite se não houver um. Substituí-lo cegamente invalidava o
-  // link que o cliente pode já ter recebido — e ele ficava sem forma de
-  // responder às propostas que o botão acabou de provocar.
+  /*
+   * O token é escrito, não preservado.
+   *
+   * Havia aqui um COALESCE, para não invalidar um link que o cliente já
+   * pudesse ter recebido. A protecção estava no sítio errado: quem chama isto
+   * já garantiu que o pedido não tem negociação nenhuma, e sem negociações não
+   * há proposta a que responder — o link antigo não serve para nada.
+   *
+   * Com o COALESCE, uma segunda tentativa gravava o hash antigo e enviava ao
+   * cliente o token novo. Os dois não correspondiam, e o link que ele abria
+   * dizia-lhe que não existia.
+   */
   const [res] = await pool.execute(
     `UPDATE simulatorOrders
         SET valorDesejadoCliente = ?,
-            acessoTokenHash = COALESCE(acessoTokenHash, ?),
-            acessoTokenExpiraEm = COALESCE(acessoTokenExpiraEm, ?)
+            acessoTokenHash = ?,
+            acessoTokenExpiraEm = ?
       WHERE id = ?`,
     [valorDesejado, hash, expiraEm, pedidoId],
   ) as any[];
-  return Number(res.affectedRows ?? 0) > 0;
+  if (Number(res.affectedRows ?? 0) > 0) return true;
+
+  /*
+   * Zero linhas alteradas não quer dizer que o pedido não exista.
+   *
+   * O MySQL conta linhas MUDADAS, não encontradas. Uma segunda tentativa com
+   * exactamente o mesmo valor e o mesmo token não muda nada — e a resposta
+   * era "este pedido já tinha sido promovido", com o pedido a ficar preso
+   * outra vez. Aqui pergunta-se o que interessa mesmo: existe?
+   */
+  const [linhas] = await pool.execute(
+    "SELECT id FROM simulatorOrders WHERE id = ? LIMIT 1",
+    [pedidoId],
+  ) as any[];
+  return (linhas as unknown[]).length > 0;
 }
 
 export async function pedidosComNegociacoes(limite = 30): Promise<
