@@ -16,6 +16,7 @@ import type {
   ServiceType,
 } from "./types";
 import AddressAutocomplete from "./components/AddressAutocomplete";
+import { emailValido } from "@/lib/inscricao-profissional";
 import {
   moradaServeParaTrabalhar,
   precisaoDaMorada,
@@ -286,7 +287,9 @@ export default function SimulatorThreePhaseForm() {
     return Boolean(
       formData.receiver?.name &&
         formData.receiver?.phone &&
-        formData.receiver?.email &&
+        // Não basta estar preenchido: "joao@gmail" nunca recebe proposta
+        // nenhuma, e o pedido segue à mesma para os profissionais.
+        emailValido(formData.receiver?.email ?? "") &&
         formData.urgency &&
         valores.ok,
     );

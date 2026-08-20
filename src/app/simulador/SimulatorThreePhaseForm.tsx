@@ -32,6 +32,7 @@ import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
+import { emailValido } from "@/lib/inscricao-profissional";
 import {
   trackSimulatorStart,
   trackSimulatorContact,
@@ -303,6 +304,19 @@ export default function SimulatorThreePhaseForm() {
     return (
       formData.receiver?.name &&
       formData.receiver?.phone &&
+      /*
+       * O email deixou de ser opcional.
+       *
+       * Era-o quando a CLYON fazia o trabalho e telefonava. Agora o pedido vai
+       * a profissionais que respondem com propostas, e a proposta chega por um
+       * link enviado por email — não há outro caminho. Sem email, o pedido
+       * segue para os profissionais, eles propõem, e o cliente nunca chega a
+       * saber. Foi o que aconteceu ao #202.
+       *
+       * O telefone continua a ser pedido, mas ninguém negoceia por telefone
+       * com quatro profissionais ao mesmo tempo.
+       */
+      emailValido(formData.receiver?.email ?? "") &&
       formData.urgency &&
       // Sem resposta à fatura não se envia: é ela que decide quem pode fazer o
       // trabalho, e descobri-lo no fim — com o serviço feito e o cliente a
@@ -314,6 +328,14 @@ export default function SimulatorThreePhaseForm() {
   const canProceedToPhase2 = isPhase1Valid();
   const canProceedToPhase3 = isPhase2Valid();
   const canAnalyze = isPhase3Valid();
+
+  /** O que ainda falta na fase 3, pela ordem em que aparece no ecrã. */
+  const faltaNaFase3: string[] = [];
+  if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se precisa de fatura");
+  if (!formData.receiver?.name) faltaNaFase3.push("o nome");
+  if (!formData.receiver?.phone) faltaNaFase3.push("o telefone");
+  if (!emailValido(formData.receiver?.email ?? "")) faltaNaFase3.push("o email");
+  if (!formData.urgency) faltaNaFase3.push("quando precisa");
 
   const handleAnalyze = async () => {
     if (!canAnalyze) {
@@ -741,14 +763,24 @@ export default function SimulatorThreePhaseForm() {
                   )}
 
                   {phase === 3 && (
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={!canAnalyze}
-                      className="ml-auto flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
-                    >
-                      Enviar Pedido
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <div className="ml-auto flex flex-col items-end gap-2">
+                      {/* Um botão cinzento sem explicação é um beco.
+                          A pessoa vê que não pode avançar, não vê porquê, e
+                          quem não descobre fecha o separador. */}
+                      {!canAnalyze && faltaNaFase3.length > 0 && (
+                        <p className="text-xs text-gray-600">
+                          Falta preencher: {faltaNaFase3.join(", ")}.
+                        </p>
+                      )}
+                      <button
+                        onClick={handleAnalyze}
+                        disabled={!canAnalyze}
+                        className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
+                      >
+                        Enviar Pedido
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1446,6 +1478,8 @@ function Phase3Contact({
   session: any;
 }) {
   const isLoggedIn = !!session?.user?.email;
+  const emailEscrito = (formData.receiver?.email ?? "").trim().length > 0;
+  const emailEstaBem = emailValido(formData.receiver?.email ?? "");
 
   return (
     <div className="space-y-6">
@@ -1585,14 +1619,28 @@ function Phase3Contact({
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-900">Email (opcional)</label>
+        <label className="block text-sm font-medium text-gray-900">Email *</label>
+        <p className="text-xs text-gray-600">
+          É por aqui que recebe as propostas. Sem email não temos como lhe
+          mostrar o que os profissionais respondem.
+        </p>
         <input
           type="email"
+          inputMode="email"
+          autoComplete="email"
           value={formData.receiver?.email || ""}
           onChange={(e) => updateField("receiver", { ...formData.receiver, email: e.target.value })}
           placeholder="Ex: exemplo@email.com"
-          className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
+          className={`w-full px-4 py-2 border-2 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm ${
+            emailEscrito && !emailEstaBem ? "border-red-400" : "border-gray-400"
+          }`}
         />
+        {/* Só se queixa de um email errado depois de haver um email escrito.
+            Marcar a vermelho um campo em branco em que a pessoa ainda não
+            tocou é ralhar antes de ela fazer nada. */}
+        {emailEscrito && !emailEstaBem && (
+          <p className="text-xs text-red-600">Este email não parece estar certo.</p>
+        )}
       </div>
 
       <div className="space-y-2">
