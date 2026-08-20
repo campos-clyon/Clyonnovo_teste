@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
@@ -106,16 +106,40 @@ export default function Perfil({
   const [dados, setDados] = useState<PerfilTipo>(perfil);
   const [aGravar, setAGravar] = useState(false);
   const [erro, setErro] = useState("");
-  const [feito, setFeito] = useState(false);
+  /*
+   * A hora a que gravou, não um "já gravei".
+   *
+   * Era um booleano, e uma vez verdadeiro o botão dizia "Guardado" até alguém
+   * mexer num campo. Quem voltasse a este ecrã encontrava-o a dizer que estava
+   * guardado sem ter carregado em nada — e quem carregasse duas vezes seguidas
+   * não via diferença entre a primeira e a segunda. Com a hora, a confirmação
+   * é sempre de uma gravação concreta.
+   */
+  const [gravadoAs, setGravadoAs] = useState<Date | null>(null);
 
   // Palavra-passe — não vive no perfil, tem rota própria.
   const [actual, setActual] = useState("");
   const [nova, setNova] = useState("");
   const [aVer, setAVer] = useState(false);
 
+  /*
+   * Cada secção responde por si.
+   *
+   * O estado era partilhado pelas cinco: gravar os dados e passar a "Serviços
+   * e zonas" mostrava lá o botão já a dizer "Guardado", sobre alterações que
+   * ninguém tinha enviado.
+   */
+  useEffect(() => {
+    setGravadoAs(null);
+    setErro("");
+  }, [seccao]);
+
   function mudar<K extends keyof PerfilTipo>(campo: K, valor: PerfilTipo[K]) {
     setDados((d) => ({ ...d, [campo]: valor }));
-    setFeito(false);
+    // Mexer num campo apaga a confirmação: o que está no ecrã deixou de ser o
+    // que está gravado, e continuar a dizer "guardado" seria mentira.
+    setGravadoAs(null);
+    setErro("");
   }
 
   async function gravar(corpo: Record<string, unknown>) {
@@ -129,13 +153,20 @@ export default function Perfil({
       });
       const r = await res.json();
       if (!res.ok) {
-        setErro(r.error ?? "Não foi possível guardar.");
+        // Uma sessão que expirou não é um erro do formulário. Dizer-lhe
+        // "Não autenticado" ao lado dos campos deixava-a a procurar o que
+        // tinha escrito de errado — quando o que precisa é de voltar a entrar.
+        setErro(
+          res.status === 401
+            ? "A sua sessão expirou. Volte a entrar e grave outra vez."
+            : (r.error ?? "Não foi possível guardar."),
+        );
         return;
       }
-      setFeito(true);
+      setGravadoAs(new Date());
       onGravado();
     } catch {
-      setErro("Erro de rede.");
+      setErro("Sem ligação. O que escreveu não se perdeu — tente outra vez.");
     } finally {
       setAGravar(false);
     }
@@ -152,43 +183,66 @@ export default function Perfil({
       });
       const r = await res.json();
       if (!res.ok) {
-        setErro(r.error ?? "Não foi possível mudar.");
+        setErro(
+          res.status === 401
+            ? "A sua sessão expirou. Volte a entrar e tente outra vez."
+            : (r.error ?? "Não foi possível mudar."),
+        );
         return;
       }
       setActual("");
       setNova("");
-      setFeito(true);
+      setGravadoAs(new Date());
     } catch {
-      setErro("Erro de rede.");
+      setErro("Sem ligação. O que escreveu não se perdeu — tente outra vez.");
     } finally {
       setAGravar(false);
     }
   }
 
+  /*
+   * A resposta fica colada ao botão.
+   *
+   * O erro era desenhado no topo do ecrã e o botão está no fundo. Num
+   * telemóvel, carregar em "Guardar" e falhar não mostrava nada: a mensagem
+   * vermelha nascia acima do que se estava a ver. Ficava a ideia de que o
+   * botão não fazia nada — que é pior do que um erro, porque leva a pessoa a
+   * carregar outra vez.
+   */
   const Guardar = ({ onClick, rotulo = "Guardar" }: { onClick: () => void; rotulo?: string }) => (
-    <button
-      onClick={onClick}
-      disabled={aGravar}
-      className="mt-5 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-base font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
-    >
-      {aGravar ? (
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      ) : feito ? (
-        <Check className="h-5 w-5" aria-hidden="true" />
-      ) : null}
-      {feito ? "Guardado" : rotulo}
-    </button>
+    <div className="mt-5">
+      <button
+        onClick={onClick}
+        disabled={aGravar}
+        className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-base font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
+      >
+        {aGravar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
+        {aGravar ? "A guardar…" : rotulo}
+      </button>
+
+      {/* Uma região viva: quem ouve o ecrã em vez de o ver recebe o mesmo. */}
+      <div aria-live="polite" className="min-h-[1.5rem]">
+        {erro ? (
+          <p className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <X className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              <strong className="font-semibold">Não foi guardado.</strong> {erro}
+            </span>
+          </p>
+        ) : gravadoAs ? (
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-emerald-700">
+            <Check className="h-4 w-4" aria-hidden="true" />
+            Guardado às{" "}
+            {gravadoAs.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 
   return (
     <>
       <CabecalhoDeEcra titulo={TITULOS[seccao]} onVoltar={onVoltar} />
-
-      {erro && (
-        <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {erro}
-        </p>
-      )}
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         {/* ── Dados ────────────────────────────────────────────────────────── */}
