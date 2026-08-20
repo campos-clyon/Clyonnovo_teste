@@ -9,7 +9,7 @@ export const CONTEUDO_DATAS = {
   cidadeServico: "2026-07-29T11:28:08+02:00",
   mudancasCidade: "2026-07-12T10:22:13+02:00",
   regioes: "2026-07-10T10:28:46+02:00",
-  estaticas: "2026-07-28T20:25:14+02:00",
+  estaticas: "2026-08-20T13:24:10+02:00",
 } as const satisfies Record<string, string>;
 
 export type GrupoConteudo = keyof typeof CONTEUDO_DATAS;

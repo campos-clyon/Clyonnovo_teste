@@ -30,6 +30,11 @@ const staticPages = [
   { url: `${SITE_URL}/esvaziamento-de-casas-amadora`, priority: 0.93, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/recolha-de-monos-amadora`, priority: 0.93, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/recolha-de-entulho`, priority: 0.97, changeFrequency: "weekly" as const },
+  // Duas páginas reais que estavam fora do sitemap sem razão nenhuma: existem,
+  // respondem 200 e o site liga-lhes a partir do menu. O Google chegava-lhes
+  // por links e não por declaração nossa — o que as põe no fim da fila.
+  { url: `${SITE_URL}/recolha-de-monos`, priority: 0.96, changeFrequency: "weekly" as const },
+  { url: `${SITE_URL}/areas-de-atuacao`, priority: 0.85, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/mudancas`, priority: 0.96, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/servicos`, priority: 0.95, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/precos`, priority: 0.82, changeFrequency: "weekly" as const },

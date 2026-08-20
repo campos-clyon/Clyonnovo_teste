@@ -58,6 +58,11 @@ const GRUPOS = {
     "src/app/simulador",
     "src/app/recolha-de-moveis",
     "src/app/recolha-de-entulho",
+    // Entraram no sitemap e faltavam aqui: sem estarem nesta lista, uma
+    // correcção nelas não mexia no lastmod, e o Google não tinha razão para
+    // voltar a olhar — que é exactamente o problema que isto resolve.
+    "src/app/recolha-de-monos",
+    "src/app/areas-de-atuacao",
     "src/app/mudancas/page.tsx",
   ],
 };
