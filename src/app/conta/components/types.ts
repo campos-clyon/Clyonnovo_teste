@@ -110,6 +110,7 @@ export type Section =
    */
   | "menu"
   | "pedidos"
+  | "carteira"
   | "dados-pessoais"
   | "faturacao"
   | "notificacoes"

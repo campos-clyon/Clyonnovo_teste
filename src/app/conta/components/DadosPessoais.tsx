@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 import type { UserProfile } from "./types";
+import Nota from "@/components/Nota";
 
 /* ------------------------------------------------------------------ */
 /* Utilitário: gerar imagem cortada a partir do canvas                  */
@@ -523,6 +524,13 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
           </div>
         </div>
       </div>
+
+      <Nota titulo="Para que serve cada campo" className="mt-4" comecaAberta>
+        A morada entra já preenchida quando pede um orçamento, e é a partir
+        dela que se calcula a distância — uma morada sem número faz o
+        profissional chegar ao meio da rua. O telefone só é dado a quem
+        contratar, e só depois de o contratar.
+      </Nota>
     </>
   );
 }

@@ -6,6 +6,8 @@ import ContaSidebar   from "./components/ContaSidebar";
 import MenuMovel      from "./components/MenuMovel";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import MeusPedidos    from "./components/MeusPedidos";
+import Carteira       from "./components/Carteira";
+import { carteiraDoCliente } from "@/lib/carteira-do-cliente";
 import DadosPessoais  from "./components/DadosPessoais";
 import Faturacao      from "./components/Faturacao";
 import Notificacoes   from "./components/Notificacoes";
@@ -31,7 +33,8 @@ interface Props {
 const TITULOS_MOVEIS: Record<Section, string> = {
   menu: "A minha conta",
   pedidos: "Os meus pedidos",
-  "dados-pessoais": "Dados pessoais",
+  carteira: "A minha carteira",
+  "dados-pessoais": "Perfil",
   faturacao: "Faturação",
   notificacoes: "Notificações",
   seguranca: "Segurança",
@@ -104,6 +107,26 @@ export default function ContaCliente({
 
   // Quantas propostas esperam por ele, somadas. É o que o distintivo mostra —
   // e é o mesmo número em qualquer sítio onde apareça.
+  /*
+   * O que está retido, para a linha do menu o mostrar sem obrigar a entrar.
+   *
+   * É a mesma conta do ecrã da carteira, feita pelo mesmo módulo — dois sítios
+   * a somar isto à sua maneira era garantir que um dia diziam números
+   * diferentes sobre o mesmo dinheiro.
+   */
+  const retidoDoCliente = carteiraDoCliente(
+    orders.flatMap((o) =>
+      (o.negociacoes ?? []).map((n) => ({
+        negociacaoId: n.id,
+        pedidoId: n.pedidoId,
+        estado: n.estado,
+        valorAcordado: n.valorAcordado,
+        confirmadoEm: n.confirmadoEm,
+        pagoEm: n.pagoEm,
+      })),
+    ),
+  ).retido;
+
   const propostasPorResponder = orders.reduce(
     (soma, o) => soma + propostasAEsperaDoCliente(o),
     0,
@@ -160,6 +183,7 @@ export default function ContaCliente({
             avatar={effectiveUser.avatarUrl ?? avatar}
             pedidosAbertos={summary?.activeOrders ?? 0}
             propostasPorResponder={propostasPorResponder}
+            retido={retidoDoCliente}
             onSection={setSection}
           />
         ) : (
@@ -205,6 +229,7 @@ function SectionContent({
           esta função nunca é chamada com "menu" — lá a raiz é a lista de
           linhas. */}
       {(section === "pedidos" || section === "menu") && <MeusPedidos resumo={summary} />}
+      {section === "carteira"       && <Carteira orders={orders} />}
       {section === "dados-pessoais" && <DadosPessoais user={user} googleAvatar={googleAvatar} onUpdate={onUpdate} />}
       {section === "faturacao"      && <Faturacao user={user} onUpdate={onUpdate} />}
       {section === "notificacoes"   && <Notificacoes user={user} onUpdate={onUpdate} />}

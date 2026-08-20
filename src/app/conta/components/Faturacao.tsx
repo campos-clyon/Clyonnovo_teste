@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import type { UserProfile } from "./types";
+import Nota from "@/components/Nota";
 
 interface Props {
   user: UserProfile;
@@ -156,6 +157,14 @@ export default function Faturacao({ user, onUpdate }: Props) {
           </button>
         </div>
       </div>
+
+      <Nota titulo="Quem passa a fatura" className="mt-4" comecaAberta>
+        A fatura do serviço é emitida pelo profissional que faz o trabalho, e
+        não pela CLYON — é ele o prestador. Estes dados são os que lhe chegam
+        para a passar, por isso vale a pena estarem certos antes de fechar um
+        trabalho. Se precisa mesmo de fatura, diga-o no pedido: só lhe
+        propomos quem a possa passar.
+      </Nota>
     </div>
   );
 }

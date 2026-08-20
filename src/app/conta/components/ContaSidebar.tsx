@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import UserAvatar from "@/components/UserAvatar";
 import {
   ClipboardList,
+  Wallet,
   User,
   Receipt,
   Bell,
@@ -14,7 +15,8 @@ import type { Section } from "./types";
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "pedidos",        label: "Os meus pedidos",  icon: ClipboardList },
-  { id: "dados-pessoais", label: "Dados pessoais",   icon: User },
+  { id: "carteira",       label: "A minha carteira", icon: Wallet },
+  { id: "dados-pessoais", label: "Perfil",           icon: User },
   { id: "faturacao",      label: "Faturação",        icon: Receipt },
   { id: "notificacoes",   label: "Notificações",     icon: Bell },
   { id: "seguranca",      label: "Segurança",        icon: Shield },

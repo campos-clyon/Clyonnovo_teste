@@ -10,6 +10,7 @@ import {
   Receipt,
   Shield,
   User,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { GrupoDeLinhas, LinhaDeMenu } from "@/components/portal/Portal";
@@ -32,6 +33,7 @@ export default function MenuMovel({
   email,
   avatar,
   pedidosAbertos,
+  retido,
   propostasPorResponder = 0,
   onSection,
 }: {
@@ -41,6 +43,8 @@ export default function MenuMovel({
   pedidosAbertos: number;
   /** Propostas à espera de resposta dele. */
   propostasPorResponder?: number;
+  /** O que está retido, para se ver sem entrar. */
+  retido?: number | null;
   onSection: (s: Section) => void;
 }) {
   return (
@@ -69,10 +73,19 @@ export default function MenuMovel({
           aviso={propostasPorResponder > 0}
           onClick={() => onSection("pedidos")}
         />
+        {/* A carteira ao lado dos pedidos, e não nas definições: é sobre o
+            trabalho, não sobre a conta. É a mesma arrumação do painel do
+            profissional, e pela mesma razão. */}
+        <LinhaDeMenu
+          icone={Wallet}
+          rotulo="A minha carteira"
+          valor={retido != null ? `${retido.toFixed(2).replace(".", ",")} €` : undefined}
+          onClick={() => onSection("carteira")}
+        />
       </GrupoDeLinhas>
 
       <GrupoDeLinhas titulo="A minha conta" className="mb-4">
-        <LinhaDeMenu icone={User} rotulo="Dados pessoais" onClick={() => onSection("dados-pessoais")} />
+        <LinhaDeMenu icone={User} rotulo="Perfil" onClick={() => onSection("dados-pessoais")} />
         <LinhaDeMenu icone={Receipt} rotulo="Faturação" onClick={() => onSection("faturacao")} />
         <LinhaDeMenu icone={Bell} rotulo="Notificações" onClick={() => onSection("notificacoes")} />
         <LinhaDeMenu icone={Shield} rotulo="Segurança" onClick={() => onSection("seguranca")} />
