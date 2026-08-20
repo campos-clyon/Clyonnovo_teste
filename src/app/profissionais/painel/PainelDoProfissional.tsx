@@ -24,6 +24,7 @@ import Historico from "./Historico";
 import PerfilEcra, { type SeccaoDoPerfil } from "./Perfil";
 import Ajuda from "./Ajuda";
 import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
+import Avaliacoes from "./Avaliacoes";
 
 /**
  * O painel do profissional.
@@ -39,13 +40,21 @@ import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./t
  * pode ser aberta por link directo, de um email ou de outra página.
  */
 
-type Ecra = "menu" | "trabalhos" | "carteira" | "historico" | "ajuda" | SeccaoDoPerfil;
+type Ecra =
+  | "menu"
+  | "trabalhos"
+  | "carteira"
+  | "historico"
+  | "avaliacoes"
+  | "ajuda"
+  | SeccaoDoPerfil;
 
 const ECRAS_VALIDOS: Ecra[] = [
   "menu",
   "trabalhos",
   "carteira",
   "historico",
+  "avaliacoes",
   "ajuda",
   "dados",
   "servicos",
@@ -196,14 +205,33 @@ export default function PainelDoProfissional() {
             {/* A média com o número de avaliações ao lado. A média sozinha
                 mente: 5,0 de uma avaliação não é melhor do que 4,6 de
                 quarenta. */}
-            {perfil?.avaliacao != null && (
-              <span className="flex items-center gap-1 text-sm font-semibold text-slate-700">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
-                {perfil.avaliacao.toFixed(1).replace(".", ",")}
-                <span className="font-normal text-slate-400">
-                  ({perfil.quantasAvaliacoes})
-                </span>
-              </span>
+            {perfil && (
+              <button
+                onClick={() => abrir("avaliacoes")}
+                className="flex items-center gap-1 text-sm font-semibold text-slate-700"
+              >
+                <Star
+                  className={`h-3.5 w-3.5 ${
+                    perfil.avaliacao != null
+                      ? "fill-[#00B4CC] text-[#00B4CC]"
+                      : "text-slate-300"
+                  }`}
+                  aria-hidden="true"
+                />
+                {/* Sem avaliações, dizia-se nada — e nada parece uma avaria.
+                    Dizer "sem avaliações" é a verdade, e mostra onde elas vão
+                    aparecer quando existirem. */}
+                {perfil.avaliacao != null ? (
+                  <>
+                    {perfil.avaliacao.toFixed(1).replace(".", ",")}
+                    <span className="font-normal text-slate-400">
+                      ({perfil.quantasAvaliacoes})
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-normal text-slate-400">sem avaliações</span>
+                )}
+              </button>
             )}
           </p>
         </div>
@@ -217,6 +245,16 @@ export default function PainelDoProfissional() {
       </header>
 
       <GrupoDeLinhas className="mb-4">
+        <LinhaDeMenu
+          icone={Star}
+          rotulo="Avaliações"
+          valor={
+            perfil?.avaliacao != null
+              ? `${perfil.avaliacao.toFixed(1).replace(".", ",")} · ${perfil.quantasAvaliacoes}`
+              : "—"
+          }
+          onClick={() => abrir("avaliacoes")}
+        />
         <LinhaDeMenu
           icone={Briefcase}
           rotulo="Os meus trabalhos"
@@ -351,6 +389,15 @@ export default function PainelDoProfissional() {
 
         {ecra === "historico" && carteira && (
           <Historico movimentos={carteira.movimentos} onVoltar={() => abrir("carteira")} />
+        )}
+
+        {ecra === "avaliacoes" && perfil && (
+          <Avaliacoes
+            avaliacoes={perfil.ultimasAvaliacoes ?? []}
+            media={perfil.avaliacao}
+            quantas={perfil.quantasAvaliacoes}
+            onVoltar={() => abrir("menu")}
+          />
         )}
 
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}

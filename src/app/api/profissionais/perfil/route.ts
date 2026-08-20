@@ -112,7 +112,9 @@ export async function GET(req: NextRequest) {
         desde: p.createdAt ?? null,
         avaliacao: reputacao.media,
         quantasAvaliacoes: reputacao.quantas,
-        ultimasAvaliacoes: avaliacoes.slice(0, 5).map((a) => ({
+        // A lista toda, não as cinco últimas: o ecrã das avaliações mostra-as
+        // todas, e a consulta já traz no máximo cem.
+        ultimasAvaliacoes: avaliacoes.map((a) => ({
           estrelas: Number(a.estrelas),
           comentario: a.comentario,
           em: a.avaliadoEm,

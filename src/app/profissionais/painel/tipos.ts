@@ -90,6 +90,12 @@ export type Perfil = {
   /** Média das avaliações, ou null enquanto não houver nenhuma. */
   avaliacao: number | null;
   quantasAvaliacoes: number;
+  /** As avaliações recebidas, sem quem as escreveu. */
+  ultimasAvaliacoes: Array<{
+    estrelas: number;
+    comentario: string | null;
+    em: string | null;
+  }>;
 };
 
 export const URGENCIA: Record<string, string> = {

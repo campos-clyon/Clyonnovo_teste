@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import {
   lerConsentimentoGuardado,
   EVENTO_CONSENTIMENTO,
@@ -85,6 +86,16 @@ export default function RastreioConsentido() {
           debaixo da mesma escolha, para o que se diz e o que se faz baterem
           certo. */}
       {consentimento.analytics && <Analytics />}
+
+      {/* O Speed Insights mede o tempo de carregamento das páginas — Core Web
+          Vitals. Não põe cookies e não segue ninguém entre sites, mas mede a
+          navegação de uma pessoa real e o banner pede autorização para
+          medição. Fica debaixo da mesma escolha que o Analytics, pela mesma
+          razão: o que se promete no banner e o que se faz têm de bater certo.
+
+          Os dados vão para /_vercel/speed-insights, no nosso domínio, por
+          isso a CSP não precisa de excepção nenhuma. */}
+      {consentimento.analytics && <SpeedInsights />}
     </>
   );
 }
