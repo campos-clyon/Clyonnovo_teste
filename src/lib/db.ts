@@ -1483,6 +1483,119 @@ let ajudaEnsured = false;
  * O backoffice mostra as duas origens na mesma lista. Quem atende não tem de
  * saber de que base veio o pedido; quem mantém o código tem.
  */
+let ligacoesEnsured = false;
+
+/**
+ * A tabela dos links de entrada.
+ *
+ * Guarda o HASH e nunca o token. Quem leia esta tabela — ou uma cópia de
+ * segurança que se perca — não consegue entrar na conta de ninguém.
+ *
+ * `usadoEm` é o que garante o uso único, e a chave única sobre o hash é o que
+ * impede duas linhas para o mesmo token.
+ */
+export async function ensureLigacoesDeEntradaTable(): Promise<void> {
+  if (ligacoesEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS ligacoesDeEntrada (
+      id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      email     VARCHAR(200) NOT NULL,
+      tokenHash CHAR(64) NOT NULL,
+      expiraEm  DATETIME NOT NULL,
+      usadoEm   DATETIME NULL DEFAULT NULL,
+      criadoEm  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY ligacao_hash (tokenHash),
+      KEY ligacao_email (email),
+      KEY ligacao_expira (expiraEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  ligacoesEnsured = true;
+}
+
+/**
+ * Cria uma ligação e mata as anteriores do mesmo email.
+ *
+ * Quem pede um link novo é porque o primeiro não serviu. Deixar o anterior a
+ * valer era deixar duas chaves da mesma casa em circulação — e a mais antiga
+ * é a que já pode ter sido reencaminhada.
+ */
+export async function criarLigacaoDeEntrada(
+  email: string,
+  tokenHash: string,
+  expiraEm: Date,
+): Promise<void> {
+  await ensureLigacoesDeEntradaTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const norm = email.trim().toLowerCase();
+
+  await pool.execute(
+    "UPDATE ligacoesDeEntrada SET usadoEm = NOW() WHERE email = ? AND usadoEm IS NULL",
+    [norm],
+  );
+  await pool.execute(
+    "INSERT INTO ligacoesDeEntrada (email, tokenHash, expiraEm) VALUES (?, ?, ?)",
+    [norm, tokenHash, expiraEm],
+  );
+
+  // Limpeza a passar: sem isto a tabela cresce para sempre com linhas que já
+  // não abrem nada. Uma semana chega para investigar um abuso e não é
+  // guardar endereços de correio sem razão.
+  await pool.execute(
+    "DELETE FROM ligacoesDeEntrada WHERE expiraEm < DATE_SUB(NOW(), INTERVAL 7 DAY)",
+  );
+}
+
+/**
+ * Consome uma ligação. Devolve o email se abriu, ou o motivo por que não.
+ *
+ * O consumo é UM ÚNICO UPDATE com a condição `usadoEm IS NULL` lá dentro. É
+ * isso que torna o uso único verdadeiro: se dois pedidos chegarem ao mesmo
+ * tempo com o mesmo token — o utilizador a carregar duas vezes, um
+ * pré-carregador do cliente de email a seguir o link antes dele — o InnoDB
+ * serializa-os na linha e só um vê `affectedRows = 1`. Ler primeiro e escrever
+ * depois deixava a janela aberta entre as duas coisas, e nessa janela os dois
+ * entravam.
+ */
+export async function consumirLigacaoDeEntrada(
+  tokenHash: string,
+): Promise<{ ok: true; email: string } | { ok: false; motivo: "desconhecido" | "expirado" | "usado" }> {
+  await ensureLigacoesDeEntradaTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [res] = await pool.execute(
+    `UPDATE ligacoesDeEntrada
+        SET usadoEm = NOW()
+      WHERE tokenHash = ? AND usadoEm IS NULL AND expiraEm > NOW()`,
+    [tokenHash],
+  ) as any[];
+
+  if (Number(res.affectedRows ?? 0) === 1) {
+    const [linhas] = await pool.execute(
+      "SELECT email FROM ligacoesDeEntrada WHERE tokenHash = ? LIMIT 1",
+      [tokenHash],
+    ) as any[];
+    const email = (linhas as Array<{ email: string }>)[0]?.email;
+    if (email) return { ok: true, email };
+  }
+
+  // Não abriu. Saber PORQUÊ só é possível para quem já tem o token na mão, e
+  // por isso não revela nada a quem anda a sondar — mas muda o que se diz à
+  // pessoa, e "expirou, peça outro" leva-a a um sítio diferente de "já foi
+  // usado".
+  const [linhas] = await pool.execute(
+    "SELECT expiraEm, usadoEm FROM ligacoesDeEntrada WHERE tokenHash = ? LIMIT 1",
+    [tokenHash],
+  ) as any[];
+  const l = (linhas as Array<{ expiraEm: Date; usadoEm: Date | null }>)[0];
+  if (!l) return { ok: false, motivo: "desconhecido" };
+  if (l.usadoEm) return { ok: false, motivo: "usado" };
+  return { ok: false, motivo: "expirado" };
+}
+
 export async function ensureAjudaTable(): Promise<void> {
   if (ajudaEnsured) return;
   const pool = await getPool();

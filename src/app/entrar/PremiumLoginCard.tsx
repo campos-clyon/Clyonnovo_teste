@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { Lock, Zap, ShieldCheck } from "lucide-react";
+import { Lock, Zap, ShieldCheck, Mail } from "lucide-react";
 
 interface Props {
   errorMsg?: string | null;
@@ -20,9 +20,33 @@ export function PremiumLoginCard({ errorMsg }: Props) {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [isLoading, setIsLoading] = useState(false);
 
+  // A entrada por email, para quem não tem conta Google no endereço que usa.
+  const [email, setEmail] = useState("");
+  const [aEnviar, setAEnviar] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     await signIn("google", { callbackUrl: "/conta" });
+  };
+
+  const pedirLink = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (aEnviar) return;
+    setAEnviar(true);
+    try {
+      await fetch("/api/entrada/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      /* A resposta é sempre a mesma, e uma falha de rede não a pode mudar:
+         dizer "não conseguimos enviar" contava que o endereço existe. */
+    } finally {
+      setAEnviar(false);
+      setEnviado(true);
+    }
   };
 
   return (
@@ -94,8 +118,75 @@ export function PremiumLoginCard({ errorMsg }: Props) {
           <span className="relative">{isLoading ? "A conectar..." : "Continuar com Google"}</span>
         </button>
 
-        <p className="mt-4 text-center text-xs leading-relaxed text-slate-400">
-          Ao {tab === "login" ? "entrares" : "registares"} com Google, a tua conta é criada automaticamente se ainda não existir.
+        {/* A segunda porta.
+            O Google era a única, e deixava de fora quem nos deu um endereço
+            hotmail, sapo, live ou do trabalho — vinte e seis dos setenta e
+            nove clientes sem conta. Não era falta de vontade deles. */}
+        <div className="my-5 flex items-center gap-3">
+          <span className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs font-medium text-slate-400">ou</span>
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        {enviado ? (
+          <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3.5 text-center">
+            <Mail className="mx-auto h-5 w-5 text-cyan-600" aria-hidden="true" />
+            <p className="mt-1.5 text-sm font-semibold text-[#0B1929]">Veja o seu email</p>
+            {/* A mesma frase quer o endereço exista ou não. Uma resposta
+                diferente para "não conhecemos este email" transformava isto
+                numa lista de quem é cliente da CLYON. */}
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              Se este email tiver conta na CLYON, o link de entrada chega dentro
+              de instantes. Dura 15 minutos e serve uma vez.
+            </p>
+            <button
+              type="button"
+              onClick={() => setEnviado(false)}
+              className="mt-2 text-xs font-semibold text-cyan-700 underline"
+            >
+              Usar outro email
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={pedirLink} className="space-y-2">
+            <label htmlFor="email-de-entrada" className="sr-only">
+              O seu email
+            </label>
+            <input
+              id="email-de-entrada"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="o.seu@email.pt"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/10"
+            />
+            <button
+              type="submit"
+              disabled={aEnviar}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50"
+            >
+              <Mail className="h-4 w-4" aria-hidden="true" />
+              {aEnviar ? "A enviar…" : "Receber link por email"}
+            </button>
+            <p className="text-center text-[11px] text-slate-400">
+              Sem palavra-passe. Enviamos um link que entra por si.
+            </p>
+          </form>
+        )}
+
+        {/* A permissão, escrita e antes de acontecer.
+            Dizia "a tua conta é criada automaticamente" — informava, não
+            perguntava, e não dizia ao que a pessoa estava a dizer que sim. */}
+        <p className="mt-5 text-center text-xs leading-relaxed text-slate-500">
+          Ao continuar, autoriza a criação de uma conta CLYON com o seu email e
+          aceita a{" "}
+          <Link href="/privacidade" className="font-semibold text-cyan-700 underline">
+            Política de Privacidade
+          </Link>
+          . Usamos o email para lhe mostrar os seus pedidos e as propostas que
+          recebe — não o vendemos nem o usamos para publicidade.
         </p>
 
         {/* Selos de confiança */}

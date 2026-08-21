@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getToken } from "next-auth/jwt";
 import { COOKIE_SESSAO_ADMIN, sessaoDeAdminValida } from "@/lib/colaborador-auth";
 import {
@@ -117,6 +118,24 @@ function abertoPorToken(caminho: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { nextUrl, headers } = request;
+
+  /*
+   * Trava no consumo dos links de entrada.
+   *
+   * O token tem 256 bits e não se adivinha — ninguém entra por força bruta. O
+   * que se trava aqui é o custo: cada tentativa é uma consulta indexada à
+   * base, e um guião que dispare milhares por segundo não descobre nada mas
+   * ocupa a base a dizer que não.
+   *
+   * Fica no middleware e não dentro do NextAuth porque é aqui que se apanha o
+   * pedido antes de ele custar seja o que for.
+   */
+  if (nextUrl.pathname.startsWith("/api/auth/callback/link-de-entrada")) {
+    const rl = await checkRateLimit(`entrada-consumo:${getClientIp(request)}`, 20, 300);
+    if (!rl.allowed) {
+      return new NextResponse(null, { status: 429, headers: { "Retry-After": "300" } });
+    }
+  }
 
   // Marcado pelo portão e aplicado a toda a resposta que saia daqui.
   let semIndexacao = false;
