@@ -11,36 +11,100 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+/*
+ * A lista real, lida do código e não de um modelo.
+ *
+ * A tabela anterior listava um `cookie_consent` de 12 meses e um `session_id`
+ * que não existem em lado nenhum, e não mencionava nenhum dos cinco cookies
+ * que o site escreve de facto. Uma política de cookies que descreve cookies
+ * imaginários é pior do que não a ter: dá a quem a lê — e a quem a fiscaliza —
+ * a certeza de que ninguém a verificou.
+ *
+ * Quem mexer nos cookies do site tem de vir aqui a seguir.
+ */
 const COOKIE_TABLE = [
   {
-    name: "cookie_consent",
+    name: "clyon_cookie_consent",
     type: "Necessário",
     provider: "clyon.pt",
-    purpose: "Guarda a escolha do utilizador no banner de consentimento (aceitar / recusar / personalizar).",
-    duration: "12 meses",
+    purpose:
+      "Guarda a sua escolha no aviso de cookies (aceitar, recusar ou personalizar), para não voltarmos a perguntar.",
+    duration: "180 dias",
   },
   {
-    name: "session_id",
+    name: "clyon_cookie_preferences",
+    type: "Necessário",
+    provider: "clyon.pt (no dispositivo)",
+    purpose:
+      "Guarda que categorias aceitou. Fica no armazenamento local do navegador, não é enviado para o servidor.",
+    duration: "Até limpar o navegador",
+  },
+  {
+    name: "next-auth.session-token",
     type: "Necessário",
     provider: "clyon.pt",
-    purpose: "Mantém a sessão de utilizadores autenticados (clientes, colaboradores, admin).",
+    purpose:
+      "Mantém a sessão de quem entrou na conta de cliente. É httpOnly — o JavaScript da página não lhe acede.",
+    duration: "30 dias",
+  },
+  {
+    name: "next-auth.csrf-token / callback-url",
+    type: "Necessário",
+    provider: "clyon.pt",
+    purpose:
+      "Protegem o processo de entrada contra pedidos forjados e guardam para onde voltar depois de entrar.",
     duration: "Sessão",
+  },
+  {
+    name: "clyon_profissional",
+    type: "Necessário",
+    provider: "clyon.pt",
+    purpose:
+      "Mantém a sessão de um profissional no painel dele. httpOnly.",
+    duration: "30 dias",
+  },
+  {
+    name: "clyon_admin",
+    type: "Necessário",
+    provider: "clyon.pt",
+    purpose:
+      "Mantém a sessão de quem trabalha no backoffice da CLYON. httpOnly.",
+    duration: "8 horas, ou 30 dias se pedir para manter a sessão",
+  },
+  {
+    name: "clyon_mvp_chave / clyon_mvp",
+    type: "Necessário",
+    provider: "clyon.pt",
+    purpose:
+      "Dão acesso à área da plataforma que ainda está em testes fechados. Só existem para quem recebeu a chave.",
+    duration: "30 dias",
   },
   {
     name: "_ga, _ga_*",
     type: "Analítica",
     provider: "Google Analytics",
-    purpose: "Análise agregada e anónima de tráfego, páginas mais visitadas e origem dos visitantes.",
+    purpose:
+      "Análise agregada de tráfego, páginas mais visitadas e origem dos visitantes. Só é carregado se aceitar a analítica.",
     duration: "24 meses",
   },
   {
-    name: "_fbp",
+    name: "Vercel Analytics e Speed Insights",
+    type: "Analítica",
+    provider: "Vercel",
+    purpose:
+      "Contagem de visitas e tempo de carregamento das páginas. Não usam cookies e os dados vão para o nosso próprio domínio. Só carregam se aceitar a analítica.",
+    duration: "Não aplicável",
+  },
+  {
+    name: "_gcl_au",
     type: "Marketing",
-    provider: "Meta (Facebook)",
-    purpose: "Medição de campanhas publicitárias e retargeting. Só activado com consentimento.",
-    duration: "3 meses",
+    provider: "Google Ads",
+    purpose:
+      "Medição de campanhas publicitárias. Só é carregado se aceitar os cookies de marketing.",
+    duration: "90 dias",
   },
 ];
+
 
 export default function CookiesPage() {
   return (
@@ -55,14 +119,12 @@ export default function CookiesPage() {
             Política de Cookies
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
-            Esta página explica quais cookies o site {BUSINESS_NAME} utiliza para prestar os serviços
-            de <strong>recolha de móveis</strong>, <strong>esvaziamento de casa e apartamento</strong>,
-            <strong> recolha de entulho</strong>, <strong>recolha de monos</strong> e{" "}
-            <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal — e como pode gerir as suas
-            preferências.
+            Esta página explica o que o site {BUSINESS_NAME} guarda no seu dispositivo, para que
+            serve cada coisa, e como pode mudar de ideias. A lista mais abaixo é a real — o que não
+            estiver lá, não pomos.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última actualização: 12 de julho de 2026.
+            Última actualização: 21 de agosto de 2026.
           </p>
         </div>
       </section>

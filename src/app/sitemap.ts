@@ -44,6 +44,7 @@ const staticPages = [
   { url: `${SITE_URL}/faq`, priority: 0.75, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/sobre-nos`, priority: 0.75, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/contactos`, priority: 0.7, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/termos`, priority: 0.4, changeFrequency: "yearly" as const },
   { url: `${SITE_URL}/blog`, priority: 0.7, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/regioes`, priority: 0.9, changeFrequency: "weekly" as const },
 ];

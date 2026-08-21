@@ -149,7 +149,14 @@ const faqCategories = [
       },
       {
         q: "Fazem fatura ou recibo?",
-        a: "Sim. Emitimos recibo ou fatura com NIF para todos os serviços. Indique o NIF no pedido de orçamento.",
+        // Dizia "Emitimos recibo ou fatura para todos os serviços", e isso
+        // deixou de ser verdade com o pivot: quem presta o serviço é o
+        // profissional e é ele quem factura. A CLYON factura só a sua
+        // comissão. A frase antiga contradizia frontalmente o que os emails e
+        // o painel do profissional dizem — e uma promessa de factura que quem
+        // a faz não pode cumprir é a pior das contradições para se ter num
+        // documento indexado pelo Google.
+        a: "Sim. A fatura do serviço é emitida por quem o executa — o profissional que escolher — com o NIF que indicar no pedido. Diga-nos no pedido que precisa de fatura: só lhe propomos profissionais que a possam passar. A CLYON fatura apenas a sua taxa de plataforma.",
       },
     ],
   },

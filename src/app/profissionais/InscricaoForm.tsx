@@ -57,6 +57,19 @@ export default function InscricaoForm({
   const [erros, setErros] = useState<ErroDeInscricao[]>([]);
   const [erroGeral, setErroGeral] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
+  /*
+   * A aceitação dos termos, explícita e não pré-marcada.
+   *
+   * Este formulário recolhia NIF, número de transportador, regime de IVA e —
+   * mais à frente — IBAN, e anunciava uma comissão. Não havia contrato nenhum
+   * a aceitar: nem caixa, nem link. Uma comissão anunciada num parágrafo não
+   * vincula ninguém, e no dia de um desacordo sobre o que foi combinado não
+   * havia documento a que voltar.
+   *
+   * Começa desmarcada de propósito. Uma caixa pré-marcada não é aceitação — é
+   * uma suposição escrita à frente de quem não a fez.
+   */
+  const [aceitaTermos, setAceitaTermos] = useState(false);
   const [enviado, setEnviado] = useState<{ precisaVerificacaoDeGuia: boolean } | null>(null);
 
   const erro = (campo: string) => erros.find((e) => e.campo === campo)?.mensagem;
@@ -526,9 +539,41 @@ export default function InscricaoForm({
       )}
 
       <div className="space-y-3">
+        <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
+          <input
+            type="checkbox"
+            checked={aceitaTermos}
+            onChange={(e) => setAceitaTermos(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400"
+          />
+          <span>
+            Li e aceito os{" "}
+            <a
+              href="/termos"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-cyan-700 underline underline-offset-2"
+            >
+              Termos e Condições
+            </a>{" "}
+            e a{" "}
+            <a
+              href="/privacidade"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-cyan-700 underline underline-offset-2"
+            >
+              Política de Privacidade
+            </a>
+            . Declaro que trabalho por conta própria, que estou regularizado
+            perante as Finanças e a Segurança Social, e que sou eu quem presta o
+            serviço e emite a fatura ao cliente.
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={aEnviar}
+          disabled={aEnviar || !aceitaTermos}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 py-3.5 text-base font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}

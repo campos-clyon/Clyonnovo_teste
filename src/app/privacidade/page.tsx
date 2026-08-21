@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BUSINESS_EMAIL, BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
+import { linhaDeIdentificacao } from "@/lib/identificacao-legal";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade — Recolha de Móveis e Esvaziamento",
@@ -31,7 +32,7 @@ export default function PrivacidadePage() {
             direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD).
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última actualização: 12 de julho de 2026.
+            Última actualização: 21 de agosto de 2026.
           </p>
         </div>
       </section>
@@ -73,10 +74,23 @@ export default function PrivacidadePage() {
             title="1. Responsável pelo tratamento"
             body={
               <>
-                O responsável pelo tratamento dos dados é a <strong>{BUSINESS_NAME}</strong>, empresa
-                sediada em Portugal e prestadora de serviços de recolha de móveis, esvaziamento de
-                casas e apartamentos, recolha de entulho de obras, recolha de monos e mudanças
-                residenciais em Lisboa, Margem Sul e Setúbal.
+                O responsável pelo tratamento dos dados é{" "}
+                <strong>{linhaDeIdentificacao()}</strong>.
+                <br />
+                <br />
+                A CLYON opera uma plataforma que <strong>liga clientes a
+                profissionais independentes</strong> — recolha de móveis,
+                esvaziamento de casas e apartamentos, recolha de entulho,
+                recolha de monos e mudanças em Lisboa, Margem Sul e Setúbal.
+                Quem executa o trabalho e emite a fatura é o profissional que o
+                cliente escolher, e não a CLYON.
+                <br />
+                <br />
+                Isto tem uma consequência que interessa: quando contrata um
+                profissional, os dados necessários ao trabalho passam para ele,
+                e a partir desse momento{" "}
+                <strong>ele é responsável autónomo por esses dados</strong> —
+                não é nosso subcontratante, e responde por eles perante si.
                 <br />
                 <br />
                 <strong>Contactos:</strong>
@@ -95,8 +109,9 @@ export default function PrivacidadePage() {
             title="2. Que dados recolhemos"
             body={
               <>
-                Recolhemos apenas os dados necessários para responder ao pedido do cliente e
-                executar o serviço contratado:
+                Recolhemos apenas os dados necessários para pôr um pedido à
+                frente dos profissionais certos e acompanhar o que se combina.
+                De quem pede um serviço:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>
                     <strong>Dados de identificação:</strong> nome, telefone, email.
@@ -130,12 +145,22 @@ export default function PrivacidadePage() {
               <>
                 Os dados recolhidos são utilizados exclusivamente para:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
-                  <li>Elaborar orçamentos de recolha de móveis, esvaziamento ou mudança.</li>
-                  <li>Agendar e coordenar a execução do serviço no local acordado.</li>
-                  <li>Comunicar com o cliente por telefone, WhatsApp ou email sobre o pedido.</li>
-                  <li>Emitir recibo, factura e cumprir obrigações contabilísticas.</li>
-                  <li>Melhorar o serviço através da análise agregada e anónima da utilização do site.</li>
-                  <li>Gerir a garantia do serviço prestado e responder a reclamações.</li>
+                  <li>Calcular a estimativa automática a partir do que nos descreve.</li>
+                  <li>
+                    Mostrar o pedido aos profissionais que trabalham na sua zona e
+                    fazem esse tipo de serviço — <strong>sem a morada exacta nem
+                    o seu contacto</strong>, que só passam depois de contratar.
+                  </li>
+                  <li>Gerir as propostas, as contrapropostas e o registo do que foi combinado.</li>
+                  <li>Comunicar consigo por email, telefone ou WhatsApp sobre o pedido.</li>
+                  <li>
+                    Passar ao profissional que contratar a morada e o contacto, para
+                    ele poder lá chegar e falar consigo.
+                  </li>
+                  <li>Faturar a taxa de plataforma e cumprir as obrigações contabilísticas dela.</li>
+                  <li>Guardar as avaliações, sem identificar quem as escreveu.</li>
+                  <li>Melhorar o serviço através da análise agregada da utilização do site.</li>
+                  <li>Responder a reclamações e ajudar a resolver desacordos.</li>
                 </ul>
                 Não usamos os dados para publicidade a terceiros nem os vendemos.
               </>

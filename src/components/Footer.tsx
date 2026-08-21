@@ -243,6 +243,9 @@ export default function Footer() {
             © CLYON {anoAtual} - Todos os direitos reservados
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "center" }}>
+            <Link href="/termos" style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>
+              Termos e Condições
+            </Link>
             <Link href="/privacidade" style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>
               Política de Privacidade
             </Link>
