@@ -216,23 +216,19 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
 </html>
     `.trim();
 
-    const { data, error } = await resend.emails.send({
-      from: "CLYON Website <noreply@clyon.pt>",
-      to: [BUSINESS_EMAIL],
-      subject: assuntoSeguro(`Novo pedido: ${servico} - ${endereco}`),
-      text: plainText,
-      html: htmlContent,
-    });
-
-    if (error) {
-      console.error("[v0] Resend error:", JSON.stringify(error, null, 2));
-      return NextResponse.json(
-        { error: `Erro ao enviar email: ${error.message || "unknown"}` },
-        { status: 500 }
-      );
-    }
-
-    // Gravar lead na DB em paralelo — independente do email, best-effort
+    /*
+     * O lead é gravado ANTES do email, e não depois.
+     *
+     * Estava depois, com um comentário a dizer "independente do email" — mas
+     * havia um `return` de erro entre as duas coisas: se o Resend recusasse,
+     * a rota devolvia 500 e o lead nunca chegava a ser criado. O nome, o
+     * telefone e o serviço de quem preencheu o formulário desapareciam porque
+     * um email não saiu.
+     *
+     * É a ordem errada em qualquer caso. O contacto é o activo; o email é só
+     * a maneira de a equipa dar por ele. Gravar primeiro significa que, mesmo
+     * com o correio em baixo, a pessoa continua na lista à espera de resposta.
+     */
     createLead({
       nome,
       telefone: telemovel,
@@ -250,6 +246,22 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
       origem: "formulario_contactos",
       canal: "email",
     }).catch((err) => console.error("[api/contact] Erro ao gravar lead:", err));
+
+    const { data, error } = await resend.emails.send({
+      from: "CLYON Website <noreply@clyon.pt>",
+      to: [BUSINESS_EMAIL],
+      subject: assuntoSeguro(`Novo pedido: ${servico} - ${endereco}`),
+      text: plainText,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error("[v0] Resend error:", JSON.stringify(error, null, 2));
+      return NextResponse.json(
+        { error: `Erro ao enviar email: ${error.message || "unknown"}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, id: data?.id });
   } catch (error) {

@@ -2208,7 +2208,10 @@ export default function ColaboradorAdminClient() {
                 <div>
                   <h2 className="text-xl font-semibold text-white">Leads e contactos</h2>
                   <p className="mt-0.5 text-sm text-slate-400">
-                    Formulários, cliques e interações captadas no site.
+                    Só o que acontece <strong>no site</strong>: formulários
+                    preenchidos e cliques. Um WhatsApp ou uma chamada que
+                    receba directamente não passa por aqui — para esses, use{" "}
+                    <strong>Registar pedido</strong> em Negociações.
                     {leadsLastUpdate && (
                       <span className="ml-2 text-slate-500">
                         Atualizado: {leadsLastUpdate.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
@@ -2239,8 +2242,16 @@ export default function ColaboradorAdminClient() {
               {/* Cards de resumo */}
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {[
-                  { label: "Formulários hoje", value: leadTotals.hoje ?? 0, icon: ListChecks, tone: "cyan" },
-                  { label: "Leads esta semana", value: leadTotals.semana ?? 0, icon: TrendingUp, tone: "cyan" },
+                  /*
+                   * "Formulários hoje" contava linhas da tabela `leads`, e o
+                   * cartão "FORMS" logo abaixo conta eventos de submissão —
+                   * duas coisas diferentes, de duas tabelas diferentes, com a
+                   * mesma palavra em cima. Bastava um formulário submetido sem
+                   * lead gravado para o painel se contradizer à frente de quem
+                   * o lê, e a partir daí nenhum número merece confiança.
+                   */
+                  { label: "Contactos deixados hoje", value: leadTotals.hoje ?? 0, icon: ListChecks, tone: "cyan" },
+                  { label: "Contactos esta semana", value: leadTotals.semana ?? 0, icon: TrendingUp, tone: "cyan" },
                   { label: "Por responder", value: leadTotals.novos ?? 0, icon: AlertTriangle, tone: "amber" },
                   { label: "Fechados", value: leadTotals.fechados ?? 0, icon: CheckCircle2, tone: "emerald" },
                 ].map((stat) => {
