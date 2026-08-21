@@ -68,6 +68,52 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * Apaga uma conta, a sério.
+ *
+ * O painel só tinha "desativar", que escrevia uma data em `deletedAt` e
+ * escondia a linha. Isso não é apagar: os dados continuavam todos lá, e quem
+ * pede para ser apagado tem o direito de o ser. A linha sai da tabela.
+ *
+ * O QUE FICA: os pedidos que a pessoa fez. Não estão ligados a esta linha por
+ * chave nenhuma — guardam o email, o nome e a morada por si — e são o registo
+ * de um serviço prestado, com as obrigações de facturação que isso traz.
+ * Apagá-los aqui, de passagem, era destruir a contabilidade a partir de um
+ * botão que diz "excluir conta".
+ *
+ * Se um dia for preciso apagar também o rasto nos pedidos, é uma operação
+ * própria e com esse nome — não um efeito secundário desta.
+ */
+export async function DELETE(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if ("error" in auth) return auth.error;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = Number(searchParams.get("id"));
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
+
+    await ensureUsersSchema();
+    const apagadas = await withConnection(async (conn) => {
+      const [r] = await conn.execute("DELETE FROM users WHERE id = ?", [id]) as [
+        { affectedRows?: number },
+        unknown,
+      ];
+      return Number(r.affectedRows ?? 0);
+    });
+
+    if (apagadas === 0) {
+      return NextResponse.json({ error: "Conta não encontrada" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[api/admin/users DELETE]", err);
+    return NextResponse.json({ error: "Erro ao excluir conta" }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if ("error" in auth) return auth.error;

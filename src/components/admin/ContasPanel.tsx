@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, Search, Mail, Phone, MapPin, Shield, ShieldOff, RefreshCw } from "lucide-react";
+import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw } from "lucide-react";
 
 interface UserAccount {
   id: number;
@@ -25,6 +25,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
   const [users, setUsers] = useState<UserAccount[]>([]);
   /** Clientes que pediram orçamento e nunca criaram conta. */
   const [semConta, setSemConta] = useState(0);
+  const [aExcluir, setAExcluir] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -64,6 +65,40 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
       await fetchUsers();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro");
+    }
+  };
+
+  /**
+   * Apagar uma conta é para sempre, e a confirmação tem de o dizer.
+   *
+   * Um `confirm` a perguntar "tem a certeza?" não distingue apagar uma conta
+   * de fechar um separador. Aqui diz-se de quem é, o que sai e o que fica.
+   */
+  const excluirConta = async (id: number, quem: string) => {
+    const certeza = confirm(
+      `Excluir a conta de ${quem}?
+
+` +
+        `A conta é apagada e não se recupera. Os pedidos que fez continuam no ` +
+        `painel — são o registo do serviço e das facturas.`,
+    );
+    if (!certeza) return;
+
+    setAExcluir(id);
+    try {
+      const res = await fetch(`/api/admin/users?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        const dados = await res.json().catch(() => ({}));
+        throw new Error(dados.error ?? "Não foi possível excluir.");
+      }
+      await fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao excluir");
+    } finally {
+      setAExcluir(null);
     }
   };
 
@@ -252,36 +287,26 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-1">
-                          {u.role === "user" ? (
-                            <button
-                              onClick={() => updateUser(u.id, { role: "admin" })}
-                              title="Promover a admin"
-                              className="rounded-lg p-1.5 text-slate-400 hover:bg-violet-50 hover:text-violet-600 transition"
-                            >
-                              <Shield className="h-4 w-4" />
-                            </button>
+                        {/* Uma acção só.
+                            Havia três: promover a admin, despromover e
+                            desactivar. As duas dos administradores não se
+                            usavam — quem gere o backoffice é colaborador, não
+                            é cliente, e um cliente promovido a admin não
+                            ganhava acesso a nada. E "desactivar" escondia a
+                            linha sem apagar nada, que é o pior dos dois
+                            mundos: parece feito e não está. */}
+                        <button
+                          onClick={() => excluirConta(u.id, u.name || u.email)}
+                          disabled={aExcluir === u.id}
+                          title="Excluir conta"
+                          className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                        >
+                          {aExcluir === u.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
                           ) : (
-                            <button
-                              onClick={() => updateUser(u.id, { role: "user" })}
-                              title="Remover admin"
-                              className="rounded-lg p-1.5 text-violet-400 hover:bg-slate-100 hover:text-slate-600 transition"
-                            >
-                              <ShieldOff className="h-4 w-4" />
-                            </button>
+                            <Trash2 className="h-4 w-4" />
                           )}
-                          <button
-                            onClick={() => {
-                              if (confirm(`Desativar conta de ${u.name || u.email}?`)) {
-                                updateUser(u.id, { deletedAt: new Date().toISOString() });
-                              }
-                            }}
-                            title="Desativar conta"
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
-                          >
-                            <ShieldOff className="h-4 w-4" />
-                          </button>
-                        </div>
+                        </button>
                       </td>
                     </tr>
                   ))
