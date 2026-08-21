@@ -23,6 +23,8 @@ interface ContasPanelProps {
 
 export default function ContasPanel({ authToken }: ContasPanelProps) {
   const [users, setUsers] = useState<UserAccount[]>([]);
+  /** Clientes que pediram orçamento e nunca criaram conta. */
+  const [semConta, setSemConta] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -38,6 +40,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
       if (!res.ok) throw new Error("Erro ao carregar");
       const data = await res.json();
       setUsers(data.users ?? []);
+      setSemConta(Number(data.semConta ?? 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido");
     } finally {
@@ -111,6 +114,13 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
           <p className="mt-1 text-sm text-slate-500">
             {activeUsers.length} conta{activeUsers.length !== 1 ? "s" : ""} ativa{activeUsers.length !== 1 ? "s" : ""}
             {deletedUsers.length > 0 && ` · ${deletedUsers.length} desativada${deletedUsers.length !== 1 ? "s" : ""}`}
+            {/* Conta não é o mesmo que cliente. Quem usa o simulador sem
+                entrar com o Google deixa um pedido e nunca chega a esta
+                tabela — e um painel chamado "Contas de Clientes" que os
+                esconde dá uma ideia errada do tamanho da casa. */}
+            {semConta > 0 && (
+              <> · <span className="text-slate-600">{semConta} pediram sem criar conta</span></>
+            )}
           </p>
         </div>
         <button

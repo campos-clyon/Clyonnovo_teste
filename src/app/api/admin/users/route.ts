@@ -41,7 +41,27 @@ export async function GET(request: NextRequest) {
       );
       return r;
     });
-    return NextResponse.json({ users: rows });
+
+    /*
+     * Quantos clientes pediram orçamento e não têm conta.
+     *
+     * O painel dizia "13 contas ativas" e ficava por aí. Só que conta não é o
+     * mesmo que cliente: quem usa o simulador sem entrar com o Google deixa
+     * um pedido com email e nunca aparece nesta tabela. Eram quinze pessoas
+     * invisíveis num painel chamado "Contas de Clientes".
+     */
+    const semConta = await withConnection(async (conn) => {
+      const [r] = await conn.execute(
+        `SELECT COUNT(DISTINCT LOWER(TRIM(o.contactEmail))) AS n
+           FROM simulatorOrders o
+           LEFT JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(o.contactEmail))
+          WHERE o.contactEmail IS NOT NULL AND TRIM(o.contactEmail) <> ''
+            AND u.id IS NULL`,
+      ) as [Array<{ n: number }>, unknown];
+      return Number(r[0]?.n ?? 0);
+    });
+
+    return NextResponse.json({ users: rows, semConta });
   } catch (err) {
     console.error("[api/admin/users] GET error:", err);
     return NextResponse.json({ error: "Erro ao carregar utilizadores" }, { status: 500 });

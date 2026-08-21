@@ -21,6 +21,7 @@
 
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { registarCliente } from "@/lib/conta-server";
 // getPool não é necessário aqui — verificação de colaborador movida para /api/colaboradores/verify-email
 
 export const authOptions: NextAuthOptions = {
@@ -34,8 +35,15 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async signIn() {
+    async signIn({ user }) {
       // Qualquer conta Google pode ser cliente — não há lista de autorizados.
+      //
+      // A conta fica gravada aqui, e não à espera de que a pessoa abra /conta.
+      // Autenticar-se É criar conta; esperar por uma visita a uma página
+      // específica deixava de fora quem entrasse e fosse fazer outra coisa.
+      if (user?.email) {
+        await registarCliente(user.email, user.name ?? null);
+      }
       return true;
     },
 

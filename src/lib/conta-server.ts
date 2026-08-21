@@ -12,6 +12,43 @@ async function ensureReady() {
   _schemaReady = true;
 }
 
+/**
+ * Regista que este cliente existe.
+ *
+ * A linha na tabela `users` nascia dentro do `loadContaData`, que só corre
+ * quando alguém abre /conta. Quem entrava com Google e ia para outro lado —
+ * voltar ao simulador, fechar o separador — ficava com sessão iniciada e sem
+ * conta nenhuma na base.
+ *
+ * Era isso que tinha o contador do backoffice parado: doze contas em Julho,
+ * uma em Agosto, com pedidos a entrar todos os dias. O número estava certo;
+ * é que contava quem tinha aberto uma página, não quem se tinha autenticado.
+ *
+ * NUNCA lança. Isto é chamado de dentro do login: uma base indisponível não
+ * pode impedir alguém de entrar. Se falhar, o /conta grava na mesma à
+ * primeira visita, que é o que já acontecia antes.
+ */
+export async function registarCliente(email: string, name: string | null): Promise<void> {
+  try {
+    const emailNorm = email.trim().toLowerCase();
+    if (!emailNorm) return;
+    await ensureReady();
+    await withConnection(async (conn) => {
+      await conn.execute(
+        `INSERT INTO users (email, name, openId, loginMethod, role, lastSignedIn, createdAt, updatedAt)
+         VALUES (?, ?, NULL, 'google', 'user', NOW(), NOW(), NOW())
+         ON DUPLICATE KEY UPDATE
+           name = IF(name IS NULL OR name = '', VALUES(name), name),
+           lastSignedIn = NOW(),
+           updatedAt = NOW()`,
+        [emailNorm, name ?? emailNorm.split("@")[0]],
+      );
+    });
+  } catch (err) {
+    console.error("[registarCliente] não gravou a conta:", err);
+  }
+}
+
 export async function loadContaData(email: string, name: string | null) {
   await ensureReady();
   const emailNorm = email.trim().toLowerCase();
