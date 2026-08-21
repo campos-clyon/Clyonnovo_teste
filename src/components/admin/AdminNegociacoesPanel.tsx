@@ -12,6 +12,7 @@ import {
   Send,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import RegistarPedido from "./RegistarPedido";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -284,6 +285,8 @@ export default function AdminNegociacoesPanel() {
         </p>
       )}
 
+      <RegistarPedido onCriado={carregar} />
+
       {/* ── Do simulador, ainda fora da plataforma ─────────────────────────
           Estes entraram pelo formulário de orçamento do site: têm estimativa,
           não têm valor pedido pelo cliente, e nunca foram distribuídos. Um
@@ -476,7 +479,13 @@ export default function AdminNegociacoesPanel() {
                         />
                       )}
 
-                      {aberta === n.id && <TrocaDePropostas negociacao={n} />}
+                      {aberta === n.id && (
+                        <TrocaDePropostas
+                          negociacao={n}
+                          pedidoId={p.id}
+                          onMudou={carregar}
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -499,7 +508,139 @@ export default function AdminNegociacoesPanel() {
  * Os valores são os brutos, os que os dois viram. A taxa não entra aqui: não
  * fazia parte da conversa deles.
  */
-function TrocaDePropostas({ negociacao }: { negociacao: Negociacao }) {
+/**
+ * A CLYON responde, em nome do cliente.
+ *
+ * Esta vista era estritamente de leitura: mostrava as propostas do
+ * profissional e não havia um único botão. Para os pedidos que chegam por
+ * WhatsApp ou por telefone isso era um beco — o cliente não tem conta nem
+ * link, e portanto ninguém do lado dele podia responder. O profissional
+ * propunha e a proposta morria às 48 horas.
+ *
+ * Fica escrito no histórico do pedido quem carregou no botão. Uma proposta
+ * feita pela CLYON e uma feita pelo cliente não são a mesma coisa, e no dia
+ * de um desacordo é o registo que responde.
+ */
+function RespostaDaClyon({
+  negociacao,
+  pedidoId,
+  propostas,
+  onMudou,
+}: {
+  negociacao: Negociacao;
+  pedidoId: number;
+  propostas: Proposta[];
+  onMudou: () => void;
+}) {
+  const { token: authToken } = useAdminAuth();
+  const [aEnviar, setAEnviar] = useState("");
+  const [erro, setErro] = useState("");
+  const [valor, setValor] = useState("");
+
+  // Fechado é fechado: depois do acordo não há nada para propor, e um botão
+  // que não faz nada é pior do que botão nenhum.
+  const fechado =
+    negociacao.estado === "acordada" ||
+    negociacao.estado === "desistida" ||
+    negociacao.estado === "morta";
+  if (fechado) return null;
+
+  const pendenteDoProfissional = propostas.find(
+    (x) => x.estado === "pendente" && x.por === "profissional",
+  );
+
+  async function agir(accao: string, v?: string) {
+    if (!authToken) return;
+    setAEnviar(accao);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/agir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ pedidoId, negociacaoId: negociacao.id, accao, valor: v }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível registar.");
+        return;
+      }
+      setValor("");
+      onMudou();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar("");
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-cyan-900/60 bg-cyan-950/20 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
+        Responder como CLYON
+      </p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+        Em nome do cliente. Fica registado no histórico do pedido com o seu nome.
+      </p>
+
+      {erro && (
+        <p className="mt-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1.5 text-xs text-red-300">
+          {erro}
+        </p>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {pendenteDoProfissional && (
+          <button
+            onClick={() => agir("aceitar")}
+            disabled={aEnviar !== ""}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+          >
+            {aEnviar === "aceitar" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+            Aceitar {Number(pendenteDoProfissional.valor).toFixed(2).replace(".", ",")} €
+          </button>
+        )}
+
+        <input
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          placeholder="contrapropor €"
+          inputMode="decimal"
+          className="h-8 w-32 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white outline-none focus:border-cyan-600"
+        />
+        <button
+          onClick={() => agir("propor", valor)}
+          disabled={aEnviar !== "" || valor.trim() === ""}
+          className="flex items-center gap-1.5 rounded-lg border border-cyan-700 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-900/40 disabled:opacity-40"
+        >
+          {aEnviar === "propor" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+          Contrapropor
+        </button>
+
+        <button
+          onClick={() => {
+            if (confirm("Desistir desta negociação? O profissional deixa de poder propor.")) {
+              agir("desistir");
+            }
+          }}
+          disabled={aEnviar !== ""}
+          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
+        >
+          Desistir
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TrocaDePropostas({
+  negociacao,
+  pedidoId,
+  onMudou,
+}: {
+  negociacao: Negociacao;
+  pedidoId: number;
+  onMudou: () => void;
+}) {
   const propostas = propostasDe(negociacao.propostasJson);
   const prova = provaDe(negociacao.provaJson);
 
@@ -536,6 +677,13 @@ function TrocaDePropostas({ negociacao }: { negociacao: Negociacao }) {
           ))}
         </ol>
       )}
+
+      <RespostaDaClyon
+        negociacao={negociacao}
+        pedidoId={pedidoId}
+        propostas={propostas}
+        onMudou={onMudou}
+      />
 
       {/* Depois do acordo: a prova e a confirmação. */}
       {(negociacao.execucaoEnviadaEm || negociacao.confirmadoEm) && (

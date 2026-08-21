@@ -51,6 +51,10 @@ const ORIGEM_LABELS: Record<string, string> = {
   // liga a um cliente que não existe, ou manda uma carrinha a uma morada
   // inventada.
   plataforma: "TESTE · plataforma",
+  // Registado à mão pela equipa, a partir de um WhatsApp ou de um telefonema.
+  // Merece etiqueta própria: nestes, quem responde às propostas é a CLYON e
+  // não o cliente — e quem abrir a lista tem de saber isso sem ter de entrar.
+  backoffice: "Registado pela CLYON",
 };
 
 export type OrigemPedido = { label: string; slug: string };
