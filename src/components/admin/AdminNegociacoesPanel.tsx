@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   Loader2,
   Mail,
@@ -17,7 +18,16 @@ import RegistarPedido from "./RegistarPedido";
 type Proposta = {
   por: "cliente" | "profissional";
   valor: number;
-  em: string;
+  /*
+   * `criadaEm`, e nao `em`.
+   *
+   * Este tipo dizia `em` e o motor grava `criadaEm` — o TypeScript nao tinha
+   * como saber, porque isto vem de um JSON.parse. O resultado era a data de
+   * cada proposta a sair sempre em branco no painel: via-se quem propos e
+   * quanto, nunca quando. Numa troca de quatro propostas em dois dias, a
+   * ordem e metade do que interessa.
+   */
+  criadaEm: string;
   estado: string;
 };
 
@@ -66,6 +76,37 @@ function quando(v: string | null): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("pt-PT");
 }
 
+/**
+ * Ha aqui uma proposta a espera de resposta da CLYON?
+ *
+ * E a unica pergunta que o painel nao respondia. O profissional contrapropoe,
+ * a proposta dura 48 horas, e do lado do backoffice nada mudava: a negociacao
+ * continuava a dizer "aberta · 2 propostas", fechada atras de um chevron, no
+ * fundo de uma pagina. Quem abrisse o painel nao tinha como saber que alguem
+ * estava do outro lado a contar as horas.
+ *
+ * Uma proposta do CLIENTE pendente esta a espera do profissional — nao e
+ * connosco. So conta a que veio do profissional.
+ */
+function esperaResposta(n: Negociacao): boolean {
+  if (n.estado === "acordada" || n.estado === "desistida" || n.estado === "morta") {
+    return false;
+  }
+  // `aguarda_contratacao` e o nome do estado a dizer isto: o profissional
+  // aceitou, o valor esta fechado dos dois lados, e nao acontece mais nada ate
+  // alguem carregar em contratar. Nao ha proposta pendente nenhuma para
+  // encontrar — e por isso que tem de ser uma condicao a parte.
+  if (n.estado === "aguarda_contratacao") return true;
+  return propostasDe(n.propostasJson).some(
+    (x) => x.estado === "pendente" && x.por === "profissional",
+  );
+}
+
+/** O que falta fazer, em duas palavras, para o distintivo do cartao. */
+function oQueFalta(n: Negociacao): string {
+  return n.estado === "aguarda_contratacao" ? "falta contratar" : "espera resposta";
+}
+
 const ESTADO_DA_PROPOSTA: Record<string, string> = {
   pendente: "à espera de resposta",
   aceite: "aceite",
@@ -110,9 +151,21 @@ export default function AdminNegociacoesPanel() {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [linksEmClaro, setLinksEmClaro] = useState<Record<string, string>>({});
-  // Qual das negociações está aberta. Uma de cada vez: abrir todas dava uma
-  // parede de valores onde não se distingue a que interessa.
-  const [aberta, setAberta] = useState<number | null>(null);
+  /*
+   * Quais as negociações abertas em ecrã.
+   *
+   * Era uma só de cada vez — abrir todas dava uma parede de valores onde não
+   * se distinguia a que interessa. O problema é que a que interessa costuma
+   * ser a que tem uma proposta à espera de resposta, e essa ficava fechada
+   * como as outras: era preciso adivinhar em qual carregar.
+   *
+   * Agora as que esperam por nós abrem sozinhas, uma vez cada, e as outras
+   * continuam fechadas. `jaAbertas` é o que impede a lista de se reabrir por
+   * cima de quem acabou de a fechar — sem isso, cada actualização automática
+   * de 60 segundos voltava a abrir tudo na cara de quem estava a ler.
+   */
+  const [abertas, setAbertas] = useState<Set<number>>(new Set());
+  const jaAbertas = useRef<Set<number>>(new Set());
   const [porPromover, setPorPromover] = useState<PorPromover[]>([]);
   const [valorDe, setValorDe] = useState<Record<number, string>>({});
 
@@ -167,6 +220,32 @@ export default function AdminNegociacoesPanel() {
     if (ready && token) carregar();
   }, [ready, token, carregar]);
 
+  // Abrir sozinha a negociação que está à espera de nós — uma vez por
+  // negociação. Se o profissional contrapuser outra vez, o id é o mesmo e não
+  // volta a abrir; o destaque no cartão continua lá a dizer que há resposta
+  // por dar.
+  useEffect(() => {
+    const novas: number[] = [];
+    for (const p of pedidos) {
+      for (const n of p.negociacoes) {
+        if (esperaResposta(n) && !jaAbertas.current.has(n.id)) {
+          jaAbertas.current.add(n.id);
+          novas.push(n.id);
+        }
+      }
+    }
+    if (novas.length > 0) setAbertas((a) => new Set([...a, ...novas]));
+  }, [pedidos]);
+
+  function alternar(id: number) {
+    setAbertas((a) => {
+      const c = new Set(a);
+      if (c.has(id)) c.delete(id);
+      else c.add(id);
+      return c;
+    });
+  }
+
   async function reenviar(chave: string, corpo: Record<string, unknown>) {
     if (!token) return;
     setOcupado(chave);
@@ -215,7 +294,15 @@ export default function AdminNegociacoesPanel() {
         setErro(dados.error ?? "Não foi possível promover.");
         return;
       }
-      if (dados.avisados === 0) {
+      /*
+       * `receberam`, não `avisados`.
+       *
+       * Este ecrã dizia "não chegou a ninguém" sempre que o email falhava, e o
+       * profissional estava com o trabalho aberto no painel dele. São duas
+       * avarias diferentes e corrigem-se em sítios diferentes — uma é a regra
+       * de alcance, a outra é o Resend.
+       */
+      if (dados.receberam === 0) {
         const motivos = Object.entries(dados.motivos ?? {})
           .filter(([, n]) => Number(n) > 0)
           .map(([m, n]) => `${m.replace(/_/g, " ")}: ${n}`)
@@ -223,6 +310,11 @@ export default function AdminNegociacoesPanel() {
         setErro(
           `Promovido, mas não chegou a nenhum de ${dados.candidatos} profissionais activos.` +
             (motivos ? ` Motivos — ${motivos}.` : ""),
+        );
+      } else if (dados.avisados < dados.receberam) {
+        setErro(
+          `Chegou a ${dados.receberam} profissional(is), mas ${dados.receberam - dados.avisados} ` +
+            `não recebeu o email de aviso. Tem o trabalho no painel e não sabe. Use "Reenviar".`,
         );
       }
       if (dados.link) {
@@ -251,7 +343,7 @@ export default function AdminNegociacoesPanel() {
         setErro(dados.error ?? "Não foi possível redistribuir.");
         return;
       }
-      if (dados.avisados === 0) {
+      if (dados.receberam === 0) {
         // Sem isto, carregar no botão e não acontecer nada parecia avaria.
         // Os motivos vêm da mesma regra que decidiu, portanto são exactos.
         const motivos = Object.entries(dados.motivos ?? {})
@@ -262,6 +354,11 @@ export default function AdminNegociacoesPanel() {
           `Continua sem chegar a ninguém de ${dados.candidatos} profissionais activos.` +
             (motivos ? ` Motivos — ${motivos}.` : ""),
         );
+      } else if (dados.avisados < dados.receberam) {
+        setErro(
+          `Chegou a ${dados.receberam} profissional(is), mas ${dados.receberam - dados.avisados} ` +
+            `não recebeu o email de aviso. Use "Reenviar" na linha dele.`,
+        );
       }
       await carregar();
     } catch {
@@ -270,6 +367,19 @@ export default function AdminNegociacoesPanel() {
       setOcupado(null);
     }
   }
+
+  /*
+   * Quem espera por nos sobe ao topo.
+   *
+   * A ordem era so por data. Um pedido de ha tres dias com uma proposta a
+   * expirar ficava debaixo de dois pedidos novos sem nada por fazer — e as 48
+   * horas passavam sem ninguem olhar.
+   */
+  const aEsperar = pedidos.filter((p) => p.negociacoes.some(esperaResposta));
+  const ordenados = [...pedidos].sort(
+    (a, b) =>
+      Number(b.negociacoes.some(esperaResposta)) - Number(a.negociacoes.some(esperaResposta)),
+  );
 
   if (!ready || aCarregar) {
     return (
@@ -283,7 +393,7 @@ export default function AdminNegociacoesPanel() {
     <div>
       <header className="mb-6 flex items-start justify-between gap-4">
         <p className="text-sm text-slate-400">
-          {pedidos.length} pedidos com valores.
+          {pedidos.length} pedidos na plataforma.
         </p>
         <button
           onClick={() => carregar()}
@@ -301,6 +411,57 @@ export default function AdminNegociacoesPanel() {
       )}
 
       <RegistarPedido onCriado={() => carregar(true)} />
+
+      {/* ── Propostas à espera de nós ───────────────────────────────────────
+          O profissional contrapropõe e a proposta expira em 48 horas. Até
+          aqui nada dizia isso: a negociação ficava fechada num cartão no fundo
+          da página, a dizer "aberta · 2 propostas" como todas as outras.
+
+          Este bloco existe para essa resposta não se perder por ninguém a ter
+          visto. Salta para o pedido e a negociação já lá está aberta. */}
+      {aEsperar.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
+            <Clock className="h-4 w-4" aria-hidden="true" />
+            {aEsperar.length === 1
+              ? "Um pedido está à espera de si"
+              : `${aEsperar.length} pedidos estão à espera de si`}
+          </h3>
+          <p className="mt-1 text-xs text-emerald-200/70">
+            Uma proposta expira 48 horas depois de ser feita. Responda — ou feche o
+            negócio — em nome do cliente, dentro do pedido.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {aEsperar.map((p) => {
+              const pendentes = p.negociacoes.filter(esperaResposta);
+              const proposta = pendentes
+                .flatMap((n) => propostasDe(n.propostasJson))
+                .find((x) => x.estado === "pendente" && x.por === "profissional");
+              // Num pedido que so espera a contratacao nao ha proposta
+              // pendente — o valor que interessa mostrar e o ja acordado.
+              const valor =
+                proposta?.valor ??
+                (pendentes.find((n) => n.valorAcordado)?.valorAcordado != null
+                  ? Number(pendentes.find((n) => n.valorAcordado)!.valorAcordado)
+                  : null);
+              return (
+                <a
+                  key={p.id}
+                  href={`#pedido-${p.id}`}
+                  className="rounded-lg border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/50"
+                >
+                  #{p.id} · {p.contactName ?? "—"}
+                  {valor != null && (
+                    <span className="ml-2 font-bold text-white">
+                      {valor.toFixed(2).replace(".", ",")} €
+                    </span>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Do simulador, ainda fora da plataforma ─────────────────────────
           Estes entraram pelo formulário de orçamento do site: têm estimativa,
@@ -372,15 +533,22 @@ export default function AdminNegociacoesPanel() {
 
       {pedidos.length === 0 && (
         <p className="rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
-          Ainda não há pedidos criados pelo formulário novo.
+          Ainda nenhum pedido foi enviado a profissionais.
         </p>
       )}
 
       <div className="space-y-3">
-        {pedidos.map((p) => {
+        {ordenados.map((p) => {
           const chaveCliente = `c${p.id}`;
+          const espera = p.negociacoes.some(esperaResposta);
           return (
-            <article key={p.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-sm">
+            <article
+              key={p.id}
+              id={`pedido-${p.id}`}
+              className={`scroll-mt-24 rounded-2xl border bg-slate-900 p-4 shadow-sm ${
+                espera ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-800"
+              }`}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-white">
@@ -444,13 +612,13 @@ export default function AdminNegociacoesPanel() {
                         {/* A linha inteira abre a troca — o alvo do rato é a
                             linha, não um triângulo de doze píxeis. */}
                         <button
-                          onClick={() => setAberta((a) => (a === n.id ? null : n.id))}
-                          aria-expanded={aberta === n.id}
+                          onClick={() => alternar(n.id)}
+                          aria-expanded={abertas.has(n.id)}
                           className="flex flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-slate-800/60"
                         >
                           <ChevronDown
                             className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
-                              aberta === n.id ? "rotate-180" : ""
+                              abertas.has(n.id) ? "rotate-180" : ""
                             }`}
                             aria-hidden="true"
                           />
@@ -464,6 +632,12 @@ export default function AdminNegociacoesPanel() {
                           >
                             {n.estado}
                           </span>
+                          {esperaResposta(n) && (
+                            <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-200">
+                              <Clock className="h-3 w-3" aria-hidden="true" />
+                              {oQueFalta(n)}
+                            </span>
+                          )}
                           {n.valorAcordado && (
                             <span className="text-xs text-slate-500">{n.valorAcordado} €</span>
                           )}
@@ -494,7 +668,7 @@ export default function AdminNegociacoesPanel() {
                         />
                       )}
 
-                      {aberta === n.id && (
+                      {abertas.has(n.id) && (
                         <TrocaDePropostas
                           negociacao={n}
                           pedidoId={p.id}
@@ -604,6 +778,41 @@ function RespostaDaClyon({
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        {/* O profissional já aceitou. Falta fechar.
+
+            `aguarda_contratacao` significa exactamente isto: o valor está
+            combinado dos dois lados e ninguém pode fazer mais propostas — só
+            falta alguém carregar em contratar para o trabalho existir. A
+            acção estava na API desde o princípio e nunca teve botão, e o
+            #204 ficou aqui parado com o valor aceite e sem forma de avançar.
+
+            É irreversível: fecha as outras negociações do mesmo pedido. Por
+            isso pergunta antes. */}
+        {negociacao.estado === "aguarda_contratacao" && (
+          <button
+            onClick={() => {
+              if (
+                confirm(
+                  "Contratar este profissional? As outras negociações deste pedido fecham.",
+                )
+              ) {
+                agir("contratar");
+              }
+            }}
+            disabled={aEnviar !== ""}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+          >
+            {aEnviar === "contratar" && (
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            )}
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Contratar
+            {negociacao.valorAcordado
+              ? ` por ${Number(negociacao.valorAcordado).toFixed(2).replace(".", ",")} €`
+              : ""}
+          </button>
+        )}
+
         {pendenteDoProfissional && (
           <button
             onClick={() => agir("aceitar")}
@@ -687,7 +896,7 @@ function TrocaDePropostas({
               <span className="w-40 shrink-0 text-slate-500">
                 {ESTADO_DA_PROPOSTA[p.estado] ?? p.estado}
               </span>
-              <span className="text-slate-600">{quando(p.em)}</span>
+              <span className="text-slate-600">{quando(p.criadaEm)}</span>
             </li>
           ))}
         </ol>

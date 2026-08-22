@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSimulatorOrderById, appendOrderHistory } from "@/lib/db";
-import { distribuirPedido } from "@/lib/distribuir-pedido";
+import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 
@@ -95,9 +95,7 @@ export async function POST(req: NextRequest) {
       type: "created",
       by: null,
       message:
-        r.avisados > 0
-          ? `Redistribuído: ${r.avisados} profissional(is) avisado(s) de ${r.candidatos} activos.`
-          : `Redistribuído sem resultado (${r.candidatos} activos). Motivos: ${JSON.stringify(r.motivos)}`,
+        `Redistribuído. ` + resumoDaDistribuicao(r),
     });
 
     return NextResponse.json({ ok: true, ...r });

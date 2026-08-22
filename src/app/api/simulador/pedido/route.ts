@@ -16,7 +16,7 @@ import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { validarValorDesejado } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
-import { distribuirPedido } from "@/lib/distribuir-pedido";
+import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arranque";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
@@ -454,11 +454,7 @@ export async function POST(req: NextRequest) {
           type: "created",
           by: null,
           message:
-            distribuicao.avisados > 0
-              ? `Enviado a ${distribuicao.avisados} profissional(is) de ${distribuicao.candidatos} activos.` +
-                (distribuicao.falhados > 0 ? ` ${distribuicao.falhados} email(s) falharam.` : "")
-              : `NÃO chegou a nenhum profissional (${distribuicao.candidatos} activos). ` +
-                `Motivos: ${JSON.stringify(distribuicao.motivos)}`,
+            resumoDaDistribuicao(distribuicao),
         });
       } catch (err) {
         console.error("[simulador/pedido] distribuição falhou:", err);

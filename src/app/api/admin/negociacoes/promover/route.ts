@@ -6,7 +6,7 @@ import {
   promoverPedidoAPlataforma,
   appendOrderHistory,
 } from "@/lib/db";
-import { distribuirPedido } from "@/lib/distribuir-pedido";
+import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { negociacoesDoPedido } from "@/lib/db";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
       by: null,
       message:
         `Promovido a pedido de plataforma por ${valor} €. ` +
-        `${r.avisados} profissional(is) avisado(s) de ${r.candidatos} activos.` +
+        resumoDaDistribuicao(r) +
         (emailSaiu ? "" : " O email do link ao cliente NÃO saiu."),
     });
 
@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
      */
     return NextResponse.json({
       ok: true,
-      chegouAAlguem: r.avisados > 0,
+      chegouAAlguem: r.receberam > 0,
       valor,
       emailSaiu,
       ...r,

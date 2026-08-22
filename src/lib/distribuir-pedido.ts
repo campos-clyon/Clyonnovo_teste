@@ -37,12 +37,57 @@ export type PedidoParaDistribuicao = {
 };
 
 export type ResultadoDaDistribuicao = {
+  /** Emails que sairam. */
   avisados: number;
+  /**
+   * Negociacoes criadas — ou seja, a quantos profissionais o trabalho chegou
+   * de facto, esteja o email de pe ou nao.
+   *
+   * Isto existia como um numero so, `avisados`, que contava emails. Se a
+   * negociacao era criada e o email falhava, o historico dizia "0
+   * profissional(is) avisado(s)" — e quem lesse concluia que o pedido nao
+   * tinha chegado a ninguem. Foi o que aconteceu ao #205: a negociacao #9 foi
+   * criada, o Fred tinha o trabalho no painel, e as tres linhas do historico
+   * diziam zero.
+   *
+   * Sao duas coisas diferentes e falham por razoes diferentes: uma negociacao
+   * falha por regra de elegibilidade, um email falha por Resend. Contadas
+   * juntas, a segunda esconde a primeira.
+   */
+  receberam: number;
   falhados: number;
   candidatos: number;
   /** Porque é que os restantes ficaram de fora. */
   motivos: Record<string, number>;
 };
+
+/**
+ * O que aconteceu na distribuicao, em portugues, para o historico do pedido.
+ *
+ * Estava escrita a mao em tres sitios — promover, redistribuir e o simulador —
+ * e os tres diziam a mesma coisa errada: "N profissional(is) avisado(s)",
+ * contando emails e chamando-lhes chegadas. Um email falhado passava a ler-se
+ * como "nao chegou a ninguem", que e a conclusao oposta da verdadeira.
+ *
+ * O historico do pedido e o que responde no dia em que alguem pergunta porque
+ * e que o trabalho nao andou. Tem de distinguir as duas avarias, porque se
+ * corrigem em sitios diferentes: nao chegar e a regra de elegibilidade, nao
+ * avisar e o email.
+ */
+export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
+  if (r.receberam === 0) {
+    return (
+      `NAO chegou a nenhum profissional (${r.candidatos} activos). ` +
+      `Motivos: ${JSON.stringify(r.motivos)}`
+    );
+  }
+  const base = `Chegou a ${r.receberam} profissional(is) de ${r.candidatos} activos`;
+  if (r.avisados >= r.receberam) return `${base} — todos avisados por email.`;
+  return (
+    `${base}, mas so ${r.avisados} recebeu(ram) o email. ` +
+    `${r.receberam - r.avisados} tem o trabalho no painel e NAO foi avisado.`
+  );
+}
 
 /**
  * Quanto o profissional recebe se fechar pelo valor que o cliente pediu.
@@ -181,7 +226,9 @@ export async function distribuirPedido(
 
   const envios = await Promise.all(
     elegiveis.map(async (c) => {
-      if (!c.profissional.email) return false;
+      // Sem email nao ha como avisar — e sem aviso nao vale a pena criar a
+      // negociacao, porque ele nunca saberia que ela existe.
+      if (!c.profissional.email) return { recebeu: false, avisado: false };
 
       // Uma negociação por profissional, cada uma com o seu link. O primeiro
       // lance já está na mesa: é o valor que o cliente pediu. Sem isto, a
@@ -206,10 +253,12 @@ export async function distribuirPedido(
           c.profissional.id,
           err,
         );
-        return false;
+        return { recebeu: false, avisado: false };
       }
 
-      return avisarProfissional({
+      // A negociacao ja esta criada a este ponto: o trabalho CHEGOU. O email e
+      // o aviso, e falha por razoes suas.
+      const avisado = await avisarProfissional({
         paraEmail: c.profissional.email,
         paraNome: c.profissional.name,
         pedidoId: pedido.id,
@@ -226,13 +275,17 @@ export async function distribuirPedido(
         precisaFatura: pedido.precisaFatura,
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
       });
+
+      return { recebeu: true, avisado };
     }),
   );
 
-  const avisados = envios.filter(Boolean).length;
+  const receberam = envios.filter((e) => e.recebeu).length;
+  const avisados = envios.filter((e) => e.avisado).length;
 
   return {
     avisados,
+    receberam,
     falhados: envios.length - avisados,
     candidatos: candidatos.length,
     motivos: motivos as unknown as Record<string, number>,

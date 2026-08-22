@@ -1098,11 +1098,30 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
   const pool = await getPool();
   if (!pool) return [];
 
+  /*
+   * O criterio e TER NEGOCIACOES, e nao "ter valor".
+   *
+   * Era `valorDesejadoCliente IS NOT NULL`, e isso partia a lista em dois
+   * sitios ao mesmo tempo:
+   *
+   *   · pedidos COM negociacoes vivas e SEM valor nao apareciam em lado
+   *     nenhum. Os #196, #199 e #200 tinham propostas de profissionais a
+   *     espera de resposta e nao existiam em ecra nenhum do backoffice — nao
+   *     havia como os abrir, nem como responder por eles;
+   *   · pedidos COM valor e SEM negociacoes apareciam aqui E na lista de
+   *     "fora da plataforma" logo acima, o mesmo pedido duas vezes, uma a
+   *     dizer que ja tinha sido enviado e outra a oferecer envia-lo.
+   *
+   * Com este criterio as duas listas passam a ser exactamente complementares:
+   * ou o pedido tem negociacoes e esta aqui, ou nao tem e esta na de promover.
+   * Nunca nas duas, nunca em nenhuma.
+   */
   const [pedidos] = await pool.execute(
-    `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt
-       FROM simulatorOrders
-      WHERE valorDesejadoCliente IS NOT NULL
-      ORDER BY createdAt DESC
+    `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
+            o.valorDesejadoCliente, o.createdAt
+       FROM simulatorOrders o
+      WHERE EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
+      ORDER BY o.createdAt DESC
       LIMIT ?`,
     [String(limite)],
   ) as any[];
@@ -1284,13 +1303,27 @@ export async function actividadeDosProfissionais(): Promise<
   const mapa = new Map<number, { recebidos: number; comProposta: number; fechados: number }>();
   if (!pool) return mapa;
 
+  /*
+   * So contam as negociacoes cujo pedido ainda existe.
+   *
+   * Apagar um pedido deixava as negociacoes dele para tras — a limpeza
+   * transaccional so chegou depois, e ficaram tres orfas na base. A carteira do
+   * profissional e a lista de trabalhos dele ja faziam JOIN com os pedidos e
+   * portanto ignoravam-nas; esta consulta contava tudo.
+   *
+   * O resultado era o pior tipo de numero errado: o backoffice dizia que o Fred
+   * tinha 8 trabalhos e 2 fechados, o painel dele mostrava 5 e 0, e nenhum dos
+   * dois estava avariado. Um numero que nao bate com o outro ecra nao se
+   * discute — deixa-se de olhar para ele.
+   */
   const [rows] = await pool.execute(
-    `SELECT providerId,
+    `SELECT n.providerId,
             COUNT(*) AS recebidos,
-            SUM(JSON_LENGTH(propostasJson) > 1) AS comProposta,
-            SUM(estado = 'acordada') AS fechados
-       FROM negociacoes
-      GROUP BY providerId`,
+            SUM(JSON_LENGTH(n.propostasJson) > 1) AS comProposta,
+            SUM(n.estado = 'acordada') AS fechados
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      GROUP BY n.providerId`,
   ) as any[];
 
   for (const r of rows as Array<Record<string, unknown>>) {
