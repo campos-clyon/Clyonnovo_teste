@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL , NOTA_DE_PRECO} from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
+import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
 import {
@@ -131,13 +132,20 @@ const HOW_IT_WORKS = [
     icon: ClipboardList,
     title: "Descreva o trabalho",
     description:
-      "Use o simulador em 2 minutos: tipo de serviço, morada, acesso e fotos. Quanto mais detalhe, mais preciso o orçamento.",
+      // Dizia "Use o simulador em 2 minutos: tipo de serviço, morada, acesso e
+    // fotos." — "simulador" é o nome que o produto tem cá dentro, e "tipo de
+    // serviço" e "acesso" são rótulos de campos de formulário a viver dentro
+    // de uma frase. Ninguém pensa "vou indicar o acesso": pensa "há elevador?".
+    "Diga o que tem para levar, onde é e se há elevador. Duas fotos e o preço fica mais certo.",
   },
   {
     icon: CheckCircle2,
     title: "Confirmamos preço e data",
     description:
-      "Um assistente confirma o orçamento e agenda a data consigo. Nada avança sem a sua aprovação explícita.",
+      // "Um assistente" é um papel do organograma da CLYON. Para quem lê, é uma
+    // pessoa desconhecida com um cargo estranho. E "aprovação explícita" é
+    // linguagem de contrato onde bastava dizer o que acontece.
+    "Ligamos-lhe a confirmar o preço e a combinar o dia. Só avançamos depois de dizer que sim.",
   },
   {
     icon: Truck,
@@ -172,8 +180,11 @@ const GUARANTEES = [
   {
     icon: Shield,
     title: "O preço que combina é o que paga",
-    stat: "€0",
-    statLabel: "a mais no fim",
+    // Era `stat: "€0"` em 48 px. Um zero em destaque, ao lado de dois cartões
+    // com números que crescem, lê-se como erro de cálculo antes de se ler
+    // como garantia — o olho procura a quantidade e encontra nada.
+    stat: "Preço fechado",
+    statLabel: "antes de começar",
     description:
       "O valor fica fechado antes de o trabalho começar. Não há adicionais no fim, nem negociação à porta no dia da recolha.",
     gradient: "from-emerald-400 to-emerald-500",
@@ -211,12 +222,12 @@ const homeFaqs = [
   {
     question: "Recolhem no mesmo dia?",
     answer:
-      "Quando existe disponibilidade operacional, sim. Muitos pedidos em Lisboa, Grande Lisboa, Margem Sul e Setúbal conseguem resposta no próprio dia ou no dia seguinte.",
+      "Quando há um profissional livre na sua zona, sim. Muitos pedidos em Lisboa, Grande Lisboa, Margem Sul e Setúbal conseguem resposta no próprio dia ou no dia seguinte.",
   },
   {
     question: "Retiram sofás, colchões e eletrodomésticos?",
     answer:
-      "Sim. A CLYON retira sofás, camas, colchões, armários, eletrodomésticos e outros volumes grandes desde que identificados no orçamento.",
+      "Sim. Sofás, camas, colchões, armários, eletrodomésticos e outros volumes grandes — desde que nos diga que os tem, para o preço já contar com eles.",
   },
   {
     question: "Fazem desmontagem de móveis?",
@@ -226,12 +237,12 @@ const homeFaqs = [
   {
     question: "Atendem empresas e condomínios?",
     answer:
-      "Sim. A operação serve particulares, senhorios, empresas, equipas de obra e condomínios com necessidade de recolha, limpeza ou esvaziamento.",
+      "Sim. Trabalhamos com particulares, senhorios, empresas, equipas de obra e condomínios com necessidade de recolha, limpeza ou esvaziamento.",
   },
   {
     question: "O destino dos resíduos é responsável?",
     answer:
-      "Sempre que possível separamos materiais para reaproveitamento ou encaminhamento adequado. O restante segue para destino responsável e legal.",
+      `O que ainda serve vai para reutilização ou doação. O resto vai para centros de tratamento licenciados — a CLYON é operador de resíduos registado na Agência Portuguesa do Ambiente, com o número ${IDENTIFICACAO.codigoAPA}.`,
   },
 ];
 
@@ -283,6 +294,17 @@ export default function HomePage() {
               Recolha de móveis{" "}
               <span className="text-acao">e esvaziamento</span>{" "}
               em Lisboa
+              {/*
+                "com profissionais verificados" vive DENTRO do h1 e não a
+                seguir a ele: é posicionamento, e o posicionamento tem de estar
+                no cabeçalho que o Google lê. Mas fica em corpo mais pequeno,
+                porque a frase inteira ao tamanho do título dava cinco linhas
+                num telemóvel — e empurrava o formulário para fora da dobra,
+                que é o único elemento da página que gera receita.
+              */}
+              <span className="mt-1.5 block text-base font-semibold text-tinta-fraca sm:text-lg">
+                com profissionais verificados
+              </span>
             </h1>
 
             {/* Subtitle */}
@@ -433,7 +455,7 @@ export default function HomePage() {
             um <h2> antes — salto de nível, que é falha do critério 1.3.1 das
             WCAG. Para quem navega por cabeçalhos, a página tinha um buraco
             entre "Simples do início ao fim" e "Construída para inspirar
-            confiança", exactamente onde deviam estar os serviços.
+            confiança", exatamente onde deviam estar os serviços.
 
             E porque a secção anterior TAMBÉM está em #F4F8FB, os nove cartões
             de preço liam-se como se fossem um quarto passo do processo. Esta
@@ -629,8 +651,11 @@ export default function HomePage() {
                 Tem uma empresa de remoções ou transportes?
               </h2>
               <p className="mt-3 text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
-                Receba pedidos verificados na sua zona. Sem investimento em publicidade, sem
-                leads frios — só trabalho real com clientes confirmados.
+                {/* Dizia "pedidos verificados" e "sem leads frios". "Lead" é a
+                    palavra de quem compra tráfego — e este bloco fala com um
+                    homem que tem uma carrinha, não com um gestor de campanhas. */}
+                Receba pedidos de clientes que já disseram o que querem e quando. Sem
+                gastar em publicidade e sem ligar a quem não atende.
               </p>
               <div className="mt-7 flex flex-wrap gap-6">
                 {[
@@ -701,7 +726,9 @@ export default function HomePage() {
               Pronto para libertar espaço?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
-              Orçamento online, sem telefonemas. Confirme os detalhes e receba uma resposta clara.
+              {/* "Confirme os detalhes e receba uma resposta clara" pede uma
+                  acção e promete um adjectivo. Isto diz o que se recebe. */}
+              Diga-nos o que tem para levar. Respondemos com um preço, não com um telefonema.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center">
               <Link

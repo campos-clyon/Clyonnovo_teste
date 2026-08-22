@@ -12,16 +12,16 @@ import {
 import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Como Funciona — Preço Fixo por IA, Validado por um Assistente",
+  title: "Como Funciona — Preço Fixo por IA, Conferido por Uma Pessoa",
   description:
-    "Descreva o serviço, receba um preço fixo calculado por IA em segundos e um assistente humano confirma tudo consigo antes de avançar. Sem negociação, sem surpresas.",
+    "Descreva o serviço, receba um preço fixo calculado por IA em segundos e alguém da CLYON confirma tudo consigo antes de avançar. Sem negociação, sem surpresas.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
   openGraph: {
-    title: "Como Funciona — Preço Fixo por IA, Validado por um Assistente",
+    title: "Como Funciona — Preço Fixo por IA, Conferido por Uma Pessoa",
     description:
-      "O modelo único da CLYON: velocidade da IA, confiança de um assistente humano, execução por um profissional verificado.",
+      "O modelo único da CLYON: velocidade da IA, a confiança de uma revisão humana, execução por um profissional verificado.",
     url: `${SITE_URL}/como-funciona`,
   },
 };
@@ -41,7 +41,7 @@ const stages = [
     icon: Sparkles,
     accent: "premium" as const,
     description:
-      "A IA analisa a descrição e as fotos, e calcula um preço fixo em segundos com base no preçário oficial — distância, volume, acessos e urgência. Vê o preço final, com e sem IVA, sem fórmulas nem margens expostas.",
+      "A IA analisa a descrição e as fotos, e calcula um preço fixo em segundos com base no preçário oficial — distância, volume, acessos e urgência. Vê o valor sem fórmulas nem margens à mistura. O preço a sério é a proposta que recebe, e é ela que traz o IVA quando o profissional o liquida.",
   },
   {
     step: "03",
@@ -49,7 +49,7 @@ const stages = [
     icon: UserCheck,
     accent: "cyan" as const,
     description:
-      "Um assistente revê o pedido: confirma se a descrição é coerente com o preço calculado, ajusta se necessário e contacta-o para validar morada exata, data, hora e orçamento final. Normalmente em menos de 2 horas.",
+      "Alguém da CLYON revê o pedido: confirma se a descrição é coerente com o preço calculado, ajusta se necessário e contacta-o para validar morada exata, data, hora e orçamento final. Normalmente em menos de 2 horas.",
   },
   {
     step: "04",
@@ -89,7 +89,7 @@ export default function ComoFuncionaPage() {
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
             A CLYON combina a velocidade de um motor de preços com IA com o
-            controlo de qualidade de um assistente humano. O preço nunca sobe
+            o controlo de qualidade de uma pessoa. O preço nunca sobe
             depois de confirmado, e nenhum pedido chega a um profissional sem
             ser validado primeiro.
           </p>
@@ -132,13 +132,13 @@ export default function ComoFuncionaPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
             <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-acao">
-              O papel do assistente
+              Quem confere antes de avançar
             </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
               Nenhum pedido avança sem revisão humana
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-              O assistente não recalcula o preço do zero — a sua função é garantir que o que a IA propôs faz sentido.
+              Quem revê não recalcula o preço do zero — a sua função é garantir que o que a IA propôs faz sentido.
             </p>
           </div>
 

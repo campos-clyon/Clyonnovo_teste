@@ -114,7 +114,7 @@ const includedItems = [
 const differentiators = [
   "Recolha de entulho em 24 a 48 horas na maioria das zonas",
   "Carregamento direto pelo profissional",
-  "Recolha pontual e encaminhamento para reciclagem",
+  "Recolha pontual, com destino licenciado",
   "Sem espera: chegamos, carregam e levamos",
   "Equipa preparada para sacos, montes ou entulho disperso",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
@@ -223,7 +223,7 @@ export default function RecolhaEntulhoPage() {
           {[
             { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
             { icon: Truck, title: "Carregamento direto", desc: "O profissional carrega o entulho — sem espera nem trabalho para si." },
-            { icon: Recycle, title: "Destino legal", desc: "Encaminhamento para reciclagem com guia de transporte e destino final." },
+            { icon: Recycle, title: "Destino legal", desc: "Vai para reciclagem, com guia de transporte e destino final." },
           ].map((item) => (
             <div key={item.title} className="rounded-[28px] border border-amber-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(180,83,9,0.12)]">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Sobre a CLYON | Recolha, Limpeza e Mudanças em Lisboa e Setúbal",
     description:
-      "Uma equipa focada em resposta rápida, orçamento claro e encaminhamento responsável dos serviços.",
+      "Uma equipa focada em resposta rápida, orçamento claro e destino licenciado para o que sai de casa.",
     url: `${SITE_URL}/sobre-nos`,
   },
 };
@@ -146,7 +146,7 @@ export default function SobreNosPage() {
               <p className="mt-4 text-base leading-8 text-slate-600">
                 Nem tudo o que sai de um imóvel deve seguir o mesmo destino. Sempre
                 que o estado dos materiais o permite, a equipa faz separação e triagem
-                para reaproveitamento, doação ou encaminhamento adequado. Esse cuidado
+                para reaproveitamento, doação ou centro de tratamento. Esse cuidado
                 reduz desperdício e melhora a qualidade do serviço para quem pede uma
                 solução completa.
               </p>

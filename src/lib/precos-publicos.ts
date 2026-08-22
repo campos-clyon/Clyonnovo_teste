@@ -26,7 +26,7 @@
  * O que resolve isto sem enganar ninguém é a natureza do número: o que está na
  * grelha é ORIENTATIVO, e o preço a sério é a proposta que o profissional faz
  * — e essa já mostra a linha de imposto quando ele está no regime normal.
- * A nota que acompanha os preços diz exactamente isso.
+ * A nota que acompanha os preços diz exatamente isso.
  */
 
 export type PrecoPublico = {

@@ -18,7 +18,7 @@
  *
  * A REGRA QUE ESTA PALETA EXISTE PARA FIXAR
  *
- * O azul da marca e o azul de acção são cores DIFERENTES. O #00B4CC sobre
+ * O azul da marca e o azul de ação são cores DIFERENTES. O #00B4CC sobre
  * branco dá 2,50:1 — falha o mínimo de 4,5:1 para texto e falha até o de 3:1
  * para componentes. O botão real usava `bg-cyan-500` (#06B6D4) com texto
  * branco: 2,43:1. E o `hover:bg-cyan-400` CLAREAVA, caindo para 1,81:1 — o

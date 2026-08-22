@@ -106,7 +106,7 @@ const faqs = [
   },
   {
     q: "A CLYON recolhe móveis em mau estado?",
-    a: "Sim. Os profissionais recolhem móveis em qualquer estado, incluindo peças danificadas, húmidas ou inutilizáveis. O encaminhamento é feito de forma responsável, mesmo quando não é possível doar ou reaproveitar.",
+    a: "Sim. Os profissionais recolhem móveis em qualquer estado, incluindo peças danificadas, húmidas ou inutilizáveis. O destino é sempre licenciado, mesmo quando não é possível doar ou reaproveitar.",
   },
   {
     q: "Quanto custa a recolha de móveis com a CLYON?",
@@ -141,7 +141,7 @@ const serviceSchema = {
   name: "Recolha de Móveis Usados",
   serviceType: "Recolha de móveis usados",
   url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
-  description: "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta e encaminhamento responsável em Lisboa, Margem Sul e Setúbal. Serviço pago, rápido e completo.",
+  description: "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal. Serviço pago, rápido e completo.",
   provider: {
     "@type": "LocalBusiness",
     name: BUSINESS_NAME,

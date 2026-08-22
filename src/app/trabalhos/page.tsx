@@ -64,7 +64,7 @@ const testimonials = [
 
 const stats = [
   { value: "163", label: "avaliações 5★" },
-  { value: "11 min", label: "tempo médio de resposta" },
+  { value: PRAZO_DE_RESPOSTA.curto, label: "para receber propostas" },
   { value: "Mesmo dia", label: "em muitos pedidos" },
 ];
 

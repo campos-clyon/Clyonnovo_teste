@@ -80,7 +80,7 @@ const differentiators = [
   "Recolha em 24 a 48 horas na maioria das zonas",
   "Carregamento direto pelo profissional",
   "Limpeza de quintais, pátios e varandas grandes",
-  "Encaminhamento para reciclagem quando possível",
+  "Vai para reciclagem sempre que der",
   "Equipa preparada para acessos difíceis",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];

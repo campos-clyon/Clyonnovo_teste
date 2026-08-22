@@ -173,7 +173,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Posso doar os meus móveis usados em Lisboa em vez de pagar pela recolha?",
-        a: "Se os móveis estiverem em bom estado, pode contactar instituições como Cáritas, Comunidade Vida e Paz ou Re-Food que aceitam doações. A CLYON pode ajudar a encaminhar móveis reutilizáveis, mas na maioria dos casos os monos já não estão em condições de doação — estão danificados, sujos ou desactualizados.",
+        a: "Se os móveis estiverem em bom estado, pode contactar instituições como Cáritas, Comunidade Vida e Paz ou Re-Food que aceitam doações. A CLYON pode ajudar a encaminhar móveis reutilizáveis, mas na maioria dos casos os monos já não estão em condições de doação — estão danificados, sujos ou desatualizados.",
       },
       {
         q: "Qual é a melhor empresa para retirar móveis usados em Lisboa?",
@@ -333,7 +333,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa um contentor de entulho em Almada?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, com transporte e encaminhamento incluídos. Um contentor pequeno leva cerca de 2 m³.`,
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, com transporte e destino licenciado incluídos. Um contentor pequeno leva cerca de 2 m³.`,
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
@@ -373,7 +373,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis de uma moradia em Cascais?",
-        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, sem IVA — uma moradia com sala, quartos e garagem fica na parte alta da faixa, e o valor exacto vem na proposta.`,
+        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, sem IVA — uma moradia com sala, quartos e garagem fica na parte alta da faixa, e o valor exato vem na proposta.`,
       },
       {
         q: "Recolhem móveis antigos e peças grandes em Cascais?",
@@ -429,8 +429,8 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-moveis-setubal": {
     citySlug: "setubal",
     serviceSlug: "recolha-moveis",
-    metaTitle: "Recolha de Moveis em Setubal — Apartamentos, Quintas e Azeito",
-    h1: "Recolha de Moveis em Setubal — Apartamentos, Moradias e Quintas",
+    metaTitle: "Recolha de Móveis em Setúbal — Apartamentos, Quintas e Azeitão",
+    h1: "Recolha de Móveis em Setúbal — Apartamentos, Moradias e Quintas",
     localIntro:
       "Precisa de retirar móveis em Setúbal? A CLYON tem profissionais de recolha de móveis usados em todo o concelho: centro histórico de Setúbal, Bairro Azul, Manteigadas, Avenida Luísa Todi, Azeitão e zona da Arrábida. Os profissionais retiram sofás, camas, armários, mesas, cadeiras e eletrodomésticos de apartamentos, moradias, lojas e escritórios. Em Azeitão, há profissionais com experiência no esvaziamento de quintas com móveis antigos e volumes grandes.",
     accessNotes:
@@ -481,8 +481,8 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-entulho-setubal": {
     citySlug: "setubal",
     serviceSlug: "recolha-entulho",
-    metaTitle: "Recolha de Entulho em Setubal — Contentores e Sacos de Obra",
-    h1: "Recolha de Entulho em Setubal — Contentores, Sacos e Obras Pequenas",
+    metaTitle: "Recolha de Entulho em Setúbal — Contentores e Sacos de Obra",
+    h1: "Recolha de Entulho em Setúbal — Contentores, Sacos e Obras Pequenas",
     localIntro:
       "Tem entulho de obra em Setúbal? A CLYON fornece contentores e faz recolha de entulho em sacos para obras de qualquer dimensão. Cobrimos todo o concelho de Setúbal, desde o centro histórico até Azeitão e Arrábida. Para pequenas remodelações, retiram sacos de entulho diretamente. Para obras maiores, colocamos contentor no local pelo tempo necessário e depois vamos buscar.",
     accessNotes:
@@ -493,7 +493,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, e o preço acompanha o volume — dez sacos dão cerca de 1 m³, um contentor pequeno cerca de 3 m³. Enviamos orçamento exacto depois de sabermos o volume e o local.`,
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, e o preço acompanha o volume — dez sacos dão cerca de 1 m³, um contentor pequeno cerca de 3 m³. Enviamos orçamento exato depois de sabermos o volume e o local.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",
@@ -512,7 +512,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Recolhemos: restos de construção (tijolos, cimento, azulejos), sacos de obra, resíduos de remodelação, madeiras de demolição, gessos e materiais mistos. Não recolhemos amianto nem resíduos perigosos.",
       },
       {
-        q: "A CLYON trata do encaminhamento do entulho em Setúbal?",
+        q: "Para onde vai o entulho recolhido em Setúbal?",
         a: "Sim. Todo o entulho é encaminhado para operadores de resíduos licenciados. Fazemos triagem e separação quando necessário. Emitimos guia de transporte se o cliente precisar.",
       },
       {

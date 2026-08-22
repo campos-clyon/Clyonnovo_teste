@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Eletrodomésticos Usados em Lisboa, Margem Sul e Setúbal",
     description:
-      "Recolha de eletrodomésticos usados com carregamento porta a porta e encaminhamento responsável.",
+      "Recolha de eletrodomésticos usados com carregamento porta a porta e destino licenciado.",
     url: `${SITE_URL}/recolha-de-eletrodomesticos`,
     locale: "pt_PT",
     type: "website",
@@ -68,7 +68,7 @@ const benefits = [
   { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
   { icon: Users, title: "Carregamento completo", desc: "A equipa retira o eletrodoméstico do interior do imóvel" },
   { icon: Truck, title: "Transporte incluído", desc: "Levam o equipamento até ao destino adequado" },
-  { icon: Recycle, title: "Destino responsável", desc: "Encaminhamento para reciclagem ou reutilização" },
+  { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem ou reutilização" },
 ];
 
 const includedItems = [
@@ -143,7 +143,7 @@ const serviceSchema = {
   name: "Recolha de Eletrodomésticos Usados",
   serviceType: "Recolha de eletrodomésticos usados",
   url: `${SITE_URL}/recolha-de-eletrodomesticos`,
-  description: "Serviço de recolha de eletrodomésticos usados com carregamento porta a porta e encaminhamento responsável em Lisboa, Margem Sul e Setúbal.",
+  description: "Serviço de recolha de eletrodomésticos usados com carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal.",
   provider: {
     "@type": "LocalBusiness",
     name: BUSINESS_NAME,
@@ -192,7 +192,7 @@ export default function RecolhaDeEletrodomesticosPage() {
                 Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? A CLYON faz a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino responsável. Atendemos pedidos em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem encaminhamento adequado por serem resíduos elétricos e eletrónicos. A equipa CLYON trata de tudo: retira do imóvel, carrega, transporta e encaminha para reciclagem ou reutilização.
+                Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem destino licenciado por serem resíduos elétricos e eletrónicos. A equipa CLYON trata de tudo: retira do imóvel, carrega, transporta e encaminha para reciclagem ou reutilização.
               </p>
 
               {/* CTA Buttons */}
@@ -311,10 +311,10 @@ export default function RecolhaDeEletrodomesticosPage() {
             Quanto custa a recolha de eletrodomésticos?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um eletrodoméstico custa, tipicamente, {PRECO_MOVEIS.etiqueta}. O valor depende de vários factores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
+            A recolha de um eletrodoméstico custa, tipicamente, {PRECO_MOVEIS.etiqueta}. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
-            <p className="font-semibold text-slate-900">Factores que influenciam o preço:</p>
+            <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {pricingFactors.map((factor) => (
                 <li key={factor} className="flex items-center gap-2 text-sm text-slate-700">

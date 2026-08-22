@@ -205,7 +205,7 @@ export default function OrcamentoClient({
         <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-5 mb-4">
           <p className="text-sm font-semibold text-red-700 mb-2">Confirmar cancelamento</p>
           <p className="text-sm text-red-600 mb-4 leading-relaxed">
-            Tem a certeza que quer cancelar este pedido? Esta acção não pode ser desfeita. Se precisar de ajuda, contacte-nos primeiro.
+            Tem a certeza que quer cancelar este pedido? Esta ação não pode ser desfeita. Se precisar de ajuda, contacte-nos primeiro.
           </p>
           <div className="flex gap-3">
             <button

@@ -582,11 +582,11 @@ export default function HeroQuoteForm() {
                         <div className="absolute bottom-8 right-0 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                           <button type="button" onClick={() => cameraRef.current?.click()}
                             className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                            <span>📷</span> Câmera
+                            <span>📷</span> Tirar foto
                           </button>
                           <button type="button" onClick={() => galleryRef.current?.click()}
                             className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                            <span>🖼️</span> Galeria
+                            <span>🖼️</span> Escolher do telemóvel
                           </button>
                         </div>
                       )}
@@ -623,7 +623,7 @@ export default function HeroQuoteForm() {
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Calculando e enviando
+                      A calcular o seu preço… (até 15 s)
                       {countdown !== null && (
                         <span className="tabular-nums text-white/70">{countdown}s</span>
                       )}

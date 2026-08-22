@@ -102,7 +102,7 @@ const benefits = [
   { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
   { icon: Users, title: "Desmontagem quando necessário", desc: "A equipa desmonta armários, camas e móveis grandes" },
   { icon: Truck, title: "Carregamento porta a porta", desc: "Retirada a partir do interior do imóvel" },
-  { icon: Recycle, title: "Destino responsável", desc: "Triagem, doação ou encaminhamento correto" },
+  { icon: Recycle, title: "Destino responsável", desc: "Doação, reciclagem ou centro de tratamento" },
 ];
 
 const includedItems = [
@@ -137,7 +137,7 @@ const faqs = [
   },
   {
     q: "O que acontece aos móveis recolhidos?",
-    a: "Sempre que o estado dos móveis permita, fazemos triagem para doação ou reaproveitamento. O restante segue para encaminhamento responsável e descarte legal.",
+    a: "Sempre que o estado dos móveis permita, fazemos triagem para doação ou reaproveitamento. O resto vai para centros de tratamento licenciados.",
   },
   {
     q: "Fazem desmontagem de armários e camas?",
@@ -229,7 +229,7 @@ const serviceSchema = {
   serviceType: "Recolha de móveis usados e eletrodomésticos",
   url: `${SITE_URL}/recolha-de-moveis`,
   description:
-    "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta, transporte e encaminhamento responsável em Lisboa, Margem Sul e Setúbal.",
+    "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta, transporte  e destino licenciado em Lisboa, Margem Sul e Setúbal.",
   provider: {
     "@type": "LocalBusiness",
     name: BUSINESS_NAME,

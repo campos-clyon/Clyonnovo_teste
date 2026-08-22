@@ -121,7 +121,7 @@ export default async function MudancasCidadePage({ params }: Props) {
          * factura nunca confirmava.
          *
          * Declarar um preço em dados estruturados numa página que não o mostra
-         * é exactamente a divergência que o Google penaliza — por isso o bloco
+         * é exatamente a divergência que o Google penaliza — por isso o bloco
          * sai inteiro, em vez de passar a outro valor.
          */
       },

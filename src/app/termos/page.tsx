@@ -68,7 +68,7 @@ export default function TermosPage() {
             Valem para clientes e para profissionais.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última actualização: 21 de agosto de 2026.
+            Última atualização: 21 de agosto de 2026.
           </p>
         </div>
       </section>
@@ -208,7 +208,7 @@ export default function TermosPage() {
             <li>
               O pedido é mostrado aos profissionais elegíveis. Antes de o
               contratar, o profissional vê a zona, a descrição, as fotografias e
-              o valor de partida — <strong>nunca a morada exacta nem o seu
+              o valor de partida — <strong>nunca a morada exata nem o seu
               contacto</strong>.
             </li>
             <li>
@@ -220,7 +220,7 @@ export default function TermosPage() {
             <li>
               Quando aceita uma proposta, o trabalho fica fechado com esse
               profissional e as outras negociações do mesmo pedido terminam. É
-              nesse momento — e só nesse — que a morada exacta e o seu contacto
+              nesse momento — e só nesse — que a morada exata e o seu contacto
               passam a estar disponíveis para ele.
             </li>
           </ol>

@@ -164,7 +164,7 @@ const localBusinessSchema = {
    * Estava, e este schema vai no <head> de TODAS as páginas do site — incluindo
    * /contactos, o blog e os formulários, onde não existe uma única avaliação
    * visível. Declarar uma nota agregada numa página sem avaliações é
-   * exactamente o padrão que o Google classifica como "self-serving review
+   * exatamente o padrão que o Google classifica como "self-serving review
    * snippets", e a sanção é manual: perdem-se as estrelas em todo o domínio,
    * não só na página que as pediu a mais.
    *
@@ -186,7 +186,7 @@ const localBusinessSchema = {
    * Um intervalo numérico global obrigaria a manter dezenas de páginas em
    * sincronia com dois números que nenhuma delas mostra. "€€" diz a mesma
    * coisa que o Google usa para o resto do mundo — gama média — e não pode
-   * ficar desactualizado.
+   * ficar desatualizado.
    */
   priceRange: "€€",
   openingHoursSpecification: [

@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Armários Usados em Lisboa, Margem Sul e Setúbal",
     description:
-      "Recolha de armários usados com desmontagem, carregamento porta a porta e encaminhamento responsável.",
+      "Recolha de armários usados com desmontagem, carregamento porta a porta e destino licenciado.",
     url: `${SITE_URL}/recolha-de-armarios`,
     locale: "pt_PT",
     type: "website",
@@ -68,7 +68,7 @@ const benefits = [
   { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
   { icon: Users, title: "Desmontagem incluída", desc: "A equipa desmonta armários, roupeiros e móveis grandes" },
   { icon: Truck, title: "Carregamento completo", desc: "Retirada a partir do interior do imóvel" },
-  { icon: Recycle, title: "Destino responsável", desc: "Triagem, doação ou encaminhamento correto" },
+  { icon: Recycle, title: "Destino responsável", desc: "Doação, reciclagem ou centro de tratamento" },
 ];
 
 const includedItems = [
@@ -112,7 +112,7 @@ const faqs = [
   },
   {
     q: "O que acontece aos armários recolhidos?",
-    a: "Sempre que o estado do armário permite, fazemos triagem para doação ou reaproveitamento. Armários danificados ou sem condições seguem para encaminhamento responsável.",
+    a: "Sempre que o estado do armário permite, fazemos triagem para doação ou reaproveitamento. Armários danificados ou sem condições seguem para destino licenciado.",
   },
 ];
 
@@ -143,7 +143,7 @@ const serviceSchema = {
   name: "Recolha de Armários Usados",
   serviceType: "Recolha de armários e roupeiros usados",
   url: `${SITE_URL}/recolha-de-armarios`,
-  description: "Serviço de recolha de armários usados com desmontagem, carregamento porta a porta e encaminhamento responsável em Lisboa, Margem Sul e Setúbal.",
+  description: "Serviço de recolha de armários usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal.",
   provider: {
     "@type": "LocalBusiness",
     name: BUSINESS_NAME,
@@ -310,10 +310,10 @@ export default function RecolhaDeArmariosPage() {
             Quanto custa a recolha de um armário?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um armário custa, tipicamente, {PRECO_MOVEIS.etiqueta}. O valor depende de vários factores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
+            A recolha de um armário custa, tipicamente, {PRECO_MOVEIS.etiqueta}. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
-            <p className="font-semibold text-slate-900">Factores que influenciam o preço:</p>
+            <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {pricingFactors.map((factor) => (
                 <li key={factor} className="flex items-center gap-2 text-sm text-slate-700">

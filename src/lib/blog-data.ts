@@ -64,7 +64,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
-          "Se o objectivo é tirar os móveis rapidamente, desmontar no local, descer escadas, carregar volumes pesados e libertar o espaço sem depender de várias entidades, a recolha privada passa a ser muito mais eficaz.",
+          "Se o objetivo é tirar os móveis rapidamente, desmontar no local, descer escadas, carregar volumes pesados e libertar o espaço sem depender de várias entidades, a recolha privada passa a ser muito mais eficaz.",
           "É aqui que a CLYON entra na Costa da Caparica: como serviço privado para recolha de sofás, camas, armários, colchões, eletrodomésticos e recheios quando a via gratuita não resolve o problema prático.",
         ],
       },
@@ -112,7 +112,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Guia prático",
     intro:
-      "A recolha de móveis é um dos pedidos mais frequentes na operação da CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objectivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou Margem Sul? Veja o serviço da CLYON em /recolha-de-moveis ou simule um orçamento em /simulador. Se precisa de esvaziar uma casa ou apartamento completo, veja o serviço de esvaziamento de casas em /esvaziamento-de-casas.",
+      "A recolha de móveis é um dos pedidos mais frequentes na operação da CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objetivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou Margem Sul? Veja o serviço da CLYON em /recolha-de-moveis ou simule um orçamento em /simulador. Se precisa de esvaziar uma casa ou apartamento completo, veja o serviço de esvaziamento de casas em /esvaziamento-de-casas.",
     sections: [
       {
         title: "Quando faz sentido pedir recolha de móveis",
@@ -152,7 +152,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha gratuita não resolve",
         paragraphs: [
           "A pesquisa por recolha gratuita de móveis usados é muito comum, mas nem sempre a via gratuita resolve o problema. A recolha municipal tem limitações: horários restritos, agendamento demorado, volume máximo e nenhum apoio para desmontagem ou retirada do interior do imóvel.",
-          "Se o objectivo é libertar o espaço rapidamente, com desmontagem incluída, carregamento porta a porta e retirada completa, a recolha privada é a opção mais eficaz. A CLYON oferece resposta rápida, equipa preparada para acessos difíceis e encaminhamento responsável dos móveis usados.",
+          "Se o objetivo é libertar o espaço rapidamente, com desmontagem incluída, carregamento porta a porta e retirada completa, a recolha privada é a opção mais eficaz. A CLYON oferece resposta rápida, equipa preparada para acessos difíceis  e destino licenciado dos móveis usados.",
           "A diferença principal: na recolha gratuita ou municipal, o cliente tem de colocar os móveis no exterior e aguardar. Na recolha privada, a equipa entra no imóvel, desmonta o necessário e resolve tudo num só pedido.",
         ],
         bullets: [
@@ -204,7 +204,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando vale a pena doar",
         paragraphs: [
           "Peças estruturais em bom estado, sem danos graves, com portas, gavetas e estofos utilizáveis, podem ainda ter valor social ou funcional. Nestes casos, a doação é uma alternativa forte e mais sustentável.",
-          "Isto acontece muito em mudanças, trocas de mobília, venda de casa e esvaziamentos parciais em que o objectivo é reduzir desperdício sem atrásar a libertação do espaço.",
+          "Isto acontece muito em mudanças, trocas de mobília, venda de casa e esvaziamentos parciais em que o objetivo é reduzir desperdício sem atrásar a libertação do espaço.",
         ],
       },
       {
@@ -283,7 +283,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quando a doação é mais útil",
         paragraphs: [
-          "Se o objectivo não é recuperar dinheiro, mas sim dar um destino útil ao mobiliário, a doação pode ser a melhor saída. É aqui que pesquisas por entidades sociais e organizações de apoio, como a REMAR, fazem parte do caminho do utilizador.",
+          "Se o objetivo não é recuperar dinheiro, mas sim dar um destino útil ao mobiliário, a doação pode ser a melhor saída. É aqui que pesquisas por entidades sociais e organizações de apoio, como a REMAR, fazem parte do caminho do utilizador.",
           "Em SEO, este tipo de conteúdo ajuda a captar pesquisas informativas muito fortes: quem procura doar também pode vir a precisar de recolha para o que não for aproveitado.",
         ],
       },
@@ -570,7 +570,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "quanto-custa-uma-mudanca-em-lisboa",
     title: "Quanto custa uma mudança em Lisboa em 2026? Guia completo de preços",
     description:
-      "Preços de mudanças em Lisboa para T1, T2 e T3. Factores que influenciam o custo: volume, distância, andar, elevador e serviços extra.",
+      "Preços de mudanças em Lisboa para T1, T2 e T3. Fatores que influenciam o custo: volume, distância, andar, elevador e serviços extra.",
     category: "Mudanças",
     keywords: [
       "quanto custa mudança lisboa",
@@ -584,7 +584,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-06-01",
     heroLabel: "Mudanças",
     intro:
-      "O preço de uma mudança em Lisboa depende de vários factores: o tamanho do apartamento, a distância entre moradas, o andar (com ou sem elevador), a necessidade de desmontagem e montagem de móveis e se quer incluir embalagem. Este guia ajuda a perceber valores reais e a evitar surpresas.",
+      "O preço de uma mudança em Lisboa depende de vários fatores: o tamanho do apartamento, a distância entre moradas, o andar (com ou sem elevador), a necessidade de desmontagem e montagem de móveis e se quer incluir embalagem. Este guia ajuda a perceber valores reais e a evitar surpresas.",
     sections: [
       {
         title: "Preços médios por tipologia de apartamento",
@@ -596,7 +596,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "O que faz o preço subir ou descer",
         paragraphs: [
-          "O andar é um dos principais factores. Um 5.º andar sem elevador exige mais tempo e esforço da equipa, o que se reflecte no orçamento. A distância entre a casa antiga e a nova também conta: uma mudança dentro do mesmo bairro sai mais barata do que uma mudança para outra cidade.",
+          "O andar é um dos principais fatores. Um 5.º andar sem elevador exige mais tempo e esforço da equipa, o que se reflecte no orçamento. A distância entre a casa antiga e a nova também conta: uma mudança dentro do mesmo bairro sai mais barata do que uma mudança para outra cidade.",
           "Móveis grandes como pianos, cofres ou móveis de canto podem exigir técnicas especiais de transporte e aumentar o custo. Dias de fim de semana ou fim de mês também tendem a ter maior procura e preços ligeiramente mais altos.",
         ],
       },
@@ -657,7 +657,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "1 semana antes: embalar e preparar",
         paragraphs: [
           "Comece a embalar divisão a divisão, etiquetando as caixas com o conteúdo e o destino (ex: 'Cozinha - Loiça'). Proteja objetos frágeis com papel ou plástico bolha.",
-          "Confirme os detalhes com a empresa de mudanças: horário, moradas exactas, andar, elevador e contacto para o dia.",
+          "Confirme os detalhes com a empresa de mudanças: horário, moradas exatas, andar, elevador e contacto para o dia.",
         ],
         bullets: [
           "Embalar divisão a divisão",
@@ -711,7 +711,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "O que é uma pequena mudança",
         paragraphs: [
           "Consideramos pequena mudança o transporte de 1 a 3 peças grandes: sofá, cama, armário, secretária, frigorífico ou máquina de lavar. É diferente de uma mudança completa porque não envolve dezenas de caixas e mobiliário de todas as divisões.",
-          "Estes serviços são rápidos — uma a duas horas — e por isso ficam bastante abaixo de uma mudança completa. O valor exacto depende do volume e da distância, e vem na proposta.",
+          "Estes serviços são rápidos — uma a duas horas — e por isso ficam bastante abaixo de uma mudança completa. O valor exato depende do volume e da distância, e vem na proposta.",
         ],
       },
       {

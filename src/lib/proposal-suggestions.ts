@@ -272,13 +272,13 @@ export function suggestJustifications(input: SuggestionInput): SuggestionResult 
     s.push({
       id: "detalhe-calculo",
       basis: "cálculo do motor",
-      text: `Este valor foi calculado com base em ${partes.join(", ")}. Inclui mão de obra, transporte e o encaminhamento dos materiais — sem custos adicionais no dia.`,
+      text: `Este valor foi calculado com base em ${partes.join(", ")}. Inclui mão de obra, transporte e o destino licenciado dos materiais — sem custos adicionais no dia.`,
       tone: "neutral",
     });
     s.push({
       id: "tudo-incluido",
       basis: "tudo incluído",
-      text: "O valor cobre a deslocação, a equipa e a remoção completa dos itens indicados, incluindo o encaminhamento para destino adequado. Não há extras no dia do serviço.",
+      text: "O valor cobre a deslocação, a equipa e a remoção completa dos itens indicados, incluindo o destino licenciado dos materiais. Não há extras no dia do serviço.",
       tone: "neutral",
     });
     if (semFotos) {

@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Sofás em Lisboa, Margem Sul e Setúbal",
     description:
-      "Recolha de sofás usados com carregamento porta a porta, transporte e encaminhamento responsável.",
+      "Recolha de sofás usados com carregamento porta a porta, transporte e destino licenciado.",
     url: `${SITE_URL}/recolha-de-sofas`,
     locale: "pt_PT",
     type: "website",
@@ -68,7 +68,7 @@ const benefits = [
   { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
   { icon: Users, title: "Carregamento completo", desc: "A equipa retira o sofá do interior do imóvel" },
   { icon: Truck, title: "Transporte incluído", desc: "Levam o sofá até ao destino adequado" },
-  { icon: Recycle, title: "Destino responsável", desc: "Triagem, doação ou encaminhamento correto" },
+  { icon: Recycle, title: "Destino responsável", desc: "Doação, reciclagem ou centro de tratamento" },
 ];
 
 const includedItems = [
@@ -108,7 +108,7 @@ const faqs = [
   },
   {
     q: "O que acontece ao sofá depois da recolha?",
-    a: "Sempre que o estado do sofá permite, fazemos triagem para doação ou reaproveitamento. Sofás danificados ou sem condições seguem para encaminhamento responsável.",
+    a: "Sempre que o estado do sofá permite, fazemos triagem para doação ou reaproveitamento. Sofás danificados ou sem condições seguem para destino licenciado.",
   },
   {
     q: "Qual a diferença entre a CLYON e deixar o sofá na rua?",
@@ -143,7 +143,7 @@ const serviceSchema = {
   name: "Recolha de Sofás",
   serviceType: "Recolha de sofás usados",
   url: `${SITE_URL}/recolha-de-sofas`,
-  description: "Serviço de recolha de sofás usados com carregamento porta a porta, transporte e encaminhamento responsável em Lisboa, Margem Sul e Setúbal.",
+  description: "Serviço de recolha de sofás usados com carregamento porta a porta, transporte  e destino licenciado em Lisboa, Margem Sul e Setúbal.",
   provider: {
     "@type": "LocalBusiness",
     name: BUSINESS_NAME,
@@ -310,10 +310,10 @@ export default function RecolhaDeSofasPage() {
             Quanto custa a recolha de um sofá?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}. Não é um preço fixo: depende de vários factores que influenciam o trabalho necessário. A melhor forma de saber o valor exacto é pedir um orçamento com fotos e morada.
+            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}. Não é um preço fixo: depende de vários fatores que influenciam o trabalho necessário. A melhor forma de saber o valor exato é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
-            <p className="font-semibold text-slate-900">Factores que influenciam o preço:</p>
+            <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {pricingFactors.map((factor) => (
                 <li key={factor} className="flex items-center gap-2 text-sm text-slate-700">

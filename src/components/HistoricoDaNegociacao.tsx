@@ -87,7 +87,7 @@ export default function HistoricoDaNegociacao({
                   </span>
                 )}
               </div>
-              {/* A hora exacta fica no title, para quem precisar dela. O que
+              {/* A hora exata fica no title, para quem precisar dela. O que
                   se lê de relance é há quanto tempo. */}
               <time
                 dateTime={e.quando}

@@ -54,7 +54,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     question: "O que está incluído no esvaziamento de casa?",
-    answer: "Incluímos a remoção de móveis, eletrodomésticos, monos, objetos volumosos e recheios completos. Fazemos carregamento, transporte e encaminhamento responsável. A limpeza final pode ser adicionada ao serviço.",
+    answer: "Incluímos a remoção de móveis, eletrodomésticos, monos, objetos volumosos e recheios completos. Fazemos carregamento, transporte e destino licenciado. A limpeza final pode ser adicionada ao serviço.",
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",

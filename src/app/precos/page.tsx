@@ -47,7 +47,7 @@ export const metadata: Metadata = {
  * oficial — recolha de móveis — e é para isso que a faixa serve: 40 € para
  * uma peça pequena e acessível, 120 € para o caso pesado num quarto andar sem
  * elevador. Inventar quatro faixas diferentes para o mesmo serviço era
- * exactamente o problema que se acabou de corrigir no resto do site.
+ * exatamente o problema que se acabou de corrigir no resto do site.
  *
  * O que fica por decidir é o conjunto de cartões, não os números: seis
  * exemplos onde quatro são o mesmo serviço dá menos informação do que a

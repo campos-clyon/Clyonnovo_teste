@@ -173,7 +173,7 @@ export default function SimulatorThreePhaseForm() {
     };
   }, [session?.user?.email]);
 
-  // Salvar draft no localStorage
+  // Guardar rascunho no localStorage
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
   }, [formData]);

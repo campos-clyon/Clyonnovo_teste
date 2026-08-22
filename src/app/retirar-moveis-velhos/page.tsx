@@ -66,7 +66,7 @@ const faqs = [
   {
     question: "Quanto custa retirar móveis velhos?",
     answer:
-      `O valor depende do volume, tipo de móveis, acessos (escadas, elevador, rua) e necessidade de desmontagem. A recolha de móveis fica em ${PRECO_MOVEIS}: uma peça isolada como um sofá ou uma cama com acesso fácil é a partir de 40 €. Envie fotos para orçamento exacto. ${NOTA_DE_PRECO.curta}`,
+      `O valor depende do volume, tipo de móveis, acessos (escadas, elevador, rua) e necessidade de desmontagem. A recolha de móveis fica em ${PRECO_MOVEIS}: uma peça isolada como um sofá ou uma cama com acesso fácil é a partir de 40 €. Envie fotos para orçamento exato. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Retiram no mesmo dia?",

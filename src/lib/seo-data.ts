@@ -281,7 +281,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha profissional de móveis velhos, recheios e volumes grandes com destino responsável.",
     longDescription:
-      "Os profissionais retiram sofás, camas, armários, eletrodomésticos e recheios completos com cuidado no acesso, transporte profissional e encaminhamento adequado. É a solução ideal para libertar espaço sem complicações.",
+      "Os profissionais retiram sofás, camas, armários, eletrodomésticos e recheios completos com cuidado no acesso, transporte profissional e destino licenciado. É a solução ideal para libertar espaço sem complicações.",
     primaryKeyword: "recolha de móveis",
     keywords: [
       "recolha de móveis",
@@ -451,7 +451,7 @@ export function getRelatedCities(citySlug: string, limit = 4) {
  *
  * Estes vêm dos perfis, conferidos a 22-08-2026. São menos redondos e têm uma
  * vantagem que o outro não tinha: qualquer pessoa os pode abrir e confirmar.
- * Quando subirem, actualizam-se aqui e mudam em todo o lado.
+ * Quando subirem, atualizam-se aqui e mudam em todo o lado.
  */
 export const AVALIACOES = {
   google: 37,

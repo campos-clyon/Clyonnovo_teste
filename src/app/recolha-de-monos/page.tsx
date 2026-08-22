@@ -98,7 +98,7 @@ const differentiators = [
   "Recolha de monos em 24 a 48 horas na maioria das zonas",
   "Carregamento direto pelo profissional",
   "Sem necessidade de descer os objetos à rua",
-  "Encaminhamento para reciclagem quando possível",
+  "Vai para reciclagem sempre que der",
   "Equipa preparada para acessos difíceis",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];
@@ -202,7 +202,7 @@ export default function RecolhaMonosPage() {
           {[
             { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
             { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega os monos — não precisa de os descer à rua." },
-            { icon: Recycle, title: "Destino responsável", desc: "Encaminhamento para reciclagem sempre que possível." },
+            { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem sempre que der." },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">

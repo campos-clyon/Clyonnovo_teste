@@ -103,7 +103,7 @@ export default function PropostasRecebidas({
   token?: string;
   pedidoId?: number;
   negociacoesIniciais: NegociacaoDoCliente[];
-  /** Para a conta recarregar a lista depois de uma acção. */
+  /** Para a conta recarregar a lista depois de uma ação. */
   onMudou?: () => void;
 }) {
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);

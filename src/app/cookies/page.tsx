@@ -124,7 +124,7 @@ export default function CookiesPage() {
             estiver lá, não pomos.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última actualização: 21 de agosto de 2026.
+            Última atualização: 21 de agosto de 2026.
           </p>
         </div>
       </section>
@@ -195,7 +195,7 @@ export default function CookiesPage() {
               <>
                 Podem ser usados para mostrar publicidade relevante em plataformas externas
                 (Facebook, Instagram, Google Ads), medir a eficácia de campanhas e evitar mostrar o
-                mesmo anúncio repetidamente. Actualmente o sistema está preparado para esta
+                mesmo anúncio repetidamente. Atualmente o sistema está preparado para esta
                 categoria mas nem todas as integrações estão activas. Só são activados com
                 consentimento explícito.
               </>
@@ -302,7 +302,7 @@ export default function CookiesPage() {
                 <br />
                 Adicionalmente, todos os browsers permitem bloquear cookies nas suas próprias
                 configurações. Ter em conta que bloquear cookies necessários pode impedir o
-                funcionamento correcto do site.
+                funcionamento correto do site.
               </>
             }
           />
@@ -311,9 +311,9 @@ export default function CookiesPage() {
             title="7. Alterações a esta política"
             body={
               <>
-                Podemos actualizar esta política sempre que houver mudanças na tecnologia usada, nos
+                Podemos atualizar esta política sempre que houver mudanças na tecnologia usada, nos
                 fornecedores ou na legislação aplicável. Publicaremos sempre a versão em vigor
-                nesta página com a data da última actualização. Recomendamos consulta periódica.
+                nesta página com a data da última atualização. Recomendamos consulta periódica.
               </>
             }
           />
@@ -337,7 +337,7 @@ export default function CookiesPage() {
                   rel="noopener noreferrer"
                   className="text-acao hover:underline"
                 >
-                  Comissão Nacional de Protecção de Dados (CNPD)
+                  Comissão Nacional de Proteção de Dados (CNPD)
                 </a>.
               </>
             }

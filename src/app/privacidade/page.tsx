@@ -32,7 +32,7 @@ export default function PrivacidadePage() {
             direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD).
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última actualização: 21 de agosto de 2026.
+            Última atualização: 21 de agosto de 2026.
           </p>
         </div>
       </section>
@@ -148,7 +148,7 @@ export default function PrivacidadePage() {
                   <li>Calcular a estimativa automática a partir do que nos descreve.</li>
                   <li>
                     Mostrar o pedido aos profissionais que trabalham na sua zona e
-                    fazem esse tipo de serviço — <strong>sem a morada exacta nem
+                    fazem esse tipo de serviço — <strong>sem a morada exata nem
                     o seu contacto</strong>, que só passam depois de contratar.
                   </li>
                   <li>Gerir as propostas, as contrapropostas e o registo do que foi combinado.</li>
@@ -205,7 +205,7 @@ export default function PrivacidadePage() {
                   <li>
                     <strong>Profissionais independentes</strong> que respondem ao pedido. Antes de os
                     contratar veem a zona, as fotografias e o valor que indicou — nunca a morada
-                    exacta nem o seu contacto, que só passam depois de os escolher.
+                    exata nem o seu contacto, que só passam depois de os escolher.
                   </li>
                   <li>
                     <strong>Alojamento e base de dados</strong> — Vercel (alojamento do site) e
@@ -276,7 +276,7 @@ export default function PrivacidadePage() {
                     <strong>Aceder</strong> aos dados que temos sobre si.
                   </li>
                   <li>
-                    <strong>Rectificar</strong> dados incorrectos ou desactualizados.
+                    <strong>Rectificar</strong> dados incorretos ou desatualizados.
                   </li>
                   <li>
                     <strong>Apagar</strong> os dados (direito ao esquecimento), quando aplicável.
@@ -299,7 +299,7 @@ export default function PrivacidadePage() {
                       rel="noopener noreferrer"
                       className="text-acao hover:underline"
                     >
-                      Comissão Nacional de Protecção de Dados (CNPD)
+                      Comissão Nacional de Proteção de Dados (CNPD)
                     </a>.
                   </li>
                 </ul>
@@ -316,7 +316,7 @@ export default function PrivacidadePage() {
               <>
                 Adoptamos medidas técnicas e organizativas para proteger os dados: comunicações
                 encriptadas (HTTPS), acesso restrito às bases de dados, cópias de segurança
-                periódicas e formação das equipas em protecção de dados. Ainda assim, nenhum sistema
+                periódicas e formação das equipas em proteção de dados. Ainda assim, nenhum sistema
                 é 100% imune — recomendamos que não envie dados sensíveis por canais não seguros.
               </>
             }

@@ -178,7 +178,7 @@ export interface EstimateResult {
    * Taxa de agendamento da CLYON — FORA do preço do trabalho e SEM IVA.
    *
    * Não somar ao total com IVA nem aplicar-lhe 23%: o preço do trabalho é do
-   * profissional e leva IVA; a taxa é da CLYON, é exacta ao cêntimo e paga-se
+   * profissional e leva IVA; a taxa é da CLYON, é exata ao cêntimo e paga-se
    * com a reserva. São duas contas diferentes, mostradas à parte de propósito.
    */
   schedulingFee?: number;
@@ -197,7 +197,7 @@ export interface EstimateResult {
   teamSize?: string | null;
   /** Horas estimadas em texto (ex: "1 a 2 horas") */
   estimatedHoursText?: string | null;
-  /** Recomendação de acção para o admin */
+  /** Recomendação de ação para o admin */
   recommendation?: "pode_aprovar" | "pedir_fotos" | "pedir_info" | "visita_presencial" | null;
   /** Limite inferior do intervalo estimado (com IVA) */
   estimateMinWithVat?: number | null;

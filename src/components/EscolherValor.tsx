@@ -15,7 +15,7 @@ import { Loader2 } from "lucide-react";
  * um "outro" para quem quer escrever. Os atalhos não são um limite — só um
  * ponto de partida.
  *
- * A direcção muda conforme quem propõe: o cliente contrapropõe ABAIXO do que o
+ * A direção muda conforme quem propõe: o cliente contrapropõe ABAIXO do que o
  * profissional pediu, o profissional contrapropõe ACIMA do que o cliente quer
  * pagar. Os atalhos seguem esse sentido, senão sugeriam a alguém uma proposta
  * contra o seu próprio interesse.
@@ -23,7 +23,7 @@ import { Loader2 } from "lucide-react";
 
 export type DireccaoDaProposta = "abaixo" | "acima";
 
-/** Quanto os atalhos se afastam da referência, por direcção. */
+/** Quanto os atalhos se afastam da referência, por direção. */
 const PASSOS: Record<DireccaoDaProposta, number[]> = {
   // O cliente quer pagar menos.
   abaixo: [0.05, 0.1],

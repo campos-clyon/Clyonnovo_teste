@@ -43,7 +43,7 @@ const faqs = [
       "Sim, quando existe disponibilidade operacional conseguimos responder no próprio dia. A forma mais rápida de confirmar é ligar para o 931 632 622 ou enviar mensagem no WhatsApp com fotos e morada.",
   },
   {
-    question: "Qual é o tempo médio de resposta?",
+    question: "Quanto tempo demora a receber resposta?",
     answer:
       "Em pedidos urgentes, a resposta comercial costuma ser dada em menos de 1 hora. A execução depende da agenda e localização, mas muitos pedidos em Lisboa e Margem Sul são tratados no próprio dia ou no dia seguinte.",
   },

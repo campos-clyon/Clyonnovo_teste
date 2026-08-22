@@ -160,7 +160,7 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
 
   // Fallback genérico
   if (isFurnitureService(serviceSlug)) {
-    return `A CLYON liga o seu pedido de recolha de móveis em ${cityName} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária, carregamento porta a porta e encaminhamento responsável em ${regionLabel}.`;
+    return `A CLYON liga o seu pedido de recolha de móveis em ${cityName} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária, carregamento porta a porta e destino licenciado em ${regionLabel}.`;
   }
 
   return `${serviceName} em ${cityName} com resposta rápida, orçamento claro e execução cuidada. Trabalhamos em contexto residencial e comercial, com apoio local em ${regionLabel}.`;
@@ -633,7 +633,9 @@ export default async function ServiceCityPage({ params }: Props) {
               )}
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-4">
-                  <p className="text-sm font-semibold text-slate-950">Tempo médio</p>
+                  {/* "Tempo médio" admite, sem querer, que metade dos casos é pior do
+                      que o número anunciado. Diz-se o que se promete. */}
+                  <p className="text-sm font-semibold text-slate-950">Resposta em</p>
                   <p className="mt-2 text-sm leading-7 text-slate-600">{PRAZO_DE_RESPOSTA.porExtenso}</p>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">
@@ -664,7 +666,7 @@ export default async function ServiceCityPage({ params }: Props) {
             {
               icon: ShieldCheck,
               title: "Processo seguro",
-              desc: "Confirmamos volume, acessos, horários e encaminhamento antes da marcação.",
+              desc: "Confirmamos volume, acessos, horários e destino antes da marcação.",
             },
           ].map((item) => (
             <div
@@ -816,7 +818,7 @@ export default async function ServiceCityPage({ params }: Props) {
               Se precisa de retirar volumes, libertar espaço e evitar o esforço de
               carregar, desmontar e transportar sozinho, esta é a solução mais
               simples. O profissional organiza a recolha, trata do acesso e dá o
-              encaminhamento adequado ao que sai do imóvel.
+              destino licenciado para o que sai do imóvel.
             </p>
             {isFurnitureService(service.slug) && (
               <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-5">

@@ -51,7 +51,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "esvaziamento-casa",
     label: "Esvaziamento de casa",
     emoji: "🏠",
-    description: "Esvaziamento completo de casas com recolha e encaminhamento responsável.",
+    description: "Esvaziamento completo de casas com recolha  e destino licenciado.",
     href: "/esvaziamento-de-casas",
   },
   {

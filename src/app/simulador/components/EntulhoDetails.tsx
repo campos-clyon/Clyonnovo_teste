@@ -172,7 +172,7 @@ export default function EntulhoDetails({
                   <span className="text-xs font-semibold text-slate-900">Não tenho a certeza</span>
                 </button>
                 <p className="text-[10px] text-slate-500">
-                  Sem problema — o assistente confirma a quantidade e o preço consigo.
+                  Sem problema — confirmamos a quantidade e o preço consigo antes de avançar.
                 </p>
 
                 <button
