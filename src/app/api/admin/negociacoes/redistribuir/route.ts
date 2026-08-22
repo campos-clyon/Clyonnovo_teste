@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSimulatorOrderById, appendOrderHistory } from "@/lib/db";
 import { distribuirPedido } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 
 export const runtime = "nodejs";
 
@@ -48,16 +49,30 @@ export async function POST(req: NextRequest) {
   }
 
   // As coordenadas do trabalho vivem no JSON do formulário, não em colunas.
-  let lat: number | null = null;
-  let lng: number | null = null;
+  /*
+   * As coordenadas, indo buscá-las se ainda não existirem.
+   *
+   * Era uma leitura crua do rawOrderJson: se lá não estivessem, seguia com
+   * nulos e a regra caía na lista de zonas de cada profissional. O #205 —
+   * uma recolha na Avenida Mouzinho de Albuquerque, em Lisboa — foi enviado
+   * três vezes e as três não chegaram a ninguém, comparado contra "palmela,
+   * montijo, seixal, amora, setubal", quando a 35 km havia um profissional
+   * com raio de 125 km.
+   *
+   * Geocodificar só na criação não chegava: há mais de cem pedidos na base
+   * criados antes disso, e esses não voltam a ser criados. Agora a busca
+   * acontece aqui, e o resultado fica gravado — da segunda vez já não há
+   * chamada nenhuma ao Google.
+   */
+  const geo = await coordenadasDoPedido(pedido);
+  const lat = geo.lat;
+  const lng = geo.lng;
   let fotos = 0;
   try {
     const cru = JSON.parse(pedido.rawOrderJson ?? "{}");
-    lat = typeof cru?.address?.lat === "number" ? cru.address.lat : null;
-    lng = typeof cru?.address?.lng === "number" ? cru.address.lng : null;
     fotos = Array.isArray(cru?.files) ? cru.files.length : 0;
   } catch {
-    /* sem coordenadas, a regra cai nas zonas */
+    /* sem fotos */
   }
 
   try {

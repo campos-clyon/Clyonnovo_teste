@@ -1,0 +1,12 @@
+# Como comunicar uma falha de segurança no clyon.pt
+#
+# Se encontrou alguma coisa, diga-nos antes de a tornar pública. Respondemos a
+# todos os contactos e não perseguimos quem comunica de boa-fé.
+#
+# Formato RFC 9116. O campo Expires é obrigatório: uma data passada faz este
+# ficheiro deixar de ser considerado válido, por isso tem de ser renovado.
+
+Contact: mailto:geral@clyon.pt
+Expires: 2027-08-22T00:00:00.000Z
+Preferred-Languages: pt, en
+Canonical: https://clyon.pt/.well-known/security.txt
