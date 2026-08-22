@@ -35,6 +35,24 @@ const DASHBOARD_ROUTES = [
   "/pedido",
 ];
 
+/**
+ * SALTAR PARA O CONTEÚDO.
+ *
+ * Primeiro elemento focável da página, e invisível até alguém carregar em Tab.
+ * Sem ele, quem navega por teclado tinha de atravessar o selector de
+ * localidade, o menu Soluções com as suas oito entradas, os quatro links de
+ * navegação, o WhatsApp e o botão de conta — em TODAS as páginas, antes de
+ * chegar ao texto.
+ */
+const saltarParaOConteudo = (
+  <a
+    href="#conteudo"
+    className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-acao focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-white"
+  >
+    Saltar para o conteúdo
+  </a>
+);
+
 export default function SiteChrome({
   children,
 }: {
@@ -57,17 +75,19 @@ export default function SiteChrome({
   if (isDashboard) {
     return (
       <>
+        {saltarParaOConteudo}
         <Header />
-        <main className="site-page-shell pt-[53px] sm:pt-[61px]">{children}</main>
+        <main id="conteudo" className="site-page-shell pt-[53px] sm:pt-[61px]">{children}</main>
       </>
     );
   }
 
   return (
     <>
+      {saltarParaOConteudo}
       <Header />
       {/* pb no mobile para o conteúdo não ficar escondido atrás da barra de navegação */}
-      <main className="site-page-shell pt-[53px] sm:pt-[61px] pb-[72px] lg:pb-0">{children}</main>
+      <main id="conteudo" className="site-page-shell pt-[53px] sm:pt-[61px] pb-[72px] lg:pb-0">{children}</main>
       <Footer />
       <MobileBottomNav />
       <DeferredCookieConsent />

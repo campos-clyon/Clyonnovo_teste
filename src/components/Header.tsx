@@ -133,8 +133,28 @@ export default function Header() {
       }
     }
 
+    /*
+     * Escape fecha, e o foco VOLTA ao botão.
+     *
+     * Devolver o foco é a metade que costuma faltar: sem isso, fechar o menu
+     * por teclado deixava o foco num elemento que já não existe, e o Tab
+     * seguinte recomeçava do princípio da página.
+     */
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSolucoesOpen((aberto) => {
+          if (aberto) buttonRef.current?.focus();
+          return false;
+        });
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   useEffect(() => {
@@ -173,10 +193,31 @@ export default function Header() {
         <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
           {/* Soluções dropdown */}
           <div className="relative">
+            {/*
+              O CLIQUE DEIXA DE FECHAR O QUE O RATO ACABOU DE ABRIR.
+
+              Era `onClick={() => setSolucoesOpen(!solucoesOpen)}` com
+              `onMouseEnter` a abrir. Quem aponta e clica — que é o que a
+              maioria das pessoas faz — via o menu desaparecer no próprio
+              gesto de o tentar usar: o rato abria-o, o clique alternava-o
+              para fechado.
+
+              Agora o clique só ABRE. Fecha-se com Esc, ao sair com o rato, ou
+              ao clicar fora, que é o que já existia.
+
+              `onFocus` abre também: sem isso, quem chega ao botão por Tab
+              nunca conseguia entrar no menu, e o mega-menu é o principal
+              caminho de descoberta de serviços em desktop — onde estão os
+              pedidos de empresas e condomínios.
+            */}
             <button
               ref={buttonRef}
-              onClick={() => setSolucoesOpen(!solucoesOpen)}
+              onClick={() => setSolucoesOpen(true)}
               onMouseEnter={() => setSolucoesOpen(true)}
+              onFocus={() => setSolucoesOpen(true)}
+              aria-expanded={solucoesOpen}
+              aria-haspopup="true"
+              aria-controls="menu-solucoes"
               className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-[0.9375rem] font-medium transition-colors ${
                 solucoesOpen
                   ? "bg-slate-50 text-acao"
@@ -188,6 +229,7 @@ export default function Header() {
                 className={`h-4 w-4 transition-transform duration-200 ${
                   solucoesOpen ? "rotate-180" : ""
                 }`}
+                aria-hidden="true"
               />
             </button>
           </div>
@@ -311,6 +353,7 @@ export default function Header() {
       {/* Mega Menu Dropdown - Centralized */}
       {solucoesOpen && (
         <div
+          id="menu-solucoes"
           ref={dropdownRef}
           onMouseLeave={() => setSolucoesOpen(false)}
           className="absolute left-1/2 top-full z-50 hidden w-[min(1200px,calc(100vw-48px))] -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-200 lg:block"

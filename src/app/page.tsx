@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { reviews } from "@/lib/reviews-data";
+import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const metadata: Metadata = {
@@ -290,6 +290,9 @@ export default function HomePage() {
       {/* ── STATS BAR ─────────────────────────────────────────────── */}
       <section className="border-b border-[#E2EEF3] bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Invisível, mas existe: sem ele estes números ficavam pendurados
+              em cabeçalho nenhum, e quem navega por headings saltava-os. */}
+          <h2 className="sr-only">A CLYON em números</h2>
           <div className="grid grid-cols-2 divide-x divide-[#E2EEF3] md:grid-cols-4">
             {PLATFORM_STATS.map((stat) => (
               <div key={stat.label} className="px-4 py-6 text-center sm:px-6 sm:py-8">
@@ -366,8 +369,35 @@ export default function HomePage() {
       </section>
 
       {/* ── SERVICES ──────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-8 sm:py-16">
+      <section className="bg-white py-8 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/*
+            A GRELHA DE SERVIÇOS NÃO TINHA TÍTULO.
+
+            Entrava directa nos cartões, e os nomes dos serviços são <h3> sem
+            um <h2> antes — salto de nível, que é falha do critério 1.3.1 das
+            WCAG. Para quem navega por cabeçalhos, a página tinha um buraco
+            entre "Simples do início ao fim" e "Construída para inspirar
+            confiança", exactamente onde deviam estar os serviços.
+
+            E porque a secção anterior TAMBÉM está em #F4F8FB, os nove cartões
+            de preço liam-se como se fossem um quarto passo do processo. Esta
+            secção passa a branco: é a mesma correcção vista de dois lados.
+
+            É também SEO. A lista completa de serviços com preços é o conteúdo
+            mais valioso da homepage e não tinha um cabeçalho que o Google
+            pudesse associar a uma intenção de pesquisa.
+          */}
+          <div className="mb-8 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
+              O que podemos levar
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-tinta-fraca sm:text-base">
+              Nove serviços, preços orientativos à vista. O valor final é fechado antes
+              de o trabalho começar.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
@@ -454,39 +484,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Marquee — desfile contínuo da direita para a esquerda */}
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-[#F4F8FB] to-transparent sm:w-32" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-[#F4F8FB] to-transparent sm:w-32" />
-          <div className="overflow-hidden">
-            <div className="reviews-marquee flex w-max gap-4 py-2">
-              {[...reviews, ...reviews].map((review, i) => (
-                <article
-                  key={i}
-                  className="w-[288px] flex-shrink-0 rounded-2xl border border-[#E2EEF3] bg-white p-6 shadow-sm"
-                >
-                  <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, j) => (
-                      <Star key={j} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <blockquote className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
-                    &ldquo;{review.text}&rdquo;
-                  </blockquote>
-                  <div className="mt-4 flex items-center gap-3 border-t border-[#E2EEF3] pt-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-acao">
-                      {review.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-tinta">{review.name}</div>
-                      <div className="text-xs text-tinta-fraca">{review.date}</div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
+        <DesfileDeAvaliacoes />
 
         <div className="mt-10 text-center">
           <Link

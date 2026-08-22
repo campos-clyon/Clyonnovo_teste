@@ -695,8 +695,53 @@ footer .text-white {
   animation: reviews-marquee 75s linear infinite;
   will-change: transform;
 }
-.reviews-marquee:hover {
+/*
+ * Para com o rato POR CIMA e com o foco LÁ DENTRO.
+ *
+ * Só tinha `:hover`, e `:hover` não existe em telemóvel — que é onde está a
+ * maioria de quem lê isto. Nenhum cliente conseguia acabar de ler um
+ * testemunho sem o perder de vista, e a prova social mais forte da CLYON
+ * passava de raspão. `:focus-within` cobre quem navega por teclado, que
+ * também não tem rato para pousar.
+ *
+ * O `.parado` é o botão de pausa: movimento automático com mais de cinco
+ * segundos e sem forma de o parar é falha directa do critério WCAG 2.2.2.
+ */
+.reviews-marquee:hover,
+.reviews-marquee:focus-within,
+.reviews-marquee.parado {
   animation-play-state: paused;
+}
+
+/*
+ * Quem pediu ao sistema para não haver movimento, não tem movimento.
+ *
+ * Não havia uma única regra `prefers-reduced-motion` no site, e havia quatro
+ * animações infinitas a correr. Para quem tem perturbação vestibular, uma
+ * faixa de 288 px a atravessar o ecrã em ciclo contínuo não é um detalhe de
+ * estilo — é náusea.
+ *
+ * As animações de entrada não são desligadas, são encurtadas a quase nada:
+ * assim o elemento fica no estado final (que é o que `both` guarda) em vez de
+ * desaparecer por não ter chegado a animar.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .reviews-marquee,
+  .step-icon,
+  .step-pulse-ring {
+    animation: none !important;
+  }
+
+  .step-enter,
+  .guarantee-card,
+  .animate-fade-in {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* Painel lateral — entra da direita.
