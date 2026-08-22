@@ -85,7 +85,14 @@ const HERO_PILLS = [
 ];
 
 const PLATFORM_STATS = [
-  { value: "5,0 ★", label: "Avaliação dos clientes", sub: "Baseado em opiniões reais", accent: "text-amber-500" },
+  {
+    value: `${AVALIACOES.media} ★`,
+    label: "Avaliação dos clientes",
+    // "Baseado em opiniões reais" não diz nada que se possa abrir e conferir.
+    // Dizer ONDE é que elas estão é o que transforma a frase numa prova.
+    sub: "No Google e na Fixando",
+    accent: "text-amber-500",
+  },
   {
     // Era `value: "188"`, escrito à mão. Não vinha de constante, não vinha da
     // base, não era contado em lado nenhum — não tinha origem. Um número de
@@ -95,8 +102,28 @@ const PLATFORM_STATS = [
     sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
     accent: "text-acao",
   },
-  { value: "9", label: "Categorias de serviço", sub: "Casa, jardim e mais", accent: "text-emerald-600" },
-  { value: "24+", label: "Localidades cobertas", sub: "Lisboa · Margem Sul · Setúbal", accent: "text-blue-600" },
+  /*
+   * Saiu daqui "9 — Categorias de serviço — Casa, jardim e mais".
+   *
+   * É catálogo de produto. Ninguém escolhe quem lhe leva o sofá por o site ter
+   * nove categorias em vez de sete — é um número sobre a plataforma, não sobre
+   * o problema de quem está a ler. No lugar dele entra a pergunta que a pessoa
+   * faz mesmo: quanto tempo até ter resposta.
+   */
+  {
+    value: PRAZO_DE_RESPOSTA.curto,
+    label: "Para receber propostas",
+    sub: "Muitos no próprio dia",
+    accent: "text-emerald-600",
+  },
+  {
+    value: "24+",
+    // "Localidades cobertas" é como se descreve uma área de operação por
+    // dentro. Quem lê quer saber uma coisa só: chegam aqui?
+    label: "Cidades com profissionais",
+    sub: "Lisboa · Margem Sul · Setúbal",
+    accent: "text-blue-600",
+  },
 ];
 
 const HOW_IT_WORKS = [
@@ -123,9 +150,13 @@ const HOW_IT_WORKS = [
 const GUARANTEES = [
   {
     icon: BadgeCheck,
-    title: "Profissionais verificados",
-    stat: "100%",
-    statLabel: "com historial verificado",
+    title: "Sabe quem vai a sua casa",
+    // Era `stat: "100%"` com "com historial verificado" ao lado. Cem por
+    // cento de quê? É uma política interna escrita como se fosse uma
+    // conquista, e não há forma nenhuma de a pessoa a confirmar. A nota e o
+    // número de avaliações, esses, abrem-se e contam-se.
+    stat: `${AVALIACOES.media} ★`,
+    statLabel: `em ${AVALIACOES_TOTAL} avaliações`,
     description:
       // Dizia "Todos os profissionais passam por verificação de identidade e
       // avaliação de qualidade contínua. Nenhum profissional sem historial
@@ -133,18 +164,18 @@ const GUARANTEES = [
       // para dentro. "Operacionais" é palavra que nenhum cliente usa, e a
       // frase falava sobre quem se admite, não sobre o que ele ganha com
       // isso. Passa a dizer o que lhe interessa: quem lhe bate à porta.
-      "Quem chega a sua casa passou por verificação de identidade e tem historial avaliado por outros clientes. Vê a nota e os trabalhos antes de escolher.",
+      "Vê o nome, a nota e os trabalhos do profissional antes de aceitar. Todos passam por verificação de identidade — e quem não tem historial não recebe pedidos.",
     gradient: "from-cyan-400 to-cyan-500",
     glow: "shadow-cyan-500/40",
     iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
   },
   {
     icon: Shield,
-    title: "Preço confirmado, sem surpresas",
+    title: "O preço que combina é o que paga",
     stat: "€0",
-    statLabel: "de adicionais no final",
+    statLabel: "a mais no fim",
     description:
-      "O orçamento é fechado antes do serviço começar. Não há adicionais no final, nem negociações no dia da recolha.",
+      "O valor fica fechado antes de o trabalho começar. Não há adicionais no fim, nem negociação à porta no dia da recolha.",
     gradient: "from-emerald-400 to-emerald-500",
     glow: "shadow-emerald-500/40",
     iconBg: "bg-gradient-to-br from-emerald-400 to-emerald-600",
@@ -156,11 +187,15 @@ const GUARANTEES = [
     // inspirar confiança". Pior: a descrição por baixo já dizia "no próprio
     // dia", ou seja o cartão contradizia-se a si próprio. Todo o resto do
     // site diz 24 horas; este era o único sítio com outro número.
-    title: PRAZO_DE_RESPOSTA.frase,
+    // O título era `PRAZO_DE_RESPOSTA.frase` — "Resposta em menos de 24
+    // horas" — com "<24h · tempo médio de resposta" em letra gigante mesmo ao
+    // lado. O cartão dizia duas vezes a mesma coisa e não dizia o que isso
+    // muda para quem lê.
+    title: "Não fica à espera de resposta",
     stat: PRAZO_DE_RESPOSTA.curto,
-    statLabel: "tempo médio de resposta",
+    statLabel: "para receber propostas",
     description:
-      "A maioria dos pedidos em Lisboa e Margem Sul recebe confirmação de data no próprio dia. Cobertura em mais de 24 localidades.",
+      `Descreva o que tem para levar e as propostas chegam em ${PRAZO_DE_RESPOSTA.porExtenso}. Em Lisboa e Margem Sul, a maioria recebe confirmação de data no próprio dia.`,
     gradient: "from-violet-400 to-violet-500",
     glow: "shadow-violet-500/40",
     iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
@@ -469,11 +504,25 @@ export default function HomePage() {
       <section className="bg-[#F4F8FB] py-8 sm:py-14 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-14">
+            {/*
+              ISTO FALAVA DA PLATAFORMA, NÃO DE QUEM ESTÁ A LER.
+
+              Dizia "Construída para inspirar confiança" e "Cada detalhe foi
+              pensado para eliminar incerteza". As duas frases são a empresa a
+              falar do seu próprio processo: "construída" e "pensado" são
+              palavras de quem faz o produto, não de quem precisa de esvaziar
+              a casa da mãe.
+
+              A secção passa a responder às três perguntas que as pessoas
+              fazem mesmo, por esta ordem: quem me entra em casa, quanto vou
+              pagar no fim, e quando é que sei alguma coisa.
+            */}
             <h2 className="text-2xl font-bold text-tinta sm:text-4xl lg:text-5xl">
-              Construída para inspirar confiança
+              Antes de deixar entrar alguém em casa
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
-              Cada detalhe foi pensado para eliminar incerteza — no preço, no profissional e no resultado.
+              Três perguntas que toda a gente faz. As respostas estão aqui, antes de
+              pedir seja o que for.
             </p>
           </div>
 
