@@ -98,6 +98,25 @@ export default function Header() {
   const pathname = usePathname();
   const isContaActive = pathname?.startsWith("/conta") ?? false;
 
+  /*
+   * O painel do profissional é território de outra identidade.
+   *
+   * Estas duas sessões vivem em cookies separados de propósito — a do cliente
+   * no next-auth, a do profissional no clyon_profissional — e é legítimo ter
+   * as duas: quem contrata na CLYON pode também trabalhar para ela. O que não
+   * é legítimo é o que estava a acontecer no ecrã.
+   *
+   * Dentro do painel do profissional, este cabeçalho mostrava o avatar, o nome
+   * e o email da CONTA DE CLIENTE, com um "Sair" próprio, ao lado do "Sair" do
+   * profissional na barra da esquerda. Duas identidades e dois botões de sair
+   * no mesmo ecrã: quem quisesse sair do painel carregava no de cima e saía da
+   * outra conta, ficando com o painel aberto e a pensar que tinha fechado.
+   *
+   * Aqui não se esconde a sessão — ela continua a existir e a valer. Esconde-se
+   * o menu que a faz parecer a identidade activa nesta página.
+   */
+  const naAreaDoProfissional = pathname?.startsWith("/profissionais") ?? false;
+
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá! Gostava de pedir um orçamento à CLYON.")}`;
 
@@ -199,7 +218,7 @@ export default function Header() {
           </a>
 
           {/* Botão conta / entrar */}
-          {session?.user ? (
+          {naAreaDoProfissional ? null : session?.user ? (
             <div className="relative" ref={contaRef}>
               <button
                 type="button"
@@ -261,7 +280,7 @@ export default function Header() {
             inferior estilo app — sem menu hambúrguer para evitar dois menus. */}
         <div className="flex items-center gap-2 lg:hidden">
           <HeaderLocationSelector />
-          {session?.user ? (
+          {naAreaDoProfissional ? null : session?.user ? (
             <Link
               href="/conta"
               aria-label="A minha conta"
