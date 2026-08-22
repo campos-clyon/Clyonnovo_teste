@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
+import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 
 const SERVICE_OPTIONS = [
   { value: "recolha_moveis",           label: "Recolha de móveis" },
@@ -37,25 +38,61 @@ const ANDAR_OPTIONS = [
 ];
 
 
+/*
+ * OS 16 PÍXEIS NÃO SÃO UMA PREFERÊNCIA DE ESTILO
+ *
+ * Os campos estavam a `text-sm` = 14 px. O Safari do iOS dá zoom automático a
+ * qualquer input com fonte abaixo de 16 px, e NÃO desfaz o zoom ao sair do
+ * campo. O cliente escrevia o nome, a página ficava ampliada e desalinhada, e
+ * tinha de fazer pinch para continuar — a cada um dos nove campos.
+ *
+ * É o atrito mais caro do site inteiro: acontece no primeiro toque do único
+ * elemento que gera receita, e não deixa rasto nenhum nas analytics. Lê-se
+ * como "abandonou o formulário".
+ *
+ * A altura mínima de 48 px vem da mesma família de razões: o mínimo para um
+ * alvo de toque é 44 px, e estes campos estavam a rondar os 40.
+ */
 function inputCls(error?: string) {
-  return `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/25 ${error ? "border-red-400" : "border-slate-200"}`;
+  return `w-full rounded-lg border bg-white px-3.5 py-3 text-base text-slate-800 placeholder-tinta-fraca outline-none transition min-h-[48px] focus:border-acao focus:ring-1 focus:ring-acao/25 ${error ? "border-erro" : "border-slate-200"}`;
 }
 
 function selectCls(error?: string) {
-  return `clyon-select w-full rounded-lg border bg-white pl-3 py-2.5 text-sm text-slate-800 outline-none transition ${error ? "border-red-400" : "border-slate-200"}`;
+  return `clyon-select w-full rounded-lg border bg-white pl-3.5 py-3 text-base text-slate-800 outline-none transition min-h-[48px] ${error ? "border-erro" : "border-slate-200"}`;
 }
 
-function Label({ children }: { children: React.ReactNode }) {
+/**
+ * O rótulo de um campo.
+ *
+ * `htmlFor` deixou de ser opcional. Sem ele — e sem `id` no input — o rótulo
+ * não é clicável (o alvo de toque perde-se) e um leitor de ecrã anuncia
+ * "caixa de texto" sem dizer de quê. Havia nove campos assim.
+ *
+ * E deixa de ser 10 px em maiúsculas com `tracking-widest`, que é o formato
+ * mais lento de ler que existe, precisamente onde é preciso ler depressa.
+ */
+function Label({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
-    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-semibold text-tinta-fraca">
       {children}
     </label>
   );
 }
 
-function Err({ msg }: { msg?: string }) {
+/**
+ * A mensagem de erro.
+ *
+ * `role="alert"` porque um erro que aparece em ecrã e não é anunciado não
+ * existe para quem não está a olhar para aquele ponto da página. O `id` liga-o
+ * ao campo por `aria-describedby`.
+ */
+function Err({ id, msg }: { id: string; msg?: string }) {
   if (!msg) return null;
-  return <p className="mt-0.5 text-[10px] text-erro">{msg}</p>;
+  return (
+    <p id={id} role="alert" className="mt-1 text-[13px] font-medium text-erro">
+      {msg}
+    </p>
+  );
 }
 
 type FormData = {
@@ -88,6 +125,18 @@ type EstimateResult = {
 const CARD_MIN_HEIGHT = 420;
 
 export default function HeroQuoteForm() {
+  /*
+   * Um prefixo único por instância, para os ids dos campos.
+   *
+   * `useId()` e não uma string fixa: este formulário aparece na homepage e em
+   * várias páginas de serviço, e pode haver mais do que um na mesma página. Com
+   * ids fixos, dois formulários no mesmo documento partilhavam `id="telefone"`
+   * — e clicar num rótulo focava o campo do outro.
+   */
+  const uid = useId();
+  const idDe = (campo: string) => `${uid}-${campo}`;
+  const idDoErro = (campo: string) => `${uid}-${campo}-erro`;
+
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<FormData>({
     primeiroNome: "",
@@ -336,6 +385,28 @@ export default function HeroQuoteForm() {
       className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50"
       style={{ minHeight: CARD_MIN_HEIGHT }}
     >
+      {/*
+        O QUE ESTE CARTÃO É.
+
+        Abria com uma barra de progresso e a linha "Passo 1/2 · Contacto" a
+        10 px. Sem título, sem promessa, sem cabeçalho semântico — e o primeiro
+        campo a pedir o nome próprio. Quem chega do Google via um cartão a
+        pedir dados sem lhe explicar em troca de quê.
+
+        É o elemento que converte, e era o único da dobra sem hierarquia
+        tipográfica própria: o H1 a 51 px e as pílulas coloridas ganhavam-lhe a
+        atenção, e ele lia-se como um bloco cinzento de campos.
+
+        O prazo vem da constante e não escrito à mão — é a mesma promessa que o
+        hero faz duas linhas acima, e duas cópias divergem sempre.
+      */}
+      <div className="border-b border-slate-100 px-5 pb-3 pt-5">
+        <h2 className="text-[22px] font-bold leading-tight text-tinta">Receba o seu preço</h2>
+        <p className="mt-1 text-sm text-tinta-fraca">
+          Dois passos, dois minutos. {PRAZO_DE_RESPOSTA.frase}, sem compromisso.
+        </p>
+      </div>
+
       {/* progress bar */}
       <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
         <div className="flex flex-1 items-center gap-1.5">
@@ -355,50 +426,50 @@ export default function HeroQuoteForm() {
               {/* Nome */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label>Primeiro nome</Label>
-                  <input className={inputCls(errors.primeiroNome)} placeholder="Ana"
+                  <Label htmlFor={idDe("primeiroNome")}>Primeiro nome</Label>
+                  <input id={idDe("primeiroNome")} className={inputCls(errors.primeiroNome)} aria-invalid={errors.primeiroNome ? true : undefined} aria-describedby={errors.primeiroNome ? idDoErro("primeiroNome") : undefined} placeholder="Ana"
                     value={form.primeiroNome} onChange={(e) => set("primeiroNome", e.target.value)}
                     autoComplete="given-name" />
-                  <Err msg={errors.primeiroNome} />
+                  <Err id={idDoErro("primeiroNome")} msg={errors.primeiroNome} />
                 </div>
                 <div>
-                  <Label>Último nome</Label>
-                  <input className={inputCls(errors.ultimoNome)} placeholder="Silva"
+                  <Label htmlFor={idDe("ultimoNome")}>Último nome</Label>
+                  <input id={idDe("ultimoNome")} className={inputCls(errors.ultimoNome)} aria-invalid={errors.ultimoNome ? true : undefined} aria-describedby={errors.ultimoNome ? idDoErro("ultimoNome") : undefined} placeholder="Silva"
                     value={form.ultimoNome} onChange={(e) => set("ultimoNome", e.target.value)}
                     autoComplete="family-name" />
-                  <Err msg={errors.ultimoNome} />
+                  <Err id={idDoErro("ultimoNome")} msg={errors.ultimoNome} />
                 </div>
               </div>
 
               {/* Telefone */}
               <div className="grid grid-cols-[72px_1fr] gap-2">
                 <div>
-                  <Label>Ind.</Label>
-                  <input className={inputCls(errors.indicativo)} placeholder="+351"
+                  <Label htmlFor={idDe("indicativo")}>Ind.</Label>
+                  <input id={idDe("indicativo")} className={inputCls(errors.indicativo)} aria-invalid={errors.indicativo ? true : undefined} aria-describedby={errors.indicativo ? idDoErro("indicativo") : undefined} inputMode="tel" placeholder="+351"
                     value={form.indicativo} onChange={(e) => set("indicativo", e.target.value)}
                     autoComplete="tel-country-code" maxLength={6} />
-                  <Err msg={errors.indicativo} />
+                  <Err id={idDoErro("indicativo")} msg={errors.indicativo} />
                 </div>
                 <div>
-                  <Label>Telemóvel</Label>
-                  <input className={inputCls(errors.telefone)} placeholder="912 345 678"
+                  <Label htmlFor={idDe("telefone")}>Telemóvel</Label>
+                  <input id={idDe("telefone")} className={inputCls(errors.telefone)} aria-invalid={errors.telefone ? true : undefined} aria-describedby={errors.telefone ? idDoErro("telefone") : undefined} inputMode="tel" placeholder="912 345 678"
                     value={form.telefone} onChange={(e) => set("telefone", e.target.value)}
                     type="tel" autoComplete="tel-national" maxLength={20} />
-                  <Err msg={errors.telefone} />
+                  <Err id={idDoErro("telefone")} msg={errors.telefone} />
                 </div>
               </div>
 
               {/* Serviço */}
               <div>
-                <Label>Tipo de serviço</Label>
-                <select className={selectCls(errors.tipoServico)}
+                <Label htmlFor={idDe("tipoServico")}>Tipo de serviço</Label>
+                <select id={idDe("tipoServico")} className={selectCls(errors.tipoServico)} aria-invalid={errors.tipoServico ? true : undefined} aria-describedby={errors.tipoServico ? idDoErro("tipoServico") : undefined}
                   value={form.tipoServico} onChange={(e) => set("tipoServico", e.target.value)}>
                   <option value="">Escolha o serviço…</option>
                   {SERVICE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
-                <Err msg={errors.tipoServico} />
+                <Err id={idDoErro("tipoServico")} msg={errors.tipoServico} />
               </div>
             </div>
 
@@ -408,9 +479,9 @@ export default function HeroQuoteForm() {
                 className="w-full rounded-xl bg-acao py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-acao-hover">
                 Próximo
               </button>
-              <p className="text-center text-[10px] text-slate-500">
-                Sem compromisso · Gratuito · Resposta &lt;24&nbsp;h
-              </p>
+              {/* A linha "Sem compromisso · Gratuito · Resposta <24 h" saiu
+                  daqui e do passo 2: passou a estar dita uma vez, no cabeçalho
+                  do cartão, que é onde a decisão de começar é tomada. */}
             </div>
           </div>
         </form>
@@ -423,71 +494,74 @@ export default function HeroQuoteForm() {
             <div className="space-y-3">
               {/* Rua */}
               <div>
-                <Label>Rua / Avenida</Label>
-                <input className={inputCls(errors.rua)} placeholder="Rua das Flores"
+                <Label htmlFor={idDe("rua")}>Rua / Avenida</Label>
+                <input id={idDe("rua")} className={inputCls(errors.rua)} aria-invalid={errors.rua ? true : undefined} aria-describedby={errors.rua ? idDoErro("rua") : undefined} placeholder="Rua das Flores"
                   value={form.rua} onChange={(e) => set("rua", e.target.value)}
                   autoComplete="street-address" />
-                <Err msg={errors.rua} />
+                <Err id={idDoErro("rua")} msg={errors.rua} />
               </div>
 
               {/* CP + porta */}
               <div className="grid grid-cols-[1fr_76px] gap-2">
                 <div>
-                  <Label>Código postal</Label>
-                  <input className={inputCls(errors.codigoPostal)} placeholder="2840-123"
+                  <Label htmlFor={idDe("codigoPostal")}>Código postal</Label>
+                  <input id={idDe("codigoPostal")} className={inputCls(errors.codigoPostal)} aria-invalid={errors.codigoPostal ? true : undefined} aria-describedby={errors.codigoPostal ? idDoErro("codigoPostal") : undefined} inputMode="numeric" placeholder="2840-123"
                     value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)}
                     autoComplete="postal-code" maxLength={12} />
-                  <Err msg={errors.codigoPostal} />
+                  <Err id={idDoErro("codigoPostal")} msg={errors.codigoPostal} />
                 </div>
                 <div>
-                  <Label>Nº porta</Label>
-                  <input className={inputCls()} placeholder="12"
+                  <Label htmlFor={idDe("numeroPosta")}>Nº porta</Label>
+                  <input id={idDe("numeroPosta")} className={inputCls()} placeholder="12"
                     value={form.numeroPosta} onChange={(e) => set("numeroPosta", e.target.value)}
-                    maxLength={10} />
+                    inputMode="numeric" maxLength={10} />
                 </div>
               </div>
 
               {/* Andar + elevador */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label>Andar</Label>
-                  <select className={selectCls(errors.andar)} value={form.andar}
+                  <Label htmlFor={idDe("andar")}>Andar</Label>
+                  <select id={idDe("andar")} className={selectCls(errors.andar)} aria-invalid={errors.andar ? true : undefined} aria-describedby={errors.andar ? idDoErro("andar") : undefined} value={form.andar}
                     onChange={(e) => set("andar", e.target.value)}>
                     {ANDAR_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
-                  <Err msg={errors.andar} />
+                  <Err id={idDoErro("andar")} msg={errors.andar} />
                 </div>
                 <div>
-                  <Label>Elevador</Label>
-                  <select className={selectCls(errors.elevador)} value={form.elevador}
+                  <Label htmlFor={idDe("elevador")}>Elevador</Label>
+                  <select id={idDe("elevador")} className={selectCls(errors.elevador)} aria-invalid={errors.elevador ? true : undefined} aria-describedby={errors.elevador ? idDoErro("elevador") : undefined} value={form.elevador}
                     onChange={(e) => set("elevador", e.target.value as FormData["elevador"])}>
                     {ELEVATOR_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
-                  <Err msg={errors.elevador} />
+                  <Err id={idDoErro("elevador")} msg={errors.elevador} />
                 </div>
               </div>
 
               {/* Descrição + upload */}
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <Label>Descrição <span className="normal-case text-slate-500">(opcional)</span></Label>
+                  <Label htmlFor={idDe("descricao")}>Descrição <span className="font-normal text-tinta-fraca">(opcional)</span></Label>
                   <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-500" : "text-tinta-fraca"}`}>
                     {form.descricao.length}/300
                   </span>
                 </div>
 
-                <div className={`relative rounded-lg border bg-white transition focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500/25 ${errors.descricao ? "border-red-400" : "border-slate-200"}`}>
+                <div className={`relative rounded-lg border bg-white transition focus-within:border-acao focus-within:ring-1 focus-within:ring-acao/25 ${errors.descricao ? "border-erro" : "border-slate-200"}`}>
                   <textarea
+                    id={idDe("descricao")}
                     value={form.descricao}
                     onChange={(e) => set("descricao", e.target.value)}
+                    aria-invalid={errors.descricao ? true : undefined}
+                    aria-describedby={errors.descricao ? idDoErro("descricao") : undefined}
                     maxLength={310}
                     rows={3}
                     placeholder="Ex: 1 sofá de 3 lugares, 1 colchão de casal…"
-                    className="w-full resize-none rounded-lg bg-transparent px-3 pb-8 pt-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none"
+                    className="w-full resize-none rounded-lg bg-transparent px-3.5 pb-8 pt-3 text-base text-slate-800 placeholder-tinta-fraca outline-none"
                   />
                   <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between rounded-b-lg border-t border-slate-100 bg-slate-50 px-3 py-1.5">
                     {images.length > 0 ? (
@@ -519,7 +593,7 @@ export default function HeroQuoteForm() {
                     </div>
                   </div>
                 </div>
-                <Err msg={errors.descricao} />
+                <Err id={idDoErro("descricao")} msg={errors.descricao} />
               </div>
             </div>
 
@@ -559,9 +633,9 @@ export default function HeroQuoteForm() {
                   )}
                 </button>
               </div>
-              <p className="text-center text-[10px] text-slate-500">
-                Sem compromisso · Gratuito · Resposta &lt;24&nbsp;h
-              </p>
+              {/* A linha "Sem compromisso · Gratuito · Resposta <24 h" saiu
+                  daqui e do passo 2: passou a estar dita uma vez, no cabeçalho
+                  do cartão, que é onde a decisão de começar é tomada. */}
             </div>
           </div>
         </form>

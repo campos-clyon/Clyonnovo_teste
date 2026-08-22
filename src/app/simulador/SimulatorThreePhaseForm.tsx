@@ -818,6 +818,21 @@ function Phase1Service({
 
   return (
     <div className="space-y-3 sm:space-y-4">
+      {/*
+        O <h1> da página.
+
+        O /simulador não tinha nenhum — o único <h1> do ficheiro está no ecrã
+        de SUCESSO ("Pedido enviado"), que só existe depois de o pedido seguir.
+        Ou seja: enquanto a página faz o trabalho dela, não tem título de nível
+        1, e a estrutura de cabeçalhos começa num <h2>.
+
+        Fica invisível (`sr-only`) de propósito: o desenho desta página é uma
+        sequência de passos e um título grande por cima roubava-lhe espaço no
+        telemóvel. Quem navega por cabeçalhos passa a ter por onde entrar, e o
+        <h2> abaixo deixa de estar pendurado em nada.
+      */}
+      <h1 className="sr-only">Simulador de preços CLYON</h1>
+
       {/* Header */}
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-slate-900">
@@ -995,8 +1010,8 @@ function AccessFields({
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Andar *</label>
-          <select
+          <label htmlFor="sim-andar-rapido" className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Andar *</label>
+          <select id="sim-andar-rapido"
             value={floor || ""}
             onChange={(e) => {
               onChange("floor", e.target.value);
@@ -1015,8 +1030,8 @@ function AccessFields({
 
         {floor && floor !== "rés-do-chão" && (
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Elevador *</label>
-            <select
+            <label htmlFor="sim-elevador-rapido" className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Elevador *</label>
+            <select id="sim-elevador-rapido"
               value={hasElevator || ""}
               onChange={(e) => onChange("hasElevator", e.target.value)}
               className={selectCls}
@@ -1032,8 +1047,8 @@ function AccessFields({
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Estacionamento *</label>
-        <select
+        <label htmlFor="sim-estacionamento-rapido" className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Estacionamento *</label>
+        <select id="sim-estacionamento-rapido"
           value={parkingDistance || ""}
           onChange={(e) => onChange("parkingDistance", e.target.value)}
           className={selectCls}
@@ -1396,8 +1411,8 @@ function Phase2Location({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-900">Andar *</label>
-          <select
+          <label htmlFor="sim-andar" className="block text-sm font-medium text-gray-900">Andar *</label>
+          <select id="sim-andar"
             value={formData.floor || ""}
             onChange={(e) => {
               const newFloor = e.target.value;
@@ -1419,8 +1434,8 @@ function Phase2Location({
 
         {formData.floor !== "rés-do-chão" && formData.floor && (
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-900">Elevador *</label>
-            <select
+            <label htmlFor="sim-elevador" className="block text-sm font-medium text-gray-900">Elevador *</label>
+            <select id="sim-elevador"
               value={formData.hasElevator || ""}
               onChange={(e) => updateField("hasElevator", e.target.value)}
               className={`${calcSelectCls} ${missingElevator ? errorBorderCls : ""}`}
@@ -1437,8 +1452,8 @@ function Phase2Location({
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-900">Estacionamento *</label>
-        <select
+        <label htmlFor="sim-estacionamento" className="block text-sm font-medium text-gray-900">Estacionamento *</label>
+        <select id="sim-estacionamento"
           value={formData.parkingDistance || ""}
           onChange={(e) => updateField("parkingDistance", e.target.value)}
           className={`${calcSelectCls} ${missingParking ? errorBorderCls : ""}`}
@@ -1596,8 +1611,8 @@ function Phase3Contact({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-900">Nome completo *</label>
-          <input
+          <label htmlFor="sim-nome" className="block text-sm font-medium text-gray-900">Nome completo *</label>
+          <input id="sim-nome"
             type="text"
             value={formData.receiver?.name || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, name: e.target.value })}
@@ -1607,8 +1622,8 @@ function Phase3Contact({
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-900">Telefone *</label>
-          <input
+          <label htmlFor="sim-telefone" className="block text-sm font-medium text-gray-900">Telefone *</label>
+          <input id="sim-telefone"
             type="tel"
             value={formData.receiver?.phone || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
@@ -1619,12 +1634,12 @@ function Phase3Contact({
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-900">Email *</label>
+        <label htmlFor="sim-email" className="block text-sm font-medium text-gray-900">Email *</label>
         <p className="text-xs text-gray-600">
           É por aqui que recebe as propostas. Sem email não temos como lhe
           mostrar o que os profissionais respondem.
         </p>
-        <input
+        <input id="sim-email"
           type="email"
           inputMode="email"
           autoComplete="email"
@@ -1644,8 +1659,8 @@ function Phase3Contact({
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-900">Quando precisa do serviço? *</label>
-        <select
+        <label htmlFor="sim-urgencia" className="block text-sm font-medium text-gray-900">Quando precisa do serviço? *</label>
+        <select id="sim-urgencia"
           value={formData.urgency || ""}
           onChange={(e) => updateField("urgency", e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
@@ -1660,10 +1675,10 @@ function Phase3Contact({
 
       {(formData.serviceType === "jardinagem" || formData.serviceType === "manutencao_casa") && (
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-900">
+          <label htmlFor="sim-recorrencia" className="block text-sm font-medium text-gray-900">
             Frequência do serviço <span className="text-gray-500 font-normal">(opcional — poupe com marcação recorrente)</span>
           </label>
-          <select
+          <select id="sim-recorrencia"
             value={formData.recurrenceFrequency || ""}
             onChange={(e) => updateField("recurrenceFrequency", e.target.value || null)}
             className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
