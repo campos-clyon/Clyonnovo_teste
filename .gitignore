@@ -112,3 +112,4 @@ Apps exemplos/
 # Gerado por npm run contrato:sql — regenerável, não versionado
 contrato-verificacao.sql
 .tmp-q/
+.tmp-*
