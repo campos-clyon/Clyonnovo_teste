@@ -440,3 +440,28 @@ export function getRelatedCities(citySlug: string, limit = 4) {
 
   return merged.slice(0, limit);
 }
+
+/**
+ * As avaliações reais, e onde se confirmam.
+ *
+ * Estavam espalhadas pelas páginas como números escritos à mão — "163", "Mais
+ * de 160" — e nenhum correspondia a nada que se pudesse contar. O schema
+ * declarava 163 sobre trinta visíveis, que é o caminho mais curto para o
+ * Google retirar as estrelas ao domínio inteiro.
+ *
+ * Estes vêm dos perfis, conferidos a 22-08-2026. São menos redondos e têm uma
+ * vantagem que o outro não tinha: qualquer pessoa os pode abrir e confirmar.
+ * Quando subirem, actualizam-se aqui e mudam em todo o lado.
+ */
+export const AVALIACOES = {
+  google: 37,
+  fixando: 118,
+  /** Contratações registadas na Fixando. */
+  contratacoes: 158,
+  media: "5,0",
+  googleUrl: "https://www.google.com/search?q=CLYON+recolha+de+m%C3%B3veis",
+  fixandoUrl: "https://www.fixando.pt/",
+} as const;
+
+/** O total verificável, somado e não arredondado. */
+export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;

@@ -5,36 +5,56 @@ import { Star, Quote, MessageCircle } from "lucide-react";
 import HeroBackground from "@/components/HeroBackground";
 import { reviews } from "@/lib/reviews-data";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Avaliações e Testemunhos de Clientes — CLYON Lisboa e Setúbal",
   description:
-    "Mais de 160 avaliações verificadas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.",
+    "37 avaliações no Google e 118 na Fixando, todas a 5 estrelas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.",
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
   openGraph: {
     title: "Avaliações Reais de Clientes — CLYON",
     description:
-      "5.0 ★ · Mais de 160 avaliações verificadas. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.",
+      "5,0 ★ em 155 avaliações verificadas no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.",
     url: "https://clyon.pt/avaliacoes",
   },
 };
 
 export const revalidate = 86400;
 
+/*
+ * A nota agregada conta o que está NESTA página, e nada mais.
+ *
+ * Dizia 163 sobre dez avaliações no schema e trinta no ecrã. As directrizes do
+ * Google são explícitas: a nota agregada tem de reflectir avaliações visíveis
+ * na própria página. Um número que ninguém consegue contar é o que faz perder
+ * as estrelas em todo o domínio — e a CLYON tem avaliações reais que chegam
+ * bem para as merecer.
+ *
+ * As de fora — Google e Fixando — continuam a valer e a somar muito mais.
+ * Mas o sítio delas é uma ligação que o cliente pode abrir e confirmar, não
+ * uma linha de schema que só o Google lê e que ninguém consegue verificar.
+ *
+ * O "@id" é o mesmo do schema global em layout.tsx de propósito: sem ele o
+ * Google via duas empresas chamadas CLYON, com a mesma morada e notas
+ * diferentes, na mesma página.
+ */
 const aggregateRatingSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
+  "@id": `${SITE_URL}/#localbusiness`,
   name: "CLYON",
+  url: SITE_URL,
   aggregateRating: {
     "@type": "AggregateRating",
     ratingValue: "5.0",
-    reviewCount: "163",
+    reviewCount: String(reviews.length),
     bestRating: "5",
     worstRating: "1",
   },
-  review: reviews.slice(0, 10).map((r) => ({
+  review: reviews.map((r) => ({
     "@type": "Review",
     author: { "@type": "Person", name: r.name },
     datePublished: r.date,
@@ -49,7 +69,11 @@ const aggregateRatingSchema = {
 
 const STATS = [
   { value: "5.0", label: "Classificação média", sub: "Google Business" },
-  { value: "163", label: "Avaliações verificadas", sub: "combinadas" },
+  {
+    value: String(AVALIACOES_TOTAL),
+    label: "Avaliações verificadas",
+    sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
+  },
   { value: "188+", label: "Trabalhos realizados", sub: "e a contar" },
   { value: "100%", label: "Recomendariam", sub: "com base nas respostas" },
 ];
@@ -104,7 +128,7 @@ export default function AvaliacoesPage() {
               <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
                 <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
                   <span className="text-amber-500">★★★★★</span>
-                  <span>5,0 · 163 avaliações</span>
+                  <span>{AVALIACOES.media} · {AVALIACOES_TOTAL} avaliações</span>
                 </span>
                 <span className="text-slate-300">·</span>
                 <span className="text-xs text-slate-500 sm:text-sm">100% recomendariam</span>
@@ -124,7 +148,10 @@ export default function AvaliacoesPage() {
                         <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400 sm:h-6 sm:w-6" />
                       ))}
                     </div>
-                    <p className="mt-2 text-xs text-slate-500 sm:text-sm">163 avaliações combinadas</p>
+                    <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+                      {AVALIACOES_TOTAL} avaliações verificadas · {AVALIACOES.google} no Google e{" "}
+                      {AVALIACOES.fixando} na Fixando
+                    </p>
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">

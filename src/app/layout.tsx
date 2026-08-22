@@ -148,13 +148,22 @@ const localBusinessSchema = {
     { "@type": "City", name: "Monte Abraão" },
     { "@type": "City", name: "Queluz" },
   ],
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "5.0",
-    reviewCount: "32",
-    bestRating: "5",
-    worstRating: "1",
-  },
+  /*
+   * NÃO há aggregateRating aqui, e é deliberado.
+   *
+   * Estava, e este schema vai no <head> de TODAS as páginas do site — incluindo
+   * /contactos, o blog e os formulários, onde não existe uma única avaliação
+   * visível. Declarar uma nota agregada numa página sem avaliações é
+   * exactamente o padrão que o Google classifica como "self-serving review
+   * snippets", e a sanção é manual: perdem-se as estrelas em todo o domínio,
+   * não só na página que as pediu a mais.
+   *
+   * Pior ainda, o número aqui dizia 32 e o da página /avaliacoes dizia 163 —
+   * ou seja, quem abrisse /avaliacoes recebia os dois no mesmo HTML, em duas
+   * entidades LocalBusiness diferentes com a mesma morada.
+   *
+   * A nota vive onde as avaliações vivem: em /avaliacoes, e só lá.
+   */
   priceRange: "120EUR - 500EUR",
   openingHoursSpecification: [
     {
