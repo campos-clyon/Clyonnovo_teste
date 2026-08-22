@@ -381,9 +381,21 @@ function Resumo({
     .join(", ");
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Pedido #{r.id} criado
+    <div className="mt-4 rounded-xl border border-emerald-800/70 bg-emerald-950/25 p-4">
+      {/*
+        Verde, e a dizer que ficou gravado.
+        
+        Este cabeçalho era cinzento e dizia só "Pedido #206 criado" — a mesma
+        cor do resto do painel, sem nada que separasse "correu bem" de "está
+        aqui uma informação". Depois de carregar num botão, a primeira coisa a
+        saber é se resultou; o preço e o alcance vêm a seguir.
+      */}
+      <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
+        <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+        Pedido #{r.id} criado e gravado
+      </p>
+      <p className="mt-0.5 text-xs text-emerald-400/70">
+        Já aparece na lista aqui em baixo. Ainda não foi enviado a ninguém.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -427,7 +439,7 @@ function Resumo({
         <p className="mt-2 text-[11px] text-slate-500">{r.moradaNormalizada}</p>
       )}
 
-      <div className="mt-4 border-t border-slate-800 pt-3">
+      <div className="mt-4 border-t border-emerald-900/50 pt-3">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
           <Users className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
           {alcance == null

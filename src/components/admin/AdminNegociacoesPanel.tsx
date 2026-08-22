@@ -116,9 +116,24 @@ export default function AdminNegociacoesPanel() {
   const [porPromover, setPorPromover] = useState<PorPromover[]>([]);
   const [valorDe, setValorDe] = useState<Record<number, string>>({});
 
-  const carregar = useCallback(async () => {
+  /*
+   * `silencioso` existe por uma razão concreta.
+   *
+   * Este painel devolve um spinner enquanto `aCarregar` for verdadeiro — e um
+   * spinner no lugar do painel DESMONTA tudo o que está dentro dele, incluindo
+   * o formulário de registar pedido e o resumo que ele acabou de mostrar.
+   *
+   * Resultado: criava-se um pedido, o resumo com o preço e o alcance aparecia
+   * durante um instante, e desaparecia junto com o formulário. Quem carregou
+   * no botão ficava a olhar para a lista sem saber se tinha corrido bem.
+   *
+   * Uma actualização que acontece POR CAUSA de uma acção do utilizador não
+   * pode apagar o ecrã onde ele está. A lista renova-se por baixo; o que ele
+   * está a ler fica.
+   */
+  const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
-    setACarregar(true);
+    if (!silencioso) setACarregar(true);
     try {
       const res = await fetch("/api/admin/negociacoes", {
         headers: { Authorization: `Bearer ${token}` },
@@ -144,7 +159,7 @@ export default function AdminNegociacoesPanel() {
     } catch {
       setErro("Erro de rede.");
     } finally {
-      setACarregar(false);
+      if (!silencioso) setACarregar(false);
     }
   }, [token]);
 
@@ -271,7 +286,7 @@ export default function AdminNegociacoesPanel() {
           {pedidos.length} pedidos com valores.
         </p>
         <button
-          onClick={carregar}
+          onClick={() => carregar()}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -285,7 +300,7 @@ export default function AdminNegociacoesPanel() {
         </p>
       )}
 
-      <RegistarPedido onCriado={carregar} />
+      <RegistarPedido onCriado={() => carregar(true)} />
 
       {/* ── Do simulador, ainda fora da plataforma ─────────────────────────
           Estes entraram pelo formulário de orçamento do site: têm estimativa,
