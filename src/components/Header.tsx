@@ -13,73 +13,57 @@ import {
   Sparkles,
   TreePine,
   Truck,
-  Refrigerator,
-  Zap,
+  Wrench,
   ArrowRight,
   Clock,
   User,
   LogOut,
   ClipboardList,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import UserAvatar from "@/components/UserAvatar";
 
 import { trackWhatsAppClick } from "@/lib/analytics";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { trackContactEvent } from "@/lib/track-contact";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import HeaderLocationSelector from "@/components/HeaderLocationSelector";
 
-const solucoes = [
-  {
-    label: "Recolha de Móveis",
-    description: "Sofás, camas, armários, colchões e recheios.",
-    href: "/recolha-de-moveis",
-    icon: Sofa,
-  },
-  {
-    label: "Recolha de Entulho",
-    description: "Sacos de obra, restos de remodelação e resíduos de construção.",
-    href: "/recolha-de-entulho",
-    icon: HardHat,
-  },
-  {
-    label: "Recolha de Monos",
-    description: "Volumes grandes, objetos antigos e materiais acumulados.",
-    href: "/recolha-de-monos",
-    icon: Package,
-  },
-  {
-    label: "Esvaziamento de Casas",
-    description: "Retirada completa de móveis, recheios e objetos.",
-    href: "/esvaziamento-de-casas",
-    icon: Home,
-  },
-  {
-    label: "Limpeza de Quintais",
-    description: "Lixo verde, resíduos exteriores e limpeza de espaços.",
-    href: "/limpeza-de-quintais",
-    icon: TreePine,
-  },
-  {
-    label: "Mudanças",
-    description: "Transporte, carga e descarga com equipa.",
-    href: "/mudancas",
-    icon: Truck,
-  },
-  {
-    label: "Recolha de Eletrodomésticos",
-    description: "Máquinas, frigoríficos e equipamentos grandes.",
-    href: "/recolha-de-eletrodomesticos",
-    icon: Refrigerator,
-  },
-  {
-    label: "Serviço Urgente",
-    description: "Pedidos rápidos em Lisboa, Margem Sul e Setúbal.",
-    href: "/recolha-de-moveis-urgente",
-    icon: Zap,
-  },
-];
+/**
+ * As soluções do mega-menu, derivadas do array partilhado.
+ *
+ * Tinha lista própria, com oito entradas — duas das quais a homepage não
+ * mostrava: "Recolha de Eletrodomésticos" e "Serviço Urgente". É a mesma
+ * classe de problema que o rodapé duplicado tinha: duas listas da mesma coisa,
+ * escritas à mão, a divergir devagar até alguém reparar.
+ *
+ * O ícone é a única coisa que fica aqui, mapeado por id: é decoração deste
+ * menu e não pertence ao array de negócio. Uma categoria nova sem ícone entra
+ * na mesma, com o de omissão — melhor entrar sem ícone do que não entrar.
+ *
+ * O "outro serviço" fica de fora: é o cartão de "não encontrei o que preciso",
+ * e num menu de descoberta não descobre nada.
+ */
+const ICONES: Record<string, LucideIcon> = {
+  recolha_moveis: Sofa,
+  recolha_entulho: HardHat,
+  recolha_monos: Package,
+  esvaziamento_casa: Home,
+  esvaziamento_apartamento: Home,
+  mudanca: Truck,
+  montagem_moveis: Wrench,
+  jardinagem: TreePine,
+  manutencao_casa: Wrench,
+};
+
+const solucoes = SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((c) => ({
+  label: c.label,
+  description: c.description,
+  href: c.href,
+  icon: ICONES[c.id] ?? Package,
+}));
 
 const navLinks = [
   { label: "Trabalhos", href: "/trabalhos" },

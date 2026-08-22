@@ -9,7 +9,16 @@
  * nosso, e estas linhas aparecem tanto na homepage como nas páginas de serviço.
  *
  * Fonte única partilhada pelo formulário de pedido e pelas páginas públicas —
- * evita arrays duplicados a divergir entre si.
+ * evita arrays duplicados a divergir entre si. O mega-menu do cabeçalho passou
+ * a derivar daqui pela mesma razão: tinha lista própria, com dois serviços que
+ * a homepage não mostrava.
+ *
+ * O `href` leva SEMPRE a uma página de serviço. Quatro entradas apontavam a
+ * `/simulador`, e um cartão que mostra um preço faz uma promessa de página
+ * informativa: quem carrega quer ler, e era-lhe pedido que preenchesse. Três
+ * ganharam página em /servicos/[slug]; a de "outro serviço" continua a apontar
+ * ao simulador, e é a excepção certa — é literalmente o cartão de "não
+ * encontrei o que preciso".
  */
 export interface ServiceCategory {
   id: string;
@@ -60,7 +69,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     label: "Esvaziamento de apartamento",
     emoji: "🏢",
     description: "Esvaziamento de apartamentos com apoio completo, mesmo com acesso difícil.",
-    href: "/simulador",
+    href: "/servicos/esvaziamento-apartamento",
   },
   {
     id: "mudanca",
@@ -76,12 +85,24 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     label: "Montagem e desmontagem de móveis",
     emoji: "🔧",
     description: "Montagem e desmontagem de móveis, roupeiros e camas com cuidado.",
-    href: "/simulador",
+    href: "/servicos/montagem-moveis",
   },
   {
     id: "jardinagem",
     slug: "jardinagem",
-    label: "Jardinagem",
+    /*
+     * O rótulo diz agora as duas coisas, e o URL fica.
+     *
+     * Dizia "Jardinagem" e aterrava numa página chamada "Limpeza de Quintais".
+     * Quem carrega em Jardinagem e chega a Quintais duvida de que tenha
+     * clicado no sítio certo — e uma dúvida dessas no primeiro clique custa
+     * mais do que parece.
+     *
+     * O href NÃO muda: /limpeza-de-quintais está indexado, e trocá-lo perdia
+     * o histórico dessa página no Google. Quem se alinha é o rótulo, e o h1
+     * da página de destino.
+     */
+    label: "Jardinagem e limpeza de quintais",
     emoji: "🌿",
     description: "Corte de relva, poda e limpeza de jardins e espaços exteriores.",
     href: "/limpeza-de-quintais",
@@ -92,7 +113,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     label: "Manutenção da casa",
     emoji: "🛠️",
     description: "Pequenas reparações e manutenção geral para manter a casa em ordem.",
-    href: "/simulador",
+    href: "/servicos/manutencao-casa",
   },
   {
     id: "outro",

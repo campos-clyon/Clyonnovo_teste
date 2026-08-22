@@ -132,7 +132,7 @@ export default function LimpezaQuintaisPage() {
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-center">
             <div className="max-w-3xl">
               <h1 className="mt-5 max-w-[18ch] text-4xl font-bold tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
-                Limpeza de Quintais em Lisboa e Setúbal
+                Jardinagem e limpeza de quintais em Lisboa e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 Limpe o seu quintal ou jardim sem preocupações. Os profissionais recolhem lixo verde, 
