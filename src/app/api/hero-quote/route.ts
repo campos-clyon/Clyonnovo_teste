@@ -38,6 +38,29 @@ const HeroQuoteSchema = z.object({
   utmSource:       z.string().max(120).optional(),
   utmMedium:       z.string().max(120).optional(),
   utmCampaign:     z.string().max(120).optional(),
+  /*
+   * As fotos, que até aqui eram deitadas fora.
+   *
+   * O formulário recolhia-as, contava-as no ecrã ("2 imagens selecionadas") e
+   * o pedido saía sem elas — o `images` do componente nunca chegava ao corpo
+   * do POST. O cliente via a confirmação de que tinham sido anexadas e o
+   * orçamento era feito às cegas.
+   *
+   * Vêm como URLs e não como ficheiros: o cliente envia-as primeiro pelo
+   * mesmo caminho do simulador (enviarFicheiro → Blob), que comprime e
+   * contorna o limite de 4,5 MB do corpo de um pedido serverless.
+   */
+  fotos: z
+    .array(
+      z.object({
+        url: z.string().url().max(600),
+        name: z.string().max(200).optional(),
+        size: z.number().optional(),
+        type: z.string().max(80).optional(),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -68,7 +91,7 @@ export async function POST(req: NextRequest) {
   const {
     primeiroNome, ultimoNome, indicativo, telefone,
     rua, codigoPostal, numeroPosta, andar, elevador,
-    tipoServico, descricao, pagePath, utmSource, utmMedium, utmCampaign,
+    tipoServico, descricao, pagePath, utmSource, utmMedium, utmCampaign, fotos,
   } = parsed.data;
 
   const nomeCompleto = `${primeiroNome} ${ultimoNome}`.trim();
@@ -147,7 +170,23 @@ export async function POST(req: NextRequest) {
     const row = {
       serviceType: tipoServico || null,
       description: descricao || null,
-      filesJson: null,
+      // Só entradas COM url. Uma linha sem url não é uma foto: é uma linha que
+      // faz o painel dizer que há fotos quando não há nenhuma.
+      filesJson:
+        fotos && fotos.length > 0
+          ? JSON.stringify(
+              fotos
+                .filter((f) => f.url)
+                .map((f, i) => ({
+                  id: String(i),
+                  url: f.url,
+                  name: f.name ?? `foto-${i + 1}`,
+                  size: f.size ?? 0,
+                  type: f.type ?? "image/jpeg",
+                  mimeType: f.type ?? "image/jpeg",
+                })),
+            )
+          : null,
       address: morada || null,
       city: codigoPostal || null,   // será refinado pelo admin; usamos CP como referência
       postalCode: codigoPostal || null,

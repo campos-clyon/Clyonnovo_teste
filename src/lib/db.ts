@@ -3396,11 +3396,40 @@ export async function updateSimulatorOrder(
   }
 }
 
+/**
+ * Apaga um pedido, e o que estava agarrado a ele.
+ *
+ * Apagava só a linha de simulatorOrders. Nao ha chaves estrangeiras nesta base
+ * — verificado — por isso as negociacoes ficavam orfas: linhas a apontar para
+ * um pedidoId que ja nao existe.
+ *
+ * A consulta do painel do profissional faz JOIN com simulatorOrders, portanto
+ * essas negociacoes desapareciam do ecra dele em silencio. Se ele tinha um
+ * trabalho fechado, o registo do que foi combinado sumia de um lado e ficava a
+ * ocupar espaco do outro, sem forma de lhe chegar.
+ *
+ * Vai tudo junto, e numa transaccao: metade apagado e' pior do que nada
+ * apagado.
+ */
 export async function deleteSimulatorOrder(id: number) {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  await pool.execute("DELETE FROM simulatorOrders WHERE id = ?", [id]);
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    // Primeiro as filhas. Ao contrario, uma falha a meio deixava o pedido
+    // apagado e as negociacoes penduradas — exactamente o estado a evitar.
+    await conn.execute("DELETE FROM negociacoes WHERE pedidoId = ?", [id]);
+    await conn.execute("DELETE FROM simulatorOrders WHERE id = ?", [id]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 // ── Web Push: subscrições do navegador ───────────────────────────────────────

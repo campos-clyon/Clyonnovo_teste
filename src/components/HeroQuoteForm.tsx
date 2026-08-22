@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 
 const SERVICE_OPTIONS = [
   { value: "recolha_moveis",           label: "Recolha de móveis" },
@@ -183,11 +184,48 @@ export default function HeroQuoteForm() {
     startCountdown();
 
     try {
+      /*
+       * As fotos vão com o pedido. Até aqui não iam.
+       *
+       * O `images` era preenchido pelos botões de câmara e galeria, contado no
+       * ecrã ("2 imagens selecionadas"), e nunca chegava ao corpo do POST — que
+       * enviava apenas {...form, pagePath}. O cliente anexava, via a
+       * confirmação, e a foto era deitada fora em silêncio.
+       *
+       * É o pior sítio para perder informação: a foto é o que mais melhora a
+       * precisão de um orçamento por volume, e é a única coisa que o cliente
+       * dá de livre vontade. Sem ela, há um telefonema a pedir o que já tinha
+       * sido enviado — e a promessa de "orçamento sem telefonemas" cai.
+       *
+       * Sobem primeiro, e vai só o URL. Cinco fotos de telemóvel são uns 25 MB
+       * em bruto, e o corpo de um pedido serverless tem 4,5 MB de tecto — por
+       * isso não podiam ir dentro do JSON nem em multipart. `enviarFicheiro` é
+       * o mesmo caminho que o simulador usa: reduz a imagem e escolhe entre a
+       * nossa função e o Blob conforme o tamanho.
+       *
+       * Se uma falhar, o pedido segue à mesma com as que resultaram. Perder o
+       * pedido inteiro por causa de uma foto seria trocar um problema por um
+       * pior.
+       */
+      const fotos: Array<{ url: string; name: string; size: number; type: string }> = [];
+      for (const ficheiro of images) {
+        try {
+          const r = await enviarFicheiro(ficheiro);
+          // O helper já devolve o ficheiro reduzido, com o tamanho real depois
+          // da compressão — usar o original aqui gravava um número que não
+          // corresponde ao que está no armazenamento.
+          if (r.ok) fotos.push(r.ficheiro);
+        } catch {
+          /* esta não subiu — as outras seguem */
+        }
+      }
+
       const res = await fetch("/api/hero-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          fotos,
           pagePath: typeof window !== "undefined" ? window.location.pathname : "/",
         }),
       });
