@@ -296,6 +296,20 @@ type Props = {
   colabId?: number;
   /** Função do colaborador: "assistente" | "admin" | etc. */
   onClose: () => void;
+  /**
+   * Mostrar o botao de excluir aqui dentro.
+   *
+   * Por omissao sim, porque e assim que o painel antigo o usa. O painel de
+   * negociacoes passa `false`: la o apagar vive na lista, com caixas de
+   * seleccao e com a guarda que recusa levar trabalho fechado por confirmar.
+   * Duas portas para a mesma accao, uma com guarda e outra sem, e' ter a
+   * guarda a fingir.
+   *
+   * A condicao aqui era `isAdmin` sozinho, por isso nao passar `onDeleted`
+   * NAO escondia o botao — so fazia o painel nao reagir ao que ja tinha sido
+   * apagado.
+   */
+  permitirApagar?: boolean;
   onDeleted?: (id: number) => void;
   onUpdated?: (order: PedidoOrder) => void;
 };
@@ -317,7 +331,7 @@ function _maskEmail(email: string | null | undefined): string {
   return !dom ? "***@***" : l.charAt(0) + "***@" + dom.charAt(0) + "***";
 }
 
-export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose, onDeleted, onUpdated }: Props) {
+export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose, permitirApagar = true, onDeleted, onUpdated }: Props) {
   const authHeader = { Authorization: `Bearer ${token}` };
 
   const [order, setOrder] = useState<PedidoOrder | null>(null);
@@ -728,10 +742,28 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
         parkingDistance: editParkingDistance || null,
         mensagemCliente: editMensagemCliente || null,
         notasInternas: editNotasInternas || null,
-        status: editStatus,
-        priority: editPriority,
         dataAgendada: editDataAgendada || null,
       };
+
+      /*
+       * O estado só vai se tiver mudado.
+       *
+       * Ia sempre — `status: editStatus` — e `editStatus` é a cópia feita no
+       * instante em que o modal abriu. Duas consequências, as duas más:
+       *
+       *   · se o pedido tiver avançado entretanto (outra pessoa no
+       *     backoffice, o cliente a confirmar, uma rota automática), gravar
+       *     uma vírgula na descrição REPUNHA o estado antigo;
+       *   · e uma mudança de estado dispara email e notificação ao cliente.
+       *     Ou seja: corrigir um acento numa morada podia mandar-lhe uma
+       *     mensagem a dizer que o pedido tinha voltado atrás.
+       *
+       * O filtro do lado da base ignora o que vier `undefined`, por isso não
+       * enviar é o mesmo que não escrever — e deixa de haver forma de
+       * disparar correspondência sem querer.
+       */
+      if (editStatus !== order.status) body.status = editStatus;
+      if (editPriority !== (order.priority ?? "normal")) body.priority = editPriority;
       if (isAdmin) {
         body.precoFinal = editPrecoFinal || null;
         body.precoFinalIva = editPrecoFinalIva || null;
@@ -1232,8 +1264,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         </button>
                       )
                     }
-                    {/* Excluir — apenas admin geral */}
-                    {isAdmin && <button
+                    {/* Excluir — apenas admin geral, e só onde este ecrã é a porta do apagar */}
+                    {isAdmin && permitirApagar && <button
                       onClick={() => setShowDelete(true)}
                       className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
                     >

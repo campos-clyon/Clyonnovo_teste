@@ -12,10 +12,12 @@ import {
   Mail,
   RefreshCw,
   Send,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import RegistarPedido from "./RegistarPedido";
+import PedidoDetailModal from "./PedidoDetailModal";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -195,6 +197,12 @@ export default function AdminNegociacoesPanel() {
   const jaAbertas = useRef<Set<number>>(new Set());
   const [porPromover, setPorPromover] = useState<PorPromover[]>([]);
   const [valorDe, setValorDe] = useState<Record<number, string>>({});
+  /** Qual dos pedidos esta aberto em detalhe, para editar. */
+  const [aEditar, setAEditar] = useState<number | null>(null);
+  /** Os que estao com a caixa marcada, para apagar em conjunto. */
+  const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  const [aApagar, setAApagar] = useState(false);
+  const [recusados, setRecusados] = useState<Array<{ id: number; motivo: string }>>([]);
 
   /*
    * `silencioso` existe por uma razão concreta.
@@ -446,14 +454,20 @@ export default function AdminNegociacoesPanel() {
         }`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-white">
-              #{p.id} · {p.serviceType ?? "—"}
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {p.contactName} · {p.contactEmail} · {p.city ?? "—"}
-              {p.valorDesejadoCliente && ` · quer pagar ${p.valorDesejadoCliente} €`}
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
+            <div className="min-w-0">
+              <button
+                onClick={() => setAEditar(p.id)}
+                className="text-left text-base font-bold text-white underline-offset-4 hover:underline"
+              >
+                #{p.id} · {p.serviceType ?? "—"}
+              </button>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {p.contactName} · {p.contactEmail || "sem email"} · {p.city ?? "—"}
+                {p.valorDesejadoCliente && ` · quer pagar ${p.valorDesejadoCliente} €`}
+              </p>
+            </div>
           </div>
           <button
             onClick={() => reenviar(chaveCliente, { pedidoId: p.id, para: "cliente" })}
@@ -579,6 +593,66 @@ export default function AdminNegociacoesPanel() {
     );
   }
 
+  function marcar(id: number) {
+    setMarcados((m) => {
+      const c = new Set(m);
+      if (c.has(id)) c.delete(id);
+      else c.add(id);
+      return c;
+    });
+  }
+
+  /**
+   * Apaga os que estao marcados.
+   *
+   * A confirmacao diz o NUMERO e nao so "tem a certeza". Quem marcou doze
+   * cartoes num ecra que rola nao tem como saber quantos ficaram marcados —
+   * e "tem a certeza?" nao lhe diz nada que ele ja nao soubesse.
+   *
+   * A base pode recusar alguns: um pedido com trabalho fechado e por
+   * confirmar nao se apaga, porque o profissional ainda precisa da morada e
+   * tem o valor cativo. Esses voltam com o motivo escrito e ficam a vista,
+   * em vez de sumirem no meio de um "apagados 10 de 12".
+   */
+  async function apagarMarcados() {
+    if (!token || marcados.size === 0) return;
+    const quantos = marcados.size;
+    if (
+      !confirm(
+        `Apagar ${quantos} pedido${quantos === 1 ? "" : "s"}?
+
+` +
+          `As negociacoes, propostas e valores acordados vao junto. ` +
+          `Fica registo permanente do que foi apagado, sem as fotos.`,
+      )
+    ) {
+      return;
+    }
+    setAApagar(true);
+    setErro("");
+    setRecusados([]);
+    try {
+      const res = await fetch("/api/admin/negociacoes/apagar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: [...marcados] }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Nao foi possivel apagar.");
+        setRecusados(dados.recusados ?? []);
+        return;
+      }
+      setRecusados(dados.recusados ?? []);
+      setMarcados(new Set());
+      await carregar(true);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAApagar(false);
+    }
+  }
+
   if (!ready || aCarregar) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-400">
@@ -606,6 +680,55 @@ export default function AdminNegociacoesPanel() {
         <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {erro}
         </p>
+      )}
+
+      {/* Os que a base se recusou a apagar, com o motivo de cada um.
+          Um "apagados 10 de 12" nao diz quais sao os dois nem porque. */}
+      {recusados.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-200">
+            {recusados.length} pedido{recusados.length === 1 ? " não foi" : "s não foram"} apagado
+            {recusados.length === 1 ? "" : "s"}
+          </p>
+          <ul className="mt-1 space-y-1">
+            {recusados.map((r) => (
+              <li key={r.id} className="text-xs text-amber-200/80">
+                <strong>#{r.id}</strong> — {r.motivo}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* A barra so aparece quando ha algo marcado. Um botao de apagar sempre
+          visivel e um botao de apagar a espera de um clique distraido. */}
+      {marcados.size > 0 && (
+        <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/40 bg-red-950/70 px-4 py-3 backdrop-blur">
+          <p className="text-sm font-semibold text-red-100">
+            {marcados.size} pedido{marcados.size === 1 ? "" : "s"} seleccionado
+            {marcados.size === 1 ? "" : "s"}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMarcados(new Set())}
+              className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+            >
+              Desmarcar
+            </button>
+            <button
+              onClick={apagarMarcados}
+              disabled={aApagar}
+              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
+            >
+              {aApagar ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Apagar
+            </button>
+          </div>
+        </div>
       )}
 
       <RegistarPedido onCriado={() => carregar(true)} />
@@ -750,6 +873,26 @@ export default function AdminNegociacoesPanel() {
           </p>
           <div className="space-y-3">{daClyon.map(cartaoDoPedido)}</div>
         </section>
+      )}
+
+      {/* O detalhe do pedido, por cima de tudo.
+          O componente vai buscar os dados sozinho — so precisa do id e do
+          token — por isso nao ha nada para carregar aqui antes de o abrir.
+
+          `permitirApagar={false}` de proposito: o apagar deste painel esta na
+          lista, com as caixas de seleccao e com a guarda que recusa levar
+          trabalho fechado por confirmar. O botao de dentro do modal nao tem
+          essa guarda, e duas portas para a mesma accao — uma com guarda e
+          outra sem — e' ter a guarda a fingir. */}
+      {aEditar != null && token && (
+        <PedidoDetailModal
+          id={aEditar}
+          token={token}
+          isAdmin
+          permitirApagar={false}
+          onClose={() => setAEditar(null)}
+          onUpdated={() => carregar(true)}
+        />
       )}
 
       {dosClientes.length > 0 && (
@@ -1029,6 +1172,26 @@ function TrocaDePropostas({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * A caixa de marcar de um pedido.
+ *
+ * `stopPropagation` porque a linha inteira e clicavel para abrir o pedido, e
+ * marcar nao pode abrir. Sem isto, marcar doze cartoes abria doze vezes o
+ * detalhe pelo caminho.
+ */
+function Caixa({ marcado, onMarcar }: { marcado: boolean; onMarcar: () => void }) {
+  return (
+    <input
+      type="checkbox"
+      checked={marcado}
+      onChange={onMarcar}
+      onClick={(e) => e.stopPropagation()}
+      aria-label="Seleccionar este pedido"
+      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 accent-cyan-500"
+    />
   );
 }
 

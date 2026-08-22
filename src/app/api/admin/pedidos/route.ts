@@ -3,6 +3,7 @@ import {
   getAllSimulatorOrders,
   updateSimulatorOrder,
   deleteSimulatorOrder,
+  TrabalhoEmCurso,
   countSimulatorOrdersByStatus,
   getSimulatorOrderById,
 } from "@/lib/db";
@@ -64,13 +65,26 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/pedidos?id=123  — apenas admin geral
 export async function DELETE(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  await deleteSimulatorOrder(Number(id));
+  try {
+    await deleteSimulatorOrder(Number(id), {
+      motivo: searchParams.get("motivo")?.slice(0, 120) || "apagado no backoffice",
+      autorNome: colab?.nome ?? null,
+    });
+  } catch (e) {
+    // 409 e nao 500: nada correu mal: a base recusou-se, e tem razao. O texto
+    // do erro nomeia o profissional e o valor, para haver o que fazer a
+    // seguir em vez de so uma porta fechada.
+    if (e instanceof TrabalhoEmCurso) {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
+    throw e;
+  }
   return NextResponse.json({ ok: true });
 }

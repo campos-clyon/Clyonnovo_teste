@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder } from "@/lib/db";
+import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
 import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
 
 export const runtime = "nodejs";
@@ -84,6 +84,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const order = await getSimulatorOrderById(Number(id));
   if (!order) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
 
-  await deleteSimulatorOrder(Number(id));
+  try {
+    await deleteSimulatorOrder(Number(id), {
+      motivo: "apagado no backoffice",
+      autorNome: colab!.nome ?? null,
+    });
+  } catch (e) {
+    if (e instanceof TrabalhoEmCurso) {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
+    throw e;
+  }
   return NextResponse.json({ ok: true, message: "Pedido excluído com sucesso." });
 }

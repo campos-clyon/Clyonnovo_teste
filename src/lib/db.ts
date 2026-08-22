@@ -3444,6 +3444,30 @@ export async function updateSimulatorOrder(
 }
 
 /**
+ * Uma tentativa de apagar que se recusou a apagar.
+ *
+ * Não é um erro genérico de propósito: quem carregou no botão tem de saber
+ * qual dos trabalhos é que está no ar, para poder ir tratar dele em vez de
+ * ficar a olhar para "não foi possível apagar".
+ */
+export class TrabalhoEmCurso extends Error {
+  constructor(
+    readonly pedidoId: number,
+    readonly detalhes: Array<{ negociacaoId: number; profissional: string; valor: string | null }>,
+  ) {
+    const quem = detalhes
+      .map((d) => `${d.profissional}${d.valor ? ` (${d.valor} €)` : ""}`)
+      .join(", ");
+    super(
+      `O pedido #${pedidoId} tem trabalho fechado e por confirmar com ${quem}. ` +
+        `Enquanto o trabalho não for confirmado, apagar o pedido tira-lhe a morada ` +
+        `e o valor da carteira.`,
+    );
+    this.name = "TrabalhoEmCurso";
+  }
+}
+
+/**
  * Apaga um pedido, e o que estava agarrado a ele.
  *
  * Apagava só a linha de simulatorOrders. Nao ha chaves estrangeiras nesta base
@@ -3457,15 +3481,153 @@ export async function updateSimulatorOrder(
  *
  * Vai tudo junto, e numa transaccao: metade apagado e' pior do que nada
  * apagado.
+ *
+ * O QUE PASSOU A ACONTECER ANTES DE APAGAR
+ *
+ * Duas coisas, e as duas nasceram do mesmo estrago já consumado: os pedidos
+ * #196, #199 e #200 foram apagados e deixaram três negociações órfãs, duas
+ * delas com negócio fechado. Ninguém sabe hoje o que foi combinado nesses
+ * trabalhos, porque o histórico vivia dentro da linha do pedido.
+ *
+ *   1. RECUSA-SE a apagar um pedido cujo trabalho está fechado e por
+ *      confirmar. Nessa altura o profissional ainda precisa da morada para lá
+ *      ir, e tem o valor cativo na carteira — que é calculada por JOIN com
+ *      esta tabela e portanto desaparece com ela. Não é uma escolha de
+ *      interface: quem apaga pode não ser quem sabe disto, e a única guarda
+ *      que serve é a que está do lado da base.
+ *
+ *   2. ESCREVE no registo permanente, dentro da mesma transacção, um retrato
+ *      do que se está a apagar: quem era o cliente, que serviço, que zona, e a
+ *      linha de cada negociação com o valor. Fotografias não — o registo
+ *      guarda que houve prova, não a prova.
+ *
+ * O `motivo` é obrigatório e não tem valor por omissão. Um registo que diz que
+ * um pedido foi apagado sem dizer porquê responde a metade da pergunta que
+ * alguém virá fazer.
  */
-export async function deleteSimulatorOrder(id: number) {
+export async function deleteSimulatorOrder(
+  id: number,
+  contexto: {
+    motivo: string;
+    autorNome?: string | null;
+    autorTipo?: "clyon" | "cliente" | "sistema";
+    /**
+     * Deixa passar um trabalho fechado e por confirmar.
+     *
+     * Só a purga automática e o apagamento de conta a pedido do titular o
+     * usam, e esses correm depois de terem verificado por outra via. Um botão
+     * de backoffice nunca o passa.
+     */
+    mesmoComTrabalhoEmCurso?: boolean;
+  },
+) {
   await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  await ensureRegistoTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+
+  // Ler ANTES de apagar. Depois de o DELETE correr não há a quem perguntar.
+  const [pedidos] = (await pool.execute(
+    `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt
+       FROM simulatorOrders WHERE id = ? LIMIT 1`,
+    [id],
+  )) as any[];
+  const pedido = (pedidos as any[])[0] ?? null;
+
+  const [negs] = (await pool.execute(
+    `SELECT n.id, n.providerId, n.estado, n.valorAcordado, n.confirmadoEm,
+            n.execucaoEnviadaEm, n.pagoEm, p.name AS profissionalNome
+       FROM negociacoes n
+       LEFT JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId = ?`,
+    [id],
+  )) as any[];
+  const negociacoes = negs as Array<Record<string, any>>;
+
+  const emCurso = negociacoes.filter(
+    (n) => n.estado === "acordada" && n.confirmadoEm == null,
+  );
+  if (emCurso.length > 0 && !contexto.mesmoComTrabalhoEmCurso) {
+    throw new TrabalhoEmCurso(
+      id,
+      emCurso.map((n) => ({
+        negociacaoId: Number(n.id),
+        profissional: (n.profissionalNome as string) ?? `#${n.providerId}`,
+        valor: n.valorAcordado != null ? String(n.valorAcordado) : null,
+      })),
+    );
+  }
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+
+    /*
+     * O retrato, escrito dentro da transacção.
+     *
+     * Fora dela, uma falha a meio deixava história de um pedido que continuou
+     * a existir, ou um pedido apagado sem história. As duas coisas ou
+     * acontecem juntas ou não acontecem.
+     */
+    await registarNaTransaccao(conn, {
+      acontecimento: "pedido_apagado",
+      pedidoId: id,
+      clienteEmail: (pedido?.contactEmail as string) ?? null,
+      clienteNome: (pedido?.contactName as string) ?? null,
+      autorTipo: contexto.autorTipo ?? "clyon",
+      autorNome: contexto.autorNome ?? null,
+      servicoTipo: (pedido?.serviceType as string) ?? null,
+      zona: (pedido?.city as string) ?? null,
+      valorCliente:
+        pedido?.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null,
+      resumo: `Pedido apagado — ${contexto.motivo}.`,
+      detalhe: {
+        motivo: contexto.motivo,
+        criadoEm: pedido?.createdAt ?? null,
+        negociacoes: negociacoes.map((n) => ({
+          id: Number(n.id),
+          providerId: Number(n.providerId),
+          profissional: (n.profissionalNome as string) ?? null,
+          estado: n.estado,
+          valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+          execucaoEnviadaEm: n.execucaoEnviadaEm ?? null,
+          confirmadoEm: n.confirmadoEm ?? null,
+          pagoEm: n.pagoEm ?? null,
+        })),
+      },
+    });
+
+    /*
+     * Uma linha por profissional, e não só o retrato de cima.
+     *
+     * O retrato serve ao backoffice, que procura por pedido. O profissional
+     * procura por `providerId` — e sem uma linha dele, um trabalho que ele fez
+     * desaparecia do histórico dele no dia em que o pedido fosse apagado. É
+     * justamente o que já aconteceu e o que isto existe para impedir.
+     */
+    for (const n of negociacoes) {
+      await registarNaTransaccao(conn, {
+        acontecimento: "pedido_apagado",
+        pedidoId: id,
+        negociacaoId: Number(n.id),
+        providerId: Number(n.providerId),
+        providerNome: (n.profissionalNome as string) ?? null,
+        clienteEmail: (pedido?.contactEmail as string) ?? null,
+        autorTipo: contexto.autorTipo ?? "clyon",
+        autorNome: contexto.autorNome ?? null,
+        estadoAntes: n.estado as string,
+        valor: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+        servicoTipo: (pedido?.serviceType as string) ?? null,
+        zona: (pedido?.city as string) ?? null,
+        resumo: `O pedido foi apagado — ${contexto.motivo}.`,
+        // Ele vê que o pedido deixou de existir e com que valor ficou. O
+        // motivo interno da CLYON não lhe diz respeito, mas o facto sim: sem
+        // isto, um trabalho sumia-lhe do ecrã sem explicação nenhuma.
+        visivelProfissional: true,
+      });
+    }
+
     // Primeiro as filhas. Ao contrario, uma falha a meio deixava o pedido
     // apagado e as negociacoes penduradas — exactamente o estado a evitar.
     await conn.execute("DELETE FROM negociacoes WHERE pedidoId = ?", [id]);
@@ -4079,3 +4241,476 @@ export async function deleteTrabalho(id: number): Promise<void> {
 }
 
 // ─── Trabalhos END ────────────────────────────────────────────────────────────
+
+// ── Registo permanente ──────────────────────────────────────────────────────
+
+/**
+ * A linha de história que sobrevive ao pedido.
+ *
+ * PORQUE É QUE ISTO PRECISA DE EXISTIR
+ *
+ * O único histórico que este site tinha vivia dentro da própria linha do
+ * pedido, na coluna `historyJson`. Isso quer dizer que morria com ele: apagar
+ * um pedido levava consigo quem propôs o quê, quem aceitou, por quanto, e em
+ * que dia. Já aconteceu — os pedidos #196, #199 e #200 foram apagados e
+ * deixaram três negociações órfãs, duas delas com negócio fechado, sem
+ * nenhuma forma de saber o que se tinha passado.
+ *
+ * A partir do momento em que os pedidos passam a ser apagados aos 60 dias, o
+ * que hoje é um acidente passa a ser a regra. Sem esta tabela, ao fim de dois
+ * meses a CLYON não conseguiria responder a "quanto é que eu recebi por aquele
+ * trabalho de Junho" — nem ao cliente, nem ao profissional, nem a um tribunal.
+ *
+ * DUAS METADES, DE PROPÓSITO
+ *
+ * As colunas estão separadas em duas famílias e a separação não é estética:
+ *
+ *   · A METADE QUE FICA — pedidoId, datas, estados, valores, taxa, tipo de
+ *     serviço e zona. É contabilidade: quanto foi cobrado, quanto a CLYON
+ *     reteve, quando. Conserva-se por obrigação legal e para defesa em caso de
+ *     litígio (RGPD art. 17.º, n.º 3, als. b) e e)).
+ *
+ *   · A METADE QUE SAI — nome, email, resumo e detalhe. São os identificadores
+ *     e o texto livre. Quando alguém exerce o direito ao apagamento, é isto que
+ *     desaparece, e a linha de contabilidade fica de pé sem ninguém lá dentro.
+ *
+ * O `resumo` e o `detalheJson` saem com os identificadores porque são TEXTO
+ * LIVRE. Limpar as colunas do nome e deixar o JSON é exactamente o erro que
+ * este projecto já comete com o `rawOrderJson`: apaga-se o `contactName` e o
+ * nome continua lá dentro, escrito por extenso.
+ *
+ * O QUE NUNCA ENTRA AQUI
+ *
+ * Fotografias. Nem os ficheiros, nem os URLs deles. Uma foto de dentro de uma
+ * casa é o dado mais sensível que este site recolhe, e guardá-la para sempre
+ * numa tabela que nunca se apaga seria transformar uma decisão de negócio
+ * ("guardar a história") na decisão oposta ("guardar tudo"). O registo guarda
+ * que houve prova de execução e em que dia; a prova em si vai-se com o pedido.
+ */
+
+let registoEnsured = false;
+// Sobe sempre que a lista de colunas cresce. O guarda booleano sozinho só
+// deixava as migrações novas passar em arranques frios, e um processo já
+// quente nunca as via — a mesma razão que está escrita nas negociações.
+const VERSAO_DO_REGISTO = 1;
+let versaoDoRegisto = 0;
+
+export async function ensureRegistoTable(): Promise<void> {
+  if (registoEnsured && versaoDoRegisto >= VERSAO_DO_REGISTO) return;
+  const pool = await getPool();
+  if (!pool) return;
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS registoPermanente (
+      id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      acontecimento       VARCHAR(40) NOT NULL,
+      ocorridoEm          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+      pedidoId            INT NULL DEFAULT NULL,
+      negociacaoId        INT UNSIGNED NULL DEFAULT NULL,
+      levantamentoId      INT UNSIGNED NULL DEFAULT NULL,
+      providerId          INT UNSIGNED NULL DEFAULT NULL,
+      clienteEmail        VARCHAR(255) NULL DEFAULT NULL,
+
+      clienteNome         VARCHAR(160) NULL DEFAULT NULL,
+      providerNome        VARCHAR(160) NULL DEFAULT NULL,
+      autorTipo           VARCHAR(20) NULL DEFAULT NULL,
+      autorNome           VARCHAR(160) NULL DEFAULT NULL,
+      resumo              VARCHAR(500) NULL DEFAULT NULL,
+      detalheJson         LONGTEXT NULL DEFAULT NULL,
+
+      estadoAntes         VARCHAR(30) NULL DEFAULT NULL,
+      estadoDepois        VARCHAR(30) NULL DEFAULT NULL,
+      valor               DECIMAL(10,2) NULL DEFAULT NULL,
+      valorCliente        DECIMAL(10,2) NULL DEFAULT NULL,
+      valorProfissional   DECIMAL(10,2) NULL DEFAULT NULL,
+      taxaClyon           DECIMAL(10,2) NULL DEFAULT NULL,
+
+      servicoTipo         VARCHAR(60) NULL DEFAULT NULL,
+      zona                VARCHAR(120) NULL DEFAULT NULL,
+
+      visivelCliente      TINYINT(1) NOT NULL DEFAULT 0,
+      visivelProfissional TINYINT(1) NOT NULL DEFAULT 0,
+
+      anonimizadoEm       DATETIME NULL DEFAULT NULL,
+      anonimizadoMotivo   VARCHAR(40) NULL DEFAULT NULL,
+      sujeitoAnonimo      VARCHAR(16) NULL DEFAULT NULL,
+
+      KEY registo_pedido (pedidoId),
+      KEY registo_negociacao (negociacaoId),
+      KEY registo_cliente (clienteEmail, ocorridoEm),
+      KEY registo_profissional (providerId, ocorridoEm),
+      KEY registo_quando (ocorridoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  registoEnsured = true;
+  versaoDoRegisto = VERSAO_DO_REGISTO;
+}
+
+/**
+ * O que aconteceu. Vocabulário fechado, e a razão é prática.
+ *
+ * Uma coluna de texto livre para o tipo de acontecimento enche-se ao fim de um
+ * ano de variantes escritas à mão — "proposta", "proposta_feita", "propôs" —
+ * e depois não há forma de contar quantas propostas houve. Com um tipo
+ * fechado, acrescentar um acontecimento novo obriga a passar por aqui, e o
+ * TypeScript apanha quem escrever ao lado.
+ */
+export type Acontecimento =
+  // O pedido
+  | "pedido_criado"
+  | "pedido_editado"
+  | "pedido_distribuido"
+  | "pedido_apagado"
+  | "pedido_expurgado"
+  // A negociação
+  | "negociacao_criada"
+  | "proposta_feita"
+  | "proposta_aceite"
+  | "negociacao_fechada"
+  | "negociacao_desistida"
+  | "negociacao_encerrada"
+  // O trabalho
+  | "execucao_enviada"
+  | "execucao_confirmada"
+  | "avaliacao_feita"
+  // O dinheiro
+  | "levantamento_pedido"
+  | "levantamento_pago"
+  // As contas
+  | "conta_apagada";
+
+export type LinhaDoRegisto = {
+  acontecimento: Acontecimento;
+  pedidoId?: number | null;
+  negociacaoId?: number | null;
+  levantamentoId?: number | null;
+  providerId?: number | null;
+  clienteEmail?: string | null;
+  clienteNome?: string | null;
+  providerNome?: string | null;
+  autorTipo?: "cliente" | "profissional" | "clyon" | "sistema" | null;
+  autorNome?: string | null;
+  resumo?: string | null;
+  detalhe?: unknown;
+  estadoAntes?: string | null;
+  estadoDepois?: string | null;
+  valor?: number | null;
+  valorCliente?: number | null;
+  valorProfissional?: number | null;
+  taxaClyon?: number | null;
+  servicoTipo?: string | null;
+  zona?: string | null;
+  /**
+   * Quem vê esta linha no histórico dele.
+   *
+   * Por omissão, ninguém além do backoffice. Uma linha só chega ao cliente ou
+   * ao profissional se alguém disser explicitamente que sim — o contrário
+   * levava notas internas e decisões da CLYON para dentro do painel de quem
+   * não tem nada a ver com elas, e essa é a espécie de fuga que só se descobre
+   * depois de acontecer.
+   */
+  visivelCliente?: boolean;
+  visivelProfissional?: boolean;
+};
+
+/**
+ * As colunas na ordem em que entram.
+ *
+ * Exportada, e a lista de valores logo a seguir também, por uma razão só: são
+ * duas listas paralelas e a base não tem como saber que uma delas ficou uma
+ * entrada mais curta. Um campo acrescentado num sítio e esquecido no outro não
+ * dá erro nenhum — desloca todos os valores seguintes uma coluna para o lado,
+ * e a partir daí os valores acordados vão parar à coluna da taxa. Há um teste
+ * a comparar os comprimentos, e é por isso que estas duas são públicas.
+ */
+export const COLUNAS_DO_REGISTO = [
+  "acontecimento",
+  "pedidoId",
+  "negociacaoId",
+  "levantamentoId",
+  "providerId",
+  "clienteEmail",
+  "clienteNome",
+  "providerNome",
+  "autorTipo",
+  "autorNome",
+  "resumo",
+  "detalheJson",
+  "estadoAntes",
+  "estadoDepois",
+  "valor",
+  "valorCliente",
+  "valorProfissional",
+  "taxaClyon",
+  "servicoTipo",
+  "zona",
+  "visivelCliente",
+  "visivelProfissional",
+] as const;
+
+export function valoresDoRegisto(l: LinhaDoRegisto): unknown[] {
+  const corta = (s: string | null | undefined, n: number) =>
+    s == null ? null : String(s).slice(0, n);
+  return [
+    l.acontecimento,
+    l.pedidoId ?? null,
+    l.negociacaoId ?? null,
+    l.levantamentoId ?? null,
+    l.providerId ?? null,
+    // O email vai normalizado porque é a chave por onde o histórico do cliente
+    // é procurado. "Ana@Gmail.com " e "ana@gmail.com" são a mesma pessoa e
+    // tinham de dar a mesma lista.
+    l.clienteEmail ? l.clienteEmail.trim().toLowerCase().slice(0, 255) : null,
+    corta(l.clienteNome, 160),
+    corta(l.providerNome, 160),
+    l.autorTipo ?? null,
+    corta(l.autorNome, 160),
+    corta(l.resumo, 500),
+    l.detalhe === undefined ? null : JSON.stringify(l.detalhe),
+    corta(l.estadoAntes, 30),
+    corta(l.estadoDepois, 30),
+    l.valor ?? null,
+    l.valorCliente ?? null,
+    l.valorProfissional ?? null,
+    l.taxaClyon ?? null,
+    corta(l.servicoTipo, 60),
+    corta(l.zona, 120),
+    l.visivelCliente ? 1 : 0,
+    l.visivelProfissional ? 1 : 0,
+  ];
+}
+
+function sqlDeInsercao(): string {
+  return (
+    `INSERT INTO registoPermanente (${COLUNAS_DO_REGISTO.join(", ")}) ` +
+    `VALUES (${COLUNAS_DO_REGISTO.map(() => "?").join(", ")})`
+  );
+}
+
+/**
+ * Escreve uma linha no registo. Lança se falhar.
+ *
+ * Usar esta quando a linha É o trabalho — apagar um pedido, pagar um
+ * levantamento. Se o registo não conseguir ser escrito, a operação não deve
+ * seguir: um pedido apagado sem rasto é precisamente o que esta tabela existe
+ * para impedir.
+ */
+export async function registar(linha: LinhaDoRegisto): Promise<void> {
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(sqlDeInsercao(), valoresDoRegisto(linha));
+}
+
+/**
+ * Escreve uma linha e engole o erro.
+ *
+ * Usar esta quando a linha é o ACOMPANHAMENTO de outra coisa que já aconteceu
+ * — o cliente propôs, o profissional aceitou. A proposta já está gravada na
+ * negociação; falhar a escrever a nota sobre ela não pode desfazer-lhe o
+ * trabalho nem devolver-lhe um erro.
+ *
+ * A diferença entre as duas não é de estilo. É a pergunta "se isto falhar,
+ * perde-se alguma coisa que não exista em mais lado nenhum?".
+ */
+export async function registarSemFalhar(linha: LinhaDoRegisto): Promise<void> {
+  try {
+    await registar(linha);
+  } catch (err) {
+    console.error("[registo] não gravou:", linha.acontecimento, err);
+  }
+}
+
+/**
+ * Escreve dentro de uma transacção que já está aberta.
+ *
+ * Existe por causa do apagar. `deleteSimulatorOrder` apaga as negociações e o
+ * pedido dentro de uma transacção; se o registo fosse escrito fora dela, uma
+ * falha a meio deixava história de um pedido que continuou a existir, ou um
+ * pedido apagado sem história. As duas coisas ou acontecem juntas ou não
+ * acontecem.
+ */
+export async function registarNaTransaccao(
+  conn: mysql.PoolConnection,
+  linha: LinhaDoRegisto,
+): Promise<void> {
+  await conn.execute(sqlDeInsercao(), valoresDoRegisto(linha));
+}
+
+/**
+ * Uma etiqueta curta e aleatória para agrupar as linhas de quem foi apagado.
+ *
+ * Sem isto, anonimizar transformava a história de uma pessoa num monte de
+ * linhas soltas: a contabilidade continuava a bater no total, mas deixava de
+ * haver forma de ver que aqueles seis movimentos foram do mesmo cliente. Com
+ * a etiqueta, a sequência mantém-se legível e continua a não existir caminho
+ * nenhum de volta ao nome — porque nenhum é guardado.
+ */
+function etiquetaAnonima(): string {
+  const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 12; i++) {
+    s += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+  }
+  return s;
+}
+
+/**
+ * Tira a pessoa do registo e deixa a contabilidade de pé.
+ *
+ * É o ÚNICO UPDATE que esta tabela admite. Tudo o resto é inserir e ler — uma
+ * tabela de história que se pode editar não é história nenhuma.
+ *
+ * Depois disto, a linha continua a dizer que no dia 12 de Junho houve um
+ * trabalho de recolha de móveis em Lisboa, fechado por 340 €, dos quais a
+ * CLYON reteve 34. Deixa de dizer de quem.
+ */
+export async function anonimizarRegisto(
+  alvo: { clienteEmail?: string; providerId?: number },
+  motivo: "conta_cliente" | "conta_profissional" | "pedido_do_titular",
+): Promise<number> {
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const onde: string[] = [];
+  const args: unknown[] = [];
+  if (alvo.clienteEmail) {
+    onde.push("clienteEmail = ?");
+    args.push(alvo.clienteEmail.trim().toLowerCase());
+  }
+  if (alvo.providerId != null) {
+    onde.push("providerId = ?");
+    args.push(alvo.providerId);
+  }
+  // Sem alvo não se anonimiza a tabela inteira. Um engano aqui não tem volta.
+  if (onde.length === 0) return 0;
+
+  const [r] = (await pool.execute(
+    `UPDATE registoPermanente
+        SET clienteEmail = NULL,
+            clienteNome = NULL,
+            providerNome = NULL,
+            autorNome = NULL,
+            resumo = NULL,
+            detalheJson = NULL,
+            anonimizadoEm = NOW(),
+            anonimizadoMotivo = ?,
+            sujeitoAnonimo = COALESCE(sujeitoAnonimo, ?)
+      WHERE (${onde.join(" OR ")}) AND anonimizadoEm IS NULL`,
+    [motivo, etiquetaAnonima(), ...args],
+  )) as any[];
+
+  return Number(r?.affectedRows ?? 0);
+}
+
+export type LinhaLidaDoRegisto = {
+  id: number;
+  acontecimento: string;
+  ocorridoEm: Date;
+  pedidoId: number | null;
+  negociacaoId: number | null;
+  providerId: number | null;
+  clienteEmail: string | null;
+  clienteNome: string | null;
+  providerNome: string | null;
+  autorTipo: string | null;
+  autorNome: string | null;
+  resumo: string | null;
+  detalheJson: string | null;
+  estadoAntes: string | null;
+  estadoDepois: string | null;
+  valor: string | null;
+  valorCliente: string | null;
+  valorProfissional: string | null;
+  taxaClyon: string | null;
+  servicoTipo: string | null;
+  zona: string | null;
+  anonimizadoEm: Date | null;
+};
+
+/** O histórico de um cliente, para o painel dele. */
+export async function registoDoCliente(
+  email: string,
+  limite = 200,
+): Promise<LinhaLidaDoRegisto[]> {
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT * FROM registoPermanente
+      WHERE clienteEmail = ? AND visivelCliente = 1 AND anonimizadoEm IS NULL
+      ORDER BY ocorridoEm DESC
+      LIMIT ?`,
+    [email.trim().toLowerCase(), String(limite)],
+  )) as any[];
+  return rows as LinhaLidaDoRegisto[];
+}
+
+/** O histórico de um profissional, para o painel dele. */
+export async function registoDoProfissional(
+  providerId: number,
+  limite = 200,
+): Promise<LinhaLidaDoRegisto[]> {
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT * FROM registoPermanente
+      WHERE providerId = ? AND visivelProfissional = 1 AND anonimizadoEm IS NULL
+      ORDER BY ocorridoEm DESC
+      LIMIT ?`,
+    [providerId, String(limite)],
+  )) as any[];
+  return rows as LinhaLidaDoRegisto[];
+}
+
+/**
+ * O registo inteiro, para o backoffice.
+ *
+ * É o único sítio que vê tudo: as linhas invisíveis aos dois lados (notas
+ * internas, quem editou o quê, quem apagou o quê) e as já anonimizadas.
+ */
+export async function registoParaOBackoffice(filtros: {
+  pedidoId?: number;
+  providerId?: number;
+  clienteEmail?: string;
+  acontecimento?: string;
+  limite?: number;
+} = {}): Promise<LinhaLidaDoRegisto[]> {
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) return [];
+
+  const onde: string[] = [];
+  const args: unknown[] = [];
+  if (filtros.pedidoId != null) {
+    onde.push("pedidoId = ?");
+    args.push(filtros.pedidoId);
+  }
+  if (filtros.providerId != null) {
+    onde.push("providerId = ?");
+    args.push(filtros.providerId);
+  }
+  if (filtros.clienteEmail) {
+    onde.push("clienteEmail = ?");
+    args.push(filtros.clienteEmail.trim().toLowerCase());
+  }
+  if (filtros.acontecimento) {
+    onde.push("acontecimento = ?");
+    args.push(filtros.acontecimento);
+  }
+
+  const [rows] = (await pool.execute(
+    `SELECT * FROM registoPermanente
+      ${onde.length ? `WHERE ${onde.join(" AND ")}` : ""}
+      ORDER BY ocorridoEm DESC
+      LIMIT ?`,
+    [...args, String(filtros.limite ?? 300)],
+  )) as any[];
+  return rows as LinhaLidaDoRegisto[];
+}
+
+// ─── Registo permanente END ──────────────────────────────────────────────────
