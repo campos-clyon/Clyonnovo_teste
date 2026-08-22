@@ -151,7 +151,18 @@ export default function MovelItemSelector({
           {totalItems > 0 && (
             <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
               <span className="text-xs text-slate-500">{totalItems} item{totalItems !== 1 ? "s" : ""}</span>
-              <span className="text-sm font-bold text-slate-900">Total: {totalPrice} € + IVA</span>
+              {/*
+                Dizia "+ IVA", e a CLYON está em ISENÇÃO DO ARTIGO 53.º do CIVA
+                — não liquida IVA nenhum. A frase prometia ao cliente um
+                imposto que não vai aparecer na factura dele, e que quem a
+                emite não pode entregar ao Estado.
+
+                Na plataforma o regime é de quem executa, e a maior parte dos
+                profissionais pequenos está no mesmo artigo 53.º. Em qualquer
+                dos casos, "+ IVA" é a única resposta que está garantidamente
+                errada.
+              */}
+              <span className="text-sm font-bold text-slate-900">Total: {totalPrice} €</span>
             </div>
           )}
         </div>

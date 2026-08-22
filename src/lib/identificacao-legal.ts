@@ -98,6 +98,24 @@ export const IDENTIFICACAO = {
    */
   codigoAPA: "APA13458563",
 
+  /** Actividade principal e secundária, tal como registadas nas Finanças. */
+  caePrincipal: "38111 — Recolha de resíduos inertes",
+  caeSecundaria: "43110 — Demolição",
+
+  /**
+   * Regime de IVA: isenção do artigo 53.º do CIVA.
+   *
+   * Não é um detalhe de contabilista — é o que o cliente vê no preço. Quem
+   * está neste regime NÃO liquida IVA, e a factura tem de mencionar
+   * "IVA — Regime de Isenção" (artigos 36.º e 40.º do CIVA).
+   *
+   * O site dizia "+ IVA" e "IVA incluído" em três sítios diferentes, e as
+   * duas coisas eram falsas ao mesmo tempo. Prometer um imposto que não
+   * aparece na factura é das poucas contradições que o cliente descobre
+   * sozinho, no fim, quando já não há como explicar.
+   */
+  regimeIva: "Isento — artigo 53.º do CIVA",
+
   /** Entidade de resolução alternativa de litígios de consumo, por região. */
   ralNome: "Centro de Arbitragem de Conflitos de Consumo de Lisboa",
   ralSite: "https://www.centroarbitragemlisboa.pt",

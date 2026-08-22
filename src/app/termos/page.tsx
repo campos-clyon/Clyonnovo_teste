@@ -111,6 +111,13 @@ export default function TermosPage() {
           <p>
             Contactos: {IDENTIFICACAO.email} · {IDENTIFICACAO.telefone}.
           </p>
+          <p>
+            Actividade registada nas Finanças sob o CAE{" "}
+            {IDENTIFICACAO.caePrincipal}, e{" "}
+            {IDENTIFICACAO.caeSecundaria} como secundária. Operador de resíduos
+            registado na Agência Portuguesa do Ambiente com o código{" "}
+            <strong>{IDENTIFICACAO.codigoAPA}</strong>.
+          </p>
           <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
             A CLYON é uma actividade em nome individual e não uma sociedade.
             Quem contrata connosco está a contratar com uma pessoa singular com
@@ -237,12 +244,21 @@ export default function TermosPage() {
             O valor que lhe mostramos como total já inclui a sua parte da taxa.
           </p>
           <p>
-            <strong>O IVA é do regime do profissional, não do nosso.</strong> Um
+            <strong>O IVA é do regime de quem emite a fatura.</strong> Um
             profissional em regime de isenção (artigo 53.º do CIVA) não liquida
             IVA, e nesse caso não verá qualquer linha de imposto no valor a
-            pagar. A percentagem de IVA que aparece numa estimativa antes de
-            haver profissional atribuído é uma previsão; o imposto que conta é o
-            da fatura que receber.
+            pagar. A percentagem de IVA que apareça numa estimativa, antes de
+            haver profissional atribuído, é uma previsão; o imposto que conta é
+            o da fatura que receber.
+          </p>
+          <p>
+            <strong>A fatura do serviço é sempre emitida pelo profissional</strong>
+            — é ele o prestador, e é a ele que a lei atribui essa obrigação. A
+            CLYON não fatura o serviço.
+          </p>
+          <p>
+            A própria CLYON está em <strong>{IDENTIFICACAO.regimeIva}</strong>,
+            pelo que nada do que emita leva IVA.
           </p>
         </S>
 

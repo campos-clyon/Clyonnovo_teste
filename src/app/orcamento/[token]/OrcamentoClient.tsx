@@ -175,11 +175,20 @@ export default function OrcamentoClient({
         {/* Preço destaque */}
         <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Total aprovado (c/ IVA)</p>
+            {/*
+              Dizia "(c/ IVA)" e "IVA incluído". A CLYON está em isenção do
+              artigo 53.º do CIVA e não liquida IVA — dizer que está incluído
+              é afirmar que há um imposto dentro do preço que não existe, e
+              que a factura vai contradizer.
+
+              O que interessa ao cliente é o mesmo em qualquer dos casos: este
+              é o valor final, e não lhe acresce nada.
+            */}
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Total aprovado</p>
             <p className="text-3xl font-bold text-[#00B4D8] mt-1">{preco}</p>
           </div>
           <div className="rounded-full bg-[#00B4D8]/10 px-3 py-1">
-            <p className="text-xs font-semibold text-[#0077B6]">IVA incluído</p>
+            <p className="text-xs font-semibold text-[#0077B6]">Valor final</p>
           </div>
         </div>
       </div>
