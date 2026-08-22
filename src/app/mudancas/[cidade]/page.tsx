@@ -17,8 +17,7 @@ import FAQSection from "@/components/service/FAQSection";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
-  SITE_URL,
-} from "@/lib/seo-data";
+  SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import {
   CIDADES_MUDANCAS,
   getAllCidadeSlugs,
@@ -342,7 +341,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Star className="mx-auto h-6 w-6 text-emerald-500" />
-            <p className="mt-2 text-sm font-bold text-slate-800">163 reviews 5★</p>
+            <p className="mt-2 text-sm font-bold text-slate-800">{AVALIACOES_TOTAL} avaliações 5★</p>
             <p className="text-xs text-slate-500">Feedback verificado de clientes CLYON</p>
           </div>
         </div>

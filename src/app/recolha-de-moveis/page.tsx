@@ -299,7 +299,7 @@ export default function RecolhaDeMoveisPage() {
             {/* Stats */}
             <div className="mt-8 flex flex-wrap gap-6 border-t border-slate-200 pt-6">
               <div>
-                <div className="text-xl font-bold text-slate-900">163</div>
+                <div className="text-xl font-bold text-slate-900">{AVALIACOES_TOTAL}</div>
                 <div className="text-xs text-slate-500">Avaliações</div>
               </div>
               <div>

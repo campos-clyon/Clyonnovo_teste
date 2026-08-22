@@ -4,8 +4,7 @@ import { Star, Quote, MessageCircle } from "lucide-react";
 
 import HeroBackground from "@/components/HeroBackground";
 import { reviews } from "@/lib/reviews-data";
-import { BUSINESS_PHONE } from "@/lib/seo-data";
-import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { BUSINESS_PHONE, SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Avaliações e Testemunhos de Clientes — CLYON Lisboa e Setúbal",
@@ -68,13 +67,16 @@ const aggregateRatingSchema = {
 };
 
 const STATS = [
-  { value: "5.0", label: "Classificação média", sub: "Google Business" },
+  { value: AVALIACOES.media, label: "Classificação média", sub: "Google e Fixando" },
   {
     value: String(AVALIACOES_TOTAL),
     label: "Avaliações verificadas",
     sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
   },
-  { value: "188+", label: "Trabalhos realizados", sub: "e a contar" },
+  // O cartão "188+ trabalhos realizados" saiu: o número não tinha origem, e o
+  // "+" é uma afirmação de "pelo menos" sem nada por trás. O que se mostra
+  // aqui passa a ser só o que se pode abrir e contar.
+  { value: String(AVALIACOES.contratacoes), label: "Contratações", sub: "registadas na Fixando" },
   { value: "100%", label: "Recomendariam", sub: "com base nas respostas" },
 ];
 
@@ -141,7 +143,7 @@ export default function AvaliacoesPage() {
             <div className="lg:py-14">
               <div className="rounded-3xl border border-cyan-100 bg-white/95 p-6 shadow-[0_24px_60px_-20px_rgba(14,116,144,0.18)] backdrop-blur-sm sm:p-7">
                 <div className="flex items-end gap-4">
-                  <div className="text-6xl font-black leading-none text-tinta sm:text-7xl">5.0</div>
+                  <div className="text-6xl font-black leading-none text-tinta sm:text-7xl">{AVALIACOES.media}</div>
                   <div className="pb-2">
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (

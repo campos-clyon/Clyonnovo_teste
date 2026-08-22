@@ -18,14 +18,13 @@ import {
   BUSINESS_PHONE,
   CITIES,
   SITE_URL,
-  getCityServiceSlug,
-} from "@/lib/seo-data";
+  getCityServiceSlug, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Rápidas, Seguras, Sem Stress",
   description:
-    "Mudanças residenciais e comerciais em Lisboa e Setúbal. Equipa profissional, embalagem, carga, transporte e montagem. Resposta em 24h, 163 reviews 5⭐. Orçamento grátis!",
+    `Mudanças residenciais e comerciais em Lisboa e Setúbal. Embalagem, carga, transporte e montagem por profissionais verificados. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   alternates: { canonical: `${SITE_URL}/mudancas` },
   openGraph: {
     title: "Mudanças em Lisboa e Setúbal — Profissional e Sem Stress",

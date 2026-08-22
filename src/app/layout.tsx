@@ -12,8 +12,7 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   REGIONS,
-  SITE_URL,
-} from "@/lib/seo-data";
+  SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
 
 import "./globals.css";
 
@@ -37,7 +36,7 @@ export const metadata: Metadata = {
     template: "%s | CLYON",
   },
   description:
-    "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Entrega em 24h, preços desde 120EUR e 188 trabalhos concluídos com 5 estrelas. Orçamento grátis!",
+    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 24h, recolha de móveis desde 70 € e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",

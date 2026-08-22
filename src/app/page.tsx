@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL , NOTA_DE_PRECO} from "@/lib/seo-data";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
 import {
@@ -32,7 +32,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export const metadata: Metadata = {
   title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
   description:
-    "Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Retiramos sofás, armários, colchões e eletrodomésticos. Orçamento gratuito em 24h. 188 trabalhos concluídos com 5,0 ★.",
+    `Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Sofás, armários, colchões e eletrodomésticos, por profissionais verificados. Orçamento gratuito em 24h. ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
@@ -100,7 +100,15 @@ const HERO_PILLS = [
 
 const PLATFORM_STATS = [
   { value: "5,0 ★", label: "Avaliação dos clientes", sub: "Baseado em opiniões reais", accent: "text-amber-500" },
-  { value: "188", label: "Trabalhos concluídos", sub: "e a contar", accent: "text-acao" },
+  {
+    // Era `value: "188"`, escrito à mão. Não vinha de constante, não vinha da
+    // base, não era contado em lado nenhum — não tinha origem. Um número de
+    // prova social que ninguém consegue confirmar é pior do que não ter número.
+    value: String(AVALIACOES_TOTAL),
+    label: "Avaliações verificadas",
+    sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
+    accent: "text-acao",
+  },
   { value: "9", label: "Categorias de serviço", sub: "Casa, jardim e mais", accent: "text-emerald-600" },
   { value: "24+", label: "Localidades cobertas", sub: "Lisboa · Margem Sul · Setúbal", accent: "text-blue-600" },
 ];
@@ -261,7 +269,7 @@ export default function HomePage() {
             <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
               <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
                 <span className="text-amber-500">★★★★★</span>
-                <span>5,0 · 188 trabalhos</span>
+                <span>{AVALIACOES.media} · {AVALIACOES_TOTAL} avaliações</span>
               </span>
               <span className="text-slate-300">·</span>
               <span className="text-xs text-slate-500 sm:text-sm">
@@ -393,8 +401,7 @@ export default function HomePage() {
               O que podemos levar
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-tinta-fraca sm:text-base">
-              Nove serviços, preços orientativos à vista. O valor final é fechado antes
-              de o trabalho começar.
+              Nove serviços, preços à vista. Sem ter de pedir para saber quanto custa.
             </p>
           </div>
 
@@ -427,6 +434,22 @@ export default function HomePage() {
               );
             })}
           </div>
+
+          {/*
+            A nota do IVA, e porque é que ela não diz se o IVA está incluído.
+
+            Numa plataforma, quem faz o trabalho é quem emite a factura — e
+            cada profissional tem o seu regime: uns na isenção do artigo 53.º
+            do CIVA, outros a liquidar 23%. "Com IVA" e "sem IVA" são as duas
+            afirmações que o site não pode garantir, e o site chegou a dizer as
+            duas em sítios diferentes.
+
+            O que se garante é o que interessa a quem está a decidir: o valor é
+            fechado antes de começar e não acresce nada depois.
+          */}
+          <p className="mx-auto mt-6 max-w-2xl text-center text-[13px] leading-relaxed text-tinta-fraca">
+            {NOTA_DE_PRECO.completa}
+          </p>
         </div>
       </section>
 

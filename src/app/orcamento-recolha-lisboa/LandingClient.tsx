@@ -31,13 +31,17 @@ import {
 import {
   trackWhatsAppClick, trackPhoneCall, trackEmailClick, trackCTAClick,
 } from "@/lib/analytics";
+import { AVALIACOES_TOTAL } from "@/lib/seo-data";
 
 const PHONE_DISPLAY = "+351 931 632 622";
 const PHONE_TEL = "+351931632622";
 const PHONE_SMS = "+351931632622";
 const EMAIL = "geral@clyon.pt";
 const WHATSAPP_BASE = "https://wa.me/351931632622";
-const REVIEWS_COUNT = 163;
+// A cópia privada do número saiu. Era `const REVIEWS_COUNT = 163` e era o
+// único sítio do site com um número de prova social só seu — enquanto
+// existisse, esta landing divergia sozinha do resto, e foi o que aconteceu.
+const REVIEWS_COUNT = AVALIACOES_TOTAL;
 
 declare global {
   interface Window {

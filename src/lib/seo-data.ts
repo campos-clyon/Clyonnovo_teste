@@ -482,6 +482,39 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
  * Todo o resto do site já dizia 24 horas; o 48 era o caso isolado. Fica aqui
  * para a próxima mudança ser uma linha e não uma caça.
  */
+/**
+ * A nota que acompanha qualquer preço mostrado ao público.
+ *
+ * PORQUE É QUE O SITE NÃO PODE DIZER SE O PREÇO TEM IVA
+ *
+ * Porque deixou de ser a CLYON a executar. Numa plataforma, quem faz o
+ * trabalho é quem emite a factura — e cada profissional tem o seu regime:
+ * uns estão na isenção do artigo 53.º do CIVA e não liquidam nada, outros
+ * liquidam 23%. O mesmo trabalho, feito por dois profissionais diferentes,
+ * pode ter facturas diferentes.
+ *
+ * Ou seja: "com IVA" e "sem IVA" são AMBAS afirmações que o site não pode
+ * garantir. E prometer um imposto que a factura não confirma é das poucas
+ * contradições que o cliente descobre sozinho, no fim, quando já não há como
+ * explicar. O site chegou a dizer "+ IVA" e "IVA incluído" em sítios
+ * diferentes — as duas erradas ao mesmo tempo.
+ *
+ * O que se pode garantir, e é o que interessa a quem está a decidir: o valor
+ * é fechado ANTES de o trabalho começar, e não lhe acresce nada depois.
+ *
+ * Escrita uma vez para não divergir. Já foi por não estar.
+ */
+export const NOTA_DE_PRECO = {
+  /** Uma linha, para pôr por cima ou por baixo de uma grelha de preços. */
+  curta:
+    "Valores orientativos. O preço final é fechado antes de o trabalho começar.",
+  /** Com a explicação de quem factura, para páginas de preços. */
+  completa:
+    "Valores orientativos. O preço final é fechado antes de o trabalho começar " +
+    "e não lhe acresce nada depois. Quem executa emite a factura, pelo regime " +
+    "de IVA dele.",
+} as const;
+
 export const PRAZO_DE_RESPOSTA = {
   /** Para texto corrido: "Orçamento gratuito em 24 horas." */
   porExtenso: "24 horas",

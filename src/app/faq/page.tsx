@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import FAQClient from "./FAQClient";
+import { AVALIACOES_TOTAL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "FAQ — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
@@ -277,7 +278,7 @@ export default function FAQPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               { value: "24h", label: "Orçamento em" },
-              { value: "188", label: "Trabalhos concluídos" },
+              { value: String(AVALIACOES_TOTAL), label: "Avaliações verificadas" },
               { value: "5,0 ★", label: "Avaliação dos clientes" },
               { value: "Lisboa+", label: "Margem Sul e Setúbal" },
             ].map((s) => (
