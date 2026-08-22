@@ -316,12 +316,12 @@ export default function HomePage() {
             </p>
 
             {/* Category pills */}
-            <div className="mt-5 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
+            <div className="mt-5 flex flex-wrap gap-2 sm:mt-7">
               {HERO_PILLS.map((pill) => (
                 <Link
                   key={pill.id}
                   href={pill.href}
-                  className="rounded-full border border-slate-200 bg-white/60 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-acao-hover sm:px-4 sm:py-1.5 sm:text-sm"
+                  className="inline-flex min-h-[44px] items-center rounded-full border border-slate-200 bg-white/60 px-4 text-sm font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-acao-hover"
                 >
                   {pill.label}
                 </Link>
@@ -383,7 +383,7 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-10 sm:py-16">
+      <section className="secao bg-[#F4F8FB]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center sm:mb-16">
             <h2 className="text-2xl font-bold tracking-tight text-tinta sm:text-4xl lg:text-5xl">
@@ -446,7 +446,7 @@ export default function HomePage() {
       </section>
 
       {/* ── SERVICES ──────────────────────────────────────────────── */}
-      <section className="bg-white py-8 sm:py-16">
+      <section className="secao bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/*
             A GRELHA DE SERVIÇOS NÃO TINHA TÍTULO.
@@ -523,7 +523,7 @@ export default function HomePage() {
       </section>
 
       {/* ── GUARANTEES ────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-8 sm:py-14 lg:py-20">
+      <section className="secao bg-[#F4F8FB]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-14">
             {/*
@@ -580,7 +580,7 @@ export default function HomePage() {
       </section>
 
       {/* ── REVIEWS ───────────────────────────────────────────────── */}
-      <section className="bg-[#F4F8FB] py-8 sm:py-16">
+      <section className="secao bg-white">
         <div className="mb-8 text-center px-4 sm:mb-12">
           <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
             O que dizem os nossos clientes
@@ -603,7 +603,7 @@ export default function HomePage() {
       </section>
 
       {/* ── COVERAGE ──────────────────────────────────────────────── */}
-      <section className="bg-white py-8 sm:py-12 lg:py-20">
+      <section className="secao bg-[#F4F8FB]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div>
@@ -643,14 +643,14 @@ export default function HomePage() {
       </section>
 
       {/* ── FOR PROFESSIONALS ─────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-8 sm:py-16">
+      <section className="secao bg-tinta text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
-              <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
+              <h2 className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
                 Tem uma empresa de remoções ou transportes?
               </h2>
-              <p className="mt-3 text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
+              <p className="mt-3 text-sm text-slate-300 sm:mt-4 sm:text-base lg:text-lg">
                 {/* Dizia "pedidos verificados" e "sem leads frios". "Lead" é a
                     palavra de quem compra tráfego — e este bloco fala com um
                     homem que tem uma carrinha, não com um gestor de campanhas. */}
@@ -663,8 +663,8 @@ export default function HomePage() {
                   { icon: Shield, label: "Sem leads falhados" },
                   { icon: BadgeCheck, label: "Pagamento garantido" },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <item.icon className="h-4 w-4 text-acao" />
+                  <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-200">
+                    <item.icon className="h-4 w-4 text-marca" />
                     {item.label}
                   </div>
                 ))}
@@ -687,7 +687,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────────── */}
-      <section className="bg-white py-8 sm:py-12 lg:py-20">
+      <section className="secao bg-white">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-12">
             <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
@@ -719,7 +719,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FINAL CTA ─────────────────────────────────────────────── */}
-      <section className="bg-white py-8 sm:py-10 lg:py-16">
+      <section className="secao bg-[#F4F8FB]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-5 py-10 text-center ring-1 ring-[#E2EEF3] sm:rounded-3xl sm:px-12 sm:py-16">
             <h2 className="text-xl font-bold text-tinta sm:text-3xl lg:text-4xl">

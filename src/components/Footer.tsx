@@ -4,269 +4,222 @@ import Link from "next/link";
 import Image from "next/image";
 import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building, ShieldCheck } from "lucide-react";
 
-import { trackWhatsAppClick, trackPhoneCall } from "@/lib/analytics";
-import { BUSINESS_PHONE, BUSINESS_EMAIL } from "@/lib/seo-data";
+import { trackWhatsAppClick } from "@/lib/analytics";
+import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 
-// Estilos para links com hover azul água
-const linkStyle = "text-white hover:text-cyan-400 transition-colors";
-const linkStyleInline = { color: "#ffffff", fontSize: "14px", textDecoration: "none" };
+/**
+ * O rodapé.
+ *
+ * ERAM DOIS RODAPÉS, E JÁ TINHAM DIVERGIDO
+ *
+ * Havia dois blocos de markup completos escritos à mão em paralelo — um
+ * `hidden lg:grid` e um `lg:hidden` — e os dois estavam SEMPRE no DOM. Com o
+ * tempo afastaram-se, como acontece sempre a duas cópias da mesma coisa:
+ *
+ *   · o desktop tinha "Mudanças" nos serviços e o telemóvel não;
+ *   · o desktop tinha "Blog" na empresa e o telemóvel tinha "Avaliações";
+ *   · o desktop listava 12 cidades e o telemóvel 8 — Barreiro, Loures,
+ *     Montijo e Odivelas desapareciam no telemóvel, que é onde está a maior
+ *     parte de quem visita este site.
+ *
+ * O custo não era só o conteúdo errado. Duplicava o peso do HTML em TODAS as
+ * páginas, fazia o leitor de ecrã anunciar o rodapé duas vezes, e enviava ao
+ * Google dois conjuntos de links internos diferentes para as mesmas páginas de
+ * cidade.
+ *
+ * Agora há um bloco só, com os dados nos arrays acima, e a diferença entre
+ * ecrãs resolvida só por CSS. Acrescentar uma cidade passa a ser uma linha —
+ * e aparece nos dois sítios por construção, não por disciplina.
+ *
+ * E SAÍRAM OS ~90 ESTILOS EM LINHA
+ *
+ * Eram eles que obrigavam às quarenta linhas de `footer a { color: inherit
+ * !important }` no globals.css: um estilo em linha ganha a qualquer classe,
+ * por isso a única forma de o vencer era `!important`. Com classes normais,
+ * nada disso é preciso.
+ */
+
+const SERVICOS = [
+  { href: "/recolha-de-moveis", texto: "Recolha de Móveis" },
+  { href: "/recolha-de-entulho", texto: "Recolha de Entulho" },
+  { href: "/esvaziamento-de-casas", texto: "Esvaziamento de Casas" },
+  { href: "/mudancas", texto: "Mudanças" },
+  { href: "/precos", texto: "Preços orientativos" },
+];
+
+const EMPRESA = [
+  { href: "/sobre-nos", texto: "Sobre nós" },
+  { href: "/faq", texto: "FAQ" },
+  { href: "/blog", texto: "Blog" },
+  { href: "/avaliacoes", texto: "Avaliações" },
+  { href: "/contactos", texto: "Contactos" },
+];
+
+/** As doze, e as mesmas em qualquer ecrã. */
+const COBERTURA = [
+  { slug: "lisboa", nome: "Lisboa" },
+  { slug: "almada", nome: "Almada" },
+  { slug: "amadora", nome: "Amadora" },
+  { slug: "seixal", nome: "Seixal" },
+  { slug: "barreiro", nome: "Barreiro" },
+  { slug: "oeiras", nome: "Oeiras" },
+  { slug: "cascais", nome: "Cascais" },
+  { slug: "setubal", nome: "Setúbal" },
+  { slug: "loures", nome: "Loures" },
+  { slug: "sintra", nome: "Sintra" },
+  { slug: "montijo", nome: "Montijo" },
+  { slug: "odivelas", nome: "Odivelas" },
+];
+
+const PAGAMENTOS = [
+  { icone: CreditCard, nome: "Revolut" },
+  { icone: Smartphone, nome: "MB WAY" },
+  { icone: Building, nome: "Novo Banco" },
+];
+
+const tituloCls =
+  "mb-4 text-xs font-bold uppercase tracking-[0.1em] text-white/70";
+const linkCls =
+  "text-sm text-white transition-colors hover:text-marca";
 
 export default function Footer() {
   const anoAtual = new Date().getFullYear();
-  const telHref = `tel:${BUSINESS_PHONE.replace(/\s+/g, "")}`;
   const numeroWhatsapp = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const urlWhatsapp = `https://wa.me/${numeroWhatsapp}?text=${encodeURIComponent("Olá! Gostava de pedir um orçamento à CLYON.")}`;
 
+  const contactoRapido = (
+    <div className="flex flex-col gap-2.5">
+      <a
+        href={urlWhatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick("footer")}
+        className="group flex min-h-[44px] items-center gap-3 rounded-lg bg-slate-800 px-3.5 py-3 text-sm text-white transition-colors hover:bg-slate-700"
+      >
+        <MessageCircle className="h-4 w-4 shrink-0 text-marca" aria-hidden="true" />
+        WhatsApp direto
+      </a>
+      <Link
+        href="/simulador"
+        className="group flex min-h-[44px] items-center gap-3 rounded-lg bg-slate-800 px-3.5 py-3 text-sm text-white transition-colors hover:bg-slate-700"
+      >
+        <ArrowRight className="h-4 w-4 shrink-0 text-marca" aria-hidden="true" />
+        Pedir orçamento
+      </Link>
+    </div>
+  );
+
   return (
-    <footer style={{ backgroundColor: "#0f172a", color: "white" }}>
-      <style jsx>{`
-        footer a:hover {
-          color: #22d3ee !important;
-        }
-        footer button:hover {
-          color: #22d3ee !important;
-        }
-      `}</style>
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "64px 24px" }}>
-        {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-[280px_repeat(4,1fr)] lg:gap-12">
-          {/* Brand Column with CTA Box */}
-          <div style={{ backgroundColor: "#1e293b", borderRadius: "16px", padding: "28px" }}>
-            <Link href="/">
+    <footer className="bg-slate-900 text-white">
+      <div className="mx-auto max-w-7xl px-6 py-16">
+        {/*
+          UM só bloco. A diferença entre ecrãs é só a grelha:
+          duas colunas em telemóvel, e a coluna da marca à esquerda a partir
+          de lg. Nada de conteúdo duplicado.
+        */}
+        <div className="grid grid-cols-2 gap-8 lg:grid-cols-[280px_repeat(4,1fr)] lg:gap-12">
+          {/* A marca ocupa a linha inteira em telemóvel. */}
+          <div className="col-span-2 rounded-2xl bg-slate-800 p-7 lg:col-span-1">
+            <Link href="/" className="inline-block">
               <Image
                 src="/logo-clyon.png"
                 alt="CLYON"
                 width={120}
                 height={40}
-                style={{ height: "36px", width: "auto", filter: "brightness(0) invert(1)" }}
+                className="h-9 w-auto brightness-0 invert"
               />
             </Link>
-            <p style={{ marginTop: "16px", fontSize: "14px", lineHeight: "1.7", color: "#ffffff" }}>
-              Ligamos quem precisa de esvaziar, arrumar ou deitar fora a profissionais
-              verificados em Lisboa, Margem Sul e Setúbal. Orçamento gratuito, preço
-              fechado antes de começar.</p>
-
-            <div style={{ marginTop: "24px", borderTop: "1px solid #334155", paddingTop: "20px" }}>
-              <h4 style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "14px" }}>Pagamentos</h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#ffffff", fontSize: "14px" }}>
-                  <CreditCard style={{ width: "16px", height: "16px", color: "#22d3ee" }} />
-                  Revolut
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#ffffff", fontSize: "14px" }}>
-                  <Smartphone style={{ width: "16px", height: "16px", color: "#22d3ee" }} />
-                  MB WAY
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#ffffff", fontSize: "14px" }}>
-                  <Building style={{ width: "16px", height: "16px", color: "#22d3ee" }} />
-                  Novo Banco
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Serviços Column */}
-          <div>
-            <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "20px" }}>Serviços</h3>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
-              <li><Link href="/recolha-de-moveis" style={linkStyleInline}>Recolha de Móveis</Link></li>
-              <li><Link href="/recolha-de-entulho" style={linkStyleInline}>Recolha de Entulho</Link></li>
-              <li><Link href="/esvaziamento-de-casas" style={linkStyleInline}>Esvaziamento de Casas</Link></li>
-              <li><Link href="/mudancas" style={linkStyleInline}>Mudanças</Link></li>
-              <li><Link href="/precos" style={linkStyleInline}>Preços orientativos</Link></li>
-            </ul>
-          </div>
-
-          {/* Empresa Column */}
-          <div>
-            <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "20px" }}>Empresa</h3>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
-              <li><Link href="/sobre-nos" style={linkStyleInline}>Sobre nós</Link></li>
-              <li><Link href="/faq" style={linkStyleInline}>FAQ</Link></li>
-              <li><Link href="/blog" style={linkStyleInline}>Blog</Link></li>
-              <li><Link href="/contactos" style={linkStyleInline}>Contactos</Link></li>
-            </ul>
-          </div>
-
-          {/* Cobertura Column */}
-          <div>
-            <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "20px" }}>Cobertura</h3>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 20px" }}>
-              <li><Link href="/recolha-moveis-lisboa" style={linkStyleInline}>Lisboa</Link></li>
-              <li><Link href="/recolha-moveis-almada" style={linkStyleInline}>Almada</Link></li>
-              <li><Link href="/recolha-moveis-amadora" style={linkStyleInline}>Amadora</Link></li>
-              <li><Link href="/recolha-moveis-seixal" style={linkStyleInline}>Seixal</Link></li>
-              <li><Link href="/recolha-moveis-barreiro" style={linkStyleInline}>Barreiro</Link></li>
-              <li><Link href="/recolha-moveis-oeiras" style={linkStyleInline}>Oeiras</Link></li>
-              <li><Link href="/recolha-moveis-cascais" style={linkStyleInline}>Cascais</Link></li>
-              <li><Link href="/recolha-moveis-setubal" style={linkStyleInline}>Setúbal</Link></li>
-              <li><Link href="/recolha-moveis-loures" style={linkStyleInline}>Loures</Link></li>
-              <li><Link href="/recolha-moveis-sintra" style={linkStyleInline}>Sintra</Link></li>
-              <li><Link href="/recolha-moveis-montijo" style={linkStyleInline}>Montijo</Link></li>
-              <li><Link href="/recolha-moveis-odivelas" style={linkStyleInline}>Odivelas</Link></li>
-            </ul>
-          </div>
-
-          {/* Contacto Rápido Column */}
-          <div>
-            <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "20px" }}>Contacto Rápido</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <a
-                href={urlWhatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick("footer-quick")}
-                className="site-btn-footer group"
-                style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#1e293b", padding: "12px 14px", borderRadius: "8px", color: "#ffffff", fontSize: "14px", textDecoration: "none", transition: "all 0.2s ease" }}
-              >
-                <MessageCircle style={{ width: "16px", height: "16px", color: "#22d3ee" }} className="group-hover:text-white" />
-                <span style={{ color: "#ffffff" }}>WhatsApp direto</span>
-              </a>
-              <Link
-                href="/simulador"
-                className="site-btn-footer group"
-                style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#1e293b", padding: "12px 14px", borderRadius: "8px", color: "#ffffff", fontSize: "14px", textDecoration: "none", transition: "all 0.2s ease" }}
-              >
-                <ArrowRight style={{ width: "16px", height: "16px", color: "#22d3ee" }} className="group-hover:text-white" />
-                <span style={{ color: "#ffffff" }}>Pedir orçamento</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Layout */}
-        <div className="lg:hidden">
-          {/* Brand */}
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <Link href="/">
-              <Image
-                src="/logo-clyon.png"
-                alt="CLYON"
-                width={120}
-                height={40}
-                style={{ height: "36px", width: "auto", margin: "0 auto", filter: "brightness(0) invert(1)" }}
-              />
-            </Link>
-            <p style={{ marginTop: "16px", fontSize: "14px", lineHeight: "1.7", color: "#ffffff" }}>
-              Recolha e limpeza profissional em Lisboa, Margem Sul e Setúbal.
+            <p className="mt-4 text-sm leading-relaxed text-white">
+              Ligamos quem precisa de esvaziar, arrumar ou deitar fora a
+              profissionais verificados em Lisboa, Margem Sul e Setúbal.
+              Orçamento gratuito, preço fechado antes de começar.
             </p>
-          </div>
 
-          {/* Pagamentos Mobile */}
-          <div style={{ marginBottom: "32px" }}>
-            <h4 style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "14px" }}>Pagamentos</h4>
-            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ffffff", fontSize: "14px" }}>
-                <CreditCard style={{ width: "16px", height: "16px", color: "#22d3ee" }} />
-                Revolut
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ffffff", fontSize: "14px" }}>
-                <Smartphone style={{ width: "16px", height: "16px", color: "#22d3ee" }} />
-                MB WAY
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ffffff", fontSize: "14px" }}>
-                <Building style={{ width: "16px", height: "16px", color: "#22d3ee" }} />
-                Novo Banco
+            <div className="mt-6 border-t border-slate-700 pt-5">
+              <h4 className={tituloCls}>Pagamentos</h4>
+              <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+                {PAGAMENTOS.map(({ icone: Icone, nome }) => (
+                  <span key={nome} className="flex items-center gap-2 text-sm text-white">
+                    <Icone className="h-4 w-4 text-marca" aria-hidden="true" />
+                    {nome}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Links Grid Mobile */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px", marginBottom: "32px" }}>
-            <div>
-              <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>Serviços</h3>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
-                <li><Link href="/recolha-de-moveis" style={linkStyleInline}>Recolha de Móveis</Link></li>
-                <li><Link href="/recolha-de-entulho" style={linkStyleInline}>Recolha de Entulho</Link></li>
-                <li><Link href="/esvaziamento-de-casas" style={linkStyleInline}>Esvaziamento</Link></li>
-                <li><Link href="/precos" style={linkStyleInline}>Preços</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>Empresa</h3>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
-                <li><Link href="/sobre-nos" style={linkStyleInline}>Sobre nós</Link></li>
-                <li><Link href="/faq" style={linkStyleInline}>FAQ</Link></li>
-                <li><Link href="/contactos" style={linkStyleInline}>Contactos</Link></li>
-                <li><Link href="/avaliacoes" style={linkStyleInline}>Avaliações</Link></li>
-              </ul>
-            </div>
-          </div>
+          <nav aria-label="Serviços">
+            <h3 className={tituloCls}>Serviços</h3>
+            <ul className="flex list-none flex-col gap-3 p-0">
+              {SERVICOS.map((s) => (
+                <li key={s.href}>
+                  <Link href={s.href} className={linkCls}>
+                    {s.texto}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-          {/* Cobertura Mobile */}
-          <div style={{ marginBottom: "32px" }}>
-            <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>Cobertura</h3>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              <Link href="/recolha-moveis-lisboa" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Lisboa</Link>
-              <Link href="/recolha-moveis-almada" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Almada</Link>
-              <Link href="/recolha-moveis-amadora" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Amadora</Link>
-              <Link href="/recolha-moveis-seixal" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Seixal</Link>
-              <Link href="/recolha-moveis-setubal" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Setúbal</Link>
-              <Link href="/recolha-moveis-sintra" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Sintra</Link>
-              <Link href="/recolha-moveis-cascais" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Cascais</Link>
-              <Link href="/recolha-moveis-oeiras" style={{ color: "#ffffff", fontSize: "13px", textDecoration: "none", padding: "4px 10px", backgroundColor: "#1e293b", borderRadius: "4px" }}>Oeiras</Link>
-            </div>
-          </div>
+          <nav aria-label="Empresa">
+            <h3 className={tituloCls}>Empresa</h3>
+            <ul className="flex list-none flex-col gap-3 p-0">
+              {EMPRESA.map((e) => (
+                <li key={e.href}>
+                  <Link href={e.href} className={linkCls}>
+                    {e.texto}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-          {/* Contacto Rápido Mobile */}
-          <div style={{ marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>Contacto Rápido</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <a
-                href={urlWhatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick("footer-mobile")}
-                className="site-btn-footer group"
-                style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#1e293b", padding: "12px 14px", borderRadius: "8px", color: "#ffffff", fontSize: "14px", textDecoration: "none", transition: "all 0.2s ease" }}
-              >
-                <MessageCircle style={{ width: "16px", height: "16px", color: "#22d3ee" }} className="group-hover:text-white" />
-                <span style={{ color: "#ffffff" }}>WhatsApp direto</span>
-              </a>
-              <Link
-                href="/simulador"
-                className="site-btn-footer group"
-                style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#1e293b", padding: "12px 14px", borderRadius: "8px", color: "#ffffff", fontSize: "14px", textDecoration: "none", transition: "all 0.2s ease" }}
-              >
-                <ArrowRight style={{ width: "16px", height: "16px", color: "#22d3ee" }} className="group-hover:text-white" />
-                <span style={{ color: "#ffffff" }}>Pedir orçamento</span>
-              </Link>
-            </div>
+          <nav aria-label="Cobertura" className="col-span-2 lg:col-span-1">
+            <h3 className={tituloCls}>Cobertura</h3>
+            {/*
+              Em telemóvel são etiquetas, em ecrã grande são duas colunas de
+              links. O mesmo conteúdo — as doze cidades — nos dois casos.
+
+              O padding das etiquetas dá 44 px de altura: eram ≈26 px, e a
+              esta densidade quem toca em "Seixal" acerta em "Setúbal".
+            */}
+            <ul className="flex list-none flex-wrap gap-2 p-0 lg:grid lg:grid-cols-2 lg:gap-x-5 lg:gap-y-3">
+              {COBERTURA.map((c) => (
+                <li key={c.slug}>
+                  <Link
+                    href={`/recolha-moveis-${c.slug}`}
+                    className="inline-flex min-h-[44px] items-center rounded-md bg-slate-800 px-3.5 text-sm text-white transition-colors hover:text-marca lg:min-h-0 lg:bg-transparent lg:px-0"
+                  >
+                    {c.nome}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="col-span-2 lg:col-span-1">
+            <h3 className={tituloCls}>Contacto rápido</h3>
+            {contactoRapido}
           </div>
         </div>
-
       </div>
 
       {/*
         Registo de operador de resíduos e identificação fiscal.
-        
+
         Os dois principais concorrentes destacam o licenciamento ambiental
         deles, e uma auditoria apontou isso como a maior desvantagem
         competitiva da CLYON. O registo cá estava desde sempre — só não
         aparecia em lado nenhum do site. É público, e é feito para ser
         mostrado.
       */}
-      <div style={{ borderTop: "1px solid #1e293b" }}>
-        <div
-          style={{
-            maxWidth: "1280px",
-            margin: "0 auto",
-            padding: "18px 24px",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "10px 28px",
-            alignItems: "center",
-            fontSize: "13px",
-            color: "rgba(255,255,255,0.55)",
-          }}
-        >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}>
-            <ShieldCheck size={15} style={{ color: "#22d3ee", flexShrink: 0 }} aria-hidden="true" />
+      <div className="border-t border-slate-800">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-7 gap-y-2.5 px-6 py-4 text-[13px] text-white/55">
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck size={15} className="shrink-0 text-marca" aria-hidden="true" />
             Operador de resíduos registado na APA ·{" "}
-            <strong style={{ color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>
-              {IDENTIFICACAO.codigoAPA}
-            </strong>
+            <strong className="font-semibold text-white/80">{IDENTIFICACAO.codigoAPA}</strong>
           </span>
           <span>
             {IDENTIFICACAO.nomeLegal} · NIF {IDENTIFICACAO.nif}
@@ -275,28 +228,32 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div style={{ borderTop: "1px solid #1e293b" }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }} className="flex-col sm:flex-row">
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)" }}>
-            © CLYON {anoAtual} - Todos os direitos reservados
+      <div className="border-t border-slate-800">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-5 sm:flex-row">
+          <p className="text-sm text-white/50">
+            © CLYON {anoAtual} — Todos os direitos reservados
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "center" }}>
-            <Link href="/termos" style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>
+          <div className="flex flex-wrap items-center gap-x-6">
+            <Link href="/termos" className="min-h-[44px] py-3 text-sm text-white/50 transition-colors hover:text-white">
               Termos e Condições
             </Link>
-            <Link href="/privacidade" style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>
+            <Link href="/privacidade" className="min-h-[44px] py-3 text-sm text-white/50 transition-colors hover:text-white">
               Política de Privacidade
             </Link>
-            <Link href="/cookies" style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>
+            <Link href="/cookies" className="min-h-[44px] py-3 text-sm text-white/50 transition-colors hover:text-white">
               Política de Cookies
             </Link>
+            {/*
+              Era um <button> com `padding: 0` — ≈20 px de altura, o alvo de
+              toque mais pequeno do site inteiro. E é o controlo que a lei
+              obriga a manter acessível.
+            */}
             <button
               type="button"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("clyon-open-cookie-preferences"));
               }}
-              style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              className="min-h-[44px] cursor-pointer border-none bg-transparent py-3 text-sm text-white/50 transition-colors hover:text-white"
             >
               Gerir cookies
             </button>

@@ -574,7 +574,7 @@ export default function HeroQuoteForm() {
                     <div className="relative">
                       <button type="button"
                         onClick={() => setShowUploadMenu((v) => !v)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-tinta-fraca transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-500"
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-base text-tinta-fraca transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-acao"
                         aria-label="Adicionar imagem">
                         +
                       </button>

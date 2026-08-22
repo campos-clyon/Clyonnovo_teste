@@ -326,7 +326,7 @@ export default function Header() {
             <Link
               href="/conta"
               aria-label="A minha conta"
-              className={`rounded-full border-2 transition ${
+              className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition ${
                 isContaActive
                   ? "border-cyan-500 ring-2 ring-cyan-500 ring-offset-2"
                   : "border-cyan-200 hover:border-cyan-400"
@@ -342,7 +342,7 @@ export default function Header() {
             <Link
               href="/entrar"
               aria-label="Entrar na conta"
-              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-200 text-slate-500 transition hover:border-cyan-300 hover:text-acao-hover"
+              className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-slate-200 text-slate-500 transition hover:border-cyan-300 hover:text-acao-hover"
             >
               <User className="h-4 w-4" />
             </Link>

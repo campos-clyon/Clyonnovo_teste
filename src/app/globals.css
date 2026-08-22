@@ -191,21 +191,19 @@ a {
   margin-top: 0.5rem;
 }
 
-/* Footer links - forçar cor branca */
-footer a,
-footer a:visited,
-footer a:hover,
-footer a:active,
-footer span,
-footer li,
-footer p {
-  color: inherit !important;
-}
-
-footer a[style*="color: #ffffff"],
-footer a[style*="color:#ffffff"] {
-  color: #ffffff !important;
-}
+/*
+ * As regras do rodapé saíram daqui, e a razão é a mesma que as trouxe.
+ *
+ * Existiam para vencer os ~90 `style={{…}}` em linha do Footer.tsx: um estilo
+ * em linha ganha a qualquer classe, e por isso a única forma de o contrariar
+ * era `!important`. Havia quarenta linhas disto, incluindo selectores por
+ * atributo — `footer a[style*="color: #ffffff"]` — que é o sinal mais claro
+ * de que se estava a combater o próprio código.
+ *
+ * O Footer.tsx passou a usar classes normais. Sem estilos em linha, não há
+ * nada para vencer, e `color: inherit !important` passou a ser um problema em
+ * vez de uma solução: apagava o `hover:text-marca` de todos os links.
+ */
 
 img {
   display: block;
@@ -256,6 +254,27 @@ img {
   outline: none;
   border-color: var(--color-acao);
   box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+/*
+ * O ritmo vertical das secções, num sítio só.
+ *
+ * A homepage tinha CINCO padrões diferentes para nove secções — py-10 sm:py-16,
+ * py-8 sm:py-16, py-8 sm:py-14 lg:py-20, py-8 sm:py-12 lg:py-20, py-8 sm:py-10
+ * lg:py-16. Ninguém identifica isto conscientemente: sente-se como um site que
+ * não está bem acabado, e é o efeito acumulado de dezoito meses de alterações
+ * sem escala definida.
+ *
+ * A partir daqui, a próxima secção que alguém escrever herda o ritmo sem ter
+ * de decidir nada.
+ */
+.secao {
+  padding-block: 64px;
+}
+@media (min-width: 1024px) {
+  .secao {
+    padding-block: 96px;
+  }
 }
 
 /*
@@ -527,37 +546,6 @@ a.bg-white:active {
   color: #0f172a !important;
 }
 
-/* Footer button styles - garantir visibilidade em todos os estados */
-footer .site-btn-footer,
-footer a[class*="bg-slate-800"],
-footer a[class*="bg-slate-700"],
-footer a[style*="background"] {
-  color: #ffffff !important;
-}
-
-footer .site-btn-footer:hover,
-footer .site-btn-footer:focus,
-footer .site-btn-footer:active,
-footer a[class*="bg-slate-"]:hover,
-footer a[class*="bg-slate-"]:focus,
-footer a[class*="bg-slate-"]:active {
-  color: #ffffff !important;
-  background-color: #334155 !important;
-}
-
-footer .site-btn-footer svg,
-footer .site-btn-footer span,
-footer a[class*="bg-slate-"] span {
-  color: #ffffff !important;
-}
-
-footer .site-btn-footer svg {
-  color: #22d3ee !important;
-}
-
-footer .site-btn-footer:hover svg {
-  color: #ffffff !important;
-}
 
 /* ============================================
    GLOBAL CONTRAST FIX - Cyan elements
