@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useId } from "react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
-import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 
 const SERVICE_OPTIONS = [
   { value: "recolha_moveis",           label: "Recolha de móveis" },
@@ -298,24 +298,30 @@ export default function HeroQuoteForm() {
     }
   }
 
-  // ── auto-reset after 60s ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!sent) return;
-    const t = setTimeout(() => {
-      setSent(false);
-      setEstimate(null);
-      setStep(1);
-      setForm({
-        primeiroNome: "", ultimoNome: "", indicativo: "+351", telefone: "",
-        tipoServico: "", rua: "", codigoPostal: "", numeroPosta: "",
-        andar: "", elevador: "", descricao: "",
-      });
-      setImages([]);
-      setErrors({});
-      setServerError("");
-    }, 60_000);
-    return () => clearTimeout(t);
-  }, [sent]);
+  /*
+   * A CONFIRMAÇÃO DEIXOU DE SE APAGAR SOZINHA.
+   *
+   * Havia aqui um `setTimeout` de 60 segundos que devolvia o formulário vazio
+   * ao passo 1. Quem saísse da página para mostrar a alguém, para copiar o
+   * número de telefone, ou simplesmente para atender uma chamada, voltava a um
+   * formulário em branco — e ficava sem saber se o pedido tinha seguido.
+   *
+   * É o momento de maior intenção de toda a visita, e era o único ecrã do site
+   * sem saída. Agora fica, e há um botão para quem quiser mesmo fazer outro.
+   */
+  function recomecar() {
+    setSent(false);
+    setEstimate(null);
+    setStep(1);
+    setForm({
+      primeiroNome: "", ultimoNome: "", indicativo: "+351", telefone: "",
+      tipoServico: "", rua: "", codigoPostal: "", numeroPosta: "",
+      andar: "", elevador: "", descricao: "",
+    });
+    setImages([]);
+    setErrors({});
+    setServerError("");
+  }
 
   // ── success ───────────────────────────────────────────────────────────────────
 
@@ -370,9 +376,31 @@ export default function HeroQuoteForm() {
             </div>
           </div>
 
-          <p className="mt-6 text-[13px] text-tinta-fraca">
-            Este formulário irá reiniciar automaticamente em 1 minuto.
-          </p>
+          {/*
+            Havia aqui "Este formulário irá reiniciar automaticamente em 1
+            minuto" — um aviso de que a página se ia apagar a si própria. No
+            lugar entram as duas coisas que fazem falta a seguir: falar já com
+            alguém, ou pedir outra coisa.
+          */}
+          <div className="mt-6 flex w-full max-w-[300px] flex-col gap-2">
+            <a
+              href={`https://wa.me/${BUSINESS_PHONE.replace(/[^\d]/g, "")}?text=${encodeURIComponent(
+                `Olá! Acabei de enviar um pedido pelo site${form.tipoServico ? ` (${form.tipoServico})` : ""}.`,
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-sm font-semibold text-whatsapp-tinta transition hover:bg-[#20bd5a]"
+            >
+              Falar já por WhatsApp
+            </a>
+            <button
+              type="button"
+              onClick={recomecar}
+              className="min-h-[44px] rounded-xl border border-slate-200 px-4 text-sm font-semibold text-tinta-fraca transition hover:bg-slate-50"
+            >
+              Fazer outro pedido
+            </button>
+          </div>
         </div>
       </div>
     );
