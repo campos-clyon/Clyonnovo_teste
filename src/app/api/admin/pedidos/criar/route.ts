@@ -6,9 +6,9 @@ import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { moradaCompleta } from "@/lib/morada";
 import { valorDeArranque } from "@/lib/valor-de-arranque";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
-import { distribuirPedido } from "@/lib/distribuir-pedido";
-import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { emailValido } from "@/lib/inscricao-profissional";
+import { geocodificarMorada } from "@/lib/geocodificar";
 
 export const runtime = "nodejs";
 
@@ -53,8 +53,6 @@ type Corpo = {
   precisaGuiaTransporte?: boolean;
   /** O valor de partida, se a equipa já combinou um ao telefone. */
   valor?: string | number | null;
-  /** Distribuir logo aos profissionais, ou deixar só registado. */
-  distribuir?: boolean;
 };
 
 const texto = (v: unknown, max = 500): string | null => {
@@ -122,6 +120,19 @@ export async function POST(req: NextRequest) {
      * são melhores do que zero — que era o que dava um preço de trabalho ao
      * lado da base para um serviço do outro lado da ponte.
      */
+    /*
+     * Coordenadas primeiro. É o que decide a quem o pedido chega.
+     *
+     * Sem elas, a regra de elegibilidade cai na lista de zonas que cada
+     * profissional escreveu à mão — cinco ou seis nomes — em vez de comparar
+     * a distância real com o raio que ele declarou. Foi o que matou o #205:
+     * uma recolha em Lisboa contra "palmela, montijo, seixal, amora, setubal",
+     * zero profissionais, quando a 35 km havia um com raio de 125.
+     *
+     * Se falhar, seguimos na mesma: null cai nas zonas, como antes.
+     */
+    const coords = await geocodificarMorada(address, postalCode);
+
     const { km, origem: origemKm } = kmParaOrcamento({
       distanciaMedidaKm: null,
       codigoPostal: postalCode,
@@ -193,7 +204,15 @@ export async function POST(req: NextRequest) {
       rawOrderJson: JSON.stringify({
         origemPedido: "backoffice",
         registadoPor: colab?.nome ?? null,
-        address: { formattedAddress: address, city, postalCode },
+        address: {
+          formattedAddress: coords?.moradaNormalizada ?? address,
+          city,
+          postalCode,
+          // Ficam gravadas para o botão "Enviar aos profissionais" as
+          // reaproveitar mais tarde — é de lá que ele as lê.
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
+        },
       }),
       valorDesejadoCliente: arranque != null ? String(arranque) : null,
       precisaFatura: corpo.precisaFatura === true ? 1 : 0,
@@ -217,47 +236,46 @@ export async function POST(req: NextRequest) {
         "." +
         (arranque != null
           ? " Valor de partida: " + arranque + " €."
-          : " Sem valor de partida — não foi distribuído."),
+          : " Sem valor de partida."),
     });
 
-    let distribuicao: { avisados: number; candidatos: number; motivos: unknown } | null = null;
-    if (corpo.distribuir !== false && arranque != null) {
+    /*
+     * Avaliar o alcance, e NÃO enviar.
+     *
+     * Enviava logo. Um pedido escrito à mão a partir de um telefonema pode ter
+     * a morada, a categoria ou a zona erradas de maneiras que só se descobrem
+     * quando não chega a ninguém — e descobri-lo depois de enviar é tarde: as
+     * negociações estão criadas e os emails saíram.
+     *
+     * Agora quem regista vê a quem chegaria, confere a estimativa, e decide.
+     * O envio é um segundo passo, deliberado.
+     */
+    let alcance: Awaited<ReturnType<typeof avaliarAlcance>> | null = null;
+    if (arranque != null) {
       try {
-        const r = await distribuirPedido({
-          id,
+        alcance = await avaliarAlcance({
           serviceType,
-          description,
-          city,
-          urgency: texto(corpo.urgency, 40),
-          quantidadeDeFotos: 0,
-          valorDesejadoCliente: arranque,
           precisaFatura: corpo.precisaFatura === true,
           precisaGuiaTransporte: corpo.precisaGuiaTransporte === true,
-          // Sem coordenadas: a regra de elegibilidade cai nas zonas cobertas
-          // por cada profissional, que é o segundo critério e existe para isto.
-          lat: null,
-          lng: null,
-          baseUrl: urlDeAccaoDoPedido(req.headers),
-        });
-        distribuicao = { avisados: r.avisados, candidatos: r.candidatos, motivos: r.motivos };
-
-        await appendOrderHistory(id, {
-          type: "created",
-          by: null,
-          message:
-            r.avisados > 0
-              ? "Enviado a " + r.avisados + " profissional(is) de " + r.candidatos + " activos."
-              : "NÃO chegou a nenhum profissional (" +
-                r.candidatos +
-                " activos). Motivos: " +
-                JSON.stringify(r.motivos),
+          city,
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
         });
       } catch (e) {
-        console.error("[admin/pedidos/criar] distribuicao falhou:", e);
+        console.error("[admin/pedidos/criar] avaliacao de alcance falhou:", e);
       }
     }
 
-    return NextResponse.json({ ok: true, id, valorDePartida: arranque, distribuicao });
+    return NextResponse.json({
+      ok: true,
+      id,
+      valorDePartida: arranque,
+      estimativa: estimativa?.estimatedPriceWithVat ?? null,
+      distanciaKm: km,
+      geocodificado: coords != null,
+      moradaNormalizada: coords?.moradaNormalizada ?? null,
+      alcance,
+    });
   } catch (error) {
     console.error("[admin/pedidos/criar]", error);
     return NextResponse.json({ error: "Não foi possível criar o pedido." }, { status: 500 });

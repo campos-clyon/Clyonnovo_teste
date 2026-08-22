@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 
 type SimulatorSetting = {
   key: string;
@@ -137,6 +138,21 @@ type LeadTotals = {
   novos?: number;
   fechados?: number;
   total?: number;
+};
+
+/**
+ * Os pedidos que entraram mesmo.
+ *
+ * Não é a mesma coisa que leads nem que cliques: é a tabela dos pedidos. Foi
+ * o que faltava a este ecrã — mostrava sinais do site e nenhum deles era o
+ * negócio.
+ */
+type PedidoTotals = {
+  total?: number;
+  hoje?: number;
+  semana?: number;
+  porAtribuir?: number;
+  registadosPelaEquipa?: number;
 };
 
 type EventTotals = {
@@ -447,6 +463,7 @@ export default function ColaboradorAdminClient() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadEvents, setLeadEvents] = useState<LeadEvent[]>([]);
   const [leadTotals, setLeadTotals] = useState<LeadTotals>({});
+  const [pedidoTotals, setPedidoTotals] = useState<PedidoTotals>({});
   const [eventTotals, setEventTotals] = useState<EventTotals>({});
   // De que páginas vem o tráfego — a análise que faltava por completo
   const [paginasTop, setPaginasTop] = useState<Array<{ pagePath: string; visitas: number }>>([]);
@@ -968,6 +985,7 @@ export default function ColaboradorAdminClient() {
         } else {
           setLeads(data.leads || []);
           setLeadTotals(data.totals || {});
+          setPedidoTotals(data.pedidos || {});
         }
       } else {
         setLeadsError("Não foi possível carregar leads. Verifique a ligação à base de dados ou os endpoints.");
@@ -1010,14 +1028,36 @@ export default function ColaboradorAdminClient() {
     }
   };
 
-  // Polling a cada 15 segundos quando a aba Leads está ativa
+  // A primeira leitura, quando a secção fica activa ou os filtros mudam.
   useEffect(() => {
     if (activeSection !== "leads" || !token) return;
     carregarLeads(token, leadPeriodo, leadStatusFilter);
-    const interval = setInterval(() => carregarLeads(token, leadPeriodo, leadStatusFilter, true), 15000);
-    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, leadPeriodo, leadStatusFilter, leadEventTypeFilter]);
+
+  /*
+   * E depois de 30 em 30 segundos, enquanto o ecrã estiver à frente.
+   *
+   * Era um setInterval de 15 segundos que nunca parava: um backoffice
+   * esquecido aberto num separador de fundo continuava a pedir à base quatro
+   * vezes por minuto, indefinidamente, para desenhar um ecrã que ninguém
+   * estava a ver.
+   *
+   * Este hook pára quando o separador deixa de estar visível e vai buscar
+   * dados frescos assim que ele volta — que é o momento em que mais
+   * interessa. Nunca mexe no estado de "a carregar", por isso o ecrã não
+   * pisca nem perde o que se está a escrever.
+   */
+  useAutoRefresh(
+    () => {
+      if (token) carregarLeads(token, leadPeriodo, leadStatusFilter, true);
+    },
+    {
+      intervalMs: 30_000,
+      enabled: activeSection === "leads" && Boolean(token),
+      paused: savingLeadStatus,
+    },
+  );
 
   // Carregar pedidos quando a aba Pedidos fica activa
   useEffect(() => {
@@ -2243,17 +2283,23 @@ export default function ColaboradorAdminClient() {
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {[
                   /*
-                   * "Formulários hoje" contava linhas da tabela `leads`, e o
-                   * cartão "FORMS" logo abaixo conta eventos de submissão —
-                   * duas coisas diferentes, de duas tabelas diferentes, com a
-                   * mesma palavra em cima. Bastava um formulário submetido sem
-                   * lead gravado para o painel se contradizer à frente de quem
-                   * o lê, e a partir daí nenhum número merece confiança.
+                   * Os pedidos primeiro, e os sinais do site depois.
+                   *
+                   * Este ecrã abria com "Formulários hoje" — linhas da tabela
+                   * `leads` — e logo abaixo tinha um cartão "FORMS" a contar
+                   * eventos de submissão. Duas tabelas diferentes com a mesma
+                   * palavra em cima, capazes de mostrar 0 e 1 ao mesmo tempo.
+                   * A partir daí nenhum número do ecrã merece confiança.
+                   *
+                   * Pior do que isso: nenhum dos quatro era o negócio. Um
+                   * "WhatsApp: 4" não são quatro conversas, são quatro cliques
+                   * num botão — e quem já tem o número guardado nunca passa
+                   * pelo site. O que conta é quantos pedidos entraram.
                    */
-                  { label: "Contactos deixados hoje", value: leadTotals.hoje ?? 0, icon: ListChecks, tone: "cyan" },
-                  { label: "Contactos esta semana", value: leadTotals.semana ?? 0, icon: TrendingUp, tone: "cyan" },
-                  { label: "Por responder", value: leadTotals.novos ?? 0, icon: AlertTriangle, tone: "amber" },
-                  { label: "Fechados", value: leadTotals.fechados ?? 0, icon: CheckCircle2, tone: "emerald" },
+                  { label: "Pedidos hoje", value: pedidoTotals.hoje ?? 0, icon: ListChecks, tone: "cyan" },
+                  { label: "Pedidos esta semana", value: pedidoTotals.semana ?? 0, icon: TrendingUp, tone: "cyan" },
+                  { label: "Por atribuir", value: pedidoTotals.porAtribuir ?? 0, icon: AlertTriangle, tone: "amber" },
+                  { label: "Contactos por responder", value: leadTotals.novos ?? 0, icon: CheckCircle2, tone: "emerald" },
                 ].map((stat) => {
                   const Icon = stat.icon;
                   const toneClass =

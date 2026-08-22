@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
     const where = `WHERE ${conditions.join(" AND ")}`;
 
-    const { leads, totals } = await withConnection(async (conn) => {
+    const { leads, totals, pedidos } = await withConnection(async (conn) => {
       const [leadsRows] = await conn.execute(
         `SELECT id, nome, telefone, email, localidade, tipoServico, preferenciaContacto,
                 mensagem, pagePath, utmSource, utmMedium, utmCampaign, gclid,
@@ -87,16 +87,40 @@ export async function GET(request: NextRequest) {
         [hoje, semanaStart],
       );
 
+      /*
+       * Os pedidos a sério, ao lado dos contactos.
+       *
+       * Este painel mostrava só a tabela `leads` e os cliques no site — e
+       * nenhum dos dois é o negócio. Um "WhatsApp: 4" não são quatro
+       * conversas: são quatro pessoas que carregaram no botão. Quem já tem o
+       * número guardado manda a mensagem e nunca toca no site.
+       *
+       * O número que conta é este: quantos pedidos entraram mesmo. Vem da
+       * mesma ida à base, para não custar uma segunda viagem.
+       */
+      const [pedidosRows] = await conn.execute(
+        `SELECT
+          COUNT(*) AS total,
+          SUM(CASE WHEN DATE(createdAt) = ? THEN 1 ELSE 0 END) AS hoje,
+          SUM(CASE WHEN createdAt >= ?      THEN 1 ELSE 0 END) AS semana,
+          SUM(CASE WHEN status = 'sem_assistente' THEN 1 ELSE 0 END) AS porAtribuir,
+          SUM(CASE WHEN rawOrderJson LIKE '%"origemPedido":"backoffice"%' THEN 1 ELSE 0 END) AS registadosPelaEquipa
+         FROM simulatorOrders
+         WHERE status IS NULL OR status NOT IN ('cancelado', 'arquivado')`,
+        [hoje, semanaStart],
+      );
+
       return {
         leads: Array.isArray(leadsRows) ? leadsRows : [],
         totals: Array.isArray(totalsRows) ? (totalsRows as any[])[0] : {},
+        pedidos: Array.isArray(pedidosRows) ? (pedidosRows as any[])[0] : {},
       };
     });
 
-    return NextResponse.json({ leads, totals });
+    return NextResponse.json({ leads, totals, pedidos });
   } catch (error) {
     console.error("[api/admin/leads] GET error:", error);
-    return NextResponse.json({ leads: [], totals: {}, error: "Erro ao carregar leads" }, { status: 500 });
+    return NextResponse.json({ leads: [], totals: {}, pedidos: {}, error: "Erro ao carregar leads" }, { status: 500 });
   }
 }
 

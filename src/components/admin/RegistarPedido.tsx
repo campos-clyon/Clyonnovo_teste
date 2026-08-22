@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const SERVICOS = [
@@ -15,6 +15,33 @@ const SERVICOS = [
   ["outro", "Outro serviço"],
 ] as const;
 
+const MOTIVOS: Record<string, string> = {
+  categoria_diferente: "não fazem este serviço",
+  fora_de_alcance: "fora da zona ou do raio",
+  nao_emite_fatura: "não passam fatura",
+  nao_emite_guia: "sem guia de transporte verificada",
+  inactivo: "conta inactiva",
+  nao_aprovado: "ainda não aprovados",
+};
+
+type Alcance = {
+  elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }>;
+  candidatos: number;
+  motivos: Record<string, number>;
+};
+
+type Resultado = {
+  id: number;
+  valorDePartida: number | null;
+  estimativa: number | null;
+  distanciaKm: number | null;
+  geocodificado: boolean;
+  moradaNormalizada: string | null;
+  alcance: Alcance | null;
+};
+
+const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".", ",") + " €");
+
 /**
  * Registar um pedido que chegou por fora do site.
  *
@@ -23,21 +50,26 @@ const SERVICOS = [
  * chegar aos profissionais — não existiam na base — e o trabalho ou era feito
  * pela CLYON ou perdia-se.
  *
- * O que se pede aqui é o mínimo de que a regra de distribuição precisa: sem
- * serviço não há categoria para comparar, sem morada não há distância, e sem
- * contacto não há a quem entregar o trabalho depois de fechado. O resto
- * melhora o preço e mais nada.
+ * SÃO DOIS PASSOS, DE PROPÓSITO
  *
- * O email é opcional, ao contrário do simulador. Quem telefona raramente o tem
- * à mão, e nestes pedidos é a CLYON que responde às propostas por ele — não
- * fica ninguém à espera de um email que não vai abrir.
+ * Primeiro grava-se e calcula-se; só depois é que se envia. A primeira versão
+ * enviava logo, e isso é arriscado num pedido escrito à mão a partir de um
+ * telefonema: a morada, a categoria ou a zona podem estar erradas de maneiras
+ * que só se descobrem quando não chega a ninguém. Foi o que aconteceu ao #205
+ * — criado, distribuído, zero profissionais, e a descoberta só depois de os
+ * emails já não poderem ser chamados de volta.
+ *
+ * Agora quem regista vê a estimativa, vê a quem chegaria e a que distância, e
+ * decide. Enviar é um segundo toque.
  */
 export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(false);
   const [aGravar, setAGravar] = useState(false);
+  const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
-  const [feito, setFeito] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [enviado, setEnviado] = useState<string | null>(null);
   const [f, setF] = useState({
     serviceType: "",
     contactName: "",
@@ -56,10 +88,27 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
   const muda = (k: keyof typeof f, v: string | boolean) => {
     setF((d) => ({ ...d, [k]: v }));
     setErro("");
-    setFeito(null);
+    setResultado(null);
+    setEnviado(null);
   };
 
-  async function gravar() {
+  function limpar() {
+    setF((d) => ({
+      ...d,
+      contactName: "",
+      contactPhone: "",
+      contactEmail: "",
+      address: "",
+      postalCode: "",
+      description: "",
+      valor: "",
+    }));
+    setResultado(null);
+    setEnviado(null);
+  }
+
+  /** Passo 1 — grava, localiza a morada, calcula o preço e avalia o alcance. */
+  async function calcular() {
     if (!token) return;
     setAGravar(true);
     setErro("");
@@ -67,50 +116,48 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
       const res = await fetch("/api/admin/pedidos/criar", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ ...f, distribuir: true }),
+        body: JSON.stringify(f),
       });
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível criar.");
         return;
       }
-      const d = dados.distribuicao;
-      /*
-       * A resposta diz se chegou a alguém, e não só que gravou.
-       *
-       * Um "criado com sucesso" sobre um pedido que não chegou a profissional
-       * nenhum é a pior mensagem possível: parece feito, e fica à espera de
-       * uma proposta que não vem.
-       */
-      setFeito(
-        "Pedido #" +
-          dados.id +
-          " criado por " +
-          dados.valorDePartida +
-          " €. " +
-          (d
-            ? d.avisados > 0
-              ? "Enviado a " + d.avisados + " de " + d.candidatos + " profissionais activos."
-              : "NÃO chegou a nenhum de " +
-                d.candidatos +
-                " activos — o histórico do pedido diz porquê."
-            : "Não foi distribuído."),
-      );
-      setF((d0) => ({
-        ...d0,
-        contactName: "",
-        contactPhone: "",
-        contactEmail: "",
-        address: "",
-        postalCode: "",
-        description: "",
-        valor: "",
-      }));
+      setResultado(dados);
       onCriado();
     } catch {
       setErro("Erro de rede.");
     } finally {
       setAGravar(false);
+    }
+  }
+
+  /** Passo 2 — só depois de alguém olhar para o que saiu. */
+  async function enviar() {
+    if (!token || !resultado) return;
+    setAEnviar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/promover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ pedidoId: resultado.id, valor: resultado.valorDePartida }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível enviar.");
+        return;
+      }
+      setEnviado(
+        dados.avisados > 0
+          ? "Enviado a " + dados.avisados + " profissional(is)."
+          : "Não chegou a nenhum — o histórico do pedido diz porquê.",
+      );
+      onCriado();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(false);
     }
   }
 
@@ -135,13 +182,15 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
         <div>
           <h3 className="text-sm font-bold text-cyan-300">Registar pedido</h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
-            Para o que chega por fora do site. Vai aos profissionais como qualquer
-            outro — e as propostas são respondidas aqui no painel, em nome do
-            cliente.
+            Para o que chega por fora do site. Primeiro calcula-se; depois
+            decide se vai aos profissionais ou fica só no backoffice.
           </p>
         </div>
         <button
-          onClick={() => setAberto(false)}
+          onClick={() => {
+            setAberto(false);
+            limpar();
+          }}
           className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-300"
         >
           Fechar
@@ -191,6 +240,10 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
             placeholder="Rua, número, localidade"
             className={campo}
           />
+          <span className="mt-0.5 block text-[10px] text-slate-500">
+            Quanto mais exacta, melhor: é daqui que saem as coordenadas, e são
+            elas que decidem que profissionais alcançam o trabalho.
+          </span>
         </label>
 
         <label className="text-xs text-slate-400">
@@ -201,9 +254,6 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
             placeholder="2845-513"
             className={campo}
           />
-          <span className="mt-0.5 block text-[10px] text-slate-500">
-            É daqui que sai a distância, e com ela o preço.
-          </span>
         </label>
 
         <label className="text-xs text-slate-400">
@@ -213,9 +263,6 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
             onChange={(e) => muda("city", e.target.value)}
             className={campo}
           />
-          <span className="mt-0.5 block text-[10px] text-slate-500">
-            Também decide quem cobre a zona.
-          </span>
         </label>
 
         <label className="text-xs text-slate-400">
@@ -280,20 +327,164 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
           {erro}
         </p>
       )}
-      {feito && (
-        <p className="mt-3 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
-          {feito}
-        </p>
+
+      {!resultado && (
+        <button
+          onClick={calcular}
+          disabled={aGravar}
+          className="mt-4 flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+        >
+          {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {aGravar ? "A calcular…" : "Calcular preço e alcance"}
+        </button>
       )}
 
-      <button
-        onClick={gravar}
-        disabled={aGravar}
-        className="mt-4 flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
-      >
-        {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {aGravar ? "A criar e a distribuir…" : "Criar e enviar aos profissionais"}
-      </button>
+      {resultado && (
+        <Resumo
+          r={resultado}
+          enviado={enviado}
+          aEnviar={aEnviar}
+          onEnviar={enviar}
+          onNovo={limpar}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * O que saiu do motor de preços, e a quem chegaria.
+ *
+ * É este ecrã que faltava. Sem ele, a decisão de enviar era tomada às cegas:
+ * carregava-se num botão e só o histórico do pedido, mais tarde, dizia se
+ * tinha chegado a alguém.
+ */
+function Resumo({
+  r,
+  enviado,
+  aEnviar,
+  onEnviar,
+  onNovo,
+}: {
+  r: Resultado;
+  enviado: string | null;
+  aEnviar: boolean;
+  onEnviar: () => void;
+  onNovo: () => void;
+}) {
+  const alcance = r.alcance;
+  const quantos = alcance?.elegiveis.length ?? 0;
+
+  const porque = Object.entries(alcance?.motivos ?? {})
+    .filter(([, n]) => Number(n) > 0)
+    .map(([m, n]) => `${n} ${MOTIVOS[m] ?? m}`)
+    .join(", ");
+
+  return (
+    <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Pedido #{r.id} criado
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">Estimativa</p>
+          <p className="text-sm font-bold text-white">{euros(r.estimativa)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">Valor de partida</p>
+          <p className="text-sm font-bold text-cyan-300">{euros(r.valorDePartida)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">Distância</p>
+          <p className="text-sm font-bold text-white">
+            {r.distanciaKm != null ? r.distanciaKm + " km" : "—"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">Morada</p>
+          <p
+            className={`text-xs font-semibold ${
+              r.geocodificado ? "text-emerald-400" : "text-amber-400"
+            }`}
+          >
+            {r.geocodificado ? "Localizada" : "Não localizada"}
+          </p>
+        </div>
+      </div>
+
+      {/* Uma morada que o Google não reconheceu deixa a regra a comparar nomes
+          de cidades em vez de medir distâncias — e é assim que um trabalho a
+          35 km fica "fora de alcance" de quem cobre 125. */}
+      {!r.geocodificado && (
+        <p className="mt-3 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-relaxed text-amber-300">
+          Não conseguimos localizar esta morada no mapa. Sem coordenadas, o
+          alcance é decidido pela lista de zonas de cada profissional, que é
+          muito mais curta do que o raio deles. Vale a pena corrigir a morada.
+        </p>
+      )}
+      {r.geocodificado && r.moradaNormalizada && (
+        <p className="mt-2 text-[11px] text-slate-500">{r.moradaNormalizada}</p>
+      )}
+
+      <div className="mt-4 border-t border-slate-800 pt-3">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+          <Users className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+          {alcance == null
+            ? "Alcance não avaliado"
+            : quantos > 0
+              ? `Chegaria a ${quantos} de ${alcance.candidatos} profissionais activos`
+              : `Não chegaria a nenhum dos ${alcance.candidatos} profissionais activos`}
+        </p>
+
+        {quantos > 0 && (
+          <ul className="mt-2 space-y-1">
+            {alcance!.elegiveis.map((p) => (
+              <li key={p.id} className="text-xs text-slate-400">
+                {p.nome}
+                {p.distanciaKm != null && (
+                  <span className="text-slate-600"> · {p.distanciaKm} km</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {quantos === 0 && porque && (
+          <p className="mt-2 text-xs text-slate-500">Porquê: {porque}.</p>
+        )}
+      </div>
+
+      {enviado ? (
+        <p className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
+          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+          {enviado}
+        </p>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            onClick={onEnviar}
+            disabled={aEnviar || r.valorDePartida == null}
+            className="flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-40"
+          >
+            {aEnviar ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Send className="h-4 w-4" aria-hidden="true" />
+            )}
+            Enviar aos profissionais
+          </button>
+          {/* Não enviar é uma escolha legítima, e por isso é um botão. Sem ele,
+              quem não quisesse distribuir ficava sem saber o que fazer ao
+              ecrã — e no meio da dúvida carregava em enviar. */}
+          <button
+            onClick={onNovo}
+            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800/60"
+          >
+            Deixar só no backoffice
+          </button>
+        </div>
+      )}
     </div>
   );
 }

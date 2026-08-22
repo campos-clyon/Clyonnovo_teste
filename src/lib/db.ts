@@ -1000,7 +1000,18 @@ export async function pedidosPorPromover(limite = 20): Promise<
        FROM simulatorOrders o
        LEFT JOIN negociacoes n ON n.pedidoId = o.id
       WHERE n.id IS NULL
-        AND o.contactEmail IS NOT NULL
+        /*
+         * Sem email TAMBÉM entra.
+         *
+         * A condicao era contactEmail IS NOT NULL, e fazia sentido enquanto
+         * todos os pedidos vinham do site — sem email não havia como mandar o
+         * link ao cliente. Deixou de fazer quando a equipa passou a registar
+         * os que chegam por telefone: quem liga raramente dá o email, e nesses
+         * é a CLYON que responde às propostas.
+         *
+         * O #205 foi criado, ficou sem email, e desapareceu desta lista.
+         * Existia na base, não existia em ecrã nenhum onde se pudesse enviar.
+         */
         AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
       ORDER BY o.createdAt DESC
       LIMIT ?`,

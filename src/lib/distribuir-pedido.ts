@@ -56,6 +56,81 @@ export function quantoRecebe(valor: number | null): number | null {
   return Math.round(valor * (1 - TAXA_PROFISSIONAL) * 100) / 100;
 }
 
+/**
+ * A quem é que este pedido chegaria — sem mandar nada a ninguém.
+ *
+ * Existe para o backoffice poder mostrar o alcance ANTES de enviar. Um pedido
+ * registado ao telefone é escrito à mão, e a morada, a categoria ou a zona
+ * podem estar erradas de maneiras que só se descobrem quando não chega a
+ * ninguém. Descobri-lo depois de carregar em enviar é tarde: as negociações
+ * ficam criadas e os emails já saíram.
+ *
+ * É a MESMA avaliação que a distribuição faz — chama as mesmas funções, na
+ * mesma ordem. Uma pré-visualização calculada à parte seria uma segunda
+ * opinião, e no dia em que discordasse da primeira ninguém saberia qual valia.
+ */
+export async function avaliarAlcance(pedido: {
+  serviceType: string | null;
+  precisaFatura: boolean;
+  precisaGuiaTransporte: boolean;
+  city: string | null;
+  lat: number | null;
+  lng: number | null;
+}): Promise<{
+  elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }>;
+  candidatos: number;
+  motivos: Record<string, number>;
+}> {
+  const candidatos = await profissionaisActivos();
+  const trabalho =
+    pedido.lat != null && pedido.lng != null ? { lat: pedido.lat, lng: pedido.lng } : null;
+
+  const comDistancia = candidatos.map((p) => ({
+    profissional: p,
+    distanciaKm: distanciaParaElegibilidade(
+      p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
+      trabalho,
+    ),
+  }));
+
+  const elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }> = [];
+  const foraDeAlcance: ProfissionalNaBase[] = [];
+  for (const c of comDistancia) {
+    const r = avaliarElegibilidade(
+      {
+        serviceType: pedido.serviceType,
+        precisaFatura: pedido.precisaFatura,
+        precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+        distanciaKm: c.distanciaKm,
+        city: pedido.city,
+      },
+      c.profissional,
+    );
+    if (r.elegivel) {
+      elegiveis.push({
+        id: c.profissional.id,
+        nome: c.profissional.name,
+        distanciaKm: c.distanciaKm,
+      });
+    } else {
+      foraDeAlcance.push(c.profissional);
+    }
+  }
+
+  const motivos = motivosAgregados(
+    {
+      serviceType: pedido.serviceType,
+      precisaFatura: pedido.precisaFatura,
+      precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+      distanciaKm: null,
+      city: pedido.city,
+    },
+    foraDeAlcance,
+  );
+
+  return { elegiveis, candidatos: candidatos.length, motivos: motivos as unknown as Record<string, number> };
+}
+
 export async function distribuirPedido(
   pedido: PedidoParaDistribuicao,
 ): Promise<ResultadoDaDistribuicao> {
