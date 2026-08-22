@@ -17,6 +17,8 @@ export type Pedido = {
   confirmadoEm: string | null;
   pagoEm: string | null;
   avaliadoEm: string | null;
+  /** Quando ELE o arrumou. Não mexe no que o cliente vê. */
+  arquivadoEm: string | null;
   estrelas: number | null;
   valorAcordado: number | null;
   serviceType: string | null;

@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
         confirmadoEm: l.confirmadoEm ?? null,
         pagoEm: l.pagoEm ?? null,
         avaliadoEm: l.avaliadoEm ?? null,
+        arquivadoEm: l.arquivadoProfissionalEm ?? null,
         estrelas: l.estrelas ?? null,
         valorAcordado: acordado,
         propostas: l.propostasJson,

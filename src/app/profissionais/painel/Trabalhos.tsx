@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import {
+  Archive,
+  ArchiveRestore,
   BadgeCheck,
   Camera,
   CheckCircle2,
@@ -67,11 +69,42 @@ function servicoDe(p: Pedido): string {
  * "Novo" é o que ainda não tocou: chegou-lhe e ele não propôs nada. É o único
  * que tem prazo a correr contra si, e por isso é o que se destaca.
  */
-type Separador = "novos" | "negociacao" | "contratados" | "terminados";
+type Separador =
+  | "novos"
+  | "negociacao"
+  | "contratados"
+  | "terminados"
+  | "recusados"
+  | "arquivados";
 
+/**
+ * "TERMINADOS" NÃO GUARDAVA TRABALHOS TERMINADOS.
+ *
+ * Guardava os `desistida` e os `morta` — ou seja, os que ele PERDEU. Um
+ * trabalho feito, confirmado e pago ficava em "Contratados" para sempre, e
+ * quem abrisse "Terminados" à procura do que já fez encontrava a lista do que
+ * lhe escapou. É o pior sítio possível para uma palavra ambígua.
+ *
+ * Agora são coisas separadas:
+ *
+ *   · CONTRATADOS — é dele e ainda não acabou. É aqui que há trabalho por
+ *     fazer, e é por isso que este separador tem de estar limpo do resto;
+ *   · TERMINADOS — feito e confirmado pelo cliente. O histórico do que
+ *     correu bem;
+ *   · RECUSADOS — desistiu ele, desistiu o cliente, ou o trabalho fechou com
+ *     outro profissional. Perdido, e vale a pena vê-lo à parte: é aqui que se
+ *     percebe o que se está a perder e porquê;
+ *   · ARQUIVADOS — o que ele próprio arrumou. Não desaparece, muda de sítio.
+ *
+ * O arquivo ganha ao resto de propósito: um trabalho arquivado é uma decisão
+ * dele, e não pode reaparecer nas outras listas só porque mudou de estado.
+ */
 function separadorDe(p: Pedido): Separador {
-  if (p.estado === "acordada") return "contratados";
-  if (p.estado === "desistida" || p.estado === "morta") return "terminados";
+  if (p.arquivadoEm) return "arquivados";
+  if (p.estado === "acordada") {
+    return p.confirmadoEm || p.pagoEm ? "terminados" : "contratados";
+  }
+  if (p.estado === "desistida" || p.estado === "morta") return "recusados";
   const propostas = propostasDe(p.propostas);
   const jaRespondeu = propostas.some((x) => x.por === "profissional");
   return jaRespondeu || p.estado === "aguarda_contratacao" ? "negociacao" : "novos";
@@ -82,13 +115,17 @@ const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
   { id: "negociacao", rotulo: "Em negociação" },
   { id: "contratados", rotulo: "Contratados" },
   { id: "terminados", rotulo: "Terminados" },
+  { id: "recusados", rotulo: "Recusados" },
+  { id: "arquivados", rotulo: "Arquivados" },
 ];
 
 const VAZIO: Record<Separador, string> = {
   novos: "Nenhum pedido novo. Assim que entrar um na sua zona e nas categorias que faz, aparece aqui — e avisamos por email.",
   negociacao: "Não há nenhuma negociação a decorrer.",
-  contratados: "Ainda não fechou nenhum trabalho.",
-  terminados: "Nada terminado por agora.",
+  contratados: "Nenhum trabalho seu por fazer neste momento.",
+  terminados: "Ainda não terminou nenhum trabalho. Assim que o cliente confirmar, aparece aqui.",
+  recusados: "Nada recusado nem perdido. É bom sinal.",
+  arquivados: "Nada arquivado. Use o botão de arquivar para arrumar o que já não precisa de ver.",
 };
 
 /** Há quanto tempo, em palavras. Um pedido de "há 3 dias" já não é novo. */
@@ -113,6 +150,30 @@ export default function Trabalhos({
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
   const [separador, setSeparador] = useState<Separador>("novos");
+  const [aArquivar, setAArquivar] = useState<number | null>(null);
+
+  /**
+   * Arruma um trabalho, ou repõe-no.
+   *
+   * Não apaga nada: muda de separador. O que o cliente vê fica igual, a
+   * carteira conta o mesmo, e o "Arquivados" existe precisamente para nada
+   * desaparecer de vez.
+   */
+  async function arquivar(negociacaoId: number, arquivar: boolean) {
+    setAArquivar(negociacaoId);
+    try {
+      const res = await fetch("/api/profissionais/arquivar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ negociacaoId, arquivar }),
+      });
+      if (res.ok) onRecarregar();
+    } catch {
+      /* Sem rede não se arruma nada — e não há nada a desfazer. */
+    } finally {
+      setAArquivar(null);
+    }
+  }
 
   const escolhido = pedidos.find((p) => p.negociacaoId === aberto);
   if (escolhido) {
@@ -188,9 +249,15 @@ export default function Trabalhos({
           const fechado = p.estado === "acordada";
           const novo = separadorDe(p) === "novos";
 
+          // O botão de arrumar só aparece onde arrumar faz sentido. Num
+          // trabalho novo ou a decorrer seria um convite a esconder o que
+          // ainda precisa de resposta.
+          const podeArrumar =
+            separador === "recusados" || separador === "terminados" || separador === "arquivados";
+
           return (
+            <div key={p.negociacaoId} className="relative">
             <button
-              key={p.negociacaoId}
               onClick={() => setAberto(p.negociacaoId)}
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
                 fechado
@@ -279,6 +346,24 @@ export default function Trabalhos({
                 </div>
               </div>
             </button>
+
+            {podeArrumar && (
+              <button
+                onClick={() => arquivar(p.negociacaoId, !p.arquivadoEm)}
+                disabled={aArquivar === p.negociacaoId}
+                className="absolute bottom-3 right-3 flex min-h-[44px] items-center gap-1.5 rounded-lg border border-[#E2EEF3] bg-white px-3 text-xs font-semibold text-slate-500 transition active:bg-slate-50 disabled:opacity-50"
+              >
+                {aArquivar === p.negociacaoId ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : p.arquivadoEm ? (
+                  <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {p.arquivadoEm ? "Repor" : "Arquivar"}
+              </button>
+            )}
+            </div>
           );
         })}
       </div>

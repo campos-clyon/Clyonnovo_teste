@@ -748,7 +748,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 3;
+const VERSAO_DAS_NEGOCIACOES = 4;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -805,6 +805,24 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN estrelas TINYINT NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN comentario VARCHAR(600) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN avaliadoEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v4 (22-08-2026) — arquivar, de cada lado.
+     *
+     * Duas colunas e não uma: arquivar é um gesto de arrumação de quem o faz,
+     * e não um estado do trabalho. O profissional pode querer tirar da vista
+     * um trabalho que perdeu há três meses sem que isso mude nada para o
+     * cliente — e o contrário também.
+     *
+     * Uma coluna partilhada faria com que arrumar a minha lista arrumasse a
+     * do outro, que é exactamente o tipo de efeito que ninguém espera de um
+     * botão que diz "arquivar".
+     *
+     * É uma DATA e não um booleano: saber QUANDO alguém arquivou é a
+     * diferença entre poder responder a "isto desapareceu-me da lista" e ter
+     * de encolher os ombros.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN arquivadoProfissionalEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN arquivadoClienteEm DATETIME NULL DEFAULT NULL`,
   ];
   for (const sql of colunas) {
     try {
@@ -905,6 +923,49 @@ export async function negociacoesDoPedido(pedidoId: number): Promise<
     [pedidoId],
   ) as any[];
   return rows as any[];
+}
+
+/**
+ * Arruma ou desarruma um trabalho na lista de quem o pediu.
+ *
+ * Só mexe na coluna do LADO que pediu. Arquivar é arrumação de quem o faz, e
+ * não um estado do trabalho: um profissional a tirar da vista uma negociação
+ * que perdeu há três meses não pode mexer no que o cliente vê.
+ *
+ * Verifica que a negociação é mesmo dele antes de escrever. Sem essa condição
+ * no WHERE, um id trocado no corpo do pedido arquivava o trabalho de outra
+ * pessoa — e ela só daria por isso quando fosse procurá-lo e não o
+ * encontrasse.
+ */
+export async function arquivarNegociacao(
+  negociacaoId: number,
+  quem: { providerId: number } | { clienteEmail: string },
+  arquivar: boolean,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const quando = arquivar ? toMySQLDateTime() : null;
+
+  if ("providerId" in quem) {
+    const [r] = (await pool.execute(
+      `UPDATE negociacoes SET arquivadoProfissionalEm = ?
+        WHERE id = ? AND providerId = ?`,
+      [quando, negociacaoId, quem.providerId],
+    )) as any[];
+    return Number(r?.affectedRows ?? 0) > 0;
+  }
+
+  // Do lado do cliente a ligação é pelo pedido, que é onde o email vive.
+  const [r] = (await pool.execute(
+    `UPDATE negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+        SET n.arquivadoClienteEm = ?
+      WHERE n.id = ? AND o.contactEmail = ?`,
+    [quando, negociacaoId, quem.clienteEmail.trim().toLowerCase()],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) > 0;
 }
 
 export async function gravarNegociacao(
@@ -1465,6 +1526,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     estrelas: number | null;
     comentario: string | null;
     avaliadoEm: Date | null;
+    arquivadoProfissionalEm: Date | null;
     serviceType: string | null;
     city: string | null;
     urgency: string | null;
@@ -1484,7 +1546,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
-            n.estrelas, n.comentario, n.avaliadoEm,
+            n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson,
             -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e
