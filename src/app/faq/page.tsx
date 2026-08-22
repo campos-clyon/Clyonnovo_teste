@@ -148,6 +148,28 @@ const faqCategories = [
         a: "Para serviços em Lisboa, Almada, Seixal, Barreiro, Setúbal e concelhos próximos a deslocação está incluída no preço. Para localidades mais afastadas pode haver um custo adicional de 5 € a 15 € conforme a distância — informado no orçamento.",
       },
       {
+        q: "O entulho vai para onde? Estão licenciados?",
+        /*
+         * Isto existia e nao estava dito em lado nenhum.
+         *
+         * Os dois principais concorrentes destacam o licenciamento ambiental
+         * deles, e uma auditoria apontou a falta disso como a maior
+         * desvantagem competitiva da CLYON. O registo na APA ca estava desde
+         * sempre.
+         *
+         * E ha um argumento mais forte, que os concorrentes nao tem: a
+         * plataforma VERIFICA o registo de transportador de cada profissional
+         * antes de lhe passar um trabalho que exija guia. A regra esta em
+         * profissional-elegivel.ts e exclui quem nao o tem verificado — nao e
+         * uma promessa, e codigo que corre em cada distribuicao.
+         *
+         * A frase e precisa de proposito: a exclusao so se aplica quando o
+         * pedido exige guia de transporte. Dizer mais do que isso seria
+         * prometer o que o sistema nao faz.
+         */
+        a: "A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente, com o código APA13458563. E vai mais longe: quando o trabalho exige guia de acompanhamento de resíduos, só lhe propomos profissionais cujo número de transportador já verificámos — quem não o tem verificado nem chega a ver o seu pedido. O destino final é sempre um operador licenciado.",
+      },
+      {
         q: "Fazem fatura ou recibo?",
         // Dizia "Emitimos recibo ou fatura para todos os serviços", e isso
         // deixou de ser verdade com o pivot: quem presta o serviço é o

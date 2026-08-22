@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building } from "lucide-react";
+import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building, ShieldCheck } from "lucide-react";
 
 import { trackWhatsAppClick, trackPhoneCall } from "@/lib/analytics";
 import { BUSINESS_PHONE, BUSINESS_EMAIL } from "@/lib/seo-data";
+import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 
 // Estilos para links com hover azul água
 const linkStyle = "text-white hover:text-cyan-400 transition-colors";
@@ -234,6 +235,43 @@ export default function Footer() {
           </div>
         </div>
 
+      </div>
+
+      {/*
+        Registo de operador de resíduos e identificação fiscal.
+        
+        Os dois principais concorrentes destacam o licenciamento ambiental
+        deles, e uma auditoria apontou isso como a maior desvantagem
+        competitiva da CLYON. O registo cá estava desde sempre — só não
+        aparecia em lado nenhum do site. É público, e é feito para ser
+        mostrado.
+      */}
+      <div style={{ borderTop: "1px solid #1e293b" }}>
+        <div
+          style={{
+            maxWidth: "1280px",
+            margin: "0 auto",
+            padding: "18px 24px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px 28px",
+            alignItems: "center",
+            fontSize: "13px",
+            color: "rgba(255,255,255,0.55)",
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}>
+            <ShieldCheck size={15} style={{ color: "#22d3ee", flexShrink: 0 }} aria-hidden="true" />
+            Operador de resíduos registado na APA ·{" "}
+            <strong style={{ color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>
+              {IDENTIFICACAO.codigoAPA}
+            </strong>
+          </span>
+          <span>
+            {IDENTIFICACAO.nomeLegal} · NIF {IDENTIFICACAO.nif}
+          </span>
+          <span>{IDENTIFICACAO.morada}</span>
+        </div>
       </div>
 
       {/* Bottom Bar */}

@@ -6,6 +6,7 @@ import {
   IDENTIFICACAO,
   identificacaoCompleta,
   linhaDeIdentificacao,
+  O_QUE_FALTA,
   TAXA_CLIENTE,
   TAXA_PROFISSIONAL,
 } from "@/lib/identificacao-legal";
@@ -75,11 +76,9 @@ export default function TermosPage() {
       {!identificacaoCompleta() && (
         <div className="mx-auto mt-6 max-w-5xl px-4 sm:px-6 lg:px-8">
           <p className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-sm leading-relaxed text-red-800">
-            <strong>Documento incompleto.</strong> Falta a identificação legal
-            obrigatória (nome e NIF). Enquanto isso não estiver preenchido em{" "}
-            <code>src/lib/identificacao-legal.ts</code>, estes termos não
-            cumprem o artigo 10.º do Decreto-Lei 7/2004 e não devem ser
-            apresentados como definitivos.
+            <strong>Falta um dado obrigatório.</strong> {O_QUE_FALTA}{" "}
+            Até lá, estes termos não cumprem integralmente o artigo 10.º do
+            Decreto-Lei 7/2004.
           </p>
         </div>
       )}

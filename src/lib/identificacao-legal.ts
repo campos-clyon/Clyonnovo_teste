@@ -30,9 +30,6 @@
  * gritar em vez de estarem escondidos numa página qualquer.
  */
 
-/** Marcador visível. Aparece tal e qual no site enquanto não for substituído. */
-const POR_PREENCHER = "[POR PREENCHER]";
-
 export const IDENTIFICACAO = {
   /** O nome comercial pelo qual toda a gente conhece a operação. */
   nomeComercial: "CLYON",
@@ -44,12 +41,35 @@ export const IDENTIFICACAO = {
    * o nome dela que tem de constar, mesmo que o negócio se apresente como
    * CLYON. Um documento assinado por uma marca não vincula ninguém.
    */
-  nomeLegal: POR_PREENCHER,
+  nomeLegal: "Wanderson Campos Silva",
 
-  /** NIF de nove dígitos da pessoa singular com actividade aberta. */
-  nif: POR_PREENCHER,
+  /**
+   * NIF de nove dígitos da pessoa singular com actividade aberta.
+   *
+   * Publicá-lo não é uma escolha: é exigido pelo artigo 10.º do DL 7/2004. E
+   * não expõe nada de novo — vai em todas as facturas emitidas, e qualquer
+   * cliente já servido tem-no. Escondê-lo do site não protegia ninguém e
+   * deixava o site em incumprimento.
+   */
+  nif: "289165199",
 
-  /** O domicílio profissional declarado nas Finanças. */
+  /**
+   * A morada, ao nível da localidade — e não da porta.
+   *
+   * A CLYON trabalha a partir de casa e ainda não tem morada comercial. A rua
+   * e o número são a residência de uma pessoa, e publicá-los num site que
+   * qualquer um abre é uma exposição que nada aqui justifica.
+   *
+   * Esta localidade já era pública muito antes disto: o conteúdo do site diz
+   * há meses que "a sede da CLYON fica em Belverde, Amora (Seixal),
+   * 2845-513". Ao ficar por aqui não se acrescenta exposição nenhuma.
+   *
+   * ⚠️ NÃO É SUFICIENTE para o artigo 10.º do DL 7/2004, que exige o endereço
+   * geográfico do estabelecimento. É um meio-termo assumido até haver morada
+   * comercial — domiciliação no contabilista ou escritório virtual, que
+   * custam entre 10 e 30 euros por mês e resolvem também a verificação do
+   * perfil do Google, falhada sete vezes por não haver local físico.
+   */
   morada: "Belverde, Amora, 2845-513 Seixal, Portugal",
 
   email: "geral@clyon.pt",
@@ -65,6 +85,19 @@ export const IDENTIFICACAO = {
    */
   formaJuridica: "Empresário em nome individual (actividade aberta)",
 
+  /**
+   * Registo de operador de resíduos, na Agência Portuguesa do Ambiente.
+   *
+   * Isto existia e não estava em lado nenhum do site. Os dois principais
+   * concorrentes destacam o licenciamento ambiental deles — era apontado como
+   * a maior desvantagem competitiva da CLYON, quando afinal o registo cá
+   * estava desde sempre, só invisível.
+   *
+   * É um registo público, feito para ser mostrado. Mostrá-lo não expõe nada
+   * que os concorrentes não exponham sobre si próprios.
+   */
+  codigoAPA: "APA13458563",
+
   /** Entidade de resolução alternativa de litígios de consumo, por região. */
   ralNome: "Centro de Arbitragem de Conflitos de Consumo de Lisboa",
   ralSite: "https://www.centroarbitragemlisboa.pt",
@@ -76,10 +109,29 @@ export const IDENTIFICACAO = {
   cnpdSite: "https://www.cnpd.pt",
 } as const;
 
-/** Está pronto para ir para o ar? */
+/**
+ * Falta alguma coisa para cumprir o artigo 10.º do DL 7/2004?
+ *
+ * Verificava se o nome e o NIF ainda eram marcadores. Deixou de servir quando
+ * foram preenchidos — e o que falta agora é outra coisa: o endereço
+ * geográfico do estabelecimento. A morada acima está ao nível da localidade,
+ * de propósito, porque a rua é a residência de uma pessoa.
+ *
+ * Passar isto a `true` quando houver morada comercial faz o aviso desaparecer
+ * de todas as páginas legais de uma só vez.
+ */
+const MORADA_COMPLETA = false;
+
 export function identificacaoCompleta(): boolean {
-  return IDENTIFICACAO.nomeLegal !== POR_PREENCHER && IDENTIFICACAO.nif !== POR_PREENCHER;
+  return MORADA_COMPLETA;
 }
+
+/** O que ainda falta, escrito para quem lê a página. */
+export const O_QUE_FALTA =
+  "Falta a morada completa do estabelecimento. A que consta está ao nível da " +
+  "localidade — a CLYON opera a partir de casa e a rua é uma residência. " +
+  "Resolve-se com uma morada comercial (domiciliação no contabilista ou " +
+  "escritório virtual).";
 
 /** A linha de identificação, montada por extenso. */
 export function linhaDeIdentificacao(): string {
