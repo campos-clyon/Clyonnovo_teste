@@ -465,3 +465,28 @@ export const AVALIACOES = {
 
 /** O total verificável, somado e não arredondado. */
 export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
+
+/**
+ * O prazo de resposta, num sítio só.
+ *
+ * Estava escrito à mão em 104 sítios de 41 ficheiros, e por isso divergiu: a
+ * homepage prometia 24 horas no hero e, dois ecrãs abaixo, anunciava "<48h" em
+ * letra gigante — na secção cujo título é "Construída para inspirar
+ * confiança". O cartão dos 48h chegava a contradizer-se a si próprio, com a
+ * descrição a dizer "confirmação de data no próprio dia".
+ *
+ * Quem compara os dois números não conclui que um deles está errado. Conclui
+ * que a casa não sabe quanto tempo demora a responder — e é isso que custa o
+ * pedido.
+ *
+ * Todo o resto do site já dizia 24 horas; o 48 era o caso isolado. Fica aqui
+ * para a próxima mudança ser uma linha e não uma caça.
+ */
+export const PRAZO_DE_RESPOSTA = {
+  /** Para texto corrido: "Orçamento gratuito em 24 horas." */
+  porExtenso: "24 horas",
+  /** Para selos e números em destaque. */
+  curto: "<24h",
+  /** Para frases como "Resposta em menos de 24 horas". */
+  frase: "Resposta em menos de 24 horas",
+} as const;

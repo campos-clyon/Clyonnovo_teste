@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
 import {
@@ -68,7 +69,19 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 const CATEGORY_PRICES: Record<string, string> = {
   recolha_moveis: "40 – 100 €",
   recolha_monos: "50 – 120 €",
-  recolha_entulho: "3 – 5 €",
+  /*
+   * Dizia "3 – 5 €", sem unidade, numa grelha onde todos os outros cartões
+   * mostram o preço TOTAL do trabalho (móveis 40–100 €, esvaziamento
+   * 180–280 €). Os 3 € vinham de pricing-helper.ts e são POR SACO — o mínimo
+   * real é 90 € s/IVA, e a própria página para onde este cartão aponta diz
+   * "desde 80€".
+   *
+   * Ou seja: o primeiro preço que o visitante vê estava trinta vezes abaixo do
+   * que se cobra, no serviço com maior margem. Quem clicava com "3 €" na
+   * cabeça aterrava numa página que diz 80 — e um preço anunciado que não se
+   * pratica não é só conversão perdida.
+   */
+  recolha_entulho: "desde 80 €",
   esvaziamento_casa: "180 – 280 €",
   esvaziamento_apartamento: "200 – 350 €",
   mudanca: "50 €/h · mín. 3h",
@@ -138,8 +151,13 @@ const GUARANTEES = [
   },
   {
     icon: Clock,
-    title: "Resposta em menos de 48 horas",
-    stat: "<48h",
+    // Dizia "menos de 48 horas" e "<48h" em letra gigante, dois ecrãs abaixo
+    // do hero que promete 24 — e na secção cujo título é "Construída para
+    // inspirar confiança". Pior: a descrição por baixo já dizia "no próprio
+    // dia", ou seja o cartão contradizia-se a si próprio. Todo o resto do
+    // site diz 24 horas; este era o único sítio com outro número.
+    title: PRAZO_DE_RESPOSTA.frase,
+    stat: PRAZO_DE_RESPOSTA.curto,
     statLabel: "tempo médio de resposta",
     description:
       "A maioria dos pedidos em Lisboa e Margem Sul recebe confirmação de data no próprio dia. Cobertura em mais de 24 localidades.",
@@ -217,7 +235,7 @@ export default function HomePage() {
             {/* Subtitle */}
             <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
               Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
-              Orçamento gratuito em 24&nbsp;horas. Serviço em Lisboa, Margem Sul e Setúbal.
+              Orçamento gratuito em {PRAZO_DE_RESPOSTA.porExtenso}. Serviço em Lisboa, Margem Sul e Setúbal.
             </p>
 
             {/* Category pills */}
@@ -246,7 +264,9 @@ export default function HomePage() {
                 <span>5,0 · 188 trabalhos</span>
               </span>
               <span className="text-slate-300">·</span>
-              <span className="text-xs text-slate-500 sm:text-sm">Resposta em &lt;24&nbsp;h</span>
+              <span className="text-xs text-slate-500 sm:text-sm">
+                Resposta em {PRAZO_DE_RESPOSTA.curto}
+              </span>
               <span className="hidden text-slate-300 sm:inline">·</span>
               <a
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
