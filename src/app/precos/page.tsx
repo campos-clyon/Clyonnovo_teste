@@ -129,7 +129,7 @@ export default function PrecosPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
+              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-acao shadow-sm">
                 Preços orientativos
               </div>
               <h1 className="mt-5 max-w-[13ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
@@ -145,9 +145,9 @@ export default function PrecosPage() {
 
             <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.2)]">
               <div className="flex items-start gap-3">
-                <Wallet className="mt-1 h-5 w-5 text-cyan-600" />
+                <Wallet className="mt-1 h-5 w-5 text-acao" />
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                     Como acelerar o preço certo
                   </p>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
@@ -180,7 +180,7 @@ export default function PrecosPage() {
                 key={item.title}
                 className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]"
               >
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                   {item.title}
                 </p>
                 <h2 className="mt-4 text-3xl font-bold text-slate-950">{item.price}</h2>
@@ -195,7 +195,7 @@ export default function PrecosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-acao">
                 O que altera o valor
               </p>
               <h2 className="mt-4 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
@@ -215,7 +215,7 @@ export default function PrecosPage() {
                   className="rounded-[22px] border border-cyan-100 bg-cyan-50/70 px-5 py-4"
                 >
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-1 h-4 w-4 text-cyan-600" />
+                    <CheckCircle2 className="mt-1 h-4 w-4 text-acao" />
                     <p className="text-sm leading-7 text-slate-700">{item}</p>
                   </div>
                 </div>
@@ -230,7 +230,7 @@ export default function PrecosPage() {
           <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)] lg:p-10">
             <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                   Cenarios tipicos
                 </p>
                 <h2 className="mt-4 text-3xl font-bold text-slate-950 sm:text-4xl">
@@ -258,7 +258,7 @@ export default function PrecosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-acao">
                 Perguntas frequentes
               </p>
               <h2 className="mt-4 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">

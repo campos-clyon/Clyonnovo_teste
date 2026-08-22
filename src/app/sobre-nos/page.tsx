@@ -87,7 +87,7 @@ export default function SobreNosPage() {
               <div className="mt-4 space-y-3">
                 {REGIONS.map((region) => (
                   <div key={region.slug} className="flex items-start gap-3">
-                    <MapPin className="mt-1 h-4 w-4 text-cyan-600" />
+                    <MapPin className="mt-1 h-4 w-4 text-acao" />
                     <p className="text-sm leading-7 text-slate-600">
                       Operação ativa em {region.name} com resposta para recolhas,
                       limpezas e pedidos urgentes.
@@ -108,7 +108,7 @@ export default function SobreNosPage() {
                 key={value}
                 className="rounded-[28px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(14,116,144,0.16)]"
               >
-                <CheckCircle2 className="h-5 w-5 text-cyan-600" />
+                <CheckCircle2 className="h-5 w-5 text-acao" />
                 <p className="mt-4 text-sm leading-7 text-slate-700">{value}</p>
               </div>
             ))}
@@ -120,7 +120,7 @@ export default function SobreNosPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[1.02fr_0.98fr]">
             <div className="rounded-[34px] border border-cyan-100 bg-cyan-50/70 p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-cyan-600 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-acao shadow-sm">
                 <Users className="h-5 w-5" />
               </div>
               <h2 className="mt-5 text-3xl font-bold text-slate-950">
@@ -129,7 +129,7 @@ export default function SobreNosPage() {
               <div className="mt-5 space-y-3">
                 {clientTypes.map((item) => (
                   <div key={item} className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-1 h-4 w-4 text-cyan-600" />
+                    <CheckCircle2 className="mt-1 h-4 w-4 text-acao" />
                     <p className="text-sm leading-7 text-slate-600">{item}</p>
                   </div>
                 ))}
@@ -137,7 +137,7 @@ export default function SobreNosPage() {
             </div>
 
             <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-acao">
                 <Recycle className="h-5 w-5" />
               </div>
               <h2 className="mt-5 text-3xl font-bold text-slate-950">
@@ -176,7 +176,7 @@ export default function SobreNosPage() {
                   className="rounded-[28px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(14,116,144,0.16)]"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-bold text-white">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-acao text-sm font-bold text-white">
                       {index + 1}
                     </div>
                     <p className="pt-1 text-sm leading-7 text-slate-600">{step}</p>
@@ -207,21 +207,21 @@ export default function SobreNosPage() {
             <div className="rounded-[34px] border border-cyan-100 bg-cyan-50/70 p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
               <div className="mt-6 space-y-4">
                 <div className="flex items-start gap-3 rounded-[22px] bg-white p-5 shadow-sm">
-                  <Phone className="mt-1 h-4 w-4 text-cyan-600" />
+                  <Phone className="mt-1 h-4 w-4 text-acao" />
                   <div>
                     <p className="text-sm font-semibold text-slate-950">Telefone</p>
                     <p className="mt-1 text-sm leading-7 text-slate-600">{BUSINESS_PHONE}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-[22px] bg-white p-5 shadow-sm">
-                  <Mail className="mt-1 h-4 w-4 text-cyan-600" />
+                  <Mail className="mt-1 h-4 w-4 text-acao" />
                   <div>
                     <p className="text-sm font-semibold text-slate-950">Email</p>
                     <p className="mt-1 text-sm leading-7 text-slate-600">{BUSINESS_EMAIL}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rounded-[22px] bg-white p-5 shadow-sm">
-                  <MapPin className="mt-1 h-4 w-4 text-cyan-600" />
+                  <MapPin className="mt-1 h-4 w-4 text-acao" />
                   <div>
                     <p className="text-sm font-semibold text-slate-950">Morada</p>
                     <p className="mt-1 text-sm leading-7 text-slate-600">{BUSINESS_ADDRESS}</p>

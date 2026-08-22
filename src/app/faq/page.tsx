@@ -243,7 +243,7 @@ export default function FAQPage() {
         <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                 Central de ajuda
               </p>
               <h1 className="mt-4 max-w-[17ch] text-[2.4rem] font-bold leading-[1.06] tracking-tight text-slate-950 sm:text-[3.6rem]">
@@ -260,7 +260,7 @@ export default function FAQPage() {
                 {["Recolha de móveis", "Esvaziamento de casa", "Preços", "Zonas"].map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700"
+                    className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-acao"
                   >
                     {tag}
                   </span>
@@ -282,7 +282,7 @@ export default function FAQPage() {
               { value: "Lisboa+", label: "Margem Sul e Setúbal" },
             ].map((s) => (
               <div key={s.label} className="text-center">
-                <p className="text-2xl font-bold text-cyan-600">{s.value}</p>
+                <p className="text-2xl font-bold text-acao">{s.value}</p>
                 <p className="mt-1 text-xs text-slate-500">{s.label}</p>
               </div>
             ))}

@@ -18,7 +18,7 @@ export default function PrivacidadePage() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700 shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-acao shadow-sm">
             Informação Legal
           </div>
           <h1 className="mt-5 max-w-4xl text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.6rem]">
@@ -40,7 +40,7 @@ export default function PrivacidadePage() {
       {/* ── Índice rápido ── */}
       <section className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Navegação rápida</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-acao">Navegação rápida</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {[
               ["#responsavel", "1. Responsável pelo tratamento"],
@@ -57,7 +57,7 @@ export default function PrivacidadePage() {
               <a
                 key={href}
                 href={href}
-                className="text-sm text-cyan-700 hover:text-cyan-900 hover:underline"
+                className="text-sm text-acao hover:text-cyan-900 hover:underline"
               >
                 {label}
               </a>
@@ -297,7 +297,7 @@ export default function PrivacidadePage() {
                       href="https://www.cnpd.pt"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-cyan-700 hover:underline"
+                      className="text-acao hover:underline"
                     >
                       Comissão Nacional de Protecção de Dados (CNPD)
                     </a>.
@@ -328,7 +328,7 @@ export default function PrivacidadePage() {
             body={
               <>
                 O uso de cookies no site clyon.pt está descrito em detalhe na{" "}
-                <Link href="/cookies" className="text-cyan-700 hover:underline">
+                <Link href="/cookies" className="text-acao hover:underline">
                   Política de Cookies
                 </Link>
                 . Pode aceitar, recusar ou personalizar as suas preferências no banner apresentado à
@@ -352,23 +352,23 @@ export default function PrivacidadePage() {
                 <br />
                 <br />
                 Serviços cobertos por esta política:{" "}
-                <Link href="/recolha-de-moveis" className="text-cyan-700 hover:underline">
+                <Link href="/recolha-de-moveis" className="text-acao hover:underline">
                   recolha de móveis
                 </Link>
                 ,{" "}
-                <Link href="/esvaziamento-de-casas" className="text-cyan-700 hover:underline">
+                <Link href="/esvaziamento-de-casas" className="text-acao hover:underline">
                   esvaziamento de casa
                 </Link>
                 ,{" "}
-                <Link href="/recolha-de-entulho" className="text-cyan-700 hover:underline">
+                <Link href="/recolha-de-entulho" className="text-acao hover:underline">
                   recolha de entulho
                 </Link>
                 ,{" "}
-                <Link href="/recolha-de-monos" className="text-cyan-700 hover:underline">
+                <Link href="/recolha-de-monos" className="text-acao hover:underline">
                   recolha de monos
                 </Link>{" "}
                 e{" "}
-                <Link href="/mudancas" className="text-cyan-700 hover:underline">
+                <Link href="/mudancas" className="text-acao hover:underline">
                   mudanças
                 </Link>{" "}
                 em Lisboa, Margem Sul e Setúbal.

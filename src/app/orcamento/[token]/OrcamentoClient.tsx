@@ -93,7 +93,7 @@ export default function OrcamentoClient({
         <p className="text-slate-600 max-w-sm mx-auto leading-relaxed">
           Obrigado pela sua confirmação. A equipa CLYON irá entrar em contacto para dar seguimento ao seu pedido.
         </p>
-        <p className="mt-4 text-sm text-slate-400">Pedido #{order.id}</p>
+        <p className="mt-4 text-sm text-tinta-fraca">Pedido #{order.id}</p>
       </div>
     );
   }
@@ -111,7 +111,7 @@ export default function OrcamentoClient({
         <p className="text-slate-600 max-w-sm mx-auto leading-relaxed">
           O seu pedido foi cancelado. Se tiver alguma dúvida, contacte-nos directamente.
         </p>
-        <p className="mt-4 text-sm text-slate-400">Pedido #{order.id}</p>
+        <p className="mt-4 text-sm text-tinta-fraca">Pedido #{order.id}</p>
       </div>
     );
   }
@@ -145,7 +145,7 @@ export default function OrcamentoClient({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Morada</p>
+                <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Morada</p>
                 <p className="text-sm text-slate-800">{order.address}</p>
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function OrcamentoClient({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Descrição</p>
+                <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Descrição</p>
                 <p className="text-sm text-slate-800 leading-relaxed">{order.description}</p>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function OrcamentoClient({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <div>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Data prevista</p>
+              <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Data prevista</p>
               <p className="text-sm text-slate-800">{fmt(order.dataAgendada)}</p>
             </div>
           </div>
@@ -184,8 +184,8 @@ export default function OrcamentoClient({
               O que interessa ao cliente é o mesmo em qualquer dos casos: este
               é o valor final, e não lhe acresce nada.
             */}
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Total aprovado</p>
-            <p className="text-3xl font-bold text-[#00B4D8] mt-1">{preco}</p>
+            <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Total aprovado</p>
+            <p className="text-3xl font-bold text-acao mt-1">{preco}</p>
           </div>
           <div className="rounded-full bg-[#00B4D8]/10 px-3 py-1">
             <p className="text-xs font-semibold text-[#0077B6]">Valor final</p>
@@ -242,7 +242,7 @@ export default function OrcamentoClient({
         </div>
       )}
 
-      <p className="mt-6 text-center text-xs text-slate-400 leading-relaxed">
+      <p className="mt-6 text-center text-xs text-tinta-fraca leading-relaxed">
         Tem dúvidas? Contacte-nos antes de confirmar ou cancelar.
       </p>
     </div>

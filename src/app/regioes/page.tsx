@@ -95,8 +95,8 @@ export default function RegioesPage() {
                 href={hub.href}
                 className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-all hover:-translate-y-1 hover:shadow-lg"
               >
-                <h3 className="font-bold text-slate-900 group-hover:text-cyan-600">{hub.name}</h3>
-                <div className="mt-3 flex items-center gap-1 text-sm font-medium text-cyan-600">
+                <h3 className="font-bold text-slate-900 group-hover:text-acao-hover">{hub.name}</h3>
+                <div className="mt-3 flex items-center gap-1 text-sm font-medium text-acao">
                   Ver hub
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
@@ -106,7 +106,7 @@ export default function RegioesPage() {
         </div>
 
         <div className="mt-8 rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
-          <h2 className="mt-3 text-3xl font-bold text-[#0B1929]">Base local preparada para captar intenção comercial</h2>
+          <h2 className="mt-3 text-3xl font-bold text-tinta">Base local preparada para captar intenção comercial</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {SERVICES.map((service) => (
               <Link

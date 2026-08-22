@@ -55,7 +55,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function Err({ msg }: { msg?: string }) {
   if (!msg) return null;
-  return <p className="mt-0.5 text-[10px] text-red-400">{msg}</p>;
+  return <p className="mt-0.5 text-[10px] text-erro">{msg}</p>;
 }
 
 type FormData = {
@@ -282,7 +282,7 @@ export default function HeroQuoteForm() {
         <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
           {/* animated check */}
           <div className="relative flex h-16 w-16 items-center justify-center">
-            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-500/20" />
+            <div className="absolute inset-0 animate-ping rounded-full bg-acao/20" />
             <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-cyan-400/40 bg-cyan-50">
               <svg className="h-7 w-7 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -290,7 +290,7 @@ export default function HeroQuoteForm() {
             </div>
           </div>
 
-          <h3 className="mt-5 text-xl font-bold text-[#0B1929]">Pedido enviado com sucesso!</h3>
+          <h3 className="mt-5 text-xl font-bold text-tinta">Pedido enviado com sucesso!</h3>
 
           <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-slate-500">
             A nossa equipa irá entrar em contacto em breve para confirmar data, horário e detalhes do serviço.
@@ -301,27 +301,27 @@ export default function HeroQuoteForm() {
             <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">📞</span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-[#0B1929]">Resposta em &lt;24&nbsp;h</p>
+                <p className="text-[11px] font-semibold text-tinta">Resposta em &lt;24&nbsp;h</p>
                 <p className="text-[10px] text-slate-500">Via chamada ou WhatsApp</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">📋</span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-[#0B1929]">Orçamento confirmado antes de avançar</p>
+                <p className="text-[11px] font-semibold text-tinta">Orçamento confirmado antes de avançar</p>
                 <p className="text-[10px] text-slate-500">Nenhum trabalho sem a sua aprovação</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">✅</span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-[#0B1929]">Sem custos ocultos</p>
+                <p className="text-[11px] font-semibold text-tinta">Sem custos ocultos</p>
                 <p className="text-[10px] text-slate-500">O preço fechado é o preço final</p>
               </div>
             </div>
           </div>
 
-          <p className="mt-6 text-[10px] text-slate-400">
+          <p className="mt-6 text-[10px] text-tinta-fraca">
             Este formulário irá reiniciar automaticamente em 1 minuto.
           </p>
         </div>
@@ -339,8 +339,8 @@ export default function HeroQuoteForm() {
       {/* progress bar */}
       <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
         <div className="flex flex-1 items-center gap-1.5">
-          <div className="h-1 flex-1 rounded-full bg-cyan-500" />
-          <div className={`h-1 flex-1 rounded-full transition-colors ${step === 2 ? "bg-cyan-500" : "bg-slate-200"}`} />
+          <div className="h-1 flex-1 rounded-full bg-acao" />
+          <div className={`h-1 flex-1 rounded-full transition-colors ${step === 2 ? "bg-acao" : "bg-slate-200"}`} />
         </div>
         <span className="text-[10px] text-slate-500">
           {step === 1 ? "Passo 1/2 · Contacto" : "Passo 2/2 · Localização"}
@@ -405,7 +405,7 @@ export default function HeroQuoteForm() {
             {/* spacer + CTA at bottom to match phase 2 height */}
             <div className="mt-auto space-y-3 pt-3">
               <button type="submit"
-                className="w-full rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400">
+                className="w-full rounded-xl bg-acao py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-acao-hover">
                 Próximo
               </button>
               <p className="text-center text-[10px] text-slate-500">
@@ -475,7 +475,7 @@ export default function HeroQuoteForm() {
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <Label>Descrição <span className="normal-case text-slate-500">(opcional)</span></Label>
-                  <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-500" : "text-slate-400"}`}>
+                  <span className={`text-[10px] ${form.descricao.length > 280 ? "text-amber-500" : "text-tinta-fraca"}`}>
                     {form.descricao.length}/300
                   </span>
                 </div>
@@ -495,12 +495,12 @@ export default function HeroQuoteForm() {
                         {images.length} imagem{images.length > 1 ? "ns" : ""} selecionada{images.length > 1 ? "s" : ""}
                       </span>
                     ) : (
-                      <span className="text-[10px] text-slate-400">Adicionar fotos</span>
+                      <span className="text-[10px] text-tinta-fraca">Adicionar fotos</span>
                     )}
                     <div className="relative">
                       <button type="button"
                         onClick={() => setShowUploadMenu((v) => !v)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-slate-400 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-500"
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-tinta-fraca transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-500"
                         aria-label="Adicionar imagem">
                         +
                       </button>
@@ -545,7 +545,7 @@ export default function HeroQuoteForm() {
                   ← Voltar
                 </button>
                 <button type="submit" disabled={loading}
-                  className="relative flex-1 overflow-hidden rounded-xl bg-cyan-500 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-cyan-600">
+                  className="relative flex-1 overflow-hidden rounded-xl bg-acao py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-acao-hover disabled:cursor-not-allowed disabled:bg-acao">
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />

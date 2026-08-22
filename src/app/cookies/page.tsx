@@ -112,7 +112,7 @@ export default function CookiesPage() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700 shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-acao shadow-sm">
             Informação Legal
           </div>
           <h1 className="mt-5 max-w-4xl text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.6rem]">
@@ -177,11 +177,11 @@ export default function CookiesPage() {
                 <br />
                 <br />
                 Estes dados ajudam-nos a melhorar a página de{" "}
-                <Link href="/recolha-de-moveis" className="text-cyan-700 hover:underline">
+                <Link href="/recolha-de-moveis" className="text-acao hover:underline">
                   recolha de móveis em Lisboa
                 </Link>
                 , os fluxos de{" "}
-                <Link href="/esvaziamento-de-casas" className="text-cyan-700 hover:underline">
+                <Link href="/esvaziamento-de-casas" className="text-acao hover:underline">
                   esvaziamento de casa
                 </Link>{" "}
                 e o simulador de orçamento.
@@ -260,7 +260,7 @@ export default function CookiesPage() {
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                             row.type === "Necessário"
-                              ? "bg-cyan-50 text-cyan-700"
+                              ? "bg-cyan-50 text-acao"
                               : row.type === "Analítica"
                               ? "bg-amber-50 text-amber-700"
                               : "bg-violet-50 text-violet-700"
@@ -327,7 +327,7 @@ export default function CookiesPage() {
                 <br />
                 <br />
                 Também pode consultar a nossa{" "}
-                <Link href="/privacidade" className="text-cyan-700 hover:underline">
+                <Link href="/privacidade" className="text-acao hover:underline">
                   Política de Privacidade
                 </Link>{" "}
                 completa ou apresentar reclamação junto da{" "}
@@ -335,7 +335,7 @@ export default function CookiesPage() {
                   href="https://www.cnpd.pt"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-cyan-700 hover:underline"
+                  className="text-acao hover:underline"
                 >
                   Comissão Nacional de Protecção de Dados (CNPD)
                 </a>.

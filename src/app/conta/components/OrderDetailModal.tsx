@@ -296,7 +296,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               <div className="text-xl font-bold leading-none text-slate-900">
                 {Number(preco).toFixed(2)} €
               </div>
-              <div className="mt-1 text-[11px] text-slate-400">
+              <div className="mt-1 text-[11px] text-tinta-fraca">
                 {precoEAcordado ? "total a pagar" : "sem IVA"}
               </div>
             </div>
@@ -305,7 +305,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               <div className="text-xl font-bold leading-none text-slate-900">
                 {Number(order.estimateMin).toFixed(0)}–{Number(order.estimateMax).toFixed(0)} €
               </div>
-              <div className="mt-1 text-[11px] text-slate-400">estimativa</div>
+              <div className="mt-1 text-[11px] text-tinta-fraca">estimativa</div>
             </div>
           ) : null}
         </div>
@@ -448,12 +448,12 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               <p className="text-xs font-semibold text-slate-700">Mensagens</p>
             </div>
             {conversation.length === 0 && !order.mensagemCliente ? (
-              <p className="text-xs text-slate-400">Ainda não há mensagens neste pedido.</p>
+              <p className="text-xs text-tinta-fraca">Ainda não há mensagens neste pedido.</p>
             ) : (
               <ul className="space-y-2">
                 {order.mensagemCliente && conversation.length === 0 && (
                   <li className="rounded-lg bg-white p-2.5 shadow-sm">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Equipa CLYON</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-tinta-fraca">Equipa CLYON</p>
                     <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{order.mensagemCliente}</p>
                   </li>
                 )}
@@ -464,7 +464,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                       key={i}
                       className={`rounded-lg p-2.5 shadow-sm ${isClient ? "ml-6 bg-blue-50" : "mr-6 bg-white"}`}
                     >
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-tinta-fraca">
                         {isClient ? "Tu" : (e.by?.nome ?? "Equipa CLYON")}
                         <span className="ml-1 text-slate-300 normal-case tracking-normal">· {formatDateTime(e.createdAt)}</span>
                       </p>
@@ -481,7 +481,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                 onChange={(e) => setReply(e.target.value)}
                 placeholder="Escreve uma resposta ou pergunta à equipa..."
                 rows={2}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#0077B6] focus:outline-none focus:ring-2 focus:ring-[#0077B6]/20"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-tinta-fraca focus:border-[#0077B6] focus:outline-none focus:ring-2 focus:ring-[#0077B6]/20"
               />
               <div className="mt-1.5 flex items-center justify-between gap-3">
                 {replyError ? (
@@ -509,7 +509,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                   href={professionalWhatsapp}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1ebe5d]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-whatsapp-tinta hover:bg-[#1ebe5d]"
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
                   Contactar
@@ -575,7 +575,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                     </div>
                     <div className="min-w-0 flex-1 pb-1">
                       <p className="text-sm leading-snug text-slate-700">{h.message}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-400">
+                      <p className="mt-0.5 text-[11px] text-tinta-fraca">
                         {formatDateTime(h.createdAt)}
                         {h.by?.nome ? ` · ${h.by.nome}` : ""}
                       </p>
@@ -587,7 +587,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           )}
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-            <span className="text-xs text-slate-400">Criado a {formatDate(order.createdAt)}</span>
+            <span className="text-xs text-tinta-fraca">Criado a {formatDate(order.createdAt)}</span>
             {preco != null && (
               <span className="text-base font-bold text-slate-900">
                 {Number(preco).toFixed(2)} € {precoEAcordado ? "a pagar" : "s/IVA"}

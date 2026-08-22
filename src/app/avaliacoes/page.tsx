@@ -93,9 +93,9 @@ export default function AvaliacoesPage() {
             <div className="mb-8 lg:mb-0">
 
               {/* H1 */}
-              <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[#0B1929] sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
+              <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-tinta sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
                 O que dizem os clientes{" "}
-                <span className="text-cyan-600">sobre a CLYON</span>
+                <span className="text-acao">sobre a CLYON</span>
               </h1>
 
               {/* Subtitle */}
@@ -109,7 +109,7 @@ export default function AvaliacoesPage() {
               <div className="mt-5 flex flex-wrap gap-2 sm:mt-7 sm:gap-3">
                 <Link
                   href="/simulador"
-                  className="inline-flex h-11 items-center rounded-xl bg-cyan-500 px-5 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-cyan-400"
+                  className="inline-flex h-11 items-center rounded-xl bg-acao px-5 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-acao-hover"
                 >
                   Pedir orçamento grátis
                 </Link>
@@ -117,7 +117,7 @@ export default function AvaliacoesPage() {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#25D366] px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
+                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#25D366] px-5 text-sm font-semibold text-whatsapp-tinta transition hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
                 >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
@@ -141,7 +141,7 @@ export default function AvaliacoesPage() {
             <div className="lg:py-14">
               <div className="rounded-3xl border border-cyan-100 bg-white/95 p-6 shadow-[0_24px_60px_-20px_rgba(14,116,144,0.18)] backdrop-blur-sm sm:p-7">
                 <div className="flex items-end gap-4">
-                  <div className="text-6xl font-black leading-none text-[#0B1929] sm:text-7xl">5.0</div>
+                  <div className="text-6xl font-black leading-none text-tinta sm:text-7xl">5.0</div>
                   <div className="pb-2">
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -161,9 +161,9 @@ export default function AvaliacoesPage() {
                 <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
                   {STATS.map((s) => (
                     <div key={s.label} className="rounded-2xl bg-[#F4F8FB] p-3 sm:p-4">
-                      <div className="text-xl font-black text-cyan-600 sm:text-2xl">{s.value}</div>
-                      <div className="mt-0.5 text-[11px] font-semibold text-[#0B1929] sm:text-xs">{s.label}</div>
-                      <div className="text-[10px] text-slate-400 sm:text-xs">{s.sub}</div>
+                      <div className="text-xl font-black text-acao sm:text-2xl">{s.value}</div>
+                      <div className="mt-0.5 text-[11px] font-semibold text-tinta sm:text-xs">{s.label}</div>
+                      <div className="text-[10px] text-tinta-fraca sm:text-xs">{s.sub}</div>
                     </div>
                   ))}
                 </div>
@@ -176,7 +176,7 @@ export default function AvaliacoesPage() {
       <section className="bg-[#F4F8FB] py-16 lg:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
-            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">
+            <h2 className="text-2xl font-bold text-tinta sm:text-3xl">
               Todos os testemunhos
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-slate-500">
@@ -192,12 +192,12 @@ export default function AvaliacoesPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-acao">
                       {review.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-[#0B1929]">{review.name}</div>
-                      <div className="text-xs text-slate-400">{review.date}</div>
+                      <div className="text-sm font-bold text-tinta">{review.name}</div>
+                      <div className="text-xs text-tinta-fraca">{review.date}</div>
                     </div>
                   </div>
                   <div className="shrink-0 rounded-xl bg-cyan-50 p-2 text-cyan-500">
@@ -221,7 +221,7 @@ export default function AvaliacoesPage() {
       {/* ── SEO COPY ─────────────────────────────────────────────────── */}
       <section className="bg-white py-14 lg:py-18">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">
+          <h2 className="text-2xl font-bold text-tinta sm:text-3xl">
             Porque é que os clientes recomendam a CLYON?
           </h2>
           <div className="mt-6 space-y-5 text-base leading-8 text-slate-600">
@@ -252,14 +252,14 @@ export default function AvaliacoesPage() {
             <h2 className="text-2xl font-bold text-white sm:text-3xl">
               Quer a mesma experiência no seu pedido?
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-slate-400">
+            <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-tinta-fraca">
               Simule o orçamento em 2 minutos ou fale connosco pelo WhatsApp para receber
               uma resposta rápida e clara.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/simulador"
-                className="inline-flex h-12 items-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-cyan-400"
+                className="inline-flex h-12 items-center rounded-xl bg-acao px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-acao-hover"
               >
                 Simular Orçamento
               </Link>
@@ -267,7 +267,7 @@ export default function AvaliacoesPage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#25D366] px-8 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
+                className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#25D366] px-8 text-base font-semibold text-whatsapp-tinta transition hover:-translate-y-0.5 hover:bg-[#1ebe5d]"
               >
                 <MessageCircle className="h-5 w-5" />
                 WhatsApp

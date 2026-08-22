@@ -52,7 +52,7 @@ export default function MenuMovel({
       <header className="mb-5 flex items-center gap-3">
         <UserAvatar src={avatar} name={nome} size={56} />
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold text-[#0B1929]">{nome}</h1>
+          <h1 className="truncate text-xl font-bold text-tinta">{nome}</h1>
           <p className="truncate text-sm text-slate-500">{email}</p>
         </div>
       </header>
@@ -96,8 +96,8 @@ export default function MenuMovel({
           href="/contactos"
           className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 transition active:bg-slate-50"
         >
-          <HelpCircle className="h-5 w-5 shrink-0 text-cyan-600" aria-hidden="true" />
-          <span className="flex-1 text-[15px] font-medium text-[#0B1929]">Ajuda e contactos</span>
+          <HelpCircle className="h-5 w-5 shrink-0 text-acao" aria-hidden="true" />
+          <span className="flex-1 text-[15px] font-medium text-tinta">Ajuda e contactos</span>
         </Link>
         <LinhaDeMenu
           icone={LogOut}

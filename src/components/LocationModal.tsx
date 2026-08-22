@@ -229,7 +229,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
           <div className="flex items-center gap-2.5">
-            <MapPin className="h-5 w-5 text-cyan-600" />
+            <MapPin className="h-5 w-5 text-acao" />
             <div>
               <h2 className="text-lg font-semibold text-slate-900">A tua localização</h2>
               <p className="mt-0.5 text-sm text-slate-500">
@@ -239,7 +239,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-tinta-fraca transition hover:bg-slate-100 hover:text-slate-600"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -250,7 +250,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
         <div className="flex flex-col p-6">
           {/* Input + dropdown de sugestões */}
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-tinta-fraca" />
             <input
               ref={inputRef}
               type="text"
@@ -263,7 +263,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
             {searchQuery && (
               <button
                 onClick={handleClearInput}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-tinta-fraca transition hover:text-slate-600"
                 aria-label="Limpar pesquisa"
               >
                 <X className="h-4 w-4" />
@@ -274,7 +274,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
             {(searching || predictions.length > 0 || (noResults && isSearchingNew)) && (
               <div className="absolute left-0 right-0 top-full z-[9999] mt-2 max-h-[280px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
                 {searching && (
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400">
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-tinta-fraca">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     A procurar moradas...
                   </div>
@@ -287,7 +287,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
                       onClick={() => handleSelectPrediction(p)}
                       className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-slate-50"
                     >
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-tinta-fraca" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium text-slate-900">
                           {p.mainText}
@@ -302,7 +302,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
                   ))}
 
                 {!searching && noResults && isSearchingNew && (
-                  <p className="px-4 py-3 text-sm text-slate-400">
+                  <p className="px-4 py-3 text-sm text-tinta-fraca">
                     Nenhuma morada encontrada para &quot;{searchQuery}&quot;.
                   </p>
                 )}
@@ -329,14 +329,14 @@ export default function LocationModal({ onClose }: LocationModalProps) {
                       selectedLocation?.city}
                   </p>
                   {selectedLocation?.isApproximate && (
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-tinta-fraca">
                       Localização aproximada — escolhe uma morada exata para um orçamento preciso.
                     </p>
                   )}
                 </div>
                 <button
                   onClick={handleChangeLocation}
-                  className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-cyan-700 transition hover:bg-cyan-50"
+                  className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-acao transition hover:bg-cyan-50"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                   Alterar
@@ -358,7 +358,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
               </>
             ) : (
               <>
-                <Navigation className="h-4 w-4 text-cyan-600" />
+                <Navigation className="h-4 w-4 text-acao" />
                 Usar localização atual
               </>
             )}
@@ -394,7 +394,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
           <button
             onClick={handleSave}
             disabled={selecting || !selectedLocation}
-            className="rounded-lg bg-cyan-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-acao px-6 py-2.5 text-sm font-medium text-white transition hover:bg-acao-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             Guardar
           </button>

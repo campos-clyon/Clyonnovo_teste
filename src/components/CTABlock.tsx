@@ -39,7 +39,7 @@ export default function CTABlock({
         <Link
           href={primaryHref}
           onClick={() => trackCTAClick(primaryText, "cta_block_compact")}
-          className="site-btn-primary site-btn-lively min-w-[200px] px-6 py-3.5 text-white"
+          className="site-btn-primary min-w-[200px] px-6 py-3.5 text-white"
         >
           <span className="text-white">{primaryText}</span>
         </Link>
@@ -49,7 +49,7 @@ export default function CTABlock({
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsAppClick("cta_block_compact")}
-            className="site-btn-whatsapp site-btn-lively min-w-[180px]"
+            className="site-btn-whatsapp min-w-[180px]"
           >
             <MessageCircle className="h-4 w-4" />
             <span>WhatsApp</span>
@@ -59,7 +59,7 @@ export default function CTABlock({
           <a
             href={phoneHref}
             onClick={() => trackPhoneCall("cta_block_compact", BUSINESS_PHONE)}
-            className="site-btn-secondary site-btn-lively min-w-[160px] px-6 py-3.5"
+            className="site-btn-secondary min-w-[160px] px-6 py-3.5"
           >
             <Phone className="h-4 w-4" />
             <span>Ligar</span>
@@ -84,7 +84,7 @@ export default function CTABlock({
           <Link
             href={primaryHref}
             onClick={() => trackCTAClick(primaryText, "cta_block_centered")}
-            className="site-btn-primary site-btn-lively min-w-[220px] px-8 py-4 text-lg text-white"
+            className="site-btn-primary min-w-[220px] px-8 py-4 text-lg text-white"
           >
             <span className="text-white">{primaryText}</span>
           </Link>
@@ -94,7 +94,7 @@ export default function CTABlock({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClick("cta_block_centered")}
-              className="site-btn-whatsapp site-btn-lively min-w-[180px] py-4 text-lg"
+              className="site-btn-whatsapp min-w-[180px] py-4 text-lg"
             >
               <MessageCircle className="h-5 w-5" />
               <span>WhatsApp</span>
@@ -119,7 +119,7 @@ export default function CTABlock({
         <Link
           href={primaryHref}
           onClick={() => trackCTAClick(primaryText, "cta_block_default")}
-          className="site-btn-primary site-btn-lively px-6 py-3.5 text-white"
+          className="site-btn-primary px-6 py-3.5 text-white"
         >
           <span className="text-white">{primaryText}</span>
         </Link>
@@ -129,7 +129,7 @@ export default function CTABlock({
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsAppClick("cta_block_default")}
-            className="site-btn-whatsapp site-btn-lively"
+            className="site-btn-whatsapp"
           >
             <MessageCircle className="h-4 w-4" />
             <span>WhatsApp</span>

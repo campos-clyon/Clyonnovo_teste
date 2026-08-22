@@ -48,7 +48,7 @@ export default function Carteira({ orders }: { orders: Order[] }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Retido
         </p>
-        <p className="mt-1 text-4xl font-bold leading-none text-[#0B1929]">
+        <p className="mt-1 text-4xl font-bold leading-none text-tinta">
           {euros(c.retido)}
         </p>
         <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">
@@ -98,7 +98,7 @@ export default function Carteira({ orders }: { orders: Order[] }) {
 
               <div className="shrink-0 text-right">
                 <p className="text-sm font-bold text-slate-900">{euros(l.total)}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-tinta-fraca">
                   {l.fase === "retido" ? "retido" : "pago"}
                 </p>
               </div>

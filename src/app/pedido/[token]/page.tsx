@@ -149,10 +149,10 @@ export default async function PaginaDoPedido({
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
       <header className="mb-6">
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <span className="text-xs font-semibold uppercase tracking-widest text-tinta-fraca">
           Pedido #{pedido.id}
         </span>
-        <h1 className="mt-1 text-2xl font-bold text-[#0B1929] sm:text-3xl">{servico}</h1>
+        <h1 className="mt-1 text-2xl font-bold text-tinta sm:text-3xl">{servico}</h1>
       </header>
 
       <PropostasRecebidas token={token} negociacoesIniciais={negociacoesDoCliente} />
@@ -175,7 +175,7 @@ export default async function PaginaDoPedido({
       </Nota>
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">
           O que pediu
         </h2>
 
@@ -188,27 +188,27 @@ export default async function PaginaDoPedido({
         <dl className="mt-4 space-y-2 text-sm">
           {pedido.city && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              <MapPin className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
               <dt className="sr-only">Zona</dt>
               <dd className="text-slate-700">{pedido.city}</dd>
             </div>
           )}
           {pedido.urgency && (
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              <Clock className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
               <dt className="sr-only">Quando</dt>
               <dd className="text-slate-700">{URGENCIA[pedido.urgency] ?? pedido.urgency}</dd>
             </div>
           )}
           {Boolean(pedido.precisaFatura) && (
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              <FileText className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
               <dd className="text-slate-700">Precisa de fatura</dd>
             </div>
           )}
           {Boolean(pedido.precisaGuiaTransporte) && (
             <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              <Truck className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
               <dd className="text-slate-700">Precisa de guia de transporte</dd>
             </div>
           )}
@@ -216,7 +216,7 @@ export default async function PaginaDoPedido({
 
         {fotos.length > 0 && (
           <div className="mt-5">
-            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-tinta-fraca">
               <Camera className="h-3.5 w-3.5" aria-hidden="true" />
               {fotos.length} {fotos.length === 1 ? "fotografia" : "fotografias"}
             </h3>
@@ -236,7 +236,7 @@ export default async function PaginaDoPedido({
       </section>
 
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">
           Os valores
         </h2>
 
@@ -244,14 +244,14 @@ export default async function PaginaDoPedido({
           {desejado && (
             <div className="flex items-baseline justify-between gap-4">
               <span className="text-sm text-slate-600">O valor que indicou</span>
-              <span className="text-lg font-bold text-[#0B1929]">{desejado}</span>
+              <span className="text-lg font-bold text-tinta">{desejado}</span>
             </div>
           )}
 
           {estimativa && (
             <div className="flex items-baseline justify-between gap-4 border-t border-slate-100 pt-3">
               <span className="text-sm text-slate-600">A nossa estimativa</span>
-              <span className="text-lg font-semibold text-cyan-600">{estimativa}</span>
+              <span className="text-lg font-semibold text-acao">{estimativa}</span>
             </div>
           )}
 
@@ -265,7 +265,7 @@ export default async function PaginaDoPedido({
         </div>
       </section>
 
-      <p className="mt-6 text-center text-xs leading-relaxed text-slate-400">
+      <p className="mt-6 text-center text-xs leading-relaxed text-tinta-fraca">
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho
         e emite a fatura é o profissional que escolher.
       </p>

@@ -120,7 +120,7 @@ export type Section =
 // o cliente nunca vê termos como "sem_assistente" ou "atribuido".
 const NOVO      = { label: "Novo",       bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-500" };
 const ANALISE   = { label: "Em análise", bg: "bg-amber-50",   text: "text-amber-700",   dot: "bg-amber-500" };
-const APROVADO  = { label: "Aprovado",   bg: "bg-cyan-50",    text: "text-cyan-700",    dot: "bg-cyan-500" };
+const APROVADO  = { label: "Aprovado",   bg: "bg-cyan-50",    text: "text-acao",    dot: "bg-acao" };
 const CONFIRM   = { label: "Confirmado", bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" };
 const AGENDADO  = { label: "Agendado",   bg: "bg-violet-50",  text: "text-violet-700",  dot: "bg-violet-500" };
 const EM_CURSO  = { label: "Em curso",   bg: "bg-orange-50",  text: "text-orange-700",  dot: "bg-orange-500" };

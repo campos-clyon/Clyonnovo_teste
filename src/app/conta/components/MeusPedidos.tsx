@@ -32,7 +32,7 @@ function formatDate(iso: string) {
 function Metrica({ rotulo, valor }: { rotulo: string; valor: string | number }) {
   return (
     <div className="flex-1 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
-      <p className="text-xs text-slate-400">{rotulo}</p>
+      <p className="text-xs text-tinta-fraca">{rotulo}</p>
       <p className="mt-0.5 text-lg font-bold text-slate-900">{valor}</p>
     </div>
   );
@@ -192,7 +192,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
           <p className="mb-1 text-sm font-semibold text-slate-700">Sem pedidos nesta categoria.</p>
           {filter === "todos" && (
             <>
-              <p className="mb-4 text-sm text-slate-400">Ainda não fizeste nenhum pedido.</p>
+              <p className="mb-4 text-sm text-tinta-fraca">Ainda não fizeste nenhum pedido.</p>
               <Link
                 href="/simulador"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#0077B6] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#005f96]"
@@ -249,10 +249,10 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                           <StatusBadge status={o.status} />
                         )}
                       </div>
-                      {local && <p className="mt-0.5 text-xs text-slate-400">{local}</p>}
+                      {local && <p className="mt-0.5 text-xs text-tinta-fraca">{local}</p>}
                       {o.scheduledDate && (
-                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-400">
-                          <CalendarDays className="h-3 w-3 text-[#00B4D8]" />
+                        <div className="mt-1 flex items-center gap-1 text-xs text-tinta-fraca">
+                          <CalendarDays className="h-3 w-3 text-acao" />
                           {new Date(o.scheduledDate).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}
                           {o.scheduledStartTime ? ` às ${o.scheduledStartTime}` : ""}
                         </div>
@@ -263,7 +263,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                         {preco != null && (
                           <p className="text-sm font-bold text-slate-900">{Number(preco).toFixed(2)} €</p>
                         )}
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-tinta-fraca">
                           {plataforma.legenda === "acordado" ? "a pagar" : formatDate(o.createdAt)}
                         </p>
                       </div>

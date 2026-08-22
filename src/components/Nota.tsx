@@ -43,7 +43,7 @@ const TONS = {
   },
   info: {
     caixa: "border-cyan-200 bg-cyan-50",
-    icone: "text-cyan-600",
+    icone: "text-acao",
     titulo: "text-cyan-900",
     texto: "text-cyan-900",
   },

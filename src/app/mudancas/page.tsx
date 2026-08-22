@@ -225,7 +225,7 @@ export default function MudancasPage() {
           </div>
 
           <div className="rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
-            <h2 className="mt-3 text-2xl font-bold text-[#0B1929]">Mudanças sem stress</h2>
+            <h2 className="mt-3 text-2xl font-bold text-tinta">Mudanças sem stress</h2>
             <div className="mt-6 space-y-3">
               {differentiators.map((item) => (
                 <div key={item} className="rounded-[18px] border border-[#E2EEF3] bg-white px-4 py-3 text-sm font-medium text-slate-700">
@@ -373,7 +373,7 @@ export default function MudancasPage() {
                     Desde {cidade.precoMin}€ · {cidade.distanceKm}km da base
                   </p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                <ArrowRight className="h-4 w-4 text-tinta-fraca group-hover:translate-x-0.5 group-hover:text-emerald-600" />
               </Link>
             ))}
           </div>

@@ -567,7 +567,7 @@ export default function SimulatorThreePhaseForm() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center justify-center rounded-xl bg-[#25D366] px-4 py-2 text-sm font-semibold text-white"
+                className="mt-3 inline-flex items-center justify-center rounded-xl bg-[#25D366] px-4 py-2 text-sm font-semibold text-whatsapp-tinta"
               >
                 Enviar fotos por WhatsApp
               </a>
@@ -612,7 +612,7 @@ export default function SimulatorThreePhaseForm() {
         <div className="mx-auto mb-3 sm:mb-5 max-w-md">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-[11px] sm:text-xs font-medium text-slate-500">Passo {phase} de {PHASES.length}</span>
-            <span className="text-[11px] sm:text-xs font-semibold text-cyan-600">
+            <span className="text-[11px] sm:text-xs font-semibold text-acao">
               {Math.round((phase / PHASES.length) * 100)}% concluído
             </span>
           </div>
@@ -637,7 +637,7 @@ export default function SimulatorThreePhaseForm() {
                   <div
                     className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-colors shrink-0 ${
                       isActive
-                        ? "bg-cyan-600 text-white"
+                        ? "bg-acao text-white"
                         : isCompleted
                           ? "bg-green-600 text-white"
                           : "bg-gray-200 text-gray-600"
@@ -709,7 +709,7 @@ export default function SimulatorThreePhaseForm() {
                   <p className="mt-1.5 max-w-sm text-sm text-slate-500">
                     A preparar o seu pedido para análise da equipa CLYON. Não feche esta página.
                   </p>
-                  <div className="mt-5 flex items-center gap-2 text-cyan-600">
+                  <div className="mt-5 flex items-center gap-2 text-acao">
                     <span className="text-3xl font-bold tabular-nums">{countdown}</span>
                     <span className="text-sm font-medium">segundos</span>
                   </div>
@@ -775,7 +775,7 @@ export default function SimulatorThreePhaseForm() {
                       <button
                         onClick={handleAnalyze}
                         disabled={!canAnalyze}
-                        className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
+                        className="flex items-center gap-2 px-6 py-3 bg-acao hover:bg-acao-hover disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
                       >
                         Enviar Pedido
                         <ChevronRight className="w-4 h-4" />
@@ -1352,7 +1352,7 @@ function Phase2Location({
           <div className="mt-3 rounded-xl border-2 border-[#00B4CC] bg-cyan-50/60 p-3">
             <label
               htmlFor="numero-de-porta"
-              className="block text-sm font-semibold text-[#0B1929]"
+              className="block text-sm font-semibold text-tinta"
             >
               Número de porta *
             </label>
@@ -1542,7 +1542,7 @@ function Phase3Contact({
           para sabermos se o que temos a propor está longe do que tinha em mente.
         </p>
         <div className="relative mt-2 max-w-[12rem]">
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-tinta-fraca">
             €
           </span>
           <input
@@ -1568,7 +1568,7 @@ function Phase3Contact({
                 href="/entrar"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-cyan-600 hover:text-cyan-700 underline"
+                className="font-semibold text-acao hover:text-acao-hover underline"
               >
                 Entrar com Google
               </a>{" "}
@@ -1585,7 +1585,7 @@ function Phase3Contact({
           <div>
             <p className="text-sm text-emerald-900">
               <strong>Sessão activa</strong> — poderá acompanhar este pedido em{" "}
-              <a href="/conta" className="font-semibold text-cyan-600 hover:text-cyan-700 underline">
+              <a href="/conta" className="font-semibold text-acao hover:text-acao-hover underline">
                 clyon.pt/conta
               </a>{" "}
               após a conclusão.

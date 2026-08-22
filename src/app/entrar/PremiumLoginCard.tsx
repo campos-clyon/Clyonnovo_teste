@@ -124,14 +124,14 @@ export function PremiumLoginCard({ errorMsg }: Props) {
             nove clientes sem conta. Não era falta de vontade deles. */}
         <div className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs font-medium text-slate-400">ou</span>
+          <span className="text-xs font-medium text-tinta-fraca">ou</span>
           <span className="h-px flex-1 bg-slate-200" />
         </div>
 
         {enviado ? (
           <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3.5 text-center">
-            <Mail className="mx-auto h-5 w-5 text-cyan-600" aria-hidden="true" />
-            <p className="mt-1.5 text-sm font-semibold text-[#0B1929]">Veja o seu email</p>
+            <Mail className="mx-auto h-5 w-5 text-acao" aria-hidden="true" />
+            <p className="mt-1.5 text-sm font-semibold text-tinta">Veja o seu email</p>
             {/* A mesma frase quer o endereço exista ou não. Uma resposta
                 diferente para "não conhecemos este email" transformava isto
                 numa lista de quem é cliente da CLYON. */}
@@ -142,7 +142,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
             <button
               type="button"
               onClick={() => setEnviado(false)}
-              className="mt-2 text-xs font-semibold text-cyan-700 underline"
+              className="mt-2 text-xs font-semibold text-acao underline"
             >
               Usar outro email
             </button>
@@ -165,12 +165,12 @@ export function PremiumLoginCard({ errorMsg }: Props) {
             <button
               type="submit"
               disabled={aEnviar}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
             >
               <Mail className="h-4 w-4" aria-hidden="true" />
               {aEnviar ? "A enviar…" : "Receber link por email"}
             </button>
-            <p className="text-center text-[11px] text-slate-400">
+            <p className="text-center text-[11px] text-tinta-fraca">
               Sem palavra-passe. Enviamos um link que entra por si.
             </p>
           </form>
@@ -182,7 +182,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
         <p className="mt-5 text-center text-xs leading-relaxed text-slate-500">
           Ao continuar, autoriza a criação de uma conta CLYON com o seu email e
           aceita a{" "}
-          <Link href="/privacidade" className="font-semibold text-cyan-700 underline">
+          <Link href="/privacidade" className="font-semibold text-acao underline">
             Política de Privacidade
           </Link>
           . Usamos o email para lhe mostrar os seus pedidos e as propostas que
@@ -193,7 +193,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
         <div className="mt-5 grid grid-cols-3 gap-2 border-t border-slate-100 pt-5">
           {TRUST.map(({ icon: Icon, label }) => (
             <div key={label} className="flex flex-col items-center gap-1.5">
-              <Icon className="h-4 w-4 text-cyan-600" />
+              <Icon className="h-4 w-4 text-acao" />
               <span className="text-[11px] font-medium text-slate-500">{label}</span>
             </div>
           ))}
@@ -203,7 +203,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
       <p className="mt-5 text-center text-sm text-slate-500">
         <Link
           href="/"
-          className="font-semibold text-cyan-600 transition-colors hover:text-cyan-700 hover:underline"
+          className="font-semibold text-acao transition-colors hover:text-acao-hover hover:underline"
         >
           ← Voltar à página inicial
         </Link>

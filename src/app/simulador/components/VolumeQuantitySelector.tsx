@@ -55,7 +55,7 @@ export default function VolumeQuantitySelector({
           <button
             type="button"
             onClick={() => setExactMode(false)}
-            className="text-xs font-medium text-cyan-600 hover:underline"
+            className="text-xs font-medium text-acao hover:underline"
           >
             ← Estimar por volume
           </button>
@@ -100,7 +100,7 @@ export default function VolumeQuantitySelector({
           <button
             type="button"
             onClick={() => setExactMode(true)}
-            className="text-xs font-medium text-cyan-600 hover:underline"
+            className="text-xs font-medium text-acao hover:underline"
           >
             {exactLabel} →
           </button>

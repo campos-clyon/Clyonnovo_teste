@@ -315,10 +315,10 @@ export default function EsvaziamentoAmadoraPage() {
                   className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-cyan-200 hover:shadow-md"
                 >
                   <div>
-                    <span className="font-semibold text-slate-900 group-hover:text-cyan-700">{link.label}</span>
+                    <span className="font-semibold text-slate-900 group-hover:text-acao-hover">{link.label}</span>
                     <p className="mt-0.5 text-sm text-slate-500">{link.desc}</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-cyan-600" />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-acao-hover" />
                 </Link>
               ))}
             </div>

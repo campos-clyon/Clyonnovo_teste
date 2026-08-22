@@ -171,7 +171,7 @@ export default function RecolhaMoveisUrgentePage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/simulador"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-cyan-600 px-6 text-[0.9375rem] font-semibold text-white transition hover:bg-cyan-700"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-acao px-6 text-[0.9375rem] font-semibold text-white transition hover:bg-acao-hover"
             >
               <Zap className="h-4 w-4" />
               Simular Orçamento
@@ -208,7 +208,7 @@ export default function RecolhaMoveisUrgentePage() {
                   key={item}
                   className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4"
                 >
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-acao" />
                   <span className="text-slate-700">{item}</span>
                 </div>
               ))}
@@ -225,7 +225,7 @@ export default function RecolhaMoveisUrgentePage() {
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             {howItWorks.map((step) => (
               <div key={step.step} className="rounded-xl border border-slate-200 bg-white p-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-acao">
                   {step.step}
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-slate-900">{step.title}</h3>
@@ -257,7 +257,7 @@ export default function RecolhaMoveisUrgentePage() {
                   key={item}
                   className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3"
                 >
-                  <Truck className="h-4 w-4 text-cyan-600" />
+                  <Truck className="h-4 w-4 text-acao" />
                   <span className="text-slate-700">{item}</span>
                 </div>
               ))}
@@ -296,12 +296,12 @@ export default function RecolhaMoveisUrgentePage() {
                   className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 transition hover:border-cyan-200 hover:shadow-sm"
                 >
                   <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-cyan-700">
+                    <h3 className="font-semibold text-slate-900 group-hover:text-acao-hover">
                       {link.label}
                     </h3>
                     <p className="text-sm text-slate-500">{link.desc}</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-cyan-600" />
+                  <ArrowRight className="h-4 w-4 text-tinta-fraca group-hover:text-acao-hover" />
                 </Link>
               ))}
             </div>
@@ -309,7 +309,7 @@ export default function RecolhaMoveisUrgentePage() {
             <div className="mt-6">
               <Link
                 href="/simulador"
-                className="inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-800"
+                className="inline-flex items-center gap-2 text-sm font-medium text-acao hover:text-cyan-800"
               >
                 Simular orçamento agora
               </Link>
@@ -319,7 +319,7 @@ export default function RecolhaMoveisUrgentePage() {
 
         {/* CTA final */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <div className="rounded-2xl bg-cyan-600 px-8 py-10 text-center text-white">
+          <div className="rounded-2xl bg-acao px-8 py-10 text-center text-white">
             <h2 className="text-2xl font-bold">Precisa de recolha urgente?</h2>
             <p className="mt-2 text-cyan-100">
               Contacte agora para verificar disponibilidade imediata.
@@ -327,7 +327,7 @@ export default function RecolhaMoveisUrgentePage() {
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a
                 href="tel:+351931632622"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 font-semibold text-cyan-700 transition hover:bg-cyan-50"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 font-semibold text-acao transition hover:bg-cyan-50"
               >
                 <Phone className="h-4 w-4" />
                 <span>Ligar Agora</span>

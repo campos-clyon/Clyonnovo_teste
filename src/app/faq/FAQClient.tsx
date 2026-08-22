@@ -17,7 +17,7 @@ export default function FAQClient({ categories }: { categories: FAQCategory[] })
         <div className="space-y-10">
           {categories.map((cat) => (
             <div key={cat.category}>
-              <div className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+              <div className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                 {cat.category}
               </div>
               <div className="mt-4 space-y-3">
@@ -38,7 +38,7 @@ export default function FAQClient({ categories }: { categories: FAQCategory[] })
                           {faq.q}
                         </span>
                         <ChevronDown
-                          className={`h-5 w-5 flex-shrink-0 text-cyan-600 transition-transform ${
+                          className={`h-5 w-5 flex-shrink-0 text-acao transition-transform ${
                             isOpen ? "rotate-180" : ""
                           }`}
                         />

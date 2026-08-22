@@ -64,7 +64,7 @@ export default function MobileBottomNav() {
 
   const itemCls = (active: boolean) =>
     `flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${
-      active ? "text-cyan-600" : "text-slate-400"
+      active ? "text-acao" : "text-tinta-fraca"
     }`;
 
   return (
@@ -89,7 +89,7 @@ export default function MobileBottomNav() {
           <span className="-mt-6 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/40 ring-4 ring-white">
             <Sparkles className="h-6 w-6" />
           </span>
-          <span className="text-[10px] font-semibold text-cyan-600">Simular</span>
+          <span className="text-[10px] font-semibold text-acao">Simular</span>
         </Link>
 
         {RIGHT.map(({ href, label, icon: Icon }) => {

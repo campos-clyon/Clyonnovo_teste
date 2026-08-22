@@ -654,7 +654,7 @@ export default async function ServiceCityPage({ params }: Props) {
               key={item.title}
               className="rounded-[28px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(14,116,144,0.18)]"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-acao">
                 <item.icon className="h-5 w-5" />
               </div>
               <h2 className="mt-5 text-xl font-bold text-slate-950">{item.title}</h2>
@@ -681,7 +681,7 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
 
           <div className="rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
-            <h2 className="mt-3 text-3xl font-bold text-[#0B1929]">Evita ruído no orçamento</h2>
+            <h2 className="mt-3 text-3xl font-bold text-tinta">Evita ruído no orçamento</h2>
             <div className="mt-6 space-y-3">
               {excludedItems.map((item) => (
                 <div
@@ -706,7 +706,7 @@ export default async function ServiceCityPage({ params }: Props) {
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
                   Onde chegamos
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
@@ -717,21 +717,21 @@ export default async function ServiceCityPage({ params }: Props) {
               </div>
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
                   Acessos
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">{local.acesso}</p>
               </div>
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
                   Estacionamento
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">{local.estacionamento}</p>
               </div>
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-700">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
                   Para onde vai
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
@@ -777,7 +777,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 "O material segue para triagem, doação ou descarte responsável.",
               ].map((step, index) => (
                 <div key={step} className="flex gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm font-bold text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-acao text-sm font-bold text-white">
                     {index + 1}
                   </div>
                   <p className="pt-1 text-sm leading-7 text-slate-600">{step}</p>
@@ -801,7 +801,7 @@ export default async function ServiceCityPage({ params }: Props) {
             {isFurnitureService(service.slug) && (
               <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-5">
                 <div className="flex items-start gap-3">
-                  <Recycle className="mt-1 h-5 w-5 text-cyan-700" />
+                  <Recycle className="mt-1 h-5 w-5 text-acao" />
                   <p className="text-sm leading-7 text-slate-700">
                     Se o cliente em {city.name} estiver a comparar com recolha
                     municipal, a vantagem da CLYON está na rapidez, desmontagem,
@@ -825,7 +825,7 @@ export default async function ServiceCityPage({ params }: Props) {
                   style={{ color: '#1e293b' }}
                 >
                   <span style={{ color: '#1e293b' }}>{item.label}</span>
-                  <ArrowRight className="h-4 w-4 text-cyan-600" />
+                  <ArrowRight className="h-4 w-4 text-acao" />
                 </Link>
               ))}
             </div>
@@ -944,7 +944,7 @@ export default async function ServiceCityPage({ params }: Props) {
 
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
           <div className="flex items-start gap-3">
-            <Star className="mt-1 h-5 w-5 text-cyan-600" />
+            <Star className="mt-1 h-5 w-5 text-acao" />
             <div>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
                 Precisa de {service.shortName} em {city.name}?

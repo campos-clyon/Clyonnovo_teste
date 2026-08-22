@@ -134,7 +134,7 @@ export default function MovelItemSelector({
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-slate-900">{tier.label}</span>
-                  <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-700">
+                  <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-acao">
                     {tier.price} €/un
                   </span>
                 </div>

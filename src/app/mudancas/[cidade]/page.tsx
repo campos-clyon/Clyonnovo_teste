@@ -196,19 +196,19 @@ export default async function MudancasCidadePage({ params }: Props) {
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Distância à base</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">{c.distanceKm} km</p>
-              <p className="text-xs text-slate-400">~{c.tempoMedio} de viagem</p>
+              <p className="text-xs text-tinta-fraca">~{c.tempoMedio} de viagem</p>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Orçamento em</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">24 horas</p>
-              <p className="text-xs text-slate-400">Resposta rápida</p>
+              <p className="text-xs text-tinta-fraca">Resposta rápida</p>
             </div>
             <div className="col-span-full rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Faixa de preço {c.nome}</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">
                 {c.precoMin}€ – {c.precoMax}€
               </p>
-              <p className="text-xs text-slate-400">Consoante volume e acessos</p>
+              <p className="text-xs text-tinta-fraca">Consoante volume e acessos</p>
             </div>
           </div>
         </div>

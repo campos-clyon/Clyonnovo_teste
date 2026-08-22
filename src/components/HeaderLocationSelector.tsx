@@ -62,7 +62,7 @@ export default function HeaderLocationSelector() {
         aria-label={aCarregar ? 'A determinar a localização' : `Localização: ${display}`}
       >
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium text-[#5A6B78]">Localização</div>
+          <div className="text-xs font-medium text-tinta-fraca">Localização</div>
           {aCarregar ? (
             <Esqueleto largura="96px" />
           ) : (
@@ -77,7 +77,7 @@ export default function HeaderLocationSelector() {
           texto chegar, senão o cabeçalho salta na hidratação. */}
       <button
         onClick={() => setShowModal(true)}
-        className="lg:hidden inline-flex min-h-[44px] w-[130px] items-center gap-1 truncate text-sm font-semibold text-slate-800 transition hover:text-[#007A8C]"
+        className="lg:hidden inline-flex min-h-[44px] w-[130px] items-center gap-1 truncate text-sm font-semibold text-slate-800 transition hover:text-acao"
         title="Alterar localização"
         aria-label={aCarregar ? 'A determinar a localização' : `Localização: ${display}`}
       >

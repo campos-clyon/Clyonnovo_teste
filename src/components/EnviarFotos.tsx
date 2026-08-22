@@ -95,7 +95,7 @@ export default function EnviarFotos({
             type="button"
             onClick={() => input.current?.click()}
             disabled={aEnviar > 0}
-            className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-cyan-300 bg-cyan-50/50 text-cyan-700 transition active:bg-cyan-100 disabled:opacity-50"
+            className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-cyan-300 bg-cyan-50/50 text-acao transition active:bg-cyan-100 disabled:opacity-50"
           >
             {aEnviar > 0 ? (
               <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />

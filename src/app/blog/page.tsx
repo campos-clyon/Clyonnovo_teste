@@ -51,7 +51,7 @@ export default function BlogPage() {
 
             <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-acao">
                   <Search className="h-5 w-5" />
                 </div>
                 <div>
@@ -99,7 +99,7 @@ export default function BlogPage() {
                 </div>
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="mt-7 inline-flex items-center justify-center rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-18px_rgba(6,182,212,0.7)] transition hover:-translate-y-0.5 hover:bg-cyan-400"
+                  className="mt-7 inline-flex items-center justify-center rounded-2xl bg-acao px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-18px_rgba(6,182,212,0.7)] transition hover:-translate-y-0.5 hover:bg-acao-hover"
                 >
                   <span className="text-white">Ler artigo</span>
                   <ArrowRight className="ml-2 h-4 w-4 text-white" />

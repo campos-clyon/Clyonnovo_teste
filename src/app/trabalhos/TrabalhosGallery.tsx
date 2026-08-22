@@ -56,7 +56,7 @@ export default function TrabalhosGallery({ trabalhos }: Props) {
             className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
               filtro === "todos"
                 ? "bg-[#00B4D8] text-white shadow-[0_4px_14px_rgba(0,180,216,0.35)]"
-                : "border border-cyan-200/50 bg-white text-slate-600 hover:border-cyan-400 hover:text-cyan-700"
+                : "border border-cyan-200/50 bg-white text-slate-600 hover:border-cyan-400 hover:text-acao-hover"
             }`}
           >
             Todos ({trabalhos.length})
@@ -70,7 +70,7 @@ export default function TrabalhosGallery({ trabalhos }: Props) {
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
                   filtro === st.value
                     ? "bg-[#00B4D8] text-white shadow-[0_4px_14px_rgba(0,180,216,0.35)]"
-                    : "border border-cyan-200/50 bg-white text-slate-600 hover:border-cyan-400 hover:text-cyan-700"
+                    : "border border-cyan-200/50 bg-white text-slate-600 hover:border-cyan-400 hover:text-acao-hover"
                 }`}
               >
                 {st.label} ({count})

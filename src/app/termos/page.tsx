@@ -56,7 +56,7 @@ export default function TermosPage() {
     <div className="min-h-screen bg-white">
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700 shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-acao shadow-sm">
             Informação Legal
           </div>
           <h1 className="mt-5 max-w-4xl text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.6rem]">
@@ -85,7 +85,7 @@ export default function TermosPage() {
 
       <section className="mx-auto max-w-5xl px-4 pt-6 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-acao">
             Navegação rápida
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -93,7 +93,7 @@ export default function TermosPage() {
               <a
                 key={href}
                 href={`#${href}`}
-                className="text-sm text-slate-700 underline decoration-cyan-300 underline-offset-4 hover:text-cyan-700"
+                className="text-sm text-slate-700 underline decoration-cyan-300 underline-offset-4 hover:text-acao-hover"
               >
                 {rotulo}
               </a>
@@ -436,14 +436,14 @@ export default function TermosPage() {
             Como tratamos os seus dados está na{" "}
             <Link
               href="/privacidade"
-              className="font-semibold text-cyan-700 underline underline-offset-4"
+              className="font-semibold text-acao underline underline-offset-4"
             >
               Política de Privacidade
             </Link>
             , e o que guardamos no seu dispositivo está na{" "}
             <Link
               href="/cookies"
-              className="font-semibold text-cyan-700 underline underline-offset-4"
+              className="font-semibold text-acao underline underline-offset-4"
             >
               Política de Cookies
             </Link>
@@ -483,7 +483,7 @@ export default function TermosPage() {
               href={IDENTIFICACAO.livroDeReclamacoes}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-cyan-700 underline underline-offset-4"
+              className="font-semibold text-acao underline underline-offset-4"
             >
               Livro de Reclamações electrónico
             </a>
@@ -495,7 +495,7 @@ export default function TermosPage() {
               href={IDENTIFICACAO.ralSite}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-cyan-700 underline underline-offset-4"
+              className="font-semibold text-acao underline underline-offset-4"
             >
               {IDENTIFICACAO.ralNome}
             </a>

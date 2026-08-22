@@ -128,7 +128,7 @@ export default function AreasDeAtuacaoPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-50">
-                    <MapPin className="h-7 w-7 text-cyan-600" />
+                    <MapPin className="h-7 w-7 text-acao" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export default function AreasDeAtuacaoPage() {
                 </div>
                 <Link
                   href={`/regioes/${region.slug}`}
-                  className="inline-flex items-center gap-2 text-cyan-600 transition-colors hover:text-cyan-700"
+                  className="inline-flex items-center gap-2 text-acao transition-colors hover:text-acao-hover"
                 >
                   Ver região
                 </Link>
@@ -157,7 +157,7 @@ export default function AreasDeAtuacaoPage() {
                   <Link
                     key={city.slug}
                     href={`/recolha-moveis-${city.slug}`}
-                    className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-cyan-100 hover:text-cyan-700"
+                    className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-cyan-100 hover:text-acao-hover"
                   >
                     {city.name}
                   </Link>
@@ -185,13 +185,13 @@ export default function AreasDeAtuacaoPage() {
                 href={`/${service.slug === "recolha-moveis" ? "recolha-de-moveis" : service.slug === "recolha-entulho" ? "recolha-de-entulho" : service.slug}`}
                 className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
               >
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-cyan-600">
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-acao-hover">
                   {service.name}
                 </h3>
                 <p className="mt-2 text-sm text-slate-500">
                   Disponível em todas as zonas
                 </p>
-                <div className="mt-4 flex items-center gap-1 text-sm font-medium text-cyan-600">
+                <div className="mt-4 flex items-center gap-1 text-sm font-medium text-acao">
                   Ver página hub
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
@@ -236,7 +236,7 @@ export default function AreasDeAtuacaoPage() {
                       <span className="font-medium text-slate-900">
                         {city.name}
                       </span>
-                      <span className="ml-2 text-xs text-slate-400">
+                      <span className="ml-2 text-xs text-tinta-fraca">
                         {city.region === "lisboa"
                           ? "Lisboa"
                           : city.region === "margem-sul"
@@ -248,7 +248,7 @@ export default function AreasDeAtuacaoPage() {
                       <td key={service.slug} className="px-4 py-3 text-center">
                         <Link
                           href={`/${service.slug}-${city.slug}`}
-                          className="inline-flex items-center justify-center rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700 transition-colors hover:bg-cyan-100"
+                          className="inline-flex items-center justify-center rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-acao transition-colors hover:bg-cyan-100"
                         >
                           Ver
                         </Link>
@@ -263,7 +263,7 @@ export default function AreasDeAtuacaoPage() {
         <div className="mt-6 text-center">
           <Link
             href="/regioes"
-            className="inline-flex items-center gap-2 text-cyan-600 transition-colors hover:text-cyan-700"
+            className="inline-flex items-center gap-2 text-acao transition-colors hover:text-acao-hover"
           >
             Ver todas as regiões e cidades
           </Link>

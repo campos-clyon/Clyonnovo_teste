@@ -203,7 +203,7 @@ export default function PropostasRecebidas({
             <div className="flex items-baseline justify-between gap-4 text-sm">
               <span className="text-slate-600">
                 Valor acordado
-                <span className="block text-xs text-slate-400">
+                <span className="block text-xs text-tinta-fraca">
                   isento de IVA (art. 53.º)
                 </span>
               </span>
@@ -249,7 +249,7 @@ export default function PropostasRecebidas({
 
         {acordada.fase === "a_confirmar" && (
           <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-4 text-left">
-            <h3 className="flex items-center gap-2 text-sm font-bold text-[#0B1929]">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-tinta">
               <Camera className="h-4 w-4 text-emerald-600" aria-hidden="true" />
               {acordada.profissionalNome} diz que está feito
             </h3>
@@ -344,7 +344,7 @@ export default function PropostasRecebidas({
                 </p>
               ) : (
                 <>
-                  <p className="text-center text-sm font-semibold text-[#0B1929]">
+                  <p className="text-center text-sm font-semibold text-tinta">
                     Como correu com {acordada.profissionalNome}?
                   </p>
                   <div className="mt-2 flex justify-center gap-1">
@@ -379,7 +379,7 @@ export default function PropostasRecebidas({
                       <button
                         onClick={() => agir(acordada.id, "avaliar")}
                         disabled={aEnviar === acordada.id}
-                        className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
+                        className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-acao font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
                       >
                         {aEnviar === acordada.id && (
                           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -404,7 +404,7 @@ export default function PropostasRecebidas({
   if (activas.length === 0) {
     return (
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 text-center shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">Propostas</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">Propostas</h2>
         <p className="mt-3 text-sm text-slate-500">
           Ainda não há propostas. Assim que um profissional responder, aparece aqui — e
           avisamos por email.
@@ -415,7 +415,7 @@ export default function PropostasRecebidas({
 
   return (
     <section className="mt-4">
-      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-tinta-fraca">
         {activas.length} {activas.length === 1 ? "profissional" : "profissionais"} a responder
       </h2>
 
@@ -448,7 +448,7 @@ export default function PropostasRecebidas({
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-bold text-[#0B1929]">{n.profissionalNome}</h3>
+                  <h3 className="text-base font-bold text-tinta">{n.profissionalNome}</h3>
                   {/* O distintivo está sempre à vista, e não ao fim de cinco
                       propostas — não pode ser uma descoberta tardia. */}
                   <div className="mt-1 flex flex-wrap gap-1.5">
@@ -480,8 +480,8 @@ export default function PropostasRecebidas({
                   que valor estava a discutir.
                 */}
                 <div className="text-right">
-                  <div className="text-xl font-bold text-[#0B1929]">{euros(emCima)}</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xl font-bold text-tinta">{euros(emCima)}</div>
+                  <div className="text-xs text-tinta-fraca">
                     {pendente?.por === "profissional" ? "proposta dele" : "a sua proposta"}
                   </div>
                 </div>

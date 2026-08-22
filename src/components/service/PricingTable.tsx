@@ -57,7 +57,7 @@ export default function PricingTable({
                 </td>
                 <td className="py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <span className="text-lg font-bold text-cyan-600">
+                    <span className="text-lg font-bold text-acao">
                       {row.priceTo
                         ? `${row.priceFrom} - ${row.priceTo}`
                         : `desde ${row.priceFrom}`}
@@ -67,7 +67,7 @@ export default function PricingTable({
                         className="group relative cursor-help"
                         title={row.note}
                       >
-                        <Info className="h-4 w-4 text-slate-400" />
+                        <Info className="h-4 w-4 text-tinta-fraca" />
                       </span>
                     )}
                   </div>

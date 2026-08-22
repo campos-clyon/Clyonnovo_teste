@@ -81,10 +81,10 @@ export default async function TrabalhosPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                 Portefólio CLYON
               </p>
-              <h1 className="mt-4 max-w-[17ch] text-[2.4rem] font-bold leading-[1.04] tracking-tight text-[#0B1929] sm:text-[4rem]">
+              <h1 className="mt-4 max-w-[17ch] text-[2.4rem] font-bold leading-[1.04] tracking-tight text-tinta sm:text-[4rem]">
                 Recolhas, esvaziamentos e mudanças — casos reais em Lisboa.
               </h1>
               <p className="mt-5 max-w-2xl text-[1.02rem] leading-8 text-slate-600">
@@ -116,7 +116,7 @@ export default async function TrabalhosPage() {
                   key={stat.label}
                   className="rounded-[26px] border border-[#E2EEF3] bg-[#F4F8FB] p-5"
                 >
-                  <div className="text-2xl font-bold text-[#0B1929]">{stat.value}</div>
+                  <div className="text-2xl font-bold text-tinta">{stat.value}</div>
                   <div className="mt-2 text-sm leading-7 text-slate-600">{stat.label}</div>
                 </div>
               ))}
@@ -237,20 +237,20 @@ export default async function TrabalhosPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-cyan-700">
+                    <p className="text-sm font-semibold text-acao">
                       {item.rating}
                     </p>
                     <h3 className="mt-3 text-[1.45rem] font-bold leading-tight text-slate-950">
                       {item.service}
                     </h3>
                   </div>
-                  <div className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                  <div className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-acao">
                     {item.date}
                   </div>
                 </div>
 
                 <div className="mt-5 flex items-start gap-3">
-                  <MessageSquareQuote className="mt-1 h-5 w-5 flex-shrink-0 text-cyan-600" />
+                  <MessageSquareQuote className="mt-1 h-5 w-5 flex-shrink-0 text-acao" />
                   <p className="text-[0.94rem] leading-7 text-slate-600">
                     {item.text}
                   </p>
@@ -285,7 +285,7 @@ export default async function TrabalhosPage() {
                     key={item}
                     className="rounded-[24px] border border-cyan-100 bg-cyan-50/70 p-5"
                   >
-                    <div className="mb-3 text-sm font-semibold text-cyan-700">
+                    <div className="mb-3 text-sm font-semibold text-acao">
                       0{index + 1}
                     </div>
                     <p className="text-sm leading-7 text-slate-700">{item}</p>

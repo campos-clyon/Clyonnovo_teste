@@ -1,5 +1,87 @@
 @import "tailwindcss";
 
+/*
+ * ── Os tokens da CLYON ─────────────────────────────────────────────────────
+ *
+ * PORQUE É QUE ISTO É `@theme` E NÃO `:root`
+ *
+ * O `:root` logo abaixo existe desde sempre e no Tailwind v4 é decoração: as
+ * variáveis lá declaradas não geram utilitário nenhum. Escrever
+ * `--accent: #0284c7` num `:root` não faz existir uma classe `bg-accent`, e
+ * portanto ninguém a usava — enquanto os botões usavam `bg-cyan-500`, que é
+ * uma família diferente. A variável mentia sobre a cor da marca e ninguém
+ * dava por isso porque não estava ligada a nada.
+ *
+ * `@theme` é o que torna um token real: `--color-acao` gera `bg-acao`,
+ * `text-acao`, `border-acao`, `hover:bg-acao`. A partir daqui muda-se a marca
+ * num sítio e muda em todo o lado.
+ *
+ * A REGRA QUE ESTA PALETA EXISTE PARA FIXAR
+ *
+ * O azul da marca e o azul de acção são cores DIFERENTES. O #00B4CC sobre
+ * branco dá 2,50:1 — falha o mínimo de 4,5:1 para texto e falha até o de 3:1
+ * para componentes. O botão real usava `bg-cyan-500` (#06B6D4) com texto
+ * branco: 2,43:1. E o `hover:bg-cyan-400` CLAREAVA, caindo para 1,81:1 — o
+ * pior número do site estava no estado em que o dedo já lá está.
+ *
+ * Não é só conformidade. Boa parte de quem usa este site são pessoas mais
+ * velhas a esvaziar a casa de um familiar, ao telemóvel, à luz do dia, com o
+ * brilho automático. Um botão a 2,43:1 desaparece nessas condições.
+ *
+ * #007A8C é o #00B4CC escurecido — mesmo matiz, 5,04:1 com branco. Não desloca
+ * a marca. O #00B4CC continua a ser a marca: logótipo, ícones sobre fundo
+ * escuro, barras de destaque. Nunca texto sobre branco.
+ */
+@theme {
+  /** Identidade. Nunca texto sobre branco — 2,50:1. */
+  --color-marca: #00B4CC;
+
+  /** Acção: fundo de botão primário, links, texto de destaque. 5,04:1 ✓ */
+  --color-acao: #007A8C;
+
+  /** Hover e active. ESCURECE — o cyan-400 anterior clareava. 6,9:1 ✓ */
+  --color-acao-hover: #00646F;
+
+  /** Títulos e texto principal. 17,4:1 ✓ */
+  --color-tinta: #0B1929;
+
+  /** Subtítulos, datas, legendas. Substitui slate-400 e slate-500. 5,10:1 ✓ */
+  --color-tinta-fraca: #5A6B78;
+
+  /** O único fundo alternativo. */
+  --color-fundo-alt: #F4F8FB;
+
+  /** A única cor de borda. Retira slate-100 e slate-200 dos cartões. */
+  --color-borda: #E2EEF3;
+
+  /** Mensagens de validação. Substitui red-400 — texto de erro ilegível é o
+      pior sítio possível para ter texto ilegível. 6,4:1 ✓ */
+  --color-erro: #B42318;
+
+  /** Só WhatsApp. */
+  --color-whatsapp: #25D366;
+
+  /** O texto que vai POR CIMA do verde do WhatsApp.
+      Branco sobre #25D366 dá 1,9:1; este dá 8,9:1. */
+  --color-whatsapp-tinta: #062A33;
+}
+
+/*
+ * O foco visível, para todo o site.
+ *
+ * Não existia em lado nenhum: quem navega por teclado — e quem usa leitor de
+ * ecrã navega sempre por teclado — não tinha forma de saber onde estava. O
+ * anel do browser por omissão desaparece contra vários dos fundos do site.
+ *
+ * `:focus-visible` e não `:focus`: o anel aparece a quem navega por teclado e
+ * não a quem carrega com o rato, que é o comportamento que as pessoas esperam.
+ */
+:focus-visible {
+  outline: 3px solid var(--color-acao);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 :root {
   color-scheme: light;
   
@@ -20,8 +102,11 @@
   --border-light: #cbd5e1;
   --border-slate: #e2e8f0;
   
-  /* Premium accent palette - CLYON Blue */
-  --accent: #0284c7;
+  /* Premium accent palette - CLYON Blue
+     `--accent` foi apagada: estava a #0284c7, que e da familia sky, enquanto
+     os botoes usavam cyan. Nao era referenciada por utilitario nenhum
+     (`grep "var(--accent)"` dava zero) — so mentia sobre a cor da marca a
+     quem a lesse. A cor de accao vive agora em @theme, como --color-acao. */
   --accent-dark: #0284c7;
   --accent-light: #0ea5e9;
   --accent-hover: #0284c7;
@@ -169,8 +254,33 @@ img {
 }
 .clyon-select:focus {
   outline: none;
-  border-color: #06b6d4;
+  border-color: var(--color-acao);
   box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+/*
+ * A linha que liga os tres passos do "Como funciona".
+ *
+ * A `div` que a desenha existe em page.tsx desde sempre, com `h-[2px]` e um
+ * `aria-hidden`, e a classe `step-line` que lhe daria cor NUNCA EXISTIU em
+ * CSS nenhum. Ou seja: ha ali dois pixeis de nada, e os tres passos nunca
+ * estiveram ligados por linha alguma. O comentario no JSX chama-lhe "dashed
+ * animated line".
+ *
+ * Fica escrita, porque o efeito era claramente intencional — e uma linha que
+ * se desvanece nas pontas nao precisa de mascara nenhuma: e so o gradiente a
+ * comecar e a acabar em transparente.
+ */
+.step-line {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-borda) 12%,
+    var(--color-marca) 50%,
+    var(--color-borda) 88%,
+    transparent 100%
+  );
+  opacity: 0.9;
 }
 
 /* Button styles - redesigned */
@@ -180,7 +290,10 @@ img {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 0.875rem;
-  background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+  /* Do #007A8C ao #00646F: os mesmos dois tokens do sistema, e nao um
+     gradiente de outra familia. O anterior era #0891b2 -> #0e7490, que dava
+     2,9:1 no ponto mais claro com texto branco. */
+  background: linear-gradient(135deg, var(--color-acao) 0%, var(--color-acao-hover) 100%);
   padding: 0.875rem 1.75rem;
   font-weight: 600;
   font-size: 0.9375rem;
@@ -210,8 +323,8 @@ img {
 }
 
 .site-btn-secondary:hover {
-  border-color: #0891b2;
-  color: #0891b2;
+  border-color: var(--color-acao);
+  color: var(--color-acao);
   background-color: #f0fdfa;
 }
 
@@ -221,11 +334,14 @@ img {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 0.875rem;
-  background-color: #25D366;
+  background-color: var(--color-whatsapp);
   padding: 0.875rem 1.75rem;
   font-weight: 600;
   font-size: 0.9375rem;
-  color: white !important;
+  /* Branco sobre este verde da 1,9:1 — falha tudo, incluindo o minimo de 3:1
+     para componentes. Este tom escuro da 8,9:1 e nao muda o verde, que e o
+     que as pessoas reconhecem. */
+  color: var(--color-whatsapp-tinta) !important;
   transition: all 0.2s ease;
   box-shadow: 0 4px 14px -4px rgba(37, 211, 102, 0.4);
 }
@@ -251,7 +367,7 @@ img {
 }
 
 .site-btn-secondary:hover svg {
-  color: #0891b2 !important;
+  color: var(--color-acao) !important;
 }
 
 /* Card styles */
@@ -284,7 +400,7 @@ img {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #164e63 100%);
+  background: linear-gradient(135deg, var(--color-acao) 0%, var(--color-acao-hover) 50%, #164e63 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -297,7 +413,11 @@ a.bg-cyan-400,
 a[class*="bg-cyan-"],
 button[class*="bg-cyan-"],
 a.bg-\[\#0891b2\],
-a.bg-\[\#009FC2\] {
+a.bg-\[\#009FC2\],
+/* O selector novo: os botoes deixaram de escrever o hex e passaram ao token
+   `bg-acao`. Sem esta linha, os que sao <a> perdiam o texto branco. */
+a.bg-acao,
+button.bg-acao {
   color: #ffffff !important;
 }
 
@@ -312,7 +432,21 @@ a.bg-cyan-600:visited {
   color: #ffffff !important;
 }
 
-/* WhatsApp buttons - força cor verde WhatsApp correta */
+/* WhatsApp buttons - força cor verde WhatsApp correta
+ *
+ * O TEXTO DEIXOU DE SER BRANCO
+ *
+ * Estas regras forçavam `color: #ffffff !important` sobre o #25D366. Branco
+ * sobre este verde dá 1,98:1 — medido no ecrã, não estimado. Falha o mínimo
+ * de 4,5:1 para texto e falha até o de 3:1 para componentes, e é o pior
+ * número que restava no site.
+ *
+ * O verde não muda: é o que as pessoas reconhecem à distância e é a marca do
+ * WhatsApp. Muda o que está escrito por cima, para #062A33 — 8,9:1.
+ *
+ * O `!important` fica porque é ele que garante que o `a:visited` do browser
+ * não repinta o texto de roxo. Sem ele, um link de WhatsApp já visitado
+ * ficava com a cor de link visitado por cima do verde. */
 /* NOTA: usar apenas classes exatas (a.bg-emerald-XXX). Seletores como
    [class*="bg-emerald-"] são demasiado abrangentes — apanham qualquer link
    com hover:bg-emerald-50 e pintam o site inteiro de verde. */
@@ -320,8 +454,8 @@ a.bg-emerald-500,
 a.bg-emerald-400,
 a.bg-emerald-600,
 a.bg-\[\#25D366\] {
-  background-color: #25D366 !important;
-  color: #ffffff !important;
+  background-color: var(--color-whatsapp) !important;
+  color: var(--color-whatsapp-tinta) !important;
 }
 
 a.bg-emerald-500:hover,
@@ -334,7 +468,7 @@ a.bg-emerald-400:visited,
 a.bg-emerald-600:visited,
 a.bg-\[\#25D366\]:hover {
   background-color: #20bd5a !important;
-  color: #ffffff !important;
+  color: var(--color-whatsapp-tinta) !important;
 }
 
 a.bg-emerald-500 svg,
@@ -345,7 +479,7 @@ a.bg-emerald-400 span,
 a.bg-emerald-600 span,
 a.bg-\[\#25D366\] svg,
 a.bg-\[\#25D366\] span {
-  color: #ffffff !important;
+  color: var(--color-whatsapp-tinta) !important;
 }
 
 /* Botões cyan (primários CLYON) - TODOS os estados
@@ -369,7 +503,9 @@ button.bg-cyan-500 svg, button.bg-cyan-500 span,
 button.bg-cyan-600 svg, button.bg-cyan-600 span,
 button.bg-cyan-700 svg, button.bg-cyan-700 span,
 a.bg-\[\#0891b2\] svg,
-a.bg-\[\#0891b2\] span {
+a.bg-\[\#0891b2\] span,
+a.bg-acao svg, a.bg-acao span,
+button.bg-acao svg, button.bg-acao span {
   color: #ffffff !important;
 }
 
@@ -434,7 +570,7 @@ footer .site-btn-footer:hover svg {
 .bg-cyan-50.text-cyan-700,
 div[class*="bg-cyan-50"][class*="text-cyan-"],
 span[class*="bg-cyan-50"][class*="text-cyan-"] {
-  color: #0e7490 !important; /* cyan-700 - darker for better contrast */
+  color: var(--color-acao) !important;
 }
 
 /* Links and buttons with cyan-50 background */
@@ -442,14 +578,14 @@ a[class*="bg-cyan-50"],
 a[class*="bg-cyan-50"] span,
 button[class*="bg-cyan-50"],
 button[class*="bg-cyan-50"] span {
-  color: #0e7490 !important;
+  color: var(--color-acao) !important;
 }
 
 /* Rounded-full tags (city buttons, category pills) */
 .rounded-full[class*="bg-cyan-50"],
 .rounded-full[class*="text-cyan-"],
 a.rounded-full[class*="border-cyan"] {
-  color: #0e7490 !important;
+  color: var(--color-acao) !important;
 }
 
 /* Ícones dentro de caixas cyan claras.
@@ -460,13 +596,13 @@ a.rounded-full[class*="border-cyan"] {
  * ícone branco dentro de um círculo cheio. */
 [class*="bg-cyan-50"] svg:not([class*="text-"]),
 div[class*="bg-cyan-50"][class*="text-cyan-"] svg:not([class*="text-"]) {
-  color: #0891b2 !important; /* cyan-600 for icons */
+  color: var(--color-acao) !important; /* icones */
 }
 
 /* Ensure hover states maintain visibility */
 a[class*="bg-cyan-50"]:hover,
 a[class*="hover\\:bg-cyan-50"]:hover {
-  color: #0e7490 !important;
+  color: var(--color-acao) !important;
 }
 
 /* Footer styles - ensure text is visible */
@@ -480,7 +616,7 @@ footer a {
 }
 
 footer a:hover {
-  color: #06b6d4;
+  color: var(--color-acao);
 }
 
 footer h3 {

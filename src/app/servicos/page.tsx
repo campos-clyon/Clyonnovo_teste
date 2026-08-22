@@ -211,7 +211,7 @@ function ChatCard({ service }: { service: Service }) {
               <p>{m.text}</p>
               <div
                 className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
-                  m.from === "cliente" ? "text-slate-400" : "text-white/75"
+                  m.from === "cliente" ? "text-tinta-fraca" : "text-white/75"
                 }`}
               >
                 <span>{m.time}</span>
@@ -225,7 +225,7 @@ function ChatCard({ service }: { service: Service }) {
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-slate-100 bg-white px-5 py-3.5">
         <p className="text-sm text-slate-600">{service.tagline}</p>
-        <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 transition group-hover:text-cyan-500">
+        <span className="inline-flex items-center gap-1 text-sm font-semibold text-acao transition group-hover:text-cyan-500">
           Ver mais
           <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
         </span>
@@ -241,7 +241,7 @@ export default function ServicosPage() {
       <section className="relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_40%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 md:pb-12 md:pt-16 lg:px-8">
-          <h1 className="max-w-[16ch] text-[2rem] font-bold leading-[1.08] tracking-tight text-[#0B1929] sm:text-5xl md:text-6xl">
+          <h1 className="max-w-[16ch] text-[2rem] font-bold leading-[1.08] tracking-tight text-tinta sm:text-5xl md:text-6xl">
             Recolhas, limpezas e mudanças <span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">sem complicar.</span>
           </h1>
 
@@ -285,7 +285,7 @@ export default function ServicosPage() {
               "Destino responsável",
             ].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-cyan-600" />
+                <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-acao" />
                 <span>{t}</span>
               </li>
             ))}
@@ -298,14 +298,14 @@ export default function ServicosPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-end justify-between gap-3 md:mb-8">
             <div>
-              <h2 className="text-2xl font-bold leading-tight text-[#0B1929] sm:text-3xl md:text-4xl">
+              <h2 className="text-2xl font-bold leading-tight text-tinta sm:text-3xl md:text-4xl">
                 O que fazemos
               </h2>
               <p className="mt-1 text-sm text-slate-500 sm:text-base">Exemplos reais do que respondemos por dia.</p>
             </div>
             <Link
               href="/precos"
-              className="hidden text-sm font-semibold text-cyan-700 hover:text-cyan-500 sm:inline-flex sm:items-center sm:gap-1"
+              className="hidden text-sm font-semibold text-acao hover:text-cyan-500 sm:inline-flex sm:items-center sm:gap-1"
             >
               Ver preços <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -322,7 +322,7 @@ export default function ServicosPage() {
       {/* ── HOW IT WORKS ─────────────────────────────────────────────── */}
       <section className="bg-white py-10 md:py-14">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold leading-tight text-[#0B1929] sm:text-3xl md:text-4xl">
+          <h2 className="text-2xl font-bold leading-tight text-tinta sm:text-3xl md:text-4xl">
             Como pedir — 3 passos
           </h2>
           <p className="mt-2 max-w-lg text-sm text-slate-600 sm:text-base">
@@ -335,7 +335,7 @@ export default function ServicosPage() {
                 <span className="absolute -top-3 left-4 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-bold text-white shadow-md">
                   {step.n}
                 </span>
-                <h3 className="mt-2 text-base font-bold text-[#0B1929] sm:text-lg">{step.title}</h3>
+                <h3 className="mt-2 text-base font-bold text-tinta sm:text-lg">{step.title}</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-600">{step.text}</p>
               </li>
             ))}
@@ -358,7 +358,7 @@ export default function ServicosPage() {
             </div>
             <Link
               href="/avaliacoes"
-              className="hidden text-sm font-semibold text-cyan-700 hover:text-cyan-500 sm:inline-flex sm:items-center sm:gap-1"
+              className="hidden text-sm font-semibold text-acao hover:text-cyan-500 sm:inline-flex sm:items-center sm:gap-1"
             >
               Ver todas <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -388,7 +388,7 @@ export default function ServicosPage() {
       {/* ── FAQ ──────────────────────────────────────────────────────── */}
       <section className="bg-white py-10 md:py-14">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold leading-tight text-[#0B1929] sm:text-3xl md:text-4xl">
+          <h2 className="text-2xl font-bold leading-tight text-tinta sm:text-3xl md:text-4xl">
             Perguntas frequentes
           </h2>
           <div className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
@@ -396,7 +396,7 @@ export default function ServicosPage() {
               <details key={f.q} className="group px-4 py-3.5 open:bg-slate-50 sm:px-5">
                 <summary className="flex cursor-pointer items-start justify-between gap-3 text-sm font-semibold text-slate-900 sm:text-base [&::-webkit-details-marker]:hidden">
                   <span>{f.q}</span>
-                  <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition group-open:rotate-45 group-open:border-cyan-500 group-open:text-cyan-600">
+                  <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition group-open:rotate-45 group-open:border-cyan-500 group-open:text-acao">
                     +
                   </span>
                 </summary>
@@ -426,7 +426,7 @@ export default function ServicosPage() {
                   href={WA_HREF}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-acao transition hover:bg-cyan-50"
                 >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp

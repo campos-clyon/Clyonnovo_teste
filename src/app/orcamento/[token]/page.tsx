@@ -47,7 +47,7 @@ export default async function OrcamentoPage(
         <div className="mx-auto max-w-lg flex items-center justify-between">
           <div>
             <span className="text-lg font-bold text-[#0077B6] tracking-tight">CLYON</span>
-            <span className="ml-2 text-xs text-slate-400">Recolha &middot; Mudanca &middot; Esvaziamento</span>
+            <span className="ml-2 text-xs text-tinta-fraca">Recolha &middot; Mudanca &middot; Esvaziamento</span>
           </div>
           <a
             href={`tel:${BUSINESS_PHONE}`}
@@ -105,7 +105,7 @@ export default async function OrcamentoPage(
         </div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-slate-400">
+      <footer className="py-6 text-center text-xs text-tinta-fraca">
         CLYON &copy; {new Date().getFullYear()} &mdash; Todos os direitos reservados
       </footer>
     </div>

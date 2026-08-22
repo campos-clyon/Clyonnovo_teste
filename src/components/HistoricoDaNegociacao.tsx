@@ -69,7 +69,7 @@ export default function HistoricoDaNegociacao({
                 <span
                   className={`text-sm ${
                     e.estado === "pendente"
-                      ? "font-semibold text-[#0B1929]"
+                      ? "font-semibold text-tinta"
                       : "text-slate-600"
                   }`}
                 >
@@ -79,8 +79,8 @@ export default function HistoricoDaNegociacao({
                   <span
                     className={
                       e.estado === "pendente" || e.quem === "sistema"
-                        ? "text-sm font-bold text-[#0B1929]"
-                        : "text-sm text-slate-400 line-through"
+                        ? "text-sm font-bold text-tinta"
+                        : "text-sm text-tinta-fraca line-through"
                     }
                   >
                     {euros(e.valor)}
@@ -92,7 +92,7 @@ export default function HistoricoDaNegociacao({
               <time
                 dateTime={e.quando}
                 title={new Date(e.quando).toLocaleString("pt-PT")}
-                className="text-xs text-slate-400"
+                className="text-xs text-tinta-fraca"
               >
                 {haQuantoTempo(e.quando, agora)}
               </time>

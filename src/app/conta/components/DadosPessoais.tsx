@@ -83,7 +83,7 @@ function Field({
           placeholder={placeholder}
           className={`h-11 w-full min-w-0 rounded-xl border px-4 text-sm outline-none transition ${
             readOnly
-              ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400"
+              ? "cursor-not-allowed border-slate-100 bg-slate-50 text-tinta-fraca"
               : error
               ? "border-red-300 bg-white text-slate-800 focus:border-red-400 focus:ring-2 focus:ring-red-100"
               : "border-slate-200 bg-white text-slate-800 focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/10"
@@ -96,7 +96,7 @@ function Field({
       </div>
       {error && <p className="mt-1 text-xs font-medium text-red-500">{error}</p>}
       {hint && !error && (
-        <p className="mt-1 break-words text-xs leading-snug text-slate-400">{hint}</p>
+        <p className="mt-1 break-words text-xs leading-snug text-tinta-fraca">{hint}</p>
       )}
     </div>
   );
@@ -133,7 +133,7 @@ function AvatarCropModal({
       <div className="w-full max-w-sm rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">Ajustar foto</h3>
-          <button type="button" onClick={onCancel} className="rounded-lg p-1 text-slate-400 hover:text-slate-600">
+          <button type="button" onClick={onCancel} className="rounded-lg p-1 text-tinta-fraca hover:text-slate-600">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -395,7 +395,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs text-tinta-fraca">
               {user.avatarUrl ? "Foto personalizada" : "Foto sincronizada com a tua conta Google"}
             </p>
           </div>
@@ -434,14 +434,14 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
               </label>
               <div className="relative flex h-11 w-full min-w-0 items-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50 px-4 pr-10">
                 <span
-                  className="flex-1 truncate text-sm text-slate-400"
+                  className="flex-1 truncate text-sm text-tinta-fraca"
                   title={user.email}
                 >
                   {user.email}
                 </span>
                 <LockKeyhole className="absolute right-3 h-3.5 w-3.5 shrink-0 text-slate-300" />
               </div>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-tinta-fraca">
                 Gerido pela tua conta Google — não pode ser alterado aqui.
               </p>
             </div>

@@ -81,7 +81,7 @@ export default function ComoFuncionaPage() {
       <section className="relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(90deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,1)_52%)]" />
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-700 shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-acao shadow-sm">
             Como funciona
           </div>
           <h1 className="mt-5 max-w-[18ch] text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.4rem]">
@@ -110,7 +110,7 @@ export default function ComoFuncionaPage() {
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {stages.map((stage, index) => (
               <div key={stage.step} className="relative rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="absolute -top-4 left-8 flex h-8 w-8 items-center justify-center rounded-full bg-cyan-600 text-sm font-bold text-white">
+                <div className="absolute -top-4 left-8 flex h-8 w-8 items-center justify-center rounded-full bg-acao text-sm font-bold text-white">
                   {index + 1}
                 </div>
                 <div
@@ -118,7 +118,7 @@ export default function ComoFuncionaPage() {
                     stage.accent === "premium" ? "bg-violet-50" : "bg-cyan-50"
                   }`}
                 >
-                  <stage.icon className={`h-7 w-7 ${stage.accent === "premium" ? "text-violet-600" : "text-cyan-600"}`} />
+                  <stage.icon className={`h-7 w-7 ${stage.accent === "premium" ? "text-violet-600" : "text-acao"}`} />
                 </div>
                 <h2 className="mt-5 text-xl font-bold text-slate-900">{stage.title}</h2>
                 <p className="mt-3 text-base leading-relaxed text-slate-600">{stage.description}</p>
@@ -131,7 +131,7 @@ export default function ComoFuncionaPage() {
       <section className="bg-white py-16 lg:py-20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-cyan-600">
+            <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-acao">
               O papel do assistente
             </div>
             <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
@@ -145,7 +145,7 @@ export default function ComoFuncionaPage() {
           <div className="space-y-4">
             {assistantRules.map((rule) => (
               <div key={rule} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-cyan-600" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-acao" />
                 <span className="text-sm font-medium text-slate-700">{rule}</span>
               </div>
             ))}

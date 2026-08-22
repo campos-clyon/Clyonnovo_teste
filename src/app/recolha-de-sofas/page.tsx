@@ -185,7 +185,7 @@ export default function RecolhaDeSofasPage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/simulador"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-600 px-6 text-base font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-acao px-6 text-base font-semibold text-white shadow-sm transition hover:bg-acao-hover"
                 >
                   Simular orçamento
                 </Link>
@@ -209,11 +209,11 @@ export default function RecolhaDeSofasPage() {
               {/* Trust indicators */}
               <div className="mt-8 flex flex-wrap items-center gap-6 text-sm text-slate-600">
                 <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-cyan-600" />
+                  <Shield className="h-4 w-4 text-acao" />
                   {AVALIACOES_TOTAL} avaliações 5 estrelas
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-cyan-600" />
+                  <MapPin className="h-4 w-4 text-acao" />
                   Lisboa, Margem Sul, Setúbal
                 </div>
               </div>
@@ -223,7 +223,7 @@ export default function RecolhaDeSofasPage() {
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100">
-                  <Sofa className="h-6 w-6 text-cyan-600" />
+                  <Sofa className="h-6 w-6 text-acao" />
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900">Recolha de Sofás</p>
@@ -233,7 +233,7 @@ export default function RecolhaDeSofasPage() {
               <div className="mt-6 space-y-4">
                 {benefits.map((benefit) => (
                   <div key={benefit.title} className="flex gap-3">
-                    <benefit.icon className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" />
+                    <benefit.icon className="mt-0.5 h-5 w-5 shrink-0 text-acao" />
                     <div>
                       <p className="font-medium text-slate-900">{benefit.title}</p>
                       <p className="text-sm text-slate-600">{benefit.desc}</p>
@@ -259,7 +259,7 @@ export default function RecolhaDeSofasPage() {
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
               <div key={item} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-cyan-600" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-acao" />
                 <span className="text-sm font-medium text-slate-700">{item}</span>
               </div>
             ))}
@@ -281,7 +281,7 @@ export default function RecolhaDeSofasPage() {
               { step: "04", title: "Fazemos a recolha", desc: "A equipa entra no imóvel, carrega o sofá, transporta e encaminha para destino responsável." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
-                <span className="text-sm font-bold text-cyan-600">{item.step}</span>
+                <span className="text-sm font-bold text-acao">{item.step}</span>
                 <h3 className="mt-2 font-semibold text-slate-900">{item.title}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.desc}</p>
               </div>
@@ -304,7 +304,7 @@ export default function RecolhaDeSofasPage() {
             <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {pricingFactors.map((factor) => (
                 <li key={factor} className="flex items-center gap-2 text-sm text-slate-700">
-                  <CheckCircle2 className="h-4 w-4 text-cyan-600" />
+                  <CheckCircle2 className="h-4 w-4 text-acao" />
                   {factor}
                 </li>
               ))}
@@ -312,7 +312,7 @@ export default function RecolhaDeSofasPage() {
             <div className="mt-6">
               <Link
                 href="/simulador"
-                className="inline-flex items-center gap-2 text-base font-semibold text-cyan-600 hover:text-cyan-700"
+                className="inline-flex items-center gap-2 text-base font-semibold text-acao hover:text-acao-hover"
               >
                 Simular orçamento para recolha de sofá
               </Link>
@@ -346,7 +346,7 @@ export default function RecolhaDeSofasPage() {
       </section>
 
       {/* CTA Final */}
-      <section className="bg-cyan-600 py-16 lg:py-20">
+      <section className="bg-acao py-16 lg:py-20">
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">
             Precisa de recolha de sofá?
@@ -357,7 +357,7 @@ export default function RecolhaDeSofasPage() {
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/simulador"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-cyan-600 transition hover:bg-cyan-50"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-acao transition hover:bg-cyan-50"
             >
               Simular orçamento
             </Link>

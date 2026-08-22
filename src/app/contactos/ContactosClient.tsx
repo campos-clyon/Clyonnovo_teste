@@ -84,7 +84,7 @@ export default function ContactosClient() {
 
         {/* Header compacto */}
         <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-[#0B1929] sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
             Fale connosco
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500">
@@ -96,57 +96,57 @@ export default function ContactosClient() {
 
           {/* Contacto direto */}
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-            <h2 className="text-base font-bold text-[#0B1929]">Contacto direto</h2>
+            <h2 className="text-base font-bold text-tinta">Contacto direto</h2>
             <ul className="mt-5 space-y-4">
               <li className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-acao">
                   <Phone className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Telefone</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-acao">Telefone</p>
                   <a
                     href="tel:+351931632622"
                     onClick={() => trackPhoneCall("contactos_lista", "+351931632622")}
-                    className="text-sm font-bold text-slate-900 hover:text-cyan-600"
+                    className="text-sm font-bold text-slate-900 hover:text-acao-hover"
                   >
                     +351 931 632 622
                   </a>
-                  <p className="text-xs text-slate-400">Pedidos rápidos e marcações</p>
+                  <p className="text-xs text-tinta-fraca">Pedidos rápidos e marcações</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-acao">
                   <Mail className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Email</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-acao">Email</p>
                   <a
                     href="mailto:geral@clyon.pt"
                     onClick={() => trackEmailClick("contactos_lista", "geral@clyon.pt")}
-                    className="text-sm font-bold text-slate-900 hover:text-cyan-600"
+                    className="text-sm font-bold text-slate-900 hover:text-acao-hover"
                   >
                     geral@clyon.pt
                   </a>
-                  <p className="text-xs text-slate-400">Pedidos detalhados e dúvidas</p>
+                  <p className="text-xs text-tinta-fraca">Pedidos detalhados e dúvidas</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-acao">
                   <MapPin className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Morada</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-acao">Morada</p>
                   <p className="text-sm text-slate-700">Belverde, Amora · 2845-513</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-acao">
                   <Clock3 className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan-700">Horário</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-acao">Horário</p>
                   <p className="text-sm text-slate-700">Seg–Sáb 08:00–20:00</p>
-                  <p className="text-xs text-slate-400">Domingo: por mensagem</p>
+                  <p className="text-xs text-tinta-fraca">Domingo: por mensagem</p>
                 </div>
               </li>
             </ul>
@@ -155,7 +155,7 @@ export default function ContactosClient() {
               <a
                 href="tel:+351931632622"
                 onClick={() => trackPhoneCall("contactos_botao", "+351931632622")}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-500 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-400"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-acao py-2.5 text-sm font-semibold text-white transition hover:bg-acao-hover"
               >
                 <Phone className="h-4 w-4" />
                 Ligar
@@ -165,7 +165,7 @@ export default function ContactosClient() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClick("contactos_botao", "orcamento")}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-sm font-semibold text-white transition hover:bg-[#1ebe5d]"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-sm font-semibold text-whatsapp-tinta transition hover:bg-[#1ebe5d]"
               >
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
@@ -178,21 +178,21 @@ export default function ContactosClient() {
             {status === "success" ? (
               <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
                 <CheckCircle2 className="h-12 w-12 text-cyan-500" />
-                <h2 className="text-lg font-bold text-[#0B1929]">Pedido recebido!</h2>
+                <h2 className="text-lg font-bold text-tinta">Pedido recebido!</h2>
                 <p className="text-sm text-slate-500">
                   A nossa equipa entra em contacto em breve. Obrigado!
                 </p>
                 <button
                   onClick={() => setStatus("idle")}
-                  className="mt-2 rounded-xl bg-cyan-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-400"
+                  className="mt-2 rounded-xl bg-acao px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-acao-hover"
                 >
                   Novo pedido
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="text-base font-bold text-[#0B1929]">Enviar pedido</h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <h2 className="text-base font-bold text-tinta">Enviar pedido</h2>
+                <p className="mt-1 text-xs text-tinta-fraca">
                   Preencha os dados — a nossa equipa responde em até 24h.
                 </p>
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
@@ -230,7 +230,7 @@ export default function ContactosClient() {
                   <button
                     type="submit"
                     disabled={status === "loading"}
-                    className="mt-1 inline-flex h-10 w-full items-center justify-center rounded-xl bg-cyan-500 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-400 disabled:opacity-60"
+                    className="mt-1 inline-flex h-10 w-full items-center justify-center rounded-xl bg-acao text-sm font-semibold text-white shadow-sm transition hover:bg-acao-hover disabled:opacity-60"
                   >
                     {status === "loading" ? "A enviar…" : "Enviar pedido"}
                   </button>

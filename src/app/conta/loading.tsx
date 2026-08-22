@@ -57,7 +57,7 @@ export default function ContaLoading() {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm text-slate-400">A carregar a sua conta…</p>
+        <p className="mt-8 text-center text-sm text-tinta-fraca">A carregar a sua conta…</p>
       </div>
     </div>
   );

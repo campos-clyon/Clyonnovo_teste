@@ -68,12 +68,12 @@ export default function EntrarPorLink() {
   if (erro) {
     return (
       <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl">
-        <ShieldAlert className="mx-auto h-9 w-9 text-slate-400" aria-hidden="true" />
-        <h1 className="mt-3 text-lg font-bold text-[#0B1929]">Não foi possível entrar</h1>
+        <ShieldAlert className="mx-auto h-9 w-9 text-tinta-fraca" aria-hidden="true" />
+        <h1 className="mt-3 text-lg font-bold text-tinta">Não foi possível entrar</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{MENSAGEM[erro]}</p>
         <Link
           href="/entrar"
-          className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-cyan-600"
+          className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-acao-hover"
         >
           Pedir um link novo
         </Link>
@@ -84,7 +84,7 @@ export default function EntrarPorLink() {
   return (
     <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl">
       <Loader2 className="mx-auto h-9 w-9 animate-spin text-[#00B4CC]" aria-hidden="true" />
-      <p className="mt-3 text-sm font-semibold text-[#0B1929]">A entrar…</p>
+      <p className="mt-3 text-sm font-semibold text-tinta">A entrar…</p>
       <p className="mt-1 text-xs text-slate-500">Só um instante.</p>
     </div>
   );

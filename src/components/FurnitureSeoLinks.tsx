@@ -57,7 +57,7 @@ export default function FurnitureSeoLinks({
             <Link
               key={link.href}
               href={link.href}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-acao-hover"
             >
               {link.label}
             </Link>
@@ -80,7 +80,7 @@ export default function FurnitureSeoLinks({
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="text-sm text-cyan-600 underline-offset-2 hover:underline"
+                className="text-sm text-acao underline-offset-2 hover:underline"
               >
                 {link.label}
               </Link>
@@ -96,7 +96,7 @@ export default function FurnitureSeoLinks({
     <div className={`rounded-2xl border border-slate-200 bg-slate-50 p-6 ${className}`}>
       {showHeading && (
         <>
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">
+          <p className="text-sm font-semibold uppercase tracking-wide text-acao">
             Links internos
           </p>
           <h3 className="mt-2 text-xl font-bold text-slate-900">
@@ -116,7 +116,7 @@ export default function FurnitureSeoLinks({
             style={{ color: '#0f172a' }}
           >
             {link.label}
-            <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:text-cyan-600" />
+            <ArrowRight className="h-4 w-4 text-tinta-fraca transition group-hover:text-acao-hover" />
           </Link>
         ))}
       </div>
@@ -131,7 +131,7 @@ export default function FurnitureSeoLinks({
               style={{ color: '#0f172a' }}
             >
               {link.label}
-              <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
+              <ArrowRight className="h-3.5 w-3.5 text-tinta-fraca" />
             </Link>
           ))}
         </div>

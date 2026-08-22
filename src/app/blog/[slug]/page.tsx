@@ -224,7 +224,7 @@ export default async function BlogPostPage({ params }: Props) {
             <div>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">Artigos relacionados</h2>
             </div>
-            <Link href="/blog" className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-600">
+            <Link href="/blog" className="text-sm font-semibold text-acao transition hover:text-acao-hover">
               Ver blog completo
             </Link>
           </div>
@@ -238,7 +238,7 @@ export default async function BlogPostPage({ params }: Props) {
                 <p className="mt-4 text-sm leading-7 text-slate-600">{item.description}</p>
                 <Link
                   href={`/blog/${item.slug}`}
-                  className="mt-6 inline-flex items-center text-sm font-semibold text-cyan-700 transition hover:text-cyan-600"
+                  className="mt-6 inline-flex items-center text-sm font-semibold text-acao transition hover:text-acao-hover"
                 >
                   Ler artigo
                   <ArrowRight className="ml-2 h-4 w-4" />

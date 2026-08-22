@@ -55,7 +55,7 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  recolha_moveis: { bg: "bg-cyan-50", text: "text-cyan-600" },
+  recolha_moveis: { bg: "bg-cyan-50", text: "text-acao" },
   recolha_monos: { bg: "bg-amber-50", text: "text-amber-600" },
   recolha_entulho: { bg: "bg-orange-50", text: "text-orange-600" },
   esvaziamento_casa: { bg: "bg-emerald-50", text: "text-emerald-600" },
@@ -100,7 +100,7 @@ const HERO_PILLS = [
 
 const PLATFORM_STATS = [
   { value: "5,0 ★", label: "Avaliação dos clientes", sub: "Baseado em opiniões reais", accent: "text-amber-500" },
-  { value: "188", label: "Trabalhos concluídos", sub: "e a contar", accent: "text-cyan-600" },
+  { value: "188", label: "Trabalhos concluídos", sub: "e a contar", accent: "text-acao" },
   { value: "9", label: "Categorias de serviço", sub: "Casa, jardim e mais", accent: "text-emerald-600" },
   { value: "24+", label: "Localidades cobertas", sub: "Lisboa · Margem Sul · Setúbal", accent: "text-blue-600" },
 ];
@@ -226,9 +226,9 @@ export default function HomePage() {
           <div className="mb-8 lg:mb-0">
 
             {/* H1 */}
-            <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[#0B1929] sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
+            <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-tinta sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
               Recolha de móveis{" "}
-              <span className="text-cyan-600">e esvaziamento</span>{" "}
+              <span className="text-acao">e esvaziamento</span>{" "}
               em Lisboa
             </h1>
 
@@ -244,14 +244,14 @@ export default function HomePage() {
                 <Link
                   key={pill.id}
                   href={pill.href}
-                  className="rounded-full border border-slate-200 bg-white/60 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-700 sm:px-4 sm:py-1.5 sm:text-sm"
+                  className="rounded-full border border-slate-200 bg-white/60 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-50 hover:text-acao-hover sm:px-4 sm:py-1.5 sm:text-sm"
                 >
                   {pill.label}
                 </Link>
               ))}
               <Link
                 href="/simulador"
-                className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100 sm:px-4 sm:py-1.5 sm:text-sm"
+                className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-acao backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100 sm:px-4 sm:py-1.5 sm:text-sm"
               >
                 Ver todos
               </Link>
@@ -272,7 +272,7 @@ export default function HomePage() {
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-cyan-600 sm:flex"
+                className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-acao-hover sm:flex"
               >
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
@@ -294,8 +294,8 @@ export default function HomePage() {
             {PLATFORM_STATS.map((stat) => (
               <div key={stat.label} className="px-4 py-6 text-center sm:px-6 sm:py-8">
                 <div className={`text-2xl font-bold sm:text-3xl ${stat.accent}`}>{stat.value}</div>
-                <div className="mt-0.5 text-sm font-semibold text-[#0B1929]">{stat.label}</div>
-                <div className="mt-0.5 text-xs text-slate-400">{stat.sub}</div>
+                <div className="mt-0.5 text-sm font-semibold text-tinta">{stat.label}</div>
+                <div className="mt-0.5 text-xs text-tinta-fraca">{stat.sub}</div>
               </div>
             ))}
           </div>
@@ -306,7 +306,7 @@ export default function HomePage() {
       <section className="bg-[#F4F8FB] py-10 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center sm:mb-16">
-            <h2 className="text-2xl font-bold tracking-tight text-[#0B1929] sm:text-4xl lg:text-5xl">
+            <h2 className="text-2xl font-bold tracking-tight text-tinta sm:text-4xl lg:text-5xl">
               Simples do início ao fim
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
@@ -346,7 +346,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <h3 className="mt-5 text-lg font-bold text-[#0B1929] sm:mt-8 sm:text-2xl">{step.title}</h3>
+                <h3 className="mt-5 text-lg font-bold text-tinta sm:mt-8 sm:text-2xl">{step.title}</h3>
                 <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500 sm:mt-3 sm:text-base">
                   {step.description}
                 </p>
@@ -357,7 +357,7 @@ export default function HomePage() {
           <div className="mt-12 text-center">
             <Link
               href="/simulador"
-              className="inline-flex items-center rounded-xl bg-cyan-500 px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
+              className="inline-flex items-center rounded-xl bg-acao px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-acao-hover"
             >
               Iniciar pedido agora
             </Link>
@@ -371,7 +371,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
-              const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-cyan-600" };
+              const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-acao" };
               const price = CATEGORY_PRICES[cat.id];
               return (
                 <Link
@@ -383,7 +383,7 @@ export default function HomePage() {
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colors.bg}`}>
                       <Icon className={`h-[18px] w-[18px] ${colors.text}`} strokeWidth={2} />
                     </div>
-                    <h3 className="text-xs font-bold leading-snug text-[#0B1929] sm:text-sm">{cat.label}</h3>
+                    <h3 className="text-xs font-bold leading-snug text-tinta sm:text-sm">{cat.label}</h3>
                   </div>
                   <p className="mt-2 flex-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
                     {cat.description}
@@ -404,7 +404,7 @@ export default function HomePage() {
       <section className="bg-[#F4F8FB] py-8 sm:py-14 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-14">
-            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-4xl lg:text-5xl">
+            <h2 className="text-2xl font-bold text-tinta sm:text-4xl lg:text-5xl">
               Construída para inspirar confiança
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
@@ -432,10 +432,10 @@ export default function HomePage() {
                   <span className={`bg-gradient-to-r ${g.gradient} bg-clip-text text-3xl font-black text-transparent sm:text-5xl`}>
                     {g.stat}
                   </span>
-                  <span className="ml-2 text-xs font-medium text-slate-400 sm:text-sm">{g.statLabel}</span>
+                  <span className="ml-2 text-xs font-medium text-tinta-fraca sm:text-sm">{g.statLabel}</span>
                 </div>
 
-                <h3 className="mt-2 text-base font-bold text-[#0B1929] sm:mt-3 sm:text-xl">{g.title}</h3>
+                <h3 className="mt-2 text-base font-bold text-tinta sm:mt-3 sm:text-xl">{g.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500 sm:mt-3 sm:text-base">{g.description}</p>
               </div>
             ))}
@@ -446,7 +446,7 @@ export default function HomePage() {
       {/* ── REVIEWS ───────────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] py-8 sm:py-16">
         <div className="mb-8 text-center px-4 sm:mb-12">
-          <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
+          <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
             O que dizem os nossos clientes
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
@@ -474,12 +474,12 @@ export default function HomePage() {
                     &ldquo;{review.text}&rdquo;
                   </blockquote>
                   <div className="mt-4 flex items-center gap-3 border-t border-[#E2EEF3] pt-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-acao">
                       {review.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-[#0B1929]">{review.name}</div>
-                      <div className="text-xs text-slate-400">{review.date}</div>
+                      <div className="text-sm font-semibold text-tinta">{review.name}</div>
+                      <div className="text-xs text-tinta-fraca">{review.date}</div>
                     </div>
                   </div>
                 </article>
@@ -491,7 +491,7 @@ export default function HomePage() {
         <div className="mt-10 text-center">
           <Link
             href="/avaliacoes"
-            className="inline-flex items-center text-sm font-semibold text-cyan-600 hover:text-cyan-700"
+            className="inline-flex items-center text-sm font-semibold text-acao hover:text-acao-hover"
           >
             Ver mais testemunhos
           </Link>
@@ -503,7 +503,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div>
-              <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">Onde estamos</h2>
+              <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">Onde estamos</h2>
               <p className="mt-3 max-w-md text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
                 Já cobrimos mais de 24 localidades em Lisboa, Margem Sul e Setúbal —
                 e continuamos a crescer.
@@ -516,7 +516,7 @@ export default function HomePage() {
                 ].map((city) => (
                   <span
                     key={city}
-                    className="rounded-xl border border-[#E2EEF3] bg-white px-3.5 py-1.5 text-sm font-medium text-[#0B1929] shadow-sm"
+                    className="rounded-xl border border-[#E2EEF3] bg-white px-3.5 py-1.5 text-sm font-medium text-tinta shadow-sm"
                   >
                     {city}
                   </span>
@@ -543,7 +543,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
             <div className="max-w-xl">
-              <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
+              <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
                 Tem uma empresa de remoções ou transportes?
               </h2>
               <p className="mt-3 text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
@@ -557,7 +557,7 @@ export default function HomePage() {
                   { icon: BadgeCheck, label: "Pagamento garantido" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <item.icon className="h-4 w-4 text-cyan-600" />
+                    <item.icon className="h-4 w-4 text-acao" />
                     {item.label}
                   </div>
                 ))}
@@ -570,7 +570,7 @@ export default function HomePage() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-cyan-500 px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-cyan-400"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-acao px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-acao-hover"
               >
                 Tornar-me parceiro
               </a>
@@ -583,7 +583,7 @@ export default function HomePage() {
       <section className="bg-white py-8 sm:py-12 lg:py-20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
+            <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
               Perguntas frequentes
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base">
@@ -598,7 +598,7 @@ export default function HomePage() {
                   value={faq.question}
                   className="border-[#E2EEF3]"
                 >
-                  <AccordionTrigger className="text-left text-sm font-semibold text-[#0B1929] hover:no-underline sm:text-base">
+                  <AccordionTrigger className="text-left text-sm font-semibold text-tinta hover:no-underline sm:text-base">
                     {faq.question}
                   </AccordionTrigger>
                   <AccordionContent className="text-xs leading-relaxed text-slate-500 sm:text-sm">
@@ -615,7 +615,7 @@ export default function HomePage() {
       <section className="bg-white py-8 sm:py-10 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-5 py-10 text-center ring-1 ring-[#E2EEF3] sm:rounded-3xl sm:px-12 sm:py-16">
-            <h2 className="text-xl font-bold text-[#0B1929] sm:text-3xl lg:text-4xl">
+            <h2 className="text-xl font-bold text-tinta sm:text-3xl lg:text-4xl">
               Pronto para libertar espaço?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
@@ -624,7 +624,7 @@ export default function HomePage() {
             <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center">
               <Link
                 href="/simulador"
-                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-500 px-6 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-cyan-400 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
+                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-acao px-6 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 hover:bg-acao-hover sm:h-12 sm:w-auto sm:px-8 sm:text-base"
               >
                 Pedir Orçamento Grátis
               </Link>
@@ -632,7 +632,7 @@ export default function HomePage() {
                 href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] sm:h-12 sm:w-auto sm:px-8 sm:text-base"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-whatsapp-tinta transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] sm:h-12 sm:w-auto sm:px-8 sm:text-base"
               >
                 <MessageCircle className="h-5 w-5" />
                 WhatsApp

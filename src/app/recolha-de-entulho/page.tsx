@@ -226,7 +226,7 @@ export default function RecolhaEntulhoPage() {
           </div>
 
           <div className="rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
-            <h2 className="mt-3 text-2xl font-bold text-[#0B1929]">Serviço completo de entulho</h2>
+            <h2 className="mt-3 text-2xl font-bold text-tinta">Serviço completo de entulho</h2>
             <div className="mt-6 space-y-3">
               {differentiators.map((item) => (
                 <div key={item} className="rounded-[18px] border border-[#E2EEF3] bg-white px-4 py-3 text-sm font-medium text-slate-700">

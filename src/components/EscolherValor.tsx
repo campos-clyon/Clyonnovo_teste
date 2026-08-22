@@ -102,7 +102,7 @@ export default function EscolherValor({
                 <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
                   {euros(a.valor)}
                 </span>
-                <span className="text-xs leading-tight text-cyan-700">
+                <span className="text-xs leading-tight text-acao">
                   {direccao === "abaixo" ? "−" : "+"}
                   {Math.round(a.passo * 100)}%
                 </span>
@@ -126,7 +126,7 @@ export default function EscolherValor({
             <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
               Outro
             </span>
-            <span className="text-xs leading-tight text-cyan-700">Escrever</span>
+            <span className="text-xs leading-tight text-acao">Escrever</span>
           </button>
         </div>
       )}
@@ -135,7 +135,7 @@ export default function EscolherValor({
           para calcular atalhos — nesse caso é a única forma de propor. */}
       {(aEscrever || atalhos.length === 0) && (
         <div className="relative mt-3">
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-tinta-fraca">
             €
           </span>
           <input
@@ -159,7 +159,7 @@ export default function EscolherValor({
         type="button"
         disabled={aEnviar || valorFinal == null}
         onClick={() => valorFinal != null && onPropor(String(valorFinal))}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 py-3.5 text-base font-bold text-white transition hover:bg-cyan-400 disabled:opacity-40"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-acao py-3.5 text-base font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
       >
         {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {valorFinal != null ? `${rotuloDoBotao} ${euros(valorFinal)}` : rotuloDoBotao}

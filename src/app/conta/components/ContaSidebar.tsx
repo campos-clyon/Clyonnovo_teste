@@ -52,12 +52,12 @@ export default function ContaSidebar({
         />
         <div className="min-w-0 w-full">
           <p className="truncate text-sm font-semibold text-slate-800">{nome}</p>
-          <p className="truncate text-xs text-slate-400">{email}</p>
+          <p className="truncate text-xs text-tinta-fraca">{email}</p>
         </div>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/" })}
-          className="mt-1 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-slate-400 transition hover:bg-slate-50 hover:text-slate-600"
+          className="mt-1 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-tinta-fraca transition hover:bg-slate-50 hover:text-slate-600"
         >
           <LogOut className="h-3.5 w-3.5" />
           Sair
@@ -83,7 +83,7 @@ export default function ContaSidebar({
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[#00B4D8]" : "text-slate-400"}`} />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-acao" : "text-tinta-fraca"}`} />
                   <span className="flex-1 text-left">{label}</span>
                   {/* O contador só nos pedidos, e só quando há mesmo alguma
                       coisa à espera dele. Um distintivo que está sempre lá

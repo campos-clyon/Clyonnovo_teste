@@ -311,7 +311,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
                 key={bullet.label}
                 className="flex items-center gap-3 text-sm font-medium text-slate-700 sm:text-base"
               >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-cyan-600">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-acao">
                   <bullet.icon className="h-4 w-4" />
                 </span>
                 {bullet.label}
@@ -333,7 +333,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
             <a
               href={`tel:${PHONE_TEL}`}
               onClick={() => trackCall("hero")}
-              className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700"
+              className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:border-cyan-300 hover:text-acao-hover"
             >
               <Phone className="h-5 w-5" />
               Ligar Agora
@@ -406,9 +406,9 @@ function DirectContactStrip() {
             {...(btn.external
               ? { target: "_blank", rel: "noopener noreferrer" }
               : {})}
-            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700"
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-acao-hover"
           >
-            <btn.icon className="h-5 w-5 text-cyan-600" />
+            <btn.icon className="h-5 w-5 text-acao" />
             {btn.label}
           </a>
         ))}
@@ -448,15 +448,15 @@ function LeadForm() {
 
       <ul className="mt-5 space-y-2.5 text-sm text-slate-700">
         <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-cyan-700">1</span>
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">1</span>
           Escolha o serviço
         </li>
         <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-cyan-700">2</span>
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">2</span>
           Indique a morada e o acesso
         </li>
         <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-cyan-700">3</span>
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">3</span>
           Deixe o seu contacto e envie
         </li>
       </ul>
@@ -472,7 +472,7 @@ function LeadForm() {
       <p className="mt-3 text-center text-xs text-slate-500">
         Prefere enviar fotos diretamente? Use o WhatsApp abaixo.
       </p>
-      <p className="text-center text-xs text-slate-400">
+      <p className="text-center text-xs text-tinta-fraca">
         O pedido de orçamento é gratuito. O serviço de recolha é pago mediante
         avaliação.
       </p>
@@ -507,7 +507,7 @@ function TrustBar() {
                 className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${
                   item.highlight
                     ? "bg-amber-50 text-amber-500"
-                    : "bg-cyan-50 text-cyan-600"
+                    : "bg-cyan-50 text-acao"
                 }`}
               >
                 <item.icon
@@ -542,7 +542,7 @@ function SectionTitle({
     <div className="mx-auto max-w-2xl text-center">
       {eyebrow ? (
         <span
-          className={`text-xs font-bold uppercase tracking-[0.18em] ${dark ? "text-cyan-400" : "text-cyan-600"}`}
+          className={`text-xs font-bold uppercase tracking-[0.18em] ${dark ? "text-cyan-400" : "text-acao"}`}
         >
           {eyebrow}
         </span>
@@ -600,7 +600,7 @@ function HowItWorks() {
             <span className="absolute right-5 top-4 text-4xl font-extrabold text-slate-100">
               {index + 1}
             </span>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-acao">
               <step.icon className="h-6 w-6" />
             </span>
             <h3 className="mt-4 text-lg font-bold text-slate-900">
@@ -739,7 +739,7 @@ function ServicesSection() {
             key={service.title}
             className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-lg"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600 transition group-hover:bg-cyan-100">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-acao transition group-hover:bg-cyan-100">
               <service.icon className="h-6 w-6" />
             </span>
             <h3 className="mt-4 text-lg font-bold text-slate-900">
@@ -764,7 +764,7 @@ function ServicesSection() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => handleCardCta(service.title)}
-              className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-700 transition group-hover:gap-2.5"
+              className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-acao transition group-hover:gap-2.5"
             >
               Pedir orçamento
             </a>
@@ -813,7 +813,7 @@ function PricingGuide() {
               key={card.title}
               className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 text-acao">
                 <card.icon className="h-5 w-5" />
               </span>
               <h3 className="mt-4 text-base font-bold text-slate-900">
@@ -869,7 +869,7 @@ function WhyChooseSection() {
             key={item.label}
             className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
           >
-            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-acao">
               <item.icon className="h-5 w-5" />
             </span>
             <span className="text-sm font-semibold text-slate-800">
@@ -960,7 +960,7 @@ function AreasSection() {
   return (
     <section className="bg-[#F4F8FB] py-14 sm:py-16">
       <div className="mx-auto max-w-5xl px-4 text-center">
-        <h2 className="mt-2 text-balance text-2xl font-extrabold text-[#0B1929] sm:text-3xl">
+        <h2 className="mt-2 text-balance text-2xl font-extrabold text-tinta sm:text-3xl">
           Atendimento em Lisboa, Margem Sul e Setúbal
         </h2>
         <div className="mt-8 flex flex-wrap justify-center gap-2.5">
@@ -1018,7 +1018,7 @@ function FAQSection() {
                   {item.q}
                 </span>
                 <ChevronDown
-                  className={`h-5 w-5 flex-shrink-0 text-cyan-600 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  className={`h-5 w-5 flex-shrink-0 text-acao transition-transform ${isOpen ? "rotate-180" : ""}`}
                 />
               </button>
               <div
@@ -1070,7 +1070,7 @@ function FinalCTA() {
             Ligar para a CLYON
           </a>
         </div>
-        <p className="mt-4 text-xs text-slate-400">{PHONE_DISPLAY}</p>
+        <p className="mt-4 text-xs text-tinta-fraca">{PHONE_DISPLAY}</p>
       </div>
     </section>
   );
@@ -1139,7 +1139,7 @@ function StickyMobileCTA({ visible }: { visible: boolean }) {
         <a
           href={`tel:${PHONE_TEL}`}
           onClick={() => trackCall("sticky_mobile")}
-          className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-600 px-3 py-3 text-sm font-semibold text-white"
+          className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-xl bg-acao px-3 py-3 text-sm font-semibold text-white"
         >
           <Phone className="h-5 w-5" />
           Ligar

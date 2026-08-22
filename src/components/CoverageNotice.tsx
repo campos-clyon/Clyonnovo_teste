@@ -50,7 +50,7 @@ export default function CoverageNotice() {
           </h2>
           <button
             onClick={() => setShowNotice(false)}
-            className="text-slate-400 transition hover:text-slate-600"
+            className="text-tinta-fraca transition hover:text-slate-600"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -75,7 +75,7 @@ export default function CoverageNotice() {
               setShowNotice(false);
               setShowModal(true);
             }}
-            className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-cyan-700"
+            className="flex-1 rounded-lg bg-acao px-4 py-2.5 text-sm font-medium text-white transition hover:bg-acao-hover"
           >
             Experimenta outra localização
           </button>

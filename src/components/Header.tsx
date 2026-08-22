@@ -179,8 +179,8 @@ export default function Header() {
               onMouseEnter={() => setSolucoesOpen(true)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-[0.9375rem] font-medium transition-colors ${
                 solucoesOpen
-                  ? "bg-slate-50 text-cyan-600"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-cyan-600"
+                  ? "bg-slate-50 text-acao"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-acao-hover"
               }`}
             >
               Soluções
@@ -197,7 +197,7 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-lg px-4 py-2.5 text-[0.9375rem] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-cyan-600"
+              className="rounded-lg px-4 py-2.5 text-[0.9375rem] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-acao-hover"
             >
               {link.label}
             </Link>
@@ -211,10 +211,10 @@ export default function Header() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsAppClick("header")}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#20bd5a]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-whatsapp-tinta transition-all hover:bg-[#20bd5a]"
           >
-            <MessageCircle className="h-4 w-4 text-white" />
-            <span className="text-white">WhatsApp</span>
+            <MessageCircle className="h-4 w-4 text-whatsapp-tinta" />
+            <span className="text-whatsapp-tinta">WhatsApp</span>
           </a>
 
           {/* Botão conta / entrar */}
@@ -242,14 +242,14 @@ export default function Header() {
                     <p className="truncate text-xs font-semibold text-slate-800">
                       {session.user.name}
                     </p>
-                    <p className="truncate text-xs text-slate-400">
+                    <p className="truncate text-xs text-tinta-fraca">
                       {session.user.email}
                     </p>
                   </div>
                   <Link
                     href="/conta"
                     onClick={() => setContaOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-cyan-700"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-acao-hover"
                   >
                     <ClipboardList className="h-4 w-4" />
                     A minha conta
@@ -268,7 +268,7 @@ export default function Header() {
           ) : (
             <Link
               href="/entrar"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-cyan-700"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-acao-hover"
             >
               <User className="h-4 w-4" />
               Entrar
@@ -300,7 +300,7 @@ export default function Header() {
             <Link
               href="/entrar"
               aria-label="Entrar na conta"
-              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-200 text-slate-500 transition hover:border-cyan-300 hover:text-cyan-600"
+              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-200 text-slate-500 transition hover:border-cyan-300 hover:text-acao-hover"
             >
               <User className="h-4 w-4" />
             </Link>
@@ -329,7 +329,7 @@ export default function Header() {
                   <Link
                     href="/simulador"
                     onClick={() => setSolucoesOpen(false)}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-cyan-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-acao-hover"
                   >
                     Pedir orçamento
                     <ArrowRight className="h-4 w-4" />
@@ -350,11 +350,11 @@ export default function Header() {
                     onClick={() => setSolucoesOpen(false)}
                     className="group flex items-start gap-3 rounded-xl p-3 transition-all hover:-translate-y-0.5 hover:bg-cyan-50"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 transition-colors group-hover:bg-cyan-600 group-hover:text-white">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-acao transition-colors group-hover:bg-acao-hover group-hover:text-white">
                       <item.icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-800 group-hover:text-cyan-700">
+                      <div className="text-sm font-semibold text-slate-800 group-hover:text-acao-hover">
                         {item.label}
                       </div>
                       <div className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-500">
@@ -379,7 +379,7 @@ export default function Header() {
               <Link
                 href="/contactos"
                 onClick={() => setSolucoesOpen(false)}
-                className="rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cyan-700"
+                className="rounded-xl bg-acao px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-acao-hover"
               >
                 Contactar
               </Link>

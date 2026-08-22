@@ -202,7 +202,7 @@ export default function LimpezaQuintaisPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-[#F4F8FB] p-7">
-            <h2 className="mt-3 text-2xl font-bold text-[#0B1929]">Limpeza completa de quintais</h2>
+            <h2 className="mt-3 text-2xl font-bold text-tinta">Limpeza completa de quintais</h2>
             <div className="mt-6 space-y-3">
               {differentiators.map((item) => (
                 <div key={item} className="rounded-xl border border-[#E2EEF3] bg-white px-4 py-3 text-sm font-medium text-slate-700">

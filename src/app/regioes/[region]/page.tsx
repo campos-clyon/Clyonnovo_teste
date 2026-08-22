@@ -88,7 +88,7 @@ export default async function RegionPage({ params }: Props) {
         <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700 shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/90 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-acao shadow-sm">
                 <MapPin className="h-4 w-4" />
                 Região estratégica
               </div>
@@ -117,7 +117,7 @@ export default async function RegionPage({ params }: Props) {
             </div>
 
             <div className="overflow-hidden rounded-[32px] border border-cyan-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                 Cobertura regional
               </p>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
@@ -152,7 +152,7 @@ export default async function RegionPage({ params }: Props) {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
               Localidades chave
             </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
@@ -204,7 +204,7 @@ export default async function RegionPage({ params }: Props) {
               "Dados locais e contacto direto para reforçar confiança e relevância.",
             ].map((item) => (
               <div key={item} className="rounded-[22px] bg-white p-5 shadow-sm">
-                <CheckCircle2 className="h-5 w-5 text-cyan-600" />
+                <CheckCircle2 className="h-5 w-5 text-acao" />
                 <p className="mt-3 text-sm leading-7 text-slate-700">{item}</p>
               </div>
             ))}
@@ -212,7 +212,7 @@ export default async function RegionPage({ params }: Props) {
         </div>
 
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
             Contacto local
           </p>
           <h2 className="mt-3 text-3xl font-bold text-slate-950">
