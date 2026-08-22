@@ -29,6 +29,8 @@ import {
   getRegion,
   getRelatedCities,
   parseCityServiceSlug,
+  AVALIACOES_TOTAL,
+  PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
 
@@ -615,7 +617,7 @@ export default async function ServiceCityPage({ params }: Props) {
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Tempo médio</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">11 minutos</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">{PRAZO_DE_RESPOSTA.porExtenso}</p>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Área servida</p>
@@ -955,7 +957,7 @@ export default async function ServiceCityPage({ params }: Props) {
             a recolha com maior precisao.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            163 avaliacoes 5 estrelas verificadas. Tempo medio de resposta: 11 minutos.
+            {AVALIACOES_TOTAL} avaliacoes 5 estrelas verificadas. Resposta em {PRAZO_DE_RESPOSTA.porExtenso}.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link

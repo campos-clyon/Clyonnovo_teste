@@ -1085,7 +1085,7 @@ function StickyMobileCTA({ visible }: { visible: boolean }) {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-50 md:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-50 lg:hidden ${
         visible ? "translate-y-0" : "translate-y-full"
       } transition-transform duration-300`}
     >

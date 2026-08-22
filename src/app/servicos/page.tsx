@@ -236,7 +236,7 @@ function ChatCard({ service }: { service: Service }) {
 
 export default function ServicosPage() {
   return (
-    <div className="min-h-screen bg-white pb-24 md:pb-0">
+    <div className="min-h-screen bg-white">
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_40%)]" />
@@ -443,33 +443,22 @@ export default function ServicosPage() {
         </div>
       </section>
 
-      {/* ── STICKY MOBILE CTA ────────────────────────────────────────── */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-md items-center gap-2">
-          <a
-            href={WA_HREF}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-3 text-sm font-semibold text-white active:bg-emerald-600"
-          >
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp
-          </a>
-          <Link
-            href="/simulador"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-3 text-sm font-semibold text-white active:brightness-110"
-          >
-            Simular
-          </Link>
-          <a
-            href={`tel:${BUSINESS_PHONE}`}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-700 active:bg-slate-100"
-            aria-label="Ligar agora"
-          >
-            <Phone className="h-4 w-4" />
-          </a>
-        </div>
-      </div>
+      {/*
+        A barra fixa desta página foi retirada.
+
+        Estava em `z-40` e `bottom-0`, e a MobileBottomNav do site inteiro está
+        em `z-50` e `bottom-0` — ou seja, esta ficava TAPADA por ela e ninguém
+        a via. O `pb-24` que lhe reservava espaço no topo do ficheiro
+        reservava-o a uma barra invisível.
+
+        Duas barras fixas no fundo do mesmo ecrã é sempre um bug: ou se
+        empilham e comem 130 px de altura, ou uma cobre a outra. Aqui era a
+        segunda. Ficou a do site, que tem o botão Simular no meio.
+
+        O que se perdeu de facto: nada — não se via. O que continua em falta,
+        e é anterior a isto: abaixo de 1024 px não há atalho de WhatsApp no
+        cabeçalho (Header.tsx:208 é `hidden lg:flex`).
+      */}
 
       <script
         type="application/ld+json"

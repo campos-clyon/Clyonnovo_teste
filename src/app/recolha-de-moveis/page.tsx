@@ -24,6 +24,8 @@ import {
   CITIES,
   SITE_URL,
   getCityServiceSlug,
+  AVALIACOES_TOTAL,
+  PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
@@ -255,7 +257,7 @@ export default function RecolhaDeMoveisPage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
               <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              163 avaliações 5 estrelas
+              {AVALIACOES_TOTAL} avaliações 5 estrelas
             </div>
             
             {/* Title */}
@@ -332,7 +334,7 @@ export default function RecolhaDeMoveisPage() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-900">Resposta Rápida</p>
-                <p className="text-[10px] text-slate-500">Em 11 minutos</p>
+                <p className="text-xs text-[#5A6B78]">{PRAZO_DE_RESPOSTA.porExtenso}</p>
               </div>
             </div>
           </div>

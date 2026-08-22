@@ -4,7 +4,7 @@ import Image from "next/image";
 import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
 import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
 import { listTrabalhos } from "@/lib/db";
-import { SITE_URL } from "@/lib/seo-data";
+import { SITE_URL, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import TrabalhosGallery from "./TrabalhosGallery";
 
 export const revalidate = 300;
@@ -12,7 +12,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Trabalhos Realizados — Recolha de Móveis e Esvaziamento em Lisboa",
   description:
-    "Portfólio de recolhas de móveis, esvaziamentos de casa, recolhas de entulho e mudanças executadas pela CLYON em Lisboa, Margem Sul e Setúbal. Fotos reais, 163 avaliações 5★, tempo médio de resposta 11 minutos.",
+    `Portfólio de recolhas de móveis, esvaziamentos de casa, recolhas de entulho e mudanças em Lisboa, Margem Sul e Setúbal. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★, ${PRAZO_DE_RESPOSTA.frase.toLowerCase()}.`,
   keywords: [
     "trabalhos CLYON",
     "portefólio recolha de móveis",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Trabalhos Realizados — Recolha de Móveis e Esvaziamento em Lisboa",
     description:
-      "Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, 163 avaliações 5★.",
+      `Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★.`,
     url: `${SITE_URL}/trabalhos`,
   },
 };

@@ -67,7 +67,7 @@ export default function SiteChrome({
     <>
       <Header />
       {/* pb no mobile para o conteúdo não ficar escondido atrás da barra de navegação */}
-      <main className="site-page-shell pt-[53px] sm:pt-[61px] pb-[72px] md:pb-0">{children}</main>
+      <main className="site-page-shell pt-[53px] sm:pt-[61px] pb-[72px] lg:pb-0">{children}</main>
       <Footer />
       <MobileBottomNav />
       <DeferredCookieConsent />

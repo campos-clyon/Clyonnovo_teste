@@ -24,11 +24,44 @@ const ler = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
 
 const NAV = ler("src/components/MobileBottomNav.tsx");
 const COOKIES = ler("src/components/CookieConsent.tsx");
+const CHROME = ler("src/components/SiteChrome.tsx");
+const HEADER = ler("src/components/Header.tsx");
 
 describe("barra de navegação do telemóvel", () => {
-  it("está colada ao fundo e só aparece abaixo de md", () => {
+  it("está colada ao fundo", () => {
     expect(NAV).toContain("fixed inset-x-0 bottom-0");
-    expect(NAV).toContain("md:hidden");
+  });
+
+  /**
+   * O BURACO DOS 256 PÍXEIS
+   *
+   * Esta barra escondia-se em `md:hidden` (≥768px) e a navegação do Header só
+   * aparece em `lg:flex` (≥1024px). Entre os dois o site não tinha navegação
+   * NENHUMA: sem menu Soluções, sem Avaliações, sem Contactos, e sem o botão
+   * Simular, que é o CTA principal em telemóvel.
+   *
+   * Não é um intervalo teórico — é o iPad em retrato (768 px), o iPhone Pro
+   * Max deitado, e os Android grandes em paisagem. Quem lá chegasse só saía da
+   * homepage pelos links do corpo da página.
+   *
+   * Este teste existe para o buraco não voltar a abrir-se: os dois sistemas
+   * têm de se encontrar no MESMO limiar.
+   */
+  it("desaparece exactamente onde a navegação do Header aparece", () => {
+    // As classes do <nav>, e não o ficheiro inteiro: o comentário que explica
+    // o buraco menciona `md:hidden` por escrito, e um teste que lesse o
+    // ficheiro todo falhava por causa da explicação em vez do código.
+    const classes = NAV.slice(NAV.indexOf("<nav className=\""));
+    const primeira = classes.slice(0, classes.indexOf("\">"));
+    expect(primeira).toContain("lg:hidden");
+    expect(primeira).not.toContain("md:hidden");
+    // O outro lado da fronteira: o Header só mostra o menu a partir de lg.
+    expect(HEADER).toContain("lg:flex");
+  });
+
+  it("o espaço reservado no corpo da página segue o mesmo limiar", () => {
+    // Sem isto, a barra tapava o fim do conteúdo entre 768 e 1023 px.
+    expect(CHROME).toContain("pb-[72px] lg:pb-0");
   });
 });
 
@@ -42,7 +75,10 @@ describe("faixa de cookies", () => {
 
   it("sobe acima da barra em telemóvel e volta ao fundo no desktop", () => {
     expect(COOKIES).toContain("bottom-[calc(3.9375rem+env(safe-area-inset-bottom))]");
-    expect(COOKIES).toContain("md:bottom-0");
+    // `lg` e não `md`: a faixa tem de descer ao fundo no mesmo ponto em que a
+    // barra deixa de existir. Com `md`, entre 768 e 1023 px a faixa voltava a
+    // bottom-0 enquanto a barra ainda lá estava — e tapava-a outra vez.
+    expect(COOKIES).toContain("lg:bottom-0");
   });
 
   /**

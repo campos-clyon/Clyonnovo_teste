@@ -9,9 +9,37 @@ import { Home, LayoutGrid, Star, User, Sparkles } from "lucide-react";
  * Substitui a antiga barra de botões WhatsApp/Orçamento.
  * Só aparece em mobile; o desktop usa o Header. Escondida em áreas que já
  * têm o seu próprio shell (backoffice, portal de parceiros, simulador).
+ *
+ * ATÉ AOS 1024 px, E NÃO ATÉ AOS 768
+ *
+ * Esta barra escondia-se em `md:hidden` (a partir de 768 px) e a navegação do
+ * Header só aparece em `lg:flex` (a partir de 1024 px). No meio ficava uma
+ * faixa de 256 px onde o site não tinha navegação NENHUMA: sem menu Soluções,
+ * sem Trabalhos, sem Avaliações, sem Contactos, e sem o botão Simular, que é
+ * o CTA principal em mobile.
+ *
+ * Não é um intervalo teórico — é o iPad em retrato (768), o iPhone Pro Max
+ * deitado, e os Android grandes em paisagem. Quem chegasse ao site nessas
+ * larguras só saía da homepage pelos links do corpo da página.
+ *
+ * O comentário antigo dizia "sem menu hambúrguer para evitar dois menus". O
+ * resultado era uma faixa com zero menus. Os dois sistemas passam a
+ * encontrar-se no mesmo limiar: `lg`, que é onde o mega-menu cabe.
  */
 
-const HIDDEN_PREFIXES = ["/admin", "/simulador"];
+const HIDDEN_PREFIXES = [
+  "/admin",
+  "/simulador",
+  /*
+   * A landing tem barra própria, com SMS, email, chamada e WhatsApp.
+   *
+   * Sem esta linha ficavam DUAS barras empilhadas no fundo do ecrã — a dela e
+   * esta — a comer 130 px de altura num telemóvel. Numa página de destino de
+   * campanha, a barra de conversão dela é que manda; a navegação do site
+   * inteiro só lhe roubaria o clique.
+   */
+  "/orcamento-recolha-lisboa",
+];
 
 const LEFT = [
   { href: "/", label: "Início", icon: Home, exact: true },
@@ -40,7 +68,7 @@ export default function MobileBottomNav() {
     }`;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur-sm md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur-sm lg:hidden">
       <div className="mx-auto flex max-w-md items-end px-2 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5">
         {LEFT.map(({ href, label, icon: Icon, exact }) => {
           const active = isActive(href, exact);

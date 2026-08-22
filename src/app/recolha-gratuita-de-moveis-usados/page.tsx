@@ -19,6 +19,7 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   SITE_URL,
+  AVALIACOES_TOTAL,
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
@@ -218,7 +219,7 @@ export default function RecolhaGratuitaDeMoveisUsadosPage() {
             <div className="mt-8 flex flex-wrap items-center gap-6 text-sm text-slate-600">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-cyan-600" />
-                163 avaliações 5 estrelas
+                {AVALIACOES_TOTAL} avaliações 5 estrelas
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-cyan-600" />

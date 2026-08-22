@@ -1,3 +1,5 @@
+import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "./seo-data";
+
 /**
  * Conteúdo único e personalizado por cidade E por serviço para páginas SEO locais.
  * Cada combinação cidade+serviço tem conteúdo genuinamente diferente.
@@ -42,7 +44,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Moveis em Lisboa — Sofas, Camas e Recheios Completos",
     metaDescription:
-      "Recolha de moveis usados em Lisboa: sofas, camas, colchoes, armarios e electrodomesticos. Entramos em casa, desmontamos, carregamos. 163 avaliacoes. Orcamento gratis.",
+      `Recolha de moveis usados em Lisboa: sofas, camas, colchoes, armarios e electrodomesticos. Um profissional verificado desmonta, carrega e leva. ${AVALIACOES_TOTAL} avaliacoes. Orcamento gratis.`,
     h1: "Recolha de Moveis Usados em Lisboa — Sofas, Camas, Armarios e Recheios",
     localIntro:
       "Precisa de retirar móveis em Lisboa? A CLYON retira sofás velhos, camas com colchão, armários, mesas, cadeiras, electrodomésticos e recheios completos de apartamentos. Trabalhamos em toda Lisboa: desde os prédios antigos sem elevador em Alfama e Mouraria até aos condomínios do Parque das Nações. Se o sofá não passa na porta, desmontamos. Se há escadas estreitas, descemos peça a peça. Se o estacionamento é complicado, coordenamos horário para evitar problemas.",
@@ -152,7 +154,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     serviceSlug: "recolha-monos",
     metaTitle: "Recolha de Monos em Lisboa — Alternativa Rapida a Camara",
     metaDescription:
-      "Recolha de monos em Lisboa: entramos em casa, retiramos moveis usados, electrodomesticos e tralha. Alternativa a Camara sem lista de espera. 163 avaliacoes. Resposta em 11 min.",
+      `Recolha de monos em Lisboa: um profissional verificado retira moveis usados, electrodomesticos e tralha. Alternativa a Camara sem lista de espera. ${AVALIACOES_TOTAL} avaliacoes. ${PRAZO_DE_RESPOSTA.frase}.`,
     h1: "Recolha de Monos em Lisboa — A Alternativa Rapida a Camara Municipal",
     localIntro:
       "Tem monos em casa que precisa de retirar? A CLYON é a alternativa rápida à recolha municipal em Lisboa. Enquanto a Câmara de Lisboa tem lista de espera de semanas e não entra no imóvel, nós vamos buscar os monos onde estiverem — seja num 5º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. A diferença é simples: ligamos, combinamos, aparecemos no dia marcado e levamos tudo.",
@@ -196,7 +198,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Qual é a melhor empresa para retirar móveis usados em Lisboa?",
-        a: "A CLYON tem 163 avaliações 5 estrelas no Fixando e resposta média de 11 minutos. Entramos em casa, desmontamos, carregamos e levamos. Cobrimos toda Lisboa e Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.",
+        a: `A CLYON tem ${AVALIACOES.fixando} avaliações 5 estrelas na Fixando e ${AVALIACOES.google} no Google. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado desmonta, carrega e leva. Cobrimos toda Lisboa e Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.`,
       },
     ],
     pricingNotes: [
