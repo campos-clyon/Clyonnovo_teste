@@ -15,7 +15,7 @@ const simulatorCategoryMap: Record<string, string> = {
 export const metadata: Metadata = {
   title: "Regiões de Atuação em Lisboa, Margem Sul e Setúbal",
   description:
-    "Conheça as regiões de atuação da CLYON e encontre páginas locais fortes para recolha de entulho, móveis, monos, mudanças e esvaziamento de casas.",
+    "Onde a CLYON tem profissionais: Lisboa, Margem Sul e Setúbal. Recolha de entulho, móveis, monos, mudanças e esvaziamento de casas, com orçamento gratuito em 24 horas.",
   alternates: {
     canonical: `${SITE_URL}/regioes`,
   },
@@ -56,9 +56,9 @@ export default function RegioesPage() {
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                   <div className="rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-4">
-                    <p className="text-sm font-semibold text-slate-950">Localidades mapeadas</p>
+                    <p className="text-sm font-semibold text-slate-950">Zonas com profissionais</p>
                     <p className="mt-2 text-sm leading-7 text-slate-600">
-                      {cities.length} zonas prioritárias nesta região.
+                      {cities.length} nesta região. A cobertura muda todas as semanas.
                     </p>
                   </div>
                   <div className="rounded-[22px] border border-cyan-100 bg-white p-4">
@@ -106,7 +106,13 @@ export default function RegioesPage() {
         </div>
 
         <div className="mt-8 rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
-          <h2 className="mt-3 text-3xl font-bold text-tinta">Base local preparada para captar intenção comercial</h2>
+          {/*
+            Dizia "Base local preparada para captar intenção comercial". É a
+            frase de um plano de marketing, publicada a quem procura quem lhe
+            leve o entulho — e diz ao leitor que a página existe para apanhar o
+            Google, não para o servir.
+          */}
+          <h2 className="text-3xl font-bold text-tinta">O que pode pedir, em qualquer das regiões</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {SERVICES.map((service) => (
               <Link

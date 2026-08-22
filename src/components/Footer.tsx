@@ -43,8 +43,9 @@ export default function Footer() {
               />
             </Link>
             <p style={{ marginTop: "16px", fontSize: "14px", lineHeight: "1.7", color: "#ffffff" }}>
-              Recolha e limpeza profissional em Lisboa, Margem Sul e Setúbal com resposta rápida e execução sem stress.
-            </p>
+              Ligamos quem precisa de esvaziar, arrumar ou deitar fora a profissionais
+              verificados em Lisboa, Margem Sul e Setúbal. Orçamento gratuito, preço
+              fechado antes de começar.</p>
 
             <div style={{ marginTop: "24px", borderTop: "1px solid #334155", paddingTop: "20px" }}>
               <h4 style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", marginBottom: "14px" }}>Pagamentos</h4>

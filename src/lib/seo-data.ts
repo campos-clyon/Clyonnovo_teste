@@ -42,10 +42,10 @@ export const REGIONS: RegionData[] = [
     name: "Lisboa",
     shortLabel: "Lisboa",
     intro:
-      "Cobertura local para pedidos de recolha, limpeza e mudanças na cidade de Lisboa e nas zonas com maior procura.",
+      "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     metaDescription:
-      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Orçamento rápido, equipas locais e resposta no mesmo dia.",
+      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 24 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -58,7 +58,7 @@ export const REGIONS: RegionData[] = [
     name: "Margem Sul",
     shortLabel: "Margem Sul",
     intro:
-      "Serviços rápidos na Margem Sul para entulho, móveis, monos, limpezas pós-obra e mudanças com apoio local.",
+      "Profissionais na Margem Sul para entulho, móveis, monos, limpezas pós-obra e mudanças, de Almada ao Montijo.",
     metaTitle: "Recolha de Entulho, Móveis e Monos na Margem Sul",
     metaDescription:
       "Recolha de entulho, móveis, monos e mudanças na Margem Sul. Atendimento rápido em Almada, Seixal, Barreiro, Moita, Montijo e arredores.",
@@ -74,10 +74,10 @@ export const REGIONS: RegionData[] = [
     name: "Setúbal",
     shortLabel: "Setúbal",
     intro:
-      "Intervenção rápida em Setúbal, Palmela e Sesimbra para recolha, limpeza pós-obra, esvaziamentos e mudanças.",
+      "Profissionais em Setúbal, Palmela e Sesimbra para recolha, limpeza pós-obra, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
     metaDescription:
-      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Equipa profissional, orçamento rápido e apoio local.",
+      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 24 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",
