@@ -1075,6 +1075,15 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     contactName: string | null;
     contactEmail: string | null;
     valorDesejadoCliente: string | null;
+    /**
+     * De onde veio o pedido: "backoffice", "hero_quote_form",
+     * "formulario_contactos", "plataforma", ou null se for do simulador.
+     *
+     * Sai por JSON_EXTRACT e nao por trazer o `rawOrderJson` inteiro, que
+     * carrega o formulario todo e os URLs das fotos — dezenas de kilobytes por
+     * pedido, para ler uma palavra.
+     */
+    origem: string | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -1118,7 +1127,11 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
    */
   const [pedidos] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
-            o.valorDesejadoCliente, o.createdAt
+            o.valorDesejadoCliente, o.createdAt,
+            COALESCE(
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source'))
+            ) AS origem
        FROM simulatorOrders o
       WHERE EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
       ORDER BY o.createdAt DESC
@@ -1158,6 +1171,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     contactName: (p.contactName as string) ?? null,
     contactEmail: (p.contactEmail as string) ?? null,
     valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
+    origem: (p.origem as string) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));

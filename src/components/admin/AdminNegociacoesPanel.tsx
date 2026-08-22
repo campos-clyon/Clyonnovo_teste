@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Building2,
   Camera,
   CheckCircle2,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
   Mail,
   RefreshCw,
   Send,
+  UserRound,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import RegistarPedido from "./RegistarPedido";
@@ -121,9 +123,34 @@ type Pedido = {
   contactName: string | null;
   contactEmail: string | null;
   valorDesejadoCliente: string | null;
+  /** "backoffice", "hero_quote_form", "formulario_contactos", ou null. */
+  origem: string | null;
   createdAt: string;
   negociacoes: Negociacao[];
 };
+
+/**
+ * Quem responde pelo lado do cliente nesta negociacao?
+ *
+ * Nao e uma etiqueta decorativa — decide quem tem de agir. Se o cliente nao
+ * consegue chegar a negociacao, ela para ate alguem da CLYON responder por ele,
+ * e a proposta do profissional expira as 48 horas com toda a gente a achar que
+ * a bola estava do outro lado.
+ *
+ * Dois casos em que a CLYON responde, e sao os dois observaveis nos dados:
+ *
+ *   · o pedido foi registado pela equipa (origem "backoffice") — chegou por
+ *     WhatsApp ou por telefone, a pessoa nunca foi ao site;
+ *   · nao ha email — sem email nao ha como mandar o link, e sem link nao ha
+ *     como responder. O #202 esta assim, com o campo vazio em vez de nulo.
+ *
+ * Tudo o resto e do cliente: recebeu o link no email e responde sozinho.
+ */
+function quemNegoceia(p: Pedido): "clyon" | "cliente" {
+  if (p.origem === "backoffice") return "clyon";
+  if (!p.contactEmail || p.contactEmail.trim() === "") return "clyon";
+  return "cliente";
+}
 
 const ESTADO_CLS: Record<string, string> = {
   aberta: "bg-blue-500/15 text-blue-300",
@@ -381,6 +408,177 @@ export default function AdminNegociacoesPanel() {
       Number(b.negociacoes.some(esperaResposta)) - Number(a.negociacoes.some(esperaResposta)),
   );
 
+  /*
+   * Tres grupos, e nao uma lista so.
+   *
+   * Sao tres trabalhos diferentes, com donos diferentes:
+   *
+   *   · os da CLYON esperam por NOS — se ninguem responder, a proposta expira;
+   *   · os dos clientes esperam pelo CLIENTE — intrometermo-nos e tirar-lhe a
+   *     negociacao das maos;
+   *   · os de baixo ainda nao sairam daqui — nao ha ninguem a espera de nada.
+   *
+   * Misturados numa lista unica ordenada por data, o primeiro grupo — o unico
+   * onde a demora nos custa dinheiro — ficava indistinguivel dos outros.
+   */
+  const daClyon = ordenados.filter((p) => quemNegoceia(p) === "clyon");
+  const dosClientes = ordenados.filter((p) => quemNegoceia(p) === "cliente");
+
+  /*
+   * O cartao de um pedido, desenhado uma vez e usado nos dois grupos.
+   *
+   * Estava dentro do `.map()` da lista unica. Ao separar as negociacoes da
+   * CLYON das dos clientes, o mesmo desenho passou a ser preciso em dois
+   * sitios — e duas copias do mesmo JSX divergem sempre: corrige-se uma e
+   * esquece-se a outra. Vive aqui dentro do componente de proposito, para
+   * continuar a alcancar `ocupado`, `abertas`, `reenviar` e `carregar` sem
+   * ter de os passar todos por prop.
+   */
+  function cartaoDoPedido(p: Pedido) {
+    const chaveCliente = `c${p.id}`;
+    const espera = p.negociacoes.some(esperaResposta);
+    return (
+      <article
+        key={p.id}
+        id={`pedido-${p.id}`}
+        className={`scroll-mt-24 rounded-2xl border bg-slate-900 p-4 shadow-sm ${
+          espera ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-800"
+        }`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-white">
+              #{p.id} · {p.serviceType ?? "—"}
+            </h2>
+            <p className="mt-0.5 text-sm text-slate-500">
+              {p.contactName} · {p.contactEmail} · {p.city ?? "—"}
+              {p.valorDesejadoCliente && ` · quer pagar ${p.valorDesejadoCliente} €`}
+            </p>
+          </div>
+          <button
+            onClick={() => reenviar(chaveCliente, { pedidoId: p.id, para: "cliente" })}
+            disabled={ocupado === chaveCliente}
+            className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+          >
+            {ocupado === chaveCliente ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Reenviar ao cliente
+          </button>
+        </div>
+
+        {linksEmClaro[chaveCliente] && (
+          <LinkEmClaro
+            caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
+            aviso="O email não saiu. Use este link."
+          />
+        )}
+
+        <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
+          {p.negociacoes.length === 0 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="text-xs font-semibold text-amber-200">
+                Nenhum profissional foi notificado.
+              </p>
+              <p className="mt-0.5 text-xs text-amber-300">
+                O histórico do pedido diz o motivo — categoria, distância, fatura ou
+                guia. Depois de corrigir, redistribua.
+              </p>
+              <button
+                onClick={() => redistribuir(p.id)}
+                disabled={ocupado === `r${p.id}`}
+                className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+              >
+                {ocupado === `r${p.id}` ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Redistribuir
+              </button>
+            </div>
+          )}
+          {p.negociacoes.map((n) => {
+            const chave = `n${n.id}`;
+            return (
+              <div key={n.id}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {/* A linha inteira abre a troca — o alvo do rato é a
+                      linha, não um triângulo de doze píxeis. */}
+                  <button
+                    onClick={() => alternar(n.id)}
+                    aria-expanded={abertas.has(n.id)}
+                    className="flex flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-slate-800/60"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
+                        abertas.has(n.id) ? "rotate-180" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm font-medium text-slate-100">
+                      {n.profissionalNome}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        ESTADO_CLS[n.estado] ?? "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {n.estado}
+                    </span>
+                    {esperaResposta(n) && (
+                      <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-200">
+                        <Clock className="h-3 w-3" aria-hidden="true" />
+                        {oQueFalta(n)}
+                      </span>
+                    )}
+                    {n.valorAcordado && (
+                      <span className="text-xs text-slate-500">{n.valorAcordado} €</span>
+                    )}
+                    <span className="text-xs text-slate-600">
+                      {propostasDe(n.propostasJson).length} proposta
+                      {propostasDe(n.propostasJson).length === 1 ? "" : "s"}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() =>
+                      reenviar(chave, { pedidoId: p.id, negociacaoId: n.id })
+                    }
+                    disabled={ocupado === chave}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
+                  >
+                    {ocupado === chave ? (
+                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Mail className="h-3 w-3" aria-hidden="true" />
+                    )}
+                    Reenviar
+                  </button>
+                </div>
+                {linksEmClaro[chave] && (
+                  <LinkEmClaro
+                    caminho={`/profissionais/pedidos/${linksEmClaro[chave]}`}
+                    aviso="O email não saiu. Use este link."
+                  />
+                )}
+
+                {abertas.has(n.id) && (
+                  <TrocaDePropostas
+                    negociacao={n}
+                    pedidoId={p.id}
+                    onMudou={carregar}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </article>
+    );
+  }
+
   if (!ready || aCarregar) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-400">
@@ -537,152 +735,40 @@ export default function AdminNegociacoesPanel() {
         </p>
       )}
 
-      <div className="space-y-3">
-        {ordenados.map((p) => {
-          const chaveCliente = `c${p.id}`;
-          const espera = p.negociacoes.some(esperaResposta);
-          return (
-            <article
-              key={p.id}
-              id={`pedido-${p.id}`}
-              className={`scroll-mt-24 rounded-2xl border bg-slate-900 p-4 shadow-sm ${
-                espera ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-800"
-              }`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-bold text-white">
-                    #{p.id} · {p.serviceType ?? "—"}
-                  </h2>
-                  <p className="mt-0.5 text-sm text-slate-500">
-                    {p.contactName} · {p.contactEmail} · {p.city ?? "—"}
-                    {p.valorDesejadoCliente && ` · quer pagar ${p.valorDesejadoCliente} €`}
-                  </p>
-                </div>
-                <button
-                  onClick={() => reenviar(chaveCliente, { pedidoId: p.id, para: "cliente" })}
-                  disabled={ocupado === chaveCliente}
-                  className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
-                >
-                  {ocupado === chaveCliente ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  Reenviar ao cliente
-                </button>
-              </div>
+      {daClyon.length > 0 && (
+        <section className="mb-6">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-cyan-300">
+            <Building2 className="h-4 w-4" aria-hidden="true" />
+            Negociações da CLYON
+            <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-bold text-cyan-200">
+              {daClyon.length}
+            </span>
+          </h3>
+          <p className="mb-3 text-xs text-slate-500">
+            Chegaram por WhatsApp, telefone, ou sem email. O cliente não tem como
+            responder — quem responde ao profissional é a CLYON, em nome dele.
+          </p>
+          <div className="space-y-3">{daClyon.map(cartaoDoPedido)}</div>
+        </section>
+      )}
 
-              {linksEmClaro[chaveCliente] && (
-                <LinkEmClaro
-                  caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
-                  aviso="O email não saiu. Use este link."
-                />
-              )}
+      {dosClientes.length > 0 && (
+        <section className="mb-6">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-violet-300">
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            Negociações dos clientes
+            <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-200">
+              {dosClientes.length}
+            </span>
+          </h3>
+          <p className="mb-3 text-xs text-slate-500">
+            O cliente recebeu o link no email e responde sozinho. A CLYON só
+            entra se ele deixar a proposta expirar.
+          </p>
+          <div className="space-y-3">{dosClientes.map(cartaoDoPedido)}</div>
+        </section>
+      )}
 
-              <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
-                {p.negociacoes.length === 0 && (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                    <p className="text-xs font-semibold text-amber-200">
-                      Nenhum profissional foi notificado.
-                    </p>
-                    <p className="mt-0.5 text-xs text-amber-300">
-                      O histórico do pedido diz o motivo — categoria, distância, fatura ou
-                      guia. Depois de corrigir, redistribua.
-                    </p>
-                    <button
-                      onClick={() => redistribuir(p.id)}
-                      disabled={ocupado === `r${p.id}`}
-                      className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
-                    >
-                      {ocupado === `r${p.id}` ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                      ) : (
-                        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-                      )}
-                      Redistribuir
-                    </button>
-                  </div>
-                )}
-                {p.negociacoes.map((n) => {
-                  const chave = `n${n.id}`;
-                  return (
-                    <div key={n.id}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        {/* A linha inteira abre a troca — o alvo do rato é a
-                            linha, não um triângulo de doze píxeis. */}
-                        <button
-                          onClick={() => alternar(n.id)}
-                          aria-expanded={abertas.has(n.id)}
-                          className="flex flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-slate-800/60"
-                        >
-                          <ChevronDown
-                            className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
-                              abertas.has(n.id) ? "rotate-180" : ""
-                            }`}
-                            aria-hidden="true"
-                          />
-                          <span className="text-sm font-medium text-slate-100">
-                            {n.profissionalNome}
-                          </span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              ESTADO_CLS[n.estado] ?? "bg-slate-800 text-slate-400"
-                            }`}
-                          >
-                            {n.estado}
-                          </span>
-                          {esperaResposta(n) && (
-                            <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-200">
-                              <Clock className="h-3 w-3" aria-hidden="true" />
-                              {oQueFalta(n)}
-                            </span>
-                          )}
-                          {n.valorAcordado && (
-                            <span className="text-xs text-slate-500">{n.valorAcordado} €</span>
-                          )}
-                          <span className="text-xs text-slate-600">
-                            {propostasDe(n.propostasJson).length} proposta
-                            {propostasDe(n.propostasJson).length === 1 ? "" : "s"}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() =>
-                            reenviar(chave, { pedidoId: p.id, negociacaoId: n.id })
-                          }
-                          disabled={ocupado === chave}
-                          className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
-                        >
-                          {ocupado === chave ? (
-                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Mail className="h-3 w-3" aria-hidden="true" />
-                          )}
-                          Reenviar
-                        </button>
-                      </div>
-                      {linksEmClaro[chave] && (
-                        <LinkEmClaro
-                          caminho={`/profissionais/pedidos/${linksEmClaro[chave]}`}
-                          aviso="O email não saiu. Use este link."
-                        />
-                      )}
-
-                      {abertas.has(n.id) && (
-                        <TrocaDePropostas
-                          negociacao={n}
-                          pedidoId={p.id}
-                          onMudou={carregar}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </article>
-          );
-        })}
-      </div>
     </div>
   );
 }
