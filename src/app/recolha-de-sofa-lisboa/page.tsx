@@ -10,6 +10,13 @@ import {
   Zap,
 } from "lucide-react";
 
+import { NOTA_DE_PRECO } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+// Esta página abria em "a partir de 35 €" — cinco euros abaixo do piso
+// publicado para recolha de móveis, e era o valor mais baixo do site inteiro.
+const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
+
 export const metadata: Metadata = {
   title: "Recolha de Sofá Lisboa | Carregamento e Transporte | CLYON",
   description:
@@ -40,7 +47,7 @@ const faqs = [
   {
     question: "Quanto custa retirar um sofá em Lisboa?",
     answer:
-      "O valor depende do tamanho do sofá, tipo de acesso (elevador, escadas, rua estreita) e andar. Para sofás pequenos ou médios com acesso fácil, os valores começam a partir de 35 €. Envie fotos para orçamento exacto.",
+      `O valor depende do tamanho do sofá, tipo de acesso (elevador, escadas, rua estreita) e andar. A recolha de móveis fica em ${PRECO_MOVEIS}: um sofá pequeno ou médio com acesso fácil é a partir de 40 €. Envie fotos para orçamento exacto. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Recolhem sofás de qualquer tamanho?",

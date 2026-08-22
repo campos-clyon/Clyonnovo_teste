@@ -7,7 +7,16 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_PHONE, NOTA_DE_PRECO, SITE_URL } from "@/lib/seo-data";
+import { precoDe } from "@/lib/precos-publicos";
+
+/**
+ * A etiqueta oficial de um serviço.
+ *
+ * Quem não publica número — as mudanças — já vem de lá com
+ * "orçamento personalizado", por isso o fallback diz o mesmo.
+ */
+const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personalizado";
 
 export const metadata: Metadata = {
   title: "Preços de Recolha de Monos, Entulho e Móveis",
@@ -24,33 +33,64 @@ export const metadata: Metadata = {
   },
 };
 
+/*
+ * Estes cartões diziam "sob avaliação" cinco vezes em seis.
+ *
+ * Quem clicava em "Ver preços" a partir de /servicos saía com MENOS informação
+ * do que a que tinha na homepage, onde a grelha já mostrava valores. Uma
+ * página de preços que não mostra preços é uma página que gasta a paciência
+ * de quem estava a decidir.
+ *
+ * QUATRO CARTÕES MOSTRAM A MESMA FAIXA, E ISSO NÃO É UM BUG.
+ *
+ * Um sofá, uma cama, um roupeiro e "vários móveis" são todos o mesmo serviço
+ * oficial — recolha de móveis — e é para isso que a faixa serve: 40 € para
+ * uma peça pequena e acessível, 120 € para o caso pesado num quarto andar sem
+ * elevador. Inventar quatro faixas diferentes para o mesmo serviço era
+ * exactamente o problema que se acabou de corrigir no resto do site.
+ *
+ * O que fica por decidir é o conjunto de cartões, não os números: seis
+ * exemplos onde quatro são o mesmo serviço dá menos informação do que a
+ * grelha da homepage, que mostra os nove serviços com preço próprio. Isso é
+ * escolha do dono, não deste alinhamento.
+ */
 const priceExamples = [
   {
     title: "Recolha de sofá",
-    price: "sob avaliação",
+    price: etiquetaDe("recolha_moveis"),
     includes: "Retirada, carregamento e transporte conforme acessos e volume.",
   },
   {
     title: "Cama, estrado e colchão",
-    price: "sob avaliação",
+    price: etiquetaDe("recolha_moveis"),
     includes: "Ideal para trocas de quarto, mudanças ou libertação de espaço.",
   },
   {
     title: "Armário ou roupeiro grande",
-    price: "sob avaliação",
+    price: etiquetaDe("recolha_moveis"),
     includes: "Pode incluir desmontagem e retirada em prédios sem elevador.",
   },
   {
     title: "Recolha de vários móveis",
-    price: "orçamento personalizado",
+    price: etiquetaDe("recolha_moveis"),
     includes: "Pedidos com recheios, divisões completas ou volumes acumulados.",
   },
   {
     title: "Recolha de entulho",
-    price: "orçamento personalizado",
+    price: etiquetaDe("recolha_entulho"),
     includes: "Valor depende do tipo de residuo, peso, quantidade e facilidade de carga.",
   },
   {
+    /*
+     * O ÚNICO PREÇO DESTA PÁGINA ESCRITO À MÃO — porque não há de onde o
+     * importar. A limpeza pós-obra não existe em SERVICE_CATEGORIES nem na
+     * tabela oficial, e por isso continua a divergir sozinha: aqui diz
+     * 160 €, em /servicos diz 150 € para o mesmo trabalho.
+     *
+     * Resolve-se de uma de duas maneiras, e ambas são decisão do dono: ou
+     * entra na tabela oficial com um valor, ou perde o número e passa a
+     * "orçamento personalizado" como as mudanças. Não se escolhe por ele.
+     */
     title: "Limpeza pós-obra",
     price: "desde 160 €",
     includes: "Preco varia com área, nível de sujidade, vidros, cozinha e casas de banho.",
@@ -188,6 +228,16 @@ export default function PrecosPage() {
               </article>
             ))}
           </div>
+
+          {/*
+            A versão completa da nota, e não a curta, porque esta é A página de
+            preços: é aqui que quem está a comparar valores vem parar, e é aqui
+            que a pergunta "isto leva IVA?" tem de ter resposta sem sair do
+            ecrã. Quem factura é o profissional, e o regime dele decide.
+          */}
+          <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-7 text-slate-500">
+            {NOTA_DE_PRECO.completa}
+          </p>
         </div>
       </section>
 

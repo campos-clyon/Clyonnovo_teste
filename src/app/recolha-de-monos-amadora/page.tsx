@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
+import { PRECOS } from "@/lib/precos-publicos";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -33,7 +34,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos na Amadora?",
-    answer: "O valor depende do volume e acessos. Para volumes pequenos (1-2 itens), costuma começar nos 35-60€. Para volumes maiores, envie fotos para orçamento rápido.",
+    answer: `O valor depende do volume e dos acessos: ${PRECOS.recolha_monos.etiqueta}, sem IVA. Para volumes maiores, envie fotos para orçamento rápido.`,
   },
   {
     question: "Recolhem móveis pesados e volumosos?",

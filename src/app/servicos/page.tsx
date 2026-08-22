@@ -9,17 +9,27 @@ import {
   Star,
 } from "lucide-react";
 
-import { BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_NAME, BUSINESS_PHONE, NOTA_DE_PRECO, SITE_URL } from "@/lib/seo-data";
+import { MENOR_PRECO_PUBLICADO, precoDe } from "@/lib/precos-publicos";
+
+/**
+ * A etiqueta oficial de um serviço.
+ *
+ * Quem não publica número — as mudanças — já vem de lá com
+ * "orçamento personalizado", por isso o fallback diz o mesmo: nunca se
+ * inventa um valor só para preencher o badge.
+ */
+const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personalizado";
 
 export const metadata: Metadata = {
   title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
   description:
-    "Recolha de entulho, móveis, monos, limpeza pós-obra, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde 120EUR, orçamento grátis em 24h!",
+    `Recolha de entulho, móveis, monos, limpeza pós-obra, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 24h!`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: {
     title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
     description:
-      "Recolha de entulho, móveis, limpeza pós-obra e mudanças em Lisboa e Setúbal. Preços desde 120EUR!",
+      `Recolha de entulho, móveis, limpeza pós-obra e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €!`,
     url: `${SITE_URL}/servicos`,
   },
 };
@@ -44,31 +54,39 @@ const services: Service[] = [
   {
     title: "Recolha de Móveis",
     tagline: "Sofás, camas, armários, eletrodomésticos",
-    price: "desde 60€",
+    price: etiquetaDe("recolha_moveis"),
     href: "/recolha-de-moveis",
     accent: "from-cyan-400 to-blue-500",
     emoji: "🛋️",
     messages: [
       { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
-      { from: "clyon",   text: "Bom dia! Recolhemos amanhã de manhã — 75€ tudo incluído. Confirma?", time: "09:14" },
+      { from: "clyon",   text: "Bom dia! Recolhemos amanhã de manhã — 75 € tudo incluído. Confirma?", time: "09:14" },
     ],
   },
   {
     title: "Recolha de Entulho",
     tagline: "Restos de obra, sacos e materiais mistos",
-    price: "desde 120€",
+    price: etiquetaDe("recolha_entulho"),
     href: "/recolha-de-entulho",
     accent: "from-amber-400 to-orange-500",
     emoji: "🧱",
     messages: [
-      { from: "cliente", text: "Fiz obras na cozinha, tenho ~2m³ de entulho. É possível hoje?", time: "14:03" },
-      { from: "clyon",   text: "Hoje entre as 17h e 19h. Fica em 130€ com transporte incluído.", time: "14:05" },
+      { from: "cliente", text: "Fiz obras na cozinha, tenho ~2 m³ de entulho. É possível hoje?", time: "14:03" },
+      /*
+       * 220 € = 2 m³ ao preço oficial de 110 €/m³.
+       *
+       * Dizia 130 €, ou seja 65 €/m³ — a conversa de exemplo prometia, no
+       * mesmo cartão onde o badge anuncia o preço por metro cúbico, metade
+       * do que o badge diz. Se o volume desta frase mudar, o valor tem de
+       * mudar com ele.
+       */
+      { from: "clyon",   text: "Hoje entre as 17h e 19h. Fica em 220 € com transporte incluído.", time: "14:05" },
     ],
   },
   {
     title: "Esvaziamento de Casas",
     tagline: "Libertação completa do imóvel",
-    price: "orçamento no local",
+    price: etiquetaDe("esvaziamento_casa"),
     href: "/esvaziamento-de-casas",
     accent: "from-emerald-400 to-teal-500",
     emoji: "🏠",
@@ -80,7 +98,7 @@ const services: Service[] = [
   {
     title: "Recolha de Monos",
     tagline: "Volumes grandes e acumulados",
-    price: "desde 80€",
+    price: etiquetaDe("recolha_monos"),
     href: "/recolha-de-monos",
     accent: "from-fuchsia-400 to-pink-500",
     emoji: "📦",
@@ -92,7 +110,7 @@ const services: Service[] = [
   {
     title: "Mudanças",
     tagline: "Casa, escritório, com desmontagem",
-    price: "orçamento personalizado",
+    price: etiquetaDe("mudanca"),
     href: "/mudancas",
     accent: "from-indigo-400 to-purple-500",
     emoji: "🚚",
@@ -103,14 +121,28 @@ const services: Service[] = [
   },
   {
     title: "Limpeza pós-obra",
+    /*
+     * ESTE É O ÚNICO PREÇO DESTA PÁGINA ESCRITO À MÃO, E É UM PROBLEMA POR
+     * RESOLVER — não um esquecimento.
+     *
+     * A limpeza pós-obra não existe em SERVICE_CATEGORIES nem na tabela de
+     * preços oficiais, por isso não há nada em precos-publicos.ts de onde a
+     * importar. Enquanto assim for, este número diverge sozinho: esta página
+     * diz 150 € e /precos diz 160 € para o mesmo trabalho.
+     *
+     * Só há duas saídas, e ambas são decisão do dono: ou a limpeza pós-obra
+     * entra na tabela oficial com um valor, ou perde o número e passa a
+     * "orçamento personalizado" como as mudanças. Até lá ficam os 150 € que
+     * já cá estavam — com o formato corrigido, sem inventar valor novo.
+     */
     tagline: "Pronto a habitar depois de obra",
-    price: "desde 150€",
+    price: "desde 150 €",
     href: "/limpeza-de-quintais",
     accent: "from-sky-400 to-cyan-500",
     emoji: "✨",
     messages: [
       { from: "cliente", text: "Acabei remodelação, quero entregar a casa a brilhar.", time: "18:47" },
-      { from: "clyon",   text: "Equipa disponível na quarta às 09h — 180€ com produtos incluídos.", time: "18:49" },
+      { from: "clyon",   text: "Equipa disponível na quarta às 09h — 180 € com produtos incluídos.", time: "18:49" },
     ],
   },
 ];
@@ -316,6 +348,15 @@ export default function ServicosPage() {
               <ChatCard key={s.title} service={s} />
             ))}
           </div>
+
+          {/*
+            Os valores dos badges são orientativos e SEM IVA, e isso tem de
+            estar dito debaixo da grelha que os mostra — não numa página de
+            condições que ninguém abre.
+          */}
+          <p className="mx-auto mt-6 max-w-2xl text-center text-[13px] leading-relaxed text-tinta-fraca">
+            {NOTA_DE_PRECO.curta}
+          </p>
         </div>
       </section>
 

@@ -13,6 +13,17 @@ import {
   BUSINESS_PHONE,
   REGIONS,
   SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { precoDe } from "@/lib/precos-publicos";
+
+/**
+ * O preço da recolha de móveis, para a meta description global.
+ *
+ * Estava escrito à mão, dizia "desde 70 €", e a tabela oficial diz
+ * 40 – 120 € — ou seja, o snippet que o Google mostra em todas as páginas
+ * do site anunciava um piso 30 € acima do que se pratica. Passa a vir da
+ * fonte única; se o valor mudar lá, muda aqui.
+ */
+const PRECO_MOVEIS = precoDe("recolha_moveis") ?? "orçamento personalizado";
 
 import "./globals.css";
 
@@ -36,7 +47,7 @@ export const metadata: Metadata = {
     template: "%s | CLYON",
   },
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 24h, recolha de móveis desde 70 € e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 24h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
@@ -163,7 +174,21 @@ const localBusinessSchema = {
    *
    * A nota vive onde as avaliações vivem: em /avaliacoes, e só lá.
    */
-  priceRange: "120EUR - 500EUR",
+  /*
+   * A faixa é qualitativa, e é de propósito.
+   *
+   * Dizia "120EUR - 500EUR", e este schema vai no <head> de TODAS as páginas
+   * do site. Contradizia a tabela oficial nas duas pontas: por baixo, porque
+   * há serviços publicados a partir de 30 € — o Google via um piso de 120 na
+   * mesma página onde o cartão dizia 30; e por cima, porque um esvaziamento
+   * de apartamento vai a 450 € e uma mudança não tem tecto publicado.
+   *
+   * Um intervalo numérico global obrigaria a manter dezenas de páginas em
+   * sincronia com dois números que nenhuma delas mostra. "€€" diz a mesma
+   * coisa que o Google usa para o resto do mundo — gama média — e não pode
+   * ficar desactualizado.
+   */
+  priceRange: "€€",
   openingHoursSpecification: [
     {
       "@type": "OpeningHoursSpecification",

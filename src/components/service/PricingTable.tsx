@@ -1,5 +1,45 @@
 import { Info } from "lucide-react";
 
+import { NOTA_DE_PRECO } from "@/lib/seo-data";
+
+/**
+ * Reduz um valor a número, seja como for que ele chegue.
+ *
+ * As páginas passam o preço em formatos diferentes — "110", "110€", "110 €",
+ * "80EUR" — porque durante muito tempo cada uma escreveu o seu. Aqui tira-se
+ * o símbolo e os espaços para a grelha voltar a compor tudo da mesma maneira.
+ *
+ * Devolve `null` quando o que sobra não é um número limpo ("—", "orçamento
+ * personalizado", "110€/m³"). Nesse caso o valor original passa intacto: mais
+ * vale mostrar o que a página escreveu do que inventar um "€" no fim de uma
+ * frase.
+ */
+function apenasONumero(valor: string): string | null {
+  const limpo = valor.replace(/\s|€|EUR/gi, "");
+  return /^\d+(?:[.,]\d+)?$/.test(limpo) ? limpo : null;
+}
+
+/**
+ * A forma única de escrever um preço na grelha: travessão com espaços e o
+ * símbolo uma só vez, no fim — "110 – 150 €", "desde 110 €".
+ *
+ * Antes era `${priceFrom} - ${priceTo}`, com hífen ASCII e o símbolo colado a
+ * cada número ("80€ - 120€"), porque vinha embebido nos dados de cada página.
+ * Como este é o único componente de grelhas do site, corrigir aqui alinha
+ * /recolha-de-entulho e qualquer página que passe a usá-lo.
+ */
+function faixaFormatada(de: string, ate?: string): string {
+  const inicio = apenasONumero(de);
+  const fim = ate ? apenasONumero(ate) : null;
+
+  if (inicio) {
+    // `ate` sem número — o "—" da linha "acima de 5m³" — lê-se como sem tecto.
+    return fim ? `${inicio} – ${fim} €` : `desde ${inicio} €`;
+  }
+
+  return ate ? `${de} – ${ate}` : de;
+}
+
 export interface PricingRow {
   service: string;
   description?: string;
@@ -20,7 +60,16 @@ export default function PricingTable({
   title = "Preços Orientativos",
   subtitle,
   rows,
-  footnote = "Valores indicativos. O preço final depende do volume, acesso e localização.",
+  /*
+   * A nota do IVA por baixo da grelha, e importada de seo-data em vez de
+   * escrita à mão — para não voltar a existir uma segunda versão do texto.
+   *
+   * Os valores da grelha são orientativos e SEM IVA, e isso tem de estar dito
+   * onde eles aparecem: quem executa é que emite a factura, e cada
+   * profissional tem o seu regime. Quem passar `footnote` substitui esta
+   * linha inteira — não acrescenta uma segunda.
+   */
+  footnote = `${NOTA_DE_PRECO.curta} O que faz variar: volume, acesso e localização.`,
   className = "",
 }: PricingTableProps) {
   return (
@@ -58,9 +107,7 @@ export default function PricingTable({
                 <td className="py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <span className="text-lg font-bold text-acao">
-                      {row.priceTo
-                        ? `${row.priceFrom} - ${row.priceTo}`
-                        : `desde ${row.priceFrom}`}
+                      {faixaFormatada(row.priceFrom, row.priceTo)}
                     </span>
                     {row.note && (
                       <span

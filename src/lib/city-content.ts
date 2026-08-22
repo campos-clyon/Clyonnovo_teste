@@ -1,4 +1,5 @@
 import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "./seo-data";
+import { PRECOS } from "./precos-publicos";
 
 /**
  * Conteúdo único e personalizado por cidade E por serviço para páginas SEO locais.
@@ -12,7 +13,6 @@ export interface CityServiceContent {
 
   // SEO único
   metaTitle: string;
-  metaDescription: string;
   h1: string;
 
   // Conteúdo local único
@@ -25,7 +25,6 @@ export interface CityServiceContent {
   faqs: { q: string; a: string }[];
 
   // Preços específicos
-  pricingNotes: string[];
 
   // CTA contextualizado
   ctaText: string;
@@ -43,8 +42,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "lisboa",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Moveis em Lisboa — Sofas, Camas e Recheios Completos",
-    metaDescription:
-      `Recolha de moveis usados em Lisboa: sofas, camas, colchoes, armarios e electrodomesticos. Um profissional verificado desmonta, carrega e leva. ${AVALIACOES_TOTAL} avaliacoes. Orcamento gratis.`,
     h1: "Recolha de Moveis Usados em Lisboa — Sofas, Camas, Armarios e Recheios",
     localIntro:
       "Precisa de retirar móveis em Lisboa? A CLYON retira sofás velhos, camas com colchão, armários, mesas, cadeiras, electrodomésticos e recheios completos de apartamentos. Trabalhamos em toda Lisboa: desde os prédios antigos sem elevador em Alfama e Mouraria até aos condomínios do Parque das Nações. Se o sofá não passa na porta, desmontamos. Se há escadas estreitas, descemos peça a peça. Se o estacionamento é complicado, coordenamos horário para evitar problemas.",
@@ -91,13 +88,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Benfica, Lumiar e Alvalade são das zonas onde mais trabalhamos em Lisboa. São bairros residenciais com bons acessos e muita procura de recolha de móveis.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso, urgência e necessidade de desmontagem",
-      "Cama de casal com colchão: orçamento conforme acesso e piso",
-      "Armário de 2-3 portas: valor depende do número de portas e piso",
-      "Frigorífico ou electrodoméstico: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-    ],
     ctaText: "Moveis para retirar em Lisboa? Envie fotos pelo WhatsApp e receba orcamento em 15 minutos.",
   },
 
@@ -108,8 +98,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "lisboa",
     serviceSlug: "recolha-entulho",
     metaTitle: "Recolha de Entulho em Lisboa - Obras e Remodelações | CLYON",
-    metaDescription:
-      "Recolha de entulho de obras em Lisboa. Retiramos restos de construção, azulejos, tijolos e sacos de cimento. Preços desde 120EUR, resposta em 24h.",
     h1: "Recolha de Entulho de Obras em Lisboa",
     localIntro:
       "Lisboa está sempre em obras. Remodelações de apartamentos antigos, renovações de lojas no Chiado, restauros em Alfama. O entulho acumula-se e precisa de sair rápido para a obra avançar. A CLYON recolhe entulho em sacos, a granel ou em contentores, adaptando o serviço ao volume e ao tipo de acesso do imóvel.",
@@ -121,7 +109,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho de uma obra em Lisboa?",
-        a: "Depende do volume. Uma remodelação de casa de banho gera cerca de 10-15 sacos e custa entre 120EUR e 180EUR. Uma obra maior pode precisar de contentor e o preço sobe proporcionalmente.",
+        a: `Depende do volume. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA — uma remodelação de casa de banho gera cerca de 2 a 3 m³. Uma obra maior precisa de contentor e o preço acompanha o volume.`,
       },
       {
         q: "A CLYON fornece contentor para entulho em Lisboa?",
@@ -136,13 +124,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim, fazemos isso regularmente em prédios antigos de Lisboa. O preço é ajustado ao esforço de descida, mas temos equipa preparada para estes acessos.",
       },
     ],
-    pricingNotes: [
-      "Até 10 sacos de entulho: 120EUR a 150EUR",
-      "Contentor pequeno (2m³): 180EUR a 220EUR",
-      "Contentor médio (5m³): 280EUR a 350EUR",
-      "Remodelação de WC completa: 150EUR a 200EUR",
-      "Obra de cozinha: 200EUR a 300EUR",
-    ],
     ctaText: "Tem entulho de obra em Lisboa? Diga-nos o volume e enviamos orçamento hoje.",
   },
 
@@ -153,8 +134,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "lisboa",
     serviceSlug: "recolha-monos",
     metaTitle: "Recolha de Monos em Lisboa — Alternativa Rapida a Camara",
-    metaDescription:
-      `Recolha de monos em Lisboa: um profissional verificado retira moveis usados, electrodomesticos e tralha. Alternativa a Camara sem lista de espera. ${AVALIACOES_TOTAL} avaliacoes. ${PRAZO_DE_RESPOSTA.frase}.`,
     h1: "Recolha de Monos em Lisboa — A Alternativa Rapida a Camara Municipal",
     localIntro:
       "Tem monos em casa que precisa de retirar? A CLYON é a alternativa rápida à recolha municipal em Lisboa. Enquanto a Câmara de Lisboa tem lista de espera de semanas e não entra no imóvel, nós vamos buscar os monos onde estiverem — seja num 5º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. A diferença é simples: ligamos, combinamos, aparecemos no dia marcado e levamos tudo.",
@@ -201,13 +180,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: `A CLYON tem ${AVALIACOES.fixando} avaliações 5 estrelas na Fixando e ${AVALIACOES.google} no Google. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado desmonta, carrega e leva. Cobrimos toda Lisboa e Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.`,
       },
     ],
-    pricingNotes: [
-      "Sofá ou cadeirão: orçamento conforme volume, acesso e necessidade de desmontagem",
-      "Cama completa: orçamento conforme acesso e piso",
-      "Armário ou roupeiro: valor depende do número de portas e piso",
-      "Electrodoméstico: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-    ],
     ctaText: "Monos para retirar em Lisboa? Envie fotos pelo WhatsApp e receba orçamento em 15 minutos.",
   },
 
@@ -218,8 +190,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "almada",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Moveis em Almada — Empresa Local, Resposta Rapida",
-    metaDescription:
-      "Recolha de moveis em Almada, Cacilhas, Pragal, Laranjeiro e Costa da Caparica. Empresa local no Seixal. Resposta em minutos. Orcamento gratis.",
     h1: "Recolha de Moveis em Almada — Cacilhas, Pragal, Laranjeiro e Costa",
     localIntro:
       "Precisa de retirar móveis em Almada? A CLYON é a empresa local para recolha de móveis usados em todo o concelho: Cacilhas, Pragal, Laranjeiro, Feijó, Cova da Piedade, Almada Velha e Costa da Caparica. Estamos sediados no Seixal, a 10 minutos de qualquer ponto de Almada. Conhecemos bem as diferenças entre Cacilhas (prédios antigos com escadas), Pragal e Laranjeiro (urbanizações mais recentes com elevador), e a Costa da Caparica (apartamentos de férias). Por sermos locais, respondemos mais depressa e com melhor preço do que empresas de Lisboa.",
@@ -266,13 +236,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Estamos no Seixal e cobrimos tanto Almada como Lisboa. Para Lisboa os preços são ligeiramente superiores pela travessia, mas continuamos a ser competitivos e rápidos.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso e necessidade de desmontagem",
-      "Cama de casal com colchão: orçamento conforme acesso e piso",
-      "Armário de 2-3 portas: valor depende do número de portas e piso",
-      "Frigorífico ou máquina: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-    ],
     ctaText: "Móveis para retirar em Almada? Somos locais — envie fotos e receba orçamento em minutos.",
   },
 
@@ -283,8 +246,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "seixal",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Móveis no Seixal - Amora, Corroios e Arrentela | CLYON",
-    metaDescription:
-      "Recolha de móveis usados no Seixal. A CLYON está sediada em Amora - resposta imediata para Corroios, Arrentela e Paio Pires. Orçamento grátis.",
     h1: "Recolha de Móveis no Seixal - A Nossa Base",
     localIntro:
       "O Seixal é a nossa casa. A sede da CLYON fica em Belverde, Amora. Isto significa que para qualquer pedido no Seixal - seja em Corroios, Arrentela, Paio Pires ou Fernão Ferro - conseguimos responder em minutos e estar no local no mesmo dia. Os nossos preços no Seixal são os mais competitivos porque não temos deslocação.",
@@ -311,13 +272,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Na maioria dos casos, sim. Por estarmos em Amora, conseguimos encaixar pedidos urgentes no Seixal com facilidade.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso e necessidade de desmontagem",
-      "Cama de casal com estrado: orçamento conforme acesso e piso",
-      "Armário: valor depende do número de portas e piso",
-      "Garagem ou tralha acumulada: orçamento conforme volume",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-    ],
     ctaText: "No Seixal, somos vizinhos. Envie fotos agora e respondemos em minutos.",
   },
 
@@ -328,8 +282,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "seixal",
     serviceSlug: "recolha-entulho",
     metaTitle: "Recolha de Entulho no Seixal - Obras em Amora, Corroios e Arrentela | CLYON",
-    metaDescription:
-      "Recolha de entulho de obras no Seixal. Contentores e sacos big bag em Amora, Corroios, Arrentela e Paio Pires. Empresa local - os melhores preços.",
     h1: "Recolha de Entulho de Obras no Seixal - Preços Locais",
     localIntro:
       "A sede da CLYON fica em Belverde, Amora - no coração do Seixal. Isto significa que para recolha de entulho no Seixal conseguimos os melhores preços e tempos de resposta do mercado. Servimos obras em Corroios, Arrentela, Paio Pires, Fernão Ferro e todas as freguesias do concelho sem custos de deslocação.",
@@ -360,13 +312,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Na maioria dos casos, sim. Por estarmos em Amora, conseguimos encaixar pedidos urgentes de entulho no Seixal com facilidade.",
       },
     ],
-    pricingNotes: [
-      "Sacos big bag de entulho: valor orientativo a partir de 80€ (depende do volume)",
-      "Contentor pequeno: orçamento personalizado — sem custo de deslocação no Seixal",
-      "Contentor médio: orçamento personalizado conforme volume e duração",
-      "Entulho de remodelação de WC: orçamento personalizado conforme volume",
-      "Demolição de divisória: orçamento personalizado conforme resíduos",
-    ],
     ctaText: "Obra no Seixal? Somos vizinhos - contentor ou sacos, entregamos hoje.",
   },
 
@@ -377,8 +322,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "almada",
     serviceSlug: "recolha-entulho",
     metaTitle: "Recolha de Entulho em Almada - Obras na Margem Sul | CLYON",
-    metaDescription:
-      "Recolha de entulho de obras em Almada, Costa da Caparica e Cacilhas. Contentores e sacos big bag. Empresa local, preços desde 100EUR.",
     h1: "Recolha de Entulho de Obras em Almada",
     localIntro:
       "Almada tem muitas obras em curso: remodelações de apartamentos antigos em Cacilhas, renovações de casas de férias na Costa da Caparica, construções novas no Pragal. A CLYON está a 10 minutos de qualquer ponto de Almada e consegue responder rápido a pedidos de recolha de entulho, seja em sacos, a granel ou com contentor.",
@@ -390,7 +333,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa um contentor de entulho em Almada?",
-        a: "Um contentor pequeno (2m³) em Almada custa entre 150EUR e 200EUR, incluindo transporte, aluguer e despejo. Somos locais, por isso conseguimos bom preço.",
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, com transporte e encaminhamento incluídos. Um contentor pequeno leva cerca de 2 m³.`,
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
@@ -405,13 +348,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Aos sábados de manhã conseguimos fazer recolhas em Almada, mediante marcação prévia.",
       },
     ],
-    pricingNotes: [
-      "Até 10 sacos de entulho: 100EUR a 140EUR",
-      "Contentor pequeno (2m³): 150EUR a 200EUR",
-      "Contentor médio (5m³): 250EUR a 320EUR",
-      "Remodelação de WC: 120EUR a 180EUR",
-      "Demolição de divisória: 150EUR a 220EUR",
-    ],
     ctaText: "Obra em Almada? Somos locais - contentor ou sacos, entregamos rápido.",
   },
 
@@ -422,8 +358,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "cascais",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Móveis em Cascais - Estoril, Parede e Carcavelos | CLYON",
-    metaDescription:
-      "Recolha de móveis usados em Cascais, Estoril e Carcavelos. Retiramos sofás, camas e armários de moradias e apartamentos. Serviço cuidado, preços desde 40EUR.",
     h1: "Recolha de Móveis em Cascais e Estoril",
     localIntro:
       "Cascais tem características próprias: muitas moradias com jardim, apartamentos de gama alta no Estoril, e casas de férias em Carcavelos. Os móveis são frequentemente maiores e mais pesados do que a média. A CLYON adapta a equipa ao tipo de imóvel e tem cuidado extra com os acessos em condomínios fechados, onde é preciso coordenar com a portaria.",
@@ -439,7 +373,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis de uma moradia em Cascais?",
-        a: "Depende do volume. Uma moradia típica em Cascais com sala, quartos e garagem pode custar entre 400EUR e 700EUR para esvaziamento completo.",
+        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, sem IVA — uma moradia com sala, quartos e garagem fica na parte alta da faixa, e o valor exacto vem na proposta.`,
       },
       {
         q: "Recolhem móveis antigos e peças grandes em Cascais?",
@@ -449,13 +383,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         q: "Fazem recolha em condomínios fechados em Cascais?",
         a: "Sim. Coordenamos a entrada com a portaria ou administração. Já trabalhamos em vários condomínios na zona de Cascais e Estoril.",
       },
-    ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso e necessidade de desmontagem",
-      "Cama: orçamento conforme acesso e piso",
-      "Armário: valor depende do número de portas e piso",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-      "Moradia completa: orçamento personalizado após visita ou fotos",
     ],
     ctaText: "Móveis para retirar em Cascais? Enviamos equipa preparada para qualquer acesso.",
   },
@@ -467,8 +394,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "sintra",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Móveis em Sintra - Mem Martins, Cacém e Rio de Mouro | CLYON",
-    metaDescription:
-      "Recolha de móveis usados em Sintra, Mem Martins, Cacém e Rio de Mouro. Retiramos sofás, camas e armários. Orçamento grátis, resposta rápida.",
     h1: "Recolha de Móveis em Sintra e Arredores",
     localIntro:
       "Sintra é um concelho grande com zonas muito diferentes: o centro histórico com ruas estreitas e empedradas, Mem Martins e Rio de Mouro com urbanizações de prédios, Cacém com uma mistura de ambos. A CLYON conhece estas diferenças e adapta o serviço. No centro histórico de Sintra, os acessos são complicados. Em Mem Martins, a maioria dos prédios tem elevador e o trabalho é mais simples.",
@@ -495,13 +420,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Se tivermos disponibilidade, sim. Para Mem Martins e Cacém é mais fácil encaixar pedidos urgentes do que para o centro histórico.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso e necessidade de desmontagem",
-      "Cama de casal com estrado: orçamento conforme acesso e piso",
-      "Armário: valor depende do número de portas e piso",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-      "Quinta com móveis antigos: orçamento personalizado após visita ou fotos",
-    ],
     ctaText: "Móveis para retirar em Sintra? Diga-nos a zona e damos preço ajustado ao acesso.",
   },
 
@@ -512,8 +430,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "setubal",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Moveis em Setubal — Apartamentos, Quintas e Azeito",
-    metaDescription:
-      "Recolha de moveis em Setubal, Azeito e Arrabida. Sofas, camas, armarios, electrodomesticos. Apartamentos, moradias, lojas e quintas. Desde 40EUR. Orcamento gratis.",
     h1: "Recolha de Moveis em Setubal — Apartamentos, Moradias e Quintas",
     localIntro:
       "Precisa de retirar móveis em Setúbal? A CLYON faz recolha de móveis usados em todo o concelho: centro histórico de Setúbal, Bairro Azul, Manteigadas, Avenida Luísa Todi, Azeitão e zona da Arrábida. Retiramos sofás, camas, armários, mesas, cadeiras e electrodomésticos de apartamentos, moradias, lojas e escritórios. Em Azeitão, temos experiência no esvaziamento de quintas com móveis antigos e volumes grandes.",
@@ -556,14 +472,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "As zonas com mais pedidos são o centro de Setúbal, Bairro Azul, Manteigadas e Azeitão. São áreas com muitos apartamentos e quintas que precisam de esvaziamento.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso e necessidade de desmontagem",
-      "Cama de casal com colchão: orçamento conforme acesso e piso",
-      "Armário de 2-3 portas: valor depende do número de portas e piso",
-      "Frigorífico ou máquina: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-      "Quinta com móveis antigos: orçamento personalizado após visita ou fotos",
-    ],
     ctaText: "Móveis para retirar em Setúbal? Envie fotos pelo WhatsApp e receba orçamento hoje.",
   },
 
@@ -574,8 +482,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "setubal",
     serviceSlug: "recolha-entulho",
     metaTitle: "Recolha de Entulho em Setubal — Contentores e Sacos de Obra",
-    metaDescription:
-      "Recolha de entulho em Setubal: contentores 3m3, 5m3, 8m3 e sacos de obra. Entrega em 24h. Remodelacoes, obras pequenas, limpezas. Orcamento gratis.",
     h1: "Recolha de Entulho em Setubal — Contentores, Sacos e Obras Pequenas",
     localIntro:
       "Tem entulho de obra em Setúbal? A CLYON fornece contentores e faz recolha de entulho em sacos para obras de qualquer dimensão. Cobrimos todo o concelho de Setúbal, desde o centro histórico até Azeitão e Arrábida. Para pequenas remodelações, retiramos sacos de entulho directamente. Para obras maiores, colocamos contentor no local pelo tempo necessário e depois vamos buscar.",
@@ -587,7 +493,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: "Depende do volume. Até 10 sacos de entulho custa entre 130EUR e 170EUR. Um contentor de 3m³ custa entre 200EUR e 260EUR. Contentores maiores de 5m³ ou 8m³ têm preços proporcionais. Enviamos orçamento exacto após saber o volume e local.",
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, e o preço acompanha o volume — dez sacos dão cerca de 1 m³, um contentor pequeno cerca de 3 m³. Enviamos orçamento exacto depois de sabermos o volume e o local.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",
@@ -618,14 +524,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Cobrimos todo o concelho de Setúbal, incluindo Azeitão, Arrábida e Palmela. Muitas quintas em remodelação geram entulho que retiramos regularmente.",
       },
     ],
-    pricingNotes: [
-      "Até 10 sacos de entulho: 130EUR a 170EUR",
-      "Contentor 3m³ (pequeno): 200EUR a 260EUR",
-      "Contentor 5m³ (médio): 300EUR a 380EUR",
-      "Contentor 8m³ (grande): 420EUR a 520EUR",
-      "Remodelação de WC completa: 160EUR a 220EUR",
-      "Obra de cozinha: 220EUR a 320EUR",
-    ],
     ctaText: "Entulho para retirar em Setúbal? Diga-nos o volume e enviamos orçamento hoje.",
   },
 
@@ -639,8 +537,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "lisboa",
     serviceSlug: "mudancas",
     metaTitle: "Mudanças em Lisboa - Residenciais e Comerciais | CLYON",
-    metaDescription:
-      "Mudanças em Lisboa com equipa profissional. Embalamos, transportamos, descarregamos e montamos móveis. Apartamentos, escritórios e lojas. Orçamento grátis, resposta rápida.",
     h1: "Mudanças em Lisboa: Residenciais e Comerciais",
     localIntro:
       "Mudar de casa em Lisboa tem desafios próprios: apartamentos em prédios antigos sem elevador em Alfama, estacionamento difícil na Baixa, horários restritos em condomínios no Parque das Nações. A CLYON conhece bem estas situações e organiza a mudança para minimizar imprevistos. Embalamos o que for preciso, protegemos os móveis, coordenamos o estacionamento com a junta de freguesia se necessário, e montamos tudo na nova casa.",
@@ -652,7 +548,16 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa uma mudança de T2 em Lisboa?",
-        a: "Uma mudança de T2 em Lisboa, com embalamento básico e montagem de móveis, custa entre 350EUR e 550EUR. Depende do piso, do volume e da distância para a nova casa.",
+        /*
+         * As mudanças não publicam preço. Ver precos-publicos.ts: o site
+         * anunciava 150 € e o motor factura a partir de 490 €, e enquanto os
+         * dois não estiverem alinhados não se publica número nenhum.
+         *
+         * Esta resposta escapou à primeira passagem porque vive num ficheiro
+         * de conteúdo e não numa página — mas é renderizada, e ia parar ao
+         * texto visível E ao FAQPage que o Google lê.
+         */
+        a: "Depende do piso, do volume e da distância para a nova casa. Descreva a mudança e recebe um orçamento personalizado em 24 horas, sem compromisso.",
       },
       {
         q: "A CLYON embala os meus pertences em Lisboa?",
@@ -671,13 +576,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Mudanças de escritórios, lojas e consultórios em Lisboa. Trabalhamos fora do horário laboral se o cliente preferir.",
       },
     ],
-    pricingNotes: [
-      "Mudança de T1 em Lisboa: 250EUR a 400EUR",
-      "Mudança de T2 em Lisboa: 350EUR a 550EUR",
-      "Mudança de T3 em Lisboa: 500EUR a 750EUR",
-      "Mudança de escritório pequeno: 400EUR a 650EUR",
-      "Embalamento completo (adicional): 80EUR a 150EUR",
-    ],
     ctaText: "Vai mudar de casa em Lisboa? Peça orçamento grátis - respondemos hoje.",
   },
 
@@ -685,8 +583,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "lisboa",
     serviceSlug: "esvaziamento-casas",
     metaTitle: "Esvaziamento de Casas em Lisboa - Heranças e Arrendamentos | CLYON",
-    metaDescription:
-      "Esvaziamento de casas e apartamentos em Lisboa. Retiramos tudo: móveis, eletrodomésticos, roupa, papéis. Serviço completo para heranças, vendas e arrendamentos.",
     h1: "Esvaziamento de Casas e Apartamentos em Lisboa",
     localIntro:
       "Esvaziar uma casa em Lisboa é um trabalho grande: há móveis para retirar, eletrodomésticos, roupa, papéis, tralha acumulada. A CLYON faz o esvaziamento completo, desde a sala aos armários da cozinha. Este serviço é muito procurado em casos de herança (o imóvel precisa de ser libertado para venda), fim de arrendamento (o inquilino deixou tudo) e mudanças (não vale a pena levar os móveis velhos).",
@@ -702,7 +598,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa esvaziar um apartamento T2 em Lisboa?",
-        a: "Um T2 em Lisboa custa entre 350EUR e 600EUR para esvaziamento completo. Depende do volume de coisas, do piso e do acesso.",
+        a: `O esvaziamento de apartamento é ${PRECOS.esvaziamento_apartamento.etiqueta}, sem IVA. Um T2 fica a meio da faixa; depende do volume, do piso e do acesso.`,
       },
       {
         q: "Fazem esvaziamento de casas de herança em Lisboa?",
@@ -717,13 +613,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Se quiser manter alguns móveis e retirar o resto, fazemos isso. O preço é ajustado ao volume que sai.",
       },
     ],
-    pricingNotes: [
-      "Apartamento T1 completo: 250EUR a 400EUR",
-      "Apartamento T2 completo: 350EUR a 600EUR",
-      "Apartamento T3 completo: 500EUR a 800EUR",
-      "Garagem ou arrecadação: 100EUR a 200EUR",
-      "Só quarto com armário cheio: 80EUR a 150EUR",
-    ],
     ctaText: "Precisa de esvaziar uma casa em Lisboa? Fazemos tudo - envie fotos para orçamento.",
   },
 
@@ -734,8 +623,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "monte-abraao",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Móveis em Monte Abraão - Queluz e Massamá | CLYON",
-    metaDescription:
-      "Recolha de móveis usados em Monte Abraão, Queluz e Massamá. Sofás, camas, armários e electrodomésticos. Empresa local, orçamento grátis em minutos.",
     h1: "Recolha de Móveis em Monte Abraão - Sofás, Camas e Armários",
     localIntro:
       "Precisa de retirar móveis em Monte Abraão? A CLYON faz recolha de sofás, camas, armários e electrodomésticos em toda a freguesia e zonas vizinhas: Queluz, Massamá, Belas e Agualva-Cacém. O orçamento é sempre personalizado conforme o volume, acesso, urgência e necessidade de desmontagem — enviamos resposta em minutos após receber fotos.",
@@ -766,13 +653,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Fazemos esvaziamento completo de apartamentos para mudanças, heranças ou fim de arrendamento. Retiramos móveis, electrodomésticos e tralha.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso, urgência e necessidade de desmontagem",
-      "Cama de casal com colchão: orçamento conforme acesso e piso",
-      "Armário roupeiro: valor depende do número de portas e piso",
-      "Frigorífico ou máquina de lavar: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-    ],
     ctaText: "Precisa de recolha de móveis em Monte Abraão? Envie fotos e respondemos em minutos.",
   },
 
@@ -783,8 +663,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "monte-abraao",
     serviceSlug: "recolha-entulho",
     metaTitle: "Recolha de Entulho em Monte Abraão - Obras em Queluz e Massamá | CLYON",
-    metaDescription:
-      "Recolha de entulho de obras em Monte Abraão, Queluz e Massamá. Contentores e sacos big bag. Orçamento grátis em minutos.",
     h1: "Recolha de Entulho de Obras em Monte Abraão",
     localIntro:
       "Monte Abraão e Massamá têm muitos apartamentos dos anos 80-90 que estão a ser renovados. Remodelações de casas de banho, cozinhas e demolição de divisórias geram entulho que precisa de ser retirado rapidamente para a obra avançar. A CLYON recolhe entulho em sacos big bag ou contentor, adaptando o serviço ao volume da obra e ao espaço disponível no prédio.",
@@ -811,12 +689,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim, fornecemos contentores de vários tamanhos. O contentor fica no local o tempo combinado. É necessário verificar se há espaço na rua ou garagem do prédio.",
       },
     ],
-    pricingNotes: [
-      "Sacos big bag: orçamento conforme volume",
-      "Contentor pequeno: orçamento conforme duração",
-      "Remodelação de WC: orçamento personalizado",
-      "Demolição de divisória: orçamento personalizado",
-    ],
     ctaText: "Obra em Monte Abraão? Envie fotos do entulho para orçamento grátis.",
   },
 
@@ -827,8 +699,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "monte-abraao",
     serviceSlug: "esvaziamento-casas",
     metaTitle: "Esvaziamento de Casas em Monte Abraão - Heranças e Mudanças | CLYON",
-    metaDescription:
-      "Esvaziamento completo de apartamentos em Monte Abraão, Queluz e Massamá. Heranças, mudanças e entregas de imóveis. Orçamento grátis.",
     h1: "Esvaziamento de Casas e Apartamentos em Monte Abraão",
     localIntro:
       "Precisa de esvaziar um apartamento em Monte Abraão? A CLYON faz esvaziamento completo de casas para heranças, mudanças, entregas de imóveis arrendados e limpezas de recheios acumulados. Retiramos todos os móveis, electrodomésticos, roupa, decoração e tralha — o apartamento fica completamente vazio e pronto para entrega ou nova ocupação.",
@@ -859,12 +729,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Um T2 standard pode ser esvaziado num dia. Apartamentos maiores ou com muito recheio podem precisar de mais tempo. Combinamos sempre o prazo antes de começar.",
       },
     ],
-    pricingNotes: [
-      "T1 com recheio normal: orçamento personalizado",
-      "T2 com recheio normal: orçamento personalizado",
-      "T3 ou maior: orçamento conforme volume",
-      "Limpeza adicional: orçamento à parte",
-    ],
     ctaText: "Precisa de esvaziar um apartamento em Monte Abraão? Envie fotos para orçamento.",
   },
 
@@ -875,8 +739,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "queluz",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Móveis em Queluz - Belas e Monte Abraão | CLYON",
-    metaDescription:
-      "Recolha de móveis usados em Queluz, Belas e Monte Abraão. Sofás, camas, armários e electrodomésticos. Empresa local, orçamento grátis em minutos.",
     h1: "Recolha de Móveis em Queluz - Sofás, Camas e Armários",
     localIntro:
       "Precisa de retirar móveis em Queluz? A CLYON faz recolha de sofás, camas, armários e electrodomésticos em todo o concelho: centro de Queluz, Belas, Monte Abraão e Massamá. Queluz tem uma mistura interessante de zonas históricas (perto do Palácio) e urbanizações modernas, e conhecemos bem as diferenças de acesso entre elas.",
@@ -907,13 +769,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Frigoríficos, máquinas de lavar, fogões, TVs - levamos tudo no mesmo serviço. Pode ser mais eficiente avaliar vários itens no mesmo pedido.",
       },
     ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso, urgência e necessidade de desmontagem",
-      "Cama de casal com colchão: orçamento conforme acesso e piso",
-      "Armário roupeiro: valor depende do número de portas e piso",
-      "Frigorífico ou máquina de lavar: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
-    ],
     ctaText: "Precisa de recolha de móveis em Queluz? Envie fotos para orçamento grátis.",
   },
 
@@ -924,8 +779,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "carnaxide",
     serviceSlug: "recolha-moveis",
     metaTitle: "Recolha de Móveis em Carnaxide - Linda-a-Velha e Queijas | CLYON",
-    metaDescription:
-      "Recolha de móveis usados em Carnaxide, Linda-a-Velha e Queijas. Sofás, camas, armários e electrodomésticos. Orçamento grátis em minutos.",
     h1: "Recolha de Móveis em Carnaxide - Sofás, Camas e Armários",
     localIntro:
       "Precisa de retirar móveis em Carnaxide? A CLYON faz recolha de sofás, camas, armários e electrodomésticos em toda a freguesia e zonas vizinhas: Linda-a-Velha, Queijas, Alto da Loba e Miraflores. Carnaxide é uma zona residencial moderna com excelentes acessos pelo IC19 e A5, permitindo-nos chegar rapidamente e oferecer preços competitivos.",
@@ -955,13 +808,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         q: "Fazem esvaziamento de apartamentos em Carnaxide?",
         a: "Sim. Fazemos esvaziamento completo de apartamentos para mudanças, heranças ou fim de arrendamento. Retiramos móveis, electrodomésticos e tralha - deixamos o espaço vazio.",
       },
-    ],
-    pricingNotes: [
-      "Sofá: orçamento conforme volume, acesso, urgência e necessidade de desmontagem",
-      "Cama de casal com colchão: orçamento conforme acesso e piso",
-      "Armário roupeiro: valor depende do número de portas e piso",
-      "Frigorífico ou máquina de lavar: orçamento personalizado",
-      "Esvaziamento de apartamento: orçamento conforme volume total e tipologia",
     ],
     ctaText: "Precisa de recolha de móveis em Carnaxide? Envie fotos e respondemos em minutos.",
   },

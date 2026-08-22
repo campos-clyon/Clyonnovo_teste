@@ -485,34 +485,38 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
 /**
  * A nota que acompanha qualquer preço mostrado ao público.
  *
- * PORQUE É QUE O SITE NÃO PODE DIZER SE O PREÇO TEM IVA
+ * OS VALORES SÃO SEM IVA, E ISSO DIZ-SE
+ *
+ * Em Portugal o preço mostrado ao consumidor tem de incluir os impostos. O que
+ * torna isto legítimo aqui é a natureza do número: o que está na grelha é uma
+ * ESTIMATIVA, não um preço de venda. O preço a sério é a proposta que o
+ * profissional faz, e essa já traz a linha de imposto quando ele está no
+ * regime normal.
+ *
+ * PORQUE É QUE O SITE NÃO PODE DIZER SE O IVA ESTÁ INCLUÍDO
  *
  * Porque deixou de ser a CLYON a executar. Numa plataforma, quem faz o
- * trabalho é quem emite a factura — e cada profissional tem o seu regime:
- * uns estão na isenção do artigo 53.º do CIVA e não liquidam nada, outros
- * liquidam 23%. O mesmo trabalho, feito por dois profissionais diferentes,
- * pode ter facturas diferentes.
+ * trabalho é quem emite a factura — e cada profissional tem o seu regime: uns
+ * na isenção do artigo 53.º do CIVA, que não acrescentam nada, outros a
+ * liquidar 23%. O mesmo trabalho, feito por dois profissionais diferentes,
+ * pode ter facturas diferentes. No momento em que a grelha é mostrada, ainda
+ * não se sabe quem vai ficar com ele.
  *
- * Ou seja: "com IVA" e "sem IVA" são AMBAS afirmações que o site não pode
- * garantir. E prometer um imposto que a factura não confirma é das poucas
- * contradições que o cliente descobre sozinho, no fim, quando já não há como
- * explicar. O site chegou a dizer "+ IVA" e "IVA incluído" em sítios
+ * "Com IVA" e "sem IVA incluído" seriam ambas afirmações que o site não pode
+ * garantir. O site chegou a dizer "+ IVA" e "IVA incluído" em sítios
  * diferentes — as duas erradas ao mesmo tempo.
- *
- * O que se pode garantir, e é o que interessa a quem está a decidir: o valor
- * é fechado ANTES de o trabalho começar, e não lhe acresce nada depois.
  *
  * Escrita uma vez para não divergir. Já foi por não estar.
  */
 export const NOTA_DE_PRECO = {
-  /** Uma linha, para pôr por cima ou por baixo de uma grelha de preços. */
-  curta:
-    "Valores orientativos. O preço final é fechado antes de o trabalho começar.",
+  /** Uma linha, para pôr junto de uma grelha. */
+  curta: "Valores orientativos, sem IVA. A proposta traz o valor final.",
   /** Com a explicação de quem factura, para páginas de preços. */
   completa:
-    "Valores orientativos. O preço final é fechado antes de o trabalho começar " +
-    "e não lhe acresce nada depois. Quem executa emite a factura, pelo regime " +
-    "de IVA dele.",
+    "Valores orientativos e sem IVA. O preço a sério é a proposta que recebe, " +
+    "fechada antes de o trabalho começar. Quem executa emite a factura: se " +
+    "estiver no regime normal, o IVA vem indicado na proposta; se estiver na " +
+    "isenção do artigo 53.º, não acresce nada.",
 } as const;
 
 export const PRAZO_DE_RESPOSTA = {

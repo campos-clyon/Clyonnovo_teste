@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import FAQClient from "./FAQClient";
-import { AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { AVALIACOES_TOTAL, NOTA_DE_PRECO } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
 
 export const metadata: Metadata = {
   title: "FAQ — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
@@ -23,7 +24,7 @@ const faqCategories = [
     questions: [
       {
         q: "Quanto custa a recolha de móveis em Lisboa?",
-        a: "O preço depende do volume, tipo de móvel e acessos. Para peças soltas como sofá, armário ou cama o valor começa nos 40 € a 100 €. Para volumes maiores ou deslocação até pisos superiores sem elevador o preço ajusta-se. Use o simulador em clyon.pt/simulador para obter um orçamento em 2 minutos.",
+        a: `O preço depende do volume, tipo de móvel e acessos. Para peças soltas como sofá, armário ou cama a recolha fica em ${PRECOS.recolha_moveis.etiqueta}. Para volumes maiores ou deslocação até pisos superiores sem elevador o preço ajusta-se. Use o simulador em clyon.pt/simulador para obter um orçamento em 2 minutos. ${NOTA_DE_PRECO.curta}`,
       },
       {
         q: "Que móveis recolhem?",
@@ -68,7 +69,7 @@ const faqCategories = [
     questions: [
       {
         q: "Quanto custa o esvaziamento de uma casa em Lisboa?",
-        a: "O esvaziamento completo de um T1 começa nos 180 € a 280 €. Um T2 entre 250 € e 400 €. Um T3 ou moradia entre 350 € e 600 €. O valor final depende do volume de recheio, número de andares, elevador disponível e distância. Peça orçamento exato pelo simulador.",
+        a: `Um esvaziamento de casa custa a partir de 250 €. Num apartamento o valor fica em ${PRECOS.esvaziamento_apartamento.etiqueta}, conforme a tipologia: um T0/T1 em 260 – 350 €, um T2 em 320 – 420 €, um T3/T4 em 380 – 450 €. Numa moradia completa, a partir de 450 €. O valor final depende do volume de recheio, número de andares, elevador disponível e distância. Peça orçamento exato pelo simulador. ${NOTA_DE_PRECO.curta}`,
       },
       {
         q: "O que inclui o serviço de esvaziamento de casa?",
@@ -146,7 +147,7 @@ const faqCategories = [
       },
       {
         q: "Há custo de deslocação para Lisboa e Margem Sul?",
-        a: "Para serviços em Lisboa, Almada, Seixal, Barreiro, Setúbal e concelhos próximos a deslocação está incluída no preço. Para localidades mais afastadas pode haver um custo adicional de 5 € a 15 € conforme a distância — informado no orçamento.",
+        a: "Para serviços em Lisboa, Almada, Seixal, Barreiro, Setúbal e concelhos próximos a deslocação está incluída no preço. Para localidades mais afastadas pode haver um custo adicional de 5 – 15 € conforme a distância — informado no orçamento.",
       },
       {
         q: "O entulho vai para onde? Estão licenciados?",
@@ -217,7 +218,13 @@ const faqCategories = [
       },
       {
         q: "Quanto custa uma mudança em Lisboa?",
-        a: "O preço começa a partir de 50 €/hora com equipa mínima de 2 pessoas e viatura. Um T1 completo custa entre 180 € e 350 € dependendo da distância, andar e volume. Um T2/T3 entre 300 € e 700 €.",
+        /*
+         * As mudanças não publicam número — decisão de 22-08-2026, e a razão
+         * está em `precos-publicos`. Esta resposta anunciava 50 €/hora e um
+         * T1 a partir de 180 €, quando o motor factura uma mudança a partir
+         * de 490 €. Qualquer número aqui volta a criar a mesma divergência.
+         */
+        a: "Uma mudança é sempre orçamento personalizado. O valor depende do volume, da distância entre as duas moradas, do andar e do acesso de cada uma — e um preço fixo publicado aqui estaria sempre errado numa delas. Envie a morada de origem, a de destino e fotos das divisões: devolvemos um orçamento grátis e fechado, normalmente em 24 horas.",
       },
       {
         q: "Fazem mudanças para outras cidades como Porto ou Coimbra?",

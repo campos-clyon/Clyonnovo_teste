@@ -26,12 +26,23 @@ import {
   getCityServiceSlug,
   AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
+  NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+/*
+ * O preço desta página vem de src/lib/precos-publicos.ts.
+ *
+ * Estava escrito à mão em três sítios — metadados, Open Graph e dados
+ * estruturados — e os três diziam coisas diferentes: "desde 40€" no texto e
+ * "35" no schema que o Google lê. Agora é uma leitura só.
+ */
+const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários",
   description:
-    "Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços desde 40€. Orçamento grátis em 24h.",
+    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços de ${PRECO_MOVEIS.etiqueta}. Orçamento grátis em 24h.`,
   keywords: [
     "recolha de móveis",
     "recolha de móveis Lisboa",
@@ -55,7 +66,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários",
     description:
-      "Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços desde 40€.",
+      `Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços de ${PRECO_MOVEIS.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-moveis`,
     locale: "pt_PT",
     type: "website",
@@ -234,10 +245,18 @@ const serviceSchema = {
     serviceUrl: `${SITE_URL}/recolha-de-moveis`,
     servicePhone: BUSINESS_PHONE,
   },
+  /*
+   * O que se declara ao Google é a mesma faixa que a página mostra.
+   *
+   * Dizia `price: "35"` — um número que não existe em lado nenhum: nem na
+   * grelha, nem no motor, nem nesta página. Um preço declarado que a página
+   * não mostra é a divergência que o Google penaliza.
+   */
   offers: {
-    "@type": "Offer",
+    "@type": "AggregateOffer",
     priceCurrency: "EUR",
-    price: "35",
+    lowPrice: PRECO_MOVEIS.minimo,
+    highPrice: PRECO_MOVEIS.maximo,
     priceValidUntil: "2026-12-31",
     availability: "https://schema.org/InStock",
   },
@@ -363,8 +382,9 @@ export default function RecolhaDeMoveisPage() {
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Exemplos de valores para recolha de móveis
             </h2>
+            <p className="mt-2 text-xl font-bold text-acao">{PRECO_MOVEIS.etiqueta}</p>
             <p className="mt-2 text-sm text-slate-600">
-              Valores orientativos. O orçamento final depende de volume, acessos, andares e necessidade de desmontagem.
+              O orçamento final depende de volume, acessos, andares e necessidade de desmontagem.
             </p>
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
               <table className="w-full text-sm">
@@ -384,6 +404,7 @@ export default function RecolhaDeMoveisPage() {
                 </tbody>
               </table>
             </div>
+            <p className="mt-4 text-sm text-slate-500">{NOTA_DE_PRECO.curta}</p>
           </div>
         </div>
       </section>

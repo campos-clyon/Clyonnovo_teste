@@ -2,13 +2,26 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
+import { NOTA_DE_PRECO } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
 
 const SITE_URL = "https://clyon.pt";
+
+/*
+ * Os dois valores publicados para esvaziamento, e nada fora deles.
+ *
+ * A grelha desta página abria nos 300 € e ia aos 1500 €; a grelha oficial diz
+ * desde 250 € para casa e 260 – 450 € para apartamento. As linhas de
+ * apartamento vivem agora dentro dessa faixa e a moradia começa onde ela
+ * acaba — nenhum número desta página contradiz o preçário.
+ */
+const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
+const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
   title: "Esvaziar Casa e Apartamento em Lisboa — Heranças, Recheios e Doações",
   description:
-    "Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços desde 300€. Orçamento grátis em 24h.",
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços ${PRECO_CASA}. Orçamento grátis em 24h.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -33,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
     description:
-      "Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços desde 300€. Orçamento em 24h.",
+      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 24h.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
   },
 };
@@ -45,7 +58,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
-    answer: "O valor depende do volume, acessos, andar, elevador e necessidade de limpeza. Para apartamento T0/T1 começa nos 300€. T2/T3 entre 500€ e 800€. Moradias entre 800€ e 1500€. Envie fotos para orçamento rápido e personalizado em 24 horas.",
+    answer: `O valor depende do volume, acessos, andar, elevador e necessidade de limpeza. Um esvaziamento de casa é a partir de 250 €. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em 260 – 350 €, T2 em 320 – 420 €, T3/T4 em 380 – 450 €. Numa moradia completa, a partir de 450 €. Envie fotos para orçamento rápido e personalizado em 24 horas. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
@@ -81,7 +94,7 @@ const faqs = [
   },
   {
     question: "Fazem esvaziamento de garagens, arrecadações e caves?",
-    answer: "Sim. Serviço específico para espaços de arrumação. Preços começam nos 150€ para arrecadações pequenas. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.",
+    answer: "Sim. Serviço específico para espaços de arrumação, a partir de 250 € para arrecadações pequenas. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.",
   },
   {
     question: "Fazem esvaziamento urgente em 24 horas?",
@@ -225,12 +238,12 @@ export default function EsvaziamentoDeCasasPage() {
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
                 <div className="mt-4 space-y-3">
                   {[
-                    { type: "Apartamento T0/T1", price: "300€ – 500€" },
-                    { type: "Apartamento T2", price: "450€ – 700€" },
-                    { type: "Apartamento T3/T4", price: "600€ – 1000€" },
-                    { type: "Moradia completa", price: "800€ – 1500€" },
-                    { type: "Garagem / arrecadação", price: "150€ – 400€" },
-                    { type: "Loja / escritório", price: "400€ – 900€" },
+                    { type: "Apartamento T0/T1", price: "260 – 350 €" },
+                    { type: "Apartamento T2", price: "320 – 420 €" },
+                    { type: "Apartamento T3/T4", price: "380 – 450 €" },
+                    { type: "Moradia completa", price: "desde 450 €" },
+                    { type: "Garagem / arrecadação", price: PRECO_CASA },
+                    { type: "Loja / escritório", price: "orçamento personalizado" },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                       <span className="text-sm text-slate-700">{item.type}</span>
@@ -238,8 +251,8 @@ export default function EsvaziamentoDeCasasPage() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 text-xs text-slate-500">
-                  Valores orientativos. O preço final depende do volume, acessos, andar e limpeza.
+                <p className="mt-4 text-xs leading-5 text-slate-500">
+                  {NOTA_DE_PRECO.curta} Depende do volume, acessos, andar e limpeza.
                 </p>
               </div>
             </div>

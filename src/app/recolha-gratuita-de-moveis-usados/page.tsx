@@ -149,13 +149,19 @@ const serviceSchema = {
     url: SITE_URL,
   },
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
-  offers: {
-    "@type": "Offer",
-    priceCurrency: "EUR",
-    price: "35",
-    priceValidUntil: "2026-12-31",
-    availability: "https://schema.org/InStock",
-  },
+  /*
+   * Esta página NÃO declara preço ao Google, de propósito.
+   *
+   * Havia aqui um bloco `offers` com price "35" — numa página chamada
+   * "recolha GRATUITA de móveis usados", que em texto visível não mostra
+   * número nenhum e cujo corpo explica precisamente que a CLYON é um serviço
+   * pago e que o valor sai no orçamento. Declarar 35 € nos dados estruturados
+   * de uma página que promete gratuito no título é a divergência que o Google
+   * penaliza — e 35 € já nem era o piso publicado, que são 40 €.
+   *
+   * Enquanto esta página não mostrar um preço ao leitor, não declara nenhum
+   * ao motor de busca.
+   */
 };
 
 export const revalidate = 86400;

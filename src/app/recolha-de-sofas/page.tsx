@@ -19,7 +19,19 @@ import {
   BUSINESS_PHONE,
   SITE_URL,
   AVALIACOES_TOTAL,
+  NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+/*
+ * A recolha de sofás é recolha de móveis: mesma faixa, mesma fonte.
+ *
+ * Esta página não mostrava preço nenhum e mesmo assim declarava um ao Google
+ * (35 €) — um número que não existe na tabela. Agora o preço está visível
+ * na página e é o mesmo que o schema declara, lido de
+ * src/lib/precos-publicos.ts.
+ */
+const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Sofás em Lisboa, Margem Sul e Setúbal | CLYON",
@@ -80,7 +92,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um sofá?",
-    a: "O preço da recolha de sofá depende do tamanho, peso, tipo de acesso e localização. A forma mais rápida de saber o valor é enviar fotos do sofá e a morada para receber um orçamento imediato.",
+    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber um orçamento imediato.`,
   },
   {
     q: "Recolhem sofás no mesmo dia?",
@@ -140,9 +152,10 @@ const serviceSchema = {
   },
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   offers: {
-    "@type": "Offer",
+    "@type": "AggregateOffer",
     priceCurrency: "EUR",
-    price: "35",
+    lowPrice: PRECO_MOVEIS.minimo,
+    highPrice: PRECO_MOVEIS.maximo,
     priceValidUntil: "2026-12-31",
     availability: "https://schema.org/InStock",
   },
@@ -297,7 +310,7 @@ export default function RecolhaDeSofasPage() {
             Quanto custa a recolha de um sofá?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            O preço da recolha de sofá não é fixo. Depende de vários factores que influenciam o trabalho necessário. A melhor forma de saber o valor exacto é pedir um orçamento com fotos e morada.
+            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}. Não é um preço fixo: depende de vários factores que influenciam o trabalho necessário. A melhor forma de saber o valor exacto é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
             <p className="font-semibold text-slate-900">Factores que influenciam o preço:</p>
@@ -318,6 +331,7 @@ export default function RecolhaDeSofasPage() {
               </Link>
             </div>
           </div>
+          <p className="mt-4 text-sm text-slate-500">{NOTA_DE_PRECO.curta}</p>
         </div>
       </section>
 

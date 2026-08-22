@@ -2,8 +2,16 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
+import { NOTA_DE_PRECO } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
 
 const SITE_URL = "https://clyon.pt";
+
+// Os mesmos dois valores publicados que a página nacional de esvaziamento usa:
+// desde 250 € para casa, 260 – 450 € para apartamento. A grelha da Amadora
+// dizia 300 € – 1500 € e era a única a dizê-lo.
+const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
+const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
   title: "Esvaziamento de Casas na Amadora | Apartamentos, Garagens e Arrecadações",
@@ -29,7 +37,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar um apartamento na Amadora?",
-    answer: "O valor depende do volume, andar, elevador e estado do imóvel. Um T1/T2 costuma ficar entre 300€ e 600€. Envie fotos para orçamento rápido.",
+    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em 260 – 350 €, um T2/T3 em 320 – 450 €. Envie fotos para orçamento rápido. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança na Amadora?",
@@ -172,10 +180,10 @@ export default function EsvaziamentoAmadoraPage() {
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
                 <div className="mt-4 space-y-3">
                   {[
-                    { type: "Apartamento T0/T1", price: "300€ – 500€" },
-                    { type: "Apartamento T2/T3", price: "500€ – 800€" },
-                    { type: "Moradia ou T4+", price: "800€ – 1500€" },
-                    { type: "Garagem ou arrecadação", price: "150€ – 400€" },
+                    { type: "Apartamento T0/T1", price: "260 – 350 €" },
+                    { type: "Apartamento T2/T3", price: "320 – 450 €" },
+                    { type: "Moradia ou T4+", price: "desde 450 €" },
+                    { type: "Garagem ou arrecadação", price: PRECO_CASA },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                       <span className="text-sm text-slate-700">{item.type}</span>
@@ -183,8 +191,8 @@ export default function EsvaziamentoAmadoraPage() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 text-xs text-slate-500">
-                  Valores orientativos. O preço final depende do volume, andar, elevador e limpeza.
+                <p className="mt-4 text-xs leading-5 text-slate-500">
+                  {NOTA_DE_PRECO.curta} Depende do volume, andar, elevador e limpeza.
                 </p>
               </div>
             </div>

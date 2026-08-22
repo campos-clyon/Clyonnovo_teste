@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL , NOTA_DE_PRECO} from "@/lib/seo-data";
+import { precoDe } from "@/lib/precos-publicos";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
 import {
@@ -66,29 +67,14 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   manutencao_casa: { bg: "bg-sky-50", text: "text-sky-600" },
 };
 
-const CATEGORY_PRICES: Record<string, string> = {
-  recolha_moveis: "40 – 100 €",
-  recolha_monos: "50 – 120 €",
-  /*
-   * Dizia "3 – 5 €", sem unidade, numa grelha onde todos os outros cartões
-   * mostram o preço TOTAL do trabalho (móveis 40–100 €, esvaziamento
-   * 180–280 €). Os 3 € vinham de pricing-helper.ts e são POR SACO — o mínimo
-   * real é 90 € s/IVA, e a própria página para onde este cartão aponta diz
-   * "desde 80€".
-   *
-   * Ou seja: o primeiro preço que o visitante vê estava trinta vezes abaixo do
-   * que se cobra, no serviço com maior margem. Quem clicava com "3 €" na
-   * cabeça aterrava numa página que diz 80 — e um preço anunciado que não se
-   * pratica não é só conversão perdida.
-   */
-  recolha_entulho: "desde 80 €",
-  esvaziamento_casa: "180 – 280 €",
-  esvaziamento_apartamento: "200 – 350 €",
-  mudanca: "50 €/h · mín. 3h",
-  montagem_moveis: "desde 49 €",
-  jardinagem: "desde 64 €",
-  manutencao_casa: "desde 57 €",
-};
+/*
+ * Os preços da grelha vivem em src/lib/precos-publicos.ts.
+ *
+ * Estavam aqui, escritos à mão, e este era o único sítio do site a tê-los —
+ * o que fez com que as páginas de serviço, os metadados e os dados
+ * estruturados fossem divergindo cada um para seu lado. A recolha de entulho
+ * chegou a dizer 80 € no texto, 120 no schema e 90 no motor, na mesma manhã.
+ */
 
 const HERO_PILLS = [
   { id: "recolha_moveis", label: "Móveis", href: "/recolha-de-moveis" },
@@ -409,7 +395,7 @@ export default function HomePage() {
             {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
               const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-acao" };
-              const price = CATEGORY_PRICES[cat.id];
+              const price = precoDe(cat.id);
               return (
                 <Link
                   key={cat.id}

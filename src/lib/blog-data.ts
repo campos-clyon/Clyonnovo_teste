@@ -589,8 +589,8 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Preços médios por tipologia de apartamento",
         paragraphs: [
-          "Um T0 ou T1 pequeno, dentro de Lisboa, custa entre 150 € e 280 €. Um T2 familiar fica entre 280 € e 450 €. Um T3 ou T4 grande pode variar entre 450 € e 700 €, dependendo do volume real de móveis e caixas.",
-          "Estes valores incluem normalmente carga, transporte, descarga e proteção básica dos móveis. Serviços extra como embalagem completa ou montagem de móveis podem acrescentar entre 80 € e 150 € ao total.",
+          "O que faz o preço variar é o volume real de móveis e caixas, a tipologia, o piso e a distância. Um T1 dentro de Lisboa e um T4 com garagem são trabalhos de escalas diferentes — e é por isso que o valor sai da descrição do caso, e não de uma tabela.",
+          "O orçamento inclui normalmente carga, transporte, descarga e proteção básica dos móveis. Embalagem completa e montagem de móveis são serviços extra e vêm sempre discriminados na proposta, para não haver surpresas no fim.",
         ],
       },
       {
@@ -711,7 +711,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "O que é uma pequena mudança",
         paragraphs: [
           "Consideramos pequena mudança o transporte de 1 a 3 peças grandes: sofá, cama, armário, secretária, frigorífico ou máquina de lavar. É diferente de uma mudança completa porque não envolve dezenas de caixas e mobiliário de todas as divisões.",
-          "Estes serviços são rápidos (1-2 horas) e têm preços mais acessíveis, geralmente entre 80 € e 150 € dependendo do volume e da distância.",
+          "Estes serviços são rápidos — uma a duas horas — e por isso ficam bastante abaixo de uma mudança completa. O valor exacto depende do volume e da distância, e vem na proposta.",
         ],
       },
       {

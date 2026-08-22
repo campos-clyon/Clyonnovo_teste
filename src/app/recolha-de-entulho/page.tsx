@@ -20,12 +20,24 @@ import {
   CITIES,
   SITE_URL,
   getCityServiceSlug,
+  NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+/*
+ * Esta página contradizia-se a si própria.
+ *
+ * "desde 80€" nos metadados e no texto, "80EUR" no herói, e 120 nos dados
+ * estruturados que o Google lê — na mesma página, no mesmo dia. O preço
+ * oficial é por metro cúbico, e a unidade vai escrita: sem ela, um número
+ * destes lê-se como o preço do trabalho inteiro.
+ */
+const PRECO_ENTULHO = PRECOS.recolha_entulho;
 
 export const metadata: Metadata = {
   title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
   description:
-    "Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento directo. Resposta em 24h, preços desde 80€. Orçamento grátis.",
+    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento directo. Resposta em 24h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",
@@ -42,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
     description:
-      "Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 24h desde 80€.",
+      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 24h, preços ${PRECO_ENTULHO.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-entulho`,
   },
 };
@@ -51,12 +63,20 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
   .map((slug) => CITIES.find((city) => city.slug === slug))
   .filter((city): city is (typeof CITIES)[number] => Boolean(city));
 
+/*
+ * O piso da primeira linha vem da tabela; os tectos são os que já se
+ * praticavam.
+ *
+ * Dizia 80 € — abaixo do piso publicado do serviço, e a página anunciava esse
+ * 80 em mais três sítios. A composição da faixa ("110 – 120 €", travessão e o
+ * símbolo uma só vez) é do PricingTable: aqui passam-se os números.
+ */
 const pricingRows = [
-  { service: "Sacos de entulho (até 10 sacos)", priceFrom: "80€", priceTo: "120€", description: "Pequenas quantidades em saco big bag" },
-  { service: "Recolha pequena (até 1m³)", priceFrom: "120€", priceTo: "180€", description: "Remodelações de WC ou cozinha" },
-  { service: "Recolha média (até 3m³)", priceFrom: "180€", priceTo: "280€", description: "Obras de apartamento T1/T2" },
-  { service: "Recolha grande (até 5m³)", priceFrom: "280€", priceTo: "400€", description: "Demolições e renovações completas" },
-  { service: "Recolha extra (acima de 5m³)", priceFrom: "400€", priceTo: "—", description: "Orçamento personalizado" },
+  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: "120 €", description: "Pequenas quantidades em saco big bag" },
+  { service: "Recolha pequena (até 1 m³)", priceFrom: "120 €", priceTo: "180 €", description: "Remodelações de WC ou cozinha" },
+  { service: "Recolha média (até 3 m³)", priceFrom: "180 €", priceTo: "280 €", description: "Obras de apartamento T1/T2" },
+  { service: "Recolha grande (até 5 m³)", priceFrom: "280 €", priceTo: "400 €", description: "Demolições e renovações completas" },
+  { service: "Recolha extra (acima de 5 m³)", priceFrom: "400 €", description: "Orçamento personalizado" },
 ];
 
 const faqs = [
@@ -74,7 +94,7 @@ const faqs = [
   },
   {
     question: "Qual o preço mínimo para recolha de entulho?",
-    answer: "Para pequenas quantidades em saco, o preço começa nos 80€. Para volumes maiores, o valor depende da quantidade, acessos e localização. Envie fotos para orçamento rápido.",
+    answer: `A recolha de entulho custa a partir de ${PRECO_ENTULHO.minimo} € por ${PRECO_ENTULHO.unidade}. Para volumes maiores, o valor depende da quantidade, dos acessos e da localização. São valores orientativos e sem IVA: envie fotos para orçamento rápido.`,
   },
   {
     question: "Recolhem entulho em apartamentos?",
@@ -113,11 +133,14 @@ const serviceSchema = {
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   offers: {
     "@type": "Offer",
+    priceCurrency: "EUR",
     priceSpecification: {
-      "@type": "PriceSpecification",
-      price: "120",
+      "@type": "UnitPriceSpecification",
+      price: PRECO_ENTULHO.minimo,
       priceCurrency: "EUR",
-      minPrice: "120",
+      minPrice: PRECO_ENTULHO.minimo,
+      unitCode: "MTQ",
+      unitText: PRECO_ENTULHO.unidade,
     },
   },
 };
@@ -171,8 +194,11 @@ export default function RecolhaEntulhoPage() {
                 </a>
               </div>
               <p className="mt-4 text-sm text-slate-500">
-                Preços desde <span className="font-semibold text-amber-600">80EUR</span> para recolha de sacos
+                Preços{" "}
+                <span className="font-semibold text-amber-600">{PRECO_ENTULHO.etiqueta}</span>{" "}
+                para entulho de obra
               </p>
+              <p className="mt-1 text-xs text-slate-400">{NOTA_DE_PRECO.curta}</p>
             </div>
 
             <div className="overflow-hidden rounded-[32px] border border-amber-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(180,83,9,0.14)]">
@@ -243,7 +269,7 @@ export default function RecolhaEntulhoPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <PricingTable
             title="Preços de Recolha de Entulho"
-            subtitle="Valores orientativos para Lisboa e Setúbal"
+            subtitle={`Recolha de entulho ${PRECO_ENTULHO.etiqueta} em Lisboa e Setúbal.`}
             rows={pricingRows}
           />
         </div>

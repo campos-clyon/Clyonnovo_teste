@@ -11,10 +11,17 @@ import {
   Zap,
 } from "lucide-react";
 
+import { NOTA_DE_PRECO } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+// A faixa publicada para recolha de móveis. A página abria numa faixa de
+// trinta e poucos euros — abaixo do piso de 40 € que o resto do site anuncia.
+const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
+
 export const metadata: Metadata = {
   title: "Empresas que Retiram Móveis Velhos em Lisboa, Margem Sul e Setúbal",
   description:
-    "Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços desde 40€, resposta em 24h por WhatsApp.",
+    `Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços ${PRECO_MOVEIS}, resposta em 24h por WhatsApp.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -37,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Empresas que Retiram Móveis Velhos em Lisboa, Margem Sul e Setúbal",
     description:
-      "Empresa profissional para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem e carregamento incluídos. Desde 40€.",
+      `Empresa profissional para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem e carregamento incluídos. Preços ${PRECO_MOVEIS}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
     siteName: "CLYON",
     locale: "pt_PT",
@@ -59,7 +66,7 @@ const faqs = [
   {
     question: "Quanto custa retirar móveis velhos?",
     answer:
-      "O valor depende do volume, tipo de móveis, acessos (escadas, elevador, rua) e necessidade de desmontagem. Para um sofá ou cama com acesso fácil, os valores começam a partir de 35-45 €. Envie fotos para orçamento exacto.",
+      `O valor depende do volume, tipo de móveis, acessos (escadas, elevador, rua) e necessidade de desmontagem. A recolha de móveis fica em ${PRECO_MOVEIS}: uma peça isolada como um sofá ou uma cama com acesso fácil é a partir de 40 €. Envie fotos para orçamento exacto. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Retiram no mesmo dia?",

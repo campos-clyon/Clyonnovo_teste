@@ -40,10 +40,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!c) return { title: "Mudanças — CLYON" };
 
   const title = `Mudanças em ${c.nome} — Orçamento em 24h | ${BUSINESS_NAME}`;
+  // Sem número de preço, aqui e no resto da página. A meta description dizia
+  // "Preços desde 150€" (o piso por cidade ia de 140 a 220 €) para um serviço
+  // que o motor factura a partir de 490 € — sete horas a 70 €/h. Nos
+  // metadados vale a mesma regra do texto visível: o que não se mostra na
+  // página não se declara ao Google.
   const description =
     `Mudanças residenciais e comerciais em ${c.nome} (${c.distrito}). ` +
     `Equipa profissional, embalagem, carga, transporte e montagem. ` +
-    `Preços desde ${c.precoMin}€ para T0/T1. Orçamento grátis em 24h.`;
+    `Orçamento personalizado e grátis em 24 horas.`;
 
   return {
     title,
@@ -75,7 +80,8 @@ export default async function MudancasCidadePage({ params }: Props) {
         name: `${BUSINESS_NAME} — Mudanças em ${c.nome}`,
         image: `${SITE_URL}/logo-clyon.png`,
         telephone: BUSINESS_PHONE,
-        priceRange: `€${c.precoMin}–€${c.precoMax}`,
+        // Sem `priceRange`: era `€${precoMin}–€${precoMax}` por cidade, um
+        // preço que a página deixou de mostrar. Ver a nota no `offers` abaixo.
         address: {
           "@type": "PostalAddress",
           addressLocality: c.nome,
@@ -106,12 +112,18 @@ export default async function MudancasCidadePage({ params }: Props) {
         serviceType: "Mudanças residenciais e comerciais",
         provider: { "@id": `${SITE_URL}/mudancas/${c.slug}#business` },
         areaServed: { "@type": "City", name: c.nome },
-        offers: {
-          "@type": "AggregateOffer",
-          priceCurrency: "EUR",
-          lowPrice: c.precoMin,
-          highPrice: c.precoMax,
-        },
+        /*
+         * Sem bloco `offers` — e sem outro número no lugar dele.
+         *
+         * Aqui estava um `AggregateOffer` com `lowPrice` a 140–220 € consoante
+         * a cidade, replicado pelas treze páginas indexadas. O motor factura a
+         * mudança a partir de 490 €: era o Google a mostrar um preço que a
+         * factura nunca confirmava.
+         *
+         * Declarar um preço em dados estruturados numa página que não o mostra
+         * é exactamente a divergência que o Google penaliza — por isso o bloco
+         * sai inteiro, em vez de passar a outro valor.
+         */
       },
       {
         "@type": "FAQPage",
@@ -185,8 +197,13 @@ export default async function MudancasCidadePage({ params }: Props) {
               </a>
             </div>
 
+            {/*
+              Dizia "Preços desde {precoMin}€ para T0/T1". O motor factura a
+              mudança a partir de 490 € — o número que estava aqui prometia
+              menos de metade. Sai o valor, fica o prazo, que é verdade.
+            */}
             <p className="mt-3 text-xs text-slate-500">
-              Preços desde <strong className="text-emerald-600">{c.precoMin}€</strong> para T0/T1 em {c.nome}
+              <strong className="text-emerald-600">Orçamento personalizado</strong>, grátis e em 24 horas para {c.nome}
             </p>
           </div>
 
@@ -202,12 +219,19 @@ export default async function MudancasCidadePage({ params }: Props) {
               <p className="mt-1 text-2xl font-bold text-emerald-600">24 horas</p>
               <p className="text-xs text-tinta-fraca">Resposta rápida</p>
             </div>
+            {/*
+              Este cartão mostrava a faixa "{precoMin}€ – {precoMax}€" da
+              cidade. Era o número mais visível da página e o mais errado: o
+              motor factura a partir de 490 €. Em vez de outra faixa, o cartão
+              passa a dizer o que determina o preço — que é a informação que o
+              cliente procura quando olha para aqui.
+            */}
             <div className="col-span-full rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500">Faixa de preço {c.nome}</p>
+              <p className="text-xs font-medium text-slate-500">Preço em {c.nome}</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">
-                {c.precoMin}€ – {c.precoMax}€
+                Orçamento personalizado
               </p>
-              <p className="text-xs text-tinta-fraca">Consoante volume e acessos</p>
+              <p className="text-xs text-tinta-fraca">Consoante volume, acessos e distância</p>
             </div>
           </div>
         </div>

@@ -18,7 +18,12 @@ import {
   BUSINESS_PHONE,
   CITIES,
   SITE_URL,
+  NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+/** Este ecrã é jardinagem: o piso publicado dela, e não um número próprio. */
+const PRECO_JARDINAGEM = PRECOS.jardinagem;
 
 export const metadata: Metadata = {
   title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 24h | CLYON",
@@ -44,7 +49,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a limpeza de um quintal?",
-    answer: "O preço depende do tamanho do quintal e da quantidade de resíduos. Para pequenos quintais, a limpeza pode começar nos 80€. Envie fotos para um orçamento preciso.",
+    answer: `O preço depende do tamanho do quintal e da quantidade de resíduos. Para pequenos quintais, ${PRECO_JARDINAGEM.etiqueta.toLowerCase()}. Envie fotos para um orçamento preciso.`,
   },
   {
     question: "Fazem poda de árvores?",
@@ -95,9 +100,12 @@ const serviceSchema = {
     "@type": "Offer",
     priceSpecification: {
       "@type": "PriceSpecification",
-      price: "80",
+      // Vinha escrito à mão, a 80 €, e era o único bloco de preço do site que
+      // não saía de precos-publicos.ts. Este serviço é jardinagem, e o piso
+      // publicado dela são 64 €.
+      price: String(PRECO_JARDINAGEM.minimo),
       priceCurrency: "EUR",
-      minPrice: "80",
+      minPrice: String(PRECO_JARDINAGEM.minimo),
     },
   },
 };
@@ -147,8 +155,9 @@ export default function LimpezaQuintaisPage() {
                 </a>
               </div>
               <p className="mt-4 text-sm text-slate-500">
-                Preços desde <span className="font-semibold text-green-600">80€</span> para pequenos quintais
+                Preços <span className="font-semibold text-green-600">{PRECO_JARDINAGEM.etiqueta.toLowerCase()}</span> para pequenos quintais
               </p>
+              <p className="mt-2 text-[13px] text-slate-500">{NOTA_DE_PRECO.curta}</p>
             </div>
 
             <div className="overflow-hidden rounded-3xl border border-green-100 bg-white p-6 shadow-xl">

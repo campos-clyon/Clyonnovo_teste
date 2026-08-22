@@ -17,12 +17,24 @@ import {
   BUSINESS_PHONE,
   CITIES,
   SITE_URL,
+  NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
+
+/*
+ * Esta página tinha quatro preços diferentes para o mesmo serviço.
+ *
+ * "desde 50€" nos metadados, "começa nos 60€" numa FAQ, 60 nos dados
+ * estruturados e 60€ no herói — quatro números escritos à mão em quatro
+ * sítios, e nenhum deles o que se pratica. Agora há uma leitura só, de
+ * src/lib/precos-publicos.ts.
+ */
+const PRECO_MONOS = PRECOS.recolha_monos;
 
 export const metadata: Metadata = {
   title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
   description:
-    "Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços desde 50€. Orçamento grátis em 24h.",
+    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 24h.`,
   keywords: [
     "recolha de monos",
     "recolha de monos Lisboa",
@@ -39,7 +51,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
     description:
-      "Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Desde 50€. Resposta em 24h.",
+      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 24h.`,
     url: `${SITE_URL}/recolha-de-monos`,
   },
 };
@@ -55,7 +67,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos?",
-    answer: "O preço depende da quantidade e do tipo de materiais. Para pequenas quantidades, a recolha pode começar nos 60€. Envie fotos para um orçamento preciso e rápido.",
+    answer: `A recolha de monos custa ${PRECO_MONOS.etiqueta}, consoante a quantidade e o tipo de materiais — para pequenas quantidades, a partir de ${PRECO_MONOS.minimo} €. São valores orientativos e sem IVA: envie fotos para um orçamento preciso e rápido.`,
   },
   {
     question: "Recolhem monos em apartamentos sem elevador?",
@@ -102,14 +114,17 @@ const serviceSchema = {
     telephone: BUSINESS_PHONE,
   },
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
+  /*
+   * O que se declara ao Google é a mesma faixa que a página mostra.
+   *
+   * Declarava 60 — um número que não está na tabela nem na página. Um preço
+   * declarado que a página não mostra é a divergência que o Google penaliza.
+   */
   offers: {
-    "@type": "Offer",
-    priceSpecification: {
-      "@type": "PriceSpecification",
-      price: "60",
-      priceCurrency: "EUR",
-      minPrice: "60",
-    },
+    "@type": "AggregateOffer",
+    priceCurrency: "EUR",
+    lowPrice: PRECO_MONOS.minimo,
+    highPrice: PRECO_MONOS.maximo,
   },
 };
 
@@ -158,8 +173,11 @@ export default function RecolhaMonosPage() {
                 </a>
               </div>
               <p className="mt-4 text-sm text-slate-500">
-                Preços desde <span className="font-semibold text-violet-600">60€</span> para pequenas recolhas
+                Preços de{" "}
+                <span className="font-semibold text-violet-600">{PRECO_MONOS.etiqueta}</span>{" "}
+                conforme a quantidade
               </p>
+              <p className="mt-1 text-xs text-slate-400">{NOTA_DE_PRECO.curta}</p>
             </div>
 
             <div className="overflow-hidden rounded-3xl border border-violet-100 bg-white p-6 shadow-xl">

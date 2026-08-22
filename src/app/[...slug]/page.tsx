@@ -31,8 +31,19 @@ import {
   parseCityServiceSlug,
   AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
+  NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { PRECOS } from "@/lib/precos-publicos";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
+
+/*
+ * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
+ * deste ficheiro: um número escrito à mão aqui multiplica-se por setenta e
+ * nunca mais bate certo com a grelha.
+ */
+const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
+const PRECO_MONOS = PRECOS.recolha_monos.etiqueta; // "30 – 100 €"
+const PRECO_ENTULHO = PRECOS.recolha_entulho.etiqueta; // "desde 110 €/m³"
 
 type Props = {
   params: Promise<{ slug: string[] }>;
@@ -47,15 +58,15 @@ function buildTitle(serviceName: string, cityName: string, serviceSlug: string, 
   // NOTA: Não incluir "| CLYON" aqui - o template do layout já adiciona
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de Móveis em Lisboa — Hoje ou Amanhã, desde 40€`;
+      return `Recolha de Móveis em Lisboa — Hoje ou Amanhã, ${PRECO_MOVEIS}`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de Móveis em Setúbal — Preços desde 40€, Resposta 24h`;
+      return `Recolha de Móveis em Setúbal — Preços ${PRECO_MOVEIS}, Resposta 24h`;
     }
     if (citySlug === "almada") {
-      return `Recolha de Móveis em Almada — Resposta Rápida, desde 40€`;
+      return `Recolha de Móveis em Almada — Resposta Rápida, ${PRECO_MOVEIS}`;
     }
-    return `Recolha de Móveis em ${cityName} — desde 40€, Orçamento em 24h`;
+    return `Recolha de Móveis em ${cityName} — ${PRECO_MOVEIS}, Orçamento em 24h`;
   }
 
   // Recolha de monos — foco em "recolha municipal" e resposta rápida
@@ -74,7 +85,7 @@ function buildTitle(serviceName: string, cityName: string, serviceSlug: string, 
 
   if (serviceSlug === "recolha-entulho") {
     if (citySlug === "lisboa") {
-      return `Recolha de Entulho em Lisboa — Big Bags, desde 80€, 24h`;
+      return `Recolha de Entulho em Lisboa — Big Bags, ${PRECO_ENTULHO}, 24h`;
     }
     if (citySlug === "setubal") {
       return `Recolha de Entulho em Setúbal — Obras e Remodelações 24h`;
@@ -94,38 +105,38 @@ function buildDescription(
 ) {
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços desde 40€. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
+      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços desde 40€, resposta em 24h. Orçamento grátis pelo WhatsApp.`;
+      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 24h. Orçamento grátis pelo WhatsApp.`;
     }
     if (citySlug === "almada") {
-      return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços desde 40€, resposta rápida em 24h. Orçamento grátis!`;
+      return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta rápida em 24h. Orçamento grátis!`;
     }
-    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços desde 40€. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis.`;
+    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços ${PRECO_MOVEIS}. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis.`;
   }
 
   if (serviceSlug === "recolha-monos") {
     if (citySlug === "lisboa") {
-      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Retiramos sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços desde 50€, resposta em 24h. Orçamento grátis por WhatsApp.`;
+      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Retiramos sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços ${PRECO_MONOS}, resposta em 24h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "almada") {
-      return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços desde 50€. Resposta em 24h por WhatsApp.`;
+      return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços ${PRECO_MONOS}. Resposta em 24h por WhatsApp.`;
     }
     if (citySlug === "cascais") {
-      return `Recolha de monos em Cascais e Estoril: contactos rápidos por WhatsApp. Sofás velhos, colchões, eletrodomésticos, volumes grandes. Preços desde 50€, resposta em 24h. Orçamento grátis.`;
+      return `Recolha de monos em Cascais e Estoril: contactos rápidos por WhatsApp. Sofás velhos, colchões, eletrodomésticos, volumes grandes. Preços ${PRECO_MONOS}, resposta em 24h. Orçamento grátis.`;
     }
-    return `Recolha de monos em ${cityName}: sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à recolha municipal. Preços desde 50€, resposta em 24h.`;
+    return `Recolha de monos em ${cityName}: sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à recolha municipal. Preços ${PRECO_MONOS}, resposta em 24h.`;
   }
 
   if (serviceSlug === "recolha-entulho") {
     if (citySlug === "lisboa") {
-      return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços desde 80€, resposta em 24h. Orçamento grátis por WhatsApp.`;
+      return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços ${PRECO_ENTULHO}, resposta em 24h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento directo, resposta em 24h. Preços desde 80€. Orçamento grátis!`;
+      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento directo, resposta em 24h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
     }
-    return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços desde 80€, resposta em 24h. Orçamento grátis!`;
+    return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços ${PRECO_ENTULHO}, resposta em 24h. Orçamento grátis!`;
   }
 
   return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
@@ -197,12 +208,18 @@ function getExcludedItems(serviceSlug: string) {
 
 function getPricingCopy(serviceName: string, cityName: string, serviceSlug: string) {
   if (isFurnitureService(serviceSlug)) {
+    /*
+     * Nenhuma destas referências pode abrir abaixo de 40 € nem fechar acima
+     * de 120 €: são o interior da faixa publicada em `precos-publicos`. Uma
+     * peça anunciada a 25 € numa página que promete 40 – 120 € é a mesma
+     * divergência, escrita em letra mais pequena.
+     */
     return [
-      "Sofá de 2 a 3 lugares: 35 € a 55 €",
-      "Cama de casal com estrado: 25 € a 45 €",
-      "Armário grande: 45 € a 75 €",
-      "Mesa com cadeiras: 35 € a 55 €",
-      `Recolha de vários móveis em ${cityName}: 180 € a 350 €`,
+      "Sofá de 2 a 3 lugares: 40 – 70 €",
+      "Cama de casal com estrado: 40 – 65 €",
+      "Armário grande: 55 – 95 €",
+      "Mesa com cadeiras: 40 – 65 €",
+      `Recolha de vários móveis em ${cityName}: ${PRECO_MOVEIS}`,
     ];
   }
 
@@ -763,6 +780,9 @@ export default async function ServiceCityPage({ params }: Props) {
                 </div>
               ))}
             </div>
+            {isFurnitureService(service.slug) && (
+              <p className="mt-4 text-xs leading-6 text-slate-500">{NOTA_DE_PRECO.curta}</p>
+            )}
           </div>
 
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">

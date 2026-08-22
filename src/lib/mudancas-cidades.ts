@@ -2,13 +2,27 @@
  * Dados por cidade para as páginas /mudancas/[cidade].
  *
  * Cada cidade tem conteúdo genuinamente diferente — distância real à base
- * CLYON, faixa de preço calibrada por zonamento, rotas comuns, pontos de
- * referência locais, FAQ específico e schema.org LocalBusiness com
- * areaServed. É o padrão do pSEO que o Fixando/Habitissimo usam para
- * ranquear em long-tails ("mudanças alcochete", "mudanças barreiro").
+ * CLYON, rotas comuns, pontos de referência locais, FAQ específico e
+ * schema.org LocalBusiness com areaServed. É o padrão do pSEO que o
+ * Fixando/Habitissimo usam para ranquear em long-tails ("mudanças
+ * alcochete", "mudanças barreiro").
  *
  * Para adicionar uma cidade nova: copia um objeto existente, muda os
  * campos. Não é preciso mexer em código.
+ *
+ * NÃO HÁ PREÇOS AQUI — decisão de 22-08-2026
+ *
+ * Este ficheiro tinha `precoMin`/`precoMax` por cidade (de 140 a 220 € de
+ * piso) e eram esses números que alimentavam o herói, o cartão de faixa, a
+ * meta description e o `AggregateOffer` das treze páginas indexadas.
+ * O motor factura a mudança a partir de 490 € — sete horas a 70 €/h. Eram
+ * 340 € de diferença entre o que o Google mostrava e o que a factura dizia,
+ * multiplicados por treze páginas.
+ *
+ * Os campos foram removidos, e não substituídos por outro número: enquanto o
+ * site e o motor não estiverem alinhados, a mudança anuncia orçamento
+ * personalizado. As FAQ "quanto custa" ficaram — a pergunta é real e traz
+ * tráfego — mas respondem com o que faz variar o preço, não com um valor.
  */
 
 export interface CidadeMudanca {
@@ -24,9 +38,8 @@ export interface CidadeMudanca {
   tempoMedio: string;
   /** Coordenadas para schema.org */
   geo: { lat: number; lng: number };
-  /** Faixa de preço típica T0/T1 nesta cidade */
-  precoMin: number;
-  precoMax: number;
+  // Aqui estavam `precoMin`/`precoMax`. Ver a nota no topo do ficheiro: o
+  // site anunciava a partir de 150 € e o motor factura a partir de 490 €.
   /** Rotas mais comuns a partir desta cidade */
   rotasComuns: string[];
   /** Zonas / pontos de referência conhecidos da cidade */
@@ -49,8 +62,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 28,
     tempoMedio: "30 minutos",
     geo: { lat: 38.7223, lng: -9.1393 },
-    precoMin: 180,
-    precoMax: 750,
     rotasComuns: [
       "Lisboa → Cascais",
       "Lisboa → Oeiras",
@@ -74,7 +85,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança dentro de Lisboa?",
         resposta:
-          "Depende do volume e da complexidade dos acessos. Um T1 dentro de Lisboa fica normalmente entre 180€ e 320€. Prédios sem elevador em bairros antigos como Alfama ou Graça têm um acréscimo de 15–25% pela subida manual.",
+          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — não há tabela que sirva a todos os casos. Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo de equipa, e isso pesa. Diga-nos a tipologia e as duas moradas: o orçamento é personalizado e grátis em 24 horas.",
       },
       {
         pergunta: "Precisam de licença EMEL para estacionar no dia da mudança?",
@@ -97,8 +108,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 8,
     tempoMedio: "12 minutos",
     geo: { lat: 38.7548, lng: -8.9694 },
-    precoMin: 150,
-    precoMax: 550,
     rotasComuns: [
       "Alcochete → Lisboa (ponte Vasco da Gama)",
       "Alcochete → Montijo",
@@ -135,8 +144,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 12,
     tempoMedio: "15 minutos",
     geo: { lat: 38.6656, lng: -9.0722 },
-    precoMin: 150,
-    precoMax: 600,
     rotasComuns: [
       "Barreiro → Lisboa (ponte 25 de Abril)",
       "Barreiro → Seixal",
@@ -155,7 +162,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança de Barreiro para Lisboa?",
         resposta:
-          "Entre 180€ e 380€ para T1/T2, dependendo do volume e do bairro de destino em Lisboa. Passamos pela ponte 25 de Abril — a portagem entra no orçamento sem surpresas.",
+          "Depende do volume, do andar e do bairro de destino em Lisboa. Passamos pela ponte 25 de Abril — a portagem entra no orçamento, sem surpresas. Fazemos um orçamento personalizado e grátis em 24 horas.",
       },
       {
         pergunta: "Fazem mudanças no Barreiro Velho, onde as ruas são estreitas?",
@@ -173,8 +180,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 6,
     tempoMedio: "10 minutos",
     geo: { lat: 38.7062, lng: -8.9741 },
-    precoMin: 140,
-    precoMax: 520,
     rotasComuns: [
       "Montijo → Lisboa (ponte Vasco da Gama)",
       "Montijo → Alcochete",
@@ -193,7 +198,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança no Montijo?",
         resposta:
-          "Entre 140€ e 320€ dentro do Montijo para T0/T1. É uma das nossas cidades mais próximas da base — o custo de deslocação é mínimo.",
+          "É uma das nossas cidades mais próximas da base, por isso o custo de deslocação é mínimo — o resto do valor depende do volume, do andar e dos acessos. Diga-nos a tipologia e as moradas e recebe um orçamento personalizado e grátis em 24 horas.",
       },
       {
         pergunta: "Fazem mudanças de/para o Aeroporto do Montijo?",
@@ -211,8 +216,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 50,
     tempoMedio: "55 minutos",
     geo: { lat: 38.8029, lng: -9.3817 },
-    precoMin: 220,
-    precoMax: 850,
     rotasComuns: [
       "Sintra → Lisboa",
       "Sintra → Cascais",
@@ -236,7 +239,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
         resposta:
-          "Entre 250€ e 500€ para T1/T2. A distância (~25km centro-a-centro) tem impacto no orçamento mas mantemos preços competitivos.",
+          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Não publicamos tabela para esta rota: fazemos um orçamento personalizado e grátis em 24 horas.",
       },
     ],
     testemunho: null,
@@ -249,8 +252,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 38,
     tempoMedio: "40 minutos",
     geo: { lat: 38.6979, lng: -9.3086 },
-    precoMin: 200,
-    precoMax: 750,
     rotasComuns: [
       "Oeiras → Lisboa",
       "Oeiras → Cascais",
@@ -274,7 +275,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança Oeiras → Lisboa?",
         resposta:
-          "Entre 200€ e 420€ para T1/T2. A distância é curta (~15km) mas o trânsito na A5 em horas de ponta pode alongar o serviço — agendamos preferencialmente antes das 8h ou depois das 20h.",
+          "A distância é curta (~15 km), mas o trânsito na A5 em horas de ponta pode alongar o serviço — agendamos preferencialmente antes das 8h ou depois das 20h. O valor depende do volume e dos acessos; o orçamento é personalizado e grátis em 24 horas.",
       },
     ],
     testemunho: null,
@@ -287,8 +288,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 32,
     tempoMedio: "35 minutos",
     geo: { lat: 38.7145, lng: -9.2376 },
-    precoMin: 190,
-    precoMax: 700,
     rotasComuns: [
       "Carnaxide → Lisboa (A5)",
       "Carnaxide → Oeiras",
@@ -307,7 +306,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de Carnaxide para Lisboa?",
         resposta:
-          "Sim, é uma das rotas mais rápidas — pela A5 chegamos a Lisboa em 15 a 25 minutos fora das horas de ponta. Preço entre 190€ e 380€ para T1/T2.",
+          "Sim, é uma das rotas mais rápidas — pela A5 chegamos a Lisboa em 15 a 25 minutos fora das horas de ponta. O preço depende do volume e dos acessos nas duas moradas, e o orçamento é personalizado e grátis em 24 horas.",
       },
       {
         pergunta: "Conseguem entrar na Zona Industrial de Carnaxide com camião?",
@@ -325,8 +324,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 10,
     tempoMedio: "13 minutos",
     geo: { lat: 38.6336, lng: -9.1559 },
-    precoMin: 145,
-    precoMax: 520,
     rotasComuns: [
       "Corroios → Seixal",
       "Corroios → Almada",
@@ -345,12 +342,12 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Corroios?",
         resposta:
-          "Entre 145€ e 350€ para T0/T1. Por ser muito próximo da nossa base, o custo de deslocação é mínimo — um dos melhores preços da margem sul.",
+          "Por ser muito próximo da nossa base, o custo de deslocação é dos mais baixos da margem sul — o resto do valor depende do volume, do andar e do elevador. Orçamento personalizado e grátis em 24 horas.",
       },
       {
         pergunta: "Fazem mudanças Corroios → Lisboa?",
         resposta:
-          "Sim, pela ponte 25 de Abril o trajecto é rápido. Para T1/T2 o preço fica entre 200€ e 420€ incluindo portagem.",
+          "Sim, pela ponte 25 de Abril o trajecto é rápido e a portagem entra no orçamento. O valor depende do volume e dos acessos nas duas moradas — diga-nos os dados e respondemos em 24 horas.",
       },
     ],
     testemunho: null,
@@ -363,8 +360,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 15,
     tempoMedio: "18 minutos",
     geo: { lat: 38.5676, lng: -8.9025 },
-    precoMin: 155,
-    precoMax: 560,
     rotasComuns: [
       "Palmela → Setúbal",
       "Palmela → Montijo",
@@ -388,7 +383,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de Palmela para Lisboa?",
         resposta:
-          "Sim, pela A2 chegamos a Lisboa em 35 a 50 minutos. Para T1/T2 o preço fica entre 210€ e 420€.",
+          "Sim, pela A2 chegamos a Lisboa em 35 a 50 minutos. O orçamento é personalizado — depende do volume, da tipologia e dos acessos — e chega-lhe grátis em 24 horas.",
       },
     ],
     testemunho: null,
@@ -401,8 +396,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 37,
     tempoMedio: "42 minutos",
     geo: { lat: 38.7952, lng: -9.1853 },
-    precoMin: 195,
-    precoMax: 720,
     rotasComuns: [
       "Odivelas → Lisboa",
       "Odivelas → Loures",
@@ -421,7 +414,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança em Odivelas?",
         resposta:
-          "Entre 195€ e 420€ para T1/T2 dentro de Odivelas ou para Lisboa. A distância é média mas o trânsito pode alongar o serviço — por isso preferimos início às 7h.",
+          "A distância é média, mas o trânsito na IC17 e na CRIL pode alongar o serviço — por isso preferimos início às 7h. O valor depende do volume, do andar e do elevador; o orçamento é personalizado e grátis em 24 horas.",
       },
       {
         pergunta: "Fazem mudanças de Odivelas para Sintra ou Cascais?",
@@ -439,8 +432,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 30,
     tempoMedio: "33 minutos",
     geo: { lat: 38.7700, lng: -9.1570 },
-    precoMin: 185,
-    precoMax: 700,
     rotasComuns: [
       "Lumiar → Lisboa Centro",
       "Lumiar → Odivelas",
@@ -464,7 +455,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança no Lumiar?",
         resposta:
-          "Entre 185€ e 380€ para T1/T2 dentro do Lumiar. Para mudanças com destino a outros pontos de Lisboa o preço varia com o percurso.",
+          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Fazemos um orçamento personalizado e grátis em 24 horas.",
       },
     ],
     testemunho: null,
@@ -477,8 +468,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 25,
     tempoMedio: "28 minutos",
     geo: { lat: 38.4439, lng: -9.1014 },
-    precoMin: 165,
-    precoMax: 600,
     rotasComuns: [
       "Sesimbra → Almada",
       "Sesimbra → Setúbal",
@@ -502,7 +491,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança em Sesimbra?",
         resposta:
-          "Entre 165€ e 380€ dentro de Sesimbra ou para Almada. Para Lisboa o preço fica entre 220€ e 480€ incluindo portagem da ponte.",
+          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra no orçamento. Orçamento personalizado e grátis em 24 horas.",
       },
     ],
     testemunho: null,
@@ -515,8 +504,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     distanceKm: 20,
     tempoMedio: "23 minutos",
     geo: { lat: 38.6412, lng: -9.2353 },
-    precoMin: 160,
-    precoMax: 580,
     rotasComuns: [
       "Costa da Caparica → Almada",
       "Costa da Caparica → Lisboa (ponte 25 de Abril)",
@@ -540,7 +527,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança Costa da Caparica → Lisboa?",
         resposta:
-          "Entre 200€ e 420€ para T1/T2, incluindo a portagem da ponte 25 de Abril. Pela ponte o trajecto demora 20 a 35 minutos.",
+          "Pela ponte 25 de Abril o trajecto demora 20 a 35 minutos e a portagem entra no orçamento. O valor depende do volume e dos acessos — o orçamento é personalizado e grátis em 24 horas.",
       },
     ],
     testemunho: null,
