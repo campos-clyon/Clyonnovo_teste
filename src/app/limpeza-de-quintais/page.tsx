@@ -45,7 +45,7 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
 const faqs = [
   {
     question: "Que tipo de resíduos recolhem nos quintais?",
-    answer: "Recolhemos lixo verde (ramos, folhas, relva), móveis de jardim velhos, entulho de pequenas obras exteriores, vasos partidos, ferramentas avariadas e outros materiais acumulados em quintais e jardins.",
+    answer: "Os profissionais recolhem lixo verde (ramos, folhas, relva), móveis de jardim velhos, entulho de pequenas obras exteriores, vasos partidos, ferramentas avariadas e outros materiais acumulados em quintais e jardins.",
   },
   {
     question: "Quanto custa a limpeza de um quintal?",
@@ -57,7 +57,7 @@ const faqs = [
   },
   {
     question: "Recolhem lixo verde de grandes dimensões?",
-    answer: "Sim, recolhemos troncos, ramos grandes, sebes cortadas e outros resíduos verdes volumosos. A nossa carrinha e equipa estão preparadas para cargas de grande volume.",
+    answer: "Sim, os profissionais recolhem troncos, ramos grandes, sebes cortadas e outros resíduos verdes volumosos. A nossa carrinha e equipa estão preparadas para cargas de grande volume.",
   },
   {
     question: "Em quanto tempo fazem a limpeza?",
@@ -78,7 +78,7 @@ const includedItems = [
 
 const differentiators = [
   "Recolha em 24 a 48 horas na maioria das zonas",
-  "Carregamento directo pela nossa equipa",
+  "Carregamento direto pelo profissional",
   "Limpeza de quintais, pátios e varandas grandes",
   "Encaminhamento para reciclagem quando possível",
   "Equipa preparada para acessos difíceis",
@@ -135,7 +135,7 @@ export default function LimpezaQuintaisPage() {
                 Limpeza de Quintais em Lisboa e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Limpe o seu quintal ou jardim sem preocupações. Recolhemos lixo verde, 
+                Limpe o seu quintal ou jardim sem preocupações. Os profissionais recolhem lixo verde, 
                 entulho, móveis de exterior e outros resíduos acumulados.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -181,7 +181,7 @@ export default function LimpezaQuintaisPage() {
         <div className="grid gap-6 md:grid-cols-3">
           {[
             { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
-            { icon: Truck, title: "Carregamento incluído", desc: "A nossa equipa carrega todos os resíduos — não precisa de os preparar." },
+            { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega todos os resíduos — não precisa de os preparar." },
             { icon: Leaf, title: "Lixo verde aceite", desc: "Ramos, folhas, relva, troncos e outros resíduos de jardim." },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">

@@ -295,7 +295,7 @@ export async function POST(req: NextRequest) {
           return data.length > 0 ? { inlineData: { mimeType, data } } : null;
         }
         if (f.previewUrl) {
-          // Este `fetch` era directo ao que viesse no corpo do pedido: o
+          // Este `fetch` era direto ao que viesse no corpo do pedido: o
           // servidor ia buscar qualquer endereço que lhe mandassem, incluindo
           // os da rede interna, e a resposta dizia ao atacante se o sítio
           // existia. Agora só vai ao nosso armazenamento — ver
@@ -703,7 +703,7 @@ REGRAS ABSOLUTAS
       EXEMPLO: Esvaziamento Lisboa, distância 18km, acesso normal, cálculo = 180€ → preço = 270€ s/IVA.
       EXEMPLO: Carga completa Seixal, cálculo = 190€ → preço = 220€ s/IVA (mínimo zona).
       EXEMPLO: Esvaziamento Lisboa, 4º andar sem elevador → preço = 360€ s/IVA.
-   c) ENTULHO: tabela de preços POR SACO (afecta directamente o preço final — NÃO apenas o tempo):
+   c) ENTULHO: tabela de preços POR SACO (afecta diretamente o preço final — NÃO apenas o tempo):
         Sacos já ensacados (padrão)                              → 3,00 € por saco s/IVA
         Sacos sem elevador ou acesso difícil (agravamento)       → 3,20 € por saco s/IVA
         Entulho no chão (a ensacar)                              → usar custo_hora_pessoa × equipa
@@ -745,7 +745,7 @@ a) Conta os itens visíveis nas fotos e compara com o valor pré-calculado em "C
 b) Se as fotos revelam MAIS itens do que o valor pré-calculado, adiciona a diferença ao preço.
    Ex: texto diz "alguns móveis" (pré-calc = 3) mas fotos mostram claramente 6 peças → usa 6.
 c) Se as fotos confirmam ou mostram MENOS itens, mantém o valor pré-calculado (não reduzires).
-d) Avalia o volume/peso aparente: grandes electrodomésticos, materiais pesados ou volumosos
+d) Avalia o volume/peso aparente: grandes eletrodomésticos, materiais pesados ou volumosos
    que não foram mencionados na descrição devem ser reflectidos no preço.
 e) Avalia o estado de acesso: escadas visíveis, corredores estreitos, pisos altos sem elevador.
 f) Adiciona em "internalNotes" uma frase como:

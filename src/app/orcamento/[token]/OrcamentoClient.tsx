@@ -91,7 +91,7 @@ export default function OrcamentoClient({
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Orçamento confirmado!</h2>
         <p className="text-slate-600 max-w-sm mx-auto leading-relaxed">
-          Obrigado pela sua confirmação. A equipa CLYON irá entrar em contacto para dar seguimento ao seu pedido.
+          Obrigado pela sua confirmação. A CLYON entra em contacto para dar seguimento ao seu pedido.
         </p>
         <p className="mt-4 text-sm text-tinta-fraca">Pedido #{order.id}</p>
       </div>
@@ -109,7 +109,7 @@ export default function OrcamentoClient({
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Pedido cancelado</h2>
         <p className="text-slate-600 max-w-sm mx-auto leading-relaxed">
-          O seu pedido foi cancelado. Se tiver alguma dúvida, contacte-nos directamente.
+          O seu pedido foi cancelado. Se tiver alguma dúvida, contacte-nos diretamente.
         </p>
         <p className="mt-4 text-sm text-tinta-fraca">Pedido #{order.id}</p>
       </div>

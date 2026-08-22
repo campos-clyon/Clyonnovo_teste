@@ -118,7 +118,7 @@ function buildDescription(
 
   if (serviceSlug === "recolha-monos") {
     if (citySlug === "lisboa") {
-      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Retiramos sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços ${PRECO_MONOS}, resposta em 24h. Orçamento grátis por WhatsApp.`;
+      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Os profissionais retiram sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços ${PRECO_MONOS}, resposta em 24h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "almada") {
       return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços ${PRECO_MONOS}. Resposta em 24h por WhatsApp.`;
@@ -134,7 +134,7 @@ function buildDescription(
       return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços ${PRECO_ENTULHO}, resposta em 24h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento directo, resposta em 24h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
+      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento direto, resposta em 24h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
     }
     return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços ${PRECO_ENTULHO}, resposta em 24h. Orçamento grátis!`;
   }
@@ -153,14 +153,14 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
   const cityContent = getCityBaseContent(citySlug);
   if (cityContent?.localIntro) {
     if (isFurnitureService(serviceSlug)) {
-      return `${cityContent.localIntro} Retiramos sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária.`;
+      return `${cityContent.localIntro} Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária.`;
     }
     return `${cityContent.localIntro} ${serviceName} com resposta rápida e orçamento claro.`;
   }
 
   // Fallback genérico
   if (isFurnitureService(serviceSlug)) {
-    return `Fazemos recolha de móveis em ${cityName} para apartamentos, moradias, lojas e escritórios. Retiramos sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária, carregamento porta a porta e encaminhamento responsável em ${regionLabel}.`;
+    return `A CLYON liga o seu pedido de recolha de móveis em ${cityName} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária, carregamento porta a porta e encaminhamento responsável em ${regionLabel}.`;
   }
 
   return `${serviceName} em ${cityName} com resposta rápida, orçamento claro e execução cuidada. Trabalhamos em contexto residencial e comercial, com apoio local em ${regionLabel}.`;
@@ -246,7 +246,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
       },
       {
         q: `Recolhem sofás, camas e armários em ${cityName}?`,
-        a: `Sim. Retiramos sofás, colchões, camas, armários, cómodas, mesas, cadeiras e outros volumes grandes, desde que o pedido seja identificado no orçamento.`,
+        a: `Sim. Os profissionais retiram sofás, colchões, camas, armários, cómodas, mesas, cadeiras e outros volumes grandes, desde que o pedido seja identificado no orçamento.`,
       },
       {
         q: `Também recolhem eletrodomésticos em ${cityName}?`,
@@ -614,7 +614,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 Resposta reforçada em {city.name}
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `Trabalhamos em ${city.name} e zonas próximas com resposta rápida, orçamento claro e recolha cuidada. Retiramos os volumes validados, protegemos os acessos e deixamos o espaço pronto para a etapa seguinte.`}
+                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `Trabalhamos em ${city.name} e zonas próximas com resposta rápida, orçamento claro e recolha cuidada. Os profissionais retiram os volumes combinados, protegem os acessos e deixam o espaço pronto para o passo seguinte.`}
               </p>
               {/* Highlight local se for página prioritária */}
               {priorityContent?.neighborhoodHighlight && (
@@ -815,7 +815,7 @@ export default async function ServiceCityPage({ params }: Props) {
             <p className="mt-4 text-base leading-8 text-slate-600">
               Se precisa de retirar volumes, libertar espaço e evitar o esforço de
               carregar, desmontar e transportar sozinho, esta é a solução mais
-              simples. A nossa equipa organiza a recolha, trata do acesso e dá o
+              simples. O profissional organiza a recolha, trata do acesso e dá o
               encaminhamento adequado ao que sai do imóvel.
             </p>
             {isFurnitureService(service.slug) && (

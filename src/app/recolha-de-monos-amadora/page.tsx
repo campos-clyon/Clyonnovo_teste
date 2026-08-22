@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     question: "Vocês retiram os monos de dentro de casa?",
-    answer: "Sim, a nossa equipa entra no apartamento ou moradia, carrega os monos e transporta. Não precisa de colocar nada no exterior.",
+    answer: "Sim, o profissional entra no apartamento ou moradia, carrega os monos e transporta. Não precisa de colocar nada no exterior.",
   },
   {
     question: "Quanto custa a recolha de monos na Amadora?",
@@ -38,7 +38,7 @@ const faqs = [
   },
   {
     question: "Recolhem móveis pesados e volumosos?",
-    answer: "Sim, retiramos sofás, camas, armários, colchões, eletrodomésticos grandes e outros volumes pesados. A equipa está preparada para carregamento.",
+    answer: "Sim, os profissionais retiram sofás, camas, armários, colchões, eletrodomésticos grandes e outros volumes pesados. A equipa está preparada para carregamento.",
   },
   {
     question: "Fazem desmontagem de móveis?",
@@ -138,7 +138,7 @@ export default function MonosAmadoraPage() {
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
                   A CLYON faz recolha de monos, móveis velhos, sofás, colchões e objetos volumosos na Amadora. 
-                  Ao contrário da recolha municipal, a nossa equipa entra no imóvel, carrega tudo e 
+                  Ao contrário da recolha municipal, o profissional entra no imóvel, carrega tudo e 
                   transporta. Atendemos Reboleira, Damaia, Alfragide, Venteira e todas as freguesias.
                 </p>
 
@@ -221,7 +221,7 @@ export default function MonosAmadoraPage() {
                   {[
                     "Resposta rápida (24-48h na maioria dos casos)",
                     "Sem limite de volume por pedido",
-                    "Retiramos de dentro de casa",
+                    "Os profissionais retiram de dentro de casa",
                     "Desmontagem e carregamento incluídos",
                     "Solução completa num só pedido",
                   ].map((item) => (

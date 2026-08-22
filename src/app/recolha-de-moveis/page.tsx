@@ -133,7 +133,7 @@ const faqs = [
   },
   {
     q: "Também recolhem eletrodomésticos?",
-    a: "Sim. Recolhemos frigoríficos, máquinas de lavar, fogões, micro-ondas e outros equipamentos volumosos, desde que o pedido seja identificado no orçamento.",
+    a: "Sim. Os profissionais recolhem frigoríficos, máquinas de lavar, fogões, micro-ondas e outros equipamentos volumosos, desde que o pedido seja identificado no orçamento.",
   },
   {
     q: "O que acontece aos móveis recolhidos?",

@@ -301,7 +301,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Zona Industrial de Carnaxide — mudanças de escritório e armazém",
     ],
     desafio:
-      "Carnaxide tem uma mistura de prédios de anos 80 com elevadores de dimensão reduzida e moradias com acesso directo pela A5. O trânsito na IC19 e A5 em horas de ponta é o principal factor de tempo — agendamos sempre fora dos picos.",
+      "Carnaxide tem uma mistura de prédios de anos 80 com elevadores de dimensão reduzida e moradias com acesso direto pela A5. O trânsito na IC19 e A5 em horas de ponta é o principal factor de tempo — agendamos sempre fora dos picos.",
     faqs: [
       {
         pergunta: "Fazem mudanças de Carnaxide para Lisboa?",

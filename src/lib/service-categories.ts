@@ -35,7 +35,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "recolha-monos",
     label: "Recolha de monos",
     emoji: "📦",
-    description: "Volumes grandes, sucata, despejos e objectos antigos com resposta rápida.",
+    description: "Volumes grandes, sucata, despejos e objetos antigos com resposta rápida.",
     href: "/recolha-de-monos",
   },
   {

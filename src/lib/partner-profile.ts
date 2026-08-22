@@ -68,7 +68,7 @@ export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
  * Tipos de documento pedidos ao profissional no onboarding.
  *
  * Desde 27-07-2026 a CLYON não paga ao profissional — o cliente entrega-lhe o
- * valor directamente. Sem transferência, não há IBAN a recolher, e o app
+ * valor diretamente. Sem transferência, não há IBAN a recolher, e o app
  * deixou de o pedir. Fica na lista de rótulos para os documentos já enviados
  * continuarem a ter nome, mas não é exigido a ninguém.
  */

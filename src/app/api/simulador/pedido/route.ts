@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     // ── Quanto o cliente quer pagar ───────────────────────────────────────────
     //
     // Validado outra vez aqui, e não só no formulário. O ecrã impede a pessoa
-    // distraída; não impede quem chame a rota directamente, e esta é pública
+    // distraída; não impede quem chame a rota diretamente, e esta é pública
     // por necessidade. Um valor absurdo vindo de um campo de texto é lixo que
     // alguém teria de limpar à mão mais tarde.
     //

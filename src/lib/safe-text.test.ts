@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { safeText, metaOf } from "./safe-text";
 
-describe("safeText — nenhum objecto chega ao JSX", () => {
+describe("safeText — nenhum objeto chega ao JSX", () => {
   it("deixa passar texto", () => {
     expect(safeText("Mudança de T2")).toBe("Mudança de T2");
   });
@@ -26,8 +26,8 @@ describe("safeText — nenhum objecto chega ao JSX", () => {
     expect(safeText([])).toBeNull();
   });
 
-  // O caso que rebentou a agenda: details vinha do motor como objecto
-  it("devolve null para o objecto de details — nunca o próprio objecto", () => {
+  // O caso que rebentou a agenda: details vinha do motor como objeto
+  it("devolve null para o objeto de details — nunca o próprio objeto", () => {
     const details = { volume_m3: 12, itens: ["sofá"], piso: 3 };
     const t = safeText(details);
     expect(t).toBeNull();
@@ -46,8 +46,8 @@ describe("safeText — nenhum objecto chega ao JSX", () => {
   });
 });
 
-describe("metaOf — o objecto original viaja à parte", () => {
-  it("devolve o objecto quando existe", () => {
+describe("metaOf — o objeto original viaja à parte", () => {
+  it("devolve o objeto quando existe", () => {
     expect(metaOf({ volume_m3: 12 })).toEqual({ volume_m3: 12 });
   });
 

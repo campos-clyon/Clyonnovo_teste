@@ -34,7 +34,7 @@ function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
 }
 
 // Converte o conteúdo de service_requests.photos em URLs visualizáveis.
-// URLs http(s) passam directamente; paths de Storage geram signed URLs (1h),
+// URLs http(s) passam diretamente; paths de Storage geram signed URLs (1h),
 // tentando os buckets existentes (o nome do bucket não está no path guardado).
 async function resolvePhotoUrls(
   sb: ReturnType<typeof getSupabaseAdmin>,

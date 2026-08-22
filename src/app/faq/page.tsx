@@ -28,7 +28,7 @@ const faqCategories = [
       },
       {
         q: "Que móveis recolhem?",
-        a: "Recolhemos qualquer tipo de móvel: sofás, camas, colchões, armários, estantes, secretárias, cadeiras, mesas, aparadores, cómodas, roupeiros e mobiliário de escritório. Também retiramos eletrodomésticos (frigoríficos, máquinas de lavar, fogões, micro-ondas) e objetos de grandes dimensões que não cabem no contentor.",
+        a: "Os profissionais recolhem qualquer tipo de móvel: sofás, camas, colchões, armários, estantes, secretárias, cadeiras, mesas, aparadores, cómodas, roupeiros e mobiliário de escritório. Também retiram eletrodomésticos (frigoríficos, máquinas de lavar, fogões, micro-ondas) e objetos de grandes dimensões que não cabem no contentor.",
       },
       {
         q: "Fazem recolha de sofás em Lisboa no mesmo dia?",
@@ -36,7 +36,7 @@ const faqCategories = [
       },
       {
         q: "Recolhem sofás, colchões e camas com ou sem desmontagem?",
-        a: "Com ou sem desmontagem — a equipa avalia no local. Se o sofá ou a cama não passa pela porta ou pelo elevador, desmontamos antes de retirar. Este serviço está incluído no orçamento desde que indicado no pedido.",
+        a: "Com ou sem desmontagem — a equipa avalia no local. Se o sofá ou a cama não passa pela porta ou pelo elevador, desmontam antes de retirar. Este serviço está incluído no orçamento desde que indicado no pedido.",
       },
       {
         q: "Recolhem móveis velhos ou danificados?",
@@ -52,7 +52,7 @@ const faqCategories = [
       },
       {
         q: "Recolhem apenas uma peça ou precisam de vários móveis?",
-        a: "Recolhemos desde uma única peça (um sofá, uma cama, um armário) até uma casa inteira. Não há mínimo de volume.",
+        a: "Os profissionais recolhem desde uma única peça (um sofá, uma cama, um armário) até uma casa inteira. Não há mínimo de volume.",
       },
       {
         q: "Para onde vão os móveis recolhidos?",
@@ -89,7 +89,7 @@ const faqCategories = [
       },
       {
         q: "Recolhem tudo numa casa — do mobiliário ao lixo?",
-        a: "Sim. Retiramos móveis, eletrodomésticos, roupa, documentos para destruição, entulho de obras menores, objetos pessoais e qualquer outro conteúdo que esteja no imóvel. O cliente indica o que fica e o que vai — nós tratamos do resto.",
+        a: "Sim. Os profissionais retiram móveis, eletrodomésticos, roupa, documentos para destruição, entulho de obras menores, objetos pessoais e qualquer outro conteúdo que esteja no imóvel. O cliente indica o que fica e o que vai — o resto é com eles.",
       },
       {
         q: "Fazem esvaziamento de apartamento em Lisboa no centro histórico?",

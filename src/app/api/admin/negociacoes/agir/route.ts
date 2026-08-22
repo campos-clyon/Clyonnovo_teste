@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
      * A negociação tem de pertencer a ESTE pedido.
      *
      * Procura-se dentro das negociações do pedido em vez de ir buscar a
-     * negociação pelo id directamente. Um id solto vindo do corpo abriria a
+     * negociação pelo id diretamente. Um id solto vindo do corpo abriria a
      * porta a agir sobre a negociação de outro pedido por engano — e o engano
      * aqui fecha um trabalho com o profissional errado.
      */

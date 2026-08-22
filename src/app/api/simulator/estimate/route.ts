@@ -6,7 +6,7 @@ import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 export const runtime = "nodejs";
 
 // Motor C foi unificado com Motor B (calculateFastEstimate).
-// Este endpoint delega directamente para o motor activo.
+// Este endpoint delega diretamente para o motor activo.
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "simulator-estimate", 30, 60);
   if (limite.erro) return limite.erro;

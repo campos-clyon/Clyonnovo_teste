@@ -102,7 +102,7 @@ export default function Seguranca() {
         <h3 className="text-sm font-semibold text-slate-800">Método de autenticação</h3>
         <p className="mt-2 text-sm text-slate-500">
           O teu login é gerido pela Google — não tens palavra-passe CLYON para gerir.
-          Para alterar a palavra-passe da tua conta Google, faz-o directamente no Google.
+          Para alterar a palavra-passe da tua conta Google, faz-o diretamente no Google.
         </p>
         <a
           href="https://myaccount.google.com"

@@ -180,7 +180,7 @@ export default function ContactosClient() {
                 <CheckCircle2 className="h-12 w-12 text-cyan-500" />
                 <h2 className="text-lg font-bold text-tinta">Pedido recebido!</h2>
                 <p className="text-sm text-slate-500">
-                  A nossa equipa entra em contacto em breve. Obrigado!
+                  O profissional entra em contacto em breve. Obrigado!
                 </p>
                 <button
                   onClick={() => setStatus("idle")}
@@ -193,7 +193,7 @@ export default function ContactosClient() {
               <>
                 <h2 className="text-base font-bold text-tinta">Enviar pedido</h2>
                 <p className="mt-1 text-xs text-tinta-fraca">
-                  Preencha os dados — a nossa equipa responde em até 24h.
+                  Preencha os dados — o profissional responde em até 24h.
                 </p>
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
                   {field("nome", "Nome completo", "text", "Ana Silva")}

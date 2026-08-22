@@ -4,7 +4,7 @@ import { CUSTOMER_APPROVAL_STATUS } from "./order-status-flow";
  * Proposta de preço ao cliente — substitui a antiga "aprovação de orçamento".
  *
  * Plano de negociação de 24-07-2026 (§3, §6, §9): o admin já não aprova o
- * pedido directamente para `confirmed`. Envia uma PROPOSTA, o cliente decide,
+ * pedido diretamente para `confirmed`. Envia uma PROPOSTA, o cliente decide,
  * e só depois de ele aceitar e pagar a reserva é que o pedido é publicado.
  *
  * A escrita é feita pela RPC admin_send_price_proposal do Bridge — este

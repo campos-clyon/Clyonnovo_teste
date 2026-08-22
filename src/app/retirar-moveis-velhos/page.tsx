@@ -56,7 +56,7 @@ const faqs = [
   {
     question: "Que móveis velhos podem retirar?",
     answer:
-      "Retiramos praticamente todo o tipo de móvel velho: sofás, camas, colchões, armários, mesas, cadeiras, estantes, secretárias, eletrodomésticos grandes e pequenos, e outros volumes. Se tiver dúvida sobre um item específico, envie foto.",
+      "Os profissionais retiram praticamente todo o tipo de móvel velho: sofás, camas, colchões, armários, mesas, cadeiras, estantes, secretárias, eletrodomésticos grandes e pequenos, e outros volumes. Se tiver dúvida sobre um item específico, envie foto.",
   },
   {
     question: "Retiram móveis de dentro de casa?",

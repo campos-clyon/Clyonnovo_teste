@@ -75,7 +75,7 @@ const whenToHire = [
 const howItWorks = [
   {
     step: "01",
-    title: "Contacto directo",
+    title: "Contacto direto",
     description: "Ligue, envie WhatsApp ou preencha o formulário com fotos e morada.",
   },
   {

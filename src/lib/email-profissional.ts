@@ -9,9 +9,9 @@
  *     a zona. No sistema antigo encontrámos esta fuga — moradas de casa a
  *     chegarem a quem ainda não tinha aceitado nada.
  *
- * Por isso este ficheiro não recebe o pedido inteiro. Recebe um objecto já
+ * Por isso este ficheiro não recebe o pedido inteiro. Recebe um objeto já
  * reduzido, e o que ele mostra é só o que lá vier. Passar a linha da base
- * directamente para aqui seria dar-lhe tudo e confiar que ninguém escreveria
+ * diretamente para aqui seria dar-lhe tudo e confiar que ninguém escreveria
  * o campo errado no template.
  */
 

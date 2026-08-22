@@ -90,7 +90,7 @@ describe("origemDoPedido — o painel deixa de chamar simulador a tudo", () => {
   // O cabeçalho do detalhe dizia "#131 · Simulador" a um pedido de quatro
   // campos vindo da página de contactos. A equipa procurava dados que nunca
   // tinham sido pedidos.
-  it("um contacto directo não é um pedido do simulador", () => {
+  it("um contacto direto não é um pedido do simulador", () => {
     const o = origemDoPedido(JSON.stringify({ origemPedido: "formulario_contactos" }));
     expect(o.label).toBe("Contactos");
     expect(o.label).not.toBe("Simulador");

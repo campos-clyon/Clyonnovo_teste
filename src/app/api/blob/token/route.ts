@@ -7,7 +7,7 @@ import { TIPOS_ACEITES } from "@/lib/tipo-ficheiro";
 export const runtime = "nodejs";
 
 /**
- * Envio directo do browser para o armazenamento.
+ * Envio direto do browser para o armazenamento.
  *
  * O caminho normal — o browser manda o ficheiro à nossa função e a função
  * manda-o ao Blob — tem um tecto que não é nosso: o Vercel recusa qualquer
@@ -19,7 +19,7 @@ export const runtime = "nodejs";
  * como o reduzir no browser. Perdemos exactamente assim o vídeo do pedido #198.
  *
  * Por aqui o ficheiro nunca passa pela função: esta rota só assina uma
- * autorização de curta duração, e o browser carrega directamente. O que a
+ * autorização de curta duração, e o browser carrega diretamente. O que a
  * autorização permite está fechado aqui — que tipos, que tamanho máximo — e é
  * o servidor que o decide, não quem chama.
  */
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       {
         error: "ENVIO_DIRECTO_INDISPONIVEL",
         message:
-          "O envio directo precisa de um BLOB_READ_WRITE_TOKEN. " +
+          "O envio direto precisa de um BLOB_READ_WRITE_TOKEN. " +
           "Este ambiente autentica-se por identidade do deployment (OIDC), " +
           "que serve para gravar mas não para assinar autorizações de cliente.",
       },

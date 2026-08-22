@@ -246,7 +246,7 @@ describe("isPublishableStatus", () => {
     }
   });
 
-  it("nenhuma transição da negociação salta directamente para publicação", () => {
+  it("nenhuma transição da negociação salta diretamente para publicação", () => {
     for (const from of ["in_review", "awaiting_customer_approval", "received", "draft"]) {
       for (const to of ["confirmed", "assignment_pending"]) {
         expect(isValidTransition(from, to), `${from} → ${to}`).toBe(false);

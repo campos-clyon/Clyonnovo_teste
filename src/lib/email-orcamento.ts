@@ -150,7 +150,7 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
               <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${BUSINESS_PHONE}</a>
             </p>
             <p style="margin:6px 0 0;font-size:11px;color:#cbd5e0;text-align:center;">
-              Este email foi enviado automaticamente. Por favor não responda directamente.
+              Este email foi enviado automaticamente. Por favor não responda diretamente.
             </p>
           </td>
         </tr>

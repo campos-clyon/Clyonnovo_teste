@@ -67,7 +67,7 @@ const areaServedCities = [
 const benefits = [
   { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
   { icon: Users, title: "Carregamento completo", desc: "A equipa retira o sofá do interior do imóvel" },
-  { icon: Truck, title: "Transporte incluído", desc: "Levamos o sofá até ao destino adequado" },
+  { icon: Truck, title: "Transporte incluído", desc: "Levam o sofá até ao destino adequado" },
   { icon: Recycle, title: "Destino responsável", desc: "Triagem, doação ou encaminhamento correto" },
 ];
 
@@ -104,7 +104,7 @@ const faqs = [
   },
   {
     q: "Recolhem chaise longues e sofás de canto?",
-    a: "Sim. Recolhemos chaise longues, sofás de canto, sofás modulares e qualquer tipo de sofá, independentemente do tamanho ou formato.",
+    a: "Sim. Os profissionais recolhem chaise longues, sofás de canto, sofás modulares e qualquer tipo de sofá, independentemente do tamanho ou formato.",
   },
   {
     q: "O que acontece ao sofá depois da recolha?",
@@ -191,7 +191,7 @@ export default function RecolhaDeSofasPage() {
                 Precisa de retirar um sofá velho, uma chaise longue ou um cadeirão? A CLYON faz a <strong>recolha de sofás usados</strong> com carregamento do interior do imóvel, transporte e destino responsável. Atendemos pedidos em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                A recolha de sofá Lisboa é um dos serviços mais pedidos à CLYON. Muitos clientes precisam de libertar espaço rapidamente por mudança, renovação ou venda de casa. Nós tratamos de tudo: entramos no imóvel, carregamos o sofá e levamos para destino adequado.
+                A recolha de sofá Lisboa é um dos serviços mais pedidos à CLYON. Muitos clientes precisam de libertar espaço rapidamente por mudança, renovação ou venda de casa. Nós tratamos de tudo: entramos no imóvel, carregam o sofá e levam para destino adequado.
               </p>
 
               {/* CTA Buttons */}

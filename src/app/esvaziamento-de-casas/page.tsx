@@ -66,7 +66,7 @@ const faqs = [
   },
   {
     question: "Retiram os móveis de dentro da casa?",
-    answer: "Sim, a nossa equipa entra no imóvel, desmonta o necessário, carrega tudo e transporta. Não precisa colocar nada no exterior nem fazer qualquer esforço físico.",
+    answer: "Sim, o profissional entra no imóvel, desmonta o necessário, carrega tudo e transporta. Não precisa colocar nada no exterior nem fazer qualquer esforço físico.",
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
@@ -200,7 +200,7 @@ export default function EsvaziamentoDeCasasPage() {
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
                   Fazemos esvaziamento completo de casas, apartamentos, moradias, garagens e
-                  arrecadações. Retiramos móveis, eletrodomésticos, roupa e recheio com
+                  arrecadações. Os profissionais retiram móveis, eletrodomésticos, roupa e recheio com
                   carregamento, transporte e triagem responsável — <strong>doamos o que estiver em
                   bom estado</strong> a instituições parceiras e encaminhamos o restante para
                   destino legal. Limpeza associada disponível.

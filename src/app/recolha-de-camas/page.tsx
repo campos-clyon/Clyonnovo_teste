@@ -104,11 +104,11 @@ const faqs = [
   },
   {
     q: "Recolhem colchões também?",
-    a: "Sim. Recolhemos colchões de todas as medidas, incluindo colchões de casal, solteiro, king size e colchões de berço. O colchão pode ser recolhido junto com a cama ou separadamente.",
+    a: "Sim. Os profissionais recolhem colchões de todas as medidas, incluindo colchões de casal, solteiro, king size e colchões de berço. O colchão pode ser recolhido junto com a cama ou separadamente.",
   },
   {
     q: "Recolhem beliches e camas articuladas?",
-    a: "Sim. Recolhemos beliches, camas treliche, camas articuladas e camas hospitalares. A equipa trata da desmontagem quando necessário.",
+    a: "Sim. Os profissionais recolhem beliches, camas treliche, camas articuladas e camas hospitalares. A equipa trata da desmontagem quando necessário.",
   },
   {
     q: "O que acontece às camas recolhidas?",

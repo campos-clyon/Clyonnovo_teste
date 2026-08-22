@@ -9,7 +9,7 @@
  *
  *     estimativa?.total ?? estimativa?.max ?? estimativa?.min ?? 0
  *
- * e nenhum desses três campos existe. O objecto da estimativa chama-lhes
+ * e nenhum desses três campos existe. O objeto da estimativa chama-lhes
  * `estimatedPriceWithVat`, `estimatedPriceWithoutVat`, `estimateMaxWithoutVat`.
  * O `?.` devolvia `undefined` em cada um, a cadeia caía no `0`, o `0 > 0` era
  * falso e o valor de arranque era `null` — sempre, para todos os pedidos em
@@ -24,7 +24,7 @@
  * não lá dentro.
  */
 
-/** Só os campos que interessam. O resto do objecto da estimativa não importa. */
+/** Só os campos que interessam. O resto do objeto da estimativa não importa. */
 export type EstimativaComPreco = {
   estimatedPriceWithVat?: number | null;
   estimatedPriceWithoutVat?: number | null;

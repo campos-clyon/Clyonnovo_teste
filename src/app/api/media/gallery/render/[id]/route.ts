@@ -14,7 +14,7 @@ const NOINDEX_HEADER = "noindex, nofollow, noimageindex, noarchive";
  * Tipos que esta rota aceita servir.
  *
  * Antes bastava o data: URL começar por "data:image/" e o tipo declarado ia
- * directo para o cabeçalho Content-Type. "data:image/svg+xml" passava — e um
+ * direto para o cabeçalho Content-Type. "data:image/svg+xml" passava — e um
  * SVG é um documento que executa script. Como a resposta sai de clyon.pt, com
  * cache de um ano, quem conseguisse gravar um item na galeria ficava com
  * alojamento de script permanente no nosso domínio, útil para enganar clientes

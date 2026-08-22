@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 /**
  * O mapinha de um endereço, servido por nós.
  *
- * O caminho óbvio era pôr o URL da Google directamente no `src` da imagem. Isso
+ * O caminho óbvio era pôr o URL da Google diretamente no `src` da imagem. Isso
  * publica a chave em cada página onde o mapa aparece, e obriga a abrir a CSP a
  * um domínio externo. Aqui a chave nunca sai do servidor e a imagem continua a
  * vir de 'self'.

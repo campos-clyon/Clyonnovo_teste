@@ -50,8 +50,8 @@ export async function GET(req: NextRequest) {
       return {
         id: r.id,
         title: safeText(r.details) || safeText(r.category_slug) || "Pedido",
-        // O objecto continua disponível para o detalhe, mas nunca chega ao
-        // JSX como filho directo.
+        // O objeto continua disponível para o detalhe, mas nunca chega ao
+        // JSX como filho direto.
         details_meta: metaOf(r.details),
         city: safeText(r.city) ?? "",
         region: safeText(r.region) ?? "",

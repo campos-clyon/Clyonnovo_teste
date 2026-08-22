@@ -23,7 +23,7 @@
 /**
  * Os tipos aceites, como lista.
  *
- * A autorização de envio directo precisa deles em array, e não em Set. Uma
+ * A autorização de envio direto precisa deles em array, e não em Set. Uma
  * segunda lista escrita à mão nesse ficheiro acabaria por divergir desta — e a
  * divergência aparecia como "este ficheiro não é aceite" num caminho e não no
  * outro, sem nada que explicasse porquê.

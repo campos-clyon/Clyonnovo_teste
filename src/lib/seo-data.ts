@@ -281,7 +281,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha profissional de móveis velhos, recheios e volumes grandes com destino responsável.",
     longDescription:
-      "Retiramos sofás, camas, armários, eletrodomésticos e recheios completos com cuidado no acesso, transporte profissional e encaminhamento adequado. É a solução ideal para libertar espaço sem complicações.",
+      "Os profissionais retiram sofás, camas, armários, eletrodomésticos e recheios completos com cuidado no acesso, transporte profissional e encaminhamento adequado. É a solução ideal para libertar espaço sem complicações.",
     primaryKeyword: "recolha de móveis",
     keywords: [
       "recolha de móveis",
@@ -315,7 +315,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha rápida e organizada de entulho para obras, remodelações e limpezas pesadas.",
     longDescription:
-      "A CLYON trata da recolha de entulho com equipas rápidas, transporte responsável e triagem simples. Recolhemos restos de obra, sacos, materiais mistos e resíduos de remodelação em contexto residencial e comercial.",
+      "A CLYON trata da recolha de entulho com equipas rápidas, transporte responsável e triagem simples. Os profissionais recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação em contexto residencial e comercial.",
     primaryKeyword: "recolha de entulho",
     keywords: [
       "recolha de entulho",

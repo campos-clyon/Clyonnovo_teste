@@ -143,7 +143,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
    *
    * A conversão vive aqui e não na API: a API devolve a linha da base tal como
    * está, e quem a desenha decide o que dela precisa. Duas formas do mesmo
-   * objecto acabam por divergir — e a que diverge é sempre a que ninguém está
+   * objeto acabam por divergir — e a que diverge é sempre a que ninguém está
    * a olhar.
    */
   const propostas: NegociacaoDoCliente[] = useMemo(

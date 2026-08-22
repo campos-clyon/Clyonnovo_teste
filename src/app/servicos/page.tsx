@@ -60,7 +60,7 @@ const services: Service[] = [
     emoji: "🛋️",
     messages: [
       { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
-      { from: "clyon",   text: "Bom dia! Recolhemos amanhã de manhã — 75 € tudo incluído. Confirma?", time: "09:14" },
+      { from: "clyon",   text: "Bom dia! Fica marcado para amanhã de manhã — 75 € tudo incluído. Confirma?", time: "09:14" },
     ],
   },
   {
@@ -170,7 +170,7 @@ const faqs = [
   },
   {
     q: "Fazem desmontagem dentro de casa?",
-    a: "Sim. Desmontamos móveis e tratamos do carregamento a partir do interior do imóvel, loja, escritório ou arrecadação.",
+    a: "Sim. Os profissionais desmontam os móveis e tratam do carregamento a partir do interior do imóvel, loja, escritório ou arrecadação.",
   },
   {
     q: "Como pagar?",

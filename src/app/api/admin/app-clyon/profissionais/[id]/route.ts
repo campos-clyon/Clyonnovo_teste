@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * Detalhe e gestão de um profissional. `id` é partner_profiles.id (NÃO o
  * user_id — ver comentário na rota da listagem).
  *
- * O painel escreve directamente em partner_profiles porque não existe RPC
+ * O painel escreve diretamente em partner_profiles porque não existe RPC
  * de administração de parceiros no Bridge (só admin_moderate_review, para
  * avaliações). Todas as escritas ficam registadas em admin_audit_log.
  */

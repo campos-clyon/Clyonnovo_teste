@@ -1217,8 +1217,8 @@ export async function verificarGuiaDeTransporte(
 /**
  * Altera o perfil de um profissional — só os campos que vierem.
  *
- * Constrói o UPDATE a partir do que foi pedido, e não a partir de um objecto
- * completo: com um objecto completo, mudar o raio reescrevia as categorias com
+ * Constrói o UPDATE a partir do que foi pedido, e não a partir de um objeto
+ * completo: com um objeto completo, mudar o raio reescrevia as categorias com
  * o que estivesse em memória no painel, que pode estar desactualizado.
  */
 export async function actualizarProfissional(
@@ -3348,10 +3348,10 @@ export async function updateSimulatorOrder(
     prevForNotify = prevRows[0] ?? null;
   }
 
-  // ⚠️ As chaves deste objecto vão para a LISTA DE COLUNAS do SQL, e uma
+  // ⚠️ As chaves deste objeto vão para a LISTA DE COLUNAS do SQL, e uma
   // consulta preparada parametriza valores, não identificadores. Como o
   // PATCH de /api/admin/pedidos faz `const { id, ...fields } = body` e passa
-  // isto directamente, os nomes das colunas vinham do corpo do pedido: uma
+  // isto diretamente, os nomes das colunas vinham do corpo do pedido: uma
   // chave como `status = 'x', outraColuna` acrescentava SQL à instrução.
   //
   // Só um administrador autenticado lá chegava — mas o updateColaborador,
@@ -4044,7 +4044,7 @@ export async function cancelarOrcamentoPeloCliente(token: string): Promise<{ ok:
   const order = await getOrderByToken(token);
   if (!order) return { ok: false, error: "Pedido não encontrado." };
   if ((order as any).canceladoPeloCliente) return { ok: true }; // idempotente
-  if ((order as any).confirmadoPeloCliente) return { ok: false, error: "O pedido já foi confirmado e não pode ser cancelado aqui. Por favor contacte a CLYON directamente." };
+  if ((order as any).confirmadoPeloCliente) return { ok: false, error: "O pedido já foi confirmado e não pode ser cancelado aqui. Por favor contacte a CLYON diretamente." };
   await pool.execute(
     "UPDATE simulatorOrders SET canceladoPeloCliente = 1, canceladoPeloClienteEm = NOW(), status = 'cancelado', updatedAt = NOW() WHERE orcamentoToken = ?",
     [token]

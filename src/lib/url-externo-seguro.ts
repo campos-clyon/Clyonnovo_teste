@@ -4,7 +4,7 @@
  * PORQUÊ ISTO EXISTE
  *
  * A rota de análise recebia um `previewUrl` do corpo do pedido e fazia
- * `fetch(previewUrl)` directo, sem autenticação a montante. Isso transformava
+ * `fetch(previewUrl)` direto, sem autenticação a montante. Isso transformava
  * o servidor da CLYON num proxy: qualquer pessoa podia pedir-lhe que fosse
  * buscar `http://127.0.0.1:6379`, `http://10.0.0.5:8080` ou qualquer endereço
  * da rede interna, e distinguir "respondeu" de "não respondeu" pela mensagem

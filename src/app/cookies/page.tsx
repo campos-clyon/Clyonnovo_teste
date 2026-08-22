@@ -216,7 +216,7 @@ export default function CookiesPage() {
                     necessário / funcional).
                   </li>
                   <li>
-                    <strong>WhatsApp</strong> — botão de contacto directo (categoria: necessário).
+                    <strong>WhatsApp</strong> — botão de contacto direto (categoria: necessário).
                   </li>
                   <li>
                     <strong>Vercel</strong> — plataforma de alojamento e desempenho (categoria:

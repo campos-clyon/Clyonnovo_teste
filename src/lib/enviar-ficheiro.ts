@@ -59,7 +59,7 @@ async function pelaNossaFuncao(f: File): Promise<ResultadoDoEnvio> {
   };
 }
 
-async function directoAoArmazenamento(f: File): Promise<ResultadoDoEnvio> {
+async function diretoAoArmazenamento(f: File): Promise<ResultadoDoEnvio> {
   const chave = `simulador/${nomeSeguro(f.name)}`;
   const blob = await upload(chave, f, {
     access: "public",
@@ -99,7 +99,7 @@ export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> 
   }
 
   try {
-    return await directoAoArmazenamento(ficheiro);
+    return await diretoAoArmazenamento(ficheiro);
   } catch (err) {
     const bruto = err instanceof Error ? err.message : String(err);
     // A mensagem tem de dizer o que se passa a quem a for ler nos registos.
@@ -107,7 +107,7 @@ export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> 
     return {
       ok: false,
       motivo: bruto.includes("ENVIO_DIRECTO_INDISPONIVEL")
-        ? `${ficheiro.name}: ficheiro grande (${Math.round(ficheiro.size / 1024 / 1024)} MB) e o envio directo não está configurado — falta BLOB_READ_WRITE_TOKEN`
+        ? `${ficheiro.name}: ficheiro grande (${Math.round(ficheiro.size / 1024 / 1024)} MB) e o envio direto não está configurado — falta BLOB_READ_WRITE_TOKEN`
         : `${ficheiro.name}: ${bruto}`,
     };
   }

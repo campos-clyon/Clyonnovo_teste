@@ -67,7 +67,7 @@ const areaServedCities = [
 const benefits = [
   { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
   { icon: Users, title: "Carregamento completo", desc: "A equipa retira o eletrodoméstico do interior do imóvel" },
-  { icon: Truck, title: "Transporte incluído", desc: "Levamos o equipamento até ao destino adequado" },
+  { icon: Truck, title: "Transporte incluído", desc: "Levam o equipamento até ao destino adequado" },
   { icon: Recycle, title: "Destino responsável", desc: "Encaminhamento para reciclagem ou reutilização" },
 ];
 
@@ -96,7 +96,7 @@ const faqs = [
   },
   {
     q: "Recolhem frigoríficos e máquinas de lavar?",
-    a: "Sim. Recolhemos frigoríficos, máquinas de lavar roupa, máquinas de lavar loiça, máquinas de secar e qualquer eletrodoméstico de grande porte.",
+    a: "Sim. Os profissionais recolhem frigoríficos, máquinas de lavar roupa, máquinas de lavar loiça, máquinas de secar e qualquer eletrodoméstico de grande porte.",
   },
   {
     q: "Recolhem eletrodomésticos no mesmo dia?",

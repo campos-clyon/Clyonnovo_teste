@@ -71,7 +71,7 @@ const faqs = [
   },
   {
     question: "Recolhem monos em apartamentos sem elevador?",
-    answer: "Sim, a nossa equipa faz o carregamento mesmo em andares altos ou com acessos difíceis. O transporte está incluído no serviço.",
+    answer: "Sim, o profissional faz o carregamento mesmo em andares altos ou com acessos difíceis. O transporte está incluído no serviço.",
   },
   {
     question: "Fazem recolha de monos no mesmo dia?",
@@ -96,7 +96,7 @@ const includedItems = [
 
 const differentiators = [
   "Recolha de monos em 24 a 48 horas na maioria das zonas",
-  "Carregamento directo pela nossa equipa",
+  "Carregamento direto pelo profissional",
   "Sem necessidade de descer os objetos à rua",
   "Encaminhamento para reciclagem quando possível",
   "Equipa preparada para acessos difíceis",
@@ -153,8 +153,8 @@ export default function RecolhaMonosPage() {
                 Recolha de Monos em Lisboa e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Livre-se de objetos volumosos que já não usa. Recolhemos móveis velhos, colchões, 
-                eletrodomésticos avariados e outros monos com carregamento directo.
+                Livre-se de objetos volumosos que já não usa. Os profissionais recolhem móveis velhos, colchões, 
+                eletrodomésticos avariados e outros monos com carregamento direto.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -201,7 +201,7 @@ export default function RecolhaMonosPage() {
         <div className="grid gap-6 md:grid-cols-3">
           {[
             { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
-            { icon: Truck, title: "Carregamento incluído", desc: "A nossa equipa carrega os monos — não precisa de os descer à rua." },
+            { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega os monos — não precisa de os descer à rua." },
             { icon: Recycle, title: "Destino responsável", desc: "Encaminhamento para reciclagem sempre que possível." },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">

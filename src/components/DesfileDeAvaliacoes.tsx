@@ -11,7 +11,7 @@ import { reviews } from "@/lib/reviews-data";
  *
  * Porque precisa de estado, e a homepage é Server Component. O botão de pausa
  * não é decoração: movimento automático que dura mais de cinco segundos e não
- * pode ser parado é falha directa do critério 2.2.2 das WCAG.
+ * pode ser parado é falha direta do critério 2.2.2 das WCAG.
  *
  * E é pior do que uma falha de conformidade. Isto anda em ciclo de 75
  * segundos e só parava com o rato por cima — `:hover`, que não existe em

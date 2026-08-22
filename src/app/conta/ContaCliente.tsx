@@ -78,7 +78,7 @@ export default function ContaCliente({
    * dados da manhã — e a esta altura já há propostas a chegar enquanto ele
    * está a olhar.
    *
-   * Só se troca o que mudou de facto: um objecto novo a cada minuto obrigava
+   * Só se troca o que mudou de facto: um objeto novo a cada minuto obrigava
    * o React a redesenhar tudo, e os formulários da conta a serem remontados
    * por baixo de quem estivesse a escrever.
    */

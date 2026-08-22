@@ -20,7 +20,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
 export const metadata: Metadata = {
   title: "Recolha de Sofá Lisboa | Carregamento e Transporte | CLYON",
   description:
-    "Recolha de sofá em Lisboa com carregamento porta a porta e transporte incluído. Retiramos sofás, chaise longues e cadeirões. Orçamento grátis: 931 632 622.",
+    "Recolha de sofá em Lisboa com carregamento porta a porta e transporte incluído. Os profissionais retiram sofás, chaise longues e cadeirões. Orçamento grátis: 931 632 622.",
   keywords: [
     "recolha de sofá Lisboa",
     "retirar sofá Lisboa",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Sofá Lisboa | Carregamento e Transporte | CLYON",
     description:
-      "Recolha de sofá em Lisboa com carregamento porta a porta e transporte incluído. Retiramos sofás, chaise longues e cadeirões.",
+      "Recolha de sofá em Lisboa com carregamento porta a porta e transporte incluído. Os profissionais retiram sofás, chaise longues e cadeirões.",
     url: "https://clyon.pt/recolha-de-sofa-lisboa",
     siteName: "CLYON",
     locale: "pt_PT",
@@ -52,7 +52,7 @@ const faqs = [
   {
     question: "Recolhem sofás de qualquer tamanho?",
     answer:
-      "Sim. Recolhemos sofás de 2 lugares, 3 lugares, chaise longues, sofás-cama, cadeirões e conjuntos completos. A equipa está preparada para volumes grandes.",
+      "Sim. Os profissionais recolhem sofás de 2 lugares, 3 lugares, chaise longues, sofás-cama, cadeirões e conjuntos completos. A equipa está preparada para volumes grandes.",
   },
   {
     question: "O sofá precisa de estar desmontado?",
@@ -185,7 +185,7 @@ export default function RecolhaSofaLisboaPage() {
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
             Precisa de retirar um sofá em Lisboa? A CLYON faz a recolha porta a porta com carregamento,
-            desmontagem quando necessário e transporte incluído. Retiramos sofás de qualquer tamanho,
+            desmontagem quando necessário e transporte incluído. Os profissionais retiram sofás de qualquer tamanho,
             de qualquer andar, com ou sem elevador.
           </p>
 

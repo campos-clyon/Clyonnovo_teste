@@ -342,7 +342,7 @@ export default function HeroQuoteForm() {
           <h3 className="mt-5 text-xl font-bold text-tinta">Pedido enviado com sucesso!</h3>
 
           <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-tinta-fraca">
-            A nossa equipa irá entrar em contacto em breve para confirmar data, horário e detalhes do serviço.
+            Recebe as propostas dos profissionais dentro de {PRAZO_DE_RESPOSTA.porExtenso}. Escolhe a que quiser — ou nenhuma, sem compromisso.
           </p>
 
           {/* info pills */}

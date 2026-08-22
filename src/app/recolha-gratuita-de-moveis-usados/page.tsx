@@ -106,7 +106,7 @@ const faqs = [
   },
   {
     q: "A CLYON recolhe móveis em mau estado?",
-    a: "Sim. Recolhemos móveis em qualquer estado, incluindo peças danificadas, húmidas ou inutilizáveis. O encaminhamento é feito de forma responsável, mesmo quando não é possível doar ou reaproveitar.",
+    a: "Sim. Os profissionais recolhem móveis em qualquer estado, incluindo peças danificadas, húmidas ou inutilizáveis. O encaminhamento é feito de forma responsável, mesmo quando não é possível doar ou reaproveitar.",
   },
   {
     q: "Quanto custa a recolha de móveis com a CLYON?",

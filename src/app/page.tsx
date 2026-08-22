@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
     description:
-      "Retiramos sofás, armários, colchões, monos e tudo o que já não precisa. Orçamento gratuito em 24h. Lisboa, Margem Sul e Setúbal.",
+      "Descreva o que tem para levar e receba propostas de profissionais verificados. Sofás, armários, colchões, monos e esvaziamentos. Orçamento gratuito em 24h. Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt",
   },
 };
@@ -127,7 +127,13 @@ const GUARANTEES = [
     stat: "100%",
     statLabel: "com historial verificado",
     description:
-      "Todos os operacionais passam por verificação de identidade e avaliação de qualidade contínua. Nenhum profissional sem historial entra na plataforma.",
+      // Dizia "Todos os profissionais passam por verificação de identidade e
+      // avaliação de qualidade contínua. Nenhum profissional sem historial
+      // entra na plataforma." — política de plataforma, escrita de dentro
+      // para dentro. "Operacionais" é palavra que nenhum cliente usa, e a
+      // frase falava sobre quem se admite, não sobre o que ele ganha com
+      // isso. Passa a dizer o que lhe interessa: quem lhe bate à porta.
+      "Quem chega a sua casa passou por verificação de identidade e tem historial avaliado por outros clientes. Vê a nota e os trabalhos antes de escolher.",
     gradient: "from-cyan-400 to-cyan-500",
     glow: "shadow-cyan-500/40",
     iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
@@ -219,6 +225,24 @@ export default function HomePage() {
           {/* ── Left: copy ───────────────────────────────────────────── */}
           <div className="mb-8 lg:mb-0">
 
+            {/*
+              A CLYON NÃO RETIRA NADA — LIGA QUEM RETIRA.
+
+              O subtítulo dizia "Os profissionais retiram sofás, armários, colchões...". É a
+              voz de quem executa, e a CLYON deixou de executar: é plataforma.
+              Quem vai a casa, desmonta e carrega é o profissional, e é ele
+              quem emite a factura.
+
+              O problema não é de estilo. Estava escrito na segunda linha mais
+              visível do site, e a linha de baixo — nas garantias — já dizia o
+              contrário: "profissionais verificados". O site comunicava os dois
+              modelos ao mesmo tempo, e o que ganhava a atenção era justamente
+              o que está a ser abandonado.
+
+              Regra, daqui para a frente: a CLYON ORGANIZA, CONFIRMA e GARANTE;
+              o profissional EXECUTA. Nada de "retiramos", "levamos" ou "a
+              equipa atribuída" em página que o cliente veja.
+            */}
             {/* H1 */}
             <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-tinta sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
               Recolha de móveis{" "}
@@ -228,8 +252,10 @@ export default function HomePage() {
 
             {/* Subtitle */}
             <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
-              Retiramos sofás, armários, colchões, monos e tudo o que já não precisa.
-              Orçamento gratuito em {PRAZO_DE_RESPOSTA.porExtenso}. Serviço em Lisboa, Margem Sul e Setúbal.
+              Descreva o que tem para levar e receba propostas de profissionais
+              verificados. Sofás, armários, colchões, monos e esvaziamentos
+              completos, em Lisboa, Margem Sul e Setúbal — com orçamento
+              gratuito em {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
 
             {/* Category pills */}
@@ -368,7 +394,7 @@ export default function HomePage() {
           {/*
             A GRELHA DE SERVIÇOS NÃO TINHA TÍTULO.
 
-            Entrava directa nos cartões, e os nomes dos serviços são <h3> sem
+            Entrava direta nos cartões, e os nomes dos serviços são <h3> sem
             um <h2> antes — salto de nível, que é falha do critério 1.3.1 das
             WCAG. Para quem navega por cabeçalhos, a página tinha um buraco
             entre "Simples do início ao fim" e "Construída para inspirar

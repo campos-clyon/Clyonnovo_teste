@@ -65,7 +65,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
           "Se o objectivo é tirar os móveis rapidamente, desmontar no local, descer escadas, carregar volumes pesados e libertar o espaço sem depender de várias entidades, a recolha privada passa a ser muito mais eficaz.",
-          "É aqui que a CLYON entra na Costa da Caparica: como serviço privado para recolha de sofás, camas, armários, colchões, electrodomésticos e recheios quando a via gratuita não resolve o problema prático.",
+          "É aqui que a CLYON entra na Costa da Caparica: como serviço privado para recolha de sofás, camas, armários, colchões, eletrodomésticos e recheios quando a via gratuita não resolve o problema prático.",
         ],
       },
       {
@@ -117,13 +117,13 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quando faz sentido pedir recolha de móveis",
         paragraphs: [
-          "Este serviço faz sentido quando existem peças grandes, pesadas ou em quantidade suficiente para tornar inviável a remoção por meios próprios. Sofás, camas, roupeiros, cómodas, mesas, electrodomésticos e recheios mistos são os casos mais comuns.",
+          "Este serviço faz sentido quando existem peças grandes, pesadas ou em quantidade suficiente para tornar inviável a remoção por meios próprios. Sofás, camas, roupeiros, cómodas, mesas, eletrodomésticos e recheios mistos são os casos mais comuns.",
           "Também é muito frequente em apartamentos sem elevador, mudanças parciais, imóveis para arrendamento, escritórios em renovação e casas que precisam de ser libertadas antes de obras ou entrega de chave.",
         ],
         bullets: [
           "Sofás, colchões, camas e estrados",
           "Roupeiros, aparadores, cómodas e mesas",
-          "Electrodomésticos e recheios antigos",
+          "Eletrodomésticos e recheios antigos",
           "Móveis desmontados ou por desmontar",
         ],
       },
@@ -138,13 +138,13 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Como acelerar o pedido e evitar atrásos",
         paragraphs: [
           "O melhor ponto de partida é enviar morada, lista básica de peças, fotos quando possível, tipo de acesso ao imóvel e urgência do serviço. Se existir desmontagem prévia ou rua de acesso difícil, isso também deve ser referido.",
-          "No caso da CLYON, o simulador ajuda a criar uma primeira referência de valor. Depois, o contacto directo por WhatsApp ou telefone serve para confirmar condições, disponibilidade e hora de recolha.",
+          "No caso da CLYON, o simulador ajuda a criar uma primeira referência de valor. Depois, o contacto direto por WhatsApp ou telefone serve para confirmar condições, disponibilidade e hora de recolha.",
         ],
       },
       {
         title: "Quando doar e quando despejar",
         paragraphs: [
-          "Nem todo o móvel precisa de ir para despejo. Peças em bom estado podem seguir para doação, reaproveitamento ou venda. Peças partidas, húmidas, sem ferragens ou sem viabilidade de uso tendem a justificar despejo directo.",
+          "Nem todo o móvel precisa de ir para despejo. Peças em bom estado podem seguir para doação, reaproveitamento ou venda. Peças partidas, húmidas, sem ferragens ou sem viabilidade de uso tendem a justificar despejo direto.",
           "Uma boa estratégia SEO para este tema não é falar apenas de recolha. É responder à dúvida real do utilizador: doar, vender, reaproveitar ou despejar? É aí que o conteúdo ganha intenção e relevância nas pesquisas.",
         ],
       },
@@ -211,19 +211,19 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando o despejo é a solução mais realista",
         paragraphs: [
           "Se o mobiliário está partido, com humidade, infestação, ferragens danificadas, mau cheiro, falta de estabilidade ou desgaste avançado, o mais prático costuma ser o despejo.",
-          "Em operações urgentes, o cliente geralmente prefere uma solução directa: retirar tudo numa só visita, sem depender de vários contactos, triagens demoradas ou recolhas selectivas incertas.",
+          "Em operações urgentes, o cliente geralmente prefere uma solução direta: retirar tudo numa só visita, sem depender de vários contactos, triagens demoradas ou recolhas selectivas incertas.",
         ],
         bullets: [
           "Peças com danos estruturais",
           "Móveis com bolor, humidade ou sujidade pesada",
           "Itens sem valor de reutilização",
-          "Objectos que atrásam a libertação do espaço",
+          "Objetos que atrásam a libertação do espaço",
         ],
       },
       {
         title: "Doação, venda e plataformas digitais",
         paragraphs: [
-          "Em pesquisas relacionadas com móveis usados, muitas pessoas procuram alternativas antes de avançar para a recolha. Plataformas como a OLX podem ser úteis para tentar venda local ou oferta directa a particulares. Isso faz sentido quando a peça ainda tem valor e existe tempo para gerir mensagens, marcações e levantamento.",
+          "Em pesquisas relacionadas com móveis usados, muitas pessoas procuram alternativas antes de avançar para a recolha. Plataformas como a OLX podem ser úteis para tentar venda local ou oferta direta a particulares. Isso faz sentido quando a peça ainda tem valor e existe tempo para gerir mensagens, marcações e levantamento.",
           "Em alguns cenários, o utilizador também procura serviços, montagens ou apoio por plataformas como a Fixando. Ainda assim, quando o problema principal é tirar volume depressa, com equipa e transporte incluídos, a decisão costuma voltar para um operador de recolha.",
         ],
       },
@@ -271,12 +271,12 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Alternativas",
     intro:
-      "Antes de pedir recolha, muita gente pesquisa soluções alternativas para móveis usados: doação, venda, reaproveitamento, entrega a instituições ou plataformas com procura local. Este artigo responde precisamente a essa intenção de pesquisa e ajuda a decidir quando vale a pena tentar essas vias e quando a recolha directa é o caminho mais eficaz.",
+      "Antes de pedir recolha, muita gente pesquisa soluções alternativas para móveis usados: doação, venda, reaproveitamento, entrega a instituições ou plataformas com procura local. Este artigo responde precisamente a essa intenção de pesquisa e ajuda a decidir quando vale a pena tentar essas vias e quando a recolha direta é o caminho mais eficaz.",
     sections: [
       {
         title: "Quando vender em vez de despejar",
         paragraphs: [
-          "Se a peça está moderna, funcional, sem danos e com procura no mercado local, anunciar pode ser a melhor primeira tentativa. A OLX continua a ser uma referência natural neste tipo de pesquisa porque liga vendedores e compradores de forma directa.",
+          "Se a peça está moderna, funcional, sem danos e com procura no mercado local, anunciar pode ser a melhor primeira tentativa. A OLX continua a ser uma referência natural neste tipo de pesquisa porque liga vendedores e compradores de forma direta.",
           "O problema é que vender demora. Exige criar anúncio, negociar, responder a mensagens e coordenar levantamento. Se a prioridade é libertar espaço no mesmo dia ou numa janela curta, a recolha profissional volta a ganhar vantagem.",
         ],
       },
@@ -306,7 +306,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Vale a pena anunciar móveis usados antes da recolha?",
         answer:
-          "Sim, se a peça estiver em bom estado e houver tempo para gerir o anúncio. Quando há urgência, a recolha directa costuma ser a solução mais prática.",
+          "Sim, se a peça estiver em bom estado e houver tempo para gerir o anúncio. Quando há urgência, a recolha direta costuma ser a solução mais prática.",
       },
       {
         question: "Posso doar umas peças e pedir recolha do resto?",
@@ -364,7 +364,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O acesso ao prédio altera o valor?",
         answer:
-          "Sim. Andares, elevador, distância até ao ponto de carga e acesso difícil têm impacto directo no esforço e no custo.",
+          "Sim. Andares, elevador, distância até ao ponto de carga e acesso difícil têm impacto direto no esforço e no custo.",
       },
     ],
   },
@@ -372,7 +372,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "recolha-de-monos-o-que-inclui",
     title: "Recolha de monos: o que inclui, quando pedir e como acelerar o serviço",
     description:
-      "Artigo completo sobre recolha de monos, volumosos, objectos sem uso, despejo rápido e libertação de espaço em casas, lojas e arrecadações.",
+      "Artigo completo sobre recolha de monos, volumosos, objetos sem uso, despejo rápido e libertação de espaço em casas, lojas e arrecadações.",
     category: "Monos",
     keywords: [
       "recolha de monos",
@@ -385,16 +385,16 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Volumosos",
     intro:
-      "Monos é um termo usado para definir objectos grandes, velhos ou sem utilidade que ocupam espaço e são difíceis de remover. A diferença para um pedido simples está no volume, na mistura de materiais e na falta de organização prévia do que vai sair.",
+      "Monos é um termo usado para definir objetos grandes, velhos ou sem utilidade que ocupam espaço e são difíceis de remover. A diferença para um pedido simples está no volume, na mistura de materiais e na falta de organização prévia do que vai sair.",
     sections: [
       {
         title: "Exemplos de monos mais comuns",
         paragraphs: [
-          "Sofás velhos, colchões, madeira solta, electrodomésticos fora de uso, cadeiras partidas, restos de arrumos, material acumulado em arrecadações e objectos sem valor de reaproveitamento entram frequentemente nesta categoria.",
+          "Sofás velhos, colchões, madeira solta, eletrodomésticos fora de uso, cadeiras partidas, restos de arrumos, material acumulado em arrecadações e objetos sem valor de reaproveitamento entram frequentemente nesta categoria.",
         ],
         bullets: [
           "Sofás velhos e colchões",
-          "Electrodomésticos fora de uso",
+          "Eletrodomésticos fora de uso",
           "Madeira solta e restos de arrumos",
           "Volumosos mistos em garagens e caves",
         ],
@@ -409,7 +409,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Monos, lixo e limpeza do espaço",
         paragraphs: [
-          "Em muitos pedidos, a recolha de monos aparece associada a acumulação, desorganização e lixo leve. Isso significa que a intenção de pesquisa não é só ‘levar objectos’, mas deixar a divisão utilizável de novo.",
+          "Em muitos pedidos, a recolha de monos aparece associada a acumulação, desorganização e lixo leve. Isso significa que a intenção de pesquisa não é só ‘levar objetos’, mas deixar a divisão utilizável de novo.",
         ],
       },
     ],
@@ -476,7 +476,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "esvaziamento-de-casas-com-recheio",
     title: "Esvaziamento de casas com recheio: heranças, mudanças e imóveis para venda",
     description:
-      "Guia completo sobre esvaziamento de casas, recheios completos, heranças, imóveis para venda e retirada de móveis, monos e objectos acumulados.",
+      "Guia completo sobre esvaziamento de casas, recheios completos, heranças, imóveis para venda e retirada de móveis, monos e objetos acumulados.",
     category: "Esvaziamentos",
     keywords: [
       "esvaziamento de casas",
@@ -514,7 +514,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "A CLYON faz esvaziamentos completos?",
         answer:
-          "Sim, desde pedidos parciais até recheios completos, conforme o volume, o tipo de objectos e as condições de acesso.",
+          "Sim, desde pedidos parciais até recheios completos, conforme o volume, o tipo de objetos e as condições de acesso.",
       },
     ],
   },
@@ -541,7 +541,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando faz sentido procurar ecocentro ou solução pública",
         paragraphs: [
           "Se o volume é pequeno, se existe viatura própria, tempo e capacidade de carga, pode fazer sentido procurar um ecocentro ou uma solução pública para encaminhar materiais.",
-          "Isto é especialmente comum em pequenos despejos, restos leves de bricolage e objectos que o utilizador consegue transportar sozinho.",
+          "Isto é especialmente comum em pequenos despejos, restos leves de bricolage e objetos que o utilizador consegue transportar sozinho.",
         ],
       },
       {
@@ -638,7 +638,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-06-01",
     heroLabel: "Mudanças",
     intro:
-      "Uma mudança bem organizada evita stress, perdas de tempo e problemas no dia. Com planeamento antecipado, triagem de objectos e comunicação clara com a equipa de mudanças, o processo torna-se muito mais simples. Este guia mostra o que fazer antes, durante e depois da mudança.",
+      "Uma mudança bem organizada evita stress, perdas de tempo e problemas no dia. Com planeamento antecipado, triagem de objetos e comunicação clara com a equipa de mudanças, o processo torna-se muito mais simples. Este guia mostra o que fazer antes, durante e depois da mudança.",
     sections: [
       {
         title: "4 semanas antes: preparar e triar",
@@ -647,7 +647,7 @@ export const BLOG_POSTS: BlogPost[] = [
           "Peça orçamentos a empresas de mudanças, compare preços e confirme disponibilidade para a data pretendida. Reserve com antecedência, especialmente se for fim de mês ou fim de semana.",
         ],
         bullets: [
-          "Fazer inventário de todos os móveis e objectos",
+          "Fazer inventário de todos os móveis e objetos",
           "Separar o que não vai para a casa nova",
           "Pedir 2-3 orçamentos de mudanças",
           "Reservar a data e a equipa",
@@ -656,7 +656,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "1 semana antes: embalar e preparar",
         paragraphs: [
-          "Comece a embalar divisão a divisão, etiquetando as caixas com o conteúdo e o destino (ex: 'Cozinha - Loiça'). Proteja objectos frágeis com papel ou plástico bolha.",
+          "Comece a embalar divisão a divisão, etiquetando as caixas com o conteúdo e o destino (ex: 'Cozinha - Loiça'). Proteja objetos frágeis com papel ou plástico bolha.",
           "Confirme os detalhes com a empresa de mudanças: horário, moradas exactas, andar, elevador e contacto para o dia.",
         ],
         bullets: [
@@ -669,7 +669,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "No dia: coordenar e supervisionar",
         paragraphs: [
-          "Esteja presente para indicar à equipa quais as caixas e móveis prioritários e onde devem ficar na nova casa. Verifique se todos os objectos foram carregados antes de sair.",
+          "Esteja presente para indicar à equipa quais as caixas e móveis prioritários e onde devem ficar na nova casa. Verifique se todos os objetos foram carregados antes de sair.",
           "Na chegada, confirme se não há danos e indique onde colocar cada volume. Móveis grandes devem ser posicionados primeiro.",
         ],
       },

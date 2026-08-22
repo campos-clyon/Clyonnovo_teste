@@ -140,7 +140,7 @@ export default async function BlogPostPage({ params }: Props) {
               <h2 className="mt-3 text-3xl font-bold leading-tight">Quer resolver este pedido sem perder tempo?</h2>
               <p className="mt-4 text-base leading-8 text-slate-300">
                 Use o simulador para ter uma referência de valor e depois confirme com a equipa da CLYON por
-                contacto directo.
+                contacto direto.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link

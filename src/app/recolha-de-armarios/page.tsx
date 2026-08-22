@@ -108,7 +108,7 @@ const faqs = [
   },
   {
     q: "Recolhem roupeiros de correr?",
-    a: "Sim. Recolhemos roupeiros de correr, roupeiros com portas de bater, e qualquer tipo de armário de quarto. A desmontagem está incluída quando necessário.",
+    a: "Sim. Os profissionais recolhem roupeiros de correr, roupeiros com portas de bater, e qualquer tipo de armário de quarto. A desmontagem está incluída quando necessário.",
   },
   {
     q: "O que acontece aos armários recolhidos?",

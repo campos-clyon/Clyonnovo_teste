@@ -268,7 +268,7 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
     slug: "moita",
     zonas: ["Moita", "Baixa da Banheira", "Vale da Amoreira", "Alhos Vedros"],
     acesso:
-      "Baixa da Banheira e Vale da Amoreira são bairros densos de prédios sem garagem. Na Moita e em Alhos Vedros há mais casa térrea com quintal, e acesso directo.",
+      "Baixa da Banheira e Vale da Amoreira são bairros densos de prédios sem garagem. Na Moita e em Alhos Vedros há mais casa térrea com quintal, e acesso direto.",
     estacionamento: "Razoável fora das ruas centrais da Baixa da Banheira.",
     destinoResiduos: { nome: "Ecocentro da Moita", entidade: "Amarsul / CM Moita" },
     distanciaKm: 14,
@@ -319,7 +319,7 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
     slug: "sesimbra",
     zonas: ["Sesimbra", "Santana", "Quinta do Conde", "Lagoa de Albufeira"],
     acesso:
-      "A vila de Sesimbra desce a pique até ao mar: ruas curtas, muito inclinadas e algumas só pedonais. A Quinta do Conde é o oposto — loteamento plano com moradias e acesso directo.",
+      "A vila de Sesimbra desce a pique até ao mar: ruas curtas, muito inclinadas e algumas só pedonais. A Quinta do Conde é o oposto — loteamento plano com moradias e acesso direto.",
     estacionamento:
       "Na vila é o maior obstáculo, e no Verão torna-se quase impossível junto à praia. A Quinta do Conde não tem esse problema.",
     destinoResiduos: { nome: "Ecocentro de Sesimbra", entidade: "Amarsul / CM Sesimbra" },

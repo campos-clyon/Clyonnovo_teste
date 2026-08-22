@@ -278,7 +278,7 @@ describe("displayText — renderização segura para JSX", () => {
     expect(r).toContain("{");
   });
 
-  it("converte o objecto real de produção (React #31) sem lançar erro", () => {
+  it("converte o objeto real de produção (React #31) sem lançar erro", () => {
     const prodDetails = {
       items_max: 5,
       items_min: 2,
@@ -295,11 +295,11 @@ describe("displayText — renderização segura para JSX", () => {
     expect(result).not.toBe("[object Object]");
   });
 
-  it("devolve fallback para objecto vazio", () => {
+  it("devolve fallback para objeto vazio", () => {
     expect(displayText({})).toBe("—");
   });
 
-  it("ignora chaves com valor null no objecto", () => {
+  it("ignora chaves com valor null no objeto", () => {
     const result = displayText({ a: 1, b: null });
     expect(result).toBe("a: 1");
   });
@@ -401,7 +401,7 @@ describe("safeText — normalizador API para campos de texto", () => {
     expect(safeText(42)).toBe("42");
   });
 
-  it("serializa objecto de produção como texto legível", () => {
+  it("serializa objeto de produção como texto legível", () => {
     const details = {
       items_max: 5,
       items_min: 2,
@@ -418,7 +418,7 @@ describe("safeText — normalizador API para campos de texto", () => {
     expect(result!).toContain("pending_quote_id: abc-123");
   });
 
-  it("devolve null para objecto vazio", () => {
+  it("devolve null para objeto vazio", () => {
     expect(safeText({})).toBeNull();
   });
 

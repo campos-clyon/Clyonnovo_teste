@@ -20,7 +20,7 @@
  * ar em branco:
  *
  *   · DL 7/2004 (comércio electrónico), art. 10.º — quem presta um serviço da
- *     sociedade da informação tem de se identificar de forma directa e
+ *     sociedade da informação tem de se identificar de forma direta e
  *     permanente: nome, endereço, NIF e contactos;
  *   · RGPD, art. 13.º, n.º 1, al. a) — a identidade e os contactos do
  *     responsável pelo tratamento têm de constar da informação dada ao

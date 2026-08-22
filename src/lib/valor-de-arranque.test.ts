@@ -6,7 +6,7 @@ describe("valorDeArranqueDaEstimativa", () => {
   /*
    * O teste que faltava.
    *
-   * Este objecto é montado com o tipo REAL da estimativa. Se alguém lhe mudar
+   * Este objeto é montado com o tipo REAL da estimativa. Se alguém lhe mudar
    * o nome a `estimatedPriceWithVat`, isto deixa de compilar — que é
    * exactamente o aviso que não existiu quando a rota foi escrita a ler
    * `estimativa.total`, um campo que nunca existiu em lado nenhum.
@@ -58,8 +58,8 @@ describe("valorDeArranqueDaEstimativa", () => {
     ).toBe(40);
   });
 
-  // A prova do bug: nenhum destes três campos existe no objecto real.
-  it("um objecto com total/max/min NÃO serve de arranque", () => {
+  // A prova do bug: nenhum destes três campos existe no objeto real.
+  it("um objeto com total/max/min NÃO serve de arranque", () => {
     expect(
       valorDeArranqueDaEstimativa({ total: 132, max: 140, min: 120 } as never),
     ).toBeNull();

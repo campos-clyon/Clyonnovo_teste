@@ -37,7 +37,7 @@ const PRECO_ENTULHO = PRECOS.recolha_entulho;
 export const metadata: Metadata = {
   title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
   description:
-    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento directo. Resposta em 24h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
+    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento direto. Resposta em 24h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",
@@ -86,11 +86,11 @@ const faqs = [
   },
   {
     question: "Que tipo de entulho recolhem?",
-    answer: "Recolhemos restos de obra como tijolos, cimento, azulejos, telhas, gesso cartonado e madeira. Não aceitamos amianto, resíduos perigosos ou lixo doméstico misturado.",
+    answer: "Os profissionais recolhem restos de obra como tijolos, cimento, azulejos, telhas, gesso cartonado e madeira. Não são aceites amianto, resíduos perigosos ou lixo doméstico misturado.",
   },
   {
     question: "Fazem carregamento do entulho?",
-    answer: "Sim, a nossa equipa carrega o entulho diretamente para a carrinha. Não precisa de se preocupar com o transporte — nós tratamos de tudo.",
+    answer: "Sim, o profissional carrega o entulho diretamente para a carrinha. Não precisa de se preocupar com o transporte — nós tratamos de tudo.",
   },
   {
     question: "Qual o preço mínimo para recolha de entulho?",
@@ -98,7 +98,7 @@ const faqs = [
   },
   {
     question: "Recolhem entulho em apartamentos?",
-    answer: "Sim, recolhemos entulho em apartamentos, moradias, lojas e escritórios. A equipa trata do carregamento mesmo em andares altos ou com acessos difíceis.",
+    answer: "Sim, os profissionais recolhem entulho em apartamentos, moradias, lojas e escritórios. A equipa trata do carregamento mesmo em andares altos ou com acessos difíceis.",
   },
 ];
 
@@ -113,9 +113,9 @@ const includedItems = [
 
 const differentiators = [
   "Recolha de entulho em 24 a 48 horas na maioria das zonas",
-  "Carregamento directo pela nossa equipa",
+  "Carregamento direto pelo profissional",
   "Recolha pontual e encaminhamento para reciclagem",
-  "Sem espera: chegamos, carregamos e levamos",
+  "Sem espera: chegamos, carregam e levamos",
   "Equipa preparada para sacos, montes ou entulho disperso",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];
@@ -174,7 +174,7 @@ export default function RecolhaEntulhoPage() {
                 Recolha de Entulho em Lisboa e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Recolhemos entulho de obras, remodelações e limpezas com carregamento directo. 
+                Os profissionais recolhem entulho de obras, remodelações e limpezas com carregamento direto. 
                 Sem espera: a equipa chega, carrega e encaminha para destino responsável.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -209,7 +209,7 @@ export default function RecolhaEntulhoPage() {
                 </div>
                 <div className="rounded-[22px] border border-amber-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Carregamento</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">Directo pela equipa</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">Direto pela equipa</p>
                 </div>
               </div>
             </div>
@@ -222,7 +222,7 @@ export default function RecolhaEntulhoPage() {
         <div className="grid gap-6 md:grid-cols-3">
           {[
             { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
-            { icon: Truck, title: "Carregamento directo", desc: "A nossa equipa carrega o entulho — sem espera nem trabalho para si." },
+            { icon: Truck, title: "Carregamento direto", desc: "O profissional carrega o entulho — sem espera nem trabalho para si." },
             { icon: Recycle, title: "Destino legal", desc: "Encaminhamento para reciclagem com guia de transporte e destino final." },
           ].map((item) => (
             <div key={item.title} className="rounded-[28px] border border-amber-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(180,83,9,0.12)]">

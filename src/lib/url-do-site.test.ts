@@ -13,7 +13,7 @@ const CHAVES = [
 
 /**
  * O `NODE_ENV` está tipado como só de leitura pelo @types/node, e o `tsc`
- * recusa a atribuição directa mesmo funcionando em execução. Escrever por aqui
+ * recusa a atribuição direta mesmo funcionando em execução. Escrever por aqui
  * mantém o teste honesto sem desligar a verificação de tipos no ficheiro todo.
  */
 function definir(chave: string, valor: string) {

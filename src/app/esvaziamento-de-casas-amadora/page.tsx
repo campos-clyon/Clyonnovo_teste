@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     question: "Vocês retiram os móveis de dentro do apartamento?",
-    answer: "Sim, a nossa equipa entra no imóvel, desmonta o necessário, carrega tudo e transporta. Mesmo em prédios sem elevador ou com acessos difíceis.",
+    answer: "Sim, o profissional entra no imóvel, desmonta o necessário, carrega tudo e transporta. Mesmo em prédios sem elevador ou com acessos difíceis.",
   },
   {
     question: "Quanto custa esvaziar um apartamento na Amadora?",
@@ -149,7 +149,7 @@ export default function EsvaziamentoAmadoraPage() {
                   Esvaziamento de casas e apartamentos na Amadora
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  A CLYON faz esvaziamento completo de casas e apartamentos na Amadora. Retiramos móveis, 
+                  A CLYON faz esvaziamento completo de casas e apartamentos na Amadora. Os profissionais retiram móveis, 
                   eletrodomésticos, monos e recheios com carregamento, transporte e limpeza associada. 
                   Atendemos Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e todas as freguesias.
                 </p>

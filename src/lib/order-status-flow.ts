@@ -34,7 +34,7 @@ export const CUSTOMER_APPROVAL_STATUS = "awaiting_customer_approval" as const;
 
 /**
  * Estado canónico de publicação. Só alcançável por customer_mark_deposit_paid
- * (plano §4). O painel não deve escrevê-lo directamente.
+ * (plano §4). O painel não deve escrevê-lo diretamente.
  */
 export const APPROVAL_TARGET_STATUS = "confirmed" as const;
 

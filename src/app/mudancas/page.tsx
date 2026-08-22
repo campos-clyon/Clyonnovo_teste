@@ -78,7 +78,7 @@ const faqs = [
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",
-    answer: "Sim, a nossa equipa faz desmontagem na origem e montagem no destino. O serviço pode ser incluído no orçamento ou pedido separadamente conforme a complexidade dos móveis.",
+    answer: "Sim, o profissional faz desmontagem na origem e montagem no destino. O serviço pode ser incluído no orçamento ou pedido separadamente conforme a complexidade dos móveis.",
   },
   {
     question: "Com quantos dias de antecedência devo marcar?",

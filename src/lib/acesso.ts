@@ -62,7 +62,7 @@ export type OrigemPedido = { label: string; slug: string };
 /**
  * A origem a partir do slug já extraído.
  *
- * A lista de pedidos não recebe o rawOrderJson inteiro — traria 100 objectos
+ * A lista de pedidos não recebe o rawOrderJson inteiro — traria 100 objetos
  * completos para mostrar uma etiqueta. Recebe só o slug, extraído em SQL, e
  * usa isto. O mapa de rótulos é o mesmo dos dois lados, que é o que impede a
  * lista e o detalhe de voltarem a discordar como discordavam.

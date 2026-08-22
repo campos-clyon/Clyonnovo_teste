@@ -44,7 +44,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Moveis em Lisboa — Sofas, Camas e Recheios Completos",
     h1: "Recolha de Moveis Usados em Lisboa — Sofas, Camas, Armarios e Recheios",
     localIntro:
-      "Precisa de retirar móveis em Lisboa? A CLYON retira sofás velhos, camas com colchão, armários, mesas, cadeiras, electrodomésticos e recheios completos de apartamentos. Trabalhamos em toda Lisboa: desde os prédios antigos sem elevador em Alfama e Mouraria até aos condomínios do Parque das Nações. Se o sofá não passa na porta, desmontamos. Se há escadas estreitas, descemos peça a peça. Se o estacionamento é complicado, coordenamos horário para evitar problemas.",
+      "Precisa de retirar móveis em Lisboa? A CLYON retira sofás velhos, camas com colchão, armários, mesas, cadeiras, eletrodomésticos e recheios completos de apartamentos. Trabalhamos em toda Lisboa: desde os prédios antigos sem elevador em Alfama e Mouraria até aos condomínios do Parque das Nações. Se o sofá não passa na porta, desmontamos. Se há escadas estreitas, descemos peça a peça. Se o estacionamento é complicado, coordenamos horário para evitar problemas.",
     accessNotes:
       "Nos bairros históricos (Alfama, Mouraria, Graça, Bairro Alto), os acessos são por escadas em caracol ou ruas empedradas onde a carrinha não entra. Avaliamos sempre antes de dar preço. Nas zonas mais modernas (Parque das Nações, Telheiras, Benfica), os acessos são normalmente fáceis.",
     neighborhoodHighlight:
@@ -57,18 +57,18 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "A CLYON retira camas e colchões em Lisboa?",
-        a: "Sim. Retiramos camas de casal, camas de solteiro, beliches, colchões de todas as medidas, sommiers e estrados. Desmontamos a cama se necessário. O valor depende do acesso e do conjunto de itens — enviamos orçamento após ver fotos.",
+        a: "Sim. Os profissionais retiram camas de casal, camas de solteiro, beliches, colchões de todas as medidas, sommiers e estrados. Os profissionais desmontam a cama se necessário. O valor depende do acesso e do conjunto de itens — enviamos orçamento após ver fotos.",
       },
       {
         q: "Recolhem armários e roupeiros em Lisboa?",
-        a: "Sim. Retiramos armários de 2, 3 ou mais portas, roupeiros embutidos (quando removíveis), estantes e móveis de quarto. Desmontamos no local se não couber nas escadas.",
+        a: "Sim. Os profissionais retiram armários de 2, 3 ou mais portas, roupeiros embutidos (quando removíveis), estantes e móveis de quarto. Os profissionais desmontam no local se não couber nas escadas.",
       },
       {
         q: "A CLYON faz esvaziamento de recheio completo em Lisboa?",
-        a: "Sim. Esvaziamos apartamentos e moradias completas em Lisboa: móveis, electrodomésticos, roupa, tralha, decoração — levamos tudo. Ideal para heranças, mudanças e entrega de imóveis arrendados.",
+        a: "Sim. Esvaziamos apartamentos e moradias completas em Lisboa: móveis, eletrodomésticos, roupa, tralha, decoração — levamos tudo. Ideal para heranças, mudanças e entrega de imóveis arrendados.",
       },
       {
-        q: "Recolhem electrodomésticos junto com os móveis em Lisboa?",
+        q: "Recolhem eletrodomésticos junto com os móveis em Lisboa?",
         a: "Sim. Frigoríficos, máquinas de lavar roupa e loiça, fogões, fornos, micro-ondas, arcas e TVs. Podemos recolher no mesmo serviço que os móveis.",
       },
       {
@@ -136,7 +136,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Monos em Lisboa — Alternativa Rapida a Camara",
     h1: "Recolha de Monos em Lisboa — A Alternativa Rapida a Camara Municipal",
     localIntro:
-      "Tem monos em casa que precisa de retirar? A CLYON é a alternativa rápida à recolha municipal em Lisboa. Enquanto a Câmara de Lisboa tem lista de espera de semanas e não entra no imóvel, nós vamos buscar os monos onde estiverem — seja num 5º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. A diferença é simples: ligamos, combinamos, aparecemos no dia marcado e levamos tudo.",
+      "Tem monos em casa que precisa de retirar? A CLYON é a alternativa rápida à recolha municipal em Lisboa. Enquanto a Câmara de Lisboa tem lista de espera de semanas e não entra no imóvel, nós vamos buscar os monos onde estiverem — seja num 5º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. A diferença é simples: ligamos, combinamos, aparecemos no dia marcado e levam tudo.",
     accessNotes:
       "Em Lisboa, os acessos mais complicados são nos bairros históricos: Alfama, Mouraria, Graça e Castelo têm escadas estreitas, ruas empedradas e estacionamento impossível. Mesmo assim, trabalhamos lá todos os dias. Avaliamos sempre o acesso antes de dar preço para não haver surpresas.",
     neighborhoodHighlight:
@@ -161,11 +161,11 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Que tipo de monos a CLYON retira em Lisboa?",
-        a: "Retiramos todo o tipo de monos: sofás, camas, colchões, armários, mesas, cadeiras, electrodomésticos, equipamento de ginásio, móveis de jardim, bicicletas velhas, tralha de garagem e cave. Basicamente, tudo o que precisa de sair e não cabe no lixo normal.",
+        a: "Os profissionais retiram todo o tipo de monos: sofás, camas, colchões, armários, mesas, cadeiras, eletrodomésticos, equipamento de ginásio, móveis de jardim, bicicletas velhas, tralha de garagem e cave. Basicamente, tudo o que precisa de sair e não cabe no lixo normal.",
       },
       {
         q: "Onde deixam os monos que recolhem em Lisboa?",
-        a: "Fazemos triagem responsável. O que pode ser reciclado vai para centros de reciclagem licenciados. Electrodomésticos vão para pontos de recolha específicos. Móveis em bom estado podem ir para reutilização. Temos parcerias com operadores de resíduos certificados.",
+        a: "Fazemos triagem responsável. O que pode ser reciclado vai para centros de reciclagem licenciados. Eletrodomésticos vão para pontos de recolha específicos. Móveis em bom estado podem ir para reutilização. Temos parcerias com operadores de resíduos certificados.",
       },
       {
         q: "Quando compensa contratar a CLYON em vez de esperar pela Câmara?",
@@ -209,7 +209,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem móveis em Cacilhas com escadas?",
-        a: "Sim. Cacilhas tem muitos prédios antigos sem elevador. Temos experiência nesses acessos, desmontamos móveis se necessário e ajustamos o preço ao esforço real.",
+        a: "Sim. Cacilhas tem muitos prédios antigos sem elevador. Temos experiência nesses acessos, desmontam móveis se necessário e ajustamos o preço ao esforço real.",
       },
       {
         q: "Fazem recolha de móveis no Pragal e Laranjeiro?",
@@ -217,14 +217,14 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Fazem recolha de móveis na Costa da Caparica?",
-        a: "Sim, frequentemente. Muitos apartamentos de férias na Costa precisam de esvaziamento no final da época. Retiramos sofás-cama, colchões, móveis de jardim e electrodomésticos.",
+        a: "Sim, frequentemente. Muitos apartamentos de férias na Costa precisam de esvaziamento no final da época. Os profissionais retiram sofás-cama, colchões, móveis de jardim e eletrodomésticos.",
       },
       {
         q: "A CLYON faz esvaziamento completo de casas em Almada?",
-        a: "Sim. Esvaziamos apartamentos e moradias completas em Almada: móveis, electrodomésticos, roupa, tralha — levamos tudo. Ideal para heranças, mudanças e entrega de imóveis arrendados.",
+        a: "Sim. Esvaziamos apartamentos e moradias completas em Almada: móveis, eletrodomésticos, roupa, tralha — levamos tudo. Ideal para heranças, mudanças e entrega de imóveis arrendados.",
       },
       {
-        q: "Recolhem electrodomésticos em Almada?",
+        q: "Recolhem eletrodomésticos em Almada?",
         a: "Sim. Frigoríficos, máquinas de lavar, fogões, fornos, micro-ondas e TVs. Podemos recolher junto com os móveis no mesmo serviço.",
       },
       {
@@ -265,7 +265,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Fazem recolha de móveis em Fernão Ferro?",
-        a: "Sim. Fernão Ferro tem muitas moradias com garagem e jardim. Retiramos móveis, equipamento de jardim e limpamos garagens.",
+        a: "Sim. Fernão Ferro tem muitas moradias com garagem e jardim. Os profissionais retiram móveis, equipamento de jardim e limpam garagens.",
       },
       {
         q: "Podem recolher móveis no mesmo dia no Seixal?",
@@ -301,7 +301,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Podem deixar contentor em Corroios ou Amora?",
-        a: "Sim. Deixamos contentores em obras em Corroios, Amora, Arrentela, Paio Pires e Fernão Ferro. O contentor fica o tempo combinado e depois vamos buscar.",
+        a: "Sim. Ficam contentores em obras em Corroios, Amora, Arrentela, Paio Pires e Fernão Ferro. O contentor fica o tempo combinado e é recolhido depois.",
       },
       {
         q: "Recolhem entulho aos sacos no Seixal?",
@@ -337,7 +337,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
-        a: "Sim. Deixamos contentores em obras na Costa da Caparica. O contentor fica o tempo combinado e depois vamos buscar.",
+        a: "Sim. Ficam contentores em obras na Costa da Caparica. O contentor fica o tempo combinado e é recolhido depois.",
       },
       {
         q: "Recolhem entulho aos sacos em Almada?",
@@ -432,7 +432,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Moveis em Setubal — Apartamentos, Quintas e Azeito",
     h1: "Recolha de Moveis em Setubal — Apartamentos, Moradias e Quintas",
     localIntro:
-      "Precisa de retirar móveis em Setúbal? A CLYON faz recolha de móveis usados em todo o concelho: centro histórico de Setúbal, Bairro Azul, Manteigadas, Avenida Luísa Todi, Azeitão e zona da Arrábida. Retiramos sofás, camas, armários, mesas, cadeiras e electrodomésticos de apartamentos, moradias, lojas e escritórios. Em Azeitão, temos experiência no esvaziamento de quintas com móveis antigos e volumes grandes.",
+      "Precisa de retirar móveis em Setúbal? A CLYON tem profissionais de recolha de móveis usados em todo o concelho: centro histórico de Setúbal, Bairro Azul, Manteigadas, Avenida Luísa Todi, Azeitão e zona da Arrábida. Os profissionais retiram sofás, camas, armários, mesas, cadeiras e eletrodomésticos de apartamentos, moradias, lojas e escritórios. Em Azeitão, há profissionais com experiência no esvaziamento de quintas com móveis antigos e volumes grandes.",
     accessNotes:
       "O centro de Setúbal tem estacionamento limitado em algumas ruas da zona histórica. Azeitão tem quintas com acessos de terra batida — avaliamos sempre antes de dar preço. Nas urbanizações novas, os acessos são normalmente fáceis.",
     neighborhoodHighlight:
@@ -453,14 +453,14 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "A CLYON retira móveis de lojas e escritórios em Setúbal?",
-        a: "Sim. Retiramos mobiliário de lojas, escritórios, consultórios e espaços comerciais em Setúbal. Podemos trabalhar fora do horário laboral se necessário.",
+        a: "Sim. Os profissionais retiram mobiliário de lojas, escritórios, consultórios e espaços comerciais em Setúbal. Podem trabalhar fora do horário laboral se necessário.",
       },
       {
         q: "Fazem esvaziamento completo de casas em Setúbal?",
-        a: "Sim. Esvaziamos apartamentos e moradias completas em Setúbal: móveis, electrodomésticos, roupa, tralha — levamos tudo. Ideal para heranças, mudanças e entrega de imóveis arrendados.",
+        a: "Sim. Esvaziamos apartamentos e moradias completas em Setúbal: móveis, eletrodomésticos, roupa, tralha — levamos tudo. Ideal para heranças, mudanças e entrega de imóveis arrendados.",
       },
       {
-        q: "Recolhem electrodomésticos em Setúbal?",
+        q: "Recolhem eletrodomésticos em Setúbal?",
         a: "Sim. Frigoríficos, máquinas de lavar, fogões, fornos, micro-ondas, arcas e TVs. Podemos recolher junto com os móveis no mesmo serviço.",
       },
       {
@@ -484,7 +484,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Entulho em Setubal — Contentores e Sacos de Obra",
     h1: "Recolha de Entulho em Setubal — Contentores, Sacos e Obras Pequenas",
     localIntro:
-      "Tem entulho de obra em Setúbal? A CLYON fornece contentores e faz recolha de entulho em sacos para obras de qualquer dimensão. Cobrimos todo o concelho de Setúbal, desde o centro histórico até Azeitão e Arrábida. Para pequenas remodelações, retiramos sacos de entulho directamente. Para obras maiores, colocamos contentor no local pelo tempo necessário e depois vamos buscar.",
+      "Tem entulho de obra em Setúbal? A CLYON fornece contentores e faz recolha de entulho em sacos para obras de qualquer dimensão. Cobrimos todo o concelho de Setúbal, desde o centro histórico até Azeitão e Arrábida. Para pequenas remodelações, retiram sacos de entulho diretamente. Para obras maiores, colocamos contentor no local pelo tempo necessário e depois vamos buscar.",
     accessNotes:
       "No centro de Setúbal, o estacionamento de contentores pode ser limitado em algumas ruas. Avaliamos sempre o local antes de colocar contentor. Em Azeitão e quintas, o acesso é normalmente mais fácil.",
     neighborhoodHighlight:
@@ -505,7 +505,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho de obras pequenas em Setúbal?",
-        a: "Sim. Remodelações de casas de banho, cozinhas, substituição de pavimentos. Não é preciso contentor - retiramos os sacos directamente. É mais económico para obras pequenas.",
+        a: "Sim. Remodelações de casas de banho, cozinhas, substituição de pavimentos. Não é preciso contentor - retiramos os sacos diretamente. É mais económico para obras pequenas.",
       },
       {
         q: "Que tipo de entulho a CLYON recolhe em Setúbal?",
@@ -594,7 +594,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "O que inclui o esvaziamento de casa da CLYON em Lisboa?",
-        a: "Retiramos tudo o que o cliente quiser: móveis, eletrodomésticos, roupa, livros, papéis, decoração, plantas. Deixamos o espaço vazio e varrido.",
+        a: "Os profissionais retiram tudo o que o cliente quiser: móveis, eletrodomésticos, roupa, livros, papéis, decoração, plantas. Deixam o espaço vazio e varrido.",
       },
       {
         q: "Quanto custa esvaziar um apartamento T2 em Lisboa?",
@@ -625,7 +625,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis em Monte Abraão - Queluz e Massamá | CLYON",
     h1: "Recolha de Móveis em Monte Abraão - Sofás, Camas e Armários",
     localIntro:
-      "Precisa de retirar móveis em Monte Abraão? A CLYON faz recolha de sofás, camas, armários e electrodomésticos em toda a freguesia e zonas vizinhas: Queluz, Massamá, Belas e Agualva-Cacém. O orçamento é sempre personalizado conforme o volume, acesso, urgência e necessidade de desmontagem — enviamos resposta em minutos após receber fotos.",
+      "Precisa de retirar móveis em Monte Abraão? A CLYON faz recolha de sofás, camas, armários e eletrodomésticos em toda a freguesia e zonas vizinhas: Queluz, Massamá, Belas e Agualva-Cacém. O orçamento é sempre personalizado conforme o volume, acesso, urgência e necessidade de desmontagem — enviamos resposta em minutos após receber fotos.",
     accessNotes:
       "Monte Abraão tem maioritariamente prédios com elevador, o que facilita a recolha. Nas zonas mais antigas próximas do centro de Queluz, alguns edifícios têm escadas estreitas - avaliamos sempre antes de dar preço final.",
     neighborhoodHighlight:
@@ -650,7 +650,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Fazem esvaziamento de apartamentos em Monte Abraão?",
-        a: "Sim. Fazemos esvaziamento completo de apartamentos para mudanças, heranças ou fim de arrendamento. Retiramos móveis, electrodomésticos e tralha.",
+        a: "Sim, há esvaziamento completo de apartamentos para mudanças, heranças ou fim de arrendamento. Os profissionais retiram móveis, eletrodomésticos e tralha.",
       },
     ],
     ctaText: "Precisa de recolha de móveis em Monte Abraão? Envie fotos e respondemos em minutos.",
@@ -674,7 +674,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "A CLYON recolhe entulho de obras em Monte Abraão?",
-        a: "Sim. Recolhemos entulho de remodelações em Monte Abraão, Queluz e Massamá. Trabalhamos com sacos big bag para obras pequenas ou contentores para volumes maiores.",
+        a: "Sim. Os profissionais recolhem entulho de remodelações em Monte Abraão, Queluz e Massamá. Trabalha-se com sacos big bag para obras pequenas ou contentores para volumes maiores.",
       },
       {
         q: "Podem recolher entulho de um apartamento em Monte Abraão?",
@@ -701,7 +701,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas em Monte Abraão - Heranças e Mudanças | CLYON",
     h1: "Esvaziamento de Casas e Apartamentos em Monte Abraão",
     localIntro:
-      "Precisa de esvaziar um apartamento em Monte Abraão? A CLYON faz esvaziamento completo de casas para heranças, mudanças, entregas de imóveis arrendados e limpezas de recheios acumulados. Retiramos todos os móveis, electrodomésticos, roupa, decoração e tralha — o apartamento fica completamente vazio e pronto para entrega ou nova ocupação.",
+      "Precisa de esvaziar um apartamento em Monte Abraão? A CLYON faz esvaziamento completo de casas para heranças, mudanças, entregas de imóveis arrendados e limpezas de recheios acumulados. Os profissionais retiram todos os móveis, eletrodomésticos, roupa, decoração e tralha — o apartamento fica completamente vazio e pronto para entrega ou nova ocupação.",
     accessNotes:
       "Monte Abraão tem prédios com elevador na maioria, o que facilita o esvaziamento. Para apartamentos maiores ou com muito recheio, podemos precisar de fazer várias viagens ou usar equipa reforçada.",
     neighborhoodHighlight:
@@ -710,7 +710,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "A CLYON faz esvaziamento de apartamentos em Monte Abraão?",
-        a: "Sim. Fazemos esvaziamento completo de apartamentos T1 a T4 em Monte Abraão, Queluz e Massamá. Retiramos tudo: móveis, electrodomésticos, roupa, decoração e lixo acumulado.",
+        a: "Sim, há esvaziamento completo de apartamentos T1 a T4 em Monte Abraão, Queluz e Massamá. Os profissionais retiram tudo: móveis, eletrodomésticos, roupa, decoração e lixo acumulado.",
       },
       {
         q: "Quanto custa esvaziar um apartamento em Monte Abraão?",
@@ -741,7 +741,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis em Queluz - Belas e Monte Abraão | CLYON",
     h1: "Recolha de Móveis em Queluz - Sofás, Camas e Armários",
     localIntro:
-      "Precisa de retirar móveis em Queluz? A CLYON faz recolha de sofás, camas, armários e electrodomésticos em todo o concelho: centro de Queluz, Belas, Monte Abraão e Massamá. Queluz tem uma mistura interessante de zonas históricas (perto do Palácio) e urbanizações modernas, e conhecemos bem as diferenças de acesso entre elas.",
+      "Precisa de retirar móveis em Queluz? A CLYON faz recolha de sofás, camas, armários e eletrodomésticos em todo o concelho: centro de Queluz, Belas, Monte Abraão e Massamá. Queluz tem uma mistura interessante de zonas históricas (perto do Palácio) e urbanizações modernas, e conhecemos bem as diferenças de acesso entre elas.",
     accessNotes:
       "O centro histórico de Queluz tem algumas ruas mais estreitas e prédios antigos. As zonas mais recentes (Monte Abraão, Massamá Norte) têm excelentes acessos e elevadores. Avaliamos sempre antes de dar preço.",
     neighborhoodHighlight:
@@ -765,7 +765,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Belas faz parte da nossa cobertura. É uma zona com muitas moradias e condomínios, geralmente com bons acessos.",
       },
       {
-        q: "Recolhem electrodomésticos junto com os móveis em Queluz?",
+        q: "Recolhem eletrodomésticos junto com os móveis em Queluz?",
         a: "Sim. Frigoríficos, máquinas de lavar, fogões, TVs - levamos tudo no mesmo serviço. Pode ser mais eficiente avaliar vários itens no mesmo pedido.",
       },
     ],
@@ -781,7 +781,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis em Carnaxide - Linda-a-Velha e Queijas | CLYON",
     h1: "Recolha de Móveis em Carnaxide - Sofás, Camas e Armários",
     localIntro:
-      "Precisa de retirar móveis em Carnaxide? A CLYON faz recolha de sofás, camas, armários e electrodomésticos em toda a freguesia e zonas vizinhas: Linda-a-Velha, Queijas, Alto da Loba e Miraflores. Carnaxide é uma zona residencial moderna com excelentes acessos pelo IC19 e A5, permitindo-nos chegar rapidamente e oferecer preços competitivos.",
+      "Precisa de retirar móveis em Carnaxide? A CLYON faz recolha de sofás, camas, armários e eletrodomésticos em toda a freguesia e zonas vizinhas: Linda-a-Velha, Queijas, Alto da Loba e Miraflores. Carnaxide é uma zona residencial moderna com excelentes acessos pelo IC19 e A5, permitindo-nos chegar rapidamente e oferecer preços competitivos.",
     accessNotes:
       "Carnaxide tem maioritariamente prédios recentes com elevador e bons acessos. Algumas urbanizações fechadas (como o Alto da Loba) requerem coordenação prévia para entrada — o acesso pode influenciar o orçamento e deve ser confirmado antes da marcação.",
     neighborhoodHighlight:
@@ -806,7 +806,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Fazem esvaziamento de apartamentos em Carnaxide?",
-        a: "Sim. Fazemos esvaziamento completo de apartamentos para mudanças, heranças ou fim de arrendamento. Retiramos móveis, electrodomésticos e tralha - deixamos o espaço vazio.",
+        a: "Sim, há esvaziamento completo de apartamentos para mudanças, heranças ou fim de arrendamento. Os profissionais retiram móveis, eletrodomésticos e tralha, e deixam o espaço vazio.",
       },
     ],
     ctaText: "Precisa de recolha de móveis em Carnaxide? Envie fotos e respondemos em minutos.",

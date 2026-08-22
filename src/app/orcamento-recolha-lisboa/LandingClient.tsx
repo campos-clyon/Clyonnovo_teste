@@ -185,7 +185,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Recolhem entulho de obra?",
-    a: "Sim. Recolhemos sacos de obra, restos de remodelação, madeira, tijolo, azulejo e cimento, desde que não envolvam materiais perigosos.",
+    a: "Sim. Os profissionais recolhem sacos de obra, restos de remodelação, madeira, tijolo, azulejo e cimento, desde que não envolvam materiais perigosos.",
   },
   {
     q: "Que materiais não recolhem?",

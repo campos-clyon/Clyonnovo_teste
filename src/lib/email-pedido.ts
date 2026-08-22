@@ -105,7 +105,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin:0 0 24px;">
             <p style="margin:0;font-size:14px;line-height:1.6;color:#166534;">
               <strong>Não precisa de criar conta.</strong> Este link abre o pedido
-              directamente. Se preferir ter todos os pedidos no mesmo sítio, pode
+              diretamente. Se preferir ter todos os pedidos no mesmo sítio, pode
               entrar com a conta Google a qualquer momento.
             </p>
           </div>

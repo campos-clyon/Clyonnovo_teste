@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Arquivar/restaurar um pedido. Arquivar esconde das listas operacionais
+// Arquivar/restaurar um pedido. Arquivar esconde das listas profissionais
 // sem apagar dados nem histórico. Requer a migração 005 (archived_at).
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { err, colab } = await requireAdmin(req);
