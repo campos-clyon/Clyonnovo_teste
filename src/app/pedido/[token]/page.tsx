@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { getSimulatorOrderByAcessoTokenHash, negociacoesDoPedido } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
+import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import type { Proposta } from "@/lib/negociacao";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
@@ -83,11 +83,77 @@ export default async function PaginaDoPedido({
     pedido?.acessoTokenExpiraEm ?? null,
   );
 
-  // Um link errado e um link expirado dão respostas diferentes ao cliente
-  // porque a diferença lhe é útil — mas só depois de o token conferir. Quem
-  // tenta à sorte cai sempre no notFound.
+  /*
+   * O LINK QUE JÁ NÃO ABRE NADA — e que até aqui dava um 404 genérico.
+   *
+   * Dizia "A página que procura não existe ou foi movida". A pessoa tem o
+   * email aberto ao lado, com o link lá dentro, mandado por nós. Dizer-lhe que
+   * a página nunca existiu põe-na a duvidar de si — ou de nós — e deixa-a sem
+   * saída nenhuma, porque o 404 do site não tem contacto de apoio.
+   *
+   * E isto vai deixar de ser raro: os pedidos são apagados 60 dias depois de
+   * criados. Daqui a dois meses, TODOS os links antigos caem aqui.
+   *
+   * PORQUE É QUE NÃO DIZ QUAL ERA O PEDIDO
+   *
+   * Não dá para saber, e é de propósito. O registo permanente guarda o que se
+   * passou, mas não guarda o hash do token — seria manter viva a credencial de
+   * um recurso que já não existe, para nada.
+   *
+   * E MOSTRA O MESMO A QUEM ADIVINHA TOKENS
+   *
+   * Um pedido apagado e um token inventado dão exactamente este ecrã. Se
+   * dessem ecrãs diferentes, quem fosse tentando à sorte ficava a saber quais
+   * dos seus palpites acertaram num pedido real. A diferença entre os dois não
+   * vale nada a quem tem o link certo, e valia demasiado a quem não tem.
+   *
+   * O link expirado continua a ter ecrã próprio, mais abaixo: esse já provou
+   * que o token confere, e a diferença é-lhe útil.
+   */
   if (!pedido || (!resultado.valido && resultado.motivo !== "expirado")) {
-    notFound();
+    const numeroWhatsapp = BUSINESS_PHONE.replace(/[^\d]/g, "");
+    return (
+      <main className="mx-auto flex min-h-[60vh] max-w-md items-center px-4">
+        <div className="w-full rounded-2xl border border-[#E2EEF3] bg-white p-6 text-center">
+          <FileText className="mx-auto h-8 w-8 text-tinta-fraca" aria-hidden="true" />
+          <h1 className="mt-3 text-lg font-bold text-tinta">Este link já não abre nenhum pedido</h1>
+          <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">
+            Os pedidos são apagados 60 dias depois de criados, e este pode ter
+            passado esse prazo ou ter sido removido a pedido. O link também pode
+            ter vindo partido do email.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-tinta-fraca">
+            Se estava à espera de encontrar aqui um pedido, diga-nos — conseguimos
+            confirmar o que aconteceu.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <a
+              href={`https://wa.me/${numeroWhatsapp}?text=${encodeURIComponent(
+                "Olá! O link do meu pedido já não abre. Podem verificar?",
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-whatsapp-tinta"
+            >
+              Falar connosco por WhatsApp
+            </a>
+            <Link
+              href="/contactos"
+              className="inline-flex items-center justify-center rounded-xl border border-[#E2EEF3] px-5 py-3 text-sm font-semibold text-tinta"
+            >
+              Outras formas de contacto
+            </Link>
+            <Link
+              href="/simulador"
+              className="py-2 text-sm text-tinta-fraca underline underline-offset-4 hover:text-acao"
+            >
+              Fazer um pedido novo
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   if (!resultado.valido) {
