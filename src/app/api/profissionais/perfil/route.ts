@@ -18,6 +18,7 @@ import {
   CATEGORIAS_VALIDAS,
   RAIO_MAXIMO_KM,
   RAIO_MINIMO_KM,
+  pareceMorada,
 } from "@/lib/inscricao-profissional";
 import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
 import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
@@ -147,8 +148,28 @@ export async function PUT(req: NextRequest) {
   // ecrã gravar uma secção de cada vez sem apagar o resto por omissão.
   if ("nome" in corpo) {
     const nome = texto(corpo.nome);
-    if (nome.length < 2) erros.push({ campo: "nome", mensagem: "Indique o nome." });
-    else mudancas.name = nome;
+    if (nome.length < 2) {
+      erros.push({ campo: "nome", mensagem: "Indique o nome." });
+    } else if (pareceMorada(nome)) {
+      /*
+       * A mesma regra da inscrição, e pela mesma razão.
+       *
+       * A validação estava só na inscrição, e isso deixava a porta do lado de
+       * dentro aberta: corrigia-se o nome uma vez e podia voltar a ser uma
+       * morada no dia seguinte, aqui.
+       *
+       * Quem trata do nome tem de o fazer nos dois sítios, porque é o mesmo
+       * campo e o mesmo estrago: é isto que o cliente vê ao escolher quem lhe
+       * entra em casa.
+       */
+      erros.push({
+        campo: "nome",
+        mensagem:
+          "Isto parece uma morada. Aqui vai o seu nome ou o da empresa — é o que o cliente vê.",
+      });
+    } else {
+      mudancas.name = nome;
+    }
   }
 
   if ("telefone" in corpo) {
