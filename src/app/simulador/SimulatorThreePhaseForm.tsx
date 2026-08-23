@@ -29,8 +29,16 @@ import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
-import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
+import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+
+/** Os três passos do envio, pela ordem em que acontecem de facto. */
+const PASSOS_DO_ENVIO = [
+  { id: "analise", texto: "A preparar o pedido" },
+  { id: "fotos", texto: "A enviar as fotografias" },
+  { id: "guardar", texto: "A registar e a avisar profissionais" },
+] as const;
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import { emailValido } from "@/lib/inscricao-profissional";
 import {
@@ -78,11 +86,22 @@ export default function SimulatorThreePhaseForm() {
   const [phase, setPhase] = useState(1);
   const [formData, setFormData] = useState<FormState>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [countdown, setCountdown] = useState(0); // contagem regressiva do envio (20→0)
+  /*
+   * O QUE O ENVIO ESTÁ MESMO A FAZER, e não uma contagem inventada.
+   *
+   * Estava aqui um `countdown` de 20 segundos e um `setTimeout(20000)` a
+   * segurá-lo, com o comentário "momento de análise antes do sucesso". O
+   * trabalho real acabava muito antes; os 20 segundos eram encenação.
+   *
+   * Agora a espera dura o que o trabalho durar. Estes passos são os passos a
+   * sério, e o das fotografias — que é o único que pode mesmo demorar, porque
+   * vai uma de cada vez — mostra quantas já subiram.
+   */
+  const [passo, setPasso] = useState<"analise" | "fotos" | "guardar">("analise");
+  const [fotosFeitas, setFotosFeitas] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
   // Fotos que o cliente escolheu mas que não chegaram a subir
   const [fotosNaoEnviadas, setFotosNaoEnviadas] = useState(0);
-  const [successAssignedTo] = useState<{ id: number; name: string } | null>(null);
   const [addressValue, setAddressValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase2Attempted, setPhase2Attempted] = useState(false);
@@ -329,6 +348,11 @@ export default function SimulatorThreePhaseForm() {
   const canProceedToPhase3 = isPhase2Valid();
   const canAnalyze = isPhase3Valid();
 
+  const emailDoPedido = formData.receiver?.email?.trim() || null;
+  const totalDeFotos = (formData.files ?? []).filter((f) => f?.file instanceof File).length;
+  /** Sem fotografias, o passo delas nem entra na lista. */
+  const passosVisiveis = PASSOS_DO_ENVIO.filter((p) => p.id !== "fotos" || totalDeFotos > 0);
+
   /** O que ainda falta na fase 3, pela ordem em que aparece no ecrã. */
   const faltaNaFase3: string[] = [];
   if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se precisa de fatura");
@@ -345,16 +369,18 @@ export default function SimulatorThreePhaseForm() {
 
     setIsAnalyzing(true);
     setError(null);
-    setCountdown(20);
+    setPasso("analise");
+    setFotosFeitas(0);
 
-    // Contagem regressiva visível (20 → 0).
-    const countdownInterval = setInterval(() => {
-      setCountdown((c) => (c > 1 ? c - 1 : 0));
-    }, 1000);
-
-    // Espera mínima de 20s — momento de "análise" antes do sucesso.
-    // O trabalho real (estimativa + gravação) corre em paralelo.
-    const minWait = new Promise<void>((resolve) => setTimeout(resolve, 20000));
+    /*
+     * Um chão de 2,2s, e não os 20 de antes.
+     *
+     * Não é para encher tempo: é para o ecrã não piscar. Quando o trabalho
+     * acaba em 300ms — e agora acaba, porque a rota deixou de esperar pelos
+     * emails — a pessoa vê um clarão e já está no fim, sem perceber que
+     * chegou a acontecer alguma coisa.
+     */
+    const chao = new Promise<void>((resolve) => setTimeout(resolve, 2200));
 
     const work = (async () => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
@@ -382,6 +408,9 @@ export default function SimulatorThreePhaseForm() {
       } catch {
         /* estimativa opcional — ignora falhas */
       }
+
+      // Passo seguinte: se há fotografias, é delas que se está à espera.
+      setPasso((formData.files ?? []).some((f) => f?.file instanceof File) ? "fotos" : "guardar");
 
       // 2) Upload das fotos/vídeos ao Vercel Blob (se existirem) antes de guardar o pedido.
       let uploadedFiles: Array<{ url: string; name: string; size: number; type?: string }> = [];
@@ -415,6 +444,7 @@ export default function SimulatorThreePhaseForm() {
           const r = await enviarFicheiro(original);
           if (r.ok) {
             uploadedFiles.push(r.ficheiro);
+            setFotosFeitas(uploadedFiles.length);
           } else {
             fotosPerdidas += 1;
             motivos.push(`${original.name}: ${r.motivo}`);
@@ -463,6 +493,7 @@ export default function SimulatorThreePhaseForm() {
           fotosNaoEnviadas: fotosPerdidas,
           motivoFotosNaoEnviadas: motivoFalhaFotos,
         };
+        setPasso("guardar");
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -478,8 +509,7 @@ export default function SimulatorThreePhaseForm() {
       return null;
     })();
 
-    const [savedId] = await Promise.all([work, minWait]);
-    clearInterval(countdownInterval);
+    const [savedId] = await Promise.all([work, chao]);
 
     if (savedId) {
       trackSimulatorOrderConfirmed({
@@ -500,7 +530,8 @@ export default function SimulatorThreePhaseForm() {
   const handleReset = () => {
     setFormData({});
     setSuccessOrderId(null);
-    setCountdown(0);
+    setPasso("analise");
+    setFotosFeitas(0);
     setPhase(1);
     setAddressValue("");
     setError(null);
@@ -574,31 +605,98 @@ export default function SimulatorThreePhaseForm() {
             </div>
           )}
 
-          {/* Combined info card */}
-          <div className="bg-white rounded-2xl border border-blue-100 p-4 sm:p-5 shadow-sm mb-5 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 shrink-0 bg-blue-50 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                {successAssignedTo ? (
-                  <>A equipa vai avaliar o pedido. Responsável: <span className="font-semibold text-gray-900">{successAssignedTo.name}</span>. Entramos em contacto por telefone ou email.</>
-                ) : (
-                  <>A equipa CLYON vai avaliar o pedido em breve e entrar em contacto por telefone ou email.</>
-                )}
-              </p>
-            </div>
-            <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-              Guarde o número <span className="font-mono font-semibold text-gray-700">#{successOrderId}</span> para referência.
-            </p>
-          </div>
+          {/*
+            O QUE ACONTECE AGORA — e não "a equipa CLYON vai avaliar".
+            Dizia-se "A equipa CLYON vai avaliar o pedido em breve e entrar em
+            contacto por telefone ou email". Três coisas erradas numa frase: a
+            CLYON não avalia nem executa, quem responde são os profissionais; o
+            contacto não é um telefonema da CLYON, são propostas; e "em breve"
+            não é prazo nenhum.
+          */}
+          <ol className="mb-5 list-none space-y-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
+            {[
+              {
+                Icone: CheckCircle,
+                cor: "text-green-600",
+                titulo: "Profissionais da sua zona receberam o pedido",
+                texto: "Verificados, com nota dada por quem já os contratou.",
+              },
+              {
+                Icone: Clock,
+                cor: "text-acao",
+                titulo: `Recebe propostas em ${PRAZO_DE_RESPOSTA.porExtenso}`,
+                texto: "Cada uma com preço fechado, sem IVA, antes de haver trabalho nenhum.",
+              },
+              {
+                Icone: ShieldCheck,
+                cor: "text-acao",
+                titulo: "Escolhe uma — ou nenhuma",
+                texto: "Só paga depois de confirmar que ficou feito. Recusar não custa nada.",
+              },
+            ].map(({ Icone, cor, titulo, texto }) => (
+              <li key={titulo} className="flex items-start gap-3">
+                <Icone className={`mt-0.5 h-5 w-5 shrink-0 ${cor}`} aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-semibold text-tinta">{titulo}</p>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-tinta-fraca">{texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
 
-          {/* CTA */}
+          {/*
+            ONDE É QUE ELE VÊ AS PROPOSTAS.
+            Este ecrã acabava num botão "Novo pedido" — um beco, no instante de
+            maior intenção da visita inteira.
+
+            O convite à conta não é promocional, é funcional: `/conta` encontra
+            os pedidos pelo EMAIL DA SESSÃO. Entrando com o mesmo email que
+            acabou de escrever, o pedido já lá está — não há nada a ligar nem a
+            registar. E a quem já entrou não se pede nada: mostra-se a porta.
+          */}
+          {session?.user ? (
+            <a href="/conta" className="site-btn-primary flex w-full items-center justify-center py-3.5 text-sm">
+              Ver o pedido na minha conta
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </a>
+          ) : (
+            <div className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] p-5">
+              <p className="text-sm font-semibold text-tinta">Acompanhe as propostas num só sítio</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-tinta-fraca">
+                Entre com o Google usando{" "}
+                {emailDoPedido ? (
+                  <span className="font-semibold text-tinta">{emailDoPedido}</span>
+                ) : (
+                  "o mesmo email que indicou"
+                )}{" "}
+                e este pedido já lá está. Nada para preencher, nada para decorar.
+              </p>
+              <a
+                href="/entrar"
+                className="site-btn-primary mt-4 flex w-full items-center justify-center py-3.5 text-sm"
+              >
+                Entrar com o Google
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
+          )}
+
+          {/* O caminho de quem não quer conta nenhuma — e continua a ser válido. */}
+          <p className="mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-tinta-fraca">
+            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
+            <span>
+              Sem conta também funciona: vai a caminho um email
+              {emailDoPedido ? <> para <span className="font-semibold text-tinta">{emailDoPedido}</span></> : null}{" "}
+              com o link deste pedido. Guarde o número{" "}
+              <span className="font-mono font-semibold text-tinta">#{successOrderId}</span>.
+            </span>
+          </p>
+
           <button
             onClick={handleReset}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-shadow"
+            className="mt-5 w-full cursor-pointer border-none bg-transparent py-3 text-sm font-medium text-tinta-fraca underline underline-offset-4 transition-colors hover:text-acao"
           >
-            Novo pedido
+            Fazer outro pedido
           </button>
         </div>
       </div>
@@ -698,21 +796,72 @@ export default function SimulatorThreePhaseForm() {
 
               {/* Loading de envio — contagem regressiva de 20s até ao sucesso */}
               {phase === 3 && isAnalyzing && (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="flex flex-col items-center justify-center py-12 text-center sm:py-16">
                   <div className="relative mb-6">
                     <div className="absolute inset-0 rounded-full bg-cyan-400/30 blur-xl animate-pulse" />
                     <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg">
-                      <Loader2 className="h-10 w-10 animate-spin text-white" />
+                      <Loader2 className="h-10 w-10 animate-spin text-white" aria-hidden="true" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900">A enviar o seu pedido…</h3>
-                  <p className="mt-1.5 max-w-sm text-sm text-slate-500">
-                    A preparar o seu pedido para análise da equipa CLYON. Não feche esta página.
+                  <h3 className="text-xl font-bold text-tinta">A enviar o seu pedido</h3>
+                  <p className="mt-1.5 max-w-sm text-sm text-tinta-fraca">
+                    Não feche esta página.
                   </p>
-                  <div className="mt-5 flex items-center gap-2 text-acao">
-                    <span className="text-3xl font-bold tabular-nums">{countdown}</span>
-                    <span className="text-sm font-medium">segundos</span>
-                  </div>
+
+                  {/*
+                    Os passos a sério, anunciados a quem não vê o ecrã.
+                    `aria-live="polite"` faz o leitor ler cada mudança sem
+                    interromper o que estiver a dizer.
+                  */}
+                  <ol
+                    aria-live="polite"
+                    className="mt-7 w-full max-w-xs list-none space-y-3 p-0 text-left"
+                  >
+                    {passosVisiveis.map(({ id, texto }, i) => {
+                      const actual = passosVisiveis.findIndex((x) => x.id === passo);
+                      const feito = i < actual;
+                      const agora = i === actual;
+                      return (
+                        <li key={id} className="flex items-center gap-3">
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                              feito ? "bg-green-600" : agora ? "bg-acao" : "bg-slate-200"
+                            }`}
+                          >
+                            {feito ? (
+                              <CheckCircle className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                            ) : agora ? (
+                              <Loader2 className="h-3 w-3 animate-spin text-white" aria-hidden="true" />
+                            ) : null}
+                          </span>
+                          <span
+                            className={`text-sm ${
+                              agora ? "font-semibold text-tinta" : feito ? "text-tinta-fraca" : "text-slate-400"
+                            }`}
+                          >
+                            {texto}
+                            {id === "fotos" && totalDeFotos > 0 && (
+                              <span className="ml-1.5 tabular-nums text-tinta-fraca">
+                                {fotosFeitas}/{totalDeFotos}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+
+                  {/*
+                    Uma linha, e não um carrossel.
+                    A espera passou de 20 segundos encenados para o tempo real
+                    do trabalho — poucos segundos sem fotografias. Num carrossel
+                    ninguém chegaria ao segundo cartão. O que a CLYON tem para
+                    dizer está no ecrã seguinte, onde a pessoa fica mesmo.
+                  */}
+                  <p className="mt-7 flex max-w-xs items-start gap-2 text-left text-[13px] leading-relaxed text-tinta-fraca">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-acao" aria-hidden="true" />
+                    O pedido não o compromete a nada. Só paga se aceitar uma proposta.
+                  </p>
                 </div>
               )}
 
