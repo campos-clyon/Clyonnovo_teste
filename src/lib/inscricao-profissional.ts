@@ -133,6 +133,58 @@ export function telefoneValido(telefone: string): boolean {
   return /^[239]\d{8}$/.test(limpo);
 }
 
+/**
+ * Isto parece uma morada em vez de um nome?
+ *
+ * PORQUE E QUE ESTA VERIFICACAO EXISTE
+ *
+ * O primeiro profissional a inscrever-se ficou com "Rua Capitão Salgueiro
+ * Maia 23" no campo do nome. A causa foi o browser: o formulário tem morada,
+ * código postal e localidade, e sem `autoComplete` no campo do nome o Chrome
+ * classificou-o como parte da morada e ofereceu a rua guardada.
+ *
+ * Esse buraco foi tapado no formulário, que é onde se resolve de verdade. Isto
+ * é a rede por baixo — porque o nome é o que o CLIENTE vê ao escolher quem lhe
+ * entra em casa, e "Rua Capitão Salgueiro Maia 23" não diz a ninguém com quem
+ * está a falar.
+ *
+ * DOIS SINAIS, E SÓ DOIS
+ *
+ * Reconhece-se pouco de propósito. Há empresas a sério chamadas "Quinta do
+ * Anjo Transportes" ou "Largo Mudanças", e recusar uma inscrição legítima é
+ * pior do que deixar passar um nome estranho — quem escreve o nome da empresa
+ * ao contrário corrige-se com um telefonema; quem é recusado vai-se embora.
+ *
+ * Por isso exigem-se os dois sinais juntos: começar por um tipo de via E ter
+ * um número de porta. Ou conter um código postal, que num nome de empresa não
+ * tem explicação nenhuma.
+ */
+/*
+ * Duas alternativas, e não uma, por causa do ponto das abreviaturas.
+ *
+ * A primeira tentativa juntava tudo num grupo só, com `\b` no fim:
+ * `/^(rua|av\.|...)\b/i`. As palavras inteiras funcionavam e as abreviaturas
+ * NÃO — "Av. da República 45" passava despercebida.
+ *
+ * A razão é que `\b` exige uma transição entre carácter de palavra e não-
+ * palavra. Depois de "Av." vem um espaço, e tanto o ponto como o espaço são
+ * não-palavra: não há transição nenhuma, e a fronteira nunca casa.
+ *
+ * Por isso as palavras inteiras levam `\b` e as abreviaturas levam o próprio
+ * ponto, que já é o terminador delas.
+ */
+const TIPOS_DE_VIA =
+  /^(?:(rua|avenida|travessa|largo|praceta|estrada|beco|alameda|praça|praca|rotunda|caminho|calçada|calcada|azinhaga|impasse|urbanização|urbanizacao|lote)\b|(r|av|tv|lg|estr|pct)\.)/i;
+
+const CODIGO_POSTAL = /\b\d{4}-\d{3}\b/;
+
+export function pareceMorada(nome: string): boolean {
+  const limpo = nome.trim();
+  if (CODIGO_POSTAL.test(limpo)) return true;
+  // Tipo de via no início E um número de porta algures. Um só não chega.
+  return TIPOS_DE_VIA.test(limpo) && /\b\d{1,4}\b/.test(limpo);
+}
+
 export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
   const erros: ErroDeInscricao[] = [];
   const c = (corpo ?? {}) as Record<string, unknown>;
@@ -140,6 +192,12 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
   const nome = texto(c.nome);
   if (nome.length < 3) {
     erros.push({ campo: "nome", mensagem: "Indique o nome ou a designação da empresa." });
+  } else if (pareceMorada(nome)) {
+    erros.push({
+      campo: "nome",
+      mensagem:
+        "Isto parece uma morada. Aqui vai o seu nome ou o da empresa — é o que o cliente vê. A morada tem campo próprio mais abaixo.",
+    });
   }
 
   const email = texto(c.email).toLowerCase();

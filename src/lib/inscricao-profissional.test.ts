@@ -6,6 +6,7 @@ import {
   codigoPostalValido,
   normalizarCodigoPostal,
   telefoneValido,
+  pareceMorada,
   RAIO_MAXIMO_KM,
 } from "./inscricao-profissional";
 
@@ -303,5 +304,65 @@ describe("veículo", () => {
     const r = com({ tipoVeiculo: "sem_veiculo" });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.dados.tipoVeiculo).toBe("sem_veiculo");
+  });
+});
+
+describe("o nome não pode ser uma morada", () => {
+  /*
+   * O primeiro profissional a inscrever-se ficou com "Rua Capitão Salgueiro
+   * Maia 23" no campo do nome. A causa foi o browser — o formulário tem
+   * morada, código postal e localidade, e sem `autoComplete` no campo do nome
+   * o Chrome classificou-o como parte da morada e ofereceu a rua guardada.
+   *
+   * O buraco foi tapado no formulário, que é onde se resolve de verdade. Isto
+   * é a rede por baixo: o nome é o que o CLIENTE vê ao escolher quem lhe entra
+   * em casa, e uma morada ali não lhe diz com quem está a falar.
+   */
+  it("apanha o caso real que aconteceu", () => {
+    expect(pareceMorada("Rua Capitão Salgueiro Maia 23")).toBe(true);
+    expect(pareceMorada("Rua Da Liberdade 61 Parque Verde Fernão Ferro")).toBe(true);
+  });
+
+  it("apanha as abreviaturas e outros tipos de via", () => {
+    expect(pareceMorada("Av. da República 45")).toBe(true);
+    expect(pareceMorada("Travessa do Forno 12")).toBe(true);
+    expect(pareceMorada("PRACETA DAS FLORES 3")).toBe(true);
+    expect(pareceMorada("Estrada Nacional 10")).toBe(true);
+  });
+
+  it("apanha um código postal, que num nome de empresa não tem explicação", () => {
+    expect(pareceMorada("Transportes Silva 2845-513")).toBe(true);
+  });
+
+  /*
+   * Reconhece-se pouco de propósito. Recusar uma inscrição legítima é pior do
+   * que deixar passar um nome estranho: quem escreve o nome ao contrário
+   * corrige-se com um telefonema, quem é recusado vai-se embora.
+   */
+  it("NÃO recusa nomes de empresa legítimos", () => {
+    expect(pareceMorada("Transportes Silva Lda")).toBe(false);
+    expect(pareceMorada("Mudanças Rápidas")).toBe(false);
+    expect(pareceMorada("João Pereira")).toBe(false);
+    // Tipo de via sem número de porta: pode ser um nome de sítio.
+    expect(pareceMorada("Largo Mudanças")).toBe(false);
+    expect(pareceMorada("Quinta do Anjo Transportes")).toBe(false);
+    // Um número sozinho também não chega — há empresas com números no nome.
+    expect(pareceMorada("Transportes 24h")).toBe(false);
+    expect(pareceMorada("Grupo 4 Logística")).toBe(false);
+  });
+
+  it("não confunde palavras que começam como um tipo de via", () => {
+    // Sem a fronteira de palavra no regex, "Lote" apanhava "Lotearte".
+    expect(pareceMorada("Lotearte 2000")).toBe(false);
+    expect(pareceMorada("Becolândia 7")).toBe(false);
+  });
+
+  it("recusa a inscrição inteira quando o nome é uma morada", () => {
+    const r = com({ nome: "Rua Capitão Salgueiro Maia 23" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.erros.some((e) => e.campo === "nome")).toBe(true);
+      expect(r.erros.find((e) => e.campo === "nome")?.mensagem).toContain("morada");
+    }
   });
 });

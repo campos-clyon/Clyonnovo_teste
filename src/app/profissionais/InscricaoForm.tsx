@@ -191,13 +191,34 @@ export default function InscricaoForm({
           <label htmlFor="nome" className="block text-sm font-medium text-gray-900">
             Nome ou empresa *
           </label>
+          {/*
+            `autoComplete="organization"` NÃO é detalhe.
+
+            Este era o único campo do formulário sem `autoComplete`, e o
+            formulário tem morada, código postal e localidade. O Chrome
+            classifica um formulário assim como sendo de MORADA e, sem
+            instrução em contrário, ofereceu a rua guardada como sugestão para
+            o primeiro campo de texto.
+
+            Foi o que aconteceu ao primeiro profissional a inscrever-se: ficou
+            com "Rua Capitão Salgueiro Maia 23" no nome, e é esse nome que o
+            cliente vê ao escolher quem lhe entra em casa.
+
+            Dizer ao browser o que o campo é resolve-o na origem — não há
+            validação que substitua isto, porque a validação só actua depois de
+            a pessoa já ter escrito a coisa errada.
+          */}
           <input
             id="nome"
             value={form.nome}
             onChange={(e) => set("nome", e.target.value)}
             placeholder="Ex: Transportes Silva Lda"
+            autoComplete="organization"
             className={`mt-1.5 ${inputCls(erro("nome"))}`}
           />
+          <p className="mt-1 text-xs text-slate-500">
+            É este nome que o cliente vê quando escolhe o profissional. Não é a morada.
+          </p>
           {erro("nome") && <p className="mt-1 text-xs text-red-600">{erro("nome")}</p>}
         </div>
 
@@ -336,6 +357,7 @@ export default function InscricaoForm({
             </label>
             <input
               id="cidade"
+              autoComplete="address-level2"
               value={form.cidade}
               onChange={(e) => set("cidade", e.target.value)}
               placeholder="Amadora"
@@ -454,6 +476,7 @@ export default function InscricaoForm({
             </label>
             <input
               id="nif"
+              autoComplete="off"
               inputMode="numeric"
               value={form.nif}
               onChange={(e) => set("nif", e.target.value)}
@@ -509,6 +532,7 @@ export default function InscricaoForm({
                 </label>
                 <input
                   id="localidadeFiscal"
+                  autoComplete="address-level2"
                   value={form.localidadeFiscal}
                   onChange={(e) => set("localidadeFiscal", e.target.value)}
                   placeholder="Amadora"
