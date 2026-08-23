@@ -5,6 +5,7 @@ import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealiza
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
 export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
+import { carteiraDe } from "@/lib/carteira";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -4776,3 +4777,235 @@ export async function registoParaOBackoffice(filtros: {
 }
 
 // ─── Registo permanente END ──────────────────────────────────────────────────
+
+/**
+ * Apagar a conta de um profissional.
+ *
+ * PORQUE É QUE SÓ DEPOIS DE SUSPENDER
+ *
+ * Suspender é o que trava a distribuição. Apagar directamente alguém activo
+ * deixava a porta aberta a um pedido novo chegar-lhe a meio do apagar — uma
+ * negociação criada para uma conta que está a desaparecer, e ninguém a
+ * responder do outro lado.
+ *
+ * Suspender primeiro torna isso impossível, e dá o passo atrás que uma acção
+ * sem volta merece ter.
+ *
+ * O QUE IMPEDE O APAGAR
+ *
+ * Dinheiro por pagar, transferências por processar e trabalhos a decorrer. Um
+ * profissional a quem se deve não deixa de existir por lhe apagarmos a linha
+ * na tabela — a dívida fica, sem nome nem IBAN para a pagar.
+ *
+ * A CARTEIRA É LIDA SEM PASSAR POR `negociacoesDoProfissional`
+ *
+ * Essa função faz `JOIN simulatorOrders`, e é INNER: uma negociação cujo
+ * pedido já foi apagado desaparece dela — e da carteira que dela se calcula.
+ * Como os pedidos são expurgados aos 60 dias, um profissional com dinheiro por
+ * levantar de um trabalho antigo apareceria aqui a não dever nada, e a conta
+ * dele seria apagada com o saldo lá dentro.
+ *
+ * As negociações são lidas cruas, direitas à tabela. O cálculo é o mesmo
+ * `carteiraDe` que ele vê no ecrã dele — se fosse reescrito em SQL, mais cedo
+ * ou mais tarde os dois números discordavam, e o que decide apagar uma conta
+ * não pode ser o que está errado.
+ *
+ * DOIS MODOS, CONFORME HAJA PASSADO
+ *
+ *   · sem história nenhuma — a linha sai mesmo da tabela. Nada lhe aponta;
+ *   · com história — a linha fica, vazia de tudo o que é pessoal.
+ *
+ * O segundo não é meia medida. Um trabalho feito em Julho continua a existir
+ * para o CLIENTE que o pagou, e as negociações apontam a esta linha por número.
+ * Removê-la fazia desaparecer o trabalho do histórico de quem não pediu nada —
+ * e a aritmética da carteira dele passava a somar sobre linhas órfãs.
+ *
+ * O registo permanente nunca se apaga: fica anonimizado, pela mesma regra que
+ * já vale para as contas de cliente.
+ */
+export class ContaComPendencias extends Error {
+  constructor(readonly motivos: string[]) {
+    super(`Não é possível apagar esta conta: ${motivos.join("; ")}.`);
+    this.name = "ContaComPendencias";
+  }
+}
+
+export type ApagarProfissionalResultado = {
+  modo: "removido" | "anonimizado";
+  nome: string;
+  /** Quantas negociações ficaram a apontar à linha anonimizada. */
+  negociacoes: number;
+  /** Linhas do registo permanente que perderam o nome. */
+  registosAnonimizados: number;
+};
+
+export async function apagarProfissional(
+  providerId: number,
+  quem: string,
+): Promise<ApagarProfissionalResultado> {
+  await ensureProvidersSchema();
+  await ensureLevantamentosTable();
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // `FOR UPDATE` para que nada mude entre a verificação e o apagar.
+    const [pLinhas] = (await conn.execute(
+      "SELECT id, name, email, estado FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
+      [providerId],
+    )) as any[];
+    const p = (
+      pLinhas as Array<{ id: number; name: string; email: string | null; estado: string | null }>
+    )[0];
+    if (!p) {
+      await conn.rollback();
+      throw new ContaComPendencias(["a conta já não existe"]);
+    }
+    if (p.estado !== "suspenso") {
+      await conn.rollback();
+      throw new ContaComPendencias(["a conta tem de estar suspensa primeiro"]);
+    }
+
+    // Negociações cruas — sem passar pelos pedidos, que podem já ter sido
+    // expurgados sem que isso apague o dinheiro que geraram.
+    const [nLinhas] = (await conn.execute(
+      `SELECT id, estado, valorAcordado, execucaoEnviadaEm, confirmadoEm, pagoEm
+         FROM negociacoes WHERE providerId = ?`,
+      [providerId],
+    )) as any[];
+    const negociacoes = nLinhas as Array<{
+      id: number;
+      estado: string;
+      valorAcordado: string | number | null;
+      execucaoEnviadaEm: Date | null;
+      confirmadoEm: Date | null;
+      pagoEm: Date | null;
+    }>;
+
+    const [lLinhas] = (await conn.execute(
+      "SELECT id, valor, estado FROM levantamentos WHERE providerId = ?",
+      [providerId],
+    )) as any[];
+    const levantamentos = (
+      lLinhas as Array<{ id: number; valor: string | number; estado: string }>
+    ).map((l) => ({
+      id: l.id,
+      valor: Number(l.valor),
+      estado: l.estado as "pedido" | "pago" | "recusado",
+    }));
+
+    const motivos: string[] = [];
+
+    const aDecorrer = negociacoes.filter((n) => n.estado === "acordada" && n.confirmadoEm == null);
+    if (aDecorrer.length > 0) {
+      motivos.push(
+        aDecorrer.length === 1
+          ? "há um trabalho contratado por confirmar"
+          : `há ${aDecorrer.length} trabalhos contratados por confirmar`,
+      );
+    }
+
+    const carteira = carteiraDe(
+      negociacoes.map((n) => ({
+        negociacaoId: n.id,
+        estado: n.estado,
+        valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+        execucaoEnviadaEm: n.execucaoEnviadaEm,
+        confirmadoEm: n.confirmadoEm,
+        pagoEm: n.pagoEm,
+      })) as never,
+      levantamentos,
+      new Date(),
+    );
+
+    const euros = (n: number) => n.toFixed(2).replace(".", ",");
+    if (carteira.cativo > 0) motivos.push(`tem ${euros(carteira.cativo)} € cativos`);
+    if (carteira.disponivel > 0) motivos.push(`tem ${euros(carteira.disponivel)} € por levantar`);
+    if (carteira.aCaminho > 0)
+      motivos.push(`tem ${euros(carteira.aCaminho)} € em transferência por processar`);
+
+    if (motivos.length > 0) {
+      await conn.rollback();
+      throw new ContaComPendencias(motivos);
+    }
+
+    // Há passado? Então a linha fica — as negociações apontam-lhe por número, e
+    // o cliente que o contratou continua a ter direito ao histórico dele.
+    const [oLinhas] = (await conn.execute(
+      "SELECT COUNT(*) AS n FROM simulatorOrders WHERE providerId = ?",
+      [providerId],
+    )) as any[];
+    const pedidosAtribuidos = Number((oLinhas as Array<{ n: number }>)[0]?.n ?? 0);
+    const temPassado = negociacoes.length > 0 || levantamentos.length > 0 || pedidosAtribuidos > 0;
+
+    await registarNaTransaccao(conn, {
+      acontecimento: "conta_apagada",
+      providerId,
+      providerNome: p.name,
+      autorTipo: "clyon",
+      autorNome: quem,
+      estadoAntes: "suspenso",
+      estadoDepois: temPassado ? "anonimizada" : "removida",
+      resumo: `Conta de profissional apagada por ${quem}`,
+    });
+
+    if (temPassado) {
+      /*
+       * Tudo o que identifica a pessoa sai. O que fica é um número e uma
+       * etiqueta, para as negociações antigas terem a que se agarrar.
+       *
+       * `slug` também é limpo — é único na tabela, e um slug com o nome dele lá
+       * dentro sobreviveria a tudo o resto.
+       */
+      await conn.execute(
+        `UPDATE providers
+            SET name = 'Profissional removido',
+                slug = CONCAT('removido-', id),
+                email = NULL, phone = NULL, nif = NULL, city = NULL,
+                passwordHash = NULL, iban = NULL, ibanTitular = NULL,
+                moradaFiscal = NULL, numeroTransportador = NULL,
+                categorias = NULL, zonas = NULL,
+                baseLat = NULL, baseLng = NULL,
+                isActive = 0, estado = 'apagado'
+          WHERE id = ?`,
+        [providerId],
+      );
+    } else {
+      await conn.execute("DELETE FROM providers WHERE id = ?", [providerId]);
+    }
+
+    // Estas saem nos dois casos: cobertura, convites e avisos não são história
+    // de ninguém, e um convite por usar seria uma porta de entrada deixada
+    // aberta para uma conta que já não existe.
+    await conn.execute("DELETE FROM provider_coverage WHERE providerId = ?", [providerId]);
+    await conn.execute("DELETE FROM convitesProfissionais WHERE providerId = ?", [providerId]);
+    if (p.email) {
+      await conn.execute("DELETE FROM convitesProfissionais WHERE email = ?", [p.email]);
+      await conn.execute("DELETE FROM pushSubscriptions WHERE userEmail = ?", [p.email]);
+    }
+
+    await conn.commit();
+
+    const registosAnonimizados = await anonimizarRegisto({ providerId }, "conta_profissional");
+
+    return {
+      modo: temPassado ? "anonimizado" : "removido",
+      nome: p.name,
+      negociacoes: negociacoes.length,
+      registosAnonimizados,
+    };
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* já houve rollback ou commit */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+}

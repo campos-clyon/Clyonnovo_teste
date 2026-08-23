@@ -31,7 +31,10 @@ export async function GET(req: NextRequest) {
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
               baseLat, baseLng, createdAt
          FROM providers
-        WHERE isClyon = 0
+        -- 'apagado' é a linha vazia que fica quando uma conta com história é
+        -- apagada: as negociações antigas precisam dela, o painel não. Sem
+        -- isto, "Profissional removido" ficava na lista para sempre.
+        WHERE isClyon = 0 AND (estado IS NULL OR estado <> 'apagado')
         ORDER BY
           -- Quem espera verificação primeiro: é o que trava pedidos.
           (emiteGuiaTransporte = 1 AND guiaVerificadaEm IS NULL) DESC,

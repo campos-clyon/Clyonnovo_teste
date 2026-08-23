@@ -152,6 +152,44 @@ export default function AdminProfissionaisPanel() {
     }
   }
 
+  /**
+   * Apagar a conta, com a palavra escrita à mão.
+   *
+   * A rota devolve 409 quando há pendências — dinheiro por levantar, uma
+   * transferência por processar, um trabalho contratado por confirmar. Isso
+   * não é avaria: é a resposta certa, e o motivo tem de chegar ao ecrã inteiro
+   * para se saber o que resolver antes de tentar de novo.
+   */
+  async function apagar(id: number) {
+    if (!token) return;
+    setOcupado(id);
+    setErro("");
+    setAviso("");
+    try {
+      const res = await fetch(`/api/admin/profissionais/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ confirmacao: "APAGAR" }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível apagar a conta.");
+        return;
+      }
+      setAviso(
+        dados.modo === "removido"
+          ? `Conta de ${dados.nome} apagada. Não tinha histórico — saiu por inteiro.`
+          : `Conta de ${dados.nome} apagada. ${dados.negociacoes} negociação(ões) antigas ficam sem nome, para o histórico dos clientes não partir.`,
+      );
+      setAEditar(null);
+      await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
   const contagens = useMemo(() => {
     const c: Record<string, number> = { todos: profissionais.length, por_verificar: 0 };
     for (const e of ESTADOS_DO_PROFISSIONAL) c[e] = 0;
@@ -301,6 +339,7 @@ export default function AdminProfissionaisPanel() {
             emEdicao={aEditar === p.id}
             onEditar={() => setAEditar(aEditar === p.id ? null : p.id)}
             onActuar={(corpo) => actuar(p.id, corpo)}
+            onApagar={() => apagar(p.id)}
           />
         ))}
       </div>
@@ -314,13 +353,19 @@ function Cartao({
   emEdicao,
   onEditar,
   onActuar,
+  onApagar,
 }: {
   p: Profissional;
   ocupado: boolean;
   emEdicao: boolean;
   onEditar: () => void;
   onActuar: (corpo: Record<string, unknown>) => void;
+  onApagar: () => void;
 }) {
+  // A palavra escrita à mão, antes de a conta desaparecer. Um botão que apaga
+  // à primeira é um botão que se carrega sem querer.
+  const [aApagar, setAApagar] = useState(false);
+  const [palavra, setPalavra] = useState("");
   const categorias = lista(p.categorias);
   const zonas = lista(p.zonas);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
@@ -478,6 +523,24 @@ function Cartao({
             Rejeitar
           </button>
         )}
+        {/*
+          Apagar só aparece depois de suspender.
+          Suspender é o que trava a distribuição: sem esse passo, um pedido
+          novo podia chegar-lhe a meio do apagar. E dá o passo atrás que uma
+          acção sem volta merece ter.
+        */}
+        {p.estado === "suspenso" && !aApagar && (
+          <button
+            onClick={() => {
+              setAApagar(true);
+              setPalavra("");
+            }}
+            disabled={ocupado}
+            className="rounded-lg border border-red-900/60 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-950/40 disabled:opacity-50"
+          >
+            Apagar conta
+          </button>
+        )}
         <button
           onClick={onEditar}
           disabled={ocupado}
@@ -488,6 +551,52 @@ function Cartao({
         </button>
         {ocupado && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-hidden="true" />}
       </div>
+
+      {aApagar && (
+        <div className="mt-3 rounded-xl border border-red-900/60 bg-red-950/20 p-4">
+          <p className="text-sm font-semibold text-red-300">Apagar a conta de {p.name}?</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+            Isto não tem volta. Sai o nome, o email, o telefone, o NIF, o IBAN e a
+            palavra-passe. Se este profissional já tiver trabalhos feitos, a linha
+            dele fica sem nome em vez de desaparecer — os clientes que o
+            contrataram continuam a ter direito ao histórico deles.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-slate-400">
+            Se lhe dever dinheiro ou tiver um trabalho por confirmar, isto pára e
+            diz o que falta resolver.
+          </p>
+          <label className="mt-3 block text-xs font-medium text-slate-400">
+            Escreva <span className="font-mono font-bold text-red-300">APAGAR</span> para
+            confirmar
+            <input
+              value={palavra}
+              onChange={(e) => setPalavra(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-red-700"
+              placeholder="APAGAR"
+              autoComplete="off"
+            />
+          </label>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={onApagar}
+              disabled={ocupado || palavra !== "APAGAR"}
+              className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Apagar definitivamente
+            </button>
+            <button
+              onClick={() => {
+                setAApagar(false);
+                setPalavra("");
+              }}
+              disabled={ocupado}
+              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {emEdicao && <Editor p={p} onGuardar={onActuar} ocupado={ocupado} />}
     </article>

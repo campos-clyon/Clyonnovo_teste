@@ -7,6 +7,8 @@ import {
   definirBaseDoProfissional,
   guardarTokenDePalavraPasse,
   getPool,
+  apagarProfissional,
+  ContaComPendencias,
 } from "@/lib/db";
 import { validarEdicao, estadoValido, afectaDistribuicao } from "@/lib/edicao-profissional";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
@@ -187,5 +189,58 @@ export async function PATCH(
   } catch (error) {
     console.error("[api/admin/profissionais PATCH]", error);
     return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });
+  }
+}
+
+/**
+ * Apagar a conta de um profissional.
+ *
+ * A palavra de confirmação vai no CORPO e não na barra de endereço. Um `?nome=`
+ * fica no histórico do browser, nos registos do servidor e em qualquer proxy
+ * pelo meio — e o que aqui se escreve é o nome de uma pessoa.
+ *
+ * Os guardas todos vivem em `apagarProfissional`, dentro da transacção, e não
+ * aqui: uma verificação feita na rota é uma verificação que a próxima maneira
+ * de chamar isto não vai ter.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { err, colab } = await requireAdmin(req);
+  if (err) return err;
+
+  const { id } = await params;
+  const providerId = Number(id);
+  if (!Number.isInteger(providerId) || providerId <= 0) {
+    return NextResponse.json({ error: "Identificador inválido" }, { status: 400 });
+  }
+
+  // Ninguém apaga uma conta por engano numa chamada solta: tem de vir a
+  // palavra, escrita à mão do outro lado.
+  let corpo: Record<string, unknown> = {};
+  try {
+    corpo = (await req.json()) as Record<string, unknown>;
+  } catch {
+    /* corpo vazio — cai na verificação seguinte */
+  }
+  if (corpo.confirmacao !== "APAGAR") {
+    return NextResponse.json(
+      { error: "Falta a confirmação. Escreva APAGAR para continuar." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const r = await apagarProfissional(providerId, colab.nome);
+    return NextResponse.json({ ok: true, ...r });
+  } catch (error) {
+    // Pendências não são avaria nossa: são a resposta certa, e o admin precisa
+    // de LER o motivo para saber o que resolver antes de tentar outra vez.
+    if (error instanceof ContaComPendencias) {
+      return NextResponse.json({ error: error.message, motivos: error.motivos }, { status: 409 });
+    }
+    console.error("[api/admin/profissionais DELETE]", error);
+    return NextResponse.json({ error: "Erro ao apagar a conta" }, { status: 500 });
   }
 }
