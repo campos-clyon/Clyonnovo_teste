@@ -5,6 +5,7 @@ import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
+import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/profissional-auth";
 import type { Perfil as PerfilTipo } from "./tipos";
@@ -121,6 +122,7 @@ export default function Perfil({
   const [actual, setActual] = useState("");
   const [nova, setNova] = useState("");
   const [aVer, setAVer] = useState(false);
+  const [aApagarConta, setAApagarConta] = useState(false);
 
   /*
    * Cada secção responde por si.
@@ -609,6 +611,41 @@ export default function Perfil({
             </Campo>
 
             <Guardar onClick={mudarPalavraPasse} rotulo="Mudar palavra-passe" />
+
+            {/*
+              Apagar a conta — uma linha, no fim, em cinzento.
+
+              O direito a sair é dele e não tinha porta nenhuma: até aqui só o
+              backoffice podia apagar uma conta de profissional. Mas uma acção
+              sem volta que quase ninguém usa não merece caixa nem cor — a
+              explicação está atrás do toque.
+
+              O que o trava é o mesmo que trava o backoffice: dinheiro por
+              levantar e trabalhos por confirmar. Não há versão mais branda por
+              ser ele próprio a pedir.
+            */}
+            <div className="mt-8 border-t border-slate-100 pt-5">
+              <LinhaApagarConta onClick={() => setAApagarConta(true)} />
+            </div>
+
+            {aApagarConta && (
+              <ApagarContaModal
+                endereco="/api/profissionais/conta"
+                aviso={
+                  <>
+                    Deixa de receber pedidos e os seus dados são apagados: nome, email,
+                    telefone, NIF, IBAN e morada fiscal. Os trabalhos que já fez ficam sem
+                    o seu nome, porque os clientes que o contrataram continuam a ter
+                    direito ao histórico deles. Se tivermos dinheiro seu por pagar ou
+                    houver um trabalho por confirmar, isto pára e diz o que falta.
+                  </>
+                }
+                aoTerminar={() => {
+                  window.location.href = "/";
+                }}
+                onClose={() => setAApagarConta(false)}
+              />
+            )}
           </div>
         )}
       </section>

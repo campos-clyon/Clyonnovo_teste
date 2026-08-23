@@ -1,8 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/auth";
-import { withConnection, ensureUsersSchema } from "@/lib/db";
+import {
+  withConnection,
+  ensureUsersSchema,
+  apagarContaDeCliente,
+  apagarFotosDoBlob,
+  ContaComPendencias,
+} from "@/lib/db";
 
 // Cache de módulo para evitar chamar ensureUsersSchema múltiplas vezes (é lento na Neon DB)
 let _schemaReady = false;
@@ -251,28 +257,69 @@ export async function PATCH(request: NextRequest) {
 }
 
 // DELETE /api/users/me — anonimiza dados, não apaga pedidos
-export async function DELETE() {
+/**
+ * Apagar a conta, a pedido do titular.
+ *
+ * O QUE ISTO FAZIA ANTES
+ *
+ * Limpava a linha em `users` e mais nada. O ecrã prometia "Os pedidos
+ * existentes ficam anonimizados" e os pedidos ficavam intactos — nome,
+ * telefone, email, morada completa e fotografias da casa, tudo onde estava.
+ * A promessa era do ecrã; o código não a cumpria.
+ *
+ * E não havia guarda nenhum: dava para apagar a conta a meio de um trabalho
+ * contratado, deixando o profissional a trabalhar para ninguém.
+ *
+ * O trabalho todo vive agora em `apagarContaDeCliente`, numa transacção.
+ */
+export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
+  // A palavra escrita à mão, como no botão. Sem ela, qualquer página que a
+  // pessoa visite com a sessão aberta podia apagar-lhe a conta com um `fetch`.
+  let corpo: Record<string, unknown> = {};
+  try {
+    corpo = (await req.json()) as Record<string, unknown>;
+  } catch {
+    /* corpo vazio — cai na verificação seguinte */
+  }
+  if (corpo.confirmacao !== "ELIMINAR") {
+    return NextResponse.json(
+      { error: "Falta a confirmação. Escreva ELIMINAR para continuar." },
+      { status: 400 },
+    );
+  }
+
   const userEmail = session.user.email.trim().toLowerCase();
   try {
-    await withConnection(async (conn) => {
-      await conn.execute(
-        `UPDATE users
-         SET name = 'Utilizador eliminado', phone = NULL, addressLine = NULL,
-             addressNumber = NULL, postalCode = NULL, addressCity = NULL,
-             nif = NULL, billingName = NULL, billingNif = NULL,
-             billingAddress = NULL, billingPostalCode = NULL, billingCity = NULL,
-             avatarUrl = NULL, deletedAt = NOW(), updatedAt = NOW()
-         WHERE email = ?`,
-        [userEmail],
-      );
-    });
-    return NextResponse.json({ success: true });
+    const r = await apagarContaDeCliente(userEmail, session.user.name ?? userEmail);
+
+    /*
+     * As fotografias saem do Blob DEPOIS da resposta.
+     *
+     * São uma chamada de rede por ficheiro. Pô-las à frente de quem está a
+     * fechar a conta fazia-o esperar por elas — e a conta já está apagada
+     * quando esta linha corre: o que falta é arrumação, não é o pedido dele.
+     */
+    if (r.fotos.length > 0) {
+      after(async () => {
+        const apagadas = await apagarFotosDoBlob(r.fotos);
+        if (apagadas < r.fotos.length) {
+          console.error(
+            `[api/users/me DELETE] ${r.fotos.length - apagadas} de ${r.fotos.length} fotografias não saíram do Blob`,
+          );
+        }
+      });
+    }
+
+    return NextResponse.json({ success: true, pedidos: r.pedidos });
   } catch (err) {
+    if (err instanceof ContaComPendencias) {
+      return NextResponse.json({ error: err.message, motivos: err.motivos }, { status: 409 });
+    }
     console.error("[api/users/me] DELETE:", err);
     return NextResponse.json({ error: "Erro ao eliminar conta." }, { status: 500 });
   }

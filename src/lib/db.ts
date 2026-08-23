@@ -5009,3 +5009,195 @@ export async function apagarProfissional(
     conn.release();
   }
 }
+
+/**
+ * Apagar a conta de um cliente.
+ *
+ * O QUE ESTAVA AQUI ANTES, E PORQUE É QUE NÃO CHEGAVA
+ *
+ * O ecrã dizia "Os pedidos existentes ficam anonimizados". Não ficavam. O
+ * apagar limpava a linha em `users` e mais nada — o nome, o telefone, o email,
+ * a morada completa e as fotografias da casa continuavam em `simulatorOrders`,
+ * exactamente onde estavam. A promessa era do ecrã; o código não a cumpria.
+ *
+ * Não havia guarda nenhum: um cliente com um trabalho contratado por confirmar
+ * podia apagar-se a meio, e o profissional ficava a trabalhar para ninguém,
+ * com o dinheiro preso entre os dois.
+ *
+ * E o email ficava na linha. `getOrCreateUser` procura `WHERE email = ? AND
+ * deletedAt IS NULL`: quem apagasse a conta e voltasse a entrar com o Google
+ * apanhava um erro, porque a linha existia para o INSERT e não existia para o
+ * SELECT. Baralhar o email resolve as duas coisas de uma vez.
+ *
+ * O QUE FICA, E PORQUÊ
+ *
+ * O tipo de serviço, a cidade, o valor e a data ficam. Não identificam
+ * ninguém, e são o registo de trabalho do PROFISSIONAL que o executou — o
+ * direito ao apagamento de um não apaga a vida profissional do outro.
+ *
+ * Sai tudo o resto: nome, telefone, email, morada exacta, a descrição escrita
+ * à mão (que pode dizer qualquer coisa), as conversas, o histórico e as
+ * fotografias. E o token de acesso, para o link do pedido deixar de abrir.
+ *
+ * As fotografias não se apagam aqui: os URLs saem para quem chamou, que as
+ * remove do Blob depois da transacção fechar. Uma chamada de rede a meio de
+ * uma transacção prende a linha na base de dados enquanto se espera pela
+ * internet.
+ */
+export type ApagarContaDeClienteResultado = {
+  pedidos: number;
+  registosAnonimizados: number;
+  /** URLs das fotografias, para quem chamou as remover do Blob. */
+  fotos: string[];
+};
+
+export async function apagarContaDeCliente(
+  email: string,
+  quem: string,
+): Promise<ApagarContaDeClienteResultado> {
+  await ensureUsersSchema();
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const alvo = email.trim().toLowerCase();
+  if (!alvo) throw new ContaComPendencias(["falta o email da conta"]);
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [oLinhas] = (await conn.execute(
+      "SELECT id, filesJson FROM simulatorOrders WHERE LOWER(contactEmail) = ? FOR UPDATE",
+      [alvo],
+    )) as any[];
+    const pedidos = oLinhas as Array<{ id: number; filesJson: string | null }>;
+
+    /*
+     * Trabalhos por fechar.
+     *
+     * `acordada` sem `confirmadoEm` quer dizer que alguém está a trabalhar e
+     * que há dinheiro cativo. Apagar o cliente aqui deixava o profissional sem
+     * a quem entregar e sem a quem cobrar.
+     */
+    if (pedidos.length > 0) {
+      const ids = pedidos.map((p) => p.id);
+      const [nLinhas] = (await conn.execute(
+        `SELECT COUNT(*) AS n FROM negociacoes
+          WHERE pedidoId IN (${ids.map(() => "?").join(",")})
+            AND estado = 'acordada' AND confirmadoEm IS NULL`,
+        ids,
+      )) as any[];
+      const aDecorrer = Number((nLinhas as Array<{ n: number }>)[0]?.n ?? 0);
+      if (aDecorrer > 0) {
+        await conn.rollback();
+        throw new ContaComPendencias([
+          aDecorrer === 1
+            ? "tem um trabalho contratado por confirmar"
+            : `tem ${aDecorrer} trabalhos contratados por confirmar`,
+        ]);
+      }
+    }
+
+    // As fotografias, antes de a coluna ser limpa.
+    const fotos: string[] = [];
+    for (const p of pedidos) {
+      if (!p.filesJson) continue;
+      try {
+        const lista = JSON.parse(p.filesJson);
+        if (Array.isArray(lista)) {
+          for (const f of lista) {
+            if (f && typeof f.url === "string") fotos.push(f.url);
+          }
+        }
+      } catch {
+        /* JSON estragado — não há URLs a salvar dele */
+      }
+    }
+
+    if (pedidos.length > 0) {
+      await conn.execute(
+        `UPDATE simulatorOrders
+            SET contactName = NULL, contactPhone = NULL, contactEmail = NULL,
+                address = NULL, floor = NULL,
+                description = NULL, filesJson = NULL,
+                rawOrderJson = NULL, chatJson = NULL, historyJson = NULL,
+                acessoTokenHash = NULL, acessoTokenExpiraEm = NULL
+          WHERE LOWER(contactEmail) = ?`,
+        [alvo],
+      );
+    }
+
+    await registarNaTransaccao(conn, {
+      acontecimento: "conta_apagada",
+      clienteEmail: alvo,
+      autorTipo: "cliente",
+      autorNome: quem,
+      estadoDepois: "anonimizada",
+      resumo: `Conta de cliente apagada a pedido do titular (${pedidos.length} pedido(s))`,
+    });
+
+    /*
+     * O email é baralhado, e não só apagado.
+     *
+     * É a chave única da tabela. Deixá-lo lá com `deletedAt` preenchido fazia
+     * com que voltar a entrar com o Google desse erro — o INSERT via a linha,
+     * o SELECT seguinte não. Assim a pessoa pode voltar, e volta como conta
+     * nova, que é o que apagar a conta quer dizer.
+     */
+    await conn.execute(
+      `UPDATE users
+          SET name = 'Utilizador eliminado',
+              email = CONCAT('apagado-', id, '@removido.invalid'),
+              phone = NULL, addressLine = NULL, addressNumber = NULL,
+              postalCode = NULL, addressCity = NULL, nif = NULL,
+              billingName = NULL, billingNif = NULL, billingAddress = NULL,
+              billingPostalCode = NULL, billingCity = NULL,
+              avatarUrl = NULL, openId = NULL,
+              deletedAt = NOW(), updatedAt = NOW()
+        WHERE email = ?`,
+      [alvo],
+    );
+
+    await conn.execute("DELETE FROM pushSubscriptions WHERE userEmail = ?", [alvo]);
+
+    await conn.commit();
+
+    const registosAnonimizados = await anonimizarRegisto({ clienteEmail: alvo }, "conta_cliente");
+
+    return { pedidos: pedidos.length, registosAnonimizados, fotos };
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* já houve rollback ou commit */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Apagar fotografias do Blob, uma a uma e sem estoirar.
+ *
+ * Uma que falhe não pode levar as outras atrás: o que falta apagar continua a
+ * ser dados pessoais de alguém que pediu para os ver apagados, e desistir ao
+ * primeiro erro deixava o resto lá.
+ *
+ * Devolve quantas saíram, para quem chamou poder registar a diferença.
+ */
+export async function apagarFotosDoBlob(urls: string[]): Promise<number> {
+  if (urls.length === 0) return 0;
+  let apagadas = 0;
+  const { del } = await import("@vercel/blob");
+  for (const url of urls) {
+    try {
+      await del(url);
+      apagadas += 1;
+    } catch (e) {
+      console.error("[apagarFotosDoBlob] falhou", url, e);
+    }
+  }
+  return apagadas;
+}
