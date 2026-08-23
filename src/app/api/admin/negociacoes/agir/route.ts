@@ -5,7 +5,11 @@ import {
   gravarNegociacao,
   encerrarOutrasNegociacoes,
   appendOrderHistory,
+  confirmarExecucao,
+  getSimulatorOrderById,
+  registarSemFalhar,
 } from "@/lib/db";
+import { clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
@@ -56,7 +60,7 @@ function propostasDe(json: string | null): Proposta[] {
   }
 }
 
-const ACCOES = ["propor", "aceitar", "contratar", "desistir"] as const;
+const ACCOES = ["propor", "aceitar", "contratar", "desistir", "confirmar"] as const;
 type AccaoDeAdmin = (typeof ACCOES)[number];
 
 export async function POST(req: NextRequest) {
@@ -96,6 +100,93 @@ export async function POST(req: NextRequest) {
     const linha = todas.find((n) => Number(n.id) === negociacaoId);
     if (!linha) {
       return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
+    }
+
+    /*
+     * CONFIRMAR — e o único portao a serio desta rota.
+     *
+     * As outras accoes negoceiam: propoem, aceitam, desistem. Nenhuma mexe em
+     * dinheiro. Esta liberta o pagamento do profissional, e por isso nao pode
+     * estar ao alcance da CLYON em qualquer pedido.
+     *
+     * O QUE ACONTECIA SEM ISTO
+     *
+     * Um pedido registado pela equipa — chegado por WhatsApp, com a cliente
+     * sem email — nao tinha ninguem que pudesse confirmar. O profissional
+     * fazia o trabalho, mandava a prova, e ficava ali: `confirmadoEm` nunca
+     * era preenchido. A carteira dele mostrava o dinheiro libertado pelo
+     * prazo, mas a data nunca era gravada — e e essa data que fecha o
+     * trabalho, que deixa apagar o pedido, e que deixa apagar a conta dele ou
+     * a dela. Um beco sem saida, e a apanhar TODOS os pedidos que a equipa
+     * regista ao telefone.
+     *
+     * PORQUE E QUE NAO SERVE PARA TODOS
+     *
+     * Se o cliente TEM como confirmar — tem email, recebeu o link — entao e
+     * ele que confirma e mais ninguem. A promessa da plataforma e que o
+     * dinheiro so se solta quando quem pagou disser que esta feito. Deixar a
+     * CLYON faze-lo por um cliente que podia falar por si e desfazer a
+     * promessa por conveniencia de quem esta do lado de dentro.
+     *
+     * A regra e a mesma que o painel usa para separar os dois grupos — vem de
+     * `@/lib/quem-negoceia`, e nao de uma copia.
+     */
+    if (accao === "confirmar") {
+      const pedido = await getSimulatorOrderById(pedidoId);
+      if (!pedido) {
+        return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+      }
+
+      let origem: string | null = null;
+      try {
+        origem = pedido.rawOrderJson
+          ? ((JSON.parse(pedido.rawOrderJson) as Record<string, unknown>).origemPedido as string) ?? null
+          : null;
+      } catch {
+        /* JSON estragado — conta como sem origem, e o email decide */
+      }
+
+      const alvo = { origem, contactEmail: pedido.contactEmail };
+      if (!clyonPodeConfirmar(alvo)) {
+        return NextResponse.json({ error: porqueNaoPodeConfirmar(alvo) }, { status: 403 });
+      }
+
+      // Os restantes guardas vivem no SQL: só grava se estiver `acordada`, com
+      // prova enviada e ainda por confirmar. Se não gravou, uma delas falhou.
+      const gravou = await confirmarExecucao(negociacaoId, pedidoId);
+      if (!gravou) {
+        return NextResponse.json(
+          {
+            error:
+              "Não há nada para confirmar: ou o trabalho ainda não foi entregue, ou já foi confirmado.",
+          },
+          { status: 409 },
+        );
+      }
+
+      const porQuem = colab?.nome ?? "a CLYON";
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message:
+          `CLYON (${porQuem}) confirmou a execução em nome do cliente — ` +
+          `negociação #${negociacaoId}. Pagamento libertado.`,
+      });
+
+      // No registo permanente fica escrito QUEM confirmou. Um trabalho fechado
+      // pela CLYON e um fechado pelo cliente não são a mesma coisa, e no dia de
+      // um desacordo esta é a única versão escrita.
+      await registarSemFalhar({
+        acontecimento: "execucao_confirmada",
+        pedidoId,
+        negociacaoId,
+        autorTipo: "clyon",
+        autorNome: porQuem,
+        valor: linha.valorAcordado != null ? Number(linha.valorAcordado) : null,
+        resumo: `Execução confirmada pela CLYON em nome do cliente (${porQuem})`,
+      });
+
+      return NextResponse.json({ ok: true, confirmado: true });
     }
 
     const agora = new Date();
@@ -143,6 +234,8 @@ export async function POST(req: NextRequest) {
       aceitar: "aceitou a proposta do profissional",
       contratar: "contratou o profissional",
       desistir: "desistiu da negociação",
+      // `confirmar` sai mais acima, com histórico próprio.
+      confirmar: "confirmou a execução",
     };
 
     // Fechar uma fecha as outras: os restantes profissionais deixam de propor

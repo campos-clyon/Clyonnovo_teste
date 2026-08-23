@@ -15,6 +15,12 @@ import {
   Trash2,
   UserRound,
 } from "lucide-react";
+import { quemNegoceia, clyonPodeConfirmar } from "@/lib/quem-negoceia";
+import {
+  quantoOClientePaga,
+  quantoOProfissionalRecebe,
+  comissaoDaClyon,
+} from "@/lib/taxas-plataforma";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
@@ -131,28 +137,15 @@ type Pedido = {
   negociacoes: Negociacao[];
 };
 
-/**
- * Quem responde pelo lado do cliente nesta negociacao?
+/*
+ * `quemNegoceia` mudou-se para `@/lib/quem-negoceia`.
  *
- * Nao e uma etiqueta decorativa — decide quem tem de agir. Se o cliente nao
- * consegue chegar a negociacao, ela para ate alguem da CLYON responder por ele,
- * e a proposta do profissional expira as 48 horas com toda a gente a achar que
- * a bola estava do outro lado.
- *
- * Dois casos em que a CLYON responde, e sao os dois observaveis nos dados:
- *
- *   · o pedido foi registado pela equipa (origem "backoffice") — chegou por
- *     WhatsApp ou por telefone, a pessoa nunca foi ao site;
- *   · nao ha email — sem email nao ha como mandar o link, e sem link nao ha
- *     como responder. O #202 esta assim, com o campo vazio em vez de nulo.
- *
- * Tudo o resto e do cliente: recebeu o link no email e responde sozinho.
+ * Aqui servia para desenhar dois grupos no ecra. A partir do momento em que a
+ * CLYON pode CONFIRMAR um trabalho — o gesto que liberta o dinheiro do
+ * profissional — a mesma regra passou a ser um portao no servidor. Um portao
+ * que vive so no browser nao e um portao, e copiado em dois sitios acabaria
+ * com o ecra a esconder um botao que a rota continuava a aceitar.
  */
-function quemNegoceia(p: Pedido): "clyon" | "cliente" {
-  if (p.origem === "backoffice") return "clyon";
-  if (!p.contactEmail || p.contactEmail.trim() === "") return "clyon";
-  return "cliente";
-}
 
 const ESTADO_CLS: Record<string, string> = {
   aberta: "bg-blue-500/15 text-blue-300",
@@ -549,7 +542,7 @@ export default function AdminNegociacoesPanel() {
                       </span>
                     )}
                     {n.valorAcordado && (
-                      <span className="text-xs text-slate-500">{n.valorAcordado} €</span>
+                      <span className="text-xs text-slate-500">{euros(n.valorAcordado)}</span>
                     )}
                     <span className="text-xs text-slate-600">
                       {propostasDe(n.propostasJson).length} proposta
@@ -582,6 +575,7 @@ export default function AdminNegociacoesPanel() {
                   <TrocaDePropostas
                     negociacao={n}
                     pedidoId={p.id}
+                    podeConfirmar={clyonPodeConfirmar(p)}
                     onMudou={carregar}
                   />
                 )}
@@ -1085,13 +1079,154 @@ function RespostaDaClyon({
   );
 }
 
+/**
+ * Dinheiro em português.
+ *
+ * O painel escrevia `{n.valorAcordado} €` — o valor cru da base de dados — e
+ * saía "200.00 €", com ponto. Em português o separador decimal é a vírgula, e
+ * este ecrã é lido por quem está ao telefone a dizer um valor em voz alta.
+ */
+function euros(n: number | string | null | undefined): string {
+  const v = typeof n === "string" ? Number(n) : n;
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `${v.toFixed(2).replace(".", ",")} €`;
+}
+
+/**
+ * A CLYON confirma o trabalho, em nome de quem não tem como o fazer.
+ *
+ * E mostra as contas.
+ *
+ * Faltavam os números: o painel dizia "200,00 €" e mais nada. Esse valor é o
+ * ACORDADO, e não é o que nenhuma das partes vê. O cliente paga mais do que
+ * isso e o profissional recebe menos — e quem está ao telefone com a cliente
+ * a combinar o pagamento precisa do número certo à frente, não de uma conta
+ * de cabeça sobre percentagens.
+ *
+ * Os três números saem de `taxas-plataforma`, que é onde as comissões vivem.
+ * Escritos à mão aqui, mudavam quando a taxa mudasse — ou pior, não mudavam.
+ */
+function ConfirmarPelaClyon({
+  negociacaoId,
+  pedidoId,
+  valorAcordado,
+  onMudou,
+}: {
+  negociacaoId: number;
+  pedidoId: number;
+  valorAcordado: number | null;
+  onMudou: () => void;
+}) {
+  const { token: authToken } = useAdminAuth();
+  const [aEnviar, setAEnviar] = useState(false);
+  const [erro, setErro] = useState("");
+  const [aConfirmar, setAConfirmar] = useState(false);
+
+  const confirmar = async () => {
+    if (!authToken) return;
+    setAEnviar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/agir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ pedidoId, negociacaoId, accao: "confirmar" }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível confirmar.");
+        return;
+      }
+      onMudou();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-emerald-900/60 bg-emerald-950/20 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+        Confirmar como CLYON
+      </p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+        Este cliente não tem como confirmar sozinho — chegou por WhatsApp ou telefone.
+        Confirme depois de falar com ele e de o trabalho estar pago.
+      </p>
+
+      {valorAcordado != null && (
+        <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
+          <div className="flex items-center justify-between">
+            <dt className="text-slate-400">Cobrar ao cliente</dt>
+            <dd className="font-semibold tabular-nums text-slate-100">
+              {euros(quantoOClientePaga(valorAcordado))}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-slate-400">O profissional recebe</dt>
+            <dd className="font-semibold tabular-nums text-slate-100">
+              {euros(quantoOProfissionalRecebe(valorAcordado))}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-800 pt-1">
+            <dt className="text-slate-500">Fica para a CLYON</dt>
+            <dd className="tabular-nums text-slate-400">{euros(comissaoDaClyon(valorAcordado))}</dd>
+          </div>
+        </dl>
+      )}
+
+      {erro && (
+        <p className="mt-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1.5 text-xs text-red-300">
+          {erro}
+        </p>
+      )}
+
+      {/*
+        Dois toques, e não um. Confirmar liberta o dinheiro do profissional e
+        não tem volta — e o botão vive ao lado de outros que se carregam sem
+        pensar.
+      */}
+      {!aConfirmar ? (
+        <button
+          onClick={() => setAConfirmar(true)}
+          className="mt-2.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+        >
+          Está feito — libertar o pagamento
+        </button>
+      ) : (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-300">Confirma que o trabalho está feito e pago?</span>
+          <button
+            onClick={confirmar}
+            disabled={aEnviar}
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {aEnviar ? "A confirmar…" : "Sim, libertar"}
+          </button>
+          <button
+            onClick={() => setAConfirmar(false)}
+            disabled={aEnviar}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TrocaDePropostas({
   negociacao,
   pedidoId,
+  podeConfirmar,
   onMudou,
 }: {
   negociacao: Negociacao;
   pedidoId: number;
+  /** A CLYON responde pelo lado do cliente NESTE pedido — ver quem-negoceia.ts. */
+  podeConfirmar: boolean;
   onMudou: () => void;
 }) {
   const propostas = propostasDe(negociacao.propostasJson);
@@ -1162,6 +1297,33 @@ function TrocaDePropostas({
               ))}
             </div>
           )}
+          {/*
+            O BECO QUE ESTAVA AQUI.
+
+            Um pedido registado pela equipa — chegado por WhatsApp, com a
+            cliente sem email — nao tinha ninguem que pudesse confirmar. O
+            profissional fazia o trabalho, mandava a prova, e ficava ali: sem
+            botao no painel, sem link no email dela, sem conta onde entrar.
+            `confirmadoEm` nunca era preenchido, e e essa data que fecha o
+            trabalho, que deixa apagar o pedido, e que deixa apagar a conta
+            dele ou a dela.
+
+            So aparece quando a CLYON responde MESMO pelo lado do cliente. Se
+            ele tem email e recebeu o link, e ele que confirma — e o botao nao
+            existe. A rota recusa na mesma; isto e so nao mostrar uma porta que
+            nao abre.
+          */}
+          {!negociacao.confirmadoEm && negociacao.execucaoEnviadaEm && podeConfirmar && (
+            <ConfirmarPelaClyon
+              negociacaoId={negociacao.id}
+              pedidoId={pedidoId}
+              valorAcordado={
+                negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null
+              }
+              onMudou={onMudou}
+            />
+          )}
+
           {negociacao.confirmadoEm && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-300">
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
