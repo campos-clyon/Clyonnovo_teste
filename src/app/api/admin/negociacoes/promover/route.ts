@@ -38,7 +38,18 @@ export async function GET(req: NextRequest) {
   if (err) return err;
 
   try {
-    return NextResponse.json({ pedidos: await pedidosPorPromover(20) });
+    /*
+     * Cem, e nao vinte.
+     *
+     * Com vinte, o painel mostrava uma janela e calava o resto: arquivar um
+     * pedido fazia aparecer outro vindo do fundo da fila, e nunca se sabia
+     * quantos faltavam. O contador que agora esta no cabecalho seria uma
+     * mentira do tamanho da diferenca.
+     *
+     * Cem cabe porque a lista deixou de ser corrida: agrupa por idade e os
+     * antigos — que sao quase sempre a maioria — nascem fechados.
+     */
+    return NextResponse.json({ pedidos: await pedidosPorPromover(100) });
   } catch (error) {
     console.error("[admin/negociacoes/promover GET]", error);
     return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });

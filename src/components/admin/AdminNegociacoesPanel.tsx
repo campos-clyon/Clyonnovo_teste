@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   Camera,
   CheckCircle2,
+  Archive,
   ChevronDown,
   Clock,
   Copy,
@@ -16,6 +17,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar } from "@/lib/quem-negoceia";
+import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
   quantoOClientePaga,
   quantoOProfissionalRecebe,
@@ -353,6 +355,72 @@ export default function AdminNegociacoesPanel() {
       setErro("Erro de rede.");
     } finally {
       setOcupado(null);
+    }
+  }
+
+  /**
+   * Arquivar um pedido que nunca vai ser enviado.
+   *
+   * Arquivar e nao apagar, como accao normal do dia a dia. Um pedido arquivado
+   * sai desta lista — `pedidosPorPromover` ja exclui o estado "arquivado" — e
+   * continua a existir: daqui a tres meses ainda se sabe que houve um pedido de
+   * moveis em Almada que ninguem enviou, e o historico do cliente nao muda.
+   *
+   * Apagar fica para o que nao devia ter existido, e por isso e o botao
+   * pequeno e cinzento com a caixa de marcar.
+   */
+  async function arquivarPedido(id: number) {
+    if (!token) return;
+    setOcupado(`a${id}`);
+    setErro("");
+    try {
+      const res = await fetch(`/api/admin/pedidos/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const dados = await res.json().catch(() => ({}));
+        setErro(dados.error ?? "Nao foi possivel arquivar.");
+        return;
+      }
+      await carregar(true);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  /**
+   * Apagar pedidos por promover.
+   *
+   * Mesma rota que apaga os outros: os guardas vivem la — um pedido com
+   * trabalho contratado por confirmar recusa-se a sair, e volta na lista de
+   * `recusados` com o motivo.
+   */
+  async function apagarPedidos(ids: number[]) {
+    if (!token || ids.length === 0) return;
+    setAApagar(true);
+    setErro("");
+    setRecusados([]);
+    try {
+      const res = await fetch("/api/admin/negociacoes/apagar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Nao foi possivel apagar.");
+        setRecusados(dados.recusados ?? []);
+        return;
+      }
+      setRecusados(dados.recusados ?? []);
+      await carregar(true);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAApagar(false);
     }
   }
 
@@ -788,62 +856,16 @@ export default function AdminNegociacoesPanel() {
           entrar num mercado — a partir daqui passa a receber propostas de
           terceiros. */}
       {porPromover.length > 0 && (
-        <section className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-200">
-            <Send className="h-4 w-4" aria-hidden="true" />
-            Pedidos do simulador, fora da plataforma
-          </h3>
-          <p className="mt-1 text-xs text-amber-200/70">
-            Enviar aos profissionais fixa o valor de partida, envia o link ao cliente e
-            distribui. Sem valor indicado, usa a estimativa.
-          </p>
-
-          <div className="mt-3 space-y-2">
-            {porPromover.map((p) => (
-              <div
-                key={p.id}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="font-semibold text-white">
-                    #{p.id} · {p.serviceType ?? "—"}
-                  </span>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {p.contactName} · {p.city ?? "—"}
-                    {p.estimateTotal
-                      ? ` · estimativa ${Number(p.estimateTotal).toFixed(2)} €`
-                      : " · sem estimativa"}
-                    {" · "}
-                    {new Date(p.createdAt).toLocaleDateString("pt-PT")}
-                  </p>
-                </div>
-
-                <input
-                  value={valorDe[p.id] ?? ""}
-                  onChange={(e) => setValorDe((v) => ({ ...v, [p.id]: e.target.value }))}
-                  placeholder={
-                    p.estimateTotal ? Number(p.estimateTotal).toFixed(0) : "valor"
-                  }
-                  inputMode="decimal"
-                  className="w-24 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
-                />
-
-                <button
-                  onClick={() => promover(p.id)}
-                  disabled={ocupado === `p${p.id}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
-                >
-                  {ocupado === `p${p.id}` ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  Enviar aos profissionais
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+        <PedidosPorPromover
+          pedidos={porPromover}
+          valorDe={valorDe}
+          setValorDe={setValorDe}
+          ocupado={ocupado}
+          onPromover={promover}
+          onArquivar={arquivarPedido}
+          onApagar={apagarPedidos}
+          aApagar={aApagar}
+        />
       )}
 
       {pedidos.length === 0 && (
@@ -1076,6 +1098,259 @@ function RespostaDaClyon({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Os pedidos que ainda não foram a lado nenhum.
+ *
+ * O QUE ESTAVA MAL
+ *
+ * Uma lista corrida, sem fim e sem hierarquia. O cabeçalho dizia "1 pedidos na
+ * plataforma" e por baixo despejava quinze pedidos de dez dias atrás, todos com
+ * o mesmo aspecto e o mesmo botão cor de laranja. O que interessava — o pedido
+ * de hoje — ficava enterrado no meio dos que já morreram.
+ *
+ * E não havia forma de tirar nenhum dali. Um pedido que nunca vai ser enviado
+ * ficava na lista para sempre, a ocupar a atenção de quem abre o painel todas
+ * as manhãs.
+ *
+ * PORQUE É QUE A IDADE É A CATEGORIA CERTA
+ *
+ * Podia agrupar-se por serviço, por cidade, por urgência. Nenhuma dessas muda
+ * o que se faz a seguir. A idade muda: um pedido de hoje ainda se ganha, um de
+ * há dez dias já foi para outro lado — e o que a lista precisava era de dizer
+ * quais são quais sem obrigar a ler quinze datas.
+ *
+ * Os antigos ficam fechados, com a conta à frente. Continuam a existir, mas
+ * deixam de gritar tão alto como os de hoje.
+ */
+
+
+function PedidosPorPromover({
+  pedidos,
+  valorDe,
+  setValorDe,
+  ocupado,
+  onPromover,
+  onArquivar,
+  onApagar,
+  aApagar,
+}: {
+  pedidos: PorPromover[];
+  valorDe: Record<number, string>;
+  setValorDe: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  ocupado: string | null;
+  onPromover: (id: number) => void;
+  onArquivar: (id: number) => void;
+  onApagar: (ids: number[]) => void;
+  aApagar: boolean;
+}) {
+  const [busca, setBusca] = useState("");
+  const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  // Os antigos nascem fechados: são os que menos merecem atenção, e são quase
+  // sempre os mais numerosos.
+  const [antigosAbertos, setAntigosAbertos] = useState(false);
+
+  const agora = new Date();
+
+  const visiveis = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return pedidos;
+    return pedidos.filter((p) =>
+      [p.contactName, p.city, p.serviceType, String(p.id)]
+        .filter(Boolean)
+        .some((c) => String(c).toLowerCase().includes(termo)),
+    );
+  }, [pedidos, busca]);
+
+  const grupos = useMemo(() => {
+    const g: Record<GrupoDeIdade, PorPromover[]> = {
+      hoje: [],
+      semana: [],
+      antigo: [],
+    };
+    for (const p of visiveis) g[grupoPorIdade(p.createdAt, agora)].push(p);
+    return g;
+    // `agora` muda a cada render e não é uma dependência útil: a idade em dias
+    // não se mexe entre dois desenhos do mesmo ecrã.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visiveis]);
+
+  const alternar = (id: number) =>
+    setMarcados((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
+  const linha = (p: PorPromover) => (
+    <div
+      key={p.id}
+      className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-3"
+    >
+      <input
+        type="checkbox"
+        checked={marcados.has(p.id)}
+        onChange={() => alternar(p.id)}
+        aria-label={`Marcar o pedido ${p.id}`}
+        className="h-4 w-4 shrink-0 cursor-pointer accent-cyan-500"
+      />
+
+      <div className="min-w-0 flex-1">
+        <span className="font-semibold text-white">
+          #{p.id} · {p.serviceType ?? "—"}
+        </span>
+        <p className="mt-0.5 text-xs text-slate-400">
+          {p.contactName} · {p.city ?? "—"}
+          {p.estimateTotal ? ` · estimativa ${euros(p.estimateTotal)}` : " · sem estimativa"}
+          {" · "}
+          {new Date(p.createdAt).toLocaleDateString("pt-PT")}
+        </p>
+      </div>
+
+      <input
+        value={valorDe[p.id] ?? ""}
+        onChange={(e) => setValorDe((v) => ({ ...v, [p.id]: e.target.value }))}
+        placeholder={p.estimateTotal ? Number(p.estimateTotal).toFixed(0) : "valor"}
+        inputMode="decimal"
+        aria-label={`Valor de partida do pedido ${p.id}`}
+        className="w-24 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
+      />
+
+      <button
+        onClick={() => onPromover(p.id)}
+        disabled={ocupado === `p${p.id}`}
+        className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+      >
+        {ocupado === `p${p.id}` ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <Send className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+        Enviar aos profissionais
+      </button>
+
+      {/*
+        Arquivar e não apagar, como acção normal.
+        Um pedido arquivado sai desta lista e continua a existir: o histórico
+        do cliente não muda, e daqui a três meses ainda se sabe que houve um
+        pedido de móveis em Almada que ninguém enviou. Apagar é para o que não
+        devia ter existido — e por isso é o botão pequeno e cinzento.
+      */}
+      <button
+        onClick={() => onArquivar(p.id)}
+        disabled={ocupado === `a${p.id}`}
+        title="Arquivar — sai da lista, mantém o registo"
+        className="rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
+      >
+        {ocupado === `a${p.id}` ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
+
+  const seccao = (chave: GrupoDeIdade) => {
+    const lista = grupos[chave];
+    if (lista.length === 0) return null;
+    const fechavel = chave === "antigo";
+    const aberto = !fechavel || antigosAbertos;
+
+    return (
+      <div key={chave} className="mt-4 first:mt-3">
+        {fechavel ? (
+          <button
+            onClick={() => setAntigosAbertos((v) => !v)}
+            aria-expanded={aberto}
+            className="flex w-full items-center gap-1.5 rounded-md border-none bg-transparent px-0 py-1 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          >
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${aberto ? "" : "-rotate-90"}`}
+              aria-hidden="true"
+            />
+            {ROTULO_DO_GRUPO[chave]} ({lista.length})
+          </button>
+        ) : (
+          <p className="px-0 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            {ROTULO_DO_GRUPO[chave]} ({lista.length})
+          </p>
+        )}
+        {aberto && <div className="mt-1.5 space-y-2">{lista.map(linha)}</div>}
+      </div>
+    );
+  };
+
+  return (
+    <section className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+            <Send className="h-4 w-4" aria-hidden="true" />
+            Pedidos do simulador, fora da plataforma
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] tabular-nums text-amber-200">
+              {pedidos.length}
+            </span>
+          </h3>
+          <p className="mt-1 text-xs text-amber-200/70">
+            Enviar aos profissionais fixa o valor de partida, envia o link ao cliente e
+            distribui. Sem valor indicado, usa a estimativa.
+          </p>
+        </div>
+
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Procurar por nome, cidade, serviço ou número…"
+          aria-label="Procurar nos pedidos por promover"
+          className="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 sm:w-72"
+        />
+      </div>
+
+      {marcados.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-red-900/60 bg-red-950/20 px-3 py-2">
+          <span className="text-xs text-slate-300">
+            {marcados.size} marcado{marcados.size === 1 ? "" : "s"}
+          </span>
+          <button
+            onClick={() => {
+              onApagar([...marcados]);
+              setMarcados(new Set());
+            }}
+            disabled={aApagar}
+            className="flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+          >
+            {aApagar ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Apagar
+          </button>
+          <button
+            onClick={() => setMarcados(new Set())}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+          >
+            Desmarcar
+          </button>
+        </div>
+      )}
+
+      {visiveis.length === 0 ? (
+        <p className="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">
+          Nada com essa procura.
+        </p>
+      ) : (
+        <>
+          {seccao("hoje")}
+          {seccao("semana")}
+          {seccao("antigo")}
+        </>
+      )}
+    </section>
   );
 }
 
