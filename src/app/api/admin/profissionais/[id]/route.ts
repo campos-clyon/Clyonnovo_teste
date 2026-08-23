@@ -135,6 +135,20 @@ export async function PATCH(
     // Depois de tudo o resto estar gravado: se o email falhar, a aprovação não
     // se desfaz. O convite reenvia-se; a aprovação não se repete.
     let conviteEnviado: boolean | undefined;
+    /*
+     * O link em claro, para quando o email não sai.
+     *
+     * Só guardamos o hash do token — depois desta resposta, o link em claro
+     * deixa de existir em qualquer sítio. Se o email falhar e nós não o
+     * devolvermos aqui, o profissional fica trancado para sempre: aprovado,
+     * sem palavra-passe, e sem forma de criar uma. E ninguém dá por isso,
+     * porque o painel dizia "aprovado" à mesma.
+     *
+     * É o mesmo remédio que o painel das negociações já usa quando o email do
+     * cliente não sai. Vai só neste corpo de resposta, para o admin copiar e
+     * mandar por WhatsApp — não fica gravado em lado nenhum.
+     */
+    let linkDaSenha: string | undefined;
     if (convitePorEnviar) {
       const pool = await getPool();
       const [linhas] = pool
@@ -159,6 +173,9 @@ export async function PATCH(
           diasDeValidade: DIAS_DO_LINK_DE_SENHA,
         });
         feito.push(conviteEnviado ? "convite enviado" : "convite NÃO enviado");
+        if (!conviteEnviado) {
+          linkDaSenha = `${urlDeAccaoDoPedido(req.headers)}/profissionais/definir-senha/${acesso.token}`;
+        }
       }
     }
 
@@ -166,7 +183,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Nada para alterar" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao, conviteEnviado });
+    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao, conviteEnviado, linkDaSenha });
   } catch (error) {
     console.error("[api/admin/profissionais PATCH]", error);
     return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });

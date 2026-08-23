@@ -75,6 +75,8 @@ export default function AdminProfissionaisPanel() {
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
+  /** O link de criar palavra-passe, quando o email não saiu. */
+  const [linkDaSenha, setLinkDaSenha] = useState("");
   const [filtro, setFiltro] = useState<"todos" | EstadoDoProfissional | "por_verificar">("todos");
   const [busca, setBusca] = useState("");
   const [aEditar, setAEditar] = useState<number | null>(null);
@@ -119,6 +121,22 @@ export default function AdminProfissionaisPanel() {
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível actualizar.");
         return;
+      }
+      /*
+       * O EMAIL PODE NÃO SAIR, E ISSO NÃO PODE PASSAR EM SILÊNCIO.
+       *
+       * Aprovar gera o link para o profissional criar a palavra-passe e
+       * manda-o por email. Se o email falhar, ele fica aprovado, sem senha, e
+       * sem forma nenhuma de criar uma — só guardamos o hash do token, por
+       * isso o link em claro deixa de existir depois desta resposta.
+       *
+       * O painel dizia "aprovado" à mesma e ninguém dava por nada. Agora, se
+       * não sair, o link aparece aqui para ser copiado e mandado à mão.
+       */
+      if (dados.linkDaSenha) {
+        setLinkDaSenha(dados.linkDaSenha);
+      } else if (dados.conviteEnviado) {
+        setAviso("Aprovado. O convite para criar a palavra-passe seguiu por email.");
       }
       if (dados.avisoDeDistribuicao) {
         setAviso(
@@ -237,6 +255,35 @@ export default function AdminProfissionaisPanel() {
         <p className="mb-4 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
           {aviso}
         </p>
+      )}
+
+      {linkDaSenha && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-200">
+            O email não saiu. Mande este link ao profissional.
+          </p>
+          <p className="mt-1 text-xs text-amber-200/75">
+            É a única forma de ele criar a palavra-passe — só guardamos o hash, e este link
+            desaparece quando fechar esta página.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded bg-slate-950 px-2 py-1.5 font-mono text-[11px] text-slate-300">
+              {linkDaSenha}
+            </code>
+            <button
+              onClick={() => navigator.clipboard?.writeText(linkDaSenha)}
+              className="min-h-[36px] shrink-0 rounded bg-amber-600 px-3 text-xs font-semibold text-white hover:bg-amber-500"
+            >
+              Copiar
+            </button>
+            <button
+              onClick={() => setLinkDaSenha("")}
+              className="min-h-[36px] shrink-0 rounded border border-slate-700 px-3 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+            >
+              Já mandei
+            </button>
+          </div>
+        </div>
       )}
 
       {visiveis.length === 0 && (
