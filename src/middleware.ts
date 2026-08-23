@@ -88,18 +88,48 @@ async function temSessaoDeProfissional(request: NextRequest) {
  * para o mesmo sítio e partia todos os links que lhe enviamos por email.
  */
 function exigeTestador(caminho: string): boolean {
-  return (
-    caminho === "/plataforma" ||
-    caminho.startsWith("/plataforma/") ||
-    // A inscrição é a única escrita da plataforma que não exige sessão de
-    // ninguém. Sem o portão à frente, quem descobrisse o endereço inscrevia
-    // profissionais na base a partir de uma linha de comandos.
-    caminho === "/api/profissionais/inscricao"
-  );
+  return caminho === "/plataforma" || caminho.startsWith("/plataforma/");
 }
 
+/*
+ * A INSCRIÇÃO SAIU DAQUI, E PORQUÊ.
+ *
+ * Estava em `exigeTestador` com esta justificação: "a inscrição é a única
+ * escrita da plataforma que não exige sessão de ninguém — sem o portão à
+ * frente, quem descobrisse o endereço inscrevia profissionais na base a partir
+ * de uma linha de comandos".
+ *
+ * Isso era verdade quando foi escrito, e deixou de ser a 19-08-2026, quando a
+ * inscrição passou a exigir convite. Hoje a rota valida um token de 256 bits,
+ * guardado só em hash, com prazo e de uso único — uma credencial mais forte do
+ * que a palavra-passe de um testador. Quem descobrir o endereço sem convite não
+ * escreve nada: leva 403.
+ *
+ * E entretanto o portão passou a partir o que devia proteger. A PÁGINA do
+ * formulário está em `exigeChave` (é `/profissionais/...`), por isso o
+ * profissional convidado chega lá e preenche-a. O BOTÃO dela chamava uma rota
+ * em `exigeTestador` — um nível acima — e o middleware devolvia 404 SEM CORPO.
+ * O formulário faz `res.json()` a essa resposta vazia, o parse estoira, e o
+ * `catch` mostra "Erro de rede. Verifique a ligação e tente novamente."
+ *
+ * Ou seja: dizia-se ao profissional que a Internet dele estava avariada, quando
+ * o que estava era um formulário atrás de um portão e o seu próprio botão atrás
+ * de outro, mais forte. Fica no mesmo nível da página que o serve.
+ */
+
 function exigeChave(caminho: string): boolean {
-  return caminho === "/profissionais" || caminho.startsWith("/profissionais/");
+  return (
+    caminho === "/profissionais" ||
+    caminho.startsWith("/profissionais/") ||
+    /*
+     * A rota da inscrição, no MESMO nível da página que a chama.
+     *
+     * Tem de estar aqui à mão: o endereço dela é `/api/profissionais/...` e
+     * não `/profissionais/...`, por isso a condição acima não a apanha. Sem
+     * esta linha, tirá-la do `exigeTestador` deixava-a sem portão nenhum.
+     */
+    caminho === "/api/profissionais/inscricao"
+  );
 }
 
 /**

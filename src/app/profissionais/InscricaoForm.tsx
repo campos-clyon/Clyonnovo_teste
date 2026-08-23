@@ -22,6 +22,21 @@ function inputCls(erro?: string) {
  * não se edita: é a chave do convite, e trocá-lo aqui criava uma conta que não
  * corresponde a ninguém com quem falámos.
  */
+/**
+ * O corpo da resposta, ou `null` se não vier JSON.
+ *
+ * Existe para separar duas coisas que o `try/catch` juntava: "o servidor não
+ * respondeu" e "o servidor respondeu uma coisa que não sei ler". A segunda é
+ * um problema nosso, e dizer ao utilizador que é da ligação dele esconde-o.
+ */
+async function respostaEmJson(res: Response): Promise<Record<string, any> | null> {
+  try {
+    return (await res.json()) as Record<string, any>;
+  } catch {
+    return null;
+  }
+}
+
 export default function InscricaoForm({
   convite,
   nomeConvidado = "",
@@ -108,16 +123,38 @@ export default function InscricaoForm({
             .filter(Boolean),
         }),
       });
-      const dados = await res.json();
+      /*
+       * O SERVIDOR PODE RESPONDER SEM JSON, E ISSO NÃO É ERRO DE REDE.
+       *
+       * Fazia-se `await res.json()` directamente. Qualquer resposta sem corpo
+       * JSON — um 404 do middleware, um 502 da Vercel, uma página de erro do
+       * Next — fazia o parse estoirar, caía no `catch`, e o ecrã dizia "Erro
+       * de rede. Verifique a ligação e tente novamente."
+       *
+       * Aconteceu mesmo, e demorou a encontrar: a rota estava atrás de um
+       * portão mais forte do que a página que a chama, e o middleware
+       * respondia 404 sem corpo. O profissional lia que a Internet dele estava
+       * avariada, tentava outra vez, e à quinta apanhava o limite de cinco
+       * pedidos por dez minutos — a única mensagem que teria sido verdadeira.
+       *
+       * Culpar a ligação de quem está do outro lado, quando o servidor
+       * respondeu, manda a pessoa procurar o problema no sítio errado.
+       */
+      const dados = await respostaEmJson(res);
 
-      if (!res.ok) {
-        if (Array.isArray(dados.erros)) setErros(dados.erros);
-        setErroGeral(dados.error ?? "Não foi possível enviar a inscrição.");
+      if (!res.ok || dados === null) {
+        if (Array.isArray(dados?.erros)) setErros(dados.erros);
+        setErroGeral(
+          dados?.error ??
+            `Não foi possível enviar a inscrição (erro ${res.status}). Se voltar a acontecer, fale connosco e diga este número.`,
+        );
         return;
       }
       setEnviado({ precisaVerificacaoDeGuia: dados.precisaVerificacaoDeGuia === true });
     } catch {
-      setErroGeral("Erro de rede. Verifique a ligação e tente novamente.");
+      // Agora só chega aqui quem NÃO teve resposta nenhuma — que é o que "erro
+      // de rede" quer mesmo dizer.
+      setErroGeral("Não foi possível chegar ao servidor. Verifique a ligação e tente novamente.");
     } finally {
       setAEnviar(false);
     }
