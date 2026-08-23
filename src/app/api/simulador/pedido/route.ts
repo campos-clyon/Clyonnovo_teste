@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import {
@@ -353,118 +353,143 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Histórico
-    await appendOrderHistory(id, {
-      type: "created",
-      by: null,
-      // A origem é a que veio no pedido. Dizer "via simulador" a um contacto
-      // da página de contactos era escrever no histórico uma coisa que não
-      // aconteceu — e o histórico é onde se vai procurar quando algo não bate
-      // certo.
-      message:
-        `Pedido criado (${order.origemPedido ?? order._source ?? "simulador"}). ` +
-        `Por atribuir. Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.` +
-        (estimativaDoServidor
-          ? " Estimativa calculada pelo motor a partir dos dados do formulário — confirmar a morada antes de fechar o preço."
-          : "")
-        + (recurrenceFrequency ? ` Marcação recorrente (${recurrenceFrequency}, desconto de ${recurringDiscountPercent}% já aplicado à estimativa).` : ""),
-    });
-
-    // Notificação WhatsApp — assíncrona, não bloqueia a resposta ao cliente.
-    // Se falhar, o pedido já está guardado e o erro apenas fica no log.
-    notifyNewOrder({
-      id,
-      contactName:     row.contactName ?? null,
-      serviceType:     row.serviceType ?? null,
-      city:            row.city ?? null,
-      address:         row.address ?? null,
-      estimateWithVat: row.estimateMax ?? row.estimateTotal ?? null,
-      backofficeUrl:   `${SITE_URL}/admin/pedidos/${id}`,
-    });
-
-    // ── O link de acesso ──────────────────────────────────────────────────────
-    //
-    // Só para pedidos que trazem valores, ou seja, os que vêm do formulário
-    // novo. Um contacto da página de contactos não tem negociação a que voltar,
-    // e mandar-lhe um link para um pedido sem propostas era prometer um ecrã
-    // que não lhe diz nada.
-    //
-    // Não bloqueia a resposta: o pedido está gravado, e um email que falhe não
-    // pode transformar-se num erro de criação aos olhos do cliente.
-    // O endereço deste deployment, tirado dos cabeçalhos: é o único sítio que
-    // sabe com certeza onde a pessoa está.
-    const baseUrl = urlDeAccaoDoPedido(req.headers);
-
-    let linkEnviado = false;
-    if (valorDeArranque != null && contactEmail) {
-      linkEnviado = await enviarLinkDoPedido({
-        para: contactEmail,
-        nomeDoCliente: row.contactName ?? null,
-        pedidoId: id,
-        serviceType: row.serviceType ?? null,
-        token: acesso.token,
-        baseUrl,
-        valorDesejadoCliente: valoresParaGravar.valorDesejadoCliente
-          ? Number(valoresParaGravar.valorDesejadoCliente)
-          : null,
-      });
-      if (!linkEnviado) {
-        // Fica no histórico porque é recuperável à mão: o pedido existe, o
-        // token existe, e alguém pode reenviar. Sem este registo, o cliente
-        // desaparecia sem ninguém perceber que nunca chegou a receber nada.
-        await appendOrderHistory(id, {
-          type: "created",
-          by: null,
-          message: "O email com o link de acesso NÃO foi enviado. Reenviar ao cliente.",
-        });
-      }
-    }
-
-    // ── Levar o pedido a quem o pode fazer ────────────────────────────────────
-    //
-    // Só para pedidos do formulário novo: os outros não têm valor pedido nem
-    // negociação, e um profissional que recebesse um deles abria um ecrã que
-    // não lhe dizia nada.
-    //
-    // Corre depois da resposta estar praticamente montada e nunca a bloqueia
-    // com um erro: se a distribuição falhar, o pedido existe e reenvia-se. O
-    // contrário — o cliente ver um erro porque um email não saiu — seria pior.
-    if (valorDeArranque != null) {
+    /*
+     * O CLIENTE DEIXA DE ESPERAR PELO QUE NÃO LHE DIZ RESPEITO.
+     *
+     * Tudo o que vinha aqui — cinco escritas de histórico, o email do link, e
+     * a distribuição aos profissionais com um email por cada um — bloqueava a
+     * resposta. O ecrã dele ficava a rodar enquanto o servidor falava com o
+     * Resend N vezes, e nenhuma dessas coisas muda o que ele vê: o número do
+     * pedido já existe na linha acima.
+     *
+     * `after()` do Next 15 mantém a função viva depois de a resposta sair. O
+     * trabalho corre na mesma, na mesma ordem, com os mesmos registos — só
+     * deixa de estar à frente da pessoa.
+     *
+     * O QUE NÃO ENTROU AQUI, E PORQUÊ
+     *
+     * A criação do pedido e a leitura que a confirma ficam antes: sem elas não
+     * há número para mostrar, e mostrar "Pedido enviado" sem ter a certeza de
+     * que ficou gravado seria a pior mentira que este ecrã podia contar.
+     */
+    after(async () => {
       try {
-        const distribuicao = await distribuirPedido({
-          id,
+      await appendOrderHistory(id, {
+        type: "created",
+        by: null,
+        // A origem é a que veio no pedido. Dizer "via simulador" a um contacto
+        // da página de contactos era escrever no histórico uma coisa que não
+        // aconteceu — e o histórico é onde se vai procurar quando algo não bate
+        // certo.
+        message:
+          `Pedido criado (${order.origemPedido ?? order._source ?? "simulador"}). ` +
+          `Por atribuir. Serviço: ${order.serviceType ?? "—"}. Prioridade: ${priority}.` +
+          (estimativaDoServidor
+            ? " Estimativa calculada pelo motor a partir dos dados do formulário — confirmar a morada antes de fechar o preço."
+            : "")
+          + (recurrenceFrequency ? ` Marcação recorrente (${recurrenceFrequency}, desconto de ${recurringDiscountPercent}% já aplicado à estimativa).` : ""),
+      });
+
+      // Notificação WhatsApp — assíncrona, não bloqueia a resposta ao cliente.
+      // Se falhar, o pedido já está guardado e o erro apenas fica no log.
+      notifyNewOrder({
+        id,
+        contactName:     row.contactName ?? null,
+        serviceType:     row.serviceType ?? null,
+        city:            row.city ?? null,
+        address:         row.address ?? null,
+        estimateWithVat: row.estimateMax ?? row.estimateTotal ?? null,
+        backofficeUrl:   `${SITE_URL}/admin/pedidos/${id}`,
+      });
+
+      // ── O link de acesso ──────────────────────────────────────────────────────
+      //
+      // Só para pedidos que trazem valores, ou seja, os que vêm do formulário
+      // novo. Um contacto da página de contactos não tem negociação a que voltar,
+      // e mandar-lhe um link para um pedido sem propostas era prometer um ecrã
+      // que não lhe diz nada.
+      //
+      // Não bloqueia a resposta: o pedido está gravado, e um email que falhe não
+      // pode transformar-se num erro de criação aos olhos do cliente.
+      // O endereço deste deployment, tirado dos cabeçalhos: é o único sítio que
+      // sabe com certeza onde a pessoa está.
+      const baseUrl = urlDeAccaoDoPedido(req.headers);
+
+      if (valorDeArranque != null && contactEmail) {
+        const linkEnviado = await enviarLinkDoPedido({
+          para: contactEmail,
+          nomeDoCliente: row.contactName ?? null,
+          pedidoId: id,
           serviceType: row.serviceType ?? null,
-          description: row.description ?? null,
-          city: row.city ?? null,
-          urgency: row.urgency ?? null,
-          quantidadeDeFotos: order.files?.length ?? 0,
+          token: acesso.token,
+          baseUrl,
           valorDesejadoCliente: valoresParaGravar.valorDesejadoCliente
             ? Number(valoresParaGravar.valorDesejadoCliente)
             : null,
-          precisaFatura: order.precisaFatura === true,
-          precisaGuiaTransporte: order.precisaGuiaTransporte === true,
-          lat: order.address?.lat ?? null,
-          lng: order.address?.lng ?? null,
-          baseUrl,
         });
-
-        // Um pedido que não chega a ninguém fica publicado e sem propostas,
-        // igualzinho a um que ninguém quis. Isto deixa escrito qual dos dois é.
-        await appendOrderHistory(id, {
-          type: "created",
-          by: null,
-          message:
-            resumoDaDistribuicao(distribuicao),
-        });
-      } catch (err) {
-        console.error("[simulador/pedido] distribuição falhou:", err);
-        await appendOrderHistory(id, {
-          type: "created",
-          by: null,
-          message: "A distribuição aos profissionais falhou. Reenviar.",
-        });
+        if (!linkEnviado) {
+          // Fica no histórico porque é recuperável à mão: o pedido existe, o
+          // token existe, e alguém pode reenviar. Sem este registo, o cliente
+          // desaparecia sem ninguém perceber que nunca chegou a receber nada.
+          await appendOrderHistory(id, {
+            type: "created",
+            by: null,
+            message: "O email com o link de acesso NÃO foi enviado. Reenviar ao cliente.",
+          });
+        }
       }
-    }
+
+      // ── Levar o pedido a quem o pode fazer ────────────────────────────────────
+      //
+      // Só para pedidos do formulário novo: os outros não têm valor pedido nem
+      // negociação, e um profissional que recebesse um deles abria um ecrã que
+      // não lhe dizia nada.
+      //
+      // Corre depois da resposta estar praticamente montada e nunca a bloqueia
+      // com um erro: se a distribuição falhar, o pedido existe e reenvia-se. O
+      // contrário — o cliente ver um erro porque um email não saiu — seria pior.
+      if (valorDeArranque != null) {
+        try {
+          const distribuicao = await distribuirPedido({
+            id,
+            serviceType: row.serviceType ?? null,
+            description: row.description ?? null,
+            city: row.city ?? null,
+            urgency: row.urgency ?? null,
+            quantidadeDeFotos: order.files?.length ?? 0,
+            valorDesejadoCliente: valoresParaGravar.valorDesejadoCliente
+              ? Number(valoresParaGravar.valorDesejadoCliente)
+              : null,
+            precisaFatura: order.precisaFatura === true,
+            precisaGuiaTransporte: order.precisaGuiaTransporte === true,
+            lat: order.address?.lat ?? null,
+            lng: order.address?.lng ?? null,
+            baseUrl,
+          });
+
+          // Um pedido que não chega a ninguém fica publicado e sem propostas,
+          // igualzinho a um que ninguém quis. Isto deixa escrito qual dos dois é.
+          await appendOrderHistory(id, {
+            type: "created",
+            by: null,
+            message:
+              resumoDaDistribuicao(distribuicao),
+          });
+        } catch (err) {
+          console.error("[simulador/pedido] distribuição falhou:", err);
+          await appendOrderHistory(id, {
+            type: "created",
+            by: null,
+            message: "A distribuição aos profissionais falhou. Reenviar.",
+          });
+        }
+      }
+      } catch (err) {
+        // Já respondemos ao cliente. Um erro aqui não pode ser mostrado a
+        // ninguém — fica no log, e o pedido está gravado na mesma.
+        console.error("[simulador/pedido] trabalho pós-resposta falhou:", err);
+      }
+    });
 
     return NextResponse.json({
       ok: true,
@@ -475,13 +500,20 @@ export async function POST(req: NextRequest) {
       assignedToName: null,
       createdAt: created.createdAt,
       queue: "general",
-      linkEnviado,
       // O token vai na resposta para o formulário poder levar o cliente ao
       // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
       // que o criou — nunca numa listagem nem numa leitura posterior.
       acessoToken: clienteIndicouValores ? acesso.token : undefined,
-      message: linkEnviado
-        ? "Pedido criado. Enviámos o link de acesso para o seu email."
+      /*
+       * A mensagem deixou de depender do email.
+       *
+       * Dizia "Enviámos o link" ou "Pedido criado", conforme o email tivesse
+       * saído — e para saber isso tinha de se ESPERAR por ele. Agora o email
+       * sai depois da resposta, por isso a mensagem diz o que se sabe com
+       * certeza neste instante: o pedido está gravado, e tem número.
+       */
+      message: clienteIndicouValores
+        ? "Pedido criado. O link de acesso segue para o seu email."
         : "Pedido criado com sucesso.",
     });
   } catch (err: any) {
