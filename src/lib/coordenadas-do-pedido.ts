@@ -1,4 +1,4 @@
-import { geocodificarMorada } from "./geocodificar";
+import { geocodificarMoradaDetalhado, geocodificarLocalidade } from "./geocodificar";
 import { updateSimulatorOrder } from "./db";
 
 /**
@@ -38,6 +38,10 @@ export type CoordenadasDoPedido = {
   lng: number | null;
   /** Verdadeiro quando foram descobertas agora e gravadas. */
   descobertasAgora: boolean;
+  /** Quando não há coordenadas: o estado que o Google devolveu ("REQUEST_DENIED",
+   *  "ZERO_RESULTS", "SEM_CHAVE", …). Sem isto, "não localizada" tapava a
+   *  diferença entre a morada errada e a chave recusada. */
+  motivo?: string;
 };
 
 export async function coordenadasDoPedido(pedido: {
@@ -72,8 +76,34 @@ export async function coordenadasDoPedido(pedido: {
   const cidade =
     pedido.city ?? (typeof morada.city === "string" ? morada.city : null);
 
-  const achadas = await geocodificarMorada(texto, cp, cidade);
-  if (!achadas) return { lat: null, lng: null, descobertasAgora: false };
+  const geo = await geocodificarMoradaDetalhado(texto, cp, cidade);
+  let achadas = geo.coords;
+  let aproximadas = false;
+
+  /*
+   * RECURSO: o Nominatim, sem chave, pela freguesia ou código postal.
+   *
+   * O Google pode falhar por razões que nada têm a ver com a morada — chave
+   * recusada, API por activar. Nesse dia, TODOS os pedidos ficavam sem
+   * coordenadas, a elegibilidade caía nas zonas escritas à mão, e um trabalho
+   * a 25 km "não chegava" a quem cobre 200.
+   *
+   * O centro da freguesia erra por um ou dois quilómetros. Contra raios de 50
+   * a 200, esse erro não muda a resposta — e é o MESMO serviço que já dá as
+   * bases dos profissionais, portanto os dois lados da subtracção vêm da
+   * mesma régua.
+   */
+  if (!achadas && (cp || cidade)) {
+    const aproximada = await geocodificarLocalidade(
+      [cp, cidade].filter(Boolean).join(" "),
+    );
+    if (aproximada) {
+      achadas = { ...aproximada, moradaNormalizada: null };
+      aproximadas = true;
+    }
+  }
+
+  if (!achadas) return { lat: null, lng: null, descobertasAgora: false, motivo: geo.estado };
 
   try {
     await updateSimulatorOrder(pedido.id, {
@@ -84,6 +114,8 @@ export async function coordenadasDoPedido(pedido: {
         // deduzida de texto não é a mesma coisa que uma escolhida na pesquisa,
         // e quem investigar um preço estranho tem de o poder saber.
         coordenadasGeocodificadasEm: new Date().toISOString(),
+        // Centro da freguesia, não a porta: chega para o raio, não para navegar.
+        coordenadasAproximadas: aproximadas || undefined,
       }),
     } as Parameters<typeof updateSimulatorOrder>[1]);
   } catch (err) {

@@ -48,7 +48,7 @@ describe("a consulta ao Google", () => {
   });
 
   it("a segunda geocodificação (na promoção) também", () => {
-    expect(semNotas(COORD)).toContain("geocodificarMorada(texto, cp, cidade)");
+    expect(semNotas(COORD)).toContain("geocodificarMoradaDetalhado(texto, cp, cidade)");
   });
 });
 
@@ -151,5 +151,38 @@ describe("as fotografias do WhatsApp", () => {
     // quando não há nenhuma.
     expect(ROTA).toContain('typeof ft.url === "string"');
     expect(ROTA).toContain("filesJson: fotos.length > 0");
+  });
+});
+
+
+describe("as coordenadas para o raio", () => {
+  const COORD = ler("src/lib/coordenadas-do-pedido.ts");
+  const MODAL = ler("src/components/admin/PedidoDetailModal.tsx");
+
+  it("quando o Google falha, o Nominatim entra pela freguesia", () => {
+    /*
+     * O Google pode falhar por razões que nada têm a ver com a morada — chave
+     * recusada, API por activar. Nesse dia TODOS os pedidos ficavam sem
+     * coordenadas e a elegibilidade caía nas zonas escritas à mão: um trabalho
+     * a 25 km "não chegava" a quem cobre 200. O centro da freguesia erra por
+     * um ou dois quilómetros; contra raios de 50 a 200, o erro não muda nada.
+     */
+    expect(COORD).toContain("geocodificarLocalidade");
+    expect(COORD).toContain("coordenadasAproximadas");
+  });
+
+  it("o detalhe do pedido mostra se as coordenadas existem", () => {
+    // O #217 parecia completo no admin e não tinha nenhuma — a diferença era
+    // invisível e decidia toda a distribuição.
+    expect(MODAL).toContain("Coordenadas para o raio");
+    expect(MODAL).toContain("SEM coordenadas");
+    expect(MODAL).toContain("Localizar agora");
+  });
+
+  it("o botão usa o mesmo caminho da promoção", () => {
+    // O que se vê ao carregar no botão é o que vai acontecer no "Enviar aos
+    // profissionais" — dois caminhos dariam duas respostas.
+    const ROTA_LOC = ler("src/app/api/admin/pedidos/[id]/localizar/route.ts");
+    expect(ROTA_LOC).toContain("coordenadasDoPedido(pedido)");
   });
 });

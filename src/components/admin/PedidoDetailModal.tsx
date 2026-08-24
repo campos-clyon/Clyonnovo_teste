@@ -334,6 +334,38 @@ function _maskEmail(email: string | null | undefined): string {
 export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose, permitirApagar = true, onDeleted, onUpdated }: Props) {
   const authHeader = { Authorization: `Bearer ${token}` };
 
+  /*
+   * As coordenadas do pedido — a parte INVISÍVEL da morada.
+   *
+   * O #217 parecia completo neste ecrã e não tinha coordenada nenhuma: a
+   * distribuição caiu nas zonas, "Penha de frança" não estava na lista de
+   * ninguém, e o pedido "não chegou". Este bloco torna o invisível visível e
+   * dá o botão que resolve — o mesmo caminho que a promoção usa.
+   */
+  const [aLocalizar, setALocalizar] = useState(false);
+  const [localizacao, setLocalizacao] = useState<
+    { ok: true; lat: number; lng: number } | { ok: false; motivo: string } | null
+  >(null);
+
+  async function localizarMorada() {
+    if (!order) return;
+    setALocalizar(true);
+    try {
+      const res = await fetch(`/api/admin/pedidos/${order.id}/localizar`, {
+        method: "POST",
+        headers: authHeader,
+      });
+      const dados = await res.json();
+      if (!res.ok) setLocalizacao({ ok: false, motivo: dados.error ?? "erro" });
+      else if (dados.ok) setLocalizacao({ ok: true, lat: dados.lat, lng: dados.lng });
+      else setLocalizacao({ ok: false, motivo: dados.motivo ?? "desconhecido" });
+    } catch {
+      setLocalizacao({ ok: false, motivo: "rede" });
+    } finally {
+      setALocalizar(false);
+    }
+  }
+
   const [order, setOrder] = useState<PedidoOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1945,6 +1977,52 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                   Abrir no Google Maps
                                 </a>
+                              );
+                            })()}
+                          </Field>
+                          <Field label="Coordenadas para o raio">
+                            {(() => {
+                              const raw = parseRawOrder(order.rawOrderJson) as {
+                                address?: { lat?: number; lng?: number };
+                                coordenadasAproximadas?: boolean;
+                              };
+                              const lat = localizacao?.ok ? localizacao.lat : raw.address?.lat;
+                              const lng = localizacao?.ok ? localizacao.lng : raw.address?.lng;
+                              const tem = typeof lat === "number" && typeof lng === "number";
+                              return (
+                                <div className="space-y-1.5 px-1 py-1">
+                                  {tem ? (
+                                    <p className="text-xs font-semibold text-emerald-600">
+                                      Localizada ({lat!.toFixed(4)}, {lng!.toFixed(4)})
+                                      {raw.coordenadasAproximadas ? " · pelo centro da freguesia" : ""}
+                                      {" — o raio dos profissionais conta."}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs font-semibold text-amber-600">
+                                      SEM coordenadas — o raio dos profissionais não conta;
+                                      só chega a quem tiver a localidade na lista de zonas.
+                                    </p>
+                                  )}
+                                  {localizacao && !localizacao.ok && (
+                                    <p className="text-xs text-red-600">
+                                      {localizacao.motivo === "REQUEST_DENIED"
+                                        ? "O Google recusou a chave — active a Geocoding API no Google Cloud."
+                                        : localizacao.motivo === "SEM_CHAVE"
+                                          ? "Sem chave do Google no servidor, e o recurso pela freguesia também falhou."
+                                          : `Não foi possível localizar (${localizacao.motivo}).`}
+                                    </p>
+                                  )}
+                                  {!tem && (
+                                    <button
+                                      type="button"
+                                      onClick={localizarMorada}
+                                      disabled={aLocalizar}
+                                      className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-400/20 disabled:opacity-50"
+                                    >
+                                      {aLocalizar ? "A localizar…" : "Localizar agora"}
+                                    </button>
+                                  )}
+                                </div>
                               );
                             })()}
                           </Field>
