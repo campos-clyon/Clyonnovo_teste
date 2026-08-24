@@ -123,27 +123,109 @@ export async function PATCH(request: NextRequest) {
     const { id, role, deletedAt } = body;
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
 
+    /*
+     * A GESTÃO COMPLETA DA CONTA — nome, telefone, email, NIF.
+     *
+     * Só aceitava `role` e `deletedAt`: um cliente que ditasse mal o telefone
+     * ao telefone ficava com ele errado para sempre, sem ecrã nenhum onde o
+     * corrigir.
+     *
+     * O EMAIL É A EXCEPÇÃO PERIGOSA, e por isso tem regras próprias:
+     *
+     *   · é a identidade de entrada (Google) E a ligação aos pedidos — o
+     *     /conta encontra-os por `contactEmail = email da sessão`;
+     *   · mudá-lo só faz sentido quando o CLIENTE mudou de conta Google.
+     *     Um email diferente do Google dele cria uma conta nova no próximo
+     *     login e órfã esta;
+     *   · com `migrarPedidos: true`, os pedidos antigos seguem o email novo
+     *     — senão desaparecem da conta dele ao entrar.
+     */
+    const texto = (v: unknown, max: number): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      if (typeof v !== "string") return undefined;
+      const t = v.trim().slice(0, max);
+      return t.length > 0 ? t : null;
+    };
+
+    const nome = texto(body.name, 160);
+    const telefone = texto(body.phone, 30);
+    const nif = texto(body.nif, 20);
+    const emailNovo =
+      typeof body.email === "string" ? body.email.trim().toLowerCase().slice(0, 255) : undefined;
+    if (emailNovo !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNovo)) {
+      return NextResponse.json({ error: "Email inválido." }, { status: 400 });
+    }
+
     await ensureUsersSchema();
-    await withConnection(async (conn) => {
-      const updates: string[] = [];
-      const params: unknown[] = [];
+    try {
+      await withConnection(async (conn) => {
+        // O email antigo, para migrar os pedidos se for pedido.
+        let emailAntigo: string | null = null;
+        if (emailNovo !== undefined) {
+          const [linhas] = (await conn.execute("SELECT email FROM users WHERE id = ? LIMIT 1", [
+            id,
+          ])) as [Array<{ email: string }>, unknown];
+          emailAntigo = linhas[0]?.email?.toLowerCase() ?? null;
+        }
 
-      if (role !== undefined) {
-        updates.push("role = ?");
-        params.push(role);
-      }
-      if (deletedAt !== undefined) {
-        updates.push("deletedAt = ?");
-        params.push(deletedAt);
-      }
+        const updates: string[] = [];
+        const params: unknown[] = [];
 
-      if (updates.length === 0) return;
-      params.push(id);
-      await conn.execute(
-        `UPDATE users SET ${updates.join(", ")} WHERE id = ?`,
-        params
-      );
-    });
+        if (role !== undefined) {
+          updates.push("role = ?");
+          params.push(role);
+        }
+        if (deletedAt !== undefined) {
+          updates.push("deletedAt = ?");
+          params.push(deletedAt);
+        }
+        if (nome !== undefined) {
+          updates.push("name = ?");
+          params.push(nome);
+        }
+        if (telefone !== undefined) {
+          updates.push("phone = ?");
+          params.push(telefone);
+        }
+        if (nif !== undefined) {
+          updates.push("nif = ?");
+          params.push(nif);
+        }
+        if (emailNovo !== undefined && emailNovo !== emailAntigo) {
+          updates.push("email = ?");
+          params.push(emailNovo);
+        }
+
+        if (updates.length === 0) return;
+        updates.push("updatedAt = NOW()");
+        params.push(id);
+        await conn.execute(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, params);
+
+        // Os pedidos seguem o email novo — senão somem da conta ao entrar.
+        if (
+          body.migrarPedidos === true &&
+          emailNovo !== undefined &&
+          emailAntigo &&
+          emailNovo !== emailAntigo
+        ) {
+          await conn.execute(
+            "UPDATE simulatorOrders SET contactEmail = ? WHERE LOWER(contactEmail) = ?",
+            [emailNovo, emailAntigo],
+          );
+        }
+      });
+    } catch (e: unknown) {
+      // O índice único do email a fazer o trabalho dele: duas contas com o
+      // mesmo email seriam uma só aos olhos do login.
+      if ((e as { code?: string })?.code === "ER_DUP_ENTRY") {
+        return NextResponse.json(
+          { error: "Já existe uma conta com esse email." },
+          { status: 409 },
+        );
+      }
+      throw e;
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

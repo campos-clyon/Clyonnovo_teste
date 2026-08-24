@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw } from "lucide-react";
+import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw, Pencil } from "lucide-react";
 
 interface UserAccount {
   id: number;
@@ -51,6 +51,8 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  const [aEditar, setAEditar] = useState<UserAccount | null>(null);
+
   const updateUser = async (id: number, patch: Record<string, unknown>) => {
     try {
       const res = await fetch("/api/admin/users", {
@@ -61,10 +63,17 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
         },
         body: JSON.stringify({ id, ...patch }),
       });
-      if (!res.ok) throw new Error("Erro ao atualizar");
+      if (!res.ok) {
+        // "Já existe uma conta com esse email" tem de chegar inteiro — um
+        // "Erro ao atualizar" genérico mandava procurar a avaria no sítio errado.
+        const d = await res.json().catch(() => ({}) as { error?: string });
+        throw new Error(d.error ?? "Erro ao atualizar");
+      }
       await fetchUsers();
+      return true;
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro");
+      return false;
     }
   };
 
@@ -296,6 +305,13 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                             linha sem apagar nada, que é o pior dos dois
                             mundos: parece feito e não está. */}
                         <button
+                          onClick={() => setAEditar(u)}
+                          title="Editar a conta"
+                          className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => excluirConta(u.id, u.name || u.email)}
                           disabled={aExcluir === u.id}
                           title="Excluir conta"
@@ -315,6 +331,17 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
             </table>
           </div>
         </div>
+      )}
+
+      {aEditar && (
+        <EditarConta
+          conta={aEditar}
+          onGuardar={async (patch) => {
+            const ok = await updateUser(aEditar.id, patch);
+            if (ok) setAEditar(null);
+          }}
+          onFechar={() => setAEditar(null)}
+        />
       )}
 
       {/* Deactivated accounts */}
@@ -343,6 +370,121 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
           </div>
         </details>
       )}
+    </div>
+  );
+}
+
+
+/**
+ * Editar a conta de um cliente — nome, telefone, NIF e, com cuidado, o email.
+ *
+ * O EMAIL É O CAMPO PERIGOSO. É a identidade de entrada (Google) e a ligação
+ * aos pedidos: o /conta encontra-os por email da sessão. Mudá-lo só faz
+ * sentido quando o CLIENTE mudou de conta Google — um email diferente do
+ * Google dele cria uma conta nova no próximo login e deixa esta órfã. O
+ * aviso vive ao lado do campo, e a migração dos pedidos antigos é uma
+ * escolha explícita, não um efeito escondido.
+ */
+function EditarConta({
+  conta,
+  onGuardar,
+  onFechar,
+}: {
+  conta: UserAccount;
+  onGuardar: (patch: Record<string, unknown>) => Promise<void>;
+  onFechar: () => void;
+}) {
+  const [nome, setNome] = useState(conta.name ?? "");
+  const [telefone, setTelefone] = useState(conta.phone ?? "");
+  const [nif, setNif] = useState(conta.nif ?? "");
+  const [email, setEmail] = useState(conta.email);
+  const [migrarPedidos, setMigrarPedidos] = useState(true);
+  const [aGuardar, setAGuardar] = useState(false);
+
+  const emailMudou = email.trim().toLowerCase() !== conta.email.toLowerCase();
+  const caixa =
+    "mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-cyan-500";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onFechar();
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 className="text-base font-semibold text-slate-900">
+          Editar a conta de {conta.name || conta.email}
+        </h3>
+
+        <div className="mt-4 space-y-3">
+          <label className="block text-xs font-semibold text-slate-500">
+            Nome
+            <input value={nome} onChange={(e) => setNome(e.target.value)} className={caixa} />
+          </label>
+          <label className="block text-xs font-semibold text-slate-500">
+            Telefone
+            <input value={telefone} onChange={(e) => setTelefone(e.target.value)} className={caixa} />
+          </label>
+          <label className="block text-xs font-semibold text-slate-500">
+            NIF
+            <input value={nif} onChange={(e) => setNif(e.target.value)} className={caixa} />
+          </label>
+          <label className="block text-xs font-semibold text-slate-500">
+            Email
+            <input value={email} onChange={(e) => setEmail(e.target.value)} className={caixa} />
+          </label>
+
+          {emailMudou && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs leading-relaxed text-amber-900">
+                O email é a entrada da conta (Google) e a ligação aos pedidos.
+                Só o mude se o cliente mudou de conta Google — com um email que
+                não é o do Google dele, o próximo login cria uma conta nova e
+                esta fica órfã.
+              </p>
+              <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs text-amber-900">
+                <input
+                  type="checkbox"
+                  checked={migrarPedidos}
+                  onChange={(e) => setMigrarPedidos(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 cursor-pointer accent-amber-600"
+                />
+                Mover também os pedidos antigos para o email novo (senão
+                desaparecem da conta dele ao entrar)
+              </label>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onFechar}
+            disabled={aGuardar}
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              setAGuardar(true);
+              await onGuardar({
+                name: nome,
+                phone: telefone || null,
+                nif: nif || null,
+                ...(emailMudou ? { email: email.trim(), migrarPedidos } : {}),
+              });
+              setAGuardar(false);
+            }}
+            disabled={aGuardar}
+            className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+          >
+            {aGuardar ? "A guardar…" : "Guardar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
