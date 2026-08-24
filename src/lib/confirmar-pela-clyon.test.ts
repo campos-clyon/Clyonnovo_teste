@@ -227,3 +227,42 @@ describe("o rótulo do valor de abertura no lado do cliente", () => {
     expect(PROPOSTAS).toContain("o seu valor — à espera da resposta");
   });
 });
+
+
+describe("a edição da plataforma acontece na plataforma", () => {
+  const EDITAR = ler("src/app/api/admin/pedidos/[id]/editar/route.ts");
+  const FORM_REG = ler("src/components/admin/RegistarPedido.tsx");
+
+  it("o botão do cartão abre o formulário da plataforma, não o modal executante", () => {
+    /*
+     * "Abrir e editar tudo" abria o modal dos Pedidos — "Aceitar pedido",
+     * "Aprovar orçamento", preço final com IVA. Nada disso é a plataforma.
+     */
+    expect(PAINEL).toContain("setAEditarPlataforma(p.id)");
+    expect(FORM_REG).toContain("editarId");
+  });
+
+  it("editar volta a localizar a morada — com a mesma rede da criação", () => {
+    // O PATCH genérico gravava a morada nova e deixava as coordenadas VELHAS
+    // no rawOrderJson: o pedido mudava de rua no ecrã e ficava no sítio
+    // antigo para a regra do raio.
+    expect(EDITAR).toContain("geocodificarMoradaDetalhado");
+    expect(EDITAR).toContain("geocodificarLocalidade");
+  });
+
+  it("a edição fica assinada no histórico", () => {
+    // Os profissionais leem o pedido da base a cada abertura — uma edição
+    // muda o que eles veem, e isso não pode ser anónimo.
+    expect(EDITAR).toContain("Pedido editado pela CLYON");
+  });
+
+  it("em edição não há botões de envio", () => {
+    // Enviar é outra decisão, tomada na lista — um pedido já enviado não se
+    // reenvia por acidente a partir de um ecrã de edição.
+    expect(FORM_REG).toContain("emEdicao ? null : enviado");
+  });
+
+  it("o rawOrderJson funde-se, não se substitui", () => {
+    expect(EDITAR).toContain("...moradaAntiga");
+  });
+});

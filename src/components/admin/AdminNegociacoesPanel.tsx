@@ -211,6 +211,16 @@ export default function AdminNegociacoesPanel({
   /** Qual dos pedidos esta aberto em detalhe, para editar. */
   const [aEditar, setAEditar] = useState<number | null>(null);
   /*
+   * O editor DA PLATAFORMA, por cima do ecrã.
+   *
+   * "Abrir e editar tudo" abria o modal dos Pedidos — o painel do modelo
+   * executante, com "Aceitar pedido" e preço final com IVA. A edição da
+   * plataforma acontece no formulário da plataforma: os mesmos campos que os
+   * profissionais leem, com re-localização da morada e alcance recalculado.
+   * O título do cartão continua a abrir a ficha completa (com a Distribuição).
+   */
+  const [aEditarPlataforma, setAEditarPlataforma] = useState<number | null>(null);
+  /*
    * A lista por profissional deixou de estar sempre aberta.
    *
    * Com quatro ainda se lia; com mil era uma parede — e a parede repetia-se
@@ -603,11 +613,18 @@ export default function AdminNegociacoesPanel({
               */}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => setAEditar(p.id)}
+                  onClick={() => setAEditarPlataforma(p.id)}
                   className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
                 >
                   <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                  Abrir e editar tudo
+                  Editar pedido
+                </button>
+                <button
+                  onClick={() => setAEditar(p.id)}
+                  title="A ficha completa do backoffice — inclui a Distribuição e o histórico"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+                >
+                  Ficha e distribuição
                 </button>
                 <button
                   onClick={() => verComoCliente(p)}
@@ -1065,6 +1082,26 @@ export default function AdminNegociacoesPanel({
           trabalho fechado por confirmar. O botao de dentro do modal nao tem
           essa guarda, e duas portas para a mesma accao — uma com guarda e
           outra sem — e' ter a guarda a fingir. */}
+      {aEditarPlataforma != null && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4 sm:p-8"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAEditarPlataforma(null);
+          }}
+        >
+          <div className="mx-auto max-w-4xl">
+            <RegistarPedido
+              editarId={aEditarPlataforma}
+              onCriado={() => carregar(true)}
+              onFechar={() => {
+                setAEditarPlataforma(null);
+                carregar(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {aEditar != null && token && (
         <PedidoDetailModal
           id={aEditar}

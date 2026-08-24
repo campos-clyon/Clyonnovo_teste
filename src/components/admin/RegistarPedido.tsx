@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
@@ -65,9 +65,27 @@ const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".
  * Agora quem regista vê a estimativa, vê a quem chegaria e a que distância, e
  * decide. Enviar é um segundo toque.
  */
-export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
+export default function RegistarPedido({
+  onCriado,
+  editarId = null,
+  onFechar,
+}: {
+  onCriado: () => void;
+  /*
+   * MODO DE EDIÇÃO — o mesmo formulário, pré-preenchido.
+   *
+   * "Abrir e editar tudo" abria o modal dos Pedidos: o painel do modelo
+   * executante, com "Aceitar pedido", "Aprovar orçamento" e preço final com
+   * IVA — nada disso é a plataforma. A edição da plataforma acontece AQUI,
+   * no mesmo formulário do registo, porque os campos são exactamente os que
+   * os profissionais vão ler. Dois formulários divergiam; um não tem como.
+   */
+  editarId?: number | null;
+  onFechar?: () => void;
+}) {
   const { token } = useAdminAuth();
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(editarId != null);
+  const [aCarregarPedido, setACarregarPedido] = useState(editarId != null);
   const [aGravar, setAGravar] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
@@ -146,7 +164,9 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
     setAGravar(true);
     setErro("");
     try {
-      const res = await fetch("/api/admin/pedidos/criar", {
+      const res = await fetch(
+        editarId != null ? `/api/admin/pedidos/${editarId}/editar` : "/api/admin/pedidos/criar",
+        {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ ...f, files: fotos }),
@@ -194,6 +214,71 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
     }
   }
 
+  // Pré-preencher a partir do pedido existente. Corre uma vez.
+  useEffect(() => {
+    if (editarId == null || !token) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/pedidos/${editarId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await res.json();
+        const o = d.order;
+        if (!vivo || !o) return;
+        const paraDataLocal = (v: unknown): string => {
+          if (!v) return "";
+          const dt = new Date(String(v));
+          if (Number.isNaN(dt.getTime())) return "";
+          const p2 = (n: number) => String(n).padStart(2, "0");
+          return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
+        };
+        setF({
+          serviceType: o.serviceType ?? "",
+          contactName: o.contactName ?? "",
+          contactPhone: o.contactPhone ?? "",
+          contactEmail: o.contactEmail ?? "",
+          address: o.address ?? "",
+          city: o.city ?? "",
+          postalCode: o.postalCode ?? "",
+          floor: o.floor ?? "",
+          hasElevator: o.hasElevator ?? "",
+          parkingDistance: o.parkingDistance ?? "",
+          dataDesejada: paraDataLocal(o.dataAgendada),
+          urgency: o.urgency ?? "flexivel",
+          description: o.description ?? "",
+          valor: o.valorDesejadoCliente != null ? String(o.valorDesejadoCliente) : "",
+          precisaFatura: Number(o.precisaFatura) === 1,
+        });
+        try {
+          const lista = o.filesJson ? JSON.parse(o.filesJson) : [];
+          if (Array.isArray(lista)) {
+            setFotos(
+              lista
+                .filter((ft: { url?: unknown }) => typeof ft?.url === "string")
+                .map((ft: { url: string; name?: string; size?: number; type?: string }) => ({
+                  url: ft.url,
+                  name: ft.name ?? "foto",
+                  size: ft.size ?? 0,
+                  type: ft.type,
+                })),
+            );
+          }
+        } catch {
+          /* filesJson estragado — começa sem fotos */
+        }
+      } catch {
+        setErro("Não foi possível carregar o pedido.");
+      } finally {
+        if (vivo) setACarregarPedido(false);
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editarId, token]);
+
   const campo =
     "mt-1 h-9 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-xs text-white outline-none focus:border-cyan-600";
 
@@ -213,14 +298,21 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
     <div className="mb-6 rounded-2xl border border-cyan-900/60 bg-cyan-950/10 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-bold text-cyan-300">Registar pedido</h3>
+          <h3 className="text-sm font-bold text-cyan-300">
+            {editarId != null ? `Editar pedido #${editarId}` : "Registar pedido"}
+          </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
-            Para o que chega por fora do site. Primeiro calcula-se; depois
-            decide se vai aos profissionais ou fica só no backoffice.
+            {editarId != null
+              ? "Os campos que os profissionais leem. Gravar volta a localizar a morada e recalcula o alcance."
+              : "Para o que chega por fora do site. Primeiro calcula-se; depois decide se vai aos profissionais ou fica só no backoffice."}
           </p>
         </div>
         <button
           onClick={() => {
+            if (onFechar) {
+              onFechar();
+              return;
+            }
             setAberto(false);
             limpar();
           }}
@@ -230,6 +322,12 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
         </button>
       </div>
 
+      {aCarregarPedido ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="h-5 w-5 animate-spin text-slate-500" aria-label="A carregar o pedido" />
+        </div>
+      ) : (
+      <>
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         <label className="text-xs text-slate-400">
           Serviço *
@@ -472,9 +570,12 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
           r={resultado}
           enviado={enviado}
           aEnviar={aEnviar}
+          emEdicao={editarId != null}
           onEnviar={enviar}
           onNovo={limpar}
         />
+      )}
+      </>
       )}
     </div>
   );
@@ -491,12 +592,14 @@ function Resumo({
   r,
   enviado,
   aEnviar,
+  emEdicao = false,
   onEnviar,
   onNovo,
 }: {
   r: Resultado;
   enviado: string | null;
   aEnviar: boolean;
+  emEdicao?: boolean;
   onEnviar: () => void;
   onNovo: () => void;
 }) {
@@ -520,10 +623,12 @@ function Resumo({
       */}
       <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
         <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-        Pedido #{r.id} criado e gravado
+        {emEdicao ? `Pedido #${r.id} actualizado` : `Pedido #${r.id} criado e gravado`}
       </p>
       <p className="mt-0.5 text-xs text-emerald-400/70">
-        Já aparece na lista aqui em baixo. Ainda não foi enviado a ninguém.
+        {emEdicao
+          ? "Os profissionais veem as alterações na próxima vez que abrirem o pedido."
+          : "Já aparece na lista aqui em baixo. Ainda não foi enviado a ninguém."}
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -636,7 +741,12 @@ function Resumo({
         )}
       </div>
 
-      {enviado ? (
+      {/*
+        Em edição os botões de envio não aparecem: enviar é outra decisão,
+        tomada na lista, e um pedido que JÁ foi enviado não se reenvia por
+        acidente a partir de um ecrã de edição.
+      */}
+      {emEdicao ? null : enviado ? (
         <p className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {enviado}
