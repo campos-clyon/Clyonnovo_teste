@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import {
   negociacaoPorTokenHash,
   gravarNegociacao,
@@ -149,6 +150,7 @@ export async function POST(
         by: null,
         message: `Cliente confirmou o trabalho da negociação #${negociacaoId}. Valor libertado.`,
       });
+      after(() => avisarProfissionalTrabalhoConfirmado({ pedidoId, negociacaoId }));
       return NextResponse.json({ ok: true, confirmado: true });
     } catch (err) {
       console.error("[negociacao] falha ao confirmar:", err);

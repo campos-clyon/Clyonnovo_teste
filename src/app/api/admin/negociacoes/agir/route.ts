@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   negociacoesDoPedido,
@@ -10,6 +10,7 @@ import {
   registarSemFalhar,
 } from "@/lib/db";
 import { clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
@@ -185,6 +186,17 @@ export async function POST(req: NextRequest) {
         valor: linha.valorAcordado != null ? Number(linha.valorAcordado) : null,
         resumo: `Execução confirmada pela CLYON em nome do cliente (${porQuem})`,
       });
+
+      // Depois da resposta: o aviso e consequencia da confirmacao, nao
+      // condicao dela. O painel dele so actualiza quando ele la volta — o
+      // email e o que lhe diz que ha dinheiro a espera.
+      after(() =>
+        avisarProfissionalTrabalhoConfirmado({
+          pedidoId,
+          negociacaoId,
+          baseUrl: urlDeAccaoDoPedido(req.headers),
+        }),
+      );
 
       return NextResponse.json({ ok: true, confirmado: true });
     }

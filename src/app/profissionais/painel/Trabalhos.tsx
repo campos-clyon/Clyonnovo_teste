@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -141,15 +141,35 @@ function haQuantoTempo(iso: string): string {
 
 export default function Trabalhos({
   pedidos,
+  realcados,
   onVoltar,
   onRecarregar,
 }: {
   pedidos: Pedido[];
+  /** Negociações com novidades desde a última visita — ganham contorno. */
+  realcados?: Set<number>;
   onVoltar: () => void;
   onRecarregar: () => void;
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
   const [separador, setSeparador] = useState<Separador>("novos");
+
+  /*
+   * Se há novidades, abre-se no separador onde a primeira está.
+   *
+   * O realce não vale nada num separador que ele não abre: um trabalho
+   * confirmado vive em "Terminados", e quem entra aterra em "Novos" — via a
+   * lista vazia e o aviso a apontar para lado nenhum. Foi exactamente o que
+   * aconteceu: a confirmação estava lá, num separador onde ninguém olhou.
+   */
+  useEffect(() => {
+    if (!realcados || realcados.size === 0) return;
+    const primeiro = pedidos.find((p) => realcados.has(p.negociacaoId));
+    if (primeiro) setSeparador(separadorDe(primeiro));
+    // Só na entrada no ecrã — mudar de separador a meio da leitura porque
+    // chegou um refresh seria roubar-lhe o ecrã das mãos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [aArquivar, setAArquivar] = useState<number | null>(null);
 
   /**
@@ -256,7 +276,14 @@ export default function Trabalhos({
             separador === "recusados" || separador === "terminados" || separador === "arquivados";
 
           return (
-            <div key={p.negociacaoId} className="relative">
+            <div
+              key={p.negociacaoId}
+              className={`relative ${
+                realcados?.has(p.negociacaoId)
+                  ? "rounded-2xl ring-2 ring-[#00B4CC] ring-offset-2"
+                  : ""
+              }`}
+            >
             <button
               onClick={() => setAberto(p.negociacaoId)}
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${

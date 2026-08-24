@@ -151,3 +151,45 @@ export async function avisarProfissionalDaProposta(p: {
       </p>`),
   );
 }
+
+/**
+ * O trabalho foi confirmado — o dinheiro dele ficou disponível.
+ *
+ * É o email mais fácil de justificar do sistema inteiro: é a notícia de que
+ * ele recebeu. Sem isto, a confirmação acontecia em silêncio — o painel só
+ * actualiza quando ele lá volta, e voltava sem saber que tinha dinheiro à
+ * espera. Foi exactamente o que aconteceu no primeiro trabalho fechado pela
+ * plataforma: confirmado no backoffice, e o profissional sem nenhum sinal.
+ *
+ * Sem token e sem link mágico: a carteira exige entrar com a palavra-passe,
+ * e um email sobre dinheiro não deve carregar credenciais.
+ */
+export async function avisarTrabalhoConfirmado(p: {
+  para: string;
+  nomeDoProfissional: string;
+  pedidoId: number;
+  /** O valor ACORDADO — o líquido calcula-se aqui, como nos outros. */
+  valorAcordado: number;
+  baseUrl?: string;
+}): Promise<boolean> {
+  const base = p.baseUrl ?? urlDeAccao();
+  const url = comChave(`${base}/profissionais/painel`);
+  const nome = p.nomeDoProfissional?.trim().split(/\s+/)[0];
+  const liquido = quantoOProfissionalRecebe(p.valorAcordado);
+
+  return enviar(
+    p.para,
+    `Trabalho #${p.pedidoId} confirmado — ${euros(liquido)} na sua carteira`,
+    moldura(`
+      <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
+      <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:#0B1929;">
+        ${nome ? `${e(nome)}, o` : "O"} trabalho foi confirmado
+      </h1>
+      <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
+        <strong>${euros(liquido)}</strong> ficaram disponíveis na sua carteira —
+        o acordado, já com a taxa CLYON descontada. Pode pedir a transferência
+        quando quiser.
+      </p>
+      ${botao(url, "Abrir a carteira")}`),
+  );
+}

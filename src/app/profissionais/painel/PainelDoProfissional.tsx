@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Briefcase,
@@ -15,6 +15,7 @@ import {
   Star,
   UserCog,
   Wallet,
+  X,
 } from "lucide-react";
 import { GrupoDeLinhas, LinhaDeMenu, euros } from "@/components/portal/Portal";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
@@ -84,6 +85,22 @@ export default function PainelDoProfissional() {
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
 
+  /*
+   * O QUE MUDOU DESDE A ÚLTIMA LEITURA — para o painel dar sinal de vida.
+   *
+   * O ciclo automático trazia os dados novos e pousava-os em silêncio: um
+   * trabalho confirmado no backoffice aparecia na carteira sem uma palavra, e
+   * ele só dava por isso se fosse lá olhar. Foi o que aconteceu ao primeiro
+   * trabalho fechado pela plataforma.
+   *
+   * A fotografia anterior vive num ref e o diff corre A CADA leitura, antes
+   * de pousar os dados. Na primeira não há novidades — há passado, e o
+   * passado não é notícia.
+   */
+  const [novidades, setNovidades] = useState<Array<{ id: string; texto: string }>>([]);
+  const [realcados, setRealcados] = useState<Set<number>>(new Set());
+  const fotografiaAnterior = useRef<Map<number, string> | null>(null);
+
   const carregar = useCallback(async () => {
     try {
       const [rp, rc, rf] = await Promise.all([
@@ -111,10 +128,63 @@ export default function PainelDoProfissional() {
        */
       if (rp.ok) {
         setNome(dp.nome ?? "");
-        setPedidos((antes) => {
-          const novos = (dp.pedidos ?? []) as Pedido[];
-          return JSON.stringify(antes) === JSON.stringify(novos) ? antes : novos;
-        });
+        const novos = (dp.pedidos ?? []) as Pedido[];
+
+        const anterior = fotografiaAnterior.current;
+        if (anterior) {
+          const chegadas: Array<{ id: string; texto: string }> = [];
+          const paraRealcar: number[] = [];
+          for (const pd of novos) {
+            const faseAntiga = anterior.get(pd.negociacaoId);
+            if (faseAntiga === undefined) {
+              chegadas.push({
+                id: `novo-${pd.negociacaoId}`,
+                texto: `Pedido novo na sua zona — #${pd.pedidoId}. Abra para propor.`,
+              });
+              paraRealcar.push(pd.negociacaoId);
+            } else if (faseAntiga !== pd.fase) {
+              // Só as mudanças que são notícia PARA ELE. Passar a
+              // "a_confirmar" foi ele próprio a enviar a prova — não é novidade.
+              if (pd.fase === "a_executar") {
+                chegadas.push({
+                  id: `contratado-${pd.negociacaoId}`,
+                  texto: `Foi contratado — pedido #${pd.pedidoId}. A morada e o contacto já estão abertos.`,
+                });
+                paraRealcar.push(pd.negociacaoId);
+              } else if (pd.fase === "confirmado") {
+                const liquido = pd.recebeSeFechado;
+                chegadas.push({
+                  id: `confirmado-${pd.negociacaoId}`,
+                  texto:
+                    `Trabalho #${pd.pedidoId} confirmado` +
+                    (liquido != null
+                      ? ` — ${liquido.toFixed(2).replace(".", ",")} € já estão disponíveis na carteira.`
+                      : " — o valor já está disponível na carteira."),
+                });
+                paraRealcar.push(pd.negociacaoId);
+              } else if (pd.fase === "pago") {
+                chegadas.push({
+                  id: `pago-${pd.negociacaoId}`,
+                  texto: `Transferência do trabalho #${pd.pedidoId} processada.`,
+                });
+              }
+            }
+          }
+          if (chegadas.length > 0) {
+            // Junta sem repetir: o mesmo acontecimento não vira duas linhas
+            // por o ciclo correr duas vezes antes de ele fechar o aviso.
+            setNovidades((v) => {
+              const ids = new Set(v.map((x) => x.id));
+              return [...v, ...chegadas.filter((c) => !ids.has(c.id))];
+            });
+            setRealcados((v) => new Set([...v, ...paraRealcar]));
+          }
+        }
+        fotografiaAnterior.current = new Map(novos.map((x) => [x.negociacaoId, x.fase]));
+
+        setPedidos((antes) =>
+          JSON.stringify(antes) === JSON.stringify(novos) ? antes : novos,
+        );
       }
       if (rc.ok) {
         setCarteira((antes) =>
@@ -147,7 +217,7 @@ export default function PainelDoProfissional() {
    * frente — um ecrã minimizado não gasta pedidos, e ao voltar não mostra
    * dados de há uma hora.
    */
-  useAutoRefresh(carregar, { intervalMs: 60_000 });
+  useAutoRefresh(carregar, { intervalMs: 30_000 });
 
   function abrir(destino: Ecra) {
     router.push(
@@ -181,6 +251,41 @@ export default function PainelDoProfissional() {
   // ecrã grande, ecrã inteiro no telemóvel.
   const menu = (
     <>
+      {/*
+        AS NOVIDADES, ditas e nao so pousadas.
+
+        `aria-live="polite"`: o leitor de ecra anuncia cada chegada sem
+        interromper o que estiver a ler. Tocar no aviso abre os trabalhos,
+        que e onde a novidade esta; o X fecha so o aviso.
+      */}
+      {novidades.length > 0 && (
+        <div
+          aria-live="polite"
+          className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md flex-col gap-2 sm:inset-x-auto sm:right-4"
+        >
+          {novidades.map((n) => (
+            <div
+              key={n.id}
+              className="flex items-start gap-2 rounded-2xl border border-[#00B4CC]/40 bg-white p-3.5 shadow-lg"
+            >
+              <button
+                onClick={() => abrir("trabalhos")}
+                className="flex-1 cursor-pointer border-none bg-transparent p-0 text-left text-sm font-medium leading-snug text-slate-800"
+              >
+                {n.texto}
+              </button>
+              <button
+                onClick={() => setNovidades((v) => v.filter((x) => x.id !== n.id))}
+                aria-label="Fechar o aviso"
+                className="shrink-0 cursor-pointer rounded-lg border-none bg-transparent p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <header className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold text-[#0B1929]">
@@ -260,11 +365,15 @@ export default function PainelDoProfissional() {
           rotulo="Os meus trabalhos"
           activo={ecra === "trabalhos"}
           destaque={
-            porFazer > 0
-              ? `${porFazer} por fazer`
-              : aResponder > 0
-                ? `${aResponder} à espera`
-                : undefined
+            // As novidades ganham ao resto: "por fazer" é estado, novidade é
+            // acontecimento — e o acontecimento é o que ele ainda não sabe.
+            novidades.length > 0
+              ? `${novidades.length} novidade${novidades.length === 1 ? "" : "s"}`
+              : porFazer > 0
+                ? `${porFazer} por fazer`
+                : aResponder > 0
+                  ? `${aResponder} à espera`
+                  : undefined
           }
           aviso={porFazer > 0}
           onClick={() => abrir("trabalhos")}
@@ -374,7 +483,19 @@ export default function PainelDoProfissional() {
         {/* Em ecrã grande a área da direita nunca fica vazia: sem nada escolhido
             mostra os trabalhos, que é o que ele vem cá ver. */}
         {(ecra === "trabalhos" || noMenu) && (
-          <Trabalhos pedidos={pedidos} onVoltar={() => abrir("menu")} onRecarregar={carregar} />
+          <Trabalhos
+            pedidos={pedidos}
+            realcados={realcados}
+            onVoltar={() => {
+              // Sair dos trabalhos e ter visto as novidades e a mesma coisa:
+              // o realce ja cumpriu, e um destaque que nunca se apaga deixa
+              // de destacar seja o que for.
+              setRealcados(new Set());
+              setNovidades([]);
+              abrir("menu");
+            }}
+            onRecarregar={carregar}
+          />
         )}
 
         {ecra === "carteira" && carteira && (

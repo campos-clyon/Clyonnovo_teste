@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import {
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
         by: null,
         message: `Cliente confirmou o trabalho da negociação #${negociacaoId}. Valor libertado.`,
       });
+      after(() => avisarProfissionalTrabalhoConfirmado({ pedidoId, negociacaoId }));
       return NextResponse.json({ ok: true, confirmado: true });
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { libertarTrabalhosPorPrazo, registarSemFalhar } from "@/lib/db";
+import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 
 export const runtime = "nodejs";
@@ -50,18 +51,24 @@ export async function GET(req: NextRequest) {
 
     // Só se regista quando houve alguma coisa: uma linha por dia a dizer
     // "zero" enterrava as que interessam.
-    if (libertados > 0) {
+    if (libertados.length > 0) {
       await registarSemFalhar({
         acontecimento: "execucao_confirmada",
         autorTipo: "sistema",
         autorNome: "prazo",
         resumo:
-          `${libertados} trabalho(s) libertado(s) por prazo — ` +
+          `${libertados.length} trabalho(s) libertado(s) por prazo — ` +
           `${DIAS_ATE_LIBERTAR_SOZINHO} dias sem resposta do cliente`,
       });
+
+      // Um email por trabalho, em série e sem pressa: é um cron, ninguém está
+      // à espera da resposta, e o Resend prefere isto a uma rajada.
+      for (const l of libertados) {
+        await avisarProfissionalTrabalhoConfirmado(l);
+      }
     }
 
-    return NextResponse.json({ ok: true, libertados });
+    return NextResponse.json({ ok: true, libertados: libertados.length });
   } catch (error) {
     console.error("[cron/libertar-por-prazo]", error);
     return NextResponse.json({ error: "Erro ao libertar" }, { status: 500 });
