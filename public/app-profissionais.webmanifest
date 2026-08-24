@@ -1,0 +1,24 @@
+{
+  "name": "CLYON Profissional",
+  "short_name": "CLYON Pro",
+  "description": "Os seus trabalhos, propostas e carteira CLYON.",
+  "start_url": "/profissionais/painel",
+  "scope": "/profissionais",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#00B4CC",
+  "lang": "pt-PT",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

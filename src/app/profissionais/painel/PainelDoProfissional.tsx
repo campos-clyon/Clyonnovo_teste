@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { GrupoDeLinhas, LinhaDeMenu, euros } from "@/components/portal/Portal";
+import InstalarNoTelemovel from "@/components/portal/InstalarNoTelemovel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import Trabalhos from "./Trabalhos";
 import Carteira from "./Carteira";
@@ -449,6 +450,7 @@ export default function PainelDoProfissional() {
             fora da conta para descobrir um número de telefone. Agora abre as
             perguntas com resposta, e a caixa para escrever quando nenhuma
             serve. */}
+        <InstalarNoTelemovel />
         <LinhaDeMenu
           icone={HelpCircle}
           rotulo="Ajuda"
