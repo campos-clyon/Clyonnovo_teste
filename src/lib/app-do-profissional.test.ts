@@ -57,11 +57,25 @@ describe("a linha de instalar no menu", () => {
     expect(PAINEL).toContain("<InstalarNoTelemovel />");
   });
 
-  it("usa o diálogo nativo quando o browser o dá, instruções quando não", () => {
+  it("usa o diálogo nativo quando o browser o dá, guia visual quando não", () => {
     // O beforeinstallprompt pode nunca disparar (iPhone nunca o tem) — a
     // linha não pode depender dele para existir.
     expect(INSTALAR).toContain("beforeinstallprompt");
     expect(INSTALAR).toContain("Adicionar ao ecrã principal");
+  });
+
+  it("o guia é visual e só do aparelho da pessoa", () => {
+    /*
+     * No iPhone NÃO EXISTE forma programática de adicionar ao ecrã — nenhum
+     * site consegue, por decisão da Apple. O tecto é um guia; a diferença
+     * entre um bom e um mau é quem o consegue seguir. Passos numerados com os
+     * ÍCONES VERDADEIROS desenhados — reconhecer em vez de ler — e só o
+     * caminho do aparelho detectado, sem obrigar a escolher entre dois.
+     */
+    expect(INSTALAR).toContain("IconePartilharIos");
+    expect(INSTALAR).toContain("IconeTresPontos");
+    expect(INSTALAR).toContain('"ios" | "android" | "computador"');
+    expect(INSTALAR).toContain("siga estes 3 passos");
   });
 
   it("desaparece quando já está instalada", () => {
