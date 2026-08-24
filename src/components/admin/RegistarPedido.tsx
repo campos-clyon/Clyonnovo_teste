@@ -37,6 +37,8 @@ type Resultado = {
   distanciaKm: number | null;
   geocodificado: boolean;
   motivoSemCoordenadas?: "sem_chave" | "chave_recusada" | "nao_encontrada" | null;
+  geocodificadoAproximado?: boolean;
+  chaveRecusada?: boolean;
   moradaNormalizada: string | null;
   alcance: Alcance | null;
 };
@@ -546,7 +548,11 @@ function Resumo({
               r.geocodificado ? "text-emerald-400" : "text-amber-400"
             }`}
           >
-            {r.geocodificado ? "Localizada" : "Não localizada"}
+            {r.geocodificado
+              ? r.geocodificadoAproximado
+                ? "Localizada pela freguesia"
+                : "Localizada"
+              : "Não localizada"}
           </p>
         </div>
       </div>
@@ -569,7 +575,12 @@ function Resumo({
           isso estar resolvido. Não é um problema desta morada.
         </p>
       )}
-      {!r.geocodificado && r.motivoSemCoordenadas === "chave_recusada" && (
+      {/*
+        A chave recusada diz-se mesmo quando a freguesia salvou o pedido:
+        se a faixa só aparecesse com o pedido por localizar, o recurso
+        esconderia a avaria e ninguém ia ao Google Cloud resolvê-la.
+      */}
+      {(r.chaveRecusada || (!r.geocodificado && r.motivoSemCoordenadas === "chave_recusada")) && (
         <p className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs leading-relaxed text-red-300">
           A chave do Google Maps existe mas o Google RECUSOU-A. Quase sempre é
           a Geocoding API por activar no projecto, ou a chave restrita a outra
@@ -585,6 +596,12 @@ function Resumo({
           decidido pela lista de zonas de cada profissional, que é muito mais
           curta do que o raio deles. Confirme a rua e o número — o código
           postal e a localidade já entram sozinhos.
+        </p>
+      )}
+      {r.geocodificado && r.geocodificadoAproximado && (
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+          Coordenadas pelo centro da freguesia (Nominatim) — chegam para decidir o
+          raio dos profissionais, não para navegar até à porta.
         </p>
       )}
       {r.geocodificado && r.moradaNormalizada && (

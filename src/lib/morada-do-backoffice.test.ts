@@ -186,3 +186,28 @@ describe("as coordenadas para o raio", () => {
     expect(ROTA_LOC).toContain("coordenadasDoPedido(pedido)");
   });
 });
+
+
+describe("a freguesia entra logo na criação", () => {
+  it("o recurso pelo Nominatim corre também no registar, não só no envio", () => {
+    /*
+     * Corria só no envio: o ecrã de criar dizia "Não localizada" e previa o
+     * alcance pelas zonas, e o envio depois encontrava coordenadas e usava o
+     * raio — dois resultados diferentes para o mesmo pedido, com o pior dos
+     * dois à frente de quem decide.
+     */
+    expect(semNotas(ROTA)).toContain("geocodificarLocalidade");
+    expect(ROTA).toContain("coordsAproximadas");
+  });
+
+  it("a chave recusada diz-se mesmo quando a freguesia salvou o pedido", () => {
+    // Se a faixa só aparecesse com o pedido por localizar, o recurso
+    // esconderia a avaria e ninguém ia ao Google Cloud resolvê-la.
+    expect(ROTA).toContain("chaveRecusada,");
+    expect(FORM).toContain("r.chaveRecusada ||");
+  });
+
+  it("o ecrã distingue a localização aproximada da exacta", () => {
+    expect(FORM).toContain("Localizada pela freguesia");
+  });
+});

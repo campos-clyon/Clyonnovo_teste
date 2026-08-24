@@ -187,7 +187,27 @@ export async function POST(req: NextRequest) {
      * Se falhar, seguimos na mesma: null cai nas zonas, como antes.
      */
     const geo = await geocodificarMoradaDetalhado(address, postalCode, city);
-    const coords = geo.coords;
+    let coords = geo.coords;
+    /*
+     * O mesmo recurso do envio, aqui na criação.
+     *
+     * O recurso pela freguesia (Nominatim, sem chave) já existia no
+     * `coordenadasDoPedido` — mas só corria no ENVIO. O ecrã de criar dizia
+     * "Não localizada" e previa o alcance pelas zonas, e o envio depois
+     * encontrava coordenadas e usava o raio: dois resultados diferentes para o
+     * mesmo pedido, com o pior dos dois à frente de quem decide.
+     */
+    let coordsAproximadas = false;
+    if (!coords && (postalCode || city)) {
+      const { geocodificarLocalidade } = await import("@/lib/geocodificar");
+      const aprox = await geocodificarLocalidade(
+        [postalCode, city].filter(Boolean).join(" "),
+      );
+      if (aprox) {
+        coords = { ...aprox, moradaNormalizada: null };
+        coordsAproximadas = true;
+      }
+    }
     /*
      * Sem coordenadas há duas histórias muito diferentes, e o ecrã tem de as
      * distinguir: ou o Google não reconheceu a morada, ou a CHAVE nem sequer
@@ -196,6 +216,10 @@ export async function POST(req: NextRequest) {
      * exactamente o que aconteceu: três tentativas da mesma rua que o Google
      * encontra à primeira, contra um servidor sem chave.
      */
+    const chaveRecusada =
+      geo.estado === "REQUEST_DENIED" ||
+      geo.estado === "OVER_DAILY_LIMIT" ||
+      geo.estado === "OVER_QUERY_LIMIT";
     const motivoSemCoordenadas = coords
       ? null
       : geo.estado === "SEM_CHAVE"
@@ -282,6 +306,7 @@ export async function POST(req: NextRequest) {
         registadoPor: colab?.nome ?? null,
         address: {
           formattedAddress: coords?.moradaNormalizada ?? address,
+          coordenadasAproximadas: coordsAproximadas || undefined,
           city,
           postalCode,
           // Ficam gravadas para o botão "Enviar aos profissionais" as
@@ -349,6 +374,8 @@ export async function POST(req: NextRequest) {
       estimativa: estimativa?.estimatedPriceWithVat ?? null,
       distanciaKm: km,
       geocodificado: coords != null,
+      geocodificadoAproximado: coordsAproximadas,
+      chaveRecusada,
       motivoSemCoordenadas,
       moradaNormalizada: coords?.moradaNormalizada ?? null,
       alcance,
