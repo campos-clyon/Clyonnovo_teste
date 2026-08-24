@@ -1153,8 +1153,18 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
           return (
             <div className="flex flex-col" style={{ height: "94vh", maxHeight: "94vh" }}>
               {/* ── Header (compacto — 1 linha) ── */}
-              <div className="flex-shrink-0 border-b border-slate-100 px-5 py-2.5">
-                <div className="flex items-center justify-between gap-3">
+              <div className="flex-shrink-0 border-b border-slate-100 px-4 py-2.5 sm:px-5">
+                {/*
+                  EMPILHADO em telemóvel, uma linha só a partir de lg.
+
+                  Era uma linha única sempre: à esquerda o nome e os chips (com
+                  wrap), à direita SETE botões com flex-shrink-0 — que recusa
+                  encolher. Num ecrã de 400px os dois lados dobravam um por
+                  cima do outro: "Por atribuir" em cima do "Aceitar pedido", o
+                  nome cortado a "Isab…". Empilhar não é menos bonito — é o
+                  que cabe.
+                */}
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
                   <div className="min-w-0 flex items-center gap-3 flex-wrap">
                     <div className="min-w-0">
                       <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 leading-tight">
@@ -1187,7 +1197,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     <span className="text-[10px] text-slate-400">{fmt(order.createdAt)}</span>
                   </div>
 
-                  <div className="flex flex-shrink-0 flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5 lg:flex-shrink-0">
                     {/* Aceitar — marca o pedido como tomado por quem está a
                         trabalhar nele. Antes só aparecia ao assistente com o
                         pedido na fila geral; sem essa função, é a administração

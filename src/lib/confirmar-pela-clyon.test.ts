@@ -266,3 +266,18 @@ describe("a edição da plataforma acontece na plataforma", () => {
     expect(EDITAR).toContain("...moradaAntiga");
   });
 });
+
+
+describe("o detalhe do pedido em telemóvel", () => {
+  it("o cabeçalho empilha em ecrã estreito", () => {
+    /*
+     * Era uma linha única sempre: nome e chips à esquerda, sete botões com
+     * flex-shrink-0 à direita — que recusa encolher. Num ecrã de 400px os
+     * dois lados dobravam um por cima do outro: "Por atribuir" em cima do
+     * "Aceitar pedido", o nome cortado a "Isab…".
+     */
+    const MODAL_PEDIDO = ler("src/components/admin/PedidoDetailModal.tsx");
+    expect(MODAL_PEDIDO).toContain("flex flex-col gap-2 lg:flex-row lg:items-center");
+    expect(MODAL_PEDIDO).not.toContain('"flex flex-shrink-0 flex-wrap items-center gap-1.5"');
+  });
+});
