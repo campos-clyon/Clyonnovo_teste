@@ -178,3 +178,52 @@ describe("o ecrã das negociações da CLYON", () => {
     expect(PAINEL).toContain('mostrar !== "clyon" && (');
   });
 });
+
+
+describe("a distribuição do pedido", () => {
+  const DIST = ler("src/lib/distribuicao-do-pedido.ts");
+  const MODAL_PEDIDO = ler("src/components/admin/PedidoDetailModal.tsx");
+
+  it("avalia TODOS os profissionais, não só os activos", () => {
+    /*
+     * `profissionaisActivos` filtra os suspensos à entrada — e "conta
+     * suspensa" é precisamente um dos motivos que se quer ver. Vão todos
+     * menos os apagados.
+     */
+    expect(DIST).toContain("estado <> 'apagado'");
+    expect(DIST).not.toContain("profissionaisActivos(");
+  });
+
+  it("traduz os motivos para português de gente", () => {
+    expect(DIST).toContain("conta suspensa ou por aprovar");
+    expect(DIST).toContain("fora do raio e da zona");
+  });
+
+  it("um elegível sem negociação não passa por erro", () => {
+    // Inscreveu-se depois do envio: é história, não avaria.
+    expect(DIST).toContain("inscreveu-se ou ficou elegível depois do envio");
+  });
+
+  it("o modal do pedido tem o separador Distribuição", () => {
+    expect(MODAL_PEDIDO).toContain('"distribuicao"');
+    expect(MODAL_PEDIDO).toContain("Receberam o pedido");
+    expect(MODAL_PEDIDO).toContain("Não receberam");
+  });
+
+  it("os cartões deixam de listar a parede de profissionais", () => {
+    // Fechada por omissão atrás do resumo; abre sozinha quando há proposta à
+    // espera — o accionável não fica atrás de um toque.
+    expect(PAINEL).toContain("negociacoesVisiveis.has(p.id) || espera");
+  });
+});
+
+describe("o rótulo do valor de abertura no lado do cliente", () => {
+  it("não chama proposta do profissional ao valor do próprio cliente", () => {
+    /*
+     * "a sua proposta" ao lado do NOME do profissional lia-se como proposta
+     * DELE — e ele ainda não tinha dito nada.
+     */
+    const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
+    expect(PROPOSTAS).toContain("o seu valor — à espera da resposta");
+  });
+});

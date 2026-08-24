@@ -210,6 +210,15 @@ export default function AdminNegociacoesPanel({
   const [valorDe, setValorDe] = useState<Record<number, string>>({});
   /** Qual dos pedidos esta aberto em detalhe, para editar. */
   const [aEditar, setAEditar] = useState<number | null>(null);
+  /*
+   * A lista por profissional deixou de estar sempre aberta.
+   *
+   * Com quatro ainda se lia; com mil era uma parede — e a parede repetia-se
+   * em cada pedido. Fecha-se por omissão atrás de um resumo, e abre-se
+   * SOZINHA quando há uma proposta à espera de resposta: o que é accionável
+   * não pode ficar atrás de um toque.
+   */
+  const [negociacoesVisiveis, setNegociacoesVisiveis] = useState<Set<number>>(new Set());
   /** Os que estao com a caixa marcada, para apagar em conjunto. */
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   const [aApagar, setAApagar] = useState(false);
@@ -670,7 +679,49 @@ export default function AdminNegociacoesPanel({
               </button>
             </div>
           )}
-          {p.negociacoes.map((n) => {
+          {p.negociacoes.length > 0 && (
+            <button
+              onClick={() =>
+                setNegociacoesVisiveis((v) => {
+                  const c = new Set(v);
+                  if (c.has(p.id)) c.delete(p.id);
+                  else c.add(p.id);
+                  return c;
+                })
+              }
+              aria-expanded={negociacoesVisiveis.has(p.id) || espera}
+              className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-slate-800/60"
+            >
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
+                  negociacoesVisiveis.has(p.id) || espera ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              />
+              <span className="text-sm font-medium text-slate-300">
+                {p.negociacoes.length} profissiona
+                {p.negociacoes.length === 1 ? "l" : "is"}
+              </span>
+              {/* O resumo por estado: o que a parede dizia, numa linha. */}
+              {Object.entries(
+                p.negociacoes.reduce<Record<string, number>>((acc, n) => {
+                  acc[n.estado] = (acc[n.estado] ?? 0) + 1;
+                  return acc;
+                }, {}),
+              ).map(([estado, quantos]) => (
+                <span
+                  key={estado}
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    ESTADO_CLS[estado] ?? "bg-slate-800 text-slate-400"
+                  }`}
+                >
+                  {quantos} {estado}
+                </span>
+              ))}
+            </button>
+          )}
+          {(negociacoesVisiveis.has(p.id) || espera) &&
+            p.negociacoes.map((n) => {
             const chave = `n${n.id}`;
             return (
               <div key={n.id}>

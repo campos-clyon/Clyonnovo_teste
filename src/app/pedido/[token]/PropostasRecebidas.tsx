@@ -482,7 +482,15 @@ export default function PropostasRecebidas({
                 <div className="text-right">
                   <div className="text-xl font-bold text-tinta">{euros(emCima)}</div>
                   <div className="text-xs text-tinta-fraca">
-                    {pendente?.por === "profissional" ? "proposta dele" : "a sua proposta"}
+                    {/*
+                      "a sua proposta" ao lado do NOME DO PROFISSIONAL lia-se
+                      como proposta DELE — e ele ainda não tinha dito nada. O
+                      valor de abertura é do cliente, e a etiqueta tem de dizer
+                      que se está à espera, não que alguém respondeu.
+                    */}
+                    {pendente?.por === "profissional"
+                      ? "proposta dele"
+                      : "o seu valor — à espera da resposta"}
                   </div>
                 </div>
               </div>

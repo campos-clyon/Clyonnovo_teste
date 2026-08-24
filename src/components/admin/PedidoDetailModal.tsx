@@ -164,6 +164,7 @@ const TABS = [
   { id: "cliente_morada",  label: "Cliente e Morada" },
   { id: "servico_fotos",   label: "Serviço e Fotos" },
   { id: "atribuicao",      label: "Estado e notas" },
+  { id: "distribuicao",    label: "Distribuição" },
   { id: "historico",       label: "Histórico" },
 ] as const;
 
@@ -2713,6 +2714,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                 )}
 
                 {/* Histórico */}
+                {activeTab === "distribuicao" && (
+                  <DistribuicaoTab pedidoId={order.id} token={token} />
+                )}
+
                 {activeTab === "historico" && (
                   <div className="space-y-4">
                     <h3 className="text-base font-bold text-slate-900">Histórico do pedido</h3>
@@ -3284,6 +3289,121 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+/**
+ * A quem o pedido chegou — e a quem não chegou, com o motivo por extenso.
+ *
+ * A lista por profissional saiu dos cartões do painel de negociações: com
+ * mil profissionais era uma parede. Quem quer saber abre o pedido e vê aqui
+ * os dois lados, incluindo "conta suspensa" e "fora do raio" — os motivos que
+ * o painel só mostrava agregados no momento do envio, e nunca mais.
+ */
+function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string }) {
+  const [dados, setDados] = useState<{
+    receberam: Array<{ providerId: number; nome: string; negociacao: { estado: string; valorAcordado: number | null } | null; distanciaKm: number | null }>;
+    naoReceberam: Array<{ providerId: number; nome: string; motivos: string[]; distanciaKm: number | null }>;
+  } | null>(null);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/pedidos/${pedidoId}/distribuicao`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await res.json();
+        if (!vivo) return;
+        if (!res.ok) setErro(d.error ?? "Não foi possível avaliar.");
+        else setDados(d);
+      } catch {
+        if (vivo) setErro("Erro de rede.");
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [pedidoId, token]);
+
+  if (erro) {
+    return <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>;
+  }
+  if (!dados) {
+    return (
+      <div className="flex justify-center py-10">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" aria-label="A carregar" />
+      </div>
+    );
+  }
+
+  const km = (v: number | null) => (v != null ? ` · ${Math.round(v)} km` : "");
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-base font-bold text-slate-900">
+          Receberam o pedido ({dados.receberam.length})
+        </h3>
+        {dados.receberam.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">
+            Ninguém. O pedido ainda não foi enviado, ou nenhum profissional era
+            elegível na altura — os motivos estão na lista de baixo.
+          </p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {dados.receberam.map((r) => (
+              <li
+                key={r.providerId}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              >
+                <span className="font-medium text-slate-800">
+                  {r.nome}
+                  <span className="font-normal text-slate-400">{km(r.distanciaKm)}</span>
+                </span>
+                <span className="text-xs text-slate-500">
+                  {r.negociacao?.estado ?? "—"}
+                  {r.negociacao?.valorAcordado != null &&
+                    ` · ${r.negociacao.valorAcordado.toFixed(2).replace(".", ",")} €`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-base font-bold text-slate-900">
+          Não receberam ({dados.naoReceberam.length})
+        </h3>
+        {dados.naoReceberam.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">Chegou a todos os profissionais registados.</p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {dados.naoReceberam.map((r) => (
+              <li
+                key={r.providerId}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm"
+              >
+                <span className="font-medium text-slate-800">
+                  {r.nome}
+                  <span className="font-normal text-slate-400">{km(r.distanciaKm)}</span>
+                </span>
+                <span className="text-xs text-amber-800">{r.motivos.join("; ")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <p className="text-xs leading-relaxed text-slate-400">
+        A elegibilidade é avaliada AGORA, com o perfil actual de cada um — quem
+        mudou de zonas ou foi suspenso depois do envio aparece com o estado de
+        hoje. O histórico do pedido guarda o que aconteceu na altura.
+      </p>
     </div>
   );
 }
