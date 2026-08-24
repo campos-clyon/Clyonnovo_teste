@@ -461,6 +461,37 @@ export default function AdminNegociacoesPanel({
   }
 
   /**
+   * Arquivar varios de uma vez.
+   *
+   * Sequencial de proposito: sao pedidos individuais a rota de arquivar, e
+   * vinte em paralelo num serverless partilhado e pedir throttling. Quem
+   * arquiva um lote de vinte espera dois segundos; quem ve metade falhar em
+   * paralelo nao sabe qual metade.
+   */
+  async function arquivarPedidos(ids: number[]) {
+    if (!token || ids.length === 0) return;
+    setOcupado("lote-arquivar");
+    setErro("");
+    let falhados = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/admin/pedidos/${id}/reject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) falhados += 1;
+      } catch {
+        falhados += 1;
+      }
+    }
+    if (falhados > 0) {
+      setErro(`${falhados} de ${ids.length} pedido(s) não foram arquivados. Tente de novo os que ficaram.`);
+    }
+    await carregar(true);
+    setOcupado(null);
+  }
+
+  /**
    * Apagar pedidos por promover.
    *
    * Mesma rota que apaga os outros: os guardas vivem la — um pedido com
@@ -1030,6 +1061,7 @@ export default function AdminNegociacoesPanel({
           ocupado={ocupado}
           onPromover={promover}
           onArquivar={arquivarPedido}
+          onArquivarVarios={arquivarPedidos}
           onApagar={apagarPedidos}
           aApagar={aApagar}
         />
@@ -1356,6 +1388,7 @@ function PedidosPorPromover({
   ocupado,
   onPromover,
   onArquivar,
+  onArquivarVarios,
   onApagar,
   aApagar,
 }: {
@@ -1365,6 +1398,7 @@ function PedidosPorPromover({
   ocupado: string | null;
   onPromover: (id: number) => void;
   onArquivar: (id: number) => void;
+  onArquivarVarios: (ids: number[]) => void;
   onApagar: (ids: number[]) => void;
   aApagar: boolean;
 }) {
@@ -1532,17 +1566,56 @@ function PedidosPorPromover({
         />
       </div>
 
+      {/*
+        Marcar todos marca OS VISIVEIS — o que a busca deixou passar, grupos
+        fechados incluidos. Se a busca diz "entulho", "todos" sao os de
+        entulho: marcar o que nao esta no ecra seria apagar as escuras.
+      */}
+      {visiveis.length > 0 && (
+        <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-xs text-slate-400">
+          <input
+            type="checkbox"
+            checked={visiveis.length > 0 && visiveis.every((p) => marcados.has(p.id))}
+            onChange={(e) =>
+              setMarcados(e.target.checked ? new Set(visiveis.map((p) => p.id)) : new Set())
+            }
+            className="h-4 w-4 cursor-pointer accent-cyan-500"
+          />
+          Marcar todos ({visiveis.length})
+        </label>
+      )}
+
       {marcados.size > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-red-900/60 bg-red-950/20 px-3 py-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2">
           <span className="text-xs text-slate-300">
             {marcados.size} marcado{marcados.size === 1 ? "" : "s"}
           </span>
+          {/*
+            Arquivar primeiro e apagar depois — pela mesma hierarquia das
+            linhas: arquivar mantem o registo e e a arrumação normal; apagar
+            e a excepção, e fica com a cor de excepção.
+          */}
+          <button
+            onClick={() => {
+              onArquivarVarios([...marcados]);
+              setMarcados(new Set());
+            }}
+            disabled={ocupado === "lote-arquivar" || aApagar}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+          >
+            {ocupado === "lote-arquivar" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Arquivar
+          </button>
           <button
             onClick={() => {
               onApagar([...marcados]);
               setMarcados(new Set());
             }}
-            disabled={aApagar}
+            disabled={aApagar || ocupado === "lote-arquivar"}
             className="flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
           >
             {aApagar ? (

@@ -104,3 +104,28 @@ describe("os números do cabeçalho", () => {
     expect(q).toContain("'cancelado', 'concluido', 'arquivado'");
   });
 });
+
+
+describe("as acções em lote", () => {
+  it("há marcar todos, e marca só os visíveis", () => {
+    /*
+     * "Todos" são os que a busca deixou passar — grupos fechados incluídos.
+     * Se a busca diz "entulho", todos são os de entulho: marcar o que não
+     * está no ecrã seria apagar às escuras.
+     */
+    expect(PAINEL).toContain("Marcar todos ({visiveis.length})");
+    expect(PAINEL).toContain("new Set(visiveis.map((p) => p.id))");
+  });
+
+  it("arquivar também existe em lote, ao lado do apagar", () => {
+    expect(PAINEL).toContain("onArquivarVarios([...marcados])");
+    expect(PAINEL).toContain("arquivarPedidos");
+  });
+
+  it("o lote arquiva um a um e conta as falhas", () => {
+    // Vinte em paralelo num serverless partilhado é pedir throttling; e quem
+    // vê metade falhar em paralelo não sabe qual metade.
+    expect(PAINEL).toContain("for (const id of ids)");
+    expect(PAINEL).toContain("não foram arquivados");
+  });
+});
