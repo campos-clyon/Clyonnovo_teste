@@ -4901,6 +4901,13 @@ export async function apagarProfissional(
   await ensureProvidersSchema();
   await ensureLevantamentosTable();
   await ensureRegistoTable();
+  /*
+   * A pushSubscriptions só nasce quando alguém activa notificações — em
+   * produção nunca ninguém activou, a tabela não existia, e o DELETE dela
+   * estoirava a transacção inteira: "Erro ao apagar a conta" por causa de
+   * uma tabela de avisos vazia. Garante-se antes, como as outras.
+   */
+  await ensurePushSubscriptionsTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
@@ -5112,6 +5119,9 @@ export async function apagarContaDeCliente(
 ): Promise<ApagarContaDeClienteResultado> {
   await ensureUsersSchema();
   await ensureRegistoTable();
+  // O mesmo remedio do apagarProfissional: sem isto, o DELETE da
+  // pushSubscriptions estoirava numa base onde ninguem activou avisos.
+  await ensurePushSubscriptionsTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 

@@ -205,3 +205,19 @@ describe("a carteira que o guarda consulta", () => {
     expect(carteira.cativo).toBeGreaterThan(0);
   });
 });
+
+
+describe("as tabelas que o apagar toca", () => {
+  it("a pushSubscriptions é garantida antes da transacção", () => {
+    /*
+     * Ela só nasce quando alguém activa notificações. Em produção ninguém
+     * tinha activado, a tabela não existia, e o DELETE dela estoirava a
+     * transacção inteira — "Erro ao apagar a conta" por causa de uma tabela
+     * de avisos vazia. Foi o primeiro apagar a sério a encontrá-lo.
+     */
+    const corpoP = DB.slice(DB.indexOf("export async function apagarProfissional"));
+    expect(corpoP.slice(0, 2000)).toContain("ensurePushSubscriptionsTable()");
+    const corpoC = DB.slice(DB.indexOf("export async function apagarContaDeCliente"));
+    expect(corpoC.slice(0, 2000)).toContain("ensurePushSubscriptionsTable()");
+  });
+});
