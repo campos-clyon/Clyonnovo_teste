@@ -44,6 +44,7 @@ export async function coordenadasDoPedido(pedido: {
   id: number;
   address?: string | null;
   postalCode?: string | null;
+  city?: string | null;
   rawOrderJson?: string | null;
 }): Promise<CoordenadasDoPedido> {
   let cru: Record<string, unknown> = {};
@@ -68,7 +69,10 @@ export async function coordenadasDoPedido(pedido: {
   const cp =
     pedido.postalCode ?? (typeof morada.postalCode === "string" ? morada.postalCode : null);
 
-  const achadas = await geocodificarMorada(texto, cp);
+  const cidade =
+    pedido.city ?? (typeof morada.city === "string" ? morada.city : null);
+
+  const achadas = await geocodificarMorada(texto, cp, cidade);
   if (!achadas) return { lat: null, lng: null, descobertasAgora: false };
 
   try {

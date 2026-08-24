@@ -36,6 +36,7 @@ type Resultado = {
   estimativa: number | null;
   distanciaKm: number | null;
   geocodificado: boolean;
+  motivoSemCoordenadas?: "sem_chave" | "nao_encontrada" | null;
   moradaNormalizada: string | null;
   alcance: Alcance | null;
 };
@@ -237,12 +238,13 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
           <input
             value={f.address}
             onChange={(e) => muda("address", e.target.value)}
-            placeholder="Rua, número, localidade"
+            placeholder="Rua e número — ex.: Rua Sousa Viterbo 29"
             className={campo}
           />
           <span className="mt-0.5 block text-[10px] text-slate-500">
-            Quanto mais exacta, melhor: é daqui que saem as coordenadas, e são
-            elas que decidem que profissionais alcançam o trabalho.
+            Só a rua e o número. O código postal e a localidade têm campo
+            próprio — os três juntos é que localizam a morada, e são as
+            coordenadas que decidem que profissionais alcançam o trabalho.
           </span>
         </label>
 
@@ -428,11 +430,27 @@ function Resumo({
       {/* Uma morada que o Google não reconheceu deixa a regra a comparar nomes
           de cidades em vez de medir distâncias — e é assim que um trabalho a
           35 km fica "fora de alcance" de quem cobre 125. */}
-      {!r.geocodificado && (
+      {/*
+        Duas histórias diferentes, dois avisos diferentes.
+
+        Sem esta distinção, um servidor sem chave do Google dizia "vale a pena
+        corrigir a morada" — e quem registava pedidos reescrevia três vezes
+        uma morada que o Google encontra à primeira. A culpa era da
+        configuração, e o ecrã mandava a pessoa procurar no sítio errado.
+      */}
+      {!r.geocodificado && r.motivoSemCoordenadas === "sem_chave" && (
+        <p className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs leading-relaxed text-red-300">
+          A chave do Google Maps não está configurada no servidor
+          (GOOGLE_MAPS_SERVER_API_KEY) — NENHUMA morada vai ser localizada até
+          isso estar resolvido. Não é um problema desta morada.
+        </p>
+      )}
+      {!r.geocodificado && r.motivoSemCoordenadas !== "sem_chave" && (
         <p className="mt-3 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-relaxed text-amber-300">
-          Não conseguimos localizar esta morada no mapa. Sem coordenadas, o
-          alcance é decidido pela lista de zonas de cada profissional, que é
-          muito mais curta do que o raio deles. Vale a pena corrigir a morada.
+          O Google não reconheceu esta morada. Sem coordenadas, o alcance é
+          decidido pela lista de zonas de cada profissional, que é muito mais
+          curta do que o raio deles. Confirme a rua e o número — o código
+          postal e a localidade já entram sozinhos.
         </p>
       )}
       {r.geocodificado && r.moradaNormalizada && (

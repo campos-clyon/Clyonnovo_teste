@@ -131,7 +131,21 @@ export async function POST(req: NextRequest) {
      *
      * Se falhar, seguimos na mesma: null cai nas zonas, como antes.
      */
-    const coords = await geocodificarMorada(address, postalCode);
+    const coords = await geocodificarMorada(address, postalCode, city);
+    /*
+     * Sem coordenadas há duas histórias muito diferentes, e o ecrã tem de as
+     * distinguir: ou o Google não reconheceu a morada, ou a CHAVE nem sequer
+     * está configurada e o Google nunca foi consultado. A segunda mascarada de
+     * primeira põe quem regista pedidos a reescrever moradas certas — foi
+     * exactamente o que aconteceu: três tentativas da mesma rua que o Google
+     * encontra à primeira, contra um servidor sem chave.
+     */
+    const { getMapsApiKey } = await import("@/lib/maps-config");
+    const motivoSemCoordenadas = coords
+      ? null
+      : getMapsApiKey()
+        ? ("nao_encontrada" as const)
+        : ("sem_chave" as const);
 
     const { km, origem: origemKm } = kmParaOrcamento({
       distanciaMedidaKm: null,
@@ -273,6 +287,7 @@ export async function POST(req: NextRequest) {
       estimativa: estimativa?.estimatedPriceWithVat ?? null,
       distanciaKm: km,
       geocodificado: coords != null,
+      motivoSemCoordenadas,
       moradaNormalizada: coords?.moradaNormalizada ?? null,
       alcance,
     });

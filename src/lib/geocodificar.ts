@@ -94,12 +94,23 @@ export async function geocodificarLocalidade(
 export async function geocodificarMorada(
   morada: string | null | undefined,
   codigoPostal?: string | null,
+  localidade?: string | null,
 ): Promise<(Coordenadas & { moradaNormalizada: string | null }) | null> {
   const { getMapsApiKey } = await import("./maps-config");
   const chave = getMapsApiKey();
   if (!chave) return null;
 
-  const texto = [morada, codigoPostal].filter(Boolean).join(", ").trim();
+  /*
+   * A LOCALIDADE ENTRA NA CONSULTA.
+   *
+   * O formulário do backoffice tem três campos — morada, código postal,
+   * localidade — e esta função só recebia dois. "Rua Sousa Viterbo 29,
+   * 1900-424" ia ao Google sem o "Lisboa" que estava escrito mesmo ao lado,
+   * no campo próprio. Quem preenchia bem os três campos dava ao Google menos
+   * informação do que quem despejava tudo na morada — o contrário do que o
+   * desenho do formulário promete.
+   */
+  const texto = [morada, codigoPostal, localidade].filter(Boolean).join(", ").trim();
   if (texto.length < 4) return null;
 
   const abortar = new AbortController();
@@ -121,13 +132,36 @@ export async function geocodificarMorada(
     );
     if (!resposta.ok) return null;
 
-    const dados = (await resposta.json()) as {
+    let dados = (await resposta.json()) as {
       status?: string;
       results?: Array<{
         formatted_address?: string;
         geometry?: { location?: { lat?: number; lng?: number } };
       }>;
     };
+    /*
+     * Segunda tentativa sem o código postal.
+     *
+     * Um CP ditado ao telefone é o campo mais fácil de ouvir mal — um dígito
+     * trocado e o Google devolve ZERO_RESULTS para uma rua que conhece
+     * perfeitamente. Rua e localidade chegam quase sempre; o CP errado não
+     * pode valer mais do que a morada certa.
+     */
+    if (dados.status !== "OK" && codigoPostal && (morada || localidade)) {
+      const semCP = [morada, localidade].filter(Boolean).join(", ").trim();
+      const params2 = new URLSearchParams({
+        address: semCP,
+        key: chave,
+        components: "country:PT",
+        language: "pt",
+      });
+      const r2 = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?${params2.toString()}`,
+        { signal: abortar.signal },
+      );
+      if (r2.ok) dados = (await r2.json()) as typeof dados;
+    }
+
     if (dados.status !== "OK") return null;
 
     const loc = dados.results?.[0]?.geometry?.location;
