@@ -412,6 +412,10 @@ function pedidoNoFiltro(
   filtro: string,
 ): boolean {
   if (p.status === "arquivado") return filtro === "arquivado";
+  // Realizado e o fim da linha feliz: o trabalho foi feito, confirmado e
+  // pago. Continuar nos "activos" punha-o ao lado do que ainda precisa de
+  // alguem — e a lista dos activos e a lista do que ha para FAZER.
+  if (p.status === "concluido") return filtro === "concluido";
   if (filtro === "todos") return true;
   if (filtro === "pendente") return !p.viewedAt;
   return p.status === filtro;
@@ -1600,6 +1604,21 @@ export default function ColaboradorAdminClient() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "concluido" ? "todos" : "concluido")}
+                    className={`flex h-11 items-center gap-2 rounded-[14px] border px-4 text-sm font-medium transition ${
+                      pedidoStatusFilter === "concluido"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos activos" : "Ver pedidos realizados"}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {pedidoStatusFilter === "concluido"
+                      ? "Ver activos"
+                      : `Realizados${(pedidosCounts["concluido"] ?? 0) > 0 ? ` (${pedidosCounts["concluido"]})` : ""}`}
+                  </button>
+                  <button
+                    type="button"
                     disabled={pedidosLoading}
                     onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
                     className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
@@ -1617,7 +1636,7 @@ export default function ColaboradorAdminClient() {
                   onClick={() => setPedidoStatusFilter("todos")}
                   className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 border-slate-200 bg-slate-50 ${pedidoStatusFilter === "todos" ? "ring-2 ring-cyan-500" : ""}`}
                 >
-                  <span className="text-2xl font-bold text-slate-700">{(pedidosCounts["total"] ?? 0) - (pedidosCounts["arquivado"] ?? 0)}</span>
+                  <span className="text-2xl font-bold text-slate-700">{(pedidosCounts["total"] ?? 0) - (pedidosCounts["arquivado"] ?? 0) - (pedidosCounts["concluido"] ?? 0)}</span>
                   <span className="mt-0.5 text-center text-xs text-slate-500">Total activos</span>
                   <span className="mt-0.5 text-[10px] text-slate-400">
                     {(pedidosCounts["arquivado"] ?? 0) > 0

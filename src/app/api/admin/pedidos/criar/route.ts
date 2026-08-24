@@ -8,7 +8,7 @@ import { valorDeArranque } from "@/lib/valor-de-arranque";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { emailValido } from "@/lib/inscricao-profissional";
-import { geocodificarMorada } from "@/lib/geocodificar";
+import { geocodificarMoradaDetalhado } from "@/lib/geocodificar";
 
 export const runtime = "nodejs";
 
@@ -108,8 +108,63 @@ export async function POST(req: NextRequest) {
 
   try {
     const postalCode = texto(corpo.postalCode, 20);
-    const city = texto(corpo.city, 120);
+    /*
+     * O ", Portugal" cai.
+     *
+     * O preenchimento automático do browser escreve "Lisboa, Portugal", e a
+     * elegibilidade compara zonas por igualdade: "lisboa, portugal" nunca bate
+     * com a zona "lisboa" de ninguém. Foi o #214 — quatro profissionais
+     * activos, zero alcançados, com um deles a cobrir Lisboa por extenso.
+     */
+    const city = texto(corpo.city, 120)?.replace(/\s*,?\s*portugal\s*$/i, "").trim() || null;
     const description = texto(corpo.description, 4000);
+
+    /*
+     * "Para quando?" é das primeiras coisas que quem liga diz — e não havia
+     * onde a escrever: ia parar à descrição, em texto, invisível para o
+     * calendário e para a urgência do preço.
+     *
+     * Uma data no passado não é um agendamento, é um engano — ignora-se em
+     * vez de gravar um pedido marcado para ontem.
+     */
+    /*
+     * As fotografias, com a MESMA forma que o simulador grava.
+     *
+     * Só entram entradas com url — uma linha sem url não é uma foto, é o
+     * painel a dizer que há fotos quando não há nenhuma. E doze no máximo:
+     * mais do que isso num pedido de telefone é engano de seleção.
+     */
+    const fotosCruas = Array.isArray((corpo as { files?: unknown }).files)
+      ? ((corpo as { files: unknown[] }).files as Array<Record<string, unknown>>)
+      : [];
+    const fotos = fotosCruas
+      .filter((ft) => ft && typeof ft.url === "string" && (ft.url as string).length > 0)
+      .slice(0, 12)
+      .map((ft, i) => ({
+        id: String(i),
+        url: ft.url as string,
+        name: typeof ft.name === "string" ? ft.name : `foto-${i + 1}`,
+        size: typeof ft.size === "number" ? ft.size : 0,
+        type: typeof ft.type === "string" ? ft.type : undefined,
+        mimeType: typeof ft.type === "string" ? ft.type : undefined,
+      }));
+
+    let dataAgendada: Date | null = null;
+    const dataCrua = texto((corpo as { dataDesejada?: unknown }).dataDesejada as string, 30);
+    if (dataCrua) {
+      const d = new Date(dataCrua);
+      if (!Number.isNaN(d.getTime()) && d.getTime() > Date.now() - 3600_000) {
+        dataAgendada = d;
+      }
+    }
+
+    // Sem urgência dita, a data decide-a: hoje, amanhã, esta semana, ou com
+    // tempo. É o mesmo vocabulário do simulador — o motor de preços lê-o.
+    let urgency = texto(corpo.urgency, 40);
+    if ((!urgency || urgency === "flexivel") && dataAgendada) {
+      const dias = (dataAgendada.getTime() - Date.now()) / 86_400_000;
+      urgency = dias < 1 ? "today" : dias < 2 ? "tomorrow" : dias < 7 ? "this_week" : "flexible";
+    }
 
     /*
      * O mesmo motor de preços dos pedidos do site.
@@ -131,7 +186,8 @@ export async function POST(req: NextRequest) {
      *
      * Se falhar, seguimos na mesma: null cai nas zonas, como antes.
      */
-    const coords = await geocodificarMorada(address, postalCode, city);
+    const geo = await geocodificarMoradaDetalhado(address, postalCode, city);
+    const coords = geo.coords;
     /*
      * Sem coordenadas há duas histórias muito diferentes, e o ecrã tem de as
      * distinguir: ou o Google não reconheceu a morada, ou a CHAVE nem sequer
@@ -140,12 +196,16 @@ export async function POST(req: NextRequest) {
      * exactamente o que aconteceu: três tentativas da mesma rua que o Google
      * encontra à primeira, contra um servidor sem chave.
      */
-    const { getMapsApiKey } = await import("@/lib/maps-config");
     const motivoSemCoordenadas = coords
       ? null
-      : getMapsApiKey()
-        ? ("nao_encontrada" as const)
-        : ("sem_chave" as const);
+      : geo.estado === "SEM_CHAVE"
+        ? ("sem_chave" as const)
+        : geo.estado === "REQUEST_DENIED" ||
+            geo.estado === "OVER_DAILY_LIMIT" ||
+            geo.estado === "OVER_QUERY_LIMIT"
+          ? // A chave existe mas o Google recusou-a — é configuração, não é a morada.
+            ("chave_recusada" as const)
+          : ("nao_encontrada" as const);
 
     const { km, origem: origemKm } = kmParaOrcamento({
       distanciaMedidaKm: null,
@@ -162,7 +222,7 @@ export async function POST(req: NextRequest) {
         floor: texto(corpo.floor, 40) || undefined,
         hasElevator: texto(corpo.hasElevator, 40),
         parkingDistance: texto(corpo.parkingDistance, 40),
-        urgency: texto(corpo.urgency, 40),
+        urgency: urgency ?? undefined,
         distanceFromBase: { distanceKm: km },
       } as Parameters<typeof calculateFastEstimate>[0]);
 
@@ -198,7 +258,9 @@ export async function POST(req: NextRequest) {
       floor: texto(corpo.floor, 40),
       hasElevator: texto(corpo.hasElevator, 40),
       parkingDistance: texto(corpo.parkingDistance, 40),
-      urgency: texto(corpo.urgency, 40),
+      urgency,
+      dataAgendada,
+      filesJson: fotos.length > 0 ? JSON.stringify(fotos) : null,
       estimateMin: estimativa?.estimateMinWithoutVat?.toString() ?? null,
       estimateMax: estimativa?.estimateMaxWithoutVat?.toString() ?? null,
       estimateTotal: estimativa?.estimatedPriceWithVat?.toString() ?? null,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CheckCircle2, Loader2, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
@@ -36,7 +36,7 @@ type Resultado = {
   estimativa: number | null;
   distanciaKm: number | null;
   geocodificado: boolean;
-  motivoSemCoordenadas?: "sem_chave" | "nao_encontrada" | null;
+  motivoSemCoordenadas?: "sem_chave" | "chave_recusada" | "nao_encontrada" | null;
   moradaNormalizada: string | null;
   alcance: Alcance | null;
 };
@@ -71,6 +71,19 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
   const [erro, setErro] = useState("");
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [enviado, setEnviado] = useState<string | null>(null);
+  /*
+   * As fotografias que chegam por WhatsApp.
+   *
+   * Quem liga manda quase sempre fotos a seguir — e até aqui elas morriam no
+   * telemóvel de quem atendeu: o pedido seguia sem nenhuma, e o profissional
+   * propunha às cegas. É o MESMO caminho do simulador (enviarFicheiro:
+   * comprime a 1920px e sobe uma de cada vez ao Blob), porque um segundo
+   * caminho de upload seria um segundo sítio onde as fotos se perdem.
+   */
+  const [fotos, setFotos] = useState<Array<{ url: string; name: string; size: number; type?: string }>>([]);
+  const [aEnviarFotos, setAEnviarFotos] = useState(0);
+  const seletorDeFotos = useRef<HTMLInputElement | null>(null);
+
   const [f, setF] = useState({
     serviceType: "",
     contactName: "",
@@ -80,6 +93,9 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
     city: "",
     postalCode: "",
     floor: "",
+    hasElevator: "",
+    parkingDistance: "",
+    dataDesejada: "",
     urgency: "flexivel",
     description: "",
     valor: "",
@@ -94,6 +110,7 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
   };
 
   function limpar() {
+    setFotos([]);
     setF((d) => ({
       ...d,
       contactName: "",
@@ -108,6 +125,19 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
     setEnviado(null);
   }
 
+  async function escolherFotos(lista: FileList | null) {
+    if (!lista || lista.length === 0) return;
+    const { enviarFicheiro } = await import("@/lib/enviar-ficheiro");
+    setAEnviarFotos((n) => n + lista.length);
+    for (const original of Array.from(lista)) {
+      const r = await enviarFicheiro(original);
+      if (r.ok) setFotos((v) => [...v, r.ficheiro]);
+      else setErro(`${original.name}: ${r.motivo}`);
+      setAEnviarFotos((n) => Math.max(0, n - 1));
+    }
+    if (seletorDeFotos.current) seletorDeFotos.current.value = "";
+  }
+
   /** Passo 1 — grava, localiza a morada, calcula o preço e avalia o alcance. */
   async function calcular() {
     if (!token) return;
@@ -117,7 +147,7 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
       const res = await fetch("/api/admin/pedidos/criar", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify(f),
+        body: JSON.stringify({ ...f, files: fotos }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -288,6 +318,57 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
           />
         </label>
 
+        {/*
+          As perguntas que quem liga responde sem dar por isso — e que até aqui
+          iam parar à descrição, em texto corrido, invisíveis para o motor de
+          preços. "Segundo andar sem elevador" escrito à mão não mudava um
+          cêntimo na estimativa; nestes campos muda.
+
+          Os valores são o vocabulário do simulador ("yes"/"small"/"no",
+          "difficult") porque é esse que o motor de preços lê. Etiquetas novas
+          com valores novos dariam campos preenchidos e preços iguais.
+        */}
+        <label className="text-xs text-slate-400">
+          Elevador
+          <select
+            value={f.hasElevator}
+            onChange={(e) => muda("hasElevator", e.target.value)}
+            className={campo}
+          >
+            <option value="">não perguntei</option>
+            <option value="yes">Com elevador</option>
+            <option value="small">Elevador pequeno</option>
+            <option value="no">Sem elevador</option>
+          </select>
+        </label>
+
+        <label className="text-xs text-slate-400">
+          Dá para estacionar à porta?
+          <select
+            value={f.parkingDistance}
+            onChange={(e) => muda("parkingDistance", e.target.value)}
+            className={campo}
+          >
+            <option value="">não perguntei</option>
+            <option value="easy">Sim, junto à porta</option>
+            <option value="difficult">Longe ou complicado</option>
+          </select>
+        </label>
+
+        <label className="text-xs text-slate-400">
+          Data e hora desejada
+          <input
+            type="datetime-local"
+            value={f.dataDesejada}
+            onChange={(e) => muda("dataDesejada", e.target.value)}
+            className={campo}
+          />
+          <span className="mt-0.5 block text-[10px] text-slate-500">
+            Se a pessoa disse "quinta de manhã", marque quinta às 9h. Fica no
+            pedido e acerta a urgência do preço.
+          </span>
+        </label>
+
         <label className="text-xs text-slate-400">
           Valor de partida
           <input
@@ -309,6 +390,49 @@ export default function RegistarPedido({ onCriado }: { onCriado: () => void }) {
             className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-600"
           />
         </label>
+
+        <div className="sm:col-span-2 lg:col-span-3">
+          <p className="text-xs text-slate-400">Fotografias</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {fotos.map((ft, idx) => (
+              <div key={ft.url} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ft.url}
+                  alt={`Fotografia ${idx + 1}`}
+                  className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFotos((v) => v.filter((x) => x.url !== ft.url))}
+                  aria-label={`Tirar a fotografia ${idx + 1}`}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-none bg-red-700 text-[10px] font-bold text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-slate-600 text-2xl text-slate-500 hover:border-cyan-600 hover:text-cyan-400">
+              {aEnviarFotos > 0 ? (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              ) : (
+                "+"
+              )}
+              <input
+                ref={seletorDeFotos}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => escolherFotos(e.target.files)}
+              />
+            </label>
+          </div>
+          <p className="mt-1 text-[10px] text-slate-500">
+            As que o cliente mandar por WhatsApp. Seguem no pedido — sem elas o
+            profissional propõe às cegas.
+          </p>
+        </div>
       </div>
 
       <label className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -445,7 +569,17 @@ function Resumo({
           isso estar resolvido. Não é um problema desta morada.
         </p>
       )}
-      {!r.geocodificado && r.motivoSemCoordenadas !== "sem_chave" && (
+      {!r.geocodificado && r.motivoSemCoordenadas === "chave_recusada" && (
+        <p className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs leading-relaxed text-red-300">
+          A chave do Google Maps existe mas o Google RECUSOU-A. Quase sempre é
+          a Geocoding API por activar no projecto, ou a chave restrita a outra
+          API. Verifique no Google Cloud Console — não é um problema desta
+          morada.
+        </p>
+      )}
+      {!r.geocodificado &&
+        r.motivoSemCoordenadas !== "sem_chave" &&
+        r.motivoSemCoordenadas !== "chave_recusada" && (
         <p className="mt-3 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-relaxed text-amber-300">
           O Google não reconheceu esta morada. Sem coordenadas, o alcance é
           decidido pela lista de zonas de cada profissional, que é muito mais

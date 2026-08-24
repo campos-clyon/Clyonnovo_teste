@@ -91,14 +91,26 @@ export async function geocodificarLocalidade(
  * reconhece, devolve null e a regra cai nas zonas como caía antes. É
  * degradação, não avaria.
  */
-export async function geocodificarMorada(
+/**
+ * O mesmo que `geocodificarMorada`, mas devolve TAMBÉM o estado do Google.
+ *
+ * "ZERO_RESULTS" e "REQUEST_DENIED" não são a mesma história: o primeiro é a
+ * morada, o segundo é a CHAVE — restrita à API errada, ou por activar. O
+ * painel do backoffice mostrava os dois como "não localizada", e quem
+ * registava pedidos corrigia moradas certas enquanto o problema era a
+ * configuração no Google Cloud.
+ */
+export async function geocodificarMoradaDetalhado(
   morada: string | null | undefined,
   codigoPostal?: string | null,
   localidade?: string | null,
-): Promise<(Coordenadas & { moradaNormalizada: string | null }) | null> {
+): Promise<{
+  coords: (Coordenadas & { moradaNormalizada: string | null }) | null;
+  estado: "OK" | "SEM_CHAVE" | "SEM_TEXTO" | "FALHA_DE_REDE" | string;
+}> {
   const { getMapsApiKey } = await import("./maps-config");
   const chave = getMapsApiKey();
-  if (!chave) return null;
+  if (!chave) return { coords: null, estado: "SEM_CHAVE" };
 
   /*
    * A LOCALIDADE ENTRA NA CONSULTA.
@@ -111,7 +123,7 @@ export async function geocodificarMorada(
    * desenho do formulário promete.
    */
   const texto = [morada, codigoPostal, localidade].filter(Boolean).join(", ").trim();
-  if (texto.length < 4) return null;
+  if (texto.length < 4) return { coords: null, estado: "SEM_TEXTO" };
 
   const abortar = new AbortController();
   const relogio = setTimeout(() => abortar.abort(), TEMPO_LIMITE_MS);
@@ -130,7 +142,7 @@ export async function geocodificarMorada(
       `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`,
       { signal: abortar.signal },
     );
-    if (!resposta.ok) return null;
+    if (!resposta.ok) return { coords: null, estado: 'HTTP_' + resposta.status };
 
     let dados = (await resposta.json()) as {
       status?: string;
@@ -162,20 +174,40 @@ export async function geocodificarMorada(
       if (r2.ok) dados = (await r2.json()) as typeof dados;
     }
 
-    if (dados.status !== "OK") return null;
+    if (dados.status !== "OK") {
+      // O estado fica no registo: "REQUEST_DENIED" no log é a diferença entre
+      // diagnosticar em um minuto e andar a reescrever moradas certas.
+      console.warn("[geocodificarMorada]", dados.status, "para", texto.slice(0, 80));
+      return { coords: null, estado: dados.status ?? "SEM_ESTADO" };
+    }
 
     const loc = dados.results?.[0]?.geometry?.location;
-    if (typeof loc?.lat !== "number" || typeof loc?.lng !== "number") return null;
+    if (typeof loc?.lat !== "number" || typeof loc?.lng !== "number") {
+      return { coords: null, estado: "SEM_GEOMETRIA" };
+    }
 
     return {
-      lat: loc.lat,
-      lng: loc.lng,
-      moradaNormalizada: dados.results?.[0]?.formatted_address ?? null,
+      coords: {
+        lat: loc.lat,
+        lng: loc.lng,
+        moradaNormalizada: dados.results?.[0]?.formatted_address ?? null,
+      },
+      estado: "OK",
     };
   } catch (err) {
     console.warn("[geocodificarMorada] falhou —", String(err).slice(0, 120));
-    return null;
+    return { coords: null, estado: "FALHA_DE_REDE" };
   } finally {
     clearTimeout(relogio);
   }
+}
+
+/** A forma antiga: só as coordenadas, ou null. Os chamadores que não precisam
+ *  do estado continuam como estavam. */
+export async function geocodificarMorada(
+  morada: string | null | undefined,
+  codigoPostal?: string | null,
+  localidade?: string | null,
+): Promise<(Coordenadas & { moradaNormalizada: string | null }) | null> {
+  return (await geocodificarMoradaDetalhado(morada, codigoPostal, localidade)).coords;
 }

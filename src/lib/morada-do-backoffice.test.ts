@@ -44,7 +44,7 @@ describe("a consulta ao Google", () => {
   });
 
   it("a rota do backoffice passa a localidade", () => {
-    expect(semNotas(ROTA)).toContain("geocodificarMorada(address, postalCode, city)");
+    expect(semNotas(ROTA)).toContain("geocodificarMoradaDetalhado(address, postalCode, city)");
   });
 
   it("a segunda geocodificação (na promoção) também", () => {
@@ -75,5 +75,81 @@ describe("o formulário pede a morada de forma coerente", () => {
     expect(semNotas(FORM)).not.toContain('"Rua, número, localidade"');
     expect(FORM).toContain("Rua e número");
     expect(FORM).toContain("Só a rua e o número.");
+  });
+});
+
+
+describe("as perguntas do telefone", () => {
+  it("elevador, estacionamento e data têm campo próprio", () => {
+    /*
+     * "Segundo andar sem elevador" escrito na descrição não mudava um cêntimo
+     * na estimativa — o motor de preços lê campos, não prosa. Estes três iam
+     * sempre parar à descrição.
+     */
+    expect(FORM).toContain('muda("hasElevator"');
+    expect(FORM).toContain('muda("parkingDistance"');
+    expect(FORM).toContain('muda("dataDesejada"');
+  });
+
+  it("com o vocabulário que o motor de preços lê", () => {
+    // Etiquetas novas com valores novos dariam campos preenchidos e preços
+    // iguais: o motor procura "yes"/"small"/"no" e "difficult".
+    for (const v of ['value="yes"', 'value="small"', 'value="no"', 'value="difficult"']) {
+      expect(FORM, `falta ${v}`).toContain(v);
+    }
+  });
+
+  it("a rota grava a data e deriva a urgência dela", () => {
+    expect(ROTA).toContain("dataAgendada");
+    expect(ROTA).toMatch(/dias < 1 \? "today" : dias < 2 \? "tomorrow" : dias < 7 \? "this_week" : "flexible"/);
+  });
+
+  it("uma data no passado não vira agendamento", () => {
+    expect(ROTA).toContain("d.getTime() > Date.now() - 3600_000");
+  });
+});
+
+describe("o que o Google responde deixa de se perder", () => {
+  it("a chave recusada distingue-se da morada não encontrada", () => {
+    /*
+     * "ZERO_RESULTS" é a morada; "REQUEST_DENIED" é a chave — restrita à API
+     * errada ou por activar. O painel mostrava os dois como "não localizada",
+     * e corrigia-se a morada certa enquanto o problema era o Google Cloud.
+     */
+    expect(ROTA).toContain('"chave_recusada"');
+    expect(ROTA).toContain('"REQUEST_DENIED"');
+    expect(FORM).toContain('motivoSemCoordenadas === "chave_recusada"');
+  });
+
+  it("o estado do Google fica no registo do servidor", () => {
+    expect(GEO).toContain('console.warn("[geocodificarMorada]", dados.status');
+  });
+});
+
+describe("a localidade limpa-se à entrada", () => {
+  it("o ', Portugal' do preenchimento automático cai", () => {
+    /*
+     * A elegibilidade compara zonas por igualdade: "lisboa, portugal" nunca
+     * bate com a zona "lisboa" de ninguém. Foi o #214 — quatro profissionais
+     * activos, zero alcançados, um deles a cobrir Lisboa por extenso.
+     */
+    expect(ROTA).toMatch(/portugal.*\$\/i/);
+  });
+});
+
+
+describe("as fotografias do WhatsApp", () => {
+  it("o formulário deixa juntá-las, pelo caminho do simulador", () => {
+    // Um segundo caminho de upload seria um segundo sítio onde as fotos se
+    // perdem — o enviarFicheiro comprime e sobe uma de cada vez, já testado.
+    expect(FORM).toContain("@/lib/enviar-ficheiro");
+    expect(FORM).toContain('accept="image/*"');
+  });
+
+  it("a rota só grava entradas com url, e no formato do simulador", () => {
+    // Uma linha sem url não é uma foto: é o painel a dizer que há fotos
+    // quando não há nenhuma.
+    expect(ROTA).toContain('typeof ft.url === "string"');
+    expect(ROTA).toContain("filesJson: fotos.length > 0");
   });
 });

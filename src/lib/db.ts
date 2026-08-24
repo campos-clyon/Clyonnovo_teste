@@ -2223,7 +2223,27 @@ export async function confirmarExecucao(
         AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
     [negociacaoId, pedidoId],
   ) as any[];
-  return Number(res.affectedRows ?? 0) > 0;
+  const gravou = Number(res.affectedRows ?? 0) > 0;
+
+  /*
+   * O pedido segue o trabalho: confirmado o trabalho, o pedido esta REALIZADO.
+   *
+   * Sem isto, um pedido cujo trabalho ja foi confirmado e pago continuava na
+   * lista dos activos do backoffice, ao lado dos que ainda precisam de
+   * alguem — e a lista dos activos e a lista do que ha para FAZER.
+   *
+   * So depois de a negociacao gravar (se nao gravou, nao ha o que fechar), e
+   * sem tocar em cancelados nem arquivados: quem arquivou decidiu onde o
+   * pedido vive, e uma confirmacao tardia nao desfaz essa arrumacao.
+   */
+  if (gravou) {
+    await pool.execute(
+      `UPDATE simulatorOrders SET status = 'concluido', updatedAt = NOW()
+        WHERE id = ? AND status NOT IN ('cancelado', 'arquivado')`,
+      [pedidoId],
+    );
+  }
+  return gravou;
 }
 
 /**
@@ -2233,19 +2253,48 @@ export async function confirmarExecucao(
  * mas convém que a base concorde com o ecrã: quem for ler a tabela daqui a um
  * ano não tem de saber a regra de cor.
  */
-export async function libertarTrabalhosPorPrazo(dias: number): Promise<number> {
+export async function libertarTrabalhosPorPrazo(
+  dias: number,
+): Promise<Array<{ negociacaoId: number; pedidoId: number }>> {
   await ensureNegociacoesTable();
   const pool = await getPool();
-  if (!pool) return 0;
-  const [res] = await pool.execute(
-    `UPDATE negociacoes
-        SET confirmadoEm = NOW()
+  if (!pool) return [];
+
+  /*
+   * Primeiro QUAIS, depois o UPDATE — e não um UPDATE cego com affectedRows.
+   *
+   * A libertação por prazo é dinheiro a ficar disponível, e o profissional
+   * tem de ser avisado de cada um. Um contador não diz a quem: devolvem-se as
+   * linhas, e o UPDATE vai por id para que o que se avisa seja EXACTAMENTE o
+   * que se libertou — entre o SELECT e um UPDATE por condição podia entrar
+   * mais um trabalho, avisado nunca.
+   */
+  const [linhas] = (await pool.execute(
+    `SELECT id, pedidoId FROM negociacoes
       WHERE estado = 'acordada' AND confirmadoEm IS NULL
         AND execucaoEnviadaEm IS NOT NULL
         AND execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)`,
     [dias],
-  ) as any[];
-  return Number(res.affectedRows ?? 0);
+  )) as any[];
+  const alvos = (linhas as Array<{ id: number; pedidoId: number }>).map((l) => ({
+    negociacaoId: Number(l.id),
+    pedidoId: Number(l.pedidoId),
+  }));
+  if (alvos.length === 0) return [];
+
+  await pool.execute(
+    `UPDATE negociacoes SET confirmadoEm = NOW()
+      WHERE id IN (${alvos.map(() => "?").join(",")}) AND confirmadoEm IS NULL`,
+    alvos.map((a) => a.negociacaoId),
+  );
+  // Os pedidos seguem os trabalhos — mesma regra do confirmarExecucao.
+  await pool.execute(
+    `UPDATE simulatorOrders SET status = 'concluido', updatedAt = NOW()
+      WHERE id IN (${alvos.map(() => "?").join(",")})
+        AND status NOT IN ('cancelado', 'arquivado')`,
+    alvos.map((a) => a.pedidoId),
+  );
+  return alvos;
 }
 
 let levantamentosEnsured = false;
@@ -3782,6 +3831,8 @@ export async function countSimulatorOrdersByStatus(): Promise<Record<string, num
         SUM(CASE WHEN status = 'aprovado' THEN 1 ELSE 0 END) as aprovado,
         SUM(CASE WHEN status = 'confirmado' THEN 1 ELSE 0 END) as confirmado,
         SUM(CASE WHEN status = 'presencial_recomendado' THEN 1 ELSE 0 END) as presencial,
+        SUM(CASE WHEN status = 'arquivado' THEN 1 ELSE 0 END) as arquivado,
+        SUM(CASE WHEN status = 'concluido' THEN 1 ELSE 0 END) as concluido,
         SUM(CASE WHEN (assignedToId IS NULL OR assignedToId = 0) AND status NOT IN ('cancelado','confirmado','concluido','arquivado') THEN 1 ELSE 0 END) as sem_assistente
        FROM simulatorOrders`
     ) as any[];
@@ -3798,6 +3849,10 @@ export async function countSimulatorOrdersByStatus(): Promise<Record<string, num
     result["confirmado"] = Number(row?.confirmado ?? 0);
     result["presencial_recomendado"] = Number(row?.presencial ?? 0);
     result["sem_assistente"] = Number(row?.sem_assistente ?? 0);
+    // Sem estas duas, o chip "Arquivados" mostrava sempre zero e o "Total
+    // activos" tinha de adivinhar o que subtrair.
+    result["arquivado"] = Number(row?.arquivado ?? 0);
+    result["concluido"] = Number(row?.concluido ?? 0);
     
     return result;
   } catch (err: any) {
