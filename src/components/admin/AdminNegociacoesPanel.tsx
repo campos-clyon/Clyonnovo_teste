@@ -168,7 +168,21 @@ type PorPromover = {
   createdAt: string;
 };
 
-export default function AdminNegociacoesPanel() {
+export default function AdminNegociacoesPanel({
+  mostrar = "tudo",
+}: {
+  /*
+   * O ecrã pode mostrar só metade do painel.
+   *
+   * As negociações da CLYON — pedidos de telefone, clientes sem email — são
+   * trabalho DIÁRIO de quem opera: há propostas à espera de resposta nossa.
+   * As dos clientes são vigilância. Misturadas num ecrã só, o que exige acção
+   * vivia no meio do que não exige nenhuma — passaram a ecrãs separados no
+   * menu, e o painel é o MESMO componente para não haver duas versões da
+   * mesma lógica a divergirem.
+   */
+  mostrar?: "tudo" | "clyon" | "clientes";
+}) {
   const { token, ready } = useAdminAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [aCarregar, setACarregar] = useState(true);
@@ -471,7 +485,16 @@ export default function AdminNegociacoesPanel() {
    * expirar ficava debaixo de dois pedidos novos sem nada por fazer — e as 48
    * horas passavam sem ninguem olhar.
    */
-  const aEsperar = pedidos.filter((p) => p.negociacoes.some(esperaResposta));
+  /*
+   * "À espera de SI" só é verdade nas negociações da CLYON — nas dos clientes
+   * quem tem de responder é o cliente. No modo "clientes" o aviso não existe.
+   */
+  const aEsperar =
+    mostrar === "clientes"
+      ? []
+      : pedidos.filter(
+          (p) => quemNegoceia(p) === "clyon" && p.negociacoes.some(esperaResposta),
+        );
   const ordenados = [...pedidos].sort(
     (a, b) =>
       Number(b.negociacoes.some(esperaResposta)) - Number(a.negociacoes.some(esperaResposta)),
@@ -736,7 +759,11 @@ export default function AdminNegociacoesPanel() {
     <div>
       <header className="mb-6 flex items-start justify-between gap-4">
         <p className="text-sm text-slate-400">
-          {pedidos.length} pedidos na plataforma.
+          {mostrar === "clyon"
+            ? `${daClyon.length} negociação(ões) da CLYON.`
+            : mostrar === "clientes"
+              ? `${dosClientes.length} negociação(ões) de clientes.`
+              : `${pedidos.length} pedidos na plataforma.`}
         </p>
         <button
           onClick={() => carregar()}
@@ -802,7 +829,7 @@ export default function AdminNegociacoesPanel() {
         </div>
       )}
 
-      <RegistarPedido onCriado={() => carregar(true)} />
+      {mostrar !== "clientes" && <RegistarPedido onCriado={() => carregar(true)} />}
 
       {/* ── Propostas à espera de nós ───────────────────────────────────────
           O profissional contrapropõe e a proposta expira em 48 horas. Até
@@ -864,7 +891,7 @@ export default function AdminNegociacoesPanel() {
           preencheu o simulador pediu um orçamento à CLYON, não pediu para
           entrar num mercado — a partir daqui passa a receber propostas de
           terceiros. */}
-      {porPromover.length > 0 && (
+      {mostrar !== "clyon" && porPromover.length > 0 && (
         <PedidosPorPromover
           pedidos={porPromover}
           valorDe={valorDe}
@@ -877,13 +904,19 @@ export default function AdminNegociacoesPanel() {
         />
       )}
 
-      {pedidos.length === 0 && (
+      {mostrar === "clyon" && daClyon.length === 0 && (
+        <p className="rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
+          Nenhuma negociação da CLYON em curso. Registe um pedido do WhatsApp ou
+          telefone aqui em cima e envie-o — aparece nesta lista.
+        </p>
+      )}
+      {mostrar !== "clyon" && pedidos.length === 0 && (
         <p className="rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
           Ainda nenhum pedido foi enviado a profissionais.
         </p>
       )}
 
-      {daClyon.length > 0 && (
+      {mostrar !== "clientes" && daClyon.length > 0 && (
         <section className="mb-6">
           <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-cyan-300">
             <Building2 className="h-4 w-4" aria-hidden="true" />
@@ -920,7 +953,27 @@ export default function AdminNegociacoesPanel() {
         />
       )}
 
-      {dosClientes.length > 0 && (
+      {/* No ecrã da CLYON não se escondem as dos clientes em silêncio: uma
+          linha diz quantas são e onde estão. O contrário também. */}
+      {mostrar === "clyon" && dosClientes.length > 0 && (
+        <p className="mb-6 text-xs text-slate-500">
+          Há {dosClientes.length} negociação(ões) de clientes no ecrã{" "}
+          <a href="/admin?section=negociacoes" className="text-cyan-400 underline">
+            Negociações
+          </a>
+          .
+        </p>
+      )}
+      {mostrar === "clientes" && daClyon.length > 0 && (
+        <p className="mb-6 text-xs text-slate-500">
+          Há {daClyon.length} negociação(ões) da CLYON no ecrã{" "}
+          <a href="/admin?section=negociacoes_clyon" className="text-cyan-400 underline">
+            Negociações CLYON
+          </a>
+          .
+        </p>
+      )}
+      {mostrar !== "clyon" && dosClientes.length > 0 && (
         <section className="mb-6">
           <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-violet-300">
             <UserRound className="h-4 w-4" aria-hidden="true" />

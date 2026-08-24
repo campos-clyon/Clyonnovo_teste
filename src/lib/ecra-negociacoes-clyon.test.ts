@@ -1,0 +1,62 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+/**
+ * As negociações da CLYON têm ecrã próprio no menu.
+ *
+ * São o trabalho DIÁRIO de quem opera — há propostas à espera de resposta
+ * nossa. Misturadas com as dos clientes num ecrã só, o que exige acção vivia
+ * no meio do que não exige nenhuma. E o lugar no menu veio do "Acesso aos
+ * testes", que ocupava posição nobre para mostrar zero contas.
+ */
+
+const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
+const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+
+describe("o menu", () => {
+  it("Negociações CLYON está na Plataforma e os testes desceram para Gerir", () => {
+    expect(SHELL).toMatch(
+      /Plataforma", itens: \["profissionais", "negociacoes_clyon", "negociacoes", "levantamentos"\]/,
+    );
+    expect(SHELL).toMatch(/Gerir", itens: \["testadores", "configs"\]/);
+  });
+
+  it("o ecrã antigo continua acessível — nada foi apagado", () => {
+    // O portão do MVP depende das contas de teste: mudaram de sítio, não de
+    // existência.
+    expect(SHELL).toContain('activeSection === "testadores"');
+    expect(SHELL).toContain("AdminTestadoresPanel");
+  });
+});
+
+describe("o painel dividido", () => {
+  it("é o MESMO componente com um modo, não uma cópia", () => {
+    // Duas versões da mesma lógica divergiam como os dois rodapés divergiram.
+    expect(PAINEL).toContain('mostrar?: "tudo" | "clyon" | "clientes"');
+    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="clyon" />');
+    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="clientes" />');
+  });
+
+  it("o registar pedido vive no ecrã da CLYON", () => {
+    // Um pedido de telefone nasce como negociação da CLYON — o formulário
+    // pertence ao ecrã onde o resultado vai viver.
+    expect(PAINEL).toContain('{mostrar !== "clientes" && <RegistarPedido');
+  });
+
+  it("nenhum ecrã esconde o outro em silêncio", () => {
+    // Uma linha diz quantas negociações estão no outro ecrã, com o caminho.
+    expect(PAINEL).toContain("/admin?section=negociacoes_clyon");
+    expect(PAINEL).toContain("/admin?section=negociacoes");
+  });
+
+  it('"à espera de si" só se diz onde é verdade', () => {
+    /*
+     * Nas negociações dos clientes quem tem de responder é o CLIENTE. O aviso
+     * "à espera de si" nesse ecrã mandava o admin responder por quem pode
+     * falar sozinho.
+     */
+    expect(PAINEL).toMatch(/mostrar === "clientes"\s*\?\s*\[\]/);
+  });
+});

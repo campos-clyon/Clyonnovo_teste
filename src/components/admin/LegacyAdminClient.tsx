@@ -89,7 +89,8 @@ type AdminSection =
   | "profissionais"
   | "negociacoes"
   | "levantamentos"
-  | "testadores";
+  | "testadores"
+  | "negociacoes_clyon";
 
 type Lead = {
   id: number;
@@ -217,6 +218,7 @@ const adminNavItems: Array<{
   { id: "negociacoes",   icon: HandCoins },
   { id: "levantamentos", icon: Wallet },
   { id: "testadores",    icon: FlaskConical },
+  { id: "negociacoes_clyon", icon: Building2 },
 ];
 
 /**
@@ -230,9 +232,15 @@ const adminNavItems: Array<{
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes", "levantamentos", "testadores"] },
+  /*
+   * As negociações da CLYON têm lugar próprio: são o trabalho diário de quem
+   * opera — há propostas à espera de resposta NOSSA. O "Acesso aos testes"
+   * desceu para Gerir: cria-se uma credencial de longe em longe, e estava a
+   * ocupar um lugar nobre para mostrar zero contas.
+   */
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "negociacoes", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
-  { titulo: "Gerir", itens: ["configs"] },
+  { titulo: "Gerir", itens: ["testadores", "configs"] },
 ];
 
 const sectionLabels: Record<AdminSection, string> = {
@@ -248,6 +256,7 @@ const sectionLabels: Record<AdminSection, string> = {
   negociacoes:   "Negociações",
   levantamentos: "Levantamentos",
   testadores:    "Acesso aos testes",
+  negociacoes_clyon: "Negociações CLYON",
 };
 
 const siteModules = [
@@ -2852,7 +2861,7 @@ export default function ColaboradorAdminClient() {
                   profissional. Reenviar emite um link novo e invalida o anterior.
                 </p>
               </div>
-              <AdminNegociacoesPanel />
+              <AdminNegociacoesPanel mostrar="clientes" />
             </section>
           )}
 
@@ -2872,6 +2881,25 @@ export default function ColaboradorAdminClient() {
                 </p>
               </div>
               <AdminLevantamentosPanel />
+            </section>
+          )}
+
+          {activeSection === "negociacoes_clyon" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Negociações da CLYON
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Pedidos que chegaram por WhatsApp, telefone, ou sem email. O cliente
+                  não tem como responder — quem negoceia com o profissional, e confirma
+                  no fim, é a CLYON em nome dele. Registe aqui os pedidos do telefone.
+                </p>
+              </div>
+              <AdminNegociacoesPanel mostrar="clyon" />
             </section>
           )}
 
