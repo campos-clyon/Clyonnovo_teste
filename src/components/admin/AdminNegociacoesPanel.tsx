@@ -547,7 +547,16 @@ export default function AdminNegociacoesPanel() {
         {linksEmClaro[chaveCliente] && (
           <LinkEmClaro
             caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
-            aviso="O email não saiu. Use este link."
+            /*
+              Duas historias, duas frases. "O email nao saiu" para quem NAO TEM
+              email poe quem le a procurar uma avaria de envio que nao existe —
+              nao ha para onde enviar, e o remedio e outro: mandar por WhatsApp.
+            */
+            aviso={
+              p.contactEmail?.trim()
+                ? "O email não saiu. Use este link."
+                : "Este cliente não tem email — mande-lhe o link por WhatsApp ou SMS. Abre o pedido dele sem palavra-passe."
+            }
           />
         )}
 
