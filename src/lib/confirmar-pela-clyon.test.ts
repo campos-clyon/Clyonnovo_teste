@@ -149,3 +149,32 @@ describe("a libertação por prazo", () => {
     expect(CRON).toMatch(/status:\s*503/);
   });
 });
+
+
+describe("o ecrã das negociações da CLYON", () => {
+  it("editar é um botão com nome, não um título clicável", () => {
+    // O editar sempre existiu — era o título, clicável, sem nada que o
+    // dissesse. Um botão que só se descobre por acidente não é um botão.
+    expect(PAINEL).toContain("Abrir e editar tudo");
+  });
+
+  it("ver como o cliente abre a página verdadeira, não uma cópia", () => {
+    /*
+     * Uma pré-visualização desenhada à parte divergia da real na primeira
+     * alteração à página. Abre-se `/pedido/[token]` noutro separador — o que
+     * o admin vê é EXACTAMENTE o que o cliente vê.
+     */
+    expect(PAINEL).toContain("verComoCliente");
+    expect(PAINEL).toMatch(/window\.open\(`\/pedido\/\$\{/);
+  });
+
+  it("avisa antes de matar um link que o cliente pode ter", () => {
+    // Gerar link novo invalida o anterior. Sem email não há quem o tenha;
+    // com email, pergunta-se primeiro.
+    expect(PAINEL).toContain("o dele deixa de funcionar");
+  });
+
+  it("no ecrã próprio o título do grupo não se repete", () => {
+    expect(PAINEL).toContain('mostrar !== "clyon" && (');
+  });
+});

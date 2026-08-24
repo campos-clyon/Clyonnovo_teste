@@ -9,8 +9,10 @@ import {
   ChevronDown,
   Clock,
   Copy,
+  Eye,
   Loader2,
   Mail,
+  Pencil,
   RefreshCw,
   Send,
   Trash2,
@@ -290,8 +292,11 @@ export default function AdminNegociacoesPanel({
     });
   }
 
-  async function reenviar(chave: string, corpo: Record<string, unknown>) {
-    if (!token) return;
+  async function reenviar(
+    chave: string,
+    corpo: Record<string, unknown>,
+  ): Promise<string | null> {
+    if (!token) return null;
     setOcupado(chave);
     setErro("");
     try {
@@ -303,24 +308,55 @@ export default function AdminNegociacoesPanel({
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível reenviar.");
-        return;
+        return null;
       }
       // Quando o email não sai, o token vem na resposta — é a única forma de
       // lá chegar, porque na base só existe o hash.
       if (dados.token) {
         setLinksEmClaro((l) => ({ ...l, [chave]: dados.token }));
-      } else {
-        setLinksEmClaro((l) => {
-          const c = { ...l };
-          delete c[chave];
-          return c;
-        });
+        return dados.token as string;
       }
+      setLinksEmClaro((l) => {
+        const c = { ...l };
+        delete c[chave];
+        return c;
+      });
+      return null;
     } catch {
       setErro("Erro de rede.");
+      return null;
     } finally {
       setOcupado(null);
     }
+  }
+
+  /*
+   * Abrir a página do pedido COMO O CLIENTE A VÊ.
+   *
+   * Não é uma pré-visualização desenhada à parte: é a página verdadeira,
+   * `/pedido/[token]`, aberta noutro separador. Uma cópia "só para ver"
+   * divergia da real na primeira alteração à página — e o que interessa é
+   * ver EXACTAMENTE o que ele vê.
+   *
+   * O preço disto: o link é de uso rotativo, e gerar um novo INVALIDA o
+   * anterior. Nos pedidos deste ecrã o cliente quase nunca tem link nenhum
+   * (chegou por telefone) — mas quando tem, o botão avisa antes.
+   */
+  async function verComoCliente(p: Pedido) {
+    const chave = `c${p.id}`;
+    const jaTem = linksEmClaro[chave];
+    if (jaTem) {
+      window.open(`/pedido/${jaTem}`, "_blank", "noopener");
+      return;
+    }
+    if (p.contactEmail?.trim()) {
+      const avanca = window.confirm(
+        "Este cliente tem email e pode ter guardado o link antigo. Abrir a página gera um link novo e o dele deixa de funcionar. Continuar?",
+      );
+      if (!avanca) return;
+    }
+    const t = await reenviar(chave, { pedidoId: p.id, para: "cliente" });
+    if (t) window.open(`/pedido/${t}`, "_blank", "noopener");
   }
 
   async function promover(pedidoId: number) {
@@ -549,8 +585,35 @@ export default function AdminNegociacoesPanel({
               </button>
               <p className="mt-0.5 text-sm text-slate-500">
                 {p.contactName} · {p.contactEmail || "sem email"} · {p.city ?? "—"}
-                {p.valorDesejadoCliente && ` · quer pagar ${p.valorDesejadoCliente} €`}
+                {p.valorDesejadoCliente && ` · quer pagar ${euros(p.valorDesejadoCliente)}`}
               </p>
+              {/*
+                O editar sempre existiu — era o título, clicável, sem nada que
+                o dissesse. Um botão que só se descobre por acidente não é um
+                botão: passam os dois a palavras, ao lado um do outro.
+              */}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setAEditar(p.id)}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                  Abrir e editar tudo
+                </button>
+                <button
+                  onClick={() => verComoCliente(p)}
+                  disabled={ocupado === `c${p.id}`}
+                  title="Abre a página verdadeira do pedido, a mesma que o cliente vê"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-50"
+                >
+                  {ocupado === `c${p.id}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  Ver como o cliente
+                </button>
+              </div>
             </div>
           </div>
           <button
@@ -918,17 +981,26 @@ export default function AdminNegociacoesPanel({
 
       {mostrar !== "clientes" && daClyon.length > 0 && (
         <section className="mb-6">
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-cyan-300">
-            <Building2 className="h-4 w-4" aria-hidden="true" />
-            Negociações da CLYON
-            <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-bold text-cyan-200">
-              {daClyon.length}
-            </span>
-          </h3>
-          <p className="mb-3 text-xs text-slate-500">
-            Chegaram por WhatsApp, telefone, ou sem email. O cliente não tem como
-            responder — quem responde ao profissional é a CLYON, em nome dele.
-          </p>
+          {/*
+            No ecrã próprio o título já está na página — repetir "Negociações
+            da CLYON" duas vezes com a mesma descrição era ruído a ocupar a
+            primeira dobra. Só aparece quando o painel mostra tudo misturado.
+          */}
+          {mostrar !== "clyon" && (
+            <>
+              <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-cyan-300">
+                <Building2 className="h-4 w-4" aria-hidden="true" />
+                Negociações da CLYON
+                <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-bold text-cyan-200">
+                  {daClyon.length}
+                </span>
+              </h3>
+              <p className="mb-3 text-xs text-slate-500">
+                Chegaram por WhatsApp, telefone, ou sem email. O cliente não tem como
+                responder — quem responde ao profissional é a CLYON, em nome dele.
+              </p>
+            </>
+          )}
           <div className="space-y-3">{daClyon.map(cartaoDoPedido)}</div>
         </section>
       )}
