@@ -3529,7 +3529,12 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
 
       {aVerificar && (
         <div
-          className="fixed inset-0 z-[60] overflow-y-auto bg-black/60 p-4 sm:p-8"
+          /*
+            Ecrã INTEIRO e fundo sólido, como o modal grande — não uma janela
+            flutuante sobre um véu. Com o pano de fundo a 60%, o separador de
+            trás lia-se através da moldura e parecia tudo sobreposto e partido.
+          */
+          className="fixed inset-0 z-[60] overflow-y-auto bg-[#0B1220] p-4 sm:p-8"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setAVerificar(false);
@@ -3537,7 +3542,7 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
             }
           }}
         >
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-5xl">
             <RegistarPedido
               editarId={pedidoId}
               podeEnviarAoGravar

@@ -1186,12 +1186,12 @@ export default function AdminNegociacoesPanel({
           outra sem — e' ter a guarda a fingir. */}
       {aEditarPlataforma != null && (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4 sm:p-8"
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220] p-4 sm:p-8"
           onClick={(e) => {
             if (e.target === e.currentTarget) setAEditarPlataforma(null);
           }}
         >
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-5xl">
             <RegistarPedido
               editarId={aEditarPlataforma}
               onCriado={() => carregar(true)}
