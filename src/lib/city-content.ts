@@ -557,7 +557,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
          * de conteúdo e não numa página — mas é renderizada, e ia parar ao
          * texto visível E ao FAQPage que o Google lê.
          */
-        a: "Depende do piso, do volume e da distância para a nova casa. Descreva a mudança e recebe um orçamento personalizado em 24 horas, sem compromisso.",
+        a: "Depende do piso, do volume e da distância para a nova casa. Descreva a mudança e recebe um orçamento personalizado em 6 horas, sem compromisso.",
       },
       {
         q: "A CLYON embala os meus pertences em Lisboa?",

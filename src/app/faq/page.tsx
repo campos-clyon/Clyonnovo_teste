@@ -113,7 +113,7 @@ const faqCategories = [
         a: "Sim. Apartamentos sem elevador têm um acréscimo no preço por andar devido ao esforço adicional e ao tempo de descida a pé. Este custo é incluído no orçamento após identificar o número de andares.",
       },
       {
-        q: "Consigo fazer esvaziamento do apartamento em 24 horas?",
+        q: "Consigo fazer esvaziamento do apartamento em 6 horas?",
         a: "Dependendo da disponibilidade e do volume, sim. Para pedidos urgentes em Lisboa responda pelo WhatsApp com fotos do imóvel e tentamos encaixar na agenda mais próxima — muitas vezes no próprio dia ou no seguinte.",
       },
       {
@@ -224,7 +224,7 @@ const faqCategories = [
          * T1 a partir de 180 €, quando o motor factura uma mudança a partir
          * de 490 €. Qualquer número aqui volta a criar a mesma divergência.
          */
-        a: "Uma mudança é sempre orçamento personalizado. O valor depende do volume, da distância entre as duas moradas, do andar e do acesso de cada uma — e um preço fixo publicado aqui estaria sempre errado numa delas. Envie a morada de origem, a de destino e fotos das divisões: devolvemos um orçamento grátis e fechado, normalmente em 24 horas.",
+        a: "Uma mudança é sempre orçamento personalizado. O valor depende do volume, da distância entre as duas moradas, do andar e do acesso de cada uma — e um preço fixo publicado aqui estaria sempre errado numa delas. Envie a morada de origem, a de destino e fotos das divisões: devolvemos um orçamento grátis e fechado, normalmente em 6 horas.",
       },
       {
         q: "Fazem mudanças para outras cidades como Porto ou Coimbra?",
@@ -284,7 +284,7 @@ export default function FAQPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
-              { value: "24h", label: "Orçamento em" },
+              { value: "6h", label: "Orçamento em" },
               { value: String(AVALIACOES_TOTAL), label: "Avaliações verificadas" },
               { value: "5,0 ★", label: "Avaliação dos clientes" },
               { value: "Lisboa+", label: "Margem Sul e Setúbal" },

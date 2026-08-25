@@ -21,7 +21,7 @@ const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 
 export const metadata: Metadata = {
   title: "Esvaziar Casa e Apartamento em Lisboa — Heranças, Recheios e Doações",
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços ${PRECO_CASA}. Orçamento grátis em 24h.`,
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços ${PRECO_CASA}. Orçamento grátis em 6h.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
     description:
-      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 24h.`,
+      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 6h.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
   },
 };
@@ -58,7 +58,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
-    answer: `O valor depende do volume, acessos, andar, elevador e necessidade de limpeza. Um esvaziamento de casa é a partir de 250 €. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em 260 – 350 €, T2 em 320 – 420 €, T3/T4 em 380 – 450 €. Numa moradia completa, a partir de 450 €. Envie fotos para orçamento rápido e personalizado em 24 horas. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, acessos, andar, elevador e necessidade de limpeza. Um esvaziamento de casa é a partir de 250 €. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em 260 – 350 €, T2 em 320 – 420 €, T3/T4 em 380 – 450 €. Numa moradia completa, a partir de 450 €. Envie fotos para orçamento rápido e personalizado em 6 horas. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
@@ -97,7 +97,7 @@ const faqs = [
     answer: "Sim. Serviço específico para espaços de arrumação, a partir de 250 € para arrecadações pequenas. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.",
   },
   {
-    question: "Fazem esvaziamento urgente em 24 horas?",
+    question: "Fazem esvaziamento urgente em 6 horas?",
     answer: "Dependendo da disponibilidade e do volume, sim. Para pedidos urgentes envie fotos pelo WhatsApp e tentamos encaixar na agenda mais próxima — muitas vezes no próprio dia ou no seguinte, incluindo fins de semana.",
   },
 ];

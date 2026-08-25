@@ -456,7 +456,7 @@ export async function POST(req: NextRequest) {
        * não se publica.
        *
        * O cliente não perde nada: o email com o link dele já seguiu, e a
-       * promessa pública é "propostas em 24 horas" — a análise vive dentro
+       * promessa pública é "propostas em 6 horas" — a análise vive dentro
        * desse prazo.
        */
       await appendOrderHistory(id, {

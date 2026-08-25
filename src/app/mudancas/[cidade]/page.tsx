@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = getCidadeMudancaBySlug(cidade);
   if (!c) return { title: "Mudanças — CLYON" };
 
-  const title = `Mudanças em ${c.nome} — Orçamento em 24h | ${BUSINESS_NAME}`;
+  const title = `Mudanças em ${c.nome} — Orçamento em 6h | ${BUSINESS_NAME}`;
   // Sem número de preço, aqui e no resto da página. A meta description dizia
   // "Preços desde 150€" (o piso por cidade ia de 140 a 220 €) para um serviço
   // que o motor factura a partir de 490 € — sete horas a 70 €/h. Nos
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description =
     `Mudanças residenciais e comerciais em ${c.nome} (${c.distrito}). ` +
     `Equipa profissional, embalagem, carga, transporte e montagem. ` +
-    `Orçamento personalizado e grátis em 24 horas.`;
+    `Orçamento personalizado e grátis em 6 horas.`;
 
   return {
     title,
@@ -179,7 +179,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
               Serviço completo de mudanças residenciais e comerciais em {c.nome} —
               embalagem, carga, transporte, descarga e montagem. Equipa profissional,
-              orçamento em 24 horas e sem surpresas.
+              orçamento em 6 horas e sem surpresas.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -203,7 +203,7 @@ export default async function MudancasCidadePage({ params }: Props) {
               menos de metade. Sai o valor, fica o prazo, que é verdade.
             */}
             <p className="mt-3 text-xs text-slate-500">
-              <strong className="text-emerald-600">Orçamento personalizado</strong>, grátis e em 24 horas para {c.nome}
+              <strong className="text-emerald-600">Orçamento personalizado</strong>, grátis e em 6 horas para {c.nome}
             </p>
           </div>
 
@@ -216,7 +216,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Orçamento em</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-600">24 horas</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600">6 horas</p>
               <p className="text-xs text-tinta-fraca">Resposta rápida</p>
             </div>
             {/*
@@ -314,7 +314,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           <CTABlock
             variant="centered"
             title={`Precisa de mudança em ${c.nome}?`}
-            description="Orçamento grátis em 24 horas, sem compromisso."
+            description="Orçamento grátis em 6 horas, sem compromisso."
             primaryText="Pedir orçamento"
             primaryHref="/simulador"
             showWhatsApp
@@ -360,7 +360,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Clock3 className="mx-auto h-6 w-6 text-emerald-500" />
-            <p className="mt-2 text-sm font-bold text-slate-800">Resposta em 24h</p>
+            <p className="mt-2 text-sm font-bold text-slate-800">Resposta em 6h</p>
             <p className="text-xs text-slate-500">Orçamento personalizado por telefone ou email</p>
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">

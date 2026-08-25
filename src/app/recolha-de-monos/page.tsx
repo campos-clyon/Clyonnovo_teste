@@ -34,7 +34,7 @@ const PRECO_MONOS = PRECOS.recolha_monos;
 export const metadata: Metadata = {
   title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
   description:
-    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 24h.`,
+    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 6h.`,
   keywords: [
     "recolha de monos",
     "recolha de monos Lisboa",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
     description:
-      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 24h.`,
+      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 6h.`,
     url: `${SITE_URL}/recolha-de-monos`,
   },
 };
@@ -184,7 +184,7 @@ export default function RecolhaMonosPage() {
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-violet-100 bg-violet-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Resposta em</p>
-                  <p className="mt-2 text-2xl font-bold text-violet-600">24 horas</p>
+                  <p className="mt-2 text-2xl font-bold text-violet-600">6 horas</p>
                 </div>
                 <div className="rounded-2xl border border-violet-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Carregamento</p>
@@ -284,7 +284,7 @@ export default function RecolhaMonosPage() {
           <CTABlock
             variant="centered"
             title="Precisa de recolher monos?"
-            description="Envie fotos e morada para receber um orçamento rápido. A equipa chega em 24h e trata de tudo."
+            description="Envie fotos e morada para receber um orçamento rápido. A equipa chega em 6h e trata de tudo."
             whatsappMessage="Olá! Preciso de recolha de monos. Podem dar-me um orçamento?"
           />
         </div>

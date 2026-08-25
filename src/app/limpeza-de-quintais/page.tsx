@@ -26,12 +26,12 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_JARDINAGEM = PRECOS.jardinagem;
 
 export const metadata: Metadata = {
-  title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 24h | CLYON",
+  title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 6h | CLYON",
   description:
-    "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 24h!",
+    "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 6h!",
   alternates: { canonical: `${SITE_URL}/limpeza-de-quintais` },
   openGraph: {
-    title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 24h | CLYON",
+    title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 6h | CLYON",
     description:
       "Limpeza de quintais e jardins. Recolha de lixo verde e resíduos exteriores em Lisboa e Setúbal.",
     url: `${SITE_URL}/limpeza-de-quintais`,
@@ -164,7 +164,7 @@ export default function LimpezaQuintaisPage() {
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-green-100 bg-green-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Resposta em</p>
-                  <p className="mt-2 text-2xl font-bold text-green-600">24 horas</p>
+                  <p className="mt-2 text-2xl font-bold text-green-600">6 horas</p>
                 </div>
                 <div className="rounded-2xl border border-green-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Carregamento</p>
@@ -264,7 +264,7 @@ export default function LimpezaQuintaisPage() {
           <CTABlock
             variant="centered"
             title="Precisa de limpar o quintal?"
-            description="Envie fotos e morada para receber um orçamento rápido. A equipa chega em 24h e trata de tudo."
+            description="Envie fotos e morada para receber um orçamento rápido. A equipa chega em 6h e trata de tudo."
             whatsappMessage="Olá! Preciso de limpeza de quintal. Podem dar-me um orçamento?"
           />
         </div>

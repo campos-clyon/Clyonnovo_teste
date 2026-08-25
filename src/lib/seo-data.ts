@@ -45,7 +45,7 @@ export const REGIONS: RegionData[] = [
       "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     metaDescription:
-      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 24 horas.",
+      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -77,7 +77,7 @@ export const REGIONS: RegionData[] = [
       "Profissionais em Setúbal, Palmela e Sesimbra para recolha, limpeza pós-obra, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
     metaDescription:
-      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 24 horas.",
+      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",
@@ -470,7 +470,7 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
  * O prazo de resposta, num sítio só.
  *
  * Estava escrito à mão em 104 sítios de 41 ficheiros, e por isso divergiu: a
- * homepage prometia 24 horas no hero e, dois ecrãs abaixo, anunciava "<48h" em
+ * homepage prometia 6 horas no hero e, dois ecrãs abaixo, anunciava "<48h" em
  * letra gigante — na secção cujo título é "Construída para inspirar
  * confiança". O cartão dos 48h chegava a contradizer-se a si próprio, com a
  * descrição a dizer "confirmação de data no próprio dia".
@@ -479,7 +479,7 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
  * que a casa não sabe quanto tempo demora a responder — e é isso que custa o
  * pedido.
  *
- * Todo o resto do site já dizia 24 horas; o 48 era o caso isolado. Fica aqui
+ * Todo o resto do site já dizia 6 horas; o 48 era o caso isolado. Fica aqui
  * para a próxima mudança ser uma linha e não uma caça.
  */
 /**
@@ -520,10 +520,10 @@ export const NOTA_DE_PRECO = {
 } as const;
 
 export const PRAZO_DE_RESPOSTA = {
-  /** Para texto corrido: "Orçamento gratuito em 24 horas." */
-  porExtenso: "24 horas",
+  /** Para texto corrido: "Orçamento gratuito em 6 horas." */
+  porExtenso: "6 horas",
   /** Para selos e números em destaque. */
-  curto: "<24h",
-  /** Para frases como "Resposta em menos de 24 horas". */
-  frase: "Resposta em menos de 24 horas",
+  curto: "<6h",
+  /** Para frases como "Resposta em menos de 6 horas". */
+  frase: "Resposta em menos de 6 horas",
 } as const;

@@ -61,12 +61,12 @@ function buildTitle(serviceName: string, cityName: string, serviceSlug: string, 
       return `Recolha de Móveis em Lisboa — Hoje ou Amanhã, ${PRECO_MOVEIS}`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de Móveis em Setúbal — Preços ${PRECO_MOVEIS}, Resposta 24h`;
+      return `Recolha de Móveis em Setúbal — Preços ${PRECO_MOVEIS}, Resposta 6h`;
     }
     if (citySlug === "almada") {
       return `Recolha de Móveis em Almada — Resposta Rápida, ${PRECO_MOVEIS}`;
     }
-    return `Recolha de Móveis em ${cityName} — ${PRECO_MOVEIS}, Orçamento em 24h`;
+    return `Recolha de Móveis em ${cityName} — ${PRECO_MOVEIS}, Orçamento em 6h`;
   }
 
   // Recolha de monos — foco em "recolha municipal" e resposta rápida
@@ -78,22 +78,22 @@ function buildTitle(serviceName: string, cityName: string, serviceSlug: string, 
       return `Recolha de Monos em Almada — Sem Esperar pela Câmara`;
     }
     if (citySlug === "cascais") {
-      return `Recolha de Monos em Cascais — Contactos e Preços 24h`;
+      return `Recolha de Monos em Cascais — Contactos e Preços 6h`;
     }
     return `Recolha de Monos em ${cityName} — Alternativa à Recolha Municipal`;
   }
 
   if (serviceSlug === "recolha-entulho") {
     if (citySlug === "lisboa") {
-      return `Recolha de Entulho em Lisboa — Big Bags, ${PRECO_ENTULHO}, 24h`;
+      return `Recolha de Entulho em Lisboa — Big Bags, ${PRECO_ENTULHO}, 6h`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de Entulho em Setúbal — Obras e Remodelações 24h`;
+      return `Recolha de Entulho em Setúbal — Obras e Remodelações 6h`;
     }
-    return `Recolha de Entulho em ${cityName} — Big Bags e Camiões, 24h`;
+    return `Recolha de Entulho em ${cityName} — Big Bags e Camiões, 6h`;
   }
 
-  return `${serviceName} em ${cityName} — Orçamento Grátis em 24h`;
+  return `${serviceName} em ${cityName} — Orçamento Grátis em 6h`;
 }
 
 function buildDescription(
@@ -105,41 +105,41 @@ function buildDescription(
 ) {
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
+      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 24h. Orçamento grátis pelo WhatsApp.`;
+      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 6h. Orçamento grátis pelo WhatsApp.`;
     }
     if (citySlug === "almada") {
-      return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta rápida em 24h. Orçamento grátis!`;
+      return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta rápida em 6h. Orçamento grátis!`;
     }
-    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços ${PRECO_MOVEIS}. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis.`;
+    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis.`;
   }
 
   if (serviceSlug === "recolha-monos") {
     if (citySlug === "lisboa") {
-      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Os profissionais retiram sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços ${PRECO_MONOS}, resposta em 24h. Orçamento grátis por WhatsApp.`;
+      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Os profissionais retiram sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços ${PRECO_MONOS}, resposta em 6h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "almada") {
-      return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços ${PRECO_MONOS}. Resposta em 24h por WhatsApp.`;
+      return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços ${PRECO_MONOS}. Resposta em 6h por WhatsApp.`;
     }
     if (citySlug === "cascais") {
-      return `Recolha de monos em Cascais e Estoril: contactos rápidos por WhatsApp. Sofás velhos, colchões, eletrodomésticos, volumes grandes. Preços ${PRECO_MONOS}, resposta em 24h. Orçamento grátis.`;
+      return `Recolha de monos em Cascais e Estoril: contactos rápidos por WhatsApp. Sofás velhos, colchões, eletrodomésticos, volumes grandes. Preços ${PRECO_MONOS}, resposta em 6h. Orçamento grátis.`;
     }
-    return `Recolha de monos em ${cityName}: sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à recolha municipal. Preços ${PRECO_MONOS}, resposta em 24h.`;
+    return `Recolha de monos em ${cityName}: sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à recolha municipal. Preços ${PRECO_MONOS}, resposta em 6h.`;
   }
 
   if (serviceSlug === "recolha-entulho") {
     if (citySlug === "lisboa") {
-      return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços ${PRECO_ENTULHO}, resposta em 24h. Orçamento grátis por WhatsApp.`;
+      return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento direto, resposta em 24h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
+      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento direto, resposta em 6h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
     }
-    return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços ${PRECO_ENTULHO}, resposta em 24h. Orçamento grátis!`;
+    return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis!`;
   }
 
-  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
+  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
 }
 
 function getServiceIntro(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string) {

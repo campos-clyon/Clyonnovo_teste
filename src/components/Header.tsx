@@ -363,7 +363,7 @@ export default function Header() {
                   </Link>
                   <div className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm text-slate-600">
                     <Clock className="h-4 w-4 text-emerald-500" />
-                    <span>Resposta rápida em 24h</span>
+                    <span>Resposta rápida em 6h</span>
                   </div>
                 </div>
               </div>

@@ -21,7 +21,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
 export const metadata: Metadata = {
   title: "Empresas que Retiram Móveis Velhos em Lisboa, Margem Sul e Setúbal",
   description:
-    `Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços ${PRECO_MOVEIS}, resposta em 24h por WhatsApp.`,
+    `Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços ${PRECO_MOVEIS}, resposta em 6h por WhatsApp.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",

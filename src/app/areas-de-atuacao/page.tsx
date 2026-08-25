@@ -276,7 +276,7 @@ export default function AreasDeAtuacaoPage() {
           <CTABlock
             variant="centered"
             title="Precisa de ajuda na sua zona?"
-            description="Peça um orçamento grátis. Respondemos em 24 horas para qualquer localidade."
+            description="Peça um orçamento grátis. Respondemos em 6 horas para qualquer localidade."
           />
         </div>
       </section>

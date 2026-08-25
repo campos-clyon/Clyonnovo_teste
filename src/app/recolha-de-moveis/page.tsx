@@ -42,7 +42,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 export const metadata: Metadata = {
   title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários",
   description:
-    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços de ${PRECO_MOVEIS.etiqueta}. Orçamento grátis em 24h.`,
+    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços de ${PRECO_MOVEIS.etiqueta}. Orçamento grátis em 6h.`,
   keywords: [
     "recolha de móveis",
     "recolha de móveis Lisboa",
@@ -291,7 +291,7 @@ export default function RecolhaDeMoveisPage() {
             
             {/* Description */}
             <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
-              Recolha rápida de móveis, entulho, monos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Orçamento grátis em 24h.
+              Recolha rápida de móveis, entulho, monos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Orçamento grátis em 6h.
             </p>
 
             {/* CTAs */}
@@ -322,7 +322,7 @@ export default function RecolhaDeMoveisPage() {
                 <div className="text-xs text-slate-500">Avaliações</div>
               </div>
               <div>
-                <div className="text-xl font-bold text-slate-900">24h</div>
+                <div className="text-xl font-bold text-slate-900">6h</div>
                 <div className="text-xs text-slate-500">Resposta</div>
               </div>
               <div>

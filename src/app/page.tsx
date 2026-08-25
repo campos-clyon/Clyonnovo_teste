@@ -34,12 +34,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export const metadata: Metadata = {
   title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
   description:
-    `Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Sofás, armários, colchões e eletrodomésticos, por profissionais verificados. Orçamento gratuito em 24h. ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
+    `Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Sofás, armários, colchões e eletrodomésticos, por profissionais verificados. Orçamento gratuito em 6h. ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
     description:
-      "Descreva o que tem para levar e receba propostas de profissionais verificados. Sofás, armários, colchões, monos e esvaziamentos. Orçamento gratuito em 24h. Lisboa, Margem Sul e Setúbal.",
+      "Descreva o que tem para levar e receba propostas de profissionais verificados. Sofás, armários, colchões, monos e esvaziamentos. Orçamento gratuito em 6h. Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt",
   },
 };
@@ -197,9 +197,9 @@ const GUARANTEES = [
     // do hero que promete 24 — e na secção cujo título é "Construída para
     // inspirar confiança". Pior: a descrição por baixo já dizia "no próprio
     // dia", ou seja o cartão contradizia-se a si próprio. Todo o resto do
-    // site diz 24 horas; este era o único sítio com outro número.
+    // site diz 6 horas; este era o único sítio com outro número.
     // O título era `PRAZO_DE_RESPOSTA.frase` — "Resposta em menos de 24
-    // horas" — com "<24h · tempo médio de resposta" em letra gigante mesmo ao
+    // horas" — com "<6h · tempo médio de resposta" em letra gigante mesmo ao
     // lado. O cartão dizia duas vezes a mesma coisa e não dizia o que isso
     // muda para quem lê.
     title: "Não fica à espera de resposta",

@@ -37,7 +37,7 @@ const PRECO_ENTULHO = PRECOS.recolha_entulho;
 export const metadata: Metadata = {
   title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
   description:
-    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento direto. Resposta em 24h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
+    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento direto. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
     description:
-      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 24h, preços ${PRECO_ENTULHO.etiqueta}.`,
+      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-entulho`,
   },
 };
@@ -205,7 +205,7 @@ export default function RecolhaEntulhoPage() {
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[22px] border border-amber-100 bg-amber-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Resposta em</p>
-                  <p className="mt-2 text-2xl font-bold text-amber-600">24 horas</p>
+                  <p className="mt-2 text-2xl font-bold text-amber-600">6 horas</p>
                 </div>
                 <div className="rounded-[22px] border border-amber-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Carregamento</p>
@@ -382,7 +382,7 @@ export default function RecolhaEntulhoPage() {
           <CTABlock
             variant="centered"
             title="Precisa de recolher entulho?"
-            description="Peça um orçamento grátis. A equipa chega em 24h, carrega o entulho e encaminha para destino responsável."
+            description="Peça um orçamento grátis. A equipa chega em 6h, carrega o entulho e encaminha para destino responsável."
             whatsappMessage="Olá! Preciso de recolha de entulho. Podem dar-me um orçamento?"
           />
         </div>

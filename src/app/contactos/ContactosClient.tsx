@@ -88,7 +88,7 @@ export default function ContactosClient() {
             Fale connosco
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500">
-            Orçamento grátis em 24h — por telefone, WhatsApp ou pelo formulário abaixo.
+            Orçamento grátis em 6h — por telefone, WhatsApp ou pelo formulário abaixo.
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export default function ContactosClient() {
               <>
                 <h2 className="text-base font-bold text-tinta">Enviar pedido</h2>
                 <p className="mt-1 text-xs text-tinta-fraca">
-                  Preencha os dados — o profissional responde em até 24h.
+                  Preencha os dados — o profissional responde em até 6h.
                 </p>
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
                   {field("nome", "Nome completo", "text", "Ana Silva")}

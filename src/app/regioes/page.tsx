@@ -15,7 +15,7 @@ const simulatorCategoryMap: Record<string, string> = {
 export const metadata: Metadata = {
   title: "Regiões de Atuação em Lisboa, Margem Sul e Setúbal",
   description:
-    "Onde a CLYON tem profissionais: Lisboa, Margem Sul e Setúbal. Recolha de entulho, móveis, monos, mudanças e esvaziamento de casas, com orçamento gratuito em 24 horas.",
+    "Onde a CLYON tem profissionais: Lisboa, Margem Sul e Setúbal. Recolha de entulho, móveis, monos, mudanças e esvaziamento de casas, com orçamento gratuito em 6 horas.",
   alternates: {
     canonical: `${SITE_URL}/regioes`,
   },
@@ -133,7 +133,7 @@ export default function RegioesPage() {
           <CTABlock
             variant="centered"
             title="Precisa de serviço na sua zona?"
-            description="Peça um orçamento grátis. Respondemos em 24 horas."
+            description="Peça um orçamento grátis. Respondemos em 6 horas."
           />
         </div>
       </section>

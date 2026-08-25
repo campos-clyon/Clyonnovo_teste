@@ -85,7 +85,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança dentro de Lisboa?",
         resposta:
-          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — não há tabela que sirva a todos os casos. Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo de equipa, e isso pesa. Diga-nos a tipologia e as duas moradas: o orçamento é personalizado e grátis em 24 horas.",
+          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — não há tabela que sirva a todos os casos. Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo de equipa, e isso pesa. Diga-nos a tipologia e as duas moradas: o orçamento é personalizado e grátis em 6 horas.",
       },
       {
         pergunta: "Precisam de licença EMEL para estacionar no dia da mudança?",
@@ -162,7 +162,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança de Barreiro para Lisboa?",
         resposta:
-          "Depende do volume, do andar e do bairro de destino em Lisboa. Passamos pela ponte 25 de Abril — a portagem entra no orçamento, sem surpresas. Fazemos um orçamento personalizado e grátis em 24 horas.",
+          "Depende do volume, do andar e do bairro de destino em Lisboa. Passamos pela ponte 25 de Abril — a portagem entra no orçamento, sem surpresas. Fazemos um orçamento personalizado e grátis em 6 horas.",
       },
       {
         pergunta: "Fazem mudanças no Barreiro Velho, onde as ruas são estreitas?",
@@ -198,7 +198,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança no Montijo?",
         resposta:
-          "É uma das nossas cidades mais próximas da base, por isso o custo de deslocação é mínimo — o resto do valor depende do volume, do andar e dos acessos. Diga-nos a tipologia e as moradas e recebe um orçamento personalizado e grátis em 24 horas.",
+          "É uma das nossas cidades mais próximas da base, por isso o custo de deslocação é mínimo — o resto do valor depende do volume, do andar e dos acessos. Diga-nos a tipologia e as moradas e recebe um orçamento personalizado e grátis em 6 horas.",
       },
       {
         pergunta: "Fazem mudanças de/para o Aeroporto do Montijo?",
@@ -239,7 +239,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
         resposta:
-          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Não publicamos tabela para esta rota: fazemos um orçamento personalizado e grátis em 24 horas.",
+          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Não publicamos tabela para esta rota: fazemos um orçamento personalizado e grátis em 6 horas.",
       },
     ],
     testemunho: null,
@@ -275,7 +275,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança Oeiras → Lisboa?",
         resposta:
-          "A distância é curta (~15 km), mas o trânsito na A5 em horas de ponta pode alongar o serviço — agendamos preferencialmente antes das 8h ou depois das 20h. O valor depende do volume e dos acessos; o orçamento é personalizado e grátis em 24 horas.",
+          "A distância é curta (~15 km), mas o trânsito na A5 em horas de ponta pode alongar o serviço — agendamos preferencialmente antes das 8h ou depois das 20h. O valor depende do volume e dos acessos; o orçamento é personalizado e grátis em 6 horas.",
       },
     ],
     testemunho: null,
@@ -306,7 +306,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de Carnaxide para Lisboa?",
         resposta:
-          "Sim, é uma das rotas mais rápidas — pela A5 chegamos a Lisboa em 15 a 25 minutos fora das horas de ponta. O preço depende do volume e dos acessos nas duas moradas, e o orçamento é personalizado e grátis em 24 horas.",
+          "Sim, é uma das rotas mais rápidas — pela A5 chegamos a Lisboa em 15 a 25 minutos fora das horas de ponta. O preço depende do volume e dos acessos nas duas moradas, e o orçamento é personalizado e grátis em 6 horas.",
       },
       {
         pergunta: "Conseguem entrar na Zona Industrial de Carnaxide com camião?",
@@ -342,12 +342,12 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Corroios?",
         resposta:
-          "Por ser muito próximo da nossa base, o custo de deslocação é dos mais baixos da margem sul — o resto do valor depende do volume, do andar e do elevador. Orçamento personalizado e grátis em 24 horas.",
+          "Por ser muito próximo da nossa base, o custo de deslocação é dos mais baixos da margem sul — o resto do valor depende do volume, do andar e do elevador. Orçamento personalizado e grátis em 6 horas.",
       },
       {
         pergunta: "Fazem mudanças Corroios → Lisboa?",
         resposta:
-          "Sim, pela ponte 25 de Abril o trajecto é rápido e a portagem entra no orçamento. O valor depende do volume e dos acessos nas duas moradas — diga-nos os dados e respondemos em 24 horas.",
+          "Sim, pela ponte 25 de Abril o trajecto é rápido e a portagem entra no orçamento. O valor depende do volume e dos acessos nas duas moradas — diga-nos os dados e respondemos em 6 horas.",
       },
     ],
     testemunho: null,
@@ -383,7 +383,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de Palmela para Lisboa?",
         resposta:
-          "Sim, pela A2 chegamos a Lisboa em 35 a 50 minutos. O orçamento é personalizado — depende do volume, da tipologia e dos acessos — e chega-lhe grátis em 24 horas.",
+          "Sim, pela A2 chegamos a Lisboa em 35 a 50 minutos. O orçamento é personalizado — depende do volume, da tipologia e dos acessos — e chega-lhe grátis em 6 horas.",
       },
     ],
     testemunho: null,
@@ -414,7 +414,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança em Odivelas?",
         resposta:
-          "A distância é média, mas o trânsito na IC17 e na CRIL pode alongar o serviço — por isso preferimos início às 7h. O valor depende do volume, do andar e do elevador; o orçamento é personalizado e grátis em 24 horas.",
+          "A distância é média, mas o trânsito na IC17 e na CRIL pode alongar o serviço — por isso preferimos início às 7h. O valor depende do volume, do andar e do elevador; o orçamento é personalizado e grátis em 6 horas.",
       },
       {
         pergunta: "Fazem mudanças de Odivelas para Sintra ou Cascais?",
@@ -455,7 +455,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança no Lumiar?",
         resposta:
-          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Fazemos um orçamento personalizado e grátis em 24 horas.",
+          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Fazemos um orçamento personalizado e grátis em 6 horas.",
       },
     ],
     testemunho: null,
@@ -491,7 +491,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança em Sesimbra?",
         resposta:
-          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra no orçamento. Orçamento personalizado e grátis em 24 horas.",
+          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra no orçamento. Orçamento personalizado e grátis em 6 horas.",
       },
     ],
     testemunho: null,
@@ -527,7 +527,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança Costa da Caparica → Lisboa?",
         resposta:
-          "Pela ponte 25 de Abril o trajecto demora 20 a 35 minutos e a portagem entra no orçamento. O valor depende do volume e dos acessos — o orçamento é personalizado e grátis em 24 horas.",
+          "Pela ponte 25 de Abril o trajecto demora 20 a 35 minutos e a portagem entra no orçamento. O valor depende do volume e dos acessos — o orçamento é personalizado e grátis em 6 horas.",
       },
     ],
     testemunho: null,

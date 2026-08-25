@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     template: "%s | CLYON",
   },
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 24h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 6h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",

@@ -23,14 +23,14 @@ import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Rápidas, Seguras, Sem Stress",
   description:
-    `Mudanças residenciais e comerciais em Lisboa e Setúbal. Embalagem, carga, transporte e montagem por profissionais verificados. Resposta em 24h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    `Mudanças residenciais e comerciais em Lisboa e Setúbal. Embalagem, carga, transporte e montagem por profissionais verificados. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   alternates: { canonical: `${SITE_URL}/mudancas` },
   openGraph: {
     title: "Mudanças em Lisboa e Setúbal — Profissional e Sem Stress",
     // Dizia "Preços desde 150€". Nos metadados vale a mesma regra do texto
     // visível: a página deixou de anunciar número, os metadados também.
     description:
-      "Mudanças rápidas com equipa profissional. Carga, transporte, descarga e montagem. Orçamento personalizado e grátis em 24 horas!",
+      "Mudanças rápidas com equipa profissional. Carga, transporte, descarga e montagem. Orçamento personalizado e grátis em 6 horas!",
     url: `${SITE_URL}/mudancas`,
   },
 };
@@ -74,7 +74,7 @@ const faqs = [
     // Respondia "entre 150EUR e 280EUR em média" — e esta resposta vai para o
     // FAQPage do JSON-LD, por isso o número aparecia também no Google. O motor
     // factura a partir de 490 €. Fica a explicação do que faz variar o preço.
-    answer: "O preço depende do volume (tamanho do apartamento), da distância entre moradas, da necessidade de desmontagem e montagem e do andar (com ou sem elevador). Por isso não trabalhamos com tabela: fazemos um orçamento personalizado e grátis em 24 horas, fechado antes de o trabalho começar.",
+    answer: "O preço depende do volume (tamanho do apartamento), da distância entre moradas, da necessidade de desmontagem e montagem e do andar (com ou sem elevador). Por isso não trabalhamos com tabela: fazemos um orçamento personalizado e grátis em 6 horas, fechado antes de o trabalho começar.",
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",
@@ -198,7 +198,7 @@ export default function MudancasPage() {
                 mais nenhuma página usava. Sai o valor, fica o prazo.
               */}
               <p className="mt-4 text-sm text-slate-500">
-                <span className="font-semibold text-emerald-600">Orçamento personalizado</span>, grátis e em 24 horas
+                <span className="font-semibold text-emerald-600">Orçamento personalizado</span>, grátis e em 6 horas
               </p>
             </div>
 
@@ -206,7 +206,7 @@ export default function MudancasPage() {
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[22px] border border-emerald-100 bg-emerald-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-950">Orçamento em</p>
-                  <p className="mt-2 text-2xl font-bold text-emerald-600">24 horas</p>
+                  <p className="mt-2 text-2xl font-bold text-emerald-600">6 horas</p>
                 </div>
                 <div className="rounded-[22px] border border-emerald-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Cobertura</p>
@@ -274,7 +274,7 @@ export default function MudancasPage() {
               Não publicamos tabela de preços para mudanças, e é uma decisão: duas
               mudanças da mesma tipologia podem ter custos muito diferentes conforme
               o volume real e os acessos. O orçamento é personalizado, grátis e
-              chega-lhe em 24 horas — fechado antes de o trabalho começar.
+              chega-lhe em 6 horas — fechado antes de o trabalho começar.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -466,7 +466,7 @@ export default function MudancasPage() {
           <CTABlock
             variant="centered"
             title="Precisa de fazer uma mudança?"
-            description="Peça um orçamento grátis. Respondemos em 24 horas com um valor detalhado para a sua mudança."
+            description="Peça um orçamento grátis. Respondemos em 6 horas com um valor detalhado para a sua mudança."
             whatsappMessage="Olá! Preciso de fazer uma mudança. Podem dar-me um orçamento?"
           />
         </div>
