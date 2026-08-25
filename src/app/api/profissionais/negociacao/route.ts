@@ -138,6 +138,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // O profissional aceitou o valor do cliente — o "sim" tem de chegar a quem
+    // propôs. Um cliente de telefone não tem painel nenhum onde o ver: sem
+    // este aviso, a aceitação ficava à espera de que alguém a escrevesse à
+    // mão no WhatsApp. Nunca lança — a aceitação já está gravada.
+    if (corpo.accao === "aceitar" && nova.estado === "aguarda_contratacao") {
+      try {
+        const { getSimulatorOrderById } = await import("@/lib/db");
+        const pedido = await getSimulatorOrderById(linha.pedidoId);
+        const aceite = [...nova.propostas].reverse().find((p) => p.estado === "aceite");
+        if (pedido && !(pedido.contactEmail ?? "").trim() && pedido.contactPhone && aceite) {
+          const { aceitacaoParaOWhatsApp } = await import("@/lib/whatsapp-negociacao");
+          await aceitacaoParaOWhatsApp({
+            telefone: pedido.contactPhone,
+            pedidoId: linha.pedidoId,
+            negociacaoId,
+            profissionalNome: sessao.nome,
+            valor: aceite.valor,
+          });
+        }
+      } catch (e) {
+        console.error("[negociacao] aviso de aceitação falhou:", e);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       estado: nova.estado,

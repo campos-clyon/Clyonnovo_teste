@@ -41,7 +41,30 @@ export async function avisarDaProposta(dados: {
 
     if (dados.quemPropos === "profissional") {
       const email = pedido.contactEmail;
-      if (!email) return;
+      /*
+       * SEM EMAIL, A PROPOSTA SEGUE PARA O WHATSAPP — com botões.
+       *
+       * Até aqui um cliente de telefone não recebia NADA quando um
+       * profissional propunha: a proposta ficava no painel à espera de que o
+       * Wanderson a escrevesse à mão no WhatsApp pessoal. Com a Cloud API
+       * configurada, o site fala com o cliente directamente — fechar,
+       * recusar ou contrapropor sem ninguém no meio. Sem configuração, o
+       * envio devolve false em silêncio e tudo fica como estava.
+       */
+      if (!email) {
+        if (pedido.contactPhone) {
+          const { propostaParaOWhatsApp } = await import("@/lib/whatsapp-negociacao");
+          await propostaParaOWhatsApp({
+            telefone: pedido.contactPhone,
+            pedidoId: dados.pedidoId,
+            negociacaoId: dados.negociacaoId,
+            profissionalNome: negociacao.profissionalNome,
+            valor: dados.valor,
+            servico: pedido.serviceType ?? null,
+          });
+        }
+        return;
+      }
 
       /*
        * Quem tem conta vai para /conta e o link que guardou continua válido.
