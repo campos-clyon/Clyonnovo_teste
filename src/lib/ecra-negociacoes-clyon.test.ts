@@ -17,8 +17,10 @@ const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 
 describe("o menu", () => {
   it("Negociações CLYON está na Plataforma e os testes desceram para Gerir", () => {
+    // "negociacoes" saiu do menu quando os dois ecrãs se fundiram num só —
+    // a secção continua a responder a links antigos, mas o menu tem UMA porta.
     expect(SHELL).toMatch(
-      /Plataforma", itens: \["profissionais", "negociacoes_clyon", "negociacoes", "levantamentos"\]/,
+      /Plataforma", itens: \["profissionais", "negociacoes_clyon", "levantamentos"\]/,
     );
     expect(SHELL).toMatch(/Gerir", itens: \["testadores", "configs"\]/);
   });

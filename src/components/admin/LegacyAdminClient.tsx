@@ -238,7 +238,11 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
    * desceu para Gerir: cria-se uma credencial de longe em longe, e estava a
    * ocupar um lugar nobre para mostrar zero contas.
    */
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "negociacoes", "levantamentos"] },
+  // "negociacoes" saiu do menu mas a secção continua a responder a links
+  // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
+  // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
+  // dois sítios é gerir mal".
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["testadores", "configs"] },
 ];
@@ -256,7 +260,7 @@ const sectionLabels: Record<AdminSection, string> = {
   negociacoes:   "Negociações",
   levantamentos: "Levantamentos",
   testadores:    "Acesso aos testes",
-  negociacoes_clyon: "Negociações CLYON",
+  negociacoes_clyon: "Negociações",
 };
 
 const siteModules = [
@@ -2891,15 +2895,15 @@ export default function ColaboradorAdminClient() {
                   Plataforma
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-white">
-                  Negociações da CLYON
+                  Pedidos e negociações
                 </h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Pedidos que chegaram por WhatsApp, telefone, ou sem email. O cliente
-                  não tem como responder — quem negoceia com o profissional, e confirma
-                  no fim, é a CLYON em nome dele. Registe aqui os pedidos do telefone.
+                  Todos os pedidos da plataforma num ecrã só: a fila por analisar e
+                  enviar, as negociações em que a CLYON responde pelo cliente, e as
+                  que o cliente conduz sozinho pelo link do email.
                 </p>
               </div>
-              <AdminNegociacoesPanel mostrar="clyon" />
+              <AdminNegociacoesPanel mostrar="tudo" />
             </section>
           )}
 

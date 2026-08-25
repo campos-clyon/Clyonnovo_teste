@@ -211,9 +211,10 @@ describe("a distribuição do pedido", () => {
   });
 
   it("os cartões deixam de listar a parede de profissionais", () => {
-    // Fechada por omissão atrás do resumo; abre sozinha quando há proposta à
-    // espera — o accionável não fica atrás de um toque.
-    expect(PAINEL).toContain("negociacoesVisiveis.has(p.id) || espera");
+    // Fechada por omissão atrás da linha da mesa — e desde a decisão dele,
+    // SEMPRE fechada até o admin abrir; o accionável aponta-se no cartão
+    // verde do topo e no botão "Responder (N)".
+    expect(PAINEL).toContain("const aberto = negociacoesVisiveis.has(p.id);");
   });
 });
 
@@ -310,8 +311,24 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
     expect(PAINEL).toContain('ultima.por === "profissional" ? "dele" : "nosso"');
   });
 
-  it("um pedido à espera de resposta abre sozinho", () => {
-    expect(PAINEL).toContain("negociacoesVisiveis.has(p.id) || espera");
+  it("os pedidos nascem FECHADOS — sempre, mesmo à espera de resposta", () => {
+    /*
+     * Decisão dele: "quando faço reset eles ficam mostrando todas as
+     * propostas e não quero; tem que ser abertas apenas pelo admin". O
+     * auto-abrir saiu; o cartão verde do topo aponta o dedo, e o salto dele
+     * abre o pedido ao aterrar — senão aterrava numa linha fechada.
+     */
+    expect(PAINEL).toContain("const aberto = negociacoesVisiveis.has(p.id);");
+    expect(PAINEL).not.toContain("negociacoesVisiveis.has(p.id) || espera");
+    expect(PAINEL).toContain("setNegociacoesVisiveis((v) => new Set([...v, p.id]))");
+  });
+
+  it("um ecrã só gere todos os pedidos", () => {
+    // Ao dar pela falta do pedido do Rui (com email, caía no outro ecrã):
+    // "aqui devo gerir todos os pedidos". Gerir em dois sítios é gerir mal.
+    const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
+    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
+    expect(SHELL).toContain('"profissionais", "negociacoes_clyon", "levantamentos"');
   });
 });
 

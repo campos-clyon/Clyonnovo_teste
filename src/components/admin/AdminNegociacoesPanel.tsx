@@ -639,7 +639,14 @@ export default function AdminNegociacoesPanel({
       (soma, n) => soma + propostasDe(n.propostasJson).length,
       0,
     );
-    const aberto = negociacoesVisiveis.has(p.id) || espera;
+    /*
+     * FECHADO POR OMISSÃO, SEMPRE — decisão dele: "quando faço reset eles
+     * ficam mostrando todas as propostas e não quero; tem que ser abertas
+     * apenas pelo admin". O auto-abrir dos à-espera trabalhava contra quem
+     * lê: o cartão verde do topo já aponta o dedo, e o "Responder (N)" da
+     * linha abre num toque.
+     */
+    const aberto = negociacoesVisiveis.has(p.id);
     const alternarAberto = () =>
       setNegociacoesVisiveis((v) => {
         const c = new Set(v);
@@ -1098,6 +1105,11 @@ export default function AdminNegociacoesPanel({
                 <a
                   key={p.id}
                   href={`#pedido-${p.id}`}
+                  onClick={() =>
+                    // Sem o auto-abrir, o salto aterrava numa linha fechada —
+                    // abrir aqui é o que faz o atalho valer alguma coisa.
+                    setNegociacoesVisiveis((v) => new Set([...v, p.id]))
+                  }
                   className="rounded-lg border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/50"
                 >
                   #{p.id} · {p.contactName ?? "—"}
