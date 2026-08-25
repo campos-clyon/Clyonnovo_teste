@@ -137,6 +137,9 @@ type Pedido = {
   valorDesejadoCliente: string | null;
   /** "backoffice", "hero_quote_form", "formulario_contactos", ou null. */
   origem: string | null;
+  status: string | null;
+  /** Quando o admin abriu o pedido depois de concluído. Null = por ver. */
+  concluidoVistoEm: string | null;
   createdAt: string;
   negociacoes: Negociacao[];
 };
@@ -599,8 +602,17 @@ export default function AdminNegociacoesPanel({
    * Misturados numa lista unica ordenada por data, o primeiro grupo — o unico
    * onde a demora nos custa dinheiro — ficava indistinguivel dos outros.
    */
-  const daClyon = ordenados.filter((p) => quemNegoceia(p) === "clyon");
-  const dosClientes = ordenados.filter((p) => quemNegoceia(p) === "cliente");
+  /*
+   * Os concluídos saem das listas de trabalho — já ninguém espera nada — e
+   * ganham prateleira própria em baixo. Um que o admin ainda não tenha
+   * ABERTO desde a conclusão fica em destaque: dinheiro que entrou merece
+   * ser visto, não descoberto por acaso.
+   */
+  const concluidos = ordenados.filter((p) => p.status === "concluido");
+  const activos = ordenados.filter((p) => p.status !== "concluido");
+  const concluidosPorVer = concluidos.filter((p) => !p.concluidoVistoEm).length;
+  const daClyon = activos.filter((p) => quemNegoceia(p) === "clyon");
+  const dosClientes = activos.filter((p) => quemNegoceia(p) === "cliente");
 
   /*
    * O cartao de um pedido, desenhado uma vez e usado nos dois grupos.
@@ -647,13 +659,30 @@ export default function AdminNegociacoesPanel({
      * linha abre num toque.
      */
     const aberto = negociacoesVisiveis.has(p.id);
-    const alternarAberto = () =>
+    const concluido = p.status === "concluido";
+    const porVer = concluido && !p.concluidoVistoEm;
+    const alternarAberto = () => {
+      // Abrir um concluído por ver É vê-lo: o carimbo grava-se no servidor e
+      // o destaque apaga-se — sem botão próprio para "marcar como visto".
+      if (porVer && !negociacoesVisiveis.has(p.id) && token) {
+        void fetch("/api/admin/negociacoes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ accao: "concluido_visto", pedidoId: p.id }),
+        }).catch(() => {});
+        setPedidos((lista) =>
+          lista.map((x) =>
+            x.id === p.id ? { ...x, concluidoVistoEm: new Date().toISOString() } : x,
+          ),
+        );
+      }
       setNegociacoesVisiveis((v) => {
         const c = new Set(v);
         if (c.has(p.id)) c.delete(p.id);
         else c.add(p.id);
         return c;
       });
+    };
 
     /*
      * "ONDE ESTÁ A BOLA", numa frase.
@@ -666,7 +695,12 @@ export default function AdminNegociacoesPanel({
     const valorDoPrimeiro = primeiro
       ? (propostasDe(primeiro.propostasJson).at(-1)?.valor ?? null)
       : null;
-    const bola = espera
+    const bola = concluido
+      ? {
+          tom: "text-emerald-400",
+          texto: `✓ Concluído${acordada ? ` — ${euros(acordada.valorAcordado)} com ${acordada.profissionalNome}` : ""}`,
+        }
+      : espera
       ? {
           tom: "text-emerald-300",
           texto: `● ${primeiro?.profissionalNome}${
@@ -690,7 +724,11 @@ export default function AdminNegociacoesPanel({
         key={p.id}
         id={`pedido-${p.id}`}
         className={`scroll-mt-24 rounded-2xl border bg-slate-900 p-4 shadow-sm ${
-          espera ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-800"
+          porVer
+            ? "border-emerald-400 ring-2 ring-emerald-400/40"
+            : espera
+              ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+              : "border-slate-800"
         }`}
       >
         {/*
@@ -737,6 +775,26 @@ export default function AdminNegociacoesPanel({
 
         {aberto && (
           <>
+        {concluido && acordada && acordada.valorAcordado != null && (
+          // O dinheiro completo, à cabeça: o que o cliente pagou, a taxa, o
+          // que o profissional recebe. Abrir um concluído é para conferir
+          // contas — não para as reconstruir proposta a proposta.
+          <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3 text-sm">
+            <p className="font-semibold text-emerald-300">
+              Trabalho concluído com {acordada.profissionalNome}
+            </p>
+            <p className="mt-1 text-slate-300">
+              Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong>
+              {" · "}o cliente paga{" "}
+              <strong>{euros(quantoOClientePaga(Number(acordada.valorAcordado)))}</strong>{" "}
+              (taxa CLYON{" "}
+              {euros(quantoOClientePaga(Number(acordada.valorAcordado)) - Number(acordada.valorAcordado))})
+              {" · "}o profissional recebe{" "}
+              <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado)))}</strong>
+              {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
+            </p>
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
           <button
             onClick={() => setAEditarPlataforma(p.id)}
@@ -1262,6 +1320,29 @@ export default function AdminNegociacoesPanel({
           </p>
           {cabecalhoDaMesa}
           <div className="space-y-3">{dosClientes.map(cartaoDoPedido)}</div>
+        </section>
+      )}
+
+      {concluidos.length > 0 && (
+        <section>
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-emerald-400">
+            Concluídos
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+              {concluidos.length}
+            </span>
+            {concluidosPorVer > 0 && (
+              <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-bold text-slate-950">
+                {concluidosPorVer} por ver
+              </span>
+            )}
+          </h3>
+          <p className="mb-3 text-xs text-slate-500">
+            Trabalhos confirmados e fechados. Um cartão em realce ainda não foi
+            aberto desde a conclusão — abrir mostra as contas completas e apaga o
+            realce.
+          </p>
+          {cabecalhoDaMesa}
+          <div className="space-y-3">{concluidos.map(cartaoDoPedido)}</div>
         </section>
       )}
 

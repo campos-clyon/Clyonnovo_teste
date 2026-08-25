@@ -1146,6 +1146,9 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
      * pedido, para ler uma palavra.
      */
     origem: string | null;
+    status: string | null;
+    /** Quando o admin abriu este pedido DEPOIS de concluído. Null = por ver. */
+    concluidoVistoEm: Date | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -1187,14 +1190,16 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
    * ou o pedido tem negociacoes e esta aqui, ou nao tem e esta na de promover.
    * Nunca nas duas, nunca em nenhuma.
    */
+  await ensureConcluidosVistosTable();
   const [pedidos] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
-            o.valorDesejadoCliente, o.createdAt,
+            o.valorDesejadoCliente, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source'))
             ) AS origem
        FROM simulatorOrders o
+       LEFT JOIN concluidosVistos v ON v.pedidoId = o.id
       WHERE EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
       ORDER BY o.createdAt DESC
       LIMIT ?`,
@@ -1234,9 +1239,45 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     contactEmail: (p.contactEmail as string) ?? null,
     valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
     origem: (p.origem as string) ?? null,
+    status: (p.status as string) ?? null,
+    concluidoVistoEm: (p.concluidoVistoEm as Date) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
+}
+
+/*
+ * Concluídos "por ver": o carimbo é do SITE, não do pedido.
+ *
+ * Vive numa tabela própria e não numa coluna de simulatorOrders porque o
+ * contrato dessa tabela é governado pelo Bridge ([[contrato-bridge]]) — o
+ * backoffice não lhe acrescenta colunas por conta própria. E sobrevive à
+ * purga dos 60 dias sem drama: apagar um pedido deixa aqui uma linha órfã
+ * inofensiva, que nunca mais faz JOIN com nada.
+ */
+let concluidosVistosReady = false;
+async function ensureConcluidosVistosTable() {
+  if (concluidosVistosReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS concluidosVistos (
+      pedidoId BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+      vistoEm  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  concluidosVistosReady = true;
+}
+
+export async function marcarConcluidoComoVisto(pedidoId: number): Promise<void> {
+  if (!Number.isInteger(pedidoId) || pedidoId <= 0) return;
+  await ensureConcluidosVistosTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "INSERT INTO concluidosVistos (pedidoId) VALUES (?) ON DUPLICATE KEY UPDATE pedidoId = pedidoId",
+    [pedidoId],
+  );
 }
 
 /**
