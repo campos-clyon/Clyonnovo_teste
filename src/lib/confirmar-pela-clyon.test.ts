@@ -309,3 +309,33 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
     expect(PAINEL).toContain("negociacoesVisiveis.has(p.id) || espera");
   });
 });
+
+
+describe("descarregar as fotos do pedido", () => {
+  const MODAL_PEDIDO2 = ler("src/components/admin/PedidoDetailModal.tsx");
+
+  it("vai buscar o ficheiro antes de o entregar", () => {
+    /*
+     * Um <a download> simples não serve: as fotos vivem noutro domínio
+     * (Vercel Blob) e o atributo `download` é IGNORADO em links de outra
+     * origem — o browser abria a imagem em vez de a guardar.
+     */
+    expect(MODAL_PEDIDO2).toContain("URL.createObjectURL(blob)");
+    expect(MODAL_PEDIDO2).toContain("descarregarFoto");
+  });
+
+  it("a rede a falhar abre o separador em vez de morrer calado", () => {
+    expect(MODAL_PEDIDO2).toContain('window.open(url, "_blank", "noopener")');
+  });
+
+  it("há descarregar todas, em série", () => {
+    // Em paralelo, o browser bloqueia a rajada; em série com intervalo,
+    // pergunta uma vez e o resto segue.
+    expect(MODAL_PEDIDO2).toContain("descarregarTodas");
+    expect(MODAL_PEDIDO2).toContain("Descarregar todas");
+  });
+
+  it("o nome do ficheiro diz de que pedido veio", () => {
+    expect(MODAL_PEDIDO2).toContain("pedido-${pedidoId}-foto-");
+  });
+});

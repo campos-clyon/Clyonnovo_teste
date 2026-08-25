@@ -374,6 +374,52 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
   const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("geral");
+  const [aDescarregar, setADescarregar] = useState<string | null>(null);
+
+  /*
+   * Descarregar uma foto do Blob.
+   *
+   * Um <a download> simples não serve: as fotos vivem noutro domínio
+   * (Vercel Blob) e o atributo `download` é IGNORADO em links de outra
+   * origem — o browser abria a imagem em vez de a guardar. Vai-se buscar o
+   * ficheiro primeiro e entrega-se como objecto local; se a rede falhar,
+   * abre-se num separador para a pessoa guardar à mão — pior que descarregar,
+   * melhor que um botão morto.
+   */
+  async function descarregarFoto(url: string, nome: string) {
+    setADescarregar(url);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const extensao =
+        url.match(/\.(jpe?g|png|gif|webp|avif|heic|mp4|mov|webm)(?:\?|$)/i)?.[1] ??
+        (blob.type.split("/")[1] || "jpg");
+      const alvo = document.createElement("a");
+      alvo.href = URL.createObjectURL(blob);
+      alvo.download = `${nome}.${extensao}`;
+      document.body.appendChild(alvo);
+      alvo.click();
+      alvo.remove();
+      URL.revokeObjectURL(alvo.href);
+    } catch {
+      window.open(url, "_blank", "noopener");
+    } finally {
+      setADescarregar(null);
+    }
+  }
+
+  /*
+   * Todas de uma vez, em série com meio segundo de intervalo — o browser
+   * pergunta uma vez se autoriza vários downloads e o resto segue. Um zip
+   * exigiria uma biblioteca; para uma dúzia de fotos, isto chega.
+   */
+  async function descarregarTodas(urls: string[], pedidoId: number) {
+    for (let i = 0; i < urls.length; i++) {
+      await descarregarFoto(urls[i], `pedido-${pedidoId}-foto-${i + 1}`);
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
   const [showAcceptPrompt, setShowAcceptPrompt] = useState(false);
   const [showPedirInfo, setShowPedirInfo] = useState(false);
   const [pedirInfoText, setPedirInfoText] = useState("");
@@ -2472,7 +2518,22 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                     {/* Fotos */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-slate-900">Fotos e ficheiros</h3>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-base font-bold text-slate-900">Fotos e ficheiros</h3>
+                        {files.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => descarregarTodas(files, order.id)}
+                            disabled={aDescarregar != null}
+                            className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-50"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
+                            </svg>
+                            {aDescarregar != null ? "A descarregar…" : `Descarregar todas (${files.length})`}
+                          </button>
+                        )}
+                      </div>
                       {/* O cliente escolheu fotos e o upload falhou. Sem isto,
                           a equipa via "nenhuma foto" e o cliente jurava tê-las
                           enviado — e ninguém tinha razão nem prova. */}
@@ -2514,6 +2575,24 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                 {isImg ? (
                                   <>
                                     <img src={url} alt={`Ficheiro ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105 cursor-pointer" onClick={() => setLightbox(url)} />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        descarregarFoto(url, `pedido-${order.id}-foto-${i + 1}`);
+                                      }}
+                                      disabled={aDescarregar === url}
+                                      title="Descarregar esta foto"
+                                      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-slate-700 opacity-0 shadow transition hover:bg-white group-hover:opacity-100 disabled:opacity-60"
+                                    >
+                                      {aDescarregar === url ? (
+                                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                                      ) : (
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
+                                        </svg>
+                                      )}
+                                    </button>
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition cursor-pointer" onClick={() => setLightbox(url)}>
                                       <svg className="h-6 w-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
