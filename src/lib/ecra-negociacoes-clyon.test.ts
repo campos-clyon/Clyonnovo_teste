@@ -36,9 +36,10 @@ describe("o menu", () => {
 describe("o painel dividido", () => {
   it("é o MESMO componente com um modo, não uma cópia", () => {
     // Duas versões da mesma lógica divergiam como os dois rodapés divergiram.
+    // Depois da fusão dos ecrãs, o menu usa um modo só — "tudo" — mas o
+    // componente mantém os três: a secção antiga responde a links antigos.
     expect(PAINEL).toContain('mostrar?: "tudo" | "clyon" | "clientes"');
-    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="clyon" />');
-    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="clientes" />');
+    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
   });
 
   it("o registar pedido vive no ecrã da CLYON", () => {
