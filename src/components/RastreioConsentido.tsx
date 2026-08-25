@@ -9,6 +9,7 @@ import {
   EVENTO_CONSENTIMENTO,
   type CookiePreferences,
 } from "@/lib/cookie-consent";
+import { enderecoSemSegredos, temSegredoNoEndereco } from "@/lib/endereco-sem-segredos";
 
 /**
  * Os scripts de terceiros, e só depois de a pessoa dizer que sim.
@@ -37,6 +38,20 @@ import {
 
 const GOOGLE_ADS_ID = "AW-18221538324";
 
+/*
+ * O Google Analytics 4 — medição, e por isso debaixo da escolha "analytics".
+ *
+ * Entrou pela porta MANUAL, e não pela que o assistente do GA4 oferecia
+ * ("usar a tag do seu site"). Essa avisava, a vermelho, que as definições da
+ * tag do Google Ads seriam SUBSTITUÍDAS — e do outro lado dessa tag está uma
+ * acção de conversão a funcionar. Trocar conversões que já correm por um
+ * atalho de configuração não é troca que se faça.
+ *
+ * O ID de medição não é segredo nenhum: viaja no HTML de todas as páginas,
+ * como o do Ads. Fica aqui à vista, ao lado dele.
+ */
+const GA4_ID = "G-Q76WK4NFZL";
+
 export default function RastreioConsentido() {
   // Começa sempre a falso, mesmo que já haja consentimento guardado: no
   // servidor não há localStorage, e devolver outra coisa aqui dava uma
@@ -60,22 +75,69 @@ export default function RastreioConsentido() {
 
   if (!consentimento) return null;
 
+  /*
+   * NESTAS PÁGINAS NÃO ENTRA MEDIÇÃO NENHUMA.
+   *
+   * Seis rotas do site trazem o token dentro do endereço — é a credencial
+   * que abre o pedido. Tentou-se primeiro redigir o `page_location` que se
+   * dá ao gtag, e para o GA4 isso chega; para o Google Ads NÃO chega. Está
+   * visto no browser: o tag dele faz o pedido dele, lê o `location` do
+   * browser e manda o endereço verdadeiro na mesma.
+   *
+   * Por isso a regra aqui é a mais simples de todas — nestas páginas não se
+   * carrega o gtag. Perde-se a contagem de quem abre pedidos; não se perde a
+   * chave de nenhum.
+   */
+  const paginaComSegredo = temSegredoNoEndereco(window.location.pathname);
+
+  const querAds = consentimento.marketing && !paginaComSegredo;
+  const querGa4 = consentimento.analytics && !paginaComSegredo;
+
+  /*
+   * E MESMO NAS OUTRAS PÁGINAS, O QUE SE DIZ VAI LIMPO.
+   *
+   * Quem vem de um pedido para o site traz esse endereço no `referrer`, e o
+   * gtag manda-o. Aqui vai já sem o token. Ver `endereco-sem-segredos.ts`.
+   */
+  const daPagina = {
+    page_location: enderecoSemSegredos(window.location.href),
+    ...(document.referrer
+      ? { page_referrer: enderecoSemSegredos(document.referrer) }
+      : {}),
+  };
+  const oQueSeDiz = JSON.stringify(daPagina);
+
+  // A biblioteca é a mesma para os dois destinos: pede-se uma vez, com o id
+  // de quem estiver consentido, e depois configura-se cada um.
+  const idDeArranque = querAds ? GOOGLE_ADS_ID : GA4_ID;
+
   return (
     <>
-      {/* Google Ads e Tag Manager — marketing. */}
-      {consentimento.marketing && (
+      {/*
+        Google Ads (marketing) e Google Analytics 4 (analytics).
+
+        Os `id` dos <Script> mudam com o que está consentido de propósito: se
+        a pessoa alargar a escolha depois de já ter respondido, o React monta
+        um elemento novo e o destino que faltava entra. Com um id fixo, o
+        script não voltava a correr e a segunda escolha não valia nada.
+      */}
+      {(querAds || querGa4) && (
         <>
           <Script
-            id="gtag-src"
+            id={`gtag-src-${idDeArranque}`}
             strategy="lazyOnload"
-            src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${idDeArranque}`}
           />
-          <Script id="gtag-init" strategy="lazyOnload">
+          <Script
+            id={`gtag-init-${querAds ? "ads" : ""}${querGa4 ? "ga4" : ""}`}
+            strategy="lazyOnload"
+          >
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', '${GOOGLE_ADS_ID}');
+              ${querAds ? `gtag('config', '${GOOGLE_ADS_ID}', ${oQueSeDiz});` : ""}
+              ${querGa4 ? `gtag('config', '${GA4_ID}', ${oQueSeDiz});` : ""}
             `}
           </Script>
         </>
@@ -93,8 +155,11 @@ export default function RastreioConsentido() {
           medição. Fica debaixo da mesma escolha que o Analytics, pela mesma
           razão: o que se promete no banner e o que se faz têm de bater certo.
 
-          Os dados vão para /_vercel/speed-insights, no nosso domínio, por
-          isso a CSP não precisa de excepção nenhuma. */}
+          Os DADOS vão para /_vercel/speed-insights, no nosso domínio — mas o
+          SCRIPT vem de va.vercel-scripts.com, e isso a CSP tem mesmo de o
+          dizer. Estava aqui escrito que não precisava de excepção nenhuma, e
+          durante todo esse tempo o browser recusou os dois scripts em
+          silêncio. Ver a nota no next.config.ts. */}
       {consentimento.analytics && <SpeedInsights />}
     </>
   );

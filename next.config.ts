@@ -342,16 +342,47 @@ const nextConfig: NextConfig = {
         key: "Content-Security-Policy",
         value: [
           "default-src 'self'",
-          // Scripts: self + Next.js inline + Google Analytics/Tag Manager
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
+          /*
+            Scripts: self + Next.js inline + Google Analytics/Tag Manager +
+            Vercel.
+
+            O `va.vercel-scripts.com` faltava, e o site tem o Vercel Analytics
+            e o Speed Insights ligados desde sempre: o browser recusava os
+            dois scripts em toda a visita, com o erro só na consola de quem
+            abrisse as ferramentas. Medição a contar zero por causa de uma
+            linha de política — e o painel do Vercel a parecer um site sem
+            visitas. É de onde vêm os scripts; os dados continuam a ir para
+            /_vercel, no nosso domínio.
+          */
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://va.vercel-scripts.com",
           // Estilos: self + inline (necessário para Tailwind/shadcn)
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           // Fontes
           "font-src 'self' https://fonts.gstatic.com",
           // Imagens: self + blobs Vercel + Google + Storage Supabase (fotos dos pedidos da app)
-          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://*.supabase.co",
-          // Ligações de rede: self + APIs externas
-          "connect-src 'self' https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io",
+          // O www.google.com e o doubleclick são os pixéis de conversão do
+          // Google Ads — ver a nota no connect-src.
+          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://*.supabase.co https://www.google.com https://*.doubleclick.net https://www.googleadservices.com",
+          /*
+            Ligações de rede: self + APIs externas.
+
+            Os anfitriões do Analytics estavam em `script-src` mas NÃO aqui, e
+            o gtag carrega o script de um sítio e ENVIA a medição para outro:
+            sem esta linha o GA4 carregava, corria, e cada envio morria na
+            política — analítica ligada a mostrar zero, sem nada no ecrã a
+            dizer porquê. O `*.google-analytics.com` é dos pontos regionais
+            (region1, region2…) que o Google escolhe pela origem da visita.
+
+            O MESMO valia para o GOOGLE ADS, e há mais tempo: o tag está no
+            site desde sempre, com uma acção de conversão ligada à página de
+            orçamento de Lisboa, e TODOS os envios dele batiam nesta linha —
+            `www.google.com/ccm/collect` e `ad.doubleclick.net` recusados,
+            visita após visita. Ou seja: as conversões do Ads nunca chegaram
+            ao Google, e quem olhasse para a campanha via zero sem perceber
+            que a culpa era daqui. Estes anfitriões só entram em jogo com o
+            consentimento de "marketing" dado, que é o que o banner promete.
+          */
+          "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io",
           // Frames: nenhum (embeds externos não usados)
           "frame-src 'none'",
           "object-src 'none'",
