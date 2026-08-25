@@ -14,16 +14,21 @@ import crypto from "node:crypto";
  * negociação não sabe que o WhatsApp existe, como nunca soube que o browser
  * existia.
  *
- * PORQUE A API OFICIAL E NÃO UMA BIBLIOTECA "whatsapp-web"
+ * DOIS CAMINHOS PARA FORA, POR ESTA ORDEM:
  *
- * As bibliotecas que fingem ser um telemóvel violam os termos do WhatsApp e
- * acabam com o número banido — o número do NEGÓCIO, com as conversas dos
- * clientes lá dentro. A Cloud API é gratuita nas conversas de serviço e é
- * feita para isto.
+ * 1. A Cloud API da Meta, quando as quatro variáveis dela existem — é a via
+ *    oficial, com botões interactivos e sem risco para o número.
+ * 2. A PONTE do Winapp, quando só PONTE_WHATSAPP_SEGREDO existe: as mensagens
+ *    ficam na fila (whatsappFila) e o Winapp — que corre no PC com o WhatsApp
+ *    emparelhado via whatsapp-web.js — vem buscá-las e envia-as. Os botões
+ *    degradam para instruções SIM/NÃO em texto, porque esse canal não tem
+ *    botões. AVISO ASSUMIDO: o whatsapp-web.js viola os termos do WhatsApp e
+ *    o número pode ser banido; é o canal que a CLYON já usa hoje no Winapp, e
+ *    a decisão de o usar é do dono. No dia em que a Meta estiver configurada,
+ *    a via 1 passa a mandar sozinha — nada mais muda.
  *
- * FALHA FECHADA: sem as quatro variáveis de ambiente, tudo aqui devolve
- * false/erro sem lançar — o site funciona como antes, e o painel continua a
- * ser o caminho.
+ * FALHA FECHADA: sem nenhuma das duas, tudo aqui devolve false sem lançar —
+ * o site funciona como antes, e o painel continua a ser o caminho.
  */
 
 const API = "https://graph.facebook.com/v21.0";
@@ -35,6 +40,16 @@ export function whatsappConfigurado(): boolean {
       process.env.WHATSAPP_VERIFY_TOKEN &&
       process.env.WHATSAPP_APP_SECRET,
   );
+}
+
+/** A ponte do Winapp está combinada? (O segredo é o aperto de mão dela.) */
+export function ponteConfigurada(): boolean {
+  return Boolean(process.env.PONTE_WHATSAPP_SEGREDO);
+}
+
+/** Há ALGUM caminho para falar com o cliente por WhatsApp? */
+export function whatsappActivo(): boolean {
+  return whatsappConfigurado() || ponteConfigurada();
 }
 
 /** Normaliza um telefone para o formato da API: dígitos, com indicativo. */
@@ -72,12 +87,39 @@ async function enviar(corpo: Record<string, unknown>): Promise<boolean> {
   }
 }
 
+/** Deixa a mensagem na fila para o Winapp a vir buscar. */
+async function porNaFila(para: string, texto: string): Promise<boolean> {
+  try {
+    const { guardarNaFilaWhatsApp } = await import("@/lib/db");
+    await guardarNaFilaWhatsApp(telefoneParaWhatsApp(para), texto.slice(0, 4096));
+    return true;
+  } catch (e) {
+    console.error("[whatsapp] fila falhou", e);
+    return false;
+  }
+}
+
+/** O gesto do painel manda em tudo: desligado, bloqueado ou interrompido — cala. */
+async function autorizadoAFalarCom(para: string): Promise<boolean> {
+  try {
+    const { podeOWhatsAppFalarCom } = await import("@/lib/db");
+    return await podeOWhatsAppFalarCom(telefoneParaWhatsApp(para));
+  } catch {
+    return false;
+  }
+}
+
 export async function enviarTextoWhatsApp(para: string, texto: string): Promise<boolean> {
-  return enviar({
-    to: telefoneParaWhatsApp(para),
-    type: "text",
-    text: { body: texto.slice(0, 4096), preview_url: false },
-  });
+  if (!(await autorizadoAFalarCom(para))) return false;
+  if (whatsappConfigurado()) {
+    return enviar({
+      to: telefoneParaWhatsApp(para),
+      type: "text",
+      text: { body: texto.slice(0, 4096), preview_url: false },
+    });
+  }
+  if (ponteConfigurada()) return porNaFila(para, texto);
+  return false;
 }
 
 /**
@@ -93,20 +135,37 @@ export async function enviarBotoesWhatsApp(
   texto: string,
   botoes: Array<{ id: string; titulo: string }>,
 ): Promise<boolean> {
-  return enviar({
-    to: telefoneParaWhatsApp(para),
-    type: "interactive",
-    interactive: {
-      type: "button",
-      body: { text: texto.slice(0, 1024) },
-      action: {
-        buttons: botoes.slice(0, 3).map((b) => ({
-          type: "reply",
-          reply: { id: b.id.slice(0, 256), title: b.titulo.slice(0, 20) },
-        })),
+  if (!(await autorizadoAFalarCom(para))) return false;
+  if (whatsappConfigurado()) {
+    return enviar({
+      to: telefoneParaWhatsApp(para),
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: texto.slice(0, 1024) },
+        action: {
+          buttons: botoes.slice(0, 3).map((b) => ({
+            type: "reply",
+            reply: { id: b.id.slice(0, 256), title: b.titulo.slice(0, 20) },
+          })),
+        },
       },
-    },
-  });
+    });
+  }
+  if (ponteConfigurada()) {
+    // Pela ponte não há botões — o whatsapp-web não os tem. O botão vira a
+    // sua instrução em palavras, e o cérebro entende SIM e NÃO do outro lado.
+    const instrucoes = botoes
+      .slice(0, 3)
+      .map((b) => {
+        if (b.id.startsWith("ct:")) return `Para «${b.titulo}», responda SIM.`;
+        if (b.id.startsWith("rc:")) return `Para «${b.titulo}», responda NÃO.`;
+        return `— ${b.titulo}`;
+      })
+      .join("\n");
+    return porNaFila(para, `${texto}\n\n${instrucoes}`);
+  }
+  return false;
 }
 
 /**

@@ -328,7 +328,7 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
     // "aqui devo gerir todos os pedidos". Gerir em dois sítios é gerir mal.
     const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
-    expect(SHELL).toContain('"profissionais", "negociacoes_clyon", "levantamentos"');
+    expect(SHELL).toContain('"profissionais", "negociacoes_clyon", "whatsapp", "levantamentos"');
   });
 });
 

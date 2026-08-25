@@ -13,6 +13,7 @@ import {
 import ContasPanel from "@/components/admin/ContasPanel";
 import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
+import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
@@ -90,7 +91,8 @@ type AdminSection =
   | "negociacoes"
   | "levantamentos"
   | "testadores"
-  | "negociacoes_clyon";
+  | "negociacoes_clyon"
+  | "whatsapp";
 
 type Lead = {
   id: number;
@@ -219,6 +221,7 @@ const adminNavItems: Array<{
   { id: "levantamentos", icon: Wallet },
   { id: "testadores",    icon: FlaskConical },
   { id: "negociacoes_clyon", icon: Building2 },
+  { id: "whatsapp", icon: MessageCircle },
 ];
 
 /**
@@ -242,7 +245,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
   // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "whatsapp", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["testadores", "configs"] },
 ];
@@ -261,6 +264,7 @@ const sectionLabels: Record<AdminSection, string> = {
   levantamentos: "Levantamentos",
   testadores:    "Acesso aos testes",
   negociacoes_clyon: "Negociações",
+  whatsapp: "WhatsApp",
 };
 
 const siteModules = [
@@ -2904,6 +2908,23 @@ export default function ColaboradorAdminClient() {
                 </p>
               </div>
               <AdminNegociacoesPanel mostrar="tudo" />
+            </section>
+          )}
+
+          {activeSection === "whatsapp" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">WhatsApp da plataforma</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  O cérebro que fala com os clientes de telefone: propostas, fechos e
+                  datas. Aqui desliga-se tudo com um gesto, entrega-se uma conversa a
+                  uma pessoa, e bloqueiam-se os contactos que não são clientes.
+                </p>
+              </div>
+              <AdminWhatsAppPanel />
             </section>
           )}
 

@@ -50,7 +50,7 @@ function propostasDe(json: string | null): Proposta[] {
 }
 
 /** Os pedidos activos deste número — comparados pelos últimos 9 dígitos. */
-async function pedidosDoTelefone(telefone: string): Promise<number[]> {
+export async function pedidosDoTelefone(telefone: string): Promise<number[]> {
   const pool = await getPool();
   if (!pool) return [];
   const digitos = telefoneParaWhatsApp(telefone).slice(-9);
@@ -105,6 +105,114 @@ async function registarAccao(
   });
 }
 
+/**
+ * Fechar pelo cliente: as duas metades do aperto de mão — aceitar o valor
+ * pendente (se o houver) e contratar. É o mesmo caminho do botão «Fechar» e
+ * da palavra SIM: um só corpo, para nunca haver dois comportamentos.
+ */
+async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
+  const agora = new Date();
+  let estado = alvo.estado;
+  const pendenteDoPro = estado.propostas.some(
+    (p) => p.estado === "pendente" && p.por === "profissional",
+  );
+  if (pendenteDoPro) {
+    const r = aceitar(estado, "cliente", agora);
+    if (!r.ok) {
+      await enviarTextoWhatsApp(telefone, `Não deu para fechar: ${r.erro}`);
+      return;
+    }
+    estado = r.negociacao;
+  }
+  const r2 = contratar(estado, agora);
+  if (!r2.ok) {
+    await enviarTextoWhatsApp(telefone, `Não deu para fechar: ${r2.erro}`);
+    return;
+  }
+  await gravarNegociacao(alvo.negociacaoId, {
+    estado: r2.negociacao.estado,
+    valorAcordado: r2.negociacao.valorAcordado ?? null,
+    propostasJson: JSON.stringify(r2.negociacao.propostas),
+  });
+  const encerradas = await encerrarOutrasNegociacoes(alvo.pedidoId, alvo.negociacaoId);
+  await registarAccao(
+    alvo.pedidoId,
+    alvo.negociacaoId,
+    `Cliente contratou ${alvo.profissionalNome} por WhatsApp — negociação #${alvo.negociacaoId}.` +
+      (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
+  );
+  const valor = r2.negociacao.valorAcordado ?? 0;
+  await enviarTextoWhatsApp(
+    telefone,
+    `Fechado com ${alvo.profissionalNome} por ${euros(valor)} (total com taxa CLYON: ${euros(quantoOClientePaga(valor))}).\n\n` +
+      `O profissional recebeu a morada e o seu contacto. Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`,
+  );
+}
+
+/** Recusar pelo cliente — o corpo do botão «Recusar» e da palavra NÃO. */
+async function recusarPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
+  const r = desistir(alvo.estado, "cliente", new Date());
+  if (!r.ok) {
+    await enviarTextoWhatsApp(telefone, `Não deu para recusar: ${r.erro}`);
+    return;
+  }
+  await gravarNegociacao(alvo.negociacaoId, {
+    estado: r.negociacao.estado,
+    valorAcordado: r.negociacao.valorAcordado ?? null,
+    propostasJson: JSON.stringify(r.negociacao.propostas),
+  });
+  await registarAccao(
+    alvo.pedidoId,
+    alvo.negociacaoId,
+    `Cliente recusou a proposta de ${alvo.profissionalNome} por WhatsApp — negociação #${alvo.negociacaoId}.`,
+  );
+  await enviarTextoWhatsApp(
+    telefone,
+    `Certo — a proposta de ${alvo.profissionalNome} foi recusada. As outras continuam de pé.`,
+  );
+}
+
+type AlvoComValor = Alvo & { valorNaMesa: number | null };
+
+/**
+ * As negociações onde um SIM ou um NÃO fazem sentido AGORA: proposta do
+ * profissional pendente, ou aceitação à espera de fecho. Cada uma com o
+ * valor em cima da mesa — é por ele que se desambigua quando há várias.
+ */
+async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
+  const lista: AlvoComValor[] = [];
+  for (const pedidoId of pedidos) {
+    const linhas = await negociacoesDoPedido(pedidoId);
+    for (const n of linhas) {
+      const propostas = propostasDe(n.propostasJson);
+      const invertidas = [...propostas].reverse();
+      const pendenteDoPro = propostas.some(
+        (p) => p.estado === "pendente" && p.por === "profissional",
+      );
+      if (!pendenteDoPro && n.estado !== "aguarda_contratacao") continue;
+      const valorNaMesa =
+        n.valorAcordado != null
+          ? Number(n.valorAcordado)
+          : (invertidas.find((p) => p.estado === "pendente" && p.por === "profissional")?.valor ??
+            invertidas.find((p) => p.estado === "aceite")?.valor ??
+            invertidas[0]?.valor ??
+            null);
+      lista.push({
+        pedidoId,
+        negociacaoId: Number(n.id),
+        profissionalNome: n.profissionalNome,
+        estado: {
+          estado: n.estado as Negociacao["estado"],
+          valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+          propostas,
+        },
+        valorNaMesa,
+      });
+    }
+  }
+  return lista;
+}
+
 /** O "ecrã" — o estado das negociações dele, reescrito em texto. */
 async function ecraDoPedido(pedidoId: number): Promise<string> {
   const pedido = await getSimulatorOrderById(pedidoId);
@@ -145,6 +253,11 @@ export async function tratarMensagemDoCliente(
   telefone: string,
   conteudo: { tipo: "botao"; id: string } | { tipo: "texto"; texto: string },
 ): Promise<void> {
+  // O painel manda primeiro: desligado, bloqueado ou entregue a uma pessoa,
+  // o cérebro não diz UMA palavra — nem sequer a de "não o conheço".
+  const { podeOWhatsAppFalarCom } = await import("@/lib/db");
+  if (!(await podeOWhatsAppFalarCom(telefone))) return;
+
   const pedidos = await pedidosDoTelefone(telefone);
   if (pedidos.length === 0) {
     await enviarTextoWhatsApp(
@@ -168,73 +281,78 @@ export async function tratarMensagemDoCliente(
     const alvo = await alvoDe(pedidoId, negociacaoId);
     if (!alvo) return;
 
-    const agora = new Date();
-    if (accao === "ct") {
-      // "Contratar" no WhatsApp quer dizer as duas metades do aperto de mão:
-      // aceitar o valor pendente (se o houver) e fechar.
-      let estado = alvo.estado;
-      const pendenteDoPro = estado.propostas.some(
-        (p) => p.estado === "pendente" && p.por === "profissional",
-      );
-      if (pendenteDoPro) {
-        const r = aceitar(estado, "cliente", agora);
-        if (!r.ok) {
-          await enviarTextoWhatsApp(telefone, `Não deu para fechar: ${r.erro}`);
-          return;
-        }
-        estado = r.negociacao;
-      }
-      const r2 = contratar(estado, agora);
-      if (!r2.ok) {
-        await enviarTextoWhatsApp(telefone, `Não deu para fechar: ${r2.erro}`);
-        return;
-      }
-      await gravarNegociacao(negociacaoId, {
-        estado: r2.negociacao.estado,
-        valorAcordado: r2.negociacao.valorAcordado ?? null,
-        propostasJson: JSON.stringify(r2.negociacao.propostas),
-      });
-      const encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
-      await registarAccao(
-        pedidoId,
-        negociacaoId,
-        `Cliente contratou ${alvo.profissionalNome} por WhatsApp — negociação #${negociacaoId}.` +
-          (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
-      );
-      const valor = r2.negociacao.valorAcordado ?? 0;
-      await enviarTextoWhatsApp(
-        telefone,
-        `Fechado com ${alvo.profissionalNome} por ${euros(valor)} (total com taxa CLYON: ${euros(quantoOClientePaga(valor))}).\n\n` +
-          `O profissional recebeu a morada e o seu contacto. Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`,
-      );
-      return;
-    }
-
-    // rc — recusar esta proposta
-    const r = desistir(alvo.estado, "cliente", agora);
-    if (!r.ok) {
-      await enviarTextoWhatsApp(telefone, `Não deu para recusar: ${r.erro}`);
-      return;
-    }
-    await gravarNegociacao(negociacaoId, {
-      estado: r.negociacao.estado,
-      valorAcordado: r.negociacao.valorAcordado ?? null,
-      propostasJson: JSON.stringify(r.negociacao.propostas),
-    });
-    await registarAccao(
-      pedidoId,
-      negociacaoId,
-      `Cliente recusou a proposta de ${alvo.profissionalNome} por WhatsApp — negociação #${negociacaoId}.`,
-    );
-    await enviarTextoWhatsApp(
-      telefone,
-      `Certo — a proposta de ${alvo.profissionalNome} foi recusada. As outras continuam de pé.`,
-    );
+    if (accao === "ct") await fecharPeloCliente(telefone, alvo);
+    else await recusarPeloCliente(telefone, alvo);
     return;
   }
 
-  // ── Texto livre: uma data, um valor, ou um pedido de ponto de situação ──
+  // ── Texto livre: sim/não, uma data, um valor, ou um ponto de situação ───
   const texto = conteudo.texto.trim();
+
+  // SIM e NÃO — o caminho de quem fala pela ponte, onde não há botões. Sem
+  // acentos nem pontuação: "Não!" e "nao" têm de ser a mesma palavra.
+  const chave = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[!.,…]+$/, "")
+    .trim();
+  const simSo = /^(sim|fechar|aceito|aceitar|pode fechar)$/.test(chave);
+  const naoSo = /^(nao|recusar|recuso|nao quero)$/.test(chave);
+  const simValor = chave.match(/^(?:sim|fechar|aceito|aceitar)\s+(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/);
+  const naoValor = chave.match(/^(?:nao|recusar|recuso)\s+(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/);
+
+  if (simSo || naoSo || simValor || naoValor) {
+    const alvos = await alvosAccionaveis(pedidos);
+    const eDeFechar = simSo || Boolean(simValor);
+    const valorDito = simValor ?? naoValor;
+    const valorPedido = valorDito ? Number(valorDito[1].replace(",", ".")) : null;
+
+    const listaDeAlvos = () =>
+      alvos
+        .map(
+          (a) =>
+            `• ${a.profissionalNome}: ${a.valorNaMesa != null ? euros(a.valorNaMesa) : "sem valor ainda"}`,
+        )
+        .join("\n");
+
+    let alvo: AlvoComValor | undefined;
+    if (valorPedido != null) {
+      alvo = alvos.find(
+        (a) => a.valorNaMesa != null && Math.abs(a.valorNaMesa - valorPedido) < 0.005,
+      );
+      if (!alvo && !eDeFechar) {
+        await enviarTextoWhatsApp(
+          telefone,
+          `Não há nenhuma proposta de ${euros(valorPedido)} em cima da mesa.` +
+            (alvos.length > 0 ? `\n${listaDeAlvos()}` : ""),
+        );
+        return;
+      }
+      // "aceito 300" sem 300 na mesa segue para baixo e vira contraproposta
+      // de 300 — que é o que a frase quer dizer nesse caso.
+    } else if (alvos.length === 1) {
+      alvo = alvos[0];
+    } else if (alvos.length === 0) {
+      await enviarTextoWhatsApp(telefone, await ecraDoPedido(pedidos[0]));
+      return;
+    } else {
+      // Várias em cima da mesa: um SIM sozinho fecharia a que ele não queria.
+      const exemplo = alvos[0].valorNaMesa != null ? Math.round(alvos[0].valorNaMesa) : 300;
+      await enviarTextoWhatsApp(
+        telefone,
+        `Tem ${alvos.length} propostas em cima da mesa:\n${listaDeAlvos()}\n\n` +
+          `Diga qual pelo valor — por exemplo: ${eDeFechar ? "fechar" : "recusar"} ${exemplo}`,
+      );
+      return;
+    }
+
+    if (alvo) {
+      if (eDeFechar) await fecharPeloCliente(telefone, alvo);
+      else await recusarPeloCliente(telefone, alvo);
+      return;
+    }
+  }
 
   // Data: dd/mm hh:mm (ano opcional). Só faz sentido com trabalho fechado.
   const data = texto.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?\s+(\d{1,2})[:hH](\d{2})?$/);
@@ -277,7 +395,7 @@ export async function tratarMensagemDoCliente(
   }
 
   // Valor: contraproposta. Aplica-se à negociação mais recente que a espera.
-  const valorTexto = texto.match(/^(?:aceito\s+|proponho\s+|contraproponho\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*€?$/i);
+  const valorTexto = texto.match(/^(?:aceito\s+|aceitar\s+|proponho\s+|contraproponho\s+|fechar\s+|sim\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*€?$/i);
   if (valorTexto) {
     const valor = Number(`${valorTexto[1]}.${valorTexto[2] ?? "0"}`);
     for (const pedidoId of pedidos) {

@@ -3810,6 +3810,265 @@ export async function getPushSubscriptionsByEmail(email: string): Promise<Stored
   return rows;
 }
 
+// ── A fila do WhatsApp: o que o site quer dizer, à espera da ponte ──────────
+//
+// O servidor não chega ao WhatsApp do Winapp — é o Winapp que vem cá. Cada
+// mensagem que o site quer mandar fica aqui; a ponte vem buscá-las de poucos
+// em poucos segundos, envia-as pelo WhatsApp emparelhado, e confirma. Uma
+// linha só se apaga por confirmação: se o Winapp cair entre buscar e enviar,
+// a mensagem volta a sair na ronda seguinte em vez de se perder.
+let filaWhatsAppReady = false;
+async function ensureFilaWhatsAppTable() {
+  if (filaWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappFila (
+      id        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone  VARCHAR(32) NOT NULL,
+      texto     TEXT NOT NULL,
+      criadoEm  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      enviadoEm DATETIME NULL,
+      KEY idx_por_enviar (enviadoEm, criadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  filaWhatsAppReady = true;
+}
+
+export async function guardarNaFilaWhatsApp(telefone: string, texto: string): Promise<void> {
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute("INSERT INTO whatsappFila (telefone, texto) VALUES (?, ?)", [
+    telefone,
+    texto,
+  ]);
+}
+
+export interface MensagemNaFilaWhatsApp {
+  id: number;
+  telefone: string;
+  texto: string;
+}
+
+export async function filaWhatsAppPorEnviar(limite = 20): Promise<MensagemNaFilaWhatsApp[]> {
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  // Mais velhas primeiro: numa conversa, a ordem é significado.
+  const [rows] = (await pool.execute(
+    `SELECT id, telefone, texto FROM whatsappFila
+      WHERE enviadoEm IS NULL
+      ORDER BY criadoEm ASC, id ASC
+      LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
+  )) as [Array<{ id: number; telefone: string; texto: string }>, unknown];
+  return rows.map((r) => ({ id: Number(r.id), telefone: r.telefone, texto: r.texto }));
+}
+
+// ── Números bloqueados no WhatsApp da plataforma ────────────────────────────
+//
+// O mesmo gesto do ecrã "Bloqueados" do Winapp, mas para o cérebro DAQUI: um
+// número bloqueado não recebe nada do site (nem propostas, nem respostas) e o
+// que ele escrever é ignorado. Serve para os contactos pessoais e para quem
+// o dono decidir que o assunto não é com o site. Compara-se pelos últimos 9
+// dígitos, como no resto do WhatsApp da plataforma.
+let bloqueadosWhatsAppReady = false;
+async function ensureWhatsappBloqueadosTable() {
+  if (bloqueadosWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappBloqueados (
+      id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone  VARCHAR(32) NOT NULL,
+      nota      VARCHAR(255) NULL,
+      criadoEm  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  bloqueadosWhatsAppReady = true;
+}
+
+function soDigitos(telefone: string): string {
+  return telefone.replace(/\D/g, "");
+}
+
+export async function bloquearNumeroWhatsApp(telefone: string, nota?: string): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappBloqueadosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO whatsappBloqueados (telefone, nota) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE nota = VALUES(nota)`,
+    [digitos, nota?.trim() || null],
+  );
+}
+
+export async function desbloquearNumeroWhatsApp(telefone: string): Promise<void> {
+  await ensureWhatsappBloqueadosTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "DELETE FROM whatsappBloqueados WHERE RIGHT(telefone, 9) = RIGHT(?, 9)",
+    [soDigitos(telefone)],
+  );
+}
+
+export async function listarNumerosBloqueadosWhatsApp(): Promise<
+  Array<{ telefone: string; nota: string | null; criadoEm: string }>
+> {
+  await ensureWhatsappBloqueadosTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT telefone, nota, criadoEm FROM whatsappBloqueados ORDER BY criadoEm DESC",
+  )) as [Array<{ telefone: string; nota: string | null; criadoEm: string }>, unknown];
+  return rows;
+}
+
+export async function numeroBloqueadoWhatsApp(telefone: string): Promise<boolean> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return false;
+  await ensureWhatsappBloqueadosTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [rows] = (await pool.execute(
+    "SELECT 1 FROM whatsappBloqueados WHERE RIGHT(telefone, 9) = RIGHT(?, 9) LIMIT 1",
+    [digitos],
+  )) as [unknown[], unknown];
+  return rows.length > 0;
+}
+
+// ── Conversas interrompidas e o interruptor geral ───────────────────────────
+//
+// Interromper é o gesto do meio: o número continua a ser cliente (nada de
+// bloqueio), mas quem fala agora é uma PESSOA — o cérebro cala-se até alguém
+// carregar em "Devolver ao site". É posto pelo backoffice, ou pelo próprio
+// Winapp quando o dono responde à mão no WhatsApp: responder à mão é a forma
+// mais natural de dizer "esta é minha".
+//
+// O interruptor geral corta tudo de uma vez. Sem linha na tabela está LIGADO:
+// o cérebro nasceu a funcionar e desligar é a excepção — e quem o desliga vê
+// no painel um interruptor vermelho, não uma ausência.
+let whatsappEstadoReady = false;
+async function ensureWhatsappEstadoTables() {
+  if (whatsappEstadoReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappInterrompidos (
+      id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone  VARCHAR(32) NOT NULL,
+      motivo    VARCHAR(255) NULL,
+      criadoEm  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappEstado (
+      id            TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+      ligado        TINYINT(1) NOT NULL DEFAULT 1,
+      actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  whatsappEstadoReady = true;
+}
+
+export async function interromperNumeroWhatsApp(telefone: string, motivo?: string): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO whatsappInterrompidos (telefone, motivo) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE motivo = VALUES(motivo)`,
+    [digitos, motivo?.trim() || null],
+  );
+}
+
+export async function retomarNumeroWhatsApp(telefone: string): Promise<void> {
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "DELETE FROM whatsappInterrompidos WHERE RIGHT(telefone, 9) = RIGHT(?, 9)",
+    [soDigitos(telefone)],
+  );
+}
+
+export async function listarNumerosInterrompidosWhatsApp(): Promise<
+  Array<{ telefone: string; motivo: string | null; criadoEm: string }>
+> {
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT telefone, motivo, criadoEm FROM whatsappInterrompidos ORDER BY criadoEm DESC",
+  )) as [Array<{ telefone: string; motivo: string | null; criadoEm: string }>, unknown];
+  return rows;
+}
+
+export async function numeroInterrompidoWhatsApp(telefone: string): Promise<boolean> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return false;
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [rows] = (await pool.execute(
+    "SELECT 1 FROM whatsappInterrompidos WHERE RIGHT(telefone, 9) = RIGHT(?, 9) LIMIT 1",
+    [digitos],
+  )) as [unknown[], unknown];
+  return rows.length > 0;
+}
+
+export async function whatsappLigado(): Promise<boolean> {
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [rows] = (await pool.execute(
+    "SELECT ligado FROM whatsappEstado WHERE id = 1",
+  )) as [Array<{ ligado: number }>, unknown];
+  return rows.length === 0 || Number(rows[0].ligado) === 1;
+}
+
+export async function definirWhatsappLigado(ligado: boolean): Promise<void> {
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO whatsappEstado (id, ligado) VALUES (1, ?)
+     ON DUPLICATE KEY UPDATE ligado = VALUES(ligado)`,
+    [ligado ? 1 : 0],
+  );
+}
+
+/**
+ * A pergunta que TODO o envio e TODA a resposta fazem primeiro: o cérebro
+ * pode falar com este número? Três nãos possíveis — o interruptor geral, o
+ * bloqueio, a conversa entregue a uma pessoa. Qualquer um deles cala tudo.
+ */
+export async function podeOWhatsAppFalarCom(telefone: string): Promise<boolean> {
+  if (!(await whatsappLigado())) return false;
+  if (await numeroBloqueadoWhatsApp(telefone)) return false;
+  if (await numeroInterrompidoWhatsApp(telefone)) return false;
+  return true;
+}
+
+export async function marcarFilaWhatsAppEnviadas(ids: number[]): Promise<void> {
+  const limpos = ids.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n > 0);
+  if (limpos.length === 0) return;
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `UPDATE whatsappFila SET enviadoEm = NOW() WHERE id IN (${limpos.map(() => "?").join(",")})`,
+    limpos,
+  );
+}
+
 export async function countSimulatorOrdersByStatus(): Promise<Record<string, number>> {
   try {
     await ensureSimulatorOrdersTable();

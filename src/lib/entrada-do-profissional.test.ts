@@ -67,10 +67,19 @@ describe("a sessão do profissional vale como passagem", () => {
     // A ordem importa: o 404 só sai DEPOIS de se tentar a conta.
     const bloco = MIDDLEWARE.slice(
       MIDDLEWARE.indexOf("const sabeOEndereco"),
-      MIDDLEWARE.indexOf("A chave passa a cookie"),
+      MIDDLEWARE.indexOf("Proteger o backoffice"),
     );
     expect(bloco).toContain("temSessaoDeProfissional(request)");
     expect(bloco).toContain("!precisaDeTestador");
+  });
+
+  it("a chave sai do endereço mesmo nas páginas abertas — o link antigo fica limpo", () => {
+    // O tira-chave corre ANTES do portão: um ?chave= válido vira cookie e o
+    // endereço redirecciona limpo, esteja a página aberta ou fechada.
+    const posicaoStrip = MIDDLEWARE.indexOf('searchParams.delete("chave")');
+    const posicaoPortao = MIDDLEWARE.indexOf("!portaAberta(nextUrl.pathname)");
+    expect(posicaoStrip).toBeGreaterThan(-1);
+    expect(posicaoStrip).toBeLessThan(posicaoPortao);
   });
 
   it("a conta não abre a camada do testador — só a da chave", () => {

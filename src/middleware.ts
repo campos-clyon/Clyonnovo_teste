@@ -195,26 +195,15 @@ export async function middleware(request: NextRequest) {
   const precisaDeTestador = exigeTestador(nextUrl.pathname);
   const precisaDeChave = precisaDeTestador || exigeChave(nextUrl.pathname);
 
-  if (precisaDeChave && !portaAberta(nextUrl.pathname)) {
+  // A chave passa a cookie e sai do endereço — senão viaja em cada partilha
+  // de ecrã, fica no histórico e aparece no cabeçalho Referer de tudo o que
+  // a página carregue. Fora do portão de propósito: o link antigo com
+  // ?chave= aponta para a página de entrar, que hoje é ABERTA — sem isto, a
+  // chave ficava pendurada na barra de endereço de quem o abrisse. Só se
+  // guarda uma chave que CONFERE: gravar o que viesse deixava um
+  // `?chave=errada` pisar um cookie válido.
+  if (precisaDeChave) {
     const chaveNoEndereco = nextUrl.searchParams.get("chave");
-    const chaveNoCookie = request.cookies.get(COOKIE_CHAVE_MVP)?.value;
-    const sabeOEndereco = chaveConfere(chaveNoEndereco) || chaveConfere(chaveNoCookie);
-
-    if (!sabeOEndereco) {
-      // A conta do profissional vale como passagem na camada da chave: quem
-      // acabou de provar quem é com as credenciais DELE já mostrou mais do
-      // que a chave partilhada mostra. Sem isto, o login aberto autenticava
-      // e o painel respondia 404 logo a seguir — entrava-se para lado nenhum.
-      const entraPelaConta = !precisaDeTestador && (await temSessaoDeProfissional(request));
-      if (!entraPelaConta) {
-        return new NextResponse(null, { status: 404 });
-      }
-    }
-
-    // A chave passa a cookie e sai do endereço — senão viaja em cada partilha
-    // de ecrã, fica no histórico e aparece no cabeçalho Referer de tudo o que
-    // a página carregue. Só se guarda uma chave que CONFERE: gravar o que
-    // vier no endereço deixava um `?chave=errada` pisar um cookie válido.
     if (chaveNoEndereco && chaveConfere(chaveNoEndereco)) {
       const limpo = new URL(request.url);
       limpo.searchParams.delete("chave");
@@ -227,6 +216,22 @@ export async function middleware(request: NextRequest) {
         maxAge: 30 * 24 * 60 * 60,
       });
       return resposta;
+    }
+  }
+
+  if (precisaDeChave && !portaAberta(nextUrl.pathname)) {
+    const chaveNoCookie = request.cookies.get(COOKIE_CHAVE_MVP)?.value;
+    const sabeOEndereco = chaveConfere(chaveNoCookie);
+
+    if (!sabeOEndereco) {
+      // A conta do profissional vale como passagem na camada da chave: quem
+      // acabou de provar quem é com as credenciais DELE já mostrou mais do
+      // que a chave partilhada mostra. Sem isto, o login aberto autenticava
+      // e o painel respondia 404 logo a seguir — entrava-se para lado nenhum.
+      const entraPelaConta = !precisaDeTestador && (await temSessaoDeProfissional(request));
+      if (!entraPelaConta) {
+        return new NextResponse(null, { status: 404 });
+      }
     }
 
     const temSessao =

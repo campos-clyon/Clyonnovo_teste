@@ -20,7 +20,7 @@ describe("o menu", () => {
     // "negociacoes" saiu do menu quando os dois ecrãs se fundiram num só —
     // a secção continua a responder a links antigos, mas o menu tem UMA porta.
     expect(SHELL).toMatch(
-      /Plataforma", itens: \["profissionais", "negociacoes_clyon", "levantamentos"\]/,
+      /Plataforma", itens: \["profissionais", "negociacoes_clyon", "whatsapp", "levantamentos"\]/,
     );
     expect(SHELL).toMatch(/Gerir", itens: \["testadores", "configs"\]/);
   });
