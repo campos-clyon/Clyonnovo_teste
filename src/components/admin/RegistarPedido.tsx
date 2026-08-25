@@ -303,12 +303,12 @@ export default function RegistarPedido({
   }
 
   return (
-    {/*
-      Fundo OPACO, e não o lavado translucido de antes. Este formulário passou
-      a abrir por cima da mesa de pedidos, e com 10% de opacidade lia-se a
-      mesa através dos campos — um formulário onde o fundo fala mais alto que
-      o texto. A legibilidade não pode depender do que está por trás.
-    */}
+    /*
+     * Fundo OPACO, e não o lavado translúcido de antes. Este formulário
+     * passou a abrir por cima da mesa de pedidos, e com 10% de opacidade
+     * lia-se a mesa através dos campos. A legibilidade não pode depender do
+     * que está por trás.
+     */
     <div className="mb-6 rounded-2xl border border-cyan-900/60 bg-slate-950 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
