@@ -140,10 +140,20 @@ function exigeChave(caminho: string): boolean {
  * pô-los atrás do portão obrigava o cliente de teste a ter conta — deixávamos
  * de estar a testar o fluxo real, que é um cliente sem conta nenhuma a abrir o
  * link que lhe chegou por email.
+ *
+ * E a PÁGINA DE ENTRADA do profissional, porque as credenciais dele SÃO o
+ * portão. Com ela atrás da chave, o link que se dava a um profissional era
+ * `/profissionais/entrar?chave=vUyd...` — impossível de ditar ao telefone e
+ * partido ao fim de 30 dias, quando o cookie da chave expirava no telemóvel
+ * dele. Agora o endereço é só `clyon.pt/profissionais/login`. O que isto
+ * expõe ao público é um formulário de login sem indexação; tudo o resto do
+ * MVP continua a responder 404.
  */
-function abertoPorToken(caminho: string): boolean {
+function portaAberta(caminho: string): boolean {
   return caminho.startsWith("/profissionais/pedidos/") ||
-    caminho.startsWith("/profissionais/definir-senha/");
+    caminho.startsWith("/profissionais/definir-senha/") ||
+    caminho === "/profissionais/entrar" ||
+    caminho === "/profissionais/login"
 }
 
 export async function middleware(request: NextRequest) {
@@ -175,22 +185,37 @@ export async function middleware(request: NextRequest) {
   // Duas fechaduras. A chave no endereço diz que a pessoa sabe onde é; as
   // credenciais dizem quem é. Sem a primeira, responde-se 404: um 403
   // confirmaria a quem anda a sondar que ali existe qualquer coisa.
+  // O endereço curto que se dita ao telefone. "login" em vez de "entrar"
+  // porque é a palavra que toda a gente reconhece num endereço — o site por
+  // dentro continua a dizer "entrar".
+  if (nextUrl.pathname === "/profissionais/login") {
+    return NextResponse.redirect(new URL("/profissionais/entrar", request.url), 301);
+  }
+
   const precisaDeTestador = exigeTestador(nextUrl.pathname);
   const precisaDeChave = precisaDeTestador || exigeChave(nextUrl.pathname);
 
-  if (precisaDeChave && !abertoPorToken(nextUrl.pathname)) {
+  if (precisaDeChave && !portaAberta(nextUrl.pathname)) {
     const chaveNoEndereco = nextUrl.searchParams.get("chave");
     const chaveNoCookie = request.cookies.get(COOKIE_CHAVE_MVP)?.value;
     const sabeOEndereco = chaveConfere(chaveNoEndereco) || chaveConfere(chaveNoCookie);
 
     if (!sabeOEndereco) {
-      return new NextResponse(null, { status: 404 });
+      // A conta do profissional vale como passagem na camada da chave: quem
+      // acabou de provar quem é com as credenciais DELE já mostrou mais do
+      // que a chave partilhada mostra. Sem isto, o login aberto autenticava
+      // e o painel respondia 404 logo a seguir — entrava-se para lado nenhum.
+      const entraPelaConta = !precisaDeTestador && (await temSessaoDeProfissional(request));
+      if (!entraPelaConta) {
+        return new NextResponse(null, { status: 404 });
+      }
     }
 
     // A chave passa a cookie e sai do endereço — senão viaja em cada partilha
     // de ecrã, fica no histórico e aparece no cabeçalho Referer de tudo o que
-    // a página carregue.
-    if (chaveNoEndereco) {
+    // a página carregue. Só se guarda uma chave que CONFERE: gravar o que
+    // vier no endereço deixava um `?chave=errada` pisar um cookie válido.
+    if (chaveNoEndereco && chaveConfere(chaveNoEndereco)) {
       const limpo = new URL(request.url);
       limpo.searchParams.delete("chave");
       const resposta = NextResponse.redirect(limpo);

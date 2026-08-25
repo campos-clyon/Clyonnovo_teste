@@ -18,6 +18,10 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
   const [visivel, setVisivel] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
+  // O caso mais comum de um 403 aqui é a própria pessoa a reabrir o email
+  // DEPOIS de já ter criado a palavra-passe — o token é de uso único. Antes
+  // levava "Link inválido." e ficava sem saída; agora leva-a para o login.
+  const [jaUsado, setJaUsado] = useState(false);
 
   const curta = palavraPasse.length > 0 && palavraPasse.length < MINIMO_DA_PALAVRA_PASSE;
 
@@ -34,6 +38,7 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível guardar.");
+        setJaUsado(res.status === 403);
         return;
       }
       // Já está autenticado — a rota devolveu o cookie de sessão.
@@ -97,9 +102,17 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
           </div>
 
           {erro && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {erro}
-            </p>
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p>{erro}</p>
+              {jaUsado && (
+                <a
+                  href="/profissionais/entrar"
+                  className="mt-2 inline-block font-semibold text-cyan-700 underline underline-offset-4"
+                >
+                  Já criou a palavra-passe? Entre aqui
+                </a>
+              )}
+            </div>
           )}
 
           <button

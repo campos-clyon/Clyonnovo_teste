@@ -190,8 +190,8 @@ export default function AdminConvitesPanel() {
             </button>
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Para quem já tem conta e perdeu o email. Abre uma vez e aquele telemóvel
-            fica autorizado 30 dias.
+            Para quem já tem conta. Curto e sem chave — dá para ditar ao telefone
+            e não expira.
           </p>
         </section>
       )}

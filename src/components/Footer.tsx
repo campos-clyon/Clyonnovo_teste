@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building, ShieldCheck } from "lucide-react";
+import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building, ShieldCheck, Wrench } from "lucide-react";
 
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -106,6 +106,19 @@ export default function Footer() {
       >
         <ArrowRight className="h-4 w-4 shrink-0 text-marca" aria-hidden="true" />
         Pedir orçamento
+      </Link>
+      {/*
+        A porta dos profissionais. É a única linha do site que não fala com o
+        cliente — leva quem trabalha connosco direto ao login, sem chave no
+        endereço. O resto da plataforma continua fechado ao público.
+      */}
+      <Link
+        href="/profissionais/entrar"
+        rel="nofollow"
+        className="group flex min-h-[44px] items-center gap-3 rounded-lg bg-slate-800 px-3.5 py-3 text-sm text-white transition-colors hover:bg-slate-700"
+      >
+        <Wrench className="h-4 w-4 shrink-0 text-marca" aria-hidden="true" />
+        Sou profissional
       </Link>
     </div>
   );

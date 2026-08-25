@@ -40,10 +40,11 @@ export async function GET(req: NextRequest) {
     const linhas = await listarConvites();
     const agora = Date.now();
     return NextResponse.json({
-      // O endereço por onde um profissional entra na conta dele. Vai com a
-      // chave lá dentro porque, enquanto o MVP estiver fechado, sem ela dá 404
-      // — e quem o partilha não tem de se lembrar de a colar à mão.
-      linkDeEntrada: comChave(`${urlDeAccaoDoPedido(req.headers)}/profissionais/entrar`),
+      // O endereço por onde um profissional entra na conta dele. Curto e sem
+      // chave: a página de login está fora do portão do MVP (as credenciais
+      // DELE são o portão), por isso dá para ditar ao telefone e não parte
+      // ao fim de 30 dias como o link com a chave partia.
+      linkDeEntrada: `${urlDeAccaoDoPedido(req.headers)}/profissionais/login`,
       convites: linhas.map((c) => ({
         id: c.id,
         nome: c.nome,
