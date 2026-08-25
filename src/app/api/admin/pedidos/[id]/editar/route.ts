@@ -184,6 +184,9 @@ export async function POST(
     return NextResponse.json({
       ok: true,
       id: pedidoId,
+      // O enviar do editor usa-o como valor de partida; sem ele a promoção
+      // caia na estimativa mesmo quando o cliente disse quanto queria pagar.
+      valorDePartida: valorDesejado,
       geocodificado: coords != null,
       geocodificadoAproximado: coordsAproximadas,
       chaveRecusada,

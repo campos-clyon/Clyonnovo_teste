@@ -7,6 +7,7 @@ import { firstPositive, legacyPriceText } from "@/lib/quote-price";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { linkGoogleMaps } from "@/lib/morada";
+import RegistarPedido from "./RegistarPedido";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -3392,6 +3393,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
  * o painel só mostrava agregados no momento do envio, e nunca mais.
  */
 function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string }) {
+  const [aVerificar, setAVerificar] = useState(false);
+  const [versao, setVersao] = useState(0);
   const [dados, setDados] = useState<{
     receberam: Array<{ providerId: number; nome: string; negociacao: { estado: string; valorAcordado: number | null } | null; distanciaKm: number | null }>;
     naoReceberam: Array<{ providerId: number; nome: string; motivos: string[]; distanciaKm: number | null }>;
@@ -3416,7 +3419,8 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
     return () => {
       vivo = false;
     };
-  }, [pedidoId, token]);
+    // `versao` recarrega a lista depois de verificar/enviar.
+  }, [pedidoId, token, versao]);
 
   if (erro) {
     return <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>;
@@ -3434,9 +3438,28 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-base font-bold text-slate-900">
-          Receberam o pedido ({dados.receberam.length})
-        </h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-bold text-slate-900">
+            Receberam o pedido ({dados.receberam.length})
+          </h3>
+          {/*
+            Enviar passa SEMPRE pela verificação: o botão não dispara nada —
+            abre o editor da plataforma pré-preenchido, e o enviar só aparece
+            DEPOIS de gravar. Foi o #220 que ditou a regra: quatro
+            profissionais a propor às cegas sobre um pedido sem descrição.
+            E só existe enquanto ninguém recebeu — um pedido já distribuído
+            gere-se nas Negociações, não se redistribui daqui.
+          */}
+          {dados.receberam.length === 0 && (
+            <button
+              type="button"
+              onClick={() => setAVerificar(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-cyan-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-400"
+            >
+              Verificar e enviar aos profissionais
+            </button>
+          )}
+        </div>
         {dados.receberam.length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">
             Ninguém. O pedido ainda não foi enviado, ou nenhum profissional era
@@ -3493,6 +3516,30 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
         mudou de zonas ou foi suspenso depois do envio aparece com o estado de
         hoje. O histórico do pedido guarda o que aconteceu na altura.
       </p>
+
+      {aVerificar && (
+        <div
+          className="fixed inset-0 z-[60] overflow-y-auto bg-black/60 p-4 sm:p-8"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setAVerificar(false);
+              setVersao((v) => v + 1);
+            }
+          }}
+        >
+          <div className="mx-auto max-w-4xl">
+            <RegistarPedido
+              editarId={pedidoId}
+              podeEnviarAoGravar
+              onCriado={() => setVersao((v) => v + 1)}
+              onFechar={() => {
+                setAVerificar(false);
+                setVersao((v) => v + 1);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

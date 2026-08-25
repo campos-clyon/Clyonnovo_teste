@@ -339,3 +339,35 @@ describe("descarregar as fotos do pedido", () => {
     expect(MODAL_PEDIDO2).toContain("pedido-${pedidoId}-foto-");
   });
 });
+
+
+describe("enviar a partir da Distribuição — sempre com verificação primeiro", () => {
+  const MODAL3 = ler("src/components/admin/PedidoDetailModal.tsx");
+  const FORM3 = ler("src/components/admin/RegistarPedido.tsx");
+  const EDITAR3 = ler("src/app/api/admin/pedidos/[id]/editar/route.ts");
+
+  it("o botão abre o editor, não dispara o envio", () => {
+    // Foi o #220 que ditou a regra: quatro profissionais a propor às cegas
+    // sobre um pedido sem descrição. Enviar passa SEMPRE pela verificação.
+    expect(MODAL3).toContain("Verificar e enviar aos profissionais");
+    expect(MODAL3).toContain("setAVerificar(true)");
+    expect(MODAL3).toContain("podeEnviarAoGravar");
+  });
+
+  it("só aparece enquanto ninguém recebeu", () => {
+    expect(MODAL3).toContain("dados.receberam.length === 0 && (");
+  });
+
+  it("no editor, o enviar só existe depois de gravar — e só com autorização", () => {
+    // Em edição normal os botões de envio não existem; a Distribuição é a
+    // excepção deliberada, e mesmo aí o enviar vive no painel do resultado,
+    // que só aparece depois do gravar.
+    expect(FORM3).toContain("emEdicao && !podeEnviar ? null");
+  });
+
+  it("a rota de editar devolve o valor de partida para o envio", () => {
+    // Sem ele, a promoção caía na estimativa mesmo quando o cliente disse
+    // quanto queria pagar.
+    expect(EDITAR3).toContain("valorDePartida: valorDesejado");
+  });
+});

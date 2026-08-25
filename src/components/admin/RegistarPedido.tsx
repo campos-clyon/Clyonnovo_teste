@@ -68,6 +68,7 @@ const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".
 export default function RegistarPedido({
   onCriado,
   editarId = null,
+  podeEnviarAoGravar = false,
   onFechar,
 }: {
   onCriado: () => void;
@@ -81,6 +82,13 @@ export default function RegistarPedido({
    * os profissionais vão ler. Dois formulários divergiam; um não tem como.
    */
   editarId?: number | null;
+  /*
+   * Em edição, os botões de envio normalmente não existem — um pedido já
+   * publicado não se reenvia por acidente. Este é o caso contrário: o
+   * separador da Distribuição só o liga quando o pedido AINDA NÃO FOI a
+   * ninguém, e aí o fluxo é exactamente verificar → gravar → enviar.
+   */
+  podeEnviarAoGravar?: boolean;
   onFechar?: () => void;
 }) {
   const { token } = useAdminAuth();
@@ -571,6 +579,7 @@ export default function RegistarPedido({
           enviado={enviado}
           aEnviar={aEnviar}
           emEdicao={editarId != null}
+          podeEnviar={podeEnviarAoGravar}
           onEnviar={enviar}
           onNovo={limpar}
         />
@@ -593,6 +602,7 @@ function Resumo({
   enviado,
   aEnviar,
   emEdicao = false,
+  podeEnviar = false,
   onEnviar,
   onNovo,
 }: {
@@ -600,6 +610,7 @@ function Resumo({
   enviado: string | null;
   aEnviar: boolean;
   emEdicao?: boolean;
+  podeEnviar?: boolean;
   onEnviar: () => void;
   onNovo: () => void;
 }) {
@@ -746,7 +757,7 @@ function Resumo({
         tomada na lista, e um pedido que JÁ foi enviado não se reenvia por
         acidente a partir de um ecrã de edição.
       */}
-      {emEdicao ? null : enviado ? (
+      {emEdicao && !podeEnviar ? null : enviado ? (
         <p className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {enviado}
