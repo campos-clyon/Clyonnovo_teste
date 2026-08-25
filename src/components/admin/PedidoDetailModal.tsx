@@ -390,7 +390,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
   async function descarregarFoto(url: string, nome: string) {
     setADescarregar(url);
     try {
-      const res = await fetch(url);
+      /*
+       * Pela NOSSA origem, nunca direito ao Blob: o Blob da Vercel não manda
+       * cabeçalhos CORS, o fetch directo falhava, e o plano B (abrir num
+       * separador) morria no bloqueador de popups a partir do segundo —
+       * "Descarregar todas" abria duas e não descarregava nenhuma. O proxy
+       * de admin entrega a foto com ordem de guardar e sem CORS no caminho.
+       */
+      const res = await fetch(
+        `/api/admin/fotos?url=${encodeURIComponent(url)}&nome=${encodeURIComponent(nome)}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
       if (!res.ok) throw new Error(String(res.status));
       const blob = await res.blob();
       const extensao =

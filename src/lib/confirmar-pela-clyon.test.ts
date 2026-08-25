@@ -319,14 +319,26 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
 describe("descarregar as fotos do pedido", () => {
   const MODAL_PEDIDO2 = ler("src/components/admin/PedidoDetailModal.tsx");
 
-  it("vai buscar o ficheiro antes de o entregar", () => {
+  it("vai buscar o ficheiro PELA NOSSA ORIGEM antes de o entregar", () => {
     /*
-     * Um <a download> simples não serve: as fotos vivem noutro domínio
-     * (Vercel Blob) e o atributo `download` é IGNORADO em links de outra
-     * origem — o browser abria a imagem em vez de a guardar.
+     * Duas lições do mesmo botão. Um <a download> directo não serve (o
+     * atributo é ignorado noutra origem); e o fetch directo ao Blob também
+     * não — o Blob da Vercel não manda CORS, o fetch falhava, e o plano B
+     * abria separadores que o bloqueador de popups engolia a partir do
+     * segundo. Ele viu-o: "abriu 2 imagens e nada aconteceu".
      */
+    expect(MODAL_PEDIDO2).toContain("/api/admin/fotos?url=");
     expect(MODAL_PEDIDO2).toContain("URL.createObjectURL(blob)");
-    expect(MODAL_PEDIDO2).toContain("descarregarFoto");
+  });
+
+  it("o proxy só aceita o nosso armazenamento", () => {
+    // Um proxy que busca "o URL que vier" é uma porta de SSRF — o servidor a
+    // bater em endpoints internos por ordem de quem chama.
+    const PROXY = ler("src/app/api/admin/fotos/route.ts");
+    expect(PROXY).toContain('.public.blob.vercel-storage.com');
+    expect(PROXY).toContain('alvo.protocol !== "https:"');
+    expect(PROXY).toContain("attachment; filename=");
+    expect(PROXY).toContain("requireAdmin");
   });
 
   it("a rede a falhar abre o separador em vez de morrer calado", () => {
