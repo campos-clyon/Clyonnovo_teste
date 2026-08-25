@@ -104,6 +104,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const { registarMensagemWhatsApp } = await import("@/lib/db");
+    await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
     await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
   } catch (e) {
     // A conversa é nossa na mesma — um erro aqui não pode atirar o cliente

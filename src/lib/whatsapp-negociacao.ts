@@ -455,6 +455,84 @@ export async function tratarMensagemDoCliente(
  * botões que fecham ou recusam num toque. É o outbound que fazia o Wanderson
  * escrever à mão.
  */
+/**
+ * Uma fotografia do cliente — vai parar às fotos do pedido dele.
+ *
+ * No Winapp as fotos morriam num aviso "não consegui abrir"; aqui fazem o
+ * caminho inteiro: API da Meta → Blob da CLYON → filesJson do pedido, com
+ * linha no histórico. Só funciona pela Cloud API (é dela que se descarrega o
+ * media) e só para números com pedido activo — uma foto de um desconhecido
+ * não se guarda: não é nossa para guardar.
+ */
+export async function tratarFotoDoCliente(
+  telefone: string,
+  mediaId: string,
+  mime: string | null,
+): Promise<void> {
+  const { podeOWhatsAppFalarCom } = await import("@/lib/db");
+  if (!(await podeOWhatsAppFalarCom(telefone))) return;
+  if (!process.env.WHATSAPP_TOKEN) return;
+
+  const pedidos = await pedidosDoTelefone(telefone);
+  if (pedidos.length === 0) return;
+  const pedidoId = pedidos[0];
+
+  try {
+    const auth = { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } };
+    const meta = (await (
+      await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, auth)
+    ).json()) as { url?: string; mime_type?: string };
+    if (!meta.url) return;
+    const resposta = await fetch(meta.url, auth);
+    if (!resposta.ok) return;
+    const bytes = Buffer.from(await resposta.arrayBuffer());
+    // 10 MB chegam para qualquer fotografia; acima disso é outra coisa.
+    if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return;
+
+    const tipo = mime ?? meta.mime_type ?? "image/jpeg";
+    const extensao = tipo.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
+    const { put } = await import("@vercel/blob");
+    const { obterTokenDoBlob } = await import("@/lib/blob-token");
+    const tokenBlob = obterTokenDoBlob();
+    if (!tokenBlob.ok) return;
+    const nome = `whatsapp-${Date.now()}.${extensao}`;
+    const blob = await put(`simulador/${nome}`, bytes, {
+      access: "public",
+      contentType: tipo,
+      addRandomSuffix: true,
+      ...(tokenBlob.modo === "token" ? { token: tokenBlob.token } : { storeId: tokenBlob.storeId }),
+    });
+
+    const pedido = await getSimulatorOrderById(pedidoId);
+    if (!pedido) return;
+    let ficheiros: unknown[] = [];
+    try {
+      const lidos = JSON.parse(pedido.filesJson ?? "[]");
+      if (Array.isArray(lidos)) ficheiros = lidos;
+    } catch {
+      /* filesJson ilegível: recomeça a lista em vez de perder a foto nova */
+    }
+    ficheiros.push({ url: blob.url, name: nome, size: bytes.length, type: tipo });
+    await updateSimulatorOrder(
+      pedidoId,
+      { filesJson: JSON.stringify(ficheiros) } as unknown as Parameters<
+        typeof updateSimulatorOrder
+      >[1],
+    );
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message: "Cliente enviou uma fotografia por WhatsApp — anexada ao pedido.",
+    });
+    await enviarTextoWhatsApp(
+      telefone,
+      `Recebi a fotografia — ficou anexada ao pedido #${pedidoId}.`,
+    );
+  } catch (e) {
+    console.error("[whatsapp] foto falhou", e);
+  }
+}
+
 export async function aceitacaoParaOWhatsApp(dados: {
   telefone: string;
   pedidoId: number;

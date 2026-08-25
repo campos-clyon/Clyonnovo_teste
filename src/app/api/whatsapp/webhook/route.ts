@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { registarMensagemWhatsApp } from "@/lib/db";
 import { assinaturaValida, whatsappConfigurado } from "@/lib/whatsapp-cloud";
-import { tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
+import { tratarFotoDoCliente, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,8 @@ export async function POST(req: NextRequest) {
               from?: string;
               type?: string;
               text?: { body?: string };
-              interactive?: { type?: string; button_reply?: { id?: string } };
+              interactive?: { type?: string; button_reply?: { id?: string; title?: string } };
+              image?: { id?: string; mime_type?: string };
             }>;
           };
         }>;
@@ -60,14 +62,25 @@ export async function POST(req: NextRequest) {
         for (const msg of change.value?.messages ?? []) {
           if (!msg.from) continue;
           if (msg.type === "interactive" && msg.interactive?.button_reply?.id) {
+            // O registo guarda o TÍTULO ("Fechar 300 €"), não o id — a
+            // conversa no painel tem de se ler como uma conversa.
+            await registarMensagemWhatsApp(
+              msg.from,
+              "in",
+              `[carregou: ${msg.interactive.button_reply.title ?? msg.interactive.button_reply.id}]`,
+            ).catch(() => {});
             await tratarMensagemDoCliente(msg.from, {
               tipo: "botao",
               id: msg.interactive.button_reply.id,
             });
           } else if (msg.type === "text" && msg.text?.body) {
+            await registarMensagemWhatsApp(msg.from, "in", msg.text.body).catch(() => {});
             await tratarMensagemDoCliente(msg.from, { tipo: "texto", texto: msg.text.body });
+          } else if (msg.type === "image" && msg.image?.id) {
+            await registarMensagemWhatsApp(msg.from, "in", "[fotografia]").catch(() => {});
+            await tratarFotoDoCliente(msg.from, msg.image.id, msg.image.mime_type ?? null);
           }
-          // Estados de entrega, reacções, media: ignoram-se em silêncio.
+          // Estados de entrega, reacções, outros media: ignoram-se em silêncio.
         }
       }
     }

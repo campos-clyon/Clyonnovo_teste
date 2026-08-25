@@ -4045,6 +4045,99 @@ export async function definirWhatsappLigado(ligado: boolean): Promise<void> {
   );
 }
 
+// ── O registo das conversas do WhatsApp ─────────────────────────────────────
+//
+// Cada mensagem que entra ou sai fica aqui — é o que faz do painel um sítio
+// onde se VÊ a conversa em vez de se adivinhar. Sessenta dias e apaga-se,
+// como os pedidos ([[retencao-registo]]): o registo é operacional, não é
+// arquivo. As acções de negócio continuam no registoPermanente, que é doutro
+// material.
+let mensagensWhatsAppReady = false;
+async function ensureWhatsappMensagensTable() {
+  if (mensagensWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappMensagens (
+      id       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone VARCHAR(32) NOT NULL,
+      direccao VARCHAR(3) NOT NULL,
+      texto    TEXT NOT NULL,
+      criadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_tel (telefone, id),
+      KEY idx_criado (criadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  mensagensWhatsAppReady = true;
+}
+
+export async function registarMensagemWhatsApp(
+  telefone: string,
+  direccao: "in" | "out",
+  texto: string,
+): Promise<void> {
+  const digitos = telefone.replace(/\D/g, "");
+  if (!digitos || !texto.trim()) return;
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "INSERT INTO whatsappMensagens (telefone, direccao, texto) VALUES (?, ?, ?)",
+    [digitos, direccao, texto.slice(0, 4096)],
+  );
+  // A limpeza anda à boleia da escrita: sem cron próprio, sem tabela a
+  // crescer para sempre. O LIMIT trava o custo de cada passagem.
+  await pool
+    .execute("DELETE FROM whatsappMensagens WHERE criadoEm < NOW() - INTERVAL 60 DAY LIMIT 200")
+    .catch(() => {});
+}
+
+export interface ConversaWhatsApp {
+  telefone: string;
+  ultimaMensagem: string;
+  direccao: string;
+  quando: string;
+}
+
+export async function conversasWhatsApp(limite = 30): Promise<ConversaWhatsApp[]> {
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT m.telefone, m.texto, m.direccao, m.criadoEm
+       FROM whatsappMensagens m
+       JOIN (SELECT telefone, MAX(id) AS mid FROM whatsappMensagens GROUP BY telefone) u
+         ON u.mid = m.id
+      ORDER BY m.id DESC
+      LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
+  )) as [Array<{ telefone: string; texto: string; direccao: string; criadoEm: string }>, unknown];
+  return rows.map((r) => ({
+    telefone: r.telefone,
+    ultimaMensagem: r.texto,
+    direccao: r.direccao,
+    quando: String(r.criadoEm),
+  }));
+}
+
+export async function mensagensDoNumeroWhatsApp(
+  telefone: string,
+  limite = 100,
+): Promise<Array<{ direccao: string; texto: string; criadoEm: string }>> {
+  const digitos = telefone.replace(/\D/g, "");
+  if (digitos.length < 9) return [];
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT direccao, texto, criadoEm FROM whatsappMensagens
+      WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
+      ORDER BY id DESC
+      LIMIT ${Math.max(1, Math.min(300, Math.floor(limite)))}`,
+    [digitos],
+  )) as [Array<{ direccao: string; texto: string; criadoEm: string }>, unknown];
+  return rows.reverse().map((r) => ({ ...r, criadoEm: String(r.criadoEm) }));
+}
+
 /**
  * A pergunta que TODO o envio e TODA a resposta fazem primeiro: o cérebro
  * pode falar com este número? Três nãos possíveis — o interruptor geral, o

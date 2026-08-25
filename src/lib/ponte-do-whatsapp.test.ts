@@ -46,7 +46,14 @@ describe("o transporte escolhe o caminho", () => {
   });
 
   it("sem Meta e sem ponte, tudo devolve false — falha fechada", () => {
-    expect(CLOUD).toContain("if (ponteConfigurada()) return porNaFila(para, texto);\n  return false;");
+    // O caminho comum nasce a false e só vira true se algum canal aceitar.
+    const canal = CLOUD.slice(
+      CLOUD.indexOf("async function enviarTextoPorCanal"),
+      CLOUD.indexOf("export async function enviarTextoWhatsApp"),
+    );
+    expect(canal).toContain("let saiu = false;");
+    expect(canal).toContain("else if (ponteConfigurada())");
+    expect(canal).toContain("return saiu;");
   });
 });
 

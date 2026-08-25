@@ -109,17 +109,45 @@ async function autorizadoAFalarCom(para: string): Promise<boolean> {
   }
 }
 
-export async function enviarTextoWhatsApp(para: string, texto: string): Promise<boolean> {
-  if (!(await autorizadoAFalarCom(para))) return false;
+/** O que saiu fica no registo — é o que faz o painel mostrar a conversa. */
+async function registarSaida(para: string, texto: string): Promise<void> {
+  try {
+    const { registarMensagemWhatsApp } = await import("@/lib/db");
+    await registarMensagemWhatsApp(telefoneParaWhatsApp(para), "out", texto);
+  } catch {
+    // O registo nunca pode impedir a mensagem — já saiu.
+  }
+}
+
+/** O caminho comum dos envios de texto: canal, e registo se saiu. */
+async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean> {
+  let saiu = false;
   if (whatsappConfigurado()) {
-    return enviar({
+    saiu = await enviar({
       to: telefoneParaWhatsApp(para),
       type: "text",
       text: { body: texto.slice(0, 4096), preview_url: false },
     });
+  } else if (ponteConfigurada()) {
+    saiu = await porNaFila(para, texto);
   }
-  if (ponteConfigurada()) return porNaFila(para, texto);
-  return false;
+  if (saiu) await registarSaida(para, texto);
+  return saiu;
+}
+
+export async function enviarTextoWhatsApp(para: string, texto: string): Promise<boolean> {
+  if (!(await autorizadoAFalarCom(para))) return false;
+  return enviarTextoPorCanal(para, texto);
+}
+
+/**
+ * O envio À MÃO, do painel. NÃO passa pelo portão de propósito: o portão
+ * cala o CÉREBRO (interruptor, bloqueio, conversa entregue) — aqui quem
+ * escreve é a pessoa, e a pessoa manda no portão, não o contrário. O único
+ * não que resta é o do próprio WhatsApp (janela de 24 h fechada).
+ */
+export async function enviarTextoManualWhatsApp(para: string, texto: string): Promise<boolean> {
+  return enviarTextoPorCanal(para, texto);
 }
 
 /**
@@ -137,7 +165,7 @@ export async function enviarBotoesWhatsApp(
 ): Promise<boolean> {
   if (!(await autorizadoAFalarCom(para))) return false;
   if (whatsappConfigurado()) {
-    return enviar({
+    const saiu = await enviar({
       to: telefoneParaWhatsApp(para),
       type: "interactive",
       interactive: {
@@ -151,6 +179,13 @@ export async function enviarBotoesWhatsApp(
         },
       },
     });
+    if (saiu) {
+      await registarSaida(
+        para,
+        `${texto}\n[botões: ${botoes.slice(0, 3).map((b) => b.titulo).join(" · ")}]`,
+      );
+    }
+    return saiu;
   }
   if (ponteConfigurada()) {
     // Pela ponte não há botões — o whatsapp-web não os tem. O botão vira a
@@ -163,7 +198,10 @@ export async function enviarBotoesWhatsApp(
         return `— ${b.titulo}`;
       })
       .join("\n");
-    return porNaFila(para, `${texto}\n\n${instrucoes}`);
+    const degradado = `${texto}\n\n${instrucoes}`;
+    const saiu = await porNaFila(para, degradado);
+    if (saiu) await registarSaida(para, degradado);
+    return saiu;
   }
   return false;
 }

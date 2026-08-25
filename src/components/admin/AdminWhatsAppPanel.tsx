@@ -34,7 +34,10 @@ type Estado = {
   interrompidos: Array<{ telefone: string; motivo: string | null; criadoEm: string }>;
   bloqueados: Array<{ telefone: string; nota: string | null; criadoEm: string }>;
   fila: Array<{ id: number; telefone: string; texto: string }>;
+  conversas: Array<{ telefone: string; ultimaMensagem: string; direccao: string; quando: string }>;
 };
+
+type Mensagem = { direccao: string; texto: string; criadoEm: string };
 
 const CAIXA =
   "rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500";
@@ -61,6 +64,11 @@ export default function AdminWhatsAppPanel() {
   const [ocupado, setOcupado] = useState(false);
   const [numeroNovo, setNumeroNovo] = useState("");
   const [notaNova, setNotaNova] = useState("");
+  const [conversaAberta, setConversaAberta] = useState<string | null>(null);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [resposta, setResposta] = useState("");
+  const [aResponder, setAResponder] = useState(false);
+  const [erroDaResposta, setErroDaResposta] = useState("");
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -114,6 +122,49 @@ export default function AdminWhatsAppPanel() {
     },
     [token, carregar],
   );
+
+  const abrirConversa = useCallback(
+    async (telefone: string) => {
+      if (!token) return;
+      setConversaAberta(telefone);
+      setErroDaResposta("");
+      try {
+        const res = await fetch(`/api/admin/whatsapp?telefone=${encodeURIComponent(telefone)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const dados = await res.json();
+        setMensagens(res.ok ? (dados.mensagens ?? []) : []);
+      } catch {
+        setMensagens([]);
+      }
+    },
+    [token],
+  );
+
+  const responder = useCallback(async () => {
+    if (!token || !conversaAberta || !resposta.trim()) return;
+    setAResponder(true);
+    setErroDaResposta("");
+    try {
+      const res = await fetch("/api/admin/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "responder", telefone: conversaAberta, nota: resposta.trim() }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErroDaResposta(dados.error ?? "Não foi possível enviar.");
+        return;
+      }
+      setResposta("");
+      await abrirConversa(conversaAberta);
+      await carregar();
+    } catch {
+      setErroDaResposta("Erro de rede.");
+    } finally {
+      setAResponder(false);
+    }
+  }, [token, conversaAberta, resposta, abrirConversa, carregar]);
 
   if (!estado) {
     return (
@@ -173,6 +224,100 @@ export default function AdminWhatsAppPanel() {
           {erro}
         </p>
       )}
+
+      {/* As conversas — o fio de cada número, com resposta à mão. */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+        <h3 className="text-sm font-bold text-white">Conversas</h3>
+        {estado.conversas.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">
+            Ainda nada por aqui. As mensagens aparecem assim que o canal estiver
+            configurado e alguém escrever.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-slate-800">
+            {estado.conversas.map((c) => (
+              <li key={c.telefone}>
+                <button
+                  onClick={() =>
+                    conversaAberta === c.telefone
+                      ? setConversaAberta(null)
+                      : void abrirConversa(c.telefone)
+                  }
+                  className="flex w-full items-center justify-between gap-3 py-2.5 text-left"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-sm text-white">{formatarTelefone(c.telefone)}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {c.direccao === "out" ? "→ " : ""}
+                      {c.ultimaMensagem}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-slate-500">{desde(c.quando)}</span>
+                </button>
+
+                {conversaAberta === c.telefone && (
+                  <div className="mb-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                    <div className="max-h-80 space-y-2 overflow-y-auto">
+                      {mensagens.map((m, i) => (
+                        <div
+                          key={i}
+                          className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
+                            m.direccao === "out"
+                              ? "ml-auto bg-cyan-500/15 text-cyan-100"
+                              : "bg-slate-800 text-slate-200"
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap break-words">{m.texto}</p>
+                          <p className="mt-1 text-right text-[10px] text-slate-500">
+                            {desde(m.criadoEm)}
+                          </p>
+                        </div>
+                      ))}
+                      {mensagens.length === 0 && (
+                        <p className="text-xs text-slate-500">Sem mensagens registadas.</p>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        value={resposta}
+                        onChange={(e) => setResposta(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            void responder();
+                          }
+                        }}
+                        placeholder="Responder como CLYON…"
+                        className={`${CAIXA} flex-1`}
+                      />
+                      <button
+                        onClick={() => void responder()}
+                        disabled={aResponder || !resposta.trim()}
+                        className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-cyan-500 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
+                      >
+                        {aResponder ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        ) : (
+                          "Enviar"
+                        )}
+                      </button>
+                    </div>
+                    {erroDaResposta && (
+                      <p className="mt-2 text-xs text-red-300">{erroDaResposta}</p>
+                    )}
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                      Sai pelo número da plataforma, e passa por cima do interruptor e
+                      das entregas — aqui quem fala é você. O WhatsApp só recusa texto
+                      livre se ele não escrever há mais de 24 horas.
+                    </p>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Interromper ou bloquear um número — o mesmo formulário serve os dois. */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
