@@ -51,6 +51,27 @@ export type NegociacaoDoCliente = {
   valorAcordado: number | null;
   propostas: Proposta[];
   profissionalNome: string;
+  /*
+   * O perfil público, calculado no servidor com dados REAIS. Pode ser null
+   * (conta entretanto apagada) e pode vir vazio — zero avaliações, zero
+   * trabalhos. O ecrã diz a verdade nos dois casos em vez de inventar.
+   */
+  perfil?: {
+    naClyonDesde: string | null;
+    trabalhosConcluidos: number;
+    notaMedia: number | null;
+    quantasAvaliacoes: number;
+    categorias: string[];
+    zonas: string[];
+    raioKm: number | null;
+    avaliacoes: Array<{
+      estrelas: number;
+      comentario: string | null;
+      avaliadoEm: string | null;
+      servicoTipo: string | null;
+      cidade: string | null;
+    }>;
+  } | null;
   emiteFatura: boolean;
   /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
   regimeIva: string;
@@ -449,6 +470,33 @@ export default function PropostasRecebidas({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <h3 className="text-base font-bold text-tinta">{n.profissionalNome}</h3>
+                  {/*
+                    A homepage promete "vê o nome, a nota e os trabalhos antes
+                    de aceitar" — isto cumpre-a com o que É VERDADE. Sem
+                    avaliações, diz-se "sem avaliações ainda"; um número
+                    inventado aqui valia uma queixa à primeira desilusão.
+                  */}
+                  {n.perfil && (
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-tinta-fraca">
+                      {n.perfil.quantasAvaliacoes > 0 ? (
+                        <>
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+                          <span className="font-semibold text-tinta">
+                            {n.perfil.notaMedia?.toFixed(1).replace(".", ",")}
+                          </span>
+                          <span>({n.perfil.quantasAvaliacoes})</span>
+                        </>
+                      ) : (
+                        <span>sem avaliações ainda</span>
+                      )}
+                      {n.perfil.trabalhosConcluidos > 0 && (
+                        <span>
+                          · {n.perfil.trabalhosConcluidos} trabalho
+                          {n.perfil.trabalhosConcluidos === 1 ? "" : "s"} na CLYON
+                        </span>
+                      )}
+                    </p>
+                  )}
                   {/* O distintivo está sempre à vista, e não ao fim de cinco
                       propostas — não pode ser uma descoberta tardia. */}
                   <div className="mt-1 flex flex-wrap gap-1.5">
@@ -469,6 +517,78 @@ export default function PropostasRecebidas({
                       </span>
                     )}
                   </div>
+                  {/*
+                    O perfil abre AQUI, no cartão, e não numa página nova:
+                    /profissionais/* está atrás da chave do MVP e o cliente
+                    não a tem — uma página própria dava-lhe um portão em vez
+                    de um perfil. E sem contacto nenhum: o telefone só depois
+                    de contratar, como a morada dele do outro lado.
+                  */}
+                  {n.perfil && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer list-none text-xs font-semibold text-acao underline-offset-4 hover:underline">
+                        Ver perfil e avaliações
+                      </summary>
+                      <div className="mt-2 space-y-2 rounded-xl bg-[#F4F8FB] p-3">
+                        <p className="text-xs leading-relaxed text-tinta-fraca">
+                          {n.perfil.naClyonDesde && (
+                            <>
+                              Na CLYON desde{" "}
+                              {new Date(n.perfil.naClyonDesde).toLocaleDateString("pt-PT", {
+                                month: "long",
+                                year: "numeric",
+                              })}
+                              .{" "}
+                            </>
+                          )}
+                          {n.perfil.zonas.length > 0 && (
+                            <>Trabalha em {n.perfil.zonas.slice(0, 5).join(", ")}</>
+                          )}
+                          {n.perfil.raioKm != null && <> · desloca-se até {n.perfil.raioKm} km</>}
+                          {n.perfil.zonas.length > 0 || n.perfil.raioKm != null ? "." : null}
+                        </p>
+                        {n.perfil.avaliacoes.length === 0 ? (
+                          <p className="text-xs leading-relaxed text-tinta-fraca">
+                            Ainda sem avaliações — a primeira aparece aqui quando um
+                            cliente confirmar um trabalho dele.
+                          </p>
+                        ) : (
+                          n.perfil.avaliacoes.slice(0, 3).map((a, i) => (
+                            <div
+                              key={i}
+                              className="rounded-lg border border-[#E2EEF3] bg-white p-2.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs tracking-widest text-amber-500">
+                                  {"★".repeat(a.estrelas)}
+                                  <span className="text-slate-300">
+                                    {"★".repeat(Math.max(0, 5 - a.estrelas))}
+                                  </span>
+                                </span>
+                                {a.avaliadoEm && (
+                                  <span className="text-[11px] text-tinta-fraca">
+                                    {new Date(a.avaliadoEm).toLocaleDateString("pt-PT")}
+                                  </span>
+                                )}
+                              </div>
+                              {a.comentario && (
+                                <p className="mt-1 text-xs leading-relaxed text-tinta">
+                                  {a.comentario}
+                                </p>
+                              )}
+                              {(a.servicoTipo || a.cidade) && (
+                                <p className="mt-1 text-[11px] text-tinta-fraca">
+                                  {[a.servicoTipo?.replace(/_/g, " "), a.cidade]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </details>
+                  )}
                 </div>
 
                 {/*

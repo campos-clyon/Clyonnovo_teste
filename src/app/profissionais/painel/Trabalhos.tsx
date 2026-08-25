@@ -592,6 +592,32 @@ function DetalheDoTrabalho({
               )}
             </p>
           )}
+          {/*
+            O contexto do cliente — só quando é real. Um cliente de telefone
+            sem email não tem historial ligável, e aí não se mostra nada:
+            inventar "cliente novo" seria adivinhar.
+          */}
+          {pedido.clienteContexto && (
+            <p className="mt-1 pl-6 text-xs text-emerald-700">
+              {pedido.clienteContexto.desde && (
+                <>
+                  Cliente desde{" "}
+                  {new Date(pedido.clienteContexto.desde).toLocaleDateString("pt-PT", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </>
+              )}
+              {pedido.clienteContexto.desde && pedido.clienteContexto.confirmados > 0 && " · "}
+              {pedido.clienteContexto.confirmados > 0 && (
+                <>
+                  {pedido.clienteContexto.confirmados} trabalho
+                  {pedido.clienteContexto.confirmados === 1 ? "" : "s"} confirmado
+                  {pedido.clienteContexto.confirmados === 1 ? "" : "s"}
+                </>
+              )}
+            </p>
+          )}
 
           {/* Levar lá.
               A morada escrita não serve de nada a alguém que está a sair de

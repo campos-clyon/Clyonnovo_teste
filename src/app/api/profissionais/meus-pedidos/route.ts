@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { negociacoesDoProfissional } from "@/lib/db";
+import { negociacoesDoProfissional, getPool } from "@/lib/db";
 import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
@@ -34,6 +34,48 @@ export async function GET(req: NextRequest) {
     const linhas = await negociacoesDoProfissional(sessao.providerId);
 
     const agora = new Date();
+
+    /*
+     * O CONTEXTO DO CLIENTE, para os trabalhos contratados — e só o real.
+     *
+     * "Cliente desde X · N trabalhos confirmados" dá ao profissional o mesmo
+     * tipo de confiança que o cliente ganhou do lado dele. Calcula-se pelo
+     * email do pedido; um cliente de telefone sem email não tem historial
+     * ligável, e nesse caso NÃO SE MOSTRA NADA — inventar "cliente novo"
+     * seria adivinhar.
+     */
+    const emailsContratados = [
+      ...new Set(
+        linhas
+          .filter((l) => l.estado === "acordada")
+          .map((l) => (l as unknown as { contactEmail?: string | null }).contactEmail)
+          .filter((e): e is string => typeof e === "string" && e.trim().length > 0)
+          .map((e) => e.trim().toLowerCase()),
+      ),
+    ];
+    const contextoDoCliente = new Map<string, { desde: string | null; confirmados: number }>();
+    if (emailsContratados.length > 0) {
+      const pool = await getPool();
+      if (pool) {
+        for (const email of emailsContratados) {
+          const [uLinhas] = (await pool.execute(
+            "SELECT createdAt FROM users WHERE email = ? AND deletedAt IS NULL LIMIT 1",
+            [email],
+          )) as any[];
+          const [cLinhas] = (await pool.execute(
+            `SELECT COUNT(*) AS n FROM negociacoes n
+              JOIN simulatorOrders o ON o.id = n.pedidoId
+             WHERE LOWER(o.contactEmail) = ? AND n.confirmadoEm IS NOT NULL`,
+            [email],
+          )) as any[];
+          const desde = (uLinhas as Array<{ createdAt?: Date }>)[0]?.createdAt ?? null;
+          contextoDoCliente.set(email, {
+            desde: desde ? new Date(desde).toISOString() : null,
+            confirmados: Number((cLinhas as Array<{ n: number }>)[0]?.n ?? 0),
+          });
+        }
+      }
+    }
 
     const pedidos = linhas.map((l) => {
       // A morada e o contacto só entram na vista depois de ele ser contratado —
@@ -73,6 +115,16 @@ export async function GET(req: NextRequest) {
         morada: (vista.address as string | undefined) ?? null,
         contactoNome: (vista.contactName as string | undefined) ?? null,
         contactoTelefone: (vista.contactPhone as string | undefined) ?? null,
+        clienteContexto:
+          l.estado === "acordada"
+            ? (contextoDoCliente.get(
+                String(
+                  (l as unknown as { contactEmail?: string | null }).contactEmail ?? "",
+                )
+                  .trim()
+                  .toLowerCase(),
+              ) ?? null)
+            : null,
         // O que ele vê do pedido — nada além disto.
         serviceType: (vista.serviceType as string | undefined) ?? null,
         city: (vista.city as string | undefined) ?? null,

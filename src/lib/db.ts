@@ -1552,7 +1552,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson,
             -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e
             -- vistaParaOEstado, e so quando o trabalho e mesmo dele.
-            o.address, o.contactName, o.contactPhone
+            o.address, o.contactName, o.contactPhone, o.contactEmail
        FROM negociacoes n
        JOIN simulatorOrders o ON o.id = n.pedidoId
       WHERE n.providerId = ?

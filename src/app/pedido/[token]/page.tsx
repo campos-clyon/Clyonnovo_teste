@@ -9,6 +9,7 @@ import type { Proposta } from "@/lib/negociacao";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
+import { perfilPublicoDoProfissional } from "@/lib/perfil-publico-do-profissional";
 
 /**
  * O pedido, aberto pelo link.
@@ -185,9 +186,42 @@ export default async function PaginaDoPedido({
   // As negociações a decorrer. O cliente pode ter várias — é isso que torna o
   // segundo passo do aperto de mão necessário.
   const agora = new Date();
-  const negociacoesDoCliente = (await negociacoesDoPedido(pedido.id)).map((n) => {
+  /*
+   * O perfil de cada profissional vai JUNTO com a negociação, calculado aqui
+   * no servidor — a homepage promete "vê o nome, a nota e os trabalhos antes
+   * de aceitar", e até aqui só ia o nome. São dados REAIS: com zero
+   * avaliações o ecrã diz "sem avaliações ainda", não inventa número nenhum.
+   */
+  const linhas = await negociacoesDoPedido(pedido.id);
+  const perfis = new Map(
+    await Promise.all(
+      [...new Set(linhas.map((n) => Number(n.providerId)))].map(
+        async (id) => [id, await perfilPublicoDoProfissional(id)] as const,
+      ),
+    ),
+  );
+  const negociacoesDoCliente = linhas.map((n) => {
     const contratado = n.estado === "acordada";
+    const perfil = perfis.get(Number(n.providerId)) ?? null;
     return {
+      perfil: perfil
+        ? {
+            naClyonDesde: perfil.naClyonDesde ? perfil.naClyonDesde.toISOString() : null,
+            trabalhosConcluidos: perfil.trabalhosConcluidos,
+            notaMedia: perfil.notaMedia,
+            quantasAvaliacoes: perfil.quantasAvaliacoes,
+            categorias: perfil.categorias,
+            zonas: perfil.zonas,
+            raioKm: perfil.raioKm,
+            avaliacoes: perfil.avaliacoes.map((a) => ({
+              estrelas: a.estrelas,
+              comentario: a.comentario,
+              avaliadoEm: a.avaliadoEm ? new Date(a.avaliadoEm).toISOString() : null,
+              servicoTipo: a.servicoTipo,
+              cidade: a.cidade,
+            })),
+          }
+        : null,
       id: n.id,
       estado: n.estado,
       valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,

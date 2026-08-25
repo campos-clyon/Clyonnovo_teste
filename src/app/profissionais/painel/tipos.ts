@@ -35,6 +35,8 @@ export type Pedido = {
   recebeSeFechado: number | null;
   /** Só chegam preenchidos depois de ele ser contratado. */
   morada: string | null;
+  /** Contexto real do cliente (por email); null quando não há historial ligável. */
+  clienteContexto?: { desde: string | null; confirmados: number } | null;
   contactoNome: string | null;
   contactoTelefone: string | null;
 };
