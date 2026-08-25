@@ -612,9 +612,72 @@ export default function AdminNegociacoesPanel({
    * continuar a alcancar `ocupado`, `abertas`, `reenviar` e `carregar` sem
    * ter de os passar todos por prop.
    */
+  /** O cabeçalho da mesa — as mesmas colunas da linha, com os mesmos px. */
+  const cabecalhoDaMesa = (
+    <div
+      aria-hidden="true"
+      className="hidden items-center gap-3 px-4 pb-1 md:grid md:grid-cols-[auto_72px_minmax(0,1fr)_96px_minmax(0,1.5fr)_128px]"
+    >
+      <span className="w-4" />
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Pedido</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Cliente</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Pede</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+        Onde está a bola
+      </span>
+      <span />
+    </div>
+  );
+
   function cartaoDoPedido(p: Pedido) {
     const chaveCliente = `c${p.id}`;
     const espera = p.negociacoes.some(esperaResposta);
+    const aEsperarLista = p.negociacoes.filter(esperaResposta);
+    const acordada = p.negociacoes.find((n) => n.estado === "acordada");
+    const quantasAbertas = p.negociacoes.filter((n) => n.estado === "aberta").length;
+    const totalPropostas = p.negociacoes.reduce(
+      (soma, n) => soma + propostasDe(n.propostasJson).length,
+      0,
+    );
+    const aberto = negociacoesVisiveis.has(p.id) || espera;
+    const alternarAberto = () =>
+      setNegociacoesVisiveis((v) => {
+        const c = new Set(v);
+        if (c.has(p.id)) c.delete(p.id);
+        else c.add(p.id);
+        return c;
+      });
+
+    /*
+     * "ONDE ESTÁ A BOLA", numa frase.
+     *
+     * Era isto que faltava ao ecrã: saber qual pedido recebeu proposta, de
+     * quem e por quanto, sem abrir nada. A linha di-lo sempre; abrir é para
+     * agir, não para descobrir.
+     */
+    const primeiro = aEsperarLista[0];
+    const valorDoPrimeiro = primeiro
+      ? (propostasDe(primeiro.propostasJson).at(-1)?.valor ?? null)
+      : null;
+    const bola = espera
+      ? {
+          tom: "text-emerald-300",
+          texto: `● ${primeiro?.profissionalNome}${
+            aEsperarLista.length > 1 ? ` e mais ${aEsperarLista.length - 1}` : ""
+          } — ${valorDoPrimeiro != null ? euros(valorDoPrimeiro) : "proposta"} à espera de resposta`,
+        }
+      : acordada
+        ? {
+            tom: "text-emerald-400",
+            texto: `✓ Acordada por ${euros(acordada.valorAcordado)} com ${acordada.profissionalNome}`,
+          }
+        : quantasAbertas > 0
+          ? {
+              tom: "text-sky-300",
+              texto: `À espera de ${quantasAbertas} profissiona${quantasAbertas === 1 ? "l" : "is"}`,
+            }
+          : { tom: "text-slate-500", texto: "Sem acordo — propostas expiradas ou desistidas" };
+
     return (
       <article
         key={p.id}
@@ -623,60 +686,82 @@ export default function AdminNegociacoesPanel({
           espera ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-800"
         }`}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
-            <div className="min-w-0">
-              <button
-                onClick={() => setAEditar(p.id)}
-                className="text-left text-base font-bold text-white underline-offset-4 hover:underline"
-              >
-                #{p.id} · {p.serviceType ?? "—"}
-              </button>
-              <p className="mt-0.5 text-sm text-slate-500">
-                {p.contactName} · {p.contactEmail || "sem email"} · {p.city ?? "—"}
-                {p.valorDesejadoCliente && ` · quer pagar ${euros(p.valorDesejadoCliente)}`}
-              </p>
-              {/*
-                O editar sempre existiu — era o título, clicável, sem nada que
-                o dissesse. Um botão que só se descobre por acidente não é um
-                botão: passam os dois a palavras, ao lado um do outro.
-              */}
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setAEditarPlataforma(p.id)}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                  Editar pedido
-                </button>
-                <button
-                  onClick={() => setAEditar(p.id)}
-                  title="A ficha completa do backoffice — inclui a Distribuição e o histórico"
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
-                >
-                  Ficha e distribuição
-                </button>
-                <button
-                  onClick={() => verComoCliente(p)}
-                  disabled={ocupado === `c${p.id}`}
-                  title="Abre a página verdadeira do pedido, a mesma que o cliente vê"
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-50"
-                >
-                  {ocupado === `c${p.id}` ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  Ver como o cliente
-                </button>
-              </div>
-            </div>
+        {/*
+          A LINHA DA MESA — opção B, escolhida por ele no canvas.
+          Uma grelha por pedido: número, cliente, o que pede, onde está a
+          bola, acção. Tudo o resto vive atrás do abrir.
+        */}
+        <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-[auto_72px_minmax(0,1fr)_96px_minmax(0,1.5fr)_128px] md:gap-3">
+          <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
+          <span className="text-sm font-bold text-white">#{p.id}</span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">{p.contactName ?? "—"}</p>
+            <p className="truncate text-xs text-slate-500">
+              {p.city ?? "—"} · {p.serviceType ?? "—"}
+              {!p.contactEmail && " · sem email"}
+            </p>
           </div>
+          <span className="text-sm font-semibold tabular-nums text-slate-200">
+            {p.valorDesejadoCliente ? euros(p.valorDesejadoCliente) : "—"}
+          </span>
+          <div className="min-w-0">
+            <p className={`truncate text-sm ${bola.tom}`}>{bola.texto}</p>
+            <p className="text-xs text-slate-500">
+              {p.negociacoes.length} profissiona{p.negociacoes.length === 1 ? "l" : "is"} ·{" "}
+              {totalPropostas} proposta{totalPropostas === 1 ? "" : "s"}
+            </p>
+          </div>
+          <button
+            onClick={alternarAberto}
+            aria-expanded={aberto}
+            className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+              espera
+                ? "bg-emerald-700 text-white hover:bg-emerald-600"
+                : "border border-slate-700 text-slate-300 hover:bg-slate-800/60"
+            }`}
+          >
+            {espera
+              ? `Responder (${aEsperarLista.length})`
+              : aberto
+                ? "Fechar"
+                : "Abrir"}
+          </button>
+        </div>
+
+        {aberto && (
+          <>
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
+          <button
+            onClick={() => setAEditarPlataforma(p.id)}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+            Editar pedido
+          </button>
+          <button
+            onClick={() => setAEditar(p.id)}
+            title="A ficha completa do backoffice — inclui a Distribuição e o histórico"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+          >
+            Ficha e distribuição
+          </button>
+          <button
+            onClick={() => verComoCliente(p)}
+            disabled={ocupado === `c${p.id}`}
+            title="Abre a página verdadeira do pedido, a mesma que o cliente vê"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-50"
+          >
+            {ocupado === `c${p.id}` ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Ver como o cliente
+          </button>
           <button
             onClick={() => reenviar(chaveCliente, { pedidoId: p.id, para: "cliente" })}
             disabled={ocupado === chaveCliente}
-            className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
           >
             {ocupado === chaveCliente ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -727,49 +812,10 @@ export default function AdminNegociacoesPanel({
               </button>
             </div>
           )}
-          {p.negociacoes.length > 0 && (
-            <button
-              onClick={() =>
-                setNegociacoesVisiveis((v) => {
-                  const c = new Set(v);
-                  if (c.has(p.id)) c.delete(p.id);
-                  else c.add(p.id);
-                  return c;
-                })
-              }
-              aria-expanded={negociacoesVisiveis.has(p.id) || espera}
-              className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left hover:bg-slate-800/60"
-            >
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
-                  negociacoesVisiveis.has(p.id) || espera ? "rotate-180" : ""
-                }`}
-                aria-hidden="true"
-              />
-              <span className="text-sm font-medium text-slate-300">
-                {p.negociacoes.length} profissiona
-                {p.negociacoes.length === 1 ? "l" : "is"}
-              </span>
-              {/* O resumo por estado: o que a parede dizia, numa linha. */}
-              {Object.entries(
-                p.negociacoes.reduce<Record<string, number>>((acc, n) => {
-                  acc[n.estado] = (acc[n.estado] ?? 0) + 1;
-                  return acc;
-                }, {}),
-              ).map(([estado, quantos]) => (
-                <span
-                  key={estado}
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    ESTADO_CLS[estado] ?? "bg-slate-800 text-slate-400"
-                  }`}
-                >
-                  {quantos} {estado}
-                </span>
-              ))}
-            </button>
-          )}
-          {(negociacoesVisiveis.has(p.id) || espera) &&
-            p.negociacoes.map((n) => {
+          {/* As negociações, direitas — a linha da mesa já resumiu; aqui
+              vê-se QUEM fez cada proposta e os VALORES, como ele pediu. */}
+          {p.negociacoes.map((n) => {
+
             const chave = `n${n.id}`;
             return (
               <div key={n.id}>
@@ -803,9 +849,30 @@ export default function AdminNegociacoesPanel({
                         {oQueFalta(n)}
                       </span>
                     )}
-                    {n.valorAcordado && (
-                      <span className="text-xs text-slate-500">{euros(n.valorAcordado)}</span>
-                    )}
+                    {/*
+                      O valor em cima da mesa, SEMPRE — e de quem é. Era isto
+                      que faltava: sabia-se que havia "1 proposta" e não se via
+                      o número sem abrir a troca.
+                    */}
+                    {(() => {
+                      const ultima = propostasDe(n.propostasJson).at(-1);
+                      if (n.valorAcordado) {
+                        return (
+                          <span className="text-xs font-semibold text-emerald-300">
+                            {euros(n.valorAcordado)}
+                          </span>
+                        );
+                      }
+                      if (!ultima) return null;
+                      return (
+                        <span className="text-xs text-slate-300">
+                          {euros(ultima.valor)}{" "}
+                          <span className="text-slate-500">
+                            ({ultima.por === "profissional" ? "dele" : "nosso"})
+                          </span>
+                        </span>
+                      );
+                    })()}
                     <span className="text-xs text-slate-600">
                       {propostasDe(n.propostasJson).length} proposta
                       {propostasDe(n.propostasJson).length === 1 ? "" : "s"}
@@ -845,6 +912,8 @@ export default function AdminNegociacoesPanel({
             );
           })}
         </div>
+          </>
+        )}
       </article>
     );
   }
@@ -1101,6 +1170,7 @@ export default function AdminNegociacoesPanel({
               </p>
             </>
           )}
+          {cabecalhoDaMesa}
           <div className="space-y-3">{daClyon.map(cartaoDoPedido)}</div>
         </section>
       )}
@@ -1178,6 +1248,7 @@ export default function AdminNegociacoesPanel({
             O cliente recebeu o link no email e responde sozinho. A CLYON só
             entra se ele deixar a proposta expirar.
           </p>
+          {cabecalhoDaMesa}
           <div className="space-y-3">{dosClientes.map(cartaoDoPedido)}</div>
         </section>
       )}

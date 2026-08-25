@@ -281,3 +281,31 @@ describe("o detalhe do pedido em telemóvel", () => {
     expect(MODAL_PEDIDO).not.toContain('"flex flex-shrink-0 flex-wrap items-center gap-1.5"');
   });
 });
+
+
+describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
+  it("cada linha diz onde está a bola sem abrir nada", () => {
+    /*
+     * A dor era "difícil de identificar qual trabalho recebeu proposta, de
+     * quem e qual valor". A linha di-lo sempre; abrir é para agir, não para
+     * descobrir.
+     */
+    expect(PAINEL).toContain("à espera de resposta");
+    expect(PAINEL).toContain("Acordada por ");
+    expect(PAINEL).toContain("Onde est");
+  });
+
+  it("a linha mostra o cliente e a contagem de propostas", () => {
+    expect(PAINEL).toContain("totalPropostas");
+    expect(PAINEL).toMatch(/Responder \(\$\{aEsperarLista\.length\}\)/);
+  });
+
+  it("aberta, mostra quem fez cada proposta e o valor em cima da mesa", () => {
+    // "1 proposta" sem número era saber que havia sem ver quanto.
+    expect(PAINEL).toContain('ultima.por === "profissional" ? "dele" : "nosso"');
+  });
+
+  it("um pedido à espera de resposta abre sozinho", () => {
+    expect(PAINEL).toContain("negociacoesVisiveis.has(p.id) || espera");
+  });
+});
