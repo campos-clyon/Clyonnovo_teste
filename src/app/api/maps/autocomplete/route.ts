@@ -49,9 +49,20 @@ export async function POST(request: NextRequest) {
   const data = await response.json();
 
   if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+    /*
+     * REQUEST_DENIED não é o Google em baixo — é a NOSSA chave sem a Places
+     * API na lista de restrições. Foi exactamente o que aconteceu quando a
+     * chave passou a só Routes + Geocoding: 33 falhas em cinco minutos e um
+     * alerta da Vercel, com o Google perfeitamente de pé. O estado fica no
+     * log e no corpo para o próximo diagnóstico demorar um minuto.
+     */
+    console.warn("[maps/autocomplete]", data.status, data.error_message ?? "");
     return NextResponse.json(
       {
-        error: data.error_message || data.status || "autocomplete_unavailable",
+        error:
+          data.status === "REQUEST_DENIED"
+            ? "places_api_recusada — falta a Places API nas restrições da chave"
+            : data.error_message || data.status || "autocomplete_unavailable",
       },
       { status: 502 },
     );
