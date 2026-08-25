@@ -256,10 +256,15 @@ describe("a edição da plataforma acontece na plataforma", () => {
     expect(EDITAR).toContain("Pedido editado pela CLYON");
   });
 
-  it("em edição não há botões de envio", () => {
-    // Enviar é outra decisão, tomada na lista — um pedido já enviado não se
-    // reenvia por acidente a partir de um ecrã de edição.
-    expect(FORM_REG).toContain("emEdicao ? null : enviado");
+  it("em edição não há botões de envio — salvo autorização explícita", () => {
+    /*
+     * A regra evoluiu com o fluxo da Distribuição: enviar continua fora da
+     * edição por omissão (um pedido já publicado não se reenvia por
+     * acidente), mas quem abre o editor PARA verificar-e-enviar liga-o com
+     * `podeEnviarAoGravar` — e só quando ninguém recebeu ainda.
+     */
+    expect(FORM_REG).toContain("emEdicao && !podeEnviar ? null");
+    expect(FORM_REG).toContain("podeEnviarAoGravar = false");
   });
 
   it("o rawOrderJson funde-se, não se substitui", () => {
