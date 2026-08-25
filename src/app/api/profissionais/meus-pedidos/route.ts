@@ -127,6 +127,9 @@ export async function GET(req: NextRequest) {
             : null,
         // O que ele vê do pedido — nada além disto.
         serviceType: (vista.serviceType as string | undefined) ?? null,
+        // A data marcada nao e contacto: ajuda a decidir ANTES de aceitar, e
+        // e a espinha da agenda depois de contratar.
+        dataAgendada: (l as unknown as { dataAgendada?: Date | string | null }).dataAgendada ?? null,
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
         description: (vista.description as string | undefined) ?? null,

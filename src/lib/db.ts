@@ -1549,7 +1549,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
-            o.precisaFatura, o.precisaGuiaTransporte, o.filesJson,
+            o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
             -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e
             -- vistaParaOEstado, e so quando o trabalho e mesmo dele.
             o.address, o.contactName, o.contactPhone, o.contactEmail

@@ -24,6 +24,8 @@ export type Pedido = {
   serviceType: string | null;
   city: string | null;
   urgency: string | null;
+  /** A data e hora desejadas pelo cliente, quando as indicou. */
+  dataAgendada?: string | null;
   description: string | null;
   filesJson: string | null;
   floor: string | null;

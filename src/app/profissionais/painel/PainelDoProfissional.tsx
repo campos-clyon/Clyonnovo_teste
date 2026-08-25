@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Briefcase,
+  CalendarDays,
   Building2,
   FileText,
   HelpCircle,
@@ -25,6 +26,7 @@ import Carteira from "./Carteira";
 import Historico from "./Historico";
 import PerfilEcra, { type SeccaoDoPerfil } from "./Perfil";
 import Ajuda from "./Ajuda";
+import Agenda from "./Agenda";
 import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
 import Avaliacoes from "./Avaliacoes";
 
@@ -45,6 +47,7 @@ import Avaliacoes from "./Avaliacoes";
 type Ecra =
   | "menu"
   | "trabalhos"
+  | "agenda"
   | "carteira"
   | "historico"
   | "avaliacoes"
@@ -54,6 +57,7 @@ type Ecra =
 const ECRAS_VALIDOS: Ecra[] = [
   "menu",
   "trabalhos",
+  "agenda",
   "carteira",
   "historico",
   "avaliacoes",
@@ -245,6 +249,12 @@ export default function PainelDoProfissional() {
   const aResponder = pedidos.filter(
     (p) => p.estado === "aberta" && !propostasDe(p.propostas).some((x) => x.por === "profissional"),
   ).length;
+
+  // Quantos trabalhos contratados tem data marcada — o numero da agenda.
+  const agendados = pedidos.filter(
+    (p) => p.fase === "a_executar" && !p.arquivadoEm && p.dataAgendada,
+  ).length;
+
   const porFazer = pedidos.filter((p) => p.estado === "acordada" && p.fase === "a_executar").length;
   const noMenu = ecra === "menu";
 
@@ -379,7 +389,14 @@ export default function PainelDoProfissional() {
           aviso={porFazer > 0}
           onClick={() => abrir("trabalhos")}
         />
-        {/* Enquanto nada está disponível, a linha mostrava 0,00 € e parecia que
+                <LinhaDeMenu
+          icone={CalendarDays}
+          rotulo="Agenda"
+          activo={ecra === "agenda"}
+          valor={agendados > 0 ? `${agendados} marcado${agendados === 1 ? "" : "s"}` : undefined}
+          onClick={() => abrir("agenda")}
+        />
+{/* Enquanto nada está disponível, a linha mostrava 0,00 € e parecia que
             ele não tinha ganho nada — quando o dinheiro existe e está à espera
             da confirmação do cliente. */}
         <LinhaDeMenu
@@ -523,6 +540,13 @@ export default function PainelDoProfissional() {
           />
         )}
 
+        {ecra === "agenda" && (
+          <Agenda
+            pedidos={pedidos}
+            onVoltar={() => abrir("menu")}
+            onAbrirTrabalhos={() => abrir("trabalhos")}
+          />
+        )}
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}
 
         {["dados", "servicos", "faturacao", "banco", "seguranca"].includes(ecra) && perfil && (
