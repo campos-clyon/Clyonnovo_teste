@@ -111,3 +111,37 @@ describe("o realce dos que ainda não abriu", () => {
     expect(cartao).toContain("{novo && (");
   });
 });
+
+describe("os hooks e o return antecipado", () => {
+  it("nenhum hook fica por baixo do return que abre um trabalho", () => {
+    /*
+     * O ecrã branco com «Application error» que ele apanhou ao clicar num
+     * pedido.
+     *
+     * `porAbrir` estava por baixo do `return` do trabalho aberto — junto ao
+     * sítio onde é usado, que era onde fazia sentido ler. Abrir um trabalho
+     * leva a função a sair mais cedo, o useMemo deixa de correr, e o React
+     * conta menos hooks do que na volta anterior. A lista de hooks é
+     * posicional: uma volta que salta um desalinha todas as seguintes.
+     *
+     * Este teste é o que impede que volte a acontecer — e voltaria, porque o
+     * sítio errado é o sítio legível.
+     */
+    const corpo = TRABALHOS.slice(TRABALHOS.indexOf("export default function Trabalhos("));
+    const saida = corpo.indexOf("const escolhido = pedidos.find(");
+    expect(saida).toBeGreaterThan(-1);
+
+    const depois = corpo.slice(saida);
+    const finalDoComponente = depois.indexOf("\nfunction ");
+    const zona = finalDoComponente === -1 ? depois : depois.slice(0, finalDoComponente);
+
+    const hooks = [...zona.matchAll(/\buse(State|Memo|Effect|Callback|Ref|Reducer)\s*\(/g)];
+    expect(hooks.map((h) => h[0])).toEqual([]);
+  });
+
+  it("o useMemo do porAbrir está mesmo acima da saída", () => {
+    expect(TRABALHOS.indexOf("const porAbrir = useMemo(")).toBeLessThan(
+      TRABALHOS.indexOf("const escolhido = pedidos.find("),
+    );
+  });
+});

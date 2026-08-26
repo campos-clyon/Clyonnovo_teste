@@ -267,22 +267,18 @@ export default function Trabalhos({
     }
   }
 
-  const escolhido = pedidos.find((p) => p.negociacaoId === aberto);
-  if (escolhido) {
-    return (
-      <DetalheDoTrabalho
-        pedido={escolhido}
-        onVoltar={() => setAberto(null)}
-        onRecarregar={onRecarregar}
-      />
-    );
-  }
-
-  const porSeparador = (id: Separador) => pedidos.filter((p) => separadorDe(p) === id);
-
-  /* Só onde ele ainda decide. Num trabalho feito, a cronologia é a resposta. */
-  const podeOrdenar = separador === "novos" || separador === "negociacao";
-
+  /*
+   * ⚠️ TODOS OS HOOKS TÊM DE FICAR ACIMA DO `return` QUE VEM A SEGUIR.
+   *
+   * O `porAbrir` estava por baixo dele, junto ao sítio onde é usado — que era
+   * onde fazia sentido ler, e onde partia. Abrir um trabalho leva a função a
+   * sair mais cedo, o `useMemo` deixa de correr, e o React conta menos hooks
+   * do que na volta anterior: "Rendered fewer hooks than expected", que é o
+   * ecrã branco com «Application error» que ele apanhou ao clicar num pedido.
+   *
+   * A regra não é um capricho do React: a lista de hooks é posicional, e uma
+   * volta que salta um desalinha todas as que vêm depois.
+   */
   /*
    * OS QUE AINDA NÃO ABRIU — E SÓ OS CINCO MAIS RECENTES.
    *
@@ -317,6 +313,23 @@ export default function Trabalhos({
       .map((p) => p.negociacaoId);
     return new Set(ids);
   }, [pedidos, lidosAgora]);
+
+  const escolhido = pedidos.find((p) => p.negociacaoId === aberto);
+  if (escolhido) {
+    return (
+      <DetalheDoTrabalho
+        pedido={escolhido}
+        onVoltar={() => setAberto(null)}
+        onRecarregar={onRecarregar}
+      />
+    );
+  }
+
+  const porSeparador = (id: Separador) => pedidos.filter((p) => separadorDe(p) === id);
+
+  /* Só onde ele ainda decide. Num trabalho feito, a cronologia é a resposta. */
+  const podeOrdenar = separador === "novos" || separador === "negociacao";
+
 
   /*
    * A ORDEM DA LISTA — DELE, E NÃO MINHA.
