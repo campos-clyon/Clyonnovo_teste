@@ -907,7 +907,7 @@ function DetalheDoTrabalho({
                       "de si" dizia onde ele está AGORA; a conta é feita desde
                       a base que ele registou. A frase passa a dizer a verdade.
                     */}
-                    {distanciaDaBase(pedido.distanciaKm)}
+                    {distanciaDaBase(pedido.distanciaKm, pedido.distanciaMedidaPor)}
                   </dd>
                 </>
               )}

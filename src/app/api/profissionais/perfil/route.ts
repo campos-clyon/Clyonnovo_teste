@@ -94,6 +94,10 @@ export async function GET(req: NextRequest) {
         telefone: p.phone ?? "",
         nif: p.nif ?? "",
         cidade: p.city ?? "",
+        /* Onde a base ficou mesmo. Sem isto o painel não podia dizer-lhe se
+           ela está confirmada no mapa ou se é um palpite sobre um texto. */
+        baseLat: p.baseLat != null ? Number(p.baseLat) : null,
+        baseLng: p.baseLng != null ? Number(p.baseLng) : null,
         moradaFiscal: p.moradaFiscal ?? "",
         codigoPostalFiscal: p.codigoPostalFiscal ?? "",
         localidadeFiscal: p.localidadeFiscal ?? "",
@@ -204,7 +208,26 @@ export async function PUT(req: NextRequest) {
        * e as coordenadas ficam a NULL — melhor não ter ponto nenhum (e cair
        * na regra das zonas) do que guardar um ponto que já não é o dele.
        */
-      const base = await geocodificarLocalidade(c);
+      /*
+       * AS COORDENADAS DA LISTA MANDAM, QUANDO EXISTEM.
+       *
+       * O campo era uma caixa de texto sem lista, e por isso aceitava «Rua dos
+       * Jasmins Amora» — que o geocodificador tentava resolver como se fosse o
+       * NOME DE UMA TERRA. Deu um ponto em Palmela para um profissional de
+       * Amora, e a partir daí todas as distâncias dele saíram erradas sem nada
+       * no ecrã a dizê-lo: aparecia a 5,6 km de um trabalho que fica a 33.
+       *
+       * Agora o painel manda as coordenadas do sítio que ele ESCOLHEU da lista.
+       * Vindas do Google, com a morada, e sem passo nenhum a adivinhar pelo
+       * meio. A localização por texto fica como recurso para quem escreveu à
+       * mão — e aí é mesmo uma aproximação, que é o que o ecrã lhe diz.
+       */
+      const escolhidas =
+        Number.isFinite(Number(corpo.baseLat)) && Number.isFinite(Number(corpo.baseLng))
+          ? { lat: Number(corpo.baseLat), lng: Number(corpo.baseLng) }
+          : null;
+
+      const base = escolhidas ?? (await geocodificarLocalidade(c));
       mudancas.baseLat = base?.lat ?? null;
       mudancas.baseLng = base?.lng ?? null;
     }

@@ -6,7 +6,7 @@ import {
 } from "@/lib/profissional-auth";
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
-import { distanciaParaElegibilidade } from "@/lib/distancia-entre-pontos";
+import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 
 export const runtime = "nodejs";
@@ -96,7 +96,29 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const pedidos = linhas.map((l) => {
+    /*
+     * A DISTÂNCIA PELA ESTRADA, E NÃO EM LINHA RECTA.
+     *
+     * "Esses cálculos de km estão muito errados. Temos que usar valores reais
+     * e calculados individualmente usando o endereço base do pro com o do
+     * pedido — reais e verdadeiros."
+     *
+     * Era linha recta vezes 1,3. De Amora a Setúbal isso dá 29,6 km e a estrada
+     * são 33,4; entre Almada e o Montijo, que são vizinhos por cima da água, o
+     * erro passa dos 60%. Um número desses decide se ele atravessa o rio.
+     *
+     * Todas de uma vez: a base é a mesma para a lista inteira, e cada par
+     * (base, pedido) fica guardado — a segunda pergunta é sempre igual à
+     * primeira, e não se paga duas vezes por ela.
+     */
+    const medidas = await distanciasRodoviarias(
+      linhas.map((l) => ({
+        origem: ponto(l.baseLat, l.baseLng),
+        destino: ponto(l.pedidoLat, l.pedidoLng),
+      })),
+    );
+
+    const pedidos = linhas.map((l, i) => {
       // A morada e o contacto só entram na vista depois de ele ser contratado —
       // a decisão está numa função só, e não repetida a cada rota.
       const vista = vistaParaOEstado(l as unknown as Record<string, unknown>, l.estado) as Record<
@@ -192,10 +214,15 @@ export async function GET(req: NextRequest) {
          * quando falta o ponto de um dos lados -- e ai o ecra cala-se, em vez
          * de inventar um numero.
          */
-        distanciaKm: distanciaParaElegibilidade(
-          ponto(l.baseLat, l.baseLng),
-          ponto(l.pedidoLat, l.pedidoLng),
-        ),
+        distanciaKm: medidas[i]?.km ?? null,
+        /* Minutos de carro, quando a estrada foi mesmo consultada. */
+        minutosDeCarro: medidas[i]?.minutos ?? null,
+        /*
+         * De onde veio o número: `estrada` é o percurso real, `estimativa` é a
+         * linha recta com folga. Sai daqui para o ecrã poder ser honesto — um
+         * número aproximado apresentado como medido é pior do que não o haver.
+         */
+        distanciaMedidaPor: medidas[i]?.origem ?? null,
         precisaFatura: Boolean(vista.precisaFatura),
         precisaGuiaTransporte: Boolean(vista.precisaGuiaTransporte),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.

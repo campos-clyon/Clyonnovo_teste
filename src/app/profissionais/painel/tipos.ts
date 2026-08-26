@@ -41,8 +41,17 @@ export type Pedido = {
   /** Entulho: como está e quantos sacos são. */
   entulhoEstado?: string | null;
   entulhoQuantidade?: string | null;
-  /** Km em linha recta com folga de estrada, da base dele ao trabalho. */
+  /** Km de carro, da base dele ao trabalho — pela estrada quando dá. */
   distanciaKm: number | null;
+  /** Minutos de carro, quando a estrada foi consultada. */
+  minutosDeCarro?: number | null;
+  /**
+   * `estrada` = percurso real. `estimativa` = linha recta com folga.
+   *
+   * O ecrã tem de saber a diferença: dizer «33 km» sobre uma linha recta é
+   * apresentar um palpite como se fosse uma medição.
+   */
+  distanciaMedidaPor?: "estrada" | "estimativa" | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
   querPagar: number | null;
@@ -98,6 +107,9 @@ export type Perfil = {
   telefone: string;
   nif: string;
   cidade: string;
+  /** Onde a base ficou no mapa. `null` = ainda não foi escolhida da lista. */
+  baseLat?: number | null;
+  baseLng?: number | null;
   moradaFiscal: string;
   codigoPostalFiscal: string;
   localidadeFiscal: string;
@@ -215,10 +227,27 @@ export function distanciaPorExtenso(km: number): string {
 }
 
 /** A mesma distância, na linha do detalhe: desde a base que ele registou. */
-export function distanciaDaBase(km: number): string {
-  return km < 1
-    ? "menos de 1 km da sua base"
-    : `cerca de ${Math.round(km)} km da sua base`;
+/**
+ * A distância dita como quem fala, e a dizer de si própria.
+ *
+ * «cerca de 6 km da sua base» era o que se dizia sempre, viesse o número de
+ * onde viesse. Agora que há duas origens — a estrada e a linha recta — a
+ * palavra muda com ela: o que foi medido diz-se sem «cerca de», e o que foi
+ * estimado assume-o.
+ */
+export function distanciaDaBase(
+  km: number | null | undefined,
+  medidaPor?: "estrada" | "estimativa" | null,
+): string | null {
+  if (km == null || !Number.isFinite(km)) return null;
+  const n = distanciaPorExtenso(km);
+  if (!n) return null;
+  if (medidaPor === "estrada") return `${n} de carro, da sua base`;
+  /*
+   * "cerca de menos de 1 km" não se diz. Quando a frase já é aproximada por
+   * si — «menos de 1 km» — o «cerca de» só a torna desajeitada.
+   */
+  return n.startsWith("menos de") ? `${n} da sua base` : `cerca de ${n} da sua base`;
 }
 
 
