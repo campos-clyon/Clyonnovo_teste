@@ -59,7 +59,16 @@ describe("os dados do acesso chegam mesmo ao profissional", () => {
 
 describe("a distância até ao trabalho", () => {
   it("é a MESMA conta que o backoffice já mostrava ao distribuir", () => {
-    expect(API).toContain("distanciaParaElegibilidade");
+    /*
+     * Passou a ser a estrada, e nos DOIS sítios ao mesmo tempo.
+     *
+     * O que este teste guarda não é o nome da função: é que o profissional e o
+     * backoffice vejam o MESMO número. Duas contas diferentes para a mesma
+     * distância é a maneira mais rápida de nenhum dos dois acreditar no que lê.
+     */
+    expect(API).toContain("distanciasRodoviarias");
+    expect(readFileSync(join(process.cwd(), "src/lib/distribuir-pedido.ts"), "utf8"))
+      .toContain("distanciasRodoviarias");
   });
 
   it("cala-se quando falta o ponto de um dos lados, em vez de inventar", () => {
@@ -146,7 +155,7 @@ describe("o vocabulário do ecrã", () => {
   });
 
   it("a distância é dita desde a BASE dele, não de onde ele está agora", () => {
-    expect(ECRA).toContain("distanciaDaBase(pedido.distanciaKm)");
+    expect(ECRA).toContain("distanciaDaBase(pedido.distanciaKm, pedido.distanciaMedidaPor)");
     expect(ECRA).not.toContain("km de si");
   });
 

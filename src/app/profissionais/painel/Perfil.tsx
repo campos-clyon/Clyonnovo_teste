@@ -9,6 +9,7 @@ import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModa
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/profissional-auth";
 import type { Perfil as PerfilTipo } from "./tipos";
+import MoradaDaBase from "./MoradaDaBase";
 
 /**
  * O perfil, em secções pequenas.
@@ -274,11 +275,27 @@ export default function Perfil({
               </div>
             </Campo>
 
-            <Campo etiqueta="Cidade de base" ajuda="É daqui que contamos o seu raio de acção.">
-              <input
+            {/*
+              A MORADA DA BASE, ESCOLHIDA DE UMA LISTA.
+
+              Chamava-se «Cidade de base» e era uma caixa vazia. Aceitou «Rua
+              dos Jasmins Amora», o servidor tentou localizar aquela frase como
+              se fosse o nome de uma terra, e a base foi parar a Palmela. A
+              partir daí todas as distâncias saíram erradas — sem nada no ecrã
+              a dizê-lo. Aparecia a 5,6 km de um trabalho que fica a 33.
+            */}
+            <Campo
+              etiqueta="Morada da base"
+              ajuda="É daqui que contamos a distância a cada trabalho, e o seu raio de acção."
+            >
+              <MoradaDaBase
                 className={CAIXA}
-                value={dados.cidade}
-                onChange={(e) => mudar("cidade", e.target.value)}
+                valor={dados.cidade}
+                lat={dados.baseLat}
+                lng={dados.baseLng}
+                onMudar={(b) =>
+                  setDados((d) => ({ ...d, cidade: b.morada, baseLat: b.lat, baseLng: b.lng }))
+                }
               />
             </Campo>
 
@@ -288,7 +305,13 @@ export default function Perfil({
 
             <Guardar
               onClick={() =>
-                gravar({ nome: dados.nome, telefone: dados.telefone, cidade: dados.cidade })
+                gravar({
+                  nome: dados.nome,
+                  telefone: dados.telefone,
+                  cidade: dados.cidade,
+                  baseLat: dados.baseLat,
+                  baseLng: dados.baseLng,
+                })
               }
             />
           </div>
@@ -373,6 +396,8 @@ export default function Perfil({
                   categorias: dados.categorias,
                   zonas: dados.zonas,
                   cidade: dados.cidade,
+                  baseLat: dados.baseLat,
+                  baseLng: dados.baseLng,
                   raioKm: dados.raioKm,
                 })
               }

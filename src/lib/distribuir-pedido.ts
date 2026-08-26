@@ -1,6 +1,7 @@
 import { profissionaisActivos, criarNegociacao, type ProfissionalNaBase } from "./db";
 import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel";
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
+import { distanciasRodoviarias } from "./distancia-rodoviaria";
 import { avisarProfissional } from "./email-profissional";
 import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
@@ -130,12 +131,35 @@ export async function avaliarAlcance(pedido: {
   const trabalho =
     pedido.lat != null && pedido.lng != null ? { lat: pedido.lat, lng: pedido.lng } : null;
 
-  const comDistancia = candidatos.map((p) => ({
+  /*
+   * A DISTÂNCIA PELA ESTRADA, POR PROFISSIONAL.
+   *
+   * "Temos que usar valores reais e calculados individualmente usando o
+   * endereço base do pro com o do pedido — reais e verdadeiros."
+   *
+   * Era linha recta vezes 1,3, e é a linha recta que decidia quem recebia o
+   * pedido. Entre Almada e o Montijo — vizinhos por cima da água, meia hora
+   * de carro — o erro passa dos 60%: entrava quem não devia e ficava de fora
+   * quem devia entrar.
+   *
+   * Cada par (base, pedido) fica guardado depois da primeira vez, por isso
+   * distribuir o mesmo pedido outra vez não volta a pagar as consultas.
+   */
+  const medidas = await distanciasRodoviarias(
+    candidatos.map((p) => ({
+      origem: p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
+      destino: trabalho,
+    })),
+  );
+
+  const comDistancia = candidatos.map((p, i) => ({
     profissional: p,
-    distanciaKm: distanciaParaElegibilidade(
-      p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
-      trabalho,
-    ),
+    distanciaKm:
+      medidas[i]?.km ??
+      distanciaParaElegibilidade(
+        p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
+        trabalho,
+      ),
   }));
 
   const elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }> = [];
@@ -194,12 +218,35 @@ export async function distribuirPedido(
   // A distância é por profissional: depende da base dele, não do pedido. Sem
   // coordenadas fica `null`, e aí ninguém é elegível: não se pode dizer que
   // alguém está dentro de um raio que nunca foi medido.
-  const comDistancia = candidatos.map((p) => ({
+  /*
+   * A DISTÂNCIA PELA ESTRADA, POR PROFISSIONAL.
+   *
+   * "Temos que usar valores reais e calculados individualmente usando o
+   * endereço base do pro com o do pedido — reais e verdadeiros."
+   *
+   * Era linha recta vezes 1,3, e é a linha recta que decidia quem recebia o
+   * pedido. Entre Almada e o Montijo — vizinhos por cima da água, meia hora
+   * de carro — o erro passa dos 60%: entrava quem não devia e ficava de fora
+   * quem devia entrar.
+   *
+   * Cada par (base, pedido) fica guardado depois da primeira vez, por isso
+   * distribuir o mesmo pedido outra vez não volta a pagar as consultas.
+   */
+  const medidas = await distanciasRodoviarias(
+    candidatos.map((p) => ({
+      origem: p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
+      destino: trabalho,
+    })),
+  );
+
+  const comDistancia = candidatos.map((p, i) => ({
     profissional: p,
-    distanciaKm: distanciaParaElegibilidade(
-      p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
-      trabalho,
-    ),
+    distanciaKm:
+      medidas[i]?.km ??
+      distanciaParaElegibilidade(
+        p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
+        trabalho,
+      ),
   }));
 
   const elegiveis: Array<{ profissional: ProfissionalNaBase; distanciaKm: number | null }> = [];
