@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 
 const SERVICOS = [
   ["recolha_moveis", "Recolha de móveis"],
@@ -507,11 +508,17 @@ export default function RegistarPedido({
         </label>
 
         <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-3">
-          O que é preciso fazer
-          <textarea
+          Descrição
+          {/*
+            Chamava-se "O que é preciso fazer". Era uma pergunta ao pé de
+            catorze rótulos que são nomes — Morada, Localidade, Andar — e a
+            forma diferente não dizia nada de diferente. É a descrição do
+            pedido, que é como ela se chama em todos os outros sítios do site:
+            no que o profissional lê, no que o cliente vê, na base de dados.
+          */}
+          <CaixaDeTextoQueCresce
             value={f.description}
             onChange={(e) => muda("description", e.target.value)}
-            rows={2}
             placeholder="O que a pessoa disse ao telefone — quanto mais detalhe, melhor o preço."
             className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-600"
           />
