@@ -127,6 +127,8 @@ export async function GET(req: NextRequest) {
         pagoEm: l.pagoEm ?? null,
         avaliadoEm: l.avaliadoEm ?? null,
         arquivadoEm: l.arquivadoProfissionalEm ?? null,
+        /* Quando ele abriu este trabalho pela primeira vez — null = por abrir. */
+        abertoEm: l.abertoProfissionalEm ?? null,
         estrelas: l.estrelas ?? null,
         valorAcordado: acordado,
         propostas: l.propostasJson,

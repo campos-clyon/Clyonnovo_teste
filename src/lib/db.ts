@@ -822,6 +822,18 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * diferença entre poder responder a "isto desapareceu-me da lista" e ter
      * de encolher os ombros.
      */
+    /*
+     * Quando o profissional ABRIU este trabalho pela primeira vez.
+     *
+     * Sem isto, "novo" queria dizer "está no separador dos novos" — e por isso
+     * o distintivo ficava em todos os cartões para sempre, mesmo nos que ele já
+     * tinha lido dez vezes. Um aviso que nunca se apaga deixa de ser um aviso.
+     *
+     * É por profissional, e vive na negociação porque é isso que a negociação
+     * é: o par (pedido, profissional). O mesmo pedido pode estar por abrir para
+     * um e lido há três dias para outro.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN abertoProfissionalEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN arquivadoProfissionalEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN arquivadoClienteEm DATETIME NULL DEFAULT NULL`,
   ];
@@ -904,6 +916,31 @@ export async function cancelarPedido(
     [pedidoId],
   );
   return { encerradas };
+}
+
+/**
+ * Marca um trabalho como aberto pelo profissional — a primeira vez, e só ela.
+ *
+ * `IS NULL` no WHERE de propósito: o que interessa é QUANDO ele o viu pela
+ * primeira vez, não a última. Reescrever a data a cada abertura faria um
+ * trabalho lido há uma semana parecer acabado de ler.
+ *
+ * O providerId no WHERE não é zelo a mais: sem ele, um id de negociação
+ * adivinhado deixava marcar como visto o trabalho de outra pessoa.
+ */
+export async function marcarTrabalhoComoAberto(
+  negociacaoId: number,
+  providerId: number,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `UPDATE negociacoes SET abertoProfissionalEm = NOW()
+      WHERE id = ? AND providerId = ? AND abertoProfissionalEm IS NULL`,
+    [negociacaoId, providerId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0) > 0;
 }
 
 export async function matarNegociacoesDoPedido(pedidoId: number): Promise<number> {
@@ -1675,6 +1712,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
      */
     floor: string | null;
     hasElevator: string | null;
+    abertoProfissionalEm: Date | null;
     moradaDestino: string | null;
     localidadeDestino: string | null;
     andarDestino: string | null;
@@ -1704,6 +1742,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- separa "duas horas" de "uma tarde" e o profissional decidia sem
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
             -- buscar.
+            n.abertoProfissionalEm,
             o.floor, o.hasElevator, o.parkingDistance,
             -- O que so alguns servicos tem, e sem o qual eles propoem as
             -- cegas: para onde vai uma mudanca (e o acesso do outro lado), e

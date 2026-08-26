@@ -48,6 +48,14 @@ export type Pedido = {
   querPagar: number | null;
   recebeSeAceitar: number | null;
   recebeSeFechado: number | null;
+  /**
+   * Quando ele abriu este trabalho pela primeira vez. `null` = ainda por abrir.
+   *
+   * É isto que faz o distintivo «novo» apagar-se sozinho. Antes, «novo» queria
+   * dizer «está no separador dos novos» — e ficava em todos os cartões para
+   * sempre, mesmo nos que ele já tinha lido dez vezes.
+   */
+  abertoEm?: string | null;
   /** Só chegam preenchidos depois de ele ser contratado. */
   morada: string | null;
   /** Contexto real do cliente (por email); null quando não há historial ligável. */
