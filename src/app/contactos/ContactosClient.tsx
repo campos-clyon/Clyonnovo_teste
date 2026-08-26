@@ -78,21 +78,16 @@ export default function ContactosClient() {
     </div>
   );
 
+  /*
+   * So os canais e o formulario — a parte que precisa de correr no browser.
+   *
+   * O involucro, o titulo e todo o texto passaram para a page.tsx, que corre
+   * no servidor. Ficavam aqui dois problemas: um SEGUNDO <h1> na mesma pagina
+   * (o Google escolhe um e o outro dilui), e um `min-h-screen` com padding
+   * proprio dentro de outro, que empurrava a pagina inteira para baixo.
+   */
   return (
-    <div className="min-h-screen bg-[#F4F8FB]">
-      <div className="mx-auto max-w-5xl px-4 pb-20 pt-24 sm:px-6 lg:px-8">
-
-        {/* Header compacto */}
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
-            Fale connosco
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500">
-            Orçamento grátis em 6h — por telefone, WhatsApp ou pelo formulário abaixo.
-          </p>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-2">
 
           {/* Contacto direto */}
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -237,9 +232,6 @@ export default function ContactosClient() {
                 </form>
               </>
             )}
-          </div>
-
-        </div>
       </div>
     </div>
   );
