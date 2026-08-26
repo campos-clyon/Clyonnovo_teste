@@ -136,6 +136,28 @@ function esperaResposta(n: Negociacao): boolean {
  * 09:12 e ninguém confirmou nada. Ficou arquivado com o trabalho do Manuel
  * Martins por reconhecer.
  */
+/**
+ * O pedido está concluído — pelo trabalho, não só pela coluna.
+ *
+ * `confirmarExecucao` põe o pedido em `concluido` quando o trabalho é
+ * confirmado, mas de propósito não toca em cancelados nem em arquivados: quem
+ * arquivou decidiu onde o pedido vive, e uma confirmação tardia não desfaz
+ * essa arrumação. Bem visto para um cancelado.
+ *
+ * Só que a mesa não é o arquivo. Os três níveis dela respondem a uma pergunta
+ * — o que preciso de fazer agora? — e um trabalho confirmado não precisa de
+ * nada. O #219 estava arquivado desde 25 de Agosto; ele confirmou-o às 16:28 e
+ * libertou os 100,00 € ao Manuel Martins, e o ecrã continuou a mostrá-lo em "A
+ * CORRER — ✓ Acordada por 100,00 €", como se ainda houvesse alguém a jogar.
+ *
+ * A verdade sobre um trabalho vive na negociação, e é `confirmadoEm`: é ela
+ * que fecha o trabalho, liberta o dinheiro e deixa apagar as contas. Uma
+ * coluna de arrumação do backoffice não a contradiz.
+ */
+function pedidoConcluido(p: Pedido): boolean {
+  return p.status === "concluido" || p.negociacoes.some((n) => n.confirmadoEm != null);
+}
+
 function esperaConfirmacao(n: Negociacao): boolean {
   if (n.estado === "desistida" || n.estado === "morta") return false;
   return n.execucaoEnviadaEm != null && n.confirmadoEm == null;
@@ -696,8 +718,8 @@ export default function AdminNegociacoesPanel({
    * ABERTO desde a conclusão fica em destaque: dinheiro que entrou merece
    * ser visto, não descoberto por acaso.
    */
-  const concluidos = ordenados.filter((p) => p.status === "concluido");
-  const activos = ordenados.filter((p) => p.status !== "concluido");
+  const concluidos = ordenados.filter(pedidoConcluido);
+  const activos = ordenados.filter((p) => !pedidoConcluido(p));
   const concluidosPorVer = concluidos.filter((p) => !p.concluidoVistoEm).length;
   const daClyon = activos.filter((p) => quemNegoceia(p) === "clyon");
   const dosClientes = activos.filter((p) => quemNegoceia(p) === "cliente");
@@ -808,7 +830,7 @@ export default function AdminNegociacoesPanel({
      * linha abre num toque.
      */
     const aberto = negociacoesVisiveis.has(p.id);
-    const concluido = p.status === "concluido";
+    const concluido = pedidoConcluido(p);
     const porVer = concluido && !p.concluidoVistoEm;
     const alternarAberto = () => {
       // Abrir um concluído por ver É vê-lo: o carimbo grava-se no servidor e
