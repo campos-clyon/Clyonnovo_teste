@@ -30,6 +30,7 @@ import {
   ELEVADOR,
   ESTACIONAMENTO,
   emPortugues,
+  ESTADO_DO_ENTULHO,
   distanciaPorExtenso,
   distanciaDaBase,
   fotosDe,
@@ -649,6 +650,90 @@ function DetalheDoTrabalho({
                   <dt className="text-slate-500">Estacionar</dt>
                   <dd className="font-medium text-tinta">
                     {emPortugues(ESTACIONAMENTO, pedido.parkingDistance)}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        )}
+
+        {/*
+          A SEGUNDA PONTA DE UMA MUDANÇA.
+
+          Uma mudança é levar as coisas de A para B, e ele só via o A. Propunha
+          um valor sem saber se era para o prédio ao lado ou para o Porto, e
+          sem saber se do outro lado havia elevador — que é uma hora inteira de
+          diferença. Estava tudo guardado desde o primeiro dia; nunca tinha
+          chegado aqui.
+        */}
+        {pedido.moradaDestino && (
+          <div className="mt-3 rounded-xl bg-[#F4F8FB] p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Para onde vai
+            </p>
+            <p className="mt-1 text-sm font-semibold text-tinta">
+              {/* A morada exacta é do trabalho fechado; até lá, a localidade. */}
+              {fechado ? pedido.moradaDestino : pedido.localidadeDestino || pedido.moradaDestino}
+            </p>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              {pedido.percursoKm != null && (
+                <>
+                  <dt className="text-slate-500">Percurso</dt>
+                  <dd className="font-semibold text-tinta">
+                    cerca de {String(pedido.percursoKm).replace(".", ",")} km daqui para lá
+                  </dd>
+                </>
+              )}
+              {pedido.andarDestino && (
+                <>
+                  <dt className="text-slate-500">Andar</dt>
+                  <dd className="font-medium text-tinta">{pedido.andarDestino}</dd>
+                </>
+              )}
+              {emPortugues(ELEVADOR, pedido.elevadorDestino) && (
+                <>
+                  <dt className="text-slate-500">Elevador</dt>
+                  <dd className="font-medium text-tinta">
+                    {emPortugues(ELEVADOR, pedido.elevadorDestino)}
+                  </dd>
+                </>
+              )}
+              {emPortugues(ESTACIONAMENTO, pedido.estacionamentoDestino) && (
+                <>
+                  <dt className="text-slate-500">Estacionar</dt>
+                  <dd className="font-medium text-tinta">
+                    {emPortugues(ESTACIONAMENTO, pedido.estacionamentoDestino)}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        )}
+
+        {/*
+          O ENTULHO EM NÚMEROS. Trinta sacos são uma manhã; trezentos são um
+          dia inteiro e outro camião. E um saco no chão tem de ser ensacado
+          primeiro — mais 30% de tempo, na conta do motor e na vida real.
+        */}
+        {(pedido.entulhoQuantidade || emPortugues(ESTADO_DO_ENTULHO, pedido.entulhoEstado)) && (
+          <div className="mt-3 rounded-xl bg-[#F4F8FB] p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              O entulho
+            </p>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              {pedido.entulhoQuantidade && (
+                <>
+                  <dt className="text-slate-500">Quantidade</dt>
+                  <dd className="font-semibold text-tinta">
+                    {pedido.entulhoQuantidade} sacos
+                  </dd>
+                </>
+              )}
+              {emPortugues(ESTADO_DO_ENTULHO, pedido.entulhoEstado) && (
+                <>
+                  <dt className="text-slate-500">Estado</dt>
+                  <dd className="font-medium text-tinta">
+                    {emPortugues(ESTADO_DO_ENTULHO, pedido.entulhoEstado)}
                   </dd>
                 </>
               )}

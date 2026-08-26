@@ -1675,6 +1675,14 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
      */
     floor: string | null;
     hasElevator: string | null;
+    moradaDestino: string | null;
+    localidadeDestino: string | null;
+    andarDestino: string | null;
+    elevadorDestino: string | null;
+    estacionamentoDestino: string | null;
+    percursoKm: string | null;
+    entulhoEstado: string | null;
+    entulhoQuantidade: string | null;
     parkingDistance: string | null;
     /* Para a distancia ate ao trabalho. Saem em texto do JSON; ver a nota. */
     pedidoLat: string | null;
@@ -1697,6 +1705,34 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
             -- buscar.
             o.floor, o.hasElevator, o.parkingDistance,
+            -- O que so alguns servicos tem, e sem o qual eles propoem as
+            -- cegas: para onde vai uma mudanca (e o acesso do outro lado), e
+            -- quantos sacos tem um entulho. Sai em texto pela mesma razao que
+            -- as coordenadas -- um pedido sem estes campos e o caso normal.
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.destinationAddress.formattedAddress'))
+                 END AS moradaDestino,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.destinationAddress.city'))
+                 END AS localidadeDestino,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.destinationAccess.floor'))
+                 END AS andarDestino,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.destinationAccess.hasElevator'))
+                 END AS elevadorDestino,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.destinationAccess.parkingDistance'))
+                 END AS estacionamentoDestino,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.movingDistance.distanceKm'))
+                 END AS percursoKm,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.entulhoState'))
+                 END AS entulhoEstado,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidade'))
+                 END AS entulhoQuantidade,
             -- As coordenadas do trabalho, para lhe dizer a quantos km fica.
             -- Saem por JSON_UNQUOTE e nao por CAST: um CAST de um nulo de
             -- JSON rebenta a consulta inteira, e um pedido sem morada

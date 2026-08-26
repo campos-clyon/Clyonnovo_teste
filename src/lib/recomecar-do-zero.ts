@@ -39,6 +39,18 @@ export type RetratoDoPedido = {
   valorDesejadoCliente: string | null;
   precisaFatura: number;
   fotografias: number;
+  /*
+   * O que só alguns serviços têm, e que vive no rawOrderJson.
+   *
+   * Mudar para onde vai uma mudança muda o trabalho todo — o percurso, as
+   * horas, o preço. Sem isto no retrato, corrigir a morada de destino gravava
+   * em silêncio e as propostas antigas ficavam de pé, feitas para outro
+   * destino. O mesmo para o número de sacos de um entulho: trinta e trezentos
+   * não são o mesmo trabalho.
+   */
+  destino: string | null;
+  acessoNoDestino: string | null;
+  entulho: string | null;
 };
 
 const texto = (v: unknown): string | null => {
@@ -66,6 +78,7 @@ export function retratoDoPedido(p: {
   valorDesejadoCliente?: unknown;
   precisaFatura?: unknown;
   filesJson?: unknown;
+  rawOrderJson?: unknown;
 }): RetratoDoPedido {
   let fotografias = 0;
   try {
@@ -74,6 +87,14 @@ export function retratoDoPedido(p: {
   } catch {
     /* JSON estragado conta como nenhuma */
   }
+
+  let cru: Record<string, unknown> = {};
+  try {
+    cru = p.rawOrderJson ? (JSON.parse(String(p.rawOrderJson)) as Record<string, unknown>) : {};
+  } catch {
+    /* JSON estragado — os campos do serviço contam como ausentes */
+  }
+  const emTexto = (v: unknown) => (v == null ? null : JSON.stringify(v));
   return {
     serviceType: texto(p.serviceType),
     description: texto(p.description),
@@ -92,6 +113,13 @@ export function retratoDoPedido(p: {
         : String(Number(p.valorDesejadoCliente)),
     precisaFatura: Number(p.precisaFatura) === 1 ? 1 : 0,
     fotografias,
+    destino: texto((cru.destinationAddress as Record<string, unknown> | undefined)?.formattedAddress),
+    acessoNoDestino: emTexto(cru.destinationAccess),
+    entulho: emTexto(
+      cru.entulhoState || cru.entulhoQuantidade
+        ? { estado: cru.entulhoState ?? null, quantidade: cru.entulhoQuantidade ?? null }
+        : null,
+    ),
   };
 }
 
@@ -115,6 +143,9 @@ const EM_PORTUGUES: Record<keyof RetratoDoPedido, string> = {
   valorDesejadoCliente: "o valor de partida",
   precisaFatura: "a fatura",
   fotografias: "as fotografias",
+  destino: "a morada de destino",
+  acessoNoDestino: "o acesso no destino",
+  entulho: "o entulho",
 };
 
 /** "o valor de partida, as fotografias e a descrição" — para o histórico. */
