@@ -865,6 +865,47 @@ export type NegociacaoNaBase = {
  *
  * Devolve quantas matou.
  */
+/**
+ * Cancelar um pedido: o cliente desistiu e o trabalho não vai acontecer.
+ *
+ * O #225 foi isto. Duas propostas na mesa, 250 € e 350 €, e o Sr. Rui a
+ * responder pelo WhatsApp: "obtivemos mais algumas ofertas, das quais pelo
+ * menos uma é mais competitiva". Não havia forma de o dizer ao sistema. O
+ * pedido ficava na mesa como se ainda houvesse alguém a decidir, e o
+ * profissional que lá tinha uma proposta continuava à espera de uma resposta
+ * que nunca ia chegar.
+ *
+ * Cancelar NÃO É APAGAR. O pedido fica, o histórico fica, o registo permanente
+ * fica — no dia em que alguém perguntar o que aconteceu ao #225, a resposta
+ * existe. O que muda é o estado e o fim das negociações vivas.
+ *
+ * Devolve quantas negociações encerrou, ou `null` se o pedido não existe.
+ */
+export async function cancelarPedido(
+  pedidoId: number,
+): Promise<{ encerradas: number } | null> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return null;
+
+  const [linhas] = (await pool.execute(
+    "SELECT id FROM simulatorOrders WHERE id = ? LIMIT 1",
+    [pedidoId],
+  )) as [Array<{ id: number }>, unknown];
+  if (!linhas[0]) return null;
+
+  // Mortas, e não "desistidas": desistir é um acto de uma das partes, com
+  // consequências entre elas. Aqui não desistiu ninguém — o trabalho deixou
+  // de existir, e as negociações vão com ele.
+  const encerradas = await matarNegociacoesDoPedido(pedidoId);
+
+  await pool.execute(
+    "UPDATE simulatorOrders SET status = 'cancelado', updatedAt = NOW() WHERE id = ?",
+    [pedidoId],
+  );
+  return { encerradas };
+}
+
 export async function matarNegociacoesDoPedido(pedidoId: number): Promise<number> {
   await ensureNegociacoesTable();
   const pool = await getPool();
@@ -4961,6 +5002,7 @@ export type Acontecimento =
   | "pedido_criado"
   | "pedido_editado"
   | "pedido_distribuido"
+  | "pedido_cancelado"
   | "pedido_apagado"
   | "pedido_expurgado"
   // A negociação

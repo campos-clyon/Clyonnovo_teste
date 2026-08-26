@@ -67,11 +67,11 @@ describe("concluído é concluído", () => {
     // O #219 estava arquivado desde 25 de Agosto. Ele confirmou-o e libertou
     // os 100,00 € ao Manuel Martins, e a mesa continuou a mostrá-lo em "A
     // CORRER — ✓ Acordada", como se ainda houvesse alguém a jogar.
-    expect(PAINEL).toContain("ordenados.filter(pedidoConcluido)");
-    expect(PAINEL).toContain("ordenados.filter((p) => !pedidoConcluido(p))");
-    expect(PAINEL).toContain("const concluido = pedidoConcluido(p);");
-    // Nenhuma das três pode voltar a ler a coluna sozinha.
+    expect(PAINEL).toContain("pedidoConcluido(p)");
+    expect(PAINEL).toContain("const concluido = !cancelado && pedidoConcluido(p);");
+    // Nenhuma das listas pode voltar a ler a coluna sozinha.
     expect(PAINEL).not.toContain('ordenados.filter((p) => p.status === "concluido")');
+    expect(PAINEL).not.toContain('const concluido = p.status === "concluido"');
   });
 
   it("deixa de pedir confirmação depois de confirmado", () => {
@@ -97,7 +97,7 @@ describe("de quem é a vez", () => {
   });
 
   it("a linha da mesa diz que o trabalho está feito, e diz antes de tudo", () => {
-    const i = PAINEL.indexOf("const bola = concluido");
+    const i = PAINEL.indexOf("const bola = ");
     const bloco = PAINEL.slice(i, PAINEL.indexOf("return (", i));
     expect(bloco).toContain("Trabalho feito por");
     expect(bloco).toContain("falta confirmar");
