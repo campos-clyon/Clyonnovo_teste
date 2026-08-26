@@ -103,7 +103,16 @@ export default function ContaCliente({
     }
   }, []);
 
-  useAutoRefresh(recarregar, { intervalMs: 60_000 });
+  /*
+   * Trinta segundos, como no painel do profissional e no backoffice.
+   *
+   * Eram sessenta, e uma proposta que chega vale meio minuto de espera a
+   * menos: do outro lado há um profissional à espera de resposta e um prazo
+   * de 48 horas a correr. O ciclo é o mesmo de sempre — pára quando o
+   * separador está escondido, não mexe em estados de "a carregar", e cala-se
+   * quando falha.
+   */
+  useAutoRefresh(recarregar, { intervalMs: 30_000 });
 
   // Quantas propostas esperam por ele, somadas. É o que o distintivo mostra —
   // e é o mesmo número em qualquer sítio onde apareça.

@@ -12,7 +12,7 @@ import {
   Loader2,
   LogOut,
   MapPin,
-  RefreshCw,
+  ArrowLeft,
   Star,
   UserCog,
   Wallet,
@@ -224,6 +224,23 @@ export default function PainelDoProfissional() {
    */
   useAutoRefresh(carregar, { intervalMs: 30_000 });
 
+  /**
+   * A porta para fora do painel.
+   *
+   * Volta ao passo anterior quando o há — quem veio do site sai por onde
+   * entrou. Sem histórico (o link do email aberto num separador novo, ou a
+   * aplicação instalada no telemóvel, onde não há botão de trás nenhum) vai
+   * para a página inicial, que é sempre melhor do que um botão que não faz
+   * nada.
+   */
+  const voltar = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.href = "/";
+  }, []);
+
   function abrir(destino: Ecra) {
     router.push(
       destino === "menu" ? "/profissionais/painel" : `/profissionais/painel?ecra=${destino}`,
@@ -351,12 +368,26 @@ export default function PainelDoProfissional() {
             )}
           </p>
         </div>
+        {/*
+          ONDE ESTAVA O BOTÃO DE ACTUALIZAR.
+
+          Um botão de recarregar num ecrã que já se actualiza sozinho de 30
+          em 30 segundos não é uma ajuda: é uma dúvida. Quem o vê pergunta-se
+          se os dados estão velhos — e carrega nele por precaução, a cada
+          visita, para ver a mesma coisa.
+
+          No lugar dele fica o que faltava mesmo: uma saída. O painel é a
+          casa do profissional e não tinha porta — quem lá entra pelo link do
+          email ficava sem caminho de volta ao site sem ser pelo botão do
+          browser, que numa aplicação instalada no telemóvel nem sequer
+          existe.
+        */}
         <button
-          onClick={carregar}
-          aria-label="Actualizar"
+          onClick={voltar}
+          aria-label="Voltar"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition active:bg-slate-100"
         >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </button>
       </header>
 

@@ -26,6 +26,7 @@ import {
   comissaoDaClyon,
 } from "@/lib/taxas-plataforma";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
 
@@ -235,6 +236,18 @@ export default function AdminNegociacoesPanel({
   /** Os que estao com a caixa marcada, para apagar em conjunto. */
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   const [aApagar, setAApagar] = useState(false);
+  /*
+   * Duas peças para a linha "actualizado há X": quando os dados foram lidos,
+   * e um relógio que anda de meio em meio minuto. Sem o relógio, a frase
+   * congelava em "agora" até algo mais fazer o ecrã redesenhar-se — e uma
+   * frase que mente sobre a hora é pior do que frase nenhuma.
+   */
+  const [lidoEm, setLidoEm] = useState<number | null>(null);
+  const [agoraParaOReloginho, setAgoraParaOReloginho] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setAgoraParaOReloginho(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
   const [recusados, setRecusados] = useState<Array<{ id: number; motivo: string }>>([]);
 
   /*
@@ -265,6 +278,7 @@ export default function AdminNegociacoesPanel({
         return;
       }
       setPedidos(dados.pedidos ?? []);
+      setLidoEm(Date.now());
       setErro("");
 
       // Os do simulador que ainda não são da plataforma. Falha em silêncio: é
@@ -283,6 +297,30 @@ export default function AdminNegociacoesPanel({
       if (!silencioso) setACarregar(false);
     }
   }, [token]);
+
+  /*
+   * ACTUALIZAR SEM DAR POR ISSO.
+   *
+   * Trinta segundos, em silêncio: `carregar(true)` não acende estados de "a
+   * carregar", por isso a lista não pisca nem salta e quem está a escrever
+   * um valor num campo não o perde. O ciclo pára com o separador escondido e
+   * vai buscar mal ele volte — e cala-se quando falha, porque uma falha de
+   * rede a meio de uma actualização automática não é notícia para quem está
+   * a trabalhar.
+   *
+   * É a mesma cadência do painel do profissional e da conta do cliente: as
+   * três pontas da mesma negociação a ver o mesmo estado ao mesmo tempo.
+   */
+  useAutoRefresh(() => carregar(true), { intervalMs: 30_000 });
+
+  /** Há quanto tempo o que está no ecrã foi lido da base. */
+  const quandoFoiLido = (() => {
+    if (!lidoEm) return "";
+    const seg = Math.round((agoraParaOReloginho - lidoEm) / 1000);
+    if (seg < 45) return "actualizado agora";
+    const min = Math.round(seg / 60);
+    return `actualizado há ${min} min`;
+  })();
 
   useEffect(() => {
     if (ready && token) carregar();
@@ -1061,13 +1099,18 @@ export default function AdminNegociacoesPanel({
               ? `${dosClientes.length} negociação(ões) de clientes.`
               : `${pedidos.length} pedidos na plataforma.`}
         </p>
-        <button
-          onClick={() => carregar()}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
-        >
-          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          Actualizar
-        </button>
+        {/*
+          O botão "Actualizar" saiu daqui.
+
+          O ecrã passou a ir buscar dados sozinho de 30 em 30 segundos, e um
+          botão de recarregar ao lado disso só semeia dúvida: quem o vê
+          assume que o que está no ecrã está velho. No lugar dele fica a
+          única coisa que ele realmente respondia — há quanto tempo isto foi
+          lido — que se pode ignorar quando não interessa.
+        */}
+        <span className="text-xs text-slate-500" aria-live="polite">
+          {quandoFoiLido}
+        </span>
       </header>
 
       {erro && (
