@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import {
+  cidadeServicoDeveIndexar,
   getCityServiceContent,
   getCityBaseContent,
   hasPriorityContent,
@@ -31,6 +32,7 @@ import {
   parseCityServiceSlug,
 } from "@/lib/seo-data";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
+import { limitarDescricao } from "@/lib/meta-descricao";
 
 type Props = {
   params: Promise<{ slug: string[] }>;
@@ -311,14 +313,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // trocado — o Google vê 73 iguais. Nomear as freguesias reais dá-lhe algo
   // que só existe nesta página, e ao cliente a confirmação de que cobrimos
   // a rua dele.
+  //
+  // O corte era em bruto aos 320 caracteres — o dobro do que o Google mostra,
+  // e a meio de uma palavra. Agora fica pelas frases inteiras que cabem.
   const zonas = getCidadeLocal(city.slug)?.zonas ?? [];
-  const descricaoLocal = zonas.length >= 2
-    ? `${description} Servimos ${zonas.slice(0, 3).join(", ")} e restantes zonas de ${city.name}.`.slice(0, 320)
-    : description;
+  const descricaoLocal = limitarDescricao(
+    zonas.length >= 2
+      ? `${description} Servimos ${zonas.slice(0, 3).join(", ")} e restantes zonas de ${city.name}.`
+      : description,
+  );
+
+  const indexavel = cidadeServicoDeveIndexar(city.slug, service.slug);
 
   return {
     title,
     description: descricaoLocal,
+    // Uma página sem conteúdo local próprio não se apresenta ao índice. O
+    // `follow` fica: os links internos que ela tem continuam a valer.
+    ...(indexavel ? {} : { robots: { index: false, follow: true } }),
     keywords: [
       ...service.keywords,
       `${service.primaryKeyword} ${city.name.toLowerCase()}`,

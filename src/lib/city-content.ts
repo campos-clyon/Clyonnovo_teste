@@ -980,6 +980,69 @@ export interface CityBaseContent {
 }
 
 export const CITY_BASE_CONTENT: Record<string, CityBaseContent> = {
+  benfica: {
+    slug: "benfica",
+    name: "Benfica",
+    region: "lisboa",
+    localIntro: "Em Benfica trabalhamos em toda a freguesia, das ruas antigas junto à Estrada de Benfica às urbanizações da Boavista e do Alto dos Moinhos. É uma zona de prédios de vários períodos, o que muda muito o tipo de recolha.",
+    landmarks: ["Estrada de Benfica", "Alto dos Moinhos", "Boavista", "Pupilos do Exército", "Estádio da Luz", "Colombo"],
+    accessNotes: "Os prédios mais antigos da Estrada de Benfica têm escadas estreitas e muitos não têm elevador — nesses casos a desmontagem no local resolve quase sempre. Nas urbanizações mais recentes o acesso é direto. O estacionamento junto ao Colombo e ao estádio complica-se em dias de evento, por isso combinamos hora fora desses períodos.",
+    nearbyAreas: ["Lisboa", "Amadora", "Carnaxide", "Odivelas"],
+  },
+  lumiar: {
+    slug: "lumiar",
+    name: "Lumiar",
+    region: "lisboa",
+    localIntro: "No Lumiar cobrimos desde o núcleo antigo até à Alta de Lisboa e ao Paço do Lumiar. É uma freguesia com muita construção recente, o que normalmente facilita a carga.",
+    landmarks: ["Alta de Lisboa", "Paço do Lumiar", "Quinta das Conchas", "Telheiras", "Ameixoeira", "Campo Grande"],
+    accessNotes: "A Alta de Lisboa e Telheiras têm prédios com elevador e lugares de carga junto à entrada. No núcleo antigo do Lumiar as ruas são bem mais estreitas e o camião fica a alguma distância — contamos com isso no orçamento em vez de o cobrar depois.",
+    nearbyAreas: ["Lisboa", "Odivelas", "Loures", "Alvalade"],
+  },
+  alvalade: {
+    slug: "alvalade",
+    name: "Alvalade",
+    region: "lisboa",
+    localIntro: "Em Alvalade atuamos em toda a zona do bairro planeado, das Avenidas de Roma e da Igreja às células residenciais junto ao Campo Grande.",
+    landmarks: ["Avenida de Roma", "Avenida da Igreja", "Bairro de Alvalade", "Campo Grande", "Areeiro", "Alameda"],
+    accessNotes: "O bairro de Alvalade é sobretudo de prédios dos anos 40 e 50: elevadores pequenos ou inexistentes e escadarias com curvas apertadas. Sofás e roupeiros saem quase sempre desmontados. O estacionamento nas avenidas principais exige chegar cedo.",
+    nearbyAreas: ["Lisboa", "Olivais", "Lumiar", "Areeiro"],
+  },
+  olivais: {
+    slug: "olivais",
+    name: "Olivais",
+    region: "lisboa",
+    localIntro: "Nos Olivais servimos toda a freguesia, dos Olivais Sul e Norte à zona do Parque das Nações e Encarnação.",
+    landmarks: ["Olivais Sul", "Olivais Norte", "Encarnação", "Parque das Nações", "Aeroporto", "Cabo Ruivo"],
+    accessNotes: "Os Olivais foram construídos com espaço entre blocos, o que dá bons acessos e lugar para o camião encostar. Os prédios mais altos têm elevador. A zona junto ao aeroporto tem condicionamentos de trânsito em horas de ponta.",
+    nearbyAreas: ["Lisboa", "Alvalade", "Loures", "Parque das Nações"],
+  },
+  "costa-da-caparica": {
+    slug: "costa-da-caparica",
+    name: "Costa da Caparica",
+    region: "margem-sul",
+    localIntro: "Na Costa da Caparica trabalhamos da frente de mar às urbanizações interiores e aos parques de campismo. Muitas recolhas aqui são de casas de férias e arrendamentos que mudam de mãos.",
+    landmarks: ["Frente de mar", "Praia do Norte", "Santo António da Caparica", "Costa Nova", "Parques de campismo", "Fonte da Telha"],
+    accessNotes: "As ruas junto à praia são estreitas e no verão o estacionamento é praticamente impossível a partir do meio da manhã — marcamos cedo nesses meses. Os apartamentos de férias costumam ter elevador pequeno, o que obriga a desmontar mais do que o habitual.",
+    nearbyAreas: ["Almada", "Corroios", "Seixal", "Sesimbra"],
+  },
+  amora: {
+    slug: "amora",
+    name: "Amora",
+    region: "margem-sul",
+    localIntro: "Amora é onde temos a base. É a zona onde conseguimos as respostas mais rápidas de toda a área que servimos — em muitos casos no próprio dia, porque a equipa já está aqui.",
+    landmarks: ["Cruz de Pau", "Paivas", "Miratejo", "Foros de Amora", "Quinta da Princesa", "Amora centro"],
+    accessNotes: "Amora tem sobretudo prédios de habitação com elevador e ruas com espaço para carga. Nos Foros de Amora há moradias com quintal, onde as recolhas de maior volume se fazem sem constrangimentos.",
+    nearbyAreas: ["Seixal", "Corroios", "Almada", "Barreiro"],
+  },
+  corroios: {
+    slug: "corroios",
+    name: "Corroios",
+    region: "margem-sul",
+    localIntro: "Em Corroios estamos a poucos minutos da nossa base em Amora, o que se nota no tempo de resposta. Cobrimos toda a freguesia, do centro ao Vale de Milhaços e Santa Marta do Pinhal.",
+    landmarks: ["Corroios centro", "Vale de Milhaços", "Santa Marta do Pinhal", "Pinhal do General", "Marisol", "Miratejo"],
+    accessNotes: "A maioria dos prédios de Corroios é recente e tem elevador. As zonas de moradias, como Marisol e Pinhal do General, têm acesso direto de camião à porta.",
+    nearbyAreas: ["Seixal", "Amora", "Almada", "Costa da Caparica"],
+  },
   lisboa: {
     slug: "lisboa",
     name: "Lisboa",
@@ -1178,6 +1241,22 @@ export function getCityBaseContent(citySlug: string): CityBaseContent | undefine
 export function hasPriorityContent(citySlug: string, serviceSlug: string): boolean {
   const key = `${serviceSlug}-${citySlug}`;
   return key in CITY_SERVICE_CONTENT;
+}
+
+/**
+ * Uma combinação cidade+serviço só deve ser indexada se tiver conteúdo que
+ * exista mesmo — texto prioritário para aquele serviço naquela cidade, ou pelo
+ * menos o retrato local da cidade (freguesias, acessos, zonas vizinhas).
+ *
+ * Sem isto, cada cidade nova acrescentada a `CITIES` nascia com uma página por
+ * serviço feita só de template com o nome da terra trocado. O Google trata
+ * conjuntos assim como conteúdo gerado em escala e o custo não fica na página
+ * fraca: arrasta o domínio inteiro. Uma página que não passa aqui continua a
+ * responder 200 a quem lá chegue por um link — apenas não se apresenta ao
+ * índice nem entra no sitemap, até alguém lhe escrever conteúdo.
+ */
+export function cidadeServicoDeveIndexar(citySlug: string, serviceSlug: string): boolean {
+  return hasPriorityContent(citySlug, serviceSlug) || getCityBaseContent(citySlug) !== undefined;
 }
 
 /**

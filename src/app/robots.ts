@@ -17,20 +17,35 @@ import type { MetadataRoute } from "next";
  * nada — é o comportamento por omissão — mas cria esta armadilha.
  */
 
-/** Caminhos que nenhum motor de busca deve rastrear. */
+/**
+ * Caminhos que nenhum motor de busca deve rastrear.
+ *
+ * ⚠️ Bloquear aqui NÃO desindexa. Uma página em `Disallow` nunca chega a ser
+ * lida, por isso um `noindex` que ela traga no HTML nunca é visto — e o URL
+ * pode continuar a aparecer nos resultados, sem descrição. Só entram nesta
+ * lista caminhos que não são páginas ou que não devem sequer ser tocados.
+ *
+ * `/entrar` e `/conta` saíram daqui de propósito: são as duas únicas que o
+ * menu liga em todas as páginas do site, logo o Google conhece-lhes o URL de
+ * qualquer maneira. Ambas declaram `robots: { index: false }` na metadata e é
+ * preciso deixá-lo ser lido para que saiam do índice de vez — bloqueadas aqui,
+ * ficavam indexadas como URL sem descrição, para sempre. Continuam protegidas
+ * por sessão, que é o mecanismo a sério; robots.txt nunca foi segurança.
+ *
+ * `/auth` fica bloqueado: são ecrãs de callback que nada no site liga, e
+ * rastreá-los é só queimar orçamento.
+ */
 const PRIVADO = [
   // Endpoints e artefactos de build: não são páginas e não têm nada a indexar
   "/api/",
   "/_next/",
-  // Backoffice e áreas autenticadas
+  // Backoffice
   "/admin",
   "/admin/",
   "/painel/",
-  "/conta",
-  // Ecrãs de autenticação
+  // Ecrãs de autenticação que nada liga publicamente
   "/auth",
   "/auth/",
-  "/entrar",
 ];
 
 export default function robots(): MetadataRoute.Robots {

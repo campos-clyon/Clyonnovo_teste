@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Star, Quote, MessageCircle } from "lucide-react";
 
 import HeroBackground from "@/components/HeroBackground";
-import { reviews } from "@/lib/reviews-data";
+import { reviews, dataISO } from "@/lib/reviews-data";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
 
@@ -57,7 +57,7 @@ const aggregateRatingSchema = {
   review: reviews.map((r) => ({
     "@type": "Review",
     author: { "@type": "Person", name: r.name },
-    datePublished: r.date,
+    datePublished: dataISO(r.date),
     reviewBody: r.text,
     reviewRating: {
       "@type": "Rating",

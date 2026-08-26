@@ -7,6 +7,7 @@ import {
   SITE_URL,
   getCityServiceSlug,
 } from "@/lib/seo-data";
+import { cidadeServicoDeveIndexar } from "@/lib/city-content";
 import { getAllBlogPosts } from "@/lib/blog-data";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 import { dataDoConteudo } from "@/lib/conteudo-datas.generated";
@@ -98,8 +99,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       if (service.slug === "mudancas") {
         return false;
       }
-      // Incluir todas as outras combinações
-      return true;
+      // Uma página sem conteúdo local próprio está marcada como noindex.
+      // Declará-la no sitemap seria pedir ao Google que fosse ver uma página
+      // que lhe dizemos para não indexar — e é assim que se ensina um motor de
+      // busca a desconfiar do sitemap todo.
+      return cidadeServicoDeveIndexar(city.slug, service.slug);
     }).map((service) => {
       const slug = getCityServiceSlug(service.slug, city.slug);
       const isPriority = priorityPages.includes(slug);

@@ -31,6 +31,18 @@ describe("robots.txt — o grupo específico não pode anular as restrições", 
       expect(lista, caminho).toContain(caminho);
     }
   });
+
+  // Bloquear não desindexa: uma página em Disallow nunca é lida, logo o
+  // `noindex` que traz no HTML nunca é visto e o URL fica no índice sem
+  // descrição. /entrar e /conta são ligadas pelo menu em todas as páginas —
+  // o Google conhece-lhes o URL de qualquer forma — por isso têm de ser
+  // rastreáveis para que o noindex delas chegue a ser lido.
+  it("não bloqueia as páginas que dependem do noindex para sair do índice", () => {
+    const lista = regras[0]?.disallow as string[];
+    for (const caminho of ["/entrar", "/conta"]) {
+      expect(lista, caminho).not.toContain(caminho);
+    }
+  });
 });
 
 describe("sitemap — só URLs canónicos", () => {

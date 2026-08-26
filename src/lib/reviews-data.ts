@@ -155,3 +155,34 @@ export const reviews: Review[] = [
     text: "Muito rápido e eficiente.",
   },
 ];
+
+/**
+ * Meses abreviados como aparecem nas datas do Google, em minúsculas e sem o
+ * ponto final.
+ */
+const MESES_PT: Record<string, string> = {
+  jan: "01", fev: "02", mar: "03", abr: "04", mai: "05", jun: "06",
+  jul: "07", ago: "08", set: "09", out: "10", nov: "11", dez: "12",
+};
+
+/**
+ * Converte "10 de jun. de 2026" em "2026-06-10".
+ *
+ * O `datePublished` do schema Review tem de ser ISO-8601. Estava a sair a data
+ * por extenso em português, que o Google não lê — e a frescura das avaliações
+ * é hoje um sinal de peso no ranking local. As datas continuam a viver no
+ * formato legível (é o que se mostra nos cartões); a conversão acontece só
+ * onde o schema precisa dela.
+ *
+ * Devolve `undefined` para um formato que não reconheça, para o campo ser
+ * omitido em vez de sair inválido.
+ */
+export function dataISO(dataPorExtenso: string): string | undefined {
+  const m = /^(\d{1,2}) de ([a-zç]+)\.? de (\d{4})$/i.exec(dataPorExtenso.trim());
+  if (!m) return undefined;
+
+  const mes = MESES_PT[m[2].toLowerCase().slice(0, 3)];
+  if (!mes) return undefined;
+
+  return `${m[3]}-${mes}-${m[1].padStart(2, "0")}`;
+}
