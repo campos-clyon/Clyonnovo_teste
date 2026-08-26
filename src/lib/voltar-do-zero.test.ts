@@ -165,6 +165,19 @@ describe("o botão", () => {
   });
 
   it("só aparece quando há alguma coisa para desfazer", () => {
-    expect(PAINEL).toContain("{p.negociacoes.length > 0 && (");
+    expect(PAINEL).toContain("{p.negociacoes.length > 0 &&");
+  });
+
+  it("não aparece em trabalhos fechados — o servidor recusa e o botão não convida", () => {
+    // A rota devolve 409 nesses casos. Mostrar o botão na mesma seria pôr o
+    // admin a carregar para levar com um não: as mesmas quatro condições do
+    // guarda decidem se ele existe.
+    const i = PAINEL.indexOf("Recomeçar do zero");
+    const bloco = PAINEL.slice(Math.max(0, i - 3000), i);
+    const guarda = bloco.slice(bloco.lastIndexOf("{p.negociacoes.length > 0 &&"));
+    expect(guarda).toContain('n.estado === "acordada"');
+    expect(guarda).toContain("n.confirmadoEm != null");
+    expect(guarda).toContain("n.pagoEm != null");
+    expect(guarda).toContain("n.execucaoEnviadaEm != null");
   });
 });

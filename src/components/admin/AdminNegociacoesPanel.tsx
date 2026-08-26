@@ -118,8 +118,42 @@ function esperaResposta(n: Negociacao): boolean {
   );
 }
 
+/**
+ * O trabalho está feito e ninguém o disse ainda.
+ *
+ * O profissional carrega em concluir e manda a prova: fica `execucaoEnviadaEm`.
+ * Depois disso o trabalho espera por uma confirmação — e é ela, e só ela, que
+ * fecha o pedido e liberta o dinheiro cativo.
+ *
+ * A mesa não olhava para isto. O #226 dizia "✓ Acordada por 170,00 € com
+ * Sthefanny Lemos", debaixo de "A CORRER — a bola está do outro lado", com
+ * exactamente as mesmas palavras que dizia antes de a Sthefanny lá ir. Ele
+ * escreveu-lhe pelo WhatsApp "marca concluído para abrir o pagamento", ela
+ * respondeu "já está" — e estava mesmo, na base, às 16:00:47. O ecrã é que
+ * não o dizia em lado nenhum sem abrir a negociação uma a uma.
+ *
+ * E não foi caso único: o #219 tinha a prova enviada desde 25 de Agosto às
+ * 09:12 e ninguém confirmou nada. Ficou arquivado com o trabalho do Manuel
+ * Martins por reconhecer.
+ */
+function esperaConfirmacao(n: Negociacao): boolean {
+  if (n.estado === "desistida" || n.estado === "morta") return false;
+  return n.execucaoEnviadaEm != null && n.confirmadoEm == null;
+}
+
+/**
+ * De quem é a vez, na pergunta que a mesa faz: "o que preciso de fazer agora?"
+ *
+ * Uma proposta por responder e um trabalho por confirmar são coisas
+ * diferentes, mas do lado dele são a mesma: nenhuma delas anda sem ele.
+ */
+function precisaDeSi(n: Negociacao): boolean {
+  return esperaConfirmacao(n) || esperaResposta(n);
+}
+
 /** O que falta fazer, em duas palavras, para o distintivo do cartao. */
 function oQueFalta(n: Negociacao): string {
+  if (esperaConfirmacao(n)) return "trabalho feito — falta confirmar";
   return n.estado === "aguarda_contratacao" ? "falta contratar" : "espera resposta";
 }
 
@@ -350,7 +384,7 @@ export default function AdminNegociacoesPanel({
     const novas: number[] = [];
     for (const p of pedidos) {
       for (const n of p.negociacoes) {
-        if (esperaResposta(n) && !jaAbertas.current.has(n.id)) {
+        if (precisaDeSi(n) && !jaAbertas.current.has(n.id)) {
           jaAbertas.current.add(n.id);
           novas.push(n.id);
         }
@@ -636,11 +670,11 @@ export default function AdminNegociacoesPanel({
     mostrar === "clientes"
       ? []
       : pedidos.filter(
-          (p) => quemNegoceia(p) === "clyon" && p.negociacoes.some(esperaResposta),
+          (p) => quemNegoceia(p) === "clyon" && p.negociacoes.some(precisaDeSi),
         );
   const ordenados = [...pedidos].sort(
     (a, b) =>
-      Number(b.negociacoes.some(esperaResposta)) - Number(a.negociacoes.some(esperaResposta)),
+      Number(b.negociacoes.some(precisaDeSi)) - Number(a.negociacoes.some(precisaDeSi)),
   );
 
   /*
@@ -675,8 +709,11 @@ export default function AdminNegociacoesPanel({
    * atalho "está à espera de si" lêem-nos — mas deixaram de desenhar duas
    * listas. O que separa agora é de quem é a vez:
    *
-   *   1. Precisa de si — há uma proposta pendente e a CLYON é que responde.
-   *      É o único nível onde a demora custa dinheiro: 48 horas e expira.
+   *   1. Precisa de si — há uma proposta pendente e a CLYON é que responde,
+   *      OU um trabalho já executado à espera de ser confirmado. É o único
+   *      nível onde a demora custa dinheiro: uma proposta expira em 48 horas,
+   *      e um trabalho por confirmar é dinheiro que fica cativo e um
+   *      profissional que já lá foi e ainda não recebeu.
    *   2. A correr — a bola está do outro lado, com o profissional ou com o
    *      cliente que responde pelo link. Estão aqui para vigiar, não para agir.
    *
@@ -688,8 +725,8 @@ export default function AdminNegociacoesPanel({
     const porData = (a: Pedido, b: Pedido) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
-    const precisam = visiveis.filter((p) => p.negociacoes.some(esperaResposta)).sort(porData);
-    const correm = visiveis.filter((p) => !p.negociacoes.some(esperaResposta)).sort(porData);
+    const precisam = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porData);
+    const correm = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi)).sort(porData);
 
     type Entrada = {
       chave: string;
@@ -716,7 +753,10 @@ export default function AdminNegociacoesPanel({
       }
       for (const p of lista) saida.push({ chave: `p${p.id}`, separador: false, pedido: p });
     };
-    bloco("n1", "Precisa de si", "ninguém avança sem a sua resposta", "text-emerald-300", precisam);
+    // "Resposta" ficou curto: um trabalho já feito não espera uma resposta,
+    // espera que alguém o reconheça e liberte o dinheiro. As duas coisas
+    // param aqui à espera dele, e a nota tem de as caber às duas.
+    bloco("n1", "Precisa de si", "nada avança sem si", "text-emerald-300", precisam);
     bloco("n2", "A correr", "a bola está do outro lado", "text-sky-300", correm);
     return saida;
   }, [activos, daClyon, dosClientes, mostrar]);
@@ -752,6 +792,8 @@ export default function AdminNegociacoesPanel({
     const chaveCliente = `c${p.id}`;
     const espera = p.negociacoes.some(esperaResposta);
     const aEsperarLista = p.negociacoes.filter(esperaResposta);
+    // O trabalho que já está feito e espera pela confirmação dele.
+    const feito = p.negociacoes.find(esperaConfirmacao);
     const acordada = p.negociacoes.find((n) => n.estado === "acordada");
     const quantasAbertas = p.negociacoes.filter((n) => n.estado === "aberta").length;
     const totalPropostas = p.negociacoes.reduce(
@@ -806,6 +848,16 @@ export default function AdminNegociacoesPanel({
       ? {
           tom: "text-emerald-400",
           texto: `✓ Concluído${acordada ? ` — ${euros(acordada.valorAcordado)} com ${acordada.profissionalNome}` : ""}`,
+        }
+      : feito
+      ? {
+          // Antes de qualquer outra coisa: o trabalho está FEITO. Uma proposta
+          // por responder noutra negociação do mesmo pedido já não interessa —
+          // este pedido tem alguém que lá foi, e dinheiro à espera de sair.
+          tom: "text-amber-300",
+          texto:
+            `Trabalho feito por ${feito.profissionalNome} — falta confirmar` +
+            (feito.valorAcordado != null ? ` ${euros(feito.valorAcordado)}` : ""),
         }
       : espera
       ? {
@@ -1028,8 +1080,14 @@ export default function AdminNegociacoesPanel({
                     >
                       {n.estado}
                     </span>
-                    {esperaResposta(n) && (
-                      <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-200">
+                    {precisaDeSi(n) && (
+                      <span
+                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+                          esperaConfirmacao(n)
+                            ? "bg-amber-500/20 text-amber-200"
+                            : "bg-emerald-500/20 text-emerald-200"
+                        }`}
+                      >
                         <Clock className="h-3 w-3" aria-hidden="true" />
                         {oQueFalta(n)}
                       </span>
@@ -1110,7 +1168,13 @@ export default function AdminNegociacoesPanel({
             negociações, nada de botão. A confirmação diz quantas morrem e
             com que valor o pedido volta — é destrutivo e não se esconde.
           */}
-          {p.negociacoes.length > 0 && (
+          {p.negociacoes.length > 0 && !p.negociacoes.some(
+            (n) =>
+              n.estado === "acordada" ||
+              n.confirmadoEm != null ||
+              n.pagoEm != null ||
+              n.execucaoEnviadaEm != null,
+          ) && (
             <div className="mt-3 border-t border-slate-800 pt-3">
               <button
                 onClick={() => {
@@ -1329,7 +1393,7 @@ export default function AdminNegociacoesPanel({
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {aEsperar.map((p) => {
-              const pendentes = p.negociacoes.filter(esperaResposta);
+              const pendentes = p.negociacoes.filter(precisaDeSi);
               const proposta = pendentes
                 .flatMap((n) => propostasDe(n.propostasJson))
                 .find((x) => x.estado === "pendente" && x.por === "profissional");
