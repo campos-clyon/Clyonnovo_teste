@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, Plus, Send, Users } from "lucide-react";
+import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const SERVICOS = [
@@ -70,6 +70,7 @@ export default function RegistarPedido({
   editarId = null,
   podeEnviarAoGravar = false,
   onFechar,
+  onEditar,
 }: {
   onCriado: () => void;
   /*
@@ -90,6 +91,16 @@ export default function RegistarPedido({
    */
   podeEnviarAoGravar?: boolean;
   onFechar?: () => void;
+  /**
+   * Abrir este pedido para corrigir, logo a seguir a criá-lo.
+   *
+   * Quem regista um pedido ao telefone escreve depressa e engana-se — uma
+   * morada trocada, um andar a mais, e as fotografias que só chegam ao
+   * WhatsApp cinco minutos depois. Sem isto, a única saída era fechar o
+   * ecrã, procurar o pedido na lista e abri-lo de novo; a maior parte das
+   * vezes não se corrigia de todo, e o profissional recebia o erro.
+   */
+  onEditar?: (id: number) => void;
 }) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(editarId != null);
@@ -583,6 +594,7 @@ export default function RegistarPedido({
         <Resumo
           r={resultado}
           enviado={enviado}
+          onEditar={onEditar}
           aEnviar={aEnviar}
           emEdicao={editarId != null}
           podeEnviar={podeEnviarAoGravar}
@@ -606,6 +618,7 @@ export default function RegistarPedido({
 function Resumo({
   r,
   enviado,
+  onEditar,
   aEnviar,
   emEdicao = false,
   podeEnviar = false,
@@ -614,6 +627,7 @@ function Resumo({
 }: {
   r: Resultado;
   enviado: string | null;
+  onEditar?: (id: number) => void;
   aEnviar: boolean;
   emEdicao?: boolean;
   podeEnviar?: boolean;
@@ -791,6 +805,19 @@ function Resumo({
           >
             Deixar só no backoffice
           </button>
+          {/*
+            Corrigir ANTES de enviar, que é quando ainda não custa nada.
+            Depois de sair para os profissionais, o erro já foi lido.
+          */}
+          {onEditar && !emEdicao && (
+            <button
+              onClick={() => onEditar(r.id)}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800/60"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Corrigir ou juntar fotografias
+            </button>
+          )}
         </div>
       )}
     </div>

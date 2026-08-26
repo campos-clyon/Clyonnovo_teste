@@ -30,6 +30,9 @@ export type Pedido = {
   filesJson: string | null;
   floor: string | null;
   hasElevator: string | null;
+  parkingDistance: string | null;
+  /** Km em linha recta com folga de estrada, da base dele ao trabalho. */
+  distanciaKm: number | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
   querPagar: number | null;
@@ -110,6 +113,36 @@ export const URGENCIA: Record<string, string> = {
   this_week: "Esta semana",
   flexible: "Sem pressa",
 };
+
+/*
+ * O ACESSO AO LOCAL, EM PORTUGUÊS.
+ *
+ * Os valores ficam guardados no vocabulário do motor de preços ("yes",
+ * "small", "difficult") porque é esse que ele lê. No ecrã do profissional
+ * saía o valor cru — "Elevador: yes". Aqui traduz-se; um valor que não
+ * conheçamos passa tal e qual, que é melhor do que desaparecer.
+ */
+export const ELEVADOR: Record<string, string> = {
+  yes: "Com elevador",
+  small: "Elevador pequeno",
+  no: "Sem elevador",
+};
+
+export const ESTACIONAMENTO: Record<string, string> = {
+  easy: "Dá para encostar à porta",
+  difficult: "Longe ou complicado",
+};
+
+/**
+ * A distância, dita como quem fala.
+ *
+ * Arredonda-se ao quilómetro e leva um "~" à frente: é linha recta com folga
+ * de estrada, não é a conta do GPS — e prometer uma precisão que não temos
+ * seria pior do que não dizer nada.
+ */
+export function distanciaPorExtenso(km: number): string {
+  return km < 1 ? "menos de 1 km" : `~${Math.round(km)} km`;
+}
 
 export function fotosDe(json: string | null): Array<{ url: string; name?: string }> {
   if (!json) return [];

@@ -1125,7 +1125,12 @@ export default function AdminNegociacoesPanel({
         </div>
       )}
 
-      {mostrar !== "clientes" && <RegistarPedido onCriado={() => carregar(true)} />}
+      {mostrar !== "clientes" && (
+        <RegistarPedido
+          onCriado={() => carregar(true)}
+          onEditar={(id) => setAEditarPlataforma(id)}
+        />
+      )}
 
       {/* ── Propostas à espera de nós ───────────────────────────────────────
           O profissional contrapropõe e a proposta expira em 48 horas. Até

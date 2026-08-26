@@ -1580,6 +1580,18 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     address: string | null;
     contactName: string | null;
     contactPhone: string | null;
+    /*
+     * O acesso ao local, que decide quanto tempo o trabalho leva — e que
+     * chegava sempre vazio: a API declarava-os, a consulta nunca os trazia.
+     */
+    floor: string | null;
+    hasElevator: string | null;
+    parkingDistance: string | null;
+    /* Para a distancia ate ao trabalho. Saem em texto do JSON; ver a nota. */
+    pedidoLat: string | null;
+    pedidoLng: string | null;
+    baseLat: string | number | null;
+    baseLng: string | number | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -1591,11 +1603,28 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
+            -- O acesso ao local: andar, elevador e estacionamento. Sao o que
+            -- separa "duas horas" de "uma tarde" e o profissional decidia sem
+            -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
+            -- buscar.
+            o.floor, o.hasElevator, o.parkingDistance,
+            -- As coordenadas do trabalho, para lhe dizer a quantos km fica.
+            -- Saem por JSON_UNQUOTE e nao por CAST: um CAST de um nulo de
+            -- JSON rebenta a consulta inteira, e um pedido sem morada
+            -- geocodificada e coisa normal. Chegam em texto e leem-se em JS.
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.address.lat'))
+                 END AS pedidoLat,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.address.lng'))
+                 END AS pedidoLng,
+            p.baseLat, p.baseLng,
             -- Saem da consulta, mas nao da API: quem decide se chegam ao ecra e
             -- vistaParaOEstado, e so quando o trabalho e mesmo dele.
             o.address, o.contactName, o.contactPhone, o.contactEmail
        FROM negociacoes n
        JOIN simulatorOrders o ON o.id = n.pedidoId
+       JOIN providers p ON p.id = n.providerId
       WHERE n.providerId = ?
       ORDER BY
         FIELD(n.estado, 'aberta', 'aguarda_contratacao', 'acordada', 'desistida', 'morta'),

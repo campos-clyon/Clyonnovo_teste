@@ -6,6 +6,7 @@ import {
 } from "@/lib/profissional-auth";
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { distanciaParaElegibilidade } from "@/lib/distancia-entre-pontos";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 
 export const runtime = "nodejs";
@@ -22,6 +23,24 @@ export const runtime = "nodejs";
  * morada exacta no dia em que alguém acrescentasse um campo à consulta. A lista
  * de permissões é o que impede isso de acontecer por distracção.
  */
+/**
+ * O que vem da base transformado num ponto do mapa — ou nada.
+ *
+ * As coordenadas do trabalho chegam em TEXTO (saem de dentro do JSON), e as
+ * do profissional podem chegar como DECIMAL. Um `"null"` de JSON vira NaN
+ * aqui, e NaN devolve `null` — que é o que faz o ecrã calar-se em vez de
+ * mostrar uma distância inventada.
+ */
+function ponto(
+  lat: string | number | null | undefined,
+  lng: string | number | null | undefined,
+): { lat: number; lng: number } | null {
+  const a = Number(lat);
+  const b = Number(lng);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return { lat: a, lng: b };
+}
+
 export async function GET(req: NextRequest) {
   const sessao = await verificarSessaoDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
@@ -136,6 +155,26 @@ export async function GET(req: NextRequest) {
         filesJson: (vista.filesJson as string | undefined) ?? null,
         floor: (vista.floor as string | undefined) ?? null,
         hasElevator: (vista.hasElevator as string | undefined) ?? null,
+        parkingDistance: (vista.parkingDistance as string | undefined) ?? null,
+        /*
+         * A QUANTOS QUILOMETROS FICA O TRABALHO.
+         *
+         * A pergunta que ele faz primeiro, e a unica que o ecra nao respondia:
+         * "Oeiras" nao diz se sao 10 km ou 60, e a diferenca decide se vale a
+         * pena responder. E a MESMA conta que o backoffice ja mostrava ao
+         * enviar o pedido ("Fred - 52,9 km"), so que agora tambem do lado de
+         * quem faz o trabalho.
+         *
+         * Linha recta com a folga da estrada, e nao a estrada verdadeira: uma
+         * chamada paga ao Maps por cada pedido de cada profissional, para dar
+         * um numero que ele so quer por alto, nao se justifica. Vem `null`
+         * quando falta o ponto de um dos lados -- e ai o ecra cala-se, em vez
+         * de inventar um numero.
+         */
+        distanciaKm: distanciaParaElegibilidade(
+          ponto(l.baseLat, l.baseLng),
+          ponto(l.pedidoLat, l.pedidoLng),
+        ),
         precisaFatura: Boolean(vista.precisaFatura),
         precisaGuiaTransporte: Boolean(vista.precisaGuiaTransporte),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.

@@ -45,7 +45,13 @@ describe("o painel dividido", () => {
   it("o registar pedido vive no ecrã da CLYON", () => {
     // Um pedido de telefone nasce como negociação da CLYON — o formulário
     // pertence ao ecrã onde o resultado vai viver.
-    expect(PAINEL).toContain('{mostrar !== "clientes" && <RegistarPedido');
+    // Sem depender de estar tudo na mesma linha: o que importa é a condição
+    // e o componente, não onde o Prettier decidiu partir o JSX.
+    const bloco = PAINEL.slice(
+      PAINEL.indexOf('{mostrar !== "clientes" &&'),
+      PAINEL.indexOf('{mostrar !== "clientes" &&') + 200,
+    );
+    expect(bloco).toContain("<RegistarPedido");
   });
 
   it("nenhum ecrã esconde o outro em silêncio", () => {

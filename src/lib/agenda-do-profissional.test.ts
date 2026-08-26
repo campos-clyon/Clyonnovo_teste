@@ -18,8 +18,11 @@ const DB = ler("src/lib/db.ts");
 
 describe("a data chega ao profissional", () => {
   it("a consulta traz a dataAgendada do pedido", () => {
-    const q = DB.slice(DB.indexOf("export async function negociacoesDoProfissional"));
-    expect(q.slice(0, 1600)).toContain("o.dataAgendada");
+    // A consulta inteira, e não os primeiros N caracteres dela: contar
+    // caracteres partia-se assim que a consulta ganhasse um comentário.
+    const inicio = DB.indexOf("export async function negociacoesDoProfissional");
+    const q = DB.slice(inicio, DB.indexOf("WHERE n.providerId = ?", inicio));
+    expect(q).toContain("o.dataAgendada");
   });
 
   it("a API devolve-a em qualquer estado", () => {

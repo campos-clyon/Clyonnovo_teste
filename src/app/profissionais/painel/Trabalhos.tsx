@@ -25,7 +25,16 @@ import Nota from "@/components/Nota";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
-import { URGENCIA, fotosDe, propostasDe, provaDe, type Pedido } from "./tipos";
+import {
+  URGENCIA,
+  ELEVADOR,
+  ESTACIONAMENTO,
+  distanciaPorExtenso,
+  fotosDe,
+  propostasDe,
+  provaDe,
+  type Pedido,
+} from "./tipos";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
@@ -351,6 +360,18 @@ export default function Trabalhos({
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                       {p.city ?? "—"}
+                      {/*
+                        A pergunta que ele faz primeiro. "Oeiras" não diz se
+                        são 10 km ou 60, e é essa diferença que decide se vale
+                        a pena responder — por isso vai aqui, na lista, antes
+                        de ele abrir seja o que for.
+                      */}
+                      {p.distanciaKm != null && (
+                        <span className="text-slate-400">
+                          {" · "}
+                          {distanciaPorExtenso(p.distanciaKm)}
+                        </span>
+                      )}
                     </span>
                     {p.urgency && (
                       <span className="flex items-center gap-1">
@@ -532,8 +553,6 @@ function DetalheDoTrabalho({
               {URGENCIA[pedido.urgency] ?? pedido.urgency}
             </li>
           )}
-          {pedido.floor && <li className="pl-6">Andar: {pedido.floor}</li>}
-          {pedido.hasElevator && <li className="pl-6">Elevador: {pedido.hasElevator}</li>}
           {pedido.precisaFatura && (
             <li className="flex items-center gap-2">
               <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
@@ -547,6 +566,60 @@ function DetalheDoTrabalho({
             </li>
           )}
         </ul>
+
+        {/*
+          O ACESSO — o que decide quanto tempo o trabalho leva.
+
+          Um segundo andar sem elevador e sem sítio para encostar a carrinha
+          não é o mesmo trabalho que um rés-do-chão com garagem, e o preço
+          que ele propõe devia saber disso. Estes campos já eram perguntados
+          ao cliente e já estavam guardados; o que faltava era chegarem aqui.
+
+          Só aparece quando há alguma coisa para dizer: uma caixa a repetir
+          "não perguntámos" quatro vezes ensina menos do que caixa nenhuma.
+        */}
+        {(pedido.floor ||
+          pedido.hasElevator ||
+          pedido.parkingDistance ||
+          pedido.distanciaKm != null) && (
+          <div className="mt-4 rounded-xl bg-[#F4F8FB] p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              O acesso
+            </p>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              {pedido.distanciaKm != null && (
+                <>
+                  <dt className="text-slate-500">Distância</dt>
+                  <dd className="font-semibold text-tinta">
+                    {distanciaPorExtenso(pedido.distanciaKm)} de si
+                  </dd>
+                </>
+              )}
+              {pedido.floor && (
+                <>
+                  <dt className="text-slate-500">Andar</dt>
+                  <dd className="font-medium text-tinta">{pedido.floor}</dd>
+                </>
+              )}
+              {pedido.hasElevator && (
+                <>
+                  <dt className="text-slate-500">Elevador</dt>
+                  <dd className="font-medium text-tinta">
+                    {ELEVADOR[pedido.hasElevator] ?? pedido.hasElevator}
+                  </dd>
+                </>
+              )}
+              {pedido.parkingDistance && (
+                <>
+                  <dt className="text-slate-500">Estacionar</dt>
+                  <dd className="font-medium text-tinta">
+                    {ESTACIONAMENTO[pedido.parkingDistance] ?? pedido.parkingDistance}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        )}
       </section>
 
       {/* Morada e contacto: só existem depois de ser contratado. */}
