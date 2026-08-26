@@ -17,7 +17,6 @@ import {
   Send,
   Trash2,
   UserRound,
-  RotateCcw,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
@@ -637,7 +636,7 @@ export default function AdminNegociacoesPanel({
     }
   }
 
-  async function redistribuir(pedidoId: number, recomecar = false) {
+  async function redistribuir(pedidoId: number) {
     if (!token) return;
     setOcupado(`r${pedidoId}`);
     setErro("");
@@ -645,7 +644,7 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes/redistribuir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId, recomecar }),
+        body: JSON.stringify({ pedidoId }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -1254,62 +1253,6 @@ export default function AdminNegociacoesPanel({
             );
           })}
 
-          {/*
-            RECOMEÇAR DO ZERO.
-
-            Está aqui, debaixo das negociações, porque é daqui que se vê o
-            problema: as propostas erradas em cima da mesa. Corrigir o valor
-            do pedido em cima não as apaga — quem já aceitou continua a ter
-            aceite o valor antigo, e a negociação fica encalhada à espera de
-            ser fechada por um número que já ninguém quer.
-
-            Só aparece quando ainda há alguma coisa para desfazer: nada de
-            negociações, nada de botão. A confirmação diz quantas morrem e
-            com que valor o pedido volta — é destrutivo e não se esconde.
-          */}
-          {p.negociacoes.length > 0 && !p.negociacoes.some(
-            (n) =>
-              n.estado === "acordada" ||
-              n.confirmadoEm != null ||
-              n.pagoEm != null ||
-              n.execucaoEnviadaEm != null,
-          ) && (
-            <div className="mt-3 border-t border-slate-800 pt-3">
-              <button
-                onClick={() => {
-                  const quantas = p.negociacoes.length;
-                  if (
-                    !window.confirm(
-                      `Recomeçar o pedido #${p.id} do zero?
-
-` +
-                        `${quantas} ${quantas === 1 ? "negociação atual acaba" : "negociações atuais acabam"} — ` +
-                        `as propostas já feitas deixam de contar.
-
-` +
-                        `O pedido volta a sair para todos os profissionais dentro do raio e da ` +
-                        `categoria, com ${euros(p.valorDesejadoCliente ?? 0)} de partida, como se fosse novo.`,
-                    )
-                  )
-                    return;
-                  redistribuir(p.id, true);
-                }}
-                disabled={ocupado === `r${p.id}`}
-                className="flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 hover:bg-rose-500/20 disabled:opacity-50"
-              >
-                {ocupado === `r${p.id}` ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                ) : (
-                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
-                Recomeçar do zero
-              </button>
-              <p className="mt-1.5 text-xs text-slate-500">
-                Para quando o valor de partida saiu errado: apaga as propostas e volta a
-                enviar o pedido a quem for elegível hoje. Não mexe em trabalhos já fechados.
-              </p>
-            </div>
-          )}
         </div>
           </>
         )}

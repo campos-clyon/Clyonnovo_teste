@@ -43,6 +43,13 @@ type Resultado = {
   chaveRecusada?: boolean;
   moradaNormalizada: string | null;
   alcance: Alcance | null;
+  /** O que mudou nesta edição, por extenso: "o valor de partida e as fotografias". */
+  mudancas?: string;
+  /** O pedido voltou a circular? Gravar uma alteração recomeça-o do zero. */
+  recomeco?:
+    | { recomecou: true; encerradas: number; receberam: number; avisados: number; candidatos: number }
+    | { recomecou: false; porque: "sem_negociacoes" | "trabalho_fechado" | "sem_valor"; detalhe?: string }
+    | null;
 };
 
 const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".", ",") + " €");
@@ -330,7 +337,7 @@ export default function RegistarPedido({
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
             {editarId != null
-              ? "Os campos que os profissionais leem. Gravar volta a localizar a morada e recalcula o alcance."
+              ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas actuais acabam e ele volta a sair a quem for elegível hoje."
               : "Para o que chega por fora do site. Primeiro calcula-se; depois decide se vai aos profissionais ou fica só no backoffice."}
           </p>
         </div>
@@ -666,9 +673,68 @@ function Resumo({
       </p>
       <p className="mt-0.5 text-xs text-emerald-400/70">
         {emEdicao
-          ? "Os profissionais veem as alterações na próxima vez que abrirem o pedido."
+          ? r.mudancas
+            ? `Mudou ${r.mudancas}.`
+            : "Nada mudou do que os profissionais leem."
           : "Já aparece na lista aqui em baixo. Ainda não foi enviado a ninguém."}
       </p>
+
+      {/*
+        O QUE ACONTECEU AO PEDIDO A SEGUIR À GRAVAÇÃO.
+
+        Gravar uma alteração recomeça o pedido do zero e volta a enviá-lo. É
+        destrutivo — as propostas anteriores acabam — e portanto tem de se ver
+        aqui, no mesmo ecrã e no mesmo segundo, e não descobrir-se depois ao
+        reparar que os números mudaram.
+      */}
+      {r.recomeco && (
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            r.recomeco.recomecou
+              ? "border-cyan-500/30 bg-cyan-500/[0.07] text-cyan-200"
+              : "border-amber-500/30 bg-amber-500/[0.07] text-amber-200"
+          }`}
+        >
+          {r.recomeco.recomecou ? (
+            <>
+              <p className="font-semibold">O pedido voltou a circular como novo.</p>
+              <p className="mt-0.5 text-cyan-200/75">
+                {r.recomeco.encerradas}{" "}
+                {r.recomeco.encerradas === 1
+                  ? "negociação anterior acabou"
+                  : "negociações anteriores acabaram"}{" "}
+                — as propostas já feitas deixaram de contar. Chegou a{" "}
+                {r.recomeco.receberam} de {r.recomeco.candidatos} profissionais activos
+                {r.recomeco.avisados < r.recomeco.receberam
+                  ? `, mas ${r.recomeco.receberam - r.recomeco.avisados} não recebeu o email de aviso`
+                  : ""}
+                .
+              </p>
+            </>
+          ) : r.recomeco.porque === "trabalho_fechado" ? (
+            <>
+              <p className="font-semibold">
+                A alteração ficou gravada, mas o pedido NÃO voltou a circular.
+              </p>
+              <p className="mt-0.5 text-amber-200/75">
+                O trabalho já está fechado com {r.recomeco.detalhe}. Recomeçar apagaria esse
+                compromisso — do outro lado há alguém que contou com o trabalho. Se for mesmo
+                para refazer, desista dessa negociação primeiro.
+              </p>
+            </>
+          ) : r.recomeco.porque === "sem_valor" ? (
+            <p>
+              A alteração ficou gravada. Sem valor de partida o pedido não pode ser enviado a
+              ninguém.
+            </p>
+          ) : (
+            <p>
+              A alteração ficou gravada. Este pedido ainda não foi enviado a ninguém — use
+              &ldquo;Enviar aos profissionais&rdquo; quando estiver pronto.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
