@@ -3514,6 +3514,12 @@ const COLUNAS_PEDIDO_EDITAVEIS = new Set<string>([
   "acceptedAt", "scheduledDate", "scheduledStartTime", "scheduledEndTime", "calendarEventId", "calendarEventUrl",
   "calendarStatus", "calendarNotes", "analysisJsonExtended", "calendarTargetId", "calendarTargetName", "recurrenceFrequency",
   "recurringDiscountPercent", "clientRating", "clientRatingComment", "historyReadAt",
+  // Os tres da plataforma. Faltavam, e o editor mandava-os na mesma: a lista
+  // ignora o que nao conhece EM SILENCIO, e o `as Parameters<...>` no editor
+  // calava o TypeScript. Resultado: gravar o pedido #228 com 30 EUR deixava
+  // 121,43 na base, a fotografia anexada evaporava-se e a caixa da fatura nao
+  // guardava. O ecra dava o pedido por actualizado e nao era verdade.
+  "valorDesejadoCliente", "precisaFatura", "filesJson",
 ]);
 
 export async function updateSimulatorOrder(
@@ -3526,7 +3532,9 @@ export async function updateSimulatorOrder(
     precoFinalIva: string | null;
     mensagemCliente: string | null;
     colaboradorId: number;
-    dataAgendada: string | null;
+    // Date TAMBEM: o editor manda um Date e o driver sabe grava-lo. O tipo e
+    // que dizia so string, e o molde do editor engolia o erro.
+    dataAgendada: Date | string | null;
     assignedToId: number | null;
     assignedToName: string | null;
     assignedAt: string | null;
@@ -3559,6 +3567,9 @@ export async function updateSimulatorOrder(
     clientRating: number | null;
     clientRatingComment: string | null;
     historyReadAt: string | null;
+    valorDesejadoCliente: string | null;
+    precisaFatura: number;
+    filesJson: string | null;
   }>
 ) {
   await ensureSimulatorOrdersTable();

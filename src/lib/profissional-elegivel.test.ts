@@ -233,18 +233,41 @@ describe("motivosAgregados", () => {
   // erro nenhum — igual a um que ninguém quis. Isto dá a diferença.
   it("diz porque é que um pedido não chegou a ninguém", () => {
     const lista = [
-      pro({ id: 1, categorias: ["jardinagem"] }),
-      pro({ id: 2, categorias: ["jardinagem"] }),
-      pro({ id: 3, raioKm: 1 }),
+      { profissional: pro({ id: 1, categorias: ["jardinagem"] }), distanciaKm: 10 },
+      { profissional: pro({ id: 2, categorias: ["jardinagem"] }), distanciaKm: 10 },
+      { profissional: pro({ id: 3, raioKm: 1 }), distanciaKm: 10 },
     ];
     const c = motivosAgregados(pedido(), lista);
     expect(c.categoria_diferente).toBe(2);
     expect(c.fora_de_alcance).toBe(1);
     expect(c.nao_emite_fatura).toBe(0);
+    // A morada ESTÁ localizada — ninguém pode ser contado como se não
+    // estivesse. Era o que acontecia: os dois sítios que chamavam isto
+    // passavam a distância a null e toda a gente saía "sem morada", com o
+    // painel a dizer "Localizada" três linhas acima.
+    expect(c.sem_morada).toBe(0);
+  });
+
+  it("a distância é de cada um, não do pedido", () => {
+    // Um perto e um longe, contra o MESMO pedido: só o longe é excluído.
+    const c = motivosAgregados(pedido(), [
+      { profissional: pro({ id: 1, raioKm: 30 }), distanciaKm: 8 },
+      { profissional: pro({ id: 2, raioKm: 30 }), distanciaKm: 90 },
+    ]);
+    expect(c.fora_de_alcance).toBe(1);
+    expect(c.sem_morada).toBe(0);
+  });
+
+  it("sem morada é só quando a morada falta mesmo", () => {
+    const c = motivosAgregados(pedido(), [
+      { profissional: pro({ id: 1 }), distanciaKm: null },
+    ]);
+    expect(c.sem_morada).toBe(1);
+    expect(c.fora_de_alcance).toBe(0);
   });
 
   it("não conta quem passou", () => {
-    const c = motivosAgregados(pedido(), [pro()]);
+    const c = motivosAgregados(pedido(), [{ profissional: pro(), distanciaKm: 10 }]);
     expect(Object.values(c).every((n) => n === 0)).toBe(true);
   });
 });

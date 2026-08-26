@@ -139,7 +139,8 @@ export async function avaliarAlcance(pedido: {
   }));
 
   const elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }> = [];
-  const foraDeAlcance: ProfissionalNaBase[] = [];
+  const foraDeAlcance: Array<{ profissional: ProfissionalNaBase; distanciaKm: number | null }> =
+    [];
   for (const c of comDistancia) {
     const r = avaliarElegibilidade(
       {
@@ -158,7 +159,7 @@ export async function avaliarAlcance(pedido: {
         distanciaKm: c.distanciaKm,
       });
     } else {
-      foraDeAlcance.push(c.profissional);
+      foraDeAlcance.push(c);
     }
   }
 
@@ -167,7 +168,6 @@ export async function avaliarAlcance(pedido: {
       serviceType: pedido.serviceType,
       precisaFatura: pedido.precisaFatura,
       precisaGuiaTransporte: pedido.precisaGuiaTransporte,
-      distanciaKm: null,
       city: pedido.city,
     },
     foraDeAlcance,
@@ -224,10 +224,12 @@ export async function distribuirPedido(
       serviceType: pedido.serviceType,
       precisaFatura: pedido.precisaFatura,
       precisaGuiaTransporte: pedido.precisaGuiaTransporte,
-      distanciaKm: null,
       city: pedido.city,
     },
-    comDistancia.filter((c) => !elegiveis.includes(c)).map((c) => c.profissional),
+    // Todos: a contagem salta os elegíveis sozinha. O filtro que aqui estava
+    // comparava objectos de formas diferentes e nunca excluía ninguém — dava
+    // o número certo por acaso, e escondia a intenção.
+    comDistancia,
   );
 
   const recebe = quantoRecebe(pedido.valorDesejadoCliente);
