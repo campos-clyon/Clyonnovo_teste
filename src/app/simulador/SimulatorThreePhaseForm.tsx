@@ -105,6 +105,9 @@ export default function SimulatorThreePhaseForm() {
   const [addressValue, setAddressValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase2Attempted, setPhase2Attempted] = useState(false);
+  /* Só se marca o que falta DEPOIS de ele tentar enviar: pintar de vermelho um
+     campo em que ninguém tocou é ralhar antes de a pessoa fazer nada. */
+  const [phase3Attempted, setPhase3Attempted] = useState(false);
 
   // Limpar localStorage ao inicializar (F5 sempre reseta)
   useEffect(() => {
@@ -324,18 +327,22 @@ export default function SimulatorThreePhaseForm() {
       formData.receiver?.name &&
       formData.receiver?.phone &&
       /*
-       * O email deixou de ser opcional.
+       * O EMAIL É RECOMENDADO, E JÁ NÃO OBRIGATÓRIO.
        *
-       * Era-o quando a CLYON fazia o trabalho e telefonava. Agora o pedido vai
-       * a profissionais que respondem com propostas, e a proposta chega por um
-       * link enviado por email — não há outro caminho. Sem email, o pedido
-       * segue para os profissionais, eles propõem, e o cliente nunca chega a
-       * saber. Foi o que aconteceu ao #202.
+       * Foi obrigatório por uma razão boa: a proposta chega por um link
+       * enviado por email, e sem ele o cliente nunca chegava a saber que
+       * alguém tinha respondido — foi o que aconteceu ao #202.
        *
-       * O telefone continua a ser pedido, mas ninguém negoceia por telefone
-       * com quatro profissionais ao mesmo tempo.
+       * Entretanto isso deixou de ser verdade. O cliente negoceia pelo
+       * WhatsApp, e o painel manda-lhe o link por lá quando não há email. A
+       * razão desapareceu e o obstáculo ficou — e um obstáculo sem razão custa
+       * pedidos inteiros a quem não tem email à mão.
+       *
+       * Continua a ser a melhor forma de receber as propostas, e é por isso
+       * que é RECOMENDADO: fica marcado a dourado quando falta, com a razão
+       * escrita ao lado. O que ele pediu, e é o desenho certo — vermelho para
+       * o que impede, dourado para o que custa.
        */
-      emailValido(formData.receiver?.email ?? "") &&
       formData.urgency &&
       // Sem resposta à fatura não se envia: é ela que decide quem pode fazer o
       // trabalho, e descobri-lo no fim — com o serviço feito e o cliente a
@@ -358,11 +365,23 @@ export default function SimulatorThreePhaseForm() {
   if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se precisa de fatura");
   if (!formData.receiver?.name) faltaNaFase3.push("o nome");
   if (!formData.receiver?.phone) faltaNaFase3.push("o telefone");
-  if (!emailValido(formData.receiver?.email ?? "")) faltaNaFase3.push("o email");
   if (!formData.urgency) faltaNaFase3.push("quando precisa");
+
+  /*
+   * O que não IMPEDE, mas custa.
+   *
+   * Uma lista à parte, e não um item mais bonito na mesma lista: misturar «não
+   * pode enviar sem isto» com «isto ia ajudar» ensina a pessoa a não ler
+   * nenhuma das duas.
+   */
+  const recomendadoNaFase3: string[] = [];
+  if (!emailValido(formData.receiver?.email ?? "")) {
+    recomendadoNaFase3.push("o email — é por lá que recebe as propostas");
+  }
 
   const handleAnalyze = async () => {
     if (!canAnalyze) {
+      setPhase3Attempted(true);
       setError("Por favor, preencha todos os campos obrigatórios");
       return;
     }
@@ -791,6 +810,8 @@ export default function SimulatorThreePhaseForm() {
                   formData={formData}
                   updateField={updateField}
                   session={session}
+                  showValidationErrors={phase3Attempted}
+                  recomendados={recomendadoNaFase3}
                 />
               )}
 
@@ -916,9 +937,25 @@ export default function SimulatorThreePhaseForm() {
                       {/* Um botão cinzento sem explicação é um beco.
                           A pessoa vê que não pode avançar, não vê porquê, e
                           quem não descobre fecha o separador. */}
+                      {/*
+                        DUAS LINHAS, DUAS CORES.
+
+                        O vermelho impede: enquanto lá estiver, o botão não
+                        envia. O dourado não impede nada — diz o que se perde
+                        ao saltar, e fica ao lado de um botão que funciona.
+
+                        Juntá-las numa só ensinava a pessoa a ler nenhuma: se
+                        metade da lista bloqueia e a outra metade não, a lista
+                        deixa de querer dizer alguma coisa.
+                      */}
                       {!canAnalyze && faltaNaFase3.length > 0 && (
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs font-medium text-red-600">
                           Falta preencher: {faltaNaFase3.join(", ")}.
+                        </p>
+                      )}
+                      {canAnalyze && recomendadoNaFase3.length > 0 && (
+                        <p className="text-xs font-medium text-amber-700">
+                          Pode enviar, mas fica a faltar {recomendadoNaFase3.join(", ")}.
                         </p>
                       )}
                       <button
@@ -1479,7 +1516,10 @@ function Phase2Location({
   if (formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator) missingFields.push("Elevador");
   if (!formData.parkingDistance) missingFields.push("Estacionamento");
 
-  const errorBorderCls = "border-2 border-red-400 focus:ring-red-400 focus:border-red-400";
+  /* O mesmo vermelho da fase 3: se a cor quer dizer «isto impede», tem de ser
+     a mesma cor nos dois sítios. Duas intensidades leem-se como dois graus. */
+  const errorBorderCls =
+    "border-2 border-red-500 bg-red-50/40 focus:ring-red-400 focus:border-red-500";
 
   return (
     <div className="space-y-6">
@@ -1636,14 +1676,44 @@ function Phase3Contact({
   formData,
   updateField,
   session,
+  showValidationErrors,
+  recomendados = [],
 }: {
   formData: FormState;
   updateField: (field: string, value: unknown) => void;
   session: any;
+  showValidationErrors?: boolean;
+  recomendados?: string[];
 }) {
   const isLoggedIn = !!session?.user?.email;
   const emailEscrito = (formData.receiver?.email ?? "").trim().length > 0;
   const emailEstaBem = emailValido(formData.receiver?.email ?? "");
+
+  /*
+   * DUAS CORES, DUAS COISAS DIFERENTES.
+   *
+   * "Os campos não preenchidos devem ficar vermelhos; no caso dos recomendados
+   * devem ficar dourados."
+   *
+   * Vermelho é o que IMPEDE: sem isto o pedido não sai. Dourado é o que CUSTA:
+   * o pedido sai na mesma, mas fica pior — e a pessoa tem direito a saber a
+   * diferença antes de decidir saltar.
+   *
+   * As duas só aparecem depois de ele tentar enviar. Pintar um campo em que
+   * ninguém tocou é ralhar antes de a pessoa fazer nada.
+   */
+  const emFalta = (vazio: boolean) => showValidationErrors && vazio;
+  const CAIXA = "w-full px-4 py-2 border-2 bg-white rounded-xl shadow-sm outline-none transition";
+  const VERMELHO = "border-red-500 bg-red-50/40 focus:ring-2 focus:ring-red-400 focus:border-red-500";
+  const DOURADO = "border-amber-500 bg-amber-50/50 focus:ring-2 focus:ring-amber-400 focus:border-amber-500";
+  const NORMAL = "border-gray-400 focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600";
+
+  const semNome = emFalta(!formData.receiver?.name);
+  const semTelefone = emFalta(!formData.receiver?.phone);
+  const semUrgencia = emFalta(!formData.urgency);
+  const semFatura = emFalta(typeof formData.precisaFatura !== "boolean");
+  /* Dourado: falta ou está errado, mas não impede. */
+  const emailPorPor = showValidationErrors && !emailEstaBem;
 
   return (
     <div className="space-y-6">
@@ -1654,7 +1724,11 @@ function Phase3Contact({
           trabalho — e é a que não se pode adivinhar. Duas escolhas explícitas
           em vez de uma caixa: uma caixa por marcar é indistinguível de uma
           pergunta que a pessoa não viu. */}
-      <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
+      <div
+        className={`rounded-xl border-2 bg-white p-4 ${
+          semFatura ? "border-red-500 bg-red-50/40" : "border-gray-200"
+        }`}
+      >
         <p className="text-sm font-semibold text-gray-900">Precisa de fatura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
           A fatura é emitida por quem presta o serviço. Dizer-nos agora garante que só lhe
@@ -1766,8 +1840,10 @@ function Phase3Contact({
             value={formData.receiver?.name || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, name: e.target.value })}
             placeholder="Ex: Eugênia Almeida"
-            className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
+            aria-invalid={semNome || undefined}
+            className={`${CAIXA} ${semNome ? VERMELHO : NORMAL}`}
           />
+          {semNome && <p className="text-xs font-medium text-red-600">Falta o nome.</p>}
         </div>
 
         <div className="space-y-2">
@@ -1777,16 +1853,22 @@ function Phase3Contact({
             value={formData.receiver?.phone || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
             placeholder="Ex: 911 128 863"
-            className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
+            aria-invalid={semTelefone || undefined}
+            className={`${CAIXA} ${semTelefone ? VERMELHO : NORMAL}`}
           />
+          {semTelefone && <p className="text-xs font-medium text-red-600">Falta o telefone.</p>}
         </div>
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="sim-email" className="block text-sm font-medium text-gray-900">Email *</label>
+        <label htmlFor="sim-email" className="block text-sm font-medium text-gray-900">
+          Email{" "}
+          <span className="font-semibold text-amber-700">(recomendado)</span>
+        </label>
         <p className="text-xs text-gray-600">
-          É por aqui que recebe as propostas. Sem email não temos como lhe
-          mostrar o que os profissionais respondem.
+          É por aqui que recebe as propostas, e é a forma mais simples de as
+          acompanhar. Sem email tratamos de si pelo telefone — mas tem de estar
+          atento, porque não lhe podemos mandar o link.
         </p>
         <input id="sim-email"
           type="email"
@@ -1795,16 +1877,31 @@ function Phase3Contact({
           value={formData.receiver?.email || ""}
           onChange={(e) => updateField("receiver", { ...formData.receiver, email: e.target.value })}
           placeholder="Ex: exemplo@email.com"
-          className={`w-full px-4 py-2 border-2 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm ${
-            emailEscrito && !emailEstaBem ? "border-red-400" : "border-gray-400"
+          aria-invalid={emailEscrito && !emailEstaBem ? true : undefined}
+          className={`${CAIXA} ${
+            emailEscrito && !emailEstaBem
+              ? VERMELHO
+              : emailPorPor
+                ? DOURADO
+                : NORMAL
           }`}
         />
-        {/* Só se queixa de um email errado depois de haver um email escrito.
-            Marcar a vermelho um campo em branco em que a pessoa ainda não
-            tocou é ralhar antes de ela fazer nada. */}
-        {emailEscrito && !emailEstaBem && (
-          <p className="text-xs text-red-600">Este email não parece estar certo.</p>
-        )}
+        {/*
+          Três estados, e não dois.
+          · Um email ESCRITO e mal escrito é um erro: vermelho, sempre.
+          · Um email em falta depois de tentar enviar é uma escolha que custa:
+            dourado, com a consequência escrita.
+          · Um campo em branco em que ainda ninguém tocou não diz nada — ralhar
+            antes de a pessoa fazer alguma coisa é a maneira mais rápida de a
+            perder.
+        */}
+        {emailEscrito && !emailEstaBem ? (
+          <p className="text-xs font-medium text-red-600">Este email não parece estar certo.</p>
+        ) : emailPorPor ? (
+          <p className="text-xs font-medium text-amber-700">
+            Pode enviar sem email — mas as propostas só lhe chegam por telefone.
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -1812,7 +1909,8 @@ function Phase3Contact({
         <select id="sim-urgencia"
           value={formData.urgency || ""}
           onChange={(e) => updateField("urgency", e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
+          aria-invalid={semUrgencia || undefined}
+          className={`${CAIXA} ${semUrgencia ? VERMELHO : NORMAL}`}
         >
           <option value="">Seleccione...</option>
           <option value="today">Hoje</option>
@@ -1820,6 +1918,9 @@ function Phase3Contact({
           <option value="this_week">Esta semana</option>
           <option value="flexible">Flexível</option>
         </select>
+        {semUrgencia && (
+          <p className="text-xs font-medium text-red-600">Falta dizer quando precisa.</p>
+        )}
       </div>
 
       {(formData.serviceType === "jardinagem" || formData.serviceType === "manutencao_casa") && (

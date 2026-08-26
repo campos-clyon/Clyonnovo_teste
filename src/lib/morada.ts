@@ -225,7 +225,25 @@ export function partirViaENumero(
 
   // O número vem no fim: "Rua do Ouro 12", "Av. da Liberdade 200-A".
   const m = via.match(/^(.*?)[,\s]+(\d+[A-Za-z]?(?:[-\s]?[A-Za-z0-9]+)?)$/);
-  if (!m) return { street: via, streetNumber: "" };
+  if (!m) {
+    /*
+     * O NÚMERO DEPOIS DA VÍRGULA — a forma portuguesa.
+     *
+     * O Google devolve "Rua dos Jasmins, 3, 2845-483 Amora": o número é o
+     * SEGUNDO pedaço, não o fim do primeiro. Isto olhava só para o primeiro e
+     * concluía que a rua não tinha número — e o formulário pedia à pessoa o
+     * número de porta que ela já tinha escolhido da lista. Apanhado a
+     * atravessar o simulador a sério, com a morada dele.
+     *
+     * Só um número de porta serve. Um código postal — 2845-483 — tem dígitos
+     * depois do traço, e por isso não passa nesta forma; um "12-A" passa.
+     */
+    const segundo = limpo((formattedAddress ?? "").split(",")[1]);
+    if (/^\d{1,4}(?:[-\s]?[A-Za-z])?$/.test(segundo)) {
+      return { street: via, streetNumber: segundo };
+    }
+    return { street: via, streetNumber: "" };
+  }
 
   const nome = limpo(m[1]);
   // "Rua 25" é o nome todo, não uma rua sem nome com o número 25.

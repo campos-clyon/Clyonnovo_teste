@@ -106,3 +106,34 @@ describe("os componentes do Google mandam quando existem", () => {
     expect(partirViaENumero(meio.formattedAddress, meio.city).streetNumber).toBe("3");
   });
 });
+
+describe("o número depois da vírgula — a forma portuguesa", () => {
+  it("«Rua dos Jasmins, 3, 2845-483 Amora» tem número 3", () => {
+    // O Google devolve exactamente isto ao escolher a sugestão. Apanhado a
+    // atravessar o simulador a sério: o formulário pedia o número de porta que
+    // a pessoa já tinha escolhido da lista.
+    expect(partirViaENumero("Rua dos Jasmins, 3, 2845-483 Amora", "Amora")).toEqual({
+      street: "Rua dos Jasmins",
+      streetNumber: "3",
+    });
+    expect(
+      precisaoDaMorada({ formattedAddress: "Rua dos Jasmins, 3, 2845-483 Amora", city: "Amora" }),
+    ).toBe("porta");
+  });
+
+  it("um código postal nunca vira número de porta", () => {
+    // 2845-483 tem dígitos depois do traço; um número de porta não tem.
+    for (const linha of [
+      "Rua do Ouro, 1100-060 Lisboa",
+      "Avenida da Liberdade, 2845-483 Amora, Portugal",
+    ]) {
+      expect(partirViaENumero(linha, null).streetNumber).toBe("");
+      expect(precisaoDaMorada({ formattedAddress: linha })).toBe("rua");
+    }
+  });
+
+  it("«12-A» e «12 B» passam, porque são portas", () => {
+    expect(partirViaENumero("Rua do Ouro, 12-A, Lisboa", "Lisboa").streetNumber).toBe("12-A");
+    expect(partirViaENumero("Rua do Ouro, 12 B, Lisboa", "Lisboa").streetNumber).toBe("12 B");
+  });
+});
