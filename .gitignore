@@ -113,3 +113,6 @@ Apps exemplos/
 contrato-verificacao.sql
 .tmp-q/
 .tmp-*
+
+# Rascunhos do desenho — os ficheiros de trabalho das telas do /design.
+.design-mesa/

@@ -7,6 +7,7 @@ import {
   ESTACIONAMENTO,
   emPortugues,
   distanciaPorExtenso,
+  distanciaDaBase,
 } from "@/app/profissionais/painel/tipos";
 
 /**
@@ -92,9 +93,17 @@ describe("a distância até ao trabalho", () => {
     expect(cartao.length).toBeGreaterThan(0);
   });
 
-  it("diz-se por alto, com til — é linha recta, não é a conta do GPS", () => {
-    expect(distanciaPorExtenso(34.2)).toBe("~34 km");
+  it("vai limpa na lista — o til saiu, a pedido dele", () => {
+    // Um sinal de matemática no meio de uma morada lê-se como ruído, não
+    // como "por alto". A ressalva mudou de sítio, não desapareceu.
+    expect(distanciaPorExtenso(34.2)).toBe("34 km");
     expect(distanciaPorExtenso(0.4)).toBe("menos de 1 km");
+  });
+
+  it("e no detalhe a aproximação diz-se por palavras", () => {
+    expect(distanciaDaBase(38.7)).toBe("cerca de 39 km da sua base");
+    // Abaixo de 1 km, "cerca de menos de 1 km" seria português a mais.
+    expect(distanciaDaBase(0.3)).toBe("menos de 1 km da sua base");
   });
 });
 
@@ -137,7 +146,7 @@ describe("o vocabulário do ecrã", () => {
   });
 
   it("a distância é dita desde a BASE dele, não de onde ele está agora", () => {
-    expect(ECRA).toContain("da sua base");
+    expect(ECRA).toContain("distanciaDaBase(pedido.distanciaKm)");
     expect(ECRA).not.toContain("km de si");
   });
 

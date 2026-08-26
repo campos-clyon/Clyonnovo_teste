@@ -31,6 +31,7 @@ import {
   ESTACIONAMENTO,
   emPortugues,
   distanciaPorExtenso,
+  distanciaDaBase,
   fotosDe,
   propostasDe,
   provaDe,
@@ -596,7 +597,7 @@ function DetalheDoTrabalho({
                       "de si" dizia onde ele está AGORA; a conta é feita desde
                       a base que ele registou. A frase passa a dizer a verdade.
                     */}
-                    {distanciaPorExtenso(pedido.distanciaKm)} da sua base
+                    {distanciaDaBase(pedido.distanciaKm)}
                   </dd>
                 </>
               )}

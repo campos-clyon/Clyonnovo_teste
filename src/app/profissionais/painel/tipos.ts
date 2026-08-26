@@ -170,9 +170,26 @@ export function emPortugues(
   return dicionario[limpo] ?? limpo;
 }
 
+/**
+ * A distância, dita como quem fala.
+ *
+ * Sem o til: ele pediu para o tirar, e tinha razão — um sinal de matemática
+ * no meio de uma morada lê-se como ruído, não como "por alto". A ressalva
+ * não se perde, muda de sítio: na lista o número vai limpo, e na linha do
+ * detalhe a aproximação diz-se por palavras ("cerca de"), que é como uma
+ * pessoa a diria.
+ */
 export function distanciaPorExtenso(km: number): string {
-  return km < 1 ? "menos de 1 km" : `~${Math.round(km)} km`;
+  return km < 1 ? "menos de 1 km" : `${Math.round(km)} km`;
 }
+
+/** A mesma distância, na linha do detalhe: desde a base que ele registou. */
+export function distanciaDaBase(km: number): string {
+  return km < 1
+    ? "menos de 1 km da sua base"
+    : `cerca de ${Math.round(km)} km da sua base`;
+}
+
 
 export function fotosDe(json: string | null): Array<{ url: string; name?: string }> {
   if (!json) return [];
