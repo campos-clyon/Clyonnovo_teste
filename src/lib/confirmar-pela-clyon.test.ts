@@ -174,8 +174,20 @@ describe("o ecrã das negociações da CLYON", () => {
     expect(PAINEL).toContain("o dele deixa de funcionar");
   });
 
-  it("no ecrã próprio o título do grupo não se repete", () => {
-    expect(PAINEL).toContain('mostrar !== "clyon" && (');
+  it("já não há título de grupo para repetir — a lista é uma só", () => {
+    /*
+     * Este teste guardava uma condição que evitava mostrar "Negociações da
+     * CLYON" duas vezes no ecrã próprio. Deixou de fazer sentido quando os
+     * dois grupos — CLYON e clientes — se fundiram numa lista única: a
+     * separação era por DE ONDE o pedido veio, e ele pediu o contrário.
+     *
+     * O que fica a valer, e é mais importante: nenhum pedido tem de ir a
+     * outro ecrã para ser visto.
+     */
+    expect(PAINEL).toContain("activosOrdenados");
+    // O bloco em si, e não a frase: o comentário do código explica de onde
+    // viemos e tem direito a citar o nome antigo.
+    expect(PAINEL).not.toContain("bg-violet-500/15");
   });
 });
 

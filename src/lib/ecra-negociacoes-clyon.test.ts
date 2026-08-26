@@ -54,10 +54,16 @@ describe("o painel dividido", () => {
     expect(bloco).toContain("<RegistarPedido");
   });
 
-  it("nenhum ecrã esconde o outro em silêncio", () => {
-    // Uma linha diz quantas negociações estão no outro ecrã, com o caminho.
-    expect(PAINEL).toContain("/admin?section=negociacoes_clyon");
-    expect(PAINEL).toContain("/admin?section=negociacoes");
+  it("nenhum ecrã esconde o outro — porque já não há dois", () => {
+    /*
+     * Havia duas listas e uma linha em cada a apontar para a outra, para que
+     * nada ficasse escondido. Os atalhos desapareceram com o motivo deles: os
+     * dois grupos são hoje uma lista única, separada por de quem é a vez e
+     * não por de onde o pedido veio.
+     */
+    expect(PAINEL).toContain("const activosOrdenados = useMemo");
+    expect(PAINEL).toContain("Precisa de si");
+    expect(PAINEL).toContain("A correr");
   });
 
   it('"à espera de si" só se diz onde é verdade', () => {

@@ -155,6 +155,21 @@ type Pedido = {
  * com o ecra a esconder um botao que a rota continuava a aceitar.
  */
 
+/*
+ * De onde o pedido entrou, em duas palavras.
+ *
+ * Os valores vieram da base: simulador (89), hero_quote_form (14),
+ * formulario_contactos (10), backoffice (7). Um pedido sem origem gravada é
+ * do simulador — foi de lá que vieram todos antes de haver o resto.
+ */
+const ORIGEM: Record<string, string> = {
+  simulador: "Simulador",
+  hero_quote_form: "Site",
+  formulario_contactos: "Contactos",
+  backoffice: "Backoffice",
+  plataforma: "Plataforma",
+};
+
 const ESTADO_CLS: Record<string, string> = {
   aberta: "bg-blue-500/15 text-blue-300",
   aguarda_contratacao: "bg-amber-500/15 text-amber-300",
@@ -653,6 +668,59 @@ export default function AdminNegociacoesPanel({
   const dosClientes = activos.filter((p) => quemNegoceia(p) === "cliente");
 
   /*
+   * A LISTA ÚNICA, POR NÍVEL DE QUEM ESPERA.
+   *
+   * `daClyon` e `dosClientes` continuam a existir — as contagens do topo e o
+   * atalho "está à espera de si" lêem-nos — mas deixaram de desenhar duas
+   * listas. O que separa agora é de quem é a vez:
+   *
+   *   1. Precisa de si — há uma proposta pendente e a CLYON é que responde.
+   *      É o único nível onde a demora custa dinheiro: 48 horas e expira.
+   *   2. A correr — a bola está do outro lado, com o profissional ou com o
+   *      cliente que responde pelo link. Estão aqui para vigiar, não para agir.
+   *
+   * Dentro de cada nível, do mais recente para o mais antigo.
+   */
+  const activosOrdenados = useMemo(() => {
+    const visiveis =
+      mostrar === "clyon" ? daClyon : mostrar === "clientes" ? dosClientes : activos;
+    const porData = (a: Pedido, b: Pedido) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+    const precisam = visiveis.filter((p) => p.negociacoes.some(esperaResposta)).sort(porData);
+    const correm = visiveis.filter((p) => !p.negociacoes.some(esperaResposta)).sort(porData);
+
+    type Entrada = {
+      chave: string;
+      separador: boolean;
+      titulo?: string;
+      quantos?: number;
+      nota?: string;
+      tom?: string;
+      pedido?: Pedido;
+    };
+    const saida: Entrada[] = [];
+    const bloco = (
+      chave: string,
+      titulo: string,
+      nota: string,
+      tom: string,
+      lista: Pedido[],
+    ) => {
+      if (lista.length === 0) return;
+      // O separador só aparece quando há DOIS níveis para separar: com uma
+      // lista só, uma linha a dizer o óbvio é ruído.
+      if (precisam.length > 0 && correm.length > 0) {
+        saida.push({ chave, separador: true, titulo, quantos: lista.length, nota, tom });
+      }
+      for (const p of lista) saida.push({ chave: `p${p.id}`, separador: false, pedido: p });
+    };
+    bloco("n1", "Precisa de si", "ninguém avança sem a sua resposta", "text-emerald-300", precisam);
+    bloco("n2", "A correr", "a bola está do outro lado", "text-sky-300", correm);
+    return saida;
+  }, [activos, daClyon, dosClientes, mostrar]);
+
+  /*
    * O cartao de um pedido, desenhado uma vez e usado nos dois grupos.
    *
    * Estava dentro do `.map()` da lista unica. Ao separar as negociacoes da
@@ -779,9 +847,22 @@ export default function AdminNegociacoesPanel({
           <span className="text-sm font-bold text-white">#{p.id}</span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-100">{p.contactName ?? "—"}</p>
-            <p className="truncate text-xs text-slate-500">
-              {p.city ?? "—"} · {p.serviceType ?? "—"}
-              {!p.contactEmail && " · sem email"}
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
+              {/*
+                A ORIGEM COMO ETIQUETA, NÃO COMO GAVETA.
+
+                Decisão dele: "pode mostrar a origem mas não separá-lo por
+                isso". Antes, de onde o pedido vinha decidia em que caixa ele
+                caía — e quem gere não pergunta de onde veio, pergunta o que
+                falta fazer. Agora é um rótulo pequeno, ao lado da cidade.
+              */}
+              <span className="shrink-0 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
+                {ORIGEM[p.origem ?? "simulador"] ?? "Simulador"}
+              </span>
+              <span className="truncate">
+                {p.city ?? "—"} · {p.serviceType ?? "—"}
+                {!p.contactEmail && " · sem email"}
+              </span>
             </p>
           </div>
           <span className="text-sm font-semibold tabular-nums text-slate-200">
@@ -1267,30 +1348,37 @@ export default function AdminNegociacoesPanel({
         </p>
       )}
 
-      {mostrar !== "clientes" && daClyon.length > 0 && (
+      {/*
+        UMA LISTA SÓ, ORDENADA POR QUEM ESPERA.
+
+        Havia duas: "Negociações da CLYON" e "Negociações dos clientes" —
+        separadas por DE ONDE o pedido tinha entrado. Decisão dele: "coloque
+        todos os pedidos num único lugar, independente de onde venha; pode
+        mostrar a origem mas não separá-lo por isso". A origem passou a ser
+        uma etiqueta na linha; o que agora agrupa é a única pergunta que
+        interessa a quem gere — de quem é a vez.
+
+        Dentro de cada nível, do mais recente para o mais antigo, como ele
+        pediu. As linhas finas separam níveis, não secções: a lista é uma só.
+      */}
+      {activosOrdenados.length > 0 && (
         <section className="mb-6">
-          {/*
-            No ecrã próprio o título já está na página — repetir "Negociações
-            da CLYON" duas vezes com a mesma descrição era ruído a ocupar a
-            primeira dobra. Só aparece quando o painel mostra tudo misturado.
-          */}
-          {mostrar !== "clyon" && (
-            <>
-              <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-cyan-300">
-                <Building2 className="h-4 w-4" aria-hidden="true" />
-                Negociações da CLYON
-                <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-bold text-cyan-200">
-                  {daClyon.length}
-                </span>
-              </h3>
-              <p className="mb-3 text-xs text-slate-500">
-                Chegaram por WhatsApp, telefone, ou sem email. O cliente não tem como
-                responder — quem responde ao profissional é a CLYON, em nome dele.
-              </p>
-            </>
-          )}
           {cabecalhoDaMesa}
-          <div className="space-y-3">{daClyon.map(cartaoDoPedido)}</div>
+          <div className="space-y-3">
+            {activosOrdenados.map((entrada) =>
+              entrada.separador ? (
+                <div key={entrada.chave} className="flex items-center gap-3 pt-2">
+                  <span className={`text-[11px] font-bold uppercase tracking-[0.15em] ${entrada.tom}`}>
+                    {entrada.titulo} · {entrada.quantos}
+                  </span>
+                  <span className="text-[11px] text-slate-500">{entrada.nota}</span>
+                  <span className="h-px flex-1 bg-slate-800" />
+                </div>
+              ) : (
+                cartaoDoPedido(entrada.pedido!)
+              ),
+            )}
+          </div>
         </section>
       )}
 
@@ -1336,42 +1424,6 @@ export default function AdminNegociacoesPanel({
 
       {/* No ecrã da CLYON não se escondem as dos clientes em silêncio: uma
           linha diz quantas são e onde estão. O contrário também. */}
-      {mostrar === "clyon" && dosClientes.length > 0 && (
-        <p className="mb-6 text-xs text-slate-500">
-          Há {dosClientes.length} negociação(ões) de clientes no ecrã{" "}
-          <a href="/admin?section=negociacoes" className="text-cyan-400 underline">
-            Negociações
-          </a>
-          .
-        </p>
-      )}
-      {mostrar === "clientes" && daClyon.length > 0 && (
-        <p className="mb-6 text-xs text-slate-500">
-          Há {daClyon.length} negociação(ões) da CLYON no ecrã{" "}
-          <a href="/admin?section=negociacoes_clyon" className="text-cyan-400 underline">
-            Negociações CLYON
-          </a>
-          .
-        </p>
-      )}
-      {mostrar !== "clyon" && dosClientes.length > 0 && (
-        <section className="mb-6">
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-violet-300">
-            <UserRound className="h-4 w-4" aria-hidden="true" />
-            Negociações dos clientes
-            <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-200">
-              {dosClientes.length}
-            </span>
-          </h3>
-          <p className="mb-3 text-xs text-slate-500">
-            O cliente recebeu o link no email e responde sozinho. A CLYON só
-            entra se ele deixar a proposta expirar.
-          </p>
-          {cabecalhoDaMesa}
-          <div className="space-y-3">{dosClientes.map(cartaoDoPedido)}</div>
-        </section>
-      )}
-
       {concluidos.length > 0 && (
         <section>
           <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-emerald-400">
