@@ -40,23 +40,26 @@ describe("cancelar na base", () => {
   });
 });
 
-describe("a rota", () => {
-  it("recusa um trabalho já contratado, executado, confirmado ou pago", () => {
-    // Isso não é cancelar um pedido, é desfazer um compromisso entre duas
-    // pessoas com dinheiro pelo meio — e tem caminho próprio, que fala com
-    // quem está do outro lado.
-    const i = ROTA.indexOf("const fechada = existentes.find(");
-    const guarda = ROTA.slice(i, ROTA.indexOf("try {", i));
-    expect(guarda).toContain('n.estado === "acordada"');
-    expect(guarda).toContain("n.confirmadoEm != null");
-    expect(guarda).toContain("n.pagoEm != null");
-    expect(guarda).toContain("n.execucaoEnviadaEm != null");
-    expect(guarda).toContain("status: 409");
-    expect(guarda).toContain("fechada.profissionalNome");
+describe("a rota do admin", () => {
+  it("NÃO recusa um trabalho contratado — o direito é absoluto", () => {
+    // A primeira versão devolvia 409 e mandava desistir da negociação
+    // primeiro. Ele corrigiu-me: "essa opção deve ser absoluta, tanto a CLYON
+    // quanto o Rui devem ter esse direito". Bloquear não protegia o
+    // profissional; só deixava o pedido na mesa a fingir que estava vivo.
+    expect(ROTA).not.toContain("status: 409, ");
+    expect(ROTA).not.toContain("const fechada = existentes.find(");
   });
 
-  it("o guarda corre antes de cancelar seja o que for", () => {
-    expect(ROTA.indexOf("const fechada = existentes.find(")).toBeLessThan(
+  it("exige o motivo quando há um compromisso a desfazer", () => {
+    // Não é um bloqueio: é uma exigência de registo. Quando o profissional
+    // perguntar porque perdeu o trabalho, a resposta tem de existir escrita.
+    expect(ROTA).toContain("desfaz.motivoObrigatorio && !motivo");
+    expect(ROTA).toContain("status: 422");
+    expect(ROTA).toContain("precisaDeMotivo: true");
+  });
+
+  it("o que se desfaz é apurado antes de se desfazer", () => {
+    expect(ROTA.indexOf("oQueSeDesfaz(existentes)")).toBeLessThan(
       ROTA.indexOf("await cancelarPedido(pedidoId)"),
     );
   });

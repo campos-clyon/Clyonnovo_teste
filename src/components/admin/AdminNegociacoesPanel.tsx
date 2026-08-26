@@ -20,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+import { oQueSeDesfaz, avisoDoCancelamento } from "@/lib/cancelamento";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
   quantoOClientePaga,
@@ -646,18 +647,40 @@ export default function AdminNegociacoesPanel({
    */
   async function cancelarPedidoNoPainel(p: Pedido) {
     if (!token) return;
+
+    /*
+     * O aviso muda com o que está em jogo.
+     *
+     * Cancelar um pedido onde ninguém foi contratado é arrumação. Cancelar um
+     * onde alguém já lá foi é desfazer um compromisso — e a caixa tem de o
+     * dizer, com o nome dele e o valor, ANTES e não depois. Ele corrigiu-me
+     * quando eu tinha isto bloqueado: o direito é absoluto. Absoluto não quer
+     * dizer silencioso.
+     */
+    const desfaz = oQueSeDesfaz(p.negociacoes);
+    const aviso = avisoDoCancelamento(desfaz);
+
     const motivo = window.prompt(
       `Cancelar o pedido #${p.id} de ${p.contactName ?? "cliente"}?
 
 ` +
+        (aviso ? `${aviso}
+
+` : "") +
         `As negociações abertas terminam e o pedido sai da mesa. Não é apagado: ` +
         `fica o histórico e o registo.
 
 ` +
-        `Porquê? (opcional — fica escrito)`,
+        (desfaz.motivoObrigatorio
+          ? `Porquê? (obrigatório — é o que ${desfaz.profissional} vai ler)`
+          : `Porquê? (opcional — fica escrito)`),
       "",
     );
     if (motivo === null) return; // carregou em cancelar na caixa
+    if (desfaz.motivoObrigatorio && motivo.trim().length === 0) {
+      setErro("Para cancelar um trabalho já contratado tem de escrever o motivo.");
+      return;
+    }
     setOcupado(`x${p.id}`);
     setErro("");
     try {

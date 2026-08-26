@@ -7,6 +7,7 @@ import {
   appendOrderHistory,
   registarSemFalhar,
 } from "@/lib/db";
+import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 
 export const runtime = "nodejs";
 
@@ -23,12 +24,19 @@ export const runtime = "nodejs";
  * dia em que alguém perguntar o que aconteceu ao #225, a resposta existe — e
  * com o motivo, se quem cancelou o escreveu.
  *
- * O QUE ELE RECUSA
+ * NÃO RECUSA NADA — E ISSO É UMA CORRECÇÃO
  *
- * Um trabalho já contratado, executado, confirmado ou pago. Cancelar isso não
- * é cancelar um pedido, é desfazer um compromisso entre duas pessoas com
- * dinheiro pelo meio — e há um caminho próprio para isso, que é desistir da
- * negociação, que fala com quem está do outro lado. Recusa, e diz com quem.
+ * A primeira versão recusava com 409 quando havia trabalho contratado ou
+ * executado. Ele corrigiu-me: "essa opção deve ser absoluta, tanto a CLYON
+ * quanto o Rui devem ter esse direito." Tem razão. Um cliente que já foi
+ * noutro sítio não deixa de o ter feito por o botão estar bloqueado; o pedido
+ * é que fica na mesa a fingir que está vivo, e o profissional continua à
+ * espera de uma resposta que não vem. Bloquear não protegia ninguém.
+ *
+ * O que muda quando há um compromisso a desfazer é o PESO: o motivo passa a
+ * ser obrigatório, e fica escrito quem foi desfeito, por quanto e em que ponto
+ * estava. Quando o profissional perguntar porque perdeu o trabalho, a resposta
+ * tem de existir por escrito.
  */
 export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
@@ -58,25 +66,20 @@ export async function POST(req: NextRequest) {
   }
 
   const existentes = await negociacoesDoPedido(pedidoId);
-  const fechada = existentes.find(
-    (n) =>
-      n.estado === "acordada" ||
-      n.confirmadoEm != null ||
-      n.pagoEm != null ||
-      n.execucaoEnviadaEm != null,
-  );
-  if (fechada) {
+  const desfaz = oQueSeDesfaz(existentes);
+
+  // O único travão que resta, e não é um bloqueio: é uma exigência de registo.
+  if (desfaz.motivoObrigatorio && !motivo) {
     return NextResponse.json(
       {
         error:
-          `Este trabalho já está fechado com ${fechada.profissionalNome}` +
-          (fechada.valorAcordado != null
-            ? ` por ${Number(fechada.valorAcordado).toFixed(2).replace(".", ",")} €`
-            : "") +
-          `. Cancelar o pedido não desfaz isso — desista dessa negociação primeiro, ` +
-          `para que ele saiba, e só depois cancele.`,
+          `Este pedido está ${desfaz.ponto} com ${desfaz.profissional}. ` +
+          `Para cancelar tem de escrever porquê — fica no histórico e no registo, ` +
+          `e é a resposta que ele vai querer quando perguntar porque perdeu o trabalho.`,
+        precisaDeMotivo: true,
+        aviso: desfaz,
       },
-      { status: 409 },
+      { status: 422 },
     );
   }
 
@@ -89,9 +92,8 @@ export async function POST(req: NextRequest) {
       type: "created",
       by: null,
       message:
-        `Pedido cancelado pela CLYON (${porQuem})` +
-        (motivo ? ` — ${motivo}` : "") +
-        `. ${r.encerradas} ${
+        resumoDoCancelamento(desfaz, `CLYON (${porQuem})`, motivo) +
+        ` ${r.encerradas} ${
           r.encerradas === 1 ? "negociação encerrada" : "negociações encerradas"
         }.`,
     });
@@ -104,12 +106,10 @@ export async function POST(req: NextRequest) {
       autorTipo: "clyon",
       autorNome: porQuem,
       valor: pedido.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null,
-      resumo: motivo
-        ? `Pedido cancelado pela CLYON (${porQuem}): ${motivo}`
-        : `Pedido cancelado pela CLYON (${porQuem})`,
+      resumo: resumoDoCancelamento(desfaz, `CLYON (${porQuem})`, motivo),
     });
 
-    return NextResponse.json({ ok: true, encerradas: r.encerradas });
+    return NextResponse.json({ ok: true, encerradas: r.encerradas, desfez: desfaz });
   } catch (error) {
     console.error("[api/admin/negociacoes/cancelar]", error);
     return NextResponse.json({ error: "Não foi possível cancelar" }, { status: 500 });

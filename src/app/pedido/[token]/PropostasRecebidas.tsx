@@ -130,8 +130,73 @@ export default function PropostasRecebidas({
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
   const [aEnviar, setAEnviar] = useState<number | null>(null);
   const [erro, setErro] = useState("");
+  // O pedido cancelado nesta sessão: o ecrã tem de mudar sem esperar por um
+  // recarregamento, senão ele carrega, some o botão e nada parece ter mudado.
+  const [cancelado, setCancelado] = useState(false);
   const [estrelas, setEstrelas] = useState(0);
   const [comentario, setComentario] = useState("");
+
+  /**
+   * Cancelar o pedido inteiro.
+   *
+   * O id -1 marca esta acção no mesmo estado de "a enviar" que as outras usam
+   * por negociação — não há negociação nenhuma a cancelar aqui, é o pedido.
+   */
+  async function cancelarOPedido() {
+    if (!window.confirm(
+      "Cancelar este pedido?\n\n" +
+      "As propostas que recebeu terminam e ninguém volta a contactá-lo sobre " +
+      "este trabalho. Não paga nada.",
+    )) return;
+
+    let motivo = window.prompt(
+      "Porquê? (ajuda-nos e ajuda os profissionais — pode deixar em branco)",
+      "",
+    );
+    if (motivo === null) return;
+
+    setAEnviar(-1);
+    setErro("");
+    try {
+      let res = await fetch(token ? `/api/negociacao/${token}` : "/api/users/me/negociacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accao: "cancelar_pedido", pedidoId, motivo }),
+      });
+      let dados = await res.json();
+
+      // 422 quer dizer: há um trabalho contratado e o motivo passa a ser
+      // preciso. Pergunta-se outra vez, agora a dizer porquê — em vez de
+      // devolver um erro que a pessoa não sabe resolver.
+      if (res.status === 422 && dados?.precisaDeMotivo) {
+        const outra = window.prompt(
+          `${dados.error}\n\nEscreva o motivo:`,
+          motivo ?? "",
+        );
+        if (outra === null || outra.trim().length === 0) {
+          setErro("O pedido não foi cancelado — falta o motivo.");
+          return;
+        }
+        motivo = outra.trim();
+        res = await fetch(token ? `/api/negociacao/${token}` : "/api/users/me/negociacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accao: "cancelar_pedido", pedidoId, motivo }),
+        });
+        dados = await res.json();
+      }
+
+      if (!res.ok || !dados?.ok) {
+        setErro(dados?.error ?? "Não foi possível cancelar o pedido.");
+        return;
+      }
+      setCancelado(true);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(null);
+    }
+  }
 
   async function agir(id: number, accao: string, valor?: string) {
     setAEnviar(id);
@@ -692,6 +757,36 @@ export default function PropostasRecebidas({
         negociações terminam nesse momento. Tem cinco propostas de cada lado e 48
         horas para responder a cada uma.
       </Nota>
+
+      {/*
+        DESISTIR DO PEDIDO TODO — o direito do outro lado.
+
+        "Essa opção deve ser absoluta: tanto a CLYON quanto o Rui devem ter esse
+        direito."
+
+        Já se podia desistir de UMA proposta, e não é a mesma coisa: quem mudou
+        de ideias sobre o trabalho inteiro tinha de as recusar uma a uma, ou
+        telefonar a pedir que alguém o fizesse por si. Enquanto isso, o pedido
+        ficava vivo e os profissionais à espera de uma resposta que não vinha.
+
+        Fica em baixo e discreto de propósito: é a saída, não um passo do
+        caminho. Mas está lá, e não pergunta a ninguém se pode.
+      */}
+      {!cancelado && (
+        <div className="mt-6 border-t border-slate-200 pt-5 text-center">
+          <button
+            onClick={cancelarOPedido}
+            disabled={aEnviar === -1}
+            className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 transition hover:text-red-600 disabled:opacity-50"
+          >
+            {aEnviar === -1 ? "A cancelar…" : "Já não preciso deste serviço — cancelar o pedido"}
+          </button>
+          <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-slate-400">
+            As propostas terminam e ninguém volta a contactá-lo sobre este pedido.
+            Não paga nada.
+          </p>
+        </div>
+      )}
     </section>
   );
 }
