@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { geocodificarLocalidade } from "@/lib/geocodificar";
 import {
   perfilDoProfissional,
   avaliacoesDoProfissional,
@@ -187,7 +188,26 @@ export async function PUT(req: NextRequest) {
   if ("cidade" in corpo) {
     const c = texto(corpo.cidade);
     if (!c) erros.push({ campo: "cidade", mensagem: "Indique a cidade." });
-    else mudancas.city = c;
+    else {
+      mudancas.city = c;
+      /*
+       * MUDAR A MORADA TEM DE MUDAR O PONTO NO MAPA.
+       *
+       * A base era geocodificada UMA vez, na inscrição, e nunca mais. Quem
+       * se mudasse — ou quem se tivesse enganado a escrever a morada —
+       * trocava o texto e ficava com as coordenadas antigas: as distâncias
+       * continuavam a ser medidas desde a casa onde já não vive, e o raio
+       * dele passava a apanhar a zona errada. Apanhado por ele: mudou de
+       * Palmela para a Amora e os quilómetros dos pedidos não mexeram.
+       *
+       * Se o geocodificador não souber responder, o texto grava-se na mesma
+       * e as coordenadas ficam a NULL — melhor não ter ponto nenhum (e cair
+       * na regra das zonas) do que guardar um ponto que já não é o dele.
+       */
+      const base = await geocodificarLocalidade(c);
+      mudancas.baseLat = base?.lat ?? null;
+      mudancas.baseLng = base?.lng ?? null;
+    }
   }
 
   if ("categorias" in corpo) {

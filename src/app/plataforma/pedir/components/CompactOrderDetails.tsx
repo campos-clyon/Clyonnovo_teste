@@ -235,24 +235,67 @@ export default function CompactOrderDetails({
         )}
       </div>
 
-      {/* ── DESCRIÇÃO ───────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <label htmlFor="descricao-pedido" className="block text-sm font-semibold text-slate-900">
-          Mais alguma coisa?{" "}
-          <span className="font-normal text-slate-500">(opcional)</span>
-        </label>
-        <p className="mt-0.5 text-xs text-slate-600">
-          O que as fotografias não mostram — acessos, andares, pressa.
-        </p>
-        <textarea
-          id="descricao-pedido"
-          value={description || ""}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="Ex: móveis desmontados, alguns sacos, acesso por garagem..."
-          className="mt-2 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm transition-colors focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-          rows={3}
-        />
-      </div>
+      {/* ── DESCRIÇÃO ───────────────────────────────────────────────────────
+          Era "Mais alguma coisa? (opcional)" — o enquadramento mais fraco que
+          um campo pode ter, e por isso vinha vazio quase sempre. Do outro
+          lado, o profissional recebia "Recolha de móveis, Oeiras" e tinha de
+          dar um preço às cegas: quem propõe às cegas propõe alto, para se
+          proteger do que não sabe. Quem paga essa margem é o cliente.
+
+          Continua a não ser obrigatório — obrigar só produz "asd" — mas passa
+          a ser pedido a sério, com a razão à vista e uma resposta que muda
+          conforme ele escreve. */}
+      {(() => {
+        const escrito = (description ?? "").trim();
+        const curta = escrito.length > 0 && escrito.length < 25;
+        const boa = escrito.length >= 25;
+        return (
+          <div
+            className={`rounded-xl border p-5 transition-colors ${
+              boa ? "border-emerald-200 bg-emerald-50/40" : "border-amber-300 bg-amber-50/50"
+            }`}
+          >
+            <label
+              htmlFor="descricao-pedido"
+              className="block text-sm font-semibold text-slate-900"
+            >
+              Descreva o que precisa{" "}
+              <span
+                className={`ml-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                  boa ? "bg-emerald-100 text-emerald-800" : "bg-amber-200 text-amber-900"
+                }`}
+              >
+                {boa ? "obrigado!" : "muito recomendado"}
+              </span>
+            </label>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              É isto que o profissional lê antes de dar o preço. Quanto melhor
+              descrever, mais certeiras — e normalmente mais baixas — são as
+              propostas que recebe.
+            </p>
+            <textarea
+              id="descricao-pedido"
+              value={description || ""}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="Ex: um sofá de 3 lugares e um colchão, 4.º andar com elevador, dá para encostar a carrinha à porta."
+              className="mt-2.5 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm transition-colors focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+              rows={3}
+            />
+            {!escrito && (
+              <p className="mt-2 text-xs font-medium text-amber-800">
+                Sem descrição, quem responde tem de adivinhar — e quem adivinha
+                cobra a mais por precaução.
+              </p>
+            )}
+            {curta && (
+              <p className="mt-2 text-xs font-medium text-amber-800">
+                Mais uma linha ajuda: quantas peças, que andar, e se dá para
+                encostar a carrinha.
+              </p>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

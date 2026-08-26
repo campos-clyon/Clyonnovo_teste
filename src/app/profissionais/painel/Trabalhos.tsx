@@ -382,6 +382,29 @@ export default function Trabalhos({
                       </span>
                     )}
                   </p>
+                  {/*
+                    O QUE É O TRABALHO, sem ter de abrir.
+
+                    A lista dizia o serviço, a cidade e o dinheiro — tudo
+                    menos aquilo que ele vai fazer. "Recolha de móveis" pode
+                    ser um sofá à porta ou uma casa inteira ao quinto andar,
+                    e é a descrição que separa as duas. Duas linhas chegam
+                    para decidir se vale a pena abrir; o resto está lá dentro.
+                  */}
+                  {p.description?.trim() ? (
+                    <p
+                      className="mt-1.5 overflow-hidden text-xs leading-relaxed text-slate-600"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                    >
+                      {p.description.trim()}
+                    </p>
+                  ) : (
+                    /* Sem descrição é informação também — e diz-lhe o que
+                       fazer a seguir em vez de o deixar a adivinhar. */
+                    <p className="mt-1.5 text-xs italic text-amber-700">
+                      Sem descrição — veja as fotografias ou pergunte à CLYON.
+                    </p>
+                  )}
                   <div className="mt-2 flex items-baseline gap-1.5">
                     <HandCoins className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
                     <span
@@ -539,9 +562,15 @@ function DetalheDoTrabalho({
       )}
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
-        {pedido.description && (
+        {pedido.description?.trim() ? (
           <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">
             {pedido.description}
+          </p>
+        ) : (
+          <p className="text-sm leading-relaxed text-amber-700">
+            O cliente não escreveu uma descrição. Veja as fotografias, e se
+            faltar alguma coisa para dar um preço justo, peça à CLYON antes de
+            propor.
           </p>
         )}
         <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
