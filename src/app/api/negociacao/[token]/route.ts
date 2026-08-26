@@ -11,7 +11,10 @@ import {
   avaliarProfissional,
   getSimulatorOrderById,
   perfilDoProfissional,
+  cancelarPedido,
+  registarSemFalhar,
 } from "@/lib/db";
+import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import {
   propor,
@@ -42,7 +45,7 @@ export const runtime = "nodejs";
  * credenciais diferentes para portas diferentes, e nenhuma serve na outra.
  */
 
-type Corpo = { accao?: string; valor?: unknown };
+type Corpo = { accao?: string; valor?: unknown; motivo?: unknown };
 
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
@@ -124,6 +127,77 @@ export async function POST(
     pedidoId = pedido.id;
     providerId = escolhida.providerId;
     linha = escolhida;
+  }
+
+  /*
+   * ── Cancelar o pedido inteiro ────────────────────────────────────────────
+   *
+   * "Essa opção deve ser absoluta: tanto a CLYON quanto o Rui devem ter esse
+   * direito."
+   *
+   * O cliente já podia desistir de UMA negociação. O que faltava era desistir
+   * do PEDIDO — e são coisas diferentes: desistir de uma proposta deixa as
+   * outras a correr, e quem mudou de ideias sobre o trabalho todo tinha de
+   * desistir uma a uma, ou telefonar a pedir que alguém o fizesse por si.
+   *
+   * Passa sempre, inclusive com trabalho contratado ou já feito. O que muda
+   * nesse caso é que o motivo deixa de ser opcional: o profissional que perde
+   * o trabalho tem direito a saber porquê, e essa resposta só existe se
+   * alguém a escrever no momento.
+   */
+  if (corpo.accao === "cancelar_pedido") {
+    if (lado !== "cliente") {
+      return NextResponse.json(
+        { ok: false, error: "Só o cliente cancela o pedido." },
+        { status: 403 },
+      );
+    }
+
+    const motivo =
+      typeof corpo.motivo === "string" && corpo.motivo.trim().length > 0
+        ? corpo.motivo.trim().slice(0, 300)
+        : null;
+
+    const existentes = await negociacoesDoPedido(pedidoId);
+    const desfaz = oQueSeDesfaz(existentes);
+
+    if (desfaz.motivoObrigatorio && !motivo) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            `Este pedido está ${desfaz.ponto} com ${desfaz.profissional}. ` +
+            `Para cancelar diga porquê — o profissional tem direito a saber.`,
+          precisaDeMotivo: true,
+          aviso: desfaz,
+        },
+        { status: 422 },
+      );
+    }
+
+    const r = await cancelarPedido(pedidoId);
+    if (!r) {
+      return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
+    }
+
+    const frase = resumoDoCancelamento(desfaz, "o cliente", motivo);
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message: `${frase} ${r.encerradas} ${
+        r.encerradas === 1 ? "negociação encerrada" : "negociações encerradas"
+      }.`,
+    });
+    await registarSemFalhar({
+      acontecimento: "pedido_cancelado",
+      pedidoId,
+      autorTipo: "cliente",
+      autorNome: null,
+      valor: desfaz.valor,
+      resumo: frase,
+    });
+
+    return NextResponse.json({ ok: true, cancelado: true, encerradas: r.encerradas });
   }
 
   // ── Confirmar que o trabalho está feito ───────────────────────────────────
