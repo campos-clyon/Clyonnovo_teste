@@ -146,10 +146,47 @@ describe("o cartão no painel", () => {
     expect(TRABALHOS).toContain("ring-1 ring-orange-100");
   });
 
-  it("a lista dos que ele decide passa a estar ordenada por sinal", () => {
-    expect(TRABALHOS).toContain("pesoDoTrabalho({ ...b, quantasFotos: fotos(b) })");
-    // E os separadores de trabalho feito NÃO se reordenam: ali a pergunta é
-    // "o que aconteceu quando".
-    expect(TRABALHOS).toContain('if (separador !== "novos" && separador !== "negociacao") return lista;');
+  it("a ordem por omissão é a chegada — o ecrã não decide por ele", () => {
+    /*
+     * A primeira versão punha os que têm sinal à frente, sempre. Ele
+     * corrigiu-me: "você mudou a hierarquia dos pedidos; vamos deixar padrão
+     * do último para o mais antigo".
+     *
+     * Tem razão, e o erro é o mesmo que os sinais vieram corrigir do outro
+     * lado: o ecrã a decidir por ele. Uma lista que se reorganiza sozinha faz
+     * perder o lugar de quem já sabia o que tinha visto.
+     */
+    expect(TRABALHOS).toContain('useState<Ordem>("recentes")');
+    expect(TRABALHOS).toContain("return ordenada.sort(maisRecentePrimeiro);");
+  });
+
+  it("ordenar é uma escolha dele, com quatro caminhos", () => {
+    for (const opcao of ['"recentes"', '"perto"', '"valor"', '"sinais"']) {
+      expect(TRABALHOS).toContain(opcao);
+    }
+    expect(TRABALHOS).toContain("setOrdem(o.id)");
+    // Os sinais continuam a existir — deixaram é de mandar sem ser pedido.
+    expect(TRABALHOS).toContain("pesoDoTrabalho({ ...b, quantasFotos: quantasFotosDe(b) })");
+  });
+
+  it("só se ordena onde ele ainda decide", () => {
+    // Nos separadores de trabalho feito a pergunta é "o que aconteceu quando",
+    // e a cronologia é a única resposta.
+    expect(TRABALHOS).toContain('const podeOrdenar = separador === "novos" || separador === "negociacao";');
+    expect(TRABALHOS).toContain("if (!podeOrdenar) return lista;");
+    expect(TRABALHOS).toContain("{podeOrdenar && visiveis.length > 1 && (");
+  });
+
+  it("sem distância medida não se finge que está perto", () => {
+    // Desconhecido não é perto nem longe, e não se põe à frente de nada.
+    expect(TRABALHOS).toContain("Number.POSITIVE_INFINITY");
+  });
+
+  it("o controlo rola em vez de dobrar, e não parte no telemóvel", () => {
+    const i = TRABALHOS.indexOf("{podeOrdenar && visiveis.length > 1 && (");
+    const bloco = TRABALHOS.slice(i, i + 1400);
+    expect(bloco).toContain("overflow-x-auto");
+    expect(bloco).toContain("whitespace-nowrap");
+    expect(bloco).toContain("shrink-0");
   });
 });

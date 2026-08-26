@@ -42,6 +42,7 @@ import {
   sinaisDoTrabalho,
   porKmPorExtenso,
   pesoDoTrabalho,
+  porQuilometro,
 } from "@/lib/sinais-do-trabalho";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
@@ -127,6 +128,25 @@ function separadorDe(p: Pedido): Separador {
   return jaRespondeu || p.estado === "aguarda_contratacao" ? "negociacao" : "novos";
 }
 
+/**
+ * Por que ordem ele quer a lista.
+ *
+ * "Vamos deixar padrão do último para o mais antigo, mas vamos criar um filtro
+ * para o utilizador colocar como quiser."
+ *
+ * Quatro, e não sete. Cada uma responde a uma pergunta diferente que ele faz
+ * conforme a hora do dia; uma lista de dez opções obriga a ler dez para
+ * escolher uma.
+ */
+type Ordem = "recentes" | "perto" | "valor" | "sinais";
+
+const ORDENS: Array<{ id: Ordem; rotulo: string; curto: string }> = [
+  { id: "recentes", rotulo: "Mais recentes", curto: "Recentes" },
+  { id: "perto", rotulo: "Mais perto de si", curto: "Mais perto" },
+  { id: "valor", rotulo: "Melhor €/km", curto: "€/km" },
+  { id: "sinais", rotulo: "Com sinais primeiro", curto: "Com sinais" },
+];
+
 const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
   { id: "novos", rotulo: "Novos" },
   { id: "negociacao", rotulo: "Em negociação" },
@@ -187,6 +207,14 @@ export default function Trabalhos({
     // chegou um refresh seria roubar-lhe o ecrã das mãos.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  /*
+   * A ordenação escolhida. Fica na sessão e não na conta de propósito: a
+   * pergunta muda com o dia — de manhã é "o que paga melhor", às cinco da
+   * tarde é "o que me fica no caminho para casa" — e uma preferência gravada
+   * para sempre passa a ser uma decisão de há três semanas.
+   */
+  const [ordem, setOrdem] = useState<Ordem>("recentes");
+
   const [aArquivar, setAArquivar] = useState<number | null>(null);
 
   /**
@@ -225,40 +253,66 @@ export default function Trabalhos({
 
   const porSeparador = (id: Separador) => pedidos.filter((p) => separadorDe(p) === id);
 
+  /* Só onde ele ainda decide. Num trabalho feito, a cronologia é a resposta. */
+  const podeOrdenar = separador === "novos" || separador === "negociacao";
+
   /*
-   * A ORDEM DA LISTA, NOS SEPARADORES ONDE ELE DECIDE.
+   * A ORDEM DA LISTA — DELE, E NÃO MINHA.
    *
-   * Era a ordem em que a base os devolveu — na prática, o mais recente
-   * primeiro. Isso serve para saber o que chegou; não serve para saber o que
-   * vale a pena. O trabalho a 6 km de Setúbal estava em quarto lugar, atrás de
-   * três a quarenta quilómetros, porque tinha entrado umas horas antes.
+   * A primeira versão pôs os que têm sinal à frente, sempre. Ele corrigiu-me:
+   * "você mudou a hierarquia dos pedidos; vamos deixar padrão do último para o
+   * mais antigo, mas vamos criar um filtro para o utilizador colocar como
+   * quiser."
    *
-   * Agora sobe quem tem sinal, e dentro do mesmo peso continua a mandar a
-   * chegada — o desempate antigo, que não estava errado, só não chegava.
+   * Tem razão, e o erro é o mesmo que os sinais vieram corrigir do outro lado:
+   * o ecrã a decidir por ele. A chegada é a ordem que ele conhece — sabe o que
+   * já viu e onde ficou — e uma lista que se reorganiza sozinha faz perder o
+   * lugar. Os sinais servem para ele reparar; ordenar por eles é uma escolha, e
+   * escolhas são dele.
    *
-   * Nos separadores de trabalho feito a ordem NÃO muda: ali a pergunta é
-   * "o que aconteceu quando", e a cronologia é a resposta.
+   * Nos separadores de trabalho feito não há escolha nenhuma: ali a pergunta é
+   * "o que aconteceu quando", e a cronologia é a única resposta.
    */
+  const quantasFotosDe = (p: Pedido) => {
+    try {
+      const f = JSON.parse(p.filesJson ?? "[]");
+      return Array.isArray(f) ? f.length : 0;
+    } catch {
+      return 0;
+    }
+  };
+  const maisRecentePrimeiro = (a: Pedido, b: Pedido) =>
+    new Date(b.actualizadoEm).getTime() - new Date(a.actualizadoEm).getTime();
+
   const visiveis = (() => {
     const lista = porSeparador(separador);
-    if (separador !== "novos" && separador !== "negociacao") return lista;
-    return [...lista].sort((a, b) => {
-      const fotos = (p: Pedido) => {
-        try {
-          const f = JSON.parse(p.filesJson ?? "[]");
-          return Array.isArray(f) ? f.length : 0;
-        } catch {
-          return 0;
-        }
-      };
-      const peso =
-        pesoDoTrabalho({ ...b, quantasFotos: fotos(b) }) -
-        pesoDoTrabalho({ ...a, quantasFotos: fotos(a) });
-      if (peso !== 0) return peso;
-      return (
-        new Date(b.actualizadoEm).getTime() - new Date(a.actualizadoEm).getTime()
+    if (!podeOrdenar) return lista;
+    const ordenada = [...lista];
+    if (ordem === "perto") {
+      // Sem distância medida vai para o fim: não é perto nem longe, é
+      // desconhecido, e desconhecido não se põe à frente de nada.
+      return ordenada.sort((a, b) => {
+        const ka = a.distanciaKm ?? Number.POSITIVE_INFINITY;
+        const kb = b.distanciaKm ?? Number.POSITIVE_INFINITY;
+        return ka - kb || maisRecentePrimeiro(a, b);
+      });
+    }
+    if (ordem === "valor") {
+      return ordenada.sort((a, b) => {
+        const va = porQuilometro({ ...a }) ?? -1;
+        const vb = porQuilometro({ ...b }) ?? -1;
+        return vb - va || maisRecentePrimeiro(a, b);
+      });
+    }
+    if (ordem === "sinais") {
+      return ordenada.sort(
+        (a, b) =>
+          pesoDoTrabalho({ ...b, quantasFotos: quantasFotosDe(b) }) -
+            pesoDoTrabalho({ ...a, quantasFotos: quantasFotosDe(a) }) ||
+          maisRecentePrimeiro(a, b),
       );
-    });
+    }
+    return ordenada.sort(maisRecentePrimeiro);
   })();
 
   return (
@@ -306,6 +360,44 @@ export default function Trabalhos({
           );
         })}
       </div>
+
+      {/*
+        POR QUE ORDEM.
+
+        Fica por baixo dos separadores e acima da lista, discreto: não é um
+        passo do caminho, é um ajuste. O padrão é a chegada — a ordem que ele
+        conhece — e as outras três estão a um toque.
+
+        Rola na horizontal em vez de dobrar: no telemóvel, quatro pastilhas
+        empilhadas roubavam uma linha inteira à lista. Ao contrário dos
+        separadores, aqui a primeira já está escolhida e vê-se logo que há mais
+        à direita — ninguém fica sem saber que existem.
+      */}
+      {podeOrdenar && visiveis.length > 1 && (
+        <div className="-mx-1 mb-3 flex items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Ordenar
+          </span>
+          {ORDENS.map((o) => {
+            const activo = ordem === o.id;
+            return (
+              <button
+                key={o.id}
+                onClick={() => setOrdem(o.id)}
+                aria-pressed={activo}
+                title={o.rotulo}
+                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  activo
+                    ? "border-[#0B1929] bg-[#0B1929] text-white"
+                    : "border-[#E2EEF3] bg-white text-slate-500 active:bg-slate-50"
+                }`}
+              >
+                {o.curto}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {visiveis.length === 0 && (
         <div className="rounded-2xl border border-[#E2EEF3] bg-white p-8 text-center">
