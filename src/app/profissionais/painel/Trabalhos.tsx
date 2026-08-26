@@ -29,6 +29,7 @@ import {
   URGENCIA,
   ELEVADOR,
   ESTACIONAMENTO,
+  emPortugues,
   distanciaPorExtenso,
   fotosDe,
   propostasDe,
@@ -579,8 +580,8 @@ function DetalheDoTrabalho({
           "não perguntámos" quatro vezes ensina menos do que caixa nenhuma.
         */}
         {(pedido.floor ||
-          pedido.hasElevator ||
-          pedido.parkingDistance ||
+          emPortugues(ELEVADOR, pedido.hasElevator) ||
+          emPortugues(ESTACIONAMENTO, pedido.parkingDistance) ||
           pedido.distanciaKm != null) && (
           <div className="mt-4 rounded-xl bg-[#F4F8FB] p-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -591,7 +592,11 @@ function DetalheDoTrabalho({
                 <>
                   <dt className="text-slate-500">Distância</dt>
                   <dd className="font-semibold text-tinta">
-                    {distanciaPorExtenso(pedido.distanciaKm)} de si
+                    {/*
+                      "de si" dizia onde ele está AGORA; a conta é feita desde
+                      a base que ele registou. A frase passa a dizer a verdade.
+                    */}
+                    {distanciaPorExtenso(pedido.distanciaKm)} da sua base
                   </dd>
                 </>
               )}
@@ -601,19 +606,19 @@ function DetalheDoTrabalho({
                   <dd className="font-medium text-tinta">{pedido.floor}</dd>
                 </>
               )}
-              {pedido.hasElevator && (
+              {emPortugues(ELEVADOR, pedido.hasElevator) && (
                 <>
                   <dt className="text-slate-500">Elevador</dt>
                   <dd className="font-medium text-tinta">
-                    {ELEVADOR[pedido.hasElevator] ?? pedido.hasElevator}
+                    {emPortugues(ELEVADOR, pedido.hasElevator)}
                   </dd>
                 </>
               )}
-              {pedido.parkingDistance && (
+              {emPortugues(ESTACIONAMENTO, pedido.parkingDistance) && (
                 <>
                   <dt className="text-slate-500">Estacionar</dt>
                   <dd className="font-medium text-tinta">
-                    {ESTACIONAMENTO[pedido.parkingDistance] ?? pedido.parkingDistance}
+                    {emPortugues(ESTACIONAMENTO, pedido.parkingDistance)}
                   </dd>
                 </>
               )}

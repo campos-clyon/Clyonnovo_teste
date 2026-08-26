@@ -1208,6 +1208,7 @@ export default function AdminNegociacoesPanel({
           onArquivarVarios={arquivarPedidos}
           onApagar={apagarPedidos}
           aApagar={aApagar}
+          onEditar={setAEditarPlataforma}
         />
       )}
 
@@ -1560,6 +1561,7 @@ function PedidosPorPromover({
   onArquivarVarios,
   onApagar,
   aApagar,
+  onEditar,
 }: {
   pedidos: PorPromover[];
   valorDe: Record<number, string>;
@@ -1570,6 +1572,8 @@ function PedidosPorPromover({
   onArquivarVarios: (ids: number[]) => void;
   onApagar: (ids: number[]) => void;
   aApagar: boolean;
+  /** Abre o pedido para corrigir — o mesmo editor da mesa. */
+  onEditar: (id: number) => void;
 }) {
   const [busca, setBusca] = useState("");
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
@@ -1643,6 +1647,26 @@ function PedidosPorPromover({
         aria-label={`Valor de partida do pedido ${p.id}`}
         className="w-24 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
       />
+
+      {/*
+        CORRIGIR ANTES DE ENVIAR.
+
+        Esta lista só sabia enviar ou arquivar. Um pedido registado ao
+        telefone chega com erros — uma morada trocada, um andar a mais — e as
+        fotografias aparecem no WhatsApp cinco minutos depois de o pedido
+        estar gravado. Sem isto, a única forma de corrigir era enviar primeiro
+        e editar já depois de os profissionais terem lido o erro.
+
+        Fica à ESQUERDA do enviar de propósito: corrigir vem antes de mandar.
+      */}
+      <button
+        onClick={() => onEditar(p.id)}
+        title="Corrigir informações ou juntar fotografias"
+        className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+      >
+        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+        Editar
+      </button>
 
       <button
         onClick={() => onPromover(p.id)}

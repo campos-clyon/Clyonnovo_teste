@@ -100,7 +100,10 @@ describe("o webhook", () => {
 
   it("o aperto de mão da Meta só devolve o challenge com o verify token certo — e nunca com ele vazio", () => {
     expect(WEBHOOK).toContain('p.get("hub.verify_token") === process.env.WHATSAPP_VERIFY_TOKEN');
-    expect(WEBHOOK).toContain("process.env.WHATSAPP_VERIFY_TOKEN\n");
+    // Sem depender do fim de linha: em Windows o git reescreve os ficheiros
+    // com CRLF ao mudar de ramo, e uma asserção presa ao fim de linha passa
+    // a falhar sem que uma única linha de código tenha mudado.
+    expect(WEBHOOK).toMatch(/&&\s*process\.env\.WHATSAPP_VERIFY_TOKEN\s*\)/);
     expect(WEBHOOK).toContain('p.get("hub.challenge")');
   });
 

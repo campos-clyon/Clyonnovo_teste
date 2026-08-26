@@ -112,34 +112,64 @@ export const URGENCIA: Record<string, string> = {
   tomorrow: "Amanhã",
   this_week: "Esta semana",
   flexible: "Sem pressa",
+  // Dois pedidos antigos ficaram com o valor escrito em português.
+  flexivel: "Sem pressa",
 };
 
 /*
  * O ACESSO AO LOCAL, EM PORTUGUÊS.
  *
- * Os valores ficam guardados no vocabulário do motor de preços ("yes",
- * "small", "difficult") porque é esse que ele lê. No ecrã do profissional
- * saía o valor cru — "Elevador: yes". Aqui traduz-se; um valor que não
- * conheçamos passa tal e qual, que é melhor do que desaparecer.
+ * Os valores ficam guardados no vocabulário do formulário do cliente e do
+ * motor de preços; no ecrã do profissional saía o valor cru — "Estacionar:
+ * door". Aqui traduz-se.
+ *
+ * A LISTA VEIO DA BASE, NÃO DA CABEÇA. A primeira versão disto tinha só
+ * "easy" e "difficult" — que era o que o formulário do backoffice oferecia —
+ * e o valor mais comum de todos, `door`, com 75 pedidos, caía no descuido e
+ * aparecia em inglês. Perguntou-se à base o que lá está mesmo antes de
+ * escrever estas linhas.
+ *
+ * As palavras são as mesmas que o cliente leu quando respondeu (ver
+ * OrderSummaryCard), viradas para quem vai lá: ele não quer saber o que foi
+ * perguntado, quer saber se encosta a carrinha.
  */
 export const ELEVADOR: Record<string, string> = {
   yes: "Com elevador",
   small: "Elevador pequeno",
   no: "Sem elevador",
+  // Um pedido antigo ficou com o valor escrito em português.
+  sim: "Com elevador",
+  unknown: "Não sabemos",
 };
 
 export const ESTACIONAMENTO: Record<string, string> = {
-  easy: "Dá para encostar à porta",
-  difficult: "Longe ou complicado",
+  door: "Encosta-se à porta",
+  under_20m: "Até 20 m da porta",
+  over_30m: "Mais de 30 m da porta",
+  difficult: "Estacionamento difícil",
+  // Vocabulário antigo do backoffice, em pedidos já gravados.
+  easy: "Sem dificuldade",
+  porta: "Encosta-se à porta",
+  unknown: "Não sabemos",
 };
 
 /**
- * A distância, dita como quem fala.
+ * Traduz, e cala-se quando não há nada de útil a dizer.
  *
- * Arredonda-se ao quilómetro e leva um "~" à frente: é linha recta com folga
- * de estrada, não é a conta do GPS — e prometer uma precisão que não temos
- * seria pior do que não dizer nada.
+ * "Não sei" e um valor por preencher não são informação — são uma linha a
+ * ocupar espaço no ecrã de quem está a decidir. E um valor que não
+ * conheçamos passa tal e qual: melhor estranho do que desaparecido.
  */
+export function emPortugues(
+  dicionario: Record<string, string>,
+  valor: string | null | undefined,
+): string | null {
+  if (!valor) return null;
+  const limpo = valor.trim();
+  if (!limpo || limpo === "unknown") return null;
+  return dicionario[limpo] ?? limpo;
+}
+
 export function distanciaPorExtenso(km: number): string {
   return km < 1 ? "menos de 1 km" : `~${Math.round(km)} km`;
 }

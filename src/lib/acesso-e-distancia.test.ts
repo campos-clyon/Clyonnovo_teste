@@ -5,6 +5,7 @@ import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
 import {
   ELEVADOR,
   ESTACIONAMENTO,
+  emPortugues,
   distanciaPorExtenso,
 } from "@/app/profissionais/painel/tipos";
 
@@ -98,19 +99,46 @@ describe("a distância até ao trabalho", () => {
 });
 
 describe("o vocabulário do ecrã", () => {
-  it("o profissional lê português, não lê «yes»", () => {
+  it("o profissional lê português, não lê «yes» nem «door»", () => {
     expect(ELEVADOR.yes).toBe("Com elevador");
     expect(ELEVADOR.no).toBe("Sem elevador");
-    expect(ESTACIONAMENTO.difficult).toBe("Longe ou complicado");
+    expect(ESTACIONAMENTO.difficult).toBe("Estacionamento difícil");
     // Antes saía o valor cru do motor de preços.
     expect(ECRA).not.toContain("Elevador: {pedido.hasElevator}");
   });
 
-  it("um valor desconhecido passa tal e qual, em vez de desaparecer", () => {
-    expect(ECRA).toContain("ELEVADOR[pedido.hasElevator] ?? pedido.hasElevator");
-    expect(ECRA).toContain(
-      "ESTACIONAMENTO[pedido.parkingDistance] ?? pedido.parkingDistance",
-    );
+  it("cobre TODOS os valores que existem mesmo na base, e não só os que eu imaginei", () => {
+    /*
+     * A primeira versão disto tinha só "easy" e "difficult" — o vocabulário
+     * que o formulário do backoffice oferecia. Mas o valor mais comum na
+     * base é `door`, com 75 pedidos, vindo do formulário do cliente e do
+     * simulador: aparecia em inglês no ecrã do profissional.
+     *
+     * Esta lista veio de perguntar à base o que lá está. Se um valor novo
+     * nascer noutro formulário, é aqui que se junta.
+     */
+    for (const v of ["door", "under_20m", "over_30m", "difficult", "easy", "porta"]) {
+      expect(emPortugues(ESTACIONAMENTO, v)).not.toBe(v);
+      expect(emPortugues(ESTACIONAMENTO, v)).toBeTruthy();
+    }
+    for (const v of ["yes", "small", "no", "sim"]) {
+      expect(emPortugues(ELEVADOR, v)).not.toBe(v);
+    }
+  });
+
+  it("cala-se quando não há nada de útil — «não sei» não é informação", () => {
+    expect(emPortugues(ESTACIONAMENTO, "unknown")).toBeNull();
+    expect(emPortugues(ELEVADOR, null)).toBeNull();
+    expect(emPortugues(ELEVADOR, "  ")).toBeNull();
+  });
+
+  it("um valor que não conheçamos passa tal e qual, em vez de desaparecer", () => {
+    expect(emPortugues(ESTACIONAMENTO, "coisa_nova")).toBe("coisa_nova");
+  });
+
+  it("a distância é dita desde a BASE dele, não de onde ele está agora", () => {
+    expect(ECRA).toContain("da sua base");
+    expect(ECRA).not.toContain("km de si");
   });
 
   it("o bloco do acesso só aparece quando há algo para dizer", () => {
@@ -120,6 +148,14 @@ describe("o vocabulário do ecrã", () => {
 });
 
 describe("corrigir o pedido logo depois de o criar", () => {
+  it("a lista dos pedidos por enviar tem por onde editar — antes só sabia enviar", () => {
+    const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+    // O #227 estava nesta lista e não havia como corrigir a morada nem juntar
+    // as fotos que chegaram ao WhatsApp depois de o pedido estar gravado.
+    expect(MESA).toContain("onEditar={setAEditarPlataforma}");
+    expect(MESA).toContain("Corrigir informações ou juntar fotografias");
+  });
+
   it("o painel do resultado tem por onde corrigir e juntar fotografias", () => {
     const REG = ler("src/components/admin/RegistarPedido.tsx");
     expect(REG).toContain("Corrigir ou juntar fotografias");
