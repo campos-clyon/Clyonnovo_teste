@@ -27,6 +27,13 @@ const PAINEL = readFileSync(
   "utf8",
 );
 
+/** Onde acaba a função que começa em `i` — a primeira chaveta na coluna zero. */
+function fimDaFuncao(i: number): number {
+  const fim = PAINEL.slice(i).search(/^\}/m);
+  return fim === -1 ? PAINEL.length : i + fim;
+}
+
+
 describe("esperar confirmação", () => {
   it("é prova enviada e confirmação em falta", () => {
     const i = PAINEL.indexOf("function esperaConfirmacao(");
@@ -44,6 +51,33 @@ describe("esperar confirmação", () => {
     const i = PAINEL.indexOf("function esperaConfirmacao(");
     const corpo = PAINEL.slice(i, PAINEL.indexOf("\n}", i));
     expect(corpo).not.toContain('=== "acordada"');
+  });
+});
+
+describe("concluído é concluído", () => {
+  it("um trabalho confirmado conta como concluído, mesmo com o pedido arquivado", () => {
+    const i = PAINEL.indexOf("function pedidoConcluido(");
+    expect(i).toBeGreaterThan(-1);
+    const corpo = PAINEL.slice(i, fimDaFuncao(i));
+    expect(corpo).toContain('p.status === "concluido"');
+    expect(corpo).toContain("n.confirmadoEm != null");
+  });
+
+  it("as duas listas e o cartão usam a mesma regra", () => {
+    // O #219 estava arquivado desde 25 de Agosto. Ele confirmou-o e libertou
+    // os 100,00 € ao Manuel Martins, e a mesa continuou a mostrá-lo em "A
+    // CORRER — ✓ Acordada", como se ainda houvesse alguém a jogar.
+    expect(PAINEL).toContain("ordenados.filter(pedidoConcluido)");
+    expect(PAINEL).toContain("ordenados.filter((p) => !pedidoConcluido(p))");
+    expect(PAINEL).toContain("const concluido = pedidoConcluido(p);");
+    // Nenhuma das três pode voltar a ler a coluna sozinha.
+    expect(PAINEL).not.toContain('ordenados.filter((p) => p.status === "concluido")');
+  });
+
+  it("deixa de pedir confirmação depois de confirmado", () => {
+    const i = PAINEL.indexOf("function esperaConfirmacao(");
+    const corpo = PAINEL.slice(i, fimDaFuncao(i));
+    expect(corpo).toContain("n.confirmadoEm == null");
   });
 });
 
