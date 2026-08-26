@@ -17,6 +17,7 @@ import {
   Send,
   Trash2,
   UserRound,
+  XCircle,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
@@ -636,6 +637,48 @@ export default function AdminNegociacoesPanel({
     }
   }
 
+  /**
+   * Cancelar: o cliente desistiu e o trabalho não vai acontecer.
+   *
+   * O motivo é opcional mas pedido — um pedido cancelado sem motivo é
+   * indistinguível de um cancelado por engano, e daqui a um ano é o registo
+   * permanente que responde por ele.
+   */
+  async function cancelarPedidoNoPainel(p: Pedido) {
+    if (!token) return;
+    const motivo = window.prompt(
+      `Cancelar o pedido #${p.id} de ${p.contactName ?? "cliente"}?
+
+` +
+        `As negociações abertas terminam e o pedido sai da mesa. Não é apagado: ` +
+        `fica o histórico e o registo.
+
+` +
+        `Porquê? (opcional — fica escrito)`,
+      "",
+    );
+    if (motivo === null) return; // carregou em cancelar na caixa
+    setOcupado(`x${p.id}`);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/cancelar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: p.id, motivo }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível cancelar.");
+        return;
+      }
+      await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
   async function redistribuir(pedidoId: number) {
     if (!token) return;
     setOcupado(`r${pedidoId}`);
@@ -717,8 +760,11 @@ export default function AdminNegociacoesPanel({
    * ABERTO desde a conclusão fica em destaque: dinheiro que entrou merece
    * ser visto, não descoberto por acaso.
    */
-  const concluidos = ordenados.filter(pedidoConcluido);
-  const activos = ordenados.filter((p) => !pedidoConcluido(p));
+  const cancelados = ordenados.filter((p) => p.status === "cancelado");
+  const concluidos = ordenados.filter((p) => p.status !== "cancelado" && pedidoConcluido(p));
+  const activos = ordenados.filter(
+    (p) => p.status !== "cancelado" && !pedidoConcluido(p),
+  );
   const concluidosPorVer = concluidos.filter((p) => !p.concluidoVistoEm).length;
   const daClyon = activos.filter((p) => quemNegoceia(p) === "clyon");
   const dosClientes = activos.filter((p) => quemNegoceia(p) === "cliente");
@@ -829,7 +875,8 @@ export default function AdminNegociacoesPanel({
      * linha abre num toque.
      */
     const aberto = negociacoesVisiveis.has(p.id);
-    const concluido = pedidoConcluido(p);
+    const cancelado = p.status === "cancelado";
+    const concluido = !cancelado && pedidoConcluido(p);
     const porVer = concluido && !p.concluidoVistoEm;
     const alternarAberto = () => {
       // Abrir um concluído por ver É vê-lo: o carimbo grava-se no servidor e
@@ -865,7 +912,12 @@ export default function AdminNegociacoesPanel({
     const valorDoPrimeiro = primeiro
       ? (propostasDe(primeiro.propostasJson).at(-1)?.valor ?? null)
       : null;
-    const bola = concluido
+    const bola = cancelado
+      ? {
+          tom: "text-slate-500",
+          texto: "✕ Cancelado — o cliente desistiu",
+        }
+      : concluido
       ? {
           tom: "text-emerald-400",
           texto: `✓ Concluído${acordada ? ` — ${euros(acordada.valorAcordado)} com ${acordada.profissionalNome}` : ""}`,
@@ -1093,6 +1145,33 @@ export default function AdminNegociacoesPanel({
             )}
             Ver como o cliente
           </button>
+          {/*
+            CANCELAR — o cliente desistiu e o trabalho não vai acontecer.
+
+            O #225 é o caso: duas propostas na mesa, 250 € e 350 €, e o Sr. Rui
+            a responder pelo WhatsApp que arranjou mais barato. Sem isto, o
+            pedido ficava em "A correr" ao lado dos contratados, como se ainda
+            houvesse alguém a decidir, e o profissional com a proposta aberta
+            continuava à espera de uma resposta que nunca ia chegar.
+
+            Discreto de propósito: não é um passo do trabalho, é a saída. E não
+            aparece em concluídos nem em já-cancelados, onde não faz nada.
+          */}
+          {!concluido && !cancelado && (
+            <button
+              onClick={() => cancelarPedidoNoPainel(p)}
+              disabled={ocupado === `x${p.id}`}
+              title="O cliente desistiu — encerra as negociações e tira o pedido da mesa, sem o apagar"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-50"
+            >
+              {ocupado === `x${p.id}` ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Cancelar pedido
+            </button>
+          )}
           <button
             onClick={() => reenviar(chaveCliente, { pedidoId: p.id, para: "cliente" })}
             disabled={ocupado === chaveCliente}
@@ -1602,6 +1681,31 @@ export default function AdminNegociacoesPanel({
           </p>
           {cabecalhoDaMesa}
           <div className="space-y-3">{concluidos.map(cartaoDoPedido)}</div>
+        </section>
+      )}
+
+      {/*
+        OS CANCELADOS, EM BAIXO E EM CINZENTO.
+
+        Não são concluídos — não houve trabalho nenhum — e não estão a correr,
+        porque já ninguém espera nada. Ficam à vista na mesma: o pedido não é
+        apagado, e daqui a um mês a pergunta "o que aconteceu ao #225?" tem de
+        ter resposta sem ir a base nenhuma.
+      */}
+      {cancelados.length > 0 && (
+        <section>
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500">
+            Cancelados
+            <span className="rounded-full bg-slate-700/40 px-2 py-0.5 text-xs font-semibold text-slate-400">
+              {cancelados.length}
+            </span>
+          </h3>
+          <p className="mb-3 text-xs text-slate-600">
+            O cliente desistiu antes de haver trabalho. Ficam aqui com o histórico
+            inteiro — abrir mostra o motivo e as propostas que chegaram a existir.
+          </p>
+          {cabecalhoDaMesa}
+          <div className="space-y-3">{cancelados.map(cartaoDoPedido)}</div>
         </section>
       )}
 
