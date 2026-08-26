@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { negociacaoNova, propor, aceitar, accoesDisponiveis } from "./negociacao";
+import { retratoDoPedido, oQueMudou, mudancasPorExtenso } from "./recomecar-do-zero";
 
 /**
  * Voltar do zero.
@@ -24,9 +25,10 @@ import { negociacaoNova, propor, aceitar, accoesDisponiveis } from "./negociacao
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const DB = ler("src/lib/db.ts");
-const ROTA = ler("src/app/api/admin/negociacoes/redistribuir/route.ts");
+const LIB = ler("src/lib/recomecar-do-zero.ts");
+const EDITOR = ler("src/app/api/admin/pedidos/[id]/editar/route.ts");
+const FORMULARIO = ler("src/components/admin/RegistarPedido.tsx");
 const DISTRIBUIR = ler("src/lib/distribuir-pedido.ts");
-const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 
 // ─── O encalhe que justifica tudo isto ─────────────────────────────────────
 
@@ -100,43 +102,129 @@ describe("a reposição", () => {
   });
 });
 
-// ─── A rota: mata primeiro, distribui a seguir, e recusa o que está fechado ─
+// ─── Gravar É recomeçar ───────────────────────────────────────────────────
 
-describe("a rota do recomeço", () => {
-  it("o recomeço é pedido de propósito — por omissão continua a ser redistribuir", () => {
-    expect(ROTA).toContain("const recomecar = corpo.recomecar === true;");
-    expect(ROTA).toContain("{ reabrir: recomecar }");
+describe("gravar uma alteração recomeça o pedido", () => {
+  it("o editor compara o pedido antes e depois, e só age se mudou", () => {
+    expect(EDITOR).toContain("const antes = retratoDoPedido(pedido);");
+    expect(EDITOR).toContain("oQueMudou(antes, retratoDoPedido(depoisDeGravar))");
+    expect(EDITOR).toContain("if (mudou.length > 0 && depoisDeGravar) {");
+    expect(EDITOR).toContain("recomecarDoZero(depoisDeGravar");
   });
 
+  it("compara DEPOIS de gravar, e não o que o formulário mandou", () => {
+    // O formulário pode mandar campos que a base ignora — foi assim que o
+    // valor de partida se perdeu em silêncio no #228. Ler a base outra vez é
+    // a única forma de saber o que ficou lá.
+    const posGravar = EDITOR.indexOf("await updateSimulatorOrder(pedidoId, {");
+    const posReler = EDITOR.indexOf("const depoisDeGravar = await getSimulatorOrderById(pedidoId);");
+    expect(posReler).toBeGreaterThan(posGravar);
+  });
+
+  it("uma falha no recomeço não desfaz a gravação", () => {
+    const i = EDITOR.indexOf("recomecarDoZero(depoisDeGravar");
+    const bloco = EDITOR.slice(i - 200, i + 400);
+    expect(bloco).toContain("catch");
+  });
+
+  it("o ecrã diz o que aconteceu ao pedido, e não só que gravou", () => {
+    expect(FORMULARIO).toContain("O pedido voltou a circular como novo.");
+    expect(FORMULARIO).toContain("NÃO voltou a circular");
+    // E avisa ANTES, no cabeçalho do editor: é destrutivo.
+    expect(FORMULARIO).toContain("Gravar recomeça o pedido do zero");
+  });
+});
+
+// ─── O recomeço em si: mata primeiro, distribui a seguir ──────────────────
+
+describe("recomecarDoZero", () => {
   it("mata as negociações ANTES de distribuir", () => {
-    const posMatar = ROTA.indexOf("matarNegociacoesDoPedido(pedidoId)");
-    const posDistribuir = ROTA.indexOf("await distribuirPedido(");
+    const posMatar = LIB.indexOf("matarNegociacoesDoPedido(pedido.id)");
+    const posDistribuir = LIB.indexOf("await distribuirPedido(");
     expect(posMatar).toBeGreaterThan(-1);
     expect(posDistribuir).toBeGreaterThan(posMatar);
   });
 
-  it("recusa com 409 quando o trabalho já está fechado, executado ou pago", () => {
-    const i = ROTA.indexOf("if (recomecar) {");
-    const guarda = ROTA.slice(i, ROTA.indexOf("try {", i));
+  it("recusa quando o trabalho já está fechado, executado ou pago", () => {
+    const i = LIB.indexOf("const fechada = existentes.find(");
+    const guarda = LIB.slice(i, LIB.indexOf("if (pedido.valorDesejadoCliente == null)", i));
     expect(guarda).toContain('n.estado === "acordada"');
     expect(guarda).toContain("n.confirmadoEm != null");
     expect(guarda).toContain("n.pagoEm != null");
     expect(guarda).toContain("n.execucaoEnviadaEm != null");
-    expect(guarda).toContain("status: 409");
-    // A recusa diz COM QUEM está fechado — sem isso o admin não sabe de qual
-    // negociação há-de desistir para poder recomeçar.
+    // E diz COM QUEM, senão quem editou não sabe de qual desistir.
     expect(guarda).toContain("fechada.profissionalNome");
   });
 
   it("o guarda corre antes de qualquer coisa ser mexida", () => {
-    expect(ROTA.indexOf("if (recomecar) {")).toBeLessThan(ROTA.indexOf("matarNegociacoesDoPedido(pedidoId)"));
+    expect(LIB.indexOf("const fechada = existentes.find(")).toBeLessThan(
+      LIB.indexOf("matarNegociacoesDoPedido(pedido.id)"),
+    );
   });
 
-  it("fica no histórico do pedido que foi um recomeço, e com que valor", () => {
-    expect(ROTA).toContain("appendOrderHistory");
-    const i = ROTA.indexOf("message: recomecar");
+  it("distribui com reabrir — senão as propostas antigas sobreviviam", () => {
+    expect(LIB).toContain("{ reabrir: true }");
+  });
+
+  it("fica no histórico que foi um recomeço, e quantas acabaram", () => {
+    expect(LIB).toContain("appendOrderHistory");
+    const i = LIB.indexOf("Recomeçado do zero depois da edição");
     expect(i).toBeGreaterThan(-1);
-    expect(ROTA.slice(i, i + 400)).toContain("pedido.valorDesejadoCliente");
+  });
+});
+
+// ─── O que conta como mudança ─────────────────────────────────────────────
+
+describe("o retrato do pedido", () => {
+  const base = {
+    serviceType: "recolha_moveis",
+    description: "uma cómoda",
+    address: "Rua José Fontana, 23",
+    city: "Almada",
+    postalCode: "2800-122",
+    floor: "2º",
+    hasElevator: "no",
+    parkingDistance: "door",
+    dataAgendada: "2026-08-27T00:20:00.000Z",
+    valorDesejadoCliente: "121.43",
+    precisaFatura: 1,
+    filesJson: '[{"url":"a"}]',
+  };
+
+  it("o valor conta como número — 30 e 30.00 são o mesmo", () => {
+    const a = retratoDoPedido({ ...base, valorDesejadoCliente: "30" });
+    const b = retratoDoPedido({ ...base, valorDesejadoCliente: "30.00" });
+    expect(oQueMudou(a, b)).toEqual([]);
+  });
+
+  it("mudar o valor conta", () => {
+    const a = retratoDoPedido(base);
+    const b = retratoDoPedido({ ...base, valorDesejadoCliente: "30" });
+    expect(oQueMudou(a, b)).toEqual(["valorDesejadoCliente"]);
+  });
+
+  it("acrescentar uma fotografia conta", () => {
+    const a = retratoDoPedido(base);
+    const b = retratoDoPedido({ ...base, filesJson: '[{"url":"a"},{"url":"b"}]' });
+    expect(oQueMudou(a, b)).toEqual(["fotografias"]);
+  });
+
+  it("corrigir o nome, o telefone ou o email do cliente NÃO conta", () => {
+    // Eles são do cliente, não do pedido, e nenhum profissional os vê antes
+    // de ser contratado. Um acento não pode matar cinco propostas a sério.
+    const a = retratoDoPedido({ ...base, contactName: "Fatima", contactPhone: "911", contactEmail: "a@b.pt" } as never);
+    const b = retratoDoPedido({ ...base, contactName: "Fátima", contactPhone: "912", contactEmail: "c@d.pt" } as never);
+    expect(oQueMudou(a, b)).toEqual([]);
+  });
+
+  it("diz o que mudou em português, para o histórico e para o ecrã", () => {
+    expect(mudancasPorExtenso(["valorDesejadoCliente"])).toBe("o valor de partida");
+    expect(mudancasPorExtenso(["valorDesejadoCliente", "fotografias"])).toBe(
+      "o valor de partida e as fotografias",
+    );
+    expect(mudancasPorExtenso(["description", "floor", "fotografias"])).toBe(
+      "a descrição, o andar e as fotografias",
+    );
   });
 });
 
@@ -148,36 +236,5 @@ describe("quem recebe", () => {
     expect(DISTRIBUIR).toContain("{ reabrir }");
     // A elegibilidade não é contornada: continua a ser a mesma regra.
     expect(DISTRIBUIR).toContain("avaliarElegibilidade");
-  });
-});
-
-// ─── O botão avisa antes de destruir ───────────────────────────────────────
-
-describe("o botão", () => {
-  it("pede confirmação antes de recomeçar", () => {
-    const i = PAINEL.indexOf("Recomeçar do zero");
-    expect(i).toBeGreaterThan(-1);
-    const bloco = PAINEL.slice(Math.max(0, i - 2200), i);
-    expect(bloco).toContain("window.confirm");
-    expect(bloco).toContain("redistribuir(p.id, true)");
-    // Sai sem fazer nada se ele disser que não.
-    expect(bloco).toMatch(/\)\s*\n?\s*return;/);
-  });
-
-  it("só aparece quando há alguma coisa para desfazer", () => {
-    expect(PAINEL).toContain("{p.negociacoes.length > 0 &&");
-  });
-
-  it("não aparece em trabalhos fechados — o servidor recusa e o botão não convida", () => {
-    // A rota devolve 409 nesses casos. Mostrar o botão na mesma seria pôr o
-    // admin a carregar para levar com um não: as mesmas quatro condições do
-    // guarda decidem se ele existe.
-    const i = PAINEL.indexOf("Recomeçar do zero");
-    const bloco = PAINEL.slice(Math.max(0, i - 3000), i);
-    const guarda = bloco.slice(bloco.lastIndexOf("{p.negociacoes.length > 0 &&"));
-    expect(guarda).toContain('n.estado === "acordada"');
-    expect(guarda).toContain("n.confirmadoEm != null");
-    expect(guarda).toContain("n.pagoEm != null");
-    expect(guarda).toContain("n.execucaoEnviadaEm != null");
   });
 });
