@@ -49,8 +49,45 @@ export type PartesDaMorada = {
 const limpo = (v: string | null | undefined) => (v ?? "").trim();
 
 export function precisaoDaMorada(m: PartesDaMorada): PrecisaoMorada {
-  const rua = limpo(m.street);
-  const numero = limpo(m.streetNumber);
+  /*
+   * A LEITURA DA LINHA, QUANDO NÃO HÁ COMPONENTES.
+   *
+   * "A morada está a dar erro mesmo estando certa."
+   *
+   * E estava mesmo: «R. dos Jasmins 3, Amora» tem rua e tem número, e o
+   * formulário respondia «isto é uma localidade, não uma morada». Duas coisas
+   * erradas na mesma frase — recusava uma morada válida, e explicava-o com um
+   * motivo que ninguém conseguia corrigir, porque não havia nada para corrigir.
+   *
+   * A causa: `street` e `streetNumber` só eram preenchidos quando a pessoa
+   * ESCOLHIA uma sugestão da lista. Quem escrevia a morada certa e seguia em
+   * frente ficava com a linha e mais nada — e uma linha sem componentes caía
+   * sempre em «localidade».
+   *
+   * A leitura da linha já existia (`partirViaENumero`) e já era feita — mas só
+   * no momento da escolha, e num formulário de cada vez. Passa a ser feita
+   * aqui, onde a pergunta é respondida, e portanto vale para todos: o
+   * simulador, o formulário da plataforma e o backoffice.
+   */
+  let rua = limpo(m.street);
+  let numero = limpo(m.streetNumber);
+
+  if (!rua || !numero) {
+    /*
+     * A linha só entra onde falta alguma coisa: quem escolheu da lista tem
+     * componentes exactos, e voltar a adivinhar por cima deles seria trocar a
+     * certeza por uma heurística.
+     *
+     * O número lê-se mesmo quando a rua já veio do Google — há o caso de a
+     * pesquisa devolver a via sem `street_number` e a pessoa ter escrito o
+     * número na linha. Só se olha para o primeiro pedaço antes da vírgula, por
+     * isso um código postal a seguir nunca é confundido com um número de porta.
+     */
+    const lido = partirViaENumero(m.formattedAddress, m.city);
+    if (!rua) rua = lido.street;
+    if (!numero) numero = lido.streetNumber;
+  }
+
   if (rua && numero) return "porta";
   if (rua) return "rua";
   if (limpo(m.city) || limpo(m.formattedAddress)) return "localidade";
