@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -148,7 +148,7 @@ const ORDENS: Array<{ id: Ordem; rotulo: string; curto: string }> = [
 ];
 
 const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
-  { id: "novos", rotulo: "Novos" },
+  { id: "novos", rotulo: "Feed" },
   { id: "negociacao", rotulo: "Em negociação" },
   { id: "contratados", rotulo: "Contratados" },
   { id: "terminados", rotulo: "Terminados" },
@@ -215,6 +215,33 @@ export default function Trabalhos({
    */
   const [ordem, setOrdem] = useState<Ordem>("recentes");
 
+  /**
+   * Abrir um trabalho, e deixar escrito que foi aberto.
+   *
+   * O ecrã muda já — o realce apaga-se no toque, sem esperar pela rede — e o
+   * servidor fica a saber a seguir. Se a gravação falhar, o pior que acontece é
+   * o distintivo voltar no próximo carregamento; abrir o trabalho nunca pode
+   * ficar à espera de um registo de leitura.
+   */
+  const abrirTrabalho = useCallback(
+    (p: Pedido) => {
+      setAberto(p.negociacaoId);
+      if (p.abertoEm) return;
+      setLidosAgora((antes) => new Set(antes).add(p.negociacaoId));
+      void fetch("/api/profissionais/abrir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ negociacaoId: p.negociacaoId }),
+      }).catch(() => {
+        /* silêncio: ver o comentário da rota */
+      });
+    },
+    [],
+  );
+
+  /* Os que ele abriu nesta sessão, para o realce cair no toque. */
+  const [lidosAgora, setLidosAgora] = useState<Set<number>>(new Set());
+
   const [aArquivar, setAArquivar] = useState<number | null>(null);
 
   /**
@@ -255,6 +282,41 @@ export default function Trabalhos({
 
   /* Só onde ele ainda decide. Num trabalho feito, a cronologia é a resposta. */
   const podeOrdenar = separador === "novos" || separador === "negociacao";
+
+  /*
+   * OS QUE AINDA NÃO ABRIU — E SÓ OS CINCO MAIS RECENTES.
+   *
+   * "Os pedidos estão todos a mostrar novo, mas novo deve ser apenas os 5
+   * recentes ainda não abertos."
+   *
+   * Tem razão duas vezes. «Novo» queria dizer «está no separador dos novos», e
+   * um trabalho fica lá até ele responder — por isso o distintivo ficava em
+   * todos os cartões, para sempre. Um aviso que nunca se apaga passa a fazer
+   * parte do fundo.
+   *
+   * E mesmo por abrir, vinte cartões marcados não destacam nada. Cinco é o que
+   * uma pessoa vê de uma vez sem contar; a partir daí é uma mancha.
+   *
+   * O conjunto calcula-se aqui e não dentro da lista, porque «os cinco mais
+   * recentes» é uma propriedade do conjunto todo — os que estão no ecrã e os
+   * que ficaram por baixo — e não de cada cartão sozinho.
+   */
+  const porAbrir = useMemo(() => {
+    const ids = pedidos
+      .filter(
+        (p) =>
+          separadorDe(p) === "novos" &&
+          !p.abertoEm &&
+          !lidosAgora.has(p.negociacaoId),
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.actualizadoEm).getTime() - new Date(a.actualizadoEm).getTime(),
+      )
+      .slice(0, 5)
+      .map((p) => p.negociacaoId);
+    return new Set(ids);
+  }, [pedidos, lidosAgora]);
 
   /*
    * A ORDEM DA LISTA — DELE, E NÃO MINHA.
@@ -411,7 +473,12 @@ export default function Trabalhos({
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
-          const novo = separadorDe(p) === "novos";
+          /*
+           * «Novo» passa a querer dizer «ainda não abriu», e não «está aqui».
+           * Assim que ele toca no cartão, o distintivo e o realce apagam-se —
+           * que é o que ele pediu: "só muda quando for aberto".
+           */
+          const novo = porAbrir.has(p.negociacaoId);
           /*
            * OS SINAIS.
            *
@@ -440,7 +507,7 @@ export default function Trabalhos({
               }`}
             >
             <button
-              onClick={() => setAberto(p.negociacaoId)}
+              onClick={() => abrirTrabalho(p)}
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
                 fechado
                   ? "border-emerald-300 ring-1 ring-emerald-100"
@@ -456,10 +523,22 @@ export default function Trabalhos({
                      */
                     ? "border-l-4 border-l-orange-500 border-y-orange-100 border-r-orange-100 ring-1 ring-orange-100"
                     : novo
-                      // Ciano da marca, e não âmbar: a CLYON não tem amarelo, e
-                      // uma cor que não é da casa lê-se como aviso de sistema em
-                      // vez de destaque.
-                      ? "border-l-4 border-l-[#00B4CC] border-y-[#E2EEF3] border-r-[#E2EEF3]"
+                      /*
+                       * POR ABRIR: barra, anel e um fundo com um sopro de cor.
+                       *
+                       * "Os pedidos novos ainda não abertos devem ter uma cor e
+                       * efeito especial; só muda quando for aberto."
+                       *
+                       * Ciano da marca, e não âmbar: a CLYON não tem amarelo, e
+                       * uma cor que não é da casa lê-se como aviso de sistema em
+                       * vez de destaque. O fundo é 40% de um ciano já claro —
+                       * o suficiente para o cartão se distinguir de relance,
+                       * pouco o suficiente para o texto continuar a ler-se.
+                       *
+                       * Some no toque. É a única forma de isto funcionar: um
+                       * realce que fica é decoração, e decoração não avisa.
+                       */
+                      ? "border-l-4 border-l-[#00B4CC] border-y-[#B8E6EE] border-r-[#B8E6EE] bg-cyan-50/40 ring-1 ring-[#00B4CC]/15"
                       : "border-[#E2EEF3]"
               }`}
             >
@@ -497,7 +576,14 @@ export default function Trabalhos({
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {novo && (
-                      <span className="rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
+                      <span className="flex items-center gap-1.5 rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
+                        {/* O ponto respira devagar. Só existe em cinco cartões
+                            no máximo — num ecrã inteiro a piscar, ninguém olha
+                            para nenhum. Pára para quem pediu menos movimento. */}
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-white/90 animate-pulse motion-reduce:animate-none"
+                          aria-hidden="true"
+                        />
                         novo
                       </span>
                     )}
