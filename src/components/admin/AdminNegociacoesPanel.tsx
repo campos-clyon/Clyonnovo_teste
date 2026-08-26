@@ -1349,6 +1349,31 @@ export default function AdminNegociacoesPanel({
   }
 
   /**
+   * Arquiva os que estao marcados.
+   *
+   * Pergunta, como o apagar — mas com outras palavras, porque nao e a mesma
+   * coisa. Arquivar tira da mesa; apagar tira do mundo. Confundir os dois num
+   * so aviso e como escrever "tem a certeza?" nos dois e esperar que quem le
+   * saiba a diferenca de cor.
+   */
+  async function arquivarMarcados() {
+    if (!token || marcados.size === 0) return;
+    const quantos = marcados.size;
+    if (
+      !window.confirm(
+        `Arquivar ${quantos} pedido${quantos === 1 ? "" : "s"}?
+
+` +
+          `Saem da mesa e ficam no backoffice, com o histórico inteiro. ` +
+          `Não são apagados.`,
+      )
+    )
+      return;
+    await arquivarPedidos([...marcados]);
+    setMarcados(new Set());
+  }
+
+  /**
    * Apaga os que estao marcados.
    *
    * A confirmacao diz o NUMERO e nao so "tem a certeza". Quem marcou doze
@@ -1458,8 +1483,12 @@ export default function AdminNegociacoesPanel({
       {/* A barra so aparece quando ha algo marcado. Um botao de apagar sempre
           visivel e um botao de apagar a espera de um clique distraido. */}
       {marcados.size > 0 && (
-        <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/40 bg-red-950/70 px-4 py-3 backdrop-blur">
-          <p className="text-sm font-semibold text-red-100">
+        // Neutra, e não vermelha. A barra era vermelha por só ter uma saída
+        // que agia — apagar — e a cor era o aviso. Com arquivar ao lado, o
+        // vermelho passou a gritar sobre a acção normal: o alarme fica no
+        // botão que o merece, não na barra inteira.
+        <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-600 bg-slate-900/90 px-4 py-3 backdrop-blur">
+          <p className="text-sm font-semibold text-slate-100">
             {marcados.size} pedido{marcados.size === 1 ? "" : "s"} seleccionado
             {marcados.size === 1 ? "" : "s"}
           </p>
@@ -1470,9 +1499,36 @@ export default function AdminNegociacoesPanel({
             >
               Desmarcar
             </button>
+            {/*
+              ARQUIVAR, AO LADO DE APAGAR E ANTES DELE.
+
+              A barra dava duas saídas: desmarcar, ou apagar. Quem tem seis
+              pedidos velhos na mesa e os quer tirar da frente não os quer
+              APAGAR — quer arrumá-los. Sem esta opção, ou ficavam na mesa a
+              ocupar a vista, ou desapareciam para sempre por ser o único botão
+              à mão.
+
+              A rota é a mesma de arquivar um a um, e vai um de cada vez de
+              propósito: vinte em paralelo num serverless partilhado é pedir
+              throttling, e quem vê metade falhar em paralelo não sabe qual
+              metade.
+            */}
+            <button
+              onClick={arquivarMarcados}
+              disabled={ocupado === "lote-arquivar" || aApagar}
+              title="Tira-os da mesa sem os apagar — ficam no backoffice, com o histórico"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-500 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+            >
+              {ocupado === "lote-arquivar" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Arquivar
+            </button>
             <button
               onClick={apagarMarcados}
-              disabled={aApagar}
+              disabled={aApagar || ocupado === "lote-arquivar"}
               className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
             >
               {aApagar ? (
