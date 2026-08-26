@@ -150,8 +150,21 @@ export function profissionaisParaNotificar(
  * nenhum — igualzinho a um pedido que ninguém quis. Isto dá a diferença.
  */
 export function motivosAgregados(
-  pedido: PedidoParaDistribuir,
-  profissionais: ProfissionalParaAvaliar[],
+  /**
+   * O pedido SEM distância: ela não é uma propriedade do pedido, é a linha
+   * entre ele e a base de cada profissional. Pedi-la aqui era o convite ao
+   * erro que aconteceu — os dois sítios que chamavam isto passavam
+   * `distanciaKm: null`, e a contagem respondia "sem morada" a respeito de
+   * um pedido cuja morada estava perfeitamente localizada. O ecrã do #228
+   * dizia, na mesma caixa, "Morada: Localizada" e "2 a morada do pedido não
+   * foi localizada".
+   */
+  pedido: Omit<PedidoParaDistribuir, "distanciaKm">,
+  /** Cada profissional com a SUA distância ao trabalho. */
+  profissionais: Array<{
+    profissional: ProfissionalParaAvaliar;
+    distanciaKm: number | null;
+  }>,
 ): Record<MotivoDeExclusao, number> {
   const contagem = {
     inactivo: 0,
@@ -163,8 +176,8 @@ export function motivosAgregados(
     nao_emite_guia: 0,
   } as Record<MotivoDeExclusao, number>;
 
-  for (const p of profissionais) {
-    const r = avaliarElegibilidade(pedido, p);
+  for (const { profissional, distanciaKm } of profissionais) {
+    const r = avaliarElegibilidade({ ...pedido, distanciaKm }, profissional);
     if (r.elegivel) continue;
     for (const m of r.motivos) contagem[m] += 1;
   }

@@ -97,7 +97,13 @@ export async function POST(
     }
 
     // As fotografias, com a mesma forma do simulador.
-    const fotosCruas = Array.isArray(corpo.files)
+    //
+    // NÃO ENVIAR e ENVIAR VAZIO são coisas diferentes, e agora que a coluna
+    // grava mesmo a diferença custa caro: sem elas o profissional propõe às
+    // cegas. Quem não mandar o campo está a dizer "não mexi nas fotografias";
+    // só quem mandar uma lista vazia está a dizer "tirei-as todas".
+    const enviouFotografias = Array.isArray(corpo.files);
+    const fotosCruas = enviouFotografias
       ? (corpo.files as Array<Record<string, unknown>>)
       : [];
     const fotos = fotosCruas
@@ -153,9 +159,12 @@ export async function POST(
       dataAgendada,
       valorDesejadoCliente: valorDesejado != null ? String(valorDesejado) : null,
       precisaFatura: corpo.precisaFatura === true ? 1 : 0,
-      filesJson: fotos.length > 0 ? JSON.stringify(fotos) : null,
+      filesJson: enviouFotografias ? (fotos.length > 0 ? JSON.stringify(fotos) : null) : undefined,
       rawOrderJson: JSON.stringify(raw),
-    } as Parameters<typeof updateSimulatorOrder>[1]);
+      // Sem molde forcado: se um destes campos sair do tipo de
+      // `updateSimulatorOrder`, isto tem de partir na compilacao em vez de
+      // gravar metade do formulario e dizer que gravou tudo.
+    });
 
     // Fica escrito QUEM editou. Os profissionais leem o pedido da base a cada
     // abertura — uma edição muda o que eles veem, e isso não pode ser anónimo.
