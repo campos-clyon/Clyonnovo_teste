@@ -31,6 +31,35 @@ const PRIVADO = [
   "/auth",
   "/auth/",
   "/entrar",
+  /*
+   * AS ROTAS QUE LEVAM UM SEGREDO NO PRÓPRIO ENDEREÇO.
+   *
+   * São as mesmas seis que `endereco-sem-segredos.ts` já protege da medição:
+   * o URL É a credencial. Quem o tiver abre o pedido, a proposta ou a
+   * definição de senha sem mais nada.
+   *
+   * Não estavam aqui. Um link colado num fórum, num comentário ou numa página
+   * pública bastava para o Googlebot lá ir — e um pedido de um cliente com a
+   * morada e o telefone dentro passava a estar num índice público. Ainda não
+   * aconteceu; o custo de esperar para ver é que é desproporcionado.
+   *
+   * Isto NÃO substitui os cabeçalhos noindex nem a expiração dos tokens: o
+   * robots.txt pede, não impede. É a primeira das camadas, não a única.
+   */
+  "/pedido/",
+  "/orcamento/",
+  "/profissionais/pedidos/",
+  "/profissionais/definir-senha/",
+  "/profissionais/inscricao/",
+  /*
+   * Áreas de trabalho de quem está de dentro. O Google já andou a gastar
+   * orçamento de rastreio em /colaboradores/dashboard e /colaboradores/
+   * alterar-senha — páginas que nunca vão ser um resultado de pesquisa.
+   */
+  "/colaboradores",
+  "/colaboradores/",
+  "/plataforma",
+  "/profissionais/painel",
 ];
 
 export default function robots(): MetadataRoute.Robots {
