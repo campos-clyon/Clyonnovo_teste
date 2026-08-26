@@ -258,7 +258,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
       },
       {
         q: `Que outrás zonas próximas de ${cityName} também atendem?`,
-        a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutrás zonas da ${regionLabel}.`,
+        a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}.`,
       },
     ];
 
@@ -283,7 +283,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
     },
     {
       q: `Que zonas próximas de ${cityName} também atendem?`,
-      a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutrás zonas da ${regionLabel}.`,
+      a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}.`,
     },
     {
       q: `Como pedir ${serviceName.toLowerCase()} em ${cityName}?`,

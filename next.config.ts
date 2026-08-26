@@ -1,4 +1,24 @@
 import type { NextConfig } from "next";
+import { getAllCidadeSlugs } from "./src/lib/mudancas-cidades";
+
+/*
+ * As cidades que TEM mesmo pagina de mudancas.
+ *
+ * Lidas da fonte e nao escritas a mao: sao treze hoje, e no dia em que
+ * alguem acrescentar a decima quarta os redirects seguem sozinhos. Uma lista
+ * repetida aqui divergia da outra ao segundo mes, e a divergencia
+ * manifestava-se como 404 — que e exactamente o que estes redirects vieram
+ * apagar.
+ */
+const CIDADES_COM_PAGINA = getAllCidadeSlugs();
+
+/** Um redirect por cidade que existe. O resto cai no apanha-tudo a seguir. */
+const paraAsCidades = (prefixo: string) =>
+  CIDADES_COM_PAGINA.map((cidade) => ({
+    source: `${prefixo}${cidade}`,
+    destination: `/mudancas/${cidade}`,
+    permanent: true,
+  }));
 
 const nextConfig: NextConfig = {
   compress: true,
@@ -59,7 +79,22 @@ const nextConfig: NextConfig = {
         destination: "/mudancas",
         permanent: true,
       },
+      /*
+       * A CIDADE NAO SE PERDE NO CAMINHO.
+       *
+       * Isto mandava /mudanças-lisboa para /mudancas — o balcao geral. Quem
+       * escreveu ou clicou naquele URL queria Lisboa, e o Google tratava a
+       * pagina de destino como uma resposta generica a uma pergunta especifica.
+       * O sinal da cidade evaporava-se, e com ele o motivo de o redirect
+       * existir.
+       *
+       * /mudancas/:city existe para as 21 localidades. Onde nao existir, o
+       * Next devolve o 404 da propria rota, que e uma resposta honesta — e
+       * melhor do que aterrar num sitio que nao responde a pergunta.
+       */
+      ...paraAsCidades("/mudan%C3%A7as-"),
       {
+        // Uma cidade sem pagina propria vai ao balcao geral, e nao a um 404.
         source: "/mudan%C3%A7as-:city*",
         destination: "/mudancas",
         permanent: true,
@@ -168,9 +203,18 @@ const nextConfig: NextConfig = {
         destination: "/servicos",
         permanent: true,
       },
+      /*
+       * A limpeza pos-obra e um caso de recolha de entulho, e a pagina de
+       * entulho da cidade responde-lhe melhor do que o catalogo de servicos.
+       */
+      {
+        source: "/limpeza-pos-obra-:city",
+        destination: "/recolha-entulho-:city",
+        permanent: true,
+      },
       {
         source: "/limpeza-pos-obra-:city*",
-        destination: "/servicos",
+        destination: "/recolha-de-entulho",
         permanent: true,
       },
       // Serviço "camião com motorista" descontinuado — redirect para /mudancas
@@ -179,6 +223,7 @@ const nextConfig: NextConfig = {
         destination: "/mudancas",
         permanent: true,
       },
+      ...paraAsCidades("/camiao-com-motorista-"),
       {
         source: "/camiao-com-motorista-:city*",
         destination: "/mudancas",
