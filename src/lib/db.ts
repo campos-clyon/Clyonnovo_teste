@@ -854,13 +854,49 @@ export type NegociacaoNaBase = {
   pagoEm?: Date | string | null;
 };
 
-export async function criarNegociacao(dados: {
-  pedidoId: number;
-  providerId: number;
-  acessoTokenHash: string;
-  acessoTokenExpiraEm: Date;
-  propostasJson: string;
-}): Promise<number> {
+/**
+ * Mata todas as negociações de um pedido, para ele poder recomeçar.
+ *
+ * "Morta" e não apagada: o histórico de quem propôs o quê continua a existir
+ * para quem for ver o pedido, e o registo permanente não fica com buracos.
+ * As que voltarem a ser elegíveis são REPOSTAS a seguir, pela distribuição;
+ * as que já não servirem — mudou o serviço, o profissional deixou de estar
+ * no raio — ficam mortas e desaparecem do painel dele, que é o que se quer.
+ *
+ * Devolve quantas matou.
+ */
+export async function matarNegociacoesDoPedido(pedidoId: number): Promise<number> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [r] = (await pool.execute(
+    "UPDATE negociacoes SET estado = 'morta' WHERE pedidoId = ? AND estado <> 'morta'",
+    [pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0);
+}
+
+export async function criarNegociacao(
+  dados: {
+    pedidoId: number;
+    providerId: number;
+    acessoTokenHash: string;
+    acessoTokenExpiraEm: Date;
+    propostasJson: string;
+  },
+  /**
+   * Recomeçar do zero: se já houver negociação com este profissional, ela é
+   * REPOSTA em vez de mantida — estado, propostas, valor acordado e o token
+   * de acesso, tudo de novo.
+   *
+   * Existe porque um pedido registado com o valor errado fica encalhado: o
+   * profissional aceita os 121 € que saíram por engano, o cliente só tem 30,
+   * e corrigir o valor não muda nada do que já foi proposto. Sem isto, a
+   * única saída era desistir de cada negociação à mão e o pedido morria com
+   * elas.
+   */
+  { reabrir = false }: { reabrir?: boolean } = {},
+): Promise<number> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
@@ -868,11 +904,23 @@ export async function criarNegociacao(dados: {
   // Se o pedido for redistribuído ao mesmo profissional, não se cria outra
   // negociação nem se apaga a que existe — o histórico de propostas dele é o
   // que dá sentido ao estado actual.
+  const aoRepetir = reabrir
+    ? `id = LAST_INSERT_ID(id),
+       estado = 'aberta', valorAcordado = NULL,
+       propostasJson = VALUES(propostasJson),
+       acessoTokenHash = VALUES(acessoTokenHash),
+       acessoTokenExpiraEm = VALUES(acessoTokenExpiraEm),
+       execucaoEnviadaEm = NULL, provaJson = NULL,
+       confirmadoEm = NULL, pagoEm = NULL,
+       estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
+       arquivadoProfissionalEm = NULL`
+    : `id = LAST_INSERT_ID(id)`;
+
   const [res] = await pool.execute(
     `INSERT INTO negociacoes
        (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson)
      VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
+     ON DUPLICATE KEY UPDATE ${aoRepetir}`,
     [
       dados.pedidoId,
       dados.providerId,
