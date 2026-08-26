@@ -17,7 +17,8 @@ const SERVICOS = [
 
 const MOTIVOS: Record<string, string> = {
   categoria_diferente: "não fazem este serviço",
-  fora_de_alcance: "fora da zona ou do raio",
+  fora_de_alcance: "fora do raio deles",
+  sem_morada: "a morada do pedido não foi localizada",
   nao_emite_fatura: "não passam fatura",
   nao_emite_guia: "sem guia de transporte verificada",
   inactivo: "conta inactiva",
@@ -767,8 +768,23 @@ function Resumo({
           </ul>
         )}
 
-        {quantos === 0 && porque && (
-          <p className="mt-2 text-xs text-slate-500">Porquê: {porque}.</p>
+        {/*
+          E OS QUE FICARAM DE FORA — SEMPRE, NÃO SÓ QUANDO SÃO TODOS.
+
+          Esta linha só aparecia quando o pedido não chegava a NINGUÉM. Com
+          dois de quatro, dizia-se "chegaria a 2 de 4" e ficava-se por aí: o
+          porquê dos outros dois era invisível.
+
+          Aconteceu no #228 — "porque só em 2 e não em todos?". A resposta
+          estava a um campo de distância: o pedido pedia fatura e dois dos
+          profissionais não a emitem. Nada disso estava no ecrã, e uma
+          contagem sem explicação transforma cada envio numa adivinha.
+        */}
+        {porque && quantos < (alcance?.candidatos ?? 0) && (
+          <p className="mt-2 text-xs text-slate-500">
+            {quantos === 0 ? "Porquê: " : `Os outros ${(alcance!.candidatos - quantos)} ficam de fora: `}
+            {porque}.
+          </p>
         )}
       </div>
 

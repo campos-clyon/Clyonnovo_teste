@@ -85,25 +85,40 @@ describe("avaliarElegibilidade", () => {
       );
     });
 
-    it("sem distância medida cai nas zonas", () => {
+    it("sem morada localizada, ninguém é excluído por «fora de alcance»", () => {
+      /*
+       * As ZONAS saíram da regra — eram uma lista escrita à mão que tentava
+       * dizer o mesmo que o raio, e pior: um acento trocado bastava para um
+       * trabalho ao lado não chegar a ninguém.
+       *
+       * Sem distância medida não se diz "fora de alcance", porque ninguém
+       * mediu nada e isso seria mentira. Diz-se o que é: falta a morada. É
+       * um problema do PEDIDO, não do profissional, e é assim que aparece no
+       * painel da distribuição — onde tem conserto.
+       */
       const semDistancia = pedido({ distanciaKm: null, city: "Lisboa" });
-      expect(avaliarElegibilidade(semDistancia, pro()).elegivel).toBe(true);
-      expect(
-        motivos(avaliarElegibilidade({ ...semDistancia, city: "Faro" }, pro())),
-      ).toContain("fora_de_alcance");
+      const r = avaliarElegibilidade(semDistancia, pro());
+      expect(motivos(r)).toContain("sem_morada");
+      expect(motivos(r)).not.toContain("fora_de_alcance");
     });
 
-    // "Setúbal" escrito com e sem acento é a mesma cidade. Falhar aqui era
-    // esconder pedidos de quem cobre a zona.
-    it("compara zonas sem tropeçar em acentos ou maiúsculas", () => {
-      const p = pedido({ distanciaKm: null, city: "SETÚBAL" });
-      expect(avaliarElegibilidade(p, pro({ zonas: ["setubal"] })).elegivel).toBe(true);
-      expect(avaliarElegibilidade(p, pro({ zonas: ["Setúbal"] })).elegivel).toBe(true);
+    it("e a cidade escrita já não muda nada — só as coordenadas contam", () => {
+      // O mesmo pedido com cidades diferentes dá o mesmo resultado: o texto
+      // deixou de ter voto.
+      const lisboa = avaliarElegibilidade(pedido({ distanciaKm: null, city: "Lisboa" }), pro());
+      const faro = avaliarElegibilidade(pedido({ distanciaKm: null, city: "Faro" }), pro());
+      const nenhuma = avaliarElegibilidade(pedido({ distanciaKm: null, city: null }), pro());
+      expect(motivos(lisboa)).toEqual(motivos(faro));
+      expect(motivos(lisboa)).toEqual(motivos(nenhuma));
     });
 
-    it("sem distância e sem cidade não se adivinha", () => {
-      const p = pedido({ distanciaKm: null, city: null });
-      expect(motivos(avaliarElegibilidade(p, pro()))).toContain("fora_de_alcance");
+    it("com distância medida, quem manda é o raio", () => {
+      const perto = pedido({ distanciaKm: 20 });
+      const longe = pedido({ distanciaKm: 400 });
+      expect(avaliarElegibilidade(perto, pro({ raioKm: 50 })).elegivel).toBe(true);
+      expect(motivos(avaliarElegibilidade(longe, pro({ raioKm: 50 })))).toContain(
+        "fora_de_alcance",
+      );
     });
   });
 

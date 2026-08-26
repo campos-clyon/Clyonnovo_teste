@@ -19,6 +19,7 @@ export type MotivoDeExclusao =
   | "nao_aprovado"
   | "categoria_diferente"
   | "fora_de_alcance"
+  | "sem_morada"
   | "nao_emite_fatura"
   | "nao_emite_guia";
 
@@ -90,19 +91,32 @@ export function avaliarElegibilidade(
     motivos.push("categoria_diferente");
   }
 
-  // Distância medida manda sempre. Só quando não existe é que se cai nas
-  // zonas — que são uma aproximação, e por isso o segundo critério.
+  /*
+   * O RAIO MANDA, E É O ÚNICO A MANDAR.
+   *
+   * Havia dois critérios: a distância medida e, quando ela faltava, a lista
+   * de ZONAS que o profissional escrevia à mão. Decisão dele: "vamos remover
+   * a opção zona e colocar apenas o raio e os serviços como filtros".
+   *
+   * As zonas eram uma aproximação escrita por pessoas — cinco ou seis nomes,
+   * com acentos trocados e concelhos a fingir de freguesias — e já tinham
+   * custado envios a sério (ver a nota do #205 em coordenadas-do-pedido.ts).
+   * Hoje não fazem falta: as coordenadas são buscadas e GRAVADAS no momento
+   * do envio, morada primeiro e localidade depois, por isso um pedido sem
+   * coordenadas é raro e deixou de ser normal.
+   *
+   * Quando mesmo assim não há ponto nenhum, ninguém é excluído por "fora de
+   * alcance" — seria mentira, porque ninguém mediu nada. Diz-se o que é:
+   * SEM MORADA. É um problema para resolver no pedido, não no profissional,
+   * e o painel da distribuição passa a dizê-lo com essas palavras.
+   */
   if (pedido.distanciaKm != null && Number.isFinite(pedido.distanciaKm)) {
     const raio = profissional.raioKm;
     if (raio == null || !Number.isFinite(raio) || pedido.distanciaKm > raio) {
       motivos.push("fora_de_alcance");
     }
   } else {
-    const zonas = profissional.zonas.map(normalizar);
-    const cidade = pedido.city ? normalizar(pedido.city) : null;
-    if (!cidade || zonas.length === 0 || !zonas.includes(cidade)) {
-      motivos.push("fora_de_alcance");
-    }
+    motivos.push("sem_morada");
   }
 
   // Isto é binário e sabe-se de antemão. Deixar um pedido que exige fatura
@@ -144,6 +158,7 @@ export function motivosAgregados(
     nao_aprovado: 0,
     categoria_diferente: 0,
     fora_de_alcance: 0,
+    sem_morada: 0,
     nao_emite_fatura: 0,
     nao_emite_guia: 0,
   } as Record<MotivoDeExclusao, number>;

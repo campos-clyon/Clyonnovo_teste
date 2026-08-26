@@ -208,7 +208,7 @@ describe("a distribuição do pedido", () => {
 
   it("traduz os motivos para português de gente", () => {
     expect(DIST).toContain("conta suspensa ou por aprovar");
-    expect(DIST).toContain("fora do raio e da zona");
+    expect(DIST).toContain("fora do raio dele");
   });
 
   it("um elegível sem negociação não passa por erro", () => {

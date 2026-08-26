@@ -459,7 +459,7 @@ export default function PainelDoProfissional() {
         />
         <LinhaDeMenu
           icone={MapPin}
-          rotulo="Serviços e zonas"
+          rotulo="Serviços e raio"
           activo={ecra === "servicos"}
           valor={perfil ? `${perfil.raioKm} km` : undefined}
           onClick={() => abrir("servicos")}

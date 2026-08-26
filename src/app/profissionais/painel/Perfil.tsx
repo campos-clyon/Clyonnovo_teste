@@ -28,7 +28,7 @@ export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seg
 
 const TITULOS: Record<SeccaoDoPerfil, string> = {
   dados: "Perfil",
-  servicos: "Serviços e zonas",
+  servicos: "Serviços e raio",
   faturacao: "Faturação e IVA",
   banco: "Conta bancária",
   seguranca: "Palavra-passe",
@@ -294,7 +294,7 @@ export default function Perfil({
           </div>
         )}
 
-        {/* ── Serviços e zonas ─────────────────────────────────────────────── */}
+        {/* ── Serviços e raio ─────────────────────────────────────────────── */}
         {seccao === "servicos" && (
           <div className="space-y-5">
             <div>
@@ -333,23 +333,20 @@ export default function Perfil({
               </div>
             </div>
 
-            <Campo
-              etiqueta="Zonas onde trabalha"
-              ajuda="Separadas por vírgula. A sua cidade entra sempre."
-            >
-              <input
-                className={CAIXA}
-                value={dados.zonas.join(", ")}
-                onChange={(e) =>
-                  mudar(
-                    "zonas",
-                    e.target.value.split(",").map((z) => z.trim()).filter(Boolean),
-                  )
-                }
-                placeholder="Lisboa, Amadora, Sintra"
-              />
-            </Campo>
+            {/*
+              AS ZONAS SAÍRAM DAQUI.
 
+              Eram uma lista de nomes escrita à mão — "palmela, montijo,
+              seixal" — que tentava dizer o mesmo que o raio já diz, e pior:
+              um acento trocado ou um concelho a fingir de freguesia bastava
+              para um trabalho ao lado não chegar. Aconteceu a sério com uma
+              recolha em Lisboa que ninguém recebeu, tendo um profissional a
+              35 km com raio de 125.
+
+              Hoje o raio chega: as coordenadas do pedido são procuradas e
+              guardadas no momento do envio. Ficam duas perguntas em vez de
+              três, e as duas são objectivas — o que faz, e até onde vai.
+            */}
             <div>
               <div className="flex items-baseline justify-between">
                 <span className="text-sm font-medium text-slate-700">Raio de acção</span>
