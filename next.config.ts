@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   compress: true,
+  // Não expor a stack no header de resposta (x-powered-by).
+  poweredByHeader: false,
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

@@ -299,10 +299,10 @@ export default function Header() {
           ) : (
             <Link
               href="/entrar"
-              aria-label="Entrar na conta"
               className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-200 text-slate-500 transition hover:border-cyan-300 hover:text-cyan-600"
             >
               <User className="h-4 w-4" />
+              <span className="sr-only">Entrar na conta</span>
             </Link>
           )}
         </div>
