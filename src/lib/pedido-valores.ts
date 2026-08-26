@@ -123,6 +123,21 @@ export const CAMPOS_VISIVEIS_AO_PROFISSIONAL = [
   "precisaGuiaTransporte",
   "status",
   "createdAt",
+  /*
+   * O que é próprio do serviço, e sem o qual ele propõe às cegas.
+   *
+   * A LOCALIDADE do destino entra aqui; a MORADA exacta não — está na lista de
+   * depois de contratado, ao lado da morada de origem, pela mesma razão. Uma
+   * mudança tem duas casas e não uma, e se a segunda saísse antes do acordo,
+   * bastava inscrever-se para colher moradas às pares.
+   */
+  "localidadeDestino",
+  "andarDestino",
+  "elevadorDestino",
+  "estacionamentoDestino",
+  "percursoKm",
+  "entulhoEstado",
+  "entulhoQuantidade",
 ] as const;
 
 export type CampoVisivelAoProfissional = (typeof CAMPOS_VISIVEIS_AO_PROFISSIONAL)[number];
@@ -159,6 +174,7 @@ export function vistaDoProfissional(pedido: Record<string, unknown>): VistaDoPro
 export const CAMPOS_VISIVEIS_DEPOIS_DE_CONTRATADO = [
   ...CAMPOS_VISIVEIS_AO_PROFISSIONAL,
   "address",
+  "moradaDestino",
   "contactName",
   "contactPhone",
 ] as const;

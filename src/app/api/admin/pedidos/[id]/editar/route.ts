@@ -6,6 +6,7 @@ import {
   appendOrderHistory,
 } from "@/lib/db";
 import { geocodificarMoradaDetalhado, geocodificarLocalidade } from "@/lib/geocodificar";
+import { camposDoServico } from "@/lib/campos-do-servico";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
@@ -148,6 +149,14 @@ export async function POST(
       city,
       postalCode,
     };
+    // Os campos próprios do serviço, recalculados: se ele mudou a morada de
+    // destino, o percurso muda, e com ele as horas e o preço.
+    const proprios = await camposDoServico(
+      corpo as Parameters<typeof camposDoServico>[0],
+      coords ? { lat: coords.lat, lng: coords.lng } : null,
+    );
+    Object.assign(raw, proprios.paraOJson);
+
     raw.editadoPelaClyonEm = new Date().toISOString();
 
     // Como o pedido estava ANTES — para saber, depois de gravar, se mudou
@@ -255,6 +264,8 @@ export async function POST(
             : "nao_encontrada",
       moradaNormalizada: coords?.moradaNormalizada ?? null,
       alcance,
+      percursoKm: proprios.percursoKm,
+      faltaParaOPreco: proprios.emFalta,
       mudou,
       mudancas: mudancasPorExtenso(mudou),
       recomeco,

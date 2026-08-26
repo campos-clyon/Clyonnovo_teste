@@ -157,6 +157,25 @@ export async function GET(req: NextRequest) {
         hasElevator: (vista.hasElevator as string | undefined) ?? null,
         parkingDistance: (vista.parkingDistance as string | undefined) ?? null,
         /*
+         * O que so alguns servicos tem.
+         *
+         * Uma mudanca sem destino e um preco a adivinhar: o trabalho e levar
+         * as coisas de A para B, e ele so via o A. Um entulho sem numero de
+         * sacos e a mesma coisa — trinta sacos e uma manha, trezentos sao um
+         * dia inteiro e outro camiao.
+         */
+        moradaDestino: (vista.moradaDestino as string | undefined) ?? null,
+        localidadeDestino: (vista.localidadeDestino as string | undefined) ?? null,
+        andarDestino: (vista.andarDestino as string | undefined) ?? null,
+        elevadorDestino: (vista.elevadorDestino as string | undefined) ?? null,
+        estacionamentoDestino: (vista.estacionamentoDestino as string | undefined) ?? null,
+        percursoKm:
+          vista.percursoKm != null && Number.isFinite(Number(vista.percursoKm))
+            ? Number(vista.percursoKm)
+            : null,
+        entulhoEstado: (vista.entulhoEstado as string | undefined) ?? null,
+        entulhoQuantidade: (vista.entulhoQuantidade as string | undefined) ?? null,
+        /*
          * A QUANTOS QUILOMETROS FICA O TRABALHO.
          *
          * A pergunta que ele faz primeiro, e a unica que o ecra nao respondia:

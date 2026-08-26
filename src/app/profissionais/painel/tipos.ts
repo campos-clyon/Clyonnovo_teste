@@ -31,6 +31,16 @@ export type Pedido = {
   floor: string | null;
   hasElevator: string | null;
   parkingDistance: string | null;
+  /** Mudança: a outra ponta, e o percurso entre as duas. */
+  moradaDestino?: string | null;
+  localidadeDestino?: string | null;
+  andarDestino?: string | null;
+  elevadorDestino?: string | null;
+  estacionamentoDestino?: string | null;
+  percursoKm?: number | null;
+  /** Entulho: como está e quantos sacos são. */
+  entulhoEstado?: string | null;
+  entulhoQuantidade?: string | null;
   /** Km em linha recta com folga de estrada, da base dele ao trabalho. */
   distanciaKm: number | null;
   precisaFatura: boolean;
@@ -151,6 +161,19 @@ export const ESTACIONAMENTO: Record<string, string> = {
   easy: "Sem dificuldade",
   porta: "Encosta-se à porta",
   unknown: "Não sabemos",
+};
+
+/**
+ * O estado do entulho, que decide se o trabalho é carregar ou ensacar primeiro.
+ *
+ * O motor de preços conta mais 30% de tempo para entulho no chão — e quem vai
+ * lá precisa de saber a mesma coisa antes de propor um valor.
+ */
+export const ESTADO_DO_ENTULHO: Record<string, string> = {
+  ensacado: "já ensacado",
+  chao: "no chão, por ensacar",
+  misto: "misto",
+  bigbags: "em big bags",
 };
 
 /**

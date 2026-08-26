@@ -16,6 +16,62 @@ const SERVICOS = [
   ["outro", "Outro serviço"],
 ] as const;
 
+/**
+ * Cada serviço pergunta o que lhe interessa.
+ *
+ * "Quando eu escolho mudanças o pedido deveria ser adaptado a isso, assim como
+ * entulhos etc — cada material tem sua peculiaridade. Mudanças precisam de 2
+ * endereços, o valor é por hora e km, sendo o mínimo de 3h."
+ *
+ * O motor de preços já sabia disto tudo há muito tempo: uma mudança são 7
+ * horas de base, mais uma hora por cada ponta sem elevador acima do 2.º andar,
+ * mais meia hora se o percurso passar dos 30 km — e depois cobra-se por hora,
+ * três colaboradores a 70 €/h, com um mínimo de três horas. Um entulho conta-se
+ * por sacos, e um saco no chão dá mais trabalho do que um saco já ensacado.
+ *
+ * Quem faltava à conversa era ESTE formulário. Ele mandava sempre os mesmos
+ * cinco campos, e o motor calculava uma mudança com uma morada só, sem saber
+ * para onde ia — 7 horas fixas, sempre o mesmo preço, fosse a mudança para o
+ * prédio ao lado ou para o Porto. E um entulho sem número de sacos ficava com
+ * o motor a pedir "quantidade de sacos de entulho" e ninguém a ouvi-lo.
+ */
+const PRECISA_DE_DOIS_ENDERECOS = (servico: string) => servico === "mudanca";
+const PRECISA_DE_SACOS = (servico: string) => servico === "recolha_entulho";
+
+const ESTADOS_DO_ENTULHO = [
+  ["ensacado", "Já ensacado"],
+  ["chao", "No chão, por ensacar"],
+  ["misto", "Misto"],
+  ["bigbags", "Big bags"],
+] as const;
+
+/** Lê do rawOrderJson os campos próprios do serviço, para o editor os mostrar. */
+function camposDoServicoGuardados(rawOrderJson: string | null | undefined) {
+  let cru: Record<string, unknown> = {};
+  try {
+    cru = rawOrderJson ? (JSON.parse(rawOrderJson) as Record<string, unknown>) : {};
+  } catch {
+    /* JSON estragado — o editor abre com os campos vazios */
+  }
+  const morada = (v: unknown) => (v as { formattedAddress?: string } | undefined)?.formattedAddress ?? "";
+  const parte = (v: unknown, k: string) => String((v as Record<string, unknown> | undefined)?.[k] ?? "");
+  const destino = cru.destinationAddress;
+  const acessoO = cru.originAccess;
+  const acessoD = cru.destinationAccess;
+  return {
+    moradaDestino: morada(destino),
+    localidadeDestino: parte(destino, "city"),
+    codigoPostalDestino: parte(destino, "postalCode"),
+    andarDestino: parte(acessoD, "floor"),
+    elevadorDestino: parte(acessoD, "hasElevator"),
+    estacionamentoDestino: parte(acessoD, "parkingDistance"),
+    acessoDificilOrigem: Boolean((acessoO as Record<string, unknown> | undefined)?.difficultAccess),
+    acessoDificilDestino: Boolean((acessoD as Record<string, unknown> | undefined)?.difficultAccess),
+    entulhoEstado: String(cru.entulhoState ?? ""),
+    entulhoQuantidade: String(cru.entulhoQuantidade ?? ""),
+  };
+}
+
 const MOTIVOS: Record<string, string> = {
   categoria_diferente: "não fazem este serviço",
   fora_de_alcance: "fora do raio deles",
@@ -43,6 +99,10 @@ type Resultado = {
   chaveRecusada?: boolean;
   moradaNormalizada: string | null;
   alcance: Alcance | null;
+  /** Km de origem a destino, quando é uma mudança com as duas moradas. */
+  percursoKm?: number | null;
+  /** O que falta para o preço não ser um palpite. */
+  faltaParaOPreco?: string[];
   /** O que mudou nesta edição, por extenso: "o valor de partida e as fotografias". */
   mudancas?: string;
   /** O pedido voltou a circular? Gravar uma alteração recomeça-o do zero. */
@@ -148,7 +208,22 @@ export default function RegistarPedido({
     description: "",
     valor: "",
     precisaFatura: false,
+    // ── Mudança: a segunda ponta ──
+    moradaDestino: "",
+    localidadeDestino: "",
+    codigoPostalDestino: "",
+    andarDestino: "",
+    elevadorDestino: "",
+    estacionamentoDestino: "",
+    acessoDificilOrigem: false,
+    acessoDificilDestino: false,
+    // ── Entulho: o que é e quanto é ──
+    entulhoEstado: "",
+    entulhoQuantidade: "",
   });
+
+  const doisEnderecos = PRECISA_DE_DOIS_ENDERECOS(f.serviceType);
+  const pedeSacos = PRECISA_DE_SACOS(f.serviceType);
 
   const muda = (k: keyof typeof f, v: string | boolean) => {
     setF((d) => ({ ...d, [k]: v }));
@@ -277,6 +352,9 @@ export default function RegistarPedido({
           description: o.description ?? "",
           valor: o.valorDesejadoCliente != null ? String(o.valorDesejadoCliente) : "",
           precisaFatura: Number(o.precisaFatura) === 1,
+          // O que é próprio do serviço vive no rawOrderJson, onde o simulador
+          // também o põe — é a mesma forma, para o pedido ser um só.
+          ...camposDoServicoGuardados(o.rawOrderJson),
         });
         try {
           const lista = o.filesJson ? JSON.parse(o.filesJson) : [];
@@ -398,7 +476,7 @@ export default function RegistarPedido({
         </label>
 
         <label className="text-xs text-slate-400 sm:col-span-2">
-          Morada *
+          {doisEnderecos ? "Morada de origem — donde sai *" : "Morada *"}
           <input
             value={f.address}
             onChange={(e) => muda("address", e.target.value)}
@@ -443,7 +521,7 @@ export default function RegistarPedido({
         </label>
 
         <label className="text-xs text-slate-400">
-          Andar
+          {doisEnderecos ? "Andar na origem" : "Andar"}
           <input
             value={f.floor}
             onChange={(e) => muda("floor", e.target.value)}
@@ -463,7 +541,7 @@ export default function RegistarPedido({
           com valores novos dariam campos preenchidos e preços iguais.
         */}
         <label className="text-xs text-slate-400">
-          Elevador
+          {doisEnderecos ? "Elevador na origem" : "Elevador"}
           <select
             value={f.hasElevator}
             onChange={(e) => muda("hasElevator", e.target.value)}
@@ -477,7 +555,7 @@ export default function RegistarPedido({
         </label>
 
         <label className="text-xs text-slate-400">
-          Dá para estacionar à porta?
+          {doisEnderecos ? "Estacionar à porta, na origem?" : "Dá para estacionar à porta?"}
           <select
             value={f.parkingDistance}
             onChange={(e) => muda("parkingDistance", e.target.value)}
@@ -488,6 +566,158 @@ export default function RegistarPedido({
             <option value="difficult">Longe ou complicado</option>
           </select>
         </label>
+
+        {/*
+          A SEGUNDA PONTA DA MUDANÇA.
+
+          Uma mudança tem duas moradas e o preço depende das duas: sete horas
+          de base, mais uma por cada ponta sem elevador acima do 2.º andar,
+          mais meia hora se o percurso passar dos 30 km. Sem a segunda morada,
+          o motor calculava sempre as mesmas sete horas — o mesmo preço para
+          uma mudança para o prédio ao lado e para uma para o Porto.
+
+          A morada de ORIGEM continua a ser a morada do pedido: é dela que sai
+          a distância que decide que profissionais alcançam o trabalho. O
+          destino é informação do trabalho, não do alcance.
+        */}
+        {doisEnderecos && (
+          <>
+            <label className="text-xs text-slate-400 sm:col-span-2">
+              Morada de destino — para onde vai *
+              <input
+                value={f.moradaDestino}
+                onChange={(e) => muda("moradaDestino", e.target.value)}
+                placeholder="Rua e número — ex.: Avenida da República 12"
+                className={campo}
+              />
+              <span className="mt-0.5 block text-[10px] text-slate-500">
+                O percurso origem→destino entra na conta das horas e do
+                combustível. Sem ele, a mudança fica com o preço mínimo.
+              </span>
+            </label>
+
+            <label className="text-xs text-slate-400">
+              Código postal do destino
+              <input
+                value={f.codigoPostalDestino}
+                onChange={(e) => muda("codigoPostalDestino", e.target.value)}
+                placeholder="1050-191"
+                className={campo}
+              />
+            </label>
+
+            <label className="text-xs text-slate-400">
+              Localidade do destino
+              <input
+                value={f.localidadeDestino}
+                onChange={(e) => muda("localidadeDestino", e.target.value)}
+                className={campo}
+              />
+            </label>
+
+            <label className="text-xs text-slate-400">
+              Andar no destino
+              <input
+                value={f.andarDestino}
+                onChange={(e) => muda("andarDestino", e.target.value)}
+                placeholder="rés-do-chão, 2º…"
+                className={campo}
+              />
+            </label>
+
+            <label className="text-xs text-slate-400">
+              Elevador no destino
+              <select
+                value={f.elevadorDestino}
+                onChange={(e) => muda("elevadorDestino", e.target.value)}
+                className={campo}
+              >
+                <option value="">não perguntei</option>
+                <option value="yes">Com elevador</option>
+                <option value="small">Elevador pequeno</option>
+                <option value="no">Sem elevador</option>
+              </select>
+            </label>
+
+            <label className="text-xs text-slate-400">
+              Estacionar à porta, no destino?
+              <select
+                value={f.estacionamentoDestino}
+                onChange={(e) => muda("estacionamentoDestino", e.target.value)}
+                className={campo}
+              >
+                <option value="">não perguntei</option>
+                <option value="easy">Sim, junto à porta</option>
+                <option value="difficult">Longe ou complicado</option>
+              </select>
+            </label>
+
+            <div className="flex flex-wrap items-center gap-4 sm:col-span-2 lg:col-span-3">
+              {/* Meia hora por ponta, na conta. Escrito na descrição não valia nada. */}
+              <label className="flex items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={f.acessoDificilOrigem}
+                  onChange={(e) => muda("acessoDificilOrigem", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900"
+                />
+                Acesso difícil ou desmontagem na origem
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={f.acessoDificilDestino}
+                  onChange={(e) => muda("acessoDificilDestino", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900"
+                />
+                Acesso difícil ou montagem no destino
+              </label>
+            </div>
+          </>
+        )}
+
+        {/*
+          O ENTULHO CONTA-SE POR SACOS.
+
+          O motor pede a quantidade — sem ela, devolve "falta a quantidade de
+          sacos de entulho" e ninguém o ouvia, porque o formulário não tinha
+          onde a escrever. E um saco no chão dá mais 30% de trabalho do que um
+          já ensacado: é a diferença entre carregar e ensacar primeiro.
+        */}
+        {pedeSacos && (
+          <>
+            <label className="text-xs text-slate-400">
+              Como está o entulho?
+              <select
+                value={f.entulhoEstado}
+                onChange={(e) => muda("entulhoEstado", e.target.value)}
+                className={campo}
+              >
+                <option value="">não perguntei</option>
+                {ESTADOS_DO_ENTULHO.map(([id, rotulo]) => (
+                  <option key={id} value={id}>
+                    {rotulo}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-xs text-slate-400">
+              Quantos sacos?
+              <input
+                value={f.entulhoQuantidade}
+                onChange={(e) => muda("entulhoQuantidade", e.target.value)}
+                placeholder="ex.: 30"
+                inputMode="numeric"
+                className={campo}
+              />
+              <span className="mt-0.5 block text-[10px] text-slate-500">
+                Um big bag conta como 42 sacos. Sem número, o motor não sabe se
+                é uma mala de escombros ou uma obra inteira.
+              </span>
+            </label>
+          </>
+        )}
 
         <label className="text-xs text-slate-400">
           Data e hora desejada
@@ -680,6 +910,24 @@ function Resumo({
       </p>
 
       {/*
+        O QUE FALTA PARA O PREÇO SER UM PREÇO.
+
+        Uma mudança sem morada de destino sai sempre pelo mínimo — 210 € —
+        porque o motor não tem percurso nenhum para contar. Um entulho sem
+        número de sacos também. O motor sabe disto e diz; até aqui não havia
+        quem o repetisse, e o número aparecia como se fosse uma conta feita.
+      */}
+      {r.faltaParaOPreco && r.faltaParaOPreco.length > 0 && (
+        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2 text-xs text-amber-200">
+          <p className="font-semibold">Este preço é um piso, não uma conta.</p>
+          <p className="mt-0.5 text-amber-200/75">
+            Falta {r.faltaParaOPreco.join(", ")}. Sem isso o motor calcula pelo
+            mínimo do serviço — vale como ponto de partida, não como estimativa.
+          </p>
+        </div>
+      )}
+
+      {/*
         O QUE ACONTECEU AO PEDIDO A SEGUIR À GRAVAÇÃO.
 
         Gravar uma alteração recomeça o pedido do zero e volta a enviá-lo. É
@@ -745,6 +993,13 @@ function Resumo({
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Valor de partida</p>
           <p className="text-sm font-bold text-cyan-300">{euros(r.valorDePartida)}</p>
         </div>
+        {r.percursoKm != null && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Percurso</p>
+            <p className="text-sm font-bold text-white">{r.percursoKm} km</p>
+            <p className="text-[10px] text-slate-500">origem → destino</p>
+          </div>
+        )}
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Distância</p>
           <p className="text-sm font-bold text-white">

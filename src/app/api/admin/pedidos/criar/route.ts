@@ -9,6 +9,7 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { emailValido } from "@/lib/inscricao-profissional";
 import { geocodificarMoradaDetalhado } from "@/lib/geocodificar";
+import { camposDoServico } from "@/lib/campos-do-servico";
 
 export const runtime = "nodejs";
 
@@ -238,6 +239,13 @@ export async function POST(req: NextRequest) {
       cidade: city,
     });
 
+    // O que só este serviço tem: a segunda morada de uma mudança, os sacos de
+    // um entulho. É daqui que o motor sabe se são 7 horas ou 9.
+    const proprios = await camposDoServico(
+      corpo as Parameters<typeof camposDoServico>[0],
+      coords ? { lat: coords.lat, lng: coords.lng } : null,
+    );
+
     let estimativa: Awaited<ReturnType<typeof calculateFastEstimate>> | null = null;
     try {
       const calculada = await calculateFastEstimate({
@@ -248,6 +256,7 @@ export async function POST(req: NextRequest) {
         parkingDistance: texto(corpo.parkingDistance, 40),
         urgency: urgency ?? undefined,
         distanceFromBase: { distanceKm: km },
+        ...proprios.paraOMotor,
       } as Parameters<typeof calculateFastEstimate>[0]);
 
       estimativa = {
@@ -314,6 +323,7 @@ export async function POST(req: NextRequest) {
           lat: coords?.lat ?? null,
           lng: coords?.lng ?? null,
         },
+        ...proprios.paraOJson,
       }),
       valorDesejadoCliente: arranque != null ? String(arranque) : null,
       precisaFatura: corpo.precisaFatura === true ? 1 : 0,
@@ -372,6 +382,8 @@ export async function POST(req: NextRequest) {
       id,
       valorDePartida: arranque,
       estimativa: estimativa?.estimatedPriceWithVat ?? null,
+      percursoKm: proprios.percursoKm,
+      faltaParaOPreco: proprios.emFalta,
       distanciaKm: km,
       geocodificado: coords != null,
       geocodificadoAproximado: coordsAproximadas,

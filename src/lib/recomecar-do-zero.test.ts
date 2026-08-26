@@ -209,6 +209,29 @@ describe("o retrato do pedido", () => {
     expect(oQueMudou(a, b)).toEqual(["fotografias"]);
   });
 
+  it("mudar para onde vai uma mudança conta", () => {
+    // O trabalho de uma mudança é levar as coisas de A para B. Trocar o B é
+    // trocar o trabalho: o percurso muda, as horas mudam, o preço muda. As
+    // propostas antigas foram feitas para outro destino.
+    const comDestino = (morada: string) => ({
+      ...base,
+      rawOrderJson: JSON.stringify({ destinationAddress: { formattedAddress: morada } }),
+    });
+    expect(
+      oQueMudou(retratoDoPedido(comDestino("Av. da República 12, Lisboa")), retratoDoPedido(comDestino("Rua do Ouro 3, Porto"))),
+    ).toEqual(["destino"]);
+  });
+
+  it("mudar o número de sacos de um entulho conta", () => {
+    const comSacos = (n: string) => ({
+      ...base,
+      rawOrderJson: JSON.stringify({ entulhoState: "chao", entulhoQuantidade: n }),
+    });
+    expect(oQueMudou(retratoDoPedido(comSacos("30")), retratoDoPedido(comSacos("300")))).toEqual([
+      "entulho",
+    ]);
+  });
+
   it("corrigir o nome, o telefone ou o email do cliente NÃO conta", () => {
     // Eles são do cliente, não do pedido, e nenhum profissional os vê antes
     // de ser contratado. Um acento não pode matar cinco propostas a sério.
