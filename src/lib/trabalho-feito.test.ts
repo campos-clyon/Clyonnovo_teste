@@ -74,6 +74,33 @@ describe("de quem é a vez", () => {
     expect(bloco.indexOf("feito")).toBeLessThan(bloco.indexOf("✓ Acordada por"));
   });
 
+  it("o cartão mostra a confirmação sem ter de abrir a negociação", () => {
+    // Isto EXISTIA — prova, contas, botão — mas dentro da negociação, atrás de
+    // um segundo toque no nome do profissional. Abrir o pedido mostrava quatro
+    // linhas de nomes e nem uma palavra sobre alguém já lá ter ido.
+    const i = PAINEL.indexOf("{feito && (");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = PAINEL.slice(i, PAINEL.indexOf("<div className=\"mt-3 flex flex-wrap items-center gap-2 border-t", i));
+    expect(bloco).toContain("deu o trabalho por feito");
+    expect(bloco).toContain("<ConfirmarPelaClyon");
+    // A prova à vista, e as contas vêm com o próprio ConfirmarPelaClyon.
+    expect(bloco).toContain("provaDe(feito.provaJson)");
+    expect(bloco).toContain("prova.fotos.map");
+  });
+
+  it("quando não é a CLYON a confirmar, diz porquê em vez de mostrar um botão que dá 403", () => {
+    const i = PAINEL.indexOf("{feito && (");
+    const bloco = PAINEL.slice(i, PAINEL.indexOf("<div className=\"mt-3 flex flex-wrap items-center gap-2 border-t", i));
+    expect(bloco).toContain("clyonPodeConfirmar(p) ?");
+    expect(bloco).toContain("porqueNaoPodeConfirmar(");
+  });
+
+  it("confirmar recarrega a mesa — senão o cartão ficava a dizer que falta confirmar", () => {
+    const i = PAINEL.indexOf("<ConfirmarPelaClyon");
+    const uso = PAINEL.slice(i, PAINEL.indexOf("/>", i));
+    expect(uso).toContain("onMudou=");
+  });
+
   it("o distintivo distingue confirmar de responder — não são a mesma acção", () => {
     expect(PAINEL).toContain("trabalho feito — falta confirmar");
     const i = PAINEL.indexOf("{precisaDeSi(n) && (");

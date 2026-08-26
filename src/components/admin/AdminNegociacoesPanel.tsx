@@ -19,7 +19,7 @@ import {
   UserRound,
   RotateCcw,
 } from "lucide-react";
-import { quemNegoceia, clyonPodeConfirmar } from "@/lib/quem-negoceia";
+import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
   quantoOClientePaga,
@@ -967,6 +967,83 @@ export default function AdminNegociacoesPanel({
             </p>
           </div>
         )}
+        {/*
+          O TRABALHO FEITO, À CABEÇA DO CARTÃO.
+
+          Isto existia — a prova, as contas, o botão que liberta o pagamento —
+          mas vivia dentro da negociação, atrás de um segundo toque no nome do
+          profissional. Abrir o pedido não chegava: o cartão do #226 mostrava
+          quatro linhas de nomes e estados e nem uma palavra sobre a Sthefanny
+          já lá ter ido.
+
+          "Deveria ver com as opções de confirmação de conclusão e os detalhes
+          acordados, e um botão para que eu, caso fale com o cliente e ele
+          confirme a conclusão, possa fechar o pedido 100%."
+
+          O botão é o mesmo — é ele que grava `confirmadoEm`, que fecha o
+          pedido, que liberta o dinheiro do profissional e que lhe manda o
+          email a dizer que já pode contar com ele. Só mudou de sítio: agora
+          está onde a pergunta se faz.
+        */}
+        {feito && (
+          <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3">
+            <p className="text-sm font-semibold text-amber-200">
+              {feito.profissionalNome} deu o trabalho por feito
+            </p>
+            <p className="mt-0.5 text-xs text-amber-200/70">
+              {feito.execucaoEnviadaEm ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. ` : ""}
+              O valor fica cativo até alguém confirmar — e é a confirmação que
+              fecha o pedido e liberta o pagamento dele.
+            </p>
+
+            {/* A prova, sem ter de a ir procurar: clicar abre a fotografia. */}
+            {(() => {
+              const prova = provaDe(feito.provaJson);
+              if (!prova) return null;
+              return (
+                <>
+                  {prova.nota && (
+                    <p className="mt-2 text-xs italic text-slate-300">&ldquo;{prova.nota}&rdquo;</p>
+                  )}
+                  {prova.fotos.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {prova.fotos.map((url, i) => (
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`Prova ${i + 1}`}
+                            className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {clyonPodeConfirmar(p) ? (
+              <ConfirmarPelaClyon
+                negociacaoId={feito.id}
+                pedidoId={p.id}
+                valorAcordado={feito.valorAcordado != null ? Number(feito.valorAcordado) : null}
+                onMudou={() => carregar(true)}
+              />
+            ) : (
+              // Nem sempre é ele que confirma. Quando o cliente tem email,
+              // recebeu o link e é dele a decisão — dizer porquê é melhor do
+              // que mostrar um botão que a rota recusa com 403.
+              <p className="mt-2.5 rounded-lg border border-slate-700/60 bg-slate-950/60 px-3 py-2 text-xs text-slate-400">
+                {porqueNaoPodeConfirmar({
+                  origem: p.origem ?? null,
+                  contactEmail: p.contactEmail ?? null,
+                })}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
           <button
             onClick={() => setAEditarPlataforma(p.id)}
