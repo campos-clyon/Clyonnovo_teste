@@ -38,6 +38,11 @@ import {
   provaDe,
   type Pedido,
 } from "./tipos";
+import {
+  sinaisDoTrabalho,
+  porKmPorExtenso,
+  pesoDoTrabalho,
+} from "@/lib/sinais-do-trabalho";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
@@ -219,7 +224,42 @@ export default function Trabalhos({
   }
 
   const porSeparador = (id: Separador) => pedidos.filter((p) => separadorDe(p) === id);
-  const visiveis = porSeparador(separador);
+
+  /*
+   * A ORDEM DA LISTA, NOS SEPARADORES ONDE ELE DECIDE.
+   *
+   * Era a ordem em que a base os devolveu — na prática, o mais recente
+   * primeiro. Isso serve para saber o que chegou; não serve para saber o que
+   * vale a pena. O trabalho a 6 km de Setúbal estava em quarto lugar, atrás de
+   * três a quarenta quilómetros, porque tinha entrado umas horas antes.
+   *
+   * Agora sobe quem tem sinal, e dentro do mesmo peso continua a mandar a
+   * chegada — o desempate antigo, que não estava errado, só não chegava.
+   *
+   * Nos separadores de trabalho feito a ordem NÃO muda: ali a pergunta é
+   * "o que aconteceu quando", e a cronologia é a resposta.
+   */
+  const visiveis = (() => {
+    const lista = porSeparador(separador);
+    if (separador !== "novos" && separador !== "negociacao") return lista;
+    return [...lista].sort((a, b) => {
+      const fotos = (p: Pedido) => {
+        try {
+          const f = JSON.parse(p.filesJson ?? "[]");
+          return Array.isArray(f) ? f.length : 0;
+        } catch {
+          return 0;
+        }
+      };
+      const peso =
+        pesoDoTrabalho({ ...b, quantasFotos: fotos(b) }) -
+        pesoDoTrabalho({ ...a, quantasFotos: fotos(a) });
+      if (peso !== 0) return peso;
+      return (
+        new Date(b.actualizadoEm).getTime() - new Date(a.actualizadoEm).getTime()
+      );
+    });
+  })();
 
   return (
     <>
@@ -280,6 +320,17 @@ export default function Trabalhos({
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
           const novo = separadorDe(p) === "novos";
+          /*
+           * OS SINAIS.
+           *
+           * Só nos separadores onde ele ainda decide. Num trabalho já
+           * contratado, "bem pago" e "a 6 km" são história: a decisão está
+           * tomada e o distintivo passa a ruído por cima do que importa.
+           */
+          const aDecidir = separador === "novos" || separador === "negociacao";
+          const sinais = aDecidir ? sinaisDoTrabalho({ ...p, quantasFotos: fotos.length }) : [];
+          const quente = sinais.some((x) => x.chave === "perto");
+          const porKm = aDecidir ? porKmPorExtenso(p) : null;
 
           // O botão de arrumar só aparece onde arrumar faz sentido. Num
           // trabalho novo ou a decorrer seria um convite a esconder o que
@@ -301,15 +352,23 @@ export default function Trabalhos({
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
                 fechado
                   ? "border-emerald-300 ring-1 ring-emerald-100"
-                  : novo
-                    // A barra à esquerda é o que faz o olho parar aqui primeiro
-                    // ao percorrer a lista. É o pedido com prazo a correr.
-                    //
-                    // Ciano da marca, e não âmbar: a CLYON não tem amarelo, e
-                    // uma cor que não é da casa lê-se como aviso de sistema em
-                    // vez de destaque.
-                    ? "border-l-4 border-l-[#00B4CC] border-y-[#E2EEF3] border-r-[#E2EEF3]"
-                    : "border-[#E2EEF3]"
+                  : quente
+                    /*
+                     * O QUENTE É OUTRO CARTÃO.
+                     *
+                     * A barra à esquerda é o que faz o olho parar ao percorrer
+                     * a lista, e até aqui dizia só uma coisa: "é novo". Agora
+                     * diz PORQUÊ — laranja quando o trabalho fica a menos de
+                     * dez quilómetros, que é a única coisa que muda o cartão
+                     * inteiro. Se todos os sinais o pintassem, nenhum se via.
+                     */
+                    ? "border-l-4 border-l-orange-500 border-y-orange-100 border-r-orange-100 ring-1 ring-orange-100"
+                    : novo
+                      // Ciano da marca, e não âmbar: a CLYON não tem amarelo, e
+                      // uma cor que não é da casa lê-se como aviso de sistema em
+                      // vez de destaque.
+                      ? "border-l-4 border-l-[#00B4CC] border-y-[#E2EEF3] border-r-[#E2EEF3]"
+                      : "border-[#E2EEF3]"
               }`}
             >
               <div className="flex gap-3">
@@ -358,6 +417,21 @@ export default function Trabalhos({
                         {fase.texto}
                       </span>
                     )}
+                    {/*
+                      `whitespace-nowrap` em cada um: nenhum distintivo pode
+                      partir a meio da palavra num telemóvel de 360 px, que é
+                      onde ele lê isto. Onde a palavra não cabia, entrou o
+                      número — «3 fotos», e não «3 fotografias».
+                    */}
+                    {sinais.map((sinal) => (
+                      <span
+                        key={sinal.chave}
+                        className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-bold ${sinal.cls}`}
+                      >
+                        <span aria-hidden="true">{sinal.emoji}</span>
+                        {sinal.texto}
+                      </span>
+                    ))}
                   </div>
                   <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                     <span className="flex items-center gap-1">
@@ -416,6 +490,21 @@ export default function Trabalhos({
                       {euros(fechado ? p.recebeSeFechado : p.recebeSeAceitar)}
                     </span>
                     <span className="text-[11px] text-slate-400">já com a taxa</span>
+                    {/*
+                      A CONTA QUE ELE FAZ DE CABEÇA, ESCRITA.
+                      304 € em Campolide, a 39 km, dão 7,8 €/km.
+                      123,50 € em Setúbal, a 6 km, dão 20,6 €/km.
+                      O barato é o melhor negócio, e a lista mostrava o contrário.
+                    */}
+                    {porKm && (
+                      <span
+                        className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
+                          quente ? "bg-orange-50 text-orange-700" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {porKm}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
