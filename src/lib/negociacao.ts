@@ -185,13 +185,43 @@ export function propor(
     return { ok: false, erro: "Indique um valor." };
   }
   if (!podeFazer(n, lado, "propor", agora)) {
+    /*
+     * PORQUE NÃO — dito como é, e não como calha.
+     *
+     * Havia duas frases para três situações, e a que sobrava mentia. Um
+     * pedido em que o profissional JÁ ACEITOU respondia "já tem uma proposta
+     * à espera de resposta" a quem tentava contrapropor — o que não era
+     * verdade, não explicava nada, e deixava quem lá estava a pensar que o
+     * site tinha avariado. Aconteceu a sério: o valor de partida saiu alto,
+     * o profissional aceitou-o, e do outro lado o cliente só tinha 30 €.
+     *
+     * Uma mensagem de recusa tem duas obrigações: dizer o que se passa, e
+     * dizer por onde se sai.
+     */
+    if (n.estado === "aguarda_contratacao") {
+      const aceite = [...n.propostas].reverse().find((p) => p.estado === "aceite");
+      const quanto = aceite ? `${aceite.valor.toFixed(2).replace(".", ",")} €` : "o valor proposto";
+      return {
+        ok: false,
+        erro:
+          `O profissional já aceitou ${quanto} — a partir daqui só falta fechar. ` +
+          `Para mudar o valor tem de desistir desta negociação e voltar a enviar o ` +
+          `pedido com o valor de partida certo.`,
+      };
+    }
+    if (n.estado === "acordada") {
+      return { ok: false, erro: "Este trabalho já está fechado." };
+    }
+    if (n.estado === "desistida" || n.estado === "morta") {
+      return { ok: false, erro: "Esta negociação terminou." };
+    }
     const restantes = propostasRestantes(n, lado, agora);
     return {
       ok: false,
       erro:
         restantes === 0
           ? "Gastou as cinco propostas. Só pode aceitar ou desistir."
-          : "Já tem uma proposta à espera de resposta.",
+          : "Já tem uma proposta à espera de resposta — espere que o outro lado responda.",
     };
   }
 

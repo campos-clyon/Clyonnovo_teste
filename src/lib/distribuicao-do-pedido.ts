@@ -31,7 +31,8 @@ const ROTULO_DO_MOTIVO: Record<string, string> = {
   inactivo: "conta desactivada",
   nao_aprovado: "conta suspensa ou por aprovar",
   categoria_diferente: "não faz este tipo de serviço",
-  fora_de_alcance: "fora do raio e da zona",
+  fora_de_alcance: "fora do raio dele",
+  sem_morada: "não foi possível localizar a morada do pedido",
   nao_emite_fatura: "não emite fatura (o cliente pediu)",
   nao_emite_guia: "sem guia de transporte verificada",
 };

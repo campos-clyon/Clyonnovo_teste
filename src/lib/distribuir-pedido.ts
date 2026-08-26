@@ -178,14 +178,22 @@ export async function avaliarAlcance(pedido: {
 
 export async function distribuirPedido(
   pedido: PedidoParaDistribuicao,
+  /**
+   * `reabrir` faz o pedido voltar do zero: quem já tinha negociação recebe-a
+   * REPOSTA — propostas antigas fora, valor de partida novo, link novo — em
+   * vez de a manter como estava. É o caminho de quem registou o pedido com o
+   * valor errado e precisa que ele volte a circular como se fosse de hoje.
+   */
+  { reabrir = false }: { reabrir?: boolean } = {},
 ): Promise<ResultadoDaDistribuicao> {
   const candidatos = await profissionaisActivos();
 
   const trabalho =
     pedido.lat != null && pedido.lng != null ? { lat: pedido.lat, lng: pedido.lng } : null;
 
-  // A distância é por profissional: depende da base dele, não do pedido. Quem
-    // não tiver coordenadas fica com `null` e a regra cai nas zonas.
+  // A distância é por profissional: depende da base dele, não do pedido. Sem
+  // coordenadas fica `null`, e aí ninguém é elegível: não se pode dizer que
+  // alguém está dentro de um raio que nunca foi medido.
   const comDistancia = candidatos.map((p) => ({
     profissional: p,
     distanciaKm: distanciaParaElegibilidade(
@@ -245,7 +253,7 @@ export async function distribuirPedido(
           propostasJson: JSON.stringify(
             negociacaoNova(pedido.valorDesejadoCliente ?? 0, new Date()).propostas,
           ),
-        });
+        }, { reabrir });
         token = acesso.token;
       } catch (err) {
         console.error(
