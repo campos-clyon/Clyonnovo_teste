@@ -1845,12 +1845,22 @@ export default function AdminNegociacoesPanel({
           essa guarda, e duas portas para a mesma accao — uma com guarda e
           outra sem — e' ter a guarda a fingir. */}
       {aEditarPlataforma != null && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220] p-4 sm:p-8"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setAEditarPlataforma(null);
-          }}
-        >
+        /*
+          FECHA-SE PELO BOTÃO, E SÓ PELO BOTÃO.
+
+          "Uma coisa que está a stressar-me muito: ao clicar sem querer fora
+          dessa tela ela fecha e perco o que estava a fazer."
+
+          Fechar ao clicar fora é um hábito de janelas pequenas — uma
+          confirmação, um menu — onde não há nada dentro para perder. Isto é um
+          formulário de catorze campos, com fotografias, e gravá-lo recomeça o
+          pedido do zero. O gesto mais barato que existe, um clique ao lado,
+          apagava o trabalho todo sem perguntar nada.
+
+          A margem escura à volta é grande de propósito, para o formulário
+          respirar. Isso torna o clique ao lado MAIS provável, não menos.
+        */
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220] p-4 sm:p-8">
           <div className="mx-auto max-w-5xl">
             <RegistarPedido
               editarId={aEditarPlataforma}
