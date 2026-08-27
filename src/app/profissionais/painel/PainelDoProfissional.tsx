@@ -83,6 +83,15 @@ export default function PainelDoProfissional() {
   const pedido = params.get("ecra") ?? "menu";
   const ecra: Ecra = (ECRAS_VALIDOS as string[]).includes(pedido) ? (pedido as Ecra) : "menu";
 
+  /*
+   * O trabalho aberto vive no endereço, como os ecrãs.
+   *
+   * Era estado local, e por isso invisível para o histórico: para o browser, a
+   * lista e o trabalho aberto eram a mesma página. «Voltar» saltava a lista
+   * inteira e ia dar ao ecrã anterior — a Agenda, se tivesse passado por lá.
+   */
+  const trabalhoAberto = Number(params.get("trabalho")) || null;
+
   const [nome, setNome] = useState("");
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [carteira, setCarteira] = useState<DadosDaCarteira | null>(null);
@@ -234,16 +243,41 @@ export default function PainelDoProfissional() {
    * nada.
    */
   const voltar = useCallback(() => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      window.history.back();
+    /*
+     * SOBE UM NÍVEL, e não recua no browser.
+     *
+     * `history.back()` recuava para a página ANTERIOR, que raramente é o sítio
+     * de onde ele veio dentro do painel — e ao fim de uns toques saía da conta.
+     * Ele descreveu-o exactamente: da Agenda para Os meus trabalhos, abre um
+     * trabalho, e voltar dava na Agenda.
+     *
+     * A hierarquia do painel tem três degraus e é sempre a mesma, venha-se de
+     * onde se vier: trabalho aberto → lista → menu → site. Subir por ela nunca
+     * surpreende, e nunca deita ninguém fora da conta.
+     */
+    if (trabalhoAberto) {
+      router.push("/profissionais/painel?ecra=trabalhos");
+      return;
+    }
+    if (ecra !== "menu") {
+      router.push("/profissionais/painel");
       return;
     }
     window.location.href = "/";
-  }, []);
+  }, [trabalhoAberto, ecra, router]);
 
   function abrir(destino: Ecra) {
     router.push(
       destino === "menu" ? "/profissionais/painel" : `/profissionais/painel?ecra=${destino}`,
+    );
+  }
+
+  /** Abrir ou fechar um trabalho — um passo no histórico, como um ecrã. */
+  function abrirTrabalho(negociacaoId: number | null) {
+    router.push(
+      negociacaoId
+        ? `/profissionais/painel?ecra=trabalhos&trabalho=${negociacaoId}`
+        : "/profissionais/painel?ecra=trabalhos",
     );
   }
 
@@ -536,6 +570,8 @@ export default function PainelDoProfissional() {
           <Trabalhos
             pedidos={pedidos}
             realcados={realcados}
+            aberto={trabalhoAberto}
+            onAbrir={abrirTrabalho}
             onVoltar={() => {
               // Sair dos trabalhos e ter visto as novidades e a mesma coisa:
               // o realce ja cumpriu, e um destaque que nunca se apaga deixa

@@ -184,14 +184,33 @@ export default function Trabalhos({
   realcados,
   onVoltar,
   onRecarregar,
+  aberto,
+  onAbrir,
 }: {
   pedidos: Pedido[];
   /** Negociações com novidades desde a última visita — ganham contorno. */
   realcados?: Set<number>;
   onVoltar: () => void;
   onRecarregar: () => void;
+  /*
+   * QUAL O TRABALHO ABERTO — E VEM DE FORA, DO ENDEREÇO.
+   *
+   * "Se eu estiver na Agenda, depois for para Os meus trabalhos e abrir um
+   * trabalho, ao voltar eu deveria voltar para os meus trabalhos, mas volto
+   * para a agenda."
+   *
+   * Era estado local. Os ecrãs do painel vivem no endereço — `?ecra=agenda` —
+   * e cada um deixa uma marca no histórico; abrir um trabalho não deixava
+   * nenhuma. Para o browser, a lista e o trabalho aberto eram a MESMA página,
+   * e por isso «voltar» saltava a lista inteira e ia dar à Agenda.
+   *
+   * No endereço, o trabalho aberto passa a ser um passo como os outros. O
+   * botão de trás do Android — que numa aplicação instalada é o único que há
+   * — passa a fazer a mesma coisa que o do ecrã.
+   */
+  aberto: number | null;
+  onAbrir: (negociacaoId: number | null) => void;
 }) {
-  const [aberto, setAberto] = useState<number | null>(null);
   const [separador, setSeparador] = useState<Separador>("novos");
 
   /*
@@ -230,7 +249,7 @@ export default function Trabalhos({
    */
   const abrirTrabalho = useCallback(
     (p: Pedido) => {
-      setAberto(p.negociacaoId);
+      onAbrir(p.negociacaoId);
       if (p.abertoEm) return;
       setLidosAgora((antes) => new Set(antes).add(p.negociacaoId));
       void fetch("/api/profissionais/abrir", {
@@ -241,7 +260,7 @@ export default function Trabalhos({
         /* silêncio: ver o comentário da rota */
       });
     },
-    [],
+    [onAbrir],
   );
 
   /* Os que ele abriu nesta sessão, para o realce cair no toque. */
@@ -327,7 +346,7 @@ export default function Trabalhos({
     return (
       <DetalheDoTrabalho
         pedido={escolhido}
-        onVoltar={() => setAberto(null)}
+        onVoltar={() => onAbrir(null)}
         onRecarregar={onRecarregar}
       />
     );

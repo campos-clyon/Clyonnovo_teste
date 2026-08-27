@@ -47,10 +47,18 @@ describe("os botões", () => {
   });
 
   it("e a saída funciona mesmo sem histórico — telemóvel, link do email", () => {
-    // Numa aplicação instalada não há botão de trás nenhum: sem este ramo,
-    // o botão não fazia nada e ficava pior do que não existir.
-    expect(PRO).toContain("window.history.length > 1");
+    /*
+     * A propriedade continua a mesma; a forma de a cumprir é que mudou, e para
+     * melhor: deixou de DEPENDER de histórico em vez de o consultar.
+     *
+     * Numa aplicação instalada não há botão de trás nenhum, e quem chega por
+     * um link do email não tem página anterior. Antes havia um ramo para esse
+     * caso; agora a hierarquia do painel — trabalho, lista, menu, site — é a
+     * mesma com histórico e sem ele.
+     */
+    expect(PRO).not.toContain("window.history.back()");
     expect(PRO).toContain('window.location.href = "/"');
+    expect(PRO).toContain("if (trabalhoAberto)");
   });
 
   it("a mesa troca o «Actualizar» por dizer quando leu", () => {
