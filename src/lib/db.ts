@@ -1289,6 +1289,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
       provaJson: string | null;
       confirmadoEm: Date | null;
       pagoEm: Date | null;
+      estrelas: number | null;
+      avaliadoEm: Date | null;
       criadaEm: Date;
       actualizadaEm: Date;
     }>;
@@ -1352,6 +1354,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     // negociação corre mal.
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.propostasJson,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+            -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
+            n.estrelas, n.avaliadoEm,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail
        FROM negociacoes n
