@@ -374,7 +374,17 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
     // "aqui devo gerir todos os pedidos". Gerir em dois sítios é gerir mal.
     const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
-    expect(SHELL).toContain('"profissionais", "negociacoes_clyon", "whatsapp", "levantamentos"');
+    /*
+     * A garantia é a PERTENÇA, não a ordem nem o comprimento.
+     *
+     * A lista cresce — as Carteiras entraram hoje — e um teste preso ao texto
+     * exacto chumba de cada vez que ela cresce, sem que nada tenha partido.
+     * O que interessa é que a mesa das negociações vive na Plataforma.
+     */
+    const i = SHELL.indexOf('titulo: "Plataforma"');
+    const grupo = SHELL.slice(i, SHELL.indexOf("]", i));
+    expect(grupo).toContain('"negociacoes_clyon"');
+    expect(grupo).toContain('"profissionais"');
   });
 });
 

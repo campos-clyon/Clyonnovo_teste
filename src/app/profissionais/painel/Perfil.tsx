@@ -583,8 +583,39 @@ export default function Perfil({
               />
             </Campo>
 
+            {/*
+              O MB WAY, ao lado do IBAN e não em vez dele.
+              
+              Nem toda a gente tem o IBAN à mão; toda a gente sabe o número de
+              telemóvel de cor. Enquanto o pagamento for feito por uma pessoa no
+              homebanking, ter dois caminhos é a diferença entre receber esta
+              semana e esperar pela próxima.
+
+              Campo PRÓPRIO, e não o telefone de contacto: os dois números podem
+              não ser o mesmo, e assumir que são é mandar dinheiro para o sítio
+              errado.
+            */}
+            <Campo
+              etiqueta="MB WAY (opcional)"
+              ajuda="Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto."
+            >
+              <input
+                className={CAIXA}
+                inputMode="tel"
+                placeholder="9xx xxx xxx"
+                value={dados.mbway ?? ""}
+                onChange={(e) => mudar("mbway", e.target.value)}
+              />
+            </Campo>
+
             <Guardar
-              onClick={() => gravar({ iban: dados.iban, ibanTitular: dados.ibanTitular })}
+              onClick={() =>
+                gravar({
+                  iban: dados.iban,
+                  ibanTitular: dados.ibanTitular,
+                  mbway: dados.mbway,
+                })
+              }
               rotulo="Guardar conta"
             />
 

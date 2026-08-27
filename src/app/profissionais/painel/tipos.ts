@@ -111,6 +111,8 @@ export type Perfil = {
   baseLat?: number | null;
   baseLng?: number | null;
   moradaFiscal: string;
+  /** Outro caminho para o dinheiro, quando não há IBAN à mão. */
+  mbway?: string;
   codigoPostalFiscal: string;
   localidadeFiscal: string;
   categorias: string[];
