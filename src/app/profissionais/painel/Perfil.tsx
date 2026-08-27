@@ -421,51 +421,73 @@ export default function Perfil({
               descricao="Há clientes que só contratam quem passa fatura."
             />
 
+            {/*
+              O NIF E A MORADA FISCAL SAEM DE TRÁS DO INTERRUPTOR.
+              
+              "Falta a opção de colocar a morada fiscal, que é muitas vezes
+              diferente da actual."
+              
+              Estavam aqui — mas só apareciam a quem ligasse «Emito fatura».
+              Fazia sentido enquanto isto era só sobre facturas; deixou de
+              fazer no dia em que passámos a pagar a estas pessoas.
+              
+              Quem recebe dinheiro tem de ser identificável, passe factura ou
+              não: é o NIF e a morada que respondem por quem recebeu, se
+              alguém um dia perguntar. O TRSul tem 57 € a receber e a ficha
+              dele diz «sem NIF · morada fiscal por indicar», porque não liga
+              um interruptor que não lhe diz respeito.
+              
+              O regime de IVA fica atrás dele, esse sim: só existe se houver
+              factura.
+            */}
+            <Campo etiqueta="NIF">
+              <input
+                className={CAIXA}
+                inputMode="numeric"
+                value={dados.nif}
+                onChange={(e) => mudar("nif", e.target.value)}
+              />
+            </Campo>
+
+            {/* A morada da declaração de actividade. Pode não ser a cidade
+                onde trabalha — essa serve para calcular distâncias, esta vai
+                na fatura e é a que responde por quem recebeu o dinheiro. */}
+            <Campo
+              etiqueta="Morada fiscal"
+              ajuda="A da declaração de actividade. Muitas vezes não é onde trabalha."
+            >
+              <input
+                className={CAIXA}
+                value={dados.moradaFiscal}
+                onChange={(e) => mudar("moradaFiscal", e.target.value)}
+                placeholder="Rua e número, andar"
+                autoComplete="street-address"
+              />
+            </Campo>
+
+            <div className="grid grid-cols-[minmax(0,7.5rem)_1fr] gap-3">
+              <Campo etiqueta="Código postal">
+                <input
+                  className={CAIXA}
+                  inputMode="numeric"
+                  value={dados.codigoPostalFiscal}
+                  onChange={(e) => mudar("codigoPostalFiscal", e.target.value)}
+                  placeholder="2700-123"
+                  autoComplete="postal-code"
+                />
+              </Campo>
+              <Campo etiqueta="Localidade">
+                <input
+                  className={CAIXA}
+                  value={dados.localidadeFiscal}
+                  onChange={(e) => mudar("localidadeFiscal", e.target.value)}
+                  placeholder="Amadora"
+                />
+              </Campo>
+            </div>
+
             {dados.emiteFatura && (
               <>
-                <Campo etiqueta="NIF">
-                  <input
-                    className={CAIXA}
-                    inputMode="numeric"
-                    value={dados.nif}
-                    onChange={(e) => mudar("nif", e.target.value)}
-                  />
-                </Campo>
-
-                {/* A morada da declaração de actividade. Pode não ser a
-                    cidade onde trabalha — essa serve para calcular distâncias,
-                    esta vai na fatura ao cliente. */}
-                <Campo etiqueta="Morada fiscal">
-                  <input
-                    className={CAIXA}
-                    value={dados.moradaFiscal}
-                    onChange={(e) => mudar("moradaFiscal", e.target.value)}
-                    placeholder="Rua e número, andar"
-                    autoComplete="street-address"
-                  />
-                </Campo>
-
-                <div className="grid grid-cols-[minmax(0,7.5rem)_1fr] gap-3">
-                  <Campo etiqueta="Código postal">
-                    <input
-                      className={CAIXA}
-                      inputMode="numeric"
-                      value={dados.codigoPostalFiscal}
-                      onChange={(e) => mudar("codigoPostalFiscal", e.target.value)}
-                      placeholder="2700-123"
-                      autoComplete="postal-code"
-                    />
-                  </Campo>
-                  <Campo etiqueta="Localidade">
-                    <input
-                      className={CAIXA}
-                      value={dados.localidadeFiscal}
-                      onChange={(e) => mudar("localidadeFiscal", e.target.value)}
-                      placeholder="Amadora"
-                    />
-                  </Campo>
-                </div>
-
                 <div>
                   <span className="text-sm font-medium text-slate-700">Regime de IVA</span>
                   <div className="mt-2 space-y-2">
@@ -618,6 +640,18 @@ export default function Perfil({
               }
               rotulo="Guardar conta"
             />
+
+            {/*
+              Ele foi procurar a morada fiscal AQUI, e não em «Faturação e
+              IVA» — o que faz sentido: quem pensa em receber dinheiro pensa
+              nesta secção. Uma linha a dizer onde está poupa a procura.
+            */}
+            <p className="text-xs leading-relaxed text-slate-500">
+              O NIF e a morada fiscal ficam em{" "}
+              <strong className="font-semibold text-slate-600">Faturação e IVA</strong>, no
+              menu. São eles que respondem por quem recebeu — e a morada fiscal muitas
+              vezes não é a de trabalho.
+            </p>
 
             <Nota titulo="Quem vê o seu IBAN" comecaAberta>
               Fica guardado connosco e só é usado para lhe transferir o saldo. Não é

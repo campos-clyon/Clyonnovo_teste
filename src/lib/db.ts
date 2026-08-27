@@ -5655,14 +5655,24 @@ export async function apagarProfissional(
        *
        * `slug` também é limpo — é único na tabela, e um slug com o nome dele lá
        * dentro sobreviveria a tudo o resto.
+       *
+       * ⚠️ ESTA LISTA TEM DE CRESCER COM A TABELA. O `mbway` foi acrescentado
+       * a `providers` meses depois desta função, e não entrou aqui: uma conta
+       * apagada ficava com o número de telemóvel que recebe dinheiro, intacto,
+       * para sempre. As três colunas da morada fiscal tinham o mesmo problema —
+       * só a rua saía, o código postal e a localidade ficavam.
+       *
+       * Há um teste que compara esta lista com as colunas da tabela e chumba
+       * quando aparece uma que identifica alguém e não é limpa aqui.
        */
       await conn.execute(
         `UPDATE providers
             SET name = 'Profissional removido',
                 slug = CONCAT('removido-', id),
                 email = NULL, phone = NULL, nif = NULL, city = NULL,
-                passwordHash = NULL, iban = NULL, ibanTitular = NULL,
-                moradaFiscal = NULL, numeroTransportador = NULL,
+                passwordHash = NULL, iban = NULL, ibanTitular = NULL, mbway = NULL,
+                moradaFiscal = NULL, codigoPostalFiscal = NULL, localidadeFiscal = NULL,
+                numeroTransportador = NULL,
                 categorias = NULL, zonas = NULL,
                 baseLat = NULL, baseLng = NULL,
                 isActive = 0, estado = 'apagado'

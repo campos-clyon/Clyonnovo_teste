@@ -31,7 +31,9 @@ const PERFIL = ler("src/app/api/profissionais/perfil/route.ts");
 describe("a pergunta certa", () => {
   it("olha para quem TEM A RECEBER, e não para quem pediu", () => {
     // É a diferença entre um ecrã vazio e 570 € à espera.
-    expect(ROTA).toContain("n.confirmadoEm IS NOT NULL");
+    // Olha para as negociações acordadas, e não para a fila dos pedidos de
+    // levantamento — é a diferença entre um ecrã vazio e 570 EUR à espera.
+    expect(ROTA).toContain("n.estado = 'acordada'");
     expect(ROTA).toContain("n.pagoEm");
     expect(ROTA).not.toContain("FROM levantamentos");
   });
@@ -123,5 +125,108 @@ describe("o ecrã", () => {
 
   it("diz quando falta o titular — um nome que não bate é transferência devolvida", () => {
     expect(PAINEL).toContain("Sem titular indicado.");
+  });
+});
+
+describe("os três montes", () => {
+  it("cada trabalho está exactamente num deles", () => {
+    /*
+     * "A carteira deve mostrar os valores já pagos, por pagar, e por
+     * finalizar — seriam os trabalhos acordados mas ainda não realizados."
+     *
+     * Faltava o terceiro, e é o que diz o que aí vem: trabalho fechado com o
+     * profissional, dinheiro do cliente já cativo, mas ainda por fazer. Sem
+     * ele a carteira mostrava o passado e calava o futuro.
+     */
+    const i = ROTA.indexOf("Três montes");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = ROTA.slice(i, i + 700);
+    // Pago sai primeiro, por finalizar a seguir, e o resto é por pagar. Cada
+    // ramo termina em `continue`, para nenhum trabalho contar duas vezes.
+    expect(bloco.indexOf("l.pagoEm != null")).toBeLessThan(bloco.indexOf("l.confirmadoEm == null"));
+    expect((bloco.match(/continue;/g) ?? []).length).toBe(2);
+  });
+
+  it("a consulta deixou de filtrar só as confirmadas", () => {
+    // Era esse filtro que escondia o terceiro monte por completo.
+    expect(ROTA).not.toContain("n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL");
+  });
+
+  it("distingue «por fazer» de «falta confirmar»", () => {
+    // São esperas diferentes: uma é do profissional, a outra é de quem confirma.
+    expect(ROTA).toContain("l.confirmadoEm == null && l.execucaoEnviadaEm != null");
+    expect(PAINEL).toContain("falta confirmar");
+    expect(PAINEL).toContain("por fazer");
+  });
+
+  it("o que está a decorrer NÃO tem botão de pagar", () => {
+    // Não é dinheiro dele ainda: está cativo do lado do cliente. Um botão aqui
+    // seria um convite a pagar por trabalho que ainda não foi feito.
+    const i = PAINEL.indexOf("c.porFinalizar.map((t) => (");
+    const bloco = PAINEL.slice(i, i + 1400);
+    expect(bloco).not.toContain("marcarPago");
+    expect(bloco).not.toContain("Já paguei");
+  });
+
+  it("quem tem trabalho a decorrer não cai no fundo com os parados", () => {
+    // Tem dinheiro a caminho: não é «sem nada».
+    expect(PAINEL).toContain("const aDecorrer = carteiras.filter(");
+    expect(PAINEL).toContain("[...comSaldo, ...aDecorrer, ...parados]");
+  });
+
+  it("os três totais aparecem no topo", () => {
+    expect(PAINEL).toContain("Por finalizar");
+    expect(PAINEL).toContain("Por transferir");
+    expect(PAINEL).toContain("Já pagos");
+    // E só o do meio tem cor: é o único que exige acção hoje.
+    const i = PAINEL.indexOf("Por transferir");
+    expect(PAINEL.slice(Math.max(0, i - 400), i)).toContain("border-emerald-500/30");
+  });
+});
+
+describe("a morada fiscal deixa de estar atrás do interruptor", () => {
+  const PERFIL_ECRA = readFileSync(
+    join(process.cwd(), "src/app/profissionais/painel/Perfil.tsx"),
+    "utf8",
+  );
+
+  it("o NIF e a morada fiscal aparecem a toda a gente", () => {
+    /*
+     * "Falta a opção de colocar a morada fiscal, que é muitas vezes diferente
+     * da actual."
+     *
+     * Existia — mas só aparecia a quem ligasse «Emito fatura». Fazia sentido
+     * enquanto isto era só sobre facturas; deixou de fazer no dia em que
+     * passámos a pagar a estas pessoas. Quem recebe dinheiro tem de ser
+     * identificável, passe factura ou não.
+     *
+     * O TRSul tem 57 € a receber e a ficha dele diz «sem NIF · morada fiscal
+     * por indicar», porque não liga um interruptor que não lhe diz respeito.
+     */
+    const i = PERFIL_ECRA.indexOf('{seccao === "faturacao" && (');
+    const gate = PERFIL_ECRA.indexOf("{dados.emiteFatura && (", i);
+    const nif = PERFIL_ECRA.indexOf('<Campo etiqueta="NIF">', i);
+    const morada = PERFIL_ECRA.indexOf('etiqueta="Morada fiscal"', i);
+    expect(nif).toBeGreaterThan(-1);
+    expect(nif).toBeLessThan(gate);
+    expect(morada).toBeLessThan(gate);
+  });
+
+  it("o regime de IVA continua atrás dele — esse só existe com factura", () => {
+    const gate = PERFIL_ECRA.indexOf("{dados.emiteFatura && (");
+    expect(PERFIL_ECRA.indexOf("Regime de IVA")).toBeGreaterThan(gate);
+  });
+
+  it("a Conta bancária diz onde eles estão", () => {
+    // Foi lá que ele foi procurar: quem pensa em receber dinheiro pensa nessa
+    // secção. Uma linha a dizer onde está poupa a procura.
+    expect(PERFIL_ECRA).toContain("O NIF e a morada fiscal ficam em");
+    expect(PERFIL_ECRA).toContain("Faturação e IVA");
+  });
+
+  it("continuam a ser gravados na mesma chamada", () => {
+    expect(PERFIL_ECRA).toContain("moradaFiscal: dados.moradaFiscal,");
+    expect(PERFIL_ECRA).toContain("codigoPostalFiscal: dados.codigoPostalFiscal,");
+    expect(PERFIL_ECRA).toContain("localidadeFiscal: dados.localidadeFiscal,");
   });
 });

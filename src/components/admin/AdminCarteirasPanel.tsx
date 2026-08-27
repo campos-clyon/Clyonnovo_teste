@@ -36,6 +36,7 @@ type Trabalho = {
   valorAcordado: number;
   recebe: number;
   confirmadoEm: string | null;
+  aguardaConfirmacao: boolean;
 };
 
 type Ficha = {
@@ -54,8 +55,10 @@ type Ficha = {
   regimeIva: string | null;
   emiteFatura: boolean;
   porPagar: Trabalho[];
+  porFinalizar: Trabalho[];
   jaPago: number;
   totalPorPagar: number;
+  totalPorFinalizar: number;
 };
 
 const euros = (v: number) => v.toFixed(2).replace(".", ",") + " €";
@@ -101,6 +104,8 @@ export default function AdminCarteirasPanel() {
   const { token } = useAdminAuth();
   const [carteiras, setCarteiras] = useState<Ficha[]>([]);
   const [total, setTotal] = useState(0);
+  const [porFinalizar, setPorFinalizar] = useState(0);
+  const [jaPago, setJaPago] = useState(0);
   const [semComoPagar, setSemComoPagar] = useState(0);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
@@ -121,6 +126,8 @@ export default function AdminCarteirasPanel() {
         }
         setCarteiras(dados.carteiras ?? []);
         setTotal(dados.total ?? 0);
+        setPorFinalizar(dados.totalPorFinalizar ?? 0);
+        setJaPago(dados.totalJaPago ?? 0);
         setSemComoPagar(dados.semComoPagar ?? 0);
         setErro("");
       } catch {
@@ -170,7 +177,9 @@ export default function AdminCarteirasPanel() {
   }
 
   const comSaldo = carteiras.filter((c) => c.totalPorPagar > 0);
-  const semSaldo = carteiras.filter((c) => c.totalPorPagar === 0);
+  /* Quem tem trabalho a decorrer não é «sem nada»: tem dinheiro a caminho. */
+  const aDecorrer = carteiras.filter((c) => c.totalPorPagar === 0 && c.totalPorFinalizar > 0);
+  const parados = carteiras.filter((c) => c.totalPorPagar === 0 && c.totalPorFinalizar === 0);
 
   return (
     <section className="rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
@@ -197,6 +206,27 @@ export default function AdminCarteirasPanel() {
 
       {/* O número que interessa, em cima. */}
       <div className="mt-5 flex flex-wrap items-center gap-3">
+        {/*
+          TRÊS MONTES, e cada trabalho está exactamente num deles.
+
+          "A carteira deve mostrar os valores já pagos, por pagar, e por
+          finalizar — seriam os trabalhos acordados mas ainda não realizados."
+
+          O do meio é o que exige acção hoje, e por isso é o que tem cor. O da
+          esquerda diz o que aí vem — é o que decide se vale a pena esperar
+          pela próxima transferência ou fazer já esta. O da direita é a conta
+          feita, e serve para conferir.
+        */}
+        <div className="rounded-2xl border border-slate-700 bg-slate-950/50 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Por finalizar
+          </p>
+          <p className="font-[Poppins] text-2xl font-bold text-slate-300">
+            {euros(porFinalizar)}
+          </p>
+          <p className="text-xs text-slate-500">acordado, ainda por fazer</p>
+        </div>
+
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
             Por transferir
@@ -205,6 +235,14 @@ export default function AdminCarteirasPanel() {
           <p className="text-xs text-emerald-300/70">
             {comSaldo.length} {comSaldo.length === 1 ? "profissional" : "profissionais"}
           </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-700 bg-slate-950/50 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Já pagos
+          </p>
+          <p className="font-[Poppins] text-2xl font-bold text-slate-300">{euros(jaPago)}</p>
+          <p className="text-xs text-slate-500">desde o início</p>
         </div>
 
         {/*
@@ -241,11 +279,15 @@ export default function AdminCarteirasPanel() {
         </p>
       ) : (
         <div className="mt-6 space-y-3">
-          {[...comSaldo, ...semSaldo].map((c) => (
+          {[...comSaldo, ...aDecorrer, ...parados].map((c) => (
             <article
               key={c.id}
               className={`rounded-2xl border bg-slate-900 p-4 ${
-                c.totalPorPagar > 0 ? "border-slate-700" : "border-slate-800 opacity-70"
+                c.totalPorPagar > 0
+                  ? "border-slate-700"
+                  : c.totalPorFinalizar > 0
+                    ? "border-slate-800"
+                    : "border-slate-800 opacity-60"
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -272,6 +314,9 @@ export default function AdminCarteirasPanel() {
                   </p>
                   <p className="text-[11px] text-slate-500">
                     por transferir
+                    {c.totalPorFinalizar > 0
+                      ? ` · ${euros(c.totalPorFinalizar)} por finalizar`
+                      : ""}
                     {c.jaPago > 0 ? ` · ${euros(c.jaPago)} já pagos` : ""}
                   </p>
                 </div>
@@ -372,6 +417,45 @@ export default function AdminCarteirasPanel() {
                         )}
                         Já paguei
                       </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/*
+                O QUE ESTÁ A DECORRER — sem botão de pagar.
+
+                Não é dinheiro dele ainda: está cativo do lado do cliente e só
+                se solta quando o trabalho for confirmado. Um botão aqui seria
+                um convite a pagar por trabalho que ainda não foi feito.
+              */}
+              {c.porFinalizar.length > 0 && (
+                <div className="mt-3 space-y-1.5 border-t border-slate-800 pt-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    A decorrer
+                  </p>
+                  {c.porFinalizar.map((t) => (
+                    <div
+                      key={t.negociacaoId}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-400">
+                          #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
+                          {t.cidade ? ` · ${t.cidade}` : ""}
+                        </p>
+                        <p className="text-[11px] text-slate-600">
+                          Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
+                        </p>
+                      </div>
+                      <span
+                        className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          t.aguardaConfirmacao
+                            ? "bg-amber-500/15 text-amber-300"
+                            : "bg-slate-800 text-slate-400"
+                        }`}
+                      >
+                        {t.aguardaConfirmacao ? "falta confirmar" : "por fazer"}
+                      </span>
                     </div>
                   ))}
                 </div>
