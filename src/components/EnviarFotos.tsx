@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, Loader2, X } from "lucide-react";
+import { Camera, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 
 /**
@@ -34,6 +34,8 @@ export default function EnviarFotos({
   rotulo?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  /* O segundo campo, sem `capture`: abre a galeria em vez da câmara. */
+  const daGaleria = useRef<HTMLInputElement>(null);
   const [aEnviar, setAEnviar] = useState(0);
   const [erro, setErro] = useState("");
 
@@ -109,6 +111,27 @@ export default function EnviarFotos({
         )}
       </div>
 
+      {/*
+        DUAS ENTRADAS, PORQUE HÁ DOIS CASOS.
+
+        "Vamos colocar a opção de enviar uma imagem da galeria para a
+        confirmação do trabalho, pois nem sempre o dono da conta está no local
+        da recolha."
+
+        Havia uma entrada só, com `capture="environment"`: num telemóvel isso
+        abre a câmara e mais nada. Serve para quem está no local com o trabalho
+        acabado à frente — e é a maioria das vezes, por isso continua a ser o
+        botão grande.
+
+        Mas o TRSul do #237 não estava lá: a equipa fez o trabalho e mandou-lhe
+        as fotografias pelo WhatsApp. Ele não tinha por onde as carregar, e a
+        prova acabou por ser uma frase — "não consegui carregar a foto do
+        serviço, porém foi enviado ao número particular". A prova de um
+        trabalho de 60 € ficou fora do registo por causa de um atributo.
+
+        `capture` é uma sugestão ao sistema, não um filtro: para dar as duas
+        opções é preciso haver dois campos, um com ele e outro sem.
+      */}
       <input
         ref={input}
         type="file"
@@ -118,6 +141,26 @@ export default function EnviarFotos({
         onChange={(e) => escolher(e.target.files)}
         className="hidden"
       />
+      <input
+        ref={daGaleria}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(e) => escolher(e.target.files)}
+        className="hidden"
+      />
+
+      {fotos.length < maximo && (
+        <button
+          type="button"
+          onClick={() => daGaleria.current?.click()}
+          disabled={aEnviar > 0}
+          className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 transition active:bg-slate-50 disabled:opacity-50"
+        >
+          <ImageIcon className="h-4 w-4 text-slate-400" aria-hidden="true" />
+          Escolher da galeria
+        </button>
+      )}
 
       {erro && <p className="mt-2 text-xs text-red-600">{erro}</p>}
     </div>
