@@ -2909,7 +2909,6 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
         return (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={(e) => { if (e.target === e.currentTarget) setCalendarModalOpen(false); }}
           >
             <div
               className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_40px_100px_rgba(0,0,0,0.15)]"
@@ -3535,12 +3534,6 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
             trás lia-se através da moldura e parecia tudo sobreposto e partido.
           */
           className="fixed inset-0 z-[60] overflow-y-auto bg-[#0B1220] p-4 sm:p-8"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setAVerificar(false);
-              setVersao((v) => v + 1);
-            }
-          }}
         >
           <div className="mx-auto max-w-5xl">
             <RegistarPedido
