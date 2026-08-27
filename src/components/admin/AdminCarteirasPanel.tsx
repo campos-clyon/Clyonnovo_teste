@@ -106,6 +106,7 @@ export default function AdminCarteirasPanel() {
   const [total, setTotal] = useState(0);
   const [porFinalizar, setPorFinalizar] = useState(0);
   const [jaPago, setJaPago] = useState(0);
+  const [clyon, setClyon] = useState({ porFinalizar: 0, ganha: 0, fechada: 0, faturado: 0 });
   const [semComoPagar, setSemComoPagar] = useState(0);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
@@ -128,6 +129,7 @@ export default function AdminCarteirasPanel() {
         setTotal(dados.total ?? 0);
         setPorFinalizar(dados.totalPorFinalizar ?? 0);
         setJaPago(dados.totalJaPago ?? 0);
+        setClyon(dados.clyon ?? { porFinalizar: 0, ganha: 0, fechada: 0, faturado: 0 });
         setSemComoPagar(dados.semComoPagar ?? 0);
         setErro("");
       } catch {
@@ -263,6 +265,51 @@ export default function AdminCarteirasPanel() {
             </div>
           </div>
         )}
+      </div>
+
+      {/*
+        A CONTA DA CASA.
+
+        "Coloque também os ganhos da CLYON."
+
+        A comissão vem das duas pontas — 6% que o cliente paga a mais e 5% que
+        se desconta ao profissional — e por isso não se lê nem do que entra nem
+        do que sai. É a diferença entre os dois, e não estava em lado nenhum.
+
+        Segue os mesmos três estados do dinheiro deles, de propósito: uma
+        comissão de um trabalho por fazer ainda não é ganho, é uma promessa.
+        Só o número da direita está fechado dos dois lados.
+      */}
+      <div className="mt-4 rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.06] p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
+            A comissão da CLYON
+          </p>
+          <p className="text-xs text-slate-400">
+            {euros(clyon.faturado)} facturados aos clientes até hoje
+          </p>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div>
+            <p className="text-[11px] text-slate-500">A caminho</p>
+            <p className="font-[Poppins] text-lg font-bold text-slate-300">
+              {euros(clyon.porFinalizar)}
+            </p>
+            <p className="text-[11px] text-slate-600">de trabalho por fazer</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-slate-500">Ganha, por liquidar</p>
+            <p className="font-[Poppins] text-lg font-bold text-slate-300">
+              {euros(clyon.ganha)}
+            </p>
+            <p className="text-[11px] text-slate-600">falta transferir a parte dele</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-cyan-300">Fechada</p>
+            <p className="font-[Poppins] text-xl font-bold text-white">{euros(clyon.fechada)}</p>
+            <p className="text-[11px] text-cyan-300/70">trabalho feito e pago</p>
+          </div>
+        </div>
       </div>
 
       {erro && (

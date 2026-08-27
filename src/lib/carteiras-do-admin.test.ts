@@ -230,3 +230,46 @@ describe("a morada fiscal deixa de estar atrás do interruptor", () => {
     expect(PERFIL_ECRA).toContain("localidadeFiscal: dados.localidadeFiscal,");
   });
 });
+
+describe("a comissão da casa", () => {
+  it("vem das DUAS pontas, e não de uma", () => {
+    /*
+     * "Coloque também os ganhos da CLYON."
+     *
+     * 6% que o cliente paga a mais e 5% que se desconta ao profissional. Não
+     * se lê nem do que entra nem do que sai: é a diferença entre os dois, e
+     * não estava em lado nenhum do backoffice.
+     */
+    expect(ROTA).toContain("comissaoDaClyon(acordado)");
+    expect(ROTA).toContain("quantoOClientePaga(acordado)");
+  });
+
+  it("segue os mesmos três estados do dinheiro deles", () => {
+    // Uma comissão de trabalho por fazer ainda não é ganho: é promessa.
+    expect(ROTA).toContain("const clyon = { porFinalizar: 0, ganha: 0, fechada: 0, faturado: 0 };");
+    expect(ROTA).toContain("clyon.porFinalizar = Math.round(");
+    expect(ROTA).toContain("clyon.ganha = Math.round(");
+    expect(ROTA).toContain("clyon.fechada = Math.round(");
+  });
+
+  it("só conta como facturado o que o cliente já pagou", () => {
+    // O trabalho por fazer não entra: o dinheiro está cativo, não facturado.
+    const i = ROTA.indexOf("if (l.confirmadoEm == null) {");
+    const bloco = ROTA.slice(i, ROTA.indexOf("continue;", i));
+    expect(bloco).toContain("clyon.porFinalizar");
+    expect(bloco).not.toContain("clyon.faturado");
+  });
+
+  it("o número fechado é o que tem destaque — é o único que é mesmo ganho", () => {
+    const i = PAINEL.indexOf("A comissão da CLYON");
+    const bloco = PAINEL.slice(i, i + 1800);
+    expect(bloco).toContain("Fechada");
+    expect(bloco).toContain("trabalho feito e pago");
+    // Os outros dois ficam em cinzento; só este é branco.
+    expect(bloco).toContain('text-xl font-bold text-white">{euros(clyon.fechada)}');
+  });
+
+  it("mostra o facturado ao cliente, para dar escala à comissão", () => {
+    expect(PAINEL).toContain("facturados aos clientes até hoje");
+  });
+});
