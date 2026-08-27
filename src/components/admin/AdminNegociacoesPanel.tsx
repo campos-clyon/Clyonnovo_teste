@@ -18,6 +18,8 @@ import {
   Trash2,
   UserRound,
   XCircle,
+  Link as LinkIcon,
+  Check,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { oQueSeDesfaz, avisoDoCancelamento } from "@/lib/cancelamento";
@@ -308,6 +310,8 @@ export default function AdminNegociacoesPanel({
   const [negociacoesVisiveis, setNegociacoesVisiveis] = useState<Set<number>>(new Set());
   /** Os que estao com a caixa marcada, para apagar em conjunto. */
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  /* Qual o link que acabou de ser copiado, para o botão o confirmar. */
+  const [copiado, setCopiado] = useState<string | null>(null);
   const [aApagar, setAApagar] = useState(false);
   /*
    * Duas peças para a linha "actualizado há X": quando os dados foram lidos,
@@ -475,6 +479,61 @@ export default function AdminNegociacoesPanel({
    * anterior. Nos pedidos deste ecrã o cliente quase nunca tem link nenhum
    * (chegou por telefone) — mas quando tem, o botão avisa antes.
    */
+  /**
+   * O LINK PARA ELE MANDAR, e mais nada.
+   *
+   * "Sempre que clico em VER COMO CLIENTE ele abre para mim e deixa o link
+   * visível. Eu copio e envio ao cliente, porém já não serve. Dê-me a opção
+   * apenas de gerar link para enviar ao cliente."
+   *
+   * O link do cliente vive na base só em resumo criptográfico: o texto não se
+   * recupera, e por isso QUALQUER pedido de link gera um novo e mata o
+   * anterior. Isso é uma boa propriedade — serve para revogar um link
+   * reencaminhado por engano — mas transformava «espreitar» num acto
+   * destrutivo, e ninguém espera isso de um botão que se chama «ver».
+   *
+   * Foi o que aconteceu à D. Sónia do #234: ele abriu para conferir, o link
+   * que lhe tinha mandado morreu, e ela respondeu «este link já não abre
+   * nenhum pedido» — com uma proposta de 170 € à espera do outro lado.
+   *
+   * Aqui gera-se uma vez, com aviso, e copia-se para a área de transferência
+   * no mesmo gesto. É o que ele faz a seguir, todas as vezes.
+   */
+  async function linkParaOCliente(p: Pedido) {
+    const chave = `c${p.id}`;
+    if (
+      !window.confirm(
+        `Gerar o link do pedido #${p.id} para mandar ao cliente?
+
+` +
+          `Se já lhe mandou um link antes, esse deixa de funcionar — o novo passa ` +
+          `a ser o único que abre este pedido.
+
+` +
+          `O email não é enviado: o link fica aqui para copiar.`,
+      )
+    )
+      return;
+
+    const t = await reenviar(chave, { pedidoId: p.id, para: "cliente", paraCopiar: true });
+    if (!t) return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/pedido/${t}`);
+      setCopiado(chave);
+      setTimeout(() => setCopiado((c) => (c === chave ? null : c)), 2500);
+    } catch {
+      /* Sem área de transferência, fica a caixa por baixo para copiar à mão. */
+    }
+  }
+
+  /**
+   * Espreitar o que o cliente vê — sem matar o link dele.
+   *
+   * Abre APENAS um link já gerado nesta sessão. Sem ele, deixou de gerar um
+   * novo por conta própria: era esse o passo que apagava o link que o cliente
+   * tinha na mão, e fazia-o em silêncio, ao carregar num botão que promete
+   * mostrar e não mexer.
+   */
   async function verComoCliente(p: Pedido) {
     const chave = `c${p.id}`;
     const jaTem = linksEmClaro[chave];
@@ -482,14 +541,11 @@ export default function AdminNegociacoesPanel({
       window.open(`/pedido/${jaTem}`, "_blank", "noopener");
       return;
     }
-    if (p.contactEmail?.trim()) {
-      const avanca = window.confirm(
-        "Este cliente tem email e pode ter guardado o link antigo. Abrir a página gera um link novo e o dele deixa de funcionar. Continuar?",
-      );
-      if (!avanca) return;
-    }
-    const t = await reenviar(chave, { pedidoId: p.id, para: "cliente" });
-    if (t) window.open(`/pedido/${t}`, "_blank", "noopener");
+    setErro(
+      `Para ver o pedido #${p.id} como o cliente é preciso gerar o link primeiro — ` +
+        `e gerar um link novo faz o anterior deixar de funcionar. ` +
+        `Use "Link para o cliente" se for mesmo para lhe mandar.`,
+    );
   }
 
   async function promover(pedidoId: number) {
@@ -1155,17 +1211,45 @@ export default function AdminNegociacoesPanel({
           >
             Ficha e distribuição
           </button>
+          {/*
+            GERAR O LINK, que é o que ele faz noventa por cento das vezes.
+
+            Vem antes de «ver» de propósito: é a acção real, e a outra é a
+            curiosidade. Copia no mesmo gesto — copiar era sempre o passo a
+            seguir, e obrigá-lo a caçar a caixa por baixo era um passo a mais
+            no meio de uma conversa de WhatsApp.
+          */}
           <button
-            onClick={() => verComoCliente(p)}
+            onClick={() => linkParaOCliente(p)}
             disabled={ocupado === `c${p.id}`}
-            title="Abre a página verdadeira do pedido, a mesma que o cliente vê"
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-50"
+            title="Gera o link do pedido para lhe mandar por WhatsApp ou SMS. O anterior deixa de funcionar."
+            className="flex items-center gap-1.5 rounded-lg border border-cyan-700/60 bg-cyan-500/10 px-2.5 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
           >
             {ocupado === `c${p.id}` ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : copiado === `c${p.id}` ? (
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
-              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+              <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
             )}
+            {copiado === `c${p.id}` ? "Copiado" : "Link para o cliente"}
+          </button>
+          {/*
+            «Ver» só abre o que já foi gerado. Sem isso, deixou de gerar por
+            conta própria — era esse passo que apagava, em silêncio, o link que
+            o cliente tinha na mão.
+          */}
+          <button
+            onClick={() => verComoCliente(p)}
+            disabled={ocupado === `c${p.id}` || !linksEmClaro[`c${p.id}`]}
+            title={
+              linksEmClaro[`c${p.id}`]
+                ? "Abre a página verdadeira do pedido, a mesma que o cliente vê"
+                : "Gere primeiro o link — abrir sem ele obrigaria a criar um novo, e o do cliente morria"
+            }
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-40"
+          >
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
             Ver como o cliente
           </button>
           {/*
