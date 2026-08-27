@@ -1275,6 +1275,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     status: string | null;
     /** Quando o admin abriu este pedido DEPOIS de concluído. Null = por ver. */
     concluidoVistoEm: Date | null;
+    linkExpiraEm: Date | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -1320,6 +1321,15 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
   const [pedidos] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
             o.valorDesejadoCliente, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
+            -- A validade do link do cliente serve de MARCA DE VERSAO.
+            --
+            -- Cada token novo poe uma data nova (agora + 30 dias), por isso
+            -- duas datas diferentes sao dois tokens diferentes. E como o ecra
+            -- guarda o texto do link que gerou, e o unico modo de ele saber
+            -- que alguem o substituiu entretanto -- e foi isso que aconteceu
+            -- ao link da D. Sonia: uma proposta da Sthefanny rodou o token
+            -- tres horas antes de ele o copiar.
+            o.acessoTokenExpiraEm,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source'))
@@ -1367,6 +1377,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     origem: (p.origem as string) ?? null,
     status: (p.status as string) ?? null,
     concluidoVistoEm: (p.concluidoVistoEm as Date) ?? null,
+    /* A marca de versão do link do cliente — ver o comentário na consulta. */
+    linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));

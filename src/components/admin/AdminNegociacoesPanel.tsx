@@ -201,6 +201,14 @@ type Pedido = {
   status: string | null;
   /** Quando o admin abriu o pedido depois de concluído. Null = por ver. */
   concluidoVistoEm: string | null;
+  /**
+   * A validade do link do cliente — que serve de MARCA DE VERSÃO.
+   *
+   * Cada token novo põe uma data nova, por isso duas datas diferentes são dois
+   * tokens diferentes. É assim que o ecrã sabe que o link que tem na caixa foi
+   * substituído por outro caminho, sem ninguém lhe dizer.
+   */
+  linkExpiraEm: string | null;
   createdAt: string;
   negociacoes: Negociacao[];
 };
@@ -312,6 +320,8 @@ export default function AdminNegociacoesPanel({
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   /* Qual o link que acabou de ser copiado, para o botão o confirmar. */
   const [copiado, setCopiado] = useState<string | null>(null);
+  /* A versão do link que temos em mão, por pedido — ver `linkExpiraEm`. */
+  const [versaoDoLink, setVersaoDoLink] = useState<Record<string, string>>({});
   const [aApagar, setAApagar] = useState(false);
   /*
    * Duas peças para a linha "actualizado há X": quando os dados foram lidos,
@@ -451,6 +461,17 @@ export default function AdminNegociacoesPanel({
       // lá chegar, porque na base só existe o hash.
       if (dados.token) {
         setLinksEmClaro((l) => ({ ...l, [chave]: dados.token }));
+        /*
+         * Guardar QUAL a versão do link que temos na mão.
+         *
+         * Sem isto, a caixa mostrava um texto para sempre — e qualquer coisa
+         * que rodasse o token noutro sítio deixava-a a mentir em silêncio. Foi
+         * o que matou o link da D. Sónia: uma proposta da Sthefanny rodou o
+         * token três horas antes de ele copiar o que estava no ecrã.
+         */
+        if (dados.expiraEm) {
+          setVersaoDoLink((v) => ({ ...v, [chave]: String(dados.expiraEm) }));
+        }
         return dados.token as string;
       }
       setLinksEmClaro((l) => {
@@ -1293,7 +1314,39 @@ export default function AdminNegociacoesPanel({
           </button>
         </div>
 
-        {linksEmClaro[chaveCliente] && (
+        {/*
+          O LINK, E SE AINDA ESTÁ VIVO.
+
+          "Continua a dar erro." E dava: o link que ele copiou do ecrã já
+          estava morto há três horas. Uma proposta da Sthefanny tinha rodado o
+          token — cada aviso de proposta a um cliente sem conta gera um link
+          novo, e cada link novo mata o anterior — e a caixa continuou a
+          mostrar o velho, sem nada que o denunciasse.
+
+          Comparar a validade resolve-o com exactidão: cada token novo põe uma
+          data nova, por isso datas diferentes são tokens diferentes. Se a que
+          temos em mão já não é a da base, o link morreu, e diz-se em vez de o
+          deixar copiar.
+        */}
+        {linksEmClaro[chaveCliente] &&
+          versaoDoLink[chaveCliente] &&
+          p.linkExpiraEm &&
+          String(p.linkExpiraEm) !== versaoDoLink[chaveCliente] && (
+            <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5">
+              <p className="text-xs font-semibold text-amber-200">
+                Este link já não serve — foi substituído entretanto.
+              </p>
+              <p className="mt-0.5 text-xs text-amber-300/80">
+                Um profissional respondeu e o aviso ao cliente gerou um link novo, que matou
+                este. Carregue em &ldquo;Link para o cliente&rdquo; e mande o novo.
+              </p>
+            </div>
+          )}
+
+        {linksEmClaro[chaveCliente] &&
+          (!versaoDoLink[chaveCliente] ||
+            !p.linkExpiraEm ||
+            String(p.linkExpiraEm) === versaoDoLink[chaveCliente]) && (
           <LinkEmClaro
             caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
             /*

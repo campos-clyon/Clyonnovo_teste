@@ -91,7 +91,19 @@ export async function POST(req: NextRequest) {
             "Link de acesso do cliente gerado para envio à mão (WhatsApp ou SMS). " +
             "O anterior deixou de funcionar.",
         });
-        return NextResponse.json({ ok: true, enviado: false, token: acesso.token });
+        /*
+         * `expiraEm` volta com o token, e é a marca de versão dele.
+         *
+         * O ecrã guarda-a ao lado do texto do link. Quando alguma coisa rodar
+         * o token noutro sítio — um aviso de proposta, por exemplo — a data na
+         * base passa a ser outra, e a caixa sabe que o que tem na mão morreu.
+         */
+        return NextResponse.json({
+          ok: true,
+          enviado: false,
+          token: acesso.token,
+          expiraEm: acesso.expiraEm,
+        });
       }
 
       const enviado = await enviarLinkDoPedido({
@@ -113,7 +125,12 @@ export async function POST(req: NextRequest) {
           : "Link de acesso do cliente regenerado, mas o email NÃO saiu.",
       });
 
-      return NextResponse.json({ ok: true, enviado, token: enviado ? undefined : acesso.token });
+      return NextResponse.json({
+        ok: true,
+        enviado,
+        token: enviado ? undefined : acesso.token,
+        expiraEm: acesso.expiraEm,
+      });
     }
 
     // ── O link de um profissional ───────────────────────────────────────────
