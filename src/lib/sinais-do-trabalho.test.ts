@@ -10,6 +10,7 @@ import {
   RAIO_QUENTE_KM,
   BOM_POR_KM,
 } from "./sinais-do-trabalho";
+import { deQuemEAVez } from "@/app/profissionais/painel/tipos";
 
 /**
  * Os sinais no painel do profissional.
@@ -182,11 +183,66 @@ describe("o cartão no painel", () => {
     expect(TRABALHOS).toContain("Number.POSITIVE_INFINITY");
   });
 
-  it("o controlo rola em vez de dobrar, e não parte no telemóvel", () => {
-    const i = TRABALHOS.indexOf("{podeOrdenar && visiveis.length > 1 && (");
-    const bloco = TRABALHOS.slice(i, i + 1400);
-    expect(bloco).toContain("overflow-x-auto");
-    expect(bloco).toContain("whitespace-nowrap");
-    expect(bloco).toContain("shrink-0");
+  it("o controlo vive fechado, e fecha-se sozinho depois de escolher", () => {
+    /*
+     * Deslizava na horizontal, e resolvia pouco: num telemóvel de 360 px a
+     * última opção saía do ecrã, e ninguém arrasta uma barra que não sabe que
+     * continua. Ele apanhou-o numa fotografia.
+     *
+     * Fechado é um botão com a escolha actual. Escolher fecha — escolher é o
+     * fim da tarefa, e a gaveta aberta rouba à lista um cartão inteiro.
+     */
+    expect(TRABALHOS).toContain("const [ordemAberta, setOrdemAberta] = useState(false);");
+    expect(TRABALHOS).toContain("aria-expanded={ordemAberta}");
+    const i = TRABALHOS.indexOf("setOrdem(o.id);");
+    expect(TRABALHOS.slice(i, i + 120)).toContain("setOrdemAberta(false);");
+    // E mudar de separador fecha-a: a escolha fica, a gaveta não.
+    expect(TRABALHOS).toContain("useEffect(() => setOrdemAberta(false), [separador]);");
+  });
+});
+
+describe("de quem é a vez", () => {
+  it("uma proposta DELE deixa a bola do lado do cliente", () => {
+    /*
+     * "O profissional fez uma proposta mas o pedido ficou no estado «à espera
+     * da sua resposta» — devia estar à espera da resposta do cliente."
+     *
+     * O estado `aberta` cobre os dois lados da mesma mesa. A lista olhava só
+     * para o nome do estado e dizia sempre a primeira das duas histórias; o
+     * ecrã de dentro, que olha para as propostas, dizia a segunda. O mesmo
+     * trabalho contava coisas diferentes conforme se abrisse ou não.
+     */
+    const dele = JSON.stringify([
+      { por: "cliente", valor: 320, estado: "recusada" },
+      { por: "profissional", valor: 300, estado: "pendente" },
+    ]);
+    expect(deQuemEAVez(dele)).toBe("cliente");
+  });
+
+  it("uma proposta do CLIENTE espera por ele", () => {
+    const doCliente = JSON.stringify([{ por: "cliente", valor: 320, estado: "pendente" }]);
+    expect(deQuemEAVez(doCliente)).toBe("sua");
+  });
+
+  it("manda a última pendente, e não a primeira que aparecer", () => {
+    const ida = JSON.stringify([
+      { por: "profissional", valor: 400, estado: "recusada" },
+      { por: "cliente", valor: 350, estado: "recusada" },
+      { por: "profissional", valor: 380, estado: "pendente" },
+    ]);
+    expect(deQuemEAVez(ida)).toBe("cliente");
+  });
+
+  it("sem nenhuma pendente, ninguém está à espera de ninguém", () => {
+    expect(deQuemEAVez(null)).toBeNull();
+    expect(deQuemEAVez("[]")).toBeNull();
+    expect(deQuemEAVez(JSON.stringify([{ por: "cliente", estado: "aceite" }]))).toBeNull();
+    // E o ecrã diz isso, em vez de inventar uma espera que não existe.
+    expect(TRABALHOS).toContain("sem propostas ainda");
+  });
+
+  it("o cartão usa isto em vez do nome do estado", () => {
+    expect(TRABALHOS).toContain('const vez = p.estado === "aberta" ? deQuemEAVez(p.propostas) : null;');
+    expect(TRABALHOS).toContain('vez === "cliente"');
   });
 });

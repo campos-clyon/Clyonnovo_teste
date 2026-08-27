@@ -276,6 +276,30 @@ export function provaDe(json: string | null): { fotos: string[]; nota: string; e
 }
 
 /**
+ * De quem é a vez, numa negociação aberta.
+ *
+ * "O profissional fez uma proposta mas o pedido ficou no estado «à espera da
+ * sua resposta» — devia estar à espera da resposta do cliente, já que foi ele
+ * que fez a proposta."
+ *
+ * O estado `aberta` cobre os DOIS lados da mesma mesa: o cliente propôs e
+ * falta ele responder, ou ele propôs e falta o cliente. A lista dizia sempre
+ * a primeira, porque olhava só para o nome do estado — e o ecrã de dentro,
+ * que olha para as propostas, dizia a segunda. O mesmo trabalho contava duas
+ * histórias conforme se abria ou não.
+ *
+ * Quem manda é a última proposta PENDENTE, e de quem ela é. Se não houver
+ * nenhuma pendente, ninguém está à espera de ninguém — e é isso que se diz.
+ */
+export function deQuemEAVez(propostasJson: string | null): "sua" | "cliente" | null {
+  const pendente = [...propostasDe(propostasJson)]
+    .reverse()
+    .find((x) => x?.estado === "pendente");
+  if (!pendente) return null;
+  return pendente.por === "profissional" ? "cliente" : "sua";
+}
+
+/**
  * As propostas tal como estão gravadas.
  *
  * O tipo é o do motor — `Proposta` de negociacao.ts — e não um parecido escrito
