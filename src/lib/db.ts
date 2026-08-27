@@ -523,6 +523,25 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "ibanTitular",
         sql: "ALTER TABLE providers ADD COLUMN ibanTitular VARCHAR(120) NULL DEFAULT NULL",
       },
+      /*
+       * MB WAY — o outro caminho para o dinheiro.
+       *
+       * "Deveríamos ver o IBAN dos pros, nome completo e morada fiscal, assim
+       * como o MB WAY como outra opção de pagamento."
+       *
+       * Dos três profissionais com trabalho por pagar hoje, DOIS não têm IBAN.
+       * Enquanto o pagamento for feito à mão pelo banco, não ter para onde
+       * transferir é o mesmo que não haver pagamento — e um número de MB WAY é
+       * uma coisa que toda a gente tem à mão e sabe de cor.
+       *
+       * Fica no telemóvel dele, mas em campo PRÓPRIO: o número de contacto e o
+       * número que recebe dinheiro podem não ser o mesmo, e assumir que são é
+       * mandar dinheiro para o sítio errado.
+       */
+      {
+        name: "mbway",
+        sql: "ALTER TABLE providers ADD COLUMN mbway VARCHAR(20) NULL DEFAULT NULL",
+      },
 
       // ── Morada fiscal (19-08-2026) ───────────────────────────────────────
       // A da declaração de actividade, que pode não ser onde ele trabalha. Vai

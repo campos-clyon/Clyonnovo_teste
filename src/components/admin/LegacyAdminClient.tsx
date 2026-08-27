@@ -15,6 +15,7 @@ import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel"
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
+import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
@@ -90,6 +91,7 @@ type AdminSection =
   | "profissionais"
   | "negociacoes"
   | "levantamentos"
+  | "carteiras"
   | "testadores"
   | "negociacoes_clyon"
   | "whatsapp";
@@ -218,6 +220,7 @@ const adminNavItems: Array<{
   { id: "configs",   icon: Settings2 },
   { id: "profissionais", icon: BadgeCheck },
   { id: "negociacoes",   icon: HandCoins },
+  { id: "carteiras", icon: Wallet },
   { id: "levantamentos", icon: Wallet },
   { id: "testadores",    icon: FlaskConical },
   { id: "negociacoes_clyon", icon: Building2 },
@@ -245,7 +248,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
   // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "whatsapp", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "whatsapp", "carteiras", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["testadores", "configs"] },
 ];
@@ -261,6 +264,7 @@ const sectionLabels: Record<AdminSection, string> = {
   configs:    "Configs",
   profissionais: "Profissionais",
   negociacoes:   "Negociações",
+  carteiras: "Carteiras",
   levantamentos: "Levantamentos",
   testadores:    "Acesso aos testes",
   negociacoes_clyon: "Negociações",
@@ -2891,6 +2895,16 @@ export default function ColaboradorAdminClient() {
               <AdminLevantamentosPanel />
             </section>
           )}
+
+          {/*
+            CARTEIRAS, ao lado dos Levantamentos e antes deles.
+
+            Os Levantamentos mostram quem PEDIU para receber. As Carteiras
+            mostram quem TEM A RECEBER — que é outra pergunta, e a única que
+            interessa enquanto o pagamento for feito à mão: para pedir é preciso
+            ter IBAN gravado, e quem não o tem nunca aparece na outra fila.
+          */}
+          {activeSection === "carteiras" && <AdminCarteirasPanel />}
 
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">

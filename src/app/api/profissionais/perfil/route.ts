@@ -115,6 +115,7 @@ export async function GET(req: NextRequest) {
         iban: iban ? ibanEncurtado(iban) : "",
         temIban: Boolean(iban),
         ibanTitular: p.ibanTitular ?? "",
+        mbway: p.mbway ?? "",
         desde: p.createdAt ?? null,
         avaliacao: reputacao.media,
         quantasAvaliacoes: reputacao.quantas,
@@ -323,6 +324,24 @@ export async function PUT(req: NextRequest) {
     } else {
       mudancas.numeroTransportador = n || null;
       guiaMudou = true;
+    }
+  }
+
+  if ("mbway" in corpo) {
+    /*
+     * Só os dígitos, e um número português tem nove.
+     *
+     * Um MB WAY mal escrito não devolve o dinheiro nem dá erro: paga a outra
+     * pessoa. Vale a pena recusar aqui em vez de descobrir depois.
+     */
+    const bruto = texto(corpo.mbway) ?? "";
+    const digitos = bruto.replace(/[^0-9]/g, "").replace(/^351/, "");
+    if (!bruto) {
+      mudancas.mbway = null;
+    } else if (digitos.length !== 9 || !/^9/.test(digitos)) {
+      erros.push({ campo: "mbway", mensagem: "Indique um telemóvel português de 9 dígitos." });
+    } else {
+      mudancas.mbway = digitos;
     }
   }
 
