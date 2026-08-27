@@ -17,6 +17,8 @@ import {
   Phone,
   Truck,
   User,
+  ArrowUpDown,
+  ChevronDown,
 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
@@ -31,6 +33,7 @@ import {
   ESTACIONAMENTO,
   emPortugues,
   ESTADO_DO_ENTULHO,
+  deQuemEAVez,
   distanciaPorExtenso,
   distanciaDaBase,
   fotosDe,
@@ -214,6 +217,8 @@ export default function Trabalhos({
    * para sempre passa a ser uma decisão de há três semanas.
    */
   const [ordem, setOrdem] = useState<Ordem>("recentes");
+  /* Fechado por omissão: a lista é o assunto, o filtro é um ajuste. */
+  const [ordemAberta, setOrdemAberta] = useState(false);
 
   /**
    * Abrir um trabalho, e deixar escrito que foi aberto.
@@ -241,6 +246,9 @@ export default function Trabalhos({
 
   /* Os que ele abriu nesta sessão, para o realce cair no toque. */
   const [lidosAgora, setLidosAgora] = useState<Set<number>>(new Set());
+
+  /* Mudar de separador fecha a gaveta: a escolha fica, a gaveta não. */
+  useEffect(() => setOrdemAberta(false), [separador]);
 
   const [aArquivar, setAArquivar] = useState<number | null>(null);
 
@@ -449,28 +457,63 @@ export default function Trabalhos({
         à direita — ninguém fica sem saber que existem.
       */}
       {podeOrdenar && visiveis.length > 1 && (
-        <div className="-mx-1 mb-3 flex items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            Ordenar
-          </span>
-          {ORDENS.map((o) => {
-            const activo = ordem === o.id;
-            return (
-              <button
-                key={o.id}
-                onClick={() => setOrdem(o.id)}
-                aria-pressed={activo}
-                title={o.rotulo}
-                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  activo
-                    ? "border-[#0B1929] bg-[#0B1929] text-white"
-                    : "border-[#E2EEF3] bg-white text-slate-500 active:bg-slate-50"
-                }`}
-              >
-                {o.curto}
-              </button>
-            );
-          })}
+        <div className="mb-3">
+          {/*
+            FECHADO POR OMISSÃO, e a fechar-se sozinho depois de escolher.
+
+            "Tem informações fora da tela, acredito que seja referente ao
+            filtro. Podemos deixá-lo fechado por padrão, e só abre ao clicar;
+            depois de escolher uma opção o filtro salva e fecha sozinho."
+
+            Quatro pastilhas mais a palavra «ORDENAR» não cabem num telemóvel
+            de 360 px: a última saía do ecrã, e uma opção que não se vê não
+            existe. Deslizavam na horizontal, o que resolve pouco — ninguém
+            arrasta uma barra que não sabe que continua.
+
+            Fechado, é UM botão que diz a escolha actual. Aberto, mostra as
+            quatro. Escolher fecha — porque escolher é o fim da tarefa, e
+            deixar aberto rouba à lista o espaço de um cartão inteiro.
+          */}
+          <button
+            onClick={() => setOrdemAberta((a) => !a)}
+            aria-expanded={ordemAberta}
+            className="flex items-center gap-1.5 rounded-full border border-[#E2EEF3] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition active:bg-slate-50"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+            {ORDENS.find((o) => o.id === ordem)?.curto ?? "Recentes"}
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-slate-400 transition-transform ${
+                ordemAberta ? "rotate-180" : ""
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {ordemAberta && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ORDENS.map((o) => {
+                const activo = ordem === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    onClick={() => {
+                      setOrdem(o.id);
+                      setOrdemAberta(false);
+                    }}
+                    aria-pressed={activo}
+                    title={o.rotulo}
+                    className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      activo
+                        ? "border-[#0B1929] bg-[#0B1929] text-white"
+                        : "border-[#E2EEF3] bg-white text-slate-500 active:bg-slate-50"
+                    }`}
+                  >
+                    {o.curto}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -482,7 +525,19 @@ export default function Trabalhos({
 
       <div className="space-y-3">
         {visiveis.map((p) => {
-          const estado = ESTADO[p.estado] ?? { texto: p.estado, cls: "bg-slate-100 text-slate-500" };
+          /*
+           * `aberta` não diz de quem é a vez — cobre os dois lados da mesa.
+           * As propostas dizem, e é isso que o ecrã de dentro já usava. Aqui
+           * dizia-se sempre «à espera da sua resposta», mesmo quando era ele
+           * quem tinha proposto e estava à espera do cliente.
+           */
+          const vez = p.estado === "aberta" ? deQuemEAVez(p.propostas) : null;
+          const estado =
+            vez === "cliente"
+              ? { texto: "à espera do cliente", cls: "bg-cyan-50 text-cyan-700" }
+              : vez === null && p.estado === "aberta"
+                ? { texto: "sem propostas ainda", cls: "bg-slate-100 text-slate-500" }
+                : (ESTADO[p.estado] ?? { texto: p.estado, cls: "bg-slate-100 text-slate-500" });
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
