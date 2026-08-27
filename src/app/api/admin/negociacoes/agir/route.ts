@@ -10,6 +10,7 @@ import {
   registarSemFalhar,
 } from "@/lib/db";
 import { clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+import { avaliarProfissional } from "@/lib/db";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
@@ -61,14 +62,21 @@ function propostasDe(json: string | null): Proposta[] {
   }
 }
 
-const ACCOES = ["propor", "aceitar", "contratar", "desistir", "confirmar"] as const;
+const ACCOES = ["propor", "aceitar", "contratar", "desistir", "confirmar", "avaliar"] as const;
 type AccaoDeAdmin = (typeof ACCOES)[number];
 
 export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; negociacaoId?: unknown; accao?: unknown; valor?: unknown };
+  let corpo: {
+    pedidoId?: unknown;
+    negociacaoId?: unknown;
+    accao?: unknown;
+    valor?: unknown;
+    estrelas?: unknown;
+    comentario?: unknown;
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -132,6 +140,93 @@ export async function POST(req: NextRequest) {
      * A regra e a mesma que o painel usa para separar os dois grupos — vem de
      * `@/lib/quem-negoceia`, e nao de uma copia.
      */
+    /*
+     * ── AVALIAR EM NOME DO CLIENTE ─────────────────────────────────────────
+     *
+     * "Eu devia ter a opção de abrir o pedido, sendo admin, ver toda a troca e
+     * inclusive abrir o perfil do pro e dar a nota, já que foi criado o pedido
+     * aqui."
+     *
+     * O mesmo beco do `confirmar`, um passo mais à frente. Um pedido que chegou
+     * por WhatsApp, com o cliente sem email, não tem quem avalie: a estrela é
+     * dada pelo cliente no link dele, e ele não tem link nem conta. O trabalho
+     * fica feito, pago e confirmado — e o profissional continua com «sem
+     * avaliações» para sempre, que é o que abre a porta ao próximo cliente.
+     *
+     * A regra é a mesma do confirmar, e é a mesma função que a decide: só onde
+     * a CLYON responde MESMO pelo lado do cliente. Se ele tem email e recebeu
+     * o link, a nota é dele e ninguém a dá por ele.
+     *
+     * FICA ESCRITO QUEM AVALIOU. Uma nota dada pela CLYON e uma dada pelo
+     * cliente não são a mesma coisa, e no dia em que alguém contar estrelas
+     * essa diferença é a única coisa que responde.
+     */
+    if (accao === "avaliar") {
+      const estrelas = Number(corpo.estrelas);
+      if (!Number.isInteger(estrelas) || estrelas < 1 || estrelas > 5) {
+        return NextResponse.json({ error: "A nota vai de 1 a 5 estrelas." }, { status: 400 });
+      }
+      const comentario =
+        typeof corpo.comentario === "string" && corpo.comentario.trim().length > 0
+          ? corpo.comentario.trim().slice(0, 600)
+          : null;
+
+      const pedido = await getSimulatorOrderById(pedidoId);
+      if (!pedido) {
+        return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+      }
+
+      let origem: string | null = null;
+      try {
+        origem = pedido.rawOrderJson
+          ? ((JSON.parse(pedido.rawOrderJson) as Record<string, unknown>).origemPedido as string) ??
+            null
+          : null;
+      } catch {
+        /* JSON estragado — conta como sem origem, e o email decide */
+      }
+      const alvo = { origem, contactEmail: pedido.contactEmail };
+      if (!clyonPodeConfirmar(alvo)) {
+        return NextResponse.json({ error: porqueNaoPodeConfirmar(alvo) }, { status: 403 });
+      }
+
+      // Os guardas vivem no SQL: só grava se estiver acordada, confirmada e
+      // ainda por avaliar. Se não gravou, uma delas falhou.
+      const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario);
+      if (!gravou) {
+        return NextResponse.json(
+          {
+            error:
+              "Não há nada para avaliar: ou o trabalho ainda não foi confirmado, ou já tem nota.",
+          },
+          { status: 409 },
+        );
+      }
+
+      const porQuem = colab?.nome ?? "a CLYON";
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message:
+          `CLYON (${porQuem}) avaliou ${linha.profissionalNome} com ${estrelas} ` +
+          `${estrelas === 1 ? "estrela" : "estrelas"} em nome do cliente` +
+          (comentario ? ` — "${comentario}"` : "") +
+          ".",
+      });
+      await registarSemFalhar({
+        acontecimento: "avaliacao_feita",
+        pedidoId,
+        negociacaoId,
+        autorTipo: "clyon",
+        autorNome: porQuem,
+        resumo:
+          `Avaliação de ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} dada pela ` +
+          `CLYON (${porQuem}) em nome do cliente`,
+      });
+
+      return NextResponse.json({ ok: true, avaliado: true });
+    }
+
     if (accao === "confirmar") {
       const pedido = await getSimulatorOrderById(pedidoId);
       if (!pedido) {
@@ -246,8 +341,9 @@ export async function POST(req: NextRequest) {
       aceitar: "aceitou a proposta do profissional",
       contratar: "contratou o profissional",
       desistir: "desistiu da negociação",
-      // `confirmar` sai mais acima, com histórico próprio.
+      // `confirmar` e `avaliar` saem mais acima, com histórico próprio.
       confirmar: "confirmou a execução",
+      avaliar: "avaliou o profissional",
     };
 
     // Fechar uma fecha as outras: os restantes profissionais deixam de propor
