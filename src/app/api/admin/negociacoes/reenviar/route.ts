@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; negociacaoId?: unknown; para?: unknown };
+  let corpo: {
+    pedidoId?: unknown;
+    negociacaoId?: unknown;
+    para?: unknown;
+    paraCopiar?: unknown;
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -57,6 +62,37 @@ export async function POST(req: NextRequest) {
     // ── O link do cliente ───────────────────────────────────────────────────
     if (corpo.para === "cliente") {
       await substituirTokenDoPedido(pedidoId, acesso.hash, acesso.expiraEm);
+
+      /*
+       * SÓ GERAR, PARA ELE MANDAR À MÃO.
+       *
+       * "Sempre que clico em VER COMO CLIENTE ele abre para mim e deixa o link
+       * visível. Eu copio e envio ao cliente, porém já não serve, pois ele
+       * abriu para mim automaticamente. Dê-me a opção apenas de gerar link
+       * para enviar ao cliente."
+       *
+       * E havia uma segunda razão, que apanhou a D. Sónia do #234: quando o
+       * email SAI, esta rota devolvia `undefined` em vez do token — a ideia
+       * era não deixar o link em claro sem necessidade. Só que ela escreveu
+       * "não tenho o link no meu email, podem enviar por aqui?", e a resposta
+       * do sistema era esconder-lho de quem lho queria mandar.
+       *
+       * Com `paraCopiar`, o email NÃO sai e o token volta. É um pedido
+       * explícito de quem vai mandar a mensagem com as próprias mãos, e
+       * mandar o email por cima seria mandar o mesmo link duas vezes por dois
+       * caminhos — sendo que só um deles é o que a pessoa pediu.
+       */
+      const soGerar = corpo.paraCopiar === true;
+      if (soGerar) {
+        await appendOrderHistory(pedidoId, {
+          type: "created",
+          by: null,
+          message:
+            "Link de acesso do cliente gerado para envio à mão (WhatsApp ou SMS). " +
+            "O anterior deixou de funcionar.",
+        });
+        return NextResponse.json({ ok: true, enviado: false, token: acesso.token });
+      }
 
       const enviado = await enviarLinkDoPedido({
         para: pedido.contactEmail ?? "",

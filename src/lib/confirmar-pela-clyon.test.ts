@@ -169,9 +169,43 @@ describe("o ecrã das negociações da CLYON", () => {
   });
 
   it("avisa antes de matar um link que o cliente pode ter", () => {
-    // Gerar link novo invalida o anterior. Sem email não há quem o tenha;
-    // com email, pergunta-se primeiro.
-    expect(PAINEL).toContain("o dele deixa de funcionar");
+    /*
+     * O aviso mudou de sítio e ficou mais forte.
+     *
+     * Estava no «Ver como o cliente», que gerava um link novo para poder
+     * abrir — e o do cliente morria por causa de uma espreitadela. Foi assim
+     * que o link da D. Sónia (#234) deixou de abrir, com uma proposta de
+     * 170 € à espera do outro lado.
+     *
+     * Agora só há um sítio que gera, e avisa; e «ver» deixou de gerar.
+     */
+    expect(PAINEL).toContain("esse deixa de funcionar");
+    expect(PAINEL).toContain("async function linkParaOCliente(");
+  });
+
+  it("espreitar deixou de ser destrutivo", () => {
+    // Um botão que se chama «ver» não pode apagar nada. Sem link gerado, ele
+    // fica desactivado e diz porquê — em vez de criar um novo em silêncio.
+    const i = PAINEL.indexOf("async function verComoCliente(");
+    const corpo = PAINEL.slice(i, i + 900);
+    expect(corpo).not.toContain("reenviar(");
+    expect(PAINEL).toContain("!linksEmClaro[`c${p.id}`]");
+  });
+
+  it("gerar para mandar à mão não dispara o email", () => {
+    // Mandar o email por cima seria mandar o mesmo link por dois caminhos,
+    // quando só um deles é o que a pessoa pediu.
+    const ROTA_REENVIAR = readFileSync(
+      join(process.cwd(), "src/app/api/admin/negociacoes/reenviar/route.ts"),
+      "utf8",
+    );
+    expect(ROTA_REENVIAR).toContain("const soGerar = corpo.paraCopiar === true;");
+    const i = ROTA_REENVIAR.indexOf("if (soGerar) {");
+    const bloco = ROTA_REENVIAR.slice(i, ROTA_REENVIAR.indexOf("const enviado", i));
+    expect(bloco).not.toContain("enviarLinkDoPedido");
+    // E o token VOLTA, mesmo para quem tem email: era escondido, e a D. Sónia
+    // pediu-o precisamente por não o ter recebido lá.
+    expect(bloco).toContain("token: acesso.token");
   });
 
   it("já não há título de grupo para repetir — a lista é uma só", () => {
