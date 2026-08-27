@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import LandingClient from "./LandingClient";
+import { BUSINESS_PHONE } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Recolha de Entulho, Móveis e Monos em Lisboa | CLYON",
@@ -24,7 +25,7 @@ const localBusinessSchema = {
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
   name: "CLYON",
   url: "https://clyon.pt/orcamento-recolha-lisboa",
-  telephone: "+351931632622",
+  telephone: BUSINESS_PHONE,
   email: "geral@clyon.pt",
   description:
     "Recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Carregamento e transporte incluídos.",
@@ -61,7 +62,7 @@ const localBusinessSchema = {
   },
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+351931632622",
+    telephone: BUSINESS_PHONE,
     email: "geral@clyon.pt",
     contactType: "customer service",
     areaServed: "PT",

@@ -9,7 +9,7 @@ import {
   Star,
 } from "lucide-react";
 
-import { BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_NAME, BUSINESS_PHONE, SITE_URL, linkWhatsApp } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
 };
 
-const WA_HREF = `https://wa.me/351931632622?text=${encodeURIComponent(
+const WA_HREF = `${linkWhatsApp()}?text=${encodeURIComponent(
   "Olá CLYON, quero pedir orçamento para um serviço.",
 )}`;
 

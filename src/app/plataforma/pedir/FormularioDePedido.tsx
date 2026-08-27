@@ -34,6 +34,7 @@ import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { validarValorDesejado, type ErroDeValor } from "@/lib/pedido-valores";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
+import { linkWhatsApp } from "@/lib/seo-data";
 import {
   trackSimulatorStart,
   trackSimulatorContact,
@@ -535,7 +536,7 @@ export default function SimulatorThreePhaseForm() {
                 do pedido — ajudam-nos a dar um preço mais certo e evitam uma visita.
               </p>
               <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
+                href={`${linkWhatsApp()}?text=${encodeURIComponent(
                   `Olá! Envio as fotos do pedido${successOrderId > 0 ? ` #${successOrderId}` : ""}.`,
                 )}`}
                 target="_blank"

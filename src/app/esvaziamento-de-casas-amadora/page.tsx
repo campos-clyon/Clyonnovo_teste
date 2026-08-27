@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
+import { BUSINESS_PHONE, linkTelefone, linkWhatsApp } from "@/lib/seo-data";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -78,7 +79,7 @@ const serviceSchema = {
   provider: {
     "@type": "LocalBusiness",
     name: "CLYON",
-    telephone: "+351931632622",
+    telephone: BUSINESS_PHONE,
     url: SITE_URL,
     address: {
       "@type": "PostalAddress",
@@ -154,13 +155,13 @@ export default function EsvaziamentoAmadoraPage() {
                     Simular orçamento
                   </Link>
                   <a
-                    href="https://wa.me/351931632622?text=Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?"
+                    href={linkWhatsApp("Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?")}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-6 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
                   >
                     WhatsApp
                   </a>
                   <a
-                    href="tel:+351931632622"
+                    href={linkTelefone()}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     <Phone className="h-4 w-4" />

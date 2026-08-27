@@ -64,6 +64,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import { linkTelefone, linkWhatsApp } from "@/lib/seo-data";
 
 type SimulatorSetting = {
   key: string;
@@ -3196,7 +3197,7 @@ export default function ColaboradorAdminClient() {
                         <Phone className="h-3.5 w-3.5" />
                         Telefone
                       </p>
-                      <a href="tel:+351931632622" className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100">
+                      <a href={linkTelefone()} className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100">
                         +351 931 632 622
                       </a>
                     </div>
@@ -3206,7 +3207,7 @@ export default function ColaboradorAdminClient() {
                         WhatsApp
                       </p>
                       <a
-                        href="https://wa.me/351931632622"
+                        href={linkWhatsApp()}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100"

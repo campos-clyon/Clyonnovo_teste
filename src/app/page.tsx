@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, linkWhatsApp } from "@/lib/seo-data";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
 import {
@@ -270,7 +270,7 @@ export default function HomePage() {
               </span>
               <span className="hidden text-slate-300 sm:inline">·</span>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href={linkWhatsApp("Olá! Gostava de pedir um orçamento à CLYON.")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-cyan-600 sm:flex"
@@ -535,7 +535,7 @@ export default function HomePage() {
             </div>
             <div className="flex-shrink-0">
               <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
+                href={`${linkWhatsApp()}?text=${encodeURIComponent(
                   "Olá! Sou uma empresa de remoções/transportes e quero saber mais sobre ser parceiro CLYON.",
                 )}`}
                 target="_blank"
@@ -599,7 +599,7 @@ export default function HomePage() {
                 Pedir Orçamento Grátis
               </Link>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href={linkWhatsApp("Olá! Gostava de pedir um orçamento à CLYON.")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] sm:h-12 sm:w-auto sm:px-8 sm:text-base"

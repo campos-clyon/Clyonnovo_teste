@@ -32,6 +32,32 @@ export interface ServiceData {
 export const SITE_URL = "https://clyon.pt";
 export const BUSINESS_NAME = "CLYON";
 export const BUSINESS_PHONE = "+351931632622";
+
+/**
+ * O mesmo número no formato que o wa.me exige: E.164 sem o '+'.
+ *
+ * Derivado de `BUSINESS_PHONE` para o número existir uma única vez no código.
+ * Estava escrito à mão em 65 sítios espalhados por 20 ficheiros — mudar de
+ * número era uma caça ao tesouro em que bastava falhar um para ficarem links
+ * a apontar para um telefone que já não é nosso.
+ */
+export const BUSINESS_PHONE_E164 = BUSINESS_PHONE.replace(/\D/g, "");
+
+/**
+ * Link de conversa no WhatsApp com a CLYON, com mensagem já preenchida.
+ *
+ * A mensagem vai em texto normal — a codificação para URL acontece aqui, e não
+ * escrita à mão em `%C3%A1`, que era como estava e ninguém conseguia ler.
+ */
+export function linkWhatsApp(mensagem?: string): string {
+  const base = `https://wa.me/${BUSINESS_PHONE_E164}`;
+  return mensagem ? `${base}?text=${encodeURIComponent(mensagem)}` : base;
+}
+
+/** Link de chamada telefónica para o número da empresa. */
+export function linkTelefone(): string {
+  return `tel:${BUSINESS_PHONE}`;
+}
 export const BUSINESS_EMAIL = "geral@clyon.pt";
 export const BUSINESS_ADDRESS = "Belverde, Amora, 2845-513 Portugal";
 export const CONTACT_PATH = "/contactos";

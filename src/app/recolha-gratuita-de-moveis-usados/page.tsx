@@ -15,11 +15,7 @@ import {
 } from "lucide-react";
 
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
-import {
-  BUSINESS_NAME,
-  BUSINESS_PHONE,
-  SITE_URL,
-} from "@/lib/seo-data";
+import { BUSINESS_NAME, BUSINESS_PHONE, SITE_URL, linkWhatsApp } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Recolha Gratuita de Móveis Usados em Lisboa, Almada e Setúbal",
@@ -205,7 +201,7 @@ export default function RecolhaGratuitaDeMoveisUsadosPage() {
                 Ligar agora
               </a>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20m%C3%B3veis."
+                href={linkWhatsApp("Olá! Preciso de recolha de móveis.")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 text-base font-semibold text-white transition hover:bg-emerald-600"
@@ -381,7 +377,7 @@ export default function RecolhaGratuitaDeMoveisUsadosPage() {
               Simular orçamento
             </Link>
             <a
-              href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20m%C3%B3veis."
+              href={linkWhatsApp("Olá! Preciso de recolha de móveis.")}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 text-base font-semibold text-white transition hover:bg-emerald-600"

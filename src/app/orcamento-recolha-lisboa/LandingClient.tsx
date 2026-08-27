@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { BUSINESS_PHONE, linkWhatsApp } from "@/lib/seo-data";
 import {
   ArrowRight,
   BadgeCheck,
@@ -33,10 +34,10 @@ import {
 } from "@/lib/analytics";
 
 const PHONE_DISPLAY = "+351 931 632 622";
-const PHONE_TEL = "+351931632622";
-const PHONE_SMS = "+351931632622";
+const PHONE_TEL = BUSINESS_PHONE;
+const PHONE_SMS = BUSINESS_PHONE;
 const EMAIL = "geral@clyon.pt";
-const WHATSAPP_BASE = "https://wa.me/351931632622";
+const WHATSAPP_BASE = linkWhatsApp();
 const REVIEWS_COUNT = 163;
 
 declare global {
