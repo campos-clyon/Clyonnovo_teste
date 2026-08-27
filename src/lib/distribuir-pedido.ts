@@ -75,17 +75,64 @@ export type ResultadoDaDistribuicao = {
  * corrigem em sitios diferentes: nao chegar e a regra de elegibilidade, nao
  * avisar e o email.
  */
+/** Os motivos em português, para quem lê o histórico daqui a um ano. */
+const MOTIVO_POR_EXTENSO: Record<string, string> = {
+  inactivo: "inactivos",
+  nao_aprovado: "por aprovar",
+  categoria_diferente: "não fazem este serviço",
+  fora_de_alcance: "fora do raio deles",
+  sem_morada: "a morada do pedido não foi localizada",
+  nao_emite_fatura: "não passam fatura",
+  nao_emite_guia: "sem guia de transporte verificada",
+};
+
+/**
+ * Quem ficou de fora, e porquê — em português e por ordem de peso.
+ *
+ * Um profissional pode falhar por mais de uma razão, e por isso a soma destes
+ * números não tem de bater com quantos ficaram de fora. Diz-se o que separa
+ * cada um, que é o que tem conserto.
+ */
+export function porqueFicaramDeFora(motivos: Record<string, number>): string {
+  return Object.entries(motivos)
+    .filter(([, n]) => Number(n) > 0)
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .map(([m, n]) => `${n} ${MOTIVO_POR_EXTENSO[m] ?? m.replace(/_/g, " ")}`)
+    .join(", ");
+}
+
 export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
+  /*
+   * O PORQUÊ VAI SEMPRE, e não só quando não chega a ninguém.
+   *
+   * "Por qual motivo esse pedido foi enviado apenas para 1 parceiro?"
+   *
+   * O histórico do #241 dizia «Chegou a 1 profissional(is) de 4 activos» e
+   * calava-se sobre os outros três. Ele teve de perguntar, e a resposta só
+   * existia correndo a regra à mão contra a base de dados.
+   *
+   * Estava tudo calculado — os motivos vêm dentro do próprio resultado — e era
+   * deitado fora em todos os casos menos um. É a mesma correcção que o ecrã da
+   * distribuição já levou: uma contagem sem explicação transforma cada envio
+   * numa adivinha.
+   */
+  const porque = porqueFicaramDeFora(r.motivos);
+
   if (r.receberam === 0) {
     return (
-      `NAO chegou a nenhum profissional (${r.candidatos} activos). ` +
-      `Motivos: ${JSON.stringify(r.motivos)}`
+      `NAO chegou a nenhum profissional (${r.candidatos} activos)` +
+      (porque ? `. Porquê: ${porque}.` : ".")
     );
   }
-  const base = `Chegou a ${r.receberam} profissional(is) de ${r.candidatos} activos`;
-  if (r.avisados >= r.receberam) return `${base} — todos avisados por email.`;
+
+  const fora = r.candidatos - r.receberam;
+  const base =
+    `Chegou a ${r.receberam} profissional(is) de ${r.candidatos} activos` +
+    (fora > 0 && porque ? ` — os outros ${fora} ficam de fora: ${porque}` : "");
+
+  if (r.avisados >= r.receberam) return `${base}. Todos avisados por email.`;
   return (
-    `${base}, mas so ${r.avisados} recebeu(ram) o email. ` +
+    `${base}. Mas so ${r.avisados} recebeu(ram) o email: ` +
     `${r.receberam - r.avisados} tem o trabalho no painel e NAO foi avisado.`
   );
 }
