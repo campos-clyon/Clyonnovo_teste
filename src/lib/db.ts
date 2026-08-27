@@ -2768,9 +2768,28 @@ export async function actualizarPerfilDoProfissional(
     "tipoVeiculo",
     "iban",
     "ibanTitular",
+    "mbway",
     "baseLat",
     "baseLng",
   ];
+  /*
+   * ⚠️ ESTA LISTA TEM DE CRESCER COM A ROTA QUE A ALIMENTA.
+   *
+   * "Eu preenchi todos os campos, inclusive o do MB WAY, mas aqui diz que não."
+   *
+   * E dizia bem. O `mbway` chegava aqui no objecto e era descartado, porque a
+   * lista de permitidos nao o conhecia — e o que nao esta na lista sai em
+   * SILENCIO. O ecra dizia "Guardado as 15:52" sobre um campo que nunca foi
+   * gravado.
+   *
+   * A lista existe por uma boa razao: as chaves vao para a lista de COLUNAS do
+   * SQL, e uma consulta preparada parametriza valores, nao identificadores.
+   * Mas o silencio e o problema, nao o filtro.
+   *
+   * E a QUARTA vez nesta sessao com esta forma — um campo que uma ponta manda e
+   * a outra deita fora sem se queixar. Ha um teste que compara esta lista com o
+   * que a rota do perfil escreve em `mudancas`, e chumba quando divergem.
+   */
   const colunas = permitidas.filter((c) => dados[c] !== undefined);
   if (colunas.length === 0) return;
 
