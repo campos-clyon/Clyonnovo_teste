@@ -36,6 +36,8 @@ type TrabalhoPorPagar = {
   valorAcordado: number;
   recebe: number;
   confirmadoEm: string | null;
+  /** Prova enviada, à espera de confirmação — ou ainda por fazer. */
+  aguardaConfirmacao: boolean;
 };
 
 export async function GET(req: NextRequest) {
@@ -52,14 +54,47 @@ export async function GET(req: NextRequest) {
               p.moradaFiscal, p.codigoPostalFiscal, p.localidadeFiscal,
               p.regimeIva, p.emiteFatura,
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
-              n.confirmadoEm, n.pagoEm,
+              n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
               o.serviceType, o.city
          FROM providers p
+         /*
+          * TODAS as acordadas, e nao so as confirmadas.
+          *
+          * "A carteira deve mostrar os valores ja pagos, por pagar, e por
+          * finalizar — seriam os trabalhos acordados mas ainda nao realizados."
+          *
+          * Faltava o terceiro monte, e e o que diz o que ai vem: trabalho
+          * fechado com o profissional, dinheiro do cliente ja cativo, mas ainda
+          * por fazer ou por confirmar. Sem ele, a carteira mostrava o passado e
+          * calava o futuro — e e o futuro que diz se vale a pena esperar pela
+          * proxima transferencia ou fazer ja esta.
+          */
          LEFT JOIN negociacoes n
-           ON n.providerId = p.id AND n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL
+           ON n.providerId = p.id AND n.estado = 'acordada' 
          LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
+        /*
+         * As contas APAGADAS ficam de fora.
+         *
+         * "Se o pro foi removido, ele deveria ter sido 100% apagado dos nossos
+         * dados."
+         *
+         * Quase foi: quando não há passado, a linha é mesmo apagada. Quando há
+         * — negociações, levantamentos, pedidos atribuídos — fica um número com
+         * a etiqueta «Profissional removido» e mais nada: sem nome, email,
+         * telefone, NIF, IBAN nem morada. É o mínimo para as negociações
+         * antigas terem a que se agarrar, e para o cliente que o contratou
+         * continuar a poder ver quem lhe fez o trabalho.
+         *
+         * O que não faz sentido nenhum é aparecer AQUI. Uma carteira é «a quem
+         * pagar», e a uma etiqueta não se paga. Se alguma vez tiver dinheiro
+         * por transferir, o filtro deixa-a passar — aí é um problema a sério e
+         * tem de se ver.
+         */
         WHERE p.isClyon = 0
-        ORDER BY p.name, n.confirmadoEm`,
+          AND (p.estado <> 'apagado' OR EXISTS (
+                SELECT 1 FROM negociacoes x
+                 WHERE x.providerId = p.id AND x.estado = 'acordada' AND x.pagoEm IS NULL))
+        ORDER BY p.name, n.confirmadoEm, n.updatedAt`,
     )) as [Array<Record<string, unknown>>, unknown];
 
     const porProfissional = new Map<number, ReturnType<typeof novaFicha>>();
@@ -84,8 +119,11 @@ export async function GET(req: NextRequest) {
         regimeIva: (l.regimeIva as string) ?? null,
         emiteFatura: Number(l.emiteFatura) === 1,
         porPagar: [] as TrabalhoPorPagar[],
+        /* Acordado, com o dinheiro do cliente cativo, e ainda por confirmar. */
+        porFinalizar: [] as TrabalhoPorPagar[],
         jaPago: 0,
         totalPorPagar: 0,
+        totalPorFinalizar: 0,
       };
     }
 
@@ -98,11 +136,7 @@ export async function GET(req: NextRequest) {
       const acordado = Number(l.valorAcordado);
       const recebe = quantoOProfissionalRecebe(acordado);
 
-      if (l.pagoEm != null) {
-        ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
-        continue;
-      }
-      ficha.porPagar.push({
+      const trabalho: TrabalhoPorPagar = {
         negociacaoId: Number(l.negociacaoId),
         pedidoId: Number(l.pedidoId),
         servico: (l.serviceType as string) ?? null,
@@ -110,7 +144,21 @@ export async function GET(req: NextRequest) {
         valorAcordado: acordado,
         recebe,
         confirmadoEm: l.confirmadoEm ? new Date(l.confirmadoEm as string).toISOString() : null,
-      });
+        /* Ele ja mandou a prova e falta so alguem confirmar? Muda a espera. */
+        aguardaConfirmacao: l.confirmadoEm == null && l.execucaoEnviadaEm != null,
+      };
+
+      /* Três montes, e cada trabalho está exactamente num deles. */
+      if (l.pagoEm != null) {
+        ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
+        continue;
+      }
+      if (l.confirmadoEm == null) {
+        ficha.porFinalizar.push(trabalho);
+        ficha.totalPorFinalizar = Math.round((ficha.totalPorFinalizar + recebe) * 100) / 100;
+        continue;
+      }
+      ficha.porPagar.push(trabalho);
       ficha.totalPorPagar = Math.round((ficha.totalPorPagar + recebe) * 100) / 100;
     }
 
@@ -121,15 +169,22 @@ export async function GET(req: NextRequest) {
      * IBAN antes de haver trabalho para pagar.
      */
     const carteiras = [...porProfissional.values()].sort(
-      (a, b) => b.totalPorPagar - a.totalPorPagar || a.nome.localeCompare(b.nome, "pt"),
+      (a, b) =>
+        b.totalPorPagar - a.totalPorPagar ||
+        b.totalPorFinalizar - a.totalPorFinalizar ||
+        a.nome.localeCompare(b.nome, "pt"),
     );
 
     const total = carteiras.reduce((s, c) => s + c.totalPorPagar, 0);
+    const totalPorFinalizar = carteiras.reduce((s, c) => s + c.totalPorFinalizar, 0);
+    const totalJaPago = carteiras.reduce((s, c) => s + c.jaPago, 0);
     const semComoPagar = carteiras.filter((c) => c.totalPorPagar > 0 && !c.iban && !c.mbway).length;
 
     return NextResponse.json({
       carteiras,
       total: Math.round(total * 100) / 100,
+      totalPorFinalizar: Math.round(totalPorFinalizar * 100) / 100,
+      totalJaPago: Math.round(totalJaPago * 100) / 100,
       semComoPagar,
     });
   } catch (e) {
