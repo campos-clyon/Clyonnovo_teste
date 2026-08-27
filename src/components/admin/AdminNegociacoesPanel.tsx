@@ -326,6 +326,43 @@ export default function AdminNegociacoesPanel({
   const [copiado, setCopiado] = useState<string | null>(null);
   /* A versão do link que temos em mão, por pedido — ver `linkExpiraEm`. */
   const [versaoDoLink, setVersaoDoLink] = useState<Record<string, string>>({});
+
+  /* A explicação do alcance, por pedido, quando alguém a pede. */
+  const [alcances, setAlcances] = useState<Record<number, string>>({});
+
+  /**
+   * Porque é que este pedido chegou a tão poucos.
+   *
+   * Responde com a regra de HOJE, e não com a de quando o pedido saiu. É de
+   * propósito: quem faz esta pergunta quer saber o que tem conserto agora —
+   * aprovar aquele profissional, ou pedir-lhe a fatura, muda quem o recebe da
+   * próxima. O histórico do envio guarda o que aconteceu na altura.
+   */
+  async function porquePoucos(pedidoId: number) {
+    if (!token || alcances[pedidoId] === "a-ler") return;
+    setAlcances((a) => ({ ...a, [pedidoId]: "a-ler" }));
+    try {
+      const res = await fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setAlcances((a) => ({ ...a, [pedidoId]: d.error ?? "Não foi possível calcular." }));
+        return;
+      }
+      const chegam = d.elegiveis?.length ?? 0;
+      const fora = (d.candidatos ?? 0) - chegam;
+      setAlcances((a) => ({
+        ...a,
+        [pedidoId]:
+          fora > 0 && d.porque
+            ? `Hoje chegaria a ${chegam} de ${d.candidatos}. Os outros ${fora}: ${d.porque}.`
+            : `Hoje chegaria a ${chegam} de ${d.candidatos} — não há ninguém de fora.`,
+      }));
+    } catch {
+      setAlcances((a) => ({ ...a, [pedidoId]: "Erro de rede." }));
+    }
+  }
   const [aApagar, setAApagar] = useState(false);
   /*
    * Duas peças para a linha "actualizado há X": quando os dados foram lidos,
@@ -1103,7 +1140,35 @@ export default function AdminNegociacoesPanel({
             <p className="text-xs text-slate-500">
               {p.negociacoes.length} profissiona{p.negociacoes.length === 1 ? "l" : "is"} ·{" "}
               {totalPropostas} proposta{totalPropostas === 1 ? "" : "s"}
+              {/*
+                «Porquê?» — a pergunta que ele teve de me fazer.
+
+                A mesa dizia «1 profissional · 1 proposta» e calava-se. A
+                resposta existia, mas só se chegava lá a correr a regra à mão
+                contra a base de dados.
+
+                É um pedido de cada vez, e só quando alguém pergunta: calcular
+                o alcance é medir a distância de cada profissional a cada
+                pedido, e a lista tem dezenas.
+              */}
+              {p.negociacoes.length > 0 && (
+                <>
+                  {" · "}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void porquePoucos(p.id);
+                    }}
+                    className="font-semibold text-cyan-400 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-300"
+                  >
+                    {alcances[p.id] === "a-ler" ? "a ver…" : "porquê?"}
+                  </button>
+                </>
+              )}
             </p>
+            {typeof alcances[p.id] === "string" && alcances[p.id] !== "a-ler" && (
+              <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
+            )}
           </div>
           <button
             onClick={alternarAberto}
