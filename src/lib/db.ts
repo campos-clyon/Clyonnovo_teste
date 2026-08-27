@@ -2706,11 +2706,29 @@ export async function perfilDoProfissional(
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = await pool.execute(
+    /*
+     * ⚠️ ESTA LISTA E A RESPOSTA DA ROTA TEM DE DIZER O MESMO.
+     *
+     * "Porque e que sempre que salvo a morada base e saio e volto la, ele esta
+     * a pedir novamente como se nao tivesse salvo? Loop sem fim."
+     *
+     * A gravacao funcionava — as coordenadas estavam na base, certas. O que
+     * faltava era aqui: `baseLat` e `baseLng` nunca eram lidas, a rota
+     * devolvia null, e o ecra concluia "ainda nao escolheu da lista". Todas as
+     * vezes, para sempre, sobre uma base que estava correcta.
+     *
+     * O `mbway` tinha o mesmo problema, acrescentado horas antes.
+     *
+     * E a terceira vez nesta sessao com esta forma exacta: um campo declarado
+     * na resposta e ausente da consulta. Ha um teste que compara as duas e
+     * chumba quando divergem.
+     */
     `SELECT id, name, email, phone, nif, city,
+            baseLat, baseLng,
             moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
             categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
-            guiaVerificadaEm, estado, isActive, iban, ibanTitular, createdAt
+            guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
   ) as any[];
