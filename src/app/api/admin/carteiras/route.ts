@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import {
+  quantoOProfissionalRecebe,
+  comissaoDaClyon,
+  quantoOClientePaga,
+} from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
 
@@ -99,6 +103,16 @@ export async function GET(req: NextRequest) {
 
     const porProfissional = new Map<number, ReturnType<typeof novaFicha>>();
 
+    /*
+     * A conta da casa, nos mesmos três estados do dinheiro deles.
+     *
+     * `fechada` é o que já está feito e pago dos dois lados — o único número
+     * que é mesmo ganho. `ganha` é de trabalho confirmado que ainda tem
+     * transferência por fazer: já é dela, mas o dinheiro ainda passa por aqui.
+     * `porFinalizar` é promessa.
+     */
+    const clyon = { porFinalizar: 0, ganha: 0, fechada: 0, faturado: 0 };
+
     function novaFicha(l: Record<string, unknown>) {
       return {
         id: Number(l.id),
@@ -135,6 +149,21 @@ export async function GET(req: NextRequest) {
       if (l.negociacaoId == null || l.valorAcordado == null) continue;
       const acordado = Number(l.valorAcordado);
       const recebe = quantoOProfissionalRecebe(acordado);
+      /*
+       * A COMISSÃO DA CASA, no mesmo trabalho e nos mesmos três montes.
+       *
+       * "Coloque também os ganhos da CLYON."
+       *
+       * Vem das duas pontas — 6% que o cliente paga a mais e 5% que se desconta
+       * ao profissional — e por isso não se lê nem do que entra nem do que sai:
+       * é a diferença entre os dois, e ninguém a via em lado nenhum.
+       *
+       * Segue os mesmos três estados do dinheiro dele, de propósito. Uma
+       * comissão de um trabalho por fazer ainda não é ganho: é uma promessa,
+       * como o dinheiro cativo do lado do cliente.
+       */
+      const comissao = comissaoDaClyon(acordado);
+      const clientePaga = quantoOClientePaga(acordado);
 
       const trabalho: TrabalhoPorPagar = {
         negociacaoId: Number(l.negociacaoId),
@@ -151,15 +180,20 @@ export async function GET(req: NextRequest) {
       /* Três montes, e cada trabalho está exactamente num deles. */
       if (l.pagoEm != null) {
         ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
+        clyon.fechada = Math.round((clyon.fechada + comissao) * 100) / 100;
+        clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         continue;
       }
       if (l.confirmadoEm == null) {
+        clyon.porFinalizar = Math.round((clyon.porFinalizar + comissao) * 100) / 100;
         ficha.porFinalizar.push(trabalho);
         ficha.totalPorFinalizar = Math.round((ficha.totalPorFinalizar + recebe) * 100) / 100;
         continue;
       }
       ficha.porPagar.push(trabalho);
       ficha.totalPorPagar = Math.round((ficha.totalPorPagar + recebe) * 100) / 100;
+      clyon.ganha = Math.round((clyon.ganha + comissao) * 100) / 100;
+      clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
     }
 
     /*
@@ -185,6 +219,13 @@ export async function GET(req: NextRequest) {
       total: Math.round(total * 100) / 100,
       totalPorFinalizar: Math.round(totalPorFinalizar * 100) / 100,
       totalJaPago: Math.round(totalJaPago * 100) / 100,
+      clyon: {
+        porFinalizar: clyon.porFinalizar,
+        ganha: clyon.ganha,
+        fechada: clyon.fechada,
+        /* O que os clientes pagaram ao todo, para dar escala à comissão. */
+        faturado: clyon.faturado,
+      },
       semComoPagar,
     });
   } catch (e) {
