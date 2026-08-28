@@ -922,8 +922,20 @@ export default function AdminNegociacoesPanel({
    *      nível onde a demora custa dinheiro: uma proposta expira em 48 horas,
    *      e um trabalho por confirmar é dinheiro que fica cativo e um
    *      profissional que já lá foi e ainda não recebeu.
-   *   2. A correr — a bola está do outro lado, com o profissional ou com o
-   *      cliente que responde pelo link. Estão aqui para vigiar, não para agir.
+   *   2. À espera de propostas — o pedido saiu e ainda ninguém fechou nada.
+   *      É o nível que pode morrer de silêncio: se os profissionais não
+   *      responderem, o cliente fica sem resposta e nós não damos por isso.
+   *   3. Contratados — já tem profissional e valor fechados; falta o trabalho
+   *      acontecer. Não há nada a fazer senão esperar pelo dia.
+   *
+   * "Temos que separar os pedidos já contratados dos à espera de propostas."
+   *
+   * Os dois estavam juntos em "A correr" porque nos dois a bola está do outro
+   * lado — mas o outro lado não é o mesmo. Num deles o pedido pode morrer
+   * sozinho por falta de resposta; no outro está tudo combinado e só falta a
+   * data chegar. Misturados, um #242 à espera de dois profissionais lia-se
+   * igual a um #239 já fechado com a TRSul, e o que precisava de vigilância
+   * desaparecia no meio do que não precisava de nada.
    *
    * Dentro de cada nível, do mais recente para o mais antigo.
    */
@@ -934,7 +946,16 @@ export default function AdminNegociacoesPanel({
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
     const precisam = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porData);
-    const correm = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi)).sort(porData);
+    const restantes = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi));
+    /* Fechado com alguém é outra coisa: já não se espera proposta nenhuma. */
+    const contratados = restantes
+      .filter((p) => p.negociacoes.some((n) => n.estado === "acordada"))
+      .sort(porData);
+    const aoAr = restantes
+      .filter((p) => !p.negociacoes.some((n) => n.estado === "acordada"))
+      .sort(porData);
+
+    const comCoisas = [precisam, aoAr, contratados].filter((l) => l.length > 0).length;
 
     type Entrada = {
       chave: string;
@@ -954,9 +975,9 @@ export default function AdminNegociacoesPanel({
       lista: Pedido[],
     ) => {
       if (lista.length === 0) return;
-      // O separador só aparece quando há DOIS níveis para separar: com uma
-      // lista só, uma linha a dizer o óbvio é ruído.
-      if (precisam.length > 0 && correm.length > 0) {
+      // O separador só aparece quando há mais do que um nível para separar:
+      // com uma lista só, uma linha a dizer o óbvio é ruído.
+      if (comCoisas > 1) {
         saida.push({ chave, separador: true, titulo, quantos: lista.length, nota, tom });
       }
       for (const p of lista) saida.push({ chave: `p${p.id}`, separador: false, pedido: p });
@@ -965,7 +986,14 @@ export default function AdminNegociacoesPanel({
     // espera que alguém o reconheça e liberte o dinheiro. As duas coisas
     // param aqui à espera dele, e a nota tem de as caber às duas.
     bloco("n1", "Precisa de si", "nada avança sem si", "text-emerald-300", precisam);
-    bloco("n2", "A correr", "a bola está do outro lado", "text-sky-300", correm);
+    bloco("n2", "À espera de propostas", "a bola está com os profissionais", "text-sky-300", aoAr);
+    bloco(
+      "n3",
+      "Contratados",
+      "já têm quem faça — falta o trabalho acontecer",
+      "text-violet-300",
+      contratados,
+    );
     return saida;
   }, [activos, daClyon, dosClientes, mostrar]);
 
