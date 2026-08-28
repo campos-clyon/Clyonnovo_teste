@@ -173,6 +173,10 @@ export async function GET(req: NextRequest) {
         // A data marcada nao e contacto: ajuda a decidir ANTES de aceitar, e
         // e a espinha da agenda depois de contratar.
         dataAgendada: (l as unknown as { dataAgendada?: Date | string | null }).dataAgendada ?? null,
+        // O dia em que o pedido foi feito — o zero de "amanha". Sem ele, a
+        // palavra do cliente le-se contra hoje e mente ao fim de um dia.
+        criadoEm:
+          (l as unknown as { pedidoCriadoEm?: Date | string | null }).pedidoCriadoEm ?? null,
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
         description: (vista.description as string | undefined) ?? null,

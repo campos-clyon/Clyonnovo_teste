@@ -1773,6 +1773,12 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
+            -- O dia em que o cliente fez o pedido. Nao e enfeite: e o ZERO de
+            -- "amanha". A palavra fica gravada como o cliente a escreveu e
+            -- le-se sempre em relacao a hoje, por isso um pedido de segunda a
+            -- dizer "amanha" continuava a prometer amanha na quinta. Com a
+            -- data de criacao a conta faz-se de onde deve.
+            o.createdAt AS pedidoCriadoEm,
             -- O acesso ao local: andar, elevador e estacionamento. Sao o que
             -- separa "duas horas" de "uma tarde" e o profissional decidia sem
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
