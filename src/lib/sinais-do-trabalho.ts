@@ -14,6 +14,8 @@
  * interessante.
  */
 
+import { quandoEOTrabalho } from "./quando-e-o-trabalho";
+
 export type Sinal = {
   /** A chave que os filtros usam. */
   chave: "perto" | "urgente" | "bem_pago" | "com_fotos";
@@ -27,6 +29,10 @@ export type Sinal = {
 export type TrabalhoParaAvaliar = {
   distanciaKm?: number | null;
   urgency?: string | null;
+  /** A data marcada, quando existe: ganha sempre à palavra do cliente. */
+  dataAgendada?: string | Date | null;
+  /** O dia do pedido — o zero de "amanhã". Ver `quando-e-o-trabalho`. */
+  criadoEm?: string | Date | null;
   recebeSeAceitar?: number | null;
   quantasFotos?: number;
 };
@@ -66,8 +72,6 @@ export const RAIO_QUENTE_KM = 10;
  */
 export const BOM_POR_KM = 12;
 
-const URGENTES = new Set(["today", "tomorrow", "hoje", "amanha", "amanhã"]);
-
 /** Quanto rende por quilómetro, ou `null` quando falta a distância ou o valor. */
 export function porQuilometro(t: TrabalhoParaAvaliar): number | null {
   const valor = t.recebeSeAceitar;
@@ -96,12 +100,21 @@ export function sinaisDoTrabalho(t: TrabalhoParaAvaliar): Sinal[] {
     });
   }
 
-  const urgencia = (t.urgency ?? "").trim().toLowerCase();
-  if (URGENTES.has(urgencia)) {
+  /*
+   * URGENTE A SÉRIO, contado a partir de hoje — e não da palavra congelada.
+   *
+   * A palavra do cliente fica gravada como ele a escreveu e lia-se sempre
+   * contra hoje: um pedido de segunda-feira a dizer «amanhã» continuava a
+   * acender o ⚡ na quinta, e a prometer um dia que já tinha passado. Agora a
+   * conta faz-se desde o dia do pedido, e o distintivo só aparece quando o
+   * trabalho é mesmo hoje ou mesmo amanhã.
+   */
+  const quando = quandoEOTrabalho(t);
+  if (!quando.passou && (quando.curto === "Hoje" || quando.curto === "Amanhã")) {
     sinais.push({
       chave: "urgente",
       emoji: "⚡",
-      texto: urgencia === "today" || urgencia === "hoje" ? "Hoje" : "Amanhã",
+      texto: quando.curto,
       cls: "border-amber-200 bg-amber-50 text-amber-800",
     });
   }

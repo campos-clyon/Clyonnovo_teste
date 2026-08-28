@@ -28,7 +28,6 @@ import VisorDeFotos from "@/components/VisorDeFotos";
 import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import {
-  URGENCIA,
   ELEVADOR,
   ESTACIONAMENTO,
   emPortugues,
@@ -47,6 +46,7 @@ import {
   pesoDoTrabalho,
   porQuilometro,
 } from "@/lib/sinais-do-trabalho";
+import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
@@ -577,6 +577,7 @@ export default function Trabalhos({
           const sinais = aDecidir ? sinaisDoTrabalho({ ...p, quantasFotos: fotos.length }) : [];
           const quente = sinais.some((x) => x.chave === "perto");
           const porKm = aDecidir ? porKmPorExtenso(p) : null;
+          const quando = quandoEOTrabalho(p);
 
           // O botão de arrumar só aparece onde arrumar faz sentido. Num
           // trabalho novo ou a decorrer seria um convite a esconder o que
@@ -715,10 +716,23 @@ export default function Trabalhos({
                         </span>
                       )}
                     </span>
-                    {p.urgency && (
-                      <span className="flex items-center gap-1">
+                    {(p.dataAgendada || p.urgency) && (
+                      /*
+                        O DIA, e não a palavra congelada.
+                        Ver `quando-e-o-trabalho`: «Amanhã» só aparece quando é
+                        mesmo amanhã. Quando o dia já passou vai a vermelho, que
+                        é a única forma de ele reparar sem abrir.
+                      */
+                      <span
+                        className={`flex items-center gap-1 ${
+                          quando.passou ? "font-semibold text-rose-600" : ""
+                        }`}
+                      >
                         <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                        {URGENCIA[p.urgency] ?? p.urgency}
+                        {quando.curto}
+                        {quando.hora && (
+                          <span className="text-slate-400">{` · ${quando.hora}`}</span>
+                        )}
                       </span>
                     )}
                   </p>
@@ -828,6 +842,8 @@ function DetalheDoTrabalho({
   const doCliente = fotosDe(pedido.filesJson);
   const prova = provaDe(pedido.provaJson);
   const fechado = pedido.estado === "acordada";
+  /* O dia e a hora, para ele ver se lhe cabe na agenda. */
+  const quandoDoPedido = quandoEOTrabalho(pedido);
 
   async function marcarFeito() {
     if (fotos.length === 0) {
@@ -933,12 +949,44 @@ function DetalheDoTrabalho({
             <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
             {pedido.city ?? "—"}
           </li>
-          {pedido.urgency && (
-            <li className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-              {URGENCIA[pedido.urgency] ?? pedido.urgency}
-            </li>
-          )}
+          {/*
+            QUANDO É — o dia, e a hora quando ela existe.
+
+            "O pedido no feed diz que o cliente deseja que seja recolhido
+            amanhã, mas ao clicar ele deveria mostrar a data e horário para o
+            parceiro ver se faz sentido na sua agenda."
+
+            Aqui dentro há espaço para a frase inteira: «Amanhã, sábado, 29 de
+            agosto, às 11:00». Na lista fica só o dia. O que nunca acontece é
+            inventar-se uma hora — quando ninguém a marcou, diz-se isso.
+          */}
+          <li className="flex items-start gap-2">
+            <Clock
+              className={`mt-0.5 h-4 w-4 shrink-0 ${
+                quandoDoPedido.passou ? "text-rose-500" : "text-slate-400"
+              }`}
+              aria-hidden="true"
+            />
+            <span>
+              <span
+                className={
+                  quandoDoPedido.passou ? "font-semibold text-rose-700" : "font-medium text-tinta"
+                }
+              >
+                {quandoDoPedido.dia}
+                {quandoDoPedido.hora && `, às ${quandoDoPedido.hora}`}
+              </span>
+              {quandoDoPedido.aviso && (
+                <span
+                  className={`block text-xs ${
+                    quandoDoPedido.passou ? "text-rose-600" : "text-slate-500"
+                  }`}
+                >
+                  {quandoDoPedido.aviso}
+                </span>
+              )}
+            </span>
+          </li>
           {pedido.precisaFatura && (
             <li className="flex items-center gap-2">
               <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />

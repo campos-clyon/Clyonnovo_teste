@@ -26,6 +26,13 @@ export type Pedido = {
   urgency: string | null;
   /** A data e hora desejadas pelo cliente, quando as indicou. */
   dataAgendada?: string | null;
+  /**
+   * Quando o cliente fez o pedido — o zero de "amanhã".
+   *
+   * A urgência fica gravada como palavra e lê-se sempre contra hoje: sem esta
+   * data, um pedido de segunda-feira continuava a prometer «amanhã» na quinta.
+   */
+  criadoEm?: string | null;
   description: string | null;
   filesJson: string | null;
   floor: string | null;
