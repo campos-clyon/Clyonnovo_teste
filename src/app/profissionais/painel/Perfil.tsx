@@ -631,13 +631,32 @@ export default function Perfil({
             </Campo>
 
             <Guardar
-              onClick={() =>
+              onClick={() => {
+                /*
+                  O IBAN QUE NÃO FOI TOCADO NÃO VIAJA.
+
+                  "Já tenho o IBAN salvo, só quero colocar o MB WAY."
+
+                  O ecrã só devolve os últimos quatro dígitos — «LT72 ···· 0473»
+                  — e a caixa mostrava-se vazia por causa disso. Mas o ESTADO
+                  continuava a ter a máscara lá dentro, e era a máscara que
+                  seguia para o servidor: chegava um IBAN cheio de pontos
+                  medianos, falhava a validação, e a resposta era «IBAN
+                  inválido. Confirme os dígitos» a alguém que não tinha escrito
+                  dígito nenhum.
+
+                  Uma máscara nunca pode ser um IBAN novo. Quando o campo está
+                  como veio, a chave nem se envia — e o servidor guarda o que já
+                  tem. Para trocar de conta, escreve-se por cima; para a apagar,
+                  apaga-se o texto, e aí segue vazio.
+                */
+                const porTocar = dados.iban.includes("·");
                 gravar({
-                  iban: dados.iban,
+                  ...(porTocar ? {} : { iban: dados.iban }),
                   ibanTitular: dados.ibanTitular,
                   mbway: dados.mbway,
-                })
-              }
+                });
+              }}
               rotulo="Guardar conta"
             />
 

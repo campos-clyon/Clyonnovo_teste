@@ -73,8 +73,16 @@ export async function GET(req: NextRequest) {
       ),
     ];
     const contextoDoCliente = new Map<string, { desde: string | null; confirmados: number }>();
-    if (emailsContratados.length > 0) {
-      const pool = await getPool();
+    /*
+     * ISTO NUNCA PODE DERRUBAR A LISTA.
+     *
+     * "Cliente desde X · N trabalhos" e contexto agradavel de ter; a lista de
+     * trabalhos e o painel inteiro. Uma consulta que falhe aqui dava-lhe "Erro
+     * ao listar" e um ecra vazio -- ele perdia tudo por causa de uma linha de
+     * enfeite. Falhando, cala-se: sem contexto, o painel continua de pe.
+     */
+    try {
+      const pool = emailsContratados.length > 0 ? await getPool() : null;
       if (pool) {
         for (const email of emailsContratados) {
           const [uLinhas] = (await pool.execute(
@@ -94,6 +102,8 @@ export async function GET(req: NextRequest) {
           });
         }
       }
+    } catch (e) {
+      console.error("[profissionais/meus-pedidos] contexto do cliente", e);
     }
 
     /*
@@ -111,12 +121,24 @@ export async function GET(req: NextRequest) {
      * (base, pedido) fica guardado — a segunda pergunta é sempre igual à
      * primeira, e não se paga duas vezes por ela.
      */
-    const medidas = await distanciasRodoviarias(
-      linhas.map((l) => ({
-        origem: ponto(l.baseLat, l.baseLng),
-        destino: ponto(l.pedidoLat, l.pedidoLng),
-      })),
-    );
+    /*
+     * E ISTO TAMBEM NAO. A distancia sai de uma API da Google e de uma tabela
+     * de cache: duas coisas que podem estar em baixo sem o painel ter culpa.
+     * Sem distancia, os cartoes aparecem sem o numero dos quilometros; sem
+     * lista, ele nao tem painel nenhum.
+     */
+    let medidas: Awaited<ReturnType<typeof distanciasRodoviarias>> = [];
+    try {
+      medidas = await distanciasRodoviarias(
+        linhas.map((l) => ({
+          origem: ponto(l.baseLat, l.baseLng),
+          destino: ponto(l.pedidoLat, l.pedidoLng),
+        })),
+      );
+    } catch (e) {
+      console.error("[profissionais/meus-pedidos] distancias", e);
+      medidas = linhas.map(() => null);
+    }
 
     const pedidos = linhas.map((l, i) => {
       // A morada e o contacto só entram na vista depois de ele ser contratado —
@@ -242,7 +264,21 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ nome: sessao.nome, pedidos });
   } catch (error) {
+    /*
+     * A MENSAGEM DIZ O QUE FALHOU, e nao so que falhou.
+     *
+     * "Erro ao listar" e uma parede: quem a le -- ele ou eu -- fica sem saber
+     * por onde comecar, e a unica pista ficava num registo do servidor a que
+     * ninguem chega a partir do telemovel.
+     */
     console.error("[profissionais/meus-pedidos]", error);
-    return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });
+    const porque = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      {
+        error: "Não foi possível carregar os seus trabalhos. Tente outra vez dentro de um minuto.",
+        detalhe: porque.slice(0, 200),
+      },
+      { status: 500 },
+    );
   }
 }

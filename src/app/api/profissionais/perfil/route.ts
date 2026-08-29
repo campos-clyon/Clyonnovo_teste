@@ -347,7 +347,21 @@ export async function PUT(req: NextRequest) {
 
   if ("iban" in corpo) {
     const bruto = texto(corpo.iban);
-    if (!bruto) {
+    /*
+     * UMA MÁSCARA NÃO É UM IBAN NOVO — é o que já lá está.
+     *
+     * A leitura devolve `LT72 ···· 0473`, e quem grave o formulário sem mexer
+     * no campo devolve-nos essa máscara de volta. Interpretá-la como um IBAN
+     * dava «IBAN inválido. Confirme os dígitos» a alguém que só queria
+     * acrescentar o MB WAY — foi o que aconteceu.
+     *
+     * O ecrã já não a envia; este travão é para nenhum outro caminho tropeçar
+     * no mesmo sítio. Ignorar é seguro: o ponto mediano não existe em IBAN
+     * nenhum, por isso isto nunca pode ser uma conta a sério a ser descartada.
+     */
+    if (bruto.includes("·")) {
+      /* mantém-se o que está gravado */
+    } else if (!bruto) {
       mudancas.iban = null;
     } else if (!ibanValido(bruto)) {
       erros.push({ campo: "iban", mensagem: "IBAN inválido. Confirme os dígitos." });

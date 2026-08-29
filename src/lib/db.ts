@@ -1773,6 +1773,20 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   }>
 > {
   await ensureNegociacoesTable();
+  /*
+   * E TAMBEM a tabela dos pedidos.
+   *
+   * Esta consulta le SETE colunas de `simulatorOrders` -- baseDoPreco,
+   * createdAt, dataAgendada, o acesso ao local -- e nao garantia nenhuma
+   * delas. Enquanto as colunas ja existirem passa despercebido; no dia em que
+   * se acrescenta uma nova e o painel do profissional e a primeira coisa a ser
+   * aberta, a consulta parte com "Unknown column" e ele ve "Erro ao listar"
+   * sem nada por tras.
+   *
+   * As migracoes correm uma vez por processo, por isso isto nao custa nada a
+   * partir da segunda chamada.
+   */
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = await pool.execute(
