@@ -767,3 +767,49 @@ footer .text-white {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/*
+ * O DISTINTIVO "NOVO" VIBRA, como um telemóvel na mesa.
+ *
+ * "Vamos mudar o ícone «novo»: remover a bolinha branca que pisca e colocá-lo
+ * para vibrar na cor verde WhatsApp."
+ *
+ * Um ponto a piscar é uma luz; uma vibração é um aviso — e é assim que se lê
+ * uma notificação que chegou agora. A diferença está no ritmo: NÃO É uma
+ * oscilação contínua. São dois décimos de segundo de tremor a cada três
+ * segundos, e o resto do tempo o distintivo está parado.
+ *
+ * Isso é deliberado. Movimento constante em cinco cartões ao mesmo tempo faz
+ * um ecrã inquieto onde já ninguém olha para nenhum; um tremor curto e
+ * espaçado chama o olho e devolve-o à lista.
+ *
+ * Um pixel para cada lado chega. Mais do que isso deixa de parecer vibração e
+ * passa a parecer defeito.
+ */
+@keyframes vibrar-novo {
+  0%, 92%, 100% { transform: translateX(0); }
+  93%  { transform: translateX(-1px); }
+  94%  { transform: translateX(1px); }
+  95%  { transform: translateX(-1px); }
+  96%  { transform: translateX(1px); }
+  97%  { transform: translateX(-1px); }
+  98%  { transform: translateX(1px); }
+}
+/*
+ * `inline-flex` NAO E ENFEITE: sem ele isto nao mexe.
+ *
+ * `transform` nao se aplica a elementos inline nao substituidos. O distintivo
+ * tinha `flex` por causa da bolinha; ao tirar a bolinha, tirei tambem o flex, e
+ * a animacao ficou a correr — `getAnimations()` dizia "running" — sem deslocar
+ * um pixel. Nenhum teste apanha isto: so se ve num browser.
+ */
+.distintivo-novo {
+  display: inline-flex;
+  animation: vibrar-novo 3s ease-in-out infinite;
+}
+/* Quem pediu menos movimento ao sistema não leva nenhum. */
+@media (prefers-reduced-motion: reduce) {
+  .distintivo-novo {
+    animation: none;
+  }
+}

@@ -92,14 +92,56 @@ describe("o distintivo «novo»", () => {
 });
 
 describe("o realce dos que ainda não abriu", () => {
-  it("tem cor, anel e fundo próprios", () => {
+  it("é o CONTORNO que destaca, e não uma barra à esquerda", () => {
+    /*
+     * "O azul que aparece do lado esquerdo do pedido quero que remova; basta
+     * ter as bordas com um azul claro para destacar o pedido."
+     *
+     * Eram três coisas a dizer a mesma — barra grossa, anel por fora e fundo.
+     * Ficou o contorno e um sopro de cor no fundo.
+     */
+    expect(LIMPO).toContain("border-2 border-[#8AD8E6]");
     expect(LIMPO).toContain("bg-cyan-50/40");
-    expect(LIMPO).toContain("ring-1 ring-[#00B4CC]/15");
-    expect(LIMPO).toContain("border-l-[#00B4CC]");
+    expect(LIMPO).not.toContain("border-l-[#00B4CC]");
+    expect(LIMPO).not.toContain("ring-1 ring-[#00B4CC]/15");
   });
 
-  it("o ponto respira, e pára para quem pediu menos movimento", () => {
-    expect(LIMPO).toContain("animate-pulse motion-reduce:animate-none");
+  it("a barra à esquerda fica reservada ao 🔥, que diz PORQUÊ", () => {
+    // Um trabalho a menos de 10 km continua a mudar o cartão inteiro: essa
+    // barra não é "é novo", é "é perto".
+    expect(LIMPO).toContain("border-l-4 border-l-orange-500");
+  });
+
+  it("o distintivo vibra em verde WhatsApp, sem bolinha a piscar", () => {
+    /*
+     * "Remover a bolinha branca que pisca e colocá-lo para vibrar na cor verde
+     * WhatsApp."
+     *
+     * O ponto a piscar era uma luz; a vibração é um aviso — e o verde já quer
+     * dizer "alguém falou contigo" para quem usa a aplicação todos os dias.
+     */
+    expect(LIMPO).toContain('className="distintivo-novo inline-flex rounded-full bg-[#25D366]');
+    expect(LIMPO).not.toContain("animate-pulse motion-reduce:animate-none");
+    expect(LIMPO).not.toContain("bg-white/90");
+  });
+
+  it("o tremor é curto e espaçado, e pára para quem pediu menos movimento", () => {
+    // Movimento constante em cinco cartões faz um ecrã inquieto onde já
+    // ninguém olha para nenhum.
+    const CSS = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(CSS).toContain("@keyframes vibrar-novo");
+    /*
+     * `display: inline-flex` NAO E ENFEITE: sem ele isto nao mexe.
+     *
+     * `transform` nao se aplica a elementos inline nao substituidos. O
+     * distintivo tinha `flex` por causa da bolinha; ao tirar a bolinha caiu
+     * tambem o flex, e a animacao ficou a correr sem deslocar um pixel —
+     * `getAnimations()` dizia "running" e a barra nao se mexia. So se viu num
+     * browser, a mover a animacao a mao ate ao instante do tremor.
+     */
+    expect(CSS).toContain("display: inline-flex;");
+    expect(CSS).toContain("animation: vibrar-novo 3s ease-in-out infinite;");
+    expect(CSS).toContain("prefers-reduced-motion: reduce");
   });
 
   it("o realce cai quando o cartão é aberto — está preso ao mesmo sinal", () => {
