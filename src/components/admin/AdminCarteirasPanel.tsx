@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Smartphone,
   Landmark,
+  Pencil,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
@@ -111,6 +112,63 @@ export default function AdminCarteirasPanel() {
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
+  /*
+   * CORRIGIR O VALOR DE UM TRABALHO FECHADO.
+   *
+   * "Me dê a opção de editar o valor, pois tem trabalhos que o orçamento é no
+   * local e que muda — ex.: esse trabalho foi 230."
+   *
+   * Numa boa parte dos trabalhos o orçamento fecha-se à porta, com as coisas à
+   * vista. O #242 foi combinado a 135 € e o trabalho foram 230: sem isto, ou
+   * se pagava 128,25 € de um trabalho de 218,50 €, ou se pagava por fora — e
+   * fora da carteira o dinheiro deixa de aparecer em conta nenhuma.
+   */
+  const [aCorrigir, setACorrigir] = useState<{
+    t: Trabalho;
+    nome: string;
+    valor: string;
+  } | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const [precisaMotivo, setPrecisaMotivo] = useState(false);
+  const [aGravar, setAGravar] = useState(false);
+
+  async function gravarValor() {
+    if (!token || !aCorrigir) return;
+    const valor = Number(aCorrigir.valor.replace(",", "."));
+    if (!Number.isFinite(valor) || valor <= 0) {
+      setErro("Escreva um valor acima de zero.");
+      return;
+    }
+    setAGravar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/valor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          negociacaoId: aCorrigir.t.negociacaoId,
+          valor,
+          motivo: motivo.trim() || undefined,
+        }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        // O servidor pede o motivo quando o trabalho já foi pago: a caixa
+        // abre-se em vez de a mensagem morrer numa linha vermelha.
+        if (dados.precisaMotivo) setPrecisaMotivo(true);
+        setErro(dados.error ?? "Não foi possível gravar o valor.");
+        return;
+      }
+      setACorrigir(null);
+      setMotivo("");
+      setPrecisaMotivo(false);
+      await carregar(true);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAGravar(false);
+    }
+  }
 
   const carregar = useCallback(
     async (silencioso = false) => {
@@ -185,6 +243,95 @@ export default function AdminCarteirasPanel() {
 
   return (
     <section className="rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+      {/*
+        A CAIXA DE CORRIGIR O VALOR.
+
+        Fecha-se pelo botão e não por clicar fora: já se perdeu trabalho a
+        meio por um toque ao lado, e aqui o que se perde é um número que se
+        acabou de acertar ao telefone.
+      */}
+      {aCorrigir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <h3 className="font-[Poppins] text-lg font-bold text-white">
+              Corrigir o valor
+            </h3>
+            <p className="mt-1 text-sm text-slate-400">
+              #{aCorrigir.t.pedidoId} · {aCorrigir.nome}
+            </p>
+            <p className="mt-3 text-xs text-slate-500">
+              Estava acordado {euros(aCorrigir.t.valorAcordado)}. O que ficar aqui
+              refaz o que ele recebe, o que o cliente paga e a comissão — e fica no
+              histórico do pedido.
+            </p>
+
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Valor do trabalho (sem IVA)
+              <input
+                autoFocus
+                value={aCorrigir.valor}
+                onChange={(e) => setACorrigir({ ...aCorrigir, valor: e.target.value })}
+                inputMode="decimal"
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-lg font-bold text-white outline-none focus:border-cyan-600"
+              />
+            </label>
+
+            {/* A conta refeita, antes de gravar: ver o número antes de o fixar. */}
+            {Number(aCorrigir.valor.replace(",", ".")) > 0 && (
+              <p className="mt-2 text-xs text-cyan-300">
+                Ele passa a receber{" "}
+                <strong>
+                  {euros(
+                    Math.round(Number(aCorrigir.valor.replace(",", ".")) * 0.95 * 100) / 100,
+                  )}
+                </strong>
+                .
+              </p>
+            )}
+
+            {(precisaMotivo || aCorrigir.t.confirmadoEm) && (
+              <label className="mt-3 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Porquê
+                <input
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="orçamento fechado no local"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-600"
+                />
+              </label>
+            )}
+
+            {erro && (
+              <p className="mt-3 rounded-lg border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-300">
+                {erro}
+              </p>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={gravarValor}
+                disabled={aGravar}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50"
+              >
+                {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                Gravar
+              </button>
+              <button
+                onClick={() => {
+                  setACorrigir(null);
+                  setMotivo("");
+                  setPrecisaMotivo(false);
+                  setErro("");
+                }}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">
@@ -450,6 +597,14 @@ export default function AdminCarteirasPanel() {
                         </p>
                         <p className="text-[11px] text-slate-500">
                           Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
+                          {" "}
+                          <button
+                            onClick={() => setACorrigir({ t, nome: c.nome, valor: String(t.valorAcordado) })}
+                            className="ml-1 inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-400 hover:border-cyan-600 hover:text-cyan-300"
+                          >
+                            <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
+                            corrigir
+                          </button>
                         </p>
                       </div>
                       <button
@@ -492,6 +647,14 @@ export default function AdminCarteirasPanel() {
                         </p>
                         <p className="text-[11px] text-slate-600">
                           Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
+                          {" "}
+                          <button
+                            onClick={() => setACorrigir({ t, nome: c.nome, valor: String(t.valorAcordado) })}
+                            className="ml-1 inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-400 hover:border-cyan-600 hover:text-cyan-300"
+                          >
+                            <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
+                            corrigir
+                          </button>
                         </p>
                       </div>
                       <span

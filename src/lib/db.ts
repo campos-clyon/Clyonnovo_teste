@@ -5211,6 +5211,15 @@ export type Acontecimento =
   // O dinheiro
   | "levantamento_pedido"
   | "levantamento_pago"
+  /*
+   * O valor de um trabalho ja fechado foi corrigido.
+   *
+   * Acontece porque numa boa parte dos trabalhos o orcamento fecha-se a porta,
+   * com as coisas a vista: combina-se 135 e o trabalho sao 230. Mudar um numero
+   * ja combinado e uma decisao com duas pessoas do lado de la, e daqui a tres
+   * meses ninguem se lembra porque. Por isso fica registado a parte.
+   */
+  | "valor_corrigido"
   // As contas
   | "conta_apagada";
 
