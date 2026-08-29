@@ -663,6 +663,27 @@ export default function PropostasRecebidas({
                 */}
                 <div className="text-right">
                   <div className="text-xl font-bold text-tinta">{euros(emCima)}</div>
+                  {/*
+                    O TOTAL, ANTES DE CARREGAR NO BOTÃO.
+
+                    O cartão mostrava só o valor cru, e a conta inteira — com
+                    IVA e taxa — só aparecia DEPOIS de "Contratar". Enquanto o
+                    imposto vinha decomposto de dentro do valor isso passava;
+                    desde 29-08-2026 o IVA ACRESCE, e 270 € passaram a 348,30 €
+                    descobertos a seguir ao clique. Um salto de 29% encontrado
+                    depois de decidir é a definição de má surpresa — e a lei
+                    portuguesa (DL 138/90) manda mostrar ao consumidor o preço
+                    final antes de ele se comprometer.
+
+                    O número grande continua a ser o da negociação, que é sobre
+                    o que os dois estão a discutir. O total vem por baixo, mais
+                    pequeno, a dizer o que sai da carteira.
+                  */}
+                  {emCima != null && (
+                    <div className="text-xs font-semibold text-acao">
+                      {euros(contaDoCliente(emCima, regimeDeIva(n.regimeIva)).total)} a pagar
+                    </div>
+                  )}
                   <div className="text-xs text-tinta-fraca">
                     {/*
                       "a sua proposta" ao lado do NOME DO PROFISSIONAL lia-se

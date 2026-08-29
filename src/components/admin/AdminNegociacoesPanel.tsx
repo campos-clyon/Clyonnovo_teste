@@ -33,6 +33,12 @@ import {
 } from "@/lib/taxas-plataforma";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import {
+  mensagemDasPropostas,
+  propostasParaOCliente,
+  trabalhoFechado,
+} from "@/lib/mensagem-das-propostas";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
@@ -193,6 +199,20 @@ function precisaDeSi(n: Negociacao): boolean {
 function oQueFalta(n: Negociacao): string {
   if (esperaConfirmacao(n)) return "trabalho feito — falta confirmar";
   return n.estado === "aguarda_contratacao" ? "falta contratar" : "espera resposta";
+}
+
+/**
+ * O serviço em palavras que o cliente escreveu, e não no código do motor.
+ *
+ * "recolha_entulho" numa mensagem de WhatsApp é linguagem de base de dados a
+ * escapar-se para a frente de quem não a devia ver. Em minúsculas de
+ * propósito: entra a meio de uma frase — "propostas para a recolha de entulho
+ * em Setúbal".
+ */
+function nomeDoServico(id: string | null): string | null {
+  if (!id) return null;
+  const c = SERVICE_CATEGORIES.find((x) => x.id === id);
+  return (c?.label ?? id.replace(/_/g, " ")).toLowerCase();
 }
 
 const ESTADO_DA_PROPOSTA: Record<string, string> = {
@@ -598,6 +618,24 @@ export default function AdminNegociacoesPanel({
 
     const t = await reenviar(chave, { pedidoId: p.id, para: "cliente", paraCopiar: true });
     if (!t) return;
+
+    /*
+     * RECARREGAR, OU A CAIXA NUNCA APARECE.
+     *
+     * "Ele gera o link mas não disponibiliza aqui para copiar e enviar."
+     *
+     * A caixa só se mostra quando o marcador de versão que temos em mão bate
+     * certo com o `linkExpiraEm` da lista. `reenviar` guarda o marcador NOVO —
+     * mas a lista continuava com o `linkExpiraEm` ANTIGO, da última vez que
+     * foi carregada. As duas datas nunca coincidiam, o ecrã concluía que o
+     * link tinha morrido, e escondia exactamente aquilo que ele acabara de
+     * gerar. Para sempre, a cada tentativa.
+     *
+     * O guarda continua a servir para o que foi feito — apanhar um token
+     * rodado NOUTRO sítio. Só precisa de comparar com dados frescos.
+     */
+    await carregar(true);
+
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/pedido/${t}`);
       setCopiado(chave);
@@ -1508,6 +1546,14 @@ export default function AdminNegociacoesPanel({
             String(p.linkExpiraEm) === versaoDoLink[chaveCliente]) && (
           <LinkEmClaro
             caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
+            mensagem={mensagemDasPropostas({
+              nomeCliente: p.contactName,
+              servico: nomeDoServico(p.serviceType),
+              cidade: p.city,
+              propostas: propostasParaOCliente(p.negociacoes),
+              fechado: trabalhoFechado(p.negociacoes),
+              link: `${typeof window !== "undefined" ? window.location.origin : "https://clyon.pt"}/pedido/${linksEmClaro[chaveCliente]}`,
+            })}
             /*
               Duas historias, duas frases. "O email nao saiu" para quem NAO TEM
               email poe quem le a procurar uma avaria de envio que nao existe —
@@ -3016,9 +3062,34 @@ function Caixa({ marcado, onMarcar }: { marcado: boolean; onMarcar: () => void }
   );
 }
 
-function LinkEmClaro({ caminho, aviso }: { caminho: string; aviso: string }) {
-  const [copiado, setCopiado] = useState(false);
+function LinkEmClaro({
+  caminho,
+  aviso,
+  mensagem,
+}: {
+  caminho: string;
+  aviso: string;
+  /**
+   * A mensagem pronta a mandar, já com as propostas e o link lá dentro.
+   *
+   * "Gostaria que ele viesse já com uma mensagem resumida para enviar ao
+   * cliente sobre as propostas que ele recebeu."
+   *
+   * Ele escrevia-a à mão, uma a uma. Escrever à mão vinte vezes por semana é
+   * onde nascem os enganos que custam dinheiro: um valor trocado, o nome de
+   * outro profissional, e — o mais caro de todos — não dizer que ao número
+   * acresce imposto.
+   */
+  mensagem?: string;
+}) {
+  const [copiado, setCopiado] = useState<"link" | "mensagem" | null>(null);
   const url = typeof window !== "undefined" ? `${window.location.origin}${caminho}` : caminho;
+
+  function copiar(o: "link" | "mensagem", texto: string) {
+    navigator.clipboard?.writeText(texto);
+    setCopiado(o);
+    setTimeout(() => setCopiado((c) => (c === o ? null : c)), 1800);
+  }
 
   return (
     <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
@@ -3028,17 +3099,44 @@ function LinkEmClaro({ caminho, aviso }: { caminho: string; aviso: string }) {
           {url}
         </code>
         <button
-          onClick={() => {
-            navigator.clipboard?.writeText(url);
-            setCopiado(true);
-            setTimeout(() => setCopiado(false), 1500);
-          }}
-          className="flex items-center gap-1 rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white"
+          onClick={() => copiar("link", url)}
+          className="flex shrink-0 items-center gap-1 rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white"
         >
           <Copy className="h-3 w-3" aria-hidden="true" />
-          {copiado ? "Copiado" : "Copiar"}
+          {copiado === "link" ? "Copiado" : "Copiar"}
         </button>
       </div>
+
+      {/*
+        A MENSAGEM INTEIRA, com o link já lá dentro.
+
+        Fica por baixo e não por cima: quem só quer o endereço não tem de
+        passar por um bloco de texto para lá chegar. Mas é este o botão que ele
+        vai usar quase sempre — o link sozinho obriga-o a escrever tudo à volta.
+      */}
+      {mensagem && (
+        <div className="mt-2 border-t border-amber-500/20 pt-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-200/80">
+              Mensagem pronta a enviar
+            </p>
+            <button
+              onClick={() => copiar("mensagem", mensagem)}
+              className="flex shrink-0 items-center gap-1 rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white"
+            >
+              <Copy className="h-3 w-3" aria-hidden="true" />
+              {copiado === "mensagem" ? "Copiada" : "Copiar mensagem"}
+            </button>
+          </div>
+          {/*
+            Mostra-se INTEIRA, e não cortada. É texto que vai sair em nome da
+            casa para um cliente: quem o manda tem de o poder ler antes.
+          */}
+          <pre className="mt-1.5 max-h-64 overflow-y-auto whitespace-pre-wrap rounded bg-slate-950 px-2.5 py-2 font-sans text-[11px] leading-relaxed text-slate-300">
+            {mensagem}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
