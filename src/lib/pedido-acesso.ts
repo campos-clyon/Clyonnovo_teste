@@ -55,6 +55,32 @@ export function hashDeToken(token: string): string {
 export function gerarTokenDeAcesso(agora: Date = new Date()): TokenDeAcesso {
   const token = randomBytes(BYTES_DE_ENTROPIA).toString("base64url");
   const expiraEm = new Date(agora.getTime() + DIAS_DE_VALIDADE * 24 * 60 * 60 * 1000);
+  /*
+   * SEM MILISSEGUNDOS — ou a data nunca sobrevive à ida e volta à base.
+   *
+   * "Ele gera o link mas não disponibiliza aqui para copiar e enviar."
+   *
+   * Esta validade serve de MARCA DE VERSÃO do link: o backoffice guarda a que
+   * gerou e compara-a com a que a base devolve, para saber se alguém rodou o
+   * token entretanto. A comparação é de texto — datas diferentes, tokens
+   * diferentes.
+   *
+   * Só que a coluna `acessoTokenExpiraEm` é DATETIME, sem casas decimais. O
+   * que se escreve com milissegundos volta sem eles, e o MySQL ainda arredonda
+   * para o segundo seguinte quando a fracção passa de meio. Medido contra a
+   * base de produção:
+   *
+   *   escrito   2026-09-28T13:26:38.829Z
+   *   lido      2026-09-28T13:26:39.000Z
+   *
+   * Duas datas do mesmo instante, dois textos diferentes. O ecrã concluía que
+   * o link tinha morrido e escondia a caixa de copiar — sempre, a cada
+   * tentativa, e recarregar a lista não ajudava nada.
+   *
+   * Zerar aqui arruma todos os caminhos de uma vez: a distribuição, a criação
+   * pelo backoffice, o pedido do simulador e o reenvio partilham esta função.
+   */
+  expiraEm.setMilliseconds(0);
   return { token, hash: hashDeToken(token), expiraEm };
 }
 
