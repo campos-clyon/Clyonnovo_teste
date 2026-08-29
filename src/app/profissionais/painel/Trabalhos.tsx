@@ -774,11 +774,21 @@ export default function Trabalhos({
                   )}
                   <div className="mt-2 flex items-baseline gap-1.5">
                     <HandCoins className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
-                    <span
-                      className={`text-lg font-bold ${
-                        fechado ? "text-emerald-600" : "text-[#0B1929]"
-                      }`}
-                    >
+                    {/*
+                      O DINHEIRO É SEMPRE VERDE.
+
+                      "Coloque a cor dos valores a ser pago na cor verde."
+
+                      Era verde só depois de fechado e preto enquanto estava
+                      por decidir — mas é ao percorrer a lista que ele procura
+                      o número, e era exactamente aí que ele não saltava. O
+                      ícone já era verde ao lado de um valor preto, o que é
+                      pior do que qualquer das duas escolhas.
+
+                      É a mesma cor do detalhe, que sempre foi verde: o número
+                      deixa de mudar de cor entre o cartão e o ecrã de dentro.
+                    */}
+                    <span className="text-lg font-bold text-emerald-600">
                       {euros(fechado ? p.recebeSeFechado : p.recebeSeAceitar)}
                     </span>
                     {/*
