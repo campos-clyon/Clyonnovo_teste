@@ -6,7 +6,6 @@ import {
   pesoDoTrabalho,
   porQuilometro,
   porKmPorExtenso,
-  corDaBarra,
   RAIO_QUENTE_KM,
   BOM_POR_KM,
 } from "./sinais-do-trabalho";
@@ -116,10 +115,19 @@ describe("a ordem e a cor", () => {
   });
 
   it("só o perto pinta o cartão de laranja", () => {
-    expect(corDaBarra({ distanciaKm: 5 }, false)).toContain("orange");
-    expect(corDaBarra({ urgency: "today" }, false)).toContain("amber");
-    // Sem sinal, volta ao ciano da marca quando é novo.
-    expect(corDaBarra({ distanciaKm: 90 }, true)).toContain("00B4CC");
+    /*
+     * A cor vive no cartão, e já não numa função à parte.
+     *
+     * `corDaBarra` devolvia a classe da barra esquerda e NUNCA foi chamada por
+     * ninguém — o painel sempre teve as classes escritas nele. Ficou a apontar
+     * para um ciano que entretanto deixou de existir: uma função morta a
+     * devolver uma cor errada é pior do que função nenhuma, porque quem a
+     * encontrar acredita nela.
+     */
+    expect(TRABALHOS).toContain("border-l-4 border-l-orange-500");
+    expect(
+      readFileSync(join(process.cwd(), "src/lib/sinais-do-trabalho.ts"), "utf8"),
+    ).not.toContain("export function corDaBarra");
   });
 });
 

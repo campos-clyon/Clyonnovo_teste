@@ -159,14 +159,6 @@ export function pesoDoTrabalho(t: TrabalhoParaAvaliar): number {
   );
 }
 
-/** A cor da barra à esquerda do cartão: a do sinal mais forte que ele tiver. */
-export function corDaBarra(t: TrabalhoParaAvaliar, novo: boolean): string {
-  const chaves = new Set(sinaisDoTrabalho(t).map((s) => s.chave));
-  if (chaves.has("perto")) return "bg-orange-500";
-  if (chaves.has("urgente")) return "bg-amber-400";
-  return novo ? "bg-[#00B4CC]" : "bg-[#E2EEF3]";
-}
-
 /** "20,6 €/km" — a conta que ele faz de cabeça, escrita. */
 export function porKmPorExtenso(t: TrabalhoParaAvaliar): string | null {
   const v = porQuilometro(t);

@@ -613,21 +613,25 @@ export default function Trabalhos({
                     ? "border-l-4 border-l-orange-500 border-y-orange-100 border-r-orange-100 ring-1 ring-orange-100"
                     : novo
                       /*
-                       * POR ABRIR: barra, anel e um fundo com um sopro de cor.
+                       * POR ABRIR: O CONTORNO, E MAIS NADA.
                        *
-                       * "Os pedidos novos ainda não abertos devem ter uma cor e
-                       * efeito especial; só muda quando for aberto."
+                       * "O azul que aparece do lado esquerdo do pedido quero
+                       * que remova; basta ter as bordas com um azul claro para
+                       * destacar o pedido."
                        *
-                       * Ciano da marca, e não âmbar: a CLYON não tem amarelo, e
-                       * uma cor que não é da casa lê-se como aviso de sistema em
-                       * vez de destaque. O fundo é 40% de um ciano já claro —
-                       * o suficiente para o cartão se distinguir de relance,
-                       * pouco o suficiente para o texto continuar a ler-se.
+                       * Havia uma barra grossa à esquerda, um anel por fora e o
+                       * fundo — três coisas a dizer a mesma coisa. Um contorno
+                       * de dois pixéis em azul claro chega para o cartão saltar
+                       * ao percorrer a lista, e devolve o olho ao conteúdo em
+                       * vez de o prender na moldura.
+                       *
+                       * A barra à esquerda fica reservada ao 🔥 aqui em cima —
+                       * essa diz PORQUÊ, e não apenas "é novo".
                        *
                        * Some no toque. É a única forma de isto funcionar: um
                        * realce que fica é decoração, e decoração não avisa.
                        */
-                      ? "border-l-4 border-l-[#00B4CC] border-y-[#B8E6EE] border-r-[#B8E6EE] bg-cyan-50/40 ring-1 ring-[#00B4CC]/15"
+                      ? "border-2 border-[#8AD8E6] bg-cyan-50/40"
                       : "border-[#E2EEF3]"
               }`}
             >
@@ -665,14 +669,22 @@ export default function Trabalhos({
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {novo && (
-                      <span className="flex items-center gap-1.5 rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
-                        {/* O ponto respira devagar. Só existe em cinco cartões
-                            no máximo — num ecrã inteiro a piscar, ninguém olha
-                            para nenhum. Pára para quem pediu menos movimento. */}
-                        <span
-                          className="h-1.5 w-1.5 rounded-full bg-white/90 animate-pulse motion-reduce:animate-none"
-                          aria-hidden="true"
-                        />
+                      /*
+                        VERDE WHATSAPP, E A VIBRAR.
+
+                        "Remover a bolinha branca que pisca e colocá-lo para
+                        vibrar na cor verde WhatsApp."
+
+                        O ponto a piscar era uma luz; a vibração é um aviso — e
+                        é assim que se lê uma notificação que acabou de chegar.
+                        O verde é o mesmo do botão de WhatsApp que ele já tem no
+                        detalhe, por isso a cor não é nova para ele: já quer
+                        dizer "alguém falou contigo".
+
+                        O ritmo está em `globals.css`: dois décimos de tremor a
+                        cada três segundos, e parado o resto do tempo.
+                      */
+                      <span className="distintivo-novo inline-flex rounded-full bg-[#25D366] px-2 py-0.5 text-xs font-bold text-white">
                         novo
                       </span>
                     )}
