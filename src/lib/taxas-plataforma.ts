@@ -43,22 +43,88 @@ export const TAXA_TOTAL = TAXA_CLIENTE + TAXA_PROFISSIONAL;
 export const TAXA_IVA = 0.23;
 
 /**
- * O valor negociado JÁ INCLUI o IVA — decompõe-se, não se soma.
+ * TODOS OS VALORES NEGOCIADOS SÃO SEM IVA. O imposto SOMA-SE.
  *
- * A alternativa era somar 23 % ao valor acordado, e aí 350 € negociados
- * passavam a 430,50 € na confirmação. Ninguém aceita um salto desses depois de
- * ter combinado um número: o cliente negoceia sobre o que vai pagar pelo
- * serviço, não sobre uma base a que se acrescenta imposto no fim.
+ * "Temos de deixar claro que todos os valores praticados são sem IVA,
+ * principalmente para os clientes." — decisão de 29-08-2026.
+ *
+ * Até aqui era ao contrário: os 350 € acordados eram tratados como já
+ * incluindo imposto e decompunham-se em 284,55 + 65,45. Agora 350 € são a
+ * base, e o IVA acresce.
+ *
+ * ISTO MUDA O QUE O CLIENTE PAGA, e não é pouco: sobre 350 € acordados com um
+ * profissional no regime normal, o total sobe de 371,00 € para 451,50 €. A
+ * mudança foi pedida sabendo disso.
+ *
+ * ⚠️ FICA UM PONTO POR RESOLVER, e é melhor estar escrito do que esquecido: a
+ * lei portuguesa (DL 138/90) obriga a mostrar ao CONSUMIDOR o preço final, com
+ * imposto incluído. "Sem IVA" é a convenção entre empresas. O que o código faz
+ * — e é o que o torna defensável — é mostrar sempre o TOTAL ao cliente, com a
+ * decomposição por baixo: ele nunca vê só a base.
  */
-export function decomporIva(valorComIva: number): { base: number; iva: number } {
-  const base = aosCentimos(valorComIva / (1 + TAXA_IVA));
-  // O IVA sai por diferença e não por multiplicação: assim base + iva dá
-  // exactamente o valor acordado, sem um cêntimo a sobrar do arredondamento.
-  return { base, iva: aosCentimos(valorComIva - base) };
+export type RegimeIva = "isento" | "normal";
+
+export function regimeDeIva(v: unknown): RegimeIva {
+  return v === "normal" ? "normal" : "isento";
 }
 
-/** O que o cliente paga: acordado + 6 %. */
-export function quantoOClientePaga(acordado: number): number {
+/**
+ * O IVA sobre uma base, segundo o regime de QUEM FACTURA.
+ *
+ * Quem presta o serviço é o profissional, e o imposto é do regime dele: um
+ * profissional na isenção do artigo 53.º não liquida IVA nenhum, e mostrar
+ * 23 % a quem o contrata seria mostrar-lhe um imposto que não deve — e que
+ * ninguém pode entregar ao Estado.
+ */
+export function ivaSobre(base: number, regime: RegimeIva): number {
+  return regime === "normal" ? aosCentimos(base * TAXA_IVA) : 0;
+}
+
+export type ContaDoCliente = {
+  /** O valor acordado com o profissional, sem imposto. */
+  servico: number;
+  /** O IVA do serviço — zero quando o profissional está isento. */
+  iva: number;
+  /** A taxa da CLYON: 6 % sobre o serviço. */
+  taxa: number;
+  /** O que sai da carteira dele. É este o número grande. */
+  total: number;
+  /** Se há linha de imposto para mostrar. */
+  temIva: boolean;
+};
+
+/**
+ * A conta inteira do cliente, num sítio só.
+ *
+ * Existe para que ninguém volte a somar isto à mão. Havia três sítios a
+ * multiplicar por 1,06 e um quarto a decompor o IVA ao contrário — e quatro
+ * cópias de uma conta de dinheiro são quatro números diferentes à espera de
+ * acontecer.
+ */
+export function contaDoCliente(acordado: number, regime: RegimeIva): ContaDoCliente {
+  const servico = aosCentimos(acordado);
+  const iva = ivaSobre(servico, regime);
+  const taxa = aosCentimos(servico * TAXA_CLIENTE);
+  return {
+    servico,
+    iva,
+    taxa,
+    total: aosCentimos(servico + iva + taxa),
+    temIva: iva > 0,
+  };
+}
+
+/**
+ * O serviço mais a taxa da CLYON, SEM IVA.
+ *
+ * Chamava-se `quantoOClientePaga`, e deixou de poder chamar-se: a partir do
+ * momento em que o imposto acresce, esta conta já não é o que o cliente paga —
+ * é a parte dela que não depende do regime do profissional. Um nome que mente
+ * sobre dinheiro acaba numa factura errada, e por isso mudou.
+ *
+ * Para o que o cliente paga a sério, use `contaDoCliente`.
+ */
+export function servicoMaisTaxa(acordado: number): number {
   return aosCentimos(acordado * (1 + TAXA_CLIENTE));
 }
 
@@ -75,5 +141,5 @@ export function quantoOProfissionalRecebe(acordado: number): number {
 
 /** O que fica para a CLYON sobre um trabalho fechado. */
 export function comissaoDaClyon(acordado: number): number {
-  return aosCentimos(quantoOClientePaga(acordado) - quantoOProfissionalRecebe(acordado));
+  return aosCentimos(servicoMaisTaxa(acordado) - quantoOProfissionalRecebe(acordado));
 }

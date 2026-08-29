@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lerBase } from "@/lib/base-do-preco";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   getSimulatorOrderById,
@@ -178,6 +179,10 @@ export async function POST(
       urgency,
       dataAgendada,
       valorDesejadoCliente: valorDesejado != null ? String(valorDesejado) : null,
+      // O que o numero MEDE: o trabalho todo, ou cada carga. Anda agarrado ao
+      // valor ate ao ecra do profissional e ao do cliente -- ver
+      // `base-do-preco.ts`. O que nao for uma das duas palavras vira 'total'.
+      baseDoPreco: lerBase(corpo.baseDoPreco),
       precisaFatura: corpo.precisaFatura === true ? 1 : 0,
       filesJson: enviouFotografias ? (fotos.length > 0 ? JSON.stringify(fotos) : null) : undefined,
       rawOrderJson: JSON.stringify(raw),

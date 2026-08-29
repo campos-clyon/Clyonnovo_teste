@@ -60,6 +60,8 @@ export async function avisarDaProposta(dados: {
             negociacaoId: dados.negociacaoId,
             profissionalNome: negociacao.profissionalNome,
             valor: dados.valor,
+            // O regime de quem factura decide se o total leva IVA por cima.
+            regimeIva: negociacao.regimeIva ?? null,
             servico: pedido.serviceType ?? null,
           });
         }

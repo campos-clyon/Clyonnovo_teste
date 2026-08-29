@@ -16,7 +16,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { quantoOClientePaga } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
 import { enviarBotoesWhatsApp, enviarTextoWhatsApp, telefoneParaWhatsApp } from "@/lib/whatsapp-cloud";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 
@@ -70,6 +70,8 @@ type Alvo = {
   pedidoId: number;
   negociacaoId: number;
   profissionalNome: string;
+  /** O regime de quem factura: decide se o total leva IVA por cima. */
+  regimeIva: string | null;
   estado: Negociacao;
 };
 
@@ -79,6 +81,7 @@ async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | nu
   if (!n) return null;
   return {
     pedidoId,
+    regimeIva: n.regimeIva ?? null,
     negociacaoId,
     profissionalNome: n.profissionalNome,
     estado: {
@@ -142,9 +145,13 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
       (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
   );
   const valor = r2.negociacao.valorAcordado ?? 0;
+  // O TOTAL, com o IVA de quem factura ja somado. O valor acordado e a base a
+  // partir de 29-08-2026, e mandar-lhe so a base por mensagem era prometer-lhe
+  // um numero que ele nao ia pagar.
+  const conta = contaDoCliente(valor, regimeDeIva(alvo.regimeIva));
   await enviarTextoWhatsApp(
     telefone,
-    `Fechado com ${alvo.profissionalNome} por ${euros(valor)} (total com taxa CLYON: ${euros(quantoOClientePaga(valor))}).\n\n` +
+    `Fechado com ${alvo.profissionalNome} por ${euros(valor)} sem IVA (total a pagar: ${euros(conta.total)}).\n\n` +
       `O profissional recebeu a morada e o seu contacto. Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`,
   );
 }
@@ -201,6 +208,7 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
         pedidoId,
         negociacaoId: Number(n.id),
         profissionalNome: n.profissionalNome,
+        regimeIva: n.regimeIva ?? null,
         estado: {
           estado: n.estado as Negociacao["estado"],
           valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
@@ -223,10 +231,13 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
   }
   const acordada = vivas.find((n) => n.estado === "acordada");
   if (acordada) {
-    const total = quantoOClientePaga(Number(acordada.valorAcordado ?? 0));
+    const total = contaDoCliente(
+      Number(acordada.valorAcordado ?? 0),
+      regimeDeIva(acordada.regimeIva),
+    ).total;
     return (
-      `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} por ${euros(Number(acordada.valorAcordado ?? 0))} ` +
-      `(total com taxa: ${euros(total)}).` +
+      `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} por ${euros(Number(acordada.valorAcordado ?? 0))} sem IVA ` +
+      `(total a pagar: ${euros(total)}).` +
       (pedido?.dataAgendada
         ? ""
         : ` Se já tem data pensada, responda por exemplo: 27/08 14:30`)
@@ -539,15 +550,24 @@ export async function aceitacaoParaOWhatsApp(dados: {
   negociacaoId: number;
   profissionalNome: string;
   valor: number;
+  /**
+   * O regime de IVA de quem factura -- OBRIGATORIO de proposito.
+   *
+   * Deixa-lo opcional daria "isento" a quem esquecesse de o passar, e uma
+   * mensagem a prometer 371 EUR de um trabalho que custa 451,50 EUR. Sendo
+   * obrigatorio, o compilador nao deixa ninguem esquecer-se.
+   */
+  regimeIva: string | null;
 }): Promise<boolean> {
   // O profissional aceitou o valor DO CLIENTE — falta só o cliente fechar.
   // Sem este aviso, o "sim" do profissional morria no painel: o cliente de
   // telefone propunha um valor e nunca sabia que tinha sido aceite.
-  const total = quantoOClientePaga(dados.valor);
+  const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
   return enviarBotoesWhatsApp(
     dados.telefone,
     `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n` +
-      `Total com a taxa CLYON: ${euros(total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
+      `${euros(dados.valor)} é sem IVA. Total a pagar: ${euros(conta.total)}, já com o imposto e a taxa CLYON.\n` +
+      `Só paga depois de o trabalho estar feito e confirmado.\n\n` +
       `Falta só fechar — é o botão em baixo.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
@@ -563,13 +583,22 @@ export async function propostaParaOWhatsApp(dados: {
   profissionalNome: string;
   valor: number;
   servico?: string | null;
+  /**
+   * O regime de IVA de quem factura -- OBRIGATORIO de proposito.
+   *
+   * Deixa-lo opcional daria "isento" a quem esquecesse de o passar, e uma
+   * mensagem a prometer 371 EUR de um trabalho que custa 451,50 EUR. Sendo
+   * obrigatorio, o compilador nao deixa ninguem esquecer-se.
+   */
+  regimeIva: string | null;
 }): Promise<boolean> {
-  const total = quantoOClientePaga(dados.valor);
+  const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
   return enviarBotoesWhatsApp(
     dados.telefone,
     `${dados.profissionalNome} propõe ${euros(dados.valor)} para o seu pedido #${dados.pedidoId}` +
       `${dados.servico ? ` (${dados.servico})` : ""}.\n` +
-      `Total com a taxa CLYON: ${euros(total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
+      `${euros(dados.valor)} é sem IVA. Total a pagar: ${euros(conta.total)}, já com o imposto e a taxa CLYON.\n` +
+      `Só paga depois de o trabalho estar feito e confirmado.\n\n` +
       `Para contrapropor, responda só com o valor (ex.: 300).`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },

@@ -241,7 +241,9 @@ describe("a comissão da casa", () => {
      * não estava em lado nenhum do backoffice.
      */
     expect(ROTA).toContain("comissaoDaClyon(acordado)");
-    expect(ROTA).toContain("quantoOClientePaga(acordado)");
+    // O valor acordado e SEM IVA desde 29-08-2026: o facturado ao cliente tem
+    // de levar o imposto de quem factura, ou fica 23% abaixo do que ha mesmo.
+    expect(ROTA).toContain("contaDoCliente(acordado, regimeDeIva(l.regimeIva)).total");
   });
 
   it("segue os mesmos três estados do dinheiro deles", () => {

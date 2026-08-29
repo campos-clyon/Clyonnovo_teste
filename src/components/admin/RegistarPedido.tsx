@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
@@ -207,6 +208,7 @@ export default function RegistarPedido({
     urgency: "flexivel",
     description: "",
     valor: "",
+    baseDoPreco: "total",
     precisaFatura: false,
     // ── Mudança: a segunda ponta ──
     moradaDestino: "",
@@ -243,6 +245,7 @@ export default function RegistarPedido({
       postalCode: "",
       description: "",
       valor: "",
+      baseDoPreco: "total",
     }));
     setResultado(null);
     setEnviado(null);
@@ -351,6 +354,7 @@ export default function RegistarPedido({
           urgency: o.urgency ?? "flexivel",
           description: o.description ?? "",
           valor: o.valorDesejadoCliente != null ? String(o.valorDesejadoCliente) : "",
+          baseDoPreco: lerBase(o.baseDoPreco),
           precisaFatura: Number(o.precisaFatura) === 1,
           // O que é próprio do serviço vive no rawOrderJson, onde o simulador
           // também o põe — é a mesma forma, para o pedido ser um só.
@@ -733,8 +737,22 @@ export default function RegistarPedido({
           </span>
         </label>
 
+        {/*
+          O VALOR, E O QUE ELE MEDE — juntos, e não em campos distantes.
+
+          "Temos de ter aqui a opção de colocar valor por carga ou valor total."
+
+          Um número sozinho não diz o que mede. Numa recolha de entulho «150 €»
+          tanto pode ser o trabalho inteiro como cada viagem ao aterro, e a
+          diferença entre as duas leituras são três cargas — 300 € que ninguém
+          combinou. É a discussão mais cara que isto pode ter, porque só
+          aparece no fim, com o trabalho já feito.
+
+          Os dois botões estão colados ao campo de propósito: quem escreve o
+          número tem de ver, no mesmo gesto, o que está a dizer com ele.
+        */}
         <label className="text-xs text-slate-400">
-          Valor de partida
+          Valor de partida <span className="text-slate-500">(sem IVA)</span>
           <input
             value={f.valor}
             onChange={(e) => muda("valor", e.target.value)}
@@ -742,6 +760,26 @@ export default function RegistarPedido({
             inputMode="decimal"
             className={campo}
           />
+          <span className="mt-1.5 flex gap-1.5">
+            {(["total", "carga"] as const).map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => muda("baseDoPreco", b)}
+                className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
+                  f.baseDoPreco === b
+                    ? "border-cyan-500 bg-cyan-500/15 text-cyan-200"
+                    : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"
+                }`}
+              >
+                {b === "total" ? "Valor total" : "Por carga"}
+              </button>
+            ))}
+          </span>
+          <span className="mt-1 block text-[10px] leading-relaxed text-slate-500">
+            {avisoDaBase(lerBase(f.baseDoPreco)) ??
+              "É o trabalho todo. O profissional e o cliente vêem esta escolha."}
+          </span>
         </label>
 
         <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-3">
@@ -838,6 +876,7 @@ export default function RegistarPedido({
       {resultado && (
         <Resumo
           r={resultado}
+          base={lerBase(f.baseDoPreco)}
           enviado={enviado}
           onEditar={onEditar}
           aEnviar={aEnviar}
@@ -862,6 +901,7 @@ export default function RegistarPedido({
  */
 function Resumo({
   r,
+  base,
   enviado,
   onEditar,
   aEnviar,
@@ -871,6 +911,8 @@ function Resumo({
   onNovo,
 }: {
   r: Resultado;
+  /** O que o valor MEDE — o trabalho todo, ou cada carga. */
+  base: BaseDoPreco;
   enviado: string | null;
   onEditar?: (id: number) => void;
   aEnviar: boolean;
@@ -991,7 +1033,11 @@ function Resumo({
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Valor de partida</p>
-          <p className="text-sm font-bold text-cyan-300">{euros(r.valorDePartida)}</p>
+          <p className="text-sm font-bold text-cyan-300">
+            {euros(r.valorDePartida)}
+            {base === "carga" && <span className="text-amber-300"> por carga</span>}
+          </p>
+          <p className="text-[10px] text-slate-500">sem IVA · {etiquetaDaBase(base)}</p>
         </div>
         {r.percursoKm != null && (
           <div>

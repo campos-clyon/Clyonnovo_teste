@@ -165,7 +165,10 @@ describe("o cérebro (whatsapp-negociacao)", () => {
   });
 
   it("o total com a taxa CLYON aparece antes de o cliente fechar", () => {
-    expect(CEREBRO).toContain("quantoOClientePaga");
+    // "total com a taxa" passou a "total a pagar": o valor acordado e a base e
+    // o IVA soma-se, por isso a mensagem tem de dizer o numero final.
+    expect(CEREBRO).toContain("contaDoCliente(");
+    expect(CEREBRO).toContain("total a pagar");
   });
 });
 

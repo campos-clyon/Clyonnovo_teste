@@ -23,7 +23,7 @@
  * existe.
  */
 
-import { quantoOClientePaga } from "./taxas-plataforma";
+import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
 
 export type TrabalhoDoCliente = {
   negociacaoId: number;
@@ -34,6 +34,14 @@ export type TrabalhoDoCliente = {
   pagoEm?: Date | string | null;
   profissionalNome?: string | null;
   serviceType?: string | null;
+  /**
+   * O regime de IVA de quem factura.
+   *
+   * A partir de 29-08-2026 o valor acordado e SEM IVA. Sem esta informacao, a
+   * carteira mostrava ao cliente um retido 23% abaixo do que ele vai pagar --
+   * e a carteira e o sitio onde ele confere se a conta bate certo.
+   */
+  regimeIva?: string | null;
 };
 
 export type LinhaDaCarteira = {
@@ -83,7 +91,7 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     const acordado = valor(t.valorAcordado);
     if (acordado == null) continue;
 
-    const total = aosCentimos(quantoOClientePaga(acordado));
+    const total = contaDoCliente(acordado, regimeDeIva(t.regimeIva)).total;
     const confirmado = quando(t.confirmadoEm) ?? quando(t.pagoEm);
 
     if (confirmado) pago += total;

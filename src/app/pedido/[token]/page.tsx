@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { lerBase, avisoDaBase } from "@/lib/base-do-preco";
 import Link from "next/link";
 import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { getSimulatorOrderByAcessoTokenHash, negociacoesDoPedido } from "@/lib/db";
@@ -244,6 +245,8 @@ export default async function PaginaDoPedido({
 
   const fotos = fotosDoPedido(pedido.filesJson);
   const desejado = euros(pedido.valorDesejadoCliente);
+  // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
+  const base = lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco);
   const estimativa = euros(pedido.estimateTotal ?? pedido.estimateMax);
 
   return (
@@ -343,9 +346,25 @@ export default async function PaginaDoPedido({
         <div className="mt-3 space-y-3">
           {desejado && (
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm text-slate-600">O valor que indicou</span>
+              <span className="text-sm text-slate-600">
+                O valor que indicou
+                <span className="block text-xs text-tinta-fraca">
+                  {base === "carga" ? "por cada carga" : "pelo trabalho todo"} · sem IVA
+                </span>
+              </span>
               <span className="text-lg font-bold text-tinta">{desejado}</span>
             </div>
+          )}
+
+          {/*
+            O AVISO DA CARGA, e só quando o preço é por carga.
+            Um «150 €» sem unidade tanto é o trabalho inteiro como cada viagem
+            ao aterro — e a diferença só aparece no fim, com o trabalho feito.
+          */}
+          {avisoDaBase(base) && (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
+              {avisoDaBase(base)}
+            </p>
           )}
 
           {estimativa && (

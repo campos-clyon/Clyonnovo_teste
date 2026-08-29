@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lerBase } from "@/lib/base-do-preco";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { createSimulatorOrder, appendOrderHistory } from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
@@ -50,6 +51,8 @@ type Corpo = {
   hasElevator?: string;
   parkingDistance?: string;
   urgency?: string;
+  /** "total" ou "carga" — o que o valor de partida MEDE. */
+  baseDoPreco?: string;
   precisaFatura?: boolean;
   precisaGuiaTransporte?: boolean;
   /** O valor de partida, se a equipa já combinou um ao telefone. */
@@ -326,6 +329,10 @@ export async function POST(req: NextRequest) {
         ...proprios.paraOJson,
       }),
       valorDesejadoCliente: arranque != null ? String(arranque) : null,
+      // O que o numero MEDE: o trabalho todo, ou cada carga. Anda agarrado ao
+      // valor ate ao ecra do profissional e ao do cliente -- ver
+      // `base-do-preco.ts`. O que nao for uma das duas palavras vira 'total'.
+      baseDoPreco: lerBase(corpo.baseDoPreco),
       precisaFatura: corpo.precisaFatura === true ? 1 : 0,
       precisaGuiaTransporte: corpo.precisaGuiaTransporte === true ? 1 : 0,
       acessoTokenHash: acesso.hash,

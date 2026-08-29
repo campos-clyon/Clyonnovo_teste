@@ -177,6 +177,10 @@ export async function GET(req: NextRequest) {
         // palavra do cliente le-se contra hoje e mente ao fim de um dia.
         criadoEm:
           (l as unknown as { pedidoCriadoEm?: Date | string | null }).pedidoCriadoEm ?? null,
+        // O que o valor MEDE: o trabalho todo, ou cada carga. Sem isto ele
+        // propunha sobre uma unidade e o cliente lia outra -- e a conta so
+        // batia mal no fim, com o trabalho ja feito.
+        baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
         description: (vista.description as string | undefined) ?? null,

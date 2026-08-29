@@ -4,7 +4,8 @@ import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import {
   quantoOProfissionalRecebe,
   comissaoDaClyon,
-  quantoOClientePaga,
+  contaDoCliente,
+  regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -163,7 +164,10 @@ export async function GET(req: NextRequest) {
        * como o dinheiro cativo do lado do cliente.
        */
       const comissao = comissaoDaClyon(acordado);
-      const clientePaga = quantoOClientePaga(acordado);
+      // O que o cliente paga a serio: o valor acordado e SEM IVA, e o imposto
+      // do regime de quem factura soma-se por cima. Sem isto, o "facturado aos
+      // clientes" ficava 23% abaixo do que ha mesmo facturado.
+      const clientePaga = contaDoCliente(acordado, regimeDeIva(l.regimeIva)).total;
 
       const trabalho: TrabalhoPorPagar = {
         negociacaoId: Number(l.negociacaoId),

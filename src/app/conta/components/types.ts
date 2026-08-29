@@ -1,4 +1,4 @@
-import { quantoOClientePaga } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
 
 export interface UserProfile {
   id: number;
@@ -227,9 +227,13 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
     // O que ele paga, não o que o profissional recebe: é o número que sai da
     // carteira dele, e é o mesmo que o detalhe mostra em "Total a pagar".
     //
-    // A conta vem de quantoOClientePaga e não de um 1.06 escrito aqui: a taxa
-    // muda num sítio só, e uma cópia à mão passaria a mentir no dia seguinte.
-    const paga = acordado != null ? quantoOClientePaga(acordado) : null;
+    // A conta vem de contaDoCliente e não de um 1.06 escrito aqui: a taxa e o
+    // IVA mudam num sítio só, e uma cópia à mão passaria a mentir no dia
+    // seguinte. O valor acordado é SEM IVA — o imposto de quem factura soma-se.
+    const paga =
+      acordado != null
+        ? contaDoCliente(acordado, regimeDeIva(fechada.regimeIva)).total
+        : null;
 
     if (fechada.confirmadoEm || fechada.pagoEm) {
       return {

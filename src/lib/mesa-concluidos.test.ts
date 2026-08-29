@@ -50,7 +50,9 @@ describe("o destaque de por ver", () => {
 describe("as contas completas ao abrir", () => {
   it("o resumo diz o acordado, o que o cliente paga, a taxa, o que o profissional recebe e a comissão", () => {
     expect(MESA).toContain("Trabalho concluído com");
-    expect(MESA).toContain("quantoOClientePaga(Number(acordada.valorAcordado))");
+    expect(MESA).toContain(
+      "contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva))",
+    );
     expect(MESA).toContain("quantoOProfissionalRecebe(Number(acordada.valorAcordado))");
     expect(MESA).toContain("comissaoDaClyon(Number(acordada.valorAcordado))");
   });
