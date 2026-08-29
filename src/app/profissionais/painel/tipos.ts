@@ -40,6 +40,14 @@ export type Pedido = {
    * «150 €» sem unidade tanto é o trabalho todo como cada viagem ao aterro.
    */
   baseDoPreco?: string | null;
+  /**
+   * O dia que ele combinou com o cliente, depois de ser contratado.
+   *
+   * Diferente de `dataAgendada`, que é o que o cliente PEDIU. Guardar as duas
+   * é o que permite ver que um trabalho pedido para quinta acabou marcado para
+   * sábado. Ver `agenda-dos-trabalhos.ts`.
+   */
+  dataCombinada?: string | null;
   description: string | null;
   filesJson: string | null;
   floor: string | null;

@@ -30,6 +30,22 @@ import type { Pedido } from "./tipos";
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
+/**
+ * A DATA QUE MANDA: a que ele combinou, e só depois a que o cliente pediu.
+ *
+ * Sete sítios deste ecrã liam `dataAgendada` directamente — o que o cliente
+ * escreveu no formulário. A partir do momento em que ele pode marcar o dia ao
+ * telefone, essa deixou de ser a data do trabalho: é o ponto de partida. Se a
+ * agenda continuasse a ler a antiga, ele marcava sábado e continuava a ver
+ * quinta.
+ *
+ * Uma função só, e todos passam por ela: sete leituras espalhadas divergem no
+ * dia em que alguém corrige seis.
+ */
+function quandoE(p: Pedido): string | null {
+  return p.dataCombinada ?? p.dataAgendada ?? null;
+}
+
 function nomeDoServico(id: string | null): string {
   if (!id) return "Serviço";
   return SERVICE_CATEGORIES.find((c) => c.id === id)?.label ?? id.replace(/_/g, " ");
@@ -54,7 +70,7 @@ function cabecalhoDoDia(d: Date): string {
  * bloco curto demais esconde o trabalho na grelha do dia.
  */
 function linkGoogleCalendar(p: Pedido): string {
-  const inicio = new Date(p.dataAgendada as string);
+  const inicio = new Date(quandoE(p) as string);
   const fim = new Date(inicio.getTime() + 2 * 3600_000);
   const f = (d: Date) =>
     `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
@@ -90,16 +106,16 @@ export default function Agenda({
   const contratados = pedidos.filter((p) => p.fase === "a_executar" && !p.arquivadoEm);
 
   const comData = contratados
-    .filter((p) => p.dataAgendada)
+    .filter((p) => quandoE(p))
     .sort(
       (a, b) =>
-        new Date(a.dataAgendada as string).getTime() - new Date(b.dataAgendada as string).getTime(),
+        new Date(quandoE(a) as string).getTime() - new Date(quandoE(b) as string).getTime(),
     );
-  const semData = contratados.filter((p) => !p.dataAgendada);
+  const semData = contratados.filter((p) => !quandoE(p));
 
   const porDia = new Map<string, Pedido[]>();
   for (const p of comData) {
-    const d = new Date(p.dataAgendada as string);
+    const d = new Date(quandoE(p) as string);
     const chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     porDia.set(chave, [...(porDia.get(chave) ?? []), p]);
   }
@@ -114,7 +130,7 @@ export default function Agenda({
           {comHora && (
             <p className="flex items-center gap-1.5 text-sm font-bold text-acao">
               <Clock className="h-4 w-4" aria-hidden="true" />
-              {new Date(p.dataAgendada as string).toLocaleTimeString("pt-PT", {
+              {new Date(quandoE(p) as string).toLocaleTimeString("pt-PT", {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
@@ -187,7 +203,7 @@ export default function Agenda({
           {[...porDia.entries()].map(([chave, lista]) => (
             <section key={chave}>
               <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-tinta-fraca">
-                {cabecalhoDoDia(new Date(lista[0].dataAgendada as string))}
+                {cabecalhoDoDia(new Date(quandoE(lista[0]) as string))}
               </h2>
               <div className="space-y-2.5">{lista.map((p) => cartao(p, true))}</div>
             </section>
