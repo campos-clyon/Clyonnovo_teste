@@ -83,7 +83,14 @@ describe("o botão na carteira", () => {
   it("está ao lado do valor, nos dois montes", () => {
     // Por pagar e a decorrer: o orçamento tanto muda antes como depois de o
     // trabalho estar feito.
-    expect(PAINEL.split("corrigir\n").length - 1).toBeGreaterThanOrEqual(2);
+    /*
+     * SEM \n NA COMPARAÇÃO, e é a segunda vez que esta lição se paga.
+     *
+     * Estes ficheiros vivem em LF enquanto os escrevo e passam a CRLF assim
+     * que o git muda de ramo. Uma asserção que atravessa uma mudança de linha
+     * passa aqui e falha na promoção — que foi exactamente o que aconteceu.
+     */
+    expect(PAINEL.split("setACorrigir({ t, nome: c.nome").length - 1).toBeGreaterThanOrEqual(2);
   });
 
   it("mostra a conta refeita ANTES de gravar", () => {
@@ -95,9 +102,13 @@ describe("o botão na carteira", () => {
     // Já se perdeu trabalho a meio por isso; aqui perde-se um número que se
     // acabou de acertar ao telefone.
     const i = PAINEL.indexOf("Corrigir o valor");
-    const bloco = PAINEL.slice(i, i + 4000);
-    expect(bloco).toContain("Fechar");
-    expect(bloco).not.toContain("onClick={() => setACorrigir(null)}\n            className=\"fixed");
+    expect(PAINEL.slice(i, i + 4000)).toContain("Fechar");
+    /*
+     * DUAS saídas, e só duas: o botão Fechar, e o fecho automático depois de
+     * gravar. Uma terceira só poderia ser o fundo do ecrã a fechar ao toque —
+     * e aí perde-se o número que se acabou de acertar ao telefone.
+     */
+    expect(PAINEL.split("setACorrigir(null)").length - 1).toBe(2);
   });
 });
 
@@ -111,7 +122,7 @@ describe("a mensagem ao profissional depois de ser contratado", () => {
      * acabou de pagar e não sabe quando é.
      */
     expect(TRABALHOS).toContain("O trabalho é seu — combine já");
-    expect(TRABALHOS).toContain("o mais\n            depressa possível para acertar o dia e a hora");
+    expect(TRABALHOS).toContain("para acertar o dia e a hora");
   });
 
   it("manda tratar de valores com a CLYON, e não com o cliente", () => {
@@ -124,7 +135,7 @@ describe("a mensagem ao profissional depois de ser contratado", () => {
   it("diz-lhe o que fazer quando o orçamento muda no local", () => {
     // É o caso real que deu origem a tudo isto. Sem uma saída dita, ele
     // combina por fora — que é exactamente o que não pode acontecer.
-    expect(TRABALHOS).toContain("Se o\n            orçamento mudar no local, diga-nos");
+    expect(TRABALHOS).toContain("orçamento mudar no local, diga-nos");
   });
 
   it("só aparece enquanto há trabalho por fazer", () => {
