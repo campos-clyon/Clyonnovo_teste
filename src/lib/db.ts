@@ -855,6 +855,16 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN abertoProfissionalEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN arquivadoProfissionalEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN arquivadoClienteEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * O DIA QUE OS DOIS MARCARAM, depois de fechar o negocio.
+     *
+     * `simulatorOrders.dataAgendada` e o que o CLIENTE pediu, e fica como
+     * esta: e a promessa que lhe foi feita. Esta e o que ficou combinado ao
+     * telefone -- e e ela que manda na agenda. Guardar as duas e o que permite
+     * ver que um trabalho pedido para quinta acabou combinado para sabado;
+     * escrever por cima perdia essa informacao para sempre.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN dataCombinada DATETIME NULL DEFAULT NULL`,
   ];
   for (const sql of colunas) {
     try {
@@ -1374,7 +1384,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.propostasJson,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
-            n.estrelas, n.avaliadoEm,
+            n.estrelas, n.avaliadoEm, n.dataCombinada,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- O REGIME DE IVA DE QUEM FACTURA.
@@ -1808,7 +1818,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- separa "duas horas" de "uma tarde" e o profissional decidia sem
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
             -- buscar.
-            n.abertoProfissionalEm,
+            n.abertoProfissionalEm, n.dataCombinada,
             o.floor, o.hasElevator, o.parkingDistance,
             -- O que so alguns servicos tem, e sem o qual eles propoem as
             -- cegas: para onde vai uma mudanca (e o acesso do outro lado), e
@@ -5234,6 +5244,8 @@ export type Acontecimento =
    * meses ninguem se lembra porque. Por isso fica registado a parte.
    */
   | "valor_corrigido"
+  /* O profissional marcou ou mudou o dia do trabalho. */
+  | "agenda_marcada"
   // As contas
   | "conta_apagada";
 

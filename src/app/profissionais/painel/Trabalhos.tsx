@@ -1205,6 +1205,23 @@ function DetalheDoTrabalho({
             diferença. Combinado por fora fica sem registo e sem o dinheiro cativo que
             garante que lhe pagam.
           </p>
+
+          {/*
+            E AQUI GRAVA-SE O QUE FICOU COMBINADO.
+
+            "Também deve ter a opção do pro corrigir a sua agenda, podendo
+            alterar horário e data."
+
+            Está dentro do «combine já» de propósito: dizer-lhe para ligar e
+            depois mandá-lo procurar noutro ecrã onde apontar o resultado é
+            perder metade das marcações pelo caminho. Liga, combina, escreve —
+            no mesmo sítio.
+
+            NÃO ESCREVE POR CIMA do que o cliente pediu: isso fica guardado à
+            parte, e é o que deixa a CLYON ver que um trabalho pedido para
+            quinta acabou marcado para sábado.
+          */}
+          <MarcarODia pedido={pedido} onGravado={onRecarregar} />
         </section>
       )}
 
@@ -1489,5 +1506,92 @@ function DetalheDoTrabalho({
         />
       )}
     </>
+  );
+}
+
+/**
+ * O dia e a hora que ele combinou com o cliente.
+ *
+ * Um campo e um botão. `datetime-local` porque é o que o telemóvel abre com o
+ * selector nativo — um campo de texto a pedir "dd/mm/aaaa hh:mm" ao volante
+ * não se preenche.
+ *
+ * Apagar o campo desmarca. É o que ele faz quando o cliente adia sem dizer
+ * quando: melhor ficar "por combinar" do que manter uma data que já ninguém
+ * cumpre.
+ */
+function MarcarODia({ pedido, onGravado }: { pedido: Pedido; onGravado: () => void }) {
+  /*
+   * `datetime-local` fala em hora LOCAL sem fuso. A data vem em ISO com Z, e
+   * `toISOString().slice(0,16)` dava a hora de Greenwich — um trabalho das 11h
+   * aparecia às 10h no campo, e bastava gravar para o adiantar uma hora.
+   */
+  const paraOCampo = (iso: string | null | undefined) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  const jaCombinado = pedido.dataCombinada ?? null;
+  const [quando, setQuando] = useState(paraOCampo(jaCombinado ?? pedido.dataAgendada));
+  const [aGravar, setAGravar] = useState(false);
+  const [erro, setErro] = useState("");
+  const [gravado, setGravado] = useState(false);
+
+  async function gravar() {
+    setAGravar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/profissionais/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ negociacaoId: pedido.negociacaoId, quando }),
+      });
+      const r = await res.json();
+      if (!res.ok) {
+        setErro(r.error ?? "Não foi possível gravar.");
+        return;
+      }
+      setGravado(true);
+      setTimeout(() => setGravado(false), 2500);
+      onGravado();
+    } catch {
+      setErro("Sem rede. Tente outra vez.");
+    } finally {
+      setAGravar(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-amber-300 bg-white/70 p-3">
+      <p className="flex items-center gap-1.5 text-sm font-bold text-amber-900">
+        <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {jaCombinado ? "O dia que combinou" : "Depois de combinar, marque aqui"}
+      </p>
+      <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
+        {jaCombinado
+          ? "Mudou alguma coisa? Corrija — a CLYON passa a ver a data nova."
+          : "Assim a CLYON sabe quando é, e não lhe liga a perguntar."}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input
+          type="datetime-local"
+          value={quando}
+          onChange={(e) => setQuando(e.target.value)}
+          className="min-h-[44px] flex-1 rounded-lg border border-amber-300 bg-white px-3 text-sm text-tinta outline-none focus:border-amber-500"
+        />
+        <button
+          onClick={gravar}
+          disabled={aGravar}
+          className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition active:bg-amber-700 disabled:opacity-50"
+        >
+          {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {gravado ? "Marcado" : "Marcar"}
+        </button>
+      </div>
+      {erro && <p className="mt-2 text-xs font-semibold text-rose-700">{erro}</p>}
+    </div>
   );
 }

@@ -16,6 +16,7 @@ import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
+import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
@@ -61,6 +62,7 @@ import {
   BadgeCheck,
   HandCoins,
   Wallet,
+  CalendarClock,
   FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,6 +94,7 @@ type AdminSection =
   | "negociacoes"
   | "levantamentos"
   | "carteiras"
+  | "agenda"
   | "testadores"
   | "negociacoes_clyon"
   | "whatsapp";
@@ -221,6 +224,7 @@ const adminNavItems: Array<{
   { id: "profissionais", icon: BadgeCheck },
   { id: "negociacoes",   icon: HandCoins },
   { id: "carteiras", icon: Wallet },
+  { id: "agenda", icon: CalendarClock },
   { id: "levantamentos", icon: Wallet },
   { id: "testadores",    icon: FlaskConical },
   { id: "negociacoes_clyon", icon: Building2 },
@@ -248,7 +252,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
   // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "whatsapp", "carteiras", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "agenda", "whatsapp", "carteiras", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["testadores", "configs"] },
 ];
@@ -265,6 +269,7 @@ const sectionLabels: Record<AdminSection, string> = {
   profissionais: "Profissionais",
   negociacoes:   "Negociações",
   carteiras: "Carteiras",
+  agenda: "Agenda",
   levantamentos: "Levantamentos",
   testadores:    "Acesso aos testes",
   negociacoes_clyon: "Negociações",
@@ -2905,6 +2910,18 @@ export default function ColaboradorAdminClient() {
             ter IBAN gravado, e quem não o tem nunca aparece na outra fila.
           */}
           {activeSection === "carteiras" && <AdminCarteirasPanel />}
+
+          {/*
+            A AGENDA, entre as negociações e as carteiras.
+
+            "Quero uma agenda para o admin acompanhar as datas e horários dos
+            trabalhos, para saber se os trabalhos estão no horário ou não."
+
+            As Negociações respondem «quem está à espera de quem»; esta responde
+            QUANDO. São perguntas diferentes, feitas em alturas diferentes do
+            dia, e por isso são dois ecrãs e não dois filtros do mesmo.
+          */}
+          {activeSection === "agenda" && <AdminAgendaPanel />}
 
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">

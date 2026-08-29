@@ -203,6 +203,10 @@ export async function GET(req: NextRequest) {
         // propunha sobre uma unidade e o cliente lia outra -- e a conta so
         // batia mal no fim, com o trabalho ja feito.
         baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
+        // O dia que ELE combinou com o cliente, depois de ser contratado. Nao
+        // escreve por cima do que o cliente pediu -- ver `agenda-dos-trabalhos`.
+        dataCombinada:
+          (l as unknown as { dataCombinada?: Date | string | null }).dataCombinada ?? null,
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
         description: (vista.description as string | undefined) ?? null,
