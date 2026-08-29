@@ -1156,6 +1156,46 @@ function DetalheDoTrabalho({
         )}
       </section>
 
+      {/*
+        O QUE FAZER AGORA, e é a primeira coisa que ele lê.
+
+        "Na tela do pro após sua proposta ser aceite deve aparecer uma mensagem
+        pedindo para que ele entre em contato com o cliente para ajustar data e
+        horário o mais rápido possível. Essa mensagem também deve pedir para o
+        cliente sempre que for tratar de valores falar diretamente com a CLYON."
+
+        Ser contratado não é o fim de nada: é o princípio de um telefonema que
+        alguém tem de fazer. Sem esta linha, o trabalho ficava à espera de que
+        um dos dois se lembrasse — e quem espera é sempre o cliente, que acabou
+        de pagar e não sabe quando é.
+
+        A SEGUNDA METADE É A QUE PROTEGE OS DOIS. Um valor combinado de boca à
+        porta fica fora da plataforma: sem registo, sem dinheiro cativo, sem
+        nada a que agarrar se depois houver discussão. Quando o orçamento muda
+        no local — e muda —, o caminho é dizer à CLYON, que corrige o valor e o
+        cliente vê a diferença no ecrã dele.
+
+        Só aparece enquanto há trabalho por fazer. Depois de feito, é ruído.
+      */}
+      {fechado && pedido.fase === "a_executar" && (
+        <section className="mt-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+          <h2 className="flex items-center gap-2 text-base font-bold text-amber-900">
+            <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />O trabalho é seu — combine já
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-amber-900">
+            Ligue {pedido.contactoNome ? `a ${pedido.contactoNome}` : "ao cliente"} o mais
+            depressa possível para acertar o dia e a hora. É a parte que ele está à espera,
+            e quanto mais cedo ficar marcado, menos hipóteses há de o trabalho se atrasar.
+          </p>
+          <p className="mt-2.5 rounded-lg border border-amber-400 bg-white/70 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
+            Valores fala sempre com a CLYON, nunca directamente com o cliente. Se o
+            orçamento mudar no local, diga-nos — nós corrigimos o valor e ele vê a
+            diferença. Combinado por fora fica sem registo e sem o dinheiro cativo que
+            garante que lhe pagam.
+          </p>
+        </section>
+      )}
+
       {/* Morada e contacto: só existem depois de ser contratado. */}
       {fechado && pedido.morada && (
         <section className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
