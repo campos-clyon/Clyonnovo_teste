@@ -33,6 +33,13 @@ export type Pedido = {
    * data, um pedido de segunda-feira continuava a prometer «amanhã» na quinta.
    */
   criadoEm?: string | null;
+  /**
+   * "total" ou "carga" — o que o valor MEDE.
+   *
+   * Ver `base-do-preco.ts`. Anda agarrado ao número desde o formulário: um
+   * «150 €» sem unidade tanto é o trabalho todo como cada viagem ao aterro.
+   */
+  baseDoPreco?: string | null;
   description: string | null;
   filesJson: string | null;
   floor: string | null;

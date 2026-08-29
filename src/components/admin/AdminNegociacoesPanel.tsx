@@ -26,11 +26,13 @@ import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/
 import { oQueSeDesfaz, avisoDoCancelamento } from "@/lib/cancelamento";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
-  quantoOClientePaga,
+  contaDoCliente,
+  regimeDeIva,
   quantoOProfissionalRecebe,
   comissaoDaClyon,
 } from "@/lib/taxas-plataforma";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import VisorDeFotos from "@/components/VisorDeFotos";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
@@ -66,6 +68,13 @@ type Negociacao = {
   provaJson: string | null;
   confirmadoEm: string | null;
   pagoEm: string | null;
+  /**
+   * O regime de IVA de quem factura.
+   *
+   * O valor acordado e SEM IVA desde 29-08-2026: sem esta coluna o backoffice
+   * mandava cobrar 23% a menos do que ha a cobrar.
+   */
+  regimeIva?: string | null;
   criadaEm: string;
   actualizadaEm: string;
 };
@@ -281,6 +290,16 @@ export default function AdminNegociacoesPanel({
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState("");
+  /*
+   * A FOTOGRAFIA ABRE POR CIMA, e não noutro separador.
+   *
+   * "Ao clicar em imagens para abrir não quero que abra uma nova janela."
+   *
+   * Cada prova aberta deixava um separador do domínio do armazenamento por
+   * fechar, e voltar à mesa era procurá-la entre sete. O visor já existia — é
+   * o mesmo que o profissional usa — e só faltava chamá-lo aqui.
+   */
+  const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
   const [linksEmClaro, setLinksEmClaro] = useState<Record<string, string>>({});
   /*
    * Quais as negociações abertas em ecrã.
@@ -1226,11 +1245,23 @@ export default function AdminNegociacoesPanel({
               Trabalho concluído com {acordada.profissionalNome}
             </p>
             <p className="mt-1 text-slate-300">
-              Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong>
+              Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong> sem IVA
               {" · "}o cliente paga{" "}
-              <strong>{euros(quantoOClientePaga(Number(acordada.valorAcordado)))}</strong>{" "}
-              (taxa CLYON{" "}
-              {euros(quantoOClientePaga(Number(acordada.valorAcordado)) - Number(acordada.valorAcordado))})
+              <strong>
+                {euros(
+                  contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva))
+                    .total,
+                )}
+              </strong>{" "}
+              (IVA{" "}
+              {euros(
+                contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva)).iva,
+              )}
+              {" + taxa CLYON "}
+              {euros(
+                contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva)).taxa,
+              )}
+              )
               {" · "}o profissional recebe{" "}
               <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado)))}</strong>
               {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
@@ -1303,14 +1334,19 @@ export default function AdminNegociacoesPanel({
                   {prova.fotos.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {prova.fotos.map((url, i) => (
-                        <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                        <button
+                          key={url}
+                          type="button"
+                          onClick={() => setAVer({ lista: prova.fotos, i })}
+                          aria-label={`Ver prova ${i + 1}`}
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={url}
                             alt={`Prova ${i + 1}`}
-                            className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700"
+                            className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700 transition hover:ring-cyan-500"
                           />
-                        </a>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -1323,6 +1359,7 @@ export default function AdminNegociacoesPanel({
                 negociacaoId={feito.id}
                 pedidoId={p.id}
                 valorAcordado={feito.valorAcordado != null ? Number(feito.valorAcordado) : null}
+                regimeIva={feito.regimeIva ?? null}
                 onMudou={() => carregar(true)}
               />
             ) : (
@@ -1606,6 +1643,7 @@ export default function AdminNegociacoesPanel({
                   <TrocaDePropostas
                     negociacao={n}
                     pedidoId={p.id}
+                    onVerFotos={(lista, i) => setAVer({ lista, i })}
                     podeConfirmar={clyonPodeConfirmar(p)}
                     onMudou={carregar}
                   />
@@ -1716,6 +1754,14 @@ export default function AdminNegociacoesPanel({
 
   return (
     <div>
+      {/* Por cima de tudo, e sem sair da mesa. */}
+      {aVer && (
+        <VisorDeFotos
+          fotos={aVer.lista}
+          indiceInicial={aVer.i}
+          onFechar={() => setAVer(null)}
+        />
+      )}
       <header className="mb-6 flex items-start justify-between gap-4">
         <p className="text-sm text-slate-400">
           {mostrar === "clyon"
@@ -2704,11 +2750,14 @@ function ConfirmarPelaClyon({
   negociacaoId,
   pedidoId,
   valorAcordado,
+  regimeIva,
   onMudou,
 }: {
   negociacaoId: number;
   pedidoId: number;
   valorAcordado: number | null;
+  /** Decide se o total a cobrar leva IVA por cima do valor acordado. */
+  regimeIva: string | null;
   onMudou: () => void;
 }) {
   const { token: authToken } = useAdminAuth();
@@ -2752,9 +2801,16 @@ function ConfirmarPelaClyon({
       {valorAcordado != null && (
         <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
           <div className="flex items-center justify-between">
-            <dt className="text-slate-400">Cobrar ao cliente</dt>
+            <dt className="text-slate-400">
+              Cobrar ao cliente
+              <span className="block text-[10px] text-slate-500">
+                {regimeDeIva(regimeIva) === "normal"
+                  ? "acordado + IVA + taxa"
+                  : "acordado + taxa (isento de IVA)"}
+              </span>
+            </dt>
             <dd className="font-semibold tabular-nums text-slate-100">
-              {euros(quantoOClientePaga(valorAcordado))}
+              {euros(contaDoCliente(valorAcordado, regimeDeIva(regimeIva)).total)}
             </dd>
           </div>
           <div className="flex items-center justify-between">
@@ -2816,9 +2872,12 @@ function TrocaDePropostas({
   pedidoId,
   podeConfirmar,
   onMudou,
+  onVerFotos,
 }: {
   negociacao: Negociacao;
   pedidoId: number;
+  /** Abre a fotografia POR CIMA da mesa, sem sair da página. */
+  onVerFotos: (fotos: string[], i: number) => void;
   /** A CLYON responde pelo lado do cliente NESTE pedido — ver quem-negoceia.ts. */
   podeConfirmar: boolean;
   onMudou: () => void;
@@ -2880,14 +2939,19 @@ function TrocaDePropostas({
           {prova && prova.fotos.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {prova.fotos.map((url, i) => (
-                <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => onVerFotos(prova.fotos, i)}
+                  aria-label={`Ver prova ${i + 1}`}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={url}
                     alt={`Prova ${i + 1}`}
-                    className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700"
+                    className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700 transition hover:ring-cyan-500"
                   />
-                </a>
+                </button>
               ))}
             </div>
           )}
@@ -2914,6 +2978,7 @@ function TrocaDePropostas({
               valorAcordado={
                 negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null
               }
+              regimeIva={negociacao.regimeIva ?? null}
               onMudou={onMudou}
             />
           )}

@@ -20,7 +20,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { quantoOClientePaga, decomporIva, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva, TAXA_IVA } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
@@ -255,65 +255,62 @@ export default function PropostasRecebidas({
         <h2 className="mt-2 text-lg font-bold text-emerald-900">
           Contratou {acordada.profissionalNome}
         </h2>
-        {/* Aqui sim: é o momento de pagar, e o total tem de ser o total —
-            com o IVA decomposto do valor acordado, não somado a ele. */}
-        <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
-          {/*
-            O IVA só aparece a quem o liquida. O regime é do profissional, não
-            nosso: um isento pelo art. 53.º não cobra IVA nenhum, e mostrar uma
-            linha de 23% a quem o contrata seria mostrar-lhe um imposto que não
-            deve — e que ninguém pode entregar ao Estado.
-          */}
-          {acordada.regimeIva === "normal" ? (
-            <>
+        {/*
+          A CONTA INTEIRA, e o total em baixo a fechar.
+
+          "Temos de deixar claro que todos os valores praticados sao sem IVA,
+          principalmente para os clientes."
+
+          O valor acordado e a BASE: o imposto soma-se por cima, e nao se
+          decompoe de dentro dele como se fazia ate 29-08-2026. Por isso cada
+          linha diz o que e, e o numero grande e o unico que ele tem de olhar
+          para saber quanto sai da carteira.
+
+          O IVA so aparece a quem o liquida. O regime e do profissional, nao
+          nosso: um isento pelo art. 53.o nao cobra IVA nenhum, e mostrar uma
+          linha de 23% a quem o contrata seria mostrar-lhe um imposto que nao
+          deve -- e que ninguem pode entregar ao Estado.
+        */}
+        {(() => {
+          const conta = contaDoCliente(
+            acordada.valorAcordado ?? 0,
+            regimeDeIva(acordada.regimeIva),
+          );
+          return (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
               <div className="flex items-baseline justify-between gap-4 text-sm">
-                <span className="text-slate-600">Serviço (sem IVA)</span>
-                <span className="text-slate-900">
-                  {euros(decomporIva(acordada.valorAcordado ?? 0).base)}
+                <span className="text-slate-600">
+                  Serviço
+                  <span className="block text-xs text-tinta-fraca">
+                    valor acordado, sem IVA
+                  </span>
                 </span>
+                <span className="text-slate-900">{euros(conta.servico)}</span>
               </div>
-              <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
-                <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
-                <span className="text-slate-900">
-                  {euros(decomporIva(acordada.valorAcordado ?? 0).iva)}
-                </span>
-              </div>
-              <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-slate-100 pt-1 text-sm">
-                <span className="font-medium text-slate-700">Valor acordado</span>
-                <span className="font-semibold text-slate-900">
-                  {euros(acordada.valorAcordado)}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-baseline justify-between gap-4 text-sm">
-              <span className="text-slate-600">
-                Valor acordado
-                <span className="block text-xs text-tinta-fraca">
-                  isento de IVA (art. 53.º)
-                </span>
-              </span>
-              <span className="font-semibold text-slate-900">
-                {euros(acordada.valorAcordado)}
-              </span>
-            </div>
-          )}
-          <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
-            <span className="text-slate-600">Taxa CLYON</span>
-            <span className="font-semibold text-slate-900">
-              {euros(
-                quantoOClientePaga(acordada.valorAcordado ?? 0) -
-                  (acordada.valorAcordado ?? 0),
+              {conta.temIva ? (
+                <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+                  <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
+                  <span className="text-slate-900">{euros(conta.iva)}</span>
+                </div>
+              ) : (
+                <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+                  <span className="text-slate-600">IVA</span>
+                  <span className="text-tinta-fraca">
+                    isento (art. 53.º)
+                  </span>
+                </div>
               )}
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
-            <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
-            <span className="text-lg font-bold text-emerald-700">
-              {euros(quantoOClientePaga(acordada.valorAcordado ?? 0))}
-            </span>
-          </div>
-        </div>
+              <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
+                <span className="text-slate-600">Taxa CLYON</span>
+                <span className="text-slate-900">{euros(conta.taxa)}</span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
+                <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+                <span className="text-lg font-bold text-emerald-700">{euros(conta.total)}</span>
+              </div>
+            </div>
+          );
+        })()}
         {/* ── O que falta acontecer ───────────────────────────────────────── */}
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
@@ -720,9 +717,21 @@ export default function PropostasRecebidas({
                       referencia={emCima}
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
-                      legendaDoValor={(v) =>
-                        `Se ele aceitar, paga ${euros(quantoOClientePaga(v))} com a taxa CLYON.`
-                      }
+                      legendaDoValor={(v) => {
+                        /*
+                          O TOTAL, e não a base.
+
+                          Dizia "paga X com a taxa CLYON" e X era o valor mais
+                          6 %, sem imposto nenhum. A partir do momento em que o
+                          IVA acresce, isso era anunciar-lhe um número que ele
+                          não ia pagar — e o sítio onde uma conta destas engana
+                          mais é exactamente aqui, antes de ele decidir.
+                        */
+                        const c = contaDoCliente(v, regimeDeIva(n.regimeIva));
+                        return c.temIva
+                          ? `Se ele aceitar, paga ${euros(c.total)} — ${euros(c.servico)} + IVA + taxa CLYON.`
+                          : `Se ele aceitar, paga ${euros(c.total)} com a taxa CLYON.`;
+                      }}
                       onPropor={(valor) => agir(n.id, "propor", valor)}
                     />
                     <p className="mt-2 text-xs text-slate-500">

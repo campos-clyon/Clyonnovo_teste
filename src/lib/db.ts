@@ -1341,7 +1341,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
   await ensureConcluidosVistosTable();
   const [pedidos] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
-            o.valorDesejadoCliente, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
+            o.valorDesejadoCliente, o.baseDoPreco, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
             -- A validade do link do cliente serve de MARCA DE VERSAO.
             --
             -- Cada token novo poe uma data nova (agora + 30 dias), por isso
@@ -1376,7 +1376,14 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
             n.estrelas, n.avaliadoEm,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
-            p.name AS profissionalNome, p.email AS profissionalEmail
+            p.name AS profissionalNome, p.email AS profissionalEmail,
+            -- O REGIME DE IVA DE QUEM FACTURA.
+            --
+            -- A partir de 29-08-2026 o valor acordado e SEM IVA e o imposto
+            -- soma-se por cima -- mas so quando quem executa esta no regime
+            -- normal. Sem esta coluna, o "Cobrar ao cliente" do backoffice
+            -- ficava 23% abaixo do que ha mesmo a cobrar.
+            p.regimeIva
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})`,
@@ -1397,6 +1404,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     contactName: (p.contactName as string) ?? null,
     contactEmail: (p.contactEmail as string) ?? null,
     valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
+    baseDoPreco: (p.baseDoPreco as string) ?? null,
     origem: (p.origem as string) ?? null,
     status: (p.status as string) ?? null,
     concluidoVistoEm: (p.concluidoVistoEm as Date) ?? null,
@@ -1773,6 +1781,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
+            -- O numero e pelo trabalho todo ou por cada carga. Sem isto, ele
+            -- propunha sobre uma unidade e o cliente lia outra.
+            o.baseDoPreco,
             -- O dia em que o cliente fez o pedido. Nao e enfeite: e o ZERO de
             -- "amanha". A palavra fica gravada como o cliente a escreveu e
             -- le-se sempre em relacao a hoje, por isso um pedido de segunda a
@@ -2704,6 +2715,24 @@ export async function palavraPasseGuardada(providerId: number): Promise<string |
   return linha?.passwordHash ?? null;
 }
 
+/**
+ * O regime de IVA de um profissional, lido da base NO MOMENTO.
+ *
+ * Não vem da sessão de propósito. A sessão é um token assinado que dura dias,
+ * e um regime de IVA guardado lá dentro fica velho no dia em que ele passa da
+ * isenção ao regime normal — sem ninguém dar por isso, e com o cliente a
+ * receber uma mensagem com 23 % a menos do que vai pagar.
+ */
+export async function regimeDeIvaDoProfissional(providerId: number): Promise<string | null> {
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT regimeIva FROM providers WHERE id = ? LIMIT 1",
+    [providerId],
+  )) as [Array<{ regimeIva: string | null }>, unknown];
+  return rows[0]?.regimeIva ?? null;
+}
+
 /** O perfil completo do profissional, para ele próprio ver e editar. */
 export async function perfilDoProfissional(
   providerId: number,
@@ -3556,6 +3585,14 @@ export async function ensureSimulatorOrdersTable() {
     // As colunas antigas ficam: apagá-las perdia o histórico dos pedidos já
     // criados, e não custam nada onde estão.
     `ALTER TABLE simulatorOrders ADD COLUMN valorDesejadoCliente DECIMAL(10,2) NULL DEFAULT NULL`,
+    // O que o numero MEDE: o trabalho todo, ou cada carga.
+    //
+    // "Temos de ter aqui a opcao de colocar valor por carga ou valor total."
+    // Um numero sozinho nao diz o que mede, e numa recolha de entulho "150 EUR"
+    // tanto pode ser o trabalho inteiro como cada viagem ao aterro. Ver
+    // `base-do-preco.ts`. Por omissao 'total', que e o que todos os pedidos
+    // que ja existem sempre quiseram dizer.
+    `ALTER TABLE simulatorOrders ADD COLUMN baseDoPreco VARCHAR(10) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -3713,7 +3750,7 @@ const COLUNAS_PEDIDO_EDITAVEIS = new Set<string>([
   // calava o TypeScript. Resultado: gravar o pedido #228 com 30 EUR deixava
   // 121,43 na base, a fotografia anexada evaporava-se e a caixa da fatura nao
   // guardava. O ecra dava o pedido por actualizado e nao era verdade.
-  "valorDesejadoCliente", "precisaFatura", "filesJson",
+  "valorDesejadoCliente", "precisaFatura", "filesJson", "baseDoPreco",
 ]);
 
 export async function updateSimulatorOrder(
@@ -3744,6 +3781,8 @@ export async function updateSimulatorOrder(
     hasElevator: string | null;
     parkingDistance: string | null;
     urgency: string | null;
+    /** "total" ou "carga" — o que o valor MEDE. Ver `base-do-preco.ts`. */
+    baseDoPreco: string | null;
     rawOrderJson: string | null;
     acceptedAt: Date | string | null;
     scheduledDate: string | null;

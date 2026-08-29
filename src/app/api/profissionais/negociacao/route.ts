@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     // mão no WhatsApp. Nunca lança — a aceitação já está gravada.
     if (corpo.accao === "aceitar" && nova.estado === "aguarda_contratacao") {
       try {
-        const { getSimulatorOrderById } = await import("@/lib/db");
+        const { getSimulatorOrderById, regimeDeIvaDoProfissional } = await import("@/lib/db");
         const pedido = await getSimulatorOrderById(linha.pedidoId);
         const aceite = [...nova.propostas].reverse().find((p) => p.estado === "aceite");
         if (pedido && !(pedido.contactEmail ?? "").trim() && pedido.contactPhone && aceite) {
@@ -155,6 +155,10 @@ export async function POST(req: NextRequest) {
             negociacaoId,
             profissionalNome: sessao.nome,
             valor: aceite.valor,
+            // Quem factura e ele: e o regime dele que decide se o total que o
+            // cliente le leva IVA por cima do valor acordado. Vem da base e
+            // nao da sessao -- um token dura dias, um regime muda hoje.
+            regimeIva: await regimeDeIvaDoProfissional(sessao.providerId),
           });
         }
       } catch (e) {

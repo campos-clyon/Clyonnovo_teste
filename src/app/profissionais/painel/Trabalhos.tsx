@@ -47,6 +47,7 @@ import {
   porQuilometro,
 } from "@/lib/sinais-do-trabalho";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
+import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
@@ -768,7 +769,18 @@ export default function Trabalhos({
                     >
                       {euros(fechado ? p.recebeSeFechado : p.recebeSeAceitar)}
                     </span>
-                    <span className="text-[11px] text-slate-400">já com a taxa</span>
+                    {/*
+                      A UNIDADE COLADA AO NUMERO.
+                      Um "150 EUR" sozinho tanto e o trabalho todo como cada
+                      viagem ao aterro, e a diferenca so aparece no fim -- com
+                      o trabalho ja feito. Ver `base-do-preco.ts`.
+                    */}
+                    {lerBase(p.baseDoPreco) === "carga" && (
+                      <span className="whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
+                        por carga
+                      </span>
+                    )}
+                    <span className="text-[11px] text-slate-400">já com a taxa, sem IVA</span>
                     {/*
                       A CONTA QUE ELE FAZ DE CABEÇA, ESCRITA.
                       304 € em Campolide, a 39 km, dão 7,8 €/km.
@@ -1276,11 +1288,29 @@ function DetalheDoTrabalho({
             <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
             {fechado ? "Recebe" : "Recebe se aceitar"}
           </span>
-          <span className="text-2xl font-bold text-emerald-600">
-            {euros(fechado ? pedido.recebeSeFechado : pedido.recebeSeAceitar)}
+          <span className="text-right">
+            <span className="block text-2xl font-bold text-emerald-600">
+              {euros(fechado ? pedido.recebeSeFechado : pedido.recebeSeAceitar)}
+            </span>
+            <span className="block text-xs font-semibold text-slate-500">
+              {etiquetaDaBase(lerBase(pedido.baseDoPreco))}
+            </span>
           </span>
         </div>
-        <p className="mt-1 text-right text-xs text-slate-400">já com a taxa CLYON descontada</p>
+        <p className="mt-1 text-right text-xs text-slate-400">
+          já com a taxa CLYON descontada · o valor é sem IVA
+        </p>
+        {/*
+          O AVISO DA CARGA, e só quando há um.
+          Dizer "este valor é pelo trabalho todo" a quem já assumia isso é
+          ruído — e ruído em todos os cartões deixa de se ler. Só aparece
+          quando o preço é por carga, que é o caso em que enganar é caro.
+        */}
+        {avisoDaBase(lerBase(pedido.baseDoPreco)) && (
+          <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
+            {avisoDaBase(lerBase(pedido.baseDoPreco))}
+          </p>
+        )}
       </section>
 
       {/* ── A fase do trabalho ─────────────────────────────────────────────── */}

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { carteiraDoCliente, type TrabalhoDoCliente } from "./carteira-do-cliente";
-import { quantoOClientePaga } from "./taxas-plataforma";
+import { contaDoCliente } from "./taxas-plataforma";
+
+/** Sem regime gravado, a carteira conta sem IVA — que e o caso dos isentos. */
+const paga = (v: number) => contaDoCliente(v, "isento").total;
 
 const t = (p: Partial<TrabalhoDoCliente>): TrabalhoDoCliente => ({
   negociacaoId: 1,
@@ -19,14 +22,14 @@ describe("carteiraDoCliente", () => {
   // coisa que ele controla, e por isso é a que aparece primeiro.
   it("um trabalho fechado e por confirmar fica retido", () => {
     const c = carteiraDoCliente([t({})]);
-    expect(c.retido).toBe(quantoOClientePaga(200));
+    expect(c.retido).toBe(paga(200));
     expect(c.pago).toBe(0);
     expect(c.linhas[0].fase).toBe("retido");
   });
 
   it("confirmar passa-o a pago", () => {
     const c = carteiraDoCliente([t({ confirmadoEm: "2026-08-20T10:00:00Z" })]);
-    expect(c.pago).toBe(quantoOClientePaga(200));
+    expect(c.pago).toBe(paga(200));
     expect(c.retido).toBe(0);
     expect(c.linhas[0].fase).toBe("pago");
   });
@@ -48,7 +51,7 @@ describe("carteiraDoCliente", () => {
     const c = carteiraDoCliente([t({ valorAcordado: 100 })]);
     // 100 secos não é o que sai da conta dele.
     expect(c.linhas[0].total).not.toBe(100);
-    expect(c.linhas[0].total).toBe(quantoOClientePaga(100));
+    expect(c.linhas[0].total).toBe(paga(100));
   });
 
   it("soma vários e separa por fase", () => {
@@ -57,9 +60,9 @@ describe("carteiraDoCliente", () => {
       t({ negociacaoId: 2, valorAcordado: 200, confirmadoEm: "2026-08-19T10:00:00Z" }),
       t({ negociacaoId: 3, valorAcordado: 300, pagoEm: "2026-08-18T10:00:00Z" }),
     ]);
-    expect(c.retido).toBe(quantoOClientePaga(100));
+    expect(c.retido).toBe(paga(100));
     expect(c.pago).toBe(
-      Math.round((quantoOClientePaga(200) + quantoOClientePaga(300)) * 100) / 100,
+      Math.round((paga(200) + paga(300)) * 100) / 100,
     );
     expect(c.total).toBe(Math.round((c.retido + c.pago) * 100) / 100);
   });

@@ -103,7 +103,8 @@ describe("o ecrã", () => {
   it("mostra as três contas, e tira-as de taxas-plataforma", () => {
     // O painel dizia "200,00 €" e mais nada — o valor acordado, que não é o que
     // nenhuma das partes vê. Quem está ao telefone precisa do número certo.
-    expect(PAINEL).toContain("quantoOClientePaga");
+    // Cobrar ao cliente e o TOTAL: acordado + IVA de quem factura + taxa.
+    expect(PAINEL).toContain("contaDoCliente(valorAcordado, regimeDeIva(regimeIva)).total");
     expect(PAINEL).toContain("quantoOProfissionalRecebe");
     expect(PAINEL).toContain("comissaoDaClyon");
   });
