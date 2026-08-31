@@ -204,3 +204,75 @@ export const CORES: Record<EstadoNaAgenda, string> = {
   por_vir: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
   feito: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
 };
+
+/**
+ * A DATA PARA DENTRO DE UM CAMPO `datetime-local`, EM HORA DE LISBOA.
+ *
+ * O campo não fala fusos: escreve-se-lhe "2026-08-31T09:30" e ele mostra
+ * 09:30, seja onde for que a pessoa esteja. Toda a agenda — as etiquetas, o
+ * «hoje às 09:00», o atraso — é lida em Lisboa, porque é lá que o trabalho
+ * acontece. O campo tinha de ser lido no mesmo sítio.
+ *
+ * A ARMADILHA, e apanhou-se num ecrã: `d.getHours()` dá a hora do RELÓGIO DE
+ * QUEM ESTÁ A OLHAR. Num portátil em Paris, o mesmo trabalho aparecia às 08:30
+ * no rótulo e às 09:30 no campo logo por baixo — e bastava carregar em Guardar
+ * sem lhe tocar para o adiantar uma hora a sério. `toISOString().slice(0,16)`
+ * tem o defeito simétrico: dá Greenwich, e atrasa-o uma.
+ */
+export function paraOCampoDeData(v: string | Date | null | undefined): string {
+  const d = paraData(v ?? null);
+  if (!d) return "";
+  // `sv-SE` dá "2026-08-31 09:30" — a forma ISO, que é a única que este campo lê.
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(d)
+    .replace(" ", "T");
+}
+
+/** Quanto é que Lisboa está à frente de Greenwich NAQUELE instante, em ms. */
+function desvioDeLisboa(d: Date): number {
+  const comoSeFosseUtc = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+    .format(d)
+    .replace(" ", "T");
+  return Date.parse(`${comoSeFosseUtc}Z`) - d.getTime();
+}
+
+/**
+ * O CAMINHO DE VOLTA: o que está escrito no campo é hora de Lisboa.
+ *
+ * "2026-08-31T09:30" quer dizer nove e meia da manhã em Portugal. Mandá-lo em
+ * cru para o servidor deixava a interpretação ao fuso de quem o lesse — o
+ * browser lia-o no relógio da pessoa, o Node da Vercel lia-o em Greenwich, e
+ * nenhum dos dois é Lisboa. Aqui fecha-se a questão: sai daqui um instante
+ * exacto, e é esse que viaja.
+ *
+ * DUAS PASSAGENS por causa das mudanças da hora. Nas madrugadas de março e de
+ * outubro o desvio antes e depois da conversão não é o mesmo, e uma passagem
+ * só deixava lá uma hora de erro no único fim-de-semana do ano em que ninguém
+ * ia desconfiar dela.
+ */
+export function doCampoParaInstante(local: string): Date | null {
+  const t = local.trim();
+  if (!t) return null;
+  const comoSeFosseUtc = Date.parse(`${t}${t.length === 16 ? ":00" : ""}Z`);
+  if (Number.isNaN(comoSeFosseUtc)) return null;
+  const primeiro = new Date(comoSeFosseUtc - desvioDeLisboa(new Date(comoSeFosseUtc)));
+  const segundo = new Date(comoSeFosseUtc - desvioDeLisboa(primeiro));
+  return segundo;
+}
