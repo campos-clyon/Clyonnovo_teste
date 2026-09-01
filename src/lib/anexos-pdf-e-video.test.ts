@@ -188,7 +188,7 @@ describe("quando o envio de um ficheiro grande falha, a mensagem diz porquê", (
 
   it("sem resposta da rota, mostra a mensagem crua com o tamanho", () => {
     // Melhor um erro técnico com o tamanho do que um erro técnico sozinho.
-    expect(ENVIAR).toContain("${ficheiro.name} (${mb} MB): ${bruto}");
+    expect(ENVIAR).toContain("${ficheiro.name} (${mb} MB):");
   });
 });
 
@@ -202,5 +202,64 @@ describe("o nome do ficheiro aparece uma vez, e não duas", () => {
      */
     const FORM = ler("src/components/admin/RegistarPedido.tsx");
     expect(FORM).toContain("r.motivo.includes(original.name) ? r.motivo :");
+  });
+});
+
+describe("o envio direto passa a funcionar SEM token de escrita", () => {
+  const ROTA = ler("src/app/api/blob/presign/route.ts");
+  const ENVIAR = ler("src/lib/enviar-ficheiro.ts");
+
+  it("assina com a identidade do deployment, e não com um token", () => {
+    /*
+     * O store da CLYON é do modelo novo: `.env.local` mostra só o
+     * `BLOB_STORE_ID`, e as definições não têm secção de tokens nenhuma. Não é
+     * uma configuração que falta — é uma credencial que não existe para criar.
+     *
+     * A documentação do SDK diz que dá: «Requests short-lived signed-token
+     * material from the Blob control API. Use OIDC (VERCEL_OIDC_TOKEN +
+     * storeId / BLOB_STORE_ID)».
+     */
+    expect(ROTA).toContain("issueSignedToken");
+    expect(ROTA).toContain("presignUrl");
+    expect(ROTA).toContain("storeId: credencial.storeId");
+  });
+
+  it("mas usa o token quando ele existe", () => {
+    // Se algum dia aparecer um, ele ganha — é o que o próprio SDK faz.
+    expect(ROTA).toContain('credencial.modo === "token"');
+    expect(ROTA).toContain("token: credencial.token");
+  });
+
+  it("a autorização é fechada aqui, e não por quem chama", () => {
+    // Um só caminho, os tipos da lista, um tamanho máximo, uma hora.
+    expect(ROTA).toContain('operations: ["put"]');
+    expect(ROTA).toContain("allowedContentTypes: [...TIPOS_ACEITES]");
+    expect(ROTA).toContain("maximumSizeInBytes: TAMANHO_MAXIMO");
+    expect(ROTA).toContain("validUntil: Date.now() + VALIDADE_MS");
+  });
+
+  it("os tipos vêm da MESMA função dos outros dois caminhos", () => {
+    // Uma terceira lista divergiria, e a divergência aparece como "este
+    // ficheiro não é aceite" num caminho e não no outro.
+    expect(ROTA).toContain("tipoDoFicheiro(nome,");
+    expect(ROTA).not.toContain("const PERMITIDOS");
+  });
+
+  it("a URL final vem da resposta, e não de adivinhar o host", () => {
+    // Deduzi-la do id do store é uma transformação que não é nossa.
+    expect(ENVIAR).toContain("o armazenamento não devolveu o endereço");
+    expect(ROTA).toContain("A URL final NÃO vem daqui");
+  });
+
+  it("o ecrã tenta a URL assinada ANTES do caminho que precisa de token", () => {
+    const i = ENVIAR.indexOf("porUrlAssinada(ficheiro)");
+    const j = ENVIAR.indexOf("diretoAoArmazenamento(ficheiro)", i);
+    expect(i).toBeGreaterThan(-1);
+    expect(j).toBeGreaterThan(i);
+  });
+
+  it("e quando os dois falham, mostra o motivo do que devia ter funcionado", () => {
+    // O erro do SDK é sempre a mesma frase genérica; o da URL assinada diz algo.
+    expect(ENVIAR).toContain("${assinado.motivo || bruto}");
   });
 });
