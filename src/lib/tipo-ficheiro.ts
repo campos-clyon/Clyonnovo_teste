@@ -32,6 +32,20 @@ export const TIPOS_ACEITES = [
   "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
   "image/heic", "image/heif",
   "video/mp4", "video/quicktime", "video/webm",
+  /*
+   * PDF, a pedido: "no arquivo nós só aceitamos fotos, mas devemos aceitar
+   * também PDFs e vídeos."
+   *
+   * O que faltava era mesmo o PDF — os vídeos já estavam nesta lista há muito,
+   * mas o `accept="image/*"` da interface impedia-os de sequer serem
+   * escolhidos. Aceitava-se no servidor o que o ecrã não deixava enviar.
+   *
+   * Um PDF é o formato em que chegam as reportagens fotográficas e os
+   * relatórios de obra — várias fotos e notas num ficheiro só. Recusá-lo
+   * obrigava a desmontá-lo em imagens à mão, e quem o faz vinte vezes por
+   * semana acaba por mandar por WhatsApp, fora do pedido.
+   */
+  "application/pdf",
 ] as const;
 
 const TIPOS_PERMITIDOS = new Set<string>(TIPOS_ACEITES);
@@ -48,7 +62,37 @@ const POR_EXTENSAO: Record<string, string> = {
   mp4:  "video/mp4",
   mov:  "video/quicktime",
   webm: "video/webm",
+  pdf:  "application/pdf",
 };
+
+/**
+ * QUE ESPÉCIE DE ANEXO É ISTO — e portanto como se mostra.
+ *
+ * Uma imagem entra num `<img>`, um vídeo num `<video>`, um PDF em lado nenhum
+ * dos dois: metido num `<img>` dá o ícone de imagem partida, que é pior do que
+ * não mostrar nada.
+ *
+ * Cinco ecrãs precisam desta decisão — o cartão do profissional, o detalhe, a
+ * prova do trabalho, a mesa do backoffice e o ecrã do cliente. Cinco cópias de
+ * uma expressão regular divergem no dia em que se acrescenta um formato.
+ *
+ * DECIDE PELO NOME, e não pelo tipo declarado: o que fica guardado é uma URL, e
+ * o tipo do momento do envio nem sempre viajou com ela.
+ */
+export type EspecieDoAnexo = "imagem" | "video" | "pdf";
+
+export function especieDoAnexo(urlOuNome: string | null | undefined): EspecieDoAnexo {
+  const limpo = (urlOuNome ?? "").split("?")[0].split("#")[0].toLowerCase();
+  if (/\.(mp4|mov|m4v|webm|avi|mkv)$/.test(limpo)) return "video";
+  if (/\.pdf$/.test(limpo)) return "pdf";
+  /*
+   * Por omissão, imagem. É o caso de longe mais comum, e uma URL sem extensão
+   * — que acontece — tem muito mais probabilidade de ser uma fotografia do que
+   * qualquer outra coisa. Num `<img>` que falhe, o ecrã mostra o texto
+   * alternativo; um PDF tratado como imagem seria o mesmo desfecho.
+   */
+  return "imagem";
+}
 
 export type ResultadoTipo =
   | { ok: true; tipo: string; origem: "declarado" | "extensao" }

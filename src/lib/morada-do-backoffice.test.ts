@@ -143,7 +143,14 @@ describe("as fotografias do WhatsApp", () => {
     // Um segundo caminho de upload seria um segundo sítio onde as fotos se
     // perdem — o enviarFicheiro comprime e sobe uma de cada vez, já testado.
     expect(FORM).toContain("@/lib/enviar-ficheiro");
-    expect(FORM).toContain('accept="image/*"');
+    /*
+     * E JÁ NÃO É SÓ `image/*`.
+     *
+     * "No arquivo nós só aceitamos fotos, mas devemos aceitar também PDFs e
+     * vídeos." O que chega por WhatsApp é muitas vezes uma reportagem
+     * fotográfica em PDF, ou um vídeo da casa a esvaziar.
+     */
+    expect(FORM).toContain('accept="image/*,video/*,application/pdf"');
   });
 
   it("a rota só grava entradas com url, e no formato do simulador", () => {

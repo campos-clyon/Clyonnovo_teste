@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Miniatura } from "@/components/Anexo";
 import { notFound } from "next/navigation";
 import { Clock } from "lucide-react";
 import {
@@ -133,13 +134,7 @@ export default async function PaginaDoPedidoProfissional({
             </h3>
             <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {fotos.map((f, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={i}
-                  src={f.url}
-                  alt={`Fotografia ${i + 1} do pedido`}
-                  className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
-                />
+                <Miniatura key={i} url={f.url} nome={f.name} className="aspect-square w-full" />
               ))}
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Miniatura } from "@/components/Anexo";
 import {
   BadgeCheck,
   Camera,
@@ -342,22 +343,12 @@ export default function PropostasRecebidas({
                 miniatura de sessenta píxeis não se vê se ficou feito. */}
             {prova && prova.fotos.length > 0 && (
               <div className="mt-3 space-y-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={prova.fotos[0]}
-                  alt="Fotografia do trabalho feito"
-                  className="max-h-72 w-full rounded-xl object-cover ring-1 ring-slate-200"
-                />
+                {/* A prova pode ser uma foto, um video ou um PDF. Ver `Anexo.tsx`. */}
+                <Miniatura url={prova.fotos[0]} className="h-64 w-full" />
                 {prova.fotos.length > 1 && (
                   <div className="grid grid-cols-4 gap-2">
                     {prova.fotos.slice(1).map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={url}
-                        src={url}
-                        alt={`Fotografia ${i + 2} do trabalho feito`}
-                        className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
-                      />
+                      <Miniatura key={url} url={url} className="aspect-square w-full" />
                     ))}
                   </div>
                 )}

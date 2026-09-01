@@ -33,6 +33,7 @@ import {
 } from "@/lib/taxas-plataforma";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import { Miniatura } from "@/components/Anexo";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import {
   mensagemDasPropostas,
@@ -1378,11 +1379,10 @@ export default function AdminNegociacoesPanel({
                           onClick={() => setAVer({ lista: prova.fotos, i })}
                           aria-label={`Ver prova ${i + 1}`}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`Prova ${i + 1}`}
-                            className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700 transition hover:ring-cyan-500"
+                          {/* Foto, video ou PDF — a especie decide-se em `Anexo.tsx`. */}
+                          <Miniatura
+                            url={url}
+                            className="h-16 w-16 ring-1 ring-slate-700 transition hover:ring-cyan-500"
                           />
                         </button>
                       ))}
@@ -2991,11 +2991,10 @@ function TrocaDePropostas({
                   onClick={() => onVerFotos(prova.fotos, i)}
                   aria-label={`Ver prova ${i + 1}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={`Prova ${i + 1}`}
-                    className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700 transition hover:ring-cyan-500"
+                  {/* Foto, video ou PDF — a especie decide-se em `Anexo.tsx`. */}
+                  <Miniatura
+                    url={url}
+                    className="h-16 w-16 ring-1 ring-slate-700 transition hover:ring-cyan-500"
                   />
                 </button>
               ))}
