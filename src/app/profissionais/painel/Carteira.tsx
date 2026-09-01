@@ -247,7 +247,12 @@ function PedirTransferencia({
           Pedir {euros(Number.isFinite(numero) ? numero : 0)}
         </button>
 
-        <p className="mt-3 text-center text-xs leading-relaxed text-slate-400">
+        <p /*
+                  `slate-600`, e nao `slate-400`. Esta e a unica frase que
+                  explica porque e que o botao acima esta apagado — e estava a
+                  2,56:1 de contraste, num telemovel muitas vezes ao sol.
+                */
+                className="mt-3 text-center text-xs leading-relaxed text-slate-600">
           O mínimo por transferência é de {MINIMO_PARA_LEVANTAR} €. Fazemos a transferência
           para o IBAN indicado — costuma chegar em um a dois dias úteis.
         </p>

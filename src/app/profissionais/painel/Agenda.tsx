@@ -143,13 +143,25 @@ export default function Agenda({
               {p.morada}
             </p>
           )}
+          {/*
+            O NÚMERO NÃO SE PARTE, E O ALVO TEM 44 px.
+
+            Era um flex de três filhos sem `flex-wrap`: a partir de um nome com
+            uns 20 caracteres o link era comprimido e o número passava a duas
+            linhas — «912 345» numa, «678» na outra. E o link herdava a caixa
+            de `text-xs`, ou seja 19 px de alvo, para o gesto PRINCIPAL deste
+            ecrã: a agenda existe para ele ligar ao cliente.
+          */}
           {p.contactoNome && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-tinta-fraca">
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-tinta-fraca">
               <User className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {p.contactoNome}
               {p.contactoTelefone && (
-                <a href={`tel:${p.contactoTelefone}`} className="flex items-center gap-1 text-acao">
-                  <Phone className="h-3 w-3" aria-hidden="true" />
+                <a
+                  href={`tel:${p.contactoTelefone}`}
+                  className="mt-0.5 flex min-h-[44px] basis-full items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-acao"
+                >
+                  <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {p.contactoTelefone}
                 </a>
               )}
