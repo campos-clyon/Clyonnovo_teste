@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CalendarClock, Loader2, MapPin, Phone, RefreshCw, User } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import FichaDaAgenda, { type TrabalhoDaAgenda } from "./FichaDaAgenda";
+import RegistarPedido from "./RegistarPedido";
 import {
   ETIQUETA,
   CORES,
@@ -26,25 +28,14 @@ import {
  * sem data, por vir, feito.
  */
 
-type Trabalho = {
-  negociacaoId: number;
-  pedidoId: number;
-  servico: string | null;
-  cidade: string | null;
-  morada: string | null;
-  clienteNome: string | null;
-  clienteTelefone: string | null;
-  profissionalNome: string;
-  profissionalTelefone: string | null;
-  valorAcordado: number | null;
-  dataCombinada: string | null;
-  dataDoCliente: string | null;
-  estado: EstadoNaAgenda;
-  quando: string | null;
-  origem: "combinada" | "do_cliente" | "nenhuma";
-  diasDeAtraso: number;
-  horaJaPassou: boolean;
-};
+/*
+ * O tipo é O DA FICHA, e não uma cópia.
+ *
+ * A linha da lista e a ficha que ela abre são o mesmo trabalho: manter dois
+ * tipos paralelos garantia que a coluna seguinte entrava num e não no outro,
+ * e a ficha abria sem ela sem ninguém dar por isso.
+ */
+type Trabalho = TrabalhoDaAgenda;
 
 const SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -66,10 +57,21 @@ export default function AdminAgendaPanel() {
   const [erro, setErro] = useState("");
   /* Ver tudo, ou só o que precisa de alguém hoje. */
   const [soOsQuePrecisam, setSoOsQuePrecisam] = useState(true);
+  /*
+   * A FICHA ABERTA, e o editor do pedido por cima dela.
+   *
+   * Guarda-se o número da negociação e não o trabalho todo: depois de gravar
+   * uma data ou um valor, a lista recarrega e o objecto antigo ficaria a
+   * mostrar o número velho numa ficha que já o mudou.
+   */
+  const [aVer, setAVer] = useState<number | null>(null);
+  const [aEditarPedido, setAEditarPedido] = useState<number | null>(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
-    setACarregar(true);
+    /* Gravar uma data com a ficha aberta recarrega a lista por baixo. Pôr
+       "A carregar…" no lugar dela fazia a ficha saltar do ecrã. */
+    if (!silencioso) setACarregar(true);
     try {
       const res = await fetch("/api/admin/agenda", {
         headers: { Authorization: `Bearer ${token}` },
@@ -205,9 +207,32 @@ export default function AdminAgendaPanel() {
                 new Date(t.dataDoCliente).toDateString();
 
             return (
+              /*
+                A LINHA INTEIRA ABRE A FICHA — e os dois telefones não mudaram.
+
+                Estava escrito aqui que não havia botão de abrir de propósito:
+                quem chega já sabe que vai ligar, e um botão era mais um toque
+                entre a pergunta e a resposta. Continua verdade para a chamada,
+                e passou a ser meia verdade para o resto — ele desliga o
+                telefone com uma data nova na mão e não tinha onde a pôr.
+
+                Por isso a ficha não roubou o lugar a ninguém: os telefones
+                ficam onde estavam, com `stopPropagation` para o toque neles
+                não abrir nada, e o resto da linha abre.
+              */
               <div
                 key={t.negociacaoId}
-                className={`rounded-xl border px-4 py-3 ${
+                role="button"
+                tabIndex={0}
+                onClick={() => setAVer(t.negociacaoId)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setAVer(t.negociacaoId);
+                  }
+                }}
+                aria-label={`Abrir o pedido #${t.pedidoId}`}
+                className={`cursor-pointer rounded-xl border px-4 py-3 transition hover:border-cyan-600/60 focus:outline-none focus-visible:border-cyan-500 ${
                   t.estado === "atrasado"
                     ? "border-rose-500/40 bg-rose-500/5"
                     : "border-slate-800 bg-slate-950/40"
@@ -276,6 +301,7 @@ export default function AdminAgendaPanel() {
                     {t.profissionalTelefone && (
                       <a
                         href={`tel:${t.profissionalTelefone}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-600 hover:text-cyan-300"
                       >
                         <Phone className="h-3 w-3" aria-hidden="true" />
@@ -285,6 +311,7 @@ export default function AdminAgendaPanel() {
                     {t.clienteTelefone && (
                       <a
                         href={`tel:${t.clienteTelefone}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-600 hover:text-cyan-300"
                       >
                         <Phone className="h-3 w-3" aria-hidden="true" />
@@ -300,10 +327,52 @@ export default function AdminAgendaPanel() {
       )}
 
       <p className="mt-5 text-xs leading-relaxed text-slate-500">
-        Quem marca o dia é o profissional, no painel dele, depois de ser contratado. O que
-        aparece aqui como <strong className="text-slate-400">pedido pelo cliente</strong> é a
-        data do formulário e ainda não foi combinada com ninguém.
+        Toque numa linha para abrir o pedido — e corrigir a data, a hora ou o valor. O dia
+        marca-o o profissional no painel dele, ou a CLYON aqui, depois de o trabalho ser
+        contratado; é a mesma data, não são duas. O que aparece como{" "}
+        <strong className="text-slate-400">pedido pelo cliente</strong> é a data do
+        formulário e ainda não foi combinada com ninguém.
       </p>
+
+      {/*
+        A FICHA lê-se sempre da lista recarregada, e não de uma cópia guardada
+        no momento do clique: depois de gravar 230 € por cima de 135 €, a ficha
+        tem de passar a dizer 230.
+      */}
+      {aVer != null && token && (() => {
+        const t = trabalhos.find((x) => x.negociacaoId === aVer);
+        if (!t) return null;
+        return (
+          <FichaDaAgenda
+            t={t}
+            token={token}
+            onFechar={() => setAVer(null)}
+            onMudou={() => carregar(true)}
+            onEditarPedido={(id) => setAEditarPedido(id)}
+          />
+        );
+      })()}
+
+      {/*
+        O editor do pedido, por cima da ficha e não no lugar dela: fechá-lo
+        devolve a pessoa ao sítio de onde saiu.
+
+        NÃO FECHA COM UM CLIQUE AO LADO — são catorze campos e fotografias.
+      */}
+      {aEditarPedido != null && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#0B1220] p-4 sm:p-8">
+          <div className="mx-auto max-w-5xl">
+            <RegistarPedido
+              editarId={aEditarPedido}
+              onCriado={() => carregar(true)}
+              onFechar={() => {
+                setAEditarPedido(null);
+                carregar(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

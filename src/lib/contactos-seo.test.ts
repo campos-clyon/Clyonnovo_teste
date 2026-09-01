@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AVALIACOES, PRAZO_DE_RESPOSTA } from "./seo-data";
 import { PRECOS } from "./precos-publicos";
+import { PROMESSA } from "./pagamento-na-plataforma";
 
 /**
  * A página de contactos, refeita para ser encontrada.
@@ -101,8 +102,17 @@ describe("os números", () => {
 
 describe("a voz", () => {
   it("a CLYON não diz que faz o trabalho", () => {
-    expect(PAGINA).toContain("A CLYON é a plataforma");
-    expect(PAGINA).toContain("Quem desmonta, carrega e transporta é o profissional");
+    /*
+     * A FRASE MUDOU DE CASA, e a garantia não mudou.
+     *
+     * Vive agora em `pagamento-na-plataforma.ts`, com as duas versões — a de
+     * hoje e a que volta quando houver cobrança. Passou para lá porque a
+     * segunda metade dela falava de dinheiro que a CLYON não tem; a primeira
+     * metade, que é a que este teste protege, é igual nas duas.
+     */
+    expect(PROMESSA.faqQuemFaz).toContain("A CLYON é a plataforma");
+    expect(PROMESSA.faqQuemFaz).toContain("Quem desmonta, carrega e transporta é o profissional");
+    expect(PAGINA).toContain("PROMESSA.faqQuemFaz");
     // Nada de "nós recolhemos", "a nossa equipa vai lá".
     expect(PAGINA_LIMPA).not.toMatch(/n[óo]s (recolhemos|esvaziamos|levamos|transportamos)/i);
     expect(PAGINA_LIMPA).not.toMatch(/a nossa equipa (vai|desmonta|carrega)/i);

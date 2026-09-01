@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -804,12 +805,12 @@ export default function RegistarPedido({
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {fotos.map((ft, idx) => (
               <div key={ft.url} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={ft.url}
-                  alt={`Fotografia ${idx + 1}`}
-                  className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-700"
-                />
+                {/*
+                  Fotografia, vídeo ou PDF — a miniatura sabe qual é.
+                  Um PDF num `<img>` dava o ícone de imagem partida, e quem o
+                  visse pensava que o anexo se tinha perdido no envio.
+                */}
+                <Miniatura url={ft.url} nome={ft.name} className="h-16 w-16" />
                 <button
                   type="button"
                   onClick={() => setFotos((v) => v.filter((x) => x.url !== ft.url))}
@@ -829,7 +830,7 @@ export default function RegistarPedido({
               <input
                 ref={seletorDeFotos}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*,application/pdf"
                 multiple
                 className="hidden"
                 onChange={(e) => escolherFotos(e.target.files)}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CheckCircle2, Phone } from "lucide-react";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRECOS } from "@/lib/precos-publicos";
@@ -91,7 +92,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Quem responde por um trabalho mal feito?",
-      a: "O profissional que o executou, e a CLYON só liberta o pagamento depois de o cliente confirmar. Cada profissional tem nota e historial avaliados por quem já o contratou.",
+      a: PROMESSA.faqQuemResponde,
     },
   ],
 };

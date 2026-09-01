@@ -4,6 +4,7 @@ import { Lock, CheckCircle2 } from "lucide-react";
 import Nota from "@/components/Nota";
 import { carteiraDoCliente, type TrabalhoDoCliente } from "@/lib/carteira-do-cliente";
 import { tService } from "@/lib/translations";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 import type { Order } from "./types";
 
 function euros(v: number): string {
@@ -17,9 +18,13 @@ function euros(v: number): string {
  * cada pedido, um a um, e para saber quanto tinha em jogo abria-os todos e
  * somava de cabeça.
  *
- * O número grande ao centro é o que ainda está retido — o único sobre o qual
+ * O número grande ao centro é o que ainda está em aberto — o único sobre o qual
  * ele pode agir hoje. O que já pagou fica ao lado, mais pequeno: é história,
  * e não é sobre isso que se vem aqui.
+ *
+ * O QUE ESSE NÚMERO É chama-se `pagamento-na-plataforma.ts` e não se escreve
+ * aqui. Enquanto a CLYON não cobrar, «retido» é mentira — e a mentira estava
+ * escrita nestas duas notas.
  */
 export default function Carteira({ orders }: { orders: Order[] }) {
   const trabalhos: TrabalhoDoCliente[] = orders.flatMap((o) =>
@@ -46,15 +51,13 @@ export default function Carteira({ orders }: { orders: Order[] }) {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Retido
+          {PROMESSA.clienteRotuloDoTotal}
         </p>
         <p className="mt-1 text-4xl font-bold leading-none text-tinta">
           {euros(c.retido)}
         </p>
         <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">
-          {c.retido > 0
-            ? "Está prometido e ainda não chegou a ninguém. Só sai quando confirmar que o trabalho está feito."
-            : "Não tem nada retido de momento."}
+          {c.retido > 0 ? PROMESSA.clienteTotalComValor : PROMESSA.clienteTotalVazio}
         </p>
 
         <div className="mt-5 border-t border-slate-100 pt-4">
@@ -114,11 +117,8 @@ export default function Carteira({ orders }: { orders: Order[] }) {
         </p>
       )}
 
-      <Nota titulo="Porque é que o valor fica retido" comecaAberta>
-        Quando aceita uma proposta, o valor fica do lado da CLYON e não chega ao
-        profissional. Só sai depois de o cliente confirmar que o trabalho está
-        feito — e é por isso que a confirmação é sua e de mais ninguém. Se
-        alguma coisa correr mal antes disso, o dinheiro ainda está cá.
+      <Nota titulo={PROMESSA.clienteTitulo} comecaAberta>
+        {PROMESSA.clienteCorpo}
       </Nota>
 
       <Nota titulo="O que é a taxa da plataforma">

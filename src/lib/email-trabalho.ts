@@ -6,7 +6,7 @@
  * pode sair — e o cliente saber que o trabalho está feito e que falta
  * confirmá-lo.
  *
- * O segundo é o que liberta o dinheiro. Sem ele, o prazo de sete dias corria
+ * O segundo é o que fecha o trabalho. Sem ele, o prazo de sete dias corria
  * sem o cliente saber sequer que estava a correr, e a libertação automática
  * deixava de ser um prazo para passar a ser uma surpresa.
  *
@@ -19,6 +19,7 @@ import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
+import { PROMESSA, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -119,8 +120,8 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
       O trabalho é seu${p.paraNome ? `, ${e(p.paraNome.split(/\s+/)[0])}` : ""}
     </h1>
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
-      O cliente contratou-o para <strong>${e(servico)}</strong>. O valor está retido na
-      CLYON e é libertado assim que ele confirmar que está feito.
+      O cliente contratou-o para <strong>${e(servico)}</strong>.
+      ${PROMESSA.emailProAoContratar}
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;margin-bottom:20px;">
@@ -167,9 +168,8 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
     </table>
 
     <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-      Quando estiver feito, fotografe o resultado e marque como feito na sua conta. É a
-      fotografia que permite ao cliente confirmar — e é a confirmação que liberta o
-      pagamento.
+      Quando estiver feito, fotografe o resultado e marque como feito na sua conta.
+      ${PROMESSA.emailProParaQueServeAProva}
     </p>`;
 
   return enviar(
@@ -206,7 +206,7 @@ export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
       <strong>${e(p.profissionalNome)}</strong> marcou o trabalho como feito e enviou
       ${p.quantasFotos === 1 ? "uma fotografia" : `${p.quantasFotos} fotografias`}.
-      Veja e confirme — é a confirmação que liberta o pagamento.
+      ${PROMESSA.emailClienteAoPedirConfirmacao}
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0">
@@ -218,9 +218,7 @@ export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise
     </table>
 
     <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
-      Se não disser nada, o pagamento é libertado sozinho daqui a
-      ${p.diasParaConfirmar} dias. Se alguma coisa estiver mal, responda a este email
-      antes disso — tratamos do assunto.
+      ${prazoDoEmailPorExtenso(p.diasParaConfirmar)}
     </p>
 
     <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">

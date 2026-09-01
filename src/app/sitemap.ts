@@ -10,6 +10,7 @@ import {
 import { getAllBlogPosts } from "@/lib/blog-data";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 import { dataDoConteudo } from "@/lib/conteudo-datas.generated";
+import { slugsDosProfissionais } from "@/lib/perfil-publico-do-profissional";
 
 const staticPages = [
   { url: `${SITE_URL}`, priority: 1.0, changeFrequency: "weekly" as const },
@@ -49,7 +50,7 @@ const staticPages = [
   { url: `${SITE_URL}/regioes`, priority: 0.9, changeFrequency: "weekly" as const },
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // `lastModified` deixou de ser a data do build. Carimbar hoje em todas as
   // páginas a cada deploy diz ao Google que 157 mudaram — o que é falso, e
   // ensina-o a ignorar o campo. Estas datas vêm do histórico do git e só
@@ -146,11 +147,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.94,
   }));
 
+  /*
+   * AS PÁGINAS DOS PROFISSIONAIS — as únicas do sitemap que não são escritas.
+   *
+   * Todas as outras entradas deste ficheiro saem de listas nossas: serviços,
+   * cidades, artigos. Estas saem da base, e crescem sozinhas à medida que
+   * profissionais são aprovados. É conteúdo que nenhum concorrente pode copiar,
+   * porque é feito das avaliações dos trabalhos que eles fizeram.
+   *
+   * SE A BASE ESTIVER EM BAIXO, o sitemap sai sem elas em vez de sair a 500.
+   * Um sitemap com menos páginas é um problema pequeno; um sitemap que não
+   * responde faz o Google desistir de o pedir.
+   */
+  const profissionaisPages = (await slugsDosProfissionais()).map((slug) => ({
+    url: `${SITE_URL}/profissionais/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
   return [
     ...staticPages.map((page) => ({ ...page, lastModified: dataEstaticas })),
     ...regionPages,
     ...blogPages,
     ...localPages,
     ...mudancasCidadePages,
+    ...profissionaisPages,
   ];
 }

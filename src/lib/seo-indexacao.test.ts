@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { getAllCityServiceSlugs } from "@/lib/seo-data";
@@ -34,7 +34,16 @@ describe("robots.txt — o grupo específico não pode anular as restrições", 
 });
 
 describe("sitemap — só URLs canónicos", () => {
-  const urls = sitemap().map((e) => e.url);
+  /*
+   * O sitemap passou a assíncrono: uma parte dele — as páginas dos
+   * profissionais — vem da base e cresce sozinha. Sem base ligada, essa parte
+   * volta vazia e o resto do ficheiro continua a ser exactamente o mesmo, que
+   * é o que estes testes medem.
+   */
+  let urls: string[] = [];
+  beforeAll(async () => {
+    urls = (await sitemap()).map((e) => e.url);
+  });
 
   it("não inclui o /mudancas-lisboa com hífen, que redirecciona", () => {
     expect(urls).not.toContain("https://clyon.pt/mudancas-lisboa");
@@ -77,7 +86,10 @@ describe("lastmod — só muda quando o conteúdo muda", () => {
   // Carimbar a data do build em todas as páginas diz ao Google que 157
   // mudaram a cada deploy. Ele aprende depressa a ignorar o campo, e
   // perde-se o único sinal de "esta vale a pena revisitar".
-  const entradas = sitemap();
+  let entradas: Awaited<ReturnType<typeof sitemap>> = [];
+  beforeAll(async () => {
+    entradas = await sitemap();
+  });
 
   it("as datas não são todas iguais", () => {
     const datas = new Set(entradas.map((e) => String(e.lastModified)));

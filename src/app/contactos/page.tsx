@@ -14,6 +14,7 @@ import {
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 /**
  * A página de contactos, refeita para ser encontrada.
@@ -109,7 +110,7 @@ const PERGUNTAS = [
   },
   {
     q: "É a CLYON que faz o trabalho?",
-    a: "Não. A CLYON é a plataforma que liga o seu pedido a profissionais verificados da sua zona. Quem desmonta, carrega e transporta é o profissional que escolher — e o pagamento só é libertado depois de o trabalho estar confirmado.",
+    a: PROMESSA.faqQuemFaz,
   },
   {
     q: "Que serviços posso pedir por aqui?",
@@ -313,7 +314,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Escolhe, e só depois se paga",
-                  "Quando aceita, o valor fica retido e o profissional recebe os dados para lá ir. O dinheiro só é libertado depois de o trabalho estar feito e confirmado.",
+                  PROMESSA.faqComoSePaga,
                 ],
               ].map(([titulo, texto], i) => (
                 <li

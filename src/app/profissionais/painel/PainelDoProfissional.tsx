@@ -29,6 +29,7 @@ import Ajuda from "./Ajuda";
 import Agenda from "./Agenda";
 import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
 import Avaliacoes from "./Avaliacoes";
+import AvisosNoTelemovel from "./AvisosNoTelemovel";
 
 /**
  * O painel do profissional.
@@ -424,6 +425,15 @@ export default function PainelDoProfissional() {
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </button>
       </header>
+
+      {/*
+        Antes de tudo o resto no menu, e só enquanto ele não decidir.
+
+        É o cartão que pede a permissão dos avisos. Fica à cabeça porque uma
+        permissão pedida a meio de uma lista não é pedida — e desaparece assim
+        que ele ligar ou dispensar.
+      */}
+      <AvisosNoTelemovel />
 
       <GrupoDeLinhas className="mb-4">
         <LinhaDeMenu

@@ -55,12 +55,48 @@ describe("a nota agregada", () => {
    * A regra tem uma razão simples: a nota agregada tem de contar avaliações
    * que a própria página mostra. /avaliacoes mostra-as; mais nenhuma mostra.
    */
-  it("só existe na página que mostra as avaliações", () => {
+  it("só existe nas páginas que mostram as avaliações que contam", () => {
+    /*
+     * SÃO DUAS, E A REGRA É A MESMA.
+     *
+     * `/avaliacoes` agrega as avaliações da CLYON e reproduz-nas. A página de
+     * um profissional agrega as DELE e reproduz as dele — cada uma conta o que
+     * mostra, que é a única coisa que um revisor humano do Google verifica.
+     */
     const comRating = PAGINAS.filter((f) =>
       semComentarios(readFileSync(f, "utf8")).includes("aggregateRating"),
     ).map((f) => f.replace(RAIZ, "").replace(/\\/g, "/"));
 
-    expect(comRating).toEqual(["/src/app/avaliacoes/page.tsx"]);
+    expect(comRating.sort()).toEqual([
+      "/src/app/avaliacoes/page.tsx",
+      "/src/app/profissionais/[slug]/page.tsx",
+    ]);
+  });
+
+  it("a do profissional não declara nota nenhuma sem avaliações", () => {
+    /*
+     * Um `aggregateRating` com zero avaliações é motivo de acção manual do
+     * Google, e é justo que seja: são as estrelas que aparecem no resultado da
+     * pesquisa. A guarda tem de vir ANTES da declaração.
+     */
+    // Sem comentários: a palavra aparece primeiro numa nota explicativa, e
+    // procurar no ficheiro cru media a distância à nota em vez de ao código.
+    const perfil = semComentarios(
+      readFileSync(join(RAIZ, "src/app/profissionais/[slug]/page.tsx"), "utf8"),
+    );
+    const i = perfil.indexOf("aggregateRating");
+    expect(i).toBeGreaterThan(-1);
+    expect(
+      perfil.lastIndexOf("p.quantasAvaliacoes > 0 && p.notaMedia != null", i),
+    ).toBeGreaterThan(-1);
+  });
+
+  it("e reproduz mesmo as avaliações que agrega", () => {
+    // É a regra toda: contar o que se mostra. Uma nota agregada numa página
+    // sem as provas visíveis é o que o Google trata como enganoso.
+    const perfil = readFileSync(join(RAIZ, "src/app/profissionais/[slug]/page.tsx"), "utf8");
+    expect(perfil).toContain("p.avaliacoes.map");
+    expect(perfil).toContain("O que dizem os clientes");
   });
 
   it("declara exactamente as avaliações que a página reproduz", () => {

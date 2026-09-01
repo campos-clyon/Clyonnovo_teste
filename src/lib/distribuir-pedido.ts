@@ -3,6 +3,8 @@ import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel"
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
 import { distanciasRodoviarias } from "./distancia-rodoviaria";
 import { avisarProfissional } from "./email-profissional";
+import { avisarProfissionalDePedidoPorPush } from "./avisar-por-push";
+import { tService } from "./translations";
 import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { negociacaoNova } from "./negociacao";
@@ -378,6 +380,24 @@ export async function distribuirPedido(
         distanciaKm: c.distanciaKm,
         precisaFatura: pedido.precisaFatura,
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+      });
+
+      /*
+       * E NO TELEMÓVEL, a seguir ao email.
+       *
+       * Este é o aviso que decide quem trabalha. Cinco profissionais recebem o
+       * mesmo pedido e quem responde primeiro ganha quase sempre — o email fica
+       * por abrir uma hora, o telemóvel toca já. A Fixando tem um ecrã inteiro
+       * de onboarding só a pedir esta permissão, e não está lá por acaso.
+       *
+       * Depois do email e nunca em vez dele: o email é o registo, e chega a
+       * quem nunca activou avisos nenhuns — que hoje são todos.
+       */
+      await avisarProfissionalDePedidoPorPush({
+        email: c.profissional.email,
+        servico: tService(pedido.serviceType) || "Trabalho novo",
+        zona: pedido.city,
+        token,
       });
 
       return { recebeu: true, avisado };

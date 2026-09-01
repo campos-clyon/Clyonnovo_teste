@@ -117,7 +117,42 @@ function exigeTestador(caminho: string): boolean {
  * de outro, mais forte. Fica no mesmo nível da página que o serve.
  */
 
+/**
+ * AS SECÇÕES DE `/profissionais` QUE SÃO MESMO PRIVADAS.
+ *
+ * Escrita à mão e curta de propósito. O portão fecha tudo o que está debaixo de
+ * `/profissionais/` menos uma coisa — a página pública de um profissional — e
+ * a forma segura de fazer isso é listar o que fica fechado, e não o que abre.
+ * Ao contrário, uma pasta nova criada daqui a seis meses nascia aberta.
+ */
+const SECCOES_PRIVADAS = [
+  "painel",
+  "entrar",
+  "login",
+  "inscricao",
+  "definir-senha",
+  "pedidos",
+];
+
+/**
+ * O PERFIL PÚBLICO DE UM PROFISSIONAL — `/profissionais/joao-silva`.
+ *
+ * É a primeira coisa que a CLYON põe no Google que não é escrita por nós:
+ * escreve-se sozinha à medida que ele trabalha. Estar atrás do portão do MVP
+ * tornava-a inútil — uma página que o Google não pode ler não é SEO nenhum, e
+ * um cliente que recebe uma proposta não podia ver com quem ia lidar.
+ *
+ * UM SEGMENTO SÓ. `/profissionais/joao-silva` abre; `/profissionais/painel` e
+ * tudo o que tenha barra a mais continua fechado.
+ */
+function ePerfilPublicoDeProfissional(caminho: string): boolean {
+  const partes = caminho.split("/").filter(Boolean);
+  if (partes.length !== 2 || partes[0] !== "profissionais") return false;
+  return !SECCOES_PRIVADAS.includes(partes[1]);
+}
+
 function exigeChave(caminho: string): boolean {
+  if (ePerfilPublicoDeProfissional(caminho)) return false;
   return (
     caminho === "/profissionais" ||
     caminho.startsWith("/profissionais/") ||

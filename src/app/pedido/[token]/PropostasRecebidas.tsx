@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Miniatura } from "@/components/Anexo";
 import {
   BadgeCheck,
   Camera,
@@ -24,6 +25,8 @@ import { contaDoCliente, regimeDeIva, TAXA_IVA } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
+import { PROMESSA, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
+
 
 /**
  * As propostas que o cliente recebeu.
@@ -315,8 +318,7 @@ export default function PropostasRecebidas({
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
             <p className="text-xs leading-relaxed text-emerald-700">
-              O valor fica retido na CLYON e só chega a {acordada.profissionalNome} depois
-              de o trabalho estar feito e de si o confirmar aqui.
+              {PROMESSA.clienteEmCurso.replaceAll("{PRO}", acordada.profissionalNome)}
             </p>
             {acordada.profissionalTelefone && (
               <a
@@ -341,22 +343,12 @@ export default function PropostasRecebidas({
                 miniatura de sessenta píxeis não se vê se ficou feito. */}
             {prova && prova.fotos.length > 0 && (
               <div className="mt-3 space-y-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={prova.fotos[0]}
-                  alt="Fotografia do trabalho feito"
-                  className="max-h-72 w-full rounded-xl object-cover ring-1 ring-slate-200"
-                />
+                {/* A prova pode ser uma foto, um video ou um PDF. Ver `Anexo.tsx`. */}
+                <Miniatura url={prova.fotos[0]} className="h-64 w-full" />
                 {prova.fotos.length > 1 && (
                   <div className="grid grid-cols-4 gap-2">
                     {prova.fotos.slice(1).map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={url}
-                        src={url}
-                        alt={`Fotografia ${i + 2} do trabalho feito`}
-                        className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
-                      />
+                      <Miniatura key={url} url={url} className="aspect-square w-full" />
                     ))}
                   </div>
                 )}
@@ -384,16 +376,13 @@ export default function PropostasRecebidas({
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
               )}
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-              Está bem feito, libertar o pagamento
+              {PROMESSA.botaoDeConfirmar}
             </button>
 
             {acordada.diasAteLibertar != null && (
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Se não disser nada, o valor é libertado sozinho daqui a{" "}
-                {Math.ceil(acordada.diasAteLibertar)} dia
-                {Math.ceil(acordada.diasAteLibertar) === 1 ? "" : "s"}. Se alguma coisa
-                estiver mal, fale connosco antes disso.
+                {prazoAutomaticoPorExtenso(acordada.diasAteLibertar)}
               </p>
             )}
           </div>
@@ -402,7 +391,7 @@ export default function PropostasRecebidas({
         {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
           <>
             <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
-              Confirmou que está feito e o pagamento foi libertado. Obrigado.
+              {PROMESSA.depoisDeConfirmar}
             </p>
 
             {/* A avaliação, depois de confirmar e só depois.

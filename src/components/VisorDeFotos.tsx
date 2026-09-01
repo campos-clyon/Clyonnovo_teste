@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AnexoGrande } from "./Anexo";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
@@ -61,7 +62,12 @@ export default function VisorDeFotos({
   if (!montado || fotos.length === 0) return null;
 
   const url = fotos[i];
-  const eVideo = /\.(mp4|mov|webm|avi)$/i.test(url);
+  /*
+   * A ESPECIE DECIDE-SE NUM SITIO SO — ver `Anexo.tsx`.
+   *
+   * Aqui vivia uma expressao regular propria para os videos, e nao conhecia
+   * PDFs: um PDF caia no `<img>` e dava o icone de imagem partida.
+   */
 
   return createPortal(
     <div
@@ -107,16 +113,7 @@ export default function VisorDeFotos({
         </>
       )}
 
-      {eVideo ? (
-        <video src={url} controls autoPlay className="max-h-[92vh] max-w-[94vw]" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={url}
-          alt={`Fotografia ${i + 1} de ${fotos.length}`}
-          className="max-h-[92vh] max-w-[94vw] object-contain"
-        />
-      )}
+      <AnexoGrande url={url} />
     </div>,
     document.body,
   );

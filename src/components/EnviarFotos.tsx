@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Miniatura } from "@/components/Anexo";
 import { Camera, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 
@@ -75,12 +76,8 @@ export default function EnviarFotos({
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {fotos.map((f, i) => (
           <div key={f.url} className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={f.url}
-              alt={f.name ?? `Fotografia ${i + 1}`}
-              className="aspect-square w-full rounded-xl object-cover ring-1 ring-slate-200"
-            />
+            {/* Foto, vídeo ou PDF: a miniatura decide. Ver `Anexo.tsx`. */}
+            <Miniatura url={f.url} nome={f.name} className="aspect-square w-full" />
             <button
               type="button"
               onClick={() => onMudar(fotos.filter((x) => x.url !== f.url))}
@@ -135,7 +132,7 @@ export default function EnviarFotos({
       <input
         ref={input}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,application/pdf"
         multiple
         capture="environment"
         onChange={(e) => escolher(e.target.files)}
@@ -144,7 +141,7 @@ export default function EnviarFotos({
       <input
         ref={daGaleria}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,application/pdf"
         multiple
         onChange={(e) => escolher(e.target.files)}
         className="hidden"

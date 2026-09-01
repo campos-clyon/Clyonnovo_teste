@@ -6,6 +6,7 @@ import { CabecalhoDeEcra, BotaoRedondo, euros } from "@/components/portal/Portal
 import Nota from "@/components/Nota";
 import { MINIMO_PARA_LEVANTAR } from "@/lib/carteira";
 import type { DadosDaCarteira } from "./tipos";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 /**
  * A carteira.
@@ -60,7 +61,7 @@ export default function Carteira({
       <section className="overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-600">
-            Valor cativo
+            {PROMESSA.proRotuloDoCativo}
             <Info className="h-4 w-4 text-slate-300" aria-hidden="true" />
           </span>
           <span className="text-base font-semibold text-slate-700">{euros(carteira.cativo)}</span>
@@ -128,11 +129,8 @@ export default function Carteira({
         </p>
       )}
 
-      <Nota titulo="Porque é que há dinheiro cativo" icone="cadeado" className="mt-3">
-        Quando o cliente o contrata, paga logo à CLYON — e o valor fica retido. É a
-        garantia dele de que o trabalho é feito, e a sua de que o dinheiro existe e não
-        depende de ninguém se lembrar de pagar. Assim que ele confirmar, ou ao fim de sete
-        dias sem resposta, o valor passa a disponível.
+      <Nota titulo={PROMESSA.proTitulo} icone="cadeado" className="mt-3">
+        {PROMESSA.proCorpo}
       </Nota>
     </>
   );

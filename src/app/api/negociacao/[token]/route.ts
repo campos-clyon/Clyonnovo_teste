@@ -28,6 +28,8 @@ import {
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { avisarQueFoiContratado } from "@/lib/email-trabalho";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
+import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
+import { tService } from "@/lib/translations";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
@@ -355,6 +357,19 @@ export async function POST(
             recebeLiquido:
               nova.valorAcordado != null ? quantoOProfissionalRecebe(nova.valorAcordado) : null,
             baseUrl: urlDeAccaoDoPedido(req.headers),
+          });
+
+          /*
+           * E no telemóvel. Ser contratado é a notícia que mais depressa muda
+           * o dia de alguém: ele tem de combinar o dia com o cliente, e cada
+           * hora que passa sem ele saber é uma hora a menos para o fazer.
+           */
+          await avisarProfissionalContratadoPorPush({
+            email: String(alvo.email),
+            servico: tService(doPedido?.serviceType) || "Trabalho",
+            valorQueRecebe:
+              nova.valorAcordado != null ? quantoOProfissionalRecebe(nova.valorAcordado) : 0,
+            pedidoId,
           });
         }
       } catch (err) {

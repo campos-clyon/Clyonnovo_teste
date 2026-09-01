@@ -25,6 +25,7 @@ import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
 import EnviarFotos, { type FotoEnviada } from "@/components/EnviarFotos";
 import Nota from "@/components/Nota";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import { Miniatura } from "@/components/Anexo";
 import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import {
@@ -640,12 +641,8 @@ export default function Trabalhos({
                     trabalho de relance, muito antes do texto. */}
                 {fotos.length > 0 ? (
                   <div className="relative shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={fotos[0].url}
-                      alt=""
-                      className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200"
-                    />
+                    {/* Foto, video ou PDF — ver `Anexo.tsx`. */}
+                    <Miniatura url={fotos[0].url} nome={fotos[0].name} className="h-20 w-20" />
                     {fotos.length > 1 && (
                       <span className="absolute bottom-1 right-1 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         +{fotos.length - 1}
@@ -929,11 +926,15 @@ function DetalheDoTrabalho({
             className="block w-full overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-slate-200"
             aria-label="Abrir fotografia em ecrã inteiro"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={doCliente[0].url}
-              alt="Fotografia do pedido"
-              className="mx-auto max-h-96 w-auto max-w-full object-contain"
+            {/*
+              O PRIMEIRO ANEXO EM GRANDE — e é por ele que se decide o preço.
+              Um PDF de reportagem fotográfica não cabe num `<img>`: aqui
+              mostra-se a ficha, e o toque abre-o no visor por cima.
+            */}
+            <Miniatura
+              url={doCliente[0].url}
+              nome={doCliente[0].name}
+              className="mx-auto h-64 w-full"
             />
           </button>
 
@@ -949,12 +950,7 @@ function DetalheDoTrabalho({
                   className="block overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200"
                   aria-label={`Abrir fotografia ${i + 2}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={f.url}
-                    alt={`Fotografia ${i + 2} do pedido`}
-                    className="aspect-square w-full object-cover"
-                  />
+                  <Miniatura url={f.url} nome={f.name} className="aspect-square w-full" />
                 </button>
               ))}
             </div>
@@ -1451,7 +1447,7 @@ function DetalheDoTrabalho({
                   aria-label={`Abrir prova ${i + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`Prova ${i + 1}`} className="aspect-square w-full object-cover" />
+                  <Miniatura url={url} className="aspect-square w-full" />
                 </button>
               ))}
             </div>
