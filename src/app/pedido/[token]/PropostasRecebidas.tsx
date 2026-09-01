@@ -24,6 +24,8 @@ import { contaDoCliente, regimeDeIva, TAXA_IVA } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
+import { PROMESSA, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
+
 
 /**
  * As propostas que o cliente recebeu.
@@ -315,8 +317,7 @@ export default function PropostasRecebidas({
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
             <p className="text-xs leading-relaxed text-emerald-700">
-              O valor fica retido na CLYON e só chega a {acordada.profissionalNome} depois
-              de o trabalho estar feito e de si o confirmar aqui.
+              {PROMESSA.clienteEmCurso.replaceAll("{PRO}", acordada.profissionalNome)}
             </p>
             {acordada.profissionalTelefone && (
               <a
@@ -384,16 +385,13 @@ export default function PropostasRecebidas({
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
               )}
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-              Está bem feito, libertar o pagamento
+              {PROMESSA.botaoDeConfirmar}
             </button>
 
             {acordada.diasAteLibertar != null && (
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Se não disser nada, o valor é libertado sozinho daqui a{" "}
-                {Math.ceil(acordada.diasAteLibertar)} dia
-                {Math.ceil(acordada.diasAteLibertar) === 1 ? "" : "s"}. Se alguma coisa
-                estiver mal, fale connosco antes disso.
+                {prazoAutomaticoPorExtenso(acordada.diasAteLibertar)}
               </p>
             )}
           </div>
@@ -402,7 +400,7 @@ export default function PropostasRecebidas({
         {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
           <>
             <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
-              Confirmou que está feito e o pagamento foi libertado. Obrigado.
+              {PROMESSA.depoisDeConfirmar}
             </p>
 
             {/* A avaliação, depois de confirmar e só depois.

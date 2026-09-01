@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
      * CONFIRMAR — e o único portao a serio desta rota.
      *
      * As outras accoes negoceiam: propoem, aceitam, desistem. Nenhuma mexe em
-     * dinheiro. Esta liberta o pagamento do profissional, e por isso nao pode
+     * dinheiro. Esta fecha o trabalho do profissional, e por isso nao pode
      * estar ao alcance da CLYON em qualquer pedido.
      *
      * O QUE ACONTECIA SEM ISTO

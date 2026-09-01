@@ -1,5 +1,6 @@
 import type { Proposta } from "./negociacao";
 import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
+import { PROMESSA } from "./pagamento-na-plataforma";
 
 /**
  * A MENSAGEM PRONTA A MANDAR AO CLIENTE, com as propostas que recebeu.
@@ -247,8 +248,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     );
     linhas.push("");
     linhas.push(
-      "No link em baixo acompanha o trabalho e confirma-o quando estiver feito —" +
-        " é isso que liberta o pagamento ao profissional.",
+      PROMESSA.whatsappConfirmar,
     );
   } else if (quantas === 0) {
     /*

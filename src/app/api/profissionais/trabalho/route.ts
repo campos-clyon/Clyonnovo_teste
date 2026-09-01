@@ -13,6 +13,7 @@ import {
 import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
+import { avisarClienteDoTrabalhoFeitoPorPush } from "@/lib/avisar-por-push";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -118,6 +119,14 @@ export async function POST(req: NextRequest) {
           quantasFotos: fotos.length,
           diasParaConfirmar: DIAS_ATE_LIBERTAR_SOZINHO,
           baseUrl: urlDeAccaoDoPedido(req.headers),
+        });
+        // E no telemóvel, se ele tiver os avisos ligados: o prazo começou a
+        // correr, e sete dias passam depressa a quem não sabe que existem.
+        await avisarClienteDoTrabalhoFeitoPorPush({
+          email: doPedido.contactEmail,
+          profissionalNome: sessao.nome,
+          pedidoId: trabalho.pedidoId,
+          token: novo.token,
         });
       }
     } catch (err) {

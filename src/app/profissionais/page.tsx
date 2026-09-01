@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 export const metadata: Metadata = {
   title: "Receba pedidos na sua zona — CLYON para profissionais",
-  description:
-    "Inscreva-se e receba pedidos com fotografias, zona e o valor que o cliente quer pagar. Responde com um valor e sabe o que recebe antes de aceitar. Pagamento garantido pela plataforma.",
+  description: PROMESSA.metaDosProfissionais,
   alternates: { canonical: "https://clyon.pt/profissionais" },
 };
 
@@ -45,9 +45,8 @@ const O_QUE_RECEBE = [
   },
   {
     icon: Lock,
-    title: "Pagamento garantido",
-    description:
-      "O cliente paga à plataforma quando o contrata. O valor fica retido e é seu assim que ele confirmar que o trabalho está feito — não anda atrás de ninguém para receber.",
+    title: PROMESSA.recrutamentoTitulo,
+    description: PROMESSA.recrutamentoCorpo,
   },
 ];
 

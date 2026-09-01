@@ -42,6 +42,7 @@ import {
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -1334,7 +1335,7 @@ export default function AdminNegociacoesPanel({
         {/*
           O TRABALHO FEITO, À CABEÇA DO CARTÃO.
 
-          Isto existia — a prova, as contas, o botão que liberta o pagamento —
+          Isto existia — a prova, as contas, o botão que fecha o trabalho —
           mas vivia dentro da negociação, atrás de um segundo toque no nome do
           profissional. Abrir o pedido não chegava: o cartão do #226 mostrava
           quatro linhas de nomes e estados e nem uma palavra sobre a Sthefanny
@@ -1356,8 +1357,7 @@ export default function AdminNegociacoesPanel({
             </p>
             <p className="mt-0.5 text-xs text-amber-200/70">
               {feito.execucaoEnviadaEm ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. ` : ""}
-              O valor fica cativo até alguém confirmar — e é a confirmação que
-              fecha o pedido e liberta o pagamento dele.
+              {PROMESSA.backofficeAConfirmar}
             </p>
 
             {/* A prova, sem ter de a ir procurar: clicar abre a fotografia. */}

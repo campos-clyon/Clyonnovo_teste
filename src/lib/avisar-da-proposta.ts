@@ -8,6 +8,7 @@ import {
 } from "./db";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { avisarClienteDaProposta, avisarProfissionalDaProposta } from "./email-proposta";
+import { avisarClientePorPush } from "./avisar-por-push";
 
 /**
  * Avisar o outro lado de que há uma proposta à espera.
@@ -95,6 +96,22 @@ export async function avisarDaProposta(dados: {
         valor: dados.valor,
         token,
         baseUrl: dados.baseUrl,
+      });
+
+      /*
+       * E NO TELEMÓVEL, se ele tiver os avisos ligados.
+       *
+       * Depois do email e não em vez dele: o email é o registo e chega a toda
+       * a gente; o push é a velocidade e só chega a quem o pediu. Uma proposta
+       * que fica duas horas por ver já não é a primeira — e a primeira ganha
+       * quase sempre.
+       */
+      await avisarClientePorPush({
+        email,
+        profissionalNome: negociacao.profissionalNome,
+        valor: dados.valor,
+        pedidoId: dados.pedidoId,
+        token: token || null,
       });
       return;
     }

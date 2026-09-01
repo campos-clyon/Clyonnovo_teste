@@ -14,6 +14,7 @@ import {
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 /**
  * A negociação, do lado do profissional.
@@ -115,8 +116,7 @@ export default function NegociacaoProfissional({
           taxa CLYON descontada.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-emerald-700">
-          O valor fica retido e é libertado quando o cliente confirmar que está feito.
-          Vamos enviar-lhe a morada e o contacto por email.
+          {PROMESSA.proAoFechar}
         </p>
       </section>
     );

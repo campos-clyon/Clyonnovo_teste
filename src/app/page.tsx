@@ -26,6 +26,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
+import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
@@ -661,7 +662,7 @@ export default function HomePage() {
                 {[
                   { icon: Users, label: "Clientes verificados" },
                   { icon: Shield, label: "Sem leads falhados" },
-                  { icon: BadgeCheck, label: "Pagamento garantido" },
+                  { icon: BadgeCheck, label: PROMESSA.seloDaPaginaInicial },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-200">
                     <item.icon className="h-4 w-4 text-marca" />
