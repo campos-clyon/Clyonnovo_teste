@@ -101,7 +101,7 @@ export function mensagemDeConvite(c: ConviteEmMensagem): string {
     `• Levanta o saldo para a sua conta quando quiser, a partir de ${MINIMO_PARA_LEVANTAR} €.`,
   );
   linhas.push(
-    "• Só recebe pedidos dos serviços que fizer e das zonas onde trabalha. É você que escolhe.",
+    "• Só recebe pedidos dos serviços que fizer e de trabalhos dentro dos quilómetros que indicar, a contar da sua base. É você que escolhe.",
   );
   linhas.push("");
 

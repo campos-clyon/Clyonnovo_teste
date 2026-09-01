@@ -267,10 +267,15 @@ export default async function PaginaDoProfissional({ params }: Props) {
             </li>
           </ul>
 
-          {p.zonas.length > 0 && (
+          {/* Base e raio. A lista de zonas escrita à mão saiu: não era o que
+              decidia o alcance dele, e um cliente que se visse nomeado nela
+              podia estar fora do raio na mesma. */}
+          {(p.cidade || p.raioKm != null) && (
             <p className="mt-4 text-sm text-slate-600">
               <span className="font-semibold text-tinta">Onde trabalha:</span>{" "}
-              {p.zonas.join(", ")}
+              {p.cidade}
+              {p.cidade && p.raioKm != null ? " " : ""}
+              {p.raioKm != null && `e até ${p.raioKm} km em redor`}
             </p>
           )}
         </header>

@@ -192,18 +192,33 @@ describe("validarInscricao", () => {
     });
   });
 
-  describe("zonas", () => {
-    // Quem não escrevesse zonas nenhumas não recebia nada, nem sequer da sua
-    // própria cidade.
-    it("a cidade de base entra sempre nas zonas", () => {
-      const r = com({ zonas: [] });
+  describe("zonas — derivadas da base, nunca escritas", () => {
+    /*
+     * O campo «Outras zonas que cobre» saiu do formulário porque MENTIA: o
+     * motor mede a distância entre a base e a morada do trabalho e compara-a
+     * com o raio (`profissional-elegivel.ts`: «O RAIO MANDA, E É O ÚNICO A
+     * MANDAR»). Quem escrevia «Lisboa, Sintra, Cascais» julgava alargar o que
+     * recebe, e não mudava nada.
+     */
+    it("são a cidade de base, e só", () => {
+      const r = com({});
       expect(r.ok).toBe(true);
       if (r.ok) expect(r.dados.zonas).toEqual(["Amadora"]);
     });
 
-    it("não duplica a cidade quando ela já vem nas zonas", () => {
-      const r = com({ zonas: ["Amadora", "Lisboa"] });
-      if (r.ok) expect(r.dados.zonas).toEqual(["Amadora", "Lisboa"]);
+    it("o que vier no pedido é IGNORADO", () => {
+      // Aceitar um campo que não faz nada é prometer que faz — e quem chama a
+      // rota directamente continua a poder mandá-lo.
+      const r = com({ zonas: ["Lisboa", "Sintra", "Faro"] });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.dados.zonas).toEqual(["Amadora"]);
+    });
+
+    it("mudar a base muda as zonas", () => {
+      // Sem isto, quem se mudasse ficava com a terra antiga gravada — e é isso
+      // que o cliente lê no perfil dele.
+      const r = com({ cidade: "Setúbal" });
+      if (r.ok) expect(r.dados.zonas).toEqual(["Setúbal"]);
     });
   });
 

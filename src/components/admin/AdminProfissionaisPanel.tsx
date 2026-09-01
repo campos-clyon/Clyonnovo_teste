@@ -377,7 +377,6 @@ function Cartao({
   const [aApagar, setAApagar] = useState(false);
   const [palavra, setPalavra] = useState("");
   const categorias = lista(p.categorias);
-  const zonas = lista(p.zonas);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
   const semCoordenadas = !p.baseLat || !p.baseLng;
 
@@ -446,8 +445,11 @@ function Cartao({
 
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
             <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            {/* Base e raio, e mais nada — são os dois números que decidem
+                quem recebe cada pedido. A lista de zonas que aqui vinha a
+                seguir não era lida por ninguém, e enchia a linha com nomes
+                que sugeriam um alcance diferente do real. */}
             {p.city} · até {p.raioKm ?? "—"} km
-            {zonas.length > 0 && ` · ${zonas.join(", ")}`}
           </p>
 
           {/* Sem coordenadas o raio não é aplicado. Não é um detalhe: o
@@ -658,7 +660,6 @@ function Editor({
   ocupado: boolean;
 }) {
   const [categorias, setCategorias] = useState<string[]>(lista(p.categorias));
-  const [zonas, setZonas] = useState(lista(p.zonas).join(", "));
   const [raioKm, setRaioKm] = useState(String(p.raioKm ?? 30));
   const [emiteFatura, setEmiteFatura] = useState(p.emiteFatura === 1);
   const [regimeIva, setRegimeIva] = useState(p.regimeIva === "normal" ? "normal" : "isento");
@@ -720,17 +721,6 @@ function Editor({
             max={RAIO_MAXIMO_KM}
             value={raioKm}
             onChange={(e) => setRaioKm(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Zonas <span className="font-normal normal-case">(separadas por vírgula)</span>
-          </span>
-          <input
-            value={zonas}
-            onChange={(e) => setZonas(e.target.value)}
-            placeholder="Lisboa, Sintra"
             className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
           />
         </label>
@@ -801,10 +791,6 @@ function Editor({
         onClick={() =>
           onGuardar({
             categorias,
-            zonas: zonas
-              .split(",")
-              .map((z) => z.trim())
-              .filter(Boolean),
             raioKm,
             emiteFatura,
             regimeIva,

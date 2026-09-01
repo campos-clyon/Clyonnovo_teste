@@ -51,18 +51,29 @@ describe("validarEdicao", () => {
     });
   });
 
-  describe("zonas", () => {
-    // Ao contrário das categorias, zonas vazias são aceitáveis: quem tem
-    // coordenadas é avaliado pelo raio e as zonas são só recurso.
-    it("aceita lista vazia", () => {
-      const r = validarEdicao({ zonas: [] });
-      expect(r.ok).toBe(true);
-      if (r.ok) expect(r.alteracoes.zonas).toEqual([]);
+  describe("zonas — já não se editam", () => {
+    /*
+     * Editá-las dava a quem mexe no painel a ideia de estar a alterar quem
+     * recebe pedidos — e mostrava-lhe até o aviso de redistribuição — sobre
+     * uma alteração que o motor nunca leu. A coluna segue a cidade de base.
+     *
+     * O `if (r.ok)` do teste anterior escondia isto: quando `zonas` deixou de
+     * ser um campo válido, o pedido passou a ser recusado, o bloco deixou de
+     * correr, e o teste continuou verde sem afirmar nada.
+     */
+    it("um pedido só com zonas não tem nada para alterar", () => {
+      expect(validarEdicao({ zonas: ["Lisboa", "Sintra"] }).ok).toBe(false);
     });
 
-    it("limpa espaços e duplicados", () => {
-      const r = validarEdicao({ zonas: [" Lisboa ", "Lisboa", "", "Sintra"] });
-      if (r.ok) expect(r.alteracoes.zonas).toEqual(["Lisboa", "Sintra"]);
+    it("vindas ao lado de um campo real, são ignoradas em silêncio", () => {
+      // Recusar partia o botão de guardar de quem tivesse a versão antiga do
+      // painel aberta no browser, e que continua a mandá-las.
+      const r = validarEdicao({ raioKm: 40, zonas: ["Lisboa"] });
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.alteracoes).toEqual({ raioKm: 40 });
+        expect(r.alteracoes.zonas).toBeUndefined();
+      }
     });
   });
 
@@ -136,9 +147,17 @@ describe("afectaDistribuicao", () => {
   it("diz quando a alteração muda quem recebe pedidos", () => {
     expect(afectaDistribuicao({ raioKm: 50 })).toBe(true);
     expect(afectaDistribuicao({ categorias: ["recolha_moveis"] })).toBe(true);
-    expect(afectaDistribuicao({ zonas: [] })).toBe(true);
     expect(afectaDistribuicao({ emiteFatura: true })).toBe(true);
     expect(afectaDistribuicao({ emiteGuiaTransporte: false })).toBe(true);
+  });
+
+  it("as zonas NÃO mudam quem recebe — e por isso não avisam", () => {
+    /*
+     * O aviso diz «afecta quem recebe os pedidos NOVOS». Dizê-lo por causa de
+     * uma lista que o motor não lê era ensinar a ignorar o aviso — no ecrã
+     * onde ele às vezes é verdade.
+     */
+    expect(afectaDistribuicao({ zonas: ["Lisboa"] })).toBe(false);
   });
 
   it("mudar só o número de transportador não muda a distribuição", () => {

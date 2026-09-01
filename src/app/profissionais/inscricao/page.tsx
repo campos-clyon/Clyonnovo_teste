@@ -62,7 +62,7 @@ const O_ESSENCIAL = [
     icon: MapPin,
     titulo: "Escolhe o que faz e onde",
     corpo:
-      "Só lhe chegam pedidos dos serviços que indicar e das zonas onde trabalha. Muda isso quando quiser, no painel.",
+      "Só lhe chegam pedidos dos serviços que faz e de trabalhos até aos quilómetros que indicar, contados a partir da sua base. Muda isso quando quiser, no painel.",
   },
   {
     icon: ClipboardCheck,

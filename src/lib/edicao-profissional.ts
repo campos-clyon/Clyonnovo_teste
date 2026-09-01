@@ -86,11 +86,19 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
     }
   }
 
-  if ("zonas" in c) {
-    // Zonas vazias são aceitáveis: quem tem coordenadas é avaliado pelo raio, e
-    // aí as zonas só servem de recurso. Não é motivo para recusar a alteração.
-    alteracoes.zonas = Array.from(new Set(listaDeTextos(c.zonas)));
-  }
+  /*
+   * AS ZONAS DEIXARAM DE SE EDITAR À MÃO.
+   *
+   * Quem decide o que chega a cada profissional é a distância entre a base
+   * dele e a morada do trabalho, medida contra o raio — `profissional-elegivel`
+   * não lê esta lista. Editá-la aqui dava a quem mexe no painel a ideia de
+   * estar a alterar a distribuição, e mostrava-lhe até um aviso a dizer isso
+   * (`afectaDistribuicao`), sobre uma alteração que não mudava nada.
+   *
+   * A coluna passa a seguir a cidade de base, escrita onde a cidade se grava.
+   * `c.zonas` é ignorado em silêncio: recusar o pedido partia o botão de
+   * guardar de quem tivesse a versão antiga do painel aberta.
+   */
 
   if ("raioKm" in c) {
     const bruto = typeof c.raioKm === "string" ? Number(c.raioKm) : c.raioKm;
@@ -156,7 +164,6 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
 export function afectaDistribuicao(alteracoes: CamposEditaveis): boolean {
   return (
     alteracoes.categorias !== undefined ||
-    alteracoes.zonas !== undefined ||
     alteracoes.raioKm !== undefined ||
     alteracoes.emiteFatura !== undefined ||
     alteracoes.emiteGuiaTransporte !== undefined

@@ -46,10 +46,11 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   {
     pergunta: "Porque é que não recebo pedidos?",
     resposta:
-      "Um pedido só lhe aparece se for de um serviço que faz e de uma zona onde trabalha. " +
-      "Confirme em Serviços e zonas: apertar o raio ou tirar uma categoria faz o trabalho " +
-      "deixar de aparecer sem nada avisar. Pedidos que exigem guia de transporte só vão para " +
-      "quem tem a guia verificada, e pedidos com fatura só para quem emite.",
+      "Um pedido só lhe aparece se for de um serviço que faz e se a morada dele estiver " +
+      "dentro do raio que indicou, contado a partir da sua base. Confirme em Serviços e " +
+      "zonas: apertar o raio ou tirar uma categoria faz o trabalho deixar de aparecer sem " +
+      "nada avisar. Pedidos que exigem guia de transporte só vão para quem tem a guia " +
+      "verificada, e pedidos com fatura só para quem emite.",
   },
   {
     pergunta: "Como funcionam as propostas?",

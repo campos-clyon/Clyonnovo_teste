@@ -65,7 +65,7 @@ export type NegociacaoDoCliente = {
     notaMedia: number | null;
     quantasAvaliacoes: number;
     categorias: string[];
-    zonas: string[];
+    cidade: string | null;
     raioKm: number | null;
     avaliacoes: Array<{
       estrelas: number;
@@ -592,11 +592,14 @@ export default function PropostasRecebidas({
                               .{" "}
                             </>
                           )}
-                          {n.perfil.zonas.length > 0 && (
-                            <>Trabalha em {n.perfil.zonas.slice(0, 5).join(", ")}</>
-                          )}
+                          {/* A BASE E O RAIO, que são o que decide mesmo se ele
+                              chega até si. Aqui vinha a lista de zonas que o
+                              profissional escrevia à mão — cinco nomes de
+                              concelhos que ninguém media, e que podiam não
+                              incluir a sua morada mesmo estando la escritos. */}
+                          {n.perfil.cidade && <>Tem base em {n.perfil.cidade}</>}
                           {n.perfil.raioKm != null && <> · desloca-se até {n.perfil.raioKm} km</>}
-                          {n.perfil.zonas.length > 0 || n.perfil.raioKm != null ? "." : null}
+                          {n.perfil.cidade || n.perfil.raioKm != null ? "." : null}
                         </p>
                         {n.perfil.avaliacoes.length === 0 ? (
                           <p className="text-xs leading-relaxed text-tinta-fraca">

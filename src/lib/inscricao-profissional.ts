@@ -358,9 +358,23 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       localidadeFiscal,
       tipoVeiculo,
       categorias,
-      // A cidade de base conta sempre como zona coberta: é o mínimo, e sem
-      // isto quem não escrevesse zonas nenhumas não recebia nada.
-      zonas: Array.from(new Set([cidade, ...listaDeTextos(c.zonas)])),
+      /*
+       * AS ZONAS DEIXARAM DE SE ESCREVER — derivam-se da base.
+       *
+       * Quem decide o que lhe chega é a distância entre a base dele e a morada
+       * do trabalho, medida contra o raio: `profissional-elegivel.ts` diz «O
+       * RAIO MANDA, E É O ÚNICO A MANDAR», e não lê esta lista há muito.
+       *
+       * Enquanto o campo existiu, quem escrevia «Lisboa, Sintra, Cascais»
+       * julgava estar a alargar o que recebe, e não alterava nada. A coluna
+       * continua a ser preenchida — com a base, e só — porque há ecrãs que a
+       * leem e porque uma coluna vazia num sítio e cheia noutro é pior do que
+       * uma coluna coerente.
+       *
+       * `c.zonas` é IGNORADO de propósito, mesmo que venha no pedido: aceitar
+       * um campo que não faz nada é prometer que faz.
+       */
+      zonas: [cidade],
       raioKm,
       emiteFatura,
       regimeIva,

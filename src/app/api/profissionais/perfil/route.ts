@@ -243,13 +243,24 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  if ("zonas" in corpo) {
-    const zonas = lista(corpo.zonas);
-    const cidade = texto(corpo.cidade) || texto(mudancas.city);
-    // A cidade de base entra sempre. Quem apagasse as zonas todas deixava de
-    // receber o que quer que fosse, incluindo da sua própria terra.
-    const todas = cidade && !zonas.includes(cidade) ? [cidade, ...zonas] : zonas;
-    mudancas.zonas = JSON.stringify(Array.from(new Set(todas)));
+  /*
+   * AS ZONAS SEGUEM A BASE, e não o que vier no pedido.
+   *
+   * Aceitava-se uma lista escrita à mão e juntava-se-lhe a cidade. Só que
+   * quem decide o que lhe chega é a distância entre a base e a morada do
+   * trabalho, medida contra o raio — a lista não era lida por ninguém.
+   *
+   * Agora a coluna é escrita a partir da cidade, e SEMPRE que a cidade muda:
+   * quem se mudasse de Amadora para Setúbal ficava com «Amadora» gravado como
+   * zona para sempre, e é isso que o cliente lia no perfil dele.
+   *
+   * O painel dele continua a mandar `zonas` no corpo — é um resto do que aqui
+   * havia. Ignora-se, em vez de se recusar o pedido: recusar partia o botão
+   * de guardar de quem ainda tem a versão antiga aberta no browser.
+   */
+  const cidadeNova = texto(corpo.cidade) || texto(mudancas.city);
+  if (cidadeNova) {
+    mudancas.zonas = JSON.stringify([cidadeNova]);
   }
 
   if ("raioKm" in corpo) {

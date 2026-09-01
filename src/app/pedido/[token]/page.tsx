@@ -212,7 +212,7 @@ export default async function PaginaDoPedido({
             notaMedia: perfil.notaMedia,
             quantasAvaliacoes: perfil.quantasAvaliacoes,
             categorias: perfil.categorias,
-            zonas: perfil.zonas,
+            cidade: perfil.cidade,
             raioKm: perfil.raioKm,
             avaliacoes: perfil.avaliacoes.map((a) => ({
               estrelas: a.estrelas,

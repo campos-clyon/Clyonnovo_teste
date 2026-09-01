@@ -19,10 +19,14 @@ import MoradaDaBase from "./MoradaDaBase";
  * a gravação de todos os outros — que é como se desiste de corrigir seja o que
  * for.
  *
- * As zonas e as categorias não são enfeite de perfil: são a regra que decide
- * que pedidos lhe chegam. Estão aqui para que mudar de área não obrigue a
- * escrever-nos — e para que ninguém deixe de receber trabalho sem perceber
- * porquê.
+ * A BASE, OS QUILÓMETROS E AS CATEGORIAS não são enfeite de perfil: são a regra
+ * que decide que pedidos lhe chegam. Estão aqui para que mudar de área não
+ * obrigue a escrever-nos — e para que ninguém deixe de receber trabalho sem
+ * perceber porquê.
+ *
+ * A lista de zonas escrita à mão saiu daqui e do formulário: não era lida por
+ * ninguém. Mede-se a distância entre a base dele e a morada do trabalho, e
+ * compara-se com o raio — está em `profissional-elegivel.ts`.
  */
 
 export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seguranca";
@@ -404,7 +408,6 @@ export default function Perfil({
               onClick={() =>
                 gravar({
                   categorias: dados.categorias,
-                  zonas: dados.zonas,
                   cidade: dados.cidade,
                   baseLat: dados.baseLat,
                   baseLng: dados.baseLng,

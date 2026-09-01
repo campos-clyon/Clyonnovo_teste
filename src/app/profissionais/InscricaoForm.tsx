@@ -68,7 +68,6 @@ export default function InscricaoForm({
     codigoPostalFiscal: "",
     localidadeFiscal: "",
     categorias: [] as string[],
-    zonas: "",
     raioKm: "30",
     emiteFatura: false,
     regimeIva: "" as "" | "isento" | "normal",
@@ -135,10 +134,6 @@ export default function InscricaoForm({
           // Sem convite não vai chave nenhuma: é assim que a rota distingue a
           // candidatura espontânea de uma inscrição por convite gasto.
           ...(convite ? { convite } : {}),
-          zonas: form.zonas
-            .split(",")
-            .map((z) => z.trim())
-            .filter(Boolean),
         }),
       });
       /*
@@ -413,19 +408,26 @@ export default function InscricaoForm({
           </div>
         </div>
 
-        <div>
-          <label htmlFor="zonas" className="block text-sm font-medium text-gray-900">
-            Outras zonas que cobre <span className="font-normal text-slate-500">(opcional)</span>
-          </label>
-          <input
-            id="zonas"
-            value={form.zonas}
-            onChange={(e) => set("zonas", e.target.value)}
-            placeholder="Lisboa, Sintra, Cascais"
-            className={`mt-1.5 ${inputCls()}`}
-          />
-          <p className="mt-1 text-xs text-slate-500">Separe por vírgulas.</p>
-        </div>
+        {/*
+          «OUTRAS ZONAS QUE COBRE» SAIU DAQUI, e não foi por ser um campo a mais.
+
+          Era um campo que MENTIA. O motor que decide quem recebe cada pedido
+          já não olha para as zonas há muito — mede a distância entre a base
+          dele e a morada do trabalho, e compara-a com o raio. Está escrito em
+          `profissional-elegivel.ts`: «O RAIO MANDA, E É O ÚNICO A MANDAR.»
+
+          Quem escrevia «Lisboa, Sintra, Cascais» ficava convencido de que
+          tinha alargado o que lhe chega, e não tinha alterado nada. Pior: quem
+          NÃO escrevesse nada podia julgar-se limitado à sua terra, e apertar
+          o raio por isso — aí sim, deixando de receber trabalho a sério.
+
+          Um campo que não faz nada é pior do que um campo que falta: o que
+          falta pergunta-se, o que engana decide-se em cima dele.
+
+          A base e os quilómetros ficam, porque são os dois números que mandam
+          mesmo. É objectivo, mede-se, e não depende de ninguém escrever o nome
+          de um concelho sem trocar o acento.
+        */}
       </fieldset>
 
       {/* ── Documentos ──────────────────────────────────────────────── */}

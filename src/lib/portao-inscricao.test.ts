@@ -149,4 +149,33 @@ describe("o formulário da inscrição", () => {
      */
     expect(FORM).toContain("respostaEmJson");
   });
+
+  it("não volta a pedir zonas escritas à mão", () => {
+    /*
+     * «Outras zonas que cobre» era um campo que MENTIA: o motor mede a
+     * distância entre a base dele e a morada do trabalho e compara-a com o
+     * raio — `profissional-elegivel.ts` diz «O RAIO MANDA, E É O ÚNICO A
+     * MANDAR» e não lê a lista. Quem escrevia «Lisboa, Sintra, Cascais»
+     * julgava estar a alargar o que recebe, e não alterava nada.
+     *
+     * Decisão dele: «basta a sua base e km». Este teste existe porque um campo
+     * de texto opcional é fácil de repor sem ninguém reparar, e nada no
+     * sistema dá erro quando ele volta — só volta a enganar quem o preenche.
+     */
+    expect(FORM).not.toContain('id="zonas"');
+    expect(FORM).not.toContain("Outras zonas");
+
+    const PAINEL = readFileSync(
+      join(process.cwd(), "src/components/admin/AdminProfissionaisPanel.tsx"),
+      "utf8",
+    );
+    expect(PAINEL).not.toContain("setZonas");
+  });
+
+  it("a base e o raio continuam lá, que são o que decide", () => {
+    // Tirar a lista é uma coisa; ficar sem os dois campos que MANDAM seria
+    // deixar toda a gente a receber tudo, ou nada.
+    expect(FORM).toContain('id="cidade"');
+    expect(FORM).toContain('id="raio"');
+  });
 });
