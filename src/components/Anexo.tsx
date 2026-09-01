@@ -92,8 +92,9 @@ export function Miniatura({
 /**
  * O anexo em grande, dentro do visor.
  *
- * O PDF abre num `<iframe>` porque é o que o browser sabe fazer com ele — e
- * fica com um botão para o abrir à parte, para quem quer imprimir ou guardar.
+ * O PDF não se mostra aqui dentro — o armazenamento serve tudo com
+ * `Content-Disposition: attachment`, e por isso o browser descarrega-o em vez
+ * de o desenhar. Mostra-se o que ele é, e um botão que o abre.
  */
 export function AnexoGrande({ url, nome }: { url: string; nome?: string }) {
   const especie = especieDoAnexo(nome || url);
@@ -103,18 +104,37 @@ export function AnexoGrande({ url, nome }: { url: string; nome?: string }) {
   }
 
   if (especie === "pdf") {
+    /*
+      SEM `iframe`, e a razão é do armazenamento e não da nossa vontade.
+
+      Os ficheiros são servidos com `Content-Disposition: attachment` — o que
+      significa que um PDF metido num `iframe` NÃO se mostra: o browser
+      descarrega-o e a moldura fica em branco. Ficava um rectângulo vazio a
+      parecer avaria, com o ficheiro a cair na pasta das transferências sem
+      ninguém perceber porquê.
+
+      (A CSP do site também tem `frame-src 'none'`, de propósito. Abri-la para
+      mostrar uma moldura que ia ficar vazia seria pagar em segurança por
+      nada.)
+
+      O que resta é o honesto: dizer o que é, e um botão que o abre.
+    */
     return (
-      <div className="flex h-[92vh] w-[94vw] flex-col gap-2">
-        <iframe src={url} title={nome ?? "Documento PDF"} className="flex-1 rounded-xl bg-white" />
+      <div className="flex max-w-[90vw] flex-col items-center gap-4 rounded-2xl bg-white/5 p-8 text-center">
+        <FileText className="h-16 w-16 text-rose-400" aria-hidden="true" />
+        <p className="max-w-md break-words text-base font-semibold text-white">
+          {nome ?? "Documento PDF"}
+        </p>
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mx-auto flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
+          className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-100"
         >
           <FileText className="h-4 w-4" aria-hidden="true" />
-          Abrir à parte {nome ? `— ${nome}` : ""}
+          Abrir o PDF
         </a>
+        <p className="text-xs text-white/50">Abre noutro separador ou descarrega, conforme o browser.</p>
       </div>
     );
   }

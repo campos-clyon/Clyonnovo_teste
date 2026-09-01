@@ -427,7 +427,31 @@ const nextConfig: NextConfig = {
             que a culpa era daqui. Estes anfitriões só entram em jogo com o
             consentimento de "marketing" dado, que é o que o banner promete.
           */
-          "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io",
+          /*
+            E O ARMAZENAMENTO, que faltava e partia o envio de ficheiros
+            grandes.
+
+            Acima de 4 MB o ficheiro NAO passa pela nossa funcao — o browser
+            carrega-o directamente, com uma autorizacao assinada, porque o
+            Vercel recusa qualquer pedido com mais de 4,5 MB de corpo. Esse
+            `PUT` vai para `vercel.com/api/blob`, que nao estava aqui: o
+            browser bloqueava-o antes de sair e o ecra dizia apenas
+            "Failed to fetch".
+
+            Levou a tarde a encontrar porque tudo o resto estava certo — a
+            rota assinava, o CORS respondia com `*`, e um `curl` passava. Um
+            `curl` nao tem CSP.
+          */
+          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io",
+          /*
+            VIDEO E AUDIO — e esta linha nao existia de todo.
+
+            Sem `media-src`, vale o `default-src 'self'`: um `<video>` com a
+            fonte no armazenamento era recusado em silencio. As fotografias
+            apareciam (o `img-src` ja tinha o anfitriao) e os videos nao, o
+            que fazia parecer um problema do ficheiro e nao da politica.
+          */
+          "media-src 'self' blob: https://*.public.blob.vercel-storage.com",
           // Frames: nenhum (embeds externos não usados)
           "frame-src 'none'",
           "object-src 'none'",

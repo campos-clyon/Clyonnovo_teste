@@ -116,10 +116,17 @@ describe("cada espécie mostra-se como deve", () => {
     expect(ANEXO).toContain('(nome ?? "PDF")');
   });
 
-  it("o visor grande sabe as três, e o PDF abre num iframe", () => {
+  it("o visor grande sabe as três, e o PDF NÃO usa iframe", () => {
+    /*
+     * O armazenamento serve tudo com `Content-Disposition: attachment`: um
+     * PDF metido num `iframe` não se mostra — o browser descarrega-o e a
+     * moldura fica em branco, a parecer avaria. E a CSP tem `frame-src
+     * 'none'` de propósito; abri-la para mostrar uma moldura vazia seria
+     * pagar em segurança por nada.
+     */
     expect(ANEXO).toContain("export function AnexoGrande");
-    expect(ANEXO).toContain("<iframe");
-    expect(ANEXO).toContain("Abrir à parte");
+    expect(ANEXO).not.toContain("<iframe");
+    expect(ANEXO).toContain("Abrir o PDF");
   });
 });
 
@@ -278,5 +285,44 @@ describe("o erro aponta o caminho certo", () => {
     const j = ENVIAR.indexOf("/client token|failed to retrieve/i");
     expect(i).toBeGreaterThan(-1);
     expect(i).toBeLessThan(j);
+  });
+});
+
+describe("a política de segurança deixa o armazenamento trabalhar", () => {
+  const CFG = ler("next.config.ts");
+
+  it("o connect-src permite o PUT directo — era o que faltava", () => {
+    /*
+     * Acima de 4 MB o ficheiro não passa pela nossa função: o browser
+     * carrega-o directamente para `vercel.com/api/blob`, que não estava na
+     * política. O browser bloqueava-o antes de sair e o ecrã dizia apenas
+     * "Failed to fetch".
+     *
+     * Levou a tarde a encontrar porque tudo o resto estava certo — a rota
+     * assinava, o CORS respondia com `*`, e um `curl` passava. Um `curl` não
+     * tem CSP.
+     */
+    const i = CFG.indexOf('"connect-src');
+    const linha = CFG.slice(i, CFG.indexOf('",', i));
+    expect(linha).toContain("https://vercel.com");
+    expect(linha).toContain("https://*.public.blob.vercel-storage.com");
+  });
+
+  it("o media-src existe, senão os vídeos não tocam", () => {
+    // Sem esta linha vale o `default-src 'self'`: as fotografias apareciam
+    // (o img-src já tinha o anfitrião) e os vídeos não, o que fazia parecer
+    // um problema do ficheiro e não da política.
+    expect(CFG).toContain('"media-src \'self\' blob: https://*.public.blob.vercel-storage.com"');
+  });
+
+  it("o img-src continua a permitir as fotografias", () => {
+    // Não se estragou o que já funcionava.
+    const i = CFG.indexOf('"img-src');
+    expect(CFG.slice(i, CFG.indexOf('",', i))).toContain("https://*.public.blob.vercel-storage.com");
+  });
+
+  it("e o frame-src continua fechado", () => {
+    // Deixou de ser preciso abri-lo: o PDF passou a abrir noutro separador.
+    expect(CFG).toContain("\"frame-src 'none'\"");
   });
 });
