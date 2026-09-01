@@ -300,7 +300,16 @@ export default function Perfil({
             </Campo>
 
             <Campo etiqueta="Email" ajuda="É com este email que entra. Para o mudar, fale connosco.">
-              <input className={`${CAIXA} bg-slate-50 text-slate-500`} value={dados.email} disabled />
+              {/*
+                TEXTO, E NAO UM CAMPO DESACTIVADO.
+
+                Um `<input disabled>` nao recebe foco, nao rola e nao se
+                selecciona: num telemovel, um email mais comprido do que a
+                caixa fica com o fim inalcancavel — e a ajuda ao lado diz
+                que e com ele que ele entra. Era o unico dado que ele foi ali
+                confirmar e o unico que nao conseguia ler inteiro.
+              */}
+              <p className={`${CAIXA} break-all bg-slate-50 text-slate-500`}>{dados.email}</p>
             </Campo>
 
             <Guardar
@@ -381,7 +390,8 @@ export default function Perfil({
                 max={RAIO_MAXIMO_KM}
                 value={dados.raioKm}
                 onChange={(e) => mudar("raioKm", Number(e.target.value))}
-                className="mt-2 w-full accent-cyan-600"
+                /* `h-11`: a calha nativa tem 16 px, e e ela que decide que trabalhos lhe chegam. */
+                className="mt-2 h-11 w-full cursor-pointer accent-cyan-600"
                 aria-label="Raio de acção em quilómetros"
               />
               <div className="flex justify-between text-xs text-slate-400">

@@ -82,9 +82,18 @@ export default function EnviarFotos({
               type="button"
               onClick={() => onMudar(fotos.filter((x) => x.url !== f.url))}
               aria-label={`Remover fotografia ${i + 1}`}
-              className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/85 text-white shadow"
+              /*
+                O DISCO CONTINUA COM 28 px, MAS O ALVO PASSA A 44.
+
+                E um gesto destrutivo colado ao canto de uma miniatura: falhar
+                o alvo significa carregar na miniatura, que nao faz nada — e
+                ele fica sem perceber porque e que a foto nao sai.
+              */
+              className="absolute -right-2.5 -top-2.5 flex h-11 w-11 items-center justify-center"
             >
-              <X className="h-4 w-4" aria-hidden="true" />
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/85 text-white shadow">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </span>
             </button>
           </div>
         ))}

@@ -440,7 +440,13 @@ export default function Trabalhos({
               type="button"
               onClick={() => setSeparador(sep.id)}
               aria-pressed={activo}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition sm:px-3.5 sm:text-sm ${
+              /*
+                44 px DE ALTURA, que e a medida do dedo.
+                O `py-2` com `text-[13px]` dava ~37 px, e sao seis alvos
+                encostados uns aos outros na navegacao principal do ecra mais
+                visto do site. Cada falha custa dois toques.
+              */
+              className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition sm:px-3.5 sm:text-sm ${
                 activo
                   ? "bg-[#0B1929] text-white"
                   : "bg-slate-100 text-slate-600 active:bg-slate-200"
@@ -598,7 +604,16 @@ export default function Trabalhos({
             >
             <button
               onClick={() => abrirTrabalho(p)}
+              /*
+                `pb-16` QUANDO HA BOTAO DE ARQUIVAR.
+                Ele esta em posicao absoluta no canto e o cartao nao lhe
+                reservava espaco nenhum: o fundo branco opaco tapava por
+                completo o distintivo «por carga» — a etiqueta que diz se o
+                valor e o trabalho todo ou cada viagem ao aterro.
+              */
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
+                podeArrumar ? "pb-16" : ""
+              } ${
                 fechado
                   ? "border-emerald-300 ring-1 ring-emerald-100"
                   : quente
@@ -657,7 +672,15 @@ export default function Trabalhos({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="truncate text-[15px] font-bold text-[#0B1929]">
+                    {/*
+                      DUAS LINHAS, E NAO CORTADO.
+                      Com `truncate` sobravam ~147 px para o titulo, e
+                      «Esvaziamento de casa» e «Esvaziamento de apartamento»
+                      ficavam AMBOS «Esvaziamento de ...». O titulo e o que
+                      identifica o trabalho na lista: dois trabalhos
+                      diferentes passavam a ler-se iguais.
+                    */}
+                    <h3 className="line-clamp-2 text-[15px] font-bold text-[#0B1929]">
                       {servicoDe(p)}
                     </h3>
                     <span className="shrink-0 text-[11px] text-slate-400">
@@ -710,8 +733,15 @@ export default function Trabalhos({
                     ))}
                   </div>
                   <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                    {/*
+                      `flex-wrap` TAMBEM AQUI DENTRO.
+                      O `flex-wrap` do <p> de fora nao resolve nada por dentro
+                      deste <span>: os dois textos ficavam presos a mesma
+                      linha e partiam-se em colunas paralelas — «Algueirao-Mem
+                      · menos de 1» numa, «Martinskm» na outra.
+                    */}
+                    <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       {p.city ?? "—"}
                       {/*
                         A pergunta que ele faz primeiro. "Oeiras" não diz se
@@ -734,7 +764,7 @@ export default function Trabalhos({
                         é a única forma de ele reparar sem abrir.
                       */
                       <span
-                        className={`flex items-center gap-1 ${
+                        className={`flex flex-wrap items-center gap-x-1 gap-y-0.5 ${
                           quando.passou ? "font-semibold text-rose-600" : ""
                         }`}
                       >
@@ -769,7 +799,29 @@ export default function Trabalhos({
                       Sem descrição — veja as fotografias ou pergunte à CLYON.
                     </p>
                   )}
-                  <div className="mt-2 flex items-baseline gap-1.5">
+                  {/*
+                    QUEBRA DE LINHA, OU O TEXTO LÊ-SE NA VERTICAL.
+
+                    "Ajuste a adaptação do site ao telemóvel."
+
+                    Esta linha tem cinco filhos — ícone, valor, «por carga»,
+                    «já com a taxa, sem IVA» e o €/km — e não tinha
+                    `flex-wrap`. Num ecrã de 360 px, que é onde estão 82% das
+                    visitas, o flex espremia o texto até uma coluna de UMA
+                    PALAVRA de largura:
+
+                        já
+                        com
+                        a
+                        taxa,
+                        sem
+                        IVA
+
+                    `flex-wrap` deixa-o passar para a linha de baixo inteiro,
+                    e `items-center` alinha os distintivos pelo meio em vez de
+                    os pendurar pela linha de base quando eles caem.
+                  */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1">
                     <HandCoins className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
                     {/*
                       O DINHEIRO É SEMPRE VERDE.
@@ -799,7 +851,9 @@ export default function Trabalhos({
                         por carga
                       </span>
                     )}
-                    <span className="text-[11px] text-slate-400">já com a taxa, sem IVA</span>
+                    <span className="whitespace-nowrap text-[11px] text-slate-400">
+                      já com a taxa, sem IVA
+                    </span>
                     {/*
                       A CONTA QUE ELE FAZ DE CABEÇA, ESCRITA.
                       304 € em Campolide, a 39 km, dão 7,8 €/km.
@@ -935,6 +989,8 @@ function DetalheDoTrabalho({
               url={doCliente[0].url}
               nome={doCliente[0].name}
               className="mx-auto h-64 w-full"
+              /* Inteira: é por esta fotografia que ele decide o preço. */
+              encaixe="inteira"
             />
           </button>
 
@@ -956,15 +1012,22 @@ function DetalheDoTrabalho({
             </div>
           )}
 
-          <p className="mt-1.5 text-center text-xs text-slate-400">
+          <p className="mt-1.5 text-center text-xs text-slate-500">
             Toque para ver em ecrã inteiro
           </p>
         </section>
       )}
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
+        {/*
+          `break-words` — o `whitespace-pre-line` quebra em espaços mas NUNCA
+          dentro de uma palavra. Uma ligação do OLX ou um email transbordava o
+          cartão, e o que passava dos 360 px era cortado pelo `overflow-x:
+          hidden` da página, sem rolamento que o recuperasse. É este o texto
+          onde o cliente diz o que há para levar.
+        */}
         {pedido.description?.trim() ? (
-          <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">
+          <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-700">
             {pedido.description}
           </p>
         ) : (
@@ -1261,7 +1324,7 @@ function DetalheDoTrabalho({
             </a>
           )}
 
-          <p className="mt-2.5 flex items-start gap-2 text-sm text-emerald-900">
+          <p className="mt-2.5 flex items-start gap-2 break-words text-sm text-emerald-900">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             {pedido.morada}
           </p>
@@ -1372,7 +1435,14 @@ function DetalheDoTrabalho({
             </span>
           </span>
         </div>
-        <p className="mt-1 text-right text-xs text-slate-400">
+        {/*
+          `slate-500` E NAO `slate-400`. Medido: #94A3B8 sobre branco da
+          2,56:1, e a norma AA pede 4,5:1. E a unica linha que diz que o valor
+          ja tem a taxa fora e que nao tem IVA — a conversa de dinheiro toda
+          depende dela, e estava logo por baixo de um numero a 24 px que lhe
+          roubava a atencao. O slate-500 da 4,76:1.
+        */}
+        <p className="mt-1 text-right text-xs text-slate-500">
           já com a taxa CLYON descontada · o valor é sem IVA
         </p>
         {/*

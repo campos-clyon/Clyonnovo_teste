@@ -28,19 +28,36 @@ export function Miniatura({
   nome,
   onAbrir,
   className = "h-20 w-20",
+  encaixe = "cobrir",
 }: {
   url: string;
   nome?: string;
   /** Quando existe, a miniatura é um botão; senão, é só uma imagem. */
   onAbrir?: () => void;
   className?: string;
+  /**
+   * `cobrir` enche a caixa e corta o que sobra — bom para uma grelha de
+   * quadrados iguais. `inteira` mostra a fotografia toda, com faixas.
+   *
+   * Existe porque a foto GRANDE do detalhe ficava recortada em cima e em
+   * baixo: uma foto de telemóvel ao alto perde cerca de 35% da altura numa
+   * caixa larga, e é sobre essa fotografia que se decide o preço. Não se
+   * resolvia no sítio da chamada — `object-cover` e `object-contain` têm a
+   * mesma especificidade e o Tailwind escreve `cover` depois, por isso
+   * `cover` ganhava sempre.
+   */
+  encaixe?: "cobrir" | "inteira";
 }) {
   const especie = especieDoAnexo(nome || url);
 
   const dentro =
     especie === "imagem" ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={url} alt={nome ?? ""} className={`${className} rounded-xl object-cover`} />
+      <img
+        src={url}
+        alt={nome ?? ""}
+        className={`${className} rounded-xl ${encaixe === "inteira" ? "object-contain" : "object-cover"}`}
+      />
     ) : especie === "video" ? (
       /*
         O PRIMEIRO FOTOGRAMA COMO CAPA.
