@@ -263,3 +263,20 @@ describe("o envio direto passa a funcionar SEM token de escrita", () => {
     expect(ENVIAR).toContain("${assinado.motivo || bruto}");
   });
 });
+
+describe("o erro aponta o caminho certo", () => {
+  it("o motivo da URL assinada ganha ao do recurso antigo", () => {
+    /*
+     * Estava ao contrário, e escondeu um problema real: a URL assinada
+     * falhava, o recurso antigo falhava a seguir com o token, e o ecrã
+     * mostrava «falta um BLOB_READ_WRITE_TOKEN» — uma frase sobre um caminho
+     * que já nem é o principal, e que mandava procurar uma credencial que não
+     * existe neste store.
+     */
+    const ENVIAR = ler("src/lib/enviar-ficheiro.ts");
+    const i = ENVIAR.indexOf("if (assinado.motivo) {");
+    const j = ENVIAR.indexOf("/client token|failed to retrieve/i");
+    expect(i).toBeGreaterThan(-1);
+    expect(i).toBeLessThan(j);
+  });
+});

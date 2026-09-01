@@ -188,6 +188,21 @@ export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> 
      * e o que se ganha é a diferença entre "falhou" e "falta configurar o
      * BLOB_READ_WRITE_TOKEN no Vercel".
      */
+    /*
+     * O MOTIVO DO CAMINHO QUE DEVIA TER FUNCIONADO GANHA SEMPRE.
+     *
+     * Estava ao contrário, e isso escondeu um problema real: a URL assinada
+     * falhava, o recurso antigo falhava a seguir com o token, e o ecrã
+     * mostrava «falta um BLOB_READ_WRITE_TOKEN» — uma frase sobre um caminho
+     * que já nem é o principal, e que mandava procurar uma credencial que não
+     * existe. O motivo verdadeiro ficava por dizer.
+     *
+     * Hoje o envio directo é a URL assinada. Se ela falhar, é isso que se diz.
+     */
+    if (assinado.motivo) {
+      return { ok: false, motivo: `${ficheiro.name} (${mb} MB): ${assinado.motivo}` };
+    }
+
     if (/client token|failed to retrieve/i.test(bruto)) {
       try {
         const r = await fetch("/api/blob/token", {
