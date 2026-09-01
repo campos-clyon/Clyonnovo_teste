@@ -2846,10 +2846,10 @@ export default function ColaboradorAdminClient() {
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-white">Profissionais</h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  A inscrição não está aberta: entra-se por convite. Convide em baixo,
-                  e o registo que ele preencher volta aqui para aprovação — aprovar
-                  dá-lhe acesso à fila, verificar a guia deixa-o receber os pedidos que
-                  exigem transporte de resíduos.
+                  As candidaturas chegam pelo formulário do site e caem aqui por
+                  aprovar. O convite continua a servir para quem já falou consigo —
+                  poupa-lhe a fila. Aprovar dá-lhe acesso aos pedidos; verificar a guia
+                  deixa-o receber os que exigem transporte de resíduos.
                 </p>
               </div>
 

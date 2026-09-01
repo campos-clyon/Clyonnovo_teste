@@ -6,6 +6,7 @@ import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizad
 export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
 import { carteiraDe } from "@/lib/carteira";
+import { VERSAO_DOS_TERMOS } from "@/lib/termos-versao";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -396,7 +397,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 3;
+const VERSAO_DOS_PROFISSIONAIS = 4;
 let versaoDosProfissionais = 0;
 
 /**
@@ -567,6 +568,30 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "tipoVeiculo",
         sql: "ALTER TABLE providers ADD COLUMN tipoVeiculo VARCHAR(60) NULL DEFAULT NULL",
       },
+
+      /*
+       * QUANDO ACEITOU OS TERMOS, E QUAIS.
+       *
+       * A caixa «Li e aceito» sempre existiu no formulário, mas ficava num
+       * `useState` fora do objecto que vai no pedido: nunca saía do browser.
+       * Enquanto a inscrição era por convite, o token era a prova de que se
+       * tinha falado com a pessoa. Aberta a candidatura ao público, esta caixa
+       * é o ÚNICO artefacto de contrato que existe — e o que aqui se combina é
+       * uma comissão sobre dinheiro real.
+       *
+       * NULL sem default, de propósito, nas duas. Um `NOT NULL DEFAULT
+       * CURRENT_TIMESTAMP` carimbava a data de hoje em todos os profissionais
+       * que já cá estavam, inventando prova de uma aceitação que nunca houve.
+       * Deles não há mesmo nada, e é isso que o NULL diz.
+       */
+      {
+        name: "termosAceitesEm",
+        sql: "ALTER TABLE providers ADD COLUMN termosAceitesEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "termosVersao",
+        sql: "ALTER TABLE providers ADD COLUMN termosVersao VARCHAR(20) NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -595,6 +620,39 @@ export async function ensureProvidersSchema(): Promise<void> {
       }
     } catch (err) {
       console.error("[ensureProvidersSchema] índice slug:", String(err).slice(0, 120));
+    }
+
+    /*
+     * O EMAIL, ÚNICO — e porque é que a verificação em JS não chegava.
+     *
+     * A rota da inscrição pergunta `profissionalPorEmail()` antes de gravar,
+     * mas entre a pergunta e a gravação há uma chamada de rede ao geocodificador
+     * que pode demorar segundos. Dois envios ao mesmo tempo — que é o duplo
+     * toque no botão — passam os dois pela verificação e gravam duas linhas
+     * iguais, lado a lado em «Por aprovar». Se ambas forem aprovadas, o mesmo
+     * profissional entra duas vezes na distribuição: recebe cada pedido a
+     * dobrar e fica com duas carteiras.
+     *
+     * Com o convite isto era teoria — eram poucos e vinham um a um. Com o
+     * formulário aberto ao público deixa de ser.
+     *
+     * Em MySQL, um índice UNIQUE aceita NULLs repetidos, e é isso que deixa as
+     * contas apagadas (que ficam com `email = NULL`) conviverem aqui.
+     */
+    try {
+      const [emailIdx] = (await conn.execute(
+        `SELECT COUNT(*) AS cnt FROM information_schema.statistics
+         WHERE table_schema = DATABASE() AND table_name = 'providers' AND index_name = 'providers_email_unique'`,
+      )) as [Array<{ cnt: number }>, unknown];
+      if (Number(emailIdx[0]?.cnt ?? 0) === 0) {
+        await conn.execute("ALTER TABLE providers ADD UNIQUE INDEX providers_email_unique (email)");
+        console.log("[ensureProvidersSchema] índice providers_email_unique criado");
+      }
+    } catch (err) {
+      // Falha se já houver emails repetidos na tabela. O SQL de limpeza está
+      // na conversa que trouxe isto; aqui só se regista, para não travar o
+      // arranque por causa de um índice.
+      console.error("[ensureProvidersSchema] índice email:", String(err).slice(0, 120));
     }
 
     await conn.execute(`
@@ -670,8 +728,10 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
         moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
         categorias, zonas, raioKm,
         emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
-        baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+        baseLat, baseLng, estado, isActive, isClyon,
+        termosAceitesEm, termosVersao)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0,
+             NOW(), ?)`,
     [
       dados.name,
       dados.slug,
@@ -692,10 +752,39 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.numeroTransportador,
       dados.baseLat,
       dados.baseLng,
+      /*
+       * A versão NUNCA vem do corpo do pedido.
+       *
+       * Se viesse, quem submetesse escolhia que versão dos Termos ficava
+       * registada como aceite — o que faz da prova o contrário de uma prova.
+       * Vem da constante do servidor, que é a mesma que a página mostra.
+       */
+      VERSAO_DOS_TERMOS,
     ],
   ) as any[];
 
   return Number(res.insertId);
+}
+
+/**
+ * Quantas candidaturas caíram na fila na última hora.
+ *
+ * O tecto contra registos em massa tem de contar num sítio que esteja sempre
+ * lá. O limite por IP da rota conta num `Map` de memória quando não há Redis
+ * configurado — e cada instância serverless tem o seu, o que faz dele uma
+ * trava com muito menos força do que aparenta.
+ *
+ * `createdAt` já existe com `DEFAULT CURRENT_TIMESTAMP`, por isso isto não
+ * pede migração nenhuma.
+ */
+export async function inscricoesPendentesNaUltimaHora(): Promise<number> {
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [linhas] = (await pool.execute(
+    `SELECT COUNT(*) AS total FROM providers
+      WHERE estado = 'pendente' AND createdAt > NOW() - INTERVAL 1 HOUR`,
+  )) as [Array<{ total: number }>, unknown];
+  return Number(linhas[0]?.total ?? 0);
 }
 
 /** Uma linha de `providers` na forma que a regra de elegibilidade entende. */
@@ -5677,9 +5766,32 @@ export async function apagarProfissional(
       await conn.rollback();
       throw new ContaComPendencias(["a conta já não existe"]);
     }
-    if (p.estado !== "suspenso") {
+    /*
+     * SUSPENSO OU RECUSADO — e porque é que o recusado passou a caber aqui.
+     *
+     * O guarda existia para obrigar a suspender antes de apagar: suspender é o
+     * que trava a distribuição, e apagar quem ainda estava a receber pedidos
+     * deixava clientes a falar com uma conta que ia desaparecer.
+     *
+     * Um RECUSADO nunca esteve na distribuição — ela filtra `estado =
+     * 'aprovado'`, e ele nunca o foi. O guarda não estava a proteger nada, e
+     * estava a criar isto: o único caminho de «rejeitado» até «apagado»
+     * passava por APROVAR primeiro, e aprovar dispara o email com o link da
+     * palavra-passe. Honrar um pedido de apagamento obrigava a escrever à
+     * pessoa a dizer-lhe que tinha sido aceite.
+     *
+     * Aberta a candidatura ao público, isto deixou de ser hipótese: passa a
+     * haver quem se candidate por engano, quem use o email de outro, e quem
+     * peça para ser apagado.
+     *
+     * As verificações da transacção (saldo cativo, disponível, a caminho,
+     * trabalho por confirmar) continuam todas a correr — num recusado dão
+     * zero, e se por absurdo houver história, cai no ramo da anonimização,
+     * que é o desfecho seguro.
+     */
+    if (p.estado !== "suspenso" && p.estado !== "rejeitado") {
       await conn.rollback();
-      throw new ContaComPendencias(["a conta tem de estar suspensa primeiro"]);
+      throw new ContaComPendencias(["a conta tem de estar suspensa ou recusada primeiro"]);
     }
 
     // Negociações cruas — sem passar pelos pedidos, que podem já ter sido

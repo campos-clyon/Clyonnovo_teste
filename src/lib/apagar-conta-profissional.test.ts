@@ -28,10 +28,20 @@ const CORPO = (() => {
 })();
 
 describe("os guardas do apagar", () => {
-  it("exige que a conta esteja suspensa", () => {
-    // Suspender é o que trava a distribuição. Sem esse passo, um pedido novo
-    // pode chegar-lhe a meio do apagar.
-    expect(CORPO).toContain('p.estado !== "suspenso"');
+  it("exige que a conta esteja suspensa OU recusada, e mais nada", () => {
+    /*
+     * Suspender é o que trava a distribuição: sem esse passo, um pedido novo
+     * pode chegar-lhe a meio do apagar. Um RECUSADO nunca esteve na
+     * distribuição — ela filtra `estado = 'aprovado'` — e o guarda estava a
+     * obrigar a APROVÁ-LO para o poder apagar, o que lhe mandava o email a
+     * dizer que tinha sido aceite.
+     *
+     * A afirmação é sobre a CONDIÇÃO INTEIRA, de propósito. A versão antiga
+     * procurava só a substring `p.estado !== "suspenso"`, que sobrevive a esta
+     * alteração — o teste passava na mesma se a segunda metade estivesse
+     * errada, ou se alguém acrescentasse "aprovado" à lista.
+     */
+    expect(CORPO).toContain('p.estado !== "suspenso" && p.estado !== "rejeitado"');
   });
 
   it("recusa quando há dinheiro em qualquer um dos três estados", () => {
@@ -157,8 +167,21 @@ describe("o que fica de fora da vista", () => {
     expect(estadoValido("apagado")).toBe(false);
   });
 
-  it("o botão só aparece depois de suspender", () => {
-    expect(PAINEL).toContain('p.estado === "suspenso" && !aApagar');
+  it("o botão aparece no suspenso e no recusado — e em mais nenhum", () => {
+    expect(PAINEL).toContain(
+      '(p.estado === "suspenso" || p.estado === "rejeitado") && !aApagar',
+    );
+  });
+
+  it("o aviso de confirmação não fala de dinheiro a quem nunca teve carteira", () => {
+    /*
+     * O aviso normal fala do IBAN, do dinheiro por levantar e do histórico dos
+     * clientes. Numa candidatura recusada nada disso existe, e um aviso que
+     * descreve perigos que não há ensina a ignorá-lo — justamente no ecrã onde
+     * ele um dia será verdadeiro.
+     */
+    expect(PAINEL).toContain('p.estado === "rejeitado"');
+    expect(PAINEL).toMatch(/nunca teve carteira nem trabalhos/);
   });
 
   it("o botão de confirmar não liga sem a palavra certa", () => {

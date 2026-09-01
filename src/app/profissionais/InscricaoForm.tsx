@@ -44,8 +44,14 @@ export default function InscricaoForm({
   telefoneConvidado = "",
   veiculoConvidado = "",
 }: {
-  /** O token do convite. Sem ele a API recusa a inscrição. */
-  convite: string;
+  /**
+   * O token do convite, quando existe.
+   *
+   * Sem ele isto é uma candidatura espontânea — a que vem do botão da
+   * homepage. A rota aceita as duas, e o que segura a porta não é este token:
+   * é a inscrição nascer `pendente`, que não entra nem define palavra-passe.
+   */
+  convite?: string;
   nomeConvidado?: string;
   emailConvidado?: string;
   telefoneConvidado?: string;
@@ -116,7 +122,19 @@ export default function InscricaoForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          convite,
+          /*
+           * A CAIXA DOS TERMOS VIAJA — e antes não viajava.
+           *
+           * `aceitaTermos` vive num `useState` fora do objecto `form`, e o
+           * corpo era `{...form, convite, zonas}`: a caixa desactivava o botão
+           * e mais nada. O servidor nunca a via, e por isso não tinha o que
+           * gravar. Enquanto a inscrição era por convite, quem provava o
+           * contrato era o token; aberta ao público, é esta caixa.
+           */
+          aceitaTermos,
+          // Sem convite não vai chave nenhuma: é assim que a rota distingue a
+          // candidatura espontânea de uma inscrição por convite gasto.
+          ...(convite ? { convite } : {}),
           zonas: form.zonas
             .split(",")
             .map((z) => z.trim())
@@ -164,11 +182,23 @@ export default function InscricaoForm({
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" aria-hidden="true" />
-        <h2 className="mt-3 text-xl font-bold text-emerald-900">Inscrição recebida</h2>
+        <h2 className="mt-3 text-xl font-bold text-emerald-900">
+          {convite ? "Inscrição recebida" : "Candidatura recebida"}
+        </h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-emerald-800">
           Vamos analisar o seu registo. Enquanto isso não acontecer{" "}
           <strong>não recebe pedidos</strong> — é assim de propósito, para o cliente
           saber que quem lhe aparece já foi verificado.
+        </p>
+        {/* O QUE ELE TEM DE LEVAR DAQUI, e que faltava dizer.
+            Quem vem por convite já falou connosco e sabe por onde a resposta
+            chega. Quem carregou num botão da homepage não sabe nada: sem esta
+            frase, fica à espera sem saber de quê, e volta a candidatar-se — o
+            que lhe dá um 409 a dizer que já se candidatou. */}
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-emerald-800">
+          A resposta vai para <strong>{form.email}</strong>. Se faltar alguma coisa,
+          falamos consigo antes de decidir. Se for aprovado, recebe aí o link para
+          criar a palavra-passe — <strong>é só depois disso que consegue entrar</strong>.
         </p>
         {enviado.precisaVerificacaoDeGuia && (
           <p className="mx-auto mt-3 max-w-md rounded-xl border border-emerald-300 bg-white p-3 text-xs leading-relaxed text-emerald-900">
@@ -631,6 +661,12 @@ export default function InscricaoForm({
             serviço e emite a fatura ao cliente.
           </span>
         </label>
+        {/* O botão desactivado já impede isto no ecrã. Esta linha é para quando
+            a recusa vier do servidor — que é o único sítio onde a aceitação
+            conta mesmo. Sem ela, a resposta chegava e não se via nada. */}
+        {erro("aceitaTermos") && (
+          <p className="text-xs text-red-600">{erro("aceitaTermos")}</p>
+        )}
 
         <button
           type="submit"

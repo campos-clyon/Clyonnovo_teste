@@ -43,6 +43,16 @@ type Profissional = {
   baseLng: string | null;
   createdAt: string;
   actividade: Actividade;
+  /*
+   * DE ONDE ELE VEIO. Os três podem vir indefinidos — de uma resposta antiga
+   * em cache, ou de um painel a correr contra uma API mais velha — e quando
+   * vêm indefinidos NÃO SE DESENHA NADA. Rotular de «espontânea» quem foi
+   * convidado, só porque não se sabe, é pior do que não rotular: a decisão de
+   * aprovar muda com isso.
+   */
+  convidadoPor?: string | null;
+  notaDoConvite?: string | null;
+  convidadoEm?: string | null;
 };
 
 const CATEGORIAS = SERVICE_CATEGORIES.filter((c) => c.id !== "outro");
@@ -384,6 +394,18 @@ function Cartao({
             >
               {p.estado}
             </span>
+            {/* Convidado ou espontâneo: é o que diz a quem analisa se já
+                falámos com esta pessoa. `convidadoEm` é a marca de que houve
+                convite; `convidadoPor` pode estar vazio num convite antigo. */}
+            {p.convidadoEm ? (
+              <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-medium text-cyan-300">
+                {p.convidadoPor ? `convidado por ${p.convidadoPor}` : "por convite"}
+              </span>
+            ) : p.convidadoEm === null ? (
+              <span className="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs font-medium text-slate-300">
+                candidatura espontânea
+              </span>
+            ) : null}
             {p.emiteFatura === 1 && (
               <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-300">
                 fatura
@@ -396,6 +418,15 @@ function Cartao({
               </span>
             )}
           </div>
+
+          {/* A NOTA DO CONVITE — quem o indicou, o que ficou combinado.
+              É exactamente a informação que decide a aprovação, e vivia no
+              painel de cima, numa linha marcada «usado» que alguém tinha de ir
+              cruzar pelo email. Mesmo tratamento do outro painel, para os dois
+              falarem a mesma língua. */}
+          {p.notaDoConvite && (
+            <p className="mt-1 text-xs italic text-slate-500">{p.notaDoConvite}</p>
+          )}
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
             {p.email && (
@@ -529,7 +560,11 @@ function Cartao({
           novo podia chegar-lhe a meio do apagar. E dá o passo atrás que uma
           acção sem volta merece ter.
         */}
-        {p.estado === "suspenso" && !aApagar && (
+        {/* Também no recusado: até aqui, o único caminho de «rejeitado» até
+            «apagado» passava por APROVAR primeiro — e aprovar manda-lhe o email
+            com o link da palavra-passe. Honrar um pedido de apagamento obrigava
+            a escrever à pessoa a dizer-lhe que tinha sido aceite. */}
+        {(p.estado === "suspenso" || p.estado === "rejeitado") && !aApagar && (
           <button
             onClick={() => {
               setAApagar(true);
@@ -556,10 +591,13 @@ function Cartao({
         <div className="mt-3 rounded-xl border border-red-900/60 bg-red-950/20 p-4">
           <p className="text-sm font-semibold text-red-300">Apagar a conta de {p.name}?</p>
           <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
-            Isto não tem volta. Sai o nome, o email, o telefone, o NIF, o IBAN e a
-            palavra-passe. Se este profissional já tiver trabalhos feitos, a linha
-            dele fica sem nome em vez de desaparecer — os clientes que o
-            contrataram continuam a ter direito ao histórico deles.
+            {/* O aviso de baixo fala do IBAN, do dinheiro por levantar e do
+                histórico dos clientes. Numa candidatura recusada nada disso
+                existe — e um aviso que descreve perigos que não há ensina a
+                ignorá-lo justamente quando ele for verdadeiro. */}
+            {p.estado === "rejeitado"
+              ? "Isto não tem volta. Sai o nome, o email, o telefone e o NIF que ele escreveu na candidatura. Uma candidatura recusada nunca teve carteira nem trabalhos — não há dinheiro nem histórico a proteger."
+              : "Isto não tem volta. Sai o nome, o email, o telefone, o NIF, o IBAN e a palavra-passe. Se este profissional já tiver trabalhos feitos, a linha dele fica sem nome em vez de desaparecer — os clientes que o contrataram continuam a ter direito ao histórico deles."}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-slate-400">
             Se lhe dever dinheiro ou tiver um trabalho por confirmar, isto pára e

@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "clyon-web-3100",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm", "run", "dev", "--port", "3100"],
+      "port": 3100
     }
   ]
 }

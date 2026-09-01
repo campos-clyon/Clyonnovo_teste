@@ -122,10 +122,30 @@ export default function EntrarForm() {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Ainda não se inscreveu?{" "}
-          <Link href="/profissionais" className="font-semibold text-cyan-600 hover:underline">
-            Inscreva-se aqui
+          Ainda não se candidatou?{" "}
+          {/* Apontava para /profissionais, que está atrás da chave do MVP e
+              responde 404 a quem vem de fora — o link estava partido para
+              exactamente quem dele precisava. A candidatura é aberta. */}
+          <Link
+            href="/profissionais/inscricao"
+            className="font-semibold text-cyan-600 hover:underline"
+          >
+            Candidate-se aqui
           </Link>
+        </p>
+        {/*
+          A LINHA QUE FALTAVA, e porque é que está FORA do bloco de erro.
+
+          Um candidato aprovado ainda não tem palavra-passe — tenta entrar,
+          leva um 401 genérico, e conclui que se enganou no email. Explicar-lho
+          na resposta da API era transformar o login numa forma de descobrir,
+          email a email, quem está na plataforma. Escrita aqui, é fixa: diz o
+          mesmo a toda a gente, e por isso não distingue ninguém.
+        */}
+        <p className="mx-auto mt-3 max-w-sm text-center text-xs leading-relaxed text-slate-500">
+          Já se candidatou e ainda não teve resposta? Enquanto a candidatura estiver
+          por analisar ainda não há palavra-passe para usar aqui. Quando for aprovada,
+          enviamos-lhe o link para a criar.
         </p>
       </div>
     </main>

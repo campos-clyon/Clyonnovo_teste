@@ -10,6 +10,7 @@ import {
   TAXA_CLIENTE,
   TAXA_PROFISSIONAL,
 } from "@/lib/identificacao-legal";
+import { TERMOS_ATUALIZADOS_EM } from "@/lib/termos-versao";
 
 export const metadata: Metadata = {
   title: "Termos e Condições — CLYON",
@@ -68,7 +69,10 @@ export default function TermosPage() {
             Valem para clientes e para profissionais.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 21 de agosto de 2026.
+            {/* A data vem da mesma constante que fica gravada no registo de quem
+                aceita — ver src/lib/termos-versao.ts. Escrita à mão aqui, ela
+                divergia da versão gravada no dia em que os Termos mudassem. */}
+            Última atualização: {TERMOS_ATUALIZADOS_EM}.
           </p>
         </div>
       </section>

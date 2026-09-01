@@ -672,16 +672,24 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
-                  "Olá! Sou uma empresa de remoções/transportes e quero saber mais sobre ser parceiro CLYON.",
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              {/*
+                DEIXOU DE IR PARA O WHATSAPP.
+
+                Abria uma conversa com uma frase já escrita, e a partir daí a
+                candidatura era uma troca de mensagens que alguém tinha de
+                conduzir à mão e transcrever para o backoffice. Agora abre o
+                formulário, e o que ele escreve cai directamente na fila «Por
+                aprovar» — com os campos todos, sem ninguém a copiar nada.
+
+                Navegação interna: sai o `target` e sai o `rel`, que só
+                existiam por causa do separador novo.
+              */}
+              <Link
+                href="/profissionais/inscricao"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-acao px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-acao-hover"
               >
                 Tornar-me parceiro
-              </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -92,29 +92,30 @@ function exigeTestador(caminho: string): boolean {
 }
 
 /*
- * A INSCRIÇÃO SAIU DAQUI, E PORQUÊ.
+ * A INSCRIÇÃO ABRIU AO PÚBLICO, E PORQUÊ.
  *
- * Estava em `exigeTestador` com esta justificação: "a inscrição é a única
- * escrita da plataforma que não exige sessão de ninguém — sem o portão à
- * frente, quem descobrisse o endereço inscrevia profissionais na base a partir
- * de uma linha de comandos".
+ * Esteve em `exigeTestador`, depois em `exigeChave`, sempre com a mesma
+ * justificação: "a inscrição é a única escrita da plataforma que não exige
+ * sessão de ninguém — sem o portão à frente, quem descobrisse o endereço
+ * inscrevia profissionais na base a partir de uma linha de comandos".
  *
- * Isso era verdade quando foi escrito, e deixou de ser a 19-08-2026, quando a
- * inscrição passou a exigir convite. Hoje a rota valida um token de 256 bits,
- * guardado só em hash, com prazo e de uso único — uma credencial mais forte do
- * que a palavra-passe de um testador. Quem descobrir o endereço sem convite não
- * escreve nada: leva 403.
+ * O QUE MUDOU: o botão «Tornar-me parceiro» da homepage ia para o WhatsApp e
+ * passou a abrir este formulário. Quem carrega nele é um estranho vindo de uma
+ * página pública — não tem cookie de chave nenhum, e o portão respondia-lhe
+ * 404. Deixar a página aberta e a rota fechada era pior ainda: é o defeito que
+ * este ficheiro já pagou uma vez, com o formulário a mostrar um erro de rede
+ * que não existia. A página e a rota saem JUNTAS, e ficam ao mesmo nível.
  *
- * E entretanto o portão passou a partir o que devia proteger. A PÁGINA do
- * formulário está em `exigeChave` (é `/profissionais/...`), por isso o
- * profissional convidado chega lá e preenche-a. O BOTÃO dela chamava uma rota
- * em `exigeTestador` — um nível acima — e o middleware devolvia 404 SEM CORPO.
- * O formulário faz `res.json()` a essa resposta vazia, o parse estoira, e o
- * `catch` mostra "Erro de rede. Verifique a ligação e tente novamente."
+ * E O QUE SEGURA A PORTA, agora que a chave não a segura: o estado do que se
+ * escreve. Uma candidatura nasce `pendente`, e `pendente` não entra
+ * (`api/profissionais/entrar/route.ts` — 401) nem define palavra-passe
+ * (`api/profissionais/definir-senha/route.ts` — 403). Quem descobrir o endereço
+ * e o encher de linhas falsas dá trabalho a quem analisa; não vê um único
+ * pedido de um cliente, nem o nome de um. O convite deixou de ser a fronteira e
+ * passou a ser o atalho de quem já falou connosco.
  *
- * Ou seja: dizia-se ao profissional que a Internet dele estava avariada, quando
- * o que estava era um formulário atrás de um portão e o seu próprio botão atrás
- * de outro, mais forte. Fica no mesmo nível da página que o serve.
+ * O que fica de pé contra o abuso está na própria rota: o limite por IP, o
+ * tecto de candidaturas por hora e o índice UNIQUE no email.
  */
 
 /**
@@ -153,18 +154,7 @@ function ePerfilPublicoDeProfissional(caminho: string): boolean {
 
 function exigeChave(caminho: string): boolean {
   if (ePerfilPublicoDeProfissional(caminho)) return false;
-  return (
-    caminho === "/profissionais" ||
-    caminho.startsWith("/profissionais/") ||
-    /*
-     * A rota da inscrição, no MESMO nível da página que a chama.
-     *
-     * Tem de estar aqui à mão: o endereço dela é `/api/profissionais/...` e
-     * não `/profissionais/...`, por isso a condição acima não a apanha. Sem
-     * esta linha, tirá-la do `exigeTestador` deixava-a sem portão nenhum.
-     */
-    caminho === "/api/profissionais/inscricao"
-  );
+  return caminho === "/profissionais" || caminho.startsWith("/profissionais/");
 }
 
 /**
@@ -183,12 +173,35 @@ function exigeChave(caminho: string): boolean {
  * dele. Agora o endereço é só `clyon.pt/profissionais/login`. O que isto
  * expõe ao público é um formulário de login sem indexação; tudo o resto do
  * MVP continua a responder 404.
+ *
+ * E a CANDIDATURA — a página e a rota que a recebe, uma ao lado da outra. Elas
+ * TÊM de ficar no mesmo nível: um formulário aberto cujo botão chama uma rota
+ * fechada recebe um 404 sem corpo e mostra um erro que não é verdade. Já
+ * aconteceu neste ficheiro; está contado em cima.
  */
 function portaAberta(caminho: string): boolean {
   return caminho.startsWith("/profissionais/pedidos/") ||
     caminho.startsWith("/profissionais/definir-senha/") ||
     caminho === "/profissionais/entrar" ||
-    caminho === "/profissionais/login"
+    caminho === "/profissionais/login" ||
+    /*
+     * IGUALDADE EXACTA, e não `startsWith`.
+     *
+     * `/profissionais/inscricao/<token>` é o link privado do convite e continua
+     * fechado — um `startsWith` abria-o, e com ele qualquer token que alguém
+     * fosse tentando à sorte. É a página SEM token que é pública.
+     */
+    caminho === "/profissionais/inscricao" ||
+    /*
+     * A ROTA JÁ NÃO PRECISA DISTO — e fica.
+     *
+     * `exigeChave` só olha para `/profissionais/...`, e o endereço dela é
+     * `/api/profissionais/...`: hoje esta linha nunca decide nada. Fica escrita
+     * para que quem um dia puser as APIs atrás do portão não feche esta sem
+     * reparar — é o botão da página da linha de cima, e as duas só funcionam
+     * ao mesmo nível.
+     */
+    caminho === "/api/profissionais/inscricao"
 }
 
 export async function middleware(request: NextRequest) {

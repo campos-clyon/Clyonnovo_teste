@@ -75,6 +75,14 @@ export type DadosDeInscricao = {
   regimeIva: RegimeDeIva;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string | null;
+  /**
+   * A caixa «Li e aceito os Termos e a Política de Privacidade».
+   *
+   * Está no tipo, e não só na validação, porque é o que obriga quem gravar a
+   * inscrição a decidir o que faz com ela. Enquanto viveu só no browser, era
+   * um obstáculo visual — o servidor nunca soube que tinha sido marcada.
+   */
+  aceitaTermos: boolean;
 };
 
 export type ResultadoDeInscricao =
@@ -320,6 +328,21 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
     }
   }
 
+  /*
+   * OS TERMOS, VERIFICADOS NO SERVIDOR.
+   *
+   * O formulário já desactivava o botão sem esta caixa, mas isso é uma barreira
+   * de ecrã: quem chamar a rota directamente nunca passou por ela. E desde que
+   * a candidatura abriu ao público, esta aceitação é a única prova de contrato
+   * que existe — antes, o convite provava que se tinha falado com a pessoa.
+   */
+  if (c.aceitaTermos !== true) {
+    erros.push({
+      campo: "aceitaTermos",
+      mensagem: "Tem de aceitar os Termos e a Política de Privacidade para se candidatar.",
+    });
+  }
+
   if (erros.length > 0) return { ok: false, erros };
 
   return {
@@ -343,6 +366,7 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       regimeIva,
       emiteGuiaTransporte,
       numeroTransportador,
+      aceitaTermos: true,
     },
   };
 }

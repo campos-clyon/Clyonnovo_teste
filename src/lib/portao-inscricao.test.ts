@@ -25,10 +25,19 @@ import { join } from "node:path";
  *
  * PORQUE É QUE É SEGURO BAIXAR O PORTÃO
  *
- * A inscrição deixou de ser aberta a 19-08-2026: exige convite. A rota valida
- * um token de 256 bits, guardado só em hash, com prazo e de uso único — uma
- * credencial mais forte do que a palavra-passe de um testador. Quem descobrir
- * o endereço sem convite leva 403 na mesma.
+ * Foi-o primeiro porque a inscrição exigia convite, e a rota validava um token
+ * de 256 bits guardado só em hash — uma credencial mais forte do que a
+ * palavra-passe de um testador.
+ *
+ * A 01-09-2026 a candidatura abriu ao público: o botão «Tornar-me parceiro» da
+ * homepage deixou de ir para o WhatsApp e passou a abrir o formulário. O que
+ * segura a porta deixou de ser o convite e passou a ser o ESTADO do que aqui se
+ * escreve — uma inscrição nasce `pendente`, e `pendente` não entra nem define
+ * palavra-passe. Quem encher isto de linhas falsas dá trabalho a quem analisa;
+ * não chega a ver um pedido de um cliente.
+ *
+ * O QUE ESTE FICHEIRO GUARDA, agora: que a página e a rota estão ao MESMO
+ * nível, e que as duas verificações que substituíram o convite continuam lá.
  */
 
 const MIDDLEWARE = readFileSync(join(process.cwd(), "src", "middleware.ts"), "utf8");
@@ -45,23 +54,50 @@ function corpoDe(nome: string): string {
 
 const ROTA = '"/api/profissionais/inscricao"';
 
+const PAGINA = '"/profissionais/inscricao"';
+
 describe("o portão da inscrição do profissional", () => {
-  it("está ao alcance de quem tem a chave", () => {
-    // Se sair daqui, a rota fica SEM portão nenhum: o endereço dela é
-    // `/api/profissionais/...` e não `/profissionais/...`, por isso a condição
-    // genérica do `exigeChave` não a apanha.
-    expect(corpoDe("exigeChave")).toContain(ROTA);
+  it("a rota está ABERTA — quem carrega no botão vem de uma página pública", () => {
+    // Quem chega aqui vem da homepage e não tem cookie de chave nenhum. Se a
+    // rota voltar a `exigeChave`, o formulário recebe um 404 sem corpo.
+    expect(corpoDe("exigeChave")).not.toContain(ROTA);
+    expect(corpoDe("portaAberta")).toContain(ROTA);
+  });
+
+  it("a PÁGINA está aberta ao mesmo nível da rota", () => {
+    /*
+     * É a regra que este ficheiro existe para guardar. Uma aberta e a outra
+     * fechada — em qualquer das duas ordens — dá um formulário que se preenche
+     * e não envia, ou um botão que chama uma página que não existe. Já
+     * aconteceu, e custou a encontrar porque o sintoma era "Erro de rede".
+     */
+    expect(corpoDe("portaAberta")).toContain(PAGINA);
+  });
+
+  it("mas o LINK DO CONVITE continua fechado", () => {
+    /*
+     * `/profissionais/inscricao/<token>` é privado. Abrir a página sem token
+     * com um `startsWith` levava os tokens todos atrás — e um endereço aberto
+     * é um endereço onde se podem experimentar tokens à sorte.
+     */
+    const corpo = corpoDe("portaAberta");
+    expect(corpo).toContain(`caminho === ${PAGINA}`);
+    expect(corpo).not.toContain(`startsWith(${PAGINA}`);
   });
 
   it("NÃO exige sessão de testador", () => {
-    // É esta linha que partia a inscrição. Se voltar, o profissional convidado
-    // volta a ver "Erro de rede" ao carregar no botão.
+    // É esta linha que partia a inscrição. Se voltar, quem se candidata volta
+    // a ver "Erro de rede" ao carregar no botão.
     expect(corpoDe("exigeTestador")).not.toContain(ROTA);
   });
 
-  it("continua a exigir convite do lado da rota", () => {
-    // Baixar o portão do middleware só é seguro porque a rota valida o convite.
-    // Se esta verificação sair de lá, o portão tem de voltar a subir.
+  it("o convite continua a valer — como atalho, não como portão", () => {
+    /*
+     * Deixou de ser obrigatório, mas um token que venha tem de ser bom: um
+     * convite gasto ou expirado NÃO pode cair em silêncio para o caminho
+     * aberto, senão quem clicou num link estragado inscreve-se por outra via
+     * sem perceber que o link tinha um problema.
+     */
     const rota = readFileSync(
       join(process.cwd(), "src/app/api/profissionais/inscricao/route.ts"),
       "utf8",
@@ -69,6 +105,30 @@ describe("o portão da inscrição do profissional", () => {
     expect(rota).toContain("convitePorTokenHash");
     expect(rota).toContain("verificarTokenDeAcesso");
     expect(rota).toMatch(/status:\s*403/);
+  });
+
+  it("o que substituiu o convite continua nos dois sítios", () => {
+    /*
+     * ISTO É O QUE TORNA SEGURO TER ABERTO A PORTA, e por isso é o teste que
+     * mais importa aqui. Se qualquer uma destas duas verificações sair, uma
+     * candidatura espontânea passa a poder entrar na conta — e aí o portão do
+     * middleware tem mesmo de voltar a subir.
+     */
+    const entrar = readFileSync(
+      join(process.cwd(), "src/app/api/profissionais/entrar/route.ts"),
+      "utf8",
+    );
+    expect(entrar).toContain('estado !== "aprovado"');
+
+    const senha = readFileSync(
+      join(process.cwd(), "src/app/api/profissionais/definir-senha/route.ts"),
+      "utf8",
+    );
+    expect(senha).toContain('estado !== "aprovado"');
+
+    // E a inscrição continua a nascer pendente.
+    const db = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
+    expect(db).toContain("'pendente', 1, 0");
   });
 });
 

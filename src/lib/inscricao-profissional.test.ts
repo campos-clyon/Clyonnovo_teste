@@ -27,6 +27,10 @@ const valida = {
   regimeIva: "isento",
   emiteGuiaTransporte: false,
   numeroTransportador: "",
+  // Passou a ser obrigatório quando a candidatura abriu ao público: é a única
+  // prova de contrato que resta, agora que já não há convite a provar que se
+  // falou com esta pessoa.
+  aceitaTermos: true,
 };
 
 const com = (p: Record<string, unknown>) => validarInscricao({ ...valida, ...p });
@@ -364,5 +368,46 @@ describe("o nome não pode ser uma morada", () => {
       expect(r.erros.some((e) => e.campo === "nome")).toBe(true);
       expect(r.erros.find((e) => e.campo === "nome")?.mensagem).toContain("morada");
     }
+  });
+});
+
+describe("os Termos, que passaram a contar do lado do servidor", () => {
+  /*
+   * A caixa «Li e aceito» sempre esteve no ecrã, mas vivia num `useState`
+   * fora do objecto que ia no pedido: desactivava o botão e mais nada. O
+   * servidor nunca soube que tinha sido marcada, e por isso não tinha o que
+   * gravar.
+   *
+   * Enquanto a inscrição foi por convite, quem provava o contrato era o token.
+   * Aberta a candidatura ao público, é esta caixa — e o que aqui se combina é
+   * uma comissão sobre dinheiro real.
+   */
+  it("sem aceitar, não passa", () => {
+    const r = com({ aceitaTermos: false });
+    expect(r.ok).toBe(false);
+    expect(erros(r)).toContain("aceitaTermos");
+  });
+
+  it("não vir de todo é o mesmo que recusar", () => {
+    // É o caso de quem chama a rota directamente, sem passar pelo ecrã — que
+    // é precisamente quem a barreira visual não trava.
+    const r = com({ aceitaTermos: undefined });
+    expect(r.ok).toBe(false);
+    expect(erros(r)).toContain("aceitaTermos");
+  });
+
+  it("um valor que só PARECE verdadeiro não serve", () => {
+    // `"true"`, `1` e `"on"` são o que um formulário mal montado envia. A
+    // verificação é `!== true` de propósito: aceitação é uma decisão, e uma
+    // string não a documenta.
+    for (const falso of ["true", 1, "on", {}]) {
+      expect(com({ aceitaTermos: falso }).ok).toBe(false);
+    }
+  });
+
+  it("aceite, a inscrição segue e leva a marca consigo", () => {
+    const r = com({});
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.dados.aceitaTermos).toBe(true);
   });
 });
