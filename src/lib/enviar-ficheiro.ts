@@ -102,13 +102,64 @@ export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> 
     return await diretoAoArmazenamento(ficheiro);
   } catch (err) {
     const bruto = err instanceof Error ? err.message : String(err);
-    // A mensagem tem de dizer o que se passa a quem a for ler nos registos.
-    // "Falhou" sem mais nada foi o que nos custou três dias no 413.
-    return {
-      ok: false,
-      motivo: bruto.includes("ENVIO_DIRECTO_INDISPONIVEL")
-        ? `${ficheiro.name}: ficheiro grande (${Math.round(ficheiro.size / 1024 / 1024)} MB) e o envio direto não está configurado — falta BLOB_READ_WRITE_TOKEN`
-        : `${ficheiro.name}: ${bruto}`,
-    };
+    const mb = Math.round(ficheiro.size / 1024 / 1024);
+
+    /*
+     * PERGUNTAR À ROTA PORQUÊ — o SDK não no-lo diz.
+     *
+     * Quando a autorização falha, o `upload()` do Vercel lança sempre a mesma
+     * frase: "Failed to retrieve the client token". O CORPO da resposta, que é
+     * onde está o motivo, fica pelo caminho — e por isso o `includes(...)` que
+     * estava aqui nunca acertava: o texto que ele procurava nunca chegava a
+     * existir na mensagem.
+     *
+     * Resultado: quem tentasse enviar um ficheiro grande via um erro que não
+     * explica nada, com a explicação escrita e pronta a três linhas de
+     * distância. Foi o que aconteceu com o "reportagem fotografica e notas.pdf".
+     *
+     * Agora pergunta-se à rota. É um pedido extra, mas SÓ quando já falhou —
+     * e o que se ganha é a diferença entre "falhou" e "falta configurar o
+     * BLOB_READ_WRITE_TOKEN no Vercel".
+     */
+    if (/client token|failed to retrieve/i.test(bruto)) {
+      try {
+        const r = await fetch("/api/blob/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "blob.generate-client-token",
+            payload: {
+              pathname: nomeSeguro(ficheiro.name),
+              callbackUrl: "/api/blob/token",
+              clientPayload: null,
+              multipart: false,
+            },
+          }),
+        });
+        const d = (await r.json()) as { error?: string; message?: string };
+        if (d?.error === "ENVIO_DIRECTO_INDISPONIVEL") {
+          return {
+            ok: false,
+            motivo:
+              `${ficheiro.name} tem ${mb} MB e os ficheiros acima de 4 MB precisam ` +
+              `de envio direto, que não está configurado neste site. ` +
+              `Falta um BLOB_READ_WRITE_TOKEN nas variáveis de ambiente do Vercel.`,
+          };
+        }
+        if (r.status === 429) {
+          return {
+            ok: false,
+            motivo: `${ficheiro.name}: demasiados envios seguidos. Espere um minuto e tente outra vez.`,
+          };
+        }
+        if (d?.message || d?.error) {
+          return { ok: false, motivo: `${ficheiro.name}: ${d.message ?? d.error}` };
+        }
+      } catch {
+        /* Sem resposta da rota, fica a mensagem crua — melhor do que nada. */
+      }
+    }
+
+    return { ok: false, motivo: `${ficheiro.name} (${mb} MB): ${bruto}` };
   }
 }

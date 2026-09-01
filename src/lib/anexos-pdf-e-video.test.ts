@@ -153,3 +153,41 @@ describe("nenhum ecrã ficou para trás", () => {
     expect(V).not.toContain("const eVideo =");
   });
 });
+
+describe("quando o envio de um ficheiro grande falha, a mensagem diz porquê", () => {
+  const ENVIAR = ler("src/lib/enviar-ficheiro.ts");
+
+  it("pergunta à rota o motivo — o SDK não o diz", () => {
+    /*
+     * Quando a autorização falha, o `upload()` do Vercel lança sempre a mesma
+     * frase: "Failed to retrieve the client token". O CORPO da resposta, que é
+     * onde está o motivo, fica pelo caminho.
+     *
+     * Havia aqui um `bruto.includes("ENVIO_DIRECTO_INDISPONIVEL")` que NUNCA
+     * podia acertar: procurava um texto que a mensagem do SDK nunca contém. A
+     * explicação estava escrita e pronta a três linhas de distância, e nunca
+     * chegou a ninguém — foi o que aconteceu com o
+     * "reportagem fotografica e notas.pdf".
+     */
+    expect(ENVIAR).toContain("/client token|failed to retrieve/i");
+    expect(ENVIAR).toContain('d?.error === "ENVIO_DIRECTO_INDISPONIVEL"');
+  });
+
+  it("e diz o tamanho, o limite e o que falta configurar", () => {
+    // "Falhou" manda quem lê procurar no sítio errado — foi o que nos custou
+    // três dias no 413.
+    expect(ENVIAR).toContain("acima de 4 MB precisam");
+    expect(ENVIAR).toContain("BLOB_READ_WRITE_TOKEN");
+  });
+
+  it("distingue o limite de ritmo de uma falta de configuração", () => {
+    // São dois problemas com remédios opostos: um espera-se, o outro configura-se.
+    expect(ENVIAR).toContain("r.status === 429");
+    expect(ENVIAR).toContain("Espere um minuto");
+  });
+
+  it("sem resposta da rota, mostra a mensagem crua com o tamanho", () => {
+    // Melhor um erro técnico com o tamanho do que um erro técnico sozinho.
+    expect(ENVIAR).toContain("${ficheiro.name} (${mb} MB): ${bruto}");
+  });
+});
