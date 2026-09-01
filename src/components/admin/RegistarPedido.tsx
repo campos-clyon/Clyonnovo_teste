@@ -259,7 +259,16 @@ export default function RegistarPedido({
     for (const original of Array.from(lista)) {
       const r = await enviarFicheiro(original);
       if (r.ok) setFotos((v) => [...v, r.ficheiro]);
-      else setErro(`${original.name}: ${r.motivo}`);
+      else {
+        /*
+          O NOME DO FICHEIRO UMA VEZ, e não duas.
+          O motivo já vem com o nome lá dentro quando isso ajuda a perceber
+          qual dos oito anexos falhou — e o ecrã mostrava
+          "reportagem.pdf: reportagem.pdf tem 8 MB...". Junta-se o nome só
+          quando o motivo não o traz.
+        */
+        setErro(r.motivo.includes(original.name) ? r.motivo : `${original.name}: ${r.motivo}`);
+      }
       setAEnviarFotos((n) => Math.max(0, n - 1));
     }
     if (seletorDeFotos.current) seletorDeFotos.current.value = "";

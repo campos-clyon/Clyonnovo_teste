@@ -191,3 +191,16 @@ describe("quando o envio de um ficheiro grande falha, a mensagem diz porquê", (
     expect(ENVIAR).toContain("${ficheiro.name} (${mb} MB): ${bruto}");
   });
 });
+
+describe("o nome do ficheiro aparece uma vez, e não duas", () => {
+  it("o ecrã só o junta quando o motivo não o traz", () => {
+    /*
+     * Lia-se "reportagem fotografica e notas.pdf: reportagem fotografica e
+     * notas.pdf tem 8 MB..." — o motivo já traz o nome quando isso ajuda a
+     * perceber qual dos oito anexos falhou, e o ecrã voltava a colá-lo à
+     * frente.
+     */
+    const FORM = ler("src/components/admin/RegistarPedido.tsx");
+    expect(FORM).toContain("r.motivo.includes(original.name) ? r.motivo :");
+  });
+});
