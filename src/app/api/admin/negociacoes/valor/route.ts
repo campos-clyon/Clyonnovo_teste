@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import {
   quantoOProfissionalRecebe,
@@ -95,6 +96,8 @@ export async function POST(req: NextRequest) {
     ];
     const linha = linhas[0];
     if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
+    // Um assistente que corrige o valor de um trabalho sem responsável fica com ele.
+    await assumirPedidoSeLivre(Number(linha.pedidoId), colab);
 
     /*
      * SÓ SE CORRIGE O QUE ESTÁ FECHADO.
