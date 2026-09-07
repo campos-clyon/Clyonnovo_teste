@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentType } from "react";
 import {
   Building2,
   Camera,
   CheckCircle2,
   Archive,
   ChevronDown,
+  ChevronRight,
   Clock,
   Copy,
   Eye,
@@ -294,6 +296,166 @@ type PorPromover = {
   createdAt: string;
 };
 
+/*
+ * A MESA EM SEIS BLOCOS, POR DE QUEM É A VEZ.
+ *
+ * "Aqui também precisa de organização." Ele abriu as Negociações logo depois
+ * de aprovar a Agenda e viu tudo junto: o cabeçalho, uma faixa verde, um
+ * bloco âmbar enorme com a lista inteira dos pedidos do simulador, e só
+ * depois os pedidos da plataforma, separados por linhas finas que nem sempre
+ * apareciam. Não estava errado — estava empilhado.
+ *
+ * O eixo não muda: o que separa continua a ser DE QUEM É A VEZ, nunca a
+ * origem ("pode mostrar a origem mas não separá-lo por isso") e nunca a data
+ * (a idade só arruma os pedidos por promover, por dentro do bloco deles). O
+ * que muda é a disposição, copiada do padrão que ele aprovou na Agenda: cada
+ * estado é um bloco com título colado ao topo, contagem, uma linha a dizer o
+ * que fazer com ele, e um cartão de totais em cima que serve de filtro. O que
+ * já está feito nasce fechado.
+ *
+ * O TÍTULO APARECE SEMPRE, mesmo com um nível só. O separador antigo era "uma
+ * linha a dizer o óbvio" e por isso só se desenhava com mais de um nível
+ * (`comCoisas > 1`). O cabeçalho novo não é um separador: é um controlo que
+ * abre e fecha, fica colado ao rolar e traz a contagem e a instrução — já não
+ * é ruído, é o sítio onde se lê o que fazer. A regra `comCoisas > 1` fica no
+ * `activosOrdenados` tal e qual, porque esse memo é a regra de ordenação da
+ * mesa e está fixada por testes que lêem a fonte; o render deixou de desenhar
+ * as entradas de separador que ele produz.
+ *
+ * As três frases dos níveis existem duas vezes de propósito: no memo (onde os
+ * testes as procuram) e aqui (onde o render as lê). Uma fonte só obrigava a
+ * mexer no memo, e o memo não se mexe.
+ *
+ * A caixa "Só o que precisa de atenção" da Agenda NÃO entra neste passo. Não
+ * está no que ele enumerou, e ligada por omissão escondia os Contratados que
+ * ele pediu para VER separados ("Temos que separar os pedidos já contratados
+ * dos à espera de propostas"). Fica como pergunta a fazer-lhe; a receita, se
+ * quiser: PRECISAM = [n1, porEnviar, n2] e a caixa desactivada enquanto há um
+ * cartão escolhido.
+ */
+type ChaveDoBloco = "n1" | "porEnviar" | "n2" | "n3" | "concluidos" | "cancelados";
+type Mostrar = "tudo" | "clyon" | "clientes";
+
+const BLOCOS: Array<{
+  chave: ChaveDoBloco;
+  titulo: string;
+  /** UMA frase a dizer o que fazer com o bloco. */
+  dica: string;
+  Icone: ComponentType<{ className?: string }>;
+  /** A cor do título e do traço à esquerda — DUAS classes numa string, partidas no render. */
+  cor: string;
+  /** A cor do número no cartão de cima. */
+  corDoNumero: string;
+  /** Fechado por omissão — o que já está feito não precisa de ocupar o ecrã. */
+  fechadoPorOmissao?: boolean;
+  /** A regra dos três modos do painel, num sítio só. */
+  visivelEm: (mostrar: Mostrar) => boolean;
+}> = [
+  /*
+   * Primeiro de cima para baixo porque é o único nível onde a demora custa
+   * dinheiro: uma proposta expira em 48 horas, e um trabalho por confirmar é
+   * dinheiro cativo. Até aqui vivia debaixo do bloco âmbar.
+   */
+  {
+    chave: "n1",
+    titulo: "Precisa de si",
+    dica:
+      "Nada avança sem si. Uma proposta expira 48 horas depois de ser feita — responda, ou feche o negócio, em nome do cliente, dentro do pedido.",
+    Icone: Clock,
+    cor: "text-emerald-300 border-emerald-500/60",
+    corDoNumero: "text-emerald-300",
+    visivelEm: () => true,
+  },
+  /*
+   * ── Do simulador, ainda fora da plataforma ─────────────────────────
+   * Estes entraram pelo formulário de orçamento do site: têm estimativa,
+   * não têm valor pedido pelo cliente, e nunca foram distribuídos. Um
+   * profissional não os vê.
+   *
+   * Promover é decidido pedido a pedido, e não por omissão: quem
+   * preencheu o simulador pediu um orçamento à CLYON, não pediu para
+   * entrar num mercado — a partir daqui passa a receber propostas de
+   * terceiros.
+   *
+   * Segundo de cima para baixo: é o maior e o mais colorido, mas espera
+   * triagem, não um prazo. Não aparece no ecrã "clyon" — esse só vê o que
+   * a CLYON já negoceia.
+   */
+  {
+    chave: "porEnviar",
+    titulo: "Por enviar",
+    dica:
+      "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais fixa o valor de partida, envia o link ao cliente e distribui; sem valor indicado, usa a estimativa.",
+    Icone: Send,
+    cor: "text-amber-300 border-amber-500/60",
+    corDoNumero: "text-amber-300",
+    visivelEm: (mostrar) => mostrar !== "clyon",
+  },
+  {
+    chave: "n2",
+    titulo: "À espera de propostas",
+    dica:
+      "A bola está com os profissionais. Um pedido sem nenhuma proposta morre de silêncio — «porquê?» na linha diz quem foi alcançado; redistribua se ninguém foi notificado.",
+    Icone: UserRound,
+    cor: "text-sky-300 border-sky-500/60",
+    corDoNumero: "text-sky-300",
+    visivelEm: () => true,
+  },
+  /*
+   * Continua VISÍVEL à entrada: ele pediu para os ver separados, não
+   * escondidos. O QUANDO destes é pergunta da Agenda, não desta mesa.
+   */
+  {
+    chave: "n3",
+    titulo: "Contratados",
+    dica:
+      "Já têm quem faça — falta o trabalho acontecer. O dia e a hora vêem-se na Agenda; quando o profissional der o trabalho por feito, o pedido sobe para «Precisa de si».",
+    Icone: Check,
+    cor: "text-violet-300 border-violet-500/60",
+    corDoNumero: "text-violet-300",
+    visivelEm: () => true,
+  },
+  /*
+   * Fechado por omissão, como os "Feitos" da Agenda — mas a pílula "N por
+   * ver" fica no título, visível com o bloco fechado. É isso que torna o
+   * fechar compatível com "caso o admin ainda não tenha aberto deve ficar
+   * destacado": dinheiro que entrou merece ser visto, não descoberto por
+   * acaso. Mostra os de todos os modos, como antes — a arrumação não é de
+   * quem negoceia.
+   */
+  {
+    chave: "concluidos",
+    titulo: "Concluídos",
+    dica:
+      "Trabalhos confirmados e fechados. Um cartão em realce ainda não foi aberto desde a conclusão — abrir mostra as contas completas e apaga o realce.",
+    Icone: CheckCircle2,
+    cor: "text-emerald-400 border-emerald-500/60",
+    corDoNumero: "text-emerald-400",
+    fechadoPorOmissao: true,
+    visivelEm: () => true,
+  },
+  /*
+   * OS CANCELADOS, EM BAIXO E EM CINZENTO.
+   *
+   * Não são concluídos — não houve trabalho nenhum — e não estão a correr,
+   * porque já ninguém espera nada. Ficam à vista na mesma: o pedido não é
+   * apagado, e daqui a um mês a pergunta "o que aconteceu ao #225?" tem de
+   * ter resposta sem ir a base nenhuma. Nascem fechados pelo mesmo motivo
+   * dos concluídos; mostram os de todos os modos.
+   */
+  {
+    chave: "cancelados",
+    titulo: "Cancelados",
+    dica:
+      "O cliente desistiu antes de haver trabalho. Ficam aqui com o histórico inteiro — abrir mostra o motivo e as propostas que chegaram a existir.",
+    Icone: XCircle,
+    cor: "text-slate-500 border-slate-600",
+    corDoNumero: "text-slate-400",
+    fechadoPorOmissao: true,
+    visivelEm: () => true,
+  },
+];
+
 export default function AdminNegociacoesPanel({
   mostrar = "tudo",
   podeApagar = true,
@@ -372,6 +534,38 @@ export default function AdminNegociacoesPanel({
   const [negociacoesVisiveis, setNegociacoesVisiveis] = useState<Set<number>>(new Set());
   /** Os que estao com a caixa marcada, para apagar em conjunto. */
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  /*
+   * UM BLOCO SÓ, quando se carrega no cartão de cima.
+   *
+   * Os cartões dos totais são filtros, como na Agenda: carregar em «Precisa
+   * de si» deixa só esse bloco no ecrã, e carregar outra vez volta a mostrar
+   * todos. Vive em `useState` de propósito — sobrevive ao `carregar(true)` de
+   * 30 em 30 segundos e nunca é derivado de "há coisas à espera".
+   */
+  const [soOBloco, setSoOBloco] = useState<ChaveDoBloco | null>(null);
+  /* Que blocos estão fechados. «Concluídos» e «Cancelados» nascem fechados. */
+  const [fechados, setFechados] = useState<Set<ChaveDoBloco>>(
+    () => new Set(BLOCOS.filter((b) => b.fechadoPorOmissao).map((b) => b.chave)),
+  );
+  function alternarFechado(chave: ChaveDoBloco) {
+    setFechados((f) => {
+      const novo = new Set(f);
+      if (novo.has(chave)) novo.delete(chave);
+      else novo.add(chave);
+      return novo;
+    });
+  }
+  /*
+   * A única porta para mudar o filtro. Limpa os marcados porque os cartões
+   * dos blocos filtrados saem do DOM, e a barra não pode ficar a oferecer
+   * Arquivar/Apagar sobre o que não se vê — "marcar o que não está no ecrã
+   * seria apagar às escuras". Fechar um bloco pelo título NÃO limpa nada: é
+   * o comportamento que já havia, com um Set só para toda a mesa.
+   */
+  function escolherBloco(chave: ChaveDoBloco | null) {
+    setSoOBloco(chave);
+    setMarcados(new Set());
+  }
   /* Qual o link que acabou de ser copiado, para o botão o confirmar. */
   const [copiado, setCopiado] = useState<string | null>(null);
   /* A versão do link que temos em mão, por pedido — ver `linkExpiraEm`. */
@@ -1064,6 +1258,42 @@ export default function AdminNegociacoesPanel({
     );
     return saida;
   }, [activos, daClyon, dosClientes, mostrar]);
+
+  /*
+   * OS BLOCOS DERIVAM-SE DO MEMO, SEM REPETIR A ORDENAÇÃO.
+   *
+   * O `activosOrdenados` é a regra de ordenação da mesa e está fixada por
+   * testes que lêem a fonte — aqui só se distribui o que ele já ordenou. Mas
+   * é preciso recontar o nível de cada pedido cá fora: com um nível só o memo
+   * não emite separador (`comCoisas > 1`), e os cartões de cima precisam das
+   * três contagens na mesma. `nivelDe` usa as DUAS mesmas condições do memo,
+   * pela mesma ordem, e tem de andar a par com ele.
+   */
+  function nivelDe(p: Pedido): "n1" | "n2" | "n3" {
+    if (p.negociacoes.some(precisaDeSi)) return "n1";
+    if (p.negociacoes.some((n) => n.estado === "acordada")) return "n3";
+    return "n2";
+  }
+  const porNivel: Record<"n1" | "n2" | "n3", Pedido[]> = { n1: [], n2: [], n3: [] };
+  for (const e of activosOrdenados) {
+    // A ordem interna — mais recente primeiro — vem preservada do memo; as
+    // entradas de separador continuam a ser produzidas e deixam de ser desenhadas.
+    if (!e.separador && e.pedido) porNivel[nivelDe(e.pedido)].push(e.pedido);
+  }
+  /*
+   * Concluídos e Cancelados não filtram por `mostrar` — mostram os de todos
+   * os modos, como já faziam. A arrumação não é de quem negoceia.
+   */
+  function pedidosDoBloco(chave: Exclude<ChaveDoBloco, "porEnviar">): Pedido[] {
+    if (chave === "concluidos") return concluidos;
+    if (chave === "cancelados") return cancelados;
+    return porNivel[chave];
+  }
+  function quantosNoBloco(chave: ChaveDoBloco): number {
+    return chave === "porEnviar" ? porPromover.length : pedidosDoBloco(chave).length;
+  }
+  const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar));
+  const blocosVisiveis = soOBloco ? blocosDoModo.filter((b) => b.chave === soOBloco) : blocosDoModo;
 
   /*
    * O cartao de um pedido, desenhado uma vez e usado nos dois grupos.
@@ -1828,7 +2058,8 @@ export default function AdminNegociacoesPanel({
             ? `${daClyon.length} negociação(ões) da CLYON.`
             : mostrar === "clientes"
               ? `${dosClientes.length} negociação(ões) de clientes.`
-              : `${pedidos.length} pedidos na plataforma.`}
+              : `${pedidos.length} pedidos na plataforma.`}{" "}
+          Carregue num cartão para ver só esse bloco; o título de cada bloco abre e fecha.
         </p>
         {/*
           O botão "Actualizar" saiu daqui.
@@ -1843,6 +2074,64 @@ export default function AdminNegociacoesPanel({
           {quandoFoiLido}
         </span>
       </header>
+
+      {/*
+        Os cartões dos totais — cada um é um filtro, como na Agenda. O de
+        «Precisa de si» puxa o olho quando há alguém à espera; em EMERALD e não
+        em rose, porque nesta mesa o verde já é "está à espera de si" (a
+        faixa, o anel do cartão, o botão Responder) e ele conhece-o.
+      */}
+      {/* `mb-6` aqui e não nos vizinhos: o que vem a seguir (erro, recusados,
+          barra dos marcados, o registo) só tem margem por baixo, e sem esta a
+          fila dos cartões colava-se ao primeiro deles — o "tudo junto" outra vez. */}
+      <div className="mb-6 mt-5 flex flex-wrap items-center gap-3">
+        {blocosDoModo.map((b) => {
+          const n = quantosNoBloco(b.chave);
+          const escolhido = soOBloco === b.chave;
+          const alarme = b.chave === "n1" && n > 0;
+          return (
+            <button
+              key={b.chave}
+              type="button"
+              onClick={() => escolherBloco(escolhido ? null : b.chave)}
+              aria-pressed={escolhido}
+              title={escolhido ? "Voltar a mostrar todos os blocos" : `Ver só ${b.titulo.toLowerCase()}`}
+              className={`rounded-xl border px-4 py-2.5 text-left transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                escolhido
+                  ? "border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/60"
+                  : alarme
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : "border-slate-700 bg-slate-950/50"
+              }`}
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                {b.titulo}
+              </p>
+              <p className={`text-xl font-bold ${b.corDoNumero}`}>{n}</p>
+              {b.chave === "concluidos" && concluidosPorVer > 0 && (
+                <p className="text-[11px] font-semibold text-emerald-300">{concluidosPorVer} por ver</p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {soOBloco && (
+        <p className="-mt-3 mb-6 text-xs text-slate-400">
+          A mostrar só{" "}
+          <strong className="text-slate-200">
+            {BLOCOS.find((b) => b.chave === soOBloco)?.titulo.toLowerCase()}
+          </strong>
+          .{" "}
+          <button
+            type="button"
+            onClick={() => escolherBloco(null)}
+            className="underline decoration-slate-600 underline-offset-2 hover:text-slate-200"
+          >
+            Ver todos os blocos
+          </button>
+        </p>
+      )}
 
       {erro && (
         <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -1939,131 +2228,205 @@ export default function AdminNegociacoesPanel({
         />
       )}
 
-      {/* ── Propostas à espera de nós ───────────────────────────────────────
-          O profissional contrapropõe e a proposta expira em 48 horas. Até
-          aqui nada dizia isso: a negociação ficava fechada num cartão no fundo
-          da página, a dizer "aberta · 2 propostas" como todas as outras.
-
-          Este bloco existe para essa resposta não se perder por ninguém a ter
-          visto. Salta para o pedido e a negociação já lá está aberta. */}
-      {aEsperar.length > 0 && (
-        <section className="mb-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
-            <Clock className="h-4 w-4" aria-hidden="true" />
-            {aEsperar.length === 1
-              ? "Um pedido está à espera de si"
-              : `${aEsperar.length} pedidos estão à espera de si`}
-          </h3>
-          <p className="mt-1 text-xs text-emerald-200/70">
-            Uma proposta expira 48 horas depois de ser feita. Responda — ou feche o
-            negócio — em nome do cliente, dentro do pedido.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {aEsperar.map((p) => {
-              const pendentes = p.negociacoes.filter(precisaDeSi);
-              const proposta = pendentes
-                .flatMap((n) => propostasDe(n.propostasJson))
-                .find((x) => x.estado === "pendente" && x.por === "profissional");
-              // Num pedido que so espera a contratacao nao ha proposta
-              // pendente — o valor que interessa mostrar e o ja acordado.
-              const valor =
-                proposta?.valor ??
-                (pendentes.find((n) => n.valorAcordado)?.valorAcordado != null
-                  ? Number(pendentes.find((n) => n.valorAcordado)!.valorAcordado)
-                  : null);
-              return (
-                <a
-                  key={p.id}
-                  href={`#pedido-${p.id}`}
-                  onClick={() =>
-                    // Sem o auto-abrir, o salto aterrava numa linha fechada —
-                    // abrir aqui é o que faz o atalho valer alguma coisa.
-                    setNegociacoesVisiveis((v) => new Set([...v, p.id]))
-                  }
-                  className="rounded-lg border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/50"
-                >
-                  #{p.id} · {p.contactName ?? "—"}
-                  {valor != null && (
-                    <span className="ml-2 font-bold text-white">
-                      {valor.toFixed(2).replace(".", ",")} €
-                    </span>
-                  )}
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* ── Do simulador, ainda fora da plataforma ─────────────────────────
-          Estes entraram pelo formulário de orçamento do site: têm estimativa,
-          não têm valor pedido pelo cliente, e nunca foram distribuídos. Um
-          profissional não os vê.
-
-          Promover é decidido pedido a pedido, e não por omissão: quem
-          preencheu o simulador pediu um orçamento à CLYON, não pediu para
-          entrar num mercado — a partir daqui passa a receber propostas de
-          terceiros. */}
-      {mostrar !== "clyon" && porPromover.length > 0 && (
-        <PedidosPorPromover
-          pedidos={porPromover}
-          valorDe={valorDe}
-          setValorDe={setValorDe}
-          ocupado={ocupado}
-          onPromover={promover}
-          onArquivar={arquivarPedido}
-          onArquivarVarios={arquivarPedidos}
-          onApagar={apagarPedidos}
-          podeApagar={podeApagar}
-          aApagar={aApagar}
-          onEditar={setAEditarPlataforma}
-        />
-      )}
-
-      {mostrar === "clyon" && daClyon.length === 0 && (
-        <p className="rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
-          Nenhuma negociação da CLYON em curso. Registe um pedido do WhatsApp ou
-          telefone aqui em cima e envie-o — aparece nesta lista.
-        </p>
-      )}
-      {mostrar !== "clyon" && pedidos.length === 0 && (
-        <p className="rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
-          Ainda nenhum pedido foi enviado a profissionais.
-        </p>
-      )}
-
       {/*
-        UMA LISTA SÓ, ORDENADA POR QUEM ESPERA.
+        UMA LISTA SÓ, ORDENADA POR QUEM ESPERA — AGORA EM BLOCOS.
 
         Havia duas: "Negociações da CLYON" e "Negociações dos clientes" —
         separadas por DE ONDE o pedido tinha entrado. Decisão dele: "coloque
         todos os pedidos num único lugar, independente de onde venha; pode
         mostrar a origem mas não separá-lo por isso". A origem passou a ser
-        uma etiqueta na linha; o que agora agrupa é a única pergunta que
-        interessa a quem gere — de quem é a vez.
+        uma etiqueta na linha; o que agrupa é a única pergunta que interessa a
+        quem gere — de quem é a vez.
 
-        Dentro de cada nível, do mais recente para o mais antigo, como ele
-        pediu. As linhas finas separam níveis, não secções: a lista é uma só.
+        "Aqui também precisa de organização." Os níveis eram linhas finas no
+        meio de uma lista corrida, a faixa verde e o bloco âmbar viviam por
+        cima dela, e Concluídos e Cancelados por baixo, cada um com o seu
+        desenho. Passam a ser seis blocos iguais (ver BLOCOS), com o padrão da
+        Agenda: título colado ao topo que abre e fecha, contagem, a linha do
+        que fazer, e o cabeçalho das colunas uma vez por bloco aberto. Dentro
+        de cada bloco, do mais recente para o mais antigo, como ele pediu.
       */}
-      {activosOrdenados.length > 0 && (
-        <section className="mb-6">
-          {cabecalhoDaMesa}
-          <div className="space-y-3">
-            {activosOrdenados.map((entrada) =>
-              entrada.separador ? (
-                <div key={entrada.chave} className="flex items-center gap-3 pt-2">
-                  <span className={`text-[11px] font-bold uppercase tracking-[0.15em] ${entrada.tom}`}>
-                    {entrada.titulo} · {entrada.quantos}
+      <div className="mt-6 space-y-6">
+        {blocosVisiveis.map((b) => {
+          const quantos = quantosNoBloco(b.chave);
+          /*
+           * Um bloco vazio não aparece — a não ser que tenha sido escolhido
+           * em cima, e aí diz que está vazio em vez de desaparecer.
+           */
+          if (quantos === 0 && soOBloco !== b.chave) return null;
+          /*
+           * Escolher um cartão é um pedido para VER: o bloco abre sem mexer
+           * em `fechados`. Ao voltar a todos, Concluídos volta a estar como
+           * estava — fechado, se ninguém o abriu pelo título.
+           */
+          const fechado = soOBloco === b.chave ? false : fechados.has(b.chave);
+          const [corTexto, corBorda] = b.cor.split(" ");
+          return (
+            <section key={b.chave} aria-labelledby={`mesa-${b.chave}`}>
+              {/*
+                O TÍTULO DO BLOCO fica colado ao topo enquanto o bloco rola:
+                com doze pedidos à espera, a pessoa a meio da lista continua a
+                saber em que bloco está. A barra dos marcados (`z-20`) fica por
+                cima dele quando as duas estão presas — a barra ganha, porque é
+                a que age.
+              */}
+              <button
+                type="button"
+                onClick={() => alternarFechado(b.chave)}
+                aria-expanded={!fechado}
+                className={`sticky top-0 z-10 flex w-full items-center gap-3 rounded-xl border-l-4 bg-slate-900 px-3 py-2 text-left ${corBorda} hover:bg-slate-800/80`}
+              >
+                <b.Icone className={`h-4 w-4 shrink-0 ${corTexto}`} aria-hidden="true" />
+                <h3 id={`mesa-${b.chave}`} className={`text-sm font-bold uppercase tracking-wider ${corTexto}`}>
+                  {b.titulo}
+                </h3>
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-semibold text-slate-200">
+                  {quantos}
+                </span>
+                {/* Visível com o bloco fechado — é o "deve ficar destacado" dele. */}
+                {b.chave === "concluidos" && concluidosPorVer > 0 && (
+                  <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-bold text-slate-950">
+                    {concluidosPorVer} por ver
                   </span>
-                  <span className="text-[11px] text-slate-500">{entrada.nota}</span>
-                  <span className="h-px flex-1 bg-slate-800" />
-                </div>
+                )}
+                <span className="hidden min-w-0 flex-1 truncate text-xs text-slate-500 sm:block">
+                  {b.dica}
+                </span>
+                {fechado ? (
+                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                )}
+              </button>
+
+              {b.chave === "porEnviar" ? (
+                /*
+                  Montado SEMPRE que o bloco é visível, fechado ou não: o
+                  componente guarda a busca, os marcados e o "Mais antigos"
+                  aberto, e fechar o bloco pelo título não os pode perder.
+                  Ele é que decide não desenhar nada quando `aberto` é falso.
+                */
+                <>
+                  <PedidosPorPromover
+                    aberto={!fechado}
+                    pedidos={porPromover}
+                    valorDe={valorDe}
+                    setValorDe={setValorDe}
+                    ocupado={ocupado}
+                    onPromover={promover}
+                    onArquivar={arquivarPedido}
+                    onArquivarVarios={arquivarPedidos}
+                    onApagar={apagarPedidos}
+                    podeApagar={podeApagar}
+                    aApagar={aApagar}
+                    onEditar={setAEditarPlataforma}
+                  />
+                  {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
+                      nada — senão apareciam duas mensagens de vazio empilhadas. */}
+                  {!fechado && quantos === 0 && (
+                    <p className="mt-2 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-4 text-center text-sm text-slate-500">
+                      Nada aqui.
+                    </p>
+                  )}
+                </>
               ) : (
-                cartaoDoPedido(entrada.pedido!)
-              ),
-            )}
-          </div>
-        </section>
+                !fechado && (
+                  <div className="mt-2 pl-1">
+                    {/* No cabeçalho a dica é `hidden sm:block`; em ecrãs estreitos
+                        a instrução não pode desaparecer. */}
+                    <p className="mb-3 text-xs text-slate-500 sm:hidden">{b.dica}</p>
+                    {quantos === 0 ? (
+                      <p className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-4 text-center text-sm text-slate-500">
+                        Nada aqui.
+                      </p>
+                    ) : (
+                      <>
+                        {/* ── Propostas à espera de nós ─────────────────────────
+                            O profissional contrapropõe e a proposta expira em 48
+                            horas. Até aqui nada dizia isso: a negociação ficava
+                            fechada num cartão no fundo da página, a dizer "aberta ·
+                            2 propostas" como todas as outras.
+
+                            Estes atalhos existem para essa resposta não se perder
+                            por ninguém a ter visto. Saltam para o pedido e a
+                            negociação já lá está aberta. Era uma faixa inteira por
+                            cima da mesa; a explicação das 48 horas passou para a
+                            dica do bloco e ficou só a fila de chips — a única coisa
+                            que mais nada faz. "À espera de SI" só é verdade nas
+                            negociações da CLYON, por isso a conta dos chips pode ser
+                            menor do que a do bloco: o bloco também tem pedidos
+                            conduzidos pelo cliente com trabalho por confirmar. */}
+                        {b.chave === "n1" && aEsperar.length > 0 && (
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <Clock className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                            <span className="text-xs text-emerald-200">
+                              {aEsperar.length === 1
+                                ? "Um pedido está à espera de si"
+                                : `${aEsperar.length} pedidos estão à espera de si`}{" "}
+                              — a CLYON responde pelo cliente; salte e a negociação abre.
+                            </span>
+                            {aEsperar.map((p) => {
+                              const pendentes = p.negociacoes.filter(precisaDeSi);
+                              const proposta = pendentes
+                                .flatMap((n) => propostasDe(n.propostasJson))
+                                .find((x) => x.estado === "pendente" && x.por === "profissional");
+                              // Num pedido que so espera a contratacao nao ha proposta
+                              // pendente — o valor que interessa mostrar e o ja acordado.
+                              const valor =
+                                proposta?.valor ??
+                                (pendentes.find((n) => n.valorAcordado)?.valorAcordado != null
+                                  ? Number(pendentes.find((n) => n.valorAcordado)!.valorAcordado)
+                                  : null);
+                              return (
+                                <a
+                                  key={p.id}
+                                  href={`#pedido-${p.id}`}
+                                  onClick={() =>
+                                    // Sem o auto-abrir, o salto aterrava numa linha fechada —
+                                    // abrir aqui é o que faz o atalho valer alguma coisa.
+                                    setNegociacoesVisiveis((v) => new Set([...v, p.id]))
+                                  }
+                                  className="rounded-lg border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/50"
+                                >
+                                  #{p.id} · {p.contactName ?? "—"}
+                                  {valor != null && (
+                                    <span className="ml-2 font-bold text-white">
+                                      {valor.toFixed(2).replace(".", ",")} €
+                                    </span>
+                                  )}
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {cabecalhoDaMesa}
+                        <div className="space-y-3">{pedidosDoBloco(b.chave).map(cartaoDoPedido)}</div>
+                      </>
+                    )}
+                  </div>
+                )
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      {/*
+        Os vazios de sempre, com as frases que ele conhece. Só quando não há
+        cartão escolhido — com um escolhido, o bloco diz "Nada aqui." sozinho.
+        O segundo pode aparecer com o bloco Por enviar cheio: é literalmente
+        verdade, nenhum foi enviado a profissionais.
+      */}
+      {soOBloco === null && mostrar === "clyon" && daClyon.length === 0 && (
+        <p className="mt-6 rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
+          Nenhuma negociação da CLYON em curso. Registe um pedido do WhatsApp ou
+          telefone aqui em cima e envie-o — aparece nesta lista.
+        </p>
+      )}
+      {soOBloco === null && mostrar !== "clyon" && pedidos.length === 0 && (
+        <p className="mt-6 rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
+          Ainda nenhum pedido foi enviado a profissionais.
+        </p>
       )}
 
       {/* O detalhe do pedido, por cima de tudo.
@@ -2115,57 +2478,6 @@ export default function AdminNegociacoesPanel({
           onUpdated={() => carregar(true)}
         />
       )}
-
-      {/* No ecrã da CLYON não se escondem as dos clientes em silêncio: uma
-          linha diz quantas são e onde estão. O contrário também. */}
-      {concluidos.length > 0 && (
-        <section>
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-emerald-400">
-            Concluídos
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
-              {concluidos.length}
-            </span>
-            {concluidosPorVer > 0 && (
-              <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-bold text-slate-950">
-                {concluidosPorVer} por ver
-              </span>
-            )}
-          </h3>
-          <p className="mb-3 text-xs text-slate-500">
-            Trabalhos confirmados e fechados. Um cartão em realce ainda não foi
-            aberto desde a conclusão — abrir mostra as contas completas e apaga o
-            realce.
-          </p>
-          {cabecalhoDaMesa}
-          <div className="space-y-3">{concluidos.map(cartaoDoPedido)}</div>
-        </section>
-      )}
-
-      {/*
-        OS CANCELADOS, EM BAIXO E EM CINZENTO.
-
-        Não são concluídos — não houve trabalho nenhum — e não estão a correr,
-        porque já ninguém espera nada. Ficam à vista na mesma: o pedido não é
-        apagado, e daqui a um mês a pergunta "o que aconteceu ao #225?" tem de
-        ter resposta sem ir a base nenhuma.
-      */}
-      {cancelados.length > 0 && (
-        <section>
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500">
-            Cancelados
-            <span className="rounded-full bg-slate-700/40 px-2 py-0.5 text-xs font-semibold text-slate-400">
-              {cancelados.length}
-            </span>
-          </h3>
-          <p className="mb-3 text-xs text-slate-600">
-            O cliente desistiu antes de haver trabalho. Ficam aqui com o histórico
-            inteiro — abrir mostra o motivo e as propostas que chegaram a existir.
-          </p>
-          {cabecalhoDaMesa}
-          <div className="space-y-3">{cancelados.map(cartaoDoPedido)}</div>
-        </section>
-      )}
-
     </div>
   );
 }
@@ -2362,10 +2674,25 @@ function RespostaDaClyon({
  *
  * Os antigos ficam fechados, com a conta à frente. Continuam a existir, mas
  * deixam de gritar tão alto como os de hoje.
+ *
+ * "AQUI TAMBÉM PRECISA DE ORGANIZAÇÃO"
+ *
+ * A caixa âmbar inteira, com título, pílula e descrição próprios, era o bloco
+ * mais alto da mesa e não fechava. Passou a ser um bloco como os outros (ver
+ * BLOCOS no pai): o título, a contagem e a dica vivem no cabeçalho colado ao
+ * topo que o pai desenha, e este componente devolve só o interior — a busca,
+ * o marcar todos, a barra de lote e os grupos por idade, textualmente iguais.
+ *
+ * `aberto` vem do pai e, quando é falso, o componente devolve null DEPOIS dos
+ * hooks: fica montado com o bloco fechado, e a busca, os marcados e o "Mais
+ * antigos" aberto não se perdem ao fechar e reabrir. Escolher OUTRO cartão em
+ * cima desmonta-o e perde-os — aceitável: já hoje `promover()` recarrega a
+ * descoberto e o spinner remonta tudo.
  */
 
 
 function PedidosPorPromover({
+  aberto,
   pedidos,
   valorDe,
   setValorDe,
@@ -2378,6 +2705,8 @@ function PedidosPorPromover({
   aApagar,
   onEditar,
 }: {
+  /** O bloco está aberto no pai; fechado, o componente fica montado e não desenha nada. */
+  aberto: boolean;
   pedidos: PorPromover[];
   valorDe: Record<number, string>;
   setValorDe: React.Dispatch<React.SetStateAction<Record<number, string>>>;
@@ -2422,6 +2751,13 @@ function PedidosPorPromover({
     // não se mexe entre dois desenhos do mesmo ecrã.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visiveis]);
+
+  // Depois de TODOS os hooks, de propósito: um return antes deles mudava a
+  // ordem dos hooks entre desenhos e o React perdia o estado.
+  if (!aberto) return null;
+  // Sem pedidos nenhuns o vazio é do pai ("Nada aqui."); "Nada com essa
+  // procura" só faz sentido quando há pedidos e a busca não deixou passar nenhum.
+  if (pedidos.length === 0) return null;
 
   const alternar = (id: number) =>
     setMarcados((s) => {
@@ -2551,49 +2887,39 @@ function PedidosPorPromover({
   };
 
   return (
-    <section className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-200">
-            <Send className="h-4 w-4" aria-hidden="true" />
-            Pedidos do simulador, fora da plataforma
-            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] tabular-nums text-amber-200">
-              {pedidos.length}
-            </span>
-          </h3>
-          <p className="mt-1 text-xs text-amber-200/70">
-            Enviar aos profissionais fixa o valor de partida, envia o link ao cliente e
-            distribui. Sem valor indicado, usa a estimativa.
-          </p>
-        </div>
+    <div className="mt-2 pl-1">
+      {/*
+        A primeira linha do corpo: marcar todos à esquerda, a busca à direita.
+        A busca vivia na fila do título; o título agora é um <button> do pai e
+        um input lá dentro era HTML inválido. Só procura NESTES pedidos — pô-la
+        no topo da mesa prometia procurar em toda a mesa.
 
+        Marcar todos marca OS VISIVEIS — o que a busca deixou passar, grupos
+        fechados incluidos. Se a busca diz "entulho", "todos" sao os de
+        entulho: marcar o que nao esta no ecra seria apagar as escuras.
+      */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {visiveis.length > 0 && (
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-slate-400">
+            <input
+              type="checkbox"
+              checked={visiveis.length > 0 && visiveis.every((p) => marcados.has(p.id))}
+              onChange={(e) =>
+                setMarcados(e.target.checked ? new Set(visiveis.map((p) => p.id)) : new Set())
+              }
+              className="h-4 w-4 cursor-pointer accent-cyan-500"
+            />
+            Marcar todos ({visiveis.length})
+          </label>
+        )}
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Procurar por nome, cidade, serviço ou número…"
           aria-label="Procurar nos pedidos por promover"
-          className="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 sm:w-72"
+          className="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 sm:ml-auto sm:w-72"
         />
       </div>
-
-      {/*
-        Marcar todos marca OS VISIVEIS — o que a busca deixou passar, grupos
-        fechados incluidos. Se a busca diz "entulho", "todos" sao os de
-        entulho: marcar o que nao esta no ecra seria apagar as escuras.
-      */}
-      {visiveis.length > 0 && (
-        <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-xs text-slate-400">
-          <input
-            type="checkbox"
-            checked={visiveis.length > 0 && visiveis.every((p) => marcados.has(p.id))}
-            onChange={(e) =>
-              setMarcados(e.target.checked ? new Set(visiveis.map((p) => p.id)) : new Set())
-            }
-            className="h-4 w-4 cursor-pointer accent-cyan-500"
-          />
-          Marcar todos ({visiveis.length})
-        </label>
-      )}
 
       {marcados.size > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2">
@@ -2657,7 +2983,7 @@ function PedidosPorPromover({
           {seccao("antigo")}
         </>
       )}
-    </section>
+    </div>
   );
 }
 
