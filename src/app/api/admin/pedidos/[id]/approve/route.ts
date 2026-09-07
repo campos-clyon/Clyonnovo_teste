@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { approveSimulatorOrder, getSimulatorOrderById, updateSimulatorOrder, setOrcamentoToken } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { sendOrcamentoEmail } from "@/lib/email-orcamento";
 
 export const runtime = "nodejs";
@@ -10,6 +11,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
   const { id } = await params;
+  // Um assistente que aprova um pedido sem responsável passa a ser o responsável.
+  await assumirPedidoSeLivre(Number(id), colab);
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch {}

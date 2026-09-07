@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getSimulatorOrderById, updateSimulatorOrder } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
   isMudancaType,
   getMovingAddresses,
@@ -96,7 +97,7 @@ function toRfc3339Local(date: string, time: string): string {
 //   calendarNotes?
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { err } = await authenticate(req);
+  const { err, colab } = await authenticate(req);
   if (err) return err;
 
   const { id } = await params;
@@ -108,7 +109,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Quem passou pelo `authenticate` agenda qualquer pedido: o assistente de
-  // hoje opera a fila inteira, não só o que lhe foi atribuído.
+  // hoje opera a fila inteira, não só o que lhe foi atribuído. E um pedido
+  // sem responsável passa a ser de quem o agendou.
+  await assumirPedidoSeLivre(orderId, colab);
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch {}

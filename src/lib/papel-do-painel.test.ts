@@ -16,6 +16,9 @@ import {
   papelPodeVerSeccao,
   rotaDeApiDoPainel,
   SECCOES_DO_ASSISTENTE,
+  assistenteComSeccoesPodeChamar,
+  normalizarSeccoes,
+  seccoesQueAbrem,
 } from "./papel-do-painel";
 
 describe("secções", () => {
@@ -82,6 +85,7 @@ describe("chamadas de API", () => {
       ["POST", "/api/admin/whatsapp"],
       ["GET", "/api/admin/fotos"],
       ["POST", "/api/admin/sessao/sair"],
+      ["GET", "/api/admin/sessao/eu"],
     ];
     for (const [m, p] of permitidas) {
       expect(assistentePodeChamar(p, m), `${m} ${p}`).toBe(true);
@@ -136,5 +140,42 @@ describe("chamadas de API", () => {
     expect(rotaDeApiDoPainel("/api/maps/distance")).toBe(false);
     expect(rotaDeApiDoPainel("/api/simulator/analyze")).toBe(false);
     expect(rotaDeApiDoPainel("/api/administracao")).toBe(false);
+  });
+});
+
+describe("secções por assistente", () => {
+  it("normaliza a lista: só o que existe, na ordem do menu, e vazio quer dizer todas", () => {
+    expect(normalizarSeccoes(["whatsapp", "pedidos", "inventada", "pedidos"])).toEqual(["pedidos", "whatsapp"]);
+    expect(normalizarSeccoes([])).toEqual([...SECCOES_DO_ASSISTENTE]);
+    expect(normalizarSeccoes(null)).toEqual([...SECCOES_DO_ASSISTENTE]);
+    expect(normalizarSeccoes(["leads"])).toEqual([...SECCOES_DO_ASSISTENTE]);
+  });
+
+  it("diz que secções abrem cada rota", () => {
+    expect(seccoesQueAbrem("/api/admin/agenda")).toEqual(["agenda"]);
+    expect(seccoesQueAbrem("/api/admin/whatsapp")).toEqual(["whatsapp"]);
+    expect(seccoesQueAbrem("/api/admin/convites")).toEqual(["profissionais"]);
+    expect(seccoesQueAbrem("/api/admin/negociacoes/agir")).toEqual(["negociacoes_clyon"]);
+    expect(seccoesQueAbrem("/api/admin/negociacoes/valor")).toEqual(["negociacoes_clyon", "agenda"]);
+    expect(seccoesQueAbrem("/api/admin/pedidos/3")).toEqual(["pedidos", "negociacoes_clyon", "agenda"]);
+    expect(seccoesQueAbrem("/api/admin/sessao/eu")).toEqual([]);
+  });
+
+  it("um assistente só com agenda agenda, corrige valores e abre pedidos, mas não fala no WhatsApp", () => {
+    const so = ["agenda"];
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/agenda", "POST")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/negociacoes/valor", "POST")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/pedidos/9", "GET")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/whatsapp", "GET")).toBe(false);
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/negociacoes", "GET")).toBe(false);
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/profissionais", "GET")).toBe(false);
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/sessao/eu", "GET")).toBe(true);
+  });
+
+  it("as secções nunca abrem o que o papel fecha", () => {
+    const todas = [...SECCOES_DO_ASSISTENTE];
+    expect(assistenteComSeccoesPodeChamar(todas, "/api/admin/pedidos/9", "DELETE")).toBe(false);
+    expect(assistenteComSeccoesPodeChamar(todas, "/api/admin/negociacoes/apagar", "POST")).toBe(false);
+    expect(assistenteComSeccoesPodeChamar(todas, "/api/admin/assistentes", "GET")).toBe(false);
   });
 });

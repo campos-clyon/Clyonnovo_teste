@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
   negociacoesDoPedido,
   gravarNegociacao,
@@ -94,6 +95,8 @@ export async function POST(req: NextRequest) {
   if (!ACCOES.includes(corpo.accao as AccaoDeAdmin)) {
     return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
   }
+  // Um assistente que negoceia num pedido sem responsável fica com ele.
+  await assumirPedidoSeLivre(pedidoId, colab);
   const accao = corpo.accao as AccaoDeAdmin;
 
   try {

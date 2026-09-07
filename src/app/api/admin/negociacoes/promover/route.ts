@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
   getSimulatorOrderById,
   pedidosPorPromover,
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   let corpo: { pedidoId?: unknown; valor?: unknown };
@@ -71,6 +72,8 @@ export async function POST(req: NextRequest) {
   if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
+  // Um assistente que envia um pedido sem responsável aos profissionais fica com ele.
+  await assumirPedidoSeLivre(pedidoId, colab);
 
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });

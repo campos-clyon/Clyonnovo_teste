@@ -476,7 +476,6 @@ export default function ColaboradorAdminClient({
 } = {}) {
   const router = useRouter();
   const paginaBase = paginaInicialDoPapel(papel);
-  const podeVer = (seccao: string) => papelPodeVerSeccao(papel, seccao);
 
   const [token, setToken] = useState("");
   const [adminNome, setAdminNome] = useState("");
@@ -484,6 +483,23 @@ export default function ColaboradorAdminClient({
   const [isAdminGeral, setIsAdminGeral] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  /*
+   * As secções que ESTE assistente tem — dadas pelo administrador, lidas ao
+   * abrir em /api/admin/sessao/eu. `null` enquanto não chegam: o menu não
+   * desenha nada até saber, para não mostrar uma secção que a seguir
+   * desaparece. O administrador não passa por aqui: vê tudo.
+   */
+  const [seccoesDoAssistente, setSeccoesDoAssistente] = useState<string[] | null>(null);
+  const [minhasEstatisticas, setMinhasEstatisticas] = useState<{
+    concluidos: number;
+    emCurso: number;
+    cancelados: number;
+    comissaoAssistente: number;
+  } | null>(null);
+  const podeVer = (seccao: string) =>
+    papel === "admin"
+      ? true
+      : papelPodeVerSeccao(papel, seccao) && (seccoesDoAssistente?.includes(seccao) ?? false);
   // O assistente não tem "Início": o dia dele começa nos pedidos.
   const [activeSection, setActiveSection] = useState<AdminSection>(
     papel === "assistente" ? "pedidos" : "overview",
@@ -651,10 +667,12 @@ export default function ColaboradorAdminClient({
     // Verificar se há section/tab/pedido no URL
     const searchParams = new URLSearchParams(window.location.search);
     const sectionParam = searchParams.get("section") as AdminSection | null;
+    // Aqui só a lista do papel: as secções deste assistente ainda não
+    // chegaram, e o efeito que as carrega corrige a secção se for preciso.
     if (
       sectionParam &&
       adminNavItems.some((item) => item.id === sectionParam) &&
-      podeVer(sectionParam)
+      papelPodeVerSeccao(papel, sectionParam)
     ) {
       setActiveSection(sectionParam);
     }
@@ -671,8 +689,10 @@ export default function ColaboradorAdminClient({
     if (papel === "admin") {
       void carregarSimulatorSettings(storedToken);
       void carregarImageStats(storedToken);
+      setLoading(false);
     }
-    setLoading(false);
+    // O assistente fica "a carregar" até chegarem as secções dele — ver o
+    // efeito seguinte.
 
     return () => {
       document.head.removeChild(metaRobots);
@@ -680,6 +700,51 @@ export default function ColaboradorAdminClient({
     // `papel` vem da página e não muda enquanto ela estiver montada.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, papel]);
+
+  // As secções e os números deste assistente, do servidor.
+  useEffect(() => {
+    if (papel !== "assistente" || !token) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/sessao/eu", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (res.status === 401) {
+          // Conta desactivada entretanto — a sessão acabou.
+          clearColaboradorStorage();
+          router.replace("/admin/login");
+          return;
+        }
+        const dados = await res.json().catch(() => ({}));
+        if (cancelado) return;
+        if (!res.ok || !Array.isArray(dados.seccoes)) {
+          setError(dados.error ?? "Não foi possível ler os seus acessos.");
+          setSeccoesDoAssistente([]);
+          setLoading(false);
+          return;
+        }
+        const seccoes: string[] = dados.seccoes;
+        setSeccoesDoAssistente(seccoes);
+        setMinhasEstatisticas(dados.estatisticas ?? null);
+        // A secção activa tem de ser uma das dele — a do URL ou a inicial
+        // podem já não ser.
+        setActiveSection((actual) =>
+          seccoes.includes(actual) ? actual : ((seccoes[0] as AdminSection | undefined) ?? "pedidos"),
+        );
+        setLoading(false);
+      } catch {
+        if (cancelado) return;
+        setError("Não foi possível ligar ao servidor.");
+        setSeccoesDoAssistente([]);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [papel, token, router]);
 
   // Sincronizar URL com a secção e aba activa
   useEffect(() => {
@@ -1419,6 +1484,16 @@ export default function ColaboradorAdminClient({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{adminNome}</p>
                 <p className="text-[11px] text-slate-500">{ROTULO_DO_PAPEL[papel]}</p>
+                {/* Os números do assistente, sempre à vista: o que já fechou e
+                    o que ainda tem nas mãos. */}
+                {papel === "assistente" && minhasEstatisticas && (
+                  <p
+                    className="mt-0.5 truncate text-[11px] text-sky-400"
+                    title={`${minhasEstatisticas.concluidos} concluídos · ${minhasEstatisticas.emCurso} em curso · ${minhasEstatisticas.cancelados} cancelados · comissão acumulada ${minhasEstatisticas.comissaoAssistente.toFixed(2).replace(".", ",")} €`}
+                  >
+                    {minhasEstatisticas.concluidos} concluídos · {minhasEstatisticas.emCurso} em curso
+                  </p>
+                )}
               </div>
               <Button
                 onClick={handleLogout}

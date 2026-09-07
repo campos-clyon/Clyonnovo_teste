@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerBase } from "@/lib/base-do-preco";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { createSimulatorOrder, appendOrderHistory } from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
@@ -342,6 +343,8 @@ export async function POST(req: NextRequest) {
     const id = await createSimulatorOrder(
       linha as unknown as Parameters<typeof createSimulatorOrder>[0],
     );
+    // Um pedido registado por um assistente nasce como dele.
+    await assumirPedidoSeLivre(id, colab);
 
     await appendOrderHistory(id, {
       type: "created",

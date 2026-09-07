@@ -5,6 +5,7 @@ import {
   appendOrderHistory,
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { assumirPedidoSeLivre } from "@/lib/assistentes";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,8 @@ export async function POST(
 
   const { id } = await params;
   const orderId = Number(id);
+  // Um assistente que pede informação num pedido sem responsável fica com ele.
+  await assumirPedidoSeLivre(orderId, jwt);
 
   const body = await req.json();
   const message = String(body?.message ?? "").trim();

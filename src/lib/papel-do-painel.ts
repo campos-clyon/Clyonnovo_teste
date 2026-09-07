@@ -50,8 +50,30 @@ export const SECCOES_DO_ASSISTENTE = [
 
 export type SeccaoDoAssistente = (typeof SECCOES_DO_ASSISTENTE)[number];
 
+export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
+  pedidos: "Pedidos",
+  profissionais: "Profissionais",
+  negociacoes_clyon: "Negociações",
+  agenda: "Agenda",
+  whatsapp: "WhatsApp",
+};
+
 export function assistentePodeVerSeccao(seccao: string): seccao is SeccaoDoAssistente {
   return (SECCOES_DO_ASSISTENTE as readonly string[]).includes(seccao);
+}
+
+/**
+ * Limpa uma lista de secções vinda de fora — do formulário do administrador
+ * ou da coluna JSON na base. Fica só o que existe, sem repetidos, na ordem
+ * do menu. `null` ou lista vazia quer dizer "todas": uma conta sem nenhuma
+ * secção não serve para nada, e é mais provável ser um esquecimento do que
+ * uma intenção.
+ */
+export function normalizarSeccoes(bruto: unknown): SeccaoDoAssistente[] {
+  if (!Array.isArray(bruto)) return [...SECCOES_DO_ASSISTENTE];
+  const pedidas = new Set(bruto.filter((s): s is string => typeof s === "string"));
+  const limpas = SECCOES_DO_ASSISTENTE.filter((s) => pedidas.has(s));
+  return limpas.length > 0 ? limpas : [...SECCOES_DO_ASSISTENTE];
 }
 
 /** Uma secção é visível para este papel? O administrador vê todas. */
@@ -89,8 +111,50 @@ const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/agenda",
   "/api/admin/whatsapp",
   "/api/admin/fotos",
-  "/api/admin/sessao/sair",
+  "/api/admin/sessao",
 ] as const;
+
+/**
+ * Que secções dão acesso a cada rota — para o assistente a quem o
+ * administrador tirou secções.
+ *
+ * Uma rota pode ser servida por mais do que uma secção: o painel de
+ * negociações abre o detalhe do pedido (rota dos pedidos) e a ficha da agenda
+ * corrige o valor de um trabalho (rota das negociações). Quem tem QUALQUER uma
+ * das secções listadas passa. Uma rota sem entrada aqui — a sessão, por
+ * exemplo — é de todos os assistentes.
+ */
+const SECCOES_QUE_ABREM: Array<{ prefixo: string; seccoes: SeccaoDoAssistente[] }> = [
+  { prefixo: "/api/admin/negociacoes/valor", seccoes: ["negociacoes_clyon", "agenda"] },
+  { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
+  { prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
+  { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
+  { prefixo: "/api/admin/profissionais", seccoes: ["profissionais"] },
+  { prefixo: "/api/admin/convites", seccoes: ["profissionais"] },
+  { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
+  { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
+];
+
+/** As secções que abrem esta rota; vazio quer dizer "qualquer assistente". */
+export function seccoesQueAbrem(pathname: string): SeccaoDoAssistente[] {
+  const limpo = pathname.replace(/\/+$/, "") || "/";
+  // A primeira entrada que casa ganha — as mais específicas vêm primeiro.
+  return SECCOES_QUE_ABREM.find((e) => comecaPor(limpo, e.prefixo))?.seccoes ?? [];
+}
+
+/**
+ * A verificação completa para um assistente concreto: a lista geral do papel
+ * E as secções que o administrador lhe deu.
+ */
+export function assistenteComSeccoesPodeChamar(
+  seccoes: readonly string[],
+  pathname: string,
+  method: string,
+): boolean {
+  if (!assistentePodeChamar(pathname, method)) return false;
+  const precisas = seccoesQueAbrem(pathname);
+  return precisas.length === 0 || precisas.some((s) => seccoes.includes(s));
+}
 
 /**
  * O que fica fechado mesmo dentro dos prefixos de cima.
