@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 
 export const runtime = "nodejs";
 
+// Administrador, ou assistente com a conta activa. O DELETE, mais abaixo,
+// volta a perguntar pelo papel: apagar é só do administrador.
 async function authenticate(req: NextRequest) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return { err: NextResponse.json({ error: "Não autorizado" }, { status: 401 }), colab: null };
-
-  // Só administradores — as outras funções deixaram de existir
-  if (colab.isAdmin !== 1) {
-    return {
-      err: NextResponse.json({ error: "Acesso negado." }, { status: 403 }),
-      colab: null,
-    };
-  }
-
-  return { err: null, colab };
+  return requireAdmin(req);
 }
 
 // GET /api/admin/pedidos/[id]
@@ -76,7 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { err, colab } = await authenticate(req);
   if (err) return err;
-  if (colab!.isAdmin !== 1) {
+  if (colab!.papel !== "admin") {
     return NextResponse.json({ error: "Apenas administradores podem excluir pedidos." }, { status: 403 });
   }
   const { id } = await params;

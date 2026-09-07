@@ -1,10 +1,34 @@
 import * as jose from "jose";
 
+import type { PapelDoPainel } from "@/lib/papel-do-painel";
+
 export type ColaboradorTokenPayload = {
   id: number;
   nome: string;
   isAdmin: number;
+  /**
+   * "assistente" nos tokens de assistente. Ausente nos de administrador
+   * emitidos antes de o papel existir — `isAdmin === 1` continua a valer
+   * como administrador, para ninguém ficar fechado fora.
+   */
+  papel?: PapelDoPainel;
 };
+
+/**
+ * O papel de um token, ou null se não for de ninguém do backoffice.
+ *
+ * `isAdmin === 1` manda: um token antigo sem `papel` é administrador. Só
+ * depois se olha para `papel === "assistente"`. Um token com `isAdmin: 0` e
+ * sem papel — a forma dos antigos motoristas e ajudantes — não entra.
+ */
+export function papelDoColaborador(
+  colab: Pick<ColaboradorTokenPayload, "isAdmin" | "papel"> | null | undefined,
+): PapelDoPainel | null {
+  if (!colab) return null;
+  if (Number(colab.isAdmin) === 1) return "admin";
+  if (colab.papel === "assistente") return "assistente";
+  return null;
+}
 
 /**
  * Cookie de sessão do backoffice.
@@ -90,6 +114,22 @@ export async function verifyColaboradorToken(token?: string | null) {
 export async function sessaoDeAdminValida(token?: string | null) {
   const colab = await verifyColaboradorToken(token);
   return colab !== null && Number(colab.isAdmin) === 1;
+}
+
+/**
+ * A sessão de quem quer que entre no backoffice — administrador ou
+ * assistente — com o papel já decidido. Null para tudo o resto.
+ *
+ * O middleware usa isto para saber que página serve e que chamada deixa
+ * passar; o que cada papel pode fazer está em `papel-do-painel.ts`.
+ */
+export async function sessaoDoPainel(
+  token?: string | null,
+): Promise<{ colab: ColaboradorTokenPayload; papel: PapelDoPainel } | null> {
+  const colab = await verifyColaboradorToken(token);
+  const papel = papelDoColaborador(colab);
+  if (!colab || !papel) return null;
+  return { colab, papel };
 }
 
 export async function verifyColaboradorAuthHeader(authHeader?: string | null) {

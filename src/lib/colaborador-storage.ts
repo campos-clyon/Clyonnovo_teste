@@ -15,6 +15,8 @@ const KEYS = {
   id: "colaborador_id",
   isAdmin: "colaborador_isAdmin",
   funcao: "colaborador_funcao",
+  /** "admin" | "assistente" — o que o login devolveu. */
+  papel: "colaborador_papel",
 } as const;
 
 function isBrowser() {

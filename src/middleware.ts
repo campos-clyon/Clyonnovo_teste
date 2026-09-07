@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getToken } from "next-auth/jwt";
-import { COOKIE_SESSAO_ADMIN, sessaoDeAdminValida } from "@/lib/colaborador-auth";
+import { COOKIE_SESSAO_ADMIN, sessaoDoPainel } from "@/lib/colaborador-auth";
+import {
+  assistentePodeAbrirPagina,
+  assistentePodeChamar,
+  paginaInicialDoPapel,
+  rotaDeApiDoPainel,
+} from "@/lib/papel-do-painel";
 import {
   COOKIE_SESSAO_PROFISSIONAL,
   verificarSessaoDoProfissional,
@@ -52,8 +58,22 @@ const MUDANCAS_CITIES_WITH_PAGE = [
  * Se não houver cookie, se a assinatura não conferir, se o token tiver
  * expirado ou se não for de administrador, o pedido nem chega à página.
  */
-async function temSessaoDeAdmin(request: NextRequest) {
-  return sessaoDeAdminValida(request.cookies.get(COOKIE_SESSAO_ADMIN)?.value);
+async function sessaoDoBackoffice(request: NextRequest) {
+  return sessaoDoPainel(request.cookies.get(COOKIE_SESSAO_ADMIN)?.value);
+}
+
+/**
+ * O token que uma chamada de API do painel traz.
+ *
+ * O painel manda-o no cabeçalho Authorization, lido do localStorage; o
+ * cookie httpOnly vai na mesma pelo browser. Olha-se primeiro para o
+ * cabeçalho, que é o que a rota vai verificar — decidir aqui por um e lá
+ * pelo outro era abrir caminho a dois papéis na mesma chamada.
+ */
+function tokenDaChamadaDeApi(request: NextRequest): string | null {
+  const cabecalho = request.headers.get("authorization");
+  if (cabecalho?.startsWith("Bearer ")) return cabecalho.slice("Bearer ".length);
+  return request.cookies.get(COOKIE_SESSAO_ADMIN)?.value ?? null;
 }
 
 /**
@@ -307,13 +327,41 @@ export async function middleware(request: NextRequest) {
 
   // Proteger o backoffice — /admin/login é a única porta aberta
   if (nextUrl.pathname === "/admin" || nextUrl.pathname.startsWith("/admin/")) {
-    if (nextUrl.pathname !== "/admin/login" && !(await temSessaoDeAdmin(request))) {
-      const entrada = new URL("/admin/login", request.url);
-      // Voltar ao sítio onde ia dar depois de entrar
-      if (nextUrl.pathname !== "/admin") {
-        entrada.searchParams.set("proximo", nextUrl.pathname + nextUrl.search);
+    if (nextUrl.pathname !== "/admin/login") {
+      const sessao = await sessaoDoBackoffice(request);
+      if (!sessao) {
+        const entrada = new URL("/admin/login", request.url);
+        // Voltar ao sítio onde ia dar depois de entrar
+        if (nextUrl.pathname !== "/admin") {
+          entrada.searchParams.set("proximo", nextUrl.pathname + nextUrl.search);
+        }
+        return NextResponse.redirect(entrada);
       }
-      return NextResponse.redirect(entrada);
+      // O assistente tem um painel só dele. Qualquer outra página de /admin
+      // — a do administrador, a app CLYON, as imagens — devolve-o lá, sem
+      // lhe servir HTML que não é para ele.
+      if (sessao.papel === "assistente" && !assistentePodeAbrirPagina(nextUrl.pathname)) {
+        return NextResponse.redirect(new URL(paginaInicialDoPapel("assistente"), request.url));
+      }
+    }
+  }
+
+  // As chamadas de API do painel, pelo mesmo crivo.
+  //
+  // Um assistente só chama as rotas das cinco secções dele. Isto é a primeira
+  // tranca; a segunda está em `requireAdmin`, dentro de cada rota, e é essa
+  // que também confirma na base que a conta continua activa. Sem token, ou com
+  // token de administrador, não se mexe: a rota decide como sempre decidiu.
+  if (rotaDeApiDoPainel(nextUrl.pathname)) {
+    const sessao = await sessaoDoPainel(tokenDaChamadaDeApi(request));
+    if (
+      sessao?.papel === "assistente" &&
+      !assistentePodeChamar(nextUrl.pathname, request.method)
+    ) {
+      return NextResponse.json(
+        { error: "Esta conta de assistente não tem acesso a esta função." },
+        { status: 403 },
+      );
     }
   }
 

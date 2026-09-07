@@ -4,7 +4,15 @@ import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
+import { papelGuardadoNoBrowser } from "@/hooks/useAdminAuth";
+import {
+  paginaInicialDoPapel,
+  papelPodeVerSeccao,
+  ROTULO_DO_PAPEL,
+  type PapelDoPainel,
+} from "@/lib/papel-do-painel";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
+import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 import {
   ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
@@ -97,7 +105,9 @@ type AdminSection =
   | "agenda"
   | "testadores"
   | "negociacoes_clyon"
-  | "whatsapp";
+  | "whatsapp"
+  // As contas de assistente — só o administrador a vê.
+  | "equipa";
 
 type Lead = {
   id: number;
@@ -229,6 +239,7 @@ const adminNavItems: Array<{
   { id: "testadores",    icon: FlaskConical },
   { id: "negociacoes_clyon", icon: Building2 },
   { id: "whatsapp", icon: MessageCircle },
+  { id: "equipa", icon: Users },
 ];
 
 /**
@@ -254,7 +265,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // dois sítios é gerir mal".
   { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "agenda", "whatsapp", "carteiras", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
-  { titulo: "Gerir", itens: ["testadores", "configs"] },
+  { titulo: "Gerir", itens: ["testadores", "equipa", "configs"] },
 ];
 
 const sectionLabels: Record<AdminSection, string> = {
@@ -274,6 +285,7 @@ const sectionLabels: Record<AdminSection, string> = {
   testadores:    "Acesso aos testes",
   negociacoes_clyon: "Negociações",
   whatsapp: "WhatsApp",
+  equipa: "Assistentes",
 };
 
 const siteModules = [
@@ -447,8 +459,24 @@ function pedidoNoFiltro(
   return p.status === filtro;
 }
 
-export default function ColaboradorAdminClient() {
+/**
+ * O painel do backoffice, para os dois papéis.
+ *
+ * `papel` diz em que modo a página foi montada: /admin monta "admin",
+ * /admin/assistente monta "assistente". O que muda entre os dois é a lista
+ * de secções que a barra desenha e que o URL aceita — a lista vive em
+ * `papel-do-painel.ts`, a mesma que o middleware e as rotas lêem. Tudo o
+ * resto é o mesmo componente: duas versões do painel eram duas versões da
+ * mesma lógica a divergir.
+ */
+export default function ColaboradorAdminClient({
+  papel = "admin",
+}: {
+  papel?: PapelDoPainel;
+} = {}) {
   const router = useRouter();
+  const paginaBase = paginaInicialDoPapel(papel);
+  const podeVer = (seccao: string) => papelPodeVerSeccao(papel, seccao);
 
   const [token, setToken] = useState("");
   const [adminNome, setAdminNome] = useState("");
@@ -456,7 +484,10 @@ export default function ColaboradorAdminClient() {
   const [isAdminGeral, setIsAdminGeral] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeSection, setActiveSection] = useState<AdminSection>("overview");
+  // O assistente não tem "Início": o dia dele começa nos pedidos.
+  const [activeSection, setActiveSection] = useState<AdminSection>(
+    papel === "assistente" ? "pedidos" : "overview",
+  );
   // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
   const [menuAberto, setMenuAberto] = useState(false);
   const [activeClyonTab, setActiveClyonTab] = useState<AppClyonTab>("visao-geral");
@@ -585,25 +616,34 @@ export default function ColaboradorAdminClient() {
 
     const storedToken = getColaboradorItem("token");
     const storedNome = getColaboradorItem("nome");
-    const storedIsAdmin = getColaboradorItem("isAdmin");
 
     if (!storedToken) {
       router.push("/admin/login");
       return;
     }
 
-    // Só administradores. Antes, quem não fosse admin nem assistente era
-    // mandado para /colaboradores/dashboard; essa área desapareceu com as
-    // funções de motorista e ajudante. Uma sessão antiga guardada no browser
-    // é limpa e volta ao ecrã de entrada.
-    if (storedIsAdmin !== "1") {
+    // Administrador ou assistente. Uma sessão antiga sem papel nenhum — a
+    // dos motoristas e ajudantes, que já não existem — é limpa e volta ao
+    // ecrã de entrada.
+    const papelGuardado = papelGuardadoNoBrowser();
+    if (!papelGuardado) {
       clearColaboradorStorage();
       router.push("/admin/login");
       return;
     }
 
+    // Cada papel tem a sua página. Um assistente que escreva /admin à mão já
+    // foi devolvido pelo middleware; isto apanha o caso inverso e o do
+    // localStorage a discordar do cookie.
+    if (papelGuardado !== papel) {
+      router.replace(paginaInicialDoPapel(papelGuardado));
+      return;
+    }
+
     setToken(storedToken);
-    setAdminNome(storedNome || "Administração");
+    setAdminNome(storedNome || ROTULO_DO_PAPEL[papel]);
+    // "Geral" aqui quer dizer "opera os pedidos": o assistente também. O que
+    // ele NÃO pode — apagar, ver as outras secções — decide-se por `papel`.
     setIsAdminGeral(true);
     const storedId = getColaboradorItem("id");
     if (storedId) setColabId(Number(storedId));
@@ -611,7 +651,11 @@ export default function ColaboradorAdminClient() {
     // Verificar se há section/tab/pedido no URL
     const searchParams = new URLSearchParams(window.location.search);
     const sectionParam = searchParams.get("section") as AdminSection | null;
-    if (sectionParam && adminNavItems.some(item => item.id === sectionParam)) {
+    if (
+      sectionParam &&
+      adminNavItems.some((item) => item.id === sectionParam) &&
+      podeVer(sectionParam)
+    ) {
       setActiveSection(sectionParam);
     }
     const tabParam = searchParams.get("tab") as AppClyonTab | null;
@@ -622,15 +666,20 @@ export default function ColaboradorAdminClient() {
     if (pedidoParam) setActivePedidoId(pedidoParam);
     urlSyncReady.current = true;
 
-    // Quem chega aqui é administrador — o ramo alternativo era do assistente.
-    void carregarSimulatorSettings(storedToken);
-    void carregarImageStats(storedToken);
+    // As configurações são do administrador: ao assistente estas chamadas
+    // respondiam 403 e a primeira punha uma faixa de erro no ecrã inteiro.
+    if (papel === "admin") {
+      void carregarSimulatorSettings(storedToken);
+      void carregarImageStats(storedToken);
+    }
     setLoading(false);
 
     return () => {
       document.head.removeChild(metaRobots);
     };
-  }, [router]);
+    // `papel` vem da página e não muda enquanto ela estiver montada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, papel]);
 
   // Sincronizar URL com a secção e aba activa
   useEffect(() => {
@@ -640,15 +689,15 @@ export default function ColaboradorAdminClient() {
       p.set("tab", activeClyonTab);
       if (activePedidoId) p.set("pedido", activePedidoId);
     }
-    router.replace(`/admin?${p.toString()}`, { scroll: false });
-  }, [activeSection, activeClyonTab, activePedidoId, token, router]);
+    router.replace(`${paginaBase}?${p.toString()}`, { scroll: false });
+  }, [activeSection, activeClyonTab, activePedidoId, token, router, paginaBase]);
 
   // Repor estado ao navegar com os botões Anterior/Seguinte do browser
   useEffect(() => {
     function handlePop() {
       const sp = new URLSearchParams(window.location.search);
       const sec = sp.get("section") as AdminSection | null;
-      if (sec && adminNavItems.some((i) => i.id === sec)) setActiveSection(sec);
+      if (sec && adminNavItems.some((i) => i.id === sec) && podeVer(sec)) setActiveSection(sec);
       const t = sp.get("tab") as AppClyonTab | null;
       if (t && CLYON_TAB_IDS.includes(t)) setActiveClyonTab(t);
       else setActiveClyonTab("visao-geral");
@@ -1105,7 +1154,8 @@ export default function ColaboradorAdminClient() {
   // essa a razão de ele existir. Sem isto voltávamos ao mesmo: ninguém abre
   // o que não sabe que tem coisas lá dentro.
   useEffect(() => {
-    if (!token) return;
+    // O suporte não é do assistente; sem a secção não há contador para acertar.
+    if (!token || !podeVer("suporte")) return;
     carregarTickets(token, ticketsFiltro, true);
     const intervalo = setInterval(() => carregarTickets(token, ticketsFiltro, true), 120000);
     return () => clearInterval(intervalo);
@@ -1284,7 +1334,7 @@ export default function ColaboradorAdminClient() {
             </div>
             <div className="min-w-0 leading-none">
               <p className="text-[9px] font-semibold uppercase leading-none tracking-[0.2em] text-sky-400">
-                Backoffice
+                {papel === "assistente" ? "Assistente" : "Backoffice"}
               </p>
               <p className="mt-0.5 truncate text-[13px] font-semibold leading-none text-white">
                 CLYON
@@ -1306,7 +1356,10 @@ export default function ColaboradorAdminClient() {
               cortar ao meio. */}
           <nav className="flex-1 overflow-y-auto border-r border-slate-800 px-3 py-4">
             {NAV_GRUPOS.map((grupo) => {
+              // O assistente vê só as secções dele; um grupo que fique vazio
+              // nem título mostra.
               const itens = grupo.itens
+                .filter((id) => podeVer(id))
                 .map((id) => adminNavItems.find((i) => i.id === id))
                 .filter((i): i is (typeof adminNavItems)[number] => Boolean(i));
               if (itens.length === 0) return null;
@@ -1365,7 +1418,7 @@ export default function ColaboradorAdminClient() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{adminNome}</p>
-                <p className="text-[11px] text-slate-500">Administração</p>
+                <p className="text-[11px] text-slate-500">{ROTULO_DO_PAPEL[papel]}</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -2259,6 +2312,8 @@ export default function ColaboradorAdminClient() {
               id={selectedPedido.id}
               token={token}
               isAdmin={isAdminGeral}
+              // Apagar é do administrador; o assistente arquiva.
+              permitirApagar={papel === "admin"}
               colabId={colabId ?? undefined}
               onClose={() => { setPedidoDetalheOpen(false); setSelectedPedido(null); }}
               onDeleted={(deletedId) => {
@@ -2938,7 +2993,7 @@ export default function ColaboradorAdminClient() {
                   que o cliente conduz sozinho pelo link do email.
                 </p>
               </div>
-              <AdminNegociacoesPanel mostrar="tudo" />
+              <AdminNegociacoesPanel mostrar="tudo" podeApagar={papel === "admin"} />
             </section>
           )}
 
@@ -2973,6 +3028,24 @@ export default function ColaboradorAdminClient() {
                 </p>
               </div>
               <AdminTestadoresPanel />
+            </section>
+          )}
+
+          {activeSection === "equipa" && papel === "admin" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Equipa
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Assistentes</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Contas com um painel próprio, mais pequeno: pedidos, profissionais,
+                  negociações, agenda e WhatsApp — e nada mais. Não vêem leads, contas,
+                  suporte nem configurações, e não apagam: arquivam. Criam-se aqui,
+                  repõe-se a palavra-passe aqui, e desactivar fecha a porta no acto.
+                </p>
+              </div>
+              <AdminAssistentesPanel />
             </section>
           )}
 

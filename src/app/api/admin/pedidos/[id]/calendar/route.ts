@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getSimulatorOrderById, updateSimulatorOrder } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   isMudancaType,
   getMovingAddresses,
@@ -14,10 +14,9 @@ export const runtime = "nodejs";
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
 
+// Administrador, ou assistente com a conta activa — a agenda é dos dois.
 async function authenticate(req: NextRequest) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return { err: NextResponse.json({ error: "Não autorizado" }, { status: 401 }), colab: null };
-  return { err: null, colab };
+  return requireAdmin(req);
 }
 
 // ─── Private key normalisation ────────────────────────────────────────────────
@@ -97,7 +96,7 @@ function toRfc3339Local(date: string, time: string): string {
 //   calendarNotes?
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { err, colab } = await authenticate(req);
+  const { err } = await authenticate(req);
   if (err) return err;
 
   const { id } = await params;
@@ -108,10 +107,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
   }
 
-  // Permission: admin can schedule any order; assistant only orders assigned to them
-  if (!colab!.isAdmin && order.assignedToId !== colab!.id) {
-    return NextResponse.json({ error: "Sem permissão para agendar este pedido." }, { status: 403 });
-  }
+  // Quem passou pelo `authenticate` agenda qualquer pedido: o assistente de
+  // hoje opera a fila inteira, não só o que lhe foi atribuído.
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch {}

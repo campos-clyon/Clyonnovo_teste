@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSimulatorOrderById } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   isMudancaType,
   getMovingAddresses,
@@ -16,9 +16,6 @@ export const runtime = "nodejs";
 // that will be sent to Google Calendar. Used by the modal to pre-fill
 // the editable description textarea before the user confirms scheduling.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-
   // ⚠️ Isto verificava apenas que existia um token válido, e mais nada.
   //
   // A resposta traz a descrição completa do pedido — nome, telefone, email,
@@ -26,11 +23,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // endereço e um token de qualquer conta, dava para percorrer 1, 2, 3… e
   // recolher os dados pessoais de todos os clientes.
   //
-  // A rota irmã, GET /api/admin/pedidos/[id], já verificava quem entrava.
-  // Esta devolve o mesmo conteúdo e não verificava nada.
-  if (colab.isAdmin !== 1) {
-    return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
-  }
+  // Passa pelo mesmo crivo da rota irmã, GET /api/admin/pedidos/[id]:
+  // administrador, ou assistente com a conta activa.
+  const { err } = await requireAdmin(req);
+  if (err) return err;
 
   const { id } = await params;
   const orderId = Number(id);
