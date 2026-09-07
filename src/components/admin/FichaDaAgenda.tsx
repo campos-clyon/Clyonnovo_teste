@@ -420,8 +420,9 @@ export default function FichaDaAgenda({
           >
             <p className="text-xl font-bold text-white">{euros(t.valorAcordado)}</p>
             <p className="mt-0.5 text-xs text-slate-500">
-              {t.profissionalNome.split(" ")[0]} recebe {euros(t.recebe)} · o cliente paga{" "}
-              {euros(t.clientePaga)}
+              {t.profissionalNome.split(" ")[0]} recebe {euros(t.recebe)}, sem IVA · o cliente paga{" "}
+              {euros(t.clientePaga)} no total — o IVA, se o profissional o cobrar, é dele e vai na
+              factura dele; a CLYON fica só com a taxa
             </p>
 
             {aEditarValor && (

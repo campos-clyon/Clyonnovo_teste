@@ -30,6 +30,8 @@ import {
   regimeDeIva,
   quantoOProfissionalRecebe,
   comissaoDaClyon,
+  TAXA_CLIENTE,
+  TAXA_PROFISSIONAL,
 } from "@/lib/taxas-plataforma";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
@@ -1291,29 +1293,33 @@ export default function AdminNegociacoesPanel({
             <p className="font-semibold text-emerald-300">
               Trabalho concluído com {acordada.profissionalNome}
             </p>
-            <p className="mt-1 text-slate-300">
-              Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong> sem IVA
-              {" · "}o cliente paga{" "}
-              <strong>
-                {euros(
-                  contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva))
-                    .total,
-                )}
-              </strong>{" "}
-              {/* O IVA é do profissional — é ele que o factura e o entrega. */}
-              (IVA do profissional{" "}
-              {euros(
-                contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva)).iva,
-              )}
-              {" + taxa CLYON "}
-              {euros(
-                contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva)).taxa,
-              )}
-              )
-              {" · "}o profissional recebe{" "}
-              <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado)))}</strong>
-              {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
-            </p>
+            {(() => {
+              /*
+                QUEM RECEBE O QUÊ, e não um total só.
+
+                "O IVA quem cobra são os pros." Dizia "o cliente paga 387 €
+                (IVA 69 € + taxa 18 €)" e lia-se como se a CLYON cobrasse o
+                imposto. Não cobra: o IVA é do profissional, vai na factura
+                dele, e é a ele que o cliente o paga. O que vai à CLYON é só a
+                taxa. Separa-se, para o dinheiro se ler como circula.
+              */
+              const conta = contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva));
+              const aoProfissional = Math.round((conta.servico + conta.iva) * 100) / 100;
+              return (
+                <p className="mt-1 text-slate-300">
+                  Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong> sem IVA
+                  {" · "}o cliente paga <strong>{euros(conta.total)}</strong>
+                  {" — "}
+                  {euros(aoProfissional)} ao profissional
+                  {conta.temIva ? ` (com o IVA dele, ${euros(conta.iva)}, na factura dele)` : " (isento de IVA)"}
+                  {" e "}
+                  {euros(conta.taxa)} de taxa à CLYON
+                  {" · "}o profissional recebe, sem IVA,{" "}
+                  <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado)))}</strong>
+                  {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
+                </p>
+              );
+            })()}
 
             {/*
               A NOTA DO PROFISSIONAL, aqui e não noutro sítio.
@@ -2808,6 +2814,11 @@ function AvaliarPelaClyon({
   );
 }
 
+/** "5 %" — a taxa como se lê, a partir da constante. */
+function pct(taxa: number): string {
+  return `${Math.round(taxa * 100)} %`;
+}
+
 function ConfirmarPelaClyon({
   negociacaoId,
   pedidoId,
@@ -2860,39 +2871,65 @@ function ConfirmarPelaClyon({
         Confirme depois de falar com ele e de o trabalho estar pago.
       </p>
 
-      {valorAcordado != null && (
-        <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400">
-              Cobrar ao cliente
-              <span className="block text-[10px] text-slate-500">
-                {/* O IVA, quando há, é do profissional: é ele que o factura. */}
-                {regimeDeIva(regimeIva) === "normal"
-                  ? "acordado + IVA do profissional + taxa CLYON"
-                  : "acordado + taxa CLYON (profissional isento de IVA)"}
-              </span>
-            </dt>
-            <dd className="font-semibold tabular-nums text-slate-100">
-              {euros(contaDoCliente(valorAcordado, regimeDeIva(regimeIva)).total)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400">
-              O profissional recebe
-              <span className="block text-[10px] text-slate-500">
-                sem IVA — o imposto, se o cobrar, segue na factura dele
-              </span>
-            </dt>
-            <dd className="font-semibold tabular-nums text-slate-100">
-              {euros(quantoOProfissionalRecebe(valorAcordado))}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between border-t border-slate-800 pt-1">
-            <dt className="text-slate-500">Fica para a CLYON</dt>
-            <dd className="tabular-nums text-slate-400">{euros(comissaoDaClyon(valorAcordado))}</dd>
-          </div>
-        </dl>
-      )}
+      {valorAcordado != null &&
+        (() => {
+          /*
+            QUEM RECEBE O QUÊ.
+
+            "O IVA quem cobra são os pros." Isto dizia «Cobrar ao cliente —
+            acordado + IVA + taxa — 387,00 €», e lia-se como se a CLYON fosse
+            cobrar 387 € com imposto dentro. Não é: o cliente paga ao
+            PROFISSIONAL o valor acordado mais o IVA que ele factura (se
+            facturar), e paga à CLYON só a taxa. O total é a soma das duas
+            transferências, e é assim que se mostra — duas linhas debaixo do
+            total, uma por destinatário.
+          */
+          const conta = contaDoCliente(valorAcordado, regimeDeIva(regimeIva));
+          const aoProfissional = Math.round((conta.servico + conta.iva) * 100) / 100;
+          return (
+            <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-300">O cliente paga, no total</dt>
+                <dd className="font-semibold tabular-nums text-slate-100">
+                  {euros(contaDoCliente(valorAcordado, regimeDeIva(regimeIva)).total)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between pl-3">
+                <dt className="text-slate-500">
+                  ao profissional — acordado{" "}
+                  {conta.temIva
+                    ? `+ IVA ${euros(conta.iva)}, na factura dele`
+                    : "(isento de IVA)"}
+                </dt>
+                <dd className="tabular-nums text-slate-300">{euros(aoProfissional)}</dd>
+              </div>
+              <div className="flex items-center justify-between pl-3">
+                <dt className="text-slate-500">à CLYON — taxa de {pct(TAXA_CLIENTE)}</dt>
+                <dd className="tabular-nums text-slate-300">{euros(conta.taxa)}</dd>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-800 pt-1">
+                <dt className="text-slate-300">
+                  O profissional recebe, sem IVA
+                  <span className="block text-[10px] text-slate-500">
+                    acordado − {pct(TAXA_PROFISSIONAL)}; o imposto, se o cobrar, é dele e entrega-o ele
+                  </span>
+                </dt>
+                <dd className="font-semibold tabular-nums text-slate-100">
+                  {euros(quantoOProfissionalRecebe(valorAcordado))}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">
+                  Fica para a CLYON
+                  <span className="block text-[10px] text-slate-600">
+                    {pct(TAXA_CLIENTE)} do cliente + {pct(TAXA_PROFISSIONAL)} do profissional
+                  </span>
+                </dt>
+                <dd className="tabular-nums text-slate-400">{euros(comissaoDaClyon(valorAcordado))}</dd>
+              </div>
+            </dl>
+          );
+        })()}
 
       {erro && (
         <p className="mt-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1.5 text-xs text-red-300">
