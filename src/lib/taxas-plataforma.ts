@@ -10,13 +10,23 @@
  * reserva ao cliente e 10 % de aceitação ao profissional, com o preço fechado
  * pela CLYON). A divergência é deliberada: testa-se o modelo novo no site
  * antes de lhe tocar na app.
+ *
+ * TROCADAS EM 07-09-2026. Estavam ao contrário — 6 % ao cliente e 5 % ao
+ * profissional — e o dono do negócio corrigiu: "são 6% dos pros e 5% do
+ * cliente". O total continua 11 %; o que muda é de que lado sai cada parte.
+ * Como todos os ecrãs, emails e mensagens leem estas duas constantes, a troca
+ * é aqui e só aqui; os testes em `taxas-plataforma.test.ts` têm os números.
+ *
+ * O IVA NÃO ENTRA NISTO. Quem factura o serviço é o profissional, e o imposto
+ * é do regime dele: soma-se ao que o cliente paga e segue com ele — a CLYON
+ * não o cobra nem fica com ele. Ver `ivaSobre` e `contaDoCliente` em baixo.
  */
 
 /** Somada ao valor acordado, no que o cliente paga. */
-export const TAXA_CLIENTE = 0.06;
+export const TAXA_CLIENTE = 0.05;
 
 /** Descontada ao valor acordado, no que o profissional recebe. */
-export const TAXA_PROFISSIONAL = 0.05;
+export const TAXA_PROFISSIONAL = 0.06;
 
 function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -85,7 +95,7 @@ export type ContaDoCliente = {
   servico: number;
   /** O IVA do serviço — zero quando o profissional está isento. */
   iva: number;
-  /** A taxa da CLYON: 6 % sobre o serviço. */
+  /** A taxa da CLYON ao cliente: `TAXA_CLIENTE` sobre o serviço. */
   taxa: number;
   /** O que sai da carteira dele. É este o número grande. */
   total: number;
@@ -129,11 +139,14 @@ export function servicoMaisTaxa(acordado: number): number {
 }
 
 /**
- * O que o profissional recebe: acordado − 5 %.
+ * O que o profissional recebe: acordado − `TAXA_PROFISSIONAL`.
  *
  * É este o número que se lhe mostra em todo o lado, incluindo no saldo cativo.
- * Nunca o bruto: mostrar 200 retidos e 190 disponíveis levantava a pergunta
- * "onde foram os 10 €", e a resposta certa é que nunca foram dele.
+ * Nunca o bruto: mostrar 200 retidos e 188 disponíveis levantava a pergunta
+ * "onde foram os 12 €", e a resposta certa é que nunca foram dele.
+ *
+ * SEM IVA, sempre. O imposto que ele liquida, quando liquida, é dele e vai
+ * na factura dele ao cliente; não passa por esta conta.
  */
 export function quantoOProfissionalRecebe(acordado: number): number {
   return aosCentimos(acordado * (1 - TAXA_PROFISSIONAL));

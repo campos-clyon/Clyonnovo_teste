@@ -28,7 +28,7 @@ import { TAXA_TOTAL } from "@/lib/taxas-plataforma";
  *
  * O QUE CADA UM GANHA: uma percentagem da comissão da CLYON em cada trabalho
  * concluído de que foi responsável. A comissão da CLYON é a taxa da
- * plataforma (6 % + 5 % = 11 %, ver `taxas-plataforma.ts`), guardada aqui como
+ * plataforma (5 % + 6 % = 11 %, ver `taxas-plataforma.ts`), guardada aqui como
  * número editável porque o administrador vai querer mexer-lhe sem tocar no
  * código; a parte do assistente (40 % por omissão) está na coluna
  * `commissionPercent`, que a tabela já tinha.

@@ -13,17 +13,18 @@ import {
 } from "./taxas-plataforma";
 
 describe("taxas da plataforma", () => {
-  // O exemplo que está escrito na homepage e na página dos profissionais. Se
-  // este teste falhar, o site passa a mostrar contas que não batem certo.
-  it("sobre 200 € acordados: cliente paga 212, profissional recebe 190", () => {
-    expect(servicoMaisTaxa(200)).toBe(212);
-    expect(quantoOProfissionalRecebe(200)).toBe(190);
+  // O exemplo que está escrito na página dos profissionais. Se este teste
+  // falhar, o site passa a mostrar contas que não batem certo.
+  it("sobre 200 € acordados: cliente paga 210, profissional recebe 188", () => {
+    expect(servicoMaisTaxa(200)).toBe(210);
+    expect(quantoOProfissionalRecebe(200)).toBe(188);
     expect(comissaoDaClyon(200)).toBe(22);
   });
 
-  it("as percentagens são as decididas", () => {
-    expect(TAXA_CLIENTE).toBe(0.06);
-    expect(TAXA_PROFISSIONAL).toBe(0.05);
+  it("as percentagens são as decididas — 5 % ao cliente, 6 % ao profissional (07-09-2026)", () => {
+    // Estavam ao contrário até 07-09-2026. "São 6% dos pros e 5% do cliente."
+    expect(TAXA_CLIENTE).toBe(0.05);
+    expect(TAXA_PROFISSIONAL).toBe(0.06);
     expect(TAXA_TOTAL).toBeCloseTo(0.11, 10);
   });
 
@@ -34,8 +35,9 @@ describe("taxas da plataforma", () => {
   });
 
   it("arredonda aos cêntimos sem lixo de vírgula flutuante", () => {
-    expect(servicoMaisTaxa(33.33)).toBe(35.33);
-    expect(quantoOProfissionalRecebe(33.33)).toBe(31.66);
+    // 33,33 × 1,05 = 34,9965 → 35,00; 33,33 × 0,94 = 31,3302 → 31,33.
+    expect(servicoMaisTaxa(33.33)).toBe(35);
+    expect(quantoOProfissionalRecebe(33.33)).toBe(31.33);
     expect(Number.isInteger(servicoMaisTaxa(10) * 100)).toBe(true);
   });
 
@@ -86,20 +88,20 @@ describe("IVA — soma-se ao valor acordado, e não se decompõe dele", () => {
 });
 
 describe("a conta do cliente", () => {
-  it("350 € acordados no regime normal dão 451,50 € a pagar", () => {
-    // Serviço 350 + IVA 80,50 + taxa CLYON 21 = 451,50.
+  it("350 € acordados no regime normal dão 448,00 € a pagar", () => {
+    // Serviço 350 + IVA 80,50 (do profissional) + taxa CLYON 17,50 = 448,00.
     const c = contaDoCliente(350, "normal");
     expect(c.servico).toBe(350);
     expect(c.iva).toBe(80.5);
-    expect(c.taxa).toBe(21);
-    expect(c.total).toBe(451.5);
+    expect(c.taxa).toBe(17.5);
+    expect(c.total).toBe(448);
     expect(c.temIva).toBe(true);
   });
 
-  it("os mesmos 350 € com um isento dão 371,00 €", () => {
+  it("os mesmos 350 € com um isento dão 367,50 €", () => {
     const c = contaDoCliente(350, "isento");
     expect(c.iva).toBe(0);
-    expect(c.total).toBe(371);
+    expect(c.total).toBe(367.5);
     expect(c.temIva).toBe(false);
   });
 

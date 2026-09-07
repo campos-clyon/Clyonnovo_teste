@@ -1,5 +1,8 @@
 import type { Proposta } from "./negociacao";
-import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
+import { contaDoCliente, regimeDeIva, TAXA_CLIENTE } from "./taxas-plataforma";
+
+/** "5%" — lido da constante, para a mensagem nunca dizer uma taxa que já não é. */
+const TAXA_CLIENTE_TEXTO = `${Math.round(TAXA_CLIENTE * 100)}%`;
 import { PROMESSA } from "./pagamento-na-plataforma";
 
 /**
@@ -244,7 +247,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
         ` ${euros(d.fechado.valor)} sem IVA, ${euros(d.fechado.total)} a pagar` +
-        " (já com o imposto e a taxa CLYON de 6%).",
+        ` (já com o imposto do profissional e a taxa CLYON de ${TAXA_CLIENTE_TEXTO}).`,
     );
     linhas.push("");
     linhas.push(
@@ -294,7 +297,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      */
     linhas.push(
       "O primeiro valor é sem IVA. No total já entram o imposto — que nem todos" +
-        " os profissionais cobram — e a taxa CLYON de 6%.",
+        ` os profissionais cobram — e a taxa CLYON de ${TAXA_CLIENTE_TEXTO}.`,
     );
     linhas.push("");
     /*

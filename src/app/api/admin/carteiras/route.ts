@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
        *
        * "Coloque também os ganhos da CLYON."
        *
-       * Vem das duas pontas — 6% que o cliente paga a mais e 5% que se desconta
+       * Vem das duas pontas — 5% que o cliente paga a mais e 6% que se desconta
        * ao profissional — e por isso não se lê nem do que entra nem do que sai:
        * é a diferença entre os dois, e ninguém a via em lado nenhum.
        *

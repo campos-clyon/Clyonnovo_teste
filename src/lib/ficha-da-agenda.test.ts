@@ -74,7 +74,7 @@ describe("a ficha mostra o que ele pediu para ver", () => {
   it("o valor — e os dois números que saem dele", () => {
     /*
      * Do valor acordado saem outros dois que não são iguais a ele: o que o
-     * profissional recebe (menos 5 %) e o que o cliente paga (mais a taxa e o
+     * profissional recebe (menos 6 %) e o que o cliente paga (mais a taxa e o
      * IVA). Sem os três à vista, corrige-se 135 para 230 sem reparar que a
      * transferência passou a ser de 218,50 €.
      */

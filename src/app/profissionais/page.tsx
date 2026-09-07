@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
 export const metadata: Metadata = {
   title: "Receba pedidos na sua zona — CLYON para profissionais",
@@ -121,7 +122,14 @@ export default function ProfissionaisPage() {
                 <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                   Recebe
                 </div>
-                <div className="mt-1.5 text-3xl font-bold text-emerald-600">190 €</div>
+                {/*
+                  Calculado da constante, e não escrito à mão: quando as taxas
+                  mudaram (07-09-2026) este número estava a dizer 190 € a quem
+                  ia receber 188 €.
+                */}
+                <div className="mt-1.5 text-3xl font-bold text-emerald-600">
+                  {Math.round(quantoOProfissionalRecebe(200))} €
+                </div>
                 <p className="mt-1 text-xs text-slate-500">Já inclui a taxa CLYON</p>
               </div>
             </div>

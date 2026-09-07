@@ -36,8 +36,9 @@ Só o administrador, na secção **Gerir → Assistentes** do painel dele:
   que a pessoa fizer, sem sair e entrar. Desactivar fecha a porta no acto.
   O registo fica; não se apagam pessoas.
 - **Comissão da CLYON**: a percentagem comum a todas as contas, no topo da
-  secção. Por omissão 11 % — a taxa total da plataforma (6 % ao cliente +
-  5 % ao profissional, `taxas-plataforma.ts`).
+  secção. Por omissão 11 % — a taxa total da plataforma (5 % ao cliente +
+  6 % ao profissional, `taxas-plataforma.ts`; trocadas em 07-09-2026). O IVA
+  não entra: é do profissional, que o factura ao cliente.
 
 ## Os trabalhos e a comissão
 
