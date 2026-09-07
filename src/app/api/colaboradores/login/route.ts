@@ -4,6 +4,7 @@ import * as jose from "jose";
 
 import { getColaboradorByNome, getDb } from "@/lib/db";
 import { COOKIE_SESSAO_ADMIN, DURACAO_SESSAO_ADMIN_SEGUNDOS, getColaboradorSecretKey } from "@/lib/colaborador-auth";
+import { paginaInicialDoPapel, type PapelDoPainel } from "@/lib/papel-do-painel";
 
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -131,25 +132,41 @@ export async function POST(req: NextRequest) {
     // Login bem-sucedido: limpa o contador de tentativas deste IP.
     limparTentativas(ip);
 
-    // As funções de assistente, motorista e ajudante deixaram de existir. As
-    // contas antigas continuam na tabela — não se apagam registos de pessoas
-    // que trabalharam connosco — mas deixam de poder entrar.
+    // Dois papéis entram: o administrador e o assistente.
     //
     // Aceita-se `funcao === "admin"` além de `isAdmin === 1` porque houve
     // contas gravadas só com a função, com isAdmin a 0; o token normaliza para
     // 1. Sem isto, um administrador antigo ficava fechado fora do painel.
+    //
+    // O assistente é `funcao === "assistente"` com a conta activa. As funções
+    // de motorista e ajudante deixaram de existir: as contas continuam na
+    // tabela — não se apagam registos de pessoas que trabalharam connosco —
+    // mas não têm para onde entrar.
     const eAdministrador = colaborador.isAdmin === 1 || colaborador.funcao === "admin";
-    if (!eAdministrador) {
+    const eAssistente = !eAdministrador && colaborador.funcao === "assistente";
+    if (!eAdministrador && !eAssistente) {
       return NextResponse.json(
         { error: "Esta conta não tem acesso ao backoffice." },
         { status: 403 },
       );
     }
+    if (eAssistente && Number(colaborador.active) !== 1) {
+      // A palavra-passe conferiu, portanto não se está a revelar nada a um
+      // estranho: é a própria pessoa a saber que a conta foi fechada.
+      return NextResponse.json(
+        { error: "Esta conta de assistente está desactivada. Fale com a administração." },
+        { status: 403 },
+      );
+    }
+
+    const papel: PapelDoPainel = eAdministrador ? "admin" : "assistente";
+    const isAdmin = eAdministrador ? 1 : 0;
 
     const token = await new jose.SignJWT({
       id: colaborador.id,
       nome: colaborador.nome,
-      isAdmin: 1,
+      isAdmin,
+      papel,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime(manterSessao ? "30d" : "8h")
@@ -160,8 +177,11 @@ export async function POST(req: NextRequest) {
       colaborador: {
         id: colaborador.id,
         nome: colaborador.nome,
-        isAdmin: 1,
+        isAdmin,
+        papel,
       },
+      // Onde o browser deve cair: o painel do administrador ou o do assistente.
+      paginaInicial: paginaInicialDoPapel(papel),
     });
 
     // O mesmo token, agora também onde o servidor o vê. httpOnly para que

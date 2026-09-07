@@ -294,7 +294,14 @@ type PorPromover = {
 
 export default function AdminNegociacoesPanel({
   mostrar = "tudo",
+  podeApagar = true,
 }: {
+  /**
+   * Apagar é do administrador. O assistente vê a mesma mesa e arquiva; o
+   * botão de apagar não lhe aparece — e o servidor recusava-o na mesma, mas
+   * um botão que responde sempre "não" é um botão que não devia estar lá.
+   */
+  podeApagar?: boolean;
   /*
    * O ecrã pode mostrar só metade do painel.
    *
@@ -790,7 +797,7 @@ export default function AdminNegociacoesPanel({
    * `recusados` com o motivo.
    */
   async function apagarPedidos(ids: number[]) {
-    if (!token || ids.length === 0) return;
+    if (!token || ids.length === 0 || !podeApagar) return;
     setAApagar(true);
     setErro("");
     setRecusados([]);
@@ -1752,7 +1759,7 @@ export default function AdminNegociacoesPanel({
    * em vez de sumirem no meio de um "apagados 10 de 12".
    */
   async function apagarMarcados() {
-    if (!token || marcados.size === 0) return;
+    if (!token || marcados.size === 0 || !podeApagar) return;
     const quantos = marcados.size;
     if (
       !confirm(
@@ -1900,18 +1907,20 @@ export default function AdminNegociacoesPanel({
               )}
               Arquivar
             </button>
-            <button
-              onClick={apagarMarcados}
-              disabled={aApagar || ocupado === "lote-arquivar"}
-              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
-            >
-              {aApagar ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-              Apagar
-            </button>
+            {podeApagar && (
+              <button
+                onClick={apagarMarcados}
+                disabled={aApagar || ocupado === "lote-arquivar"}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
+              >
+                {aApagar ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Apagar
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1998,6 +2007,7 @@ export default function AdminNegociacoesPanel({
           onArquivar={arquivarPedido}
           onArquivarVarios={arquivarPedidos}
           onApagar={apagarPedidos}
+          podeApagar={podeApagar}
           aApagar={aApagar}
           onEditar={setAEditarPlataforma}
         />
@@ -2357,6 +2367,7 @@ function PedidosPorPromover({
   onArquivar,
   onArquivarVarios,
   onApagar,
+  podeApagar = true,
   aApagar,
   onEditar,
 }: {
@@ -2368,6 +2379,8 @@ function PedidosPorPromover({
   onArquivar: (id: number) => void;
   onArquivarVarios: (ids: number[]) => void;
   onApagar: (ids: number[]) => void;
+  /** O assistente arquiva mas não apaga. */
+  podeApagar?: boolean;
   aApagar: boolean;
   /** Abre o pedido para corrigir — o mesmo editor da mesa. */
   onEditar: (id: number) => void;
@@ -2600,21 +2613,23 @@ function PedidosPorPromover({
             )}
             Arquivar
           </button>
-          <button
-            onClick={() => {
-              onApagar([...marcados]);
-              setMarcados(new Set());
-            }}
-            disabled={aApagar || ocupado === "lote-arquivar"}
-            className="flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
-          >
-            {aApagar ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            Apagar
-          </button>
+          {podeApagar && (
+            <button
+              onClick={() => {
+                onApagar([...marcados]);
+                setMarcados(new Set());
+              }}
+              disabled={aApagar || ocupado === "lote-arquivar"}
+              className="flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+            >
+              {aApagar ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Apagar
+            </button>
+          )}
           <button
             onClick={() => setMarcados(new Set())}
             className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
+import { paginaInicialDoPapel, type PapelDoPainel } from "@/lib/papel-do-painel";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -41,21 +42,30 @@ export default function AdminLoginPage() {
         setError(data.error || "Credenciais inválidas.");
         return;
       }
-      // Só administradores entram no backoffice. As funções de assistente,
-      // motorista e ajudante deixaram de existir — a conta que não seja de
-      // administrador não tem para onde ir, e é melhor dizê-lo aqui do que
-      // deixar entrar e falhar em cada ecrã lá dentro.
+      // Dois papéis entram: o administrador, que cai onde ia, e o assistente,
+      // que tem um painel só dele. Quem não for nem um nem outro não tem para
+      // onde ir, e é melhor dizê-lo aqui do que deixar entrar e falhar em cada
+      // ecrã lá dentro. O servidor já recusou; isto é a rede de segurança.
       const isAdmin = data.colaborador.isAdmin === 1 || data.colaborador.isAdmin === true;
-      if (!isAdmin) {
+      const papel: PapelDoPainel | null = isAdmin
+        ? "admin"
+        : data.colaborador.papel === "assistente"
+          ? "assistente"
+          : null;
+      if (!papel) {
         setError("Esta conta não tem acesso ao backoffice.");
         return;
       }
       localStorage.setItem("colaborador_token", data.token);
       localStorage.setItem("colaborador_nome", data.colaborador.nome);
       localStorage.setItem("colaborador_id", String(data.colaborador.id));
-      localStorage.setItem("colaborador_isAdmin", "1");
+      localStorage.setItem("colaborador_isAdmin", isAdmin ? "1" : "0");
+      localStorage.setItem("colaborador_papel", papel);
       localStorage.removeItem("colaborador_funcao");
-      router.push(proximo);
+      // O assistente vai sempre para o painel dele — um "proximo" apontado ao
+      // painel do administrador só o faria dar a volta pelo middleware.
+      const destino = papel === "assistente" ? paginaInicialDoPapel("assistente") : proximo;
+      router.push(destino);
     } catch {
       setError("Erro de ligação. Tente novamente.");
     } finally {

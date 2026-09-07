@@ -6,19 +6,39 @@ import {
   getColaboradorItem,
   clearColaboradorStorage,
 } from "@/lib/colaborador-storage";
+import type { PapelDoPainel } from "@/lib/papel-do-painel";
 
 export type AdminUser = {
   id: number;
   nome: string;
   isAdmin: boolean;
+  papel: PapelDoPainel;
   funcao: string;
 };
 
 /**
- * Hook de autenticação administrativa.
+ * Lê o papel guardado no browser.
  *
- * Fonte canónica: família colaborador_* (token, nome, id, isAdmin, funcao)
- * gravada pelo /api/colaboradores/login e acessível via getColaboradorItem.
+ * `colaborador_isAdmin = "1"` é administrador — a forma antiga, que continua
+ * a valer. `colaborador_papel = "assistente"` é assistente. Qualquer outra
+ * combinação não é sessão nenhuma.
+ */
+export function papelGuardadoNoBrowser(): PapelDoPainel | null {
+  const isAdminStr = getColaboradorItem("isAdmin");
+  if (isAdminStr === "1" || isAdminStr === "true") return "admin";
+  if (getColaboradorItem("papel") === "assistente") return "assistente";
+  return null;
+}
+
+/**
+ * Hook de autenticação do backoffice.
+ *
+ * Fonte canónica: família colaborador_* (token, nome, id, isAdmin, papel,
+ * funcao) gravada pelo /api/colaboradores/login e acessível via
+ * getColaboradorItem.
+ *
+ * Aceita administradores e assistentes. Quem decide o que cada um pode
+ * chamar é o servidor; isto só diz ao ecrã quem está a trabalhar.
  *
  * Migração de compatibilidade: se encontrar admin_token/admin_user (formato
  * antigo), lê uma vez e limpa; o utilizador fará novo login com o formato
@@ -37,13 +57,13 @@ export function useAdminAuth({ skip = false }: { skip?: boolean } = {}) {
     const t = getColaboradorItem("token");
     const nome = getColaboradorItem("nome");
     const idStr = getColaboradorItem("id");
-    const isAdminStr = getColaboradorItem("isAdmin");
     const funcao = getColaboradorItem("funcao") ?? "";
 
     if (t && nome) {
-      const isAdmin = isAdminStr === "1" || isAdminStr === "true";
-      if (!isAdmin) {
-        // Colaborador autenticado mas sem acesso administrativo
+      const papel = papelGuardadoNoBrowser();
+      if (!papel) {
+        // Colaborador autenticado mas sem papel no backoffice
+        clearColaboradorStorage();
         router.replace("/admin/login");
         return;
       }
@@ -51,7 +71,8 @@ export function useAdminAuth({ skip = false }: { skip?: boolean } = {}) {
       setUser({
         id: parseInt(idStr ?? "0", 10),
         nome,
-        isAdmin,
+        isAdmin: papel === "admin",
+        papel,
         funcao,
       });
       setReady(true);
@@ -86,5 +107,5 @@ export function useAdminAuth({ skip = false }: { skip?: boolean } = {}) {
     return { Authorization: `Bearer ${token}` } as Record<string, string>;
   }, [token]);
 
-  return { token, user, ready, logout, authHeader };
+  return { token, user, ready, logout, authHeader, papel: user?.papel ?? null };
 }

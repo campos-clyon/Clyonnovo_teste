@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, toMySQLDateTime } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -13,12 +13,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const jwt = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!jwt) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-
-  if (Number(jwt.isAdmin) !== 1) {
-    return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
-  }
+  const { err } = await requireAdmin(req);
+  if (err) return err;
 
   const { id } = await params;
   const orderId = Number(id);

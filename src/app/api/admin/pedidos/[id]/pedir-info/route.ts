@@ -4,7 +4,7 @@ import {
   updateSimulatorOrder,
   appendOrderHistory,
 } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 
 export const runtime = "nodejs";
 
@@ -21,12 +21,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const jwt = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!jwt) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-
-  if (Number(jwt.isAdmin) !== 1) {
-    return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
-  }
+  const { err, colab: jwt } = await requireAdmin(req);
+  if (err) return err;
 
   const { id } = await params;
   const orderId = Number(id);
@@ -52,7 +48,7 @@ export async function POST(
 
   await appendOrderHistory(orderId, {
     type: "info_requested",
-    by: { id: jwt.id, nome: jwt.nome, role: "admin" },
+    by: { id: jwt.id, nome: jwt.nome, role: jwt.papel },
     message: `Pedido de informação enviado ao cliente: "${message.slice(0, 200)}${message.length > 200 ? "…" : ""}"`,
   });
 

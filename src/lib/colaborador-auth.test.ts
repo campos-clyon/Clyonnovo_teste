@@ -144,3 +144,63 @@ describe("verifyColaboradorAuthHeader", () => {
     expect(isAdmin).toBe(false);
   });
 });
+
+// ─── O papel no token ────────────────────────────────────────────────────────
+//
+// O assistente entra com `isAdmin: 0` e `papel: "assistente"`. Um token
+// antigo de administrador não traz `papel` nenhum e tem de continuar a ser
+// administrador; um token com `isAdmin: 0` e sem papel — a forma dos antigos
+// motoristas — não é de ninguém do backoffice.
+
+describe("papel do token", () => {
+  let papelDoColaborador: typeof import("./colaborador-auth").papelDoColaborador;
+  let sessaoDoPainel: typeof import("./colaborador-auth").sessaoDoPainel;
+  let sessaoDeAdminValida: typeof import("./colaborador-auth").sessaoDeAdminValida;
+
+  beforeAll(async () => {
+    process.env.JWT_SECRET = TEST_SECRET;
+    const mod = await import("./colaborador-auth");
+    papelDoColaborador = mod.papelDoColaborador;
+    sessaoDoPainel = mod.sessaoDoPainel;
+    sessaoDeAdminValida = mod.sessaoDeAdminValida;
+  });
+
+  it("isAdmin=1 é administrador, com ou sem papel", () => {
+    expect(papelDoColaborador({ isAdmin: 1 })).toBe("admin");
+    expect(papelDoColaborador({ isAdmin: 1, papel: "admin" })).toBe("admin");
+  });
+
+  it("isAdmin=0 com papel assistente é assistente", () => {
+    expect(papelDoColaborador({ isAdmin: 0, papel: "assistente" })).toBe("assistente");
+  });
+
+  it("isAdmin=0 sem papel não é ninguém do backoffice", () => {
+    expect(papelDoColaborador({ isAdmin: 0 })).toBeNull();
+    expect(papelDoColaborador(null)).toBeNull();
+  });
+
+  it("um papel de assistente não promove um isAdmin=1 a menos, nem um 'admin' escrito à mão promove um isAdmin=0", () => {
+    expect(papelDoColaborador({ isAdmin: 1, papel: "assistente" })).toBe("admin");
+    expect(papelDoColaborador({ isAdmin: 0, papel: "admin" })).toBeNull();
+  });
+
+  it("sessaoDoPainel devolve o papel do token de assistente e sessaoDeAdminValida recusa-o", async () => {
+    const token = await mintToken({ id: 7, nome: "MARIA", isAdmin: 0, papel: "assistente" });
+    const sessao = await sessaoDoPainel(token);
+    expect(sessao?.papel).toBe("assistente");
+    expect(sessao?.colab.id).toBe(7);
+    expect(await sessaoDeAdminValida(token)).toBe(false);
+  });
+
+  it("sessaoDoPainel devolve admin para um token antigo sem papel", async () => {
+    const token = await mintToken({ id: 1, nome: "WANDERSON", isAdmin: 1 });
+    expect((await sessaoDoPainel(token))?.papel).toBe("admin");
+    expect(await sessaoDeAdminValida(token)).toBe(true);
+  });
+
+  it("sessaoDoPainel recusa tokens de outros domínios e tokens sem papel nenhum", async () => {
+    expect(await sessaoDoPainel(await mintToken({ id: 3, nome: "X", isAdmin: 0 }))).toBeNull();
+    expect(await sessaoDoPainel(await mintToken({ id: 3, nome: "X", isAdmin: 0, papel: "assistente", type: "profissional" }))).toBeNull();
+    expect(await sessaoDoPainel(null)).toBeNull();
+  });
+});

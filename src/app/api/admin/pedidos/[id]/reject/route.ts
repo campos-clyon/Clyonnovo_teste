@@ -4,7 +4,7 @@ import {
   updateSimulatorOrder,
   appendOrderHistory,
 } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 
 export const runtime = "nodejs";
 
@@ -19,10 +19,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const jwt = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!jwt) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-  }
+  // Administrador, ou assistente com a conta activa. Arquivar é a acção
+  // normal do dia a dia dos dois — o que o assistente não faz é apagar.
+  const { err, colab: jwt } = await requireAdmin(req);
+  if (err) return err;
 
   const { id } = await params;
   const orderId = Number(id);
@@ -30,12 +30,6 @@ export async function POST(
   const order = await getSimulatorOrderById(orderId);
   if (!order) {
     return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
-  }
-
-  const isAdmin = Number(jwt.isAdmin) === 1;
-
-  if (!isAdmin && order.assignedToId !== jwt.id) {
-    return NextResponse.json({ error: "Sem permissão para rejeitar este pedido." }, { status: 403 });
   }
 
   try {
@@ -54,7 +48,7 @@ export async function POST(
 
   await appendOrderHistory(orderId, {
     type: "archived",
-    by: { id: jwt.id, nome: jwt.nome, role: "admin" },
+    by: { id: jwt.id, nome: jwt.nome, role: jwt.papel },
     message: `Pedido arquivado por ${jwt.nome}.`,
   });
 
