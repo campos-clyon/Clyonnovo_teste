@@ -288,14 +288,15 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const normal = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "B", propostasJson: proposta("profissional", 300), regimeIva: "normal" },
     ]);
-    expect(isento[0].total).toBe(318);
-    expect(normal[0].total).toBe(387);
+    // 300 + 5 % = 315; 300 + 69 de IVA + 15 = 384. (5 % ao cliente desde 07-09-2026.)
+    expect(isento[0].total).toBe(315);
+    expect(normal[0].total).toBe(384);
   });
 
   it("ordena pelo TOTAL e não pela base", () => {
     /*
      * Com regimes diferentes as duas ordens divergem: 280 € de quem liquida
-     * IVA são 361,20 € a pagar, e 300 € de um isento são 318 €. Ordenar pela
+     * IVA são 358,40 € a pagar, e 300 € de um isento são 315 €. Ordenar pela
      * base punha o mais caro primeiro e dizia-lhe que era o mais barato.
      */
     const r = propostasParaOCliente([
@@ -313,7 +314,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const r = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "X", propostasJson: proposta("profissional", 100) },
     ]);
-    expect(r[0].total).toBe(106);
+    expect(r[0].total).toBe(105);
   });
 
   it("NÃO promete «recusar» — esse botão não existe", () => {
@@ -429,7 +430,8 @@ describe("quando o trabalho já está fechado", () => {
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("Está combinado com Sthefanny Lemos");
-    expect(m).toContain("425,70 € a pagar");
+    // 330 + 75,90 de IVA + 16,50 de taxa (5 %) = 422,40.
+    expect(m).toContain("422,40 € a pagar");
     expect(m).not.toContain("aceita a proposta que preferir");
     expect(m).not.toContain("Ainda não temos propostas");
   });

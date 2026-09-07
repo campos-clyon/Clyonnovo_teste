@@ -236,7 +236,7 @@ describe("a comissão da casa", () => {
     /*
      * "Coloque também os ganhos da CLYON."
      *
-     * 6% que o cliente paga a mais e 5% que se desconta ao profissional. Não
+     * 5% que o cliente paga a mais e 6% que se desconta ao profissional. Não
      * se lê nem do que entra nem do que sai: é a diferença entre os dois, e
      * não estava em lado nenhum do backoffice.
      */

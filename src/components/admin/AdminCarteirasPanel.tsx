@@ -13,6 +13,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
@@ -281,9 +282,9 @@ export default function AdminCarteirasPanel() {
               <p className="mt-2 text-xs text-cyan-300">
                 Ele passa a receber{" "}
                 <strong>
-                  {euros(
-                    Math.round(Number(aCorrigir.valor.replace(",", ".")) * 0.95 * 100) / 100,
-                  )}
+                  {/* Da constante, e não de um 0,95 escrito aqui: a taxa
+                      mudou uma vez e este número ficou a mentir. */}
+                  {euros(quantoOProfissionalRecebe(Number(aCorrigir.valor.replace(",", "."))))}
                 </strong>
                 .
               </p>
@@ -419,9 +420,10 @@ export default function AdminCarteirasPanel() {
 
         "Coloque também os ganhos da CLYON."
 
-        A comissão vem das duas pontas — 6% que o cliente paga a mais e 5% que
-        se desconta ao profissional — e por isso não se lê nem do que entra nem
-        do que sai. É a diferença entre os dois, e não estava em lado nenhum.
+        A comissão vem das duas pontas — 5% que o cliente paga a mais e 6% que
+        se desconta ao profissional (trocadas em 07-09-2026) — e por isso não
+        se lê nem do que entra nem do que sai. É a diferença entre os dois, e
+        não estava em lado nenhum.
 
         Segue os mesmos três estados do dinheiro deles, de propósito: uma
         comissão de um trabalho por fazer ainda não é ganho, é uma promessa.

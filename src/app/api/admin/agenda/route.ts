@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
          *
          * A ficha mostra o valor a quem vai corrigi-lo, e do valor acordado
          * saem outros dois que não são iguais a ele: o que o profissional
-         * recebe (menos 5 %) e o que o cliente paga (mais a taxa e o IVA do
+         * recebe (menos 6 %) e o que o cliente paga (mais a taxa e o IVA do
          * regime dele). Sem os três à vista, corrige-se 135 para 230 sem
          * reparar que a transferência passou a ser de 218,50 €.
          */

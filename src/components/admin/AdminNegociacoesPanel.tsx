@@ -1300,7 +1300,8 @@ export default function AdminNegociacoesPanel({
                     .total,
                 )}
               </strong>{" "}
-              (IVA{" "}
+              {/* O IVA é do profissional — é ele que o factura e o entrega. */}
+              (IVA do profissional{" "}
               {euros(
                 contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva)).iva,
               )}
@@ -2865,9 +2866,10 @@ function ConfirmarPelaClyon({
             <dt className="text-slate-400">
               Cobrar ao cliente
               <span className="block text-[10px] text-slate-500">
+                {/* O IVA, quando há, é do profissional: é ele que o factura. */}
                 {regimeDeIva(regimeIva) === "normal"
-                  ? "acordado + IVA + taxa"
-                  : "acordado + taxa (isento de IVA)"}
+                  ? "acordado + IVA do profissional + taxa CLYON"
+                  : "acordado + taxa CLYON (profissional isento de IVA)"}
               </span>
             </dt>
             <dd className="font-semibold tabular-nums text-slate-100">
@@ -2875,7 +2877,12 @@ function ConfirmarPelaClyon({
             </dd>
           </div>
           <div className="flex items-center justify-between">
-            <dt className="text-slate-400">O profissional recebe</dt>
+            <dt className="text-slate-400">
+              O profissional recebe
+              <span className="block text-[10px] text-slate-500">
+                sem IVA — o imposto, se o cobrar, segue na factura dele
+              </span>
+            </dt>
             <dd className="font-semibold tabular-nums text-slate-100">
               {euros(quantoOProfissionalRecebe(valorAcordado))}
             </dd>
