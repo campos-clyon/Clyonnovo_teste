@@ -256,20 +256,32 @@ export default function NegociacaoProfissional({
 
       {/* Acções */}
       <div className="mt-4 space-y-3">
-        {/* Com a sugestão à frente, a primeira acção é propor — o valor de
-            partida não se aceita. */}
+        {/*
+          COM A SUGESTÃO À FRENTE, ELE ESCREVE O VALOR DELE.
+
+          Havia um botão verde «Propor 93,34 €» com o valor sugerido. "No
+          botão verde vamos colocar o que hoje é «Outro — escrever»; os três
+          botões em baixo: 10 % acima da sugestão CLYON, 20 % e 40 %." A
+          sugestão fica como referência, não como botão: o campo está em cima
+          com o verde, e os atalhos escrevem nele.
+        */}
         {sugestaoAberta && podePropor && (
-          <button
-            onClick={() => agir("propor", sugestaoAberta.precoSugerido.toFixed(2))}
-            disabled={aEnviar}
-            className="flex w-full flex-wrap items-center justify-center gap-x-2 rounded-xl bg-emerald-600 px-3 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
-          >
-            {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            <span>Propor {euros(sugestaoAberta.precoSugerido)}</span>
-            <span className="text-sm font-semibold text-emerald-50">
-              recebe {euros(sugestaoAberta.recebeSePropuser)}
-            </span>
-          </button>
+          <div>
+            <p className="mb-2 text-sm font-medium text-slate-900">O seu valor a propor</p>
+            <EscolherValor
+              referencia={sugestaoAberta.precoSugerido}
+              direccao="acima"
+              passos={[0.1, 0.2, 0.4]}
+              escreverPrimeiro
+              rotuloDosAtalhos="Ou um passo acima da sugestão CLYON"
+              aEnviar={aEnviar}
+              legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}
+              onPropor={(v) => agir("propor", v)}
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
+            </p>
+          </div>
         )}
 
         {podeAceitar && !sugestaoAberta && (
@@ -289,14 +301,10 @@ export default function NegociacaoProfissional({
           </button>
         )}
 
-        {podePropor && (
+        {podePropor && !sugestaoAberta && (
           <div>
             <p className="mb-2 text-sm font-medium text-slate-900">
-              {sugestaoAberta
-                ? "Ou proponha o seu valor"
-                : podeAceitar
-                  ? "Ou proponha outro valor"
-                  : "Proponha um valor"}
+              {podeAceitar ? "Ou proponha outro valor" : "Proponha um valor"}
             </p>
             <EscolherValor
               referencia={referenciaDaProposta}
