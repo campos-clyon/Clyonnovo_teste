@@ -20,8 +20,10 @@ import {
   canalWhatsApp,
   enviarTextoManualWhatsApp,
   linkParaEnviarAMao,
+  linkParaEnviarNoWhatsAppWeb,
   numeroManualWhatsApp,
 } from "@/lib/whatsapp-cloud";
+import { tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 
 export const runtime = "nodejs";
 
@@ -91,7 +93,12 @@ export async function POST(req: NextRequest) {
     // porque quem carregou vai enviá-la.
     if (canalWhatsApp() === "manual") {
       await registarMensagemWhatsApp(telefone, "out", texto);
-      return NextResponse.json({ ok: true, manual: true, link: linkParaEnviarAMao(telefone, texto) });
+      return NextResponse.json({
+        ok: true,
+        manual: true,
+        link: linkParaEnviarAMao(telefone, texto),
+        linkWeb: linkParaEnviarNoWhatsAppWeb(telefone, texto),
+      });
     }
     const saiu = await enviarTextoManualWhatsApp(telefone, texto);
     if (!saiu) {
@@ -105,6 +112,33 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json({ ok: true });
+  }
+
+  /*
+   * CHEGOU UMA RESPOSTA — lida no WhatsApp Web e colada aqui.
+   *
+   * Sem API não há webhook; este é o webhook à mão. O texto entra pelo
+   * mesmo caminho da Meta e da ponte: regista-se no fio como recebido e o
+   * cérebro trata-o (é ele que decide se pode falar com este número — ligado,
+   * não bloqueado, não entregue, com pedido activo). O que ele responder
+   * fica na fila, para sair pelo WhatsApp Web com um clique.
+   */
+  if (accao === "recebida") {
+    const texto = typeof corpo.nota === "string" ? corpo.nota.trim() : "";
+    if (!texto || telefone.replace(/\D/g, "").length < 9) {
+      return NextResponse.json({ error: "Falta o número ou o texto." }, { status: 400 });
+    }
+    await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
+    try {
+      await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+    } catch (e) {
+      console.error("[admin/whatsapp recebida]", e);
+      return NextResponse.json(
+        { error: "Ficou registada, mas o cérebro não conseguiu tratá-la. Responda à mão." },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ ok: true, fila: await filaWhatsAppPorEnviar(50) });
   }
 
   // A fila, à mão: "enviada" risca a mensagem e põe-na no fio da conversa

@@ -8,6 +8,11 @@ import Nota from "@/components/Nota";
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/profissional-auth";
+import {
+  RUBRICAS_DOS_CUSTOS_FIXOS,
+  custosFixosPorTrabalhoDe,
+  totalDosCustosFixosAnuais,
+} from "@/lib/custos-fixos-do-profissional";
 import type { Perfil as PerfilTipo } from "./tipos";
 import MoradaDaBase from "./MoradaDaBase";
 
@@ -467,6 +472,111 @@ export default function Perfil({
                   />
                 </label>
               </div>
+
+              {/*
+                OS CUSTOS FIXOS, EM EUROS POR ANO.
+
+                "Via Verde, manutenção, IUC, inspecção e seguro — ele pode
+                responder com os valores anuais e o site calcula o valor por
+                trabalho." Pede-se o que ele sabe de cor, o que paga por ano,
+                e o divisor — quantos trabalhos faz por mês. A conta por
+                trabalho aparece logo por baixo, para ele ver o que os
+                números dele dão antes de gravar.
+              */}
+              <p className="mt-5 text-sm font-medium text-slate-800">Custos fixos, por ano</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                O que paga tenha ou não trabalho. O site divide pelos trabalhos que faz
+                num ano e põe a parte de cada trabalho na conta.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {RUBRICAS_DOS_CUSTOS_FIXOS.map(({ chave, rotulo }) => (
+                  <label key={chave} className="block">
+                    <span className="mb-1 block text-xs font-medium text-slate-600">{rotulo} (€/ano)</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="10"
+                      min={0}
+                      max={50000}
+                      placeholder="0"
+                      value={dados.custosFixosAnuais?.[chave] ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value === "" ? null : Number(e.target.value);
+                        setDados((d) => ({
+                          ...d,
+                          custosFixosAnuais: { ...(d.custosFixosAnuais ?? {}), [chave]: v },
+                        }));
+                        setGravadoAs(null);
+                        setErro("");
+                      }}
+                      className={CAIXA}
+                    />
+                  </label>
+                ))}
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Trabalhos por mês</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    step="1"
+                    min={1}
+                    max={300}
+                    placeholder="20"
+                    value={dados.trabalhosPorMes ?? ""}
+                    onChange={(e) =>
+                      mudar("trabalhosPorMes", e.target.value === "" ? null : Number(e.target.value))
+                    }
+                    className={CAIXA}
+                  />
+                </label>
+              </div>
+              {(() => {
+                // A mesma conta que o servidor faz, para ele ver antes de gravar.
+                const anual = totalDosCustosFixosAnuais(dados.custosFixosAnuais);
+                if (anual == null || anual <= 0) return null;
+                const porMes = dados.trabalhosPorMes ?? null;
+                const porTrabalho = custosFixosPorTrabalhoDe(anual, porMes);
+                return (
+                  <p className="mt-2 text-xs text-slate-600">
+                    {anual.toFixed(2).replace(".", ",")} € por ano
+                    {porTrabalho != null && porMes
+                      ? ` ÷ ${porMes * 12} trabalhos = ${porTrabalho.toFixed(2).replace(".", ",")} € por trabalho`
+                      : " — indique os trabalhos por mês para o site dividir"}
+                  </p>
+                );
+              })()}
+
+              {/*
+                A MARGEM, NUMA BARRA COMO A DO RAIO.
+
+                "Taxa de lucro desejada, colocada pelo pro através de linha
+                como no raio de distância." Sem valor gravado a barra começa
+                nos 40 % de referência da CLYON.
+              */}
+              <div className="mt-5">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-medium text-slate-800">Margem de lucro desejada</span>
+                  <span className="text-lg font-bold text-cyan-700">{dados.margemPercent ?? 40} %</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={dados.margemPercent ?? 40}
+                  onChange={(e) => mudar("margemPercent", Number(e.target.value))}
+                  className="mt-2 h-11 w-full cursor-pointer accent-cyan-600"
+                  aria-label="Margem de lucro desejada em percentagem"
+                />
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>0 %</span>
+                  <span>100 %</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Sobre o custo mínimo de cada trabalho. A sugestão de valor propõe custo mais
+                  esta margem.
+                </p>
+              </div>
             </div>
 
             <Guardar
@@ -480,6 +590,9 @@ export default function Perfil({
                   custoKm: dados.custoKm ?? null,
                   custoHoraPessoa: dados.custoHoraPessoa ?? null,
                   pessoasNaEquipa: dados.pessoasNaEquipa ?? null,
+                  custosFixosAnuais: dados.custosFixosAnuais ?? null,
+                  trabalhosPorMes: dados.trabalhosPorMes ?? null,
+                  margemPercent: dados.margemPercent ?? null,
                 })
               }
             />

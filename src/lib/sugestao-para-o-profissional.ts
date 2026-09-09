@@ -1,6 +1,11 @@
 import { estimateLaborHours, type FastEstimateInput } from "@/lib/pricing-helper";
 import type { SimulatorSettingsMap } from "@/lib/simulator-settings";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import {
+  custosFixosPorTrabalhoDe,
+  totalDosCustosFixosAnuais,
+  type CustosFixosAnuais,
+} from "@/lib/custos-fixos-do-profissional";
 
 /**
  * A SUGESTÃO DA CLYON, CALCULADA PARA QUEM ESTÁ A VER O PEDIDO.
@@ -23,8 +28,11 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
  *
  * O que muda de profissional para profissional: os quilómetros são os DELE
  * — da base dele ao trabalho, pela estrada — e, se os tiver definido no
- * perfil, o custo por km, o custo por hora e pessoa e o tamanho da equipa
- * são os dele. Sem isso, entram os valores de referência da CLYON.
+ * perfil, o custo por km, o custo por hora e pessoa, o tamanho da equipa,
+ * os custos fixos (anuais, divididos pelos trabalhos do ano) e a margem que
+ * quer são os dele. "Esses dados eram nossos — vamos deixar o pro responder
+ * com os dados dele." Sem isso, campo a campo, entram os valores de
+ * referência da CLYON.
  *
  * É pura de propósito: recebe números e devolve números. Quem vai buscar a
  * distância e os parâmetros à base são as rotas — esta função tem de ser
@@ -57,12 +65,42 @@ export function parametrosDoMapa(mapa: Partial<SimulatorSettingsMap>): Parametro
   };
 }
 
+/**
+ * Os custos fixos anuais, por rubrica, e a conta que os põe por trabalho,
+ * vivem em custos-fixos-do-profissional.ts — sem servidor, para o ecrã do
+ * perfil os poder pré-visualizar. Aqui só se usam.
+ */
+export {
+  RUBRICAS_DOS_CUSTOS_FIXOS,
+  totalDosCustosFixosAnuais,
+  type CustosFixosAnuais,
+} from "@/lib/custos-fixos-do-profissional";
+
 /** O que o profissional definiu no perfil. `null` = usa a referência da CLYON. */
 export type CustosDoProfissional = {
   custoKm?: number | null;
   custoHoraPessoa?: number | null;
   pessoasNaEquipa?: number | null;
+  custosFixosAnuais?: CustosFixosAnuais | null;
+  /** Quantos trabalhos faz por mês, em média — o divisor dos custos fixos. */
+  trabalhosPorMes?: number | null;
+  /** A margem que quer, em percentagem (40 = 40 %). */
+  margemPercent?: number | null;
 };
+
+/**
+ * Os custos fixos POR TRABALHO, a partir dos anuais dele.
+ *
+ * Só existe quando há rubricas E um número de trabalhos por mês: sem o
+ * divisor, 3 000 € por ano não dizem nada sobre um trabalho. Devolve null e
+ * a conta cai na referência da CLYON.
+ */
+export function custosFixosPorTrabalho(custos: CustosDoProfissional | null | undefined): number | null {
+  return custosFixosPorTrabalhoDe(
+    totalDosCustosFixosAnuais(custos?.custosFixosAnuais),
+    numero(custos?.trabalhosPorMes),
+  );
+}
 
 /** O que do pedido entra na conta. Nada disto é morada nem contacto. */
 export type PedidoParaSugestao = {
@@ -176,10 +214,15 @@ export function sugerirParaOProfissional(
   const custoKm = numero(custos?.custoKm) ?? parametros.custoKm;
   const custoHoraPessoa = numero(custos?.custoHoraPessoa) ?? parametros.custoHoraPessoa;
   const pessoas = Math.max(1, Math.round(numero(custos?.pessoasNaEquipa) ?? parametros.numPessoas));
+  const fixosDele = custosFixosPorTrabalho(custos);
+  const margemDele = numero(custos?.margemPercent);
+  const margem = margemDele != null && margemDele >= 0 ? margemDele / 100 : parametros.margem;
   const comOsSeusCustos =
     numero(custos?.custoKm) != null ||
     numero(custos?.custoHoraPessoa) != null ||
-    numero(custos?.pessoasNaEquipa) != null;
+    numero(custos?.pessoasNaEquipa) != null ||
+    fixosDele != null ||
+    margemDele != null;
 
   const mudanca = pedido.serviceType === "mudanca";
   const percurso = numero(pedido.percursoKm);
@@ -213,19 +256,23 @@ export function sugerirParaOProfissional(
   const semDistancia = kmDeCarro == null;
   const custoCombustivel = kmDeCarro != null ? aosCentimos(kmDeCarro * custoKm) : 0;
   const custoPessoal = aosCentimos(horas * pessoas * custoHoraPessoa);
-  const custosFixos = aosCentimos(parametros.overhead);
+  const custosFixos = aosCentimos(fixosDele ?? parametros.overhead);
   const custoMinimo = aosCentimos(custoCombustivel + custoPessoal + custosFixos);
-  const precoSugerido = aosCentimos(custoMinimo * (1 + parametros.margem));
+  const precoSugerido = aosCentimos(custoMinimo * (1 + margem));
   const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido);
   const lucroEstimado = aosCentimos(recebeSePropuser - custoMinimo);
 
+  const anual = totalDosCustosFixosAnuais(custos?.custosFixosAnuais);
+  const porMes = numero(custos?.trabalhosPorMes);
   const pressupostos = [
     kmDeCarro != null
       ? `Combustível: ${km(kmDeCarro)} ${mudanca ? "de percurso" : "ida e volta"} × ${euros(custoKm)}/km = ${euros(custoCombustivel)}`
       : "Combustível: sem distância conhecida — ficou a 0 €, por isso a conta é por baixo",
     `Pessoal: ${horas} h × ${pessoas} ${pessoas === 1 ? "pessoa" : "pessoas"} × ${euros(custoHoraPessoa)}/h = ${euros(custoPessoal)}`,
-    `Custos fixos por serviço: ${euros(custosFixos)}`,
-    `Margem: ${Math.round(parametros.margem * 100)} % sobre o custo`,
+    fixosDele != null && anual != null && porMes != null
+      ? `Custos fixos: ${euros(anual)}/ano ÷ ${porMes * 12} trabalhos (${porMes} por mês) = ${euros(custosFixos)} por trabalho`
+      : `Custos fixos por serviço: ${euros(custosFixos)} (referência CLYON)`,
+    `Margem: ${Math.round(margem * 100)} % sobre o custo${margemDele != null ? " — a sua" : " — referência CLYON"}`,
     comOsSeusCustos
       ? "Com os custos que definiu no seu perfil."
       : "Com os custos de referência da CLYON — pode pôr os seus em Perfil › Serviços e raio.",
@@ -241,7 +288,7 @@ export function sugerirParaOProfissional(
     custoPessoal,
     custosFixos,
     custoMinimo,
-    margem: parametros.margem,
+    margem,
     precoSugerido,
     recebeSePropuser,
     lucroEstimado,
