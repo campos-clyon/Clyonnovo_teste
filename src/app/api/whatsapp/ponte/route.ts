@@ -65,7 +65,13 @@ export async function POST(req: NextRequest) {
   const erro = portao(req);
   if (erro) return erro;
 
-  let corpo: { telefone?: unknown; texto?: unknown; accao?: unknown };
+  let corpo: {
+    telefone?: unknown;
+    texto?: unknown;
+    accao?: unknown;
+    /** Uma fotografia, já descarregada pela ponte: {base64, mime}. */
+    foto?: { base64?: unknown; mime?: unknown } | null;
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -73,6 +79,14 @@ export async function POST(req: NextRequest) {
   }
   const telefone = typeof corpo.telefone === "string" ? corpo.telefone.trim() : "";
   const texto = typeof corpo.texto === "string" ? corpo.texto : "";
+  const fotoBase64 =
+    corpo.foto && typeof corpo.foto.base64 === "string" && corpo.foto.base64.length > 0
+      ? corpo.foto.base64
+      : null;
+  const fotoMime =
+    corpo.foto && typeof corpo.foto.mime === "string" && corpo.foto.mime.startsWith("image/")
+      ? corpo.foto.mime
+      : "image/jpeg";
   if (!telefone) {
     return NextResponse.json({ error: "Falta o telefone" }, { status: 400 });
   }
@@ -110,8 +124,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const { registarMensagemWhatsApp } = await import("@/lib/db");
-    await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
-    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+    if (fotoBase64) {
+      /*
+       * A fotografia vem já descarregada — a ponte tem o WhatsApp Web, o
+       * site não. Guarda-se no pedido pelo mesmo caminho da API da Meta
+       * (Blob → filesJson → histórico), e a legenda, se houver, segue como
+       * texto.
+       */
+      await registarMensagemWhatsApp(telefone, "in", "[fotografia]").catch(() => {});
+      const { guardarFotoDoClienteNoPedido } = await import("@/lib/whatsapp-negociacao");
+      await guardarFotoDoClienteNoPedido(telefone, Buffer.from(fotoBase64, "base64"), fotoMime);
+      if (texto.trim()) {
+        await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
+        await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+      }
+    } else {
+      await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
+      await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+    }
   } catch (e) {
     // A conversa é nossa na mesma — um erro aqui não pode atirar o cliente
     // para o bot de leads, que lhe responderia como a um desconhecido.

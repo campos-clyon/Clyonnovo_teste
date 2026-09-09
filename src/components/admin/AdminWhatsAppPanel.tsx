@@ -99,27 +99,11 @@ export default function AdminWhatsAppPanel() {
   const [aResponder, setAResponder] = useState(false);
   const [erroDaResposta, setErroDaResposta] = useState("");
   /*
-   * POR ONDE SE ENVIA À MÃO: pelo WhatsApp Web deste computador ou pelo
-   * telemóvel. "Ative usando o WhatsApp Web por enquanto" — por isso o Web é
-   * a omissão; a escolha fica neste navegador.
+   * À mão, os links abrem o WhatsApp Web deste computador. A secção com a
+   * escolha Web/telemóvel saiu a pedido do dono ("remova isso, não era o que
+   * queria"): o caminho a sério é a ponte (ponte-whatsapp/), não isto.
    */
-  const [porOnde, setPorOnde] = useState<"web" | "telemovel">("web");
-  useEffect(() => {
-    try {
-      const guardado = window.localStorage.getItem("clyon.whatsapp.porOnde");
-      if (guardado === "telemovel" || guardado === "web") setPorOnde(guardado);
-    } catch {
-      /* sem armazenamento — fica o Web */
-    }
-  }, []);
-  const escolherPorOnde = (v: "web" | "telemovel") => {
-    setPorOnde(v);
-    try {
-      window.localStorage.setItem("clyon.whatsapp.porOnde", v);
-    } catch {
-      /* ignora */
-    }
-  };
+  const porOnde: "web" | "telemovel" = "web";
   // "Chegou uma resposta": o que o cliente escreveu no WhatsApp Web, colado aqui.
   const [numeroRecebido, setNumeroRecebido] = useState("");
   const [textoRecebido, setTextoRecebido] = useState("");
@@ -361,62 +345,6 @@ export default function AdminWhatsAppPanel() {
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {erro}
         </p>
-      )}
-
-      {/*
-        O WHATSAPP WEB, POR ENQUANTO.
-
-        Sem API, o número da CLYON vive no WhatsApp Web deste computador:
-        daqui abre-se a conversa com o texto pronto, e o que o cliente
-        responde lê-se lá e cola-se em "Chegou uma resposta". A escolha
-        Web/telemóvel é de quem está sentado — no telemóvel o wa.me abre a
-        aplicação; no PC o wa.me pergunta primeiro, o web.whatsapp.com não.
-      */}
-      {aMao && (
-        <section className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.05] p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white">WhatsApp Web, por enquanto</h3>
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                Abra o WhatsApp Web neste navegador com o {numeroDaClyon} emparelhado
-                (no telemóvel: Definições › Dispositivos ligados). As mensagens da fila
-                abrem-se lá com um clique; as respostas dos clientes lêem-se lá e
-                colam-se aqui em baixo.
-              </p>
-            </div>
-            <a
-              href="https://web.whatsapp.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-slate-950 transition hover:bg-emerald-400"
-            >
-              <ExternalLink className="h-4 w-4" aria-hidden="true" />
-              Abrir o WhatsApp Web
-            </a>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-slate-500">Enviar por:</span>
-            {(
-              [
-                ["web", "WhatsApp Web (este computador)"],
-                ["telemovel", "Telemóvel"],
-              ] as const
-            ).map(([v, rotulo]) => (
-              <button
-                key={v}
-                onClick={() => escolherPorOnde(v)}
-                className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                  porOnde === v
-                    ? "bg-emerald-500/20 text-emerald-200"
-                    : "border border-slate-700 text-slate-400 hover:bg-slate-800"
-                }`}
-                aria-pressed={porOnde === v}
-              >
-                {rotulo}
-              </button>
-            ))}
-          </div>
-        </section>
       )}
 
       {/* As conversas — o fio de cada número, com resposta à mão. */}

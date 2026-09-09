@@ -2,7 +2,7 @@
 
 O número da CLYON (931 632 622) emparelhado num servidor, a falar com o cérebro do site. Com isto, o assistente responde sozinho: recolhe pedidos de quem escreve, manda as propostas dos profissionais, fecha e marca datas — e o painel WhatsApp do backoffice continua a mandar (desligar, entregar a si, bloquear).
 
-Não é a API oficial da Meta. Usa o protocolo do WhatsApp Web (biblioteca Baileys), como mais um «dispositivo ligado» do telemóvel. Funciona com um número normal, sem conta de empresa. A Meta pode um dia recusar; a saída definitiva é a API oficial, que o site já suporta.
+Não é a API oficial da Meta. É a mesma cadeia do Winapp: whatsapp-web.js a abrir o WhatsApp Web num Chromium sem janela (Puppeteer), com o emparelhamento guardado em disco e a versão da página fixa numa que se sabe funcionar — só que num servidor sempre ligado. Funciona com um número normal; a automação viola os termos do WhatsApp e o número pode ser bloqueado, por isso usa-se um número dedicado. A saída definitiva é a API oficial, que o site já suporta.
 
 ## Pôr a correr no Railway (10 minutos)
 
@@ -32,3 +32,4 @@ Não é a API oficial da Meta. Usa o protocolo do WhatsApp Web (biblioteca Baile
 - `503`: o Vercel ainda não tem o `PONTE_WHATSAPP_SEGREDO` (ou não fez redeploy).
 - `sessão terminada no telemóvel`: apague o conteúdo do volume (ou desligue o dispositivo no telemóvel) e emparelhe de novo.
 - Sem `PONTE_NUMERO`, o emparelhamento é por QR nos logs — funciona, mas é mais difícil de ler.
+- As fotos deixaram de descarregar mas o texto anda: a Meta mudou a página do WhatsApp Web. Mude `VERSAO_DA_PAGINA` para uma versão que a biblioteca conheça (ver wppconnect-team/wa-version) e reinicie.
