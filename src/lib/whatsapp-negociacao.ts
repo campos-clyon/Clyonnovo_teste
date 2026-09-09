@@ -583,7 +583,6 @@ export async function tratarFotoDoCliente(
 
   const pedidos = await pedidosDoTelefone(telefone);
   if (pedidos.length === 0) return;
-  const pedidoId = pedidos[0];
 
   try {
     const auth = { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } };
@@ -594,10 +593,33 @@ export async function tratarFotoDoCliente(
     const resposta = await fetch(meta.url, auth);
     if (!resposta.ok) return;
     const bytes = Buffer.from(await resposta.arrayBuffer());
+    await guardarFotoDoClienteNoPedido(telefone, bytes, mime ?? meta.mime_type ?? "image/jpeg");
+  } catch (e) {
+    console.error("[whatsapp] foto falhou", e);
+  }
+}
+
+/**
+ * Os bytes de uma fotografia do cliente, para o pedido dele — Blob →
+ * filesJson → histórico. Serve a API da Meta (que os descarrega acima) e a
+ * ponte (que os traz já descarregados do WhatsApp Web).
+ */
+export async function guardarFotoDoClienteNoPedido(
+  telefone: string,
+  bytes: Buffer,
+  mime: string | null,
+): Promise<void> {
+  const { podeOWhatsAppFalarCom } = await import("@/lib/db");
+  if (!(await podeOWhatsAppFalarCom(telefone))) return;
+  const pedidos = await pedidosDoTelefone(telefone);
+  if (pedidos.length === 0) return;
+  const pedidoId = pedidos[0];
+
+  try {
     // 10 MB chegam para qualquer fotografia; acima disso é outra coisa.
     if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return;
 
-    const tipo = mime ?? meta.mime_type ?? "image/jpeg";
+    const tipo = mime ?? "image/jpeg";
     const extensao = tipo.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
     const { put } = await import("@vercel/blob");
     const { obterTokenDoBlob } = await import("@/lib/blob-token");
