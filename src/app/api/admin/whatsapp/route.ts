@@ -9,14 +9,18 @@ import {
   interromperNumeroWhatsApp,
   listarNumerosBloqueadosWhatsApp,
   listarNumerosInterrompidosWhatsApp,
+  marcarFilaWhatsAppEnviadas,
+  mensagemDaFilaWhatsApp,
   mensagensDoNumeroWhatsApp,
+  registarMensagemWhatsApp,
   retomarNumeroWhatsApp,
   whatsappLigado,
 } from "@/lib/db";
 import {
+  canalWhatsApp,
   enviarTextoManualWhatsApp,
-  ponteConfigurada,
-  whatsappConfigurado,
+  linkParaEnviarAMao,
+  numeroManualWhatsApp,
 } from "@/lib/whatsapp-cloud";
 
 export const runtime = "nodejs";
@@ -50,7 +54,9 @@ export async function GET(req: NextRequest) {
   ]);
   return NextResponse.json({
     ligado,
-    canal: whatsappConfigurado() ? "meta" : ponteConfigurada() ? "ponte" : "nenhum",
+    // "meta", "ponte", "manual" (o número da CLYON à mão, sem API) ou "nenhum".
+    canal: canalWhatsApp(),
+    numeroManual: numeroManualWhatsApp(),
     interrompidos,
     bloqueados,
     fila,
@@ -62,7 +68,7 @@ export async function POST(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { accao?: unknown; telefone?: unknown; nota?: unknown };
+  let corpo: { accao?: unknown; telefone?: unknown; nota?: unknown; id?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -80,6 +86,13 @@ export async function POST(req: NextRequest) {
     if (!texto || telefone.replace(/\D/g, "").length < 9) {
       return NextResponse.json({ error: "Falta o número ou o texto." }, { status: 400 });
     }
+    // À mão, sem API: a resposta não sai daqui — devolve-se o link que abre
+    // o WhatsApp do número da CLYON com o texto pronto, e regista-se no fio
+    // porque quem carregou vai enviá-la.
+    if (canalWhatsApp() === "manual") {
+      await registarMensagemWhatsApp(telefone, "out", texto);
+      return NextResponse.json({ ok: true, manual: true, link: linkParaEnviarAMao(telefone, texto) });
+    }
     const saiu = await enviarTextoManualWhatsApp(telefone, texto);
     if (!saiu) {
       return NextResponse.json(
@@ -90,6 +103,21 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 },
       );
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // A fila, à mão: "enviada" risca a mensagem e põe-na no fio da conversa
+  // como saída; "descartar" risca-a sem a registar — não chegou a sair.
+  if (accao === "enviada" || accao === "descartar") {
+    const id = Number(corpo.id);
+    const mensagem = await mensagemDaFilaWhatsApp(id);
+    if (!mensagem) {
+      return NextResponse.json({ error: "Essa mensagem já não está na fila." }, { status: 404 });
+    }
+    await marcarFilaWhatsAppEnviadas([mensagem.id]);
+    if (accao === "enviada") {
+      await registarMensagemWhatsApp(mensagem.telefone, "out", mensagem.texto);
     }
     return NextResponse.json({ ok: true });
   }

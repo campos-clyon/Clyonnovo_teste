@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Ban,
+  Check,
+  ExternalLink,
   Hand,
   Loader2,
   MessageCircle,
   Power,
   RefreshCw,
+  Trash2,
   Undo2,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -30,7 +33,13 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 type Estado = {
   ligado: boolean;
-  canal: "meta" | "ponte" | "nenhum";
+  /**
+   * "manual" é o número da CLYON à mão, sem API: o que o cérebro escreve fica
+   * na fila e envia-se daqui com um clique — "ative o WhatsApp no painel sem a
+   * API por agora", 09-09-2026.
+   */
+  canal: "meta" | "ponte" | "manual" | "nenhum";
+  numeroManual?: string | null;
   interrompidos: Array<{ telefone: string; motivo: string | null; criadoEm: string }>;
   bloqueados: Array<{ telefone: string; nota: string | null; criadoEm: string }>;
   fila: Array<{ id: number; telefone: string; texto: string }>;
@@ -156,6 +165,11 @@ export default function AdminWhatsAppPanel() {
         setErroDaResposta(dados.error ?? "Não foi possível enviar.");
         return;
       }
+      // À mão: o servidor não envia — devolve o link que abre o WhatsApp da
+      // CLYON com o texto pronto. Abre-se num separador e quem carregou envia.
+      if (typeof dados.link === "string") {
+        window.open(dados.link, "_blank", "noopener,noreferrer");
+      }
       setResposta("");
       await abrirConversa(conversaAberta);
       await carregar();
@@ -178,8 +192,37 @@ export default function AdminWhatsAppPanel() {
   const CANAL = {
     meta: "a falar pela API oficial da Meta",
     ponte: "a falar pela ponte do Winapp (o WhatsApp emparelhado no PC)",
+    manual: `a sair à mão pelo ${formatarTelefone(estado.numeroManual ?? "351931632622")} — sem API da Meta por agora: o que o cérebro escreve fica na fila em baixo e envia-se daqui com um clique`,
     nenhum: "sem canal configurado — nada sai nem entra até haver Meta ou ponte",
   }[estado.canal];
+  const aMao = estado.canal === "manual";
+
+  /** O link que abre o WhatsApp da CLYON já com o destinatário e o texto. */
+  const linkParaEnviar = (telefone: string, texto: string) =>
+    `https://wa.me/${telefone.replace(/\D/g, "")}?text=${encodeURIComponent(texto)}`;
+
+  const agirNaFila = async (accao: "enviada" | "descartar", id: number) => {
+    if (!token) return;
+    setOcupado(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao, id }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível.");
+        return;
+      }
+      setErro("");
+      await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -228,6 +271,13 @@ export default function AdminWhatsAppPanel() {
       {/* As conversas — o fio de cada número, com resposta à mão. */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
         <h3 className="text-sm font-bold text-white">Conversas</h3>
+        {aMao && (
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Sem API, o que os clientes respondem chega ao telemóvel e não a este ecrã.
+            Aqui fica o que saiu daqui; a resposta ao cliente dá-se dentro do pedido,
+            nas Negociações.
+          </p>
+        )}
         {estado.conversas.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">
             Ainda nada por aqui. As mensagens aparecem assim que o canal estiver
@@ -307,9 +357,9 @@ export default function AdminWhatsAppPanel() {
                       <p className="mt-2 text-xs text-red-300">{erroDaResposta}</p>
                     )}
                     <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                      Sai pelo número da plataforma, e passa por cima do interruptor e
-                      das entregas — aqui quem fala é você. O WhatsApp só recusa texto
-                      livre se ele não escrever há mais de 24 horas.
+                      {aMao
+                        ? "Enviar abre o WhatsApp da CLYON com o texto pronto — carregue em enviar lá. Fica registado aqui como saída."
+                        : "Sai pelo número da plataforma, e passa por cima do interruptor e das entregas — aqui quem fala é você. O WhatsApp só recusa texto livre se ele não escrever há mais de 24 horas."}
                     </p>
                   </div>
                 )}
@@ -452,27 +502,75 @@ export default function AdminWhatsAppPanel() {
         )}
       </section>
 
-      {/* A fila por enviar — só aparece quando há alguma coisa nela. */}
-      {estado.fila.length > 0 && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+      {/*
+        A fila por enviar. Pela ponte, só se vê; à mão, é o sítio onde o
+        trabalho acontece: cada mensagem tem o botão que abre o WhatsApp da
+        CLYON com ela pronta, e o de a dar por enviada. Por isso à mão a
+        secção aparece sempre, mesmo vazia — é a caixa de saída.
+      */}
+      {(estado.fila.length > 0 || aMao) && (
+        <section className={`rounded-2xl border p-5 ${aMao ? "border-cyan-500/30 bg-cyan-500/[0.05]" : "border-slate-800 bg-slate-900/60"}`}>
           <h3 className="text-sm font-bold text-white">
-            Na fila para sair{" "}
-            <span className="ml-1 rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-semibold text-cyan-300">
-              {estado.fila.length}
-            </span>
+            {aMao ? "Para enviar do telemóvel" : "Na fila para sair"}{" "}
+            {estado.fila.length > 0 && (
+              <span className="ml-1 rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-semibold text-cyan-300">
+                {estado.fila.length}
+              </span>
+            )}
           </h3>
-          <p className="mt-1 text-xs text-slate-500">
-            O Winapp vem buscá-las de poucos em poucos segundos.
-            {!estado.ligado && " Desligado, ficam aqui à espera."}
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            {aMao
+              ? `Abrir no WhatsApp abre a conversa no ${formatarTelefone(estado.numeroManual ?? "351931632622")} com o texto já escrito — carregue em enviar lá e volte aqui para a marcar como enviada. Descartar tira-a da fila sem a enviar.`
+              : "O Winapp vem buscá-las de poucos em poucos segundos."}
+            {!estado.ligado && " Desligado, o cérebro não escreve nada de novo."}
           </p>
-          <ul className="mt-3 divide-y divide-slate-800">
-            {estado.fila.map((m) => (
-              <li key={m.id} className="py-2.5">
-                <p className="font-mono text-xs text-slate-400">{formatarTelefone(m.telefone)}</p>
-                <p className="mt-0.5 truncate text-sm text-slate-300">{m.texto}</p>
-              </li>
-            ))}
-          </ul>
+          {estado.fila.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">Nada por enviar.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-slate-800">
+              {estado.fila.map((m) => (
+                <li key={m.id} className="py-3">
+                  <p className="font-mono text-xs text-slate-400">{formatarTelefone(m.telefone)}</p>
+                  <p className={`mt-0.5 whitespace-pre-wrap text-sm text-slate-300 ${aMao ? "" : "truncate"}`}>
+                    {m.texto}
+                  </p>
+                  {aMao && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <a
+                        href={linkParaEnviar(m.telefone, m.texto)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-bold text-slate-950 transition hover:bg-emerald-400"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        Abrir no WhatsApp
+                      </a>
+                      <button
+                        onClick={() => void agirNaFila("enviada", m.id)}
+                        disabled={ocupado}
+                        className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-slate-600 px-3 text-xs font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-40"
+                      >
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                        Marcar como enviada
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Descartar esta mensagem sem a enviar?")) {
+                            void agirNaFila("descartar", m.id);
+                          }
+                        }}
+                        disabled={ocupado}
+                        className="flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300 disabled:opacity-40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Descartar
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
     </div>

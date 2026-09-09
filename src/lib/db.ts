@@ -4326,6 +4326,20 @@ export interface MensagemNaFilaWhatsApp {
   texto: string;
 }
 
+/** Uma mensagem da fila ainda por enviar — para o painel a marcar como enviada à mão. */
+export async function mensagemDaFilaWhatsApp(id: number): Promise<MensagemNaFilaWhatsApp | null> {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT id, telefone, texto FROM whatsappFila WHERE id = ? AND enviadoEm IS NULL LIMIT 1",
+    [id],
+  )) as [Array<{ id: number; telefone: string; texto: string }>, unknown];
+  const r = rows[0];
+  return r ? { id: Number(r.id), telefone: r.telefone, texto: r.texto } : null;
+}
+
 export async function filaWhatsAppPorEnviar(limite = 20): Promise<MensagemNaFilaWhatsApp[]> {
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
