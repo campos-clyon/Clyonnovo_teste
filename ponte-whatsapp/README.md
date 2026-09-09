@@ -4,6 +4,18 @@ O número da CLYON (931 632 622) emparelhado num servidor, a falar com o cérebr
 
 Não é a API oficial da Meta. É a mesma cadeia do Winapp: whatsapp-web.js a abrir o WhatsApp Web num Chromium sem janela (Puppeteer), com o emparelhamento guardado em disco e a versão da página fixa numa que se sabe funcionar — só que num servidor sempre ligado. Funciona com um número normal; a automação viola os termos do WhatsApp e o número pode ser bloqueado, por isso usa-se um número dedicado. A saída definitiva é a API oficial, que o site já suporta.
 
+## Como saber em que pé está
+
+Sem instalar nada, no navegador ou no terminal:
+
+```bash
+curl -i https://clyon.pt/api/whatsapp/ponte
+```
+
+- **503 «Ponte não configurada»** → o Vercel ainda não tem o `PONTE_WHATSAPP_SEGREDO`. Nada responde no WhatsApp, faça o que fizer no telemóvel. É o passo 2 aqui em baixo.
+- **401 «Não autorizado»** → o site está pronto. Falta a ponte a correr no Railway (passo 3).
+- Ligada e a correr, os logs do Railway dizem `ligado ao WhatsApp`.
+
 ## Pôr a correr no Railway (10 minutos)
 
 1. **Um segredo.** Invente uma frase longa (ex.: 40 letras e números). Vai ser o `PONTE_WHATSAPP_SEGREDO` nos dois lados.
@@ -15,6 +27,7 @@ Não é a API oficial da Meta. É a mesma cadeia do Winapp: whatsapp-web.js a ab
      - `PONTE_WHATSAPP_SEGREDO` = o segredo
      - `PONTE_NUMERO` = `351931632622`
    - Volumes › Add volume › mount path `/app/auth` (guarda a sessão; sem isto emparelha-se a cada arranque).
+   - O Chromium precisa de memória: se o serviço morrer sozinho no arranque, suba o limite para 1 GB.
 4. **Deploy.** Abra os logs: passados uns segundos aparece `CÓDIGO DE EMPARELHAMENTO: XXXX-XXXX`.
 5. **No telemóvel do 931 632 622**: Definições › Dispositivos ligados › Ligar dispositivo › **Ligar com número de telefone** › escreva o código.
 6. Nos logs aparece `ligado ao WhatsApp`. Pronto: mande uma mensagem de outro número e o assistente responde.
