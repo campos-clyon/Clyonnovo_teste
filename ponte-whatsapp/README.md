@@ -2,7 +2,7 @@
 
 O número da CLYON (931 632 622) emparelhado num servidor, a falar com o cérebro do site. Com isto, o assistente responde sozinho: recolhe pedidos de quem escreve, manda as propostas dos profissionais, fecha e marca datas — e o painel WhatsApp do backoffice continua a mandar (desligar, entregar a si, bloquear).
 
-Não é a API oficial da Meta. É a mesma cadeia do Winapp: whatsapp-web.js a abrir o WhatsApp Web num Chromium sem janela (Puppeteer), com o emparelhamento guardado em disco e a versão da página fixa numa que se sabe funcionar — só que num servidor sempre ligado. Funciona com um número normal; a automação viola os termos do WhatsApp e o número pode ser bloqueado, por isso usa-se um número dedicado. A saída definitiva é a API oficial, que o site já suporta.
+Não é a API oficial da Meta. É a mesma cadeia do Winapp: whatsapp-web.js a abrir o WhatsApp Web num Chromium sem janela (Puppeteer), com o emparelhamento guardado em disco e a versão da página do WhatsApp sob controlo — só que num servidor sempre ligado. Funciona com um número normal; a automação viola os termos do WhatsApp e o número pode ser bloqueado, por isso usa-se um número dedicado. A saída definitiva é a API oficial, que o site já suporta.
 
 ## Como saber em que pé está
 
@@ -45,4 +45,5 @@ curl -i https://clyon.pt/api/whatsapp/ponte
 - `503`: o Vercel ainda não tem o `PONTE_WHATSAPP_SEGREDO` (ou não fez redeploy).
 - `sessão terminada no telemóvel`: apague o conteúdo do volume (ou desligue o dispositivo no telemóvel) e emparelhe de novo.
 - Sem `PONTE_NUMERO`, o emparelhamento é por QR nos logs — funciona, mas é mais difícil de ler.
-- As fotos deixaram de descarregar mas o texto anda: a Meta mudou a página do WhatsApp Web. Mude `VERSAO_DA_PAGINA` para uma versão que a biblioteca conheça (ver wppconnect-team/wa-version) e reinicie.
+- **As fotos deixaram de descarregar mas o texto anda**: a Meta mexeu na página do WhatsApp Web. No arranque a ponte usa a versão actual; para voltar a uma anterior, ponha `VERSAO_DA_PAGINA` com uma da lista em `versions.json` do repositório `wppconnect-team/wa-version` (ex.: `2.3000.1047094411-alpha`) e reinicie. É o mesmo botão que o Winapp tinha nas Definições.
+- **`O SITE AINDA NÃO TEM O SEGREDO (503)`** nos registos: falta o passo 2. A ponte fica à espera e tenta de trinta em trinta segundos — assim que puser a variável no Vercel e fizer redeploy, ela segue sozinha, sem reiniciar nada.
