@@ -526,6 +526,12 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "horasPorTrabalho",
         sql: "ALTER TABLE providers ADD COLUMN horasPorTrabalho DECIMAL(5,2) NULL DEFAULT NULL",
       },
+      // O seguro de risco: uma percentagem dos custos directos de cada
+      // trabalho, posta de lado para partidos, cancelamentos e imprevistos.
+      {
+        name: "riscoPercent",
+        sql: "ALTER TABLE providers ADD COLUMN riscoPercent DECIMAL(5,2) NULL DEFAULT NULL",
+      },
       // Definir a palavra-passe por link, e nunca por palavra-passe enviada
       // por email: um email é copiado, reencaminhado e fica na caixa para
       // sempre. O que vai no email é um token de uso único, guardado com hash
@@ -2900,13 +2906,14 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
   trabalhosPorMes: number | null;
   margemPercent: number | null;
   horasPorTrabalho: number | null;
+  riscoPercent: number | null;
 } | undefined> {
   await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = (await pool.execute(
     `SELECT baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa,
-            custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho
+            custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
   )) as [Array<Record<string, unknown>>, unknown];
@@ -2923,6 +2930,7 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
     trabalhosPorMes: n(r.trabalhosPorMes),
     margemPercent: n(r.margemPercent),
     horasPorTrabalho: n(r.horasPorTrabalho),
+    riscoPercent: n(r.riscoPercent),
   };
 }
 
@@ -2974,7 +2982,7 @@ export async function perfilDoProfissional(
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt,
             custoKm, custoHoraPessoa, pessoasNaEquipa,
-            custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho
+            custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
   ) as any[];
@@ -3024,6 +3032,7 @@ export async function actualizarPerfilDoProfissional(
     "trabalhosPorMes",
     "margemPercent",
     "horasPorTrabalho",
+    "riscoPercent",
   ];
   /*
    * ⚠️ ESTA LISTA TEM DE CRESCER COM A ROTA QUE A ALIMENTA.

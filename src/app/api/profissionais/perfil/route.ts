@@ -114,6 +114,7 @@ export async function GET(req: NextRequest) {
         trabalhosPorMes: p.trabalhosPorMes != null ? Number(p.trabalhosPorMes) : null,
         margemPercent: p.margemPercent != null ? Number(p.margemPercent) : null,
         horasPorTrabalho: p.horasPorTrabalho != null ? Number(p.horasPorTrabalho) : null,
+        riscoPercent: p.riscoPercent != null ? Number(p.riscoPercent) : null,
         emiteFatura: Number(p.emiteFatura) === 1,
         regimeIva: String(p.regimeIva ?? "isento"),
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
@@ -392,6 +393,14 @@ export async function PUT(req: NextRequest) {
     else if (!Number.isFinite(n) || n < 0.25 || n > 24) {
       erros.push({ campo: "horasPorTrabalho", mensagem: "O tempo por trabalho vai de 0,25 a 24 horas." });
     } else mudancas.horasPorTrabalho = Math.round(n * 100) / 100;
+  }
+  // O seguro de risco, em percentagem dos custos directos: de 0 a 25 %.
+  if ("riscoPercent" in corpo) {
+    const n = custoOuNulo(corpo.riscoPercent);
+    if (n === null) mudancas.riscoPercent = null;
+    else if (!Number.isFinite(n) || n < 0 || n > 25) {
+      erros.push({ campo: "riscoPercent", mensagem: "O seguro de risco vai de 0 a 25 %." });
+    } else mudancas.riscoPercent = Math.round(n * 100) / 100;
   }
 
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;

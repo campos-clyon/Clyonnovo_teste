@@ -610,6 +610,45 @@ export default function Perfil({
                   esta margem.
                 </p>
               </div>
+
+              {/*
+                O SEGURO DE RISCO.
+
+                "Vamos acrescentar uma taxa de seguro de risco — não sei como
+                funciona, deixo-te planear." Um transportador parte um móvel,
+                um cliente cancela à porta, uma viagem sai em vão: são perdas
+                que não têm linha nos custos e que, ao fim do ano, saem da
+                margem. A forma honesta de as contar é uma percentagem dos
+                custos directos de cada trabalho (combustível e pessoal), que
+                entra no custo mínimo ANTES da margem — a margem é lucro, isto
+                é reserva. Cinco por cento é um ponto de partida razoável para
+                recolhas; mudanças com peças frágeis pedem mais.
+              */}
+              <div className="mt-5">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-medium text-slate-800">Seguro de risco</span>
+                  <span className="text-lg font-bold text-cyan-700">{dados.riscoPercent ?? 0} %</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={25}
+                  step={1}
+                  value={dados.riscoPercent ?? 0}
+                  onChange={(e) => mudar("riscoPercent", Number(e.target.value))}
+                  className="mt-2 h-11 w-full cursor-pointer accent-cyan-600"
+                  aria-label="Seguro de risco em percentagem dos custos directos"
+                />
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>0 %</span>
+                  <span>25 %</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Uma reserva para partidos, cancelamentos e viagens em vão: esta percentagem
+                  do combustível e do pessoal de cada trabalho entra no custo mínimo, antes da
+                  margem. Cinco por cento é um ponto de partida razoável.
+                </p>
+              </div>
             </div>
 
             <Guardar
@@ -627,6 +666,7 @@ export default function Perfil({
                   trabalhosPorMes: dados.trabalhosPorMes ?? null,
                   margemPercent: dados.margemPercent ?? null,
                   horasPorTrabalho: dados.horasPorTrabalho ?? null,
+                  riscoPercent: dados.riscoPercent ?? null,
                 })
               }
             />

@@ -141,6 +141,23 @@ describe("a conta, com os números DELE", () => {
     expect(sugerirParaOProfissional(recolha, 25, CLYON).pressupostos.join(" ")).toContain("estimado pela CLYON");
   });
 
+  it("o seguro de risco é uma percentagem do combustível e do pessoal, antes da margem", () => {
+    // 25 + 27 = 52 € directos; 5 % = 2,60 €; custo mínimo 69 + 2,60 = 71,60.
+    const s = sugerirParaOProfissional(recolha, 25, CLYON, { riscoPercent: 5 });
+    expect(s.seguroDeRisco).toBe(2.6);
+    expect(s.custoMinimo).toBe(71.6);
+    expect(s.precoSugerido).toBe(100.24); // 71,60 × 1,4
+    expect(s.pressupostos.join(" ")).toContain("Seguro de risco: 5 % de 52,00 € = 2,60 €");
+    expect(s.comOsSeusCustos).toBe(true);
+  });
+
+  it("sem seguro de risco, nada muda e a linha não aparece", () => {
+    const s = sugerirParaOProfissional(recolha, 25, CLYON, { riscoPercent: null });
+    expect(s.seguroDeRisco).toBe(0);
+    expect(s.custoMinimo).toBe(69);
+    expect(s.pressupostos.join(" ")).not.toContain("Seguro de risco");
+  });
+
   it("aceita vírgula decimal, que é o que um teclado português escreve", () => {
     const s = sugerirParaOProfissional(recolha, 25, CLYON, { custoKm: Number("0,45".replace(",", ".")) });
     expect(s.custoKm).toBe(0.45);

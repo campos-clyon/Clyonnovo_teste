@@ -92,6 +92,12 @@ export type CustosDoProfissional = {
    * pro." Quando está, manda sobre a estimativa do simulador.
    */
   horasPorTrabalho?: number | null;
+  /**
+   * O seguro de risco, em percentagem dos custos directos (combustível e
+   * pessoal). Uma reserva para partidos, cancelamentos e viagens em vão, que
+   * entra no custo mínimo ANTES da margem. Vazio = 0 %.
+   */
+  riscoPercent?: number | null;
 };
 
 /**
@@ -136,6 +142,9 @@ export type SugestaoParaOProfissional = {
   custoCombustivel: number;
   custoPessoal: number;
   custosFixos: number;
+  /** A reserva de risco deste trabalho, em €, e a percentagem que a gerou. */
+  seguroDeRisco: number;
+  riscoPercent: number;
   /** Abaixo disto é prejuízo. */
   custoMinimo: number;
   margem: number;
@@ -236,7 +245,8 @@ export function sugerirParaOProfissional(
     numero(custos?.pessoasNaEquipa) != null ||
     fixosDele != null ||
     margemDele != null ||
-    (horasDele != null && horasDele > 0);
+    (horasDele != null && horasDele > 0) ||
+    (numero(custos?.riscoPercent) ?? 0) > 0;
 
   const mudanca = pedido.serviceType === "mudanca";
   const percurso = numero(pedido.percursoKm);
@@ -274,7 +284,11 @@ export function sugerirParaOProfissional(
   const custoCombustivel = kmDeCarro != null ? aosCentimos(kmDeCarro * custoKm) : 0;
   const custoPessoal = aosCentimos(horas * pessoas * custoHoraPessoa);
   const custosFixos = aosCentimos(fixosDele ?? parametros.overhead);
-  const custoMinimo = aosCentimos(custoCombustivel + custoPessoal + custosFixos);
+  // O seguro de risco: uma percentagem do que este trabalho custa a fazer
+  // (combustível e pessoal), posta de lado antes da margem.
+  const riscoPercent = Math.max(0, numero(custos?.riscoPercent) ?? 0);
+  const seguroDeRisco = aosCentimos((custoCombustivel + custoPessoal) * (riscoPercent / 100));
+  const custoMinimo = aosCentimos(custoCombustivel + custoPessoal + custosFixos + seguroDeRisco);
   const precoSugerido = aosCentimos(custoMinimo * (1 + margem));
   const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido);
   const lucroEstimado = aosCentimos(recebeSePropuser - custoMinimo);
@@ -289,6 +303,9 @@ export function sugerirParaOProfissional(
     fixosDele != null && anual != null && porMes != null
       ? `Custos fixos: ${euros(anual)}/ano ÷ ${porMes * 12} trabalhos (${porMes} por mês) = ${euros(custosFixos)} por trabalho`
       : `Custos fixos por serviço: ${euros(custosFixos)} (referência CLYON)`,
+    ...(riscoPercent > 0
+      ? [`Seguro de risco: ${riscoPercent} % de ${euros(aosCentimos(custoCombustivel + custoPessoal))} = ${euros(seguroDeRisco)}`]
+      : []),
     `Margem: ${Math.round(margem * 100)} % sobre o custo${margemDele != null ? " — a sua" : " — referência CLYON"}`,
     comOsSeusCustos
       ? "Com os custos que definiu no seu perfil."
@@ -304,6 +321,8 @@ export function sugerirParaOProfissional(
     custoCombustivel,
     custoPessoal,
     custosFixos,
+    seguroDeRisco,
+    riscoPercent,
     custoMinimo,
     margem,
     precoSugerido,

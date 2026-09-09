@@ -157,6 +157,8 @@ export type Perfil = {
   margemPercent?: number | null;
   /** Horas que um trabalho lhe leva em média, deslocação e recolha incluídas. */
   horasPorTrabalho?: number | null;
+  /** Seguro de risco: % dos custos directos posta de lado em cada trabalho. */
+  riscoPercent?: number | null;
   emiteFatura: boolean;
   regimeIva: string;
   emiteGuiaTransporte: boolean;
