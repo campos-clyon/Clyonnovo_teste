@@ -10,6 +10,7 @@
  */
 
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
@@ -107,7 +108,7 @@ export async function enviarEmailDeAprovacao(p: AprovacaoParams): Promise<boolea
       from: "CLYON <noreply@clyon.pt>",
       to: p.para,
       subject: "Está aprovado — crie a sua palavra-passe",
-      html: montarHtml(p),
+      html: legivelNoResumo(montarHtml(p)),
     });
     if (error) {
       console.error("[email-aprovacao] Resend recusou:", error);

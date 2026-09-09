@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
@@ -98,7 +99,7 @@ export async function enviarConviteAoProfissional(p: ConviteParaEnviar): Promise
       from: "CLYON <noreply@clyon.pt>",
       to: p.para,
       subject: "O seu registo na CLYON",
-      html,
+      html: legivelNoResumo(html),
     });
     if (error) {
       console.error("[email-convite] Resend recusou:", error);

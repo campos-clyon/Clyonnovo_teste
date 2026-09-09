@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
@@ -60,7 +61,7 @@ async function enviar(para: string, assunto: string, html: string): Promise<bool
       from: "CLYON <noreply@clyon.pt>",
       to: para,
       subject: assunto,
-      html,
+      html: legivelNoResumo(html),
     });
     if (error) {
       console.error("[email-proposta] Resend recusou:", error);

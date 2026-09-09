@@ -5,6 +5,7 @@
  */
 
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
 import { e } from "./escapar-html";
 
@@ -134,7 +135,7 @@ export async function sendOrderStatusEmail(params: SendStatusEmailParams): Promi
       from:    "CLYON <noreply@clyon.pt>",
       to:      [params.to],
       subject: `${msg.title} — Pedido #${params.orderId} | CLYON`,
-      html:    buildHtml(params),
+      html:    legivelNoResumo(buildHtml(params)),
     });
     if (error) console.error("[email-status] Resend devolveu erro:", error);
     else console.log("[email-status] Email enviado para", params.to, "pedido#", params.orderId, "estado:", params.status);
