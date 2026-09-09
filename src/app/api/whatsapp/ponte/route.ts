@@ -19,11 +19,12 @@ export const runtime = "nodejs";
  * O servidor não chega ao PC (não tem endereço público): é o Winapp que vem
  * cá, com um segredo partilhado no cabeçalho. Três verbos:
  *
- *   POST  {telefone, texto} — chegou uma mensagem. Se o número TEM pedido
- *         activo, o cérebro trata-a e a resposta fica na fila; devolve-se
- *         {meu: true} e o que houver para enviar. Se NÃO tem, devolve-se
- *         {meu: false} e o site não mexe — a conversa é do bot local, que
- *         faz o trabalho dele: qualificar o contacto novo.
+ *   POST  {telefone, texto} — chegou uma mensagem. O cérebro trata-a e a
+ *         resposta fica na fila; devolve-se {meu: true} e o que houver para
+ *         enviar. Com pedido activo é a negociação; sem pedido é o assistente
+ *         que recolhe um pedido novo (whatsapp-recolha.ts). Só se devolve
+ *         {meu: false} — o bot local fica com a conversa — quando o site está
+ *         desligado ou o número bloqueado.
  *   GET   — o que está na fila por enviar.
  *   PATCH {ids} — estas saíram mesmo; risca-as. Só se risca por confirmação:
  *         se o Winapp cair entre buscar e enviar, a mensagem volta a sair na
@@ -90,11 +91,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ meu: false, paraEnviar: [] });
   }
 
-  // A pergunta que decide quem fala: este número tem pedido activo?
+  /*
+   * ERA: sem pedido activo, {meu: false} — a conversa era do bot local do
+   * Winapp, que qualificava o contacto. AGORA o site faz isso: "quero esse
+   * WhatsApp usado pelo site automaticamente, a recolher os dados e a criar o
+   * pedido". Um número desconhecido é {meu: true} — o assistente daqui trata
+   * dele (whatsapp-recolha.ts) e o bot local cala-se.
+   */
   const pedidos = await pedidosDoTelefone(telefone);
-  if (pedidos.length === 0) {
-    return NextResponse.json({ meu: false, paraEnviar: [] });
-  }
+  void pedidos;
 
   // É cliente do site, mas a conversa está entregue a uma pessoa: o bot
   // local do Winapp também não a pode apanhar — {meu: true} cala-o — e o

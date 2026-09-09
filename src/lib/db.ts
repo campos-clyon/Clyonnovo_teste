@@ -4732,6 +4732,108 @@ export async function mensagensDoNumeroWhatsApp(
   return rows.reverse().map((r) => ({ ...r, criadoEm: String(r.criadoEm) }));
 }
 
+/*
+ * A RECOLHA DE UM PEDIDO PELO WHATSAPP — onde cada número vai na conversa.
+ *
+ * Uma linha por número: o passo em que está e o que já respondeu, em JSON.
+ * Termina quando o pedido nasce (fica o pedidoId) ou quando a pessoa
+ * desiste (apaga-se). Uma recolha parada há mais de um dia recomeça — quem
+ * volta passado uma semana não se lembra do que estava a responder.
+ */
+let whatsappRecolhasReady = false;
+async function ensureWhatsappRecolhasTable() {
+  if (whatsappRecolhasReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappRecolhas (
+      id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone      VARCHAR(32) NOT NULL,
+      passo         VARCHAR(40) NOT NULL,
+      dadosJson     TEXT NULL,
+      pedidoId      INT NULL,
+      criadoEm      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_recolha_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  whatsappRecolhasReady = true;
+}
+
+export interface RecolhaWhatsApp {
+  telefone: string;
+  passo: string;
+  dados: Record<string, unknown>;
+  pedidoId: number | null;
+  actualizadoEm: string;
+}
+
+export async function recolhaWhatsApp(telefone: string): Promise<RecolhaWhatsApp | null> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return null;
+  await ensureWhatsappRecolhasTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT telefone, passo, dadosJson, pedidoId, actualizadoEm FROM whatsappRecolhas WHERE RIGHT(telefone, 9) = RIGHT(?, 9) LIMIT 1",
+    [digitos],
+  )) as [Array<{ telefone: string; passo: string; dadosJson: string | null; pedidoId: number | null; actualizadoEm: string }>, unknown];
+  const r = rows[0];
+  if (!r) return null;
+  let dados: Record<string, unknown> = {};
+  try {
+    dados = r.dadosJson ? JSON.parse(r.dadosJson) : {};
+  } catch {
+    dados = {};
+  }
+  return {
+    telefone: r.telefone,
+    passo: r.passo,
+    dados,
+    pedidoId: r.pedidoId != null ? Number(r.pedidoId) : null,
+    actualizadoEm: String(r.actualizadoEm),
+  };
+}
+
+export async function guardarRecolhaWhatsApp(
+  telefone: string,
+  passo: string,
+  dados: Record<string, unknown>,
+): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return;
+  await ensureWhatsappRecolhasTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `INSERT INTO whatsappRecolhas (telefone, passo, dadosJson, pedidoId)
+     VALUES (?, ?, ?, NULL)
+     ON DUPLICATE KEY UPDATE passo = VALUES(passo), dadosJson = VALUES(dadosJson), pedidoId = NULL`,
+    [digitos, passo, JSON.stringify(dados)],
+  );
+}
+
+export async function apagarRecolhaWhatsApp(telefone: string): Promise<void> {
+  await ensureWhatsappRecolhasTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("DELETE FROM whatsappRecolhas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [
+    soDigitos(telefone),
+  ]);
+}
+
+export async function listarRecolhasWhatsAppEmCurso(): Promise<
+  Array<{ telefone: string; passo: string; actualizadoEm: string }>
+> {
+  await ensureWhatsappRecolhasTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT telefone, passo, actualizadoEm FROM whatsappRecolhas WHERE pedidoId IS NULL ORDER BY actualizadoEm DESC LIMIT 50",
+  )) as [Array<{ telefone: string; passo: string; actualizadoEm: string }>, unknown];
+  return rows.map((r) => ({ ...r, actualizadoEm: String(r.actualizadoEm) }));
+}
+
 /**
  * A pergunta que TODO o envio e TODA a resposta fazem primeiro: o cérebro
  * pode falar com este número? Três nãos possíveis — o interruptor geral, o

@@ -44,6 +44,26 @@ type Estado = {
   bloqueados: Array<{ telefone: string; nota: string | null; criadoEm: string }>;
   fila: Array<{ id: number; telefone: string; texto: string }>;
   conversas: Array<{ telefone: string; ultimaMensagem: string; direccao: string; quando: string }>;
+  /** Os números a meio da recolha de um pedido pelo assistente, e o passo. */
+  recolhas?: Array<{ telefone: string; passo: string; actualizadoEm: string }>;
+};
+
+/** O passo da recolha, em palavras de painel. */
+const PASSO_DA_RECOLHA: Record<string, string> = {
+  servico: "a escolher o serviço",
+  nome: "a dizer o nome",
+  morada: "a dar a morada",
+  codigoPostal: "a dar o código postal",
+  moradaDestino: "a dar o destino",
+  codigoPostalDestino: "a dar o código postal do destino",
+  andar: "a dizer o andar",
+  elevador: "a dizer se há elevador",
+  estacionamento: "a dizer se dá para estacionar",
+  entulhoQuantidade: "a dizer quanto entulho",
+  quando: "a dizer para quando",
+  descricao: "a descrever",
+  fatura: "a dizer se quer factura",
+  confirmar: "a confirmar o resumo",
 };
 
 type Mensagem = { direccao: string; texto: string; criadoEm: string };
@@ -405,6 +425,12 @@ export default function AdminWhatsAppPanel() {
         {aMao && (
           <>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Um número sem pedido activo é atendido pelo assistente: pergunta o serviço,
+              o nome, a morada, o andar, para quando — e regista o pedido na fila «por
+              enviar» das Negociações. Um número com pedido fala com o cérebro das
+              propostas. «Entregar a si» cala o assistente nesse número; bloqueado, não
+              recebe nada.
+              <br />
               Sem API, o que os clientes respondem chega ao WhatsApp Web e não a este
               ecrã sozinho. Cole-o aqui: o cérebro trata-o como se tivesse entrado pela
               API e a resposta dele fica na fila em baixo, pronta a enviar.
@@ -468,7 +494,19 @@ export default function AdminWhatsAppPanel() {
                   className="flex w-full items-center justify-between gap-3 py-2.5 text-left"
                 >
                   <div className="min-w-0">
-                    <p className="font-mono text-sm text-white">{formatarTelefone(c.telefone)}</p>
+                    <p className="flex flex-wrap items-center gap-2 font-mono text-sm text-white">
+                      {formatarTelefone(c.telefone)}
+                      {(() => {
+                        const r = (estado.recolhas ?? []).find(
+                          (x) => x.telefone.slice(-9) === c.telefone.replace(/\D/g, "").slice(-9),
+                        );
+                        return r ? (
+                          <span className="rounded-full bg-violet-500/15 px-2 py-0.5 font-sans text-[11px] font-semibold text-violet-300">
+                            assistente: {PASSO_DA_RECOLHA[r.passo] ?? r.passo}
+                          </span>
+                        ) : null;
+                      })()}
+                    </p>
                     <p className="truncate text-xs text-slate-500">
                       {c.direccao === "out" ? "→ " : ""}
                       {c.ultimaMensagem}
@@ -527,6 +565,30 @@ export default function AdminWhatsAppPanel() {
                     </div>
                     {erroDaResposta && (
                       <p className="mt-2 text-xs text-red-300">{erroDaResposta}</p>
+                    )}
+                    {(estado.recolhas ?? []).some(
+                      (x) => x.telefone.slice(-9) === c.telefone.replace(/\D/g, "").slice(-9),
+                    ) && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            if (window.confirm("O assistente volta a perguntar tudo desde o serviço. Continuar?")) {
+                              void agir("recomecarRecolha", c.telefone);
+                            }
+                          }}
+                          disabled={ocupado}
+                          className="rounded-lg border border-violet-500/40 px-3 py-1.5 text-xs font-semibold text-violet-300 transition hover:bg-violet-500/10 disabled:opacity-40"
+                        >
+                          Recomeçar a recolha do assistente
+                        </button>
+                        <button
+                          onClick={() => void agir("interromper", c.telefone, "Pelo backoffice, durante a recolha")}
+                          disabled={ocupado}
+                          className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/10 disabled:opacity-40"
+                        >
+                          Calar o assistente e falar eu
+                        </button>
+                      </div>
                     )}
                     <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
                       {aMao
