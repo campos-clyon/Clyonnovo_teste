@@ -342,7 +342,8 @@ function passoSeguinte(passo: PassoDaRecolha, dados: DadosDaRecolha): PassoDaRec
 
 /** As correcções no resumo: «morada …», «nome …», «andar …», «quando …», «descrição …». */
 function corrigir(dados: DadosDaRecolha, texto: string, agora: Date): DadosDaRecolha | null {
-  const m = texto.trim().match(/^([A-Za-zÀ-ú]+)[:\s]+(.+)$/s);
+  // [\s\S] em vez da flag /s: o alvo do TypeScript do projecto não a aceita.
+  const m = texto.trim().match(/^([A-Za-zÀ-ú]+)[:\s]+([\s\S]+)$/);
   if (!m) return null;
   const campo = semAcentos(m[1]);
   const valor = m[2].trim();
