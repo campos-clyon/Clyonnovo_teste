@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { escaparHtml } from "./escapar-html";
 import { MINUTOS_DE_VALIDADE } from "./entrada-por-link";
 
@@ -76,7 +77,7 @@ export async function enviarEmailDeEntrada(params: {
       from: "CLYON <noreply@clyon.pt>",
       to: params.para,
       subject: "Entrar na CLYON",
-      html,
+      html: legivelNoResumo(html),
     });
     if (error) {
       console.error("[email-entrada] Resend recusou:", error);

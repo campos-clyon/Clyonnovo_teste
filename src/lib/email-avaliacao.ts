@@ -7,6 +7,7 @@
  * com parceiros, e o nome antigo só ia enganar quem viesse a seguir.
  */
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { SITE_URL } from "./seo-data";
 import { e } from "./escapar-html";
 
@@ -83,7 +84,7 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
       from:    "CLYON <noreply@clyon.pt>",
       to:      [params.to],
       subject: `Como correu o teu ${servico}? Deixa uma avaliação ★`,
-      html,
+      html: legivelNoResumo(html),
     });
     if (error) console.error("[email-parceiro] Resend erro (avaliação):", error);
   } catch (err: any) {

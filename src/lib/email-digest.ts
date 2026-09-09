@@ -5,6 +5,7 @@
  */
 
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -115,7 +116,7 @@ export async function sendWeeklyDigestEmail(params: SendWeeklyDigestParams): Pro
       from:    "CLYON <noreply@clyon.pt>",
       to:      [params.to],
       subject: `O seu resumo semanal CLYON — ${params.orders.length} ${params.orders.length === 1 ? "pedido activo" : "pedidos activos"}`,
-      html:    buildHtml(params),
+      html:    legivelNoResumo(buildHtml(params)),
     });
     if (error) {
       console.error("[email-digest] Resend devolveu erro:", error);

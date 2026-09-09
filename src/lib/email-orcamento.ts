@@ -5,6 +5,7 @@
  */
 
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
 import { e } from "./escapar-html";
 
@@ -185,7 +186,7 @@ export async function sendOrcamentoEmail(params: SendOrcamentoEmailParams): Prom
       from:    "CLYON <noreply@clyon.pt>",
       to:      [params.to],
       subject: `O seu orçamento CLYON — ${servico}`,
-      html:    buildHtml(params),
+      html:    legivelNoResumo(buildHtml(params)),
     });
     if (error) {
       console.error("[email-orcamento] Resend devolveu erro:", error);

@@ -14,6 +14,7 @@
  */
 
 import { Resend } from "resend";
+import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
@@ -158,7 +159,7 @@ export async function enviarLinkDoPedido(p: LinkDoPedidoParams): Promise<boolean
       from: "CLYON <noreply@clyon.pt>",
       to: p.para,
       subject: `O seu pedido #${p.pedidoId} está criado`,
-      html: montarHtml(p),
+      html: legivelNoResumo(montarHtml(p)),
     });
     if (error) {
       console.error("[email-pedido] Resend recusou:", error);
