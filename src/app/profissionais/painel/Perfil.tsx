@@ -246,6 +246,9 @@ export default function Perfil({
             <Check className="h-4 w-4" aria-hidden="true" />
             Guardado às{" "}
             {gravadoAs.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+            {/* Os custos mudam a sugestão de cada pedido; o painel já os foi
+                buscar — a pessoa não tem de recarregar nada. */}
+            {seccao === "servicos" && " · os seus trabalhos já estão recalculados"}
           </p>
         ) : null}
       </div>

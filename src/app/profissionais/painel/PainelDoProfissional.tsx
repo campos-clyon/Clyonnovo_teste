@@ -118,10 +118,12 @@ export default function PainelDoProfissional() {
 
   const carregar = useCallback(async () => {
     try {
+      // Sempre a versão de agora: depois de gravar os custos no perfil, a
+      // sugestão de cada trabalho muda, e uma cópia guardada mostrava a antiga.
       const [rp, rc, rf] = await Promise.all([
-        fetch("/api/profissionais/meus-pedidos"),
-        fetch("/api/profissionais/carteira"),
-        fetch("/api/profissionais/perfil"),
+        fetch("/api/profissionais/meus-pedidos", { cache: "no-store" }),
+        fetch("/api/profissionais/carteira", { cache: "no-store" }),
+        fetch("/api/profissionais/perfil", { cache: "no-store" }),
       ]);
 
       if (rp.status === 401 || rc.status === 401 || rf.status === 401) {

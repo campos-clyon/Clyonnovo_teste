@@ -18,6 +18,10 @@ import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 
 export const runtime = "nodejs";
+// Nunca em cache: a sugestão de cada pedido depende dos custos que ele acabou
+// de gravar no perfil — "após guardar, os meus trabalhos devem actualizar
+// automaticamente".
+export const dynamic = "force-dynamic";
 
 /**
  * Os pedidos deste profissional, para o painel dele.
