@@ -47,9 +47,61 @@ export function ponteConfigurada(): boolean {
   return Boolean(process.env.PONTE_WHATSAPP_SEGREDO);
 }
 
+/**
+ * O TERCEIRO CAMINHO: O NÚMERO À MÃO.
+ *
+ * "Também quero que ative o WhatsApp no painel sem a API por agora, pois
+ * ainda não temos a API da Meta. Vamos ativar o número 931632622 por
+ * enquanto." — 09-09-2026.
+ *
+ * Sem Meta e sem ponte, o site não tinha por onde falar: tudo devolvia false
+ * e o cérebro calava-se. Agora há um caminho de pessoas: o que o cérebro
+ * escreve fica na fila, e o painel mostra cada mensagem com um botão que
+ * abre o WhatsApp do número da CLYON já com o texto e o destinatário — quem
+ * está no backoffice carrega em enviar e marca como enviada. Não é
+ * automático, mas é o que se faz hoje à mão, sem a pessoa ter de escrever
+ * as propostas.
+ *
+ * O QUE NÃO FAZ: não lê respostas. Sem API não há webhook, e o que o cliente
+ * responder chega ao telemóvel e não ao site. Quem responde por ele é quem
+ * está no painel, dentro do pedido — como já era.
+ *
+ * O número é o da CLYON, público em todo o site. Muda-se com
+ * WHATSAPP_NUMERO_MANUAL; "off" desliga este caminho. A Meta e a ponte, quando
+ * existirem, mandam sobre isto sem mais nada mudar.
+ */
+export const NUMERO_MANUAL_POR_OMISSAO = "351931632622";
+
+export function numeroManualWhatsApp(): string | null {
+  const bruto = (process.env.WHATSAPP_NUMERO_MANUAL ?? "").trim();
+  if (bruto.toLowerCase() === "off") return null;
+  const digitos = telefoneParaWhatsApp(bruto || NUMERO_MANUAL_POR_OMISSAO);
+  return digitos.length >= 9 ? digitos : null;
+}
+
+/** O caminho à mão está de pé? Só quando não há nenhum automático. */
+export function manualActivo(): boolean {
+  return !whatsappConfigurado() && !ponteConfigurada() && numeroManualWhatsApp() !== null;
+}
+
+export type CanalWhatsApp = "meta" | "ponte" | "manual" | "nenhum";
+
+/** Por onde saem as mensagens hoje — o painel diz isto em letras grandes. */
+export function canalWhatsApp(): CanalWhatsApp {
+  if (whatsappConfigurado()) return "meta";
+  if (ponteConfigurada()) return "ponte";
+  if (manualActivo()) return "manual";
+  return "nenhum";
+}
+
+/** O link que abre o WhatsApp já com o destinatário e o texto — o gesto do caminho à mão. */
+export function linkParaEnviarAMao(para: string, texto: string): string {
+  return `https://wa.me/${telefoneParaWhatsApp(para)}?text=${encodeURIComponent(texto)}`;
+}
+
 /** Há ALGUM caminho para falar com o cliente por WhatsApp? */
 export function whatsappActivo(): boolean {
-  return whatsappConfigurado() || ponteConfigurada();
+  return whatsappConfigurado() || ponteConfigurada() || manualActivo();
 }
 
 /** Normaliza um telefone para o formato da API: dígitos, com indicativo. */
@@ -130,6 +182,10 @@ async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean
     });
   } else if (ponteConfigurada()) {
     saiu = await porNaFila(para, texto);
+  } else if (manualActivo()) {
+    // À mão: fica na fila para o painel, e só se regista como saída quando
+    // alguém a marcar como enviada — antes disso ainda não saiu de lado nenhum.
+    return porNaFila(para, texto);
   }
   if (saiu) await registarSaida(para, texto);
   return saiu;
@@ -202,6 +258,19 @@ export async function enviarBotoesWhatsApp(
     const saiu = await porNaFila(para, degradado);
     if (saiu) await registarSaida(para, degradado);
     return saiu;
+  }
+  if (manualActivo()) {
+    // À mão também não há botões: vai a mesma versão em palavras para a fila,
+    // e regista-se quando alguém a enviar do telemóvel.
+    const instrucoes = botoes
+      .slice(0, 3)
+      .map((b) => {
+        if (b.id.startsWith("ct:")) return `Para «${b.titulo}», responda SIM.`;
+        if (b.id.startsWith("rc:")) return `Para «${b.titulo}», responda NÃO.`;
+        return `— ${b.titulo}`;
+      })
+      .join("\n");
+    return porNaFila(para, `${texto}\n\n${instrucoes}`);
   }
   return false;
 }
