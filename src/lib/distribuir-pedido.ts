@@ -336,10 +336,10 @@ export async function distribuirPedido(
       // negociacao, porque ele nunca saberia que ela existe.
       if (!c.profissional.email) return { recebeu: false, avisado: false };
 
-      // Uma negociação por profissional, cada uma com o seu link. O primeiro
-      // lance já está na mesa: é o valor que o cliente pediu. Sem isto, a
-      // negociação começava vazia e alguém tinha de dar o primeiro passo sem
-      // saber sobre o quê.
+      // Uma negociação por profissional, cada uma com o seu link. A mesa
+      // começa VAZIA: o primeiro lance é do profissional, com a sugestão
+      // CLYON calculada para ele à frente — o valor do cliente já não abre a
+      // negociação ("não será o cliente a propor pela primeira vez").
       let token: string;
       try {
         const acesso = gerarTokenDeAcesso();
@@ -348,9 +348,7 @@ export async function distribuirPedido(
           providerId: c.profissional.id,
           acessoTokenHash: acesso.hash,
           acessoTokenExpiraEm: acesso.expiraEm,
-          propostasJson: JSON.stringify(
-            negociacaoNova(pedido.valorDesejadoCliente ?? 0, new Date()).propostas,
-          ),
+          propostasJson: JSON.stringify(negociacaoNova(new Date()).propostas),
         }, { reabrir });
         token = acesso.token;
       } catch (err) {

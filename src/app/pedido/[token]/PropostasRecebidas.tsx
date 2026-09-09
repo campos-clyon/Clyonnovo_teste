@@ -685,7 +685,9 @@ export default function PropostasRecebidas({
                     */}
                     {pendente?.por === "profissional"
                       ? "proposta dele"
-                      : "o seu valor — à espera da resposta"}
+                      : pendente
+                        ? "o seu valor — à espera da resposta"
+                        : "à espera da proposta dele"}
                   </div>
                 </div>
               </div>

@@ -39,6 +39,25 @@ export const runtime = "nodejs";
  * aqui, e NaN devolve `null` — que é o que faz o ecrã calar-se em vez de
  * mostrar uma distância inventada.
  */
+/** O valor da proposta pendente do CLIENTE, lido do JSON gravado; null se não há. */
+function valorPendenteDoCliente(json: string | null | undefined): number | null {
+  if (typeof json !== "string" || !json.trim()) return null;
+  try {
+    const lista = JSON.parse(json);
+    if (!Array.isArray(lista)) return null;
+    for (let i = lista.length - 1; i >= 0; i--) {
+      const p = lista[i] as { por?: unknown; estado?: unknown; valor?: unknown };
+      if (p?.estado === "pendente") {
+        const v = Number(p.valor);
+        return p.por === "cliente" && Number.isFinite(v) ? v : null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function ponto(
   lat: string | number | null | undefined,
   lng: string | number | null | undefined,
@@ -186,7 +205,13 @@ export async function GET(req: NextRequest) {
         string,
         unknown
       >;
-      const minimo = l.valorDesejadoCliente != null ? Number(l.valorDesejadoCliente) : null;
+      /*
+       * O QUE ESTÁ EM CIMA DA MESA PARA ELE ACEITAR: a proposta pendente do
+       * cliente, e só essa. Era o valor desejado do pedido, que agora não abre
+       * a negociação — o profissional propõe primeiro, com a sugestão CLYON
+       * à frente — e que ele não deve ver antes de propor.
+       */
+      const minimo = valorPendenteDoCliente(l.propostasJson);
       const acordado = l.valorAcordado != null ? Number(l.valorAcordado) : null;
       const fase = faseDoTrabalho(l as never);
 

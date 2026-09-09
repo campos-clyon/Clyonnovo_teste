@@ -142,6 +142,10 @@ export function accoesDisponiveis(n: Negociacao, lado: Lado, agora: Date): Accao
     return lado === "cliente" ? ["contratar", "desistir"] : ["desistir"];
   }
 
+  // A primeira palavra é do profissional. Enquanto a mesa está vazia, o
+  // cliente só pode desistir — a proposta que ele responde é a do pro.
+  if (n.propostas.length === 0 && lado === "cliente") return ["desistir"];
+
   const pendente = propostaPendente(n, agora);
   const restantes = propostasRestantes(n, lado, agora);
   const accoes: Accao[] = [];
@@ -214,6 +218,12 @@ export function propor(
     }
     if (n.estado === "desistida" || n.estado === "morta") {
       return { ok: false, erro: "Esta negociação terminou." };
+    }
+    if (n.propostas.length === 0 && lado === "cliente") {
+      return {
+        ok: false,
+        erro: "O profissional propõe primeiro — espere pela proposta dele para responder.",
+      };
     }
     const restantes = propostasRestantes(n, lado, agora);
     return {
@@ -305,18 +315,19 @@ export function semSaida(n: Negociacao, agora: Date): boolean {
   );
 }
 
-/** Uma negociação nova, com o valor que o cliente pediu como ponto de partida. */
-export function negociacaoNova(valorPedidoPeloCliente: number, agora: Date): Negociacao {
-  return {
-    estado: "aberta",
-    valorAcordado: null,
-    propostas: [
-      {
-        por: "cliente",
-        valor: Math.round(valorPedidoPeloCliente * 100) / 100,
-        criadaEm: agora,
-        estado: "pendente",
-      },
-    ],
-  };
+/**
+ * Uma negociação nova: a mesa VAZIA. O profissional propõe primeiro.
+ *
+ * Abria com o valor do cliente já em cima da mesa, como proposta dele. Com a
+ * sugestão CLYON calculada para cada profissional, isso passou a ser um
+ * erro: o histórico dizia «O cliente propôs 330 €» sobre uma coisa que o
+ * cliente não fez, e o profissional via um valor a aceitar em vez de fazer a
+ * conta dele. "Não será o cliente a propor pela primeira vez, e sim o pro."
+ *
+ * As negociações antigas, com a abertura do cliente gravada, continuam a
+ * funcionar — o motor nunca dependeu de a primeira proposta ser de alguém.
+ */
+export function negociacaoNova(agora: Date): Negociacao {
+  void agora; // a data fica na primeira proposta, que agora é do profissional
+  return { estado: "aberta", valorAcordado: null, propostas: [] };
 }
