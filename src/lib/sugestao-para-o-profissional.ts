@@ -86,6 +86,12 @@ export type CustosDoProfissional = {
   trabalhosPorMes?: number | null;
   /** A margem que quer, em percentagem (40 = 40 %). */
   margemPercent?: number | null;
+  /**
+   * O tempo médio que UM trabalho lhe leva, em horas, deslocação e recolha
+   * incluídas. "Assim não usaremos esse dado pela IA e sim o estipulado pelo
+   * pro." Quando está, manda sobre a estimativa do simulador.
+   */
+  horasPorTrabalho?: number | null;
 };
 
 /**
@@ -189,6 +195,12 @@ export function pedidoParaSugestaoDaLinha(linha: Record<string, unknown>): Pedid
   };
 }
 
+/** «1 h», «2,5 h» — vírgula decimal, sem zeros a mais. */
+function horasPorExtenso(h: number): string {
+  const arredondado = Math.round(h * 100) / 100;
+  return `${String(arredondado).replace(".", ",")} h`;
+}
+
 function numero(v: unknown): number | null {
   if (v == null || v === "") return null;
   const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
@@ -217,12 +229,14 @@ export function sugerirParaOProfissional(
   const fixosDele = custosFixosPorTrabalho(custos);
   const margemDele = numero(custos?.margemPercent);
   const margem = margemDele != null && margemDele >= 0 ? margemDele / 100 : parametros.margem;
+  const horasDele = numero(custos?.horasPorTrabalho);
   const comOsSeusCustos =
     numero(custos?.custoKm) != null ||
     numero(custos?.custoHoraPessoa) != null ||
     numero(custos?.pessoasNaEquipa) != null ||
     fixosDele != null ||
-    margemDele != null;
+    margemDele != null ||
+    (horasDele != null && horasDele > 0);
 
   const mudanca = pedido.serviceType === "mudanca";
   const percurso = numero(pedido.percursoKm);
@@ -249,8 +263,11 @@ export function sugerirParaOProfissional(
     },
   };
 
-  // As horas vêm da mesma regra do simulador: itens, sacos, andares, elevador.
-  const horas = estimateLaborHours(entrada);
+  // As horas são as DELE quando as definiu — o tempo médio de um trabalho,
+  // deslocação e recolha incluídas. Só sem isso entra a regra do simulador:
+  // itens, sacos, andares, elevador.
+  const horas = horasDele != null && horasDele > 0 ? horasDele : estimateLaborHours(entrada);
+  const horasSaoDele = horasDele != null && horasDele > 0;
 
   const kmDeCarro = mudanca ? percurso : distanciaKm != null ? distanciaKm * 2 : null;
   const semDistancia = kmDeCarro == null;
@@ -268,7 +285,7 @@ export function sugerirParaOProfissional(
     kmDeCarro != null
       ? `Combustível: ${km(kmDeCarro)} ${mudanca ? "de percurso" : "ida e volta"} × ${euros(custoKm)}/km = ${euros(custoCombustivel)}`
       : "Combustível: sem distância conhecida — ficou a 0 €, por isso a conta é por baixo",
-    `Pessoal: ${horas} h × ${pessoas} ${pessoas === 1 ? "pessoa" : "pessoas"} × ${euros(custoHoraPessoa)}/h = ${euros(custoPessoal)}`,
+    `Pessoal: ${horasPorExtenso(horas)} × ${pessoas} ${pessoas === 1 ? "pessoa" : "pessoas"} × ${euros(custoHoraPessoa)}/h = ${euros(custoPessoal)}${horasSaoDele ? " (o seu tempo médio, deslocação e recolha)" : " (tempo estimado pela CLYON)"}`,
     fixosDele != null && anual != null && porMes != null
       ? `Custos fixos: ${euros(anual)}/ano ÷ ${porMes * 12} trabalhos (${porMes} por mês) = ${euros(custosFixos)} por trabalho`
       : `Custos fixos por serviço: ${euros(custosFixos)} (referência CLYON)`,

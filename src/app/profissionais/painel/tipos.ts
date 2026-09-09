@@ -155,6 +155,8 @@ export type Perfil = {
   custosFixosAnuais?: Record<string, number | null> | null;
   trabalhosPorMes?: number | null;
   margemPercent?: number | null;
+  /** Horas que um trabalho lhe leva em média, deslocação e recolha incluídas. */
+  horasPorTrabalho?: number | null;
   emiteFatura: boolean;
   regimeIva: string;
   emiteGuiaTransporte: boolean;

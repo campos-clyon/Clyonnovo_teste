@@ -113,6 +113,7 @@ export async function GET(req: NextRequest) {
         custosFixosAnuais: custosFixosDeJson(p.custosFixosJson),
         trabalhosPorMes: p.trabalhosPorMes != null ? Number(p.trabalhosPorMes) : null,
         margemPercent: p.margemPercent != null ? Number(p.margemPercent) : null,
+        horasPorTrabalho: p.horasPorTrabalho != null ? Number(p.horasPorTrabalho) : null,
         emiteFatura: Number(p.emiteFatura) === 1,
         regimeIva: String(p.regimeIva ?? "isento"),
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
@@ -372,6 +373,14 @@ export async function PUT(req: NextRequest) {
     else if (!Number.isFinite(n) || n < 0 || n > 200) {
       erros.push({ campo: "margemPercent", mensagem: "A margem vai de 0 a 200 %." });
     } else mudancas.margemPercent = Math.round(n * 100) / 100;
+  }
+  // O tempo médio de um trabalho, em horas — de um quarto de hora a um dia.
+  if ("horasPorTrabalho" in corpo) {
+    const n = custoOuNulo(corpo.horasPorTrabalho);
+    if (n === null) mudancas.horasPorTrabalho = null;
+    else if (!Number.isFinite(n) || n < 0.25 || n > 24) {
+      erros.push({ campo: "horasPorTrabalho", mensagem: "O tempo por trabalho vai de 0,25 a 24 horas." });
+    } else mudancas.horasPorTrabalho = Math.round(n * 100) / 100;
   }
 
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;

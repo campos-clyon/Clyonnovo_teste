@@ -470,6 +470,39 @@ export default function Perfil({
               </div>
 
               {/*
+                O TEMPO DE UM TRABALHO, DITO POR ELE.
+
+                "Vamos adicionar também o tempo médio para a realização de um
+                trabalho, entre deslocação e coleta — assim não usaremos esse
+                dado pela IA e sim o estipulado pelo pro." Vazio, a conta usa
+                a estimativa do simulador (itens, andares, elevador).
+              */}
+              <div className="mt-4">
+                <label className="block sm:w-1/2">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">
+                    Tempo médio por trabalho (horas)
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.25"
+                    min={0.25}
+                    max={24}
+                    placeholder="ex.: 2,5"
+                    value={dados.horasPorTrabalho ?? ""}
+                    onChange={(e) =>
+                      mudar("horasPorTrabalho", e.target.value === "" ? null : Number(e.target.value))
+                    }
+                    className={CAIXA}
+                  />
+                </label>
+                <p className="mt-1 text-xs text-slate-500">
+                  Deslocação e recolha incluídas. Com isto preenchido, a conta usa o seu tempo
+                  em vez de o estimar a partir do pedido.
+                </p>
+              </div>
+
+              {/*
                 OS CUSTOS FIXOS, EM EUROS POR ANO.
 
                 "Via Verde, manutenção, IUC, inspecção e seguro — ele pode
@@ -590,6 +623,7 @@ export default function Perfil({
                   custosFixosAnuais: dados.custosFixosAnuais ?? null,
                   trabalhosPorMes: dados.trabalhosPorMes ?? null,
                   margemPercent: dados.margemPercent ?? null,
+                  horasPorTrabalho: dados.horasPorTrabalho ?? null,
                 })
               }
             />
