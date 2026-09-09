@@ -1,7 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { negociacaoNova, propor, aceitar, accoesDisponiveis } from "./negociacao";
+import { propor, aceitar, accoesDisponiveis, type Negociacao } from "./negociacao";
+
+/** A mesa como abria antes — o valor do cliente lá posto. O #228 era assim. */
+function abertaPeloCliente(valor: number, agora: Date): Negociacao {
+  return {
+    estado: "aberta",
+    valorAcordado: null,
+    propostas: [{ por: "cliente", valor, criadaEm: agora, estado: "pendente" }],
+  };
+}
 import { retratoDoPedido, oQueMudou, mudancasPorExtenso } from "./recomecar-do-zero";
 
 /**
@@ -35,7 +44,7 @@ const DISTRIBUIR = ler("src/lib/distribuir-pedido.ts");
 describe("o encalhe", () => {
   it("depois de o profissional aceitar, mais ninguém consegue propor outro valor", () => {
     const agora = new Date();
-    let n = negociacaoNova(121, agora);
+    let n = abertaPeloCliente(121, agora);
 
     // O profissional aceita o valor que saiu por engano.
     const aceite = aceitar(n, "profissional", agora);

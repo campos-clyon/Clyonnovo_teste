@@ -25,16 +25,47 @@ function aplica(r: ReturnType<typeof propor>): Negociacao {
   return r.negociacao;
 }
 
+/**
+ * A mesa como abria ANTES: com o valor do cliente já lá, pendente. As
+ * negociações gravadas até 09-09-2026 têm esta forma, e o motor tem de
+ * continuar a tratá-las — é sobre ela que as regras de alternância se testam.
+ */
+function abertaPeloCliente(valor: number, agora: Date): Negociacao {
+  return {
+    estado: "aberta",
+    valorAcordado: null,
+    propostas: [{ por: "cliente", valor, criadaEm: agora, estado: "pendente" }],
+  };
+}
+
 describe("negociacaoNova", () => {
-  it("abre com o valor que o cliente pediu, pendente", () => {
-    const n = negociacaoNova(80, T0);
+  it("abre VAZIA — o profissional propõe primeiro", () => {
+    // "Não será o cliente a propor pela primeira vez, e sim o pro."
+    const n = negociacaoNova(T0);
     expect(n.estado).toBe("aberta");
-    expect(n.propostas).toHaveLength(1);
-    expect(n.propostas[0]).toMatchObject({ por: "cliente", valor: 80, estado: "pendente" });
+    expect(n.propostas).toHaveLength(0);
+    expect(propostasRestantes(n, "cliente", T0)).toBe(MAX_PROPOSTAS_POR_LADO);
+    expect(propostasRestantes(n, "profissional", T0)).toBe(MAX_PROPOSTAS_POR_LADO);
   });
 
-  it("gasta uma das cinco do cliente", () => {
-    const n = negociacaoNova(80, T0);
+  it("com a mesa vazia, o cliente só pode desistir; o profissional propõe", () => {
+    const n = negociacaoNova(T0);
+    expect(accoesDisponiveis(n, "cliente", T0)).toEqual(["desistir"]);
+    expect(accoesDisponiveis(n, "profissional", T0)).toEqual(["propor", "desistir"]);
+    expect(propor(n, "cliente", 80, T0).ok).toBe(false);
+  });
+
+  it("depois da primeira proposta do profissional, a negociação é a de sempre", () => {
+    const n = aplica(propor(negociacaoNova(T0), "profissional", 96.6, T0));
+    expect(propostaPendente(n, T0)).toMatchObject({ por: "profissional", valor: 96.6 });
+    expect(accoesDisponiveis(n, "cliente", T0)).toEqual(
+      expect.arrayContaining(["aceitar", "propor", "desistir"]),
+    );
+    expect(accoesDisponiveis(n, "profissional", T0)).toEqual(["desistir"]);
+  });
+
+  it("a abertura antiga, pelo cliente, gasta uma das cinco dele", () => {
+    const n = abertaPeloCliente(80, T0);
     expect(propostasRestantes(n, "cliente", T0)).toBe(MAX_PROPOSTAS_POR_LADO - 1);
     expect(propostasRestantes(n, "profissional", T0)).toBe(MAX_PROPOSTAS_POR_LADO);
   });
@@ -44,7 +75,7 @@ describe("alternância", () => {
   // Sem isto, um lado enterrava o outro em propostas e a negociação passava a
   // ser quem escreve mais depressa.
   it("quem tem proposta pendente não pode fazer outra", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     expect(accoesDisponiveis(n, "cliente", T0)).not.toContain("propor");
     const r = propor(n, "cliente", 90, T0);
     expect(r.ok).toBe(false);
@@ -52,21 +83,21 @@ describe("alternância", () => {
   });
 
   it("o outro lado pode aceitar ou contrapropor", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     expect(accoesDisponiveis(n, "profissional", T0)).toEqual(
       expect.arrayContaining(["aceitar", "propor"]),
     );
   });
 
   it("contrapropor recusa a que estava em cima da mesa", () => {
-    const n = aplica(propor(negociacaoNova(80, T0), "profissional", 120, horas(1)));
+    const n = aplica(propor(abertaPeloCliente(80, T0), "profissional", 120, horas(1)));
     expect(n.propostas[0].estado).toBe("recusada");
     expect(n.propostas[1]).toMatchObject({ por: "profissional", valor: 120, estado: "pendente" });
     expect(propostaPendente(n, horas(1))?.valor).toBe(120);
   });
 
   it("as propostas vão e voltam", () => {
-    let n = negociacaoNova(80, T0);
+    let n = abertaPeloCliente(80, T0);
     n = aplica(propor(n, "profissional", 120, horas(1)));
     n = aplica(propor(n, "cliente", 95, horas(2)));
     n = aplica(propor(n, "profissional", 110, horas(3)));
@@ -79,7 +110,7 @@ describe("alternância", () => {
 describe("as cinco propostas", () => {
   /** Faz o cliente e o profissional alternarem até o cliente gastar as cinco. */
   function ateEsgotar(lado: Lado): Negociacao {
-    let n = negociacaoNova(80, T0);
+    let n = abertaPeloCliente(80, T0);
     let t = 1;
     while (propostasRestantes(n, lado, horas(t)) > 0) {
       const outro: Lado = lado === "cliente" ? "profissional" : "cliente";
@@ -109,7 +140,7 @@ describe("as cinco propostas", () => {
 
 describe("prazo de 48 horas", () => {
   it("uma proposta expira ao fim do prazo", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS - 1))).not.toBeNull();
     expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS))).toBeNull();
   });
@@ -117,27 +148,27 @@ describe("prazo de 48 horas", () => {
   // A regra que impede o silêncio de ser a melhor jogada: se expirar gastasse
   // chance de quem propôs, bastava ao outro lado calar-se para ganhar.
   it("expirar NÃO gasta chance de quem propôs", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     expect(propostasRestantes(n, "cliente", T0)).toBe(4);
     expect(propostasRestantes(n, "cliente", horas(PRAZO_DA_PROPOSTA_HORAS + 1))).toBe(5);
   });
 
   it("depois de expirar, quem propôs pode propor de novo", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     const depois = horas(PRAZO_DA_PROPOSTA_HORAS + 1);
     expect(accoesDisponiveis(n, "cliente", depois)).toContain("propor");
     expect(propor(n, "cliente", 85, depois).ok).toBe(true);
   });
 
   it("uma proposta expirada já não se aceita", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     const depois = horas(PRAZO_DA_PROPOSTA_HORAS + 1);
     expect(accoesDisponiveis(n, "profissional", depois)).not.toContain("aceitar");
     expect(aceitar(n, "profissional", depois).ok).toBe(false);
   });
 
   it("avisa antes de expirar", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     const p = n.propostas[0];
     expect(estaPrestesAExpirar(p, horas(1))).toBe(false);
     expect(estaPrestesAExpirar(p, horas(40))).toBe(true);
@@ -150,19 +181,19 @@ describe("aperto de mão duplo", () => {
   // passo, o primeiro a aceitar ficava com o trabalho sem o cliente ter
   // escolhido quem lhe entra em casa.
   it("o profissional aceitar NÃO fecha o negócio", () => {
-    const n = aplica(aceitar(negociacaoNova(80, T0), "profissional", horas(1)));
+    const n = aplica(aceitar(abertaPeloCliente(80, T0), "profissional", horas(1)));
     expect(n.estado).toBe("aguarda_contratacao");
     expect(n.valorAcordado).toBe(80);
   });
 
   it("depois disso, só o cliente decide", () => {
-    const n = aplica(aceitar(negociacaoNova(80, T0), "profissional", horas(1)));
+    const n = aplica(aceitar(abertaPeloCliente(80, T0), "profissional", horas(1)));
     expect(accoesDisponiveis(n, "cliente", horas(2))).toEqual(["contratar", "desistir"]);
     expect(accoesDisponiveis(n, "profissional", horas(2))).toEqual(["desistir"]);
   });
 
   it("contratar fecha", () => {
-    let n = aplica(aceitar(negociacaoNova(80, T0), "profissional", horas(1)));
+    let n = aplica(aceitar(abertaPeloCliente(80, T0), "profissional", horas(1)));
     n = aplica(contratar(n, horas(2)));
     expect(n.estado).toBe("acordada");
     expect(n.valorAcordado).toBe(80);
@@ -170,7 +201,7 @@ describe("aperto de mão duplo", () => {
 
   // A assimetria: quando o cliente aceita, a escolha já está feita.
   it("o cliente aceitar fecha logo", () => {
-    let n = negociacaoNova(80, T0);
+    let n = abertaPeloCliente(80, T0);
     n = aplica(propor(n, "profissional", 120, horas(1)));
     n = aplica(aceitar(n, "cliente", horas(2)));
     expect(n.estado).toBe("acordada");
@@ -178,13 +209,13 @@ describe("aperto de mão duplo", () => {
   });
 
   it("não se contrata o que ninguém aceitou", () => {
-    expect(contratar(negociacaoNova(80, T0), horas(1)).ok).toBe(false);
+    expect(contratar(abertaPeloCliente(80, T0), horas(1)).ok).toBe(false);
   });
 });
 
 describe("fim da negociação", () => {
   it("uma negociação acordada não aceita mais nada", () => {
-    let n = negociacaoNova(80, T0);
+    let n = abertaPeloCliente(80, T0);
     n = aplica(propor(n, "profissional", 120, horas(1)));
     n = aplica(aceitar(n, "cliente", horas(2)));
     expect(accoesDisponiveis(n, "cliente", horas(3))).toEqual([]);
@@ -193,38 +224,38 @@ describe("fim da negociação", () => {
   });
 
   it("desistir termina", () => {
-    const n = aplica(desistir(negociacaoNova(80, T0), "profissional", horas(1)));
+    const n = aplica(desistir(abertaPeloCliente(80, T0), "profissional", horas(1)));
     expect(n.estado).toBe("desistida");
     expect(accoesDisponiveis(n, "cliente", horas(2))).toEqual([]);
   });
 
   it("desistir duas vezes não faz nada", () => {
-    const n = aplica(desistir(negociacaoNova(80, T0), "cliente", horas(1)));
+    const n = aplica(desistir(abertaPeloCliente(80, T0), "cliente", horas(1)));
     expect(desistir(n, "cliente", horas(2)).ok).toBe(false);
   });
 });
 
 describe("semSaida", () => {
   it("é falso enquanto houver propostas por gastar", () => {
-    expect(semSaida(negociacaoNova(80, T0), T0)).toBe(false);
+    expect(semSaida(abertaPeloCliente(80, T0), T0)).toBe(false);
   });
 
   it("é falso quando há proposta em cima da mesa", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     expect(semSaida(n, horas(1))).toBe(false);
   });
 });
 
 describe("valores", () => {
   it("recusa valores inválidos", () => {
-    const n = negociacaoNova(80, T0);
+    const n = abertaPeloCliente(80, T0);
     for (const v of [0, -10, NaN, Infinity]) {
       expect(propor(n, "profissional", v, horas(1)).ok).toBe(false);
     }
   });
 
   it("arredonda aos cêntimos", () => {
-    const n = aplica(propor(negociacaoNova(80, T0), "profissional", 99.999, horas(1)));
+    const n = aplica(propor(abertaPeloCliente(80, T0), "profissional", 99.999, horas(1)));
     expect(n.propostas[1].valor).toBe(100);
   });
 });
