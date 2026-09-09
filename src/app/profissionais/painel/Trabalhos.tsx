@@ -1539,20 +1539,46 @@ function DetalheDoTrabalho({
 
       {/* O valor */}
       <section className="mt-3 rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-sm text-slate-600">
-            <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-            {fechado ? "Recebe" : "Recebe se aceitar"}
-          </span>
-          <span className="text-right">
-            <span className="block text-2xl font-bold text-emerald-600">
-              {euros(fechado ? pedido.recebeSeFechado : pedido.recebeSeAceitar)}
-            </span>
-            <span className="block text-xs font-semibold text-slate-500">
-              {etiquetaDaBase(lerBase(pedido.baseDoPreco))}
-            </span>
-          </span>
-        </div>
+        {/*
+          ANTES DE ELE PROPOR, O QUE HÁ É A SUGESTÃO — NÃO UM VALOR A ACEITAR.
+
+          Dizia «Recebe se aceitar 310,20 €» sobre o valor de partida, a
+          mesma coisa que o ecrã da negociação já não oferece a aceitar.
+          "Deve ser VALOR SUGERIDO PELA CLYON." Enquanto não há proposta dele,
+          mostra-se o preço sugerido e o que lhe ficaria; a partir daí volta
+          a ser o que está em cima da mesa.
+        */}
+        {(() => {
+          const jaRespondeu = propostasDe(pedido.propostas).some((x) => x.por === "profissional");
+          const sugestaoAntesDePropor = !fechado && !jaRespondeu ? (pedido.sugestao ?? null) : null;
+          return (
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                {fechado ? "Recebe" : sugestaoAntesDePropor ? "Valor sugerido pela CLYON" : "Recebe se aceitar"}
+              </span>
+              <span className="text-right">
+                <span className="block text-2xl font-bold text-emerald-600">
+                  {euros(
+                    fechado
+                      ? pedido.recebeSeFechado
+                      : sugestaoAntesDePropor
+                        ? sugestaoAntesDePropor.precoSugerido
+                        : pedido.recebeSeAceitar,
+                  )}
+                </span>
+                {sugestaoAntesDePropor && (
+                  <span className="block text-xs font-semibold text-emerald-700">
+                    recebe {euros(sugestaoAntesDePropor.recebeSePropuser)}
+                  </span>
+                )}
+                <span className="block text-xs font-semibold text-slate-500">
+                  {etiquetaDaBase(lerBase(pedido.baseDoPreco))}
+                </span>
+              </span>
+            </div>
+          );
+        })()}
         {/*
           `slate-500` E NAO `slate-400`. Medido: #94A3B8 sobre branco da
           2,56:1, e a norma AA pede 4,5:1. E a unica linha que diz que o valor

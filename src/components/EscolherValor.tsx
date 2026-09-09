@@ -47,6 +47,9 @@ export default function EscolherValor({
   rotuloDoBotao = "Propor",
   legendaDoValor,
   onPropor,
+  passos,
+  escreverPrimeiro = false,
+  rotuloDosAtalhos,
 }: {
   /** O valor em cima da mesa, sobre o qual os atalhos são calculados. */
   referencia: number | null;
@@ -56,6 +59,19 @@ export default function EscolherValor({
   /** Uma linha por baixo do valor escolhido — o líquido, o total, o que fizer sentido. */
   legendaDoValor?: (valor: number) => string;
   onPropor: (valor: string) => void;
+  /** Os atalhos, quando não são os da direcção (ex.: 10, 20 e 40 % sobre a sugestão). */
+  passos?: number[];
+  /**
+   * O CAMPO PRIMEIRO, E SEMPRE À VISTA.
+   *
+   * "No botão verde vamos colocar o que hoje é «Outro — escrever»; os três
+   * botões em baixo: 10 % acima da sugestão CLYON, 20 % e, no lugar de
+   * «Outro», 40 %." Com isto ligado não há azulejo «Outro»: o campo está em
+   * cima com o botão verde, e os atalhos por baixo escrevem nele.
+   */
+  escreverPrimeiro?: boolean;
+  /** A linha por cima dos atalhos, nesse modo. */
+  rotuloDosAtalhos?: string;
 }) {
   const [escolhido, setEscolhido] = useState<number | null>(null);
   const [outro, setOutro] = useState("");
@@ -63,7 +79,7 @@ export default function EscolherValor({
 
   const atalhos =
     referencia != null && referencia > 0
-      ? PASSOS[direccao].map((passo) => ({
+      ? (passos ?? PASSOS[direccao]).map((passo) => ({
           passo,
           valor: aosCentimos(
             direccao === "abaixo" ? referencia * (1 - passo) : referencia * (1 + passo),
@@ -72,11 +88,79 @@ export default function EscolherValor({
       : [];
 
   const valorEscrito = Number(outro.replace(",", "."));
-  const valorFinal = aEscrever
-    ? Number.isFinite(valorEscrito) && valorEscrito > 0
-      ? aosCentimos(valorEscrito)
-      : null
-    : escolhido;
+  const valorFinal =
+    aEscrever || escreverPrimeiro
+      ? Number.isFinite(valorEscrito) && valorEscrito > 0
+        ? aosCentimos(valorEscrito)
+        : null
+      : escolhido;
+
+  if (escreverPrimeiro) {
+    return (
+      <div>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-tinta-fraca">
+            €
+          </span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={outro}
+            onChange={(e) => setOutro(e.target.value)}
+            placeholder={referencia != null ? String(Math.round(referencia)) : "120"}
+            aria-label="Valor a propor"
+            className="w-full rounded-xl border-2 border-gray-300 bg-white py-3 pl-10 pr-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-emerald-600"
+          />
+        </div>
+        {valorFinal != null && legendaDoValor && (
+          <p className="mt-2 text-sm text-slate-600">{legendaDoValor(valorFinal)}</p>
+        )}
+        <button
+          type="button"
+          disabled={aEnviar || valorFinal == null}
+          onClick={() => valorFinal != null && onPropor(String(valorFinal))}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-40"
+        >
+          {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {valorFinal != null ? `${rotuloDoBotao} ${euros(valorFinal)}` : rotuloDoBotao}
+        </button>
+
+        {atalhos.length > 0 && (
+          <>
+            {rotuloDosAtalhos && (
+              <p className="mb-2 mt-4 text-sm font-medium text-slate-900">{rotuloDosAtalhos}</p>
+            )}
+            <div className={`grid grid-cols-3 gap-2 ${rotuloDosAtalhos ? "" : "mt-3"}`}>
+              {atalhos.map((a) => {
+                const activo = valorFinal === a.valor;
+                return (
+                  <button
+                    key={a.passo}
+                    type="button"
+                    onClick={() => setOutro(String(a.valor).replace(".", ","))}
+                    aria-pressed={activo}
+                    className={`flex min-h-[72px] flex-col items-start justify-center rounded-xl border-2 px-2.5 py-2 text-left transition sm:px-3 ${
+                      activo
+                        ? "border-emerald-600 bg-emerald-50"
+                        : "border-slate-300 bg-white hover:border-emerald-400"
+                    }`}
+                  >
+                    <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
+                      {euros(a.valor)}
+                    </span>
+                    <span className="text-xs leading-tight text-acao">
+                      {direccao === "abaixo" ? "−" : "+"}
+                      {Math.round(a.passo * 100)}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
