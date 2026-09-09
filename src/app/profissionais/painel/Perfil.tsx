@@ -400,6 +400,71 @@ export default function Perfil({
               </div>
             </div>
 
+            {/*
+              OS CUSTOS DELE.
+
+              A sugestão de valor que ele vê em cada pedido é a conta da CLYON
+              feita para ele: os quilómetros são os dele, sempre; o custo por
+              km, o custo por hora e o tamanho da equipa são os de referência
+              da CLYON — a não ser que os ponha aqui. Todos opcionais: vazio
+              é «usar a referência».
+            */}
+            <div className="rounded-xl border border-slate-200 p-3">
+              <p className="text-sm font-medium text-slate-800">Os meus custos</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                Entram na sugestão de valor de cada pedido. Deixe vazio para usar a
+                referência da CLYON.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Custo por km (€)</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.05"
+                    min={0.05}
+                    max={5}
+                    placeholder="0,50"
+                    value={dados.custoKm ?? ""}
+                    onChange={(e) => mudar("custoKm", e.target.value === "" ? null : Number(e.target.value))}
+                    className={CAIXA}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Custo por hora e pessoa (€)</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.5"
+                    min={3}
+                    max={60}
+                    placeholder="9"
+                    value={dados.custoHoraPessoa ?? ""}
+                    onChange={(e) =>
+                      mudar("custoHoraPessoa", e.target.value === "" ? null : Number(e.target.value))
+                    }
+                    className={CAIXA}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Pessoas na equipa</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    step="1"
+                    min={1}
+                    max={10}
+                    placeholder="3"
+                    value={dados.pessoasNaEquipa ?? ""}
+                    onChange={(e) =>
+                      mudar("pessoasNaEquipa", e.target.value === "" ? null : Number(e.target.value))
+                    }
+                    className={CAIXA}
+                  />
+                </label>
+              </div>
+            </div>
+
             <Guardar
               onClick={() =>
                 gravar({
@@ -409,6 +474,9 @@ export default function Perfil({
                   baseLat: dados.baseLat,
                   baseLng: dados.baseLng,
                   raioKm: dados.raioKm,
+                  custoKm: dados.custoKm ?? null,
+                  custoHoraPessoa: dados.custoHoraPessoa ?? null,
+                  pessoasNaEquipa: dados.pessoasNaEquipa ?? null,
                 })
               }
             />

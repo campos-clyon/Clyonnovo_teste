@@ -5,11 +5,19 @@ import { Clock } from "lucide-react";
 import {
   negociacaoPorTokenHash,
   getSimulatorOrderById,
+  custosEBaseDoProfissional,
 } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { vistaDoProfissional } from "@/lib/pedido-valores";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
+import { getActivePricingMap } from "@/lib/pricing-helper";
+import {
+  parametrosDoMapa,
+  sugerirParaOProfissional,
+  type SugestaoParaOProfissional,
+} from "@/lib/sugestao-para-o-profissional";
 import type { Proposta } from "@/lib/negociacao";
 import Nota from "@/components/Nota";
 import NegociacaoProfissional from "./NegociacaoProfissional";
@@ -97,6 +105,64 @@ export default async function PaginaDoPedidoProfissional({
   const minimo =
     vista.valorDesejadoCliente != null ? Number(vista.valorDesejadoCliente) : null;
 
+  /*
+   * A SUGESTÃO DA CLYON, CALCULADA PARA ELE — também por aqui.
+   *
+   * O link do email e o painel são a mesma negociação e têm de dizer o
+   * mesmo número. Os quilómetros são da base DELE (o profissional desta
+   * negociação) ao trabalho, pela estrada quando dá; os custos são os do
+   * perfil dele, se os tiver. Nada disto pode impedir a página de abrir:
+   * sem base, sem coordenadas ou sem parâmetros, sai sem sugestão.
+   */
+  let sugestao: SugestaoParaOProfissional | null = null;
+  try {
+    const [mapa, profissional] = await Promise.all([
+      getActivePricingMap(),
+      custosEBaseDoProfissional(Number(negociacao.providerId)),
+    ]);
+    const bruto = linha as unknown as Record<string, unknown>;
+    let destino: { lat: number; lng: number } | null = null;
+    try {
+      const raw = typeof bruto.rawOrderJson === "string" ? JSON.parse(bruto.rawOrderJson) : null;
+      const lat = Number(raw?.address?.lat);
+      const lng = Number(raw?.address?.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) destino = { lat, lng };
+    } catch {
+      destino = null;
+    }
+    const origem =
+      profissional?.baseLat != null && profissional?.baseLng != null
+        ? { lat: profissional.baseLat, lng: profissional.baseLng }
+        : null;
+    let distanciaKm: number | null = null;
+    if (origem && destino) {
+      const [medida] = await distanciasRodoviarias([{ origem, destino }]);
+      distanciaKm = medida?.km ?? null;
+    }
+    sugestao = sugerirParaOProfissional(
+      {
+        serviceType: (vista.serviceType as string | null) ?? null,
+        entulhoEstado: (vista.entulhoEstado as string | null) ?? null,
+        entulhoQuantidade: (vista.entulhoQuantidade as string | null) ?? null,
+        floor: (vista.floor as string | null) ?? null,
+        hasElevator: (vista.hasElevator as string | null) ?? null,
+        parkingDistance: (vista.parkingDistance as string | null) ?? null,
+        description: (vista.description as string | null) ?? null,
+        percursoKm: (vista.percursoKm as number | string | null) ?? null,
+        andarDestino: (vista.andarDestino as string | null) ?? null,
+        elevadorDestino: (vista.elevadorDestino as string | null) ?? null,
+        estacionamentoDestino: (vista.estacionamentoDestino as string | null) ?? null,
+        baseDoPreco: (bruto.baseDoPreco as string | null) ?? null,
+      },
+      distanciaKm,
+      parametrosDoMapa(mapa),
+      profissional ?? null,
+    );
+  } catch (e) {
+    console.error("[profissionais/pedidos/[token]] sugestão", e);
+    sugestao = null;
+  }
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
       <header className="mb-6">
@@ -155,6 +221,7 @@ export default async function PaginaDoPedidoProfissional({
         valorAcordado={negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null}
         minimoDoCliente={minimo}
         recebeSeAceitar={minimo != null ? quantoOProfissionalRecebe(minimo) : null}
+        sugestao={sugestao}
       />
 
       {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email

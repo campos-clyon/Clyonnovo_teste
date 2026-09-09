@@ -104,6 +104,10 @@ export async function GET(req: NextRequest) {
         categorias: listaGravada(p.categorias),
         zonas: listaGravada(p.zonas),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
+        // Os custos dele, para a sugestão de valor. Nulos = referência da CLYON.
+        custoKm: p.custoKm != null ? Number(p.custoKm) : null,
+        custoHoraPessoa: p.custoHoraPessoa != null ? Number(p.custoHoraPessoa) : null,
+        pessoasNaEquipa: p.pessoasNaEquipa != null ? Number(p.pessoasNaEquipa) : null,
         emiteFatura: Number(p.emiteFatura) === 1,
         regimeIva: String(p.regimeIva ?? "isento"),
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
@@ -283,6 +287,39 @@ export async function PUT(req: NextRequest) {
 
   if ("localidadeFiscal" in corpo) {
     mudancas.localidadeFiscal = texto(corpo.localidadeFiscal) || null;
+  }
+
+  /*
+   * OS CUSTOS DELE — o que faz a sugestão de valor ser dele e não da CLYON.
+   *
+   * Os três são opcionais: vazio grava null e a conta cai na referência da
+   * CLYON campo a campo. Os limites são de sanidade — 0,05 €/km e 60 €/h não
+   * são preços, são dedos a mais no teclado.
+   */
+  const custoOuNulo = (v: unknown): number | null => {
+    if (v === null || v === undefined || v === "") return null;
+    return Number(String(v).replace(",", "."));
+  };
+  if ("custoKm" in corpo) {
+    const n = custoOuNulo(corpo.custoKm);
+    if (n === null) mudancas.custoKm = null;
+    else if (!Number.isFinite(n) || n < 0.05 || n > 5) {
+      erros.push({ campo: "custoKm", mensagem: "O custo por km vai de 0,05 a 5 €." });
+    } else mudancas.custoKm = Math.round(n * 100) / 100;
+  }
+  if ("custoHoraPessoa" in corpo) {
+    const n = custoOuNulo(corpo.custoHoraPessoa);
+    if (n === null) mudancas.custoHoraPessoa = null;
+    else if (!Number.isFinite(n) || n < 3 || n > 60) {
+      erros.push({ campo: "custoHoraPessoa", mensagem: "O custo por hora e pessoa vai de 3 a 60 €." });
+    } else mudancas.custoHoraPessoa = Math.round(n * 100) / 100;
+  }
+  if ("pessoasNaEquipa" in corpo) {
+    const n = custoOuNulo(corpo.pessoasNaEquipa);
+    if (n === null) mudancas.pessoasNaEquipa = null;
+    else if (!Number.isFinite(n) || n < 1 || n > 10) {
+      erros.push({ campo: "pessoasNaEquipa", mensagem: "A equipa vai de 1 a 10 pessoas." });
+    } else mudancas.pessoasNaEquipa = Math.round(n);
   }
 
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;

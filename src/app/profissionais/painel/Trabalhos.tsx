@@ -578,9 +578,22 @@ export default function Trabalhos({
            * tomada e o distintivo passa a ruído por cima do que importa.
            */
           const aDecidir = separador === "novos" || separador === "negociacao";
-          const sinais = aDecidir ? sinaisDoTrabalho({ ...p, quantasFotos: fotos.length }) : [];
+          /*
+           * NOS NOVOS, O NÚMERO É A SUGESTÃO DA CLYON PARA ELE.
+           *
+           * "A CLYON deve dar uma sugestão, não um valor para aceitação
+           * inicial." Enquanto ele não respondeu, o cartão mostra o que lhe
+           * ficaria se propusesse o valor sugerido — a mesma conta que o
+           * detalhe faz — e o €/km e os sinais seguem esse número, para o
+           * cartão e o ecrã de dentro não dizerem coisas diferentes.
+           */
+          const sugestaoAberta = separador === "novos" && p.sugestao ? p.sugestao : null;
+          const paraOsSinais = sugestaoAberta
+            ? { ...p, recebeSeAceitar: sugestaoAberta.recebeSePropuser }
+            : p;
+          const sinais = aDecidir ? sinaisDoTrabalho({ ...paraOsSinais, quantasFotos: fotos.length }) : [];
           const quente = sinais.some((x) => x.chave === "perto");
-          const porKm = aDecidir ? porKmPorExtenso(p) : null;
+          const porKm = aDecidir ? porKmPorExtenso(paraOsSinais) : null;
           const quando = quandoEOTrabalho(p);
 
           /*
@@ -840,8 +853,19 @@ export default function Trabalhos({
                       deixa de mudar de cor entre o cartão e o ecrã de dentro.
                     */}
                     <span className="text-lg font-bold text-emerald-600">
-                      {euros(fechado ? p.recebeSeFechado : p.recebeSeAceitar)}
+                      {euros(
+                        fechado
+                          ? p.recebeSeFechado
+                          : sugestaoAberta
+                            ? sugestaoAberta.recebeSePropuser
+                            : p.recebeSeAceitar,
+                      )}
                     </span>
+                    {sugestaoAberta && (
+                      <span className="whitespace-nowrap rounded-md border border-cyan-200 bg-cyan-50 px-1.5 py-0.5 text-[11px] font-bold text-cyan-800">
+                        sugestão CLYON
+                      </span>
+                    )}
                     {/*
                       A UNIDADE COLADA AO NUMERO.
                       Um "150 EUR" sozinho tanto e o trabalho todo como cada
@@ -1647,6 +1671,7 @@ function DetalheDoTrabalho({
           recebeSeAceitar={
             pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
           }
+          sugestao={pedido.sugestao ?? null}
           onMudou={onRecarregar}
         />
       )}
