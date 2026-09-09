@@ -490,6 +490,21 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "baseLng",
         sql: "ALTER TABLE providers ADD COLUMN baseLng DECIMAL(10,7) NULL DEFAULT NULL",
       },
+      // Os custos DELE, para a sugestão de valor ser calculada com os números
+      // dele e não com os de referência da CLYON. Nulos = usa a referência.
+      // Ver `sugestao-para-o-profissional.ts`.
+      {
+        name: "custoKm",
+        sql: "ALTER TABLE providers ADD COLUMN custoKm DECIMAL(6,2) NULL DEFAULT NULL",
+      },
+      {
+        name: "custoHoraPessoa",
+        sql: "ALTER TABLE providers ADD COLUMN custoHoraPessoa DECIMAL(6,2) NULL DEFAULT NULL",
+      },
+      {
+        name: "pessoasNaEquipa",
+        sql: "ALTER TABLE providers ADD COLUMN pessoasNaEquipa TINYINT NULL DEFAULT NULL",
+      },
       // Definir a palavra-passe por link, e nunca por palavra-passe enviada
       // por email: um email é copiado, reencaminhado e fica na caixa para
       // sempre. O que vai no email é um token de uso único, guardado com hash
@@ -2847,6 +2862,39 @@ export async function regimeDeIvaDoProfissional(providerId: number): Promise<str
 }
 
 /** O perfil completo do profissional, para ele próprio ver e editar. */
+/**
+ * A base e os custos de um profissional — o que a sugestão de valor precisa.
+ *
+ * Só isto, e não o perfil inteiro: a página do pedido pelo link do email
+ * chama-o para calcular a conta dele, e não tem de carregar IBAN nem morada
+ * fiscal para saber quantos quilómetros são.
+ */
+export async function custosEBaseDoProfissional(providerId: number): Promise<{
+  baseLat: number | null;
+  baseLng: number | null;
+  custoKm: number | null;
+  custoHoraPessoa: number | null;
+  pessoasNaEquipa: number | null;
+} | undefined> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = (await pool.execute(
+    "SELECT baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa FROM providers WHERE id = ? LIMIT 1",
+    [providerId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const r = rows[0];
+  if (!r) return undefined;
+  const n = (v: unknown) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+  return {
+    baseLat: n(r.baseLat),
+    baseLng: n(r.baseLng),
+    custoKm: n(r.custoKm),
+    custoHoraPessoa: n(r.custoHoraPessoa),
+    pessoasNaEquipa: n(r.pessoasNaEquipa),
+  };
+}
+
 export async function perfilDoProfissional(
   providerId: number,
 ): Promise<Record<string, unknown> | undefined> {
@@ -2919,6 +2967,9 @@ export async function actualizarPerfilDoProfissional(
     "mbway",
     "baseLat",
     "baseLng",
+    "custoKm",
+    "custoHoraPessoa",
+    "pessoasNaEquipa",
   ];
   /*
    * ⚠️ ESTA LISTA TEM DE CRESCER COM A ROTA QUE A ALIMENTA.

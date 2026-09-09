@@ -1,4 +1,5 @@
 import type { Proposta } from "@/lib/negociacao";
+import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
 
 /** O que os ecrãs do painel do profissional partilham. */
 
@@ -80,6 +81,12 @@ export type Pedido = {
   recebeSeAceitar: number | null;
   recebeSeFechado: number | null;
   /**
+   * A conta da CLYON feita PARA ELE: custos com os quilómetros dele, preço
+   * sugerido e o que lhe fica. É o que o ecrã mostra em vez de «aceitar o
+   * valor do cliente». Ver `sugestao-para-o-profissional.ts`.
+   */
+  sugestao?: SugestaoParaOProfissional | null;
+  /**
    * Quando ele abriu este trabalho pela primeira vez. `null` = ainda por abrir.
    *
    * É isto que faz o distintivo «novo» apagar-se sozinho. Antes, «novo» queria
@@ -140,6 +147,10 @@ export type Perfil = {
   categorias: string[];
   zonas: string[];
   raioKm: number;
+  /** Os custos dele, para a sugestão de valor. `null` = referência da CLYON. */
+  custoKm?: number | null;
+  custoHoraPessoa?: number | null;
+  pessoasNaEquipa?: number | null;
   emiteFatura: boolean;
   regimeIva: string;
   emiteGuiaTransporte: boolean;

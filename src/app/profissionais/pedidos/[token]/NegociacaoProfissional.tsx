@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Clock, HandCoins, Loader2, X } from "lucide-react";
+import { Calculator, CheckCircle2, Clock, HandCoins, Loader2, X } from "lucide-react";
+import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
 import {
   accoesDisponiveis,
   propostasRestantes,
@@ -42,6 +43,7 @@ export default function NegociacaoProfissional({
   valorAcordado,
   minimoDoCliente,
   recebeSeAceitar,
+  sugestao = null,
   onMudou,
 }: {
   /**
@@ -58,6 +60,14 @@ export default function NegociacaoProfissional({
   valorAcordado: number | null;
   minimoDoCliente: number | null;
   recebeSeAceitar: number | null;
+  /**
+   * A conta da CLYON feita para ELE — custos com os quilómetros dele, preço
+   * sugerido e o que lhe fica. Enquanto ainda não respondeu, é isto que vê
+   * em vez de «aceitar o valor do cliente»: "a CLYON deve dar uma sugestão,
+   * não um valor para aceitação inicial". Sem sugestão (sem base, sem
+   * distância), o ecrã volta ao que era.
+   */
+  sugestao?: SugestaoParaOProfissional | null;
   /** Para o painel recarregar a lista depois de uma acção. */
   onMudou?: () => void;
 }) {
@@ -151,37 +161,92 @@ export default function NegociacaoProfissional({
   const recebeSeFechar =
     valorEmCima != null ? quantoOProfissionalRecebe(valorEmCima) : recebeSeAceitar;
 
+  /*
+   * A ABERTURA É UMA SUGESTÃO, NÃO UM VALOR PARA ACEITAR.
+   *
+   * "O valor que coloquei aparece para aceitar ou fazer uma proposta, mas
+   * devia vir somente o valor com uma estimativa de custos, lucros e a nossa
+   * estimativa de valor a cobrar." Enquanto ele ainda não disse nada — não
+   * há proposta dele — o que está na mesa é o valor de partida, e esse não
+   * se oferece a aceitar: mostra-se a conta feita para ele e pede-se a
+   * proposta dele. A partir da primeira resposta, a negociação é a de
+   * sempre: o que o cliente contrapuser aparece com o botão de aceitar.
+   */
+  const jaRespondeu = negociacao.propostas.some((p) => p.por === "profissional");
+  const aberturaDoCliente = !jaRespondeu && (!pendente || pendente.por === "cliente");
+  // Nulo quando não há sugestão ou quando ele já respondeu: a verificação de
+  // nulo é o que deixa o resto do ecrã usar os números sem mais perguntas.
+  const sugestaoAberta = aberturaDoCliente ? sugestao : null;
+  const referenciaDaProposta = sugestaoAberta ? sugestaoAberta.precoSugerido : valorEmCima;
+
   return (
     <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
       <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">A negociação</h2>
 
-      {/* O que está em cima da mesa */}
-      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="text-sm text-slate-600">
-            {pendente?.por === "cliente"
-              ? "O cliente quer pagar"
-              : pendente?.por === "profissional"
-                ? "A sua proposta"
-                : "O cliente quer pagar"}
-          </span>
-          <span className="text-2xl font-bold text-[#0B1929]">{euros(valorEmCima)}</span>
-        </div>
-        {recebeSeFechar != null && (
-          <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
-            <span className="flex items-center gap-1.5 text-sm text-slate-600">
-              <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-              Recebe
-            </span>
-            <span className="text-xl font-bold text-emerald-600">{euros(recebeSeFechar)}</span>
-          </div>
-        )}
-        {pendente && (
-          <p className="mt-2 text-xs text-slate-500">
-            {Math.max(0, Math.round(horasAteExpirar(pendente, agora)))} h para responder
+      {sugestaoAberta ? (
+        /* A conta feita para ele: custos, preço sugerido, o que lhe fica. */
+        <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-4">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-cyan-800">
+            <Calculator className="h-4 w-4" aria-hidden="true" />
+            Sugestão CLYON, calculada para si
           </p>
-        )}
-      </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-white/80 p-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Custo mínimo</p>
+              <p className="text-base font-bold text-rose-700">{euros(sugestaoAberta.custoMinimo)}</p>
+              <p className="text-[10px] text-slate-400">abaixo é prejuízo</p>
+            </div>
+            <div className="rounded-lg bg-white/80 p-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">A propor</p>
+              <p className="text-base font-bold text-[#0B1929]">{euros(sugestaoAberta.precoSugerido)}</p>
+              <p className="text-[10px] text-slate-400">sem IVA{sugestaoAberta.porCarga ? " · por carga" : ""}</p>
+            </div>
+            <div className="rounded-lg bg-white/80 p-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Lucro estimado</p>
+              <p className="text-base font-bold text-emerald-700">{euros(sugestaoAberta.lucroEstimado)}</p>
+              <p className="text-[10px] text-slate-400">recebe {euros(sugestaoAberta.recebeSePropuser)}</p>
+            </div>
+          </div>
+          <ul className="mt-3 space-y-0.5 text-xs text-slate-600">
+            {sugestaoAberta.pressupostos.map((linha) => (
+              <li key={linha}>· {linha}</li>
+            ))}
+          </ul>
+          {pendente && (
+            <p className="mt-2 text-xs text-slate-500">
+              {Math.max(0, Math.round(horasAteExpirar(pendente, agora)))} h para responder
+            </p>
+          )}
+        </div>
+      ) : (
+        /* O que está em cima da mesa */
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-sm text-slate-600">
+              {pendente?.por === "cliente"
+                ? "O cliente quer pagar"
+                : pendente?.por === "profissional"
+                  ? "A sua proposta"
+                  : "O cliente quer pagar"}
+            </span>
+            <span className="text-2xl font-bold text-[#0B1929]">{euros(valorEmCima)}</span>
+          </div>
+          {recebeSeFechar != null && (
+            <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
+              <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                Recebe
+              </span>
+              <span className="text-xl font-bold text-emerald-600">{euros(recebeSeFechar)}</span>
+            </div>
+          )}
+          {pendente && (
+            <p className="mt-2 text-xs text-slate-500">
+              {Math.max(0, Math.round(horasAteExpirar(pendente, agora)))} h para responder
+            </p>
+          )}
+        </div>
+      )}
 
       {erro && (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -191,7 +256,23 @@ export default function NegociacaoProfissional({
 
       {/* Acções */}
       <div className="mt-4 space-y-3">
-        {podeAceitar && (
+        {/* Com a sugestão à frente, a primeira acção é propor — o valor de
+            partida não se aceita. */}
+        {sugestaoAberta && podePropor && (
+          <button
+            onClick={() => agir("propor", sugestaoAberta.precoSugerido.toFixed(2))}
+            disabled={aEnviar}
+            className="flex w-full flex-wrap items-center justify-center gap-x-2 rounded-xl bg-emerald-600 px-3 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+          >
+            {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            <span>Propor {euros(sugestaoAberta.precoSugerido)}</span>
+            <span className="text-sm font-semibold text-emerald-50">
+              recebe {euros(sugestaoAberta.recebeSePropuser)}
+            </span>
+          </button>
+        )}
+
+        {podeAceitar && !sugestaoAberta && (
           <button
             onClick={() => agir("aceitar")}
             disabled={aEnviar}
@@ -211,10 +292,14 @@ export default function NegociacaoProfissional({
         {podePropor && (
           <div>
             <p className="mb-2 text-sm font-medium text-slate-900">
-              {podeAceitar ? "Ou proponha outro valor" : "Proponha um valor"}
+              {sugestaoAberta
+                ? "Ou proponha o seu valor"
+                : podeAceitar
+                  ? "Ou proponha outro valor"
+                  : "Proponha um valor"}
             </p>
             <EscolherValor
-              referencia={valorEmCima}
+              referencia={referenciaDaProposta}
               direccao="acima"
               aEnviar={aEnviar}
               legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}

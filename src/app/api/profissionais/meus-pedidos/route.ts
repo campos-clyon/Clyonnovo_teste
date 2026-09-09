@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { negociacoesDoProfissional, getPool } from "@/lib/db";
+import { negociacoesDoProfissional, getPool, custosEBaseDoProfissional } from "@/lib/db";
+import { getActivePricingMap } from "@/lib/pricing-helper";
+import {
+  parametrosDoMapa,
+  sugerirParaOProfissional,
+  type ParametrosDeCusto,
+  type CustosDoProfissional,
+  type PedidoParaSugestao,
+} from "@/lib/sugestao-para-o-profissional";
 import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
@@ -53,6 +61,37 @@ export async function GET(req: NextRequest) {
     const linhas = await negociacoesDoProfissional(sessao.providerId);
 
     const agora = new Date();
+
+    /*
+     * A SUGESTÃO DA CLYON, CALCULADA PARA ELE.
+     *
+     * Os parâmetros são os do simulador (uma leitura para a lista inteira) e
+     * os custos são os do perfil dele, se os tiver. A conta em si é pura —
+     * `sugerirParaOProfissional` — e nunca pode derrubar a lista: sem
+     * parâmetros ou com um pedido estranho, o cartão sai sem sugestão e mais
+     * nada.
+     */
+    let parametros: ParametrosDeCusto | null = null;
+    let custos: CustosDoProfissional | null = null;
+    try {
+      const [mapa, perfil] = await Promise.all([
+        getActivePricingMap(),
+        custosEBaseDoProfissional(sessao.providerId),
+      ]);
+      parametros = parametrosDoMapa(mapa);
+      custos = perfil ?? null;
+    } catch (e) {
+      console.error("[profissionais/meus-pedidos] parâmetros da sugestão", e);
+    }
+    const sugestaoSegura = (pedido: PedidoParaSugestao, distanciaKm: number | null) => {
+      if (!parametros) return null;
+      try {
+        return sugerirParaOProfissional(pedido, distanciaKm, parametros, custos);
+      } catch (e) {
+        console.error("[profissionais/meus-pedidos] sugestão", e);
+        return null;
+      }
+    };
 
     /*
      * O CONTEXTO DO CLIENTE, para os trabalhos contratados — e só o real.
@@ -263,6 +302,24 @@ export async function GET(req: NextRequest) {
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo) : null,
         recebeSeFechado: acordado != null ? quantoOProfissionalRecebe(acordado) : null,
+        // A conta feita para ele — com os km da base dele, pela estrada quando dá.
+        sugestao: sugestaoSegura(
+          {
+            serviceType: l.serviceType,
+            entulhoEstado: l.entulhoEstado,
+            entulhoQuantidade: l.entulhoQuantidade,
+            floor: l.floor,
+            hasElevator: l.hasElevator,
+            parkingDistance: l.parkingDistance,
+            description: l.description,
+            percursoKm: l.percursoKm,
+            andarDestino: l.andarDestino,
+            elevadorDestino: l.elevadorDestino,
+            estacionamentoDestino: l.estacionamentoDestino,
+            baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
+          },
+          medidas[i]?.km ?? null,
+        ),
       };
     });
 
