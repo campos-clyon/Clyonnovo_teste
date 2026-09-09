@@ -125,6 +125,22 @@ describe("a conta, com os números DELE", () => {
     expect(s.comOsSeusCustos).toBe(true);
   });
 
+  it("o tempo por trabalho é o dele, não o estimado — deslocação e recolha incluídas", () => {
+    // 2,5 h × 3 pessoas × 9 €/h = 67,50 €.
+    const s = sugerirParaOProfissional(recolha, 25, CLYON, { horasPorTrabalho: 2.5 });
+    expect(s.horas).toBe(2.5);
+    expect(s.custoPessoal).toBe(67.5);
+    expect(s.comOsSeusCustos).toBe(true);
+    expect(s.pressupostos.join(" ")).toContain("2,5 h × 3 pessoas");
+    expect(s.pressupostos.join(" ")).toContain("o seu tempo médio");
+  });
+
+  it("sem tempo dele (ou a zero), as horas voltam a ser as estimadas", () => {
+    expect(sugerirParaOProfissional(recolha, 25, CLYON, { horasPorTrabalho: 0 }).horas).toBe(1);
+    expect(sugerirParaOProfissional(recolha, 25, CLYON, { horasPorTrabalho: null }).horas).toBe(1);
+    expect(sugerirParaOProfissional(recolha, 25, CLYON).pressupostos.join(" ")).toContain("estimado pela CLYON");
+  });
+
   it("aceita vírgula decimal, que é o que um teclado português escreve", () => {
     const s = sugerirParaOProfissional(recolha, 25, CLYON, { custoKm: Number("0,45".replace(",", ".")) });
     expect(s.custoKm).toBe(0.45);
