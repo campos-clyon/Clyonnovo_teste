@@ -14,6 +14,12 @@ import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { validarValorDesejado } from "@/lib/pedido-valores";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
+import { getActivePricingMap } from "@/lib/pricing-helper";
+import {
+  parametrosDoMapa,
+  pedidoParaSugestaoDaLinha,
+  sugerirParaOProfissional,
+} from "@/lib/sugestao-para-o-profissional";
 
 export const runtime = "nodejs";
 
@@ -25,9 +31,17 @@ export const runtime = "nodejs";
  * não o vê, e não o poderia negociar mesmo que o visse — não há valor de
  * partida nem forma de o cliente responder.
  *
- * Promover resolve as três coisas de uma vez: fixa o valor de partida (o que
- * for indicado, ou a estimativa), emite o link de acesso do cliente e distribui
- * aos profissionais elegíveis.
+ * Promover resolve as três coisas de uma vez: fixa o valor de partida, emite o
+ * link de acesso do cliente e distribui aos profissionais elegíveis.
+ *
+ * O VALOR DE PARTIDA É A CONTA DA CLYON, E NÃO UM NÚMERO ESCRITO À MÃO.
+ *
+ * Havia uma caixa na mesa para escrever o valor, e sem nada escrito valia a
+ * estimativa — que está gravada COM IVA, num sítio onde tudo é sem IVA. Ele
+ * pediu para a CLYON dar uma sugestão em vez de um valor a aceitar, e disse
+ * que sim a usar a mesma conta aqui (09-09-2026): custos com os quilómetros
+ * da base da CLYON, pessoal, fixos e a margem, sem IVA — a mesma fórmula que
+ * cada profissional vê no link, só que com os quilómetros dele.
  *
  * É uma acção de uma pessoa, e não algo que aconteça sozinho. Quem preencheu o
  * simulador pediu um orçamento à CLYON — não pediu para entrar num mercado. A
@@ -99,13 +113,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Sem valor indicado, vale a estimativa. É o único número que existe, e é o
-  // que o cliente já viu no fim do simulador — começar a negociação noutro
-  // sítio qualquer seria começá-la a mentir-lhe.
-  const bruto =
-    corpo.valor !== undefined && corpo.valor !== null && corpo.valor !== ""
-      ? corpo.valor
-      : (pedido.estimateTotal ?? pedido.estimateMax);
+  /*
+   * A conta da CLYON, com os quilómetros da base da CLYON (`distanceKm`).
+   *
+   * Sem distância a conta sai sem combustível — e aí vale mais a estimativa
+   * gravada, tirando-lhe o IVA que ela traz dentro, do que uma conta que não
+   * contou a viagem. Um `valor` que ainda venha no corpo é ignorado: a caixa
+   * de escrever o valor saiu da mesa.
+   */
+  if (corpo.valor !== undefined && corpo.valor !== null && corpo.valor !== "") {
+    console.warn("[promover] valor escrito à mão ignorado — a partida é a conta da CLYON", { pedidoId });
+  }
+  const mapa = await getActivePricingMap();
+  const distanciaDaClyon = Number(pedido.distanceKm);
+  const conta = sugerirParaOProfissional(
+    pedidoParaSugestaoDaLinha(pedido as unknown as Record<string, unknown>),
+    Number.isFinite(distanciaDaClyon) && distanciaDaClyon > 0 ? distanciaDaClyon : null,
+    parametrosDoMapa(mapa),
+  );
+  const estimativaGravada = Number(pedido.estimateTotal ?? pedido.estimateMax);
+  const estimativaSemIva =
+    Number.isFinite(estimativaGravada) && estimativaGravada > 0
+      ? Math.round((estimativaGravada / 1.23) * 100) / 100
+      : null;
+  const bruto = conta.semDistancia && estimativaSemIva != null ? estimativaSemIva : conta.precoSugerido;
 
   const validacao = validarValorDesejado(bruto);
   if (!validacao.ok) {
@@ -193,7 +224,11 @@ export async function POST(req: NextRequest) {
       type: "created",
       by: null,
       message:
-        `Promovido a pedido de plataforma por ${valor} €. ` +
+        `Promovido a pedido de plataforma por ${valor} € (conta CLYON: ` +
+        (conta.semDistancia
+          ? "estimativa sem IVA, sem distância da base"
+          : `${conta.kmDeCarro} km ida e volta, ${conta.horas} h, margem ${Math.round(conta.margem * 100)} %`) +
+        "). " +
         resumoDaDistribuicao(r) +
         (emailSaiu ? "" : " O email do link ao cliente NÃO saiu."),
     });

@@ -103,6 +103,42 @@ describe("a conta, com os números DELE", () => {
   });
 });
 
+describe("a linha do pedido vira campos da conta", () => {
+  it("lê as colunas e, do JSON do formulário, os campos que só alguns serviços têm", async () => {
+    const { pedidoParaSugestaoDaLinha } = await import("./sugestao-para-o-profissional");
+    const p = pedidoParaSugestaoDaLinha({
+      serviceType: "mudanca",
+      floor: "2",
+      hasElevator: "no",
+      parkingDistance: "near",
+      description: "Casa T2",
+      baseDoPreco: "total",
+      rawOrderJson: JSON.stringify({
+        entulhoState: "chao",
+        entulhoQuantidade: "30",
+        movingDistance: { distanceKm: 18.4 },
+        destinationAccess: { floor: "3", hasElevator: "yes", parkingDistance: "far" },
+      }),
+    });
+    expect(p.serviceType).toBe("mudanca");
+    expect(p.entulhoEstado).toBe("chao");
+    expect(p.entulhoQuantidade).toBe("30");
+    expect(p.percursoKm).toBe(18.4);
+    expect(p.andarDestino).toBe("3");
+    expect(p.elevadorDestino).toBe("yes");
+    expect(p.estacionamentoDestino).toBe("far");
+    expect(p.baseDoPreco).toBe("total");
+  });
+
+  it("um JSON estragado não impede a conta — sai só com as colunas", async () => {
+    const { pedidoParaSugestaoDaLinha } = await import("./sugestao-para-o-profissional");
+    const p = pedidoParaSugestaoDaLinha({ serviceType: "recolha_moveis", rawOrderJson: "{nope" });
+    expect(p.serviceType).toBe("recolha_moveis");
+    expect(p.percursoKm).toBeNull();
+    expect(p.entulhoQuantidade).toBeNull();
+  });
+});
+
 describe("os parâmetros vêm do mapa do simulador", () => {
   it("lê as chaves certas e cai nos valores de referência quando faltam", () => {
     const p = parametrosDoMapa({

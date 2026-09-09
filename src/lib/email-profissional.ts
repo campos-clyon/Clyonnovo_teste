@@ -112,7 +112,7 @@ function montarHtml(p: AvisoDePedido): string {
               ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #e2e8f0;border-radius:10px;">
                    <tr>
                      <td style="padding:14px;text-align:center;border-right:1px solid #e2e8f0;">
-                       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Cliente quer pagar</div>
+                       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Valor de partida (conta CLYON)</div>
                        <div style="margin-top:4px;font-size:22px;font-weight:700;color:#0B1929;">${quer}</div>
                      </td>
                      <td style="padding:14px;text-align:center;">
@@ -151,8 +151,9 @@ function montarHtml(p: AvisoDePedido): string {
           </table>
 
           <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-            A morada exacta aparece depois de o cliente o contratar. Pode aceitar o valor
-            pedido ou propor outro — só valores, sem mensagens.
+            A morada exacta aparece depois de o cliente o contratar. No link vê a conta
+            feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe
+            fica — e propõe o seu valor. Só valores, sem mensagens.
           </p>
         </td></tr>
 

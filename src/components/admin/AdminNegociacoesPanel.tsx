@@ -385,7 +385,7 @@ const BLOCOS: Array<{
     chave: "porEnviar",
     titulo: "Por enviar",
     dica:
-      "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais fixa o valor de partida, envia o link ao cliente e distribui; sem valor indicado, usa a estimativa.",
+      "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais parte da conta da CLYON (custos + margem, sem IVA), envia o link ao cliente e distribui; cada profissional vê a conta com os quilómetros dele.",
     Icone: Send,
     cor: "text-amber-300 border-amber-500/60",
     corDoNumero: "text-amber-300",
@@ -510,7 +510,6 @@ export default function AdminNegociacoesPanel({
   const [abertas, setAbertas] = useState<Set<number>>(new Set());
   const jaAbertas = useRef<Set<number>>(new Set());
   const [porPromover, setPorPromover] = useState<PorPromover[]>([]);
-  const [valorDe, setValorDe] = useState<Record<number, string>>({});
   /** Qual dos pedidos esta aberto em detalhe, para editar. */
   const [aEditar, setAEditar] = useState<number | null>(null);
   /*
@@ -880,7 +879,8 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes/promover", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId, valor: valorDe[pedidoId] }),
+        // Sem valor: a partida é a conta da CLYON, feita na rota.
+        body: JSON.stringify({ pedidoId }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -2310,8 +2310,6 @@ export default function AdminNegociacoesPanel({
                   <PedidosPorPromover
                     aberto={!fechado}
                     pedidos={porPromover}
-                    valorDe={valorDe}
-                    setValorDe={setValorDe}
                     ocupado={ocupado}
                     onPromover={promover}
                     onArquivar={arquivarPedido}
@@ -2694,8 +2692,6 @@ function RespostaDaClyon({
 function PedidosPorPromover({
   aberto,
   pedidos,
-  valorDe,
-  setValorDe,
   ocupado,
   onPromover,
   onArquivar,
@@ -2708,8 +2704,6 @@ function PedidosPorPromover({
   /** O bloco está aberto no pai; fechado, o componente fica montado e não desenha nada. */
   aberto: boolean;
   pedidos: PorPromover[];
-  valorDe: Record<number, string>;
-  setValorDe: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   ocupado: string | null;
   onPromover: (id: number) => void;
   onArquivar: (id: number) => void;
@@ -2786,20 +2780,21 @@ function PedidosPorPromover({
         </span>
         <p className="mt-0.5 text-xs text-slate-400">
           {p.contactName} · {p.city ?? "—"}
-          {p.estimateTotal ? ` · estimativa ${euros(p.estimateTotal)}` : " · sem estimativa"}
+          {p.estimateTotal ? ` · estimativa ${euros(p.estimateTotal)} c/IVA` : " · sem estimativa"}
           {" · "}
           {new Date(p.createdAt).toLocaleDateString("pt-PT")}
         </p>
       </div>
 
-      <input
-        value={valorDe[p.id] ?? ""}
-        onChange={(e) => setValorDe((v) => ({ ...v, [p.id]: e.target.value }))}
-        placeholder={p.estimateTotal ? Number(p.estimateTotal).toFixed(0) : "valor"}
-        inputMode="decimal"
-        aria-label={`Valor de partida do pedido ${p.id}`}
-        className="w-24 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
-      />
+      {/*
+        A CAIXA DO VALOR SAIU.
+
+        Escrevia-se aqui o valor de partida, e sem nada escrito valia a
+        estimativa. Ele pediu que a CLYON desse uma sugestão em vez de um
+        valor a aceitar, e disse que sim a usar a mesma conta ao enviar: a
+        partida passa a ser a conta da CLYON, feita na rota com os quilómetros
+        da base da CLYON — e cada profissional vê a conta com os dele.
+      */}
 
       {/*
         CORRIGIR ANTES DE ENVIAR.

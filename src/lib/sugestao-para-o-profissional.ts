@@ -115,6 +115,42 @@ function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * Os campos da conta, lidos de uma linha de `simulatorOrders`.
+ *
+ * Os do serviço vivem em colunas; os que só alguns serviços têm — sacos de
+ * entulho, percurso da mudança, acesso ao destino — vivem no JSON do
+ * formulário, pelos MESMOS caminhos que a consulta do painel do
+ * profissional usa. Uma linha sem JSON, ou com JSON estragado, dá os
+ * campos do serviço e mais nada — a conta sai por baixo, não deixa de sair.
+ */
+export function pedidoParaSugestaoDaLinha(linha: Record<string, unknown>): PedidoParaSugestao {
+  let raw: Record<string, unknown> = {};
+  try {
+    const j = typeof linha.rawOrderJson === "string" ? JSON.parse(linha.rawOrderJson) : null;
+    if (j && typeof j === "object") raw = j as Record<string, unknown>;
+  } catch {
+    raw = {};
+  }
+  const texto = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : v == null ? null : String(v));
+  const destinoAcesso = (raw.destinationAccess ?? {}) as Record<string, unknown>;
+  const mudanca = (raw.movingDistance ?? {}) as Record<string, unknown>;
+  return {
+    serviceType: texto(linha.serviceType),
+    entulhoEstado: texto(raw.entulhoState),
+    entulhoQuantidade: texto(raw.entulhoQuantidade),
+    floor: texto(linha.floor),
+    hasElevator: texto(linha.hasElevator),
+    parkingDistance: texto(linha.parkingDistance),
+    description: texto(linha.description),
+    percursoKm: numero(mudanca.distanceKm),
+    andarDestino: texto(destinoAcesso.floor),
+    elevadorDestino: texto(destinoAcesso.hasElevator),
+    estacionamentoDestino: texto(destinoAcesso.parkingDistance),
+    baseDoPreco: texto(linha.baseDoPreco),
+  };
+}
+
 function numero(v: unknown): number | null {
   if (v == null || v === "") return null;
   const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
