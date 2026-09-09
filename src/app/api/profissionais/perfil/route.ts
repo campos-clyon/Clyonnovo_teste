@@ -27,6 +27,7 @@ import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
 import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * O perfil do profissional, visto e mudado por ele próprio.
