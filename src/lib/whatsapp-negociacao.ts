@@ -50,6 +50,97 @@ function propostasDe(json: string | null): Proposta[] {
 }
 
 /** Os pedidos activos deste número — comparados pelos últimos 9 dígitos. */
+/**
+ * A conversa que recolhe um pedido — o passo de hoje, gravado e respondido.
+ *
+ * Lê onde este número ia, aplica o que ele escreveu (`responderNaRecolha`,
+ * pura), grava o passo seguinte e manda a pergunta. Ao SIM do resumo, o
+ * pedido nasce na base e a recolha fecha com o número dele. «Falar com
+ * alguém» entrega a conversa — o mesmo interruptor que o painel tem.
+ */
+export async function recolherPedidoPorWhatsApp(telefone: string, texto: string): Promise<void> {
+  const {
+    recolhaWhatsApp,
+    guardarRecolhaWhatsApp,
+    apagarRecolhaWhatsApp,
+    interromperNumeroWhatsApp,
+  } = await import("@/lib/db");
+  const { responderNaRecolha, recolhaNova, perguntaDo, mensagemDePedidoRegistado } = await import(
+    "@/lib/whatsapp-recolha"
+  );
+
+  const guardada = await recolhaWhatsApp(telefone);
+  const paradaHaMuito =
+    guardada != null && Date.now() - new Date(guardada.actualizadoEm).getTime() > 24 * 3600_000;
+  // Já tem pedido registado por aqui mas o pedido deixou de estar activo
+  // (concluído, cancelado): começa-se outro. Uma recolha velha também.
+  type Estado = Parameters<typeof responderNaRecolha>[0];
+  const estado: Estado | null =
+    guardada && guardada.pedidoId == null && !paradaHaMuito
+      ? { passo: guardada.passo as Estado["passo"], dados: guardada.dados as Estado["dados"] }
+      : null;
+
+  if (!estado) {
+    // Primeira mensagem: se já diz o serviço, aproveita-se; senão, pergunta-se.
+    const novo = recolhaNova();
+    const r = responderNaRecolha(novo, texto);
+    const avancou = r.estado.passo !== "servico";
+    if (avancou && !r.pedirPessoa && !r.desistir) {
+      await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
+      await enviarTextoWhatsApp(telefone, r.resposta);
+    } else if (r.pedirPessoa) {
+      await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
+      await enviarTextoWhatsApp(telefone, r.resposta);
+    } else {
+      await guardarRecolhaWhatsApp(telefone, "servico", {});
+      await enviarTextoWhatsApp(telefone, perguntaDo("servico", {}));
+    }
+    return;
+  }
+
+  const r = responderNaRecolha(estado, texto);
+
+  if (r.pedirPessoa) {
+    await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
+    await enviarTextoWhatsApp(telefone, r.resposta);
+    return;
+  }
+  if (r.desistir) {
+    await apagarRecolhaWhatsApp(telefone);
+    await enviarTextoWhatsApp(telefone, r.resposta);
+    return;
+  }
+  if (r.registar) {
+    const { registarPedidoDaRecolha } = await import("@/lib/registar-pedido-por-whatsapp");
+    try {
+      const { id } = await registarPedidoDaRecolha(telefone, r.estado.dados);
+      const { getPool } = await import("@/lib/db");
+      const pool = await getPool();
+      if (pool) {
+        await pool
+          .execute("UPDATE whatsappRecolhas SET pedidoId = ? WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [
+            id,
+            telefoneParaWhatsApp(telefone),
+          ])
+          .catch(() => {});
+      }
+      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, false));
+    } catch (e) {
+      console.error("[whatsapp/recolha] não registou o pedido:", e);
+      // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.
+      await interromperNumeroWhatsApp(telefone, "O registo automático falhou — ver a conversa");
+      await enviarTextoWhatsApp(
+        telefone,
+        "Tenho aqui tudo o que me disse, mas não consegui registar sozinho. Uma pessoa da CLYON vai tratar disto e responde-lhe por aqui.",
+      );
+    }
+    return;
+  }
+
+  await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
+  await enviarTextoWhatsApp(telefone, r.resposta);
+}
+
 export async function pedidosDoTelefone(telefone: string): Promise<number[]> {
   const pool = await getPool();
   if (!pool) return [];
@@ -271,11 +362,17 @@ export async function tratarMensagemDoCliente(
 
   const pedidos = await pedidosDoTelefone(telefone);
   if (pedidos.length === 0) {
-    await enviarTextoWhatsApp(
-      telefone,
-      "Olá! Este número não está ligado a nenhum pedido activo na CLYON. " +
-        "Para pedir um orçamento: clyon.pt/simulador — ou responda aqui com o que precisa e a equipa regista o pedido.",
-    );
+    /*
+     * UM NÚMERO SEM PEDIDO É UM PEDIDO POR FAZER.
+     *
+     * Respondia «este número não está ligado a nenhum pedido — vá ao
+     * simulador». "Quero esse WhatsApp usado pelo site automaticamente: se o
+     * cliente enviar mensagem, ele responde para recolher os dados e criar o
+     * pedido." O assistente pergunta uma coisa de cada vez e regista o pedido
+     * no fim — ver whatsapp-recolha.ts. Botões não chegam aqui: uma pessoa
+     * sem pedido não tem botões para carregar.
+     */
+    if (conteudo.tipo === "texto") await recolherPedidoPorWhatsApp(telefone, conteudo.texto);
     return;
   }
 

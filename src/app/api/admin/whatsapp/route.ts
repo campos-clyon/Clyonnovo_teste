@@ -9,6 +9,8 @@ import {
   interromperNumeroWhatsApp,
   listarNumerosBloqueadosWhatsApp,
   listarNumerosInterrompidosWhatsApp,
+  listarRecolhasWhatsAppEmCurso,
+  apagarRecolhaWhatsApp,
   marcarFilaWhatsAppEnviadas,
   mensagemDaFilaWhatsApp,
   mensagensDoNumeroWhatsApp,
@@ -47,12 +49,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ mensagens: await mensagensDoNumeroWhatsApp(telefone) });
   }
 
-  const [ligado, interrompidos, bloqueados, fila, conversas] = await Promise.all([
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas] = await Promise.all([
     whatsappLigado(),
     listarNumerosInterrompidosWhatsApp(),
     listarNumerosBloqueadosWhatsApp(),
     filaWhatsAppPorEnviar(50),
     conversasWhatsApp(),
+    listarRecolhasWhatsAppEmCurso().catch(() => []),
   ]);
   return NextResponse.json({
     ligado,
@@ -63,6 +66,8 @@ export async function GET(req: NextRequest) {
     bloqueados,
     fila,
     conversas,
+    // Os números a meio da recolha de um pedido pelo assistente, e em que passo.
+    recolhas,
   });
 }
 
@@ -158,6 +163,11 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (accao) {
+      // A recolha deste número volta ao início — para quando a conversa se
+      // baralhou e a equipa quer que o assistente pergunte tudo de novo.
+      case "recomecarRecolha":
+        await apagarRecolhaWhatsApp(telefone);
+        break;
       case "ligar":
         await definirWhatsappLigado(true);
         break;

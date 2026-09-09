@@ -64,13 +64,13 @@ describe("a rota da ponte", () => {
     expect(PONTE).toContain("401");
   });
 
-  it("um número sem pedido activo é do bot local — {meu: false} e nada mais", () => {
+  it("um número sem pedido activo é do site — o assistente recolhe o pedido; {meu: false} só bloqueado ou desligado", () => {
     const post = PONTE.slice(PONTE.indexOf("export async function POST"));
-    // A pergunta vem ANTES de o cérebro tocar na mensagem.
-    expect(post.indexOf("pedidosDoTelefone(telefone)")).toBeLessThan(
-      post.indexOf("tratarMensagemDoCliente"),
-    );
+    // "Quero esse WhatsApp usado pelo site automaticamente." O bot local do
+    // Winapp já não fica com os desconhecidos: o cérebro daqui trata-os.
+    expect(post).not.toContain("if (pedidos.length === 0) {\n    return NextResponse.json({ meu: false");
     expect(post).toContain("meu: false");
+    expect(post).toContain("tratarMensagemDoCliente");
   });
 
   it("só se risca da fila por confirmação do Winapp", () => {
