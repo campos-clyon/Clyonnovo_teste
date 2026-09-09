@@ -280,15 +280,11 @@ export default function Trabalhos({
    * carteira conta o mesmo, e o "Arquivados" existe precisamente para nada
    * desaparecer de vez.
    */
-  async function arquivar(negociacaoId: number, arquivar: boolean) {
-    setAArquivar(negociacaoId);
+  async function arquivar(p: Pedido, arquivar: boolean) {
+    if (arquivar && !confirmarArrumacao(p)) return;
+    setAArquivar(p.negociacaoId);
     try {
-      const res = await fetch("/api/profissionais/arquivar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ negociacaoId, arquivar }),
-      });
-      if (res.ok) onRecarregar();
+      if (await arrumarTrabalho(p, arquivar)) onRecarregar();
     } catch {
       /* Sem rede não se arruma nada — e não há nada a desfazer. */
     } finally {
@@ -587,11 +583,17 @@ export default function Trabalhos({
           const porKm = aDecidir ? porKmPorExtenso(p) : null;
           const quando = quandoEOTrabalho(p);
 
-          // O botão de arrumar só aparece onde arrumar faz sentido. Num
-          // trabalho novo ou a decorrer seria um convite a esconder o que
-          // ainda precisa de resposta.
-          const podeArrumar =
-            separador === "recusados" || separador === "terminados" || separador === "arquivados";
+          /*
+           * O botão de arrumar aparece em TODOS os separadores.
+           *
+           * Só aparecia nos recusados, terminados e arquivados — "num trabalho
+           * novo seria um convite a esconder o que ainda precisa de resposta".
+           * Ele pediu o contrário: "o pro deve poder arquivar qualquer pedido
+           * nas categorias, para não poluir a tela se não tiver interesse"
+           * (09-09-2026). Arquivar um pedido AINDA ABERTO diz ao cliente que
+           * não há interesse antes de o arrumar — ver `arrumarTrabalho`.
+           */
+          const podeArrumar = true;
 
           return (
             <div
@@ -876,8 +878,9 @@ export default function Trabalhos({
 
             {podeArrumar && (
               <button
-                onClick={() => arquivar(p.negociacaoId, !p.arquivadoEm)}
+                onClick={() => arquivar(p, !p.arquivadoEm)}
                 disabled={aArquivar === p.negociacaoId}
+                title={p.arquivadoEm ? "Voltar a mostrar este pedido" : "Tirar este pedido da sua vista"}
                 className="absolute bottom-3 right-3 flex min-h-[44px] items-center gap-1.5 rounded-lg border border-[#E2EEF3] bg-white px-3 text-xs font-semibold text-slate-500 transition active:bg-slate-50 disabled:opacity-50"
               >
                 {aArquivar === p.negociacaoId ? (
@@ -896,6 +899,66 @@ export default function Trabalhos({
       </div>
     </>
   );
+}
+
+// ── Arrumar ─────────────────────────────────────────────────────────────────
+
+/** Ainda há negociação a decorrer? Arquivar isto tem de a fechar primeiro. */
+function negociacaoAberta(p: Pedido): boolean {
+  return p.estado === "aberta" || p.estado === "aguarda_contratacao";
+}
+
+/**
+ * A pergunta antes de arquivar — só quando arquivar faz mais do que arrumar.
+ *
+ * Um pedido aberto: arquivar diz ao cliente que não há interesse (senão a
+ * proposta dele ficava na mesa à espera de alguém que já não vai responder).
+ * Um contratado: arquivar tira-o da vista E da agenda, e o trabalho continua
+ * combinado — é melhor sabê-lo antes do toque.
+ */
+function confirmarArrumacao(p: Pedido): boolean {
+  if (negociacaoAberta(p)) {
+    return window.confirm(
+      "Arquivar este pedido diz ao cliente que não está interessado e tira-o da sua vista. Continuar?",
+    );
+  }
+  if (p.estado === "acordada" && !p.confirmadoEm && !p.pagoEm) {
+    return window.confirm(
+      "Este trabalho está contratado. Arquivar só o tira da sua vista e da agenda — continua combinado com o cliente. Continuar?",
+    );
+  }
+  return true;
+}
+
+/**
+ * Arruma um trabalho, ou repõe-no. Devolve true se mexeu.
+ *
+ * Não apaga nada: muda de separador. O que o cliente vê fica igual, a
+ * carteira conta o mesmo, e o "Arquivados" existe precisamente para nada
+ * desaparecer de vez.
+ *
+ * SE AINDA ESTÁ ABERTO, DESISTE PRIMEIRO. Arquivar sem desistir deixava uma
+ * negociação-fantasma: o cliente e a CLYON viam "à espera de resposta" de
+ * alguém que tinha arrumado o pedido e nunca mais o ia ver. A desistência é
+ * a mesma da rota de negociação — com o histórico e os avisos de sempre.
+ */
+async function arrumarTrabalho(p: Pedido, arquivar: boolean): Promise<boolean> {
+  if (arquivar && negociacaoAberta(p)) {
+    const desistiu = await fetch("/api/profissionais/negociacao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accao: "desistir", negociacaoId: p.negociacaoId }),
+    });
+    // Se a desistência falhar (prazo, estado mudou), não se esconde nada: o
+    // pedido continua à vista para ele perceber o que se passou.
+    if (!desistiu.ok) return false;
+  }
+  const res = await fetch("/api/profissionais/arquivar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ negociacaoId: p.negociacaoId, arquivar }),
+  });
+  return res.ok;
 }
 
 // ── O detalhe ───────────────────────────────────────────────────────────────
@@ -923,6 +986,37 @@ function DetalheDoTrabalho({
   const [semMapa, setSemMapa] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
+  const [aArrumar, setAArrumar] = useState(false);
+  const [erroAoArrumar, setErroAoArrumar] = useState("");
+
+  /*
+   * ARQUIVAR, AQUI DENTRO.
+   *
+   * "Quando ele abrir o pedido deve poder fazer isso, para não poluir a
+   * tela se não tiver interesse." O botão da lista já existia para os
+   * separadores fechados; passou a existir em todos, e passou a existir
+   * também aqui, onde ele acabou de ler o pedido e decidiu que não é para
+   * ele. Depois de arrumar volta-se à lista — o que se arrumou não fica
+   * aberto à frente.
+   */
+  async function arrumar() {
+    const arquivar = !pedido.arquivadoEm;
+    if (arquivar && !confirmarArrumacao(pedido)) return;
+    setAArrumar(true);
+    setErroAoArrumar("");
+    try {
+      if (await arrumarTrabalho(pedido, arquivar)) {
+        onRecarregar();
+        onVoltar();
+      } else {
+        setErroAoArrumar("Não foi possível arquivar. Tente outra vez.");
+      }
+    } catch {
+      setErroAoArrumar("Erro de rede.");
+    } finally {
+      setAArrumar(false);
+    }
+  }
 
   const doCliente = fotosDe(pedido.filesJson);
   const prova = provaDe(pedido.provaJson);
@@ -1573,6 +1667,40 @@ function DetalheDoTrabalho({
         }}
         euSou="profissional"
       />
+
+      {/* Arrumar — no fim, depois de ler tudo. Em qualquer estado. */}
+      <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-800">
+              {pedido.arquivadoEm ? "Este pedido está arquivado" : "Não é para si?"}
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+              {pedido.arquivadoEm
+                ? "Repor volta a mostrá-lo no separador de onde veio."
+                : negociacaoAberta(pedido)
+                  ? "Arquivar diz ao cliente que não tem interesse e tira o pedido da sua lista. Fica em «Arquivados», e não desaparece."
+                  : "Arquivar tira o pedido da sua lista. Fica em «Arquivados», e não desaparece."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void arrumar()}
+            disabled={aArrumar}
+            className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl border border-[#E2EEF3] bg-white px-4 text-sm font-semibold text-slate-600 transition active:bg-slate-50 disabled:opacity-50"
+          >
+            {aArrumar ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : pedido.arquivadoEm ? (
+              <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Archive className="h-4 w-4" aria-hidden="true" />
+            )}
+            {pedido.arquivadoEm ? "Repor" : "Arquivar"}
+          </button>
+        </div>
+        {erroAoArrumar && <p className="mt-2 text-xs text-red-600">{erroAoArrumar}</p>}
+      </section>
 
       {aVer && (
         <VisorDeFotos
