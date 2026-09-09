@@ -62,9 +62,11 @@ export function ponteConfigurada(): boolean {
  * automático, mas é o que se faz hoje à mão, sem a pessoa ter de escrever
  * as propostas.
  *
- * O QUE NÃO FAZ: não lê respostas. Sem API não há webhook, e o que o cliente
- * responder chega ao telemóvel e não ao site. Quem responde por ele é quem
- * está no painel, dentro do pedido — como já era.
+ * O QUE NÃO FAZ SOZINHO: ler respostas. Sem API não há webhook; o que o
+ * cliente responder chega ao WhatsApp Web (ou ao telemóvel) e não ao site.
+ * Quem está no painel cola-a em "Chegou uma resposta" e o cérebro trata-a
+ * como se tivesse entrado pela API — a resposta dele fica na fila, para sair
+ * pelo WhatsApp Web com um clique.
  *
  * O número é o da CLYON, público em todo o site. Muda-se com
  * WHATSAPP_NUMERO_MANUAL; "off" desliga este caminho. A Meta e a ponte, quando
@@ -97,6 +99,16 @@ export function canalWhatsApp(): CanalWhatsApp {
 /** O link que abre o WhatsApp já com o destinatário e o texto — o gesto do caminho à mão. */
 export function linkParaEnviarAMao(para: string, texto: string): string {
   return `https://wa.me/${telefoneParaWhatsApp(para)}?text=${encodeURIComponent(texto)}`;
+}
+
+/**
+ * O mesmo gesto, mas no WhatsApp Web do computador — "ative usando o WhatsApp
+ * Web por enquanto", 09-09-2026. O wa.me no PC pergunta primeiro se quer
+ * abrir a aplicação; este endereço vai direito à conversa no separador do
+ * web.whatsapp.com, onde o número da CLYON está emparelhado.
+ */
+export function linkParaEnviarNoWhatsAppWeb(para: string, texto: string): string {
+  return `https://web.whatsapp.com/send?phone=${telefoneParaWhatsApp(para)}&text=${encodeURIComponent(texto)}`;
 }
 
 /** Há ALGUM caminho para falar com o cliente por WhatsApp? */

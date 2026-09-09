@@ -151,6 +151,10 @@ export type Perfil = {
   custoKm?: number | null;
   custoHoraPessoa?: number | null;
   pessoasNaEquipa?: number | null;
+  /** Por rubrica, em euros por ano: viaVerde, manutencao, iuc, inspecao, seguro. */
+  custosFixosAnuais?: Record<string, number | null> | null;
+  trabalhosPorMes?: number | null;
+  margemPercent?: number | null;
   emiteFatura: boolean;
   regimeIva: string;
   emiteGuiaTransporte: boolean;

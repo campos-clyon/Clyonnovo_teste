@@ -504,6 +504,21 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "pessoasNaEquipa",
         sql: "ALTER TABLE providers ADD COLUMN pessoasNaEquipa TINYINT NULL DEFAULT NULL",
       },
+      // Os custos fixos ANUAIS dele, por rubrica (Via Verde, manutenção, IUC,
+      // inspecção, seguro), em JSON; os trabalhos por mês que os dividem; e a
+      // margem que quer. "Vamos deixar o pro responder com os dados dele."
+      {
+        name: "custosFixosJson",
+        sql: "ALTER TABLE providers ADD COLUMN custosFixosJson TEXT NULL DEFAULT NULL",
+      },
+      {
+        name: "trabalhosPorMes",
+        sql: "ALTER TABLE providers ADD COLUMN trabalhosPorMes INT NULL DEFAULT NULL",
+      },
+      {
+        name: "margemPercent",
+        sql: "ALTER TABLE providers ADD COLUMN margemPercent DECIMAL(5,2) NULL DEFAULT NULL",
+      },
       // Definir a palavra-passe por link, e nunca por palavra-passe enviada
       // por email: um email é copiado, reencaminhado e fica na caixa para
       // sempre. O que vai no email é um token de uso único, guardado com hash
@@ -2786,12 +2801,17 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
   custoKm: number | null;
   custoHoraPessoa: number | null;
   pessoasNaEquipa: number | null;
+  custosFixosAnuais: Record<string, number | null> | null;
+  trabalhosPorMes: number | null;
+  margemPercent: number | null;
 } | undefined> {
   await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = (await pool.execute(
-    "SELECT baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa FROM providers WHERE id = ? LIMIT 1",
+    `SELECT baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa,
+            custosFixosJson, trabalhosPorMes, margemPercent
+       FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
   )) as [Array<Record<string, unknown>>, unknown];
   const r = rows[0];
@@ -2803,7 +2823,27 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
     custoKm: n(r.custoKm),
     custoHoraPessoa: n(r.custoHoraPessoa),
     pessoasNaEquipa: n(r.pessoasNaEquipa),
+    custosFixosAnuais: custosFixosDeJson(r.custosFixosJson),
+    trabalhosPorMes: n(r.trabalhosPorMes),
+    margemPercent: n(r.margemPercent),
   };
+}
+
+/** O JSON dos custos fixos anuais, lido com cuidado: números ou null por rubrica. */
+export function custosFixosDeJson(json: unknown): Record<string, number | null> | null {
+  if (typeof json !== "string" || !json.trim()) return null;
+  try {
+    const bruto = JSON.parse(json);
+    if (!bruto || typeof bruto !== "object") return null;
+    const limpo: Record<string, number | null> = {};
+    for (const [k, v] of Object.entries(bruto as Record<string, unknown>)) {
+      const x = Number(v);
+      limpo[k] = v == null || v === "" || !Number.isFinite(x) ? null : x;
+    }
+    return limpo;
+  } catch {
+    return null;
+  }
 }
 
 export async function perfilDoProfissional(
@@ -2835,7 +2875,9 @@ export async function perfilDoProfissional(
             moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
             categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
-            guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt
+            guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt,
+            custoKm, custoHoraPessoa, pessoasNaEquipa,
+            custosFixosJson, trabalhosPorMes, margemPercent
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
   ) as any[];
@@ -2881,6 +2923,9 @@ export async function actualizarPerfilDoProfissional(
     "custoKm",
     "custoHoraPessoa",
     "pessoasNaEquipa",
+    "custosFixosJson",
+    "trabalhosPorMes",
+    "margemPercent",
   ];
   /*
    * ⚠️ ESTA LISTA TEM DE CRESCER COM A ROTA QUE A ALIMENTA.

@@ -5,7 +5,9 @@ import {
   avaliacoesDoProfissional,
   actualizarPerfilDoProfissional,
   invalidarVerificacaoDaGuia,
+  custosFixosDeJson,
 } from "@/lib/db";
+import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
@@ -108,6 +110,9 @@ export async function GET(req: NextRequest) {
         custoKm: p.custoKm != null ? Number(p.custoKm) : null,
         custoHoraPessoa: p.custoHoraPessoa != null ? Number(p.custoHoraPessoa) : null,
         pessoasNaEquipa: p.pessoasNaEquipa != null ? Number(p.pessoasNaEquipa) : null,
+        custosFixosAnuais: custosFixosDeJson(p.custosFixosJson),
+        trabalhosPorMes: p.trabalhosPorMes != null ? Number(p.trabalhosPorMes) : null,
+        margemPercent: p.margemPercent != null ? Number(p.margemPercent) : null,
         emiteFatura: Number(p.emiteFatura) === 1,
         regimeIva: String(p.regimeIva ?? "isento"),
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
@@ -320,6 +325,53 @@ export async function PUT(req: NextRequest) {
     else if (!Number.isFinite(n) || n < 1 || n > 10) {
       erros.push({ campo: "pessoasNaEquipa", mensagem: "A equipa vai de 1 a 10 pessoas." });
     } else mudancas.pessoasNaEquipa = Math.round(n);
+  }
+  /*
+   * OS CUSTOS FIXOS ANUAIS, por rubrica, e o que os divide.
+   *
+   * Vêm como objecto {viaVerde, manutencao, iuc, inspecao, seguro}; só as
+   * rubricas conhecidas entram, cada uma um número de euros por ano ou vazia.
+   * Guardam-se em JSON: são cinco números que se lêem sempre juntos.
+   */
+  if ("custosFixosAnuais" in corpo) {
+    const bruto = corpo.custosFixosAnuais;
+    if (bruto === null || bruto === undefined) {
+      mudancas.custosFixosJson = null;
+    } else if (typeof bruto !== "object") {
+      erros.push({ campo: "custosFixosAnuais", mensagem: "Custos fixos inválidos." });
+    } else {
+      const limpo: Record<string, number | null> = {};
+      let invalido = false;
+      for (const { chave, rotulo } of RUBRICAS_DOS_CUSTOS_FIXOS) {
+        const n = custoOuNulo((bruto as Record<string, unknown>)[chave]);
+        if (n === null) {
+          limpo[chave] = null;
+        } else if (!Number.isFinite(n) || n < 0 || n > 50000) {
+          erros.push({ campo: "custosFixosAnuais", mensagem: `${rotulo}: indique euros por ano, até 50 000.` });
+          invalido = true;
+        } else {
+          limpo[chave] = Math.round(n * 100) / 100;
+        }
+      }
+      if (!invalido) {
+        const algum = Object.values(limpo).some((v) => v != null);
+        mudancas.custosFixosJson = algum ? JSON.stringify(limpo) : null;
+      }
+    }
+  }
+  if ("trabalhosPorMes" in corpo) {
+    const n = custoOuNulo(corpo.trabalhosPorMes);
+    if (n === null) mudancas.trabalhosPorMes = null;
+    else if (!Number.isFinite(n) || n < 1 || n > 300) {
+      erros.push({ campo: "trabalhosPorMes", mensagem: "Trabalhos por mês: de 1 a 300." });
+    } else mudancas.trabalhosPorMes = Math.round(n);
+  }
+  if ("margemPercent" in corpo) {
+    const n = custoOuNulo(corpo.margemPercent);
+    if (n === null) mudancas.margemPercent = null;
+    else if (!Number.isFinite(n) || n < 0 || n > 200) {
+      erros.push({ campo: "margemPercent", mensagem: "A margem vai de 0 a 200 %." });
+    } else mudancas.margemPercent = Math.round(n * 100) / 100;
   }
 
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;

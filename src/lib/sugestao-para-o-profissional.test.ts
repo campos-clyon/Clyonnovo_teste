@@ -97,6 +97,34 @@ describe("a conta, com os números DELE", () => {
     expect(s.comOsSeusCustos).toBe(true);
   });
 
+  it("os custos fixos anuais dividem-se pelos trabalhos do ano, rubrica a rubrica", () => {
+    // 600 + 1 200 + 150 + 50 + 400 = 2 400 €/ano; 20 por mês × 12 = 240 → 10 € por trabalho.
+    const s = sugerirParaOProfissional(recolha, 25, CLYON, {
+      custosFixosAnuais: { viaVerde: 600, manutencao: 1200, iuc: 150, inspecao: 50, seguro: 400 },
+      trabalhosPorMes: 20,
+    });
+    expect(s.custosFixos).toBe(10);
+    expect(s.custoMinimo).toBe(62); // 25 + 27 + 10
+    expect(s.pressupostos.join(" ")).toContain("2400,00 €/ano ÷ 240 trabalhos");
+  });
+
+  it("sem trabalhos por mês, os anuais não chegam para uma conta por trabalho — vale a referência", () => {
+    const s = sugerirParaOProfissional(recolha, 25, CLYON, {
+      custosFixosAnuais: { seguro: 900 },
+      trabalhosPorMes: null,
+    });
+    expect(s.custosFixos).toBe(17);
+    expect(s.comOsSeusCustos).toBe(false);
+  });
+
+  it("a margem é a que ele pôs na barra", () => {
+    const s = sugerirParaOProfissional(recolha, 25, CLYON, { margemPercent: 25 });
+    expect(s.margem).toBe(0.25);
+    expect(s.precoSugerido).toBe(86.25); // 69 × 1,25
+    expect(s.pressupostos.join(" ")).toContain("Margem: 25 %");
+    expect(s.comOsSeusCustos).toBe(true);
+  });
+
   it("aceita vírgula decimal, que é o que um teclado português escreve", () => {
     const s = sugerirParaOProfissional(recolha, 25, CLYON, { custoKm: Number("0,45".replace(",", ".")) });
     expect(s.custoKm).toBe(0.45);
