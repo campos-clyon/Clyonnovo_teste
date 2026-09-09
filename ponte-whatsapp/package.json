@@ -1,0 +1,19 @@
+{
+  "name": "clyon-ponte-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A ponte entre o WhatsApp do número da CLYON e o cérebro do site (clyon.pt/api/whatsapp/ponte).",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16",
+    "pino": "^9.4.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
