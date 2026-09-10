@@ -2492,7 +2492,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             </button>
                           </div>
                           {distanceMsg && <p className="mt-1.5 text-[11px] text-cyan-400">{distanceMsg}</p>}
-                          <p className="mt-1 text-[10px] text-slate-500">Base: Av. Q.ta das Laranjeiras, Fernão Ferro. A distância entra no cálculo do preço ao recalcular a estimativa.</p>
+                          <p className="mt-1 text-[10px] text-slate-500">Origem de referência da estimativa do backoffice. Na proposta de cada profissional a distância é medida da base dele, não desta.</p>
                         </Field>
                       )}
 

@@ -34,7 +34,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
-import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
+import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
@@ -399,7 +399,6 @@ export default async function ServiceCityPage({ params }: Props) {
   // O que só é verdade nesta zona: freguesias, acessos, estacionamento e
   // destino dos resíduos. É isto que distingue esta página das outras 72.
   const local = getCidadeLocal(city.slug);
-  const tempo = local ? tempoAproximado(local.distanciaKm) : "";
   const notaServico = local?.porServico?.[service.slug as ServicoSlug] ?? null;
 
   const includedItems = getIncludedItems(service.name, city.name, service.slug);
@@ -728,10 +727,23 @@ export default async function ServiceCityPage({ params }: Props) {
                 <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
                   Onde chegamos
                 </h3>
+                {/*
+                  A BASE É DO PROFISSIONAL, NÃO DA CLYON.
+
+                  Dizia "da nossa base em Fernão Ferro são cerca de X km" nas
+                  108 páginas de cidade — e o resto do site, a começar pela
+                  identificação legal, dizia Belverde. Duas moradas para a
+                  mesma empresa, e nenhuma delas verdadeira do ponto de vista
+                  de quem faz o trabalho: "estamos a migrar para uma
+                  plataforma que liga profissionais aos clientes, então agora
+                  a base passa a ser dos profissionais, não da CLYON"
+                  (10-09-2026). Quem se desloca é o profissional, da base
+                  dele, e é essa distância que a proposta dele já reflecte.
+                */}
                 <p className="mt-2 text-sm leading-7 text-slate-600">
                   Cobrimos {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
-                  Da nossa base em Fernão Ferro são cerca de {local.distanciaKm} km — {tempo} de
-                  viagem, sem trânsito.
+                  Os profissionais da CLYON que trabalham nesta zona recebem o seu pedido e
+                  respondem com o valor já com a deslocação incluída.
                 </p>
               </div>
 
