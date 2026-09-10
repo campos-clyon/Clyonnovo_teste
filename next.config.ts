@@ -67,12 +67,17 @@ const nextConfig: NextConfig = {
         destination: "/simulador",
         permanent: true,
       },
-      // URLs antigas deprecated
-      {
-        source: "/credito-fiscal",
-        destination: "/servicos",
-        permanent: true,
-      },
+      /*
+       * /credito-fiscal NÃO está aqui, e é de propósito.
+       *
+       * Estava, a mandar 301 para /servicos — e o middleware, ao lado,
+       * devolvia 410 para o mesmo endereço. Os redirects deste ficheiro
+       * correm ANTES do middleware, por isso o 410 nunca chegou a acontecer
+       * uma única vez. Dois sítios a responder à mesma pergunta, e o que
+       * ganhava era o que ninguém queria: um serviço descontinuado a fingir
+       * que virou outro. O 410 diz a verdade ao Google — isto acabou — e é
+       * ele que fica.
+       */
       // mudanças com cedilha (ç) → redirect para mudancas sem cedilha
       {
         source: "/mudan%C3%A7as",
