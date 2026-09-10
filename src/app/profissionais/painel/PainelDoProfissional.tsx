@@ -678,6 +678,7 @@ export default function PainelDoProfissional() {
             pedidos={pedidos}
             onVoltar={() => abrir("menu")}
             onAbrirTrabalhos={() => abrir("trabalhos")}
+            onRecarregar={carregar}
           />
         )}
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}

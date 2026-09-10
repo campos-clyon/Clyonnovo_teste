@@ -1,9 +1,11 @@
 "use client";
 
-import { CalendarPlus, Clock, MapPin, Phone, User } from "lucide-react";
+import { useState } from "react";
+import { Archive, CalendarPlus, Clock, MapPin, Phone, User } from "lucide-react";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import type { Pedido } from "./tipos";
+import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
 
 /**
  * A agenda do profissional — os trabalhos contratados, por dia.
@@ -96,11 +98,40 @@ export default function Agenda({
   pedidos,
   onVoltar,
   onAbrirTrabalhos,
+  onRecarregar,
 }: {
   pedidos: Pedido[];
   onVoltar: () => void;
   onAbrirTrabalhos: () => void;
+  /** Depois de arquivar, a lista tem de vir outra vez da base. */
+  onRecarregar: () => void;
 }) {
+  /*
+   * ARQUIVAR, AQUI TAMBÉM.
+   *
+   * "Os pros estão a reclamar de terem a agenda cheia; os trabalhos em que o
+   * cliente deixou de responder não saem da agenda." Saem — arquivar já os
+   * tirava daqui — mas o botão só existia em «Os meus trabalhos», e ninguém
+   * sai da agenda para ir arrumar a agenda.
+   *
+   * Um trabalho contratado só sai por si quando alguém o dá por feito, e é
+   * precisamente isso que não acontece quando o cliente desaparece: fica ali
+   * para sempre a empurrar para baixo o que ainda interessa.
+   */
+  const [aArquivar, setAArquivar] = useState<number | null>(null);
+
+  async function arquivar(p: Pedido) {
+    if (!confirmarArrumacao(p)) return;
+    setAArquivar(p.negociacaoId);
+    try {
+      if (await arrumarTrabalho(p, true)) onRecarregar();
+    } catch {
+      /* Sem rede não se arruma nada — e não há nada a desfazer. */
+    } finally {
+      setAArquivar(null);
+    }
+  }
+
   // Só o que está contratado e por fazer. O resto não é agenda: o confirmado
   // já foi, o em-negociação ainda não é de ninguém.
   const contratados = pedidos.filter((p) => p.fase === "a_executar" && !p.arquivadoEm);
@@ -190,6 +221,21 @@ export default function Agenda({
           Sem data marcada — combine com o cliente e a CLYON regista-a no pedido.
         </p>
       )}
+
+      {/*
+        Discreto de propósito, e no fim.
+        A agenda existe para ele ligar ao cliente; arquivar é a saída para
+        quando já ligou e não há ninguém do outro lado. Um botão grande aqui
+        competia com o telefone, que é o gesto principal.
+      */}
+      <button
+        onClick={() => void arquivar(p)}
+        disabled={aArquivar === p.negociacaoId}
+        className="mt-2 flex min-h-[40px] w-full items-center justify-center gap-1.5 text-xs font-semibold text-tinta-fraca transition active:text-tinta disabled:opacity-40"
+      >
+        <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+        {aArquivar === p.negociacaoId ? "A arquivar…" : "Arquivar — o cliente não responde"}
+      </button>
     </div>
   );
 

@@ -26,6 +26,7 @@ import EnviarFotos, { type FotoEnviada } from "@/components/EnviarFotos";
 import Nota from "@/components/Nota";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
+import { arrumarTrabalho, confirmarArrumacao, negociacaoAberta } from "./arrumar";
 import NegociacaoProfissional from "@/app/profissionais/pedidos/[token]/NegociacaoProfissional";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import {
@@ -954,62 +955,6 @@ export default function Trabalhos({
 // ── Arrumar ─────────────────────────────────────────────────────────────────
 
 /** Ainda há negociação a decorrer? Arquivar isto tem de a fechar primeiro. */
-function negociacaoAberta(p: Pedido): boolean {
-  return p.estado === "aberta" || p.estado === "aguarda_contratacao";
-}
-
-/**
- * A pergunta antes de arquivar — só quando arquivar faz mais do que arrumar.
- *
- * Um pedido aberto: arquivar diz ao cliente que não há interesse (senão a
- * proposta dele ficava na mesa à espera de alguém que já não vai responder).
- * Um contratado: arquivar tira-o da vista E da agenda, e o trabalho continua
- * combinado — é melhor sabê-lo antes do toque.
- */
-function confirmarArrumacao(p: Pedido): boolean {
-  if (negociacaoAberta(p)) {
-    return window.confirm(
-      "Arquivar este pedido diz ao cliente que não está interessado e tira-o da sua vista. Continuar?",
-    );
-  }
-  if (p.estado === "acordada" && !p.confirmadoEm && !p.pagoEm) {
-    return window.confirm(
-      "Este trabalho está contratado. Arquivar só o tira da sua vista e da agenda — continua combinado com o cliente. Continuar?",
-    );
-  }
-  return true;
-}
-
-/**
- * Arruma um trabalho, ou repõe-no. Devolve true se mexeu.
- *
- * Não apaga nada: muda de separador. O que o cliente vê fica igual, a
- * carteira conta o mesmo, e o "Arquivados" existe precisamente para nada
- * desaparecer de vez.
- *
- * SE AINDA ESTÁ ABERTO, DESISTE PRIMEIRO. Arquivar sem desistir deixava uma
- * negociação-fantasma: o cliente e a CLYON viam "à espera de resposta" de
- * alguém que tinha arrumado o pedido e nunca mais o ia ver. A desistência é
- * a mesma da rota de negociação — com o histórico e os avisos de sempre.
- */
-async function arrumarTrabalho(p: Pedido, arquivar: boolean): Promise<boolean> {
-  if (arquivar && negociacaoAberta(p)) {
-    const desistiu = await fetch("/api/profissionais/negociacao", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accao: "desistir", negociacaoId: p.negociacaoId }),
-    });
-    // Se a desistência falhar (prazo, estado mudou), não se esconde nada: o
-    // pedido continua à vista para ele perceber o que se passou.
-    if (!desistiu.ok) return false;
-  }
-  const res = await fetch("/api/profissionais/arquivar", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ negociacaoId: p.negociacaoId, arquivar }),
-  });
-  return res.ok;
-}
 
 // ── O detalhe ───────────────────────────────────────────────────────────────
 
