@@ -301,7 +301,13 @@ describe("quem ainda não entrou lê os mesmos passos", () => {
     const FORM = ler("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx");
     expect(FORM).toContain('placeholder="Ex.: Transportes e Mudanças, Lda."');
     expect(FORM).not.toContain('placeholder="Ex.: Mudanças Jorge"');
+    /*
+     * O PLACEHOLDER, e não o ficheiro todo: o comentário que explica a
+     * mudança nomeia o exemplo antigo, e é suposto nomeá-lo — é assim que
+     * quem o ler daqui a um ano percebe porque é que não se volta atrás.
+     */
     const INSCRICAO = ler("src/app/profissionais/InscricaoForm.tsx");
-    expect(INSCRICAO).not.toContain("Transportes Silva Lda");
+    expect(INSCRICAO).not.toContain('placeholder="Ex: Transportes Silva Lda"');
+    expect(INSCRICAO).toContain('placeholder="Ex.: Transportes e Mudanças, Lda."');
   });
 });

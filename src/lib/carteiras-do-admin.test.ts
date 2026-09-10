@@ -205,7 +205,15 @@ describe("a morada fiscal deixa de estar atrás do interruptor", () => {
      */
     const i = PERFIL_ECRA.indexOf('{seccao === "faturacao" && (');
     const gate = PERFIL_ECRA.indexOf("{dados.emiteFatura && (", i);
-    const nif = PERFIL_ECRA.indexOf('<Campo etiqueta="NIF">', i);
+    /*
+     * Procura-se o ATRIBUTO, e não a etiqueta inteira.
+     *
+     * Era `'<Campo etiqueta="NIF">'` e partiu-se no dia em que o campo ganhou
+     * um segundo atributo — o triângulo de «por preencher». O que este teste
+     * guarda é a POSIÇÃO do NIF em relação ao interruptor, e não a lista de
+     * propriedades que o campo tem nesse dia.
+     */
+    const nif = PERFIL_ECRA.indexOf('etiqueta="NIF"', i);
     const morada = PERFIL_ECRA.indexOf('etiqueta="Morada fiscal"', i);
     expect(nif).toBeGreaterThan(-1);
     expect(nif).toBeLessThan(gate);

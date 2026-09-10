@@ -129,8 +129,9 @@ export function LinhaDeMenu({
       >
         {rotulo}
       </span>
-      {/* Colado ao rótulo, e não no fim da linha: é do que está DENTRO desta
-          secção que ele fala, e a seta no fim já pertence a outra ideia. */}
+      {/* Antes do distintivo e do valor. O que falta preencher decide se vale
+          a pena entrar na secção; o saldo ou o raio que aparecem a seguir são
+          informação de quem já lá esteve. */}
       {porCompletar != null && porCompletar > 0 && (
         <span className="flex shrink-0 items-center gap-1 text-amber-600">
           <PorPreencher
