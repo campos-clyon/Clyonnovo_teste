@@ -1,10 +1,17 @@
 # A verificação que faltava.
 #
-# O computador do dono não tem Node, e o repositório não tinha nenhum
-# workflow: os 117 ficheiros de teste nunca corriam sozinhos, e a única
-# rede era a build do Vercel — que verifica tipos mas não corre testes.
-# Muitos destes testes lêem o código-fonte e exigem frases exactas, por
-# isso são precisamente eles que apanham um refactor de texto.
+# O computador do dono não tem Node, e o repositório não tinha workflow
+# nenhum: os 117 ficheiros de teste nunca corriam sozinhos, e a única rede
+# era a build do Vercel — que verifica tipos mas não corre testes. Muitos
+# destes testes lêem o código-fonte e exigem frases exactas, por isso são
+# precisamente eles que apanham um refactor de texto.
+#
+# PORQUE É QUE ISTO CUSPE `::error::`
+#
+# Os registos de um workflow só se descarregam com direitos de administrador
+# do repositório. As ANOTAÇÕES, não: qualquer um as lê pela API pública. Por
+# isso o que falha sai também como anotação — é o único caminho por onde o
+# resultado chega a quem está a corrigir sem poder abrir os registos.
 name: Verificar
 
 on:
@@ -31,22 +38,35 @@ jobs:
       - name: Instalar
         run: pnpm install --frozen-lockfile
 
-      # Os dois passos correm sempre, mesmo que o primeiro chumbe: quem lê o
+      # Os dois correm sempre, mesmo que o primeiro chumbe: quem lê o
       # resultado quer saber tudo o que está mal, não a primeira coisa.
-      - name: Tipos (pnpm check)
-        id: tipos
-        run: pnpm check
-        continue-on-error: true
-
-      - name: Testes (pnpm test)
-        id: testes
-        run: pnpm test
-        continue-on-error: true
-
-      - name: Resultado
+      - name: Tipos e testes
         run: |
-          echo "Tipos:  ${{ steps.tipos.outcome }}"
-          echo "Testes: ${{ steps.testes.outcome }}"
-          if [ "${{ steps.tipos.outcome }}" != "success" ] || [ "${{ steps.testes.outcome }}" != "success" ]; then
-            exit 1
+          set +e
+          falhou=0
+
+          anotar() {
+            # Uma anotação por linha, sem os caracteres que partem o formato.
+            printf '%s\n' "$2" | tail -n 30 | while IFS= read -r linha; do
+              limpa=$(printf '%s' "$linha" | tr -d '\r' | sed 's/%/%25/g')
+              [ -n "$limpa" ] && echo "::error title=$1::$limpa"
+            done
+          }
+
+          echo "──────── pnpm check ────────"
+          saida=$(pnpm check 2>&1); rc=$?
+          printf '%s\n' "$saida"
+          if [ $rc -ne 0 ]; then falhou=1; anotar "tipos" "$saida"; fi
+
+          echo "──────── pnpm test ────────"
+          saida=$(pnpm test 2>&1); rc=$?
+          printf '%s\n' "$saida"
+          if [ $rc -ne 0 ]; then
+            falhou=1
+            # Só o que interessa: os nomes dos testes que falharam e o resumo.
+            resumo=$(printf '%s\n' "$saida" | grep -E "^ *(FAIL|×|✗)|Tests +[0-9]+ failed|Test Files +[0-9]+ failed|AssertionError|Expected|Received" | head -n 30)
+            [ -z "$resumo" ] && resumo=$(printf '%s\n' "$saida" | tail -n 30)
+            anotar "testes" "$resumo"
           fi
+
+          exit $falhou
