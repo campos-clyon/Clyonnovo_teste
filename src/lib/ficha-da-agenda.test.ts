@@ -30,7 +30,7 @@ const ROTA = ler("src/app/api/admin/agenda/route.ts");
 
 describe("a linha da agenda abre a ficha", () => {
   it("toca-se em qualquer parte da linha, e também com o teclado", () => {
-    expect(PAINEL_NU).toContain("onClick={() => setAVer(t.negociacaoId)}");
+    expect(PAINEL_NU).toContain("onAbrir={() => setAVer(t.negociacaoId)}");
     expect(PAINEL_NU).toContain('e.key === "Enter"');
     expect(PAINEL_NU).toContain("tabIndex={0}");
   });

@@ -33,6 +33,14 @@ describe("o resumo do email lê-se", () => {
     const corpo = readFileSync(join(process.cwd(), "src/lib/email-profissional.ts"), "utf8");
     expect(corpo).toContain("primeiraFrase(p)");
     expect(corpo).toContain("text: montarTexto(p)");
-    expect(corpo).not.toContain("Valor de partida");
+    /*
+     * A etiqueta mudou de «Valor de partida» para a sugestão. Afirma-se a
+     * etiqueta NOVA, e não a ausência da velha: o comentário no topo do
+     * ficheiro cita o resumo estragado do Gmail, onde a frase antiga aparece
+     * — e um teste que proíbe uma palavra no ficheiro inteiro chumba por
+     * causa de um comentário que explica precisamente o que se corrigiu.
+     */
+    expect(corpo).toContain("Sugestão CLYON (conta base)");
+    expect(corpo).toContain("Receberia");
   });
 });

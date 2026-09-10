@@ -374,7 +374,7 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
     // Ao dar pela falta do pedido do Rui (com email, caía no outro ecrã):
     // "aqui devo gerir todos os pedidos". Gerir em dois sítios é gerir mal.
     const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
-    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
+    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo"');
     /*
      * A garantia é a PERTENÇA, não a ordem nem o comprimento.
      *

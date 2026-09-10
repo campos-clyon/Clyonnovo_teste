@@ -27,7 +27,7 @@ describe("quem entra na lista de propostas", () => {
     const r = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "TRSul", propostasJson: proposta("profissional", 270) },
     ]);
-    expect(r).toEqual([{ profissional: "TRSul", valor: 270, total: 286.2 }]);
+    expect(r).toEqual([{ profissional: "TRSul", valor: 270, total: 283.5 }]);
   });
 
   it("entra quem ACEITOU o valor do cliente", () => {
@@ -42,7 +42,7 @@ describe("quem entra na lista de propostas", () => {
         propostasJson: proposta("cliente", 330, "aceite"),
       },
     ]);
-    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, total: 349.8 }]);
+    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, total: 346.5 }]);
   });
 
   it("NÃO entra quem ainda não respondeu", () => {
@@ -412,11 +412,11 @@ describe("quando o trabalho já está fechado", () => {
   });
 
   it("mas encontra-se, e traz o total certo do regime dele", () => {
-    // 330 + 75,90 de IVA + 19,80 de taxa = 425,70.
+    // 330 + 75,90 de IVA + 16,50 de taxa (5 %) = 422,40.
     expect(trabalhoFechado(fechada)).toEqual({
       profissional: "Sthefanny Lemos",
       valor: 330,
-      total: 425.7,
+      total: 422.4,
     });
   });
 

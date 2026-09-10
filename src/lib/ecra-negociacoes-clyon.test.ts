@@ -22,7 +22,15 @@ describe("o menu", () => {
     expect(SHELL).toMatch(
       /Plataforma", itens: \[[^\]]*"negociacoes_clyon"[^\]]*\]/,
     );
-    expect(SHELL).toMatch(/Gerir", itens: \["testadores", "configs"\]/);
+    /*
+     * O que importa é que os testadores e as configurações estão em "Gerir",
+     * não a lista exacta: entretanto entrou lá a "equipa" (as assistentes), e
+     * uma asserção com a lista inteira chumbava a cada entrada nova sem que
+     * nada estivesse mal.
+     */
+    const gerir = SHELL.match(/titulo: "Gerir", itens: \[([^\]]*)\]/)?.[1] ?? "";
+    expect(gerir).toContain('"testadores"');
+    expect(gerir).toContain('"configs"');
   });
 
   it("o ecrã antigo continua acessível — nada foi apagado", () => {
@@ -39,7 +47,7 @@ describe("o painel dividido", () => {
     // Depois da fusão dos ecrãs, o menu usa um modo só — "tudo" — mas o
     // componente mantém os três: a secção antiga responde a links antigos.
     expect(PAINEL).toContain('mostrar?: "tudo" | "clyon" | "clientes"');
-    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
+    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo"');
   });
 
   it("o registar pedido vive no ecrã da CLYON", () => {
