@@ -17,6 +17,7 @@ import {
   HardHat,
   Home,
   Leaf,
+  Lock,
   MessageCircle,
   Package,
   Shield,
@@ -221,6 +222,28 @@ const GUARANTEES = [
     gradient: "from-violet-400 to-violet-500",
     glow: "shadow-violet-500/40",
     iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
+  },
+  {
+    icon: Lock,
+    /*
+     * A GARANTIA QUE JÁ EXISTIA NO CÓDIGO E NUNCA SE DIZIA EM VOZ ALTA.
+     *
+     * O dinheiro fica retido até o cliente confirmar que o trabalho está
+     * feito — está em `pagamento-na-plataforma.ts` e é o que o site faz. A
+     * concorrência vende garantias como diferencial; aqui existia e ninguém
+     * a lia na home.
+     *
+     * O texto vem da constante e não escrito à mão: se um dia a plataforma
+     * deixar de cobrar, `PROMESSA` troca sozinha e este cartão acompanha, em
+     * vez de ficar a prometer o que já não se faz.
+     */
+    title: PROMESSA.clienteTitulo,
+    stat: "Só depois",
+    statLabel: "de si confirmar",
+    description: PROMESSA.clienteCorpo,
+    gradient: "from-cyan-400 to-cyan-500",
+    glow: "shadow-cyan-500/40",
+    iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
   },
 ];
 
@@ -559,7 +582,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
             {GUARANTEES.map((g, i) => (
               <div
                 key={g.title}
