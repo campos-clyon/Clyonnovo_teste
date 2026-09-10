@@ -208,11 +208,13 @@ export default function InscricaoForm({
             validação que substitua isto, porque a validação só actua depois de
             a pessoa já ter escrito a coisa errada.
           */}
+          {/* Nenhum exemplo é o nome de uma casa a sério — ver o mesmo campo em
+              /quero-ser-parceiro. Dizia «Transportes Silva Lda». */}
           <input
             id="nome"
             value={form.nome}
             onChange={(e) => set("nome", e.target.value)}
-            placeholder="Ex: Transportes Silva Lda"
+            placeholder="Ex.: Transportes e Mudanças, Lda."
             autoComplete="organization"
             className={`mt-1.5 ${inputCls(erro("nome"))}`}
           />

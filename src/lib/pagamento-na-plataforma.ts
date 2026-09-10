@@ -99,6 +99,13 @@ type Promessa = {
   clienteEmCurso: string;
   /** Ao profissional, no ecrã em que ele acaba de ser contratado. */
   proAoFechar: string;
+  /**
+   * O passo «e depois recebo?» do «como funciona» do profissional.
+   *
+   * É a pergunta que ele faz antes de se inscrever, e a resposta tem de ser a
+   * mesma que vai encontrar lá dentro. Ver `como-funciona-para-o-profissional.ts`.
+   */
+  proComoRecebe: string;
   /** O argumento de recrutamento — título e corpo do cartão. */
   recrutamentoTitulo: string;
   recrutamentoCorpo: string;
@@ -155,6 +162,8 @@ const COM_COBRANCA: Promessa = {
     "O valor fica retido na CLYON e só chega a {PRO} depois de o trabalho estar feito e de si o confirmar aqui.",
   proAoFechar:
     "O valor fica retido e é libertado quando o cliente confirmar que está feito. Vamos enviar-lhe a morada e o contacto por email.",
+  proComoRecebe:
+    "O cliente paga à CLYON quando o contrata, e o valor é libertado assim que ele confirmar que o trabalho está feito. Não anda atrás de ninguém para receber.",
   recrutamentoTitulo: "Pagamento garantido",
   recrutamentoCorpo:
     "O cliente paga à plataforma quando o contrata. O valor fica retido e é seu assim que " +
@@ -231,6 +240,8 @@ const SEM_COBRANCA: Promessa = {
     "O valor que combinou com {PRO} paga-o a {PRO} no fim, quando o trabalho estiver feito e depois de o confirmar aqui.",
   proAoFechar:
     "O valor ficou combinado por escrito e é o cliente que lho paga, no fim do trabalho. Vamos enviar-lhe a morada e o contacto por email.",
+  proComoRecebe:
+    "Quem lhe paga é o cliente, no fim do trabalho — a CLYON não recebe esse dinheiro nem lho cobra. O que fica connosco é o acordo: o valor escrito antes de sair de casa, que nenhum dos dois pode mudar sozinho.",
   /*
    * O CARTÃO DE RECRUTAMENTO É O QUE MAIS CUSTAVA TER ERRADO.
    *

@@ -13,6 +13,7 @@ import { MAX_PROPOSTAS_POR_LADO, PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "./taxas-plataforma";
+import { PROMESSA } from "./pagamento-na-plataforma";
 
 export type PerguntaFrequente = {
   pergunta: string;
@@ -30,11 +31,19 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   },
   {
     pergunta: "Quando é que recebo o dinheiro?",
+    /*
+     * ESTA RESPOSTA ESTAVA A PROMETER O QUE NÃO EXISTE.
+     *
+     * Dizia que o cliente paga à CLYON no momento em que contrata e que o
+     * valor fica cativo. Não fica: não há hoje nenhuma forma de o cliente
+     * pagar à plataforma. Era a última frase do produto ainda a descrever a
+     * caução — e logo a que um profissional lê antes de decidir se vai ao
+     * trabalho. Passa a ler a fonte única, como as outras nove.
+     */
     resposta:
-      "O cliente paga à CLYON no momento em que o contrata, e o valor fica cativo — é a " +
-      "garantia dele de que o trabalho é feito, e a sua de que o dinheiro existe. Depois de " +
-      "marcar o trabalho como feito, o cliente confirma e o valor passa a disponível. Se ele " +
-      `não disser nada, liberta-se sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`,
+      PROMESSA.proComoRecebe +
+      " Depois de marcar o trabalho como feito, o cliente confirma; se não disser nada, " +
+      `fecha-se sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`,
   },
   {
     pergunta: "Como levanto o saldo?",

@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Camera, HandCoins, MapPin, ShieldCheck } from "lucide-react";
+import { Camera, HandCoins, MapPin, MinusCircle, ShieldCheck } from "lucide-react";
 import { TAXA_PROFISSIONAL, quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { SITE_URL } from "@/lib/seo-data";
+import {
+  PASSOS_DO_PROFISSIONAL,
+  O_QUE_A_CLYON_NAO_FAZ,
+} from "@/lib/como-funciona-para-o-profissional";
 import FormularioDeCandidatura from "./FormularioDeCandidatura";
 
 export const metadata: Metadata = {
@@ -108,6 +112,54 @@ export default function QueroSerParceiroPage() {
               <strong>{Math.round(quantoOProfissionalRecebe(300))} €</strong>. Quem lhe paga é o
               cliente, no fim; a fatura do serviço é sua.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/*
+        COMO FUNCIONA, ANTES DO FORMULÁRIO.
+
+        Quem chega aqui não sabe se isto é uma bolsa de contactos, uma agência
+        que subcontrata, ou um site que lhe vende leads. Pedir-lhe seis campos
+        antes de responder a isso é pedir-lhe fé. Os passos são os MESMOS que
+        ele vai encontrar dentro do painel — vêm do mesmo ficheiro — porque a
+        versão que o convence a candidatar-se não pode ser mais generosa do que
+        a que lê depois de entrar.
+      */}
+      <section className="border-y border-[#E2EEF3] bg-white py-10 sm:py-14">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">Como funciona</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Do pedido que lhe chega ao dinheiro que recebe, sem letra pequena.
+          </p>
+
+          <ol className="mt-6 space-y-5">
+            {PASSOS_DO_PROFISSIONAL.map((passo, i) => (
+              <li key={passo.chave} className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-bold text-cyan-700">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-[#0B1929]">{passo.titulo}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">{passo.texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-8 rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] p-5">
+            <h3 className="text-base font-bold text-[#0B1929]">O que a CLYON não faz</h3>
+            <ul className="mt-3 space-y-2">
+              {O_QUE_A_CLYON_NAO_FAZ.map((linha) => (
+                <li key={linha} className="flex items-start gap-2.5">
+                  <MinusCircle
+                    className="mt-0.5 h-4 w-4 shrink-0 text-slate-400"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm leading-relaxed text-slate-600">{linha}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronRight, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { CabecalhoDeEcra } from "@/components/portal/Portal";
+import { CabecalhoDeEcra, PorPreencher } from "@/components/portal/Portal";
+import {
+  faltaPelaChave,
+  faltasDaSeccao,
+  oQueFaltaNoPerfil,
+  type Falta,
+} from "@/lib/perfil-por-completar";
 import Nota from "@/components/Nota";
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
@@ -44,17 +50,91 @@ function Campo({
   etiqueta,
   children,
   ajuda,
+  falta,
 }: {
   etiqueta: string;
   children: React.ReactNode;
   ajuda?: string;
+  /**
+   * O que acontece por este campo estar vazio. Presente = põe o triângulo ao
+   * lado do rótulo e escreve a razão por baixo, em âmbar.
+   */
+  falta?: string;
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-slate-700">{etiqueta}</span>
+      <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+        {etiqueta}
+        {falta && <PorPreencher dica={falta} />}
+      </span>
       <div className="mt-1.5">{children}</div>
+      {/* A razão fica POR BAIXO da caixa, e não num balão: num telemóvel não há
+          rato para pousar em cima de um triângulo. */}
+      {falta && <span className="mt-1 block text-xs leading-relaxed text-amber-700">{falta}</span>}
       {ajuda && <span className="mt-1 block text-xs text-slate-500">{ajuda}</span>}
     </label>
+  );
+}
+
+/** O rótulo pequeno dos campos dos custos, com o triângulo quando está vazio. */
+function EtiquetaDoCusto({ texto, falta }: { texto: string; falta?: Falta }) {
+  return (
+    <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-600">
+      {texto}
+      {falta && <PorPreencher dica={falta.porque} />}
+    </span>
+  );
+}
+
+/**
+ * O QUE FALTA NESTA SECÇÃO, À CABEÇA DELA.
+ *
+ * O cartão do menu diz que falta; aqui diz-se o quê, ao lado do sítio onde se
+ * resolve. Sem isto, quem carrega no aviso chega a um ecrã com quinze campos e
+ * fica à procura de qual deles era.
+ */
+function AvisoDaSeccao({
+  faltas,
+  onComoFunciona,
+}: {
+  faltas: Falta[];
+  onComoFunciona?: () => void;
+}) {
+  if (faltas.length === 0) return null;
+  const travoes = faltas.filter((f) => f.peso === "essencial");
+  return (
+    <div
+      className={`mb-4 rounded-xl border p-3 ${
+        travoes.length > 0 ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"
+      }`}
+    >
+      <p className="flex items-center gap-2 text-sm font-semibold text-[#0B1929]">
+        <AlertTriangle
+          className={`h-4 w-4 shrink-0 ${
+            travoes.length > 0 ? "text-amber-600" : "text-slate-400"
+          }`}
+          aria-hidden="true"
+        />
+        {faltas.length === 1 ? "Falta um campo aqui" : `Faltam ${faltas.length} campos aqui`}
+      </p>
+      <ul className="mt-1.5 space-y-1">
+        {faltas.map((f) => (
+          <li key={f.chave} className="text-xs leading-relaxed text-slate-600">
+            <strong className="font-semibold text-slate-800">{f.rotulo}</strong> — {f.porque}
+          </li>
+        ))}
+      </ul>
+      {onComoFunciona && (
+        <button
+          type="button"
+          onClick={onComoFunciona}
+          className="mt-2 flex items-center gap-1 text-xs font-semibold text-cyan-700 underline-offset-2 hover:underline"
+        >
+          O que é que isto muda
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -104,11 +184,13 @@ export default function Perfil({
   perfil,
   onVoltar,
   onGravado,
+  onComoFunciona,
 }: {
   seccao: SeccaoDoPerfil;
   perfil: PerfilTipo;
   onVoltar: () => void;
   onGravado: () => void;
+  onComoFunciona?: () => void;
 }) {
   const [dados, setDados] = useState<PerfilTipo>(perfil);
   const [aGravar, setAGravar] = useState(false);
@@ -251,9 +333,26 @@ export default function Perfil({
     </div>
   );
 
+  /*
+   * O QUE FALTA, CONTADO SOBRE O QUE ELE ESTÁ A ESCREVER — e não sobre o que
+   * está gravado.
+   *
+   * A conta corre sobre `dados`, o estado local, e por isso o triângulo apaga-
+   * -se no instante em que ele preenche o campo, sem esperar por gravar. O
+   * painel lá fora conta sobre o perfil gravado, e é ele que manda no menu: os
+   * dois só discordam enquanto houver alterações por guardar, que é
+   * exactamente o que se quer dizer.
+   */
+  const faltas = oQueFaltaNoPerfil(dados);
+  const faltasAqui = seccao === "seguranca" ? [] : faltasDaSeccao(faltas, seccao);
+  const falta = (chave: string) => faltaPelaChave(faltas, chave);
+  const porque = (chave: string) => falta(chave)?.porque;
+
   return (
     <>
       <CabecalhoDeEcra titulo={TITULOS[seccao]} onVoltar={onVoltar} />
+
+      <AvisoDaSeccao faltas={faltasAqui} onComoFunciona={onComoFunciona} />
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         {/* ── Dados ────────────────────────────────────────────────────────── */}
@@ -267,7 +366,7 @@ export default function Perfil({
               />
             </Campo>
 
-            <Campo etiqueta="Telefone">
+            <Campo etiqueta="Telefone" falta={porque("telefone")}>
               <div className="flex">
                 {/* O prefixo fixo evita a dúvida de escrever +351 ou não — e é
                     o que faz o número ficar sempre no mesmo formato na base. */}
@@ -294,6 +393,7 @@ export default function Perfil({
             */}
             <Campo
               etiqueta="Morada da base"
+              falta={porque("base-no-mapa")}
               ajuda="É daqui que contamos a distância a cada trabalho, e o seu raio de acção."
             >
               <MoradaDaBase
@@ -338,7 +438,15 @@ export default function Perfil({
         {seccao === "servicos" && (
           <div className="space-y-5">
             <div>
-              <span className="text-sm font-medium text-slate-700">O que faz</span>
+              <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+                O que faz
+                {porque("categorias") && <PorPreencher dica={porque("categorias") as string} />}
+              </span>
+              {porque("categorias") && (
+                <span className="mt-1 block text-xs leading-relaxed text-amber-700">
+                  {porque("categorias")}
+                </span>
+              )}
               <div className="mt-2 grid grid-cols-1 gap-2">
                 {SERVICE_CATEGORIES.map((c) => {
                   const activo = dados.categorias.includes(c.id);
@@ -419,13 +527,16 @@ export default function Perfil({
             */}
             <div className="rounded-xl border border-slate-200 p-3">
               <p className="text-sm font-medium text-slate-800">Os meus custos</p>
+              {/* O triângulo e esta frase têm de dizer o mesmo. Dizia só «deixe
+                  vazio para usar a referência», e um campo assinalado ao lado de
+                  uma frase que diz que pode ficar vazio é uma contradição. */}
               <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                Entram na sugestão de valor de cada pedido. Deixe vazio para usar a
-                referência da CLYON.
+                Entram na sugestão de valor de cada pedido. Pode deixar vazio: aí entra a
+                referência da CLYON — que é o custo de um profissional médio, e não o seu.
               </p>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">Custo por km (€)</span>
+                  <EtiquetaDoCusto texto="Custo por km (€)" falta={falta("custo-km")} />
                   <input
                     type="number"
                     inputMode="decimal"
@@ -439,7 +550,10 @@ export default function Perfil({
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">Custo por hora e pessoa (€)</span>
+                  <EtiquetaDoCusto
+                    texto="Custo por hora e pessoa (€)"
+                    falta={falta("custo-hora")}
+                  />
                   <input
                     type="number"
                     inputMode="decimal"
@@ -455,7 +569,7 @@ export default function Perfil({
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">Pessoas na equipa</span>
+                  <EtiquetaDoCusto texto="Pessoas na equipa" falta={falta("pessoas")} />
                   <input
                     type="number"
                     inputMode="numeric"
@@ -482,9 +596,10 @@ export default function Perfil({
               */}
               <div className="mt-4">
                 <label className="block sm:w-1/2">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">
-                    Tempo médio por trabalho (horas)
-                  </span>
+                  <EtiquetaDoCusto
+                    texto="Tempo médio por trabalho (horas)"
+                    falta={falta("horas")}
+                  />
                   <input
                     type="number"
                     inputMode="decimal"
@@ -515,7 +630,12 @@ export default function Perfil({
                 trabalho aparece logo por baixo, para ele ver o que os
                 números dele dão antes de gravar.
               */}
-              <p className="mt-5 text-sm font-medium text-slate-800">Custos fixos, por ano</p>
+              <p className="mt-5 flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                Custos fixos, por ano
+                {porque("custos-fixos") && (
+                  <PorPreencher dica={porque("custos-fixos") as string} />
+                )}
+              </p>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                 O que paga tenha ou não trabalho. O site divide pelos trabalhos que faz
                 num ano e põe a parte de cada trabalho na conta.
@@ -546,7 +666,10 @@ export default function Perfil({
                   </label>
                 ))}
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">Trabalhos por mês</span>
+                  <EtiquetaDoCusto
+                    texto="Trabalhos por mês"
+                    falta={falta("trabalhos-por-mes")}
+                  />
                   <input
                     type="number"
                     inputMode="numeric"
@@ -587,7 +710,10 @@ export default function Perfil({
               */}
               <div className="mt-5">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-medium text-slate-800">Margem de lucro desejada</span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                    Margem de lucro desejada
+                    {porque("margem") && <PorPreencher dica={porque("margem") as string} />}
+                  </span>
                   <span className="text-lg font-bold text-cyan-700">{dados.margemPercent ?? 40} %</span>
                 </div>
                 <input
@@ -625,7 +751,10 @@ export default function Perfil({
               */}
               <div className="mt-5">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-medium text-slate-800">Seguro de risco</span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                    Seguro de risco
+                    {porque("risco") && <PorPreencher dica={porque("risco") as string} />}
+                  </span>
                   <span className="text-lg font-bold text-cyan-700">{dados.riscoPercent ?? 0} %</span>
                 </div>
                 <input
@@ -708,7 +837,7 @@ export default function Perfil({
               O regime de IVA fica atrás dele, esse sim: só existe se houver
               factura.
             */}
-            <Campo etiqueta="NIF">
+            <Campo etiqueta="NIF" falta={porque("nif")}>
               <input
                 className={CAIXA}
                 inputMode="numeric"
@@ -722,6 +851,7 @@ export default function Perfil({
                 na fatura e é a que responde por quem recebeu o dinheiro. */}
             <Campo
               etiqueta="Morada fiscal"
+              falta={porque("morada-fiscal")}
               ajuda="A da declaração de actividade. Muitas vezes não é onde trabalha."
             >
               <input
@@ -803,6 +933,7 @@ export default function Perfil({
             {dados.emiteGuiaTransporte && (
               <Campo
                 etiqueta="Número de registo de transportador"
+                falta={porque("numero-transportador")}
                 ajuda={
                   dados.guiaVerificada
                     ? "Verificado. Mudar o número volta a pô-lo por verificar."
@@ -853,6 +984,9 @@ export default function Perfil({
 
             <Campo
               etiqueta={dados.temIban ? "Novo IBAN" : "IBAN"}
+              /* O triângulo só aqui, e não também no MB WAY: são dois caminhos
+                 para a mesma coisa, e marcar os dois dizia que faltam dois. */
+              falta={porque("onde-receber")}
               ajuda="Verificamos os dígitos de controlo antes de guardar."
             >
               <input
@@ -865,7 +999,11 @@ export default function Perfil({
               />
             </Campo>
 
-            <Campo etiqueta="Titular da conta" ajuda="O nome tal como está no banco.">
+            <Campo
+              etiqueta="Titular da conta"
+              falta={porque("titular")}
+              ajuda="O nome tal como está no banco."
+            >
               <input
                 className={CAIXA}
                 value={dados.ibanTitular}

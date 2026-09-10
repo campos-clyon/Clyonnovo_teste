@@ -1,6 +1,41 @@
 "use client";
 
-import { ChevronRight, ChevronLeft, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ChevronRight, ChevronLeft, type LucideIcon } from "lucide-react";
+
+/**
+ * O TRIÂNGULO COM O PONTO DE EXCLAMAÇÃO — «isto ainda não está feito».
+ *
+ * Um campo por preencher não dá erro: dá silêncio. O ecrã aceita-o vazio, a
+ * conta segue com a referência da CLYON e ninguém fica a saber. Este sinal é
+ * o que faz o silêncio ver-se, e é o mesmo em todo o lado — na linha do menu,
+ * ao lado do rótulo do campo, no cartão do topo — para se aprender uma vez.
+ *
+ * ÂMBAR, E NÃO VERMELHO. Vermelho é erro: alguma coisa correu mal e há que a
+ * desfazer. Isto não correu mal — está por acabar. Quem vê vermelho num
+ * formulário que nunca preencheu conclui que estragou alguma coisa.
+ *
+ * O `title` não chega a um leitor de ecrã nem a um telemóvel, por isso o
+ * porquê vai também em texto escondido. Um triângulo sem explicação é um
+ * enigma; a pessoa vê que falta qualquer coisa e não sabe o quê.
+ */
+export function PorPreencher({
+  dica,
+  className = "",
+}: {
+  /** O que falta, em palavras. Vai no `title` e no texto para quem ouve. */
+  dica: string;
+  className?: string;
+}) {
+  return (
+    <span
+      title={dica}
+      className={`inline-flex shrink-0 items-center text-amber-600 ${className}`}
+    >
+      <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+      <span className="sr-only">Por preencher: {dica}</span>
+    </span>
+  );
+}
 
 /**
  * As peças do portal — do profissional e do cliente.
@@ -45,6 +80,7 @@ export function LinhaDeMenu({
   valor,
   destaque,
   aviso,
+  porCompletar,
   onClick,
   tom = "normal",
   activo = false,
@@ -56,6 +92,14 @@ export function LinhaDeMenu({
   /** Um distintivo colorido — "3 à espera", "por verificar". */
   destaque?: string;
   aviso?: boolean;
+  /**
+   * Quantos campos desta secção estão por preencher.
+   *
+   * Põe o triângulo com o «!» à direita do rótulo. É um NÚMERO e não um
+   * booleano porque «falta uma coisa» e «faltam sete» pedem decisões
+   * diferentes de quem está a olhar para a lista.
+   */
+  porCompletar?: number;
   onClick: () => void;
   tom?: "normal" | "perigo";
   /**
@@ -85,6 +129,22 @@ export function LinhaDeMenu({
       >
         {rotulo}
       </span>
+      {/* Colado ao rótulo, e não no fim da linha: é do que está DENTRO desta
+          secção que ele fala, e a seta no fim já pertence a outra ideia. */}
+      {porCompletar != null && porCompletar > 0 && (
+        <span className="flex shrink-0 items-center gap-1 text-amber-600">
+          <PorPreencher
+            dica={
+              porCompletar === 1
+                ? "Falta um campo por preencher nesta secção."
+                : `Faltam ${porCompletar} campos por preencher nesta secção.`
+            }
+          />
+          <span className="text-xs font-bold" aria-hidden="true">
+            {porCompletar}
+          </span>
+        </span>
+      )}
       {destaque && (
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${

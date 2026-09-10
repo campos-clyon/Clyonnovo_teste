@@ -112,11 +112,23 @@ export default function FormularioDeCandidatura() {
       <div className="space-y-4">
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Nome ou empresa *</span>
+          {/*
+            NENHUM EXEMPLO PODE SER O NOME DE UMA EMPRESA A SÉRIO.
+
+            Dizia «Ex.: Mudanças Jorge», e a Mudanças Jorge existe — está no
+            mesmo grupo de empresas de mudanças que vamos convidar. Chegar a
+            uma página de recrutamento e encontrar o nome da própria casa posto
+            como exemplo por quem ainda não a convidou não é simpático: é usar
+            o nome dela sem pedir.
+
+            O exemplo passa a ser uma forma jurídica genérica, que não é o nome
+            de ninguém.
+          */}
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             className={`mt-1.5 ${CAIXA}`}
-            placeholder="Ex.: Mudanças Jorge"
+            placeholder="Ex.: Transportes e Mudanças, Lda."
           />
           {erroDe("nome") && <span className="mt-1 block text-xs text-red-600">{erroDe("nome")}</span>}
         </label>

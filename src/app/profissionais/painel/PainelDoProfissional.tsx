@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  BookOpen,
   Briefcase,
   CalendarDays,
   Building2,
@@ -30,6 +31,9 @@ import Agenda from "./Agenda";
 import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
 import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
+import PerfilPorCompletar from "./PerfilPorCompletar";
+import ComoFunciona from "./ComoFunciona";
+import { resumoDoPerfil, faltasDaSeccao, type SeccaoComFalta } from "@/lib/perfil-por-completar";
 
 /**
  * O painel do profissional.
@@ -53,6 +57,7 @@ type Ecra =
   | "historico"
   | "avaliacoes"
   | "ajuda"
+  | "como-funciona"
   | SeccaoDoPerfil;
 
 const ECRAS_VALIDOS: Ecra[] = [
@@ -63,6 +68,7 @@ const ECRAS_VALIDOS: Ecra[] = [
   "historico",
   "avaliacoes",
   "ajuda",
+  "como-funciona",
   "dados",
   "servicos",
   "faturacao",
@@ -312,6 +318,22 @@ export default function PainelDoProfissional() {
   const porFazer = pedidos.filter((p) => p.estado === "acordada" && p.fase === "a_executar").length;
   const noMenu = ecra === "menu";
 
+  /*
+   * O QUE FALTA NO PERFIL — contado uma vez, mostrado em quatro sítios.
+   *
+   * O cartão no topo, o triângulo em cada linha do menu, o aviso dentro de
+   * cada secção e o ecrã do «como funciona» leem todos daqui. Se cada um
+   * fizesse a sua conta, bastava uma regra mudar num deles para o menu dizer
+   * que falta uma coisa e o ecrã garantir que está tudo bem.
+   *
+   * Sem perfil carregado a lista vem vazia — e não «tudo por preencher». Um
+   * cartão a gritar durante o meio segundo do carregamento é um susto por
+   * engano.
+   */
+  const resumo = perfil ? resumoDoPerfil(perfil) : null;
+  const faltas = resumo?.faltas ?? [];
+  const quantasFaltam = (seccao: SeccaoComFalta) => faltasDaSeccao(faltas, seccao).length;
+
   // O menu é desenhado uma vez e serve os dois desenhos: coluna da esquerda em
   // ecrã grande, ecrã inteiro no telemóvel.
   const menu = (
@@ -437,6 +459,26 @@ export default function PainelDoProfissional() {
       */}
       <AvisosNoTelemovel />
 
+      {/*
+        O QUE FALTA NO PERFIL, ANTES DOS TRABALHOS.
+
+        Parece contra-intuitivo pôr isto por cima do que ele vem cá ver. Mas o
+        que falta no perfil é a razão pela qual, muitas vezes, não há nada para
+        ver: sem categorias não chega pedido nenhum, sem a base no mapa as
+        distâncias saem erradas. Um aviso por baixo de uma lista vazia chega
+        tarde.
+
+        Desaparece sozinho quando não faltar nada — e enquanto faltar só coisas
+        pequenas, deixa de ser âmbar.
+      */}
+      {resumo && (
+        <PerfilPorCompletar
+          resumo={resumo}
+          onAbrir={(seccao) => abrir(seccao)}
+          onComoFunciona={() => abrir("como-funciona")}
+        />
+      )}
+
       <GrupoDeLinhas className="mb-4">
         <LinhaDeMenu
           icone={Star}
@@ -501,6 +543,7 @@ export default function PainelDoProfissional() {
           icone={UserCog}
           rotulo="Perfil"
           activo={ecra === "dados"}
+          porCompletar={quantasFaltam("dados")}
           onClick={() => abrir("dados")}
         />
         <LinhaDeMenu
@@ -508,6 +551,7 @@ export default function PainelDoProfissional() {
           rotulo="Serviços e raio"
           activo={ecra === "servicos"}
           valor={perfil ? `${perfil.raioKm} km` : undefined}
+          porCompletar={quantasFaltam("servicos")}
           onClick={() => abrir("servicos")}
         />
         <LinhaDeMenu
@@ -520,6 +564,7 @@ export default function PainelDoProfissional() {
               : undefined
           }
           aviso
+          porCompletar={quantasFaltam("faturacao")}
           onClick={() => abrir("faturacao")}
         />
         <LinhaDeMenu
@@ -529,6 +574,7 @@ export default function PainelDoProfissional() {
           valor={perfil?.temIban ? perfil.iban : undefined}
           destaque={perfil && !perfil.temIban ? "por indicar" : undefined}
           aviso
+          porCompletar={quantasFaltam("banco")}
           onClick={() => abrir("banco")}
         />
         <LinhaDeMenu
@@ -545,6 +591,14 @@ export default function PainelDoProfissional() {
             perguntas com resposta, e a caixa para escrever quando nenhuma
             serve. */}
         <InstalarNoTelemovel />
+        {/* Antes da ajuda: quem chega aqui perdido não tem uma pergunta para
+            fazer — tem tudo por perceber. */}
+        <LinhaDeMenu
+          icone={BookOpen}
+          rotulo="Como funciona"
+          activo={ecra === "como-funciona"}
+          onClick={() => abrir("como-funciona")}
+        />
         <LinhaDeMenu
           icone={HelpCircle}
           rotulo="Ajuda"
@@ -628,12 +682,21 @@ export default function PainelDoProfissional() {
         )}
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}
 
+        {ecra === "como-funciona" && (
+          <ComoFunciona
+            faltas={faltas}
+            onVoltar={() => abrir("menu")}
+            onAbrir={(seccao) => abrir(seccao)}
+          />
+        )}
+
         {["dados", "servicos", "faturacao", "banco", "seguranca"].includes(ecra) && perfil && (
           <PerfilEcra
             seccao={ecra as SeccaoDoPerfil}
             perfil={perfil}
             onVoltar={() => abrir("menu")}
             onGravado={carregar}
+            onComoFunciona={() => abrir("como-funciona")}
           />
         )}
       </div>
