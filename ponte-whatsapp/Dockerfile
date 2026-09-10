@@ -19,7 +19,8 @@ COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 COPY index.js ./
 
-# O emparelhamento fica aqui: montar um volume, senão lê-se o código a cada arranque.
-VOLUME ["/app/auth"]
+# O emparelhamento fica em /app/auth. O volume monta-se no painel do Railway,
+# que recusa a instrução VOLUME aqui dentro ("use Railway Volumes"). Sem esse
+# volume, lê-se o código de emparelhamento a cada arranque.
 
 CMD ["node", "index.js"]
