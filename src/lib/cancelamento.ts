@@ -22,6 +22,34 @@
  * existir por escrito.
  */
 
+/**
+ * OS MOTIVOS, EM BOTÕES — e não numa caixa de texto vazia.
+ *
+ * "Esses clientes desistem e não há hora de cancelar. Em vez de ter que
+ * colocar textos com o motivo, dê-me opções tipo cliente desistiu, ou não
+ * deseja mais, já foi feito, etc." — 10-09-2026.
+ *
+ * Escrever à mão tem dois defeitos. O primeiro é o trabalho, precisamente na
+ * hora em que se quer despachar; o segundo aparece um ano depois — cada
+ * pessoa escreve a mesma coisa de maneira diferente («desistiu», «desistência
+ * do cliente», «já não quer») e ninguém consegue contar quantos pedidos se
+ * perderam por desistência. Com uma lista fechada, o registo passa a poder
+ * ser somado.
+ *
+ * «Outro motivo» fica, e é o único que pede texto: uma lista fechada a que
+ * falte a razão verdadeira obriga a escolher a mentira mais parecida.
+ */
+export const MOTIVOS_DE_CANCELAMENTO = [
+  "O cliente desistiu",
+  "O cliente já não precisa",
+  "Já foi feito por outra pessoa",
+  "Não conseguimos falar com o cliente",
+  "O profissional não pode fazer",
+  "Pedido repetido",
+] as const;
+
+export type MotivoDeCancelamento = (typeof MOTIVOS_DE_CANCELAMENTO)[number];
+
 export type NegociacaoParaCancelar = {
   estado: string;
   valorAcordado: unknown;

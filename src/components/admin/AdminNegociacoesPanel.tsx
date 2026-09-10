@@ -25,7 +25,7 @@ import {
   Star,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
-import { oQueSeDesfaz, avisoDoCancelamento } from "@/lib/cancelamento";
+import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
   contaDoCliente,
@@ -494,6 +494,17 @@ export default function AdminNegociacoesPanel({
    */
   const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
   const [linksEmClaro, setLinksEmClaro] = useState<Record<string, string>>({});
+  /**
+   * O pedido que está prestes a ser cancelado.
+   *
+   * ERA UM `window.prompt` COM O MOTIVO À MÃO. Escrever a razão dá trabalho
+   * precisamente na hora em que se quer despachar, e um ano depois ninguém
+   * consegue contar quantos pedidos se perderam por desistência — cada pessoa
+   * escreveu a mesma coisa de maneira diferente. Passou a ser uma caixa com os
+   * motivos em botões, e é a MESMA da agenda: cancelar num sítio ou no outro é
+   * o mesmo gesto, e não duas versões da mesma pergunta.
+   */
+  const [aCancelar, setACancelar] = useState<Pedido | null>(null);
   /*
    * Quais as negociações abertas em ecrã.
    *
@@ -1016,70 +1027,6 @@ export default function AdminNegociacoesPanel({
       setErro("Erro de rede.");
     } finally {
       setAApagar(false);
-    }
-  }
-
-  /**
-   * Cancelar: o cliente desistiu e o trabalho não vai acontecer.
-   *
-   * O motivo é opcional mas pedido — um pedido cancelado sem motivo é
-   * indistinguível de um cancelado por engano, e daqui a um ano é o registo
-   * permanente que responde por ele.
-   */
-  async function cancelarPedidoNoPainel(p: Pedido) {
-    if (!token) return;
-
-    /*
-     * O aviso muda com o que está em jogo.
-     *
-     * Cancelar um pedido onde ninguém foi contratado é arrumação. Cancelar um
-     * onde alguém já lá foi é desfazer um compromisso — e a caixa tem de o
-     * dizer, com o nome dele e o valor, ANTES e não depois. Ele corrigiu-me
-     * quando eu tinha isto bloqueado: o direito é absoluto. Absoluto não quer
-     * dizer silencioso.
-     */
-    const desfaz = oQueSeDesfaz(p.negociacoes);
-    const aviso = avisoDoCancelamento(desfaz);
-
-    const motivo = window.prompt(
-      `Cancelar o pedido #${p.id} de ${p.contactName ?? "cliente"}?
-
-` +
-        (aviso ? `${aviso}
-
-` : "") +
-        `As negociações abertas terminam e o pedido sai da mesa. Não é apagado: ` +
-        `fica o histórico e o registo.
-
-` +
-        (desfaz.motivoObrigatorio
-          ? `Porquê? (obrigatório — é o que ${desfaz.profissional} vai ler)`
-          : `Porquê? (opcional — fica escrito)`),
-      "",
-    );
-    if (motivo === null) return; // carregou em cancelar na caixa
-    if (desfaz.motivoObrigatorio && motivo.trim().length === 0) {
-      setErro("Para cancelar um trabalho já contratado tem de escrever o motivo.");
-      return;
-    }
-    setOcupado(`x${p.id}`);
-    setErro("");
-    try {
-      const res = await fetch("/api/admin/negociacoes/cancelar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: p.id, motivo }),
-      });
-      const dados = await res.json();
-      if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível cancelar.");
-        return;
-      }
-      await carregar();
-    } catch {
-      setErro("Erro de rede.");
-    } finally {
-      setOcupado(null);
     }
   }
 
@@ -1729,7 +1676,7 @@ export default function AdminNegociacoesPanel({
           */}
           {!concluido && !cancelado && (
             <button
-              onClick={() => cancelarPedidoNoPainel(p)}
+              onClick={() => setACancelar(p)}
               disabled={ocupado === `x${p.id}`}
               title="O cliente desistiu — encerra as negociações e tira o pedido da mesa, sem o apagar"
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-50"
@@ -2475,6 +2422,20 @@ export default function AdminNegociacoesPanel({
           permitirApagar={false}
           onClose={() => setAEditar(null)}
           onUpdated={() => carregar(true)}
+        />
+      )}
+
+      {aCancelar && (
+        <CancelarPedido
+          pedidoId={aCancelar.id}
+          nomeDoCliente={aCancelar.contactName}
+          negociacoes={aCancelar.negociacoes}
+          token={token ?? ""}
+          onFechar={() => setACancelar(null)}
+          onCancelado={() => {
+            setACancelar(null);
+            void carregar();
+          }}
         />
       )}
     </div>

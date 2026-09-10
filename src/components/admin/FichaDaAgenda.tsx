@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Ban,
   CalendarClock,
   Check,
   Euro,
@@ -15,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { linkGoogleMaps } from "@/lib/morada";
+import CancelarPedido from "./CancelarPedido";
 import {
   ETIQUETA,
   CORES,
@@ -161,6 +163,7 @@ export default function FichaDaAgenda({
   const [motivo, setMotivo] = useState("");
   const [precisaMotivo, setPrecisaMotivo] = useState(false);
   const [aGravar, setAGravar] = useState<"data" | "valor" | null>(null);
+  const [aCancelar, setACancelar] = useState(false);
   const [erro, setErro] = useState("");
   const [feito, setFeito] = useState("");
 
@@ -550,9 +553,54 @@ export default function FichaDaAgenda({
               O trabalho já está contratado, por isso guardar ali não o volta a mandar aos
               profissionais.
             </p>
+
+            {/*
+              CANCELAR, AQUI TAMBÉM.
+              É na agenda que se dá pela desistência: liga-se ao cliente para
+              confirmar o dia e ouve-se «já não preciso». Sem isto, cancelar
+              era sair da agenda, procurar o pedido noutro ecrã e perder o
+              sítio onde se estava — com a lista dos atrasados por percorrer.
+            */}
+            <button
+              onClick={() => setACancelar(true)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10"
+            >
+              <Ban className="h-4 w-4" aria-hidden="true" />
+              Cancelar o pedido
+            </button>
           </div>
         </div>
       </div>
+
+      {aCancelar && (
+        /*
+         * A negociação desta linha, na forma que o `oQueSeDesfaz` lê. Tudo o
+         * que está na agenda está contratado, por isso é sempre "acordada" —
+         * e o que muda o peso do aviso é já estar confirmado ou pago.
+         */
+        <CancelarPedido
+          pedidoId={t.pedidoId}
+          nomeDoCliente={t.clienteNome}
+          negociacoes={[
+            {
+              estado: "acordada",
+              valorAcordado: t.valorAcordado,
+              profissionalNome: t.profissionalNome,
+              confirmadoEm: t.jaConfirmado ? true : null,
+              pagoEm: t.jaPago ? true : null,
+            },
+          ]}
+          token={token}
+          onFechar={() => setACancelar(false)}
+          onCancelado={() => {
+            setACancelar(false);
+            // Cancelado, o trabalho sai da agenda: fecha-se a ficha, senão
+            // ficava aberta em cima de uma linha que já não existe.
+            onMudou();
+            onFechar();
+          }}
+        />
+      )}
     </div>
   );
 }
