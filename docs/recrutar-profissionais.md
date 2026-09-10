@@ -184,3 +184,131 @@ Por ordem de proximidade, que é a que costuma resultar:
 
 Um pedido parado é o melhor argumento que existe. Não guarde os pedidos para
 depois de ter os profissionais: use-os para os arranjar.
+
+---
+
+## 7. A mensagem completa, para empresas de mudanças
+
+Escrita para os grupos de WhatsApp de mudanças (Margem Sul e Lisboa), onde as
+empresas passam o dia a anunciar que têm equipa e carrinha disponíveis.
+
+### Primeiro: no privado, nunca no grupo
+
+O grupo tem regras — o nome dele começa por «Leia as regras» — e a maioria
+destes grupos proíbe divulgação. Uma mensagem de recrutamento no grupo tira-o
+de lá e queima 246 contactos de uma vez.
+
+**Envie um a um, no privado.** Dá mais trabalho e é a única forma que não se
+paga cara. E abre a mensagem a dizer de onde veio: «vi-o no grupo» é a
+diferença entre um convite e spam.
+
+### Como enviar
+
+Estas pessoas recebem dezenas de mensagens por dia. **Mande primeiro só o
+bloco de abertura.** O texto completo vai depois, se responderem — quem recebe
+quinze linhas de um número desconhecido não as lê.
+
+### Abertura (a primeira mensagem)
+
+> Boa tarde, [nome]. Chamo-me Wanderson, da CLYON.
+>
+> Vi-o no grupo Mudanças 24h. Somos uma plataforma que recebe pedidos de
+> clientes e os manda aos profissionais da zona — mudanças, recolhas e
+> esvaziamentos, em Lisboa e na Margem Sul.
+>
+> Neste momento tenho pedidos parados à espera de quem os faça.
+>
+> Responder a um pedido não custa nada: nem créditos, nem contactos comprados,
+> nem mensalidade. Só há comissão quando fecha um trabalho.
+>
+> Quer que lhe explique como funciona?
+
+### O texto completo (quando responderem)
+
+> *O que é a CLYON*
+> Uma plataforma que liga clientes a profissionais. O cliente descreve o
+> trabalho com fotografias; nós mandamos o pedido a quem o pode fazer. Quem
+> executa é o profissional — a CLYON não faz mudanças.
+>
+> *O que lhe chega*
+> O pedido vai-lhe ao email e ao painel, com fotografias, a zona, o andar e se
+> há elevador. Só os serviços que faz, e só dentro do raio que indicar a partir
+> da sua base. Não tem de estar de olho em grupo nenhum à espera que apareça
+> trabalho.
+>
+> *Quanto custa*
+> Inscrição: zero. Mensalidade: zero. Responder a um pedido: zero.
+> Só há comissão quando fecha um trabalho — 6 % do valor acordado. Um orçamento
+> que não dá em nada não lhe custa um cêntimo.
+>
+> *Como responde*
+> Abre o pedido e encontra a conta já feita para si: o combustível para os
+> quilómetros que vai fazer, as horas da sua equipa, os seus custos fixos, e o
+> valor que sugerimos. Essa conta usa os SEUS números, os que puser no perfil —
+> não os nossos. Depois propõe o valor que entender.
+> O que aparece no ecrã é sempre o líquido: o que fica para si.
+>
+> *Quem paga*
+> O cliente paga-lhe a si, no fim do trabalho. A CLYON não recebe nem guarda
+> esse dinheiro. O que a plataforma faz é guardar o valor combinado por
+> escrito, para ninguém o mudar à porta do cliente.
+> A factura do serviço é sua e o IVA é do seu regime. A CLYON factura só a
+> comissão dela.
+>
+> *O que a plataforma não deixa fazer*
+> A morada exacta e o telefone do cliente só lhe aparecem depois de ele o
+> escolher. Antes disso vê a zona. É o que protege o cliente — e o que garante
+> que ninguém lhe passa à frente com o contacto.
+>
+> *O que não lhe prometo*
+> Somos novos e somos poucos. Não lhe garanto dez trabalhos por mês, e quem
+> lho garantir está a inventar. O que lhe garanto é que responder nunca lhe
+> custa nada, e que hoje tenho pedidos à espera.
+>
+> *Como se entra*
+> Mando-lhe um convite por email. O registo leva cinco minutos: nome, email,
+> telemóvel, a cidade onde tem base, os serviços que faz e até onde vai. Se
+> emitir factura, também o NIF e a morada fiscal.
+>
+> Quer que envie?
+
+---
+
+## 8. O que eles vão perguntar
+
+As objecções reais de quem vive disto. Respostas curtas, e todas verdadeiras.
+
+**«Tenho de pagar para receber os contactos?»**
+Não. Nem para receber, nem para responder. Só há comissão quando fecha um
+trabalho.
+
+**«E se o cliente não me pagar?»**
+O cliente paga-lhe a si, no fim. A CLYON não retém o dinheiro — o que faz é
+guardar o acordo por escrito, com data, para não haver versão diferente
+depois. Não lhe vou dizer que garantimos o pagamento, porque não garantimos.
+
+**«Quanto é a comissão, ao certo?»**
+6 % do valor acordado, seu. O cliente paga 5 % por cima, que é a parte dele.
+Num trabalho de 300 €, ficam-lhe 282 €.
+
+**«Sou obrigado a aceitar os pedidos?»**
+Não. Pode não responder, e pode arrumar o pedido para não lhe encher o ecrã.
+Não há penalização nenhuma.
+
+**«Já estou na Fixando / noutra plataforma.»**
+Continue. Isto não é exclusivo. A diferença é que aqui não gasta nada a
+responder — se não fechar, não pagou.
+
+**«Quantos trabalhos vou receber?»**
+Não sei, e não lhe vou inventar um número. Somos poucos profissionais, o que
+quer dizer que os pedidos que entram são repartidos por poucos. Hoje tenho
+[N] à espera.
+
+**«Preciso de empresa? De factura?»**
+Para se inscrever, não. Se emitir factura, pedimos o NIF e a morada fiscal,
+porque a factura do serviço é sua. Se não emitir, também pode entrar — mas há
+clientes que só aceitam com factura.
+
+**«E o entulho? Preciso de guia?»**
+Para transportar resíduos é preciso ser transportador licenciado (e-GAR). No
+perfil diz se emite guia, e os pedidos que a exigem só vão a quem a emite.
