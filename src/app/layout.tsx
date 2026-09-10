@@ -43,7 +43,15 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "CLYON - Recolha de Móveis, Entulho, Monos e Esvaziamento de Casas em Lisboa e Setúbal",
+    /*
+     * 55 caracteres, e eram 87.
+     *
+     * O Google corta o título por volta dos 60 e põe reticências. O que
+     * estava aqui perdia "e Esvaziamento de Casas em Lisboa e Setúbal" — ou
+     * seja, perdia as cidades, que é a parte pela qual as pessoas procuram.
+     * Melhor escolher o que fica do que deixar a máquina escolher.
+     */
+    default: "CLYON — Recolha de Móveis e Entulho em Lisboa e Setúbal",
     template: "%s | CLYON",
   },
   description:
@@ -128,7 +136,29 @@ const localBusinessSchema = {
   email: BUSINESS_EMAIL,
   image: `${SITE_URL}/og-image.png`,
   description:
-    "Empresa especializada em recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Plataforma que liga clientes a profissionais verificados de recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
+  /*
+   * SEM `geo` E SEM `hasMap`, e é uma decisão e não um esquecimento.
+   *
+   * O plano pedia-os. Só que a base deixou de ser da CLYON: "a base passa a
+   * ser dos profissionais, não da CLYON" (10-09-2026). Declarar coordenadas
+   * e um ponto no mapa é dizer que se atende ali, e não se atende ali coisa
+   * nenhuma — quem se desloca é o profissional, da base dele.
+   *
+   * A morada abaixo fica porque é a sede legal, a mesma que está na
+   * identificação legal e nos termos, e uma empresa tem de a declarar. O que
+   * não se declara é um balcão que não existe.
+   *
+   * Isto fecha a porta ao Map Pack do Google. Já estava fechada: segundo a
+   * auditoria, o perfil de negócio foi recusado sete vezes por falta de
+   * morada física. Abri-la é a decisão da morada comercial, que é do dono.
+   */
+  sameAs: [
+    // TODO (Wanderson): pôr aqui os endereços dos perfis reais quando
+    // existirem — Google Business Profile, Instagram, Facebook. Um `sameAs`
+    // com um endereço errado é pior do que não ter nenhum: diz ao Google que
+    // aquela página é a CLYON, e ela não é.
+  ],
   address: {
     "@type": "PostalAddress",
     streetAddress: "Belverde",
