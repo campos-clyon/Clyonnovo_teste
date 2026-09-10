@@ -96,7 +96,7 @@ export const metadata: Metadata = {
       "Serviço rápido para recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "CLYON - Recolha de Entulho, Móveis e Monos",
@@ -108,7 +108,7 @@ export const metadata: Metadata = {
     title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
     description:
       "Orçamento rápido para recolha de entulho, móveis, monos, mudanças e limpeza pós-obra.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
   },
   other: {
     "geo.region": "PT-11",
@@ -127,7 +127,7 @@ const localBusinessSchema = {
   url: SITE_URL,
   telephone: BUSINESS_PHONE,
   email: BUSINESS_EMAIL,
-  image: `${SITE_URL}/og-image.jpg`,
+  image: `${SITE_URL}/og-image.png`,
   description:
     "Empresa especializada em recolha de entulho, móveis, monos, esvaziamento de casas, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
   address: {
