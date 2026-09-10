@@ -118,11 +118,26 @@ export async function POST(req: NextRequest) {
    *
    * Sem distância a conta sai sem combustível — e aí vale mais a estimativa
    * gravada, tirando-lhe o IVA que ela traz dentro, do que uma conta que não
-   * contou a viagem. Um `valor` que ainda venha no corpo é ignorado: a caixa
-   * de escrever o valor saiu da mesa.
+   * contou a viagem.
+   *
+   * QUEM ESTÁ NA MESA PODE PASSAR À FRENTE DELA, e isso voltou a pedido do
+   * dono (10-09-2026). Houve um tempo em que o valor escrito era ignorado, e
+   * a razão era boa: um número inventado à mão valia para todos os
+   * profissionais, viessem de Amora ou de Setúbal. Mas há um caso que a conta
+   * não conhece — o que já foi combinado ao telefone. Nesse, quem atendeu
+   * sabe mais do que a fórmula.
+   *
+   * A regra fica simples de dizer: caixa vazia, manda a conta da CLYON;
+   * caixa preenchida, manda o que lá está. E o que cada profissional vê
+   * continua a ser a conta feita com os custos e os quilómetros DELE — este
+   * valor é só o ponto de partida da mesa.
    */
-  if (corpo.valor !== undefined && corpo.valor !== null && corpo.valor !== "") {
-    console.warn("[promover] valor escrito à mão ignorado — a partida é a conta da CLYON", { pedidoId });
+  const escrito =
+    corpo.valor !== undefined && corpo.valor !== null && corpo.valor !== ""
+      ? validarValorDesejado(corpo.valor)
+      : null;
+  if (escrito && !escrito.ok) {
+    return NextResponse.json({ error: escrito.erros[0].mensagem }, { status: 400 });
   }
   const mapa = await getActivePricingMap();
   const distanciaDaClyon = Number(pedido.distanceKm);
@@ -136,7 +151,8 @@ export async function POST(req: NextRequest) {
     Number.isFinite(estimativaGravada) && estimativaGravada > 0
       ? Math.round((estimativaGravada / 1.23) * 100) / 100
       : null;
-  const bruto = conta.semDistancia && estimativaSemIva != null ? estimativaSemIva : conta.precoSugerido;
+  const daConta = conta.semDistancia && estimativaSemIva != null ? estimativaSemIva : conta.precoSugerido;
+  const bruto = escrito?.ok ? escrito.valores.valorDesejadoCliente : daConta;
 
   const validacao = validarValorDesejado(bruto);
   if (!validacao.ok) {
@@ -224,11 +240,16 @@ export async function POST(req: NextRequest) {
       type: "created",
       by: null,
       message:
-        `Promovido a pedido de plataforma por ${valor} € (conta CLYON: ` +
-        (conta.semDistancia
-          ? "estimativa sem IVA, sem distância da base"
-          : `${conta.kmDeCarro} km ida e volta, ${conta.horas} h, margem ${Math.round(conta.margem * 100)} %`) +
-        "). " +
+        // Fica escrito DE ONDE veio o número: quem ler isto daqui a um mês
+        // tem de saber se foi a fórmula ou se foi alguém que escreveu.
+        `Promovido a pedido de plataforma por ${valor} € ` +
+        (escrito?.ok
+          ? `(escrito na mesa; a conta CLYON dava ${daConta} €). `
+          : "(conta CLYON: " +
+            (conta.semDistancia
+              ? "estimativa sem IVA, sem distância da base"
+              : `${conta.kmDeCarro} km ida e volta, ${conta.horas} h, margem ${Math.round(conta.margem * 100)} %`) +
+            "). ") +
         resumoDaDistribuicao(r) +
         (emailSaiu ? "" : " O email do link ao cliente NÃO saiu."),
     });

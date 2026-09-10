@@ -385,7 +385,7 @@ const BLOCOS: Array<{
     chave: "porEnviar",
     titulo: "Por enviar",
     dica:
-      "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais parte da conta da CLYON (custos + margem, sem IVA), envia o link ao cliente e distribui; cada profissional vê a conta com os quilómetros dele.",
+      "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais parte da conta da CLYON (custos + margem, sem IVA) ou do valor que escrever na caixa, envia o link ao cliente e distribui; cada profissional vê a conta com os quilómetros dele.",
     Icone: Send,
     cor: "text-amber-300 border-amber-500/60",
     corDoNumero: "text-amber-300",
@@ -871,7 +871,7 @@ export default function AdminNegociacoesPanel({
     );
   }
 
-  async function promover(pedidoId: number) {
+  async function promover(pedidoId: number, valor?: string) {
     if (!token) return;
     setOcupado(`p${pedidoId}`);
     setErro("");
@@ -879,8 +879,9 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes/promover", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        // Sem valor: a partida é a conta da CLYON, feita na rota.
-        body: JSON.stringify({ pedidoId }),
+        // Sem valor, a partida é a conta da CLYON, feita na rota; com valor,
+        // é o que a mesa escreveu.
+        body: JSON.stringify({ pedidoId, valor }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -2705,7 +2706,7 @@ function PedidosPorPromover({
   aberto: boolean;
   pedidos: PorPromover[];
   ocupado: string | null;
-  onPromover: (id: number) => void;
+  onPromover: (id: number, valor?: string) => void;
   onArquivar: (id: number) => void;
   onArquivarVarios: (ids: number[]) => void;
   onApagar: (ids: number[]) => void;
@@ -2720,6 +2721,17 @@ function PedidosPorPromover({
   // Os antigos nascem fechados: são os que menos merecem atenção, e são quase
   // sempre os mais numerosos.
   const [antigosAbertos, setAntigosAbertos] = useState(false);
+  /*
+   * O VALOR DE PARTIDA, ESCRITO À MÃO — de volta a pedido do dono.
+   *
+   * Esteve aqui, saiu quando o envio passou a usar a conta da CLYON, e volta
+   * porque há um caso que a fórmula não conhece: o que já foi combinado ao
+   * telefone. Quem atendeu sabe mais do que a conta.
+   *
+   * Vazio é o normal, e vazio manda a conta da CLYON. Um por pedido, e não um
+   * só partilhado: escrever num pedido não pode encher a caixa do de baixo.
+   */
+  const [valorDe, setValorDe] = useState<Record<number, string>>({});
 
   const agora = new Date();
 
@@ -2816,8 +2828,28 @@ function PedidosPorPromover({
         Editar
       </button>
 
+      {/*
+        Vazio = a conta da CLYON. Escrito = o que lá está.
+        O `title` diz a regra a quem passar o rato, para não ser preciso
+        adivinhar o que faz uma caixa vazia.
+      */}
+      <div className="relative">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+          €
+        </span>
+        <input
+          value={valorDe[p.id] ?? ""}
+          onChange={(e) => setValorDe((v) => ({ ...v, [p.id]: e.target.value }))}
+          inputMode="decimal"
+          placeholder="conta CLYON"
+          title="Deixe vazio para enviar a conta da CLYON. Escreva um valor para mandar esse."
+          aria-label={`Valor de partida do pedido ${p.id}`}
+          className="w-28 rounded-lg border border-slate-600 bg-slate-950 py-2 pl-5 pr-2 text-xs text-white outline-none focus:border-amber-500"
+        />
+      </div>
+
       <button
-        onClick={() => onPromover(p.id)}
+        onClick={() => onPromover(p.id, valorDe[p.id]?.trim() || undefined)}
         disabled={ocupado === `p${p.id}`}
         className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
       >
