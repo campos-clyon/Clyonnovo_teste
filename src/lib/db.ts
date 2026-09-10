@@ -4131,6 +4131,12 @@ export async function deleteSimulatorOrder(
      * de backoffice nunca o passa.
      */
     mesmoComTrabalhoEmCurso?: boolean;
+    /**
+     * O que fica escrito no registo. A purga dos 60 dias escreve
+     * `pedido_expurgado`; um botão do backoffice, `pedido_apagado`. Não é a
+     * mesma coisa: um foi a decisão de alguém, o outro foi o prazo.
+     */
+    acontecimento?: "pedido_apagado" | "pedido_expurgado";
   },
 ) {
   await ensureSimulatorOrdersTable();
@@ -4141,7 +4147,8 @@ export async function deleteSimulatorOrder(
 
   // Ler ANTES de apagar. Depois de o DELETE correr não há a quem perguntar.
   const [pedidos] = (await pool.execute(
-    `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt
+    `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt,
+            filesJson
        FROM simulatorOrders WHERE id = ? LIMIT 1`,
     [id],
   )) as any[];
@@ -4149,13 +4156,45 @@ export async function deleteSimulatorOrder(
 
   const [negs] = (await pool.execute(
     `SELECT n.id, n.providerId, n.estado, n.valorAcordado, n.confirmadoEm,
-            n.execucaoEnviadaEm, n.pagoEm, p.name AS profissionalNome
+            n.execucaoEnviadaEm, n.pagoEm, n.provaJson, p.name AS profissionalNome
        FROM negociacoes n
        LEFT JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId = ?`,
     [id],
   )) as any[];
   const negociacoes = negs as Array<Record<string, any>>;
+
+  /*
+   * AS FOTOGRAFIAS, ANTES DE APAGAR A LINHA.
+   *
+   * Apagava-se o pedido e os ficheiros ficavam no Blob para sempre — as do
+   * pedido (`filesJson`) e as da prova de execução (`provaJson`). É o contrário
+   * do que se quer ao apagar: o registo guarda que houve prova, a prova em si
+   * tem de ir-se com o pedido.
+   *
+   * Recolhem-se aqui e apagam-se DEPOIS de a transacção fechar. Uma chamada de
+   * rede a meio dela prende a linha na base enquanto se espera pela internet.
+   */
+  const fotos: string[] = [];
+  try {
+    const lista = pedido?.filesJson ? JSON.parse(pedido.filesJson) : [];
+    if (Array.isArray(lista)) {
+      for (const f of lista) if (f && typeof f.url === "string") fotos.push(f.url);
+    }
+  } catch {
+    /* um JSON estragado não pode impedir o apagar */
+  }
+  for (const n of negociacoes) {
+    if (!n.provaJson) continue;
+    try {
+      const prova = JSON.parse(n.provaJson);
+      if (Array.isArray(prova?.fotos)) {
+        for (const u of prova.fotos) if (typeof u === "string") fotos.push(u);
+      }
+    } catch {
+      /* idem */
+    }
+  }
 
   const emCurso = negociacoes.filter(
     (n) => n.estado === "acordada" && n.confirmadoEm == null,
@@ -4183,7 +4222,7 @@ export async function deleteSimulatorOrder(
      * acontecem juntas ou não acontecem.
      */
     await registarNaTransaccao(conn, {
-      acontecimento: "pedido_apagado",
+      acontecimento: contexto.acontecimento ?? "pedido_apagado",
       pedidoId: id,
       clienteEmail: (pedido?.contactEmail as string) ?? null,
       clienteNome: (pedido?.contactName as string) ?? null,
@@ -4197,6 +4236,8 @@ export async function deleteSimulatorOrder(
       detalhe: {
         motivo: contexto.motivo,
         criadoEm: pedido?.createdAt ?? null,
+        // Quantas havia, e não quais: o registo guarda que houve prova, não a prova.
+        fotografias: fotos.length,
         negociacoes: negociacoes.map((n) => ({
           id: Number(n.id),
           providerId: Number(n.providerId),
@@ -4220,7 +4261,7 @@ export async function deleteSimulatorOrder(
      */
     for (const n of negociacoes) {
       await registarNaTransaccao(conn, {
-        acontecimento: "pedido_apagado",
+        acontecimento: contexto.acontecimento ?? "pedido_apagado",
         pedidoId: id,
         negociacaoId: Number(n.id),
         providerId: Number(n.providerId),
@@ -4251,6 +4292,12 @@ export async function deleteSimulatorOrder(
   } finally {
     conn.release();
   }
+
+  // Só com a linha já apagada, e com a ligação já devolvida ao pool. Uma que
+  // falhe fica no erro do Blob e não desfaz o apagar — o registo já diz
+  // quantas havia.
+  const fotosApagadas = await apagarFotosDoBlob(fotos);
+  return { fotos: fotos.length, fotosApagadas };
 }
 
 // ── Web Push: subscrições do navegador ───────────────────────────────────────
@@ -6403,4 +6450,108 @@ export async function apagarFotosDoBlob(urls: string[]): Promise<number> {
     }
   }
   return apagadas;
+}
+
+/**
+ * A PURGA DOS 60 DIAS — o que o código prometia e ninguém tinha construído.
+ *
+ * Havia o acontecimento `pedido_expurgado` no registo, a opção
+ * `mesmoComTrabalhoEmCurso` "para a purga automática", e comentários a dizer
+ * "os pedidos são expurgados aos 60 dias" como se fosse verdade. Não havia
+ * cron, e nada emitia o acontecimento. Verificado a 10-09-2026: as fotografias
+ * nem sequer saíam do Blob quando se apagava um pedido à mão.
+ *
+ * "Temos de ter o histórico completo do pedido para caso de processos
+ * judiciais, mas temos que eliminar as imagens e os pedidos da base de dados."
+ *
+ * O QUE CONTA COMO TERMINADO
+ *
+ * Um pedido concluído, cancelado ou arquivado há mais de N dias. A data é o
+ * `updatedAt`: não há coluna com o momento em que terminou, e qualquer edição
+ * posterior empurra a data para a frente. É a direcção certa de errar —
+ * atrasa a purga, nunca a adianta.
+ *
+ * O QUE NUNCA SE PURGA
+ *
+ * Um pedido com uma negociação `acordada` sem `pagoEm`. Cobre as duas coisas
+ * que a carteira precisa de encontrar: o trabalho por confirmar, e o dinheiro
+ * confirmado e ainda por pagar ao profissional. `deleteSimulatorOrder` apaga
+ * as negociações com o pedido, e a carteira lê-as cruas precisamente para
+ * sobreviver à purga — se as apagássemos com dinheiro lá dentro, a dívida
+ * desaparecia com elas. Por isso a guarda está no SELECT, e
+ * `mesmoComTrabalhoEmCurso` NÃO se passa: o guarda de dentro fica armado por
+ * cima deste.
+ *
+ * UM DE CADA VEZ, E NÃO UM DELETE EM MASSA
+ *
+ * Cada pedido passa por `deleteSimulatorOrder`: o retrato no registo, as
+ * negociações, a linha e as fotografias do Blob — na mesma transacção que o
+ * botão do backoffice usa. É essa a parte que serve os processos judiciais. Um
+ * DELETE em bloco apagava tudo sem deixar retrato nenhum.
+ *
+ * Há um tecto por passagem. O cron é diário: um atraso acumulado limpa-se em
+ * dias, sem uma rajada contra o Blob. O que ficou por fazer é devolvido, para
+ * ninguém ler "0" onde devia ler "ainda faltam 300".
+ */
+export const PEDIDOS_POR_PASSAGEM_DA_PURGA = 100;
+
+export type ResultadoDaPurga = {
+  elegiveis: number;
+  expurgados: number;
+  falhados: Array<{ pedidoId: number; erro: string }>;
+  fotosApagadas: number;
+  /** Elegíveis que não couberam nesta passagem. */
+  restantes: number;
+};
+
+export async function purgarPedidosTerminados(dias: number): Promise<ResultadoDaPurga> {
+  const n = Math.max(1, Math.floor(dias));
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const condicao = `
+       FROM simulatorOrders o
+      WHERE o.status IN ('concluido', 'cancelado', 'arquivado')
+        AND o.updatedAt < NOW() - INTERVAL ${n} DAY
+        AND NOT EXISTS (
+          SELECT 1 FROM negociacoes g
+           WHERE g.pedidoId = o.id AND g.estado = 'acordada' AND g.pagoEm IS NULL
+        )`;
+
+  const [cont] = (await pool.execute(`SELECT COUNT(*) AS n ${condicao}`)) as any[];
+  const elegiveis = Number((cont as Array<{ n: number }>)[0]?.n ?? 0);
+
+  const [linhas] = (await pool.execute(
+    `SELECT o.id ${condicao} ORDER BY o.updatedAt ASC LIMIT ${PEDIDOS_POR_PASSAGEM_DA_PURGA}`,
+  )) as any[];
+  const ids = (linhas as Array<{ id: number }>).map((l) => Number(l.id));
+
+  let expurgados = 0;
+  let fotosApagadas = 0;
+  const falhados: Array<{ pedidoId: number; erro: string }> = [];
+  for (const id of ids) {
+    try {
+      const r = await deleteSimulatorOrder(id, {
+        motivo: `retenção de ${n} dias`,
+        autorTipo: "sistema",
+        autorNome: "retenção",
+        acontecimento: "pedido_expurgado",
+      });
+      expurgados += 1;
+      fotosApagadas += r.fotosApagadas;
+    } catch (e) {
+      // Um que falhe não pode parar os outros — e fica dito qual, e porquê.
+      falhados.push({ pedidoId: id, erro: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  return {
+    elegiveis,
+    expurgados,
+    falhados,
+    fotosApagadas,
+    restantes: Math.max(0, elegiveis - ids.length),
+  };
 }
