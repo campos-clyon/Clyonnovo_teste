@@ -121,29 +121,31 @@ function telefoneDe(id) {
   return id.split("@")[0];
 }
 
-/**
- * O número de quem escreveu, seja qual for o feitio do identificador.
- *
- * O WhatsApp antigo dizia `351912345678@c.us` — o número estava à vista. O
- * novo identifica muitos contactos por `@lid`, um número interno que não é o
- * telefone de ninguém, e nas contas de empresa isso é a regra e não a
- * excepção. Quando o identificador não se deixa ler, pergunta-se ao contacto.
- *
- * Devolve null só quando não há mesmo nada a fazer — e nesse caso quem chama
- * escreve nos registos, porque desistir em silêncio foi o que nos custou uma
- * tarde: as mensagens chegavam ao WhatsApp e a ponte não dizia uma palavra.
- */
 /** Os dígitos de um identificador, venha ele como texto ou como objecto. */
 function soDigitos(v) {
   if (v && typeof v === "object") v = v._serialized ?? v.user ?? "";
   return String(v ?? "").replace(/\D/g, "");
 }
 
+/**
+ * O número do OUTRO LADO da conversa, seja qual for o feitio do identificador.
+ *
+ * O WhatsApp antigo dizia `351912345678@c.us` — o número estava à vista. O
+ * novo identifica muitos contactos por `@lid`, um número interno que não é o
+ * telefone de ninguém, e nas contas de empresa isso é a regra e não a
+ * excepção.
+ *
+ * O outro lado, e não quem escreveu: numa mensagem que SAI, quem escreveu
+ * somos nós, mas o número que interessa é o de quem a recebe. Confundir as
+ * duas coisas custou caro — ver a nota da entrega em `message_create`.
+ *
+ * Devolve null só quando não há mesmo nada a fazer — e nesse caso quem chama
+ * escreve nos registos, porque desistir em silêncio foi o que nos custou uma
+ * tarde: as mensagens chegavam ao WhatsApp e a ponte não dizia uma palavra.
+ */
 async function telefoneDaMensagem(msg, bruto) {
   const directo = telefoneDe(bruto);
   if (directo) return directo;
-  // Nas mensagens que saem, o contacto seria o nosso próprio número.
-  if (msg.fromMe) return null;
 
   /*
    * O teste que separa um telefone de um @lid: um telefone tem entre 8 e 15
@@ -154,11 +156,16 @@ async function telefoneDaMensagem(msg, bruto) {
   const oLid = soDigitos(bruto.split("@")[0]);
   const bom = (d) => d.length >= 8 && d.length <= 15 && d !== oLid;
 
-  // 1. O WhatsApp novo costuma mandar o telefone ao lado do @lid, no pacote.
-  const doPacote = soDigitos(msg._data?.senderPn);
-  if (bom(doPacote)) return doPacote;
+  // 1. O WhatsApp novo manda o telefone de quem escreveu ao lado do @lid. Só
+  //    serve nas que entram: numa que sai, quem escreveu somos nós.
+  if (!msg.fromMe) {
+    const doPacote = soDigitos(msg._data?.senderPn);
+    if (bom(doPacote)) return doPacote;
+  }
 
-  // 2. A biblioteca sabe trocar um @lid pelo telefone — quando a versão a tem.
+  // 2. A troca de @lid por telefone. Esta vale nos DOIS sentidos, porque o
+  //    que se troca é o identificador da conversa, e a conversa é a mesma
+  //    quer a mensagem entre quer saia.
   try {
     if (typeof client?.getContactLidAndPhone === "function") {
       const [par] = await client.getContactLidAndPhone([bruto]);
@@ -170,12 +177,15 @@ async function telefoneDaMensagem(msg, bruto) {
   }
 
   // 3. O contacto. Às vezes traz o número; às vezes devolve o @lid outra vez.
-  try {
-    const contacto = await msg.getContact();
-    const n = soDigitos(contacto?.number ?? contacto?.id?.user);
-    if (bom(n)) return n;
-  } catch (e) {
-    log("não consegui ler o contacto de", bruto, "—", e.message);
+  //    Também só nas que entram: `getContact` de uma que sai devolve-nos a nós.
+  if (!msg.fromMe) {
+    try {
+      const contacto = await msg.getContact();
+      const n = soDigitos(contacto?.number ?? contacto?.id?.user);
+      if (bom(n)) return n;
+    } catch (e) {
+      log("não consegui ler o contacto de", bruto, "—", e.message);
+    }
   }
 
   log("não sei tirar o telefone de", bruto, "— o pacote traz:", Object.keys(msg._data ?? {}).join(","));
@@ -364,6 +374,20 @@ async function arrancar() {
         return;
       }
 
+      /*
+       * A ENTREGA. "Se for eu a iniciar uma conversa, ele não pode continuar
+       * sem que eu passe a conversa para ele" — 10-09-2026.
+       *
+       * Escrever à mão a alguém é dizer que a conversa é sua. A partir daqui
+       * o cérebro cala-se nesse número, e só volta a falar quando carregar em
+       * «Devolver ao site» no painel. Vale para o primeiro contacto com um
+       * profissional tanto como para uma resposta a meio de um pedido.
+       *
+       * Isto esteve partido durante uma tarde: `telefoneDaMensagem` desistia
+       * nas mensagens que saem, a entrega nunca disparava, e o assistente
+       * atirou-se a uma conversa com uma transportadora — respondeu três
+       * vezes à resposta automática dela.
+       */
       if (msg.fromMe) {
         if (msg.id?._serialized && enviadasPorMim.has(msg.id._serialized)) return;
         await site("POST", { telefone, accao: "interromper" }).catch((e) =>
