@@ -226,16 +226,21 @@ const GUARANTEES = [
   {
     icon: Lock,
     /*
-     * A GARANTIA QUE JÁ EXISTIA NO CÓDIGO E NUNCA SE DIZIA EM VOZ ALTA.
+     * O QUE A PLATAFORMA FAZ COM O DINHEIRO, DITO NA HOME.
      *
-     * O dinheiro fica retido até o cliente confirmar que o trabalho está
-     * feito — está em `pagamento-na-plataforma.ts` e é o que o site faz. A
-     * concorrência vende garantias como diferencial; aqui existia e ninguém
-     * a lia na home.
+     * O título e o corpo vêm de `PROMESSA` e NÃO estão escritos aqui, e a
+     * razão é a mesma que fez este comentário ser reescrito: eu tinha posto
+     * aqui a frase da fase seguinte, aquela em que a plataforma guarda o
+     * valor. Hoje não guarda — `A_PLATAFORMA_COBRA` está a `false`, quem paga
+     * ao profissional é o cliente, e o que a CLYON faz é registar o acordo.
      *
-     * O texto vem da constante e não escrito à mão: se um dia a plataforma
-     * deixar de cobrar, `PROMESSA` troca sozinha e este cartão acompanha, em
-     * vez de ficar a prometer o que já não se faz.
+     * O teste `promessa-do-dinheiro` apanhou-me: procura essas frases em todo
+     * o código e chumba se alguma voltar enquanto o interruptor estiver
+     * desligado. Apanhou um comentário e não texto de ecrã — e ainda bem,
+     * porque o comentário é onde a ideia errada começa.
+     *
+     * Ler da constante é o que faz este cartão dizer sempre a verdade: no dia
+     * em que a fase 1 aterrar, `PROMESSA` troca e ele acompanha sozinho.
      */
     title: PROMESSA.clienteTitulo,
     stat: "Só depois",

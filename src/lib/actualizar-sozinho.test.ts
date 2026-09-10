@@ -63,12 +63,12 @@ describe("os botões", () => {
 
   it("a mesa troca o «Actualizar» por dizer quando leu", () => {
     expect(MESA).not.toContain("Actualizar\n        </button>");
-    expect(MESA).toContain("actualizado agora");
+    expect(MESA).toContain("atualizado agora");
     expect(MESA).toContain('aria-live="polite"');
   });
 
   it("e o relógio anda, para a frase não mentir sobre a hora", () => {
-    // Sem isto "actualizado agora" congelava até algo mais redesenhar o ecrã.
+    // Sem isto "atualizado agora" congelava até algo mais redesenhar o ecrã.
     expect(MESA).toContain("setAgoraParaOReloginho(Date.now())");
   });
 });
