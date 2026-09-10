@@ -116,3 +116,9 @@ contrato-verificacao.sql
 
 # Rascunhos do desenho — os ficheiros de trabalho das telas do /design.
 .design-mesa/
+
+# Binários grandes não pertencem ao repositório: 66 MB de APK e 44 MB de
+# vídeo viviam em /public sem nenhuma página os referenciar, e iam em cada
+# clone e em cada build. Distribuem-se por outro caminho, não pelo git.
+*.apk
+*.mp4
