@@ -27,9 +27,15 @@ const ROTA = ler("src/app/api/admin/whatsapp/route.ts");
 const PAINEL = ler("src/components/admin/AdminWhatsAppPanel.tsx");
 const PAINEL_NU = semNotas(PAINEL);
 
-/** O corpo de uma função de db.ts, para não confundir SQL de vizinhas. */
+/**
+ * O corpo de uma função de db.ts, para não confundir SQL de vizinhas.
+ *
+ * O parêntese faz parte da âncora de propósito: sem ele, procurar
+ * `limparFilaWhatsApp` casava primeiro com `limparFilaWhatsAppDoNumero`, que
+ * nasceu depois, e o teste passava a ler o corpo da função errada.
+ */
 const corpoDe = (nome: string) => {
-  const i = DB.indexOf(`export async function ${nome}`);
+  const i = DB.indexOf(`export async function ${nome}(`);
   expect(i, `${nome} não existe`).toBeGreaterThan(-1);
   const j = DB.indexOf("\n}\n", i);
   return DB.slice(i, j);
