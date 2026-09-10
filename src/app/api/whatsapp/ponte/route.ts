@@ -115,10 +115,32 @@ export async function POST(req: NextRequest) {
   const pedidos = await pedidosDoTelefone(telefone);
   void pedidos;
 
-  // É cliente do site, mas a conversa está entregue a uma pessoa: o bot
-  // local do Winapp também não a pode apanhar — {meu: true} cala-o — e o
-  // cérebro daqui fica em silêncio até ser devolvida.
+  /*
+   * É cliente do site, mas a conversa está entregue a uma pessoa: o bot
+   * local do Winapp também não a pode apanhar — {meu: true} cala-o — e o
+   * cérebro daqui fica em silêncio até ser devolvida.
+   *
+   * MAS A MENSAGEM FICA REGISTADA.
+   *
+   * Voltava-se aqui para trás sem escrever nada, e o painel — que é
+   * exactamente onde a pessoa a quem a conversa foi entregue vai ler o que o
+   * cliente escreveu — ficava cego. A 10-09-2026 uma cliente escreveu três
+   * mensagens seguidas às 16:49 («consegue recolher um frigorífico antigo ao
+   * domicílio», «hoje ou amanhã?», «diga-me se tem algum custo») e nenhuma
+   * apareceu no ecrã: quem tinha a conversa em mãos não tinha como saber que
+   * ela tinha perguntado fosse o que fosse.
+   *
+   * Calar o assistente e não guardar a conversa são duas decisões
+   * diferentes, e só a primeira foi pedida.
+   */
   if (await numeroInterrompidoWhatsApp(telefone)) {
+    const { registarMensagemWhatsApp } = await import("@/lib/db");
+    if (fotoBase64) {
+      await registarMensagemWhatsApp(telefone, "in", "[fotografia]").catch(() => {});
+    }
+    if (texto.trim()) {
+      await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
+    }
     return NextResponse.json({ meu: true, paraEnviar: [] });
   }
 

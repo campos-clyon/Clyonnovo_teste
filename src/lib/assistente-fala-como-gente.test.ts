@@ -156,3 +156,36 @@ describe("a ponte não toma a própria voz por uma resposta do dono", () => {
     expect(PONTE_CLIENTE).toContain("const chaveDoEnvio = (texto) =>");
   });
 });
+
+describe("uma conversa entregue a uma pessoa continua a ficar escrita", () => {
+  const PONTE = ler("src/app/api/whatsapp/ponte/route.ts");
+
+  it("a mensagem do cliente regista-se ANTES de o site se calar", () => {
+    /*
+     * Calar o assistente e não guardar a conversa são duas decisões
+     * diferentes, e só a primeira foi pedida. Voltava-se para trás sem
+     * escrever nada, e o painel — onde a pessoa que ficou com a conversa vai
+     * ler — ficava cego: três mensagens seguidas de uma cliente às 16:49 e
+     * nenhuma no ecrã.
+     */
+    const i = PONTE.indexOf("if (await numeroInterrompidoWhatsApp(telefone)) {");
+    const bloco = PONTE.slice(i, PONTE.indexOf("return NextResponse.json({ meu: true, paraEnviar: [] });", i));
+    expect(bloco).toContain('registarMensagemWhatsApp(telefone, "in", texto)');
+    expect(bloco).toContain('registarMensagemWhatsApp(telefone, "in", "[fotografia]")');
+  });
+
+  it("mas o cérebro NÃO lhe responde — a conversa é da pessoa", () => {
+    const i = PONTE.indexOf("if (await numeroInterrompidoWhatsApp(telefone)) {");
+    const bloco = PONTE.slice(i, PONTE.indexOf("return NextResponse.json({ meu: true, paraEnviar: [] });", i));
+    expect(bloco).not.toContain("tratarMensagemDoCliente");
+    // E a fila continua vazia: nada sai por este caminho.
+    expect(PONTE.slice(i, i + 900)).toContain("paraEnviar: []");
+  });
+
+  it("um bloqueado continua a não deixar rasto — esse foi mesmo o pedido", () => {
+    // Bloquear é "nunca mais recebem nada, e o que escreverem é ignorado".
+    const i = PONTE.indexOf("numeroBloqueadoWhatsApp(telefone)");
+    const bloco = PONTE.slice(i, i + 200);
+    expect(bloco).not.toContain("registarMensagemWhatsApp");
+  });
+});
