@@ -405,6 +405,33 @@ const COMBINACOES_COM_PAGINA_PROPRIA = new Set([
   "recolha-monos-amadora",
 ]);
 
+/**
+ * Combinações que existem mas ninguém procura.
+ *
+ * Benfica, Lumiar, Alvalade e Olivais são FREGUESIAS de Lisboa, e ninguém
+ * escreve "recolha de entulho Alvalade" — escreve "recolha de entulho
+ * Lisboa". São oito páginas geradas, sem conteúdo próprio, a repetir o que
+ * a página de Lisboa já diz melhor. Um site com muitas páginas fracas é
+ * lido como um site fraco: o Google gasta o orçamento de rastreio nelas e
+ * julga o domínio pela média.
+ *
+ * Continuam a RESPONDER — quem lá chegar por um link antigo é atendido. O
+ * que deixam de fazer é pedir para ser indexadas e aparecer no sitemap.
+ *
+ * A DECISÃO FINAL É DO SEARCH CONSOLE, e não desta lista: se alguma destas
+ * trouxer impressões a sério, tira-se daqui. Ver o CHANGELOG da auditoria.
+ */
+export const PAGINAS_SEM_PROCURA = new Set([
+  "recolha-entulho-benfica",
+  "recolha-entulho-lumiar",
+  "recolha-entulho-alvalade",
+  "recolha-entulho-olivais",
+  "esvaziamento-casas-benfica",
+  "esvaziamento-casas-lumiar",
+  "esvaziamento-casas-alvalade",
+  "esvaziamento-casas-olivais",
+]);
+
 export function getAllCityServiceSlugs() {
   return CITIES.flatMap((city) =>
     SERVICES

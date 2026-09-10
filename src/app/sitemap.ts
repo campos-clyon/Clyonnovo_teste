@@ -6,6 +6,7 @@ import {
   SERVICES,
   SITE_URL,
   getCityServiceSlug,
+  PAGINAS_SEM_PROCURA,
 } from "@/lib/seo-data";
 import { getAllBlogPosts } from "@/lib/blog-data";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
@@ -107,6 +108,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return true;
     }).map((service) => {
       const slug = getCityServiceSlug(service.slug, city.slug);
+      // As freguesias sem procura nao entram: pedem lugar no indice sem o
+      // merecer, e o sitemap e onde nos o pedimos.
+      if (PAGINAS_SEM_PROCURA.has(slug)) return null;
       const isPriority = priorityPages.includes(slug);
       
       return {
@@ -134,7 +138,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           : 0.85,
       };
     }),
-  );
+  ).filter((p): p is NonNullable<typeof p> => p !== null);
 
   const blogPages = getAllBlogPosts().map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,

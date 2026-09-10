@@ -32,6 +32,7 @@ import {
   AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
   NOTA_DE_PRECO,
+  PAGINAS_SEM_PROCURA,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
@@ -338,6 +339,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description: descricaoLocal,
+    /*
+     * As freguesias de Lisboa × entulho/esvaziamento não pedem indexação.
+     *
+     * Ninguém escreve "recolha de entulho Alvalade": escreve "Lisboa". São
+     * oito páginas sem conteúdo próprio a repetir o que a de Lisboa diz
+     * melhor, e um site com muitas páginas fracas é lido como um site fraco.
+     * Continuam a responder a quem lá chegar — só deixam de pedir lugar no
+     * índice. A lista está em `PAGINAS_SEM_PROCURA`, e quem manda nela é o
+     * Search Console.
+     */
+    ...(PAGINAS_SEM_PROCURA.has(getCityServiceSlug(service.slug, city.slug))
+      ? { robots: { index: false, follow: true } }
+      : {}),
     keywords: [
       ...service.keywords,
       `${service.primaryKeyword} ${city.name.toLowerCase()}`,
