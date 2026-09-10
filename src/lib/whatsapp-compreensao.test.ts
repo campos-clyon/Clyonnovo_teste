@@ -3,6 +3,7 @@ import {
   recolhaNova,
   responderComCompreensao,
   primeiroPassoEmFalta,
+  perguntaDo,
   type EstadoDaRecolha,
 } from "./whatsapp-recolha";
 
@@ -51,7 +52,11 @@ describe("uma frase que diz várias coisas de uma vez", () => {
 
   it("salta para o primeiro campo que ainda falta — o nome", () => {
     expect(r.estado.passo).toBe("nome");
-    expect(r.resposta).toContain("chama");
+    /*
+     * O passo é a garantia; a frase mudou de "Como se chama?" para "Com quem
+     * estou a falar?" quando o assistente deixou de falar como formulário.
+     */
+    expect(r.resposta).toBe(perguntaDo("nome", r.estado.dados, false));
   });
 
   it("não pergunta pelo número de nenhuma lista", () => {

@@ -289,7 +289,9 @@ export function saudacao(agora: Date = new Date()): string {
   const h = Number(escrita.replace(/\D/g, ""));
   if (!Number.isFinite(h)) return "Olá";
   if (h >= 5 && h < 13) return "Bom dia";
-  if (h < 20) return "Boa tarde";
+  // A madrugada tem de ser dita: com um simples `h < 20` aqui, as três da
+  // manhã caíam no "boa tarde" por não terem chegado ao "bom dia".
+  if (h >= 13 && h < 20) return "Boa tarde";
   return "Boa noite";
 }
 
