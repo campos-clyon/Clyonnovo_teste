@@ -65,9 +65,14 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     apagarRecolhaWhatsApp,
     interromperNumeroWhatsApp,
   } = await import("@/lib/db");
-  const { responderNaRecolha, recolhaNova, perguntaDo, mensagemDePedidoRegistado } = await import(
-    "@/lib/whatsapp-recolha"
-  );
+  const {
+    responderNaRecolha,
+    responderComCompreensao,
+    recolhaNova,
+    perguntaDo,
+    mensagemDePedidoRegistado,
+  } = await import("@/lib/whatsapp-recolha");
+  const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
   const guardada = await recolhaWhatsApp(telefone);
   const paradaHaMuito =
@@ -80,10 +85,22 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
       ? { passo: guardada.passo as Estado["passo"], dados: guardada.dados as Estado["dados"] }
       : null;
 
+  /*
+   * Primeiro o Gemini lê a mensagem; só se ele não puder é que se lê pelos
+   * números. Ele devolve os campos que percebeu, ainda por validar, e é a
+   * `responderComCompreensao` — pura, com os validadores de sempre — que
+   * decide o que fica gravado e o que se pergunta a seguir.
+   */
+  const agora = new Date();
+  const responder = async (e: Estado) => {
+    const c = await compreender(texto, e.dados as Record<string, unknown>, agora);
+    return c ? responderComCompreensao(e, c, agora) : responderNaRecolha(e, texto, agora);
+  };
+
   if (!estado) {
     // Primeira mensagem: se já diz o serviço, aproveita-se; senão, pergunta-se.
     const novo = recolhaNova();
-    const r = responderNaRecolha(novo, texto);
+    const r = await responder(novo);
     const avancou = r.estado.passo !== "servico";
     if (avancou && !r.pedirPessoa && !r.desistir) {
       await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
@@ -93,12 +110,12 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
       await enviarTextoWhatsApp(telefone, r.resposta);
     } else {
       await guardarRecolhaWhatsApp(telefone, "servico", {});
-      await enviarTextoWhatsApp(telefone, perguntaDo("servico", {}));
+      await enviarTextoWhatsApp(telefone, perguntaDo("servico", {}, !compreensaoDisponivel()));
     }
     return;
   }
 
-  const r = responderNaRecolha(estado, texto);
+  const r = await responder(estado);
 
   if (r.pedirPessoa) {
     await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");

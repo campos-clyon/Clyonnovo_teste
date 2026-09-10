@@ -27,6 +27,7 @@
  */
 
 import { SERVICE_CATEGORIES } from "./service-categories";
+import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
 
 export type PassoDaRecolha =
   | "servico"
@@ -263,10 +264,25 @@ const URGENCIA_POR_EXTENSO: Record<string, string> = {
 };
 
 /** O que se pergunta em cada passo. */
-export function perguntaDo(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
+/**
+ * A pergunta de um passo.
+ *
+ * `comLista` é a lista numerada dos serviços. Ela é o plano B: quando o
+ * Gemini está de pé, quem lê o que a pessoa escreve é ele, e uma lista de dez
+ * números numa mensagem de WhatsApp é um mau princípio de conversa. Sem chave
+ * ou com a Google em baixo, a lista volta — mais vale pedir um número do que
+ * não perceber ninguém.
+ */
+export function perguntaDo(
+  passo: PassoDaRecolha,
+  dados: DadosDaRecolha,
+  comLista = true,
+): string {
   switch (passo) {
     case "servico":
-      return `Olá! Sou o assistente da CLYON. Trato do seu pedido por aqui em dois minutos.\n\nQue serviço precisa? Responda com o número:\n${LISTA_DE_SERVICOS}`;
+      return comLista
+        ? `Olá! Sou o assistente da CLYON. Trato do seu pedido por aqui em dois minutos.\n\nQue serviço precisa? Responda com o número:\n${LISTA_DE_SERVICOS}`
+        : "Olá! Sou o assistente da CLYON. Trato do seu pedido por aqui em dois minutos.\n\nDiga-me o que precisa, à vontade e pelas suas palavras. Por exemplo: «preciso de tirar um sofá e um colchão de um 3º andar em Cascais, se puder ser sexta de manhã».";
     case "nome":
       return "Como se chama?";
     case "morada":
@@ -320,8 +336,8 @@ export function recolhaNova(): EstadoDaRecolha {
 }
 
 /** A ordem dos passos, com os que só alguns serviços têm. */
-function passoSeguinte(passo: PassoDaRecolha, dados: DadosDaRecolha): PassoDaRecolha {
-  const ordem: PassoDaRecolha[] = [
+function ordemDosPassos(dados: DadosDaRecolha): PassoDaRecolha[] {
+  return [
     "servico",
     "nome",
     "morada",
@@ -336,8 +352,61 @@ function passoSeguinte(passo: PassoDaRecolha, dados: DadosDaRecolha): PassoDaRec
     "fatura",
     "confirmar",
   ];
+}
+
+function passoSeguinte(passo: PassoDaRecolha, dados: DadosDaRecolha): PassoDaRecolha {
+  const ordem = ordemDosPassos(dados);
   const i = ordem.indexOf(passo);
   return ordem[Math.min(i + 1, ordem.length - 1)];
+}
+
+/** Este passo já tem resposta? É isto que decide o que ainda falta perguntar. */
+function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
+  switch (passo) {
+    case "servico":
+      return Boolean(d.serviceType);
+    case "nome":
+      return Boolean(d.contactName);
+    case "morada":
+      return Boolean(d.address);
+    case "codigoPostal":
+      return Boolean(d.postalCode && d.city);
+    case "moradaDestino":
+      return Boolean(d.moradaDestino);
+    case "codigoPostalDestino":
+      return Boolean(d.codigoPostalDestino && d.localidadeDestino);
+    case "andar":
+      return d.floor != null;
+    case "elevador":
+      return d.hasElevator != null;
+    // O «não sei» do estacionamento guarda-se como null, e é uma resposta:
+    // por isso a pergunta aqui é se o campo existe, não se tem valor.
+    case "estacionamento":
+      return d.parkingDistance !== undefined;
+    case "entulhoQuantidade":
+      return Boolean(d.entulhoQuantidade);
+    case "quando":
+      return Boolean(d.quandoTexto);
+    case "descricao":
+      return Boolean(d.description);
+    case "fatura":
+      return d.precisaFatura !== undefined;
+    case "confirmar":
+      return false;
+  }
+}
+
+/**
+ * O primeiro campo que ainda falta — ou "confirmar", quando não falta nenhum.
+ *
+ * A máquina antiga andava um passo de cada vez porque perguntava um de cada
+ * vez. Quem escreve à vontade dá três ou quatro campos numa frase só, e salta
+ * por cima de meia conversa; o que interessa então não é qual era o passo
+ * seguinte, é qual é o primeiro que continua por responder.
+ */
+export function primeiroPassoEmFalta(dados: DadosDaRecolha): PassoDaRecolha {
+  const ordem = ordemDosPassos(dados);
+  return ordem.find((p) => !respondido(p, dados)) ?? "confirmar";
 }
 
 /** As correcções no resumo: «morada …», «nome …», «andar …», «quando …», «descrição …». */
@@ -555,6 +624,129 @@ export function responderNaRecolha(
       ? `${ETIQUETAS[d.serviceType] ?? d.serviceType} — certo.\n\n`
       : "";
   return { estado: { passo: proximo, dados: d }, resposta: confirmacao + perguntaDo(proximo, d) };
+}
+
+/** Quando não se percebeu nada, não se repete a saudação inteira. */
+function reperguntar(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
+  if (passo === "servico") {
+    return "Desculpe, não apanhei. Diga-me o que há para levar ou fazer, e em que zona.";
+  }
+  return `Desculpe, não apanhei. ${perguntaDo(passo, dados, false)}`;
+}
+
+/**
+ * A conversa depois de o Gemini ter lido a mensagem.
+ *
+ * Irmã de `responderNaRecolha` e com o mesmo contrato — estado a entrar,
+ * estado e resposta a sair, sem base de dados e sem envio. A diferença é a
+ * fonte: em vez de ler o texto com expressões regulares, recebe os campos já
+ * separados por quem os percebeu.
+ *
+ * O que NÃO muda é a garantia. Cada campo que vem do Gemini passa pelo mesmo
+ * validador de sempre: o serviço tem de ser um dos da lista, o código postal
+ * tem de ter quatro dígitos e três, a data passa por `interpretarQuando`, o
+ * sim e o não por `simOuNao`. O que não passar é deitado fora em silêncio, e
+ * o campo fica por responder — que é como se pergunta outra vez.
+ */
+export function responderComCompreensao(
+  estado: EstadoDaRecolha,
+  compreensao: { intencao: Intencao; campos: CamposCrus },
+  agora: Date = new Date(),
+): RespostaDaRecolha {
+  const { intencao, campos: k } = compreensao;
+
+  if (intencao === "falar_com_pessoa") {
+    return {
+      estado,
+      resposta:
+        "Com certeza. Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.",
+      pedirPessoa: true,
+    };
+  }
+  if (intencao === "cancelar") {
+    return {
+      estado,
+      resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
+      desistir: true,
+    };
+  }
+  if (intencao === "recomecar") {
+    const novo = recolhaNova();
+    return { estado: novo, resposta: `Vamos recomeçar.\n\n${perguntaDo("servico", {}, false)}` };
+  }
+
+  const d: DadosDaRecolha = { ...estado.dados };
+
+  if (k.servico) {
+    /*
+     * O identificador exacto primeiro. As PISTAS foram escritas para ler
+     * gente, não identificadores: «esvaziamento_apartamento» não tem o espaço
+     * que a pista do apartamento exige, e ia cair na do esvaziamento de casa —
+     * o serviço errado, com o preço errado, sem ninguém dar por isso.
+     */
+    const id = k.servico.trim().toLowerCase();
+    const exacto = SERVICE_CATEGORIES.some((c) => c.id === id) ? id : null;
+    const s = exacto ?? servicoDoTexto(k.servico);
+    if (s) d.serviceType = s;
+  }
+  if (k.nome && k.nome.trim().length >= 2) d.contactName = k.nome.trim().slice(0, 120);
+  if (k.morada && k.morada.trim().length >= 3) {
+    d.address = k.morada.trim().slice(0, 300);
+    // Vem muitas vezes com o código postal colado; aproveita-se.
+    const cp = codigoPostalELocalidade(k.morada);
+    if (cp.postalCode) d.postalCode = cp.postalCode;
+  }
+  if (k.codigoPostal) {
+    const { postalCode, city } = codigoPostalELocalidade(k.codigoPostal);
+    if (postalCode) d.postalCode = postalCode;
+    if (city) d.city = city;
+  }
+  if (k.moradaDestino && k.moradaDestino.trim().length >= 3) {
+    d.moradaDestino = k.moradaDestino.trim().slice(0, 300);
+  }
+  if (k.codigoPostalDestino) {
+    const { postalCode, city } = codigoPostalELocalidade(k.codigoPostalDestino);
+    if (postalCode) d.codigoPostalDestino = postalCode;
+    if (city) d.localidadeDestino = city;
+  }
+  if (k.andar) d.floor = andarDoTexto(k.andar);
+  if (k.elevador) {
+    const r = simOuNao(k.elevador);
+    if (r) d.hasElevator = r === "sim" ? "yes" : "no";
+  }
+  if (k.estacionamento) {
+    const r = simOuNao(k.estacionamento);
+    if (r) d.parkingDistance = r === "sim" ? "near" : "far";
+  }
+  if (k.entulho) d.entulhoQuantidade = k.entulho.trim().slice(0, 60);
+  if (k.quando) {
+    const q = interpretarQuando(k.quando, agora);
+    d.quandoTexto = k.quando.trim().slice(0, 120);
+    d.dataDesejada = q.data ? q.data.toISOString() : null;
+    d.urgency = q.urgency;
+  }
+  if (k.descricao && k.descricao.trim().length >= 3) {
+    d.description = k.descricao.trim().slice(0, 4000);
+  }
+  if (k.fatura) {
+    const r = simOuNao(k.fatura);
+    if (r) d.precisaFatura = r === "sim";
+  }
+
+  const passo = primeiroPassoEmFalta(d);
+
+  // O SIM só vale com tudo preenchido. Com um campo por responder, o «sim» é
+  // conversa e não confirmação — pergunta-se o que falta.
+  if (intencao === "confirmar" && passo === "confirmar") {
+    return { estado: { passo, dados: d }, resposta: "", registar: true };
+  }
+
+  const mudouAlgo = JSON.stringify(d) !== JSON.stringify(estado.dados);
+  if (!mudouAlgo && passo === estado.passo) {
+    return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
+  }
+
+  return { estado: { passo, dados: d }, resposta: perguntaDo(passo, d, false) };
 }
 
 /** A mensagem quando o pedido ficou registado. */
