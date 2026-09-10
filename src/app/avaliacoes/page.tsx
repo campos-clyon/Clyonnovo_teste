@@ -8,15 +8,24 @@ import { BUSINESS_PHONE, SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/se
 
 export const metadata: Metadata = {
   title: "Avaliações e Testemunhos de Clientes — CLYON Lisboa e Setúbal",
+  /*
+   * Os números vêm das constantes, não escritos à mão.
+   *
+   * Estavam aqui 37, 118 e 155 em texto, ao lado de um `AVALIACOES` que esta
+   * página já importava. No dia em que subirem, as constantes mudam num sítio
+   * e estas duas frases ficam a mentir sem ninguém dar por isso — que é
+   * exactamente o tipo de divergência que o Google apanha entre o schema
+   * (gerado das constantes) e o texto.
+   */
   description:
-    "37 avaliações no Google e 118 na Fixando, todas a 5 estrelas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.",
+    `${AVALIACOES.google} avaliações no Google e ${AVALIACOES.fixando} na Fixando, todas a 5 estrelas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.`,
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
   openGraph: {
     title: "Avaliações Reais de Clientes — CLYON",
     description:
-      "5,0 ★ em 155 avaliações verificadas no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.",
+      `${AVALIACOES.media} ★ em ${AVALIACOES_TOTAL} avaliações verificadas no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.`,
     url: "https://clyon.pt/avaliacoes",
   },
 };
