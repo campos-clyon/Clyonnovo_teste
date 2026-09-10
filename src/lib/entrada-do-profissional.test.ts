@@ -48,10 +48,19 @@ describe("a página de login está fora do portão", () => {
     );
   });
 
-  it("o resto do MVP continua atrás da chave — a landing e o painel incluídos", () => {
+  it("a landing de recrutamento abre; o resto do MVP continua atrás da chave", () => {
+    /*
+     * A raiz `/profissionais` é o anúncio que convence alguém a trabalhar
+     * connosco, e estava fechada: só a via quem já cá estava dentro. Um
+     * anúncio que só os empregados podem ler não recruta ninguém.
+     *
+     * O que abre é a RAIZ e só ela — a comparação é por igualdade, e devolve
+     * `false` (não exige chave). Tudo o que tem barra a mais continua a
+     * entrar pelo `startsWith`.
+     */
     const chave = corpoDe("exigeChave");
-    expect(chave).toContain('"/profissionais"');
-    expect(chave).toContain('"/profissionais/"');
+    expect(chave).toContain('if (caminho === "/profissionais") return false;');
+    expect(chave).toContain('caminho.startsWith("/profissionais/")');
     // E o painel continua a exigir a sessão DELE, portão à parte.
     expect(MIDDLEWARE).toContain('nextUrl.pathname.startsWith("/profissionais/painel")');
     expect(MIDDLEWARE).toContain("temSessaoDeProfissional(request)");

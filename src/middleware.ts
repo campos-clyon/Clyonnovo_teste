@@ -148,8 +148,19 @@ function ePerfilPublicoDeProfissional(caminho: string): boolean {
 
 function exigeChave(caminho: string): boolean {
   if (ePerfilPublicoDeProfissional(caminho)) return false;
+  /*
+   * A LANDING DE RECRUTAMENTO ABRE — `/profissionais`, a raiz e só ela.
+   *
+   * É a página que convence alguém a trabalhar connosco, e estava fechada
+   * atrás da chave do MVP: só a via quem já cá estava dentro. Um anúncio que
+   * só os empregados podem ler não recruta ninguém, e o Google nunca o leu.
+   *
+   * Tudo o que tem barra a mais continua fechado — o painel, a entrada, a
+   * inscrição, os pedidos. A raiz não mostra dados de ninguém: mostra o que a
+   * CLYON oferece a quem se inscrever.
+   */
+  if (caminho === "/profissionais") return false;
   return (
-    caminho === "/profissionais" ||
     caminho.startsWith("/profissionais/") ||
     /*
      * A rota da inscrição, no MESMO nível da página que a chama.
