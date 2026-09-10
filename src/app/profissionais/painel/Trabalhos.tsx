@@ -588,9 +588,21 @@ export default function Trabalhos({
            * cartão e o ecrã de dentro não dizerem coisas diferentes.
            */
           const sugestaoAberta = separador === "novos" && p.sugestao ? p.sugestao : null;
-          const paraOsSinais = sugestaoAberta
-            ? { ...p, recebeSeAceitar: sugestaoAberta.recebeSePropuser }
-            : p;
+          /*
+           * O NÚMERO GRANDE É O DA CLYON.
+           *
+           * "O valor que deve aparecer para os pros nos pedidos é o valor que
+           * colocamos aqui" — 10-09-2026. Era a conta feita para ele que
+           * estava em cima; passa para baixo, em letra pequena, a dizer se o
+           * trabalho lhe compensa. Na falta do nosso valor, ela volta a ser o
+           * número grande — mais vale a conta dele do que número nenhum.
+           */
+          const valorEmCima =
+            separador === "novos"
+              ? (p.valorDaClyon ?? sugestaoAberta?.recebeSePropuser ?? null)
+              : null;
+          const paraOsSinais =
+            valorEmCima != null ? { ...p, recebeSeAceitar: valorEmCima } : p;
           const sinais = aDecidir ? sinaisDoTrabalho({ ...paraOsSinais, quantasFotos: fotos.length }) : [];
           const quente = sinais.some((x) => x.chave === "perto");
           const porKm = aDecidir ? porKmPorExtenso(paraOsSinais) : null;
@@ -853,17 +865,17 @@ export default function Trabalhos({
                       deixa de mudar de cor entre o cartão e o ecrã de dentro.
                     */}
                     <span className="text-lg font-bold text-emerald-600">
-                      {euros(
-                        fechado
-                          ? p.recebeSeFechado
-                          : sugestaoAberta
-                            ? sugestaoAberta.recebeSePropuser
-                            : p.recebeSeAceitar,
-                      )}
+                      {euros(fechado ? p.recebeSeFechado : (valorEmCima ?? p.recebeSeAceitar))}
                     </span>
-                    {sugestaoAberta && (
+                    {!fechado && valorEmCima != null && (
                       <span className="whitespace-nowrap rounded-md border border-cyan-200 bg-cyan-50 px-1.5 py-0.5 text-[11px] font-bold text-cyan-800">
-                        sugestão CLYON
+                        {/*
+                          Dois nomes para dois números diferentes. Chamar
+                          «sugestão» ao valor que a CLYON pôs convidava-o a
+                          descontá-lo; chamar «valor CLYON» à conta feita para
+                          ele prometia um número que ninguém lhe garantiu.
+                        */}
+                        {p.valorDaClyon != null ? "valor CLYON" : "sugestão CLYON"}
                       </span>
                     )}
                     {/*
@@ -895,6 +907,20 @@ export default function Trabalhos({
                         {porKm}
                       </span>
                     )}
+                    {/*
+                      A CONTA DELE, EM SEGUNDO PLANO.
+                      O número grande é o da CLYON; este diz-lhe se, com os
+                      quilómetros e os custos DELE, aquilo compensa. Só aparece
+                      quando os dois existem e discordam — repetir o mesmo
+                      número duas vezes na mesma linha não informa ninguém.
+                    */}
+                    {p.valorDaClyon != null &&
+                      sugestaoAberta != null &&
+                      Math.abs(sugestaoAberta.recebeSePropuser - p.valorDaClyon) >= 1 && (
+                        <span className="whitespace-nowrap text-[11px] text-slate-400">
+                          para os seus custos, sugeria {euros(sugestaoAberta.recebeSePropuser)}
+                        </span>
+                      )}
                   </div>
                 </div>
               </div>

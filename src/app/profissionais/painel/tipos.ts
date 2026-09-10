@@ -82,10 +82,20 @@ export type Pedido = {
   recebeSeFechado: number | null;
   /**
    * A conta da CLYON feita PARA ELE: custos com os quilómetros dele, preço
-   * sugerido e o que lhe fica. É o que o ecrã mostra em vez de «aceitar o
-   * valor do cliente». Ver `sugestao-para-o-profissional.ts`.
+   * sugerido e o que lhe fica. Ver `sugestao-para-o-profissional.ts`.
+   *
+   * Desde 10-09-2026 é o SEGUNDO número do cartão, em letra pequena: diz-lhe
+   * se o trabalho lhe compensa, e já não quanto vale o trabalho — isso é o
+   * `valorDaClyon`.
    */
   sugestao?: SugestaoParaOProfissional | null;
+  /**
+   * O valor que a CLYON pôs no pedido, no líquido dele.
+   *
+   * "O valor que deve aparecer para os pros nos pedidos é o valor que
+   * colocamos aqui" — é o número grande do cartão.
+   */
+  valorDaClyon?: number | null;
   /**
    * Quando ele abriu este trabalho pela primeira vez. `null` = ainda por abrir.
    *

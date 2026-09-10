@@ -331,6 +331,23 @@ export async function GET(req: NextRequest) {
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo) : null,
         recebeSeFechado: acordado != null ? quantoOProfissionalRecebe(acordado) : null,
+        /*
+         * O VALOR QUE A CLYON PÔS NO PEDIDO — no líquido dele.
+         *
+         * "O valor que deve aparecer para os pros nos pedidos é o valor que
+         * colocamos aqui" — 10-09-2026, sobre a caixa «conta CLYON» da mesa.
+         *
+         * É o número grande do cartão. A conta feita para ele continua a ir
+         * em `sugestao`, mas em segundo plano: serve para ele saber se o
+         * trabalho lhe compensa, não para lhe dizer quanto vale o trabalho.
+         *
+         * Vai já com a taxa descontada porque é assim que o cartão lê todos
+         * os outros números — sempre o líquido, nunca o bruto.
+         */
+        valorDaClyon:
+          l.valorDesejadoCliente != null
+            ? quantoOProfissionalRecebe(Number(l.valorDesejadoCliente))
+            : null,
         // A conta feita para ele — com os km da base dele, pela estrada quando dá.
         sugestao: sugestaoSegura(
           {
