@@ -387,6 +387,23 @@ async function arrancar() {
     puppeteer: {
       executablePath: CHROME,
       headless: true,
+      /*
+       * TRÊS MINUTOS NÃO CHEGAM A ESTE CONTENTOR.
+       *
+       * O `Client.inject` da whatsapp-web.js corre um `page.evaluate` enorme
+       * — carrega o "store" inteiro do WhatsApp Web — e o puppeteer desiste
+       * ao fim de 180 s por omissão. Num contentor pequeno do Railway isso
+       * não chega, e o erro que sai não diz nada do que se passou:
+       *
+       *   ProtocolError: Runtime.callFunctionOn timed out.
+       *     at Client.inject (whatsapp-web.js/src/Client.js:146)
+       *
+       * Apanhou-se ao segundo nos registos de 11-09-2026: emparelhou às
+       * 01:14:43 e rebentou às 01:17:43 — exactamente os 180 s. Dez minutos
+       * dão folga de sobra e não custam nada: quem espera é um arranque, não
+       * um cliente.
+       */
+      protocolTimeout: 10 * 60_000,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -534,7 +551,36 @@ setInterval(rondaDaFila, INTERVALO);
     log("a tentar outra vez daqui a 30 s…");
     await new Promise((r) => setTimeout(r, 30000));
   }
-  await arrancar();
+  /*
+   * ARRANCAR ATÉ CONSEGUIR — e não morrer à primeira.
+   *
+   * Um arranque falhado fazia `process.exit(1)`, o Railway reiniciava, e o
+   * contentor entrava em ciclo: montar o volume, abrir o Chromium, esperar
+   * pelo `inject`, rebentar, repetir. Cada volta paga o arranque a frio
+   * outra vez, o que torna a volta seguinte MAIS provável de falhar.
+   *
+   * Aqui espera-se, com o tempo a dobrar até cinco minutos. O `destroy`
+   * antes de tentar outra vez é o que mata o Chromium que ficou pendurado —
+   * senão o `destrancarOPerfil` da tentativa seguinte apaga uma tranca que
+   * ainda tem dono, e aí sim ficam dois a disputar o mesmo perfil.
+   */
+  let espera = 15_000;
+  for (;;) {
+    try {
+      await arrancar();
+      return;
+    } catch (e) {
+      log("não arrancou:", e.message, `— outra vez daqui a ${Math.round(espera / 1000)} s`);
+      try {
+        await client?.destroy();
+      } catch {
+        /* já estava morto, ou nunca chegou a nascer */
+      }
+      client = null;
+      await new Promise((r) => setTimeout(r, espera));
+      espera = Math.min(espera * 2, 5 * 60_000);
+    }
+  }
 })().catch((e) => {
   console.error("[ponte] não arrancou:", e);
   process.exit(1);

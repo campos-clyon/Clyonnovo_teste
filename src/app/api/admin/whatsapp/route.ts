@@ -189,7 +189,9 @@ export async function POST(req: NextRequest) {
       limparFilaWhatsAppDoNumero,
     } = await import("@/lib/db");
     const { fioParaLeitura, guiaoDoFio, releituraDoFio } = await import("@/lib/reler-a-conversa");
-    const { compreenderFio } = await import("@/lib/whatsapp-compreensao");
+    const { compreenderFio, compreensaoDisponivel } = await import(
+      "@/lib/whatsapp-compreensao",
+    );
     const { pedidosDoTelefone } = await import("@/lib/whatsapp-negociacao");
 
     /*
@@ -234,8 +236,20 @@ export async function POST(req: NextRequest) {
     const gravado = guardada?.dados ?? {};
     const campos = await compreenderFio(guiaoDoFio(fio), gravado as Record<string, unknown>);
     if (!campos) {
+      /*
+       * DUAS AVARIAS DIFERENTES, DUAS FRASES DIFERENTES.
+       *
+       * Dizia "sem chave do Gemini, ou a leitura falhou" — e quem lê aquilo
+       * não sabe se tem de ir à Vercel pôr uma variável ou se basta carregar
+       * outra vez. São problemas com donos diferentes.
+       */
+      const semChave = !compreensaoDisponivel();
       return NextResponse.json(
-        { error: "Não consegui ler a conversa (sem chave do Gemini, ou a leitura falhou)." },
+        {
+          error: semChave
+            ? "O Gemini não está configurado neste ambiente — falta a GEMINI_API_KEY. Sem ela o assistente também não percebe texto livre: responde pela lista numerada."
+            : "A leitura falhou — o Gemini não respondeu a tempo ou devolveu algo que não se lê. Tente outra vez; se voltar a acontecer, veja os registos da Vercel por «[whatsapp/compreensao]».",
+        },
         { status: 503 },
       );
     }
