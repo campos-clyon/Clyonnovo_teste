@@ -120,6 +120,33 @@ function telefoneDe(id) {
 }
 
 /**
+ * O número de quem escreveu, seja qual for o feitio do identificador.
+ *
+ * O WhatsApp antigo dizia `351912345678@c.us` — o número estava à vista. O
+ * novo identifica muitos contactos por `@lid`, um número interno que não é o
+ * telefone de ninguém, e nas contas de empresa isso é a regra e não a
+ * excepção. Quando o identificador não se deixa ler, pergunta-se ao contacto.
+ *
+ * Devolve null só quando não há mesmo nada a fazer — e nesse caso quem chama
+ * escreve nos registos, porque desistir em silêncio foi o que nos custou uma
+ * tarde: as mensagens chegavam ao WhatsApp e a ponte não dizia uma palavra.
+ */
+async function telefoneDaMensagem(msg, bruto) {
+  const directo = telefoneDe(bruto);
+  if (directo) return directo;
+  // Nas mensagens que saem, o contacto seria o nosso próprio número.
+  if (msg.fromMe) return null;
+  try {
+    const contacto = await msg.getContact();
+    const n = String(contacto?.number ?? contacto?.id?.user ?? "").replace(/\D/g, "");
+    if (n) return n;
+  } catch (e) {
+    log("não consegui ler o contacto de", bruto, "—", e.message);
+  }
+  return null;
+}
+
+/**
  * A versão da página do WhatsApp Web a carregar.
  *
  * Sem `VERSAO_DA_PAGINA`, pergunta-se qual é a actual — um número fixo no
@@ -256,8 +283,11 @@ async function arrancar() {
       if (typeof chatId !== "string" || chatId.endsWith("@g.us") || chatId === "status@broadcast") {
         return;
       }
-      const telefone = telefoneDe(chatId);
-      if (!telefone) return;
+      const telefone = await telefoneDaMensagem(msg, chatId);
+      if (!telefone) {
+        log("mensagem ignorada — não sei tirar o número de", chatId);
+        return;
+      }
 
       if (msg.fromMe) {
         if (msg.id?._serialized && enviadasPorMim.has(msg.id._serialized)) return;
