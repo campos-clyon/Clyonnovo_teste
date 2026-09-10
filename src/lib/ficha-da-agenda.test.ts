@@ -30,7 +30,11 @@ const ROTA = ler("src/app/api/admin/agenda/route.ts");
 
 describe("a linha da agenda abre a ficha", () => {
   it("toca-se em qualquer parte da linha, e também com o teclado", () => {
-    expect(PAINEL_NU).toContain("onClick={() => setAVer(t.negociacaoId)}");
+    // A linha saiu para um componente próprio, `LinhaDaAgenda`: quem abre é
+    // agora o `onAbrir` que lhe é passado. O gesto é o mesmo — a linha toda —
+    // e ganhou `role="button"` pelo caminho.
+    expect(PAINEL_NU).toContain("onAbrir={() => setAVer(t.negociacaoId)}");
+    expect(PAINEL_NU).toContain("onClick={onAbrir}");
     expect(PAINEL_NU).toContain('e.key === "Enter"');
     expect(PAINEL_NU).toContain("tabIndex={0}");
   });
