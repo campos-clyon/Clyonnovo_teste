@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
+  apagarConversaWhatsApp,
+  arquivarConversaWhatsApp,
   bloquearNumeroWhatsApp,
   conversasWhatsApp,
   definirWhatsappLigado,
   desbloquearNumeroWhatsApp,
   filaWhatsAppPorEnviar,
   interromperNumeroWhatsApp,
+  limparFilaWhatsApp,
+  listarConversasArquivadasWhatsApp,
   listarNumerosBloqueadosWhatsApp,
   listarNumerosInterrompidosWhatsApp,
   listarRecolhasWhatsAppEmCurso,
@@ -49,14 +53,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ mensagens: await mensagensDoNumeroWhatsApp(telefone) });
   }
 
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas] = await Promise.all([
-    whatsappLigado(),
-    listarNumerosInterrompidosWhatsApp(),
-    listarNumerosBloqueadosWhatsApp(),
-    filaWhatsAppPorEnviar(50),
-    conversasWhatsApp(),
-    listarRecolhasWhatsAppEmCurso().catch(() => []),
-  ]);
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas] =
+    await Promise.all([
+      whatsappLigado(),
+      listarNumerosInterrompidosWhatsApp(),
+      listarNumerosBloqueadosWhatsApp(),
+      filaWhatsAppPorEnviar(50),
+      // Mais fundo do que as 30 de origem: uma conversa arquivada sai da mesa
+      // mas continua a contar para o limite, e o separador delas tem de ter o
+      // que mostrar.
+      conversasWhatsApp(80),
+      listarRecolhasWhatsAppEmCurso().catch(() => []),
+      listarConversasArquivadasWhatsApp().catch(() => []),
+    ]);
   return NextResponse.json({
     ligado,
     // "meta", "ponte", "manual" (o número da CLYON à mão, sem API) ou "nenhum".
@@ -68,6 +77,8 @@ export async function GET(req: NextRequest) {
     conversas,
     // Os números a meio da recolha de um pedido pelo assistente, e em que passo.
     recolhas,
+    // As que já foram dadas por tratadas: saem da mesa, não do registo.
+    arquivadas,
   });
 }
 
@@ -146,6 +157,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, fila: await filaWhatsAppPorEnviar(50) });
   }
 
+  /*
+   * LIMPAR A FILA INTEIRA.
+   *
+   * O irmão grande do "descartar". Quando o cérebro se repete — o mesmo menu
+   * de dez serviços duas vezes para o mesmo número — o que se quer é que nada
+   * daquilo saia, e não dois gestos por mensagem.
+   *
+   * Devolve quantas riscou: sem o número, quem carrega não sabe se apanhou o
+   * que estava a ver ou se entretanto entraram mais.
+   */
+  if (accao === "limparFila") {
+    const quantas = await limparFilaWhatsApp();
+    return NextResponse.json({ ok: true, quantas });
+  }
+
   // A fila, à mão: "enviada" risca a mensagem e põe-na no fio da conversa
   // como saída; "descartar" risca-a sem a registar — não chegou a sair.
   if (accao === "enviada" || accao === "descartar") {
@@ -167,6 +193,24 @@ export async function POST(req: NextRequest) {
       // baralhou e a equipa quer que o assistente pergunte tudo de novo.
       case "recomecarRecolha":
         await apagarRecolhaWhatsApp(telefone);
+        break;
+      // Arrumar a mesa. Não apaga nada: o fio fica, e volta com "desarquivar".
+      case "arquivar":
+        await arquivarConversaWhatsApp(telefone, true);
+        break;
+      case "desarquivar":
+        await arquivarConversaWhatsApp(telefone, false);
+        break;
+      /*
+       * Apagar o fio — e a recolha e a fila deste número com ele, senão a
+       * conversa continuava sozinha onde já não se vê.
+       *
+       * O bloqueio e a entrega a uma pessoa NÃO se tocam: são decisões em
+       * vigor, e apagar o registo não pode devolver a palavra ao assistente
+       * sem ninguém ter pedido.
+       */
+      case "apagarConversa":
+        await apagarConversaWhatsApp(telefone);
         break;
       case "ligar":
         await definirWhatsappLigado(true);

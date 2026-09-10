@@ -4653,6 +4653,132 @@ export async function mensagensDoNumeroWhatsApp(
 }
 
 /*
+ * ARQUIVAR UMA CONVERSA — arrumação, e não esquecimento.
+ *
+ * A lista das conversas é a mesa de quem atende: o que lá está é o que ainda
+ * pede alguma coisa. Uma conversa já tratada continua a ocupar uma linha, e
+ * ao fim de vinte linhas ninguém encontra a que interessa — foi o que o ecrã
+ * ficou a ser.
+ *
+ * Arquivar tira-a da mesa e não apaga nada: o fio inteiro continua lá, basta
+ * pedir as arquivadas. É uma DATA e não um booleano, como nas negociações
+ * ([[arquivar-de-cada-lado]]) — saber QUANDO se arrumou é metade da história.
+ */
+let arquivadasWhatsAppReady = false;
+async function ensureWhatsappArquivadasTable() {
+  if (arquivadasWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappArquivadas (
+      id       INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone VARCHAR(32) NOT NULL,
+      criadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  arquivadasWhatsAppReady = true;
+}
+
+export async function arquivarConversaWhatsApp(
+  telefone: string,
+  arquivar: boolean,
+): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappArquivadasTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  if (arquivar) {
+    // Voltar a arquivar uma já arquivada actualiza a data: o que interessa é
+    // quando foi a última vez que alguém a deu por tratada.
+    await pool.execute(
+      `INSERT INTO whatsappArquivadas (telefone) VALUES (?)
+       ON DUPLICATE KEY UPDATE criadoEm = NOW()`,
+      [digitos],
+    );
+    return;
+  }
+  await pool.execute("DELETE FROM whatsappArquivadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [
+    digitos,
+  ]);
+}
+
+export async function listarConversasArquivadasWhatsApp(): Promise<
+  Array<{ telefone: string; criadoEm: string }>
+> {
+  await ensureWhatsappArquivadasTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT telefone, criadoEm FROM whatsappArquivadas ORDER BY criadoEm DESC",
+  )) as [Array<{ telefone: string; criadoEm: string }>, unknown];
+  return rows.map((r) => ({ telefone: r.telefone, criadoEm: String(r.criadoEm) }));
+}
+
+/*
+ * APAGAR UMA CONVERSA — e tudo o que a faria continuar sozinha.
+ *
+ * Apagar só o fio deixava a conversa viva onde não se vê: a recolha a meio
+ * punha o assistente a retomar no passo antigo à mensagem seguinte, e o que
+ * estivesse na fila saía a seguir — respostas de uma conversa que o painel
+ * já dizia não existir.
+ *
+ * O que NÃO se toca é o bloqueio e a entrega a uma pessoa. Esses não são
+ * história, são decisões em vigor: desfazem-se onde foram tomadas, e apagar
+ * o fio não pode devolver a palavra ao assistente sem ninguém ter pedido.
+ */
+export async function apagarConversaWhatsApp(telefone: string): Promise<number> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappMensagensTable();
+  await ensureWhatsappRecolhasTable();
+  await ensureFilaWhatsAppTable();
+  await ensureWhatsappArquivadasTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    "DELETE FROM whatsappMensagens WHERE RIGHT(telefone, 9) = RIGHT(?, 9)",
+    [digitos],
+  )) as [{ affectedRows?: number }, unknown];
+  await pool
+    .execute("DELETE FROM whatsappRecolhas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .catch(() => {});
+  await pool
+    .execute(
+      "DELETE FROM whatsappFila WHERE enviadoEm IS NULL AND RIGHT(telefone, 9) = RIGHT(?, 9)",
+      [digitos],
+    )
+    .catch(() => {});
+  // Arquivada e apagada não é estado nenhum: sem fio, a linha sai da mesa por si.
+  await pool
+    .execute("DELETE FROM whatsappArquivadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .catch(() => {});
+  return Number(r?.affectedRows ?? 0);
+}
+
+/*
+ * LIMPAR A FILA — a saída quando o cérebro se repete.
+ *
+ * Pedida ao ver duas vezes o mesmo menu de dez serviços à espera de sair
+ * para o mesmo número: descartar uma a uma são dois gestos por mensagem, e o
+ * que se quer naquele momento é que NADA daquilo saia.
+ *
+ * Não se apaga a linha — marca-se como saída, que é o que a tira da fila. A
+ * fila é o registo do que o Winapp veio buscar; um DELETE apagava a prova de
+ * que a mensagem chegou a existir.
+ */
+export async function limparFilaWhatsApp(): Promise<number> {
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [r] = (await pool.execute(
+    "UPDATE whatsappFila SET enviadoEm = NOW() WHERE enviadoEm IS NULL",
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0);
+}
+
+/*
  * A RECOLHA DE UM PEDIDO PELO WHATSAPP — onde cada número vai na conversa.
  *
  * Uma linha por número: o passo em que está e o que já respondeu, em JSON.
