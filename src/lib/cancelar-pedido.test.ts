@@ -101,12 +101,18 @@ describe("a mesa", () => {
   });
 
   it("cancelar pergunta antes, e o motivo é opcional", () => {
-    const i = PAINEL.indexOf("async function cancelarPedidoNoPainel(");
-    const corpo = PAINEL.slice(i, PAINEL.indexOf("\n  async function", i + 10));
-    expect(corpo).toContain("window.prompt");
-    // Fechar a caixa desiste; uma cadeia vazia é um motivo em branco, e isso
-    // é uma escolha, não um cancelamento do cancelamento.
-    expect(corpo).toContain("if (motivo === null) return;");
-    expect(corpo).toContain("/api/admin/negociacoes/cancelar");
+    /*
+     * Era um `window.prompt` dentro do painel; é agora a `CancelarPedido`,
+     * com os motivos em botões e partilhada com a agenda. Perguntar antes
+     * continua a ser a regra — o que mudou foi quem faz a pergunta.
+     */
+    const CAIXA = ler("src/components/admin/CancelarPedido.tsx");
+    expect(PAINEL).toContain("<CancelarPedido");
+    expect(CAIXA).toContain("Cancelar o pedido #");
+    // Há por onde sair sem cancelar: fechar a caixa desiste do cancelamento.
+    expect(CAIXA).toContain("Voltar atrás");
+    expect(CAIXA).toContain("/api/admin/negociacoes/cancelar");
+    // E sem compromisso a desfazer, o motivo continua a ser opcional.
+    expect(CAIXA).toContain("desfaz.motivoObrigatorio ? motivo.length > 0 : true");
   });
 });

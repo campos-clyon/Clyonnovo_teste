@@ -148,17 +148,25 @@ describe("o cliente também cancela", () => {
 });
 
 describe("o painel do admin", () => {
+  /*
+   * A CAIXA SAIU DO PAINEL PARA UM COMPONENTE PRÓPRIO.
+   *
+   * Era um `window.prompt` escrito dentro do painel; passou a ser a
+   * `CancelarPedido`, com os motivos em botões e partilhada com a agenda —
+   * que ganhou o mesmo gesto. A garantia é a mesma e mudou de ficheiro.
+   */
+  const CAIXA = semComentarios(ler("src/components/admin/CancelarPedido.tsx"));
+
   it("avisa do que desfaz antes de perguntar", () => {
-    const i = PAINEL.indexOf("async function cancelarPedidoNoPainel(");
-    const corpo = PAINEL.slice(i, PAINEL.indexOf("\n  async function", i + 10));
-    expect(corpo).toContain("oQueSeDesfaz(p.negociacoes)");
-    expect(corpo).toContain("avisoDoCancelamento(desfaz)");
-    expect(corpo).toContain("desfaz.motivoObrigatorio");
+    expect(CAIXA).toContain("oQueSeDesfaz(negociacoes)");
+    expect(CAIXA).toContain("avisoDoCancelamento(desfaz)");
+    expect(CAIXA).toContain("desfaz.motivoObrigatorio");
+    // E o painel chama-a, em vez de perguntar por conta própria.
+    expect(PAINEL).toContain("<CancelarPedido");
   });
 
   it("recusa avançar sem motivo quando ele é preciso", () => {
-    const i = PAINEL.indexOf("async function cancelarPedidoNoPainel(");
-    const corpo = PAINEL.slice(i, PAINEL.indexOf("\n  async function", i + 10));
-    expect(corpo).toContain("motivo.trim().length === 0");
+    expect(CAIXA).toContain("desfaz.motivoObrigatorio ? motivo.length > 0 : true");
+    expect(CAIXA).toContain("disabled={aCancelar || !podeCancelar}");
   });
 });
