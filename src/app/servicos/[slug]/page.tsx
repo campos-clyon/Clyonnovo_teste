@@ -74,7 +74,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Quanto custa montar um roupeiro?",
-      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem começa ${PRECOS.montagem_moveis.etiqueta.toLowerCase()}, sem IVA, e o valor exacto vem na proposta.`,
+      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem começa ${PRECOS.montagem_moveis.etiqueta.toLowerCase()}, sem IVA, e o valor exato vem na proposta.`,
     },
   ],
   "manutencao-casa": [

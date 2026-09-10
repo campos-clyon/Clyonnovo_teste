@@ -208,7 +208,7 @@ export default async function PaginaDoPedidoProfissional({
 
         <Nota titulo="Morada e contacto: depois de ser contratado" icone="cadeado" className="mt-5">
           Vê a zona para saber se lhe serve e quanto custa lá chegar. A morada
-          exacta e o telefone do cliente chegam-lhe por email assim que ele o
+          exata e o telefone do cliente chegam-lhe por email assim que ele o
           contratar — é o que impede que um pedido seja usado como lista de
           contactos.
         </Nota>

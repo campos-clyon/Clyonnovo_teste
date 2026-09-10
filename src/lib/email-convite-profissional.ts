@@ -70,7 +70,7 @@ export async function enviarConviteAoProfissional(p: ConviteParaEnviar): Promise
 
           <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
             Depois de enviar, confirmamos os dados e avisamo-lo por email quando a conta
-            estiver activa. A partir daí começa a receber pedidos da sua zona, com
+            estiver ativa. A partir daí começa a receber pedidos da sua zona, com
             fotografias e com o valor que o cliente quer pagar — e vê sempre quanto
             recebe antes de aceitar seja o que for.
           </p>

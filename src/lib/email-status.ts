@@ -104,7 +104,7 @@ function buildHtml(p: SendStatusEmailParams): string {
               <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${BUSINESS_PHONE}</a>
             </p>
             <p style="margin:6px 0 0;font-size:11px;color:#cbd5e0;text-align:center;">
-              Recebe este email porque tem as notificações de estado activas. Pode desligá-las na sua conta.
+              Recebe este email porque tem as notificações de estado ativas. Pode desligá-las na sua conta.
             </p>
           </td>
         </tr>

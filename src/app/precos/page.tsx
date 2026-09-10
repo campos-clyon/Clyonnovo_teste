@@ -218,7 +218,7 @@ export default function PrecosPage() {
             A versão completa da nota, e não a curta, porque esta é A página de
             preços: é aqui que quem está a comparar valores vem parar, e é aqui
             que a pergunta "isto leva IVA?" tem de ter resposta sem sair do
-            ecrã. Quem factura é o profissional, e o regime dele decide.
+            ecrã. Quem fatura é o profissional, e o regime dele decide.
           */}
           <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-7 text-slate-500">
             {NOTA_DE_PRECO.completa}

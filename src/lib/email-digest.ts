@@ -71,7 +71,7 @@ function buildHtml(p: SendWeeklyDigestParams): string {
           <td style="padding:36px 36px 24px;">
             <p style="margin:0 0 16px;font-size:17px;color:#1a2332;font-weight:600;">Olá, ${primeiroNome}!</p>
             <p style="margin:0 0 24px;font-size:15px;color:#4a5568;line-height:1.6;">
-              Tem ${p.orders.length} ${p.orders.length === 1 ? "pedido activo" : "pedidos activos"} na CLYON. Aqui está o ponto de situação:
+              Tem ${p.orders.length} ${p.orders.length === 1 ? "pedido ativo" : "pedidos ativos"} na CLYON. Aqui está o ponto de situação:
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">${rows}</table>
             <table width="100%" cellpadding="0" cellspacing="0">
@@ -90,7 +90,7 @@ function buildHtml(p: SendWeeklyDigestParams): string {
               <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${BUSINESS_PHONE}</a>
             </p>
             <p style="margin:6px 0 0;font-size:11px;color:#cbd5e0;text-align:center;">
-              Recebe este resumo porque tem o 'Resumo semanal' activo. Pode desligá-lo na sua conta.
+              Recebe este resumo porque tem o 'Resumo semanal' ativo. Pode desligá-lo na sua conta.
             </p>
           </td>
         </tr>
@@ -115,7 +115,7 @@ export async function sendWeeklyDigestEmail(params: SendWeeklyDigestParams): Pro
     const { error } = await resend.emails.send({
       from:    "CLYON <noreply@clyon.pt>",
       to:      [params.to],
-      subject: `O seu resumo semanal CLYON — ${params.orders.length} ${params.orders.length === 1 ? "pedido activo" : "pedidos activos"}`,
+      subject: `O seu resumo semanal CLYON — ${params.orders.length} ${params.orders.length === 1 ? "pedido ativo" : "pedidos ativos"}`,
       html:    legivelNoResumo(buildHtml(params)),
     });
     if (error) {

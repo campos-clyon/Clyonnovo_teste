@@ -52,7 +52,7 @@ export default function Faturacao({ user, onUpdate }: Props) {
 
   const handleSave = async () => {
     if (billingNif && !/^\d{9}$/.test(billingNif)) {
-      setError("O NIF deve ter exactamente 9 dígitos.");
+      setError("O NIF deve ter exatamente 9 dígitos.");
       return;
     }
     setSaving(true); setSuccess(false); setError("");

@@ -152,7 +152,7 @@ export default function ProfissionaisPage() {
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Não há inscrição aberta. Fale connosco, deixe o nome e o email, e enviamos-lhe
             o link do registo. Depois de o preencher, confirmamos os dados e avisamo-lo
-            quando a conta ficar activa.
+            quando a conta ficar ativa.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
             É de propósito: assim cada profissional na plataforma é alguém com quem já

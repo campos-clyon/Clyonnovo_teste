@@ -126,8 +126,8 @@ export default function PrivacidadePage() {
                     voluntariamente para orçamento de recolha ou esvaziamento.
                   </li>
                   <li>
-                    <strong>Dados de facturação (opcionais):</strong> NIF e morada de facturação
-                    quando o cliente solicita recibo ou factura.
+                    <strong>Dados de faturação (opcionais):</strong> NIF e morada de faturação
+                    quando o cliente solicita recibo ou fatura.
                   </li>
                   <li>
                     <strong>Dados técnicos:</strong> endereço IP, tipo de browser, páginas
@@ -179,7 +179,7 @@ export default function PrivacidadePage() {
                     o serviço de recolha ou esvaziamento.
                   </li>
                   <li>
-                    <strong>Obrigação legal</strong> — para facturação, contabilidade e requisitos
+                    <strong>Obrigação legal</strong> — para faturação, contabilidade e requisitos
                     fiscais.
                   </li>
                   <li>
@@ -254,7 +254,7 @@ export default function PrivacidadePage() {
                     portuguesa).
                   </li>
                   <li>
-                    <strong>Dados de facturação:</strong> 10 anos, conforme legislação em vigor.
+                    <strong>Dados de faturação:</strong> 10 anos, conforme legislação em vigor.
                   </li>
                   <li>
                     <strong>Cookies e dados de navegação:</strong> conforme indicado na política de

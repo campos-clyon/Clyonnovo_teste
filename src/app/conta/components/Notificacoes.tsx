@@ -118,7 +118,7 @@ export default function Notificacoes({ user, onUpdate }: Props) {
         <Toggle
           id="notif-weekly"
           label="Resumo semanal"
-          description="Um email semanal com o resumo dos teus pedidos activos."
+          description="Um email semanal com o resumo dos teus pedidos ativos."
           checked={notifWeeklyDigest}
           saving={saving}
           onChange={(v) => {

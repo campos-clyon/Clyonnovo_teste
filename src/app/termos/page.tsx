@@ -119,9 +119,9 @@ export default function TermosPage() {
             <strong>{IDENTIFICACAO.codigoAPA}</strong>.
           </p>
           <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-            A CLYON é uma actividade em nome individual e não uma sociedade.
+            A CLYON é uma atividade em nome individual e não uma sociedade.
             Quem contrata connosco está a contratar com uma pessoa singular com
-            actividade aberta — dizemo-lo aqui porque é verdade e porque tem
+            atividade aberta — dizemo-lo aqui porque é verdade e porque tem
             consequências que ninguém deve descobrir tarde.
           </p>
         </S>
@@ -320,7 +320,7 @@ export default function TermosPage() {
         <S id="profissionais" titulo="10. Se é profissional">
           <p>
             A inscrição é gratuita e sujeita a aprovação. Ao inscrever-se,
-            declara que exerce a actividade por conta própria, que está
+            declara que exerce a atividade por conta própria, que está
             regularizado perante as Finanças e a Segurança Social, e que tem os
             meios e as autorizações necessárias ao que se propõe fazer —
             incluindo, quando aplicável, registo de transportador de resíduos e
@@ -467,7 +467,7 @@ export default function TermosPage() {
             plataforma. Se não concordar, pode encerrar a conta sem custo.
           </p>
           <p>
-            As alterações não se aplicam retroactivamente a trabalhos já
+            As alterações não se aplicam retroativamente a trabalhos já
             fechados.
           </p>
         </S>

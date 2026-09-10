@@ -151,14 +151,14 @@ export default function CookiesPage() {
               <>
                 São indispensáveis para o funcionamento básico do site. Sem eles, funcionalidades
                 como o simulador de orçamento, o login de colaboradores ou a memorização das suas
-                preferências de consentimento deixam de funcionar. Não podem ser desactivados no
+                preferências de consentimento deixam de funcionar. Não podem ser desativados no
                 painel de preferências.
                 <br />
                 <br />
                 <strong>Exemplos de utilização na CLYON:</strong>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   <li>Guardar as respostas ao simulador de recolha de móveis enquanto o preenche.</li>
-                  <li>Manter sessão activa na área de cliente ou de colaborador.</li>
+                  <li>Manter sessão ativa na área de cliente ou de colaborador.</li>
                   <li>Registar a sua escolha no banner de cookies para não voltar a aparecer.</li>
                 </ul>
               </>
@@ -173,7 +173,7 @@ export default function CookiesPage() {
                 os visitantes usam o site: páginas mais visitadas, tempo médio de permanência, taxa
                 de conclusão do simulador de orçamento, origem do tráfego (pesquisa, redes sociais,
                 referências). Os dados são agregados e anónimos — não identificam o utilizador
-                individualmente. Só são activados com o seu consentimento explícito.
+                individualmente. Só são ativados com o seu consentimento explícito.
                 <br />
                 <br />
                 Estes dados ajudam-nos a melhorar a página de{" "}
@@ -196,7 +196,7 @@ export default function CookiesPage() {
                 Podem ser usados para mostrar publicidade relevante em plataformas externas
                 (Facebook, Instagram, Google Ads), medir a eficácia de campanhas e evitar mostrar o
                 mesmo anúncio repetidamente. Atualmente o sistema está preparado para esta
-                categoria mas nem todas as integrações estão activas. Só são activados com
+                categoria mas nem todas as integrações estão ativas. Só são ativados com
                 consentimento explícito.
               </>
             }
@@ -289,7 +289,7 @@ export default function CookiesPage() {
                     <strong>Aceitar todos</strong> — permite necessários, analítica e marketing.
                   </li>
                   <li>
-                    <strong>Recusar opcionais</strong> — só ficam activos os necessários.
+                    <strong>Recusar opcionais</strong> — só ficam ativos os necessários.
                   </li>
                   <li>
                     <strong>Personalizar</strong> — escolhe categoria a categoria.

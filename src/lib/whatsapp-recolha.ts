@@ -292,7 +292,7 @@ export function perguntaDo(passo: PassoDaRecolha, dados: DadosDaRecolha): string
     case "descricao":
       return "Descreva o que é preciso levar ou fazer: quantidade, tamanho, o que houver de especial.";
     case "fatura":
-      return "Precisa de factura? (sim/não)";
+      return "Precisa de fatura? (sim/não)";
     case "confirmar":
       return resumo(dados);
   }
@@ -517,7 +517,7 @@ export function responderNaRecolha(
     }
     case "fatura": {
       const r = simOuNao(t);
-      if (!r) return { estado, resposta: "Precisa de factura? Responda sim ou não." };
+      if (!r) return { estado, resposta: "Precisa de fatura? Responda sim ou não." };
       d.precisaFatura = r === "sim";
       break;
     }

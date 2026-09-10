@@ -1497,7 +1497,7 @@ function Phase3Contact({
           <span className="text-lg">✓</span>
           <div>
             <p className="text-sm text-emerald-900">
-              <strong>Sessão activa</strong> — poderá acompanhar este pedido em{" "}
+              <strong>Sessão ativa</strong> — poderá acompanhar este pedido em{" "}
               <a href="/conta" className="font-semibold text-cyan-600 hover:text-cyan-700 underline">
                 clyon.pt/conta
               </a>{" "}

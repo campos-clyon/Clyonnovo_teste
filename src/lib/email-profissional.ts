@@ -130,7 +130,7 @@ function montarTexto(p: AvisoDePedido): string {
     "",
     `Ver e responder: ${url}`,
     "",
-    "A morada exacta aparece depois de o cliente o contratar. No link vê a conta",
+    "A morada exata aparece depois de o cliente o contratar. No link vê a conta",
     "feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe",
     "fica — e propõe o seu valor. Só valores, sem mensagens.",
   ].filter((l): l is string => l != null);
@@ -212,7 +212,7 @@ function montarHtml(p: AvisoDePedido): string {
           </table>
 
           <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-            A morada exacta aparece depois de o cliente o contratar. No link vê a conta
+            A morada exata aparece depois de o cliente o contratar. No link vê a conta
             feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe
             fica — e propõe o seu valor. Só valores, sem mensagens.
           </p>

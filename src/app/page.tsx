@@ -288,7 +288,7 @@ export default function HomePage() {
               O subtítulo dizia "Os profissionais retiram sofás, armários, colchões...". É a
               voz de quem executa, e a CLYON deixou de executar: é plataforma.
               Quem vai a casa, desmonta e carrega é o profissional, e é ele
-              quem emite a factura.
+              quem emite a fatura.
 
               O problema não é de estilo. Estava escrito na segunda linha mais
               visível do site, e a linha de baixo — nas garantias — já dizia o
@@ -518,7 +518,7 @@ export default function HomePage() {
           {/*
             A nota do IVA, e porque é que ela não diz se o IVA está incluído.
 
-            Numa plataforma, quem faz o trabalho é quem emite a factura — e
+            Numa plataforma, quem faz o trabalho é quem emite a fatura — e
             cada profissional tem o seu regime: uns na isenção do artigo 53.º
             do CIVA, outros a liquidar 23%. "Com IVA" e "sem IVA" são as duas
             afirmações que o site não pode garantir, e o site chegou a dizer as

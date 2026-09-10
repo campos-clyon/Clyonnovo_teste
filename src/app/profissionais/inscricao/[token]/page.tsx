@@ -91,7 +91,7 @@ export default async function PaginaDoConvite({
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Diga-nos o que faz e onde trabalha. Confirmamos os dados e avisamo-lo por email
-          quando a conta estiver activa.
+          quando a conta estiver ativa.
         </p>
       </header>
 
