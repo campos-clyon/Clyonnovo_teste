@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, TAXA_PROFISSIONAL } from "@/lib/taxas-plataforma";
 
 export const metadata: Metadata = {
   title: "Receba pedidos na sua zona — CLYON para profissionais",
@@ -139,6 +139,31 @@ export default function ProfissionaisPage() {
                 se mete nisso e fatura apenas a comissão dela.
               </p>
             </div>
+          </div>
+
+          {/*
+            SÓ SE PAGA QUANDO SE GANHA — e é aqui que se diz.
+
+            O que faz alguém trocar de plataforma não é a percentagem: é
+            QUANDO se paga. Noutras, compram-se créditos para responder a um
+            pedido, e paga-se por cada resposta, tenha ela dado trabalho ou
+            não. Aqui não sai nada da carteira de ninguém até haver um
+            trabalho feito e confirmado.
+
+            A percentagem vem da constante, e a frase não faz contas sobre a
+            concorrência nem cita números que não podemos provar: diz o que a
+            CLYON faz, e deixa a comparação a quem lê.
+          */}
+          <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6">
+            <h3 className="text-lg font-bold text-[#0B1929]">
+              Não paga para responder a um pedido
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700">
+              Responder não custa nada, e responder a dez também não. A CLYON só ganha
+              quando você ganha: {Math.round(TAXA_PROFISSIONAL * 100)} % sobre o
+              valor do trabalho, descontados no fim, e só depois de o cliente confirmar
+              que ficou feito. Um orçamento que não dá em nada não lhe custa um cêntimo.
+            </p>
           </div>
         </div>
       </section>
