@@ -1,0 +1,52 @@
+# A verificação que faltava.
+#
+# O computador do dono não tem Node, e o repositório não tinha nenhum
+# workflow: os 117 ficheiros de teste nunca corriam sozinhos, e a única
+# rede era a build do Vercel — que verifica tipos mas não corre testes.
+# Muitos destes testes lêem o código-fonte e exigem frases exactas, por
+# isso são precisamente eles que apanham um refactor de texto.
+name: Verificar
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Instalar
+        run: pnpm install --frozen-lockfile
+
+      # Os dois passos correm sempre, mesmo que o primeiro chumbe: quem lê o
+      # resultado quer saber tudo o que está mal, não a primeira coisa.
+      - name: Tipos (pnpm check)
+        id: tipos
+        run: pnpm check
+        continue-on-error: true
+
+      - name: Testes (pnpm test)
+        id: testes
+        run: pnpm test
+        continue-on-error: true
+
+      - name: Resultado
+        run: |
+          echo "Tipos:  ${{ steps.tipos.outcome }}"
+          echo "Testes: ${{ steps.testes.outcome }}"
+          if [ "${{ steps.tipos.outcome }}" != "success" ] || [ "${{ steps.testes.outcome }}" != "success" ]; then
+            exit 1
+          fi
