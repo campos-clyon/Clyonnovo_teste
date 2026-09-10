@@ -156,9 +156,56 @@ const nextConfig: NextConfig = {
         destination: "/recolha-de-moveis",
         permanent: true,
       },
+      /*
+       * AS PÁGINAS GÉMEAS JUNTAM-SE NUMA SÓ.
+       *
+       * Havia cinco páginas a responder a duas perguntas. /recolha-de-moveis
+       * tem 586 linhas e sete blocos de perguntas; /retirar-moveis-velhos e
+       * /recolha-de-moveis-urgente tinham um bloco cada e diziam o mesmo por
+       * outras palavras. O mesmo entre /recolha-de-sofas e
+       * /recolha-de-sofa-lisboa.
+       *
+       * Duas páginas nossas na mesma pesquisa não somam: o Google escolhe uma,
+       * divide o sinal entre as duas, e às vezes escolhe a fina. As finas
+       * passam a 301 e levam o que acumularam para a que fica.
+       *
+       * O /retirada-de-moveis apontava para /retirar-moveis-velhos, que agora
+       * também redirecciona — duas etapas em cadeia perdem força pelo caminho,
+       * por isso passa a apontar direito ao destino final.
+       */
       {
         source: "/retirada-de-moveis",
-        destination: "/retirar-moveis-velhos",
+        destination: "/recolha-de-moveis",
+        permanent: true,
+      },
+      {
+        source: "/retirar-moveis-velhos",
+        destination: "/recolha-de-moveis",
+        permanent: true,
+      },
+      {
+        source: "/recolha-de-moveis-urgente",
+        destination: "/recolha-de-moveis",
+        permanent: true,
+      },
+      {
+        source: "/recolha-de-sofa-lisboa",
+        destination: "/recolha-de-sofas",
+        permanent: true,
+      },
+      /*
+       * E as duas da Amadora, que nasciam do catch-all cidade×serviço ao lado
+       * de páginas escritas à mão para a Amadora. Ficam as escritas à mão; as
+       * geradas saíram de `getAllCityServiceSlugs` e vêm ter aqui.
+       */
+      {
+        source: "/esvaziamento-casas-amadora",
+        destination: "/esvaziamento-de-casas-amadora",
+        permanent: true,
+      },
+      {
+        source: "/recolha-monos-amadora",
+        destination: "/recolha-de-monos-amadora",
         permanent: true,
       },
       {

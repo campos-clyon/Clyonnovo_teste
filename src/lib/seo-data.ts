@@ -387,6 +387,24 @@ export function getService(slug: string) {
  */
 const SERVICOS_COM_PAGINA_PROPRIA = new Set(["mudancas"]);
 
+/**
+ * Combinações que já têm página escrita à mão, com outro endereço.
+ *
+ * `esvaziamento-casas-amadora` e `recolha-monos-amadora` nasciam aqui, e ao
+ * lado existiam `/esvaziamento-de-casas-amadora` e `/recolha-de-monos-amadora`
+ * — páginas próprias, com conteúdo escrito para a Amadora. Duas páginas
+ * nossas a responder à mesma pesquisa é a definição de canibalização: o
+ * Google escolhe uma, divide o sinal, e às vezes escolhe a fina.
+ *
+ * Ficam as escritas à mão. As geradas saem daqui e passam a 301 no
+ * next.config — o endereço antigo continua a valer, e leva o que acumulou
+ * para a página que fica.
+ */
+const COMBINACOES_COM_PAGINA_PROPRIA = new Set([
+  "esvaziamento-casas-amadora",
+  "recolha-monos-amadora",
+]);
+
 export function getAllCityServiceSlugs() {
   return CITIES.flatMap((city) =>
     SERVICES
@@ -396,7 +414,7 @@ export function getAllCityServiceSlugs() {
         city,
         service,
       })),
-  );
+  ).filter((item) => !COMBINACOES_COM_PAGINA_PROPRIA.has(item.slug[0]));
 }
 
 export function getCityServiceSlug(serviceSlug: string, citySlug: string) {
@@ -405,6 +423,10 @@ export function getCityServiceSlug(serviceSlug: string, citySlug: string) {
 
 export function parseCityServiceSlug(fullSlug: string[]) {
   const slug = fullSlug.join("/");
+
+  // O que tem página própria não se serve por aqui, senão o 301 do
+  // next.config e esta rota respondiam os dois ao mesmo endereço.
+  if (COMBINACOES_COM_PAGINA_PROPRIA.has(slug)) return null;
 
   for (const service of SERVICES) {
     for (const city of CITIES) {
