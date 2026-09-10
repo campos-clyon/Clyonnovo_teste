@@ -264,3 +264,93 @@ export async function compreender(
   if (modelName === MODELO_DE_RESERVA) return null;
   return await tentar(MODELO_DE_RESERVA, apiKey, t, sistema, 10);
 }
+
+/**
+ * AS INSTRUÇÕES PARA LER UM FIO INTEIRO — e não uma mensagem.
+ *
+ * A releitura mostra ao modelo a conversa toda, com as duas vozes e a data de
+ * cada linha, e pede-lhe o ESTADO ACUMULADO: o que o cliente disse ao longo
+ * dela, com as correcções do fim a valerem mais do que o princípio.
+ *
+ * A diferença que importa em relação a `instrucoes`: aqui NÃO se pede intenção
+ * nenhuma. Um «sim» de há três dias não pode registar um pedido, um «quero
+ * falar com uma pessoa» de há uma semana não pode entregar a conversa outra
+ * vez, e um «recomeçar» dito a meio não pode apagar o que ele disse a seguir.
+ * O que viaja do fio para os dados são CAMPOS, e mais nada.
+ */
+function instrucoesDoFio(jaSabido: Record<string, unknown>, agora: Date): string {
+  const servicos = SERVICE_CATEGORIES.map((c) => `- ${c.id}: ${c.label}`).join("\n");
+  const dia = agora.toLocaleDateString("pt-PT", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  return `És o assistente da CLYON, uma empresa portuguesa de recolhas, mudanças e limpezas. Vais ler uma CONVERSA INTEIRA de WhatsApp entre a CLYON e um cliente, e o teu trabalho é dizer o que o cliente já contou sobre o pedido dele.
+
+Hoje é ${dia}. Cada linha traz a data em que foi escrita, entre parénteses rectos, e quem falou.
+
+Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código:
+
+{ "campos": { ... } }
+
+Só campos. NÃO devolvas intenção nenhuma — não é isso que te é pedido aqui.
+
+Regras de leitura:
+- Lê a conversa toda e devolve o ESTADO FINAL. Se ele disse uma morada e mais à frente a corrigiu, vale a corrigida.
+- As linhas "CLYON:" são as perguntas do assistente. Servem para dar sentido às respostas curtas — um "sim" sozinho não quer dizer nada; a seguir a "Há elevador no prédio?" quer dizer que há elevador. NUNCA tomes uma pergunta da CLYON por uma resposta do cliente.
+- Preenche SÓ o que o CLIENTE disse mesmo. Nunca inventes, nunca adivinhes, nunca preenchas por simpatia. Um campo a mais e inventado é muito pior do que um campo a menos: alguém vai a uma morada que ninguém deu.
+- Se a conversa mudou de assunto a meio e trata de outro trabalho, devolve o do FIM.
+
+Os campos são os mesmos de sempre:
+- "servico" — um destes identificadores, e mais nenhum:
+${servicos}
+- "nome" — o nome próprio de quem fala.
+- "morada" — rua e número do sítio do serviço.
+- "codigoPostal" — código postal e localidade, como ele os escreveu (ex.: "2845-513 Amora"). Se só disser a localidade, mete só a localidade.
+- "moradaDestino", "codigoPostalDestino" — só numa mudança, para onde vai.
+- "andar" — o andar ("r/c", "3º", "cave").
+- "elevador" — "sim" ou "não".
+- "estacionamento" — "sim" ou "não", se dá para estacionar à porta.
+- "entulho" — a quantidade, só em recolha de entulho (ex.: "20 sacos", "3 m3").
+- "quando" — quando ele quer o serviço, com as palavras dele ("sexta de manhã", "amanhã", "sem pressa"). NÃO converta para data e NÃO tente corrigir uma data velha: escreve o que ele disse, que de a aproveitar ou não trata quem te chamou.
+- "descricao" — o que há para levar ou fazer, com o detalhe que ele deu.
+- "fatura" — "sim" ou "não", se precisa de factura.
+
+O que já está gravado deste pedido — devolve um campo destes só se a conversa o CONTRADISSER ou o completar:
+${JSON.stringify(jaSabido)}`;
+}
+
+/**
+ * O que o cliente já contou, lido de uma vez a partir do fio.
+ *
+ * Uma chamada só, e não uma por mensagem: quem carregou no botão está a olhar
+ * para o ecrã, e replayar dez mensagens a dezoito segundos cada não é uma
+ * funcionalidade, é uma sala de espera.
+ *
+ * Devolve null quando não há chave, quando a chamada falha e quando a resposta
+ * não se lê — e nesses casos quem chama não muda nada, que é melhor do que
+ * gravar meio estado.
+ */
+export async function compreenderFio(
+  guiao: string,
+  jaSabido: Record<string, unknown>,
+  agora: Date = new Date(),
+): Promise<CamposCrus | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const t = guiao.trim();
+  if (!t) return null;
+
+  const sistema = instrucoesDoFio(resumoDoSabido(jaSabido), agora);
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  // A mesma escada de sempre — 18 s no modelo bom, 10 s no de reserva. Um fio
+  // é maior do que uma mensagem, mas quem espera é a mesma pessoa.
+  const bom = await tentar(modelName, apiKey, t, sistema, 18);
+  if (bom) return bom.campos;
+  if (modelName === MODELO_DE_RESERVA) return null;
+  const reserva = await tentar(MODELO_DE_RESERVA, apiKey, t, sistema, 10);
+  return reserva ? reserva.campos : null;
+}

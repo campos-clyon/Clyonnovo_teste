@@ -683,57 +683,30 @@ function reperguntar(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
   return `Desculpe, não apanhei. ${perguntaDo(passo, dados, false)}`;
 }
 
+
 /**
- * A conversa depois de o Gemini ter lido a mensagem.
+ * FUNDIR OS CAMPOS CRUS NOS DADOS — o único sítio onde isso acontece.
  *
- * Irmã de `responderNaRecolha` e com o mesmo contrato — estado a entrar,
- * estado e resposta a sair, sem base de dados e sem envio. A diferença é a
- * fonte: em vez de ler o texto com expressões regulares, recebe os campos já
- * separados por quem os percebeu.
+ * Este bloco vivia dentro de `responderComCompreensao`. Saiu para aqui quando
+ * a releitura do fio precisou de fazer exactamente o mesmo: pegar nos campos
+ * que o Gemini percebeu e passá-los pelos validadores de sempre.
  *
- * O que NÃO muda é a garantia. Cada campo que vem do Gemini passa pelo mesmo
- * validador de sempre: o serviço tem de ser um dos da lista, o código postal
- * tem de ter quatro dígitos e três, a data passa por `interpretarQuando`, o
- * sim e o não por `simOuNao`. O que não passar é deitado fora em silêncio, e
- * o campo fica por responder — que é como se pergunta outra vez.
+ * Não é «passar pelos mesmos validadores» — é literalmente o mesmo código. Uma
+ * cópia divergia no dia em que alguém corrigisse um dos lados, e o lado velho
+ * passava a aceitar o que o novo recusa. O Gemini alarga o que se PERCEBE;
+ * nunca alarga o que se ACEITA, e é aqui que isso se garante.
+ *
+ * O `agora` importa: `interpretarQuando` lê «sexta de manhã» em relação a um
+ * instante. Na conversa viva é o momento da mensagem; na releitura tem de ser
+ * o instante em que a frase foi ESCRITA, senão uma data de há três semanas é
+ * remarcada para esta sexta sem ninguém dar por isso.
  */
-export function responderComCompreensao(
-  estado: EstadoDaRecolha,
-  compreensao: { intencao: Intencao; campos: CamposCrus },
+export function fundirCampos(
+  dados: DadosDaRecolha,
+  k: CamposCrus,
   agora: Date = new Date(),
-): RespostaDaRecolha {
-  const { intencao, campos: k } = compreensao;
-
-  if (intencao === "falar_com_pessoa") {
-    return {
-      estado,
-      resposta:
-        "Com certeza. Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.",
-      pedirPessoa: true,
-    };
-  }
-  if (intencao === "cancelar") {
-    return {
-      estado,
-      resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
-      desistir: true,
-    };
-  }
-  if (intencao === "recomecar") {
-    const novo = recolhaNova();
-    /*
-     * Sem a saudação. Já se disse bom dia no princípio desta conversa, e um
-     * segundo «Bom dia! Aqui é a CLYON» a meio dela é o mesmo defeito que
-     * `reperguntar` existe para evitar.
-     */
-    return {
-      estado: novo,
-      resposta:
-        "Sem problema, vamos do princípio. Diga-me o que precisa de levar ou fazer, e em que zona.",
-    };
-  }
-
-  const d: DadosDaRecolha = { ...estado.dados };
+): DadosDaRecolha {
+  const d: DadosDaRecolha = { ...dados };
 
   if (k.servico) {
     /*
@@ -790,6 +763,59 @@ export function responderComCompreensao(
     const r = simOuNao(k.fatura);
     if (r) d.precisaFatura = r === "sim";
   }
+  return d;
+}
+/**
+ * A conversa depois de o Gemini ter lido a mensagem.
+ *
+ * Irmã de `responderNaRecolha` e com o mesmo contrato — estado a entrar,
+ * estado e resposta a sair, sem base de dados e sem envio. A diferença é a
+ * fonte: em vez de ler o texto com expressões regulares, recebe os campos já
+ * separados por quem os percebeu.
+ *
+ * O que NÃO muda é a garantia. Cada campo que vem do Gemini passa pelo mesmo
+ * validador de sempre: o serviço tem de ser um dos da lista, o código postal
+ * tem de ter quatro dígitos e três, a data passa por `interpretarQuando`, o
+ * sim e o não por `simOuNao`. O que não passar é deitado fora em silêncio, e
+ * o campo fica por responder — que é como se pergunta outra vez.
+ */
+export function responderComCompreensao(
+  estado: EstadoDaRecolha,
+  compreensao: { intencao: Intencao; campos: CamposCrus },
+  agora: Date = new Date(),
+): RespostaDaRecolha {
+  const { intencao, campos: k } = compreensao;
+
+  if (intencao === "falar_com_pessoa") {
+    return {
+      estado,
+      resposta:
+        "Com certeza. Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.",
+      pedirPessoa: true,
+    };
+  }
+  if (intencao === "cancelar") {
+    return {
+      estado,
+      resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
+      desistir: true,
+    };
+  }
+  if (intencao === "recomecar") {
+    const novo = recolhaNova();
+    /*
+     * Sem a saudação. Já se disse bom dia no princípio desta conversa, e um
+     * segundo «Bom dia! Aqui é a CLYON» a meio dela é o mesmo defeito que
+     * `reperguntar` existe para evitar.
+     */
+    return {
+      estado: novo,
+      resposta:
+        "Sem problema, vamos do princípio. Diga-me o que precisa de levar ou fazer, e em que zona.",
+    };
+  }
+
+  const d = fundirCampos(estado.dados, k, agora);
 
   const passo = primeiroPassoEmFalta(d);
 

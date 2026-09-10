@@ -86,7 +86,14 @@ export async function POST(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { accao?: unknown; telefone?: unknown; nota?: unknown; id?: unknown };
+  let corpo: {
+    accao?: unknown;
+    telefone?: unknown;
+    nota?: unknown;
+    id?: unknown;
+    /** Segunda fase da releitura: sem isto, ela mostra e não escreve. */
+    confirmar?: unknown;
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -155,6 +162,130 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json({ ok: true, fila: await filaWhatsAppPorEnviar(50) });
+  }
+
+  /*
+   * RELER A CONVERSA — continuar de onde parámos.
+   *
+   * "Quando clico em Recomeçar conversa ele devia ler as mensagens anteriores
+   * para recomeçar de onde parámos." O «Recomeçar do zero» apaga tudo e volta
+   * a perguntar o serviço a quem já o disse; isto lê o fio, reconstrói o que
+   * ele já respondeu, e pergunta só o que falta.
+   *
+   * DUAS FASES, E PORQUÊ. Sem `confirmar`, isto não escreve nada: devolve o
+   * que percebeu e a frase que ia mandar, para quem carregou VER antes de o
+   * cliente ouvir. Um campo inventado mas bem formado — um código postal com
+   * quatro dígitos e três que ninguém deu — passa em todos os validadores sem
+   * uma queixa, e o único guarda contra isso são olhos humanos.
+   */
+  if (accao === "relerConversa") {
+    if (telefone.replace(/\D/g, "").length < 9) {
+      return NextResponse.json({ error: "Falta o número." }, { status: 400 });
+    }
+    const {
+      mensagensDoNumeroWhatsApp,
+      recolhaWhatsApp,
+      guardarRecolhaWhatsApp,
+      limparFilaWhatsAppDoNumero,
+    } = await import("@/lib/db");
+    const { fioParaLeitura, guiaoDoFio, releituraDoFio } = await import("@/lib/reler-a-conversa");
+    const { compreenderFio } = await import("@/lib/whatsapp-compreensao");
+    const { pedidosDoTelefone } = await import("@/lib/whatsapp-negociacao");
+
+    /*
+     * O GUARDA DO pedidoId. `guardarRecolhaWhatsApp` faz
+     * `ON DUPLICATE KEY UPDATE ... pedidoId = NULL`: escrever por cima de uma
+     * recolha que já deu pedido RESSUSCITA-A, o número volta à lista do painel
+     * e a mensagem seguinte do cliente cai outra vez na recolha.
+     */
+    const guardada = await recolhaWhatsApp(telefone);
+    if (guardada?.pedidoId != null) {
+      return NextResponse.json(
+        {
+          error:
+            `Esta conversa já deu o pedido #${guardada.pedidoId}. ` +
+            `Reler ia reabrir uma recolha que está fechada.`,
+        },
+        { status: 409 },
+      );
+    }
+    // E com pedido activo o cérebro nem chega à recolha: reler escrevia uma
+    // linha que ninguém ia ler, e dava um verde que não queria dizer nada.
+    const activos = await pedidosDoTelefone(telefone);
+    if (activos.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `Este número já tem o pedido #${activos[0]} a andar. ` +
+            `A conversa dele é a das propostas, não a da recolha.`,
+        },
+        { status: 409 },
+      );
+    }
+
+    const fio = fioParaLeitura(await mensagensDoNumeroWhatsApp(telefone, 200));
+    if (fio.length === 0) {
+      return NextResponse.json(
+        { error: "Não há conversa registada para reler neste número." },
+        { status: 404 },
+      );
+    }
+
+    const gravado = guardada?.dados ?? {};
+    const campos = await compreenderFio(guiaoDoFio(fio), gravado as Record<string, unknown>);
+    if (!campos) {
+      return NextResponse.json(
+        { error: "Não consegui ler a conversa (sem chave do Gemini, ou a leitura falhou)." },
+        { status: 503 },
+      );
+    }
+
+    const r = releituraDoFio({ gravado: gravado as never, campos, fio });
+
+    if (corpo.confirmar !== true) {
+      return NextResponse.json({
+        ok: true,
+        previsao: true,
+        recuperados: r.recuperados,
+        passo: r.passo,
+        completo: r.completo,
+        mensagem: r.mensagem,
+        linhasLidas: fio.length,
+      });
+    }
+
+    // Não se troca uma recolha que existe por uma linha vazia.
+    if (r.recuperados.length === 0 && guardada == null) {
+      return NextResponse.json(
+        { error: "A conversa não trouxe nada de aproveitável — não gravei nada." },
+        { status: 422 },
+      );
+    }
+
+    await guardarRecolhaWhatsApp(telefone, r.passo, r.dados);
+    // O que estava por sair era do passo antigo.
+    const riscadas = await limparFilaWhatsAppDoNumero(telefone);
+
+    const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
+    const saiu = await enviarTextoWhatsApp(telefone, r.mensagem);
+    return NextResponse.json({
+      ok: true,
+      recuperados: r.recuperados,
+      passo: r.passo,
+      completo: r.completo,
+      mensagem: r.mensagem,
+      riscadas,
+      /*
+       * A VERDADE SOBRE O ENVIO. Pela ponte, `enviarTextoWhatsApp` devolve
+       * true só por ter posto na fila — «saiu» não é «chegou». E se a conversa
+       * estiver entregue a uma pessoa, bloqueada, ou o WhatsApp desligado, o
+       * portão cala-a e não sai nada: dizer que sim seria um verde mentiroso.
+       */
+      enviada: saiu,
+      aviso: saiu
+        ? null
+        : "Gravei o que reli, mas a mensagem não saiu — a conversa está entregue a si, bloqueada, ou o WhatsApp está desligado. Copie-a e mande-a à mão.",
+    });
   }
 
   /*

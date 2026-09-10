@@ -5,6 +5,7 @@ import {
   Archive,
   ArchiveRestore,
   Ban,
+  BookOpen,
   Bot,
   Check,
   CheckCheck,
@@ -330,6 +331,22 @@ export default function AdminWhatsAppPanel() {
   const [textoRecebido, setTextoRecebido] = useState("");
   const [aRegistar, setARegistar] = useState(false);
   const [avisoRecebido, setAvisoRecebido] = useState("");
+  /**
+   * A releitura da conversa, antes de sair.
+   *
+   * Duas fases de propósito: um campo inventado mas bem formado — um código
+   * postal com quatro dígitos e três que ninguém deu — passa em todos os
+   * validadores sem uma queixa. O único guarda contra isso são olhos humanos,
+   * e é por isso que se VÊ antes de o cliente ouvir.
+   */
+  const [releitura, setReleitura] = useState<{
+    telefone: string;
+    recuperados: string[];
+    mensagem: string;
+    completo: boolean;
+    linhasLidas: number;
+  } | null>(null);
+  const [aReler, setAReler] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -400,6 +417,53 @@ export default function AdminWhatsAppPanel() {
       }
     },
     [token],
+  );
+
+  /**
+   * Reler o fio. Sem `confirmar` não escreve nada — só mostra o que percebeu.
+   *
+   * O erro não vai para o `erro` geral do painel: vem de um gesto concreto
+   * numa conversa concreta, e uma tarja no topo do ecrã obriga a procurar de
+   * onde veio.
+   */
+  const reler = useCallback(
+    async (telefone: string, confirmar: boolean) => {
+      if (!token) return;
+      setAReler(true);
+      setErroDaResposta("");
+      try {
+        const res = await fetch("/api/admin/whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ accao: "relerConversa", telefone, confirmar }),
+        });
+        const dados = await res.json();
+        if (!res.ok) {
+          setErroDaResposta(dados.error ?? "Não foi possível reler.");
+          setReleitura(null);
+          return;
+        }
+        if (dados.previsao) {
+          setReleitura({
+            telefone,
+            recuperados: dados.recuperados ?? [],
+            mensagem: dados.mensagem ?? "",
+            completo: Boolean(dados.completo),
+            linhasLidas: Number(dados.linhasLidas ?? 0),
+          });
+          return;
+        }
+        setReleitura(null);
+        if (dados.aviso) setErroDaResposta(dados.aviso);
+        await abrirConversa(telefone);
+        await carregar();
+      } catch {
+        setErroDaResposta("Erro de rede.");
+      } finally {
+        setAReler(false);
+      }
+    },
+    [token, abrirConversa, carregar],
   );
 
   const responder = useCallback(async () => {
@@ -907,11 +971,77 @@ export default function AdminWhatsAppPanel() {
                       {erroDaResposta && <p className="mt-2 text-xs text-red-300">{erroDaResposta}</p>}
 
                       {/*
+                        O QUE A RELEITURA PERCEBEU, ANTES DE SAIR.
+                        Um código postal inventado mas bem formado passa em
+                        todos os validadores sem uma queixa. O único guarda
+                        contra isso são olhos humanos — e é este ecrã.
+                      */}
+                      {releitura?.telefone === l.telefone && (
+                        <div className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
+                          <p className="text-xs font-semibold text-cyan-200">
+                            Reli {releitura.linhasLidas} linha
+                            {releitura.linhasLidas === 1 ? "" : "s"} da conversa
+                            {releitura.recuperados.length > 0
+                              ? ` e recuperei: ${releitura.recuperados.join(", ")}.`
+                              : " e não encontrei nada de novo."}
+                          </p>
+                          <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-950/60 p-2 text-xs leading-relaxed text-slate-200">
+                            {releitura.mensagem}
+                          </p>
+                          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                            {releitura.completo
+                              ? "Está tudo respondido — o que vai é o resumo, e o SIM dele regista o pedido."
+                              : "Confirme antes de sair: um campo que ele nunca disse passa nos validadores na mesma."}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <button
+                              onClick={() => void reler(l.telefone, true)}
+                              disabled={aReler}
+                              className={`${ACCAO} border-cyan-500/40 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25`}
+                            >
+                              {aReler ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                              )}
+                              Confirmar e enviar
+                            </button>
+                            <button
+                              onClick={() => setReleitura(null)}
+                              className={`${ACCAO} border-transparent text-slate-400 hover:bg-slate-800`}
+                            >
+                              Deixar estar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/*
                         O resto do poder sobre esta conversa. Fica cá dentro de
                         propósito: são gestos de arrumação, e a linha fechada
                         tem de continuar a caber num telemóvel.
                       */}
                       <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-800 pt-3">
+                        {/*
+                          RELER, E NÃO RECOMEÇAR.
+                          "Quando clico em Recomeçar conversa ele devia ler as
+                          mensagens anteriores para recomeçar de onde parámos."
+                          Vem primeiro e é o botão a sério; o recomeçar do zero
+                          fica ao lado, para quando a conversa se baralhou mesmo.
+                        */}
+                        <button
+                          onClick={() => void reler(l.telefone, false)}
+                          disabled={ocupado || aReler}
+                          className={`${ACCAO} border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10`}
+                          title="Lê a conversa toda, reconstrói o que ele já respondeu, e pergunta só o que falta."
+                        >
+                          {aReler && releitura?.telefone !== l.telefone ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                          Reler e continuar
+                        </button>
                         {l.passo && (
                           <button
                             onClick={() => {

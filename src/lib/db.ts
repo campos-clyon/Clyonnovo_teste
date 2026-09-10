@@ -4768,6 +4768,28 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
  * fila é o registo do que o Winapp veio buscar; um DELETE apagava a prova de
  * que a mensagem chegou a existir.
  */
+/**
+ * Limpar o que está por sair PARA UM NÚMERO — a irmã pequena da de cima.
+ *
+ * Serve à releitura da conversa: se ficou na fila uma pergunta do passo
+ * antigo, ela sai depois da retoma e o cliente recebe duas perguntas
+ * diferentes com dois minutos de intervalo. É um defeito que o «Recomeçar do
+ * zero» já tem hoje e que não vale a pena herdar.
+ */
+export async function limparFilaWhatsAppDoNumero(telefone: string): Promise<number> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return 0;
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [r] = (await pool.execute(
+    `UPDATE whatsappFila SET enviadoEm = NOW()
+      WHERE enviadoEm IS NULL AND RIGHT(telefone, 9) = RIGHT(?, 9)`,
+    [digitos],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0);
+}
+
 export async function limparFilaWhatsApp(): Promise<number> {
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
