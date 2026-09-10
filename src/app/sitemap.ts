@@ -48,6 +48,14 @@ const staticPages = [
   { url: `${SITE_URL}/termos`, priority: 0.4, changeFrequency: "yearly" as const },
   { url: `${SITE_URL}/blog`, priority: 0.7, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/regioes`, priority: 0.9, changeFrequency: "weekly" as const },
+  // Paginas reais que nunca foram declaradas: existem, respondem 200 e o site
+  // liga-lhes. A /profissionais e a landing de recrutamento, que passou a ser
+  // publica no item 18.
+  { url: `${SITE_URL}/como-funciona`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/limpeza-de-quintais`, priority: 0.9, changeFrequency: "weekly" as const },
+  { url: `${SITE_URL}/profissionais`, priority: 0.85, changeFrequency: "weekly" as const },
+  { url: `${SITE_URL}/privacidade`, priority: 0.3, changeFrequency: "yearly" as const },
+  { url: `${SITE_URL}/cookies`, priority: 0.3, changeFrequency: "yearly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -55,7 +63,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // páginas a cada deploy diz ao Google que 157 mudaram — o que é falso, e
   // ensina-o a ignorar o campo. Estas datas vêm do histórico do git e só
   // mudam quando o conteúdo muda (ver scripts/gerar-datas-conteudo.mjs).
-  const now = new Date();
   const dataCidadeServico = dataDoConteudo("cidadeServico");
   const dataMudancasCidade = dataDoConteudo("mudancasCidade");
   const dataRegioes = dataDoConteudo("regioes");
@@ -159,9 +166,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * Um sitemap com menos páginas é um problema pequeno; um sitemap que não
    * responde faz o Google desistir de o pedir.
    */
-  const profissionaisPages = (await slugsDosProfissionais()).map((slug) => ({
-    url: `${SITE_URL}/profissionais/${slug}`,
-    lastModified: new Date(),
+  const profissionaisPages = (await slugsDosProfissionais()).map((p) => ({
+    url: `${SITE_URL}/profissionais/${p.slug}`,
+    lastModified: p.actualizadoEm,
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));

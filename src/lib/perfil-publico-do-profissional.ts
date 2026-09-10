@@ -168,8 +168,17 @@ export async function perfilPublicoPorSlug(slug: string): Promise<PerfilPublico 
   return perfilPublicoDoProfissional(Number(id));
 }
 
-/** Os endereços que entram no sitemap. Só aprovados, e só com slug. */
-export async function slugsDosProfissionais(): Promise<string[]> {
+/**
+ * Os endereços que entram no sitemap. Só aprovados, e só com slug.
+ *
+ * Vem com a data em que o perfil mudou. O sitemap carimbava `new Date()` em
+ * cada perfil, o que dizia ao Google, a cada deploy, que todos tinham mudado
+ * — e a maneira mais rápida de ensinar o Google a ignorar o `lastModified` é
+ * mentir-lhe todos os dias.
+ */
+export async function slugsDosProfissionais(): Promise<
+  Array<{ slug: string; actualizadoEm: Date }>
+> {
   /*
    * TUDO dentro do try, e o `ensureProvidersSchema` é o que mais importa lá
    * estar: é ele que abre ligação à base, e foi ele que ficou de fora à
@@ -181,12 +190,19 @@ export async function slugsDosProfissionais(): Promise<string[]> {
     const pool = await getPool();
     if (!pool) return [];
     const [linhas] = (await pool.execute(
-      `SELECT slug FROM providers
+      `SELECT slug, updatedAt FROM providers
         WHERE estado = 'aprovado' AND isActive = 1 AND isClyon = 0
           AND slug IS NOT NULL AND slug <> ''
         ORDER BY slug`,
     )) as any[];
-    return (linhas as Array<{ slug: string }>).map((l) => String(l.slug));
+    return (linhas as Array<{ slug: string; updatedAt: unknown }>).map((l) => {
+      const d = l.updatedAt ? new Date(String(l.updatedAt)) : null;
+      return {
+        slug: String(l.slug),
+        // Sem data legível vale a de hoje: é melhor do que não declarar nada.
+        actualizadoEm: d && !Number.isNaN(d.getTime()) ? d : new Date(),
+      };
+    });
   } catch {
     /* O sitemap gera-se com o que houver. Uma base em baixo não o parte. */
     return [];
