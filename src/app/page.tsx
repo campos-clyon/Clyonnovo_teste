@@ -553,6 +553,11 @@ export default function HomePage() {
           <p className="mx-auto mt-6 max-w-2xl text-center text-[13px] leading-relaxed text-tinta-fraca">
             {NOTA_DE_PRECO.completa}
           </p>
+          {/* A conta feita, para "sem IVA" deixar de ser uma palavra e passar
+              a ser um número que se compara. */}
+          <p className="mx-auto mt-2 max-w-2xl text-center text-[13px] font-semibold leading-relaxed text-slate-600">
+            {NOTA_DE_PRECO.exemploComIva}
+          </p>
         </div>
       </section>
 

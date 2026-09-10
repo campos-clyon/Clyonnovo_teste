@@ -223,6 +223,15 @@ export default function PrecosPage() {
           <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-7 text-slate-500">
             {NOTA_DE_PRECO.completa}
           </p>
+          {/*
+            E a conta feita, porque "sem IVA" não é um número.
+            Quem lê um preço para casa lê o valor e assume que é o que paga.
+            Descobrir a diferença no ecrã seguinte sabe a engano, mesmo quando
+            ninguém enganou ninguém.
+          */}
+          <p className="mx-auto mt-3 max-w-3xl text-center text-sm font-semibold leading-7 text-slate-700">
+            {NOTA_DE_PRECO.exemploComIva}
+          </p>
         </div>
       </section>
 

@@ -560,12 +560,29 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
 export const NOTA_DE_PRECO = {
   /** Uma linha, para pôr junto de uma grelha. */
   curta: "Valores orientativos, sem IVA. A proposta traz o valor final.",
-  /** Com a explicação de quem factura, para páginas de preços. */
+  /** Com a explicação de quem fatura, para páginas de preços. */
   completa:
     "Valores orientativos e sem IVA. O preço a sério é a proposta que recebe, " +
-    "fechada antes de o trabalho começar. Quem executa emite a factura: se " +
+    "fechada antes de o trabalho começar. Quem executa emite a fatura: se " +
     "estiver no regime normal, o IVA vem indicado na proposta; se estiver na " +
     "isenção do artigo 53.º, não acresce nada.",
+  /**
+   * O QUE "SEM IVA" QUER DIZER EM EUROS, com um exemplo.
+   *
+   * "Sem IVA" é linguagem de quem passa recibos, e quem lê um preço para
+   * casa lê o número e assume que é o que paga. A diferença entre 350 € e
+   * 430,50 € descobre-se no ecrã seguinte, e a essa altura já se sente
+   * enganado — mesmo quando ninguém o enganou.
+   *
+   * Um exemplo com a conta feita custa uma linha e evita isso. Não é uma
+   * mudança de preços nem de regime: os valores continuam a sair como
+   * saíam, e quem emite a fatura é o profissional. Mostrar o TOTAL em vez do
+   * valor sem imposto é decisão do dono, com o contabilista — está anotado
+   * no CHANGELOG da auditoria.
+   */
+  exemploComIva:
+    "Exemplo: 100 € sem IVA são 123 € com IVA à taxa de 23 %. Se o profissional " +
+    "estiver na isenção do artigo 53.º, não acresce nada.",
 } as const;
 
 export const PRAZO_DE_RESPOSTA = {
