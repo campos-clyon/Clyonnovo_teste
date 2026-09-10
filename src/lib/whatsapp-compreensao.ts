@@ -180,12 +180,57 @@ function limpar(bruto: unknown): Compreensao | null {
   return { intencao, campos };
 }
 
+/** O modelo de recurso: não pensa antes de responder, e por isso é depressa. */
+const MODELO_DE_RESERVA = "gemini-2.0-flash";
+
+async function tentar(
+  modelName: string,
+  apiKey: string,
+  texto: string,
+  sistema: string,
+  segundos: number,
+): Promise<Compreensao | null> {
+  const comecou = Date.now();
+  try {
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const client = new GoogleGenerativeAI(apiKey);
+    const model = client.getGenerativeModel({
+      model: modelName,
+      systemInstruction: sistema,
+      generationConfig: { responseMimeType: "application/json", temperature: 0 },
+    });
+
+    const resposta = await Promise.race([
+      model.generateContent(texto),
+      new Promise<never>((_, rejeitar) =>
+        setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000),
+      ),
+    ]);
+
+    const lido = limpar(jsonDe(resposta.response.text()));
+    // Sem isto, uma queda do Gemini é indistinguível de uma conversa normal: o
+    // assistente volta aos números e ninguém sabe porquê. Ver a mensagem da
+    // Patrícia Gonçalves, 10-09-2026.
+    console.log(
+      `[whatsapp/compreensao] ${modelName}: ${Object.keys(lido?.campos ?? {}).length} campos,` +
+        ` intenção ${lido?.intencao ?? "—"}, ${Date.now() - comecou} ms`,
+    );
+    return lido;
+  } catch (e) {
+    console.error(
+      `[whatsapp/compreensao] ${modelName} falhou aos ${Date.now() - comecou} ms:`,
+      e instanceof Error ? e.message : e,
+    );
+    return null;
+  }
+}
+
 /**
  * O que a pessoa disse, lido pelo Gemini.
  *
- * Devolve null quando não há chave, quando a chamada falha e quando a resposta
- * não se lê — e nesses casos quem chama segue pelo caminho antigo. Falhar aqui
- * nunca pode ser calar-se.
+ * Devolve null quando não há chave, quando as duas tentativas falham e quando
+ * a resposta não se lê — e nesses casos quem chama segue pelo caminho antigo,
+ * o das expressões regulares. Falhar aqui nunca pode ser calar-se.
  */
 export async function compreender(
   texto: string,
@@ -197,29 +242,25 @@ export async function compreender(
   const t = texto.trim();
   if (!t) return null;
 
+  const sistema = instrucoes(resumoDoSabido(jaSabido), agora);
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-  try {
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({
-      model: modelName,
-      systemInstruction: instrucoes(resumoDoSabido(jaSabido), agora),
-      generationConfig: { responseMimeType: "application/json", temperature: 0 },
-    });
-
-    // Doze segundos: a pessoa está à espera no WhatsApp. Se demorar mais do
-    // que isto, mais vale responder pelos números do que não responder nada.
-    const resposta = await Promise.race([
-      model.generateContent(t),
-      new Promise<never>((_, rejeitar) =>
-        setTimeout(() => rejeitar(new Error("o Gemini demorou de mais")), 12_000),
-      ),
-    ]);
-
-    return limpar(jsonDe(resposta.response.text()));
-  } catch (e) {
-    console.error("[whatsapp/compreensao]", e instanceof Error ? e.message : e);
-    return null;
-  }
+  /*
+   * DUAS TENTATIVAS, E PORQUÊ.
+   *
+   * Doze segundos pareciam de sobra e não eram: a primeira cliente a escrever
+   * uma mensagem a sério — quarenta linhas com morada, datas, andar e preço —
+   * esgotou-os, caiu no plano B, e o assistente perguntou-lhe o nome que ela
+   * tinha dado na primeira linha. O gemini-2.5-flash pensa antes de responder,
+   * e o que lê aqui é uma mensagem inteira de WhatsApp.
+   *
+   * Dezoito segundos para o modelo bom; se ele não chegar a tempo — ou se o
+   * nome do modelo estiver errado, ou a Google devolver um erro — dez para um
+   * que não pensa. Vinte e oito no pior caso é muito tempo a olhar para o
+   * WhatsApp, mas é menos mau do que perguntar o que já foi dito.
+   */
+  const bom = await tentar(modelName, apiKey, t, sistema, 18);
+  if (bom) return bom;
+  if (modelName === MODELO_DE_RESERVA) return null;
+  return await tentar(MODELO_DE_RESERVA, apiKey, t, sistema, 10);
 }
