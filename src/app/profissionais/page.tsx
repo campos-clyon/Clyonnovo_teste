@@ -158,11 +158,18 @@ export default function ProfissionaisPage() {
             <h3 className="text-lg font-bold text-[#0B1929]">
               Não paga para responder a um pedido
             </h3>
+            {/*
+              A frase NÃO diz "descontados no fim", e a diferença não é de
+              estilo. Enquanto `A_PLATAFORMA_COBRA` for `false`, a CLYON não
+              recebe nem retém o dinheiro do trabalho: quem paga ao
+              profissional é o cliente, e a CLYON factura-lhe a comissão à
+              parte. Escrever "descontados" prometia um mecanismo que não
+              existe — e a quem se está a recrutar, ainda por cima.
+            */}
             <p className="mt-2 text-sm leading-relaxed text-slate-700">
-              Responder não custa nada, e responder a dez também não. A CLYON só ganha
-              quando você ganha: {Math.round(TAXA_PROFISSIONAL * 100)} % sobre o
-              valor do trabalho, descontados no fim, e só depois de o cliente confirmar
-              que ficou feito. Um orçamento que não dá em nada não lhe custa um cêntimo.
+              Responder não custa nada, e responder a dez também não. Só há comissão
+              quando fecha um trabalho: {Math.round(TAXA_PROFISSIONAL * 100)} % sobre o
+              valor acordado. Um orçamento que não dá em nada não lhe custa um cêntimo.
             </p>
           </div>
         </div>
