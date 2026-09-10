@@ -107,6 +107,9 @@ const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/pedidos",
   "/api/admin/profissionais",
   "/api/admin/convites",
+  // As candidaturas do site vivem no mesmo ecrã dos convites, e quem trata de
+  // um trata do outro.
+  "/api/admin/candidaturas",
   "/api/admin/negociacoes",
   "/api/admin/agenda",
   "/api/admin/whatsapp",
@@ -131,6 +134,7 @@ const SECCOES_QUE_ABREM: Array<{ prefixo: string; seccoes: SeccaoDoAssistente[] 
   { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
   { prefixo: "/api/admin/profissionais", seccoes: ["profissionais"] },
   { prefixo: "/api/admin/convites", seccoes: ["profissionais"] },
+  { prefixo: "/api/admin/candidaturas", seccoes: ["profissionais"] },
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
   { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
 ];

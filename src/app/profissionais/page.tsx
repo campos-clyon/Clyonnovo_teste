@@ -150,7 +150,7 @@ export default function ProfissionaisPage() {
             Entra-se por convite
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Não há inscrição aberta. Fale connosco, deixe o nome e o email, e enviamos-lhe
+            Não há inscrição aberta. Deixe a candidatura em dois minutos e, se avançar, enviamos-lhe
             o link do registo. Depois de o preencher, confirmamos os dados e avisamo-lo
             quando a conta ficar activa.
           </p>
@@ -162,7 +162,7 @@ export default function ProfissionaisPage() {
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/contactos"
+              href="/quero-ser-parceiro"
               className="flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-cyan-600 px-6 text-base font-bold text-white transition hover:bg-cyan-500"
             >
               Quero receber o convite

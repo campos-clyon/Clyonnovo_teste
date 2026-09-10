@@ -48,6 +48,11 @@ const staticPages = [
   { url: `${SITE_URL}/termos`, priority: 0.4, changeFrequency: "yearly" as const },
   { url: `${SITE_URL}/blog`, priority: 0.7, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/regioes`, priority: 0.9, changeFrequency: "weekly" as const },
+  // A candidatura de parceiros é uma página de recrutamento, e é no Google que
+  // um transportador procura com quem trabalhar. Vive fora de /profissionais
+  // de propósito: essa secção está atrás do portão do MVP, e uma página que o
+  // Google não pode ler não recruta ninguém.
+  { url: `${SITE_URL}/quero-ser-parceiro`, priority: 0.85, changeFrequency: "monthly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

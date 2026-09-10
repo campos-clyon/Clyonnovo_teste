@@ -672,16 +672,26 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
-                  "Olá! Sou uma empresa de remoções/transportes e quero saber mais sobre ser parceiro CLYON.",
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              {/*
+                ABRE O FORMULÁRIO, E NÃO O WHATSAPP.
+
+                Mandava para uma conversa por escrever no 931 632 622. Quem
+                carregava saía do site e caía numa caixa de mensagens com
+                dezenas de outras — sem nome, sem zona, sem os serviços que
+                faz, e sem ficar registado em lado nenhum. Quem não escrevesse
+                naquela hora, perdia-se; e quem escrevesse ficava à espera de
+                alguém que estava a atender clientes.
+
+                Agora preenche seis campos, a candidatura fica na base, e
+                aparece no backoffice para aprovação. A porta continua a ser o
+                convite — o que muda é que quem bate a ela fica registado.
+              */}
+              <Link
+                href="/quero-ser-parceiro"
                 className="inline-flex h-12 items-center justify-center rounded-xl bg-acao px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:-translate-y-0.5 hover:bg-acao-hover"
               >
                 Tornar-me parceiro
-              </a>
+              </Link>
             </div>
           </div>
         </div>

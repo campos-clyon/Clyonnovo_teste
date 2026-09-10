@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, KeyRound, Loader2, Mail, RefreshCw, Send, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { TIPOS_DE_VEICULO, etiquetaDoVeiculo } from "@/lib/convite-profissional";
+import AdminCandidaturasPanel from "@/components/admin/AdminCandidaturasPanel";
 
 /**
  * Convidar um profissional.
@@ -133,6 +134,9 @@ export default function AdminConvitesPanel() {
 
   return (
     <div>
+      {/* Quem se candidatou pelo site vem primeiro: é a fila que se esvazia. */}
+      <AdminCandidaturasPanel />
+
       {erro && (
         <p className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {erro}
