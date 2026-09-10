@@ -80,6 +80,9 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     ensacado: "Ensacado",
     chao:     "No chão",
     misto:    "Misto",
+    // Só para os pedidos JÁ GRAVADOS com este estado: a escolha saiu dos
+    // formulários e do registo manual, porque a CLYON não recolhe big bags.
+    // Ver `sacos-de-entulho.ts`.
     bigbags:  "Big bags",
     unknown:  "Não informado",
   },

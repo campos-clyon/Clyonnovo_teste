@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Info, Truck, HelpCircle } from "lucide-react";
+import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 
 type EntulhoState = "ensacado" | "chao" | "misto" | "bigbags" | "unknown";
 type EntulhoVolume = "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
@@ -74,13 +75,22 @@ export default function EntulhoDetails({
         <p className="text-xs text-slate-600 mt-0.5">Confirme para preço correto</p>
       </div>
 
-      {/* Estado do entulho */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/*
+        O BIG BAG SAIU DAQUI — igual ao simulador.
+
+        Um big bag cheio de entulho pesa perto de uma tonelada e não há forma
+        de o carregar à mão. Aceitar a escolha era aceitar um trabalho que
+        ninguém podia fazer. Ver `sacos-de-entulho.ts`.
+      */}
+      <div className="grid grid-cols-3 gap-2.5">
         {stateBtn("ensacado", "Ensacado")}
         {stateBtn("chao", "No chão")}
         {stateBtn("misto", "Misto")}
-        {stateBtn("bigbags", "Big Bags")}
       </div>
+      <p className="text-xs text-slate-500">
+        A recolha é feita em sacos de obra até {PESO_MAXIMO_DO_SACO_KG} kg, carregados à mão.
+        Se estiver no chão, o profissional ensaca no local. Não há contentores nem big bags.
+      </p>
 
       {/* Quantidade - varia conforme o estado */}
       <div className="space-y-2 pt-1">
@@ -107,18 +117,6 @@ export default function EntulhoDetails({
               />
             </div>
           </>
-        ) : state === "bigbags" ? (
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-slate-900">Número de big bags</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={quantidadeBigBags || ""}
-              onChange={(e) => onQuantidadeBigBagsChange?.(e.target.value)}
-              placeholder="Ex: 3"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
-            />
-          </div>
         ) : (
           // ensacado / chao (ou ainda sem estado): estimativa por volume
           <div className="space-y-2">

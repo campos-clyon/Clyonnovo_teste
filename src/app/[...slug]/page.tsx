@@ -34,6 +34,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
 
 /*
@@ -84,13 +85,20 @@ function buildTitle(serviceName: string, cityName: string, serviceSlug: string, 
   }
 
   if (serviceSlug === "recolha-entulho") {
+    /*
+      SEM BIG BAGS NO TÍTULO — é o que aparece no Google.
+
+      Prometia «Big Bags» a quem procurava, e a CLYON não os tem: a recolha é
+      a saco de 25 kg. Um título que promete o que a página não cumpre traz
+      cliques que se perdem no primeiro parágrafo. Ver `sacos-de-entulho.ts`.
+    */
     if (citySlug === "lisboa") {
-      return `Recolha de Entulho em Lisboa — Big Bags, ${PRECO_ENTULHO}, 6h`;
+      return `Recolha de Entulho em Lisboa — a Saco, ${PRECO_ENTULHO}, 6h`;
     }
     if (citySlug === "setubal") {
       return `Recolha de Entulho em Setúbal — Obras e Remodelações 6h`;
     }
-    return `Recolha de Entulho em ${cityName} — Big Bags e Camiões, 6h`;
+    return `Recolha de Entulho em ${cityName} — Sacos de Obra, 6h`;
   }
 
   return `${serviceName} em ${cityName} — Orçamento Grátis em 6h`;
@@ -131,12 +139,12 @@ function buildDescription(
 
   if (serviceSlug === "recolha-entulho") {
     if (citySlug === "lisboa") {
-      return `Recolha de entulho em Lisboa: big bags, sacos e recolha completa por camião. Obras, remodelações e demolições. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis por WhatsApp.`;
+      return `Recolha de entulho em Lisboa, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg carregados à mão. Obras, remodelações e demolições. Sem contentores. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de entulho em Setúbal: big bags, sacos e camião completo. Carregamento direto, resposta em 6h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
+      return `Recolha de entulho em Setúbal, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg. Carregamento à mão e transporte no mesmo dia, sem contentores. Resposta em 6h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
     }
-    return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis!`;
+    return `Recolha de entulho em ${cityName}, ${regionLabel}, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg. Sem contentores e sem aluguer. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis!`;
   }
 
   return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;

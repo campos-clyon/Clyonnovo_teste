@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
@@ -40,11 +41,21 @@ const SERVICOS = [
 const PRECISA_DE_DOIS_ENDERECOS = (servico: string) => servico === "mudanca";
 const PRECISA_DE_SACOS = (servico: string) => servico === "recolha_entulho";
 
+/*
+ * SEM BIG BAGS — a CLYON não os recolhe.
+ *
+ * A recolha é a saco de 25 kg, carregado à mão (ver `sacos-de-entulho.ts`).
+ * Um big bag cheio anda perto da tonelada. Registar um pedido assim é marcar
+ * um trabalho que ninguém pode fazer, e quem o descobre é o profissional, à
+ * porta do cliente.
+ *
+ * A etiqueta continua a existir em `translations.ts` — os pedidos antigos
+ * gravados com este estado têm de continuar a ler-se.
+ */
 const ESTADOS_DO_ENTULHO = [
   ["ensacado", "Já ensacado"],
   ["chao", "No chão, por ensacar"],
   ["misto", "Misto"],
-  ["bigbags", "Big bags"],
 ] as const;
 
 /** Lê do rawOrderJson os campos próprios do serviço, para o editor os mostrar. */
@@ -726,8 +737,10 @@ export default function RegistarPedido({
                 className={campo}
               />
               <span className="mt-0.5 block text-[10px] text-slate-500">
-                Um big bag conta como 42 sacos. Sem número, o motor não sabe se
-                é uma mala de escombros ou uma obra inteira.
+                Sacos de obra até {PESO_MAXIMO_DO_SACO_KG} kg — é assim que se recolhe, e não
+                há outra forma. Sem número, o motor não sabe se é uma mala de escombros ou
+                uma obra inteira. Se o cliente falar em big bags ou contentor, diga-lhe que
+                não fazemos e conte os sacos com ele.
               </span>
             </label>
           </>

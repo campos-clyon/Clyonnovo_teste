@@ -23,6 +23,12 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import {
+  COMO_SE_RECOLHE_ENTULHO,
+  NAO_HA_CONTENTORES,
+  PESO_MAXIMO_DO_SACO_KG,
+  RESPOSTA_SOBRE_CONTENTORES,
+} from "@/lib/sacos-de-entulho";
 
 /*
  * Esta página contradizia-se a si própria.
@@ -37,13 +43,15 @@ const PRECO_ENTULHO = PRECOS.recolha_entulho;
 export const metadata: Metadata = {
   title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
   description:
-    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal. Big bags, contentores e carregamento direto. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
+    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg carregados à mão. Sem contentores. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",
     "recolha de entulho de obras",
     "recolha de escombros",
-    "big bag entulho",
+    // "big bag entulho" saiu: procurar por big bags e cair numa página que
+    // não os faz é o clique que mais depressa se perde. Ver `sacos-de-entulho`.
+    "sacos de entulho",
     "carga de entulho",
     "recolha de entulho Setúbal",
     "recolha de entulho Almada",
@@ -54,7 +62,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
     description:
-      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal. Big bags e carga completa. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
+      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal, a saco e carregado à mão. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-entulho`,
   },
 };
@@ -72,7 +80,7 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
  * símbolo uma só vez) é do PricingTable: aqui passam-se os números.
  */
 const pricingRows = [
-  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: "120 €", description: "Pequenas quantidades em saco big bag" },
+  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: "120 €", description: `Pequenas quantidades, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg` },
   { service: "Recolha pequena (até 1 m³)", priceFrom: "120 €", priceTo: "180 €", description: "Remodelações de WC ou cozinha" },
   { service: "Recolha média (até 3 m³)", priceFrom: "180 €", priceTo: "280 €", description: "Obras de apartamento T1/T2" },
   { service: "Recolha grande (até 5 m³)", priceFrom: "280 €", priceTo: "400 €", description: "Demolições e renovações completas" },
@@ -90,7 +98,18 @@ const faqs = [
   },
   {
     question: "Fazem carregamento do entulho?",
-    answer: "Sim, o profissional carrega o entulho diretamente para a carrinha. Não precisa de se preocupar com o transporte — nós tratamos de tudo.",
+    answer: `Sim, o profissional carrega o entulho diretamente para a carrinha. ${COMO_SE_RECOLHE_ENTULHO} Se estiver solto no chão, ensaca-o no local.`,
+  },
+  {
+    /*
+      A PERGUNTA DOS CONTENTORES, RESPONDIDA COM UM NÃO.
+
+      É das mais procuradas de todo o serviço, e o site respondia-lhe que sim
+      — em cinco cidades, com medidas e prazos de aluguer. Não há contentores.
+      A pergunta fica porque continua a ser feita; a resposta é que muda.
+    */
+    question: "A CLYON fornece ou aluga contentores para entulho?",
+    answer: RESPOSTA_SOBRE_CONTENTORES,
   },
   {
     question: "Qual o preço mínimo para recolha de entulho?",
@@ -116,7 +135,8 @@ const differentiators = [
   "Carregamento direto pelo profissional",
   "Recolha pontual, com destino licenciado",
   "Sem espera: chegamos, carregam e levamos",
-  "Equipa preparada para sacos, montes ou entulho disperso",
+  `Sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg — descem por qualquer escada`,
+  NAO_HA_CONTENTORES,
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];
 

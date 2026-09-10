@@ -28,7 +28,7 @@ const faqCategories = [
       },
       {
         q: "Que móveis recolhem?",
-        a: "Os profissionais recolhem qualquer tipo de móvel: sofás, camas, colchões, armários, estantes, secretárias, cadeiras, mesas, aparadores, cómodas, roupeiros e mobiliário de escritório. Também retiram eletrodomésticos (frigoríficos, máquinas de lavar, fogões, micro-ondas) e objetos de grandes dimensões que não cabem no contentor.",
+        a: "Os profissionais recolhem qualquer tipo de móvel: sofás, camas, colchões, armários, estantes, secretárias, cadeiras, mesas, aparadores, cómodas, roupeiros e mobiliário de escritório. Também retiram eletrodomésticos (frigoríficos, máquinas de lavar, fogões, micro-ondas) e objetos de grandes dimensões que não cabem no contentor do lixo da rua.",
       },
       {
         q: "Fazem recolha de sofás em Lisboa no mesmo dia?",

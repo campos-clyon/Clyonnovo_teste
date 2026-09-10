@@ -1,5 +1,11 @@
 import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "./seo-data";
 import { PRECOS } from "./precos-publicos";
+import {
+  COMO_SE_RECOLHE_ENTULHO,
+  NAO_HA_CONTENTORES,
+  PESO_MAXIMO_DO_SACO_KG,
+  RESPOSTA_SOBRE_CONTENTORES,
+} from "./sacos-de-entulho";
 
 /**
  * Conteúdo único e personalizado por cidade E por serviço para páginas SEO locais.
@@ -100,20 +106,22 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Entulho em Lisboa - Obras e Remodelações | CLYON",
     h1: "Recolha de Entulho de Obras em Lisboa",
     localIntro:
-      "Lisboa está sempre em obras. Remodelações de apartamentos antigos, renovações de lojas no Chiado, restauros em Alfama. O entulho acumula-se e precisa de sair rápido para a obra avançar. A CLYON recolhe entulho em sacos, a granel ou em contentores, adaptando o serviço ao volume e ao tipo de acesso do imóvel.",
+      `Lisboa está sempre em obras. Remodelações de apartamentos antigos, renovações de lojas no Chiado, restauros em Alfama. O entulho acumula-se e precisa de sair rápido para a obra avançar. ${COMO_SE_RECOLHE_ENTULHO} ${NAO_HA_CONTENTORES}`,
     accessNotes:
-      "Em muitas obras de Lisboa, o acesso é por escadas ou ruas estreitas onde não entra contentor grande. Nestes casos, trabalhamos com sacos big bag ou recolha manual com carrinho de mão.",
+      "Em muitas obras de Lisboa o acesso é por escadas ou ruas estreitas, onde não entra nem estaciona nada de grande. É por isso que se trabalha a saco e à mão: desce por qualquer escada e não ocupa a rua nem precisa de licença.",
     neighborhoodHighlight:
       "As zonas com mais obras em Lisboa são o centro histórico (Alfama, Mouraria, Baixa), Avenidas Novas e Parque das Nações. Cada zona tem desafios de acesso diferentes.",
     nearbyAreas: ["Amadora", "Loures", "Odivelas", "Oeiras"],
     faqs: [
       {
         q: "Quanto custa recolher entulho de uma obra em Lisboa?",
-        a: `Depende do volume. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA — uma remodelação de casa de banho gera cerca de 2 a 3 m³. Uma obra maior precisa de contentor e o preço acompanha o volume.`,
+        a: `Depende da quantidade. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA — uma remodelação de casa de banho dá tipicamente 80 a 120 sacos. Diga-nos quantos sacos tem, ou mande uma fotografia, e o preço sai daí.`,
       },
       {
         q: "A CLYON fornece contentor para entulho em Lisboa?",
-        a: "Fornecemos contentores de vários tamanhos para obras em Lisboa. O contentor fica no local o tempo combinado e depois vamos buscar. O preço inclui transporte e despejo.",
+        // A pergunta fica: é procurada, e quem a faz merece um não em dez
+        // segundos em vez de o descobrir na véspera da obra.
+        a: RESPOSTA_SOBRE_CONTENTORES,
       },
       {
         q: "Recolhem entulho de obras ao sábado em Lisboa?",
@@ -286,7 +294,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     localIntro:
       "A sede da CLYON fica em Belverde, Amora - no coração do Seixal. Isto significa que para recolha de entulho no Seixal conseguimos os melhores preços e tempos de resposta do mercado. Servimos obras em Corroios, Arrentela, Paio Pires, Fernão Ferro e todas as freguesias do concelho sem custos de deslocação.",
     accessNotes:
-      "No Seixal temos excelente conhecimento local: sabemos onde cabe contentor (Corroios, Cruz de Pau), onde é melhor trabalhar com sacos (zonas mais antigas) e onde há restrições de estacionamento. Isto permite-nos dar orçamentos precisos à primeira.",
+      "No Seixal temos excelente conhecimento local: sabemos onde a carrinha encosta à porta (Corroios, Cruz de Pau), onde há escadas e ruas estreitas (zonas mais antigas) e onde há restrições de estacionamento. Isto permite-nos dar orçamentos precisos à primeira.",
     neighborhoodHighlight:
       "Corroios e Amora são as zonas com mais obras de remodelação no Seixal. Muitos apartamentos dos anos 80-90 estão a ser modernizados, gerando entulho de demolição de WCs, cozinhas e divisórias.",
     nearbyAreas: ["Almada", "Barreiro", "Lisboa", "Setúbal"],
@@ -297,22 +305,22 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa um contentor de entulho no Seixal?",
-        a: "Por estarmos sediados em Amora, conseguimos preços mais competitivos no Seixal do que em zonas mais distantes. O valor depende do volume, tipo de entulho e duração. Peça orçamento sem compromisso.",
+        a: RESPOSTA_SOBRE_CONTENTORES,
       },
       {
         q: "Podem deixar contentor em Corroios ou Amora?",
-        a: "Sim. Ficam contentores em obras em Corroios, Amora, Arrentela, Paio Pires e Fernão Ferro. O contentor fica o tempo combinado e é recolhido depois.",
+        a: `${NAO_HA_CONTENTORES} O que fazemos em Corroios, Amora, Arrentela, Paio Pires e Fernão Ferro é ir buscar o entulho ensacado e levá-lo no mesmo dia — não fica nada na rua nem é preciso licença de ocupação.`,
       },
       {
         q: "Recolhem entulho aos sacos no Seixal?",
-        a: "Sim. Para obras mais pequenas trabalhamos com sacos big bag. Por estarmos sediados em Amora, o custo de deslocação é mínimo, o que torna o preço mais competitivo. Peça orçamento.",
+        a: `Sim, e é a única forma como o fazemos: sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg, carregados à mão. Por estarmos sediados em Amora, o custo de deslocação é mínimo, o que torna o preço mais competitivo. Peça orçamento.`,
       },
       {
         q: "Podem recolher entulho no mesmo dia no Seixal?",
         a: "Na maioria dos casos, sim. Por estarmos em Amora, conseguimos encaixar pedidos urgentes de entulho no Seixal com facilidade.",
       },
     ],
-    ctaText: "Obra no Seixal? Somos vizinhos - contentor ou sacos, entregamos hoje.",
+    ctaText: "Obra no Seixal? Somos vizinhos - diga quantos sacos tem e vamos hoje.",
   },
 
   // ---------------------------------------------------------------------------
@@ -324,31 +332,31 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Entulho em Almada - Obras na Margem Sul | CLYON",
     h1: "Recolha de Entulho de Obras em Almada",
     localIntro:
-      "Almada tem muitas obras em curso: remodelações de apartamentos antigos em Cacilhas, renovações de casas de férias na Costa da Caparica, construções novas no Pragal. A CLYON está a 10 minutos de qualquer ponto de Almada e consegue responder rápido a pedidos de recolha de entulho, seja em sacos, a granel ou com contentor.",
+      `Almada tem muitas obras em curso: remodelações de apartamentos antigos em Cacilhas, renovações de casas de férias na Costa da Caparica, construções novas no Pragal. A CLYON está a 10 minutos de qualquer ponto de Almada e responde rápido a pedidos de recolha de entulho. ${COMO_SE_RECOLHE_ENTULHO}`,
     accessNotes:
-      "Na Costa da Caparica, a maioria das obras tem bom acesso para contentor. Em Cacilhas e Almada Velha, trabalhamos mais com sacos por causa das ruas estreitas.",
+      "Na Costa da Caparica a carrinha encosta quase sempre à porta. Em Cacilhas e Almada Velha, com ruas estreitas e escadas, o entulho desce a saco e à mão — que é a forma de o tirar de onde nada de grande entra.",
     neighborhoodHighlight:
       "A Costa da Caparica é a zona com mais obras de renovação em Almada. Muitos apartamentos antigos estão a ser modernizados.",
     nearbyAreas: ["Seixal", "Lisboa", "Barreiro", "Setúbal"],
     faqs: [
       {
         q: "Quanto custa um contentor de entulho em Almada?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, com transporte e destino licenciado incluídos. Um contentor pequeno leva cerca de 2 m³.`,
+        a: `${NAO_HA_CONTENTORES} A recolha, essa, é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, com transporte e destino licenciado incluídos — e o preço acompanha o número de sacos.`,
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
-        a: "Sim. Ficam contentores em obras na Costa da Caparica. O contentor fica o tempo combinado e é recolhido depois.",
+        a: `Não deixamos. ${COMO_SE_RECOLHE_ENTULHO} Vai tudo no mesmo dia: não fica nada à porta da obra a ocupar lugar nem a atrair despejos de outros.`,
       },
       {
         q: "Recolhem entulho aos sacos em Almada?",
-        a: "Sim. Para obras mais pequenas ou acessos difíceis, trabalhamos com sacos big bag. É mais prático em prédios sem elevador.",
+        a: `Sim, e é a única forma como o fazemos: sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg. É o que funciona em prédios sem elevador — desce por qualquer escada.`,
       },
       {
         q: "Podem recolher entulho de uma obra ao sábado em Almada?",
         a: "Aos sábados de manhã conseguimos fazer recolhas em Almada, mediante marcação prévia.",
       },
     ],
-    ctaText: "Obra em Almada? Somos locais - contentor ou sacos, entregamos rápido.",
+    ctaText: "Obra em Almada? Somos locais - diga quantos sacos tem e vamos buscar.",
   },
 
   // ---------------------------------------------------------------------------
@@ -481,31 +489,31 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-entulho-setubal": {
     citySlug: "setubal",
     serviceSlug: "recolha-entulho",
-    metaTitle: "Recolha de Entulho em Setúbal — Contentores e Sacos de Obra",
-    h1: "Recolha de Entulho em Setúbal — Contentores, Sacos e Obras Pequenas",
+    metaTitle: "Recolha de Entulho em Setúbal — Sacos de Obra até 25 kg",
+    h1: "Recolha de Entulho em Setúbal — a Saco, e Levado no Mesmo Dia",
     localIntro:
-      "Tem entulho de obra em Setúbal? A CLYON fornece contentores e faz recolha de entulho em sacos para obras de qualquer dimensão. Cobrimos todo o concelho de Setúbal, desde o centro histórico até Azeitão e Arrábida. Para pequenas remodelações, retiram sacos de entulho diretamente. Para obras maiores, colocamos contentor no local pelo tempo necessário e depois vamos buscar.",
+      `Tem entulho de obra em Setúbal? ${COMO_SE_RECOLHE_ENTULHO} Cobrimos todo o concelho, desde o centro histórico até Azeitão e Arrábida. ${NAO_HA_CONTENTORES} O entulho sai no mesmo dia em que o profissional lá vai: não fica nada à porta da obra.`,
     accessNotes:
-      "No centro de Setúbal, o estacionamento de contentores pode ser limitado em algumas ruas. Avaliamos sempre o local antes de colocar contentor. Em Azeitão e quintas, o acesso é normalmente mais fácil.",
+      "No centro de Setúbal há ruas onde não se estaciona nada de grande nem por dez minutos — e é onde trabalhar a saco resolve, porque não é preciso licença de ocupação da via nem esperar por lugar. Em Azeitão e nas quintas, a carrinha encosta à porta.",
     neighborhoodHighlight:
       "As zonas com mais obras em Setúbal são o centro histórico (renovações de edifícios antigos), a Avenida Luísa Todi e as novas urbanizações. Azeitão tem muitas quintas em remodelação.",
     nearbyAreas: ["Palmela", "Sesimbra", "Seixal", "Barreiro"],
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, e o preço acompanha o volume — dez sacos dão cerca de 1 m³, um contentor pequeno cerca de 3 m³. Enviamos orçamento exato depois de sabermos o volume e o local.`,
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, e o preço acompanha o número de sacos — cerca de 40 sacos de ${PESO_MAXIMO_DO_SACO_KG} kg fazem um metro cúbico. Enviamos orçamento exato depois de sabermos a quantidade e o local.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",
-        a: "Sim. Fornecemos contentores de 3m³, 5m³ e 8m³. Entregamos no local, o contentor fica pelo tempo combinado (normalmente 3-7 dias) e depois vamos buscar. O preço inclui entrega, aluguer e recolha.",
+        a: RESPOSTA_SOBRE_CONTENTORES,
       },
       {
-        q: "Em quanto tempo entregam contentor de entulho em Setúbal?",
-        a: "Normalmente entregamos em 24 a 48 horas. Se for urgente e tivermos disponibilidade, conseguimos no próprio dia. Contacte-nos para verificar.",
+        q: "Em quanto tempo recolhem o entulho em Setúbal?",
+        a: "Normalmente em 24 a 48 horas. Se for urgente e houver profissional livre, conseguimos no próprio dia. Como não há contentor para entregar nem para ir buscar, é uma deslocação só.",
       },
       {
         q: "Recolhem entulho de obras pequenas em Setúbal?",
-        a: "Sim. Remodelações de casas de banho, cozinhas, substituição de pavimentos. Não é preciso contentor - retiramos os sacos diretamente. É mais económico para obras pequenas.",
+        a: "Sim, e é onde isto funciona melhor: remodelações de casas de banho, cozinhas, substituição de pavimentos. Retiram-se os sacos e vai tudo de uma vez — sem aluguer, sem dias de espera e sem nada parado à porta.",
       },
       {
         q: "Que tipo de entulho a CLYON recolhe em Setúbal?",
@@ -517,7 +525,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho em locais com acesso difícil em Setúbal?",
-        a: "Sim. Se o contentor não couber ou a rua for estreita, fazemos recolha manual com sacos. Avaliamos sempre o local antes de dar preço para não haver surpresas.",
+        a: `Sim — é o que a recolha a saco permite. Cada saco vai até ${PESO_MAXIMO_DO_SACO_KG} kg e desce à mão por escadas, corredores estreitos ou ruas onde não entra nada de grande. Avaliamos sempre o local antes de dar preço, para não haver surpresas.`,
       },
       {
         q: "A CLYON também recolhe entulho em Azeitão e Arrábida?",
@@ -665,16 +673,16 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Entulho em Monte Abraão - Obras em Queluz e Massamá | CLYON",
     h1: "Recolha de Entulho de Obras em Monte Abraão",
     localIntro:
-      "Monte Abraão e Massamá têm muitos apartamentos dos anos 80-90 que estão a ser renovados. Remodelações de casas de banho, cozinhas e demolição de divisórias geram entulho que precisa de ser retirado rapidamente para a obra avançar. A CLYON recolhe entulho em sacos big bag ou contentor, adaptando o serviço ao volume da obra e ao espaço disponível no prédio.",
+      `Monte Abraão e Massamá têm muitos apartamentos dos anos 80-90 que estão a ser renovados. Remodelações de casas de banho, cozinhas e demolição de divisórias geram entulho que precisa de ser retirado rapidamente para a obra avançar. ${COMO_SE_RECOLHE_ENTULHO} ${NAO_HA_CONTENTORES}`,
     accessNotes:
-      "A maioria dos prédios em Monte Abraão tem elevador, mas o entulho é pesado e sujo. Trabalhamos com sacos resistentes e protegemos as zonas comuns durante o transporte. Para obras maiores, podemos deixar contentor na rua se houver licença.",
+      `A maioria dos prédios em Monte Abraão tem elevador, mas o entulho é pesado e sujo. Trabalha-se com sacos resistentes de ${PESO_MAXIMO_DO_SACO_KG} kg — que cabem no elevador e não rebentam a meio — e protegem-se as zonas comuns durante o transporte.`,
     neighborhoodHighlight:
       "As zonas com mais obras de remodelação em Monte Abraão são os edifícios junto à estação de comboio e as urbanizações de Massamá Norte. São apartamentos familiares em processo de modernização.",
     nearbyAreas: ["Queluz", "Massamá", "Sintra", "Amadora"],
     faqs: [
       {
         q: "A CLYON recolhe entulho de obras em Monte Abraão?",
-        a: "Sim. Os profissionais recolhem entulho de remodelações em Monte Abraão, Queluz e Massamá. Trabalha-se com sacos big bag para obras pequenas ou contentores para volumes maiores.",
+        a: `Sim. Os profissionais recolhem entulho de remodelações em Monte Abraão, Queluz e Massamá. ${COMO_SE_RECOLHE_ENTULHO}`,
       },
       {
         q: "Podem recolher entulho de um apartamento em Monte Abraão?",
@@ -686,7 +694,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Fornecem contentor para obras em Monte Abraão?",
-        a: "Sim, fornecemos contentores de vários tamanhos. O contentor fica no local o tempo combinado. É necessário verificar se há espaço na rua ou garagem do prédio.",
+        a: RESPOSTA_SOBRE_CONTENTORES,
       },
     ],
     ctaText: "Obra em Monte Abraão? Envie fotos do entulho para orçamento grátis.",
