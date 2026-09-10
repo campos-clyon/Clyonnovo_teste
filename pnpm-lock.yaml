@@ -35,9 +35,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.2.1
         version: 4.2.1
-      '@types/bcrypt':
-        specifier: ^6.0.0
-        version: 6.0.0
       '@upstash/redis':
         specifier: ^1.38.0
         version: 1.38.0
@@ -53,9 +50,6 @@ importers:
       ai:
         specifier: ^6.0.0
         version: 6.0.208(zod@4.1.12)
-      bcrypt:
-        specifier: ^6.0.0
-        version: 6.0.0
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
