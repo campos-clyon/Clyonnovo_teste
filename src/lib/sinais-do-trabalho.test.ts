@@ -133,8 +133,15 @@ describe("a ordem e a cor", () => {
 
 describe("o cartão no painel", () => {
   it("mostra os distintivos e o €/km", () => {
-    expect(TRABALHOS).toContain("sinaisDoTrabalho({ ...p, quantasFotos: fotos.length })");
-    expect(TRABALHOS).toContain("porKmPorExtenso(p)");
+    /*
+     * Nos «novos», os sinais e o €/km seguem a SUGESTÃO da CLYON e não o
+     * valor cru — é esse o número que o cartão lhe mostra, e o ecrã de dentro
+     * tem de dizer o mesmo. Por isso a conta recebe `paraOsSinais` e já não
+     * `p`. O que aqui se guarda é a chamada com a contagem de fotos, e não o
+     * nome que a variável tem hoje.
+     */
+    expect(TRABALHOS).toMatch(/sinaisDoTrabalho\(\{ \.\.\.\w+, quantasFotos: fotos\.length \}\)/);
+    expect(TRABALHOS).toMatch(/porKmPorExtenso\(\w+\)/);
     expect(TRABALHOS).toContain("{sinal.emoji}");
   });
 

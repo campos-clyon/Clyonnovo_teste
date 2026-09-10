@@ -22,7 +22,15 @@ describe("o menu", () => {
     expect(SHELL).toMatch(
       /Plataforma", itens: \[[^\]]*"negociacoes_clyon"[^\]]*\]/,
     );
-    expect(SHELL).toMatch(/Gerir", itens: \["testadores", "configs"\]/);
+    /*
+     * A PERTENÇA, e não a lista inteira — a mesma lição do grupo "Plataforma".
+     *
+     * O que este teste guarda é que o "Acesso aos testes" desceu para "Gerir",
+     * e não a composição do grupo: "equipa" entrou depois e chumbava-o sem
+     * nada ter partido.
+     */
+    const gerir = SHELL.slice(SHELL.indexOf('titulo: "Gerir"'));
+    expect(gerir.slice(0, gerir.indexOf("]"))).toContain('"testadores"');
   });
 
   it("o ecrã antigo continua acessível — nada foi apagado", () => {
@@ -39,7 +47,13 @@ describe("o painel dividido", () => {
     // Depois da fusão dos ecrãs, o menu usa um modo só — "tudo" — mas o
     // componente mantém os três: a secção antiga responde a links antigos.
     expect(PAINEL).toContain('mostrar?: "tudo" | "clyon" | "clientes"');
-    expect(SHELL).toContain('<AdminNegociacoesPanel mostrar="tudo" />');
+    /*
+     * O `mostrar="tudo"` é a garantia; a lista de atributos é livre de
+     * crescer. `podeApagar` entrou depois — quem apaga passou a ser só o
+     * admin — e um teste preso ao texto exacto da etiqueta chumbava por
+     * causa de uma restrição que ele próprio quereria.
+     */
+    expect(SHELL).toMatch(/<AdminNegociacoesPanel\s+mostrar="tudo"[^>]*\/>/);
   });
 
   it("o registar pedido vive no ecrã da CLYON", () => {
