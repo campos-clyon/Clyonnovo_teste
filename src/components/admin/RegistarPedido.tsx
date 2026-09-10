@@ -80,7 +80,7 @@ const MOTIVOS: Record<string, string> = {
   sem_morada: "a morada do pedido não foi localizada",
   nao_emite_fatura: "não passam fatura",
   nao_emite_guia: "sem guia de transporte verificada",
-  inactivo: "conta inactiva",
+  inactivo: "conta inativa",
   nao_aprovado: "ainda não aprovados",
 };
 
@@ -951,7 +951,7 @@ function Resumo({
       */}
       <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
         <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-        {emEdicao ? `Pedido #${r.id} actualizado` : `Pedido #${r.id} criado e gravado`}
+        {emEdicao ? `Pedido #${r.id} atualizado` : `Pedido #${r.id} criado e gravado`}
       </p>
       <p className="mt-0.5 text-xs text-emerald-400/70">
         {emEdicao
@@ -1135,8 +1135,8 @@ function Resumo({
           {alcance == null
             ? "Alcance não avaliado"
             : quantos > 0
-              ? `Chegaria a ${quantos} de ${alcance.candidatos} profissionais activos`
-              : `Não chegaria a nenhum dos ${alcance.candidatos} profissionais activos`}
+              ? `Chegaria a ${quantos} de ${alcance.candidatos} profissionais ativos`
+              : `Não chegaria a nenhum dos ${alcance.candidatos} profissionais ativos`}
         </p>
 
         {quantos > 0 && (

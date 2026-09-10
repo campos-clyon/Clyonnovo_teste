@@ -329,7 +329,7 @@ export default function AdminTrabalhosClient() {
       body: JSON.stringify(form),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Erro ao actualizar");
+    if (!res.ok) throw new Error(data.error ?? "Erro ao atualizar");
     setEditing(null);
     await load();
   }

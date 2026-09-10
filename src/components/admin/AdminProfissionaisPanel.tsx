@@ -119,7 +119,7 @@ export default function AdminProfissionaisPanel() {
       });
       const dados = await res.json();
       if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível actualizar.");
+        setErro(dados.error ?? "Não foi possível atualizar.");
         return;
       }
       /*
@@ -502,7 +502,7 @@ function Cartao({
             disabled={ocupado}
             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
           >
-            {p.estado === "suspenso" ? "Reactivar" : "Aprovar"}
+            {p.estado === "suspenso" ? "Reativar" : "Aprovar"}
           </button>
         )}
         {p.estado === "aprovado" && (

@@ -247,7 +247,7 @@ export default function AdminTestadoresPanel() {
                   : "bg-emerald-600 text-white hover:bg-emerald-500"
               }`}
             >
-              {t.activo ? "Desactivar" : "Reactivar"}
+              {t.activo ? "Desativar" : "Reativar"}
             </button>
           </article>
         ))}

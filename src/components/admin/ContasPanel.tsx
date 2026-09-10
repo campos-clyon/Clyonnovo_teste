@@ -89,7 +89,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
 
 ` +
         `A conta é apagada e não se recupera. Os pedidos que fez continuam no ` +
-        `painel — são o registo do serviço e das facturas.`,
+        `painel — são o registo do serviço e das faturas.`,
     );
     if (!certeza) return;
 
@@ -301,7 +301,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                             desactivar. As duas dos administradores não se
                             usavam — quem gere o backoffice é colaborador, não
                             é cliente, e um cliente promovido a admin não
-                            ganhava acesso a nada. E "desactivar" escondia a
+                            ganhava acesso a nada. E "desativar" escondia a
                             linha sem apagar nada, que é o pior dos dois
                             mundos: parece feito e não está. */}
                         <button

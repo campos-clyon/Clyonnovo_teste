@@ -688,9 +688,9 @@ export default function AdminNegociacoesPanel({
   const quandoFoiLido = (() => {
     if (!lidoEm) return "";
     const seg = Math.round((agoraParaOReloginho - lidoEm) / 1000);
-    if (seg < 45) return "actualizado agora";
+    if (seg < 45) return "atualizado agora";
     const min = Math.round(seg / 60);
-    return `actualizado há ${min} min`;
+    return `atualizado há ${min} min`;
   })();
 
   useEffect(() => {
@@ -901,7 +901,7 @@ export default function AdminNegociacoesPanel({
           .map(([m, n]) => `${m.replace(/_/g, " ")}: ${n}`)
           .join(", ");
         setErro(
-          `Promovido, mas não chegou a nenhum de ${dados.candidatos} profissionais activos.` +
+          `Promovido, mas não chegou a nenhum de ${dados.candidatos} profissionais ativos.` +
             (motivos ? ` Motivos — ${motivos}.` : ""),
         );
       } else if (dados.avisados < dados.receberam) {
@@ -1105,7 +1105,7 @@ export default function AdminNegociacoesPanel({
           .map(([m, n]) => `${m.replace(/_/g, " ")}: ${n}`)
           .join(", ");
         setErro(
-          `Continua sem chegar a ninguém de ${dados.candidatos} profissionais activos.` +
+          `Continua sem chegar a ninguém de ${dados.candidatos} profissionais ativos.` +
             (motivos ? ` Motivos — ${motivos}.` : ""),
         );
       } else if (dados.avisados < dados.receberam) {
@@ -1541,7 +1541,7 @@ export default function AdminNegociacoesPanel({
                   {" · "}o cliente paga <strong>{euros(conta.total)}</strong>
                   {" — "}
                   {euros(aoProfissional)} ao profissional
-                  {conta.temIva ? ` (com o IVA dele, ${euros(conta.iva)}, na factura dele)` : " (isento de IVA)"}
+                  {conta.temIva ? ` (com o IVA dele, ${euros(conta.iva)}, na fatura dele)` : " (isento de IVA)"}
                   {" e "}
                   {euros(conta.taxa)} de taxa à CLYON
                   {" · "}o profissional recebe, sem IVA,{" "}
@@ -2062,7 +2062,7 @@ export default function AdminNegociacoesPanel({
           Carregue num cartão para ver só esse bloco; o título de cada bloco abre e fecha.
         </p>
         {/*
-          O botão "Actualizar" saiu daqui.
+          O botão "Atualizar" saiu daqui.
 
           O ecrã passou a ir buscar dados sozinho de 30 em 30 segundos, e um
           botão de recarregar ao lado disso só semeia dúvida: quem o vê
@@ -3219,7 +3219,7 @@ function ConfirmarPelaClyon({
                 <dt className="text-slate-500">
                   ao profissional — acordado{" "}
                   {conta.temIva
-                    ? `+ IVA ${euros(conta.iva)}, na factura dele`
+                    ? `+ IVA ${euros(conta.iva)}, na fatura dele`
                     : "(isento de IVA)"}
                 </dt>
                 <dd className="tabular-nums text-slate-300">{euros(aoProfissional)}</dd>

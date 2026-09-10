@@ -57,7 +57,7 @@ export default function AvisosNoTelemovel() {
           "O telemóvel recusou a permissão. Pode dá-la nas definições do browser, em Notificações.",
         );
     } catch {
-      setErro("Não foi possível activar. Tente outra vez.");
+      setErro("Não foi possível ativar. Tente outra vez.");
     } finally {
       setATratar(false);
     }

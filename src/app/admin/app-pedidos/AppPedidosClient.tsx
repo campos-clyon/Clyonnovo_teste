@@ -236,7 +236,7 @@ function OrderRow({ order, onClick, active, compact }: { order: AppOrder; onClic
           <p className={`mt-1 text-[10px] font-semibold ${(order.open_offers ?? 0) > 0 ? "text-emerald-400" : "text-amber-400"}`}>
             {(order.open_offers ?? 0) > 0
               ? `Visível a ${order.open_offers} profissional${(order.open_offers ?? 0) > 1 ? "is" : ""}`
-              : "Publicável, sem ofertas activas"}
+              : "Publicável, sem ofertas ativas"}
           </p>
         )}
         <p className="mt-1 text-[10px] text-slate-600">{fmt(order.created_at)}</p>
@@ -665,7 +665,7 @@ export default function AppPedidosClient({
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {compact ? "" : "Actualizar"}
+            {compact ? "" : "Atualizar"}
           </button>
         </div>
 

@@ -203,7 +203,7 @@ export default function AdminPedidosClient() {
         <MetricCard label="Total de pedidos" value={total} />
         <MetricCard label="Por tratar" value={pendentes} accent={pendentes > 0 ? "text-amber-400" : "text-white"} />
         <MetricCard label="Confirmados" value={confirmados} accent="text-green-400" />
-        <MetricCard label="Facturação" value={faturacaoTotal > 0 ? `${faturacaoTotal.toFixed(0)}€` : "—"} accent="text-cyan-400" sub="pedidos activos" />
+        <MetricCard label="Faturação" value={faturacaoTotal > 0 ? `${faturacaoTotal.toFixed(0)}€` : "—"} accent="text-cyan-400" sub="pedidos ativos" />
       </div>
 
       {/* Filtros + pesquisa */}

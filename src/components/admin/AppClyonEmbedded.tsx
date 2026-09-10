@@ -2027,7 +2027,7 @@ function TabVisaoGeral({
   const highlightCards = [
     { label: "Novos (7 dias)",       value: stats.new7d ?? 0,                             color: "text-cyan-300",    hint: "Pedidos criados" },
     { label: "Receita 30d (est.)",   value: fmtMoney(stats.revenue30d ?? 0),              color: "text-emerald-300", hint: "Estimativas de concluídos" },
-    { label: "Profissionais activos",value: stats.partnersActive ?? 0,                    color: "text-violet-300",  hint: "Disponíveis agora" },
+    { label: "Profissionais ativos",value: stats.partnersActive ?? 0,                    color: "text-violet-300",  hint: "Disponíveis agora" },
   ];
 
   return (
@@ -2402,7 +2402,7 @@ const PARTNER_STATUS_CFG: Record<string, { label: string; cls: string }> = {
 
 const DOC_LABELS: Record<string, string> = {
   id: "Documento de identificação", nif: "NIF",
-  activity: "Início de actividade", iban: "Comprovativo de IBAN",
+  activity: "Início de atividade", iban: "Comprovativo de IBAN",
 };
 
 // Painel de gestão de um profissional — o que aqui se muda é o que o cliente
@@ -2781,7 +2781,7 @@ function ProfissionalPanel({
             <label className={`${IL2} mt-3`}>Nome comercial</label>
             <input value={tradeName} onChange={(e) => setTradeName(e.target.value)} className={INP2} />
             <button
-              onClick={() => patch({ description: descricao.trim(), trade_name: tradeName.trim() }, "Perfil público actualizado.")}
+              onClick={() => patch({ description: descricao.trim(), trade_name: tradeName.trim() }, "Perfil público atualizado.")}
               disabled={busy}
               className="mt-3 w-full rounded-lg bg-[#00BDEB] py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
             >
@@ -2861,12 +2861,12 @@ function ProfissionalPanel({
                         className="rounded-lg border border-white/[0.08] px-2.5 py-1 text-[10px] font-semibold text-slate-300 hover:border-sky-400/40 disabled:opacity-50"
                       >{s.verified_at ? "Retirar verificação" : "Verificar"}</button>
                       <button
-                        onClick={() => post({ action: "service", service_id: s.id, active: !s.active }, s.active ? "Serviço desactivado." : "Serviço activado.")}
+                        onClick={() => post({ action: "service", service_id: s.id, active: !s.active }, s.active ? "Serviço desativado." : "Serviço ativado.")}
                         disabled={busy}
                         className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold disabled:opacity-50 ${
                           s.active ? "border-red-500/25 text-red-300 hover:bg-red-500/10" : "border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/10"
                         }`}
-                      >{s.active ? "Desactivar" : "Activar"}</button>
+                      >{s.active ? "Desativar" : "Ativar"}</button>
                     </div>
                   </div>
                 ))}
@@ -2962,7 +2962,7 @@ function ProfissionalPanel({
             <button
               onClick={() => patch(
                 { earning_share: earningShare.trim() === "" ? null : Number(earningShare) },
-                earningShare.trim() === "" ? "Passa a seguir o padrão da plataforma." : "Quota actualizada.",
+                earningShare.trim() === "" ? "Passa a seguir o padrão da plataforma." : "Quota atualizada.",
               )}
               disabled={busy || (earningShare.trim() !== "" && (Number(earningShare) <= 0 || Number(earningShare) > 1))}
               className="mt-2 w-full rounded-lg bg-[#00BDEB] py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
@@ -3265,7 +3265,7 @@ function TabCatalogo({ authHeader }: { authHeader: Record<string, string> }) {
                     : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
                 }`}
               >
-                {toggling === cat.slug ? "…" : cat.is_active ? "Arquivar" : "Activar"}
+                {toggling === cat.slug ? "…" : cat.is_active ? "Arquivar" : "Ativar"}
               </button>
             </div>
           ))}
@@ -3489,7 +3489,7 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
                               : "bg-slate-500/15 text-slate-400"
                           }`}>
                             <span className={`inline-block h-1.5 w-1.5 rounded-full ${c.active ? "bg-emerald-400" : "bg-slate-500"}`} />
-                            {c.active ? "Activo" : "Pausado"}
+                            {c.active ? "Ativo" : "Pausado"}
                           </span>
                         </td>
                         <td className="px-3 py-3 text-right">
@@ -3497,7 +3497,7 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
                             <button onClick={() => openEdit(c)} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-cyan-400 transition" title="Editar">
                               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                             </button>
-                            <button onClick={() => toggleActive(c)} className={`rounded-lg p-1.5 transition ${c.active ? "text-slate-500 hover:bg-red-500/10 hover:text-red-400" : "text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"}`} title={c.active ? "Pausar" : "Activar"}>
+                            <button onClick={() => toggleActive(c)} className={`rounded-lg p-1.5 transition ${c.active ? "text-slate-500 hover:bg-red-500/10 hover:text-red-400" : "text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"}`} title={c.active ? "Pausar" : "Ativar"}>
                               {c.active ? (
                                 <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                               ) : (
@@ -3721,13 +3721,13 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
               {(editFee[r.id] !== undefined && editFee[r.id] !== String(r.fee_credits)) && (
                 <button
                   disabled={busy}
-                  onClick={() => post({ action: "update", id: r.id, fee_credits: Number(editFee[r.id]) }, "Custo actualizado.")}
+                  onClick={() => post({ action: "update", id: r.id, fee_credits: Number(editFee[r.id]) }, "Custo atualizado.")}
                   className="rounded-lg bg-[#00BDEB] px-3 py-1.5 text-[11px] font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
                 >
                   Guardar
                 </button>
               )}
-              {/* "Activar" activava a linha na tabela, não o escalão: a
+              {/* "Ativar" activava a linha na tabela, não o escalão: a
                   função de cálculo já não a lê. Dizê-lo no próprio botão
                   evita a conclusão errada de que ficou a valer. */}
               <button
@@ -3735,15 +3735,15 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
                 onClick={() => post(
                   { action: "update", id: r.id, active: !r.active },
                   r.active
-                    ? "Banda desactivada. Não altera o que o profissional paga."
-                    : "Banda marcada como activa — mas os escalões continuam fora de uso, o custo real não muda.",
+                    ? "Banda desativada. Não altera o que o profissional paga."
+                    : "Banda marcada como ativa — mas os escalões continuam fora de uso, o custo real não muda.",
                 )}
                 title={r.active
-                  ? "Marca a linha como inactiva. Não altera o custo real."
-                  : "Marca a linha como activa. Não altera o custo real — os escalões estão fora de uso."}
+                  ? "Marca a linha como inativa. Não altera o custo real."
+                  : "Marca a linha como ativa. Não altera o custo real — os escalões estão fora de uso."}
                 className={`ml-auto rounded-lg border px-3 py-1.5 text-[11px] font-semibold ${r.active ? "border-red-500/25 text-red-300 hover:bg-red-500/10" : "border-white/[0.10] text-slate-400 hover:bg-white/[0.04]"} disabled:opacity-50`}
               >
-                {r.active ? "Desactivar" : "Activar"}
+                {r.active ? "Desativar" : "Ativar"}
               </button>
             </div>
           ))}
@@ -4697,7 +4697,7 @@ type AuditEntry = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
-  status_change: "Mudança de estado", note: "Nota", update: "Actualização",
+  status_change: "Mudança de estado", note: "Nota", update: "Atualização",
   archive: "Arquivado", unarchive: "Restaurado", delete_request: "Eliminado",
 };
 
@@ -4742,7 +4742,7 @@ function TabAuditoria({ authHeader }: { authHeader: Record<string, string> }) {
       <div className="flex items-center gap-1 border-b border-white/[0.05]">
         {[
           { k: "ops" as const, label: "Operações em pedidos" },
-          { k: "admin" as const, label: "Acções admin" },
+          { k: "admin" as const, label: "Ações admin" },
         ].map((s) => (
           <button
             key={s.k}

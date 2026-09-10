@@ -1026,8 +1026,8 @@ export default function ColaboradorAdminClient({
     const plural = n === 1 ? "1 pedido" : `${n} pedidos`;
 
     const perguntas: Record<typeof acao, string> = {
-      concluido: `Marcar ${plural} como realizados? Saem da lista activa e entram na folha de trabalhos concluídos.`,
-      rejeitado: `Marcar ${plural} como rejeitados? Saem da lista activa e não voltam a aparecer na fila.`,
+      concluido: `Marcar ${plural} como realizados? Saem da lista ativa e entram na folha de trabalhos concluídos.`,
+      rejeitado: `Marcar ${plural} como rejeitados? Saem da lista ativa e não voltam a aparecer na fila.`,
       arquivar:  `Arquivar ${plural}? Deixam de aparecer na lista principal, mas podem ser vistos em "Arquivados".`,
       apagar:    `APAGAR ${plural} definitivamente? Isto não tem desfazer — os dados do cliente e o histórico desaparecem.`,
     };
@@ -1085,8 +1085,8 @@ export default function ColaboradorAdminClient({
     if (!token || !p.id) return;
     const quem = p.contactName ? ` de ${p.contactName}` : "";
     const pergunta = novoEstado === "concluido"
-      ? `Marcar o pedido${quem} como realizado? Sai da lista activa e entra na folha de trabalhos concluídos.`
-      : `Marcar o pedido${quem} como rejeitado? Sai da lista activa e não volta a aparecer na fila.`;
+      ? `Marcar o pedido${quem} como realizado? Sai da lista ativa e entra na folha de trabalhos concluídos.`
+      : `Marcar o pedido${quem} como rejeitado? Sai da lista ativa e não volta a aparecer na fila.`;
     if (!confirm(pergunta)) return;
     try {
       const r = await fetch(`/api/admin/pedidos`, {
@@ -1749,11 +1749,11 @@ export default function ColaboradorAdminClient({
                         ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
-                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos activos" : "Ver pedidos arquivados"}
+                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos ativos" : "Ver pedidos arquivados"}
                   >
                     <Archive className="h-4 w-4" />
                     {pedidoStatusFilter === "arquivado"
-                      ? "Ver activos"
+                      ? "Ver ativos"
                       : `Arquivados${(pedidosCounts["arquivado"] ?? 0) > 0 ? ` (${pedidosCounts["arquivado"]})` : ""}`}
                   </button>
                   <button
@@ -1764,11 +1764,11 @@ export default function ColaboradorAdminClient({
                         ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
-                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos activos" : "Ver pedidos realizados"}
+                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos ativos" : "Ver pedidos realizados"}
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     {pedidoStatusFilter === "concluido"
-                      ? "Ver activos"
+                      ? "Ver ativos"
                       : `Realizados${(pedidosCounts["concluido"] ?? 0) > 0 ? ` (${pedidosCounts["concluido"]})` : ""}`}
                   </button>
                   <button
@@ -1778,7 +1778,7 @@ export default function ColaboradorAdminClient({
                     className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
                   >
                     <RefreshCw className={`h-4 w-4 ${pedidosLoading ? "animate-spin" : ""}`} />
-                    {pedidosLoading ? "A actualizar…" : "Actualizar"}
+                    {pedidosLoading ? "A atualizar…" : "Atualizar"}
                   </button>
                 </div>
               </div>
@@ -2131,7 +2131,7 @@ export default function ColaboradorAdminClient({
                                         if (!token || !p.id) return;
                                         const isAlreadyArchived = p.status === "arquivado";
                                         const confirmMsg = isAlreadyArchived
-                                          ? "Restaurar este pedido para a fila activa?"
+                                          ? "Restaurar este pedido para a fila ativa?"
                                           : "Arquivar este pedido? Ele deixará de aparecer na lista principal.";
                                         if (!confirm(confirmMsg)) return;
                                         try {
@@ -2869,7 +2869,7 @@ export default function ColaboradorAdminClient({
                     className="h-10 rounded-[12px] bg-sky-500 px-4 text-white hover:bg-sky-400 disabled:opacity-60"
                   >
                     <RefreshCw className={`mr-2 h-4 w-4 ${ticketsLoading ? "animate-spin" : ""}`} />
-                    {ticketsLoading ? "A actualizar…" : "Actualizar"}
+                    {ticketsLoading ? "A atualizar…" : "Atualizar"}
                   </Button>
                 </div>
               </div>

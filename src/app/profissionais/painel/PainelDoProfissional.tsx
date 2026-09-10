@@ -72,7 +72,7 @@ const ECRAS_VALIDOS: Ecra[] = [
 
 const ESTADO_DA_CONTA: Record<string, { texto: string; cls: string }> = {
   pendente: { texto: "à espera de aprovação", cls: "bg-amber-100 text-amber-800" },
-  aprovado: { texto: "activo", cls: "bg-emerald-100 text-emerald-800" },
+  aprovado: { texto: "ativo", cls: "bg-emerald-100 text-emerald-800" },
   rejeitado: { texto: "não aprovado", cls: "bg-red-100 text-red-700" },
   suspenso: { texto: "suspenso", cls: "bg-slate-200 text-slate-600" },
 };

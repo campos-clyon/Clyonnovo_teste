@@ -796,7 +796,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       const isRef = src === "gemini_reference" || src === "fallback_reference";
       const missing: string[] = data.missingFields?.filter(Boolean) ?? [];
       if (isRef && missing.length > 0) {
-        setSaveMsg(`Estimativa de referência gerada. Actualize: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " e outros" : ""}.`);
+        setSaveMsg(`Estimativa de referência gerada. Atualize: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " e outros" : ""}.`);
       } else if (isRef) {
         setSaveMsg("Estimativa de referência gerada — confirme antes de enviar ao cliente.");
       } else if (recommended) {

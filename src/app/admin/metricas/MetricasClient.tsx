@@ -249,7 +249,7 @@ export default function MetricasClient() {
             <StatCard
               label="Tempo médio resposta"
               value={fmtMin(r.tempoMedioMin)}
-              sub={r.tempoMedioMin ? "desde criação até 1.ª acção" : "sem dados"}
+              sub={r.tempoMedioMin ? "desde criação até 1.ª ação" : "sem dados"}
               accent="text-[#00B4D8]"
             />
           </div>

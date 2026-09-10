@@ -62,7 +62,7 @@ const PASSO_DA_RECOLHA: Record<string, string> = {
   entulhoQuantidade: "a dizer quanto entulho",
   quando: "a dizer para quando",
   descricao: "a descrever",
-  fatura: "a dizer se quer factura",
+  fatura: "a dizer se quer fatura",
   confirmar: "a confirmar o resumo",
 };
 
@@ -237,7 +237,7 @@ export default function AdminWhatsAppPanel() {
       setAvisoRecebido(
         naFila > 0
           ? "Registada. O cérebro respondeu — a resposta está na fila em baixo, para enviar."
-          : "Registada. O cérebro não tinha nada a dizer a este número (sem pedido activo, entregue a si ou bloqueado) — responda à mão se for preciso.",
+          : "Registada. O cérebro não tinha nada a dizer a este número (sem pedido ativo, entregue a si ou bloqueado) — responda à mão se for preciso.",
       );
       setTextoRecebido("");
       if (conversaAberta === numeroRecebido) await abrirConversa(conversaAberta);

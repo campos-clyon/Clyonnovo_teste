@@ -232,7 +232,7 @@ export default function AdminAssistentesPanel() {
   function alternarEstado(a: Assistente) {
     if (
       a.activo &&
-      !window.confirm(`Desactivar ${a.nome}? Deixa de conseguir entrar no painel de imediato.`)
+      !window.confirm(`Desativar ${a.nome}? Deixa de conseguir entrar no painel de imediato.`)
     ) {
       return;
     }
@@ -399,7 +399,7 @@ export default function AdminAssistentesPanel() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-slate-400">
           {assistentes.length} conta{assistentes.length === 1 ? "" : "s"}
-          {assistentes.length > 0 ? ` · ${activos} activa${activos === 1 ? "" : "s"}` : ""}
+          {assistentes.length > 0 ? ` · ${ativos} ativa${ativos === 1 ? "" : "s"}` : ""}
           {assistentes.length > 0 ? ` · comissões acumuladas ${euros(totalComissoes)}` : ""}
         </p>
         <button
@@ -559,9 +559,9 @@ export default function AdminAssistentesPanel() {
                       {ocupado === a.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                       ) : a.activo ? (
-                        "Desactivar"
+                        "Desativar"
                       ) : (
-                        "Reactivar"
+                        "Reativar"
                       )}
                     </button>
                   </div>
