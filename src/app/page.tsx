@@ -35,7 +35,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export const metadata: Metadata = {
   title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
   description:
-    `Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Sofás, armários, colchões e eletrodomésticos, por profissionais verificados. Orçamento gratuito em 6h. ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
+    `Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Sofás, armários, colchões e eletrodomésticos, por profissionais verificados. Orçamento gratuito em 6h. ${AVALIACOES_TOTAL} avaliações 5★ verificadas.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
@@ -92,7 +92,7 @@ const PLATFORM_STATS = [
     label: "Avaliação dos clientes",
     // "Baseado em opiniões reais" não diz nada que se possa abrir e conferir.
     // Dizer ONDE é que elas estão é o que transforma a frase numa prova.
-    sub: "No Google e na Fixando",
+    sub: "Média de todas as avaliações",
     accent: "text-amber-500",
   },
   {
@@ -101,7 +101,7 @@ const PLATFORM_STATS = [
     // prova social que ninguém consegue confirmar é pior do que não ter número.
     value: String(AVALIACOES_TOTAL),
     label: "Avaliações verificadas",
-    sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
+    sub: "Abertas uma a uma em Avaliações",
     accent: "text-acao",
   },
   /*

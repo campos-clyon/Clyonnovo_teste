@@ -177,7 +177,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Qual é a melhor empresa para retirar móveis usados em Lisboa?",
-        a: `A CLYON tem ${AVALIACOES.fixando} avaliações 5 estrelas na Fixando e ${AVALIACOES.google} no Google. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado desmonta, carrega e leva. Cobrimos toda Lisboa e Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.`,
+        a: `A CLYON tem ${AVALIACOES.fixando + AVALIACOES.google} avaliações 5 estrelas verificadas. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado desmonta, carrega e leva. Cobrimos toda Lisboa e Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.`,
       },
     ],
     ctaText: "Monos para retirar em Lisboa? Envie fotos pelo WhatsApp e receba orçamento em 15 minutos.",

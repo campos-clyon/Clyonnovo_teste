@@ -227,8 +227,7 @@ export default async function RegionPage({ params }: Props) {
                     O que dizem os clientes
                   </dt>
                   <dd className="mt-1 text-sm leading-7 text-slate-600">
-                    {AVALIACOES.media} ★ em {AVALIACOES_TOTAL} avaliações, no Google e
-                    na Fixando
+                    {AVALIACOES.media} ★ em {AVALIACOES_TOTAL} avaliações verificadas
                   </dd>
                 </div>
               </dl>

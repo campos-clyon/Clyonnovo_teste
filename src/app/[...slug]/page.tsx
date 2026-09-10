@@ -105,7 +105,7 @@ function buildDescription(
 ) {
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
+      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ verificadas. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
       return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 6h. Orçamento grátis pelo WhatsApp.`;
@@ -113,7 +113,7 @@ function buildDescription(
     if (citySlug === "almada") {
       return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta rápida em 6h. Orçamento grátis!`;
     }
-    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis.`;
+    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ verificadas. Orçamento grátis.`;
   }
 
   if (serviceSlug === "recolha-monos") {
@@ -139,7 +139,7 @@ function buildDescription(
     return `Recolha de entulho em ${cityName}, ${regionLabel}. Big bags e camião completo, sacos, limpeza fina. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis!`;
   }
 
-  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
+  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ verificadas. Orçamento grátis por WhatsApp.`;
 }
 
 function getServiceIntro(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string) {
@@ -983,7 +983,7 @@ export default async function ServiceCityPage({ params }: Props) {
             a recolha com maior precisao.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            {AVALIACOES_TOTAL} avaliações 5 estrelas no Google e na Fixando. Resposta em {PRAZO_DE_RESPOSTA.porExtenso}.
+            {AVALIACOES_TOTAL} avaliações 5 estrelas verificadas. Resposta em {PRAZO_DE_RESPOSTA.porExtenso}.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
