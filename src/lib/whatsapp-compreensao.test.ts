@@ -127,11 +127,27 @@ describe("as intenções que fecham a conversa", () => {
   });
 });
 
-describe("quando não se percebeu nada", () => {
+describe("quando a mensagem não trouxe dados nenhuns", () => {
   it("não se repete a saudação inteira", () => {
     const r = responderComCompreensao(recolhaNova(), { intencao: "informar", campos: {} }, T0);
-    expect(r.resposta).toContain("não apanhei");
     expect(r.resposta).not.toContain("Sou o assistente da CLYON");
+  });
+
+  it("no primeiro passo acolhe-se, não se diz que não se percebeu", () => {
+    // «Olá, gostaria de pedir um orçamento» percebe-se muito bem — só não diz
+    // o que é para levar.
+    const r = responderComCompreensao(recolhaNova(), { intencao: "informar", campos: {} }, T0);
+    expect(r.resposta).not.toContain("não apanhei");
+    expect(r.resposta).toContain("Diga-me o que precisa");
+  });
+
+  it("mais à frente, onde a pergunta era concreta, admite-se", () => {
+    const r = responderComCompreensao(
+      { passo: "nome", dados: { serviceType: "recolha_moveis" } },
+      { intencao: "informar", campos: {} },
+      T0,
+    );
+    expect(r.resposta).toContain("não apanhei");
   });
 });
 

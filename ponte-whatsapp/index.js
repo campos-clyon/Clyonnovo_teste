@@ -223,16 +223,48 @@ async function enviar(telefone, texto) {
 }
 
 /** Envia o que o site mandou e confirma-lhe, uma a uma — só se risca o que saiu. */
-async function despachar(paraEnviar) {
+/*
+ * AS MENSAGENS SAÍAM A DOBRAR, e a culpa era desta função ser chamada por dois
+ * caminhos que leem a mesma fila: a resposta ao POST já traz o que há para
+ * enviar, e a ronda vai buscá-lo outra vez de cinco em cinco segundos. Como a
+ * fila só se risca DEPOIS de a mensagem sair — de propósito, para nada se
+ * perder se a ponte cair a meio —, uma ronda que passe nesse intervalo vê a
+ * mesma mensagem por enviar e manda-a segunda vez. O cliente recebia duas
+ * saudações iguais, seguidas.
+ *
+ * Duas trancas, porque uma só não chegava:
+ *
+ *   `jaDespachadas` — um id que já saiu (ou está a sair) não volta a sair,
+ *   mesmo que a fila ainda o mostre. Se o envio falhar, o id sai da lista e a
+ *   ronda seguinte tenta de novo, como sempre.
+ *
+ *   `despachando` — os dois caminhos entram em fila indiana. Sem isto, ambos
+ *   liam o Set antes de qualquer um lá escrever, e passavam os dois.
+ */
+const jaDespachadas = new Set();
+let despachando = Promise.resolve();
+
+function despachar(paraEnviar) {
+  despachando = despachando.then(() => despacharPorOrdem(paraEnviar)).catch(() => {});
+  return despachando;
+}
+
+async function despacharPorOrdem(paraEnviar) {
   for (const m of paraEnviar ?? []) {
+    if (jaDespachadas.has(m.id)) continue;
+    jaDespachadas.add(m.id);
     try {
       await enviar(m.telefone, m.texto);
       await site("PATCH", { ids: [m.id] });
       log("→", m.telefone, m.texto.slice(0, 60).replace(/\n/g, " "));
     } catch (e) {
+      jaDespachadas.delete(m.id);
       log("não saiu para", m.telefone, "-", e.message);
       // Fica na fila; a ronda seguinte tenta outra vez.
     }
+  }
+  if (jaDespachadas.size > 2000) {
+    for (const id of [...jaDespachadas].slice(0, 1000)) jaDespachadas.delete(id);
   }
 }
 

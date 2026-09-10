@@ -626,10 +626,21 @@ export function responderNaRecolha(
   return { estado: { passo: proximo, dados: d }, resposta: confirmacao + perguntaDo(proximo, d) };
 }
 
-/** Quando não se percebeu nada, não se repete a saudação inteira. */
+/**
+ * Quando a mensagem não trouxe dados nenhuns.
+ *
+ * Não é a mesma coisa que não perceber. «Olá, gostaria de pedir um orçamento»
+ * percebe-se muito bem — só não diz o que é para levar. Responder «não
+ * apanhei» a isso é o assistente a portar-se mal com quem foi claro. No
+ * primeiro passo acolhe-se e pergunta-se o que falta; daí para a frente, onde
+ * a pergunta era concreta, aí sim, admite-se que não se apanhou.
+ *
+ * O que nunca se faz é repetir a saudação inteira, que era o que mandava dois
+ * «Olá! Sou o assistente da CLYON» seguidos.
+ */
 function reperguntar(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
   if (passo === "servico") {
-    return "Desculpe, não apanhei. Diga-me o que há para levar ou fazer, e em que zona.";
+    return "Com certeza. Diga-me o que precisa de levar ou fazer, e em que zona — por exemplo «tenho um sofá e um colchão para tirar, em Cascais».";
   }
   return `Desculpe, não apanhei. ${perguntaDo(passo, dados, false)}`;
 }
