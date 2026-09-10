@@ -7,6 +7,7 @@ import {
   Ban,
   Bot,
   Check,
+  CheckCheck,
   ExternalLink,
   Hand,
   Loader2,
@@ -145,6 +146,149 @@ const CORES: Record<EstadoDaConversa, string> = {
   arquivada: "bg-slate-700/60 text-slate-300",
   bloqueada: "bg-red-500/15 text-red-300",
 };
+
+/*
+ * O FIO, COM A CARA DO WHATSAPP.
+ *
+ * "Quero que ele pareça com WhatsApp real." Havia razão para o pedido: os
+ * balões ocupavam a largura toda do monitor, e um fio que se lê de ponta a
+ * ponta de um ecrã de 1600 px não se lê como conversa — lê-se como tabela. A
+ * mensagem da cliente com os 350 € por carga era um retângulo de mil e
+ * trezentos pixels.
+ *
+ * As cores são as do WhatsApp escuro, escritas à mão e não tiradas dos tokens
+ * do backoffice. Aqui o objectivo é o reconhecimento imediato de quem passa o
+ * dia na aplicação a sério, e uma aproximação em slate não o dá.
+ */
+const WA = {
+  fundo: "#0b141a",
+  recebida: "#202c33",
+  enviada: "#005c4b",
+  texto: "#e9edef",
+  hora: "rgba(233,237,239,0.55)",
+  dia: "#182229",
+};
+
+/** "Hoje", "Ontem" ou a data — os separadores de dia do WhatsApp. */
+function diaDaMensagem(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const mesmoDia = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  const hoje = new Date();
+  const ontem = new Date();
+  ontem.setDate(hoje.getDate() - 1);
+  if (mesmoDia(d, hoje)) return "Hoje";
+  if (mesmoDia(d, ontem)) return "Ontem";
+  return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+/** Só as horas: é o que o WhatsApp mostra dentro do balão. */
+function horaDaMensagem(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * O bico do balão — o triângulo que aponta a quem falou.
+ *
+ * Só no primeiro de cada seguida, como no WhatsApp: repetido em todas as
+ * mensagens faz uma serra pela conversa abaixo.
+ */
+function Bico({ saida }: { saida: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute top-0 h-3 w-2 ${saida ? "right-[-7px]" : "left-[-7px]"}`}
+      style={{
+        backgroundColor: saida ? WA.enviada : WA.recebida,
+        clipPath: saida ? "polygon(0 0, 100% 0, 0 100%)" : "polygon(0 0, 100% 0, 100% 100%)",
+      }}
+    />
+  );
+}
+
+/** O fio inteiro de uma conversa, desenhado como o WhatsApp o desenha. */
+function FioDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
+  return (
+    <div
+      className="max-h-[26rem] overflow-y-auto rounded-xl px-3 py-2"
+      style={{
+        backgroundColor: WA.fundo,
+        // O papel de parede não se copia; a textura discreta por baixo dos
+        // balões é o que faz o fundo não parecer uma caixa vazia.
+        backgroundImage: "radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
+      }}
+    >
+      {mensagens.length === 0 && (
+        <p className="py-6 text-center text-xs" style={{ color: WA.hora }}>
+          Sem mensagens registadas.
+        </p>
+      )}
+      {mensagens.map((m, i) => {
+        const anterior = mensagens[i - 1];
+        const saida = m.direccao === "out";
+        const diaNovo =
+          !anterior || diaDaMensagem(anterior.criadoEm) !== diaDaMensagem(m.criadoEm);
+        // Uma "seguida" são mensagens do mesmo lado sem nada pelo meio: só a
+        // primeira leva bico, e as outras encostam-se a ela.
+        const primeiraDaSeguida = diaNovo || !anterior || anterior.direccao !== m.direccao;
+        return (
+          <div key={i}>
+            {diaNovo && (
+              <div className="my-3 flex justify-center">
+                <span
+                  className="rounded-lg px-3 py-1 text-[11px] font-medium uppercase tracking-wide"
+                  style={{ backgroundColor: WA.dia, color: WA.hora }}
+                >
+                  {diaDaMensagem(m.criadoEm)}
+                </span>
+              </div>
+            )}
+            <div
+              className={`flex ${saida ? "justify-end" : "justify-start"} ${
+                primeiraDaSeguida ? "mt-2" : "mt-[2px]"
+              }`}
+            >
+              <div
+                className="relative max-w-[75%] rounded-lg px-2.5 py-1.5 shadow-[0_1px_0.5px_rgba(0,0,0,0.3)]"
+                style={{
+                  backgroundColor: saida ? WA.enviada : WA.recebida,
+                  color: WA.texto,
+                  // O canto de onde sai o bico é recto — é o que dá a forma.
+                  borderTopRightRadius: saida && primeiraDaSeguida ? 0 : undefined,
+                  borderTopLeftRadius: !saida && primeiraDaSeguida ? 0 : undefined,
+                }}
+              >
+                {primeiraDaSeguida && <Bico saida={saida} />}
+                <p className="whitespace-pre-wrap break-words text-sm leading-snug">
+                  {/*
+                    A hora flutua à direita e o texto corre à volta dela — é
+                    assim que o WhatsApp mete as duas coisas na mesma linha
+                    quando cabem, e empurra para baixo quando não cabem.
+                  */}
+                  <span
+                    className="float-right ml-2 mt-1.5 inline-flex items-center gap-1 text-[10px] leading-none"
+                    style={{ color: WA.hora }}
+                  >
+                    {horaDaMensagem(m.criadoEm)}
+                    {saida && <CheckCheck className="h-3 w-3" aria-hidden="true" />}
+                  </span>
+                  {m.texto}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const SEPARADORES: Array<{ id: EstadoDaConversa; titulo: string; vazio: string }> = [
   {
@@ -733,26 +877,7 @@ export default function AdminWhatsAppPanel() {
 
                   {aberta && (
                     <div className="mb-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                      <div className="max-h-80 space-y-2 overflow-y-auto">
-                        {mensagens.map((m, i) => (
-                          <div
-                            key={i}
-                            className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
-                              m.direccao === "out"
-                                ? "ml-auto bg-cyan-500/15 text-cyan-100"
-                                : "bg-slate-800 text-slate-200"
-                            }`}
-                          >
-                            <p className="whitespace-pre-wrap break-words">{m.texto}</p>
-                            <p className="mt-1 text-right text-[10px] text-slate-500">
-                              {desde(m.criadoEm)}
-                            </p>
-                          </div>
-                        ))}
-                        {mensagens.length === 0 && (
-                          <p className="text-xs text-slate-500">Sem mensagens registadas.</p>
-                        )}
-                      </div>
+                      <FioDaConversa mensagens={mensagens} />
 
                       <div className="mt-3 flex gap-2">
                         <input

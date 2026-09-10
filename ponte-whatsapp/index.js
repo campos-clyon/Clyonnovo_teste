@@ -107,6 +107,46 @@ async function confirmarOSite() {
 
 /** Os ids das mensagens que NÓS enviámos — para não as tomar por respostas do dono. */
 const enviadasPorMim = new Set();
+
+/*
+ * O QUE ESTAMOS A ENVIAR NESTE MOMENTO — e porque é que o id não chega.
+ *
+ * `enviadasPorMim` guarda o ID da mensagem. Mas o id só existe DEPOIS de o
+ * `sendMessage` resolver, e o `message_create` dispara ANTES disso. Nessa
+ * fresta, a ponte via a mensagem do PRÓPRIO assistente como "o dono respondeu
+ * à mão" e entregava a conversa: o assistente respondia uma vez e ficava mudo
+ * para sempre naquele número, sem nada nos registos a dizer porquê.
+ *
+ * Foi o que se viu a 10-09-2026: o 33780582689 tinha como última mensagem uma
+ * SAÍDA às 14:17 e estava entregue a uma pessoa "desde 14:17" — calou-se com
+ * a própria mensagem. Uma corrida, por isso às vezes passava e às vezes não;
+ * do lado de fora parecia o assistente a "travar".
+ *
+ * A marca põe-se ANTES de enviar e vai pelo TEXTO, e não pelo número: entre o
+ * que sai daqui e o que volta no evento pode haver um @lid pelo meio, e o
+ * texto é a única coisa que não muda.
+ */
+const aEnviarAgora = new Map();
+const chaveDoEnvio = (texto) => String(texto ?? "").trim();
+
+function marcarAEnviar(chave) {
+  aEnviarAgora.set(chave, (aEnviarAgora.get(chave) ?? 0) + 1);
+}
+
+function desmarcarAEnviar(chave) {
+  const n = aEnviarAgora.get(chave);
+  if (n == null) return;
+  if (n <= 1) aEnviarAgora.delete(chave);
+  else aEnviarAgora.set(chave, n - 1);
+}
+
+/** Consome uma marca. Devolve true se a mensagem que saiu era nossa. */
+function eraNossa(texto) {
+  const chave = chaveDoEnvio(texto);
+  if (!chave || !aEnviarAgora.has(chave)) return false;
+  desmarcarAEnviar(chave);
+  return true;
+}
 let ligado = false;
 let client = null;
 
@@ -215,11 +255,28 @@ async function versaoDaPagina() {
 
 async function enviar(telefone, texto) {
   if (!client || !ligado) throw new Error("WhatsApp não está ligado");
-  const m = await client.sendMessage(chatIdDe(telefone), texto);
+  // A marca ANTES do envio: o `message_create` chega enquanto o `sendMessage`
+  // ainda não resolveu, e é essa a fresta por onde o assistente se calava.
+  const chave = chaveDoEnvio(texto);
+  marcarAEnviar(chave);
+  let m;
+  try {
+    m = await client.sendMessage(chatIdDe(telefone), texto);
+  } catch (e) {
+    desmarcarAEnviar(chave);
+    throw e;
+  }
   if (m?.id?._serialized) enviadasPorMim.add(m.id._serialized);
   if (enviadasPorMim.size > 2000) {
     for (const id of [...enviadasPorMim].slice(0, 1000)) enviadasPorMim.delete(id);
   }
+  /*
+   * A marca cai passado um minuto. Se ficasse para sempre, o dia em que o
+   * dono escrevesse à mão exactamente o mesmo texto que o assistente já
+   * mandara, a entrega dele não disparava — e o erro trocava de lado.
+   */
+  const t = setTimeout(() => desmarcarAEnviar(chave), 60_000);
+  if (typeof t.unref === "function") t.unref();
 }
 
 /** Envia o que o site mandou e confirma-lhe, uma a uma — só se risca o que saiu. */
@@ -422,6 +479,13 @@ async function arrancar() {
        */
       if (msg.fromMe) {
         if (msg.id?._serialized && enviadasPorMim.has(msg.id._serialized)) return;
+        /*
+         * Ainda a caminho: o id da mensagem só existe depois de o
+         * `sendMessage` resolver, e este evento chega primeiro. Sem esta
+         * segunda verificação, o assistente entregava a conversa por causa da
+         * sua própria resposta — e calava-se para sempre naquele número.
+         */
+        if (eraNossa(msg.body)) return;
         await site("POST", { telefone, accao: "interromper" }).catch((e) =>
           log("interromper:", e.message),
         );

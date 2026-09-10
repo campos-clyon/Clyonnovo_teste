@@ -273,42 +273,78 @@ const URGENCIA_POR_EXTENSO: Record<string, string> = {
  * ou com a Google em baixo, a lista volta — mais vale pedir um número do que
  * não perceber ninguém.
  */
+/**
+ * Bom dia, boa tarde ou boa noite — pela hora de LISBOA.
+ *
+ * O servidor da Vercel corre em Greenwich, e no Verão está uma hora atrás: às
+ * 13:30 de Lisboa ainda dizia "bom dia". A hora do sítio onde o trabalho
+ * acontece é a única que interessa a quem está a ler do outro lado.
+ */
+export function saudacao(agora: Date = new Date()): string {
+  const escrita = agora.toLocaleString("pt-PT", {
+    timeZone: "Europe/Lisbon",
+    hour: "2-digit",
+    hour12: false,
+  });
+  const h = Number(escrita.replace(/\D/g, ""));
+  if (!Number.isFinite(h)) return "Olá";
+  if (h >= 5 && h < 13) return "Bom dia";
+  if (h < 20) return "Boa tarde";
+  return "Boa noite";
+}
+
+/**
+ * O que se pergunta em cada passo.
+ *
+ * FALA-SE COMO SE FALA AO TELEFONE, e não como um formulário.
+ *
+ * Abria com "Olá! Sou o assistente da CLYON. Trato do seu pedido por aqui em
+ * dois minutos." — uma apresentação de robô, seguida de perguntas secas com
+ * "(sim/não)" ao fundo. "Não quero que ele fale que é o assistente com essa
+ * mensagem engessada; comece como uma conversa normal" — 10-09-2026.
+ *
+ * Agora cumprimenta pela hora do dia e vai ao assunto. Ninguém anuncia que é
+ * um assistente ao atender um telefone; diz bom dia e pergunta o que é
+ * preciso. Cada pergunta diz também PARA QUE serve — o andar e o elevador não
+ * são curiosidade, são o que decide quantas pessoas vêm e quanto custa.
+ */
 export function perguntaDo(
   passo: PassoDaRecolha,
   dados: DadosDaRecolha,
   comLista = true,
+  agora: Date = new Date(),
 ): string {
   switch (passo) {
     case "servico":
       return comLista
-        ? `Olá! Sou o assistente da CLYON. Trato do seu pedido por aqui em dois minutos.\n\nQue serviço precisa? Responda com o número:\n${LISTA_DE_SERVICOS}`
-        : "Olá! Sou o assistente da CLYON. Trato do seu pedido por aqui em dois minutos.\n\nDiga-me o que precisa, à vontade e pelas suas palavras. Por exemplo: «preciso de tirar um sofá e um colchão de um 3º andar em Cascais, se puder ser sexta de manhã».";
+        ? `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
+        : `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras. Por exemplo: «tenho um sofá e um colchão para tirar de um 3º andar em Cascais, se puder ser sexta de manhã».`;
     case "nome":
-      return "Como se chama?";
+      return "Com quem estou a falar?";
     case "morada":
-      return "Qual é a morada do serviço? Rua e número (ex.: Rua Sousa Viterbo 29).";
+      return "Qual é a morada certa? Rua e número — é por aí que o profissional se orienta (ex.: Rua Sousa Viterbo 29).";
     case "codigoPostal":
-      return "Código postal e localidade? (ex.: 2845-513 Amora)";
+      return "E o código postal, com a localidade? (ex.: 2845-513 Amora)";
     case "moradaDestino":
-      return "E a morada de destino da mudança? Rua e número.";
+      return "Para onde é a mudança? Rua e número do destino.";
     case "codigoPostalDestino":
-      return "Código postal e localidade do destino?";
+      return "E o código postal do destino, com a localidade?";
     case "andar":
       return dados.serviceType === "mudanca"
-        ? "Em que andar está a casa de origem? (ex.: r/c, 2º)"
-        : "Em que andar? (ex.: r/c, 2º)";
+        ? "Em que andar fica a casa de origem? (r/c, 2º, cave…)"
+        : "Em que andar é? (r/c, 2º, cave…)";
     case "elevador":
-      return "Há elevador? (sim/não)";
+      return "Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.";
     case "estacionamento":
-      return "Dá para estacionar à porta? (sim/não)";
+      return "Dá para encostar a carrinha à porta, ou fica longe?";
     case "entulhoQuantidade":
-      return "Quanto entulho, mais ou menos? Em sacos ou em m³ (ex.: 20 sacos).";
+      return "Mais ou menos quanto entulho? Em sacos ou em m³ — um número aproximado chega (ex.: 20 sacos).";
     case "quando":
-      return "Para quando? (ex.: amanhã de manhã, sexta às 9, 14/09 11:30, sem pressa)";
+      return "Para quando precisa? Pode ser «amanhã de manhã», «sexta às 9», «14/09 às 11:30» — ou sem pressa, se for o caso.";
     case "descricao":
-      return "Descreva o que é preciso levar ou fazer: quantidade, tamanho, o que houver de especial.";
+      return "Conte-me o que há para levar ou fazer: quantas peças, o tamanho, e o que houver de especial.";
     case "fatura":
-      return "Precisa de factura? (sim/não)";
+      return "Precisa de factura com NIF?";
     case "confirmar":
       return resumo(dados);
   }
@@ -683,7 +719,16 @@ export function responderComCompreensao(
   }
   if (intencao === "recomecar") {
     const novo = recolhaNova();
-    return { estado: novo, resposta: `Vamos recomeçar.\n\n${perguntaDo("servico", {}, false)}` };
+    /*
+     * Sem a saudação. Já se disse bom dia no princípio desta conversa, e um
+     * segundo «Bom dia! Aqui é a CLYON» a meio dela é o mesmo defeito que
+     * `reperguntar` existe para evitar.
+     */
+    return {
+      estado: novo,
+      resposta:
+        "Sem problema, vamos do princípio. Diga-me o que precisa de levar ou fazer, e em que zona.",
+    };
   }
 
   const d: DadosDaRecolha = { ...estado.dados };
