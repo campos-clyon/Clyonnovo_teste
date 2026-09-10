@@ -141,7 +141,17 @@ describe("o painel de controlo manda em tudo", () => {
     expect(ADMIN).toContain('"whatsapp"');
     expect(ADMIN).toContain("<AdminWhatsAppPanel />");
     expect(PAINEL).toContain("Desligar tudo");
-    expect(PAINEL).toContain("Devolver ao site");
+    /*
+     * Chamava-se "Devolver ao site" e passou a "Devolver ao assistente"
+     * quando a mesa se fundiu numa lista: o ecrã inteiro passou a falar do
+     * assistente — o separador, o distintivo, o passo da recolha — e "o
+     * site" era a única peça que ainda dizia outra coisa.
+     *
+     * O que este teste guarda é que HÁ como desfazer uma entrega, e não a
+     * frase com que se desfaz.
+     */
+    expect(PAINEL).toContain("Devolver ao assistente");
+    expect(PAINEL).toContain('agir("retomar"');
     expect(PAINEL).toContain("Desbloquear");
   });
 });
