@@ -190,7 +190,10 @@ const faqSchema = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  "@id": `${SITE_URL}/#organization`,
+  // O MESMO negócio do layout, e não a organização: isto é um LocalBusiness,
+  // e o `#organization` identifica a Organization. Dois tipos com o mesmo @id
+  // dizem ao Google que são a mesma coisa, e não são.
+  "@id": `${SITE_URL}/#localbusiness`,
   name: BUSINESS_NAME,
   description: "Recolha de móveis, entulho, monos, esvaziamento de casas, mudanças e limpeza de quintais em Lisboa, Margem Sul e Setúbal.",
   url: SITE_URL,

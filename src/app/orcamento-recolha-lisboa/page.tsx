@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Recolha de Entulho, Móveis e Monos em Lisboa | CLYON",
     description:
       "Orçamento rápido por WhatsApp para recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
-    url: "https://clyon.pt/orcamento-recolha-lisboa",
+    url: "https://clyon.pt",
     type: "website",
     locale: "pt_PT",
   },
@@ -22,8 +22,11 @@ export const metadata: Metadata = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
+  // Sem `@id`, isto criava um terceiro negócio anónimo. E o `url` apontava
+  // para a própria landing, o que dizia que a CLYON É esta página.
+  "@id": "https://clyon.pt/#localbusiness",
   name: "CLYON",
-  url: "https://clyon.pt/orcamento-recolha-lisboa",
+  url: "https://clyon.pt",
   telephone: "+351931632622",
   email: "geral@clyon.pt",
   description:
