@@ -14,7 +14,8 @@ chegou a correr**. Confirmei pessoalmente, lendo o código e o site, os cinco ac
 mais graves; os restantes **estão por verificar** e vão marcados como tal. Nenhum deve
 ser corrigido sem alguém confirmar primeiro que é verdade.
 
-**Números.** 103 achados: 3 críticos, 41 altos, 44 médios, 15 baixos.
+**Números.** 123 achados: 5 críticos, 45 altos, e o resto médios e baixos. (A frente de
+SEO técnico e um crítico de completude correram à parte, no dia seguinte, e juntaram 20.)
 
 ---
 
@@ -97,6 +98,35 @@ A CLYON não tem veículos nem pessoal. E `/sobre-nos` — a página onde algué
 quem está a lidar — descreve uma empresa executante e **nunca diz que a CLYON é um
 marketplace**. Quem lê sai convencido de que contrata uma empresa com equipa própria;
 quem depois recebe três propostas de nomes diferentes conclui que foi enganado.
+
+---
+
+### 1.6 Todas as partilhas do site saem sem imagem
+
+`https://clyon.pt/og-image.jpg` devolve **404**. O ficheiro não existe no repositório, e
+o `layout.tsx` referencia-o três vezes: no Open Graph, no Twitter card e no `image` do
+LocalBusiness em JSON-LD — que é o campo que o Google usa para o painel de negócio local,
+em todas as 165 páginas.
+
+Pior: **34 das 35 rotas que declaram `openGraph` não declaram `images`**, e em Next.js o
+`openGraph` do filho substitui o do layout. Resultado: `og:image` **não é emitido em
+página nenhuma**. Cada link do clyon.pt partilhado no WhatsApp — que é por onde um
+marketplace local circula — sai sem imagem, como texto simples.
+
+### 1.7 Há um cron que apaga pedidos e fotografias todos os dias, e não há cópia de segurança
+
+`vercel.json` agenda `/api/cron/purgar-pedidos` para as **04:30, todos os dias**.
+A função apaga a linha do pedido, as negociações e as imagens. E uma busca por
+`backup|cópia de seguran|restore|mysqldump` em todo o repositório não devolve **uma única
+ocorrência operacional**: não há runbook, não há plano de recuperação, não há prova de que
+exista de onde recuperar.
+
+A condição da purga parece bem escrita (só concluídos, cancelados ou arquivados, com mais
+de 60 dias, e sem negociação acordada por pagar). Mas um trabalho destrutivo diário sem
+rede por baixo está a uma alteração de distância de uma perda irreversível.
+
+**Isto não é código para corrigir — é uma pergunta para si:** o Railway tem cópias
+automáticas da base? Alguém já experimentou restaurar uma?
 
 ---
 
@@ -194,6 +224,42 @@ apenas o que ele tem a receber.
 - **O portão do MVP devolve uma folha branca de 0 bytes** em vez de um 404 com caminho de
   volta. Um profissional convidado que abra o link noutro telemóvel não sabe se o site
   caiu.
+
+**O que está bem, e é justo dizê-lo:** das 165 URLs do sitemap, **todas devolvem 200** —
+zero 301, zero 404. Nenhuma tem canónico em falta, nenhuma canonicaliza para outra, não há
+descriptions em falta nem duplicadas, todas têm exactamente um H1, e todas as imagens têm
+`alt` e usam `next/image`. O `robots.txt` tem um único grupo de user-agent, que é o
+correcto. A base técnica está sólida; o que falha são os detalhes acima.
+
+**Além disso:** 25 páginas servem `| CLYON | CLYON` no título; 114 dos 165 títulos passam
+dos 65 caracteres e 147 das 165 descriptions passam dos 160; dois pares de nós JSON-LD
+partilham `@id` com horários e coordenadas contraditórios (`/recolha-de-moveis` diz que
+fecha às 19h num bloco e às 20h noutro, com 1,7 km de diferença nas coordenadas); e as 29
+`Review` de `/avaliacoes` têm `datePublished` escrito em português em vez de ISO 8601.
+
+---
+
+## 6-A. O que ninguém estava a ver
+
+Um agente de completude foi procurar o que uma auditoria destas normalmente não vê:
+
+- **Não há observabilidade nenhuma.** 334 `console.error` no código e ninguém do outro
+  lado: sem Sentry, sem alertas, sem captura de erros. Quando um email não sai ou a base
+  falha, ninguém dá por isso — descobre-se pelo cliente que telefona.
+- **Não há `error.tsx` nem `global-error.tsx` em toda a App Router.** Um erro por apanhar
+  numa página é o ecrã de erro cru do Next, sem marca e sem caminho de volta.
+- **O CI não corre a build nem lint.** Só `tsc` e os testes. E o ESLint está instalado sem
+  ficheiro de configuração, portanto nunca correu.
+- **78 dos 128 ficheiros de teste lêem o código-fonte e fixam frases exactas.** É a
+  disciplina desta casa e apanha regressões de texto a sério — mas também é gesso: metade
+  da suite chumba quando o código muda por bem, como se viu ontem duas vezes.
+- **29 variáveis de ambiente lidas pelo código estão ausentes do `.env.example`.** Quem
+  montar isto de novo não sabe do que precisa.
+- **Uma rota órfã e viva:** `/api/chat-simulador`, 347 linhas, duplica
+  `/api/simulator/chat` e ninguém a chama.
+- **Cinco ficheiros concentram 22 mil linhas** — o `db.ts` sozinho tem 6 557.
+- **A ponte do WhatsApp corre sobre biblioteca não oficial** (`whatsapp-web.js`): se o
+  WhatsApp bloquear o número ou mudar o protocolo, o canal desaparece sem aviso.
 
 ---
 

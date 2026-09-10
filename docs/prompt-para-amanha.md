@@ -74,11 +74,29 @@ todas as páginas. `A_PLATAFORMA_COBRA = false`. Corrige também `src/app/faq/pa
 `src/lib/blog-data.ts:287`. Frases como «Esta página precisa de deixar clara a intenção
 comercial» estão visíveis em produção. Reescreve-as como texto para o cliente.
 
-**1.8 O EXIF das fotografias.**
+**1.8 Todas as partilhas do site saem sem imagem.**
+`https://clyon.pt/og-image.jpg` devolve **404** — o ficheiro não existe. É referenciado
+três vezes em `src/app/layout.tsx` (Open Graph, Twitter, e o `image` do LocalBusiness em
+JSON-LD, que vai nas 165 páginas). E **34 das 35 rotas que declaram `openGraph` não
+declaram `images`**, pelo que em Next.js o do filho substitui o do layout e `og:image`
+não é emitido em página nenhuma. Cria a imagem (1200×630) e centraliza num helper
+`ogDe({title, description, url})` que inclua sempre as `images`, para não se voltar a
+perder. Teste que faça fetch de N rotas e exija `og:image`.
+
+**1.9 O EXIF das fotografias.**
 `src/lib/reduzir-imagem.ts` só recodifica imagens acima de 1 MB e 1920 px — as outras
 chegam intactas, com GPS, e são mostradas aos profissionais **antes do contrato**. Tira
 os metadados no servidor, no ponto por onde tudo passa
 (`/api/simulador/upload-fotos` e o caminho da URL assinada).
+
+**1.10 PERGUNTA ANTES DE TUDO O RESTO: há cópia de segurança da base?**
+`vercel.json` agenda `/api/cron/purgar-pedidos` para as 04:30 **todos os dias**, e a
+função apaga a linha do pedido, as negociações e as fotografias. Uma busca por
+`backup|cópia de seguran|restore|mysqldump` no repositório inteiro não devolve nada.
+Não escrevas código para isto — **pergunta-me** se o Railway tem cópias automáticas e se
+alguém já restaurou uma. Se a resposta for não, o teu primeiro trabalho do dia é pôr a
+purga em modo de ensaio (registar o que apagaria, sem apagar) e escrever
+`docs/recuperar-a-base.md`.
 
 ## Bloco 2 — Bugs que custam dinheiro
 
@@ -136,6 +154,21 @@ concelhos onde a empresa tem base.
 **5.4** O portão do MVP devolve 0 bytes em vez de um 404 com caminho de volta.
 **5.5** O artigo «Quanto custa uma mudança em Lisboa em 2026 — guia completo de preços»
 não tem um único preço.
+**5.6** 25 páginas com `| CLYON | CLYON` no título — nove ficheiros escrevem o sufixo à
+mão e o `layout.tsx:47` já tem `template: "%s | CLYON"`. Trivial, e um teste impede a
+reincidência.
+**5.7** Dois pares de nós JSON-LD com o mesmo `@id` e dados contraditórios
+(`/recolha-de-moveis` e `/avaliacoes`), e as 29 `Review` de `/avaliacoes` com
+`datePublished` em português em vez de ISO 8601.
+
+## Bloco 6 — Se sobrar dia
+
+**6.1** Não há `error.tsx` nem `global-error.tsx` em toda a App Router.
+**6.2** Não há observabilidade: 334 `console.error` e ninguém do outro lado.
+**6.3** O CI não corre a build nem lint, e o ESLint está instalado sem configuração.
+**6.4** Rota órfã e viva: `/api/chat-simulador`, 347 linhas, duplica
+`/api/simulator/chat`. Confirma com grep que ninguém a chama antes de a apagar.
+**6.5** 29 variáveis de ambiente lidas pelo código estão fora do `.env.example`.
 
 ## O que NÃO fazer hoje
 
