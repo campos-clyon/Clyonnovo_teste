@@ -77,7 +77,16 @@ const PROMESSAS_FALSAS = [
   "em sacos, a granel",
   "sacos big bag",
   "saco big bag",
-  "big bags e",
+  /*
+   * As combinações exactas dos títulos e descrições antigos.
+   *
+   * Aqui esteve «big bags e», e apanhou o comentário que EXPLICAVA porque é
+   * que os big bags saíram — um guarda que apanha quem o veio consertar. As
+   * frases são as que estavam mesmo escritas.
+   */
+  "Big bags e camião",
+  "Big Bags e Camiões",
+  "big bags, sacos",
   "Big Bags,",
 ];
 

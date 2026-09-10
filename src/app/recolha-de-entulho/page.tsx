@@ -49,8 +49,8 @@ export const metadata: Metadata = {
     "recolha de entulho Lisboa",
     "recolha de entulho de obras",
     "recolha de escombros",
-    // "big bag entulho" saiu: procurar por big bags e cair numa página que
-    // não os faz é o clique que mais depressa se perde. Ver `sacos-de-entulho`.
+    // "big bag entulho" saiu: quem procura «big bag» e cai numa página que não
+    // o faz é o clique que mais depressa se perde. Ver `sacos-de-entulho`.
     "sacos de entulho",
     "carga de entulho",
     "recolha de entulho Setúbal",
