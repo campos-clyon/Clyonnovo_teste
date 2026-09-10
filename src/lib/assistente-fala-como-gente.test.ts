@@ -189,3 +189,88 @@ describe("uma conversa entregue a uma pessoa continua a ficar escrita", () => {
     expect(bloco).not.toContain("registarMensagemWhatsApp");
   });
 });
+
+describe("a ponte aguenta um arranque lento, e não morre à primeira", () => {
+  it("dá ao Chromium mais do que os 180 s por omissão", () => {
+    /*
+     * O `Client.inject` da whatsapp-web.js corre um `page.evaluate` enorme, e
+     * o puppeteer desiste ao fim de 180 s. Num contentor pequeno isso não
+     * chega. Apanhou-se ao segundo nos registos de 11-09-2026: emparelhou às
+     * 01:14:43 e rebentou às 01:17:43 — exactamente os 180 s — com
+     * «ProtocolError: Runtime.callFunctionOn timed out».
+     */
+    expect(PONTE_CLIENTE).toContain("protocolTimeout:");
+    const m = PONTE_CLIENTE.match(/protocolTimeout:\s*(\d+)\s*\*\s*(\d+)_?(\d*)/);
+    expect(m, "o protocolTimeout tem de estar escrito em minutos").not.toBeNull();
+    const ms = Number(m![1]) * Number(`${m![2]}${m![3]}`);
+    expect(ms).toBeGreaterThan(180_000);
+  });
+
+  it("um arranque falhado espera e tenta outra vez — não faz exit", () => {
+    /*
+     * `process.exit(1)` punha o Railway a reiniciar, e cada volta paga o
+     * arranque a frio outra vez — o que torna a volta seguinte MAIS provável
+     * de falhar. O ciclo alimenta-se a si próprio.
+     */
+    const i = PONTE_CLIENTE.indexOf("while (!(await confirmarOSite()))");
+    const fim = PONTE_CLIENTE.slice(i);
+    expect(fim).toContain("await arrancar();");
+    expect(fim).toContain("espera = Math.min(espera * 2");
+  });
+
+  it("mata o Chromium pendurado antes de tentar de novo", () => {
+    // Senão o `destrancarOPerfil` da tentativa seguinte apaga uma tranca que
+    // ainda tem dono, e ficam dois a disputar o mesmo perfil.
+    const i = PONTE_CLIENTE.indexOf("while (!(await confirmarOSite()))");
+    const fim = PONTE_CLIENTE.slice(i);
+    expect(fim).toContain("await client?.destroy();");
+    expect(fim.indexOf("await client?.destroy();")).toBeLessThan(
+      fim.indexOf("espera = Math.min(espera * 2"),
+    );
+  });
+});
+
+describe("sem chave e falhou não são a mesma avaria", () => {
+  const ROTA_ADMIN = ler("src/app/api/admin/whatsapp/route.ts");
+
+  it("a releitura diz QUAL das duas, porque têm donos diferentes", () => {
+    /*
+     * Dizia "sem chave do Gemini, ou a leitura falhou" — e quem lê aquilo não
+     * sabe se tem de ir à Vercel pôr uma variável ou se basta carregar outra
+     * vez.
+     */
+    const i = ROTA_ADMIN.indexOf("const semChave = !compreensaoDisponivel();");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = ROTA_ADMIN.slice(i, i + 900);
+    expect(bloco).toContain("falta a GEMINI_API_KEY");
+    expect(bloco).toContain("[whatsapp/compreensao]");
+  });
+
+  it("a chave que o código lê é a que o .env.example documenta", () => {
+    // Há um GOOGLE_API_KEY neste projecto que é outra coisa — Maps. Trocá-los
+    // deixa o assistente a responder pela lista numerada sem ninguém perceber.
+    const EXEMPLO = ler(".env.example");
+    expect(ler("src/lib/whatsapp-compreensao.ts")).toContain("process.env.GEMINI_API_KEY");
+    expect(EXEMPLO).toMatch(/^GEMINI_API_KEY=/m);
+  });
+});
+
+describe("o .env.example não esconde o que desliga produção", () => {
+  const EXEMPLO = ler(".env.example");
+
+  it("a CRON_SECRET está lá, e diz o que se cala sem ela", () => {
+    /*
+     * Faltava. As duas rotas de cron falham fechadas de propósito — mas em
+     * silêncio: a Vercel chama, recebe 503, e mais nada. Quem monta um
+     * ambiente novo não tinha como saber que a purga e a libertação por prazo
+     * dependem disto.
+     */
+    expect(EXEMPLO).toMatch(/^CRON_SECRET=/m);
+    expect(EXEMPLO).toContain("/api/cron/purgar-pedidos");
+    expect(EXEMPLO).toContain("/api/cron/libertar-por-prazo");
+  });
+
+  it("e o segredo da ponte também", () => {
+    expect(EXEMPLO).toMatch(/^PONTE_WHATSAPP_SEGREDO=/m);
+  });
+});
