@@ -38,6 +38,8 @@
  *   PASTA_DA_SESSAO         — onde guarda o emparelhamento (volume no Railway)
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 
@@ -204,7 +206,46 @@ async function rondaDaFila() {
   }
 }
 
+/**
+ * Apagar as trancas que o Chromium deixa no perfil.
+ *
+ * O Chromium tranca a pasta do perfil para dois processos não escreverem lá ao
+ * mesmo tempo. A tranca é um ficheiro, e só desaparece quando ele fecha com
+ * educação — o que não acontece quando o contentor é morto, nem quando o
+ * Railway levanta o contentor novo antes de deitar abaixo o velho. Fica lá, e
+ * o arranque seguinte morre com "The profile appears to be in use by another
+ * Chromium process", em ciclo, para sempre.
+ *
+ * Como aqui só corre uma ponte, uma tranca encontrada ao arrancar é sempre de
+ * um Chromium que já não existe. Apaga-se.
+ */
+function destrancarOPerfil() {
+  const trancas = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
+  let pastas;
+  try {
+    pastas = fs
+      .readdirSync(PASTA, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && e.name.startsWith("session"))
+      .map((e) => path.join(PASTA, e.name));
+  } catch {
+    return; // Primeiro arranque: a pasta ainda nem existe.
+  }
+  for (const pasta of pastas) {
+    for (const tranca of trancas) {
+      const f = path.join(pasta, tranca);
+      try {
+        fs.lstatSync(f); // Lança se não existir. Nota: é um atalho, e um
+        fs.rmSync(f, { force: true }); // atalho partido engana o existsSync.
+        log("apaguei a tranca", tranca, "que ficou em", path.basename(pasta));
+      } catch {
+        /* não estava lá, que é o normal */
+      }
+    }
+  }
+}
+
 async function arrancar() {
+  destrancarOPerfil();
   const versao = await versaoDaPagina();
   log("a arrancar com o Chromium em", CHROME, "e a página", versao ?? "que a biblioteca trouxer");
 
