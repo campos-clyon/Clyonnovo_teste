@@ -328,7 +328,7 @@ const simulatorDisplayGroups = [
   {
     id: "pos_obra",
     label: "Pós-obra",
-    description: "Valores partilhados para limpeza pós-obra e resíduos de obra.",
+    description: "Valores partilhados para resíduos de obra.",
     keys: ["entulho_distancia_km", "entulho_multiplicador"],
   },
   {

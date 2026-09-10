@@ -122,7 +122,7 @@ const faqCategories = [
       },
       {
         q: "O apartamento fica limpo depois do esvaziamento?",
-        a: "Após o esvaziamento o espaço fica varrido e sem volumes. Para limpeza profunda (pavimentos, paredes, casas de banho, cozinha) oferecemos serviço de limpeza pós-obra e pós-mudança como complemento — peça no orçamento.",
+        a: "Após o esvaziamento o espaço fica varrido e sem volumes. Não fazemos limpeza profunda (pavimentos, paredes, casas de banho, cozinha) — para isso é preciso uma empresa de limpezas.",
       },
     ],
   },

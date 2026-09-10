@@ -5,14 +5,14 @@ import LandingClient from "./LandingClient";
 export const metadata: Metadata = {
   title: "Recolha de Entulho, Móveis e Monos em Lisboa | CLYON",
   description:
-    "Peça orçamento para recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+    "Peça orçamento para recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
   openGraph: {
     title: "Recolha de Entulho, Móveis e Monos em Lisboa | CLYON",
     description:
-      "Orçamento rápido por WhatsApp para recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+      "Orçamento rápido por WhatsApp para recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt/orcamento-recolha-lisboa",
     type: "website",
     locale: "pt_PT",
@@ -27,7 +27,7 @@ const localBusinessSchema = {
   telephone: "+351931632622",
   email: "geral@clyon.pt",
   description:
-    "Recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Carregamento e transporte incluídos.",
+    "Recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal. Carregamento e transporte incluídos.",
   areaServed: [
     { "@type": "City", name: "Lisboa" },
     { "@type": "City", name: "Amadora" },
@@ -53,7 +53,7 @@ const localBusinessSchema = {
       "Recolha de móveis",
       "Recolha de monos e volumosos",
       "Esvaziamento de casas",
-      "Limpeza pós-obra",
+      "Mudanças",
     ].map((service) => ({
       "@type": "Offer",
       itemOffered: { "@type": "Service", name: service },

@@ -47,14 +47,13 @@ export const metadata: Metadata = {
     template: "%s | CLYON",
   },
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 6h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    `Recolha de entulho, móveis, monos e mudanças em Lisboa e Setúbal. Resposta em 6h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
     "recolha de entulho lisboa",
     "mudanças margem sul",
     "esvaziamento de casas lisboa",
-    "limpeza pós-obra lisboa",
   ],
   authors: [{ name: BUSINESS_NAME }],
   creator: BUSINESS_NAME,
@@ -93,7 +92,7 @@ export const metadata: Metadata = {
     siteName: BUSINESS_NAME,
     title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
     description:
-      "Serviço rápido para recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
+      "Serviço rápido para recolha de entulho, móveis, monos e mudanças em Lisboa, Margem Sul e Setúbal.",
     images: [
       {
         url: "/og-image.png",
@@ -107,7 +106,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
     description:
-      "Orçamento rápido para recolha de entulho, móveis, monos, mudanças e limpeza pós-obra.",
+      "Orçamento rápido para recolha de entulho, móveis, monos, esvaziamentos e mudanças.",
     images: ["/og-image.png"],
   },
   other: {
@@ -129,7 +128,7 @@ const localBusinessSchema = {
   email: BUSINESS_EMAIL,
   image: `${SITE_URL}/og-image.png`,
   description:
-    "Empresa especializada em recolha de entulho, móveis, monos, esvaziamento de casas, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Empresa especializada em recolha de entulho, móveis, monos, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Belverde",

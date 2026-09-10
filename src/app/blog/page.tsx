@@ -44,7 +44,7 @@ export default function BlogPage() {
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
                 Guias práticos sobre recolha, doações, despejo de móveis, entulho,
-                monos, pós-obra e esvaziamentos. O foco é captar procura qualificada
+                monos, entulho e esvaziamentos. O foco é captar procura qualificada
                 e ajudar o cliente a perceber rapidamente qual é o serviço certo.
               </p>
             </div>

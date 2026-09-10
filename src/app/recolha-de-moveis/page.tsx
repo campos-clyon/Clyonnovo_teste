@@ -192,7 +192,7 @@ const localBusinessSchema = {
   "@type": "LocalBusiness",
   "@id": `${SITE_URL}/#organization`,
   name: BUSINESS_NAME,
-  description: "Recolha de móveis, entulho, monos, esvaziamento de casas, mudanças e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+  description: "Recolha de móveis, entulho, monos, esvaziamento de casas, mudanças e limpeza de quintais em Lisboa, Margem Sul e Setúbal.",
   url: SITE_URL,
   telephone: BUSINESS_PHONE,
   email: BUSINESS_EMAIL,
@@ -291,7 +291,7 @@ export default function RecolhaDeMoveisPage() {
             
             {/* Description */}
             <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
-              Recolha rápida de móveis, entulho, monos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Orçamento grátis em 6h.
+              Recolha rápida de móveis, entulho, monos e esvaziamentos em Lisboa, Margem Sul e Setúbal. Orçamento grátis em 6h.
             </p>
 
             {/* CTAs */}

@@ -21,7 +21,7 @@ const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personal
 export const metadata: Metadata = {
   title: "Preços de Recolha de Monos, Entulho e Móveis",
   description:
-    "Veja preços orientativos para recolha de monos, entulho, móveis, esvaziamentos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+    "Veja preços orientativos para recolha de monos, entulho, móveis e esvaziamentos em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: `${SITE_URL}/precos`,
   },
@@ -79,21 +79,6 @@ const priceExamples = [
     title: "Recolha de entulho",
     price: etiquetaDe("recolha_entulho"),
     includes: "Valor depende do tipo de residuo, peso, quantidade e facilidade de carga.",
-  },
-  {
-    /*
-     * O ÚNICO PREÇO DESTA PÁGINA ESCRITO À MÃO — porque não há de onde o
-     * importar. A limpeza pós-obra não existe em SERVICE_CATEGORIES nem na
-     * tabela oficial, e por isso continua a divergir sozinha: aqui diz
-     * 160 €, em /servicos diz 150 € para o mesmo trabalho.
-     *
-     * Resolve-se de uma de duas maneiras, e ambas são decisão do dono: ou
-     * entra na tabela oficial com um valor, ou perde o número e passa a
-     * "orçamento personalizado" como as mudanças. Não se escolhe por ele.
-     */
-    title: "Limpeza pós-obra",
-    price: "desde 160 €",
-    includes: "Preco varia com área, nível de sujidade, vidros, cozinha e casas de banho.",
   },
 ];
 
@@ -177,7 +162,7 @@ export default function PrecosPage() {
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
                 Esta página ajuda a perceber faixas de valor para recolha de móveis,
-                monos, entulho, limpeza pós-obra e esvaziamentos. Não substitui um
+                monos, entulho e esvaziamentos. Não substitui um
                 orçamento final, mas dá contexto rápido sobre o que influencia o preço
                 e como reduzir atrásos na marcação.
               </p>

@@ -114,7 +114,7 @@ export default async function RegionPage({ params }: Props) {
         name: `Que serviços posso pedir em ${regionData.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças, esvaziamento de casas e limpeza pós-obra em ${regionData.name}. Descreve o que tem e recebe propostas de profissionais verificados.`,
+          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças, esvaziamento de casas e limpeza de quintais em ${regionData.name}. Descreve o que tem e recebe propostas de profissionais verificados.`,
         },
       },
       {

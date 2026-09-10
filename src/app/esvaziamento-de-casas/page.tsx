@@ -70,7 +70,7 @@ const faqs = [
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
-    answer: "Sim, oferecemos limpeza associada ao esvaziamento. Pode ser limpeza básica (varrer, remover restos) ou limpeza pós-obra completa (pavimentos, paredes, casas de banho, cozinha). Peça no orçamento.",
+    answer: "O espaço fica varrido e sem volumes: retiramos tudo o que combinámos e levamos os restos. Limpeza profunda de pavimentos, paredes, cozinha e casas de banho é outro trabalho, e não é o nosso.",
   },
   {
     question: "Quanto tempo demora um esvaziamento?",

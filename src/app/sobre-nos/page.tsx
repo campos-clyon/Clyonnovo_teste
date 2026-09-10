@@ -57,7 +57,7 @@ const processSteps = [
 
 const trustSignals = [
   "Atendimento em várias zonas com operação local",
-  "Apoio em móveis, entulho, monos, esvaziamentos e limpeza pós-obra",
+  "Apoio em móveis, entulho, monos, esvaziamentos e mudanças",
   "Prova social em avaliações reais e trabalhos publicados",
   "Contacto direto por telefone, WhatsApp e formulário",
 ];

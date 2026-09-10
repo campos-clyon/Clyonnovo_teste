@@ -45,7 +45,7 @@ export const REGIONS: RegionData[] = [
       "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     metaDescription:
-      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
+      "Recolha de entulho, móveis, monos, esvaziamentos e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -58,7 +58,7 @@ export const REGIONS: RegionData[] = [
     name: "Margem Sul",
     shortLabel: "Margem Sul",
     intro:
-      "Profissionais na Margem Sul para entulho, móveis, monos, limpezas pós-obra e mudanças, de Almada ao Montijo.",
+      "Profissionais na Margem Sul para entulho, móveis, monos, esvaziamentos e mudanças, de Almada ao Montijo.",
     metaTitle: "Recolha de Entulho, Móveis e Monos na Margem Sul",
     metaDescription:
       "Recolha de entulho, móveis, monos e mudanças na Margem Sul. Atendimento rápido em Almada, Seixal, Barreiro, Moita, Montijo e arredores.",
@@ -74,10 +74,10 @@ export const REGIONS: RegionData[] = [
     name: "Setúbal",
     shortLabel: "Setúbal",
     intro:
-      "Profissionais em Setúbal, Palmela e Sesimbra para recolha, limpeza pós-obra, esvaziamentos e mudanças.",
+      "Profissionais em Setúbal, Palmela e Sesimbra para recolha de entulho, móveis, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
     metaDescription:
-      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
+      "Recolha de entulho, móveis, monos, mudanças e esvaziamentos em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",

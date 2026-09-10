@@ -22,14 +22,14 @@ import { MENOR_PRECO_PUBLICADO, precoDe } from "@/lib/precos-publicos";
 const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personalizado";
 
 export const metadata: Metadata = {
-  title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
+  title: "Serviços de Recolha de Entulho, Esvaziamentos e Mudanças",
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 6h!`,
+    `Recolha de entulho, móveis, monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 6h!`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: {
-    title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
+    title: "Serviços de Recolha de Entulho, Esvaziamentos e Mudanças",
     description:
-      `Recolha de entulho, móveis, limpeza pós-obra e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €!`,
+      `Recolha de entulho, móveis, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €!`,
     url: `${SITE_URL}/servicos`,
   },
 };
@@ -119,32 +119,6 @@ const services: Service[] = [
       { from: "clyon",   text: "Temos disponibilidade. Envio orçamento por email ainda hoje.", time: "11:10" },
     ],
   },
-  {
-    title: "Limpeza pós-obra",
-    /*
-     * ESTE É O ÚNICO PREÇO DESTA PÁGINA ESCRITO À MÃO, E É UM PROBLEMA POR
-     * RESOLVER — não um esquecimento.
-     *
-     * A limpeza pós-obra não existe em SERVICE_CATEGORIES nem na tabela de
-     * preços oficiais, por isso não há nada em precos-publicos.ts de onde a
-     * importar. Enquanto assim for, este número diverge sozinho: esta página
-     * diz 150 € e /precos diz 160 € para o mesmo trabalho.
-     *
-     * Só há duas saídas, e ambas são decisão do dono: ou a limpeza pós-obra
-     * entra na tabela oficial com um valor, ou perde o número e passa a
-     * "orçamento personalizado" como as mudanças. Até lá ficam os 150 € que
-     * já cá estavam — com o formato corrigido, sem inventar valor novo.
-     */
-    tagline: "Pronto a habitar depois de obra",
-    price: "desde 150 €",
-    href: "/limpeza-de-quintais",
-    accent: "from-sky-400 to-cyan-500",
-    emoji: "✨",
-    messages: [
-      { from: "cliente", text: "Acabei remodelação, quero entregar a casa a brilhar.", time: "18:47" },
-      { from: "clyon",   text: "Equipa disponível na quarta às 09h — 180 € com produtos incluídos.", time: "18:49" },
-    ],
-  },
 ];
 
 const steps = [
@@ -162,7 +136,7 @@ const reviews = [
 const faqs = [
   {
     q: "Que tipo de pedidos a CLYON aceita?",
-    a: "Recolha de entulho, móveis, monos, recheios, limpeza pós-obra, esvaziamento de casas e mudanças — para particulares e empresas.",
+    a: "Recolha de entulho, móveis, monos, recheios, esvaziamento de casas e mudanças — para particulares e empresas.",
   },
   {
     q: "Recolhem no mesmo dia?",

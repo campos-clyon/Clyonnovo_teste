@@ -720,9 +720,9 @@ function ServicesSection() {
     },
     {
       icon: Sparkles,
-      title: "Limpeza Pós-Obra",
-      text: "Remoção de resíduos e limpeza após obras.",
-      examples: ["Restos de obra", "Pó e detritos", "Espaços remodelados"],
+      title: "Esvaziamento de casas",
+      text: "Retiramos o recheio todo e deixamos o espaço vazio.",
+      examples: ["Heranças", "Arrendamentos", "Casas para venda"],
     },
   ];
 
@@ -1052,7 +1052,7 @@ function FinalCTA() {
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-slate-300">
           Envie fotos agora e receba uma estimativa para recolha de entulho,
-          móveis, monos ou limpeza pós-obra.
+          móveis, monos ou esvaziamento de casas.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a
