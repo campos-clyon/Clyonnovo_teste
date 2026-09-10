@@ -399,7 +399,7 @@ export default function AdminAssistentesPanel() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-slate-400">
           {assistentes.length} conta{assistentes.length === 1 ? "" : "s"}
-          {assistentes.length > 0 ? ` · ${ativos} ativa${ativos === 1 ? "" : "s"}` : ""}
+          {assistentes.length > 0 ? ` · ${activos} ativa${activos === 1 ? "" : "s"}` : ""}
           {assistentes.length > 0 ? ` · comissões acumuladas ${euros(totalComissoes)}` : ""}
         </p>
         <button
