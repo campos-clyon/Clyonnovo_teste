@@ -15,7 +15,7 @@ import type {
   MovingDistance,
   ServiceType,
 } from "./types";
-import AddressAutocomplete from "./components/AddressAutocomplete";
+import AddressAutocomplete from "@/components/pedido/AddressAutocomplete";
 import { emailValido } from "@/lib/inscricao-profissional";
 import {
   moradaServeParaTrabalhar,
@@ -23,8 +23,8 @@ import {
   numeroDePortaValido,
   partirViaENumero,
 } from "@/lib/morada";
-import OrderSummaryCard from "./components/OrderSummaryCard";
-import ServiceTypeCards from "./components/ServiceTypeCards";
+import OrderSummaryCard from "@/components/pedido/OrderSummaryCard";
+import ServiceTypeCards from "@/components/pedido/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";

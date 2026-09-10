@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderData } from "../types";
+import type { OrderData } from "./types";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",

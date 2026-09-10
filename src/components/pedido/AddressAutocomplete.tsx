@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AddressData, AddressStatus, DistanceFromBase, DistanceStatus } from "../types";
+import type { AddressData, AddressStatus, DistanceFromBase, DistanceStatus } from "./types";
 import { useLocation } from "@/contexts/LocationContext";
 import { useGooglePlaces, type PlacePrediction } from "@/hooks/useGooglePlaces";
 

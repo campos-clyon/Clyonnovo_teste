@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import type { ServiceType } from "../types";
+import type { ServiceType } from "./types";
 
 interface Service {
   id: ServiceType;
