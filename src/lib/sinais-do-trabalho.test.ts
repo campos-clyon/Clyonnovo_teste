@@ -134,7 +134,7 @@ describe("a ordem e a cor", () => {
 describe("o cartão no painel", () => {
   it("mostra os distintivos e o €/km", () => {
     expect(TRABALHOS).toContain("sinaisDoTrabalho({ ...paraOsSinais, quantasFotos: fotos.length })");
-    expect(TRABALHOS).toContain("porKmPorExtenso(p)");
+    expect(TRABALHOS).toContain("porKmPorExtenso(paraOsSinais)");
     expect(TRABALHOS).toContain("{sinal.emoji}");
   });
 
