@@ -107,19 +107,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Esvaziamento de Casas",
   description: "Serviço de esvaziamento de casas, apartamentos, garagens e arrecadações em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: ["Lisboa", "Amadora", "Almada", "Setúbal", "Sintra", "Oeiras", "Cascais"],
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: {
     "@type": "GeoCircle",
     geoMidpoint: { "@type": "GeoCoordinates", latitude: 38.7223, longitude: -9.1393 },

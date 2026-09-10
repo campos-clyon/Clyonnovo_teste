@@ -108,16 +108,7 @@ export default function RecolhaMoveisUrgentePage() {
         name: "Recolha de Móveis Urgente",
         description:
           "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal com resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        provider: { "@id": "https://clyon.pt/#organization" },
         areaServed: ["Lisboa", "Margem Sul", "Setúbal"],
         serviceType: "Recolha de Móveis Urgente",
       },

@@ -136,16 +136,7 @@ export default function RetirarMoveisVelhosPage() {
         name: "Retirar Móveis Velhos",
         description:
           "Serviço de retirada de móveis velhos em Lisboa, Margem Sul e Setúbal com desmontagem, carregamento e transporte incluídos.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        provider: { "@id": "https://clyon.pt/#organization" },
         areaServed: ["Lisboa", "Margem Sul", "Setúbal"],
         serviceType: "Retirada de Móveis Velhos",
       },

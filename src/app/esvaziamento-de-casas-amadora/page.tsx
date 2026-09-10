@@ -83,19 +83,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Esvaziamento de Casas na Amadora",
   description: "Serviço de esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos e limpeza.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: "Amadora",
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: {
     "@type": "City",
     name: "Amadora",

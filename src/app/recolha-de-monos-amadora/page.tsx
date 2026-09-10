@@ -71,19 +71,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Monos na Amadora",
   description: "Serviço de recolha de monos, móveis velhos e objetos volumosos na Amadora com carregamento e transporte.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: "Amadora",
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: {
     "@type": "City",
     name: "Amadora",

@@ -126,16 +126,7 @@ export default function RecolhaSofaLisboaPage() {
         name: "Recolha de Sofá Lisboa",
         description:
           "Recolha de sofá em Lisboa com carregamento porta a porta, desmontagem quando necessário e transporte incluído.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        provider: { "@id": "https://clyon.pt/#organization" },
         areaServed: {
           "@type": "City",
           name: "Lisboa",
