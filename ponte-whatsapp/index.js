@@ -133,18 +133,52 @@ function telefoneDe(id) {
  * escreve nos registos, porque desistir em silêncio foi o que nos custou uma
  * tarde: as mensagens chegavam ao WhatsApp e a ponte não dizia uma palavra.
  */
+/** Os dígitos de um identificador, venha ele como texto ou como objecto. */
+function soDigitos(v) {
+  if (v && typeof v === "object") v = v._serialized ?? v.user ?? "";
+  return String(v ?? "").replace(/\D/g, "");
+}
+
 async function telefoneDaMensagem(msg, bruto) {
   const directo = telefoneDe(bruto);
   if (directo) return directo;
   // Nas mensagens que saem, o contacto seria o nosso próprio número.
   if (msg.fromMe) return null;
+
+  /*
+   * O teste que separa um telefone de um @lid: um telefone tem entre 8 e 15
+   * dígitos, e — isto é que importa — nunca é igual ao próprio @lid. Sem esta
+   * segunda metade, aceitámos o 143207765696672 como se fosse um número, e a
+   * resposta do assistente ficou endereçada a ninguém.
+   */
+  const oLid = soDigitos(bruto.split("@")[0]);
+  const bom = (d) => d.length >= 8 && d.length <= 15 && d !== oLid;
+
+  // 1. O WhatsApp novo costuma mandar o telefone ao lado do @lid, no pacote.
+  const doPacote = soDigitos(msg._data?.senderPn);
+  if (bom(doPacote)) return doPacote;
+
+  // 2. A biblioteca sabe trocar um @lid pelo telefone — quando a versão a tem.
+  try {
+    if (typeof client?.getContactLidAndPhone === "function") {
+      const [par] = await client.getContactLidAndPhone([bruto]);
+      const n = soDigitos(par?.pn);
+      if (bom(n)) return n;
+    }
+  } catch (e) {
+    log("a troca de @lid por telefone falhou para", bruto, "—", e.message);
+  }
+
+  // 3. O contacto. Às vezes traz o número; às vezes devolve o @lid outra vez.
   try {
     const contacto = await msg.getContact();
-    const n = String(contacto?.number ?? contacto?.id?.user ?? "").replace(/\D/g, "");
-    if (n) return n;
+    const n = soDigitos(contacto?.number ?? contacto?.id?.user);
+    if (bom(n)) return n;
   } catch (e) {
     log("não consegui ler o contacto de", bruto, "—", e.message);
   }
+
+  log("não sei tirar o telefone de", bruto, "— o pacote traz:", Object.keys(msg._data ?? {}).join(","));
   return null;
 }
 
