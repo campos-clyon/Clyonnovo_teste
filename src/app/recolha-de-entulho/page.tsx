@@ -15,7 +15,6 @@ import FAQSection from "@/components/service/FAQSection";
 import PricingTable from "@/components/service/PricingTable";
 import { getCitiesByRegion } from "@/lib/city-content";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
   CITIES,
   SITE_URL,
@@ -125,11 +124,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Entulho",
   description: "Serviço de recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   offers: {
     "@type": "Offer",

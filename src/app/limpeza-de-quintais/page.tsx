@@ -14,7 +14,6 @@ import {
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
   CITIES,
   SITE_URL,
@@ -90,11 +89,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Limpeza de Quintais",
   description: "Serviço de limpeza de quintais e recolha de lixo verde em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   offers: {
     "@type": "Offer",

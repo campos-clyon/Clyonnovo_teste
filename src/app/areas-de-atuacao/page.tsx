@@ -53,6 +53,9 @@ const regions = [
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
+  // O MESMO negócio, e não outro: sem `@id` isto criava um LocalBusiness
+  // anónimo por página, e o Google fica com três CLYON em vez de uma.
+  "@id": `${SITE_URL}/#localbusiness`,
   name: BUSINESS_NAME,
   telephone: BUSINESS_PHONE,
   url: SITE_URL,

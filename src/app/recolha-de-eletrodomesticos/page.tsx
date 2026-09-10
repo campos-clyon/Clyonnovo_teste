@@ -144,12 +144,7 @@ const serviceSchema = {
   serviceType: "Recolha de eletrodomésticos usados",
   url: `${SITE_URL}/recolha-de-eletrodomesticos`,
   description: "Serviço de recolha de eletrodomésticos usados com carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   offers: {
     "@type": "AggregateOffer",

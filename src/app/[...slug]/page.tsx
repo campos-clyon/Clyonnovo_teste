@@ -466,15 +466,7 @@ export default async function ServiceCityPage({ params }: Props) {
     serviceType: service.name,
     name: title,
     description,
-    provider: {
-      "@type": "LocalBusiness",
-      name: BUSINESS_NAME,
-      telephone: BUSINESS_PHONE,
-      areaServed: {
-        "@type": "City",
-        name: city.name,
-      },
-    },
+    provider: { "@id": SITE_URL + "/#organization" },
     areaServed: [
       {
         "@type": "City",

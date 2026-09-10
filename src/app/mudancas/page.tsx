@@ -117,11 +117,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Serviço de Mudanças",
   description: "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal com carga, transporte, descarga e montagem.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
    * Sem bloco `offers` — e sem outro número no lugar dele.

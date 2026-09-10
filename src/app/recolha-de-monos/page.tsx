@@ -13,7 +13,6 @@ import {
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
   CITIES,
   SITE_URL,
@@ -108,11 +107,7 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Monos",
   description: "Serviço de recolha de monos e volumes grandes em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
    * O que se declara ao Google é a mesma faixa que a página mostra.

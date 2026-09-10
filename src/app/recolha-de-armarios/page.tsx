@@ -144,12 +144,7 @@ const serviceSchema = {
   serviceType: "Recolha de armários e roupeiros usados",
   url: `${SITE_URL}/recolha-de-armarios`,
   description: "Serviço de recolha de armários usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   offers: {
     "@type": "AggregateOffer",

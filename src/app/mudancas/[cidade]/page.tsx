@@ -70,47 +70,26 @@ export default async function MudancasCidadePage({ params }: Props) {
   const c = getCidadeMudancaBySlug(cidade);
   if (!c) notFound();
 
-  // ── Schema.org: LocalBusiness + Service + FAQPage + BreadcrumbList ────────
+  /*
+   * Schema.org: Service + FAQPage + BreadcrumbList.
+   *
+   * Saiu daqui um LocalBusiness POR CIDADE, com morada e coordenadas dessa
+   * cidade: treze negocios inventados, um por pagina indexada, cada um a
+   * dizer que a CLYON tem casa em Sintra, no Barreiro ou em Palmela. E o que
+   * a Google chama misrepresentation of location, e nao e um exagero de
+   * marketing: e a razao por que um perfil de negocio se suspende.
+   *
+   * Fica o Service, que e o que a pagina e mesmo, com areaServed na cidade e
+   * o provider a apontar para a organizacao declarada uma vez no layout.
+   */
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "LocalBusiness",
-        "@id": `${SITE_URL}/mudancas/${c.slug}#business`,
-        name: `${BUSINESS_NAME} — Mudanças em ${c.nome}`,
-        image: `${SITE_URL}/logo-clyon.png`,
-        telephone: BUSINESS_PHONE,
-        // Sem `priceRange`: era `€${precoMin}–€${precoMax}` por cidade, um
-        // preço que a página deixou de mostrar. Ver a nota no `offers` abaixo.
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: c.nome,
-          addressRegion: c.distrito,
-          addressCountry: "PT",
-        },
-        geo: {
-          "@type": "GeoCoordinates",
-          latitude: c.geo.lat,
-          longitude: c.geo.lng,
-        },
-        areaServed: {
-          "@type": "City",
-          name: c.nome,
-        },
-        openingHoursSpecification: [
-          {
-            "@type": "OpeningHoursSpecification",
-            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            opens: "08:00",
-            closes: "20:00",
-          },
-        ],
-      },
-      {
         "@type": "Service",
         "@id": `${SITE_URL}/mudancas/${c.slug}#service`,
         serviceType: "Mudanças residenciais e comerciais",
-        provider: { "@id": `${SITE_URL}/mudancas/${c.slug}#business` },
+        provider: { "@id": `${SITE_URL}/#organization` },
         areaServed: { "@type": "City", name: c.nome },
         /*
          * Sem bloco `offers` — e sem outro número no lugar dele.

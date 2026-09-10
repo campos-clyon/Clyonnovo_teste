@@ -167,7 +167,7 @@ const serviceListSchema = {
     position: i + 1,
     name: s.title,
     description: s.tagline,
-    provider: { "@type": "LocalBusiness", name: BUSINESS_NAME, telephone: BUSINESS_PHONE },
+    provider: { "@id": `${SITE_URL}/#organization` },
     areaServed: ["Lisboa", "Setúbal", "Almada", "Seixal"],
   })),
 };

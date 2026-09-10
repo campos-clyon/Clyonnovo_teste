@@ -142,12 +142,7 @@ const serviceSchema = {
   serviceType: "Recolha de móveis usados",
   url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   description: "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal. Serviço pago, rápido e completo.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   /*
    * Esta página NÃO declara preço ao Google, de propósito.

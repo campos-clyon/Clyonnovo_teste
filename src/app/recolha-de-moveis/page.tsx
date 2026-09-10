@@ -230,12 +230,7 @@ const serviceSchema = {
   url: `${SITE_URL}/recolha-de-moveis`,
   description:
     "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta, transporte  e destino licenciado em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  provider: { "@id": SITE_URL + "/#organization" },
   areaServed: areaServedCities.map((city) => ({
     "@type": "City",
     name: city,
