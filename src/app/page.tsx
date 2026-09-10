@@ -119,10 +119,16 @@ const PLATFORM_STATS = [
     accent: "text-emerald-600",
   },
   {
-    value: "24+",
-    // "Localidades cobertas" é como se descreve uma área de operação por
-    // dentro. Quem lê quer saber uma coisa só: chegam aqui?
-    label: "Cidades com profissionais",
+    /*
+     * Era "24+ Cidades com profissionais", com três parceiros no MVP.
+     *
+     * O "24+" contava as cidades onde existe PÁGINA, não onde existe
+     * profissional — e a diferença entre as duas coisas é a distância entre
+     * uma promessa e uma mentira. As três regiões são verificáveis: estão em
+     * `REGIONS`, e quem quiser confere abrindo /regioes.
+     */
+    value: "3",
+    label: "Regiões onde trabalhamos",
     sub: "Lisboa · Margem Sul · Setúbal",
     accent: "text-blue-600",
   },
@@ -141,18 +147,22 @@ const HOW_IT_WORKS = [
   },
   {
     icon: CheckCircle2,
-    title: "Confirmamos preço e data",
+    /*
+     * A CLYON não confirma preço nem liga a combinar: quem propõe o valor é
+     * o profissional, e quem escolhe é o cliente. Dizia "Confirmamos preço e
+     * data — ligamos-lhe", que é a promessa de uma empresa que executa, e o
+     * resto do site promete o contrário ("receba propostas de profissionais
+     * verificados"). Das duas identidades, a verdadeira é esta.
+     */
+    title: "Receba propostas",
     description:
-      // "Um assistente" é um papel do organograma da CLYON. Para quem lê, é uma
-    // pessoa desconhecida com um cargo estranho. E "aprovação explícita" é
-    // linguagem de contrato onde bastava dizer o que acontece.
-    "Ligamos-lhe a confirmar o preço e a combinar o dia. Só avançamos depois de dizer que sim.",
+      "Os profissionais da sua zona respondem com o valor deles, já com deslocação incluída. Compara e escolhe.",
   },
   {
     icon: Truck,
     title: "Profissional na sua porta",
     description:
-      "Um profissional verificado executa o trabalho na data acordada. O espaço fica limpo e pronto a usar.",
+      "O profissional que escolheu faz o trabalho na data combinada. Só paga depois de estar feito e confirmado.",
   },
 ];
 
