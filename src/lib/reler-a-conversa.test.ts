@@ -49,7 +49,14 @@ describe("os validadores são os MESMOS — não uma cópia", () => {
      * for corrigido, o outro continua a aceitar o que o primeiro recusa.
      */
     expect(RECOLHA).toContain("export function fundirCampos(");
-    expect(RECOLHA).toContain("const d = fundirCampos(estado.dados, k, agora);");
+    /*
+     * Sem o nome da variável dos campos: ela passou a ser `kk` quando a
+     * leitura directa das perguntas fechadas entrou (o `simOuNao` que lê um
+     * «Não» quando o modelo não percebe). O que este teste guarda é que a
+     * fusão sai daqui e não de um bloco escrito à mão — não como se chama o
+     * argumento do meio.
+     */
+    expect(RECOLHA).toMatch(/const d = fundirCampos\(estado\.dados, \w+, agora\);/);
   });
 
   it("os dois caminhos dão exactamente o mesmo resultado", () => {

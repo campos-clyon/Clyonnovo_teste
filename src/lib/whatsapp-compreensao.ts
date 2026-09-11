@@ -244,6 +244,14 @@ export async function compreender(
   texto: string,
   jaSabido: Record<string, unknown>,
   agora: Date = new Date(),
+  /**
+   * A pergunta que a CLYON acabou de fazer.
+   *
+   * Sem ela uma resposta curta lê-se a flutuar no vazio — e foi assim que um
+   * «não preciso», a responder a «Precisa de factura?», apagou a recolha
+   * inteira de uma cliente.
+   */
+  perguntaPendente?: string,
 ): Promise<Compreensao | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
