@@ -84,7 +84,11 @@ export function compreensaoDisponivel(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
-function instrucoes(jaSabido: Record<string, unknown>, agora: Date): string {
+function instrucoes(
+  jaSabido: Record<string, unknown>,
+  agora: Date,
+  perguntaPendente?: string,
+): string {
   const servicos = SERVICE_CATEGORIES.map((c) => `- ${c.id}: ${c.label}`).join("\n");
   const dia = agora.toLocaleDateString("pt-PT", {
     weekday: "long",
@@ -104,9 +108,13 @@ Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código, com es
   "campos": { ... }
 }
 
+A REGRA MAIS IMPORTANTE DE TODAS: a mensagem que vais ler é, quase sempre, uma RESPOSTA à pergunta que a CLYON acabou de fazer. Lê-a ao lado dessa pergunta e não sozinha. Um "não" a seguir a "Há elevador?" quer dizer que não há elevador — não quer dizer que a pessoa desistiu. Um "não preciso" a seguir a "Precisa de factura?" quer dizer que não precisa de FACTURA.
+
+A PERGUNTA QUE A CLYON ACABOU DE FAZER: ${perguntaPendente ?? "(ainda nenhuma — é o início da conversa)"}
+
 A intenção:
 - "falar_com_pessoa" — pede para falar com alguém, com um humano, diz que não quer bots.
-- "cancelar" — desiste do pedido ("deixa estar", "já não preciso", "esquece").
+- "cancelar" — desiste do PEDIDO INTEIRO, e só quando é inequívoco ("deixa estar, já não quero nada", "esqueça o serviço", "cancele o pedido"). Na dúvida NÃO é cancelar: se a frase puder ser uma resposta à pergunta acima, é "informar". Cancelar apaga o trabalho todo desta conversa, por isso só se usa quando a pessoa o diz com todas as letras.
 - "recomecar" — quer começar de novo, do início.
 - "confirmar" — está a confirmar que o resumo está certo ("sim", "está tudo bem", "pode ser", "confirmo").
 - "informar" — tudo o resto, incluindo quando dá dados novos ou corrige dados antigos.
@@ -242,7 +250,7 @@ export async function compreender(
   const t = texto.trim();
   if (!t) return null;
 
-  const sistema = instrucoes(resumoDoSabido(jaSabido), agora);
+  const sistema = instrucoes(resumoDoSabido(jaSabido), agora, perguntaPendente);
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   /*

@@ -184,7 +184,32 @@ async function registarSaida(para: string, texto: string): Promise<void> {
 }
 
 /** O caminho comum dos envios de texto: canal, e registo se saiu. */
+/**
+ * O TECLADO DE QUEM ESTÁ DO OUTRO LADO.
+ *
+ * "Usa caracteres especiais sem precisar." As mensagens saíam com aspas
+ * angulares («»), travessões longos (—) e pontos médios (·) — sinais de
+ * tipografia de livro que ninguém escreve num telemóvel, e que num balão de
+ * WhatsApp denunciam imediatamente que do outro lado está uma máquina.
+ *
+ * Aqui e não em cada frase: este é o estrangulamento por onde sai TUDO —
+ * recolha, releitura e negociação, pelos três canais. Corrigir as trinta e
+ * tal frases uma a uma deixava sempre a próxima por corrigir.
+ *
+ * Os acentos ficam, claro: «não» é português, «—» é tipografia.
+ */
+export function paraTeclado(texto: string): string {
+  return texto
+    .replace(/[«»“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\s*[—–]\s*/g, " - ")
+    .replace(/\s*·\s*/g, ", ")
+    .replace(/…/g, "...")
+    .replace(/ /g, " ");
+}
+
 async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean> {
+  texto = paraTeclado(texto);
   let saiu = false;
   if (whatsappConfigurado()) {
     saiu = await enviar({

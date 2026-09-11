@@ -65,6 +65,15 @@ export type DadosDaRecolha = {
   urgency?: string | null;
   description?: string;
   precisaFatura?: boolean;
+  /**
+   * Pediu-se confirmacao de desistencia e a proxima mensagem decide.
+   *
+   * Vive aqui, e nao num membro novo de `PassoDaRecolha`, porque os switches
+   * de `perguntaDo` e `respondido` sao exaustivos: um passo a mais parte a
+   * compilacao em cadeia. E nao chega ao pedido — `registarPedidoDaRecolha`
+   * escolhe os campos pelo nome.
+   */
+  aConfirmarDesistencia?: boolean;
 };
 
 export type EstadoDaRecolha = {
@@ -779,12 +788,150 @@ export function fundirCampos(
  * sim e o não por `simOuNao`. O que não passar é deitado fora em silêncio, e
  * o campo fica por responder — que é como se pergunta outra vez.
  */
+/**
+ * A PERGUNTA QUE ESTÁ EM CIMA DA MESA, numa linha.
+ *
+ * Vai no aviso ao Gemini. Sem ela, ele lê «Não preciso» a flutuar no vazio e
+ * casa-a com o exemplo de desistir — e foi assim que a recolha da Sra. Ana
+ * desapareceu. Uma resposta curta só quer dizer alguma coisa ao lado da
+ * pergunta a que responde.
+ *
+ * É a versão curta de `perguntaDo`: no passo do serviço aquela abre com o bom
+ * dia e um exemplo, que num aviso ao modelo é ruído.
+ */
+export function perguntaPendente(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
+  if (passo === "servico") return "O que precisa de levar ou fazer?";
+  if (passo === "confirmar") return "Está tudo certo? (à espera de um SIM para registar)";
+  return perguntaDo(passo, dados, false).split("\n")[0];
+}
+
+/**
+ * AS PERGUNTAS FECHADAS LÊEM-SE SEM MODELO NENHUM.
+ *
+ * Sabendo qual é a pergunta, uma resposta curta tem uma leitura só: a «Há
+ * elevador?» responde-se sim ou não, e `simOuNao` faz isso desde sempre. Era
+ * o caminho antigo, que existia e nunca era tentado — o Gemini passava-lhe à
+ * frente e, quando não percebia, ninguém ia atrás dele.
+ *
+ * Só as FECHADAS. O nome, a morada, a descrição e a data ficam de fora de
+ * propósito: aí uma leitura à letra transformava «Qual o valor?» no nome do
+ * cliente, que é pior do que não perceber.
+ */
+export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus | null {
+  const t = texto.trim();
+  if (!t) return null;
+
+  switch (passo) {
+    case "servico": {
+      const s = servicoDoTexto(t);
+      return s ? { servico: s } : null;
+    }
+    case "elevador": {
+      const r = simOuNao(t);
+      return r ? { elevador: r } : null;
+    }
+    case "estacionamento": {
+      const r = simOuNao(t);
+      return r ? { estacionamento: r } : null;
+    }
+    case "fatura": {
+      const r = simOuNao(t);
+      return r ? { fatura: r } : null;
+    }
+    case "codigoPostal": {
+      const { postalCode } = codigoPostalELocalidade(t);
+      return postalCode ? { codigoPostal: t } : null;
+    }
+    case "codigoPostalDestino": {
+      const { postalCode } = codigoPostalELocalidade(t);
+      return postalCode ? { codigoPostalDestino: t } : null;
+    }
+    case "andar": {
+      // Só o que se parece mesmo com um andar: «2», «r/c», «cave», «3º». Uma
+      // frase inteira não é um andar, e `andarDoTexto` devolve-a tal e qual.
+      const curto = semAcentos(t).replace(/[.!º°]+/g, "");
+      if (!/^(\d{1,2}|r\/?c|cave|terreo|loja|moradia|vivenda|[a-z]{4,8}o)$/.test(curto)) return null;
+      return { andar: t };
+    }
+    default:
+      return null;
+  }
+}
+
+/** Já há trabalho feito nesta conversa que se perca ao desistir? */
+function temTrabalhoFeito(d: DadosDaRecolha): boolean {
+  return Boolean(
+    d.serviceType || d.contactName || d.address || d.description || d.quandoTexto || d.postalCode,
+  );
+}
+
+/** O que já se sabe, em meia dúzia de palavras, para a pergunta da desistência. */
+function oQueJaTenho(d: DadosDaRecolha): string {
+  const partes = [
+    d.serviceType ? (ETIQUETAS[d.serviceType] ?? d.serviceType).toLowerCase() : null,
+    d.contactName ?? null,
+    [d.address, d.city].filter(Boolean).join(", ") || null,
+  ].filter((x): x is string => Boolean(x));
+  return partes.length > 0 ? partes.join(", ") : "o que já me disse";
+}
+
 export function responderComCompreensao(
   estado: EstadoDaRecolha,
   compreensao: { intencao: Intencao; campos: CamposCrus },
   agora: Date = new Date(),
+  contexto: { texto?: string } = {},
 ): RespostaDaRecolha {
   const { intencao, campos: k } = compreensao;
+  const cru = (contexto.texto ?? "").trim();
+
+  /*
+   * A LEITURA DIRECTA MANDA — e é o plano B que faltava.
+   *
+   * O Gemini lia «Não» a uma pergunta de sim/não e devolvia campos vazios,
+   * e a conversa respondia «Desculpe, não apanhei. Precisa de factura com
+   * NIF?» — à frente de um `simOuNao("Não")` que teria acertado sem hesitar.
+   * O caminho antigo existia e nunca era tentado, porque esta função nem
+   * sequer recebia o texto cru.
+   *
+   * Agora recebe. Sabendo qual é a pergunta em cima da mesa, uma resposta
+   * curta lê-se com os validadores de sempre, e o que daí sair vale MAIS do
+   * que o silêncio do modelo.
+   */
+  const directa = cru ? leituraDirecta(estado.passo, cru) : null;
+  const kk: CamposCrus = directa ? { ...k, ...directa } : k;
+
+  /*
+   * A CONFIRMAÇÃO ANTES DO APAGAR.
+   *
+   * «Não preciso», a responder a «Precisa de factura com NIF?», foi lido
+   * como desistência — e apagou a recolha inteira da Sra. Ana: serviço,
+   * nome, morada, andar, data, tudo. Sem confirmação, sem arquivo, sem
+   * volta. O exemplo que o modelo tinha para «cancelar» era, literalmente,
+   * «já não preciso».
+   *
+   * Com trabalho feito, desistir passa a PERGUNTAR. E quem lê a resposta a
+   * essa pergunta é o código — `simOuNao` — e não outra etiqueta do modelo:
+   * um DELETE irreversível não pode ficar do outro lado de um palpite.
+   */
+  if (estado.dados.aConfirmarDesistencia) {
+    const resposta = cru ? simOuNao(cru) : null;
+    const { aConfirmarDesistencia: _, ...limpos } = estado.dados;
+    if (resposta === "sim" || /^cancelar$/i.test(cru)) {
+      return {
+        estado: { passo: estado.passo, dados: limpos },
+        resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
+        desistir: true,
+      };
+    }
+    // Não era desistência: limpa-se a bandeira e a conversa segue com o que
+    // ele acabou de dizer, como se nada tivesse acontecido.
+    return responderComCompreensao(
+      { passo: estado.passo, dados: limpos },
+      { intencao: intencao === "cancelar" ? "informar" : intencao, campos: kk },
+      agora,
+      contexto,
+    );
+  }
 
   if (intencao === "falar_com_pessoa") {
     return {
@@ -795,10 +942,21 @@ export function responderComCompreensao(
     };
   }
   if (intencao === "cancelar") {
+    // Sem nada recolhido não há o que perder: é o «deixa estar» de quem ainda
+    // não disse nada, e obrigá-lo a confirmar seria ficar-lhe com a conversa.
+    if (!temTrabalhoFeito(estado.dados)) {
+      return {
+        estado,
+        resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
+        desistir: true,
+      };
+    }
     return {
-      estado,
-      resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
-      desistir: true,
+      estado: { passo: estado.passo, dados: { ...estado.dados, aConfirmarDesistencia: true } },
+      resposta:
+        `Só para eu não apagar nada por engano: quer mesmo desistir do pedido?\n\n` +
+        `Já tenho ${oQueJaTenho(estado.dados)}. Responda SIM para deitar fora, ` +
+        `ou diga-me o que falta e seguimos daqui.`,
     };
   }
   if (intencao === "recomecar") {
@@ -815,7 +973,7 @@ export function responderComCompreensao(
     };
   }
 
-  const d = fundirCampos(estado.dados, k, agora);
+  const d = fundirCampos(estado.dados, kk, agora);
 
   const passo = primeiroPassoEmFalta(d);
 

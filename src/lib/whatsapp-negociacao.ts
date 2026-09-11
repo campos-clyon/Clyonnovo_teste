@@ -68,6 +68,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   const {
     responderNaRecolha,
     responderComCompreensao,
+    perguntaPendente,
     recolhaNova,
     perguntaDo,
     mensagemDePedidoRegistado,
@@ -93,8 +94,19 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
    */
   const agora = new Date();
   const responder = async (e: Estado) => {
-    const c = await compreender(texto, e.dados as Record<string, unknown>, agora);
-    return c ? responderComCompreensao(e, c, agora) : responderNaRecolha(e, texto, agora);
+    /*
+     * A PERGUNTA VAI COM A MENSAGEM.
+     *
+     * Sem ela o modelo lê «Não preciso» a flutuar no vazio e casa-a com o
+     * exemplo de desistir — foi assim que a recolha de uma cliente
+     * desapareceu inteira. E o TEXTO CRU vai para a função pura, que sem ele
+     * não tinha como cair no caminho antigo quando o modelo não percebe.
+     */
+    const pendente = perguntaPendente(e.passo, e.dados as never);
+    const c = await compreender(texto, e.dados as Record<string, unknown>, agora, pendente);
+    return c
+      ? responderComCompreensao(e, c, agora, { texto })
+      : responderNaRecolha(e, texto, agora);
   };
 
   if (!estado) {
@@ -106,8 +118,16 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
       await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
       await enviarTextoWhatsApp(telefone, r.resposta);
     } else if (r.pedirPessoa) {
-      await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
+      /*
+       * FALAR PRIMEIRO, INTERROMPER DEPOIS.
+       *
+       * `enviarTextoWhatsApp` passa pelo portão, e `podeOWhatsAppFalarCom`
+       * devolve falso para um número interrompido há um milissegundo: a
+       * despedida era engolida sem erro nenhum, e quem pediu para falar com
+       * uma pessoa ficava a olhar para o silêncio.
+       */
       await enviarTextoWhatsApp(telefone, r.resposta);
+      await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
     } else {
       await guardarRecolhaWhatsApp(telefone, "servico", {});
       await enviarTextoWhatsApp(telefone, perguntaDo("servico", {}, !compreensaoDisponivel()));
@@ -118,8 +138,9 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   const r = await responder(estado);
 
   if (r.pedirPessoa) {
-    await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
+    // Falar primeiro — ver a nota acima: o portão engole o que sair depois.
     await enviarTextoWhatsApp(telefone, r.resposta);
+    await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
     return;
   }
   if (r.desistir) {
@@ -145,11 +166,12 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     } catch (e) {
       console.error("[whatsapp/recolha] não registou o pedido:", e);
       // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.
-      await interromperNumeroWhatsApp(telefone, "O registo automático falhou — ver a conversa");
+      // Falar primeiro — ver a nota acima: o portão engole o que sair depois.
       await enviarTextoWhatsApp(
         telefone,
         "Tenho aqui tudo o que me disse, mas não consegui registar sozinho. Uma pessoa da CLYON vai tratar disto e responde-lhe por aqui.",
       );
+      await interromperNumeroWhatsApp(telefone, "O registo automático falhou — ver a conversa");
     }
     return;
   }
