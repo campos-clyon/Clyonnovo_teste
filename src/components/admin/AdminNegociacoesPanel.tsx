@@ -1837,6 +1837,7 @@ export default function AdminNegociacoesPanel({
           <LinkEmClaro
             caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
             telefone={p.contactPhone}
+            token={token}
             mensagem={mensagemDasPropostas({
               nomeCliente: p.contactName,
               servico: nomeDoServico(p.serviceType),
@@ -3538,11 +3539,14 @@ function LinkEmClaro({
   aviso,
   mensagem,
   telefone,
+  token,
 }: {
   caminho: string;
   aviso: string;
   /** O telemóvel do cliente, se der para abrir a conversa no WhatsApp. */
   telefone?: string | null;
+  /** Para enviar pela CLYON. Sem ele o botão não aparece — não há envio anónimo. */
+  token?: string | null;
   /**
    * A mensagem pronta a mandar, já com as propostas e o link lá dentro.
    *
@@ -3557,7 +3561,42 @@ function LinkEmClaro({
   mensagem?: string;
 }) {
   const [copiado, setCopiado] = useState<"link" | "mensagem" | null>(null);
+  const [aEnviar, setAEnviar] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [erroDoEnvio, setErroDoEnvio] = useState("");
   const url = typeof window !== "undefined" ? `${window.location.origin}${caminho}` : caminho;
+
+  /**
+   * Manda a mensagem pelo número da CLYON e devolve a conversa ao assistente.
+   *
+   * O `token` vem de quem chama: este componente vive dentro do painel, que já
+   * está autenticado. Sem ele o botão não aparece — não há envio anónimo.
+   */
+  async function enviarPelaClyon(para: string, texto: string) {
+    if (!token) return;
+    setAEnviar(true);
+    setErroDoEnvio("");
+    try {
+      const res = await fetch("/api/admin/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "enviarPelaClyon", telefone: para, nota: texto }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErroDoEnvio(dados.error ?? "Não foi possível enviar.");
+        return;
+      }
+      setEnviado(true);
+      // Um aviso não é um erro: a mensagem saiu, mas há uma condição que
+      // impede o assistente de continuar — e quem carregou tem de a saber.
+      if (dados.aviso) setErroDoEnvio(dados.aviso);
+    } catch {
+      setErroDoEnvio("Erro de rede.");
+    } finally {
+      setAEnviar(false);
+    }
+  }
 
   function copiar(o: "link" | "mensagem", texto: string) {
     navigator.clipboard?.writeText(texto);
@@ -3595,6 +3634,33 @@ function LinkEmClaro({
               Mensagem pronta a enviar
             </p>
             <div className="flex shrink-0 items-center gap-1.5">
+              {/*
+                ENVIAR PELA CLYON — e o assistente fica com a conversa.
+
+                "Esse botão devia passar para o bot do WhatsApp enviar, e
+                continuar a conversa caso seja necessário."
+
+                É a diferença que importa: o botão do lado sai do telemóvel de
+                quem carrega, e o assistente não fica a saber de nada — quando
+                o cliente responder «aceito», a resposta cai numa conversa que
+                a plataforma nunca começou. Este sai pelo número da CLYON, fica
+                no fio, e devolve o número ao assistente.
+              */}
+              {telefone && (
+                <button
+                  onClick={() => void enviarPelaClyon(telefone, mensagem)}
+                  disabled={aEnviar}
+                  title="Sai pelo número da CLYON e o assistente fica a tratar da conversa."
+                  className="flex items-center gap-1 rounded bg-cyan-600 px-2 py-1 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50"
+                >
+                  {aEnviar ? (
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Send className="h-3 w-3" aria-hidden="true" />
+                  )}
+                  {enviado ? "A caminho" : "Enviar pela CLYON"}
+                </button>
+              )}
               {/* Abrir a conversa com isto escrito poupa copiar, trocar de
                   aplicação e procurar o contacto. O envio continua a ser dele. */}
               {linkDeWhatsApp(telefone, mensagem) && (
@@ -3602,10 +3668,11 @@ function LinkEmClaro({
                   href={linkDeWhatsApp(telefone, mensagem) as string}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title="Abre o SEU WhatsApp com o texto escrito. A mensagem sai do seu número."
                   className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
                 >
                   <MessageCircle className="h-3 w-3" aria-hidden="true" />
-                  Enviar no WhatsApp
+                  Do meu WhatsApp
                 </a>
               )}
               <button
@@ -3621,6 +3688,22 @@ function LinkEmClaro({
             Mostra-se INTEIRA, e não cortada. É texto que vai sair em nome da
             casa para um cliente: quem o manda tem de o poder ler antes.
           */}
+          {/*
+            O que aconteceu ao envio, dito por extenso.
+
+            Um verde silencioso não chega: pela ponte, «saiu» quer dizer «ficou
+            na fila», e com o interruptor geral desligado a mensagem sai mas o
+            assistente não responde ao que vier a seguir.
+          */}
+          {enviado && !erroDoEnvio && (
+            <p className="mt-1.5 text-[11px] text-cyan-300">
+              A caminho pelo número da CLYON. O assistente fica a tratar desta conversa —
+              responde ao que ele disser.
+            </p>
+          )}
+          {erroDoEnvio && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-red-300">{erroDoEnvio}</p>
+          )}
           <pre className="mt-1.5 max-h-64 overflow-y-auto whitespace-pre-wrap rounded bg-slate-950 px-2.5 py-2 font-sans text-[11px] leading-relaxed text-slate-300">
             {mensagem}
           </pre>

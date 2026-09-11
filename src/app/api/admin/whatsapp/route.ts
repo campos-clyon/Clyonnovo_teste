@@ -138,6 +138,68 @@ export async function POST(req: NextRequest) {
   }
 
   /*
+   * ENVIAR PELA CLYON — e o assistente fica com a conversa.
+   *
+   * "Esse botão enviar orçamento devia passar para o bot do WhatsApp enviar,
+   * e continuar a conversa caso seja necessário." — 11-09-2026.
+   *
+   * O botão que havia abria o WhatsApp Web de quem carregava, com o texto
+   * escrito: a mensagem saía do telemóvel DELE, e o assistente não ficava a
+   * saber de nada. Quando o cliente respondesse «aceito» ou «150», a resposta
+   * caía numa conversa que a plataforma nunca tinha começado.
+   *
+   * Aqui sai pelo número da CLYON, fica no fio, e o número é DEVOLVIDO ao
+   * assistente — que é o que faz a frase «e continuar a conversa» valer
+   * alguma coisa. Sem isso, uma conversa que estivesse entregue a uma pessoa
+   * continuava entregue, e o cérebro calava-se à resposta do cliente.
+   */
+  if (accao === "enviarPelaClyon") {
+    const texto = typeof corpo.nota === "string" ? corpo.nota.trim() : "";
+    if (!texto || telefone.replace(/\D/g, "").length < 9) {
+      return NextResponse.json({ error: "Falta o número ou o texto." }, { status: 400 });
+    }
+
+    // Um bloqueado não recebe nada — é a decisão que o bloqueio É, e não uma
+    // que este botão possa desfazer por acidente.
+    const { numeroBloqueadoWhatsApp } = await import("@/lib/db");
+    if (await numeroBloqueadoWhatsApp(telefone)) {
+      return NextResponse.json(
+        { error: "Este número está bloqueado. Desbloqueie-o primeiro, no ecrã do WhatsApp." },
+        { status: 409 },
+      );
+    }
+
+    const saiu = await enviarTextoManualWhatsApp(telefone, texto);
+    if (!saiu) {
+      return NextResponse.json(
+        {
+          error:
+            "Não saiu. Ou não há canal configurado, ou a janela de 24 horas desde a " +
+            "última mensagem dele já fechou — nesse caso só um template aprovado passa.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await retomarNumeroWhatsApp(telefone);
+
+    /*
+     * O assistente só responde se o interruptor geral estiver ligado. A
+     * mensagem saiu à mesma — quem carregou pediu-o — mas dizer que ele fica
+     * a tratar disto, com o WhatsApp desligado, seria uma promessa falsa.
+     */
+    const ligado = await whatsappLigado();
+    return NextResponse.json({
+      ok: true,
+      canal: canalWhatsApp(),
+      assistenteVaiResponder: ligado,
+      aviso: ligado
+        ? null
+        : "A mensagem saiu, mas o WhatsApp da plataforma está DESLIGADO — o assistente não vai responder ao que ele disser. Ligue-o no ecrã do WhatsApp.",
+    });
+  }
+
+  /*
    * CHEGOU UMA RESPOSTA — lida no WhatsApp Web e colada aqui.
    *
    * Sem API não há webhook; este é o webhook à mão. O texto entra pelo
