@@ -103,11 +103,24 @@ const includedItems = [
   "Equipa de 2 a 4 pessoas conforme necessidade",
 ];
 
+/*
+ * O SEGURO SAIU DAQUI, E A PRIMEIRA PESSOA TAMBÉM.
+ *
+ * Prometia responsabilidade civil incluída. Não há apólice nenhuma:
+ * não se pede seguro ao profissional, não se verifica, não se guarda — não há
+ * um único campo de seguro em `providers`. «Não temos nenhum seguro», confirmou
+ * o dono a 11-09-2026. Um cliente com um móvel partido ia reclamar uma
+ * cobertura que não existe, e tinha por escrito que lha prometemos.
+ *
+ * E o resto falava como se a CLYON tivesse camiões e equipas. Não tem: quem vai
+ * é um profissional independente, com a carrinha dele. A regra está escrita em
+ * `service-categories.ts` e é a mesma em todo o site — o que se promete é o que
+ * a plataforma faz, não o que o profissional faz por ela.
+ */
 const differentiators = [
-  "Equipa profissional treinada para cargas pesadas",
-  "Veículos de vários tamanhos (carrinhas a camiões)",
+  "Profissionais com equipa e veículo adequados ao volume",
   "Proteção de paredes, elevadores e acessos",
-  "Seguro de responsabilidade civil incluído",
+  "O valor fica acordado por escrito antes de sair de casa",
   "Orçamento detalhado sem surpresas",
   "Flexibilidade de horário (manhã, tarde, fim de semana)",
 ];
@@ -222,8 +235,11 @@ export default function MudancasPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Clock3, title: "Pontualidade", desc: "Chegamos à hora combinada e cumprimos o planeamento acordado." },
-            { icon: Shield, title: "Proteção incluída", desc: "Seguro de responsabilidade civil e proteção dos seus bens durante o transporte." },
+            { icon: Clock3, title: "Hora combinada", desc: "O profissional confirma consigo o dia e a hora, e fica registado na plataforma." },
+            // Era "Proteção incluída", a prometer responsabilidade civil. Não há
+            // apólice nenhuma. O que existe mesmo — e é verificável — é o valor
+            // acordado por escrito antes de ele sair de casa. Ver sem-seguro.test.ts.
+            { icon: Shield, title: "Preço fechado", desc: "O valor fica acordado por escrito antes do trabalho começar, e ninguém o muda sozinho à porta." },
             { icon: Package, title: "Serviço completo", desc: "Embalagem, desmontagem, transporte, descarga e montagem no destino." },
           ].map((item) => (
             <div key={item.title} className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(5,150,105,0.12)]">
