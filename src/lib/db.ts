@@ -6502,9 +6502,67 @@ export type ResultadoDaPurga = {
   fotosApagadas: number;
   /** Elegíveis que não couberam nesta passagem. */
   restantes: number;
+  /**
+   * Correu a sério? Em modo seco nada foi apagado: `expurgados` e
+   * `fotosApagadas` passam a ser o que TERIA sido apagado.
+   */
+  aSerio: boolean;
+  /** Em modo seco, os pedidos que estavam na mira. */
+  naMira: number[];
 };
 
-export async function purgarPedidosTerminados(dias: number): Promise<ResultadoDaPurga> {
+/**
+ * Quantas fotografias estes pedidos têm, sem lhes tocar.
+ *
+ * Só o modo seco usa isto. É a mesma leitura que `deleteSimulatorOrder` faz
+ * antes de apagar — e está escrita aqui outra vez de propósito, em vez de se
+ * extrair a de lá: aquela é a função que apaga a sério, e mexer-lhe para
+ * ganhar uma contagem que não apaga nada seria pôr em risco o caminho crítico
+ * pelo lado errado. Uma contagem que erre por baixo num relatório é um
+ * incómodo; um apagar que erre é irreversível.
+ */
+async function contarFotografiasDe(ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const pool = await getPool();
+  if (!pool) return 0;
+  const marcas = ids.map(() => "?").join(",");
+  const [oLinhas] = (await pool.execute(
+    `SELECT filesJson FROM simulatorOrders WHERE id IN (${marcas})`,
+    ids,
+  )) as any[];
+  const [nLinhas] = (await pool.execute(
+    `SELECT provaJson FROM negociacoes WHERE pedidoId IN (${marcas}) AND provaJson IS NOT NULL`,
+    ids,
+  )) as any[];
+
+  let n = 0;
+  for (const o of oLinhas as Array<{ filesJson: string | null }>) {
+    try {
+      const lista = o.filesJson ? JSON.parse(o.filesJson) : [];
+      if (Array.isArray(lista)) for (const f of lista) if (f && typeof f.url === "string") n += 1;
+    } catch {
+      /* um JSON estragado conta zero, e não estoira o relatório */
+    }
+  }
+  for (const g of nLinhas as Array<{ provaJson: string | null }>) {
+    try {
+      const prova = g.provaJson ? JSON.parse(g.provaJson) : null;
+      if (Array.isArray(prova?.fotos)) for (const u of prova.fotos) if (typeof u === "string") n += 1;
+    } catch {
+      /* idem */
+    }
+  }
+  return n;
+}
+
+/**
+ * @param opcoes.aSerio  Falso = modo seco: conta o que apagaria e não apaga.
+ */
+export async function purgarPedidosTerminados(
+  dias: number,
+  opcoes: { aSerio?: boolean } = {},
+): Promise<ResultadoDaPurga> {
+  const aSerio = opcoes.aSerio !== false;
   const n = Math.max(1, Math.floor(dias));
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
@@ -6527,6 +6585,28 @@ export async function purgarPedidosTerminados(dias: number): Promise<ResultadoDa
     `SELECT o.id ${condicao} ORDER BY o.updatedAt ASC LIMIT ${PEDIDOS_POR_PASSAGEM_DA_PURGA}`,
   )) as any[];
   const ids = (linhas as Array<{ id: number }>).map((l) => Number(l.id));
+
+  /*
+   * MODO SECO — a trava enquanto não houver cópia de segurança verificada.
+   *
+   * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: uma purga
+   * diária e irreversível sem ninguém ter confirmado que há de onde recuperar.
+   * A condição está apertada, mas "apertada" não é "reversível".
+   *
+   * Por omissão conta e não apaga. Arma-se com PURGA_ARMADA=sim, depois de se
+   * ver no registo o número real da primeira passagem.
+   */
+  if (!aSerio) {
+    return {
+      elegiveis,
+      expurgados: ids.length,
+      falhados: [],
+      fotosApagadas: await contarFotografiasDe(ids),
+      restantes: Math.max(0, elegiveis - ids.length),
+      aSerio: false,
+      naMira: ids,
+    };
+  }
 
   let expurgados = 0;
   let fotosApagadas = 0;
@@ -6553,5 +6633,7 @@ export async function purgarPedidosTerminados(dias: number): Promise<ResultadoDa
     falhados,
     fotosApagadas,
     restantes: Math.max(0, elegiveis - ids.length),
+    aSerio: true,
+    naMira: [],
   };
 }

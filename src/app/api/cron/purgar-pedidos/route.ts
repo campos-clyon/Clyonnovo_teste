@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { purgarPedidosTerminados, registarSemFalhar } from "@/lib/db";
-import { DIAS_DE_RETENCAO_DOS_PEDIDOS } from "@/lib/retencao";
+import { DIAS_DE_RETENCAO_DOS_PEDIDOS, purgaArmada } from "@/lib/retencao";
 
 export const runtime = "nodejs";
 
@@ -32,23 +32,38 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const r = await purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS);
+    const armada = purgaArmada();
+    const r = await purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, { aSerio: armada });
 
-    // Só se regista quando houve alguma coisa: uma linha por dia a dizer
-    // "zero" enterrava as que interessam. As linhas por pedido já lá estão,
-    // escritas por `deleteSimulatorOrder`; esta é o resumo da passagem.
-    if (r.expurgados > 0 || r.falhados.length > 0) {
+    /*
+     * Em modo seco regista-se SEMPRE que houvesse alguma coisa a apagar, e não
+     * só quando se apagou: o número é justamente o que se quer ver antes de
+     * armar. A seco, um "zero" também vale a pena — diz que não há nada
+     * acumulado, que é uma resposta.
+     */
+    if (r.expurgados > 0 || r.falhados.length > 0 || !r.aSerio) {
       await registarSemFalhar({
         acontecimento: "pedido_expurgado",
         autorTipo: "sistema",
         autorNome: "retenção",
-        resumo:
-          `Purga dos ${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias: ${r.expurgados} pedido(s) expurgado(s), ` +
-          `${r.fotosApagadas} fotografia(s) apagada(s)` +
-          (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
-          (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : ""),
-        detalhe: { falhados: r.falhados, restantes: r.restantes },
+        resumo: r.aSerio
+          ? `Purga dos ${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias: ${r.expurgados} pedido(s) expurgado(s), ` +
+            `${r.fotosApagadas} fotografia(s) apagada(s)` +
+            (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
+            (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "")
+          : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s) e ` +
+            `${r.fotosApagadas} fotografia(s)` +
+            (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
+            `. Para armar, ponha PURGA_ARMADA=sim na Vercel.`,
+        detalhe: { falhados: r.falhados, restantes: r.restantes, aSerio: r.aSerio, naMira: r.naMira },
       });
+    }
+
+    if (!r.aSerio) {
+      console.warn(
+        `[cron/purgar-pedidos] MODO SECO: apagaria ${r.expurgados} pedido(s) e ${r.fotosApagadas} fotografia(s). ` +
+          `PURGA_ARMADA=sim para valer a sério.`,
+      );
     }
 
     // Nunca em silêncio: um tecto que não se anuncia lê-se como "estava tudo feito".

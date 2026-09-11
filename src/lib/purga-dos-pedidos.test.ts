@@ -23,6 +23,7 @@ import { DIAS_DE_RETENCAO_DOS_PEDIDOS } from "./retencao";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const DB = ler("src/lib/db.ts");
 const ROTA = ler("src/app/api/cron/purgar-pedidos/route.ts");
+const RETENCAO = ler("src/lib/retencao.ts");
 const VERCEL = JSON.parse(ler("vercel.json")) as { crons: Array<{ path: string; schedule: string }> };
 
 /**
@@ -55,7 +56,10 @@ describe("a purga corre", () => {
 
   it("o prazo é o da constante, e a constante são 60 dias", () => {
     expect(DIAS_DE_RETENCAO_DOS_PEDIDOS).toBe(60);
-    expect(ROTA).toContain("purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS)");
+    // Sem o parêntese de fecho: a chamada ganhou um segundo argumento (a
+    // trava do modo seco), e o que este teste guarda é o PRAZO vir da
+    // constante — não a forma da chamada.
+    expect(ROTA).toContain("purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS");
   });
 
   it("nunca em silêncio: o que ficou por fazer é dito", () => {
@@ -133,5 +137,52 @@ describe("as imagens saem mesmo — também quando se apaga à mão", () => {
 
   it("o retrato distingue prazo de decisão", () => {
     expect(apagar).toContain('contexto.acontecimento ?? "pedido_apagado"');
+  });
+});
+
+describe("a trava: modo seco enquanto não houver cópia de segurança", () => {
+  const purga = corpoDe("purgarPedidosTerminados");
+
+  it("por omissão NÃO apaga — arma-se de propósito, não por esquecimento", () => {
+    /*
+     * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron
+     * diário e irreversível sem prova de que exista cópia de segurança de onde
+     * recuperar. A condição está apertada, mas "apertada" não é "reversível".
+     *
+     * O sentido do `!== false` é a decisão: quem chama sem dizer nada apaga
+     * (é o contrato da função), e quem decide é a ROTA, que lê a variável e
+     * por omissão NÃO arma. Assim a função continua honesta e o cron seguro.
+     */
+    expect(RETENCAO).toContain("export function purgaArmada()");
+    expect(RETENCAO).toContain('=== "sim"');
+    expect(ROTA).toContain("const armada = purgaArmada();");
+    expect(ROTA).toContain("{ aSerio: armada }");
+  });
+
+  it("a seco devolve o que APAGARIA, e sai antes de apagar", () => {
+    const seco = purga.indexOf("if (!aSerio) {");
+    expect(seco).toBeGreaterThan(-1);
+    // O `return` do modo seco vem ANTES do ciclo que chama o apagar.
+    expect(seco).toBeLessThan(purga.indexOf("await deleteSimulatorOrder(id, {"));
+    expect(purga).toContain("aSerio: false");
+  });
+
+  it("conta as fotografias sem lhes tocar", () => {
+    // O número que interessa ver antes de armar é o das imagens: é o espaço.
+    expect(purga).toContain("await contarFotografiasDe(ids)");
+    expect(DB).toContain("async function contarFotografiasDe(");
+  });
+
+  it("a seco regista SEMPRE, mesmo o zero — é o número que se quer ver", () => {
+    expect(ROTA).toContain("|| !r.aSerio");
+    expect(ROTA).toContain("MODO SECO");
+    expect(ROTA).toContain("PURGA_ARMADA=sim");
+  });
+
+  it("e o .env.example diz que está travada e porquê", () => {
+    const EXEMPLO = ler(".env.example");
+    expect(EXEMPLO).toMatch(/^PURGA_ARMADA=/m);
+    expect(EXEMPLO).toContain("MODO SECO");
+    expect(EXEMPLO).toContain("cópia de segurança");
   });
 });
