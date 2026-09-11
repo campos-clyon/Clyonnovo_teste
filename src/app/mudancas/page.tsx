@@ -184,10 +184,14 @@ export default function MudancasPage() {
               <h1 className="mt-5 max-w-[16ch] text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
                 Mudanças Residenciais e Comerciais
               </h1>
+              {/* «Tratamos da sua mudança» e «equipa profissional, veículos
+                  adequados» diziam, no primeiro parágrafo da página, o mesmo que
+                  saiu da lista de baixo: que a CLYON faz o trabalho. Quem faz é
+                  um profissional independente, com a carrinha dele. */}
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Tratamos da sua mudança do início ao fim: embalagem, carga, transporte,
-                descarga e montagem de móveis. Equipa profissional, veículos adequados
-                e orçamento sem surpresas.
+                Ligamos a sua mudança a profissionais da sua zona que tratam dela do
+                início ao fim: embalagem, carga, transporte, descarga e montagem de
+                móveis. Recebe propostas com o valor fechado, e escolhe.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
