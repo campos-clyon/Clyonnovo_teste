@@ -1333,6 +1333,15 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     city: string | null;
     contactName: string | null;
     contactEmail: string | null;
+    /**
+     * O telemóvel do cliente — para o orçamento poder sair daqui por WhatsApp.
+     *
+     * Metade destes pedidos chega sem email (o simulador não o exige) e é por
+     * WhatsApp que se fala com eles. Sem este campo, a mesa tinha a mensagem
+     * pronta e não tinha para onde a mandar: copiava-se, abria-se o WhatsApp à
+     * parte, procurava-se a conversa. Três passos onde devia haver um.
+     */
+    contactPhone: string | null;
     valorDesejadoCliente: string | null;
     /**
      * De onde veio o pedido: "backoffice", "hero_quote_form",
@@ -1392,7 +1401,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
    */
   await ensureConcluidosVistosTable();
   const [pedidos] = await pool.execute(
-    `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
+    `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail, o.contactPhone,
             o.valorDesejadoCliente, o.baseDoPreco, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
             -- A validade do link do cliente serve de MARCA DE VERSAO.
             --
@@ -1455,6 +1464,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     city: (p.city as string) ?? null,
     contactName: (p.contactName as string) ?? null,
     contactEmail: (p.contactEmail as string) ?? null,
+    contactPhone: (p.contactPhone as string) ?? null,
     valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
     baseDoPreco: (p.baseDoPreco as string) ?? null,
     origem: (p.origem as string) ?? null,

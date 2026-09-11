@@ -14,6 +14,7 @@ import {
   Eye,
   Loader2,
   Mail,
+  MessageCircle,
   Pencil,
   RefreshCw,
   Send,
@@ -44,6 +45,7 @@ import {
   propostasParaOCliente,
   trabalhoFechado,
 } from "@/lib/mensagem-das-propostas";
+import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
@@ -234,6 +236,8 @@ type Pedido = {
   city: string | null;
   contactName: string | null;
   contactEmail: string | null;
+  /** O telemóvel, para o orçamento poder sair daqui direito para o WhatsApp. */
+  contactPhone: string | null;
   valorDesejadoCliente: string | null;
   /** "backoffice", "hero_quote_form", "formulario_contactos", ou null. */
   origem: string | null;
@@ -858,6 +862,69 @@ export default function AdminNegociacoesPanel({
     } catch {
       /* Sem área de transferência, fica a caixa por baixo para copiar à mão. */
     }
+  }
+
+  /**
+   * MANDAR O ORÇAMENTO AO CLIENTE, NUM GESTO.
+   *
+   * "Coloque nessa tela a opção de enviar o orçamento direto para o cliente."
+   * — 11-09-2026, com uma conversa de WhatsApp aberta ao lado onde tinha
+   * acabado de prometer resposta «até amanhã às 11h».
+   *
+   * A mensagem com as propostas já existia e já estava bem escrita, mas só
+   * aparecia DEPOIS de carregar em «Link para o cliente», dentro de uma caixa
+   * âmbar cujo título fala de emails que não saíram. Para a usar era preciso
+   * gerar o link, encontrar a caixa, copiar o texto, abrir o WhatsApp, procurar
+   * a conversa e colar. Seis passos, e metade destes clientes nem sequer tem
+   * email — o do #303 está marcado «sem email» no próprio ecrã.
+   *
+   * Agora é um: gera o link, monta a mensagem com as propostas e abre a
+   * conversa no WhatsApp com tudo escrito. Ele lê, e carrega em enviar.
+   *
+   * O QUE ISTO NÃO FAZ: não envia sozinho. O último toque é dele, dentro do
+   * WhatsApp, com o texto à frente — uma mensagem a um cliente não sai desta
+   * casa sem alguém a ter lido.
+   */
+  async function enviarOrcamento(p: Pedido) {
+    const chave = `c${p.id}`;
+    const propostas = propostasParaOCliente(p.negociacoes);
+    if (propostas.length === 0) {
+      setErro(`O pedido #${p.id} ainda não tem nenhuma proposta para mandar ao cliente.`);
+      return;
+    }
+    if (!numeroParaWhatsApp(p.contactPhone)) {
+      setErro(
+        `O pedido #${p.id} não tem um telemóvel que dê para abrir no WhatsApp. ` +
+          `Use "Link para o cliente" e mande por outro meio.`,
+      );
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Abrir o WhatsApp com o orçamento do pedido #${p.id} escrito?\n\n` +
+          `Gera um link novo do pedido — se já lhe mandou um antes, esse deixa de funcionar.\n\n` +
+          `A mensagem não sai sozinha: fica à sua frente para enviar.`,
+      )
+    )
+      return;
+
+    const t = await reenviar(chave, { pedidoId: p.id, para: "cliente", paraCopiar: true });
+    if (!t) return;
+    await carregar(true);
+
+    const url = `${window.location.origin}/pedido/${t}`;
+    const texto = mensagemDasPropostas({
+      nomeCliente: p.contactName,
+      servico: nomeDoServico(p.serviceType),
+      cidade: p.city,
+      propostas,
+      fechado: trabalhoFechado(p.negociacoes),
+      link: url,
+    });
+
+    const destino = linkDeWhatsApp(p.contactPhone, texto);
+    if (destino) window.open(destino, "_blank", "noopener");
   }
 
   /**
@@ -1629,6 +1696,37 @@ export default function AdminNegociacoesPanel({
             seguir, e obrigá-lo a caçar a caixa por baixo era um passo a mais
             no meio de uma conversa de WhatsApp.
           */}
+          {/*
+            ENVIAR O ORÇAMENTO, que é o fim de toda esta mesa.
+
+            Vem antes de «Link para o cliente» porque é a acção de que ele
+            precisa quando tem uma proposta em mão e um cliente à espera. O
+            link sozinho obriga-o a escrever a mensagem à volta; isto abre a
+            conversa com ela feita.
+
+            Só aparece quando há mesmo uma proposta — um botão que promete
+            mandar um orçamento e abre o WhatsApp com uma mensagem vazia é
+            pior do que não existir.
+          */}
+          {propostasParaOCliente(p.negociacoes).length > 0 && (
+            <button
+              onClick={() => enviarOrcamento(p)}
+              disabled={ocupado === `c${p.id}`}
+              title={
+                numeroParaWhatsApp(p.contactPhone)
+                  ? "Gera o link e abre o WhatsApp com as propostas escritas. Não envia sozinho."
+                  : "Este cliente não tem um telemóvel que dê para abrir no WhatsApp"
+              }
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+            >
+              {ocupado === `c${p.id}` ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Enviar orçamento
+            </button>
+          )}
           <button
             onClick={() => linkParaOCliente(p)}
             disabled={ocupado === `c${p.id}`}
@@ -1738,6 +1836,7 @@ export default function AdminNegociacoesPanel({
             String(p.linkExpiraEm) === versaoDoLink[chaveCliente]) && (
           <LinkEmClaro
             caminho={`/pedido/${linksEmClaro[chaveCliente]}`}
+            telefone={p.contactPhone}
             mensagem={mensagemDasPropostas({
               nomeCliente: p.contactName,
               servico: nomeDoServico(p.serviceType),
@@ -3438,9 +3537,12 @@ function LinkEmClaro({
   caminho,
   aviso,
   mensagem,
+  telefone,
 }: {
   caminho: string;
   aviso: string;
+  /** O telemóvel do cliente, se der para abrir a conversa no WhatsApp. */
+  telefone?: string | null;
   /**
    * A mensagem pronta a mandar, já com as propostas e o link lá dentro.
    *
@@ -3492,13 +3594,28 @@ function LinkEmClaro({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-200/80">
               Mensagem pronta a enviar
             </p>
-            <button
-              onClick={() => copiar("mensagem", mensagem)}
-              className="flex shrink-0 items-center gap-1 rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white"
-            >
-              <Copy className="h-3 w-3" aria-hidden="true" />
-              {copiado === "mensagem" ? "Copiada" : "Copiar mensagem"}
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {/* Abrir a conversa com isto escrito poupa copiar, trocar de
+                  aplicação e procurar o contacto. O envio continua a ser dele. */}
+              {linkDeWhatsApp(telefone, mensagem) && (
+                <a
+                  href={linkDeWhatsApp(telefone, mensagem) as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
+                >
+                  <MessageCircle className="h-3 w-3" aria-hidden="true" />
+                  Enviar no WhatsApp
+                </a>
+              )}
+              <button
+                onClick={() => copiar("mensagem", mensagem)}
+                className="flex items-center gap-1 rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white"
+              >
+                <Copy className="h-3 w-3" aria-hidden="true" />
+                {copiado === "mensagem" ? "Copiada" : "Copiar mensagem"}
+              </button>
+            </div>
           </div>
           {/*
             Mostra-se INTEIRA, e não cortada. É texto que vai sair em nome da
