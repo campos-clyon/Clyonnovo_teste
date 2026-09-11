@@ -16,8 +16,10 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
-/** Dias que o link de criação de palavra-passe dura. */
-const DIAS_DO_LINK_DE_SENHA = 7;
+// O número saiu daqui para `convite-profissional.ts`: a aprovação de uma
+// candidatura pelo site emite o mesmo link, e dois «7» em dois ficheiros é como
+// um deles passa a 14 sem ninguém dar por isso.
+import { DIAS_DO_LINK_DE_SENHA } from "@/lib/convite-profissional";
 
 export const runtime = "nodejs";
 

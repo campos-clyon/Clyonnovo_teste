@@ -14,9 +14,17 @@ import { etiquetaDoVeiculo } from "@/lib/convite-profissional";
  * serviços que faz. Agora preenche um formulário e a candidatura aparece
  * aqui.
  *
- * «Convidar» não o inscreve: cria o convite de sempre, com o mesmo email e o
- * mesmo link de 14 dias. A porta continua a ser a mesma; o que mudou é que
- * quem bate a ela deixa de se perder.
+ * APROVAR CRIA A CONTA. Mandava um convite para um segundo formulário, onde
+ * metade dos campos era a repetição do que ele acabara de escrever — «porque é
+ * que pede para enviar convite, se ele já preencheu tudo?», perguntou o dono a
+ * 11-09-2026, com razão. Agora aprovar cria o profissional com o que ele disse
+ * e manda-lhe o link para definir a palavra-passe.
+ *
+ * SÃO DUAS DECISÕES, E ESTÃO SEPARADAS DE PROPÓSITO. Aprovar aqui é dizer
+ * «este existe e é quem diz ser»: abre-lhe o painel, onde o cartão do perfil
+ * por completar lhe pede o NIF, a morada fiscal e o IBAN. Pô-lo a receber
+ * pedidos é a outra, e continua a ser tomada no ecrã dos profissionais, com a
+ * ficha dele à frente.
  */
 
 type Candidatura = {
@@ -28,7 +36,7 @@ type Candidatura = {
   tipoVeiculo: string | null;
   servicos: string[];
   mensagem: string | null;
-  estado: "nova" | "convidada" | "recusada";
+  estado: "nova" | "aprovada" | "convidada" | "recusada";
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -71,7 +79,7 @@ export default function AdminCandidaturasPanel() {
     if (ready) void carregar();
   }, [ready, carregar]);
 
-  async function agir(id: number, accao: "convidar" | "recusar") {
+  async function agir(id: number, accao: "aprovar" | "recusar") {
     if (!token) return;
     setOcupado(id);
     setErro("");
@@ -130,8 +138,10 @@ export default function AdminCandidaturasPanel() {
         )}
       </div>
       <p className="mt-1 text-xs leading-relaxed text-slate-400">
-        Vieram do formulário em /quero-ser-parceiro. Convidar cria o convite de sempre e
-        manda o email com o link de 14 dias — não inscreve ninguém.
+        Vieram do formulário em /quero-ser-parceiro. Aprovar cria já a conta com o que ele
+        escreveu e manda-lhe o link para definir a palavra-passe — sem segundo formulário.
+        Abre-lhe o painel; não o põe a receber pedidos: isso é a aprovação em Profissionais,
+        depois de ele preencher o NIF, a morada fiscal e o IBAN.
       </p>
 
       {erro && (
@@ -197,16 +207,35 @@ export default function AdminCandidaturasPanel() {
                   <p className="mt-1 text-[11px] text-slate-500">
                     {quando(c.criadoEm)}
                     {c.estado !== "nova" &&
-                      ` · ${c.estado === "convidada" ? "convidada" : "recusada"}${
-                        c.tratadoPor ? ` por ${c.tratadoPor}` : ""
-                      }`}
+                      ` · ${
+                        c.estado === "aprovada"
+                          ? "aprovada"
+                          : // Linhas anteriores a 11-09-2026, de quando aprovar
+                            // mandava um convite para o formulário longo.
+                            c.estado === "convidada"
+                            ? "convidada (convite antigo)"
+                            : "recusada"
+                      }${c.tratadoPor ? ` por ${c.tratadoPor}` : ""}`}
                   </p>
                 </div>
 
                 {c.estado === "nova" && (
                   <div className="flex shrink-0 gap-2">
                     <button
-                      onClick={() => void agir(c.id, "convidar")}
+                      /* Confirmação: isto cria uma conta e manda um email a uma
+                         pessoa. Enquanto era só um convite, um toque a mais
+                         custava um convite a mais; agora custa um profissional
+                         na base. */
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Criar a conta de ${c.nome} e enviar-lhe o link da palavra-passe?\n\n` +
+                              "Fica em pendente: abre o painel, não recebe pedidos.",
+                          )
+                        ) {
+                          void agir(c.id, "aprovar");
+                        }
+                      }}
                       disabled={ocupado === c.id}
                       className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
                     >
@@ -215,7 +244,7 @@ export default function AdminCandidaturasPanel() {
                       ) : (
                         <Send className="h-3.5 w-3.5" aria-hidden="true" />
                       )}
-                      Convidar
+                      Aprovar e dar acesso
                     </button>
                     <button
                       onClick={() => {
@@ -231,7 +260,7 @@ export default function AdminCandidaturasPanel() {
                     </button>
                   </div>
                 )}
-                {c.estado === "convidada" && (
+                {(c.estado === "aprovada" || c.estado === "convidada") && (
                   <Check className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
                 )}
               </div>

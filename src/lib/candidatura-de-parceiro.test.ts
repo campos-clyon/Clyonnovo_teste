@@ -68,21 +68,79 @@ describe("a rota pública recebe, e não inscreve", () => {
   });
 });
 
-describe("aprovar passa pelo convite de sempre", () => {
-  it("cria o convite com o mesmo token e a mesma validade", () => {
-    expect(ROTA_ADMIN).toContain("criarConvite");
-    expect(ROTA_ADMIN).toContain("DIAS_DE_VALIDADE_DO_CONVITE");
-    expect(ROTA_ADMIN).toContain("enviarConviteAoProfissional");
+describe("aprovar cria a conta, e não um segundo formulário", () => {
+  /*
+   * ISTO MUDOU A 11-09-2026, e o teste mudou com ele.
+   *
+   * Aprovar criava um CONVITE para um formulário de dez campos onde metade era
+   * a repetição do que o candidato acabara de escrever. «Porque é que pede para
+   * enviar convite, se ele já preencheu tudo?» — e a pergunta estava certa.
+   * Agora cria o profissional e manda o link da palavra-passe.
+   */
+  it("cria o profissional com o que ele escreveu na candidatura", () => {
+    expect(ROTA_ADMIN).toContain("criarProfissional");
+    expect(ROTA_ADMIN).toContain("slugLivreParaProfissional");
+    // Os serviços que ele escolheu entram como categorias — se não entrassem,
+    // ele não receberia pedido nenhum e ninguém saberia porquê.
+    expect(ROTA_ADMIN).toContain("categorias: candidatura.servicos");
   });
 
-  it("não convida duas vezes o mesmo email", () => {
+  it("manda o link da palavra-passe, e não um convite", () => {
+    expect(ROTA_ADMIN).toContain("guardarTokenDePalavraPasse");
+    expect(ROTA_ADMIN).toContain("enviarEmailDeAprovacao");
+    expect(ROTA_ADMIN).toContain("DIAS_DO_LINK_DE_SENHA");
+    expect(ROTA_ADMIN).not.toContain("criarConvite(");
+  });
+
+  it("o que a candidatura não pergunta fica por preencher, e o painel pede-o", () => {
+    // Não se inventam valores para o NIF nem para a morada fiscal: ficam nulos
+    // e o cartão do perfil por completar mostra o triângulo em cada um.
+    expect(ROTA_ADMIN).toContain("nif: null");
+    expect(ROTA_ADMIN).toContain("moradaFiscal: null");
+  });
+
+  it("não cria uma segunda conta com o mesmo email", () => {
     expect(ROTA_ADMIN).toContain("profissionalPorEmail");
-    expect(ROTA_ADMIN).toContain("convitePorEmail");
+  });
+
+  it("aprovar abre o painel e não a fila — a conta nasce pendente", () => {
+    /*
+     * São duas decisões diferentes: «este é quem diz ser» e «este pode ir a
+     * casa de um cliente». `criarProfissional` grava sempre `pendente`, e
+     * `avaliarElegibilidade` exige `aprovado` para distribuir.
+     */
+    const DB = ler("src/lib/db.ts");
+    const i = DB.indexOf("export async function criarProfissional");
+    expect(DB.slice(i, i + 2000)).toContain("pendente");
+    expect(ler("src/lib/profissional-elegivel.ts")).toContain(
+      'profissional.estado !== "aprovado"',
+    );
+  });
+
+  it("quem está pendente consegue definir a palavra-passe", () => {
+    // Sem isto, aprovar mandava um link que a própria rota recusava.
+    const SENHA = ler("src/app/api/profissionais/definir-senha/route.ts");
+    expect(SENHA).toContain('linha.estado !== "aprovado" && linha.estado !== "pendente"');
+  });
+
+  it("e consegue voltar a entrar depois de fechar o browser", () => {
+    /*
+     * A armadilha que esta mudança quase deixou: a entrada exigia `aprovado`.
+     * Ele definia a palavra-passe, entrava com a sessão que o link lhe dava,
+     * fechava o browser — e a partir daí a conta dele respondia «dados
+     * errados» até alguém o aprovar. Passava dias convencido de que se tinha
+     * enganado a escrever.
+     */
+    const ENTRAR = ler("src/app/api/profissionais/entrar/route.ts");
+    expect(ENTRAR).toContain('p?.estado === "aprovado" || p?.estado === "pendente"');
+    // E continua a barrar quem está suspenso, rejeitado ou desactivado.
+    expect(ENTRAR).toContain("p.isActive !== 1");
   });
 
   it("sem email, devolve o link para se mandar à mão", () => {
     // Senão a candidatura morre por causa de um servidor de email em baixo.
-    expect(ROTA_ADMIN).toContain("link: enviado ? null : comChave(");
+    expect(ROTA_ADMIN).toContain("link: enviado");
+    expect(ROTA_ADMIN).toContain("definir-senha");
   });
 
   it("só o admin ou um assistente com a secção dos profissionais lá chega", () => {

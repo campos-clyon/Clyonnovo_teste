@@ -42,6 +42,20 @@ export function etiquetaDoVeiculo(id: string | null | undefined): string {
 /** Quantos dias o link do convite dura. */
 export const DIAS_DE_VALIDADE_DO_CONVITE = 14;
 
+/**
+ * Quantos dias dura o link de criação da palavra-passe.
+ *
+ * Vive aqui e não dentro de uma rota porque agora há DOIS sítios a emiti-lo: a
+ * aprovação de um profissional no ecrã dos profissionais, e a aprovação de uma
+ * candidatura vinda do site. Dois números chamados «7» em dois ficheiros é
+ * como um deles passa a 14 sem ninguém dar por isso.
+ *
+ * É mais curto do que o do convite de propósito: o convite é um pedido a quem
+ * ainda não decidiu nada; este chega a quem acabou de ser aceite e só tem de
+ * escolher uma palavra-passe.
+ */
+export const DIAS_DO_LINK_DE_SENHA = 7;
+
 export type ErroDeConvite = { campo: string; mensagem: string };
 
 export type DadosDoConvite = {

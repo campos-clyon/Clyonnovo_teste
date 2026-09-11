@@ -19,7 +19,13 @@ import { getPool } from "./db";
  * sempre, com o mesmo email e o mesmo link de 14 dias.
  */
 
-export type EstadoDaCandidatura = "nova" | "convidada" | "recusada";
+/**
+ * `convidada` é o estado antigo, de quando aprovar mandava um convite para um
+ * segundo formulário. Desde 11-09-2026 aprovar CRIA A CONTA e manda o link da
+ * palavra-passe — o estado passou a `aprovada`. O antigo fica porque há linhas
+ * gravadas com ele e têm de continuar a ler-se.
+ */
+export type EstadoDaCandidatura = "nova" | "aprovada" | "convidada" | "recusada";
 
 export type Candidatura = {
   id: number;
@@ -33,7 +39,10 @@ export type Candidatura = {
   mensagem: string | null;
   estado: EstadoDaCandidatura;
   notaInterna: string | null;
+  /** O convite que se criou — só nas linhas anteriores a 11-09-2026. */
   conviteId: number | null;
+  /** O profissional em que esta candidatura se tornou, quando foi aprovada. */
+  providerId: number | null;
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -58,6 +67,7 @@ export async function ensureCandidaturasTable(): Promise<void> {
       estado      VARCHAR(20) NOT NULL DEFAULT 'nova',
       notaInterna VARCHAR(500) NULL,
       conviteId   INT UNSIGNED NULL DEFAULT NULL,
+      providerId  INT UNSIGNED NULL DEFAULT NULL,
       criadoEm    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       tratadoEm   DATETIME NULL DEFAULT NULL,
       tratadoPor  VARCHAR(120) NULL,
@@ -65,6 +75,20 @@ export async function ensureCandidaturasTable(): Promise<void> {
       KEY candidaturas_email (email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+
+  /*
+   * A tabela já existia sem esta coluna. O CREATE TABLE acima só corre em bases
+   * novas — quem já tem candidaturas gravadas precisa do ALTER, e o erro de
+   * «coluna duplicada» é o caso normal a partir da segunda vez.
+   */
+  try {
+    await pool.execute(
+      "ALTER TABLE candidaturasProfissionais ADD COLUMN providerId INT UNSIGNED NULL DEFAULT NULL",
+    );
+  } catch {
+    /* já existe */
+  }
+
   pronta = true;
 }
 
@@ -88,6 +112,7 @@ function daLinha(l: Record<string, unknown>): Candidatura {
     estado: (String(l.estado ?? "nova") as EstadoDaCandidatura),
     notaInterna: l.notaInterna ? String(l.notaInterna) : null,
     conviteId: l.conviteId != null ? Number(l.conviteId) : null,
+    providerId: l.providerId != null ? Number(l.providerId) : null,
     criadoEm: String(l.criadoEm ?? ""),
     tratadoEm: l.tratadoEm ? String(l.tratadoEm) : null,
     tratadoPor: l.tratadoPor ? String(l.tratadoPor) : null,
@@ -184,12 +209,20 @@ export async function candidaturaPorId(id: number): Promise<Candidatura | null> 
   return linhas[0] ? daLinha(linhas[0]) : null;
 }
 
-/** Marca o que se decidiu, e por quem. */
+/**
+ * Marca o que se decidiu, e por quem.
+ *
+ * `providerId` é o profissional em que esta candidatura se tornou — desde
+ * 11-09-2026, aprovar cria a conta directamente. O `conviteId` fica para as
+ * linhas anteriores, de quando aprovar mandava um convite; guardar um id de
+ * profissional numa coluna chamada «convite» era poupar uma coluna e pagar com
+ * a confusão de quem a fosse ler daqui a um ano.
+ */
 export async function marcarCandidatura(
   id: number,
   estado: EstadoDaCandidatura,
   por: string | null,
-  conviteId?: number | null,
+  providerId?: number | null,
   nota?: string | null,
 ): Promise<void> {
   await ensureCandidaturasTable();
@@ -198,10 +231,10 @@ export async function marcarCandidatura(
   await pool.execute(
     `UPDATE candidaturasProfissionais
         SET estado = ?, tratadoEm = CURRENT_TIMESTAMP, tratadoPor = ?,
-            conviteId = COALESCE(?, conviteId),
+            providerId = COALESCE(?, providerId),
             notaInterna = COALESCE(?, notaInterna)
       WHERE id = ?`,
-    [estado, por, conviteId ?? null, nota ?? null, id],
+    [estado, por, providerId ?? null, nota ?? null, id],
   );
 }
 

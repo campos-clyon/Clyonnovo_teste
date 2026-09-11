@@ -51,8 +51,26 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    /*
+     * `pendente` ENTRA, e é preciso que entre.
+     *
+     * Isto exigia `aprovado`, e funcionava enquanto ninguém em `pendente`
+     * tinha palavra-passe: o link para a criar só saía com a aprovação. Desde
+     * 11-09-2026 a aprovação de uma candidatura pelo site cria a conta em
+     * `pendente` e manda logo esse link — ele escolhe a palavra-passe, entra, e
+     * é no painel que lhe pedimos o NIF, a morada fiscal e o IBAN.
+     *
+     * Sem esta linha, era uma armadilha: definia a palavra-passe, fechava o
+     * browser, e a conta dele recusava-o com «dados errados» até alguém o
+     * aprovar. Passava dias a pensar que se tinha enganado a escrever.
+     *
+     * Entrar não é receber trabalho. Quem distribui pedidos continua a exigir
+     * `aprovado` (ver `avaliarElegibilidade`), e o painel mostra-lhe o estado
+     * da conta à cabeça.
+     */
     const p = await profissionalParaEntrar(email);
-    if (!p || p.estado !== "aprovado" || p.isActive !== 1) {
+    const podeEntrar = p?.estado === "aprovado" || p?.estado === "pendente";
+    if (!p || !podeEntrar || p.isActive !== 1) {
       return NextResponse.json({ error: GENERICO }, { status: 401 });
     }
 
