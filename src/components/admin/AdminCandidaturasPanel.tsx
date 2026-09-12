@@ -108,9 +108,22 @@ export default function AdminCandidaturasPanel() {
     }
   }
 
-  const novas = candidaturas.filter((c) => c.estado === "nova");
-  const tratadas = candidaturas.filter((c) => c.estado !== "nova");
-  const aMostrar = verTratadas ? tratadas : novas;
+  /*
+   * `convidada` NÃO É TRATADA — e era assim que estas pessoas se perdiam.
+   *
+   * É o estado antigo, de quando aprovar mandava um convite para um segundo
+   * formulário. Quem nunca usou esse convite ficou sem conta nenhuma: o
+   * candidato escreveu tudo, recebeu um link, não lhe tocou, e do lado de cá
+   * a linha mostrava um visto verde e não tinha botão nenhum. Parecia
+   * despachada e estava parada — quatro pessoas à espera sem ninguém a ver.
+   *
+   * Fica por tratar até alguém lhe criar a conta ou a recusar. Aprovar é
+   * seguro mesmo que ele tenha entretanto usado o convite: a rota vê que já
+   * é profissional e arruma a candidatura sem criar nada.
+   */
+  const porTratar = candidaturas.filter((c) => c.estado === "nova" || c.estado === "convidada");
+  const tratadas = candidaturas.filter((c) => c.estado === "aprovada" || c.estado === "recusada");
+  const aMostrar = verTratadas ? tratadas : porTratar;
 
   // Sem candidaturas nenhumas, nem sequer se desenha o bloco: um painel vazio
   // a dizer "nada por aqui" é ruído por cima do que interessa.
@@ -122,9 +135,9 @@ export default function AdminCandidaturasPanel() {
         <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
           <Inbox className="h-4 w-4 text-cyan-400" aria-hidden="true" />
           Candidaturas pelo site
-          {novas.length > 0 && (
+          {porTratar.length > 0 && (
             <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-xs font-bold text-cyan-200">
-              {novas.length}
+              {porTratar.length}
             </span>
           )}
         </h3>
@@ -133,7 +146,7 @@ export default function AdminCandidaturasPanel() {
             onClick={() => setVerTratadas((v) => !v)}
             className="rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
           >
-            {verTratadas ? `Ver por tratar (${novas.length})` : `Ver tratadas (${tratadas.length})`}
+            {verTratadas ? `Ver por tratar (${porTratar.length})` : `Ver tratadas (${tratadas.length})`}
           </button>
         )}
       </div>
@@ -210,16 +223,21 @@ export default function AdminCandidaturasPanel() {
                       ` · ${
                         c.estado === "aprovada"
                           ? "aprovada"
-                          : // Linhas anteriores a 11-09-2026, de quando aprovar
-                            // mandava um convite para o formulário longo.
+                          : /*
+                             * Linhas anteriores a 11-09-2026, de quando aprovar
+                             * mandava um convite para o formulário longo. Diz-se
+                             * o que ISSO SIGNIFICA hoje — «convidada» sozinho
+                             * lia-se como despachada, e a pessoa não tem conta
+                             * nenhuma.
+                             */
                             c.estado === "convidada"
-                            ? "convidada (convite antigo)"
+                            ? "convite antigo por usar — ainda sem conta"
                             : "recusada"
                       }${c.tratadoPor ? ` por ${c.tratadoPor}` : ""}`}
                   </p>
                 </div>
 
-                {c.estado === "nova" && (
+                {(c.estado === "nova" || c.estado === "convidada") && (
                   <div className="flex shrink-0 gap-2">
                     <button
                       /* Confirmação: isto cria uma conta e manda um email a uma
@@ -244,7 +262,7 @@ export default function AdminCandidaturasPanel() {
                       ) : (
                         <Send className="h-3.5 w-3.5" aria-hidden="true" />
                       )}
-                      Aprovar e dar acesso
+                      {c.estado === "convidada" ? "Criar a conta agora" : "Aprovar e dar acesso"}
                     </button>
                     <button
                       onClick={() => {
@@ -260,7 +278,7 @@ export default function AdminCandidaturasPanel() {
                     </button>
                   </div>
                 )}
-                {(c.estado === "aprovada" || c.estado === "convidada") && (
+                {c.estado === "aprovada" && (
                   <Check className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
                 )}
               </div>
