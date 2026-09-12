@@ -6647,3 +6647,161 @@ export async function purgarPedidosTerminados(
     naMira: [],
   };
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * O RESUMO DO BACKOFFICE — o que precisa de si, hoje.
+ *
+ * "Essa tela de início já não condiz com as novas ferramentas, está
+ * desactualizada. Vamos colocá-la no modo actual, com informações precisas
+ * como num painel bem planeado." — 12-09-2026.
+ *
+ * O Início contava os pedidos do simulador por estados que já não se usam —
+ * seis caixas a zero — e os leads do site. Nada sobre a plataforma que
+ * entretanto nasceu: as negociações, a agenda, o assistente do WhatsApp, as
+ * carteiras, os levantamentos, quem se candidatou.
+ *
+ * Este resumo conta só o que ALGUÉM TEM DE FAZER. Um painel bem planeado não
+ * é um painel com muitos números: é um que, se estiver todo a zero, diz que
+ * não há nada à espera de si — e que, quando não está, diz onde carregar.
+ *
+ * Uma consulta por linha, todas indexadas ou sobre tabelas pequenas, e todas
+ * com `.catch` à volta: um número que falhe devolve null e o cartão diz que
+ * não sabe. Um painel que rebenta por causa de um contador é pior do que um
+ * contador em falta.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export type ResumoDoBackoffice = {
+  /** Pedidos na mesa que ainda não foram a profissional nenhum. */
+  porEnviar: number | null;
+  /** Propostas à espera de uma resposta da CLYON, pelo cliente. */
+  esperamResposta: number | null;
+  /** Trabalhos contratados cujo dia já passou e ninguém deu por feito. */
+  atrasados: number | null;
+  /** Trabalhos contratados sem dia marcado. */
+  semData: number | null;
+  /** Transferências pedidas pelos profissionais e ainda por pagar. */
+  levantamentosPorPagar: number | null;
+  /** Quanto é que essas transferências somam, em euros. */
+  levantamentosEmEuros: number | null;
+  /** Candidaturas pelo site por tratar (novas e convites antigos por usar). */
+  candidaturas: number | null;
+  /** Profissionais à espera de aprovação. */
+  profissionaisPorAprovar: number | null;
+  /** Conversas de WhatsApp entregues a uma pessoa. */
+  conversasEntregues: number | null;
+  /** Mensagens do assistente à espera de sair. */
+  filaDoWhatsApp: number | null;
+  /** O assistente está ligado? */
+  whatsappLigado: boolean | null;
+  /** Trabalhos a decorrer — contratados, com dia, ainda por fazer. */
+  aDecorrer: number | null;
+};
+
+/** Um número de uma consulta que pode falhar sem levar o painel atrás. */
+async function conta(sql: string, args: unknown[] = []): Promise<number | null> {
+  try {
+    const pool = await getPool();
+    if (!pool) return null;
+    const [linhas] = (await pool.execute(sql, args)) as any[];
+    const n = (linhas as Array<{ n: unknown }>)[0]?.n;
+    const v = Number(n);
+    return Number.isFinite(v) ? v : null;
+  } catch (e) {
+    console.error("[resumo]", sql.slice(0, 60), e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
+  await ensureSimulatorOrdersTable().catch(() => {});
+  await ensureNegociacoesTable().catch(() => {});
+
+  const activo = "(o.status IS NULL OR o.status NOT IN ('cancelado','concluido','arquivado'))";
+
+  const [
+    porEnviar,
+    esperamResposta,
+    atrasados,
+    semData,
+    levantamentosPorPagar,
+    somaLevantamentos,
+    candidaturas,
+    profissionaisPorAprovar,
+    conversasEntregues,
+    filaDoWhatsApp,
+    aDecorrer,
+    ligado,
+  ] = await Promise.all([
+    // Na mesa e nunca enviado: o espelho exacto da lista "por promover".
+    conta(
+      `SELECT COUNT(*) AS n FROM simulatorOrders o
+        WHERE ${activo} AND NOT EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)`,
+    ),
+    /*
+     * À espera de uma resposta NOSSA.
+     *
+     * Só as que a CLYON conduz — pedido registado pela equipa, ou cliente sem
+     * email, que é quem não tem como responder sozinho. Nas outras a bola está
+     * do lado do cliente, e pô-las aqui era pedir à equipa que respondesse por
+     * quem pode falar por si.
+     */
+    conta(
+      `SELECT COUNT(*) AS n FROM negociacoes g
+         JOIN simulatorOrders o ON o.id = g.pedidoId
+        WHERE ${activo}
+          AND g.estado IN ('aberta','aguarda_contratacao')
+          AND JSON_SEARCH(g.propostasJson, 'one', 'pendente', NULL, '$[*].estado') IS NOT NULL
+          AND (
+            COALESCE(
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source'))
+            ) = 'backoffice'
+            OR o.contactEmail IS NULL OR TRIM(o.contactEmail) = ''
+          )`,
+    ),
+    // O dia passou e ninguém deu o trabalho por feito.
+    conta(
+      `SELECT COUNT(*) AS n FROM negociacoes g
+         JOIN simulatorOrders o ON o.id = g.pedidoId
+        WHERE g.estado = 'acordada' AND g.execucaoEnviadaEm IS NULL
+          AND COALESCE(g.dataCombinada, o.dataAgendada) IS NOT NULL
+          AND COALESCE(g.dataCombinada, o.dataAgendada) < NOW()`,
+    ),
+    // Contratado e sem dia: um atraso que ainda não começou a contar.
+    conta(
+      `SELECT COUNT(*) AS n FROM negociacoes g
+         JOIN simulatorOrders o ON o.id = g.pedidoId
+        WHERE g.estado = 'acordada' AND g.execucaoEnviadaEm IS NULL
+          AND COALESCE(g.dataCombinada, o.dataAgendada) IS NULL`,
+    ),
+    conta("SELECT COUNT(*) AS n FROM levantamentos WHERE estado = 'pedido'"),
+    conta("SELECT COALESCE(SUM(valor), 0) AS n FROM levantamentos WHERE estado = 'pedido'"),
+    // `convidada` conta: é o convite antigo por usar, de quem ainda não tem conta.
+    conta(
+      "SELECT COUNT(*) AS n FROM candidaturasProfissionais WHERE estado IN ('nova','convidada')",
+    ),
+    conta("SELECT COUNT(*) AS n FROM providers WHERE estado = 'pendente'"),
+    conta("SELECT COUNT(*) AS n FROM whatsappInterrompidos"),
+    conta("SELECT COUNT(*) AS n FROM whatsappFila WHERE enviadoEm IS NULL"),
+    conta(
+      `SELECT COUNT(*) AS n FROM negociacoes g
+        WHERE g.estado = 'acordada' AND g.confirmadoEm IS NULL`,
+    ),
+    whatsappLigado().catch(() => null),
+  ]);
+
+  return {
+    porEnviar,
+    esperamResposta,
+    atrasados,
+    semData,
+    levantamentosPorPagar,
+    levantamentosEmEuros: somaLevantamentos,
+    candidaturas,
+    profissionaisPorAprovar,
+    conversasEntregues,
+    filaDoWhatsApp,
+    whatsappLigado: ligado,
+    aDecorrer,
+  };
+}

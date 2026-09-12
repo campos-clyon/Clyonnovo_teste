@@ -24,6 +24,7 @@ import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
+import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
@@ -1232,7 +1233,14 @@ export default function ColaboradorAdminClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, ticketsFiltro]);
 
-  // Carregar resumo de pedidos para o overview (5 mais recentes)
+  /*
+   * Os pedidos, à cabeça.
+   *
+   * Era «para o overview», e deixou de o ser: o Início passou a ter resumo
+   * próprio numa chamada só (`/api/admin/resumo`). Isto fica porque o ecrã
+   * dos Pedidos conta com a lista já carregada — tirá-lo agora era trocar um
+   * ecrã desactualizado por outro vazio.
+   */
   useEffect(() => {
     if (!token) return;
     carregarPedidos(token, "todos", "");
@@ -1537,196 +1545,7 @@ export default function ColaboradorAdminClient({
             )}
 
           {activeSection === "overview" && (
-            <>
-              {/* Barra de ações rápidas */}
-              <section className="flex flex-col gap-4 rounded-[24px] border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(9,27,43,0.96)_0%,rgba(12,34,52,0.94)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.24)] xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950">
-                    <LayoutDashboard className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
-                      Painel de controlo
-                    </p>
-                    <p className="mt-1 text-lg font-semibold capitalize text-white">{hojeLabel}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                </div>
-              </section>
-
-
-              {/* Bloco de resumo de pedidos do simulador */}
-              <section className="rounded-[24px] border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(9,27,43,0.96)_0%,rgba(12,34,52,0.94)_100%)] p-5 shadow-[0_20px_70px_rgba(3,10,18,0.24)]">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500 text-white">
-                      <FileText className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Simulador</p>
-                      <h3 className="text-base font-semibold text-white">Pedidos do simulador</h3>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection("pedidos")}
-                    className="flex items-center gap-2 rounded-[14px] border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-cyan-100 transition hover:bg-white/[0.08]"
-                  >
-                    Ver todos
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-                {/* Métricas rápidas */}
-                <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-                  {[
-                    { label: "Novos", key: "pendente", color: "text-blue-400", bg: "bg-blue-400/10 border-blue-400/20" },
-                    { label: "Atribuídos", key: "atribuido", color: "text-purple-400", bg: "bg-purple-400/10 border-purple-400/20" },
-                    { label: "Em análise", key: "em_analise", color: "text-yellow-400", bg: "bg-yellow-400/10 border-yellow-400/20" },
-                    { label: "Aprovados", key: "aprovado", color: "text-cyan-300 font-semibold", bg: "bg-cyan-400/15 border-cyan-400/30" },
-                    { label: "Confirmados", key: "confirmado", color: "text-green-400", bg: "bg-green-400/10 border-green-400/20" },
-                    { label: "Presencial", key: "presencial_recomendado", color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
-                  ].map((m) => (
-                    <button
-                      key={m.key}
-                      type="button"
-                      onClick={() => { setPedidoStatusFilter(m.key); setActiveSection("pedidos"); }}
-                      className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 ${m.bg}`}
-                    >
-                      <span className={`text-xl font-bold ${m.color}`}>{pedidosCounts[m.key] ?? 0}</span>
-                      <span className="mt-0.5 text-xs text-slate-400">{m.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {/* Últimos 5 pedidos */}
-                {pedidosLoading ? (
-                  <div className="py-4 text-center text-sm text-slate-400">A carregar...</div>
-                ) : pedidos.length === 0 ? (
-                  <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/10 py-8 text-center">
-                    <FileText className="h-8 w-8 text-slate-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-300">Nenhum pedido do simulador ainda</p>
-                      <p className="mt-1 text-xs text-slate-500">Quando um cliente enviar um pedido pelo simulador, ele aparecerá aqui para análise.</p>
-                    </div>
-                    <a
-                      href="/simulador"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 rounded-[12px] border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/20"
-                    >
-                      Ver simulador
-                    </a>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {pedidos.slice(0, 5).map((p) => {
-                      const statusColors: Record<string, string> = {
-                        sem_assistente: "bg-yellow-500/20 text-yellow-300",
-                        pendente: "bg-blue-500/20 text-blue-300",
-                        atribuido: "bg-purple-500/20 text-purple-300",
-                        em_analise: "bg-yellow-500/20 text-yellow-300",
-                        aprovado: "bg-cyan-500/20 text-cyan-200 font-semibold",
-                        confirmado: "bg-green-500/20 text-green-300",
-                        cancelado: "bg-slate-500/20 text-slate-400",
-                        presencial_recomendado: "bg-orange-500/20 text-orange-300",
-                      };
-                      const statusLabel: Record<string, string> = {
-                        sem_assistente: "Por atribuir",
-                        pendente: "Novo",
-                        atribuido: "Atribuído",
-                        em_analise: "Em análise",
-                        precisa_info: "Info",
-                        presencial_recomendado: "Presencial",
-                        estimativa_pronta: "Estimativa",
-                        aprovado: "Aprovado",
-                        enviado_cliente: "Enviado",
-                        confirmado: "Confirmado",
-                        cancelado: "Cancelado",
-                        concluido: "Realizado",
-                        rejeitado: "Rejeitado",
-                        arquivado: "Arquivado",
-                      };
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => { setSelectedPedido(p); setPedidoDetalheOpen(true); setActiveSection("pedidos"); }}
-                          className="flex w-full items-center gap-3 rounded-[14px] border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-sm transition hover:border-cyan-400/30 hover:bg-white/[0.06]"
-                        >
-                          <span className="w-8 text-right text-xs font-mono text-slate-500">#{p.id}</span>
-                          <span className="flex-1 truncate font-medium text-white">{p.contactName ?? "—"}</span>
-                          <span className="hidden truncate text-slate-400 sm:block">{normalizeServiceTypeLabel(p.serviceType)}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[p.status] ?? "bg-slate-500/20 text-slate-400"}`}>
-                            {statusLabel[p.status] ?? p.status}
-                          </span>
-                          {(p as any).calendarStatus && (p as any).calendarStatus !== "not_scheduled" && (
-                            <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              Agendado
-                            </span>
-                          )}
-                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-
-              {/* Layout principal: leads + ações */}
-              <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-                <div className="space-y-4">
-                  {/* Leads e contactos do site */}
-                  <ActionCard title="Leads e contactos do site" description="Resumo de hoje e últimos contactos.">
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {[
-                        { label: "Leads hoje", value: leadTotals.hoje ?? "—" },
-                        { label: "Esta semana", value: leadTotals.semana ?? "—" },
-                        { label: "WhatsApp hoje", value: eventTotals.whatsappHoje ?? "—" },
-                        { label: "Ligar hoje", value: eventTotals.ligarHoje ?? "—" },
-                      ].map((stat) => (
-                        <div key={stat.label} className="rounded-[14px] border border-white/10 bg-white/[0.03] p-3 text-center">
-                          <p className="text-xl font-semibold text-white">{stat.value}</p>
-                          <p className="mt-0.5 text-[11px] text-slate-400">{stat.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {leads.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        {leads.slice(0, 5).map((lead) => (
-                          <div key={lead.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-white/5 bg-white/[0.02] px-3 py-2">
-                            <div>
-                              <p className="text-sm font-medium text-white">{lead.nome}</p>
-                              <p className="text-[11px] text-slate-400">{lead.tipoServico} · {lead.localidade}</p>
-                            </div>
-                            <span className="text-[11px] text-slate-500">
-                              {new Date(lead.createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" })}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setActiveSection("leads")}
-                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.07] py-2.5 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/[0.14]"
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      Ver todos os leads
-                    </button>
-                  </ActionCard>
-
-                  {/* Ações rápidas */}
-                  <ActionCard title="Ações rápidas" description="Atalhos operacionais." compact>
-                    <QuickAction icon={TrendingUp} label="Ver leads e contactos" onClick={() => setActiveSection("leads")} />
-                    <QuickAction icon={Settings2} label="Configurações" onClick={() => setActiveSection("configs")} />
-                  </ActionCard>
-                </div>
-              </section>
-            </>
+            <AdminInicioPanel onAbrir={(s) => setActiveSection(s as AdminSection)} />
           )}
 
           {activeSection === "pedidos" && (
