@@ -216,6 +216,103 @@ describe("as propostas chegam de duas formas, e as duas têm de servir", () => {
   });
 });
 
+describe("de quem é a vez, quando já houve propostas", () => {
+  /*
+   * "Como está com «Orçamento enviado» se ainda está à espera de proposta?"
+   * — 12-09-2026, sobre os pedidos #283 e #277.
+   *
+   * Nenhum dos rótulos mentia: havia propostas na mesa E esperava-se pelos
+   * profissionais, porque o cliente tinha contraproposto e a vez tinha
+   * voltado para trás. O que faltava era um nome para esse pé — e sem nome, o
+   * mais parecido ficava com ele.
+   */
+
+  it("proposta do profissional por responder: a bola está no cliente", () => {
+    expect(
+      categoriaDoPedido({
+        negociacoes: [neg({ estado: "aberta", propostasJson: proposta("profissional", 150) })],
+      }),
+    ).toBe("orcamento_enviado");
+  });
+
+  it("o cliente contrapropôs: a vez voltou ao profissional", () => {
+    // Era aqui que dizia «Orçamento enviado» ao lado de «À espera de 2
+    // profissionais», dentro do bloco «À espera de propostas».
+    expect(
+      categoriaDoPedido({
+        negociacoes: [
+          neg({
+            estado: "aberta",
+            propostas: [
+              { por: "profissional", valor: 150, criadaEm: "2026-09-10T10:00:00Z", estado: "recusada" },
+              { por: "cliente", valor: 120, criadaEm: "2026-09-10T11:00:00Z", estado: "pendente" },
+            ],
+          }),
+        ],
+      }),
+    ).toBe("com_o_profissional");
+  });
+
+  it("uma proposta pendente num dos lados basta para a bola ser desse lado", () => {
+    // Dois profissionais: um já respondeu e espera, o outro recebeu a
+    // contraproposta. Quem manda é quem está à espera de NÓS.
+    expect(
+      categoriaDoPedido({
+        negociacoes: [
+          neg({
+            estado: "aberta",
+            propostas: [
+              { por: "cliente", valor: 120, criadaEm: "2026-09-10T11:00:00Z", estado: "pendente" },
+            ],
+          }),
+          neg({ estado: "aberta", propostasJson: proposta("profissional", 150) }),
+        ],
+      }),
+    ).toBe("orcamento_enviado");
+  });
+
+  it("sem proposta nenhuma continua à espera de propostas", () => {
+    expect(categoriaDoPedido({ negociacoes: [neg({ estado: "aberta" })] })).toBe(
+      "a_espera_de_propostas",
+    );
+  });
+
+  it("«aguarda contratação» é bola do cliente, mesmo sem proposta pendente dele", () => {
+    // O profissional aceitou, o valor está fechado dos dois lados, e nada
+    // acontece até alguém carregar em contratar.
+    expect(
+      categoriaDoPedido({
+        negociacoes: [
+          neg({
+            estado: "aguarda_contratacao",
+            propostasJson: proposta("cliente", 200, "aceite"),
+          }),
+        ],
+      }),
+    ).toBe("orcamento_enviado");
+  });
+
+  it("a contraproposta à espera do profissional conta como viva", () => {
+    // Tem 48 horas a correr e morre sozinha se ninguém olhar — é das mais
+    // vivas que há.
+    expect(categoriaViva("com_o_profissional")).toBe(true);
+  });
+
+  it("as duas esperas não têm a mesma cor", () => {
+    /*
+     * Âmbar é a bola do lado do cliente. Se a contraproposta ficasse âmbar
+     * também, o ecrã voltava a dizer a mesma coisa a dois pés diferentes — que
+     * é o problema que isto veio resolver.
+     */
+    expect(CORES_DA_CATEGORIA.com_o_profissional).not.toBe(
+      CORES_DA_CATEGORIA.orcamento_enviado,
+    );
+    expect(CORES_DA_CATEGORIA_ESCURO.com_o_profissional).not.toBe(
+      CORES_DA_CATEGORIA_ESCURO.orcamento_enviado,
+    );
+  });
+});
+
 describe("a lista das categorias serve os ecrãs", () => {
   it("todas têm etiqueta em português e cor", () => {
     for (const c of CATEGORIAS_POR_ORDEM) {

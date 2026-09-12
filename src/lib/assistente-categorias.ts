@@ -34,8 +34,23 @@ export type CategoriaDoPedido =
   | "criado"
   /** Distribuído, e ninguém propôs nada ainda. */
   | "a_espera_de_propostas"
-  /** Há pelo menos uma proposta na mesa. A bola está do lado do cliente. */
+  /** Há uma proposta do profissional por responder. A bola está do lado do cliente. */
   | "orcamento_enviado"
+  /**
+   * Houve propostas, o cliente já respondeu, e agora espera-se o profissional.
+   *
+   * Faltava, e a falta via-se no ecrã: o painel mostrava «Orçamento enviado»
+   * ao lado de «À espera de 2 profissionais», dentro do bloco «À espera de
+   * propostas». Os dois rótulos estavam certos e liam-se como uma
+   * contradição — «como está com orçamento enviado se ainda está à espera de
+   * proposta?», 12-09-2026.
+   *
+   * Nenhum mentia: havia propostas na mesa E esperava-se pelos profissionais,
+   * porque o cliente tinha contraproposto e a vez tinha voltado para trás.
+   * O que faltava era um nome para esse pé — e sem nome, o mais parecido
+   * ficava com ele.
+   */
+  | "com_o_profissional"
   /** Fechado com um profissional, e o trabalho ainda não foi feito. */
   | "aceite_por_fazer"
   /** O profissional provou que fez. Falta o cliente confirmar. */
@@ -56,6 +71,7 @@ export const ETIQUETA_DA_CATEGORIA: Record<CategoriaDoPedido, string> = {
   criado: "Pedido criado",
   a_espera_de_propostas: "À espera de propostas",
   orcamento_enviado: "Orçamento enviado",
+  com_o_profissional: "Contraproposta — com o profissional",
   aceite_por_fazer: "Orçamento aceite",
   feito_por_confirmar: "Feito, por confirmar",
   concluido: "Concluído",
@@ -80,6 +96,9 @@ export const CORES_DA_CATEGORIA: Record<string, string> = {
   criado: "bg-slate-100 text-slate-600 border-slate-200",
   a_espera_de_propostas: "bg-slate-100 text-slate-600 border-slate-200",
   orcamento_enviado: "bg-amber-50 text-amber-700 border-amber-200",
+  // Azul, e não âmbar: âmbar é a bola do lado do cliente, e aqui ela voltou
+  // para o profissional. Duas esperas diferentes não podem ter a mesma cor.
+  com_o_profissional: "bg-sky-50 text-sky-700 border-sky-200",
   aceite_por_fazer: "bg-emerald-50 text-emerald-700 border-emerald-200",
   feito_por_confirmar: "bg-cyan-50 text-cyan-700 border-cyan-200",
   concluido: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -106,6 +125,7 @@ export const CORES_DA_CATEGORIA_ESCURO: Record<string, string> = {
   criado: "border-slate-700 text-slate-400",
   a_espera_de_propostas: "border-slate-700 text-slate-400",
   orcamento_enviado: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  com_o_profissional: "border-sky-500/30 bg-sky-500/10 text-sky-300",
   aceite_por_fazer: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
   feito_por_confirmar: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
   concluido: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
@@ -123,6 +143,9 @@ export const CATEGORIAS_POR_ORDEM: CategoriaDoPedido[] = [
   "criado",
   "a_espera_de_propostas",
   "orcamento_enviado",
+  // Vem a seguir porque é o passo a seguir: o orçamento foi, o cliente
+  // respondeu com outro número, e a vez voltou para o profissional.
+  "com_o_profissional",
   "aceite_por_fazer",
   "feito_por_confirmar",
   "concluido",
@@ -140,6 +163,9 @@ export const CATEGORIAS_VIVAS: CategoriaDoPedido[] = [
   "criado",
   "a_espera_de_propostas",
   "orcamento_enviado",
+  // Uma contraproposta à espera do profissional é das mais vivas que há: tem
+  // 48 horas a correr e morre sozinha se ninguém olhar.
+  "com_o_profissional",
   "aceite_por_fazer",
   "feito_por_confirmar",
 ];
@@ -240,8 +266,35 @@ export function categoriaDoPedido(p: PedidoParaCategoria): CategoriaDoPedido {
     return houvePropostas ? "recusado" : "a_espera_de_propostas";
   }
 
-  const naMesa = vivas.some((n) => propostasDe(n).length > 0);
-  return naMesa ? "orcamento_enviado" : "a_espera_de_propostas";
+  /*
+   * DE QUEM É A VEZ — e não só «há propostas».
+   *
+   * Isto era `vivas.some(n => propostasDe(n).length > 0) ? "orcamento_enviado"
+   * : "a_espera_de_propostas"`, e dizia «Orçamento enviado» a qualquer pedido
+   * que alguma vez tivesse recebido uma proposta. Inclusive depois de o
+   * cliente ter contraproposto e a vez ter voltado ao profissional.
+   *
+   * No ecrã lia-se assim: «Orçamento enviado» ao lado de «À espera de 2
+   * profissionais», dentro do bloco «À espera de propostas». Nenhum dos três
+   * mentia — e juntos não faziam sentido nenhum.
+   *
+   * A bola está do lado do CLIENTE quando há uma proposta do profissional por
+   * responder, ou quando ele já aceitou e falta contratar (`aguarda_contratacao`
+   * é isso mesmo: valor fechado dos dois lados, e nada acontece até alguém
+   * carregar em contratar). É a mesma regra que o painel usa em
+   * `esperaResposta` para decidir o que precisa de atenção — escrita aqui
+   * outra vez porque este ficheiro é puro e não conhece o painel, e guardada
+   * pelo teste que compara as duas.
+   */
+  const bolaNoCliente = vivas.some(
+    (n) =>
+      n.estado === "aguarda_contratacao" ||
+      propostasDe(n).some((x) => x.estado === "pendente" && x.por === "profissional"),
+  );
+  if (bolaNoCliente) return "orcamento_enviado";
+
+  const houvePropostas = vivas.some((n) => propostasDe(n).length > 0);
+  return houvePropostas ? "com_o_profissional" : "a_espera_de_propostas";
 }
 
 /**
