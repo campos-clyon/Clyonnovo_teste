@@ -267,7 +267,7 @@ export default function NegociacaoProfissional({
           <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg bg-white/80 p-3">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] uppercase tracking-wide text-slate-500">
-                Quanto tempo leva
+                Tempo estimado
               </span>
               <span className="flex items-center gap-1.5">
                 <input
