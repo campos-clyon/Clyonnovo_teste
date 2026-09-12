@@ -2059,6 +2059,93 @@ export default function AdminNegociacoesPanel({
   }
 
   /**
+   * REENVIAR OS MARCADOS AOS PROFISSIONAIS.
+   *
+   * "Eu marquei, agora preciso da opção de reenviar pedido." — 12-09-2026,
+   * depois de acrescentar profissionais novos que nunca viram os pedidos
+   * parados. Um a um eram sete visitas à ficha de cada pedido.
+   *
+   * UM DE CADA VEZ, e não em paralelo: cada redistribuição mede a distância de
+   * cada profissional ao pedido e manda emails. Seis ao mesmo tempo num
+   * serverless partilhado é pedir throttling — e quem vê metade falhar em
+   * paralelo não sabe qual metade. É a mesma decisão que o arquivar em lote já
+   * tinha tomado.
+   *
+   * NÃO TOCA EM QUEM JÁ TEM O PEDIDO. Isso é garantido do lado do servidor
+   * desde 12-09-2026 — antes disso, redistribuir mandava a toda a gente um
+   * link novo que nunca era gravado, e o link antigo deles morria. Ver
+   * `distribuir-pedido.ts`.
+   */
+  async function redistribuirMarcados() {
+    if (!token || marcados.size === 0) return;
+    const ids = [...marcados];
+    if (
+      !window.confirm(
+        `Reenviar ${ids.length} pedido${ids.length === 1 ? "" : "s"} aos profissionais?
+
+` +
+          `Só entram os que ainda não o têm — quem já o recebeu não é avisado ` +
+          `outra vez e mantém o link que tem.`,
+      )
+    )
+      return;
+
+    setOcupado("lote-redistribuir");
+    setErro("");
+    let novos = 0;
+    let semNinguem = 0;
+    let falhados = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch("/api/admin/negociacoes/redistribuir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pedidoId: id }),
+        });
+        const dados = await res.json();
+        if (!res.ok) {
+          falhados += 1;
+          continue;
+        }
+        const chegou = Number(dados.receberam ?? 0);
+        novos += chegou;
+        if (chegou === 0) semNinguem += 1;
+      } catch {
+        falhados += 1;
+      }
+    }
+
+    /*
+     * O resultado dito em números, e não num "feito".
+     *
+     * Reenviar seis pedidos e ver a barra fechar-se não diz se alguém os
+     * recebeu. O que interessa é quantas negociações NOVAS nasceram — se
+     * forem zero, o problema não é o botão: é que os profissionais novos não
+     * estão aprovados, ou o pedido não lhes serve. O «porquê?» de cada linha
+     * diz qual das duas.
+     */
+    const partes: string[] = [];
+    if (novos > 0) {
+      partes.push(`${novos} envio(s) novo(s) a profissionais`);
+    }
+    if (semNinguem > 0) {
+      partes.push(
+        `${semNinguem} pedido(s) não chegaram a ninguém novo — veja o «porquê?» na linha`,
+      );
+    }
+    if (falhados > 0) partes.push(`${falhados} falharam`);
+    setErro(
+      partes.length > 0
+        ? `Reenvio: ${partes.join("; ")}.`
+        : "Reenvio feito, e não havia nenhum profissional novo para avisar.",
+    );
+
+    await carregar(true);
+    setOcupado(null);
+    setMarcados(new Set());
+  }
+
+  /**
    * Apaga os que estao marcados.
    *
    * A confirmacao diz o NUMERO e nao so "tem a certeza". Quem marcou doze
@@ -2250,6 +2337,30 @@ export default function AdminNegociacoesPanel({
               className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
             >
               Desmarcar
+            </button>
+            {/*
+              REENVIAR, E É O PRIMEIRO A AGIR.
+
+              "Eu marquei, agora preciso da opção de reenviar pedido." A barra
+              tinha três saídas — desmarcar, arquivar, apagar — e todas tiravam
+              pedidos da frente. Nenhuma os punha a andar, que é o que se quer
+              fazer a seis pedidos parados quando entram profissionais novos.
+
+              Fica antes das outras duas porque é a única construtiva: as que
+              tiram ficam do lado onde já estão, ao pé do vermelho.
+            */}
+            <button
+              onClick={redistribuirMarcados}
+              disabled={ocupado === "lote-redistribuir" || ocupado === "lote-arquivar" || aApagar}
+              title="Manda-os aos profissionais que ainda não os têm. Quem já os recebeu não é avisado outra vez."
+              className="flex items-center gap-1.5 rounded-lg border border-cyan-600/60 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
+            >
+              {ocupado === "lote-redistribuir" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Send className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Reenviar aos profissionais
             </button>
             {/*
               ARQUIVAR, AO LADO DE APAGAR E ANTES DELE.

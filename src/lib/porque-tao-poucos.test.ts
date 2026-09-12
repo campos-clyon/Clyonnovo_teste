@@ -188,3 +188,41 @@ describe("redistribuir para alcançar quem entrou depois", () => {
     expect(D).toContain("new Set<number>()");
   });
 });
+
+describe("reenviar em lote, da barra dos marcados", () => {
+  /*
+   * "Eu marquei, agora preciso da opção de reenviar pedido." — 12-09-2026.
+   *
+   * A barra dos seleccionados dava três saídas — desmarcar, arquivar, apagar
+   * — e todas tiravam pedidos da frente. Nenhuma os punha a andar, que é o que
+   * se quer fazer a seis pedidos parados quando entram profissionais novos.
+   */
+  const PAINEL_NEG = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+
+  it("a barra tem o botão, e diz o que faz a quem já o tem", () => {
+    expect(PAINEL_NEG).toContain("Reenviar aos profissionais");
+    expect(PAINEL_NEG).toContain("onClick={redistribuirMarcados}");
+    expect(PAINEL_NEG).toContain("Quem já os recebeu não é avisado outra vez");
+  });
+
+  it("vai um de cada vez, e não seis em paralelo", () => {
+    /*
+     * Cada redistribuição mede a distância de cada profissional ao pedido e
+     * manda emails. Seis ao mesmo tempo num serverless partilhado é pedir
+     * throttling — e quem vê metade falhar em paralelo não sabe qual metade.
+     */
+    const i = PAINEL_NEG.indexOf("async function redistribuirMarcados");
+    const corpo = PAINEL_NEG.slice(i, i + 2600);
+    expect(corpo).toContain("for (const id of ids)");
+    expect(corpo).not.toContain("Promise.all");
+  });
+
+  it("conta o que chegou, em vez de dizer «feito»", () => {
+    // Reenviar seis e ver a barra fechar-se não diz se alguém os recebeu. Se
+    // forem zero envios novos, o problema não é o botão.
+    const i = PAINEL_NEG.indexOf("async function redistribuirMarcados");
+    const corpo = PAINEL_NEG.slice(i, i + 2600);
+    expect(corpo).toContain("envio(s) novo(s) a profissionais");
+    expect(corpo).toContain("não chegaram a ninguém novo");
+  });
+});
