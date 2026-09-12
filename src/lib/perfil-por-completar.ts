@@ -57,6 +57,8 @@ export type PerfilParaCompletar = {
   codigoPostalFiscal?: string | null;
   localidadeFiscal?: string | null;
   categorias?: string[] | null;
+  /** Até onde se desloca. Nulo = não recebe pedido nenhum. */
+  raioKm?: number | null;
   custoKm?: number | null;
   custoHoraPessoa?: number | null;
   pessoasNaEquipa?: number | null;
@@ -105,6 +107,28 @@ export function oQueFaltaNoPerfil(p: PerfilParaCompletar): Falta[] {
       seccao: "servicos",
       rotulo: "O que faz",
       porque: "Sem nenhum serviço escolhido não lhe chega pedido nenhum.",
+      peso: "essencial",
+    });
+  }
+
+  /*
+   * O RAIO É UM TRAVÃO, e não uma preferência.
+   *
+   * `avaliarElegibilidade` trata raio nulo exactamente como «o trabalho fica
+   * longe demais»: exclui. Uma conta sem raio não recebe pedido nenhum, para
+   * sempre — e este cartão, que existe para dizer o que trava, não o pedia.
+   *
+   * Aconteceu a sério: sete profissionais aprovados, e os pedidos a chegar a
+   * três ou quatro (12-09-2026). As contas criadas a partir de candidaturas
+   * nasciam sem raio, porque o formulário de candidatura não o pergunta.
+   */
+  if (semNumero(p.raioKm)) {
+    faltas.push({
+      chave: "raio",
+      seccao: "servicos",
+      rotulo: "Raio de acção",
+      porque:
+        "Sem ele não lhe chega pedido nenhum: a regra que decide quem recebe trata «sem raio» como «longe demais».",
       peso: "essencial",
     });
   }
@@ -285,14 +309,14 @@ export type ResumoDoPerfil = {
 /**
  * Quantos campos existem para avaliar — o denominador da percentagem.
  *
- * Treze são sempre perguntados. Os outros três só existem depois de uma
+ * Catorze são sempre perguntados. Os outros três só existem depois de uma
  * resposta anterior: o titular só faz sentido com IBAN, o número de
  * transportador só a quem disse que emite guia, e o divisor dos custos fixos
  * só depois de haver custos fixos. O denominador tem de crescer com eles —
  * senão a percentagem subia por se ter respondido «sim» a uma pergunta.
  */
 function quantosCamposConta(p: PerfilParaCompletar): number {
-  const SEMPRE = 13;
+  const SEMPRE = 14;
   return (
     SEMPRE +
     (p.temIban ? 1 : 0) +

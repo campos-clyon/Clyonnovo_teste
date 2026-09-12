@@ -11,6 +11,7 @@ import {
 import { PASSOS_DO_PROFISSIONAL, passoDaSeccao } from "./como-funciona-para-o-profissional";
 import { MAX_PROPOSTAS_POR_LADO, PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
 import { A_PLATAFORMA_COBRA, PROMESSA } from "./pagamento-na-plataforma";
+import { RAIO_POR_OMISSAO_KM } from "./inscricao-profissional";
 
 /**
  * O perfil a meio, e o triângulo que o diz.
@@ -35,6 +36,7 @@ const CHEIO: PerfilParaCompletar = {
   codigoPostalFiscal: "2845-000",
   localidadeFiscal: "Amora",
   categorias: ["recolha_moveis"],
+  raioKm: 30,
   custoKm: 0.5,
   custoHoraPessoa: 8,
   pessoasNaEquipa: 2,
@@ -72,6 +74,36 @@ describe("o que trava vem primeiro", () => {
 
   it("a base sem ponto no mapa também — é dela que se medem as distâncias", () => {
     expect(faltaPelaChave(vazio.faltas, "base-no-mapa")?.peso).toBe("essencial");
+  });
+
+  it("sem raio não chega pedido nenhum, e o cartão tem de o dizer", () => {
+    /*
+     * `avaliarElegibilidade` trata raio nulo exactamente como «longe demais»:
+     * exclui. Uma conta sem raio não recebe pedido nenhum, para sempre.
+     *
+     * Custou sete profissionais aprovados e pedidos a chegar a três
+     * (12-09-2026): as contas criadas a partir de candidaturas nasciam sem
+     * raio, porque a candidatura não o pergunta — e este cartão, que existe
+     * para dizer o que trava, também não.
+     */
+    const f = faltaPelaChave(vazio.faltas, "raio");
+    expect(f?.peso).toBe("essencial");
+    expect(f?.porque).toContain("não lhe chega pedido nenhum");
+    expect(faltaPelaChave(oQueFaltaNoPerfil({ ...CHEIO, raioKm: 125 }), "raio")).toBeUndefined();
+  });
+
+  it("uma conta nova nasce com raio, e não com nulo", () => {
+    // A aprovação de uma candidatura grava `RAIO_POR_OMISSAO_KM`. Se voltar a
+    // gravar nulo, a conta é aprovada e não recebe nada — em silêncio.
+    // Lido aqui em vez de pelo `ler` lá de baixo: este bloco corre antes dele
+    // no ficheiro, e uma referência para a frente lê-se mal.
+    const ROTA = readFileSync(
+      join(process.cwd(), "src/app/api/admin/candidaturas/route.ts"),
+      "utf8",
+    );
+    expect(ROTA).toContain("raioKm: RAIO_POR_OMISSAO_KM");
+    expect(ROTA).not.toContain("raioKm: null");
+    expect(RAIO_POR_OMISSAO_KM).toBeGreaterThan(0);
   });
 
   it("os essenciais estão todos à frente das melhorias na lista", () => {

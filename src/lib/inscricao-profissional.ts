@@ -34,6 +34,25 @@ export const TIPOS_DE_VEICULO_VALIDOS: string[] = [
 ];
 export const RAIO_MINIMO_KM = 1;
 
+/**
+ * O raio com que uma conta nasce quando ninguém o escreveu.
+ *
+ * NUNCA NULO, e a razão é dura: `avaliarElegibilidade` exclui por
+ * `fora_de_alcance` quem tem `raioKm` nulo — «raio == null» e «o trabalho fica
+ * a 300 km» dão o mesmo resultado. Uma conta criada sem raio não recebe pedido
+ * NENHUM, para sempre, e nada no ecrã dela o explica.
+ *
+ * Foi o que aconteceu às contas criadas a partir de candidaturas a partir de
+ * 11-09-2026: o formulário de candidatura não pergunta o raio — de propósito,
+ * são seis campos — e a aprovação gravava `null`. Sete profissionais
+ * aprovados, e os pedidos a chegar a três ou quatro (12-09-2026).
+ *
+ * Trinta é o mesmo número com que o formulário de inscrição já nascia
+ * preenchido. Não é uma escolha nova: é a que já existia, a deixar de se
+ * perder no caminho.
+ */
+export const RAIO_POR_OMISSAO_KM = 30;
+
 export type ErroDeInscricao = { campo: string; mensagem: string };
 
 /**

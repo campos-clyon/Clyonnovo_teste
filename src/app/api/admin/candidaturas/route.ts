@@ -16,6 +16,7 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
 import { DIAS_DO_LINK_DE_SENHA } from "@/lib/convite-profissional";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
+import { RAIO_POR_OMISSAO_KM } from "@/lib/inscricao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { comChave } from "@/lib/acesso-mvp";
 
@@ -142,7 +143,18 @@ export async function POST(req: NextRequest) {
       codigoPostalFiscal: null,
       localidadeFiscal: null,
       zonas: [],
-      raioKm: null,
+      /*
+       * O RAIO NÃO PODE NASCER NULO — ver `RAIO_POR_OMISSAO_KM`.
+       *
+       * Gravava `null`, e `avaliarElegibilidade` trata raio nulo como
+       * `fora_de_alcance`: a conta era aprovada e não recebia pedido nenhum,
+       * para sempre, sem nada no ecrã a dizer porquê. Sete aprovados e os
+       * pedidos a chegar a três (12-09-2026).
+       *
+       * Ele muda-o no perfil quando quiser; o cartão de «perfil por
+       * completar» pede-lho logo à entrada.
+       */
+      raioKm: RAIO_POR_OMISSAO_KM,
       emiteFatura: false,
       regimeIva: "",
       emiteGuiaTransporte: false,
