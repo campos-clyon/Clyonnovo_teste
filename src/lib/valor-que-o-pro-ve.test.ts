@@ -19,6 +19,9 @@ import { join } from "node:path";
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+/** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
+const semNotas = (t: string) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const ROTA = ler("src/app/api/profissionais/meus-pedidos/route.ts");
 const CARTAO = ler("src/app/profissionais/painel/Trabalhos.tsx");
 const TIPOS = ler("src/app/profissionais/painel/tipos.ts");
@@ -86,5 +89,48 @@ describe("o cartão põe o nosso valor em cima", () => {
     // passou a história.
     expect(CARTAO).toContain("fechado ? p.recebeSeFechado");
     expect(CARTAO).toContain("{!fechado && valorEmCima != null && (");
+  });
+});
+
+describe("e o ecrã de dentro diz o MESMO que o cartão", () => {
+  /*
+   * "O valor sugerido pela CLYON foi de 350, não de 190,84 €." — 12-09-2026.
+   *
+   * O cartão da lista dizia 329 € com a etiqueta «valor CLYON». O ecrã de
+   * dentro, sobre o MESMO pedido, dizia 190,84 € com «Valor sugerido pela
+   * CLYON» por cima. Dois números, duas contas diferentes, e o nome de uma
+   * colado à outra: o ecrã de dentro mostrava `sugestao.precoSugerido`, que é
+   * a conta feita com os quilómetros e os custos DELE.
+   *
+   * A regra de 10-09-2026 é uma só, e vale nos dois sítios: o número grande é
+   * o valor que a CLYON pôs no pedido.
+   */
+  it("o número grande do detalhe é o da CLYON, e a conta dele é o suplente", () => {
+    expect(CARTAO).toContain("const daClyon = antesDePropor ? (pedido.valorDaClyon ?? null) : null;");
+    expect(CARTAO).toContain("const emCima = daClyon ?? suaConta?.recebeSePropuser ?? null;");
+    expect(CARTAO).toContain(
+      "euros(fechado ? pedido.recebeSeFechado : (emCima ?? pedido.recebeSeAceitar))",
+    );
+  });
+
+  it("o detalhe deixou de chamar «valor da CLYON» à conta feita para ele", () => {
+    /*
+     * Esta é a asserção que apanha a volta atrás. `precoSugerido` é o bruto da
+     * conta DELE: se voltar a ser o número grande, o ecrã volta a dizer 190,84
+     * onde a lista diz 329.
+     */
+    expect(semNotas(CARTAO)).not.toContain("sugestaoAntesDePropor.precoSugerido");
+    expect(semNotas(CARTAO)).not.toContain("sugestaoAntesDePropor");
+  });
+
+  it("e quando o número grande é a conta dele, a etiqueta diz isso", () => {
+    // Chamar «valor CLYON» a uma conta feita para ele prometia um número que
+    // ninguém lhe garantiu — a mesma regra do cartão, nas mesmas palavras.
+    expect(CARTAO).toContain('"Valor sugerido pela CLYON"');
+    expect(CARTAO).toContain('"Sugestão da CLYON para si"');
+  });
+
+  it("a conta dele aparece em baixo, e só quando discorda", () => {
+    expect(CARTAO).toContain("Math.abs(suaConta.recebeSePropuser - daClyon) >= 1");
   });
 });

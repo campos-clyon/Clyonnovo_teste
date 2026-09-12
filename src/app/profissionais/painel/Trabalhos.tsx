@@ -1521,28 +1521,59 @@ function DetalheDoTrabalho({
         */}
         {(() => {
           const jaRespondeu = propostasDe(pedido.propostas).some((x) => x.por === "profissional");
-          const sugestaoAntesDePropor = !fechado && !jaRespondeu ? (pedido.sugestao ?? null) : null;
+          const antesDePropor = !fechado && !jaRespondeu;
+          /*
+           * O NÚMERO GRANDE É O DA CLYON — a mesma regra do cartão da lista.
+           *
+           * Estava aqui `pedido.sugestao.precoSugerido`, que é outra coisa: a
+           * conta feita com os QUILÓMETROS E OS CUSTOS DELE. O cartão da lista
+           * dizia 329 € («valor CLYON») e este ecrã dizia 190,84 € com a
+           * etiqueta «Valor sugerido pela CLYON» por cima, sobre o mesmo
+           * pedido. Dois números, duas contas diferentes, e o nome de uma
+           * colado à outra.
+           *
+           * A regra é a de 10-09-2026, e é uma só: "o valor que deve aparecer
+           * para os pros nos pedidos é o valor que colocamos aqui". A conta
+           * feita para ele desce para a linha de baixo, que é o sítio dela —
+           * serve para ele saber se o trabalho lhe compensa, não para lhe
+           * dizer quanto vale o trabalho.
+           *
+           * Sem valor da CLYON, a conta dele volta a ser o número grande:
+           * mais vale a conta dele do que número nenhum. E aí a etiqueta muda
+           * para «sugestão», como no cartão — chamar «valor CLYON» a uma conta
+           * feita para ele prometia um número que ninguém lhe garantiu.
+           */
+          const daClyon = antesDePropor ? (pedido.valorDaClyon ?? null) : null;
+          const suaConta = antesDePropor ? (pedido.sugestao ?? null) : null;
+          const emCima = daClyon ?? suaConta?.recebeSePropuser ?? null;
+          const etiqueta = fechado
+            ? "Recebe"
+            : emCima == null
+              ? "Recebe se aceitar"
+              : daClyon != null
+                ? "Valor sugerido pela CLYON"
+                : "Sugestão da CLYON para si";
           return (
             <div className="flex items-baseline justify-between gap-4">
               <span className="flex items-center gap-1.5 text-sm text-slate-600">
                 <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                {fechado ? "Recebe" : sugestaoAntesDePropor ? "Valor sugerido pela CLYON" : "Recebe se aceitar"}
+                {etiqueta}
               </span>
               <span className="text-right">
                 <span className="block text-2xl font-bold text-emerald-600">
-                  {euros(
-                    fechado
-                      ? pedido.recebeSeFechado
-                      : sugestaoAntesDePropor
-                        ? sugestaoAntesDePropor.precoSugerido
-                        : pedido.recebeSeAceitar,
-                  )}
+                  {euros(fechado ? pedido.recebeSeFechado : (emCima ?? pedido.recebeSeAceitar))}
                 </span>
-                {sugestaoAntesDePropor && (
-                  <span className="block text-xs font-semibold text-emerald-700">
-                    recebe {euros(sugestaoAntesDePropor.recebeSePropuser)}
-                  </span>
-                )}
+                {/*
+                  A CONTA DELE, EM SEGUNDO PLANO — e só quando discorda.
+                  Repetir o mesmo número duas vezes não informa ninguém.
+                */}
+                {daClyon != null &&
+                  suaConta != null &&
+                  Math.abs(suaConta.recebeSePropuser - daClyon) >= 1 && (
+                    <span className="block text-xs font-semibold text-slate-500">
+                      para os seus custos, sugeria {euros(suaConta.recebeSePropuser)}
+                    </span>
+                  )}
                 <span className="block text-xs font-semibold text-slate-500">
                   {etiquetaDaBase(lerBase(pedido.baseDoPreco))}
                 </span>
