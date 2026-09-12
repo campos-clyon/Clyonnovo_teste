@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import VisorDeFotos from "@/components/VisorDeFotos";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
@@ -512,6 +513,30 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
   // Lightbox
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  /*
+   * AS FOTOS DO PEDIDO, TODAS, PARA SE PASSAR DE UMA À SEGUINTE.
+   *
+   * O visor daqui mostrava UMA fotografia e tinha um X. Para ver a segunda era
+   * fechar, procurar a miniatura ao lado e abrir outra vez — e um esvaziamento
+   * traz três, cinco, dez fotos. É sobre elas que se decide o preço, e vê-las é
+   * exactamente o trabalho que se faz neste ecrã.
+   *
+   * Não se escreveu visor novo: o `VisorDeFotos` já existe, já tem setas,
+   * teclado, contador e Escape, e é o que o painel dos profissionais usa. O que
+   * lhe faltava aqui era a LISTA — este ecrã só lhe sabia dar um URL.
+   *
+   * Só imagens. Um PDF ou um vídeo no meio da sequência fazia as setas saltar
+   * para uma coisa que não se vê ao lado das outras; esses continuam a abrir-se
+   * pelo seu próprio caminho.
+   */
+  const fotosDoPedido = useMemo(
+    () =>
+      parseFiles(order?.filesJson).filter((u) =>
+        /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(u),
+      ),
+    [order?.filesJson],
+  );
 
   function populateEdit(o: PedidoOrder) {
     // Fallback ao rawOrderJson (o simulador guarda lá quando o campo top-level
@@ -2889,17 +2914,27 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
         })()}
       </div>
 
-      {/* ── Lightbox ── */}
-      {lightbox && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={() => setLightbox(null)}>
-          <img src={lightbox} alt="Preview" className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain" />
-          <button className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-slate-900 hover:bg-white/20 transition" onClick={() => setLightbox(null)}>
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+      {/* ── Lightbox ──
+          Passou a ser o `VisorDeFotos` partilhado: setas, teclas ← →, contador
+          «2 de 3» e Escape. A que foi tocada é a que abre; as outras estão a uma
+          tecla de distância. */}
+      {lightbox &&
+        (() => {
+          /*
+           * Se a foto tocada não estiver na lista — um ficheiro cuja extensão a
+           * regra não reconheceu — abre-se ELA, sozinha. Cair no índice zero
+           * abria outra qualquer, e quem tocou numa foto e viu aparecer outra
+           * conclui que o ecrã está avariado.
+           */
+          const onde = fotosDoPedido.indexOf(lightbox);
+          return (
+            <VisorDeFotos
+              fotos={onde >= 0 ? fotosDoPedido : [lightbox]}
+              indiceInicial={onde >= 0 ? onde : 0}
+              onFechar={() => setLightbox(null)}
+            />
+          );
+        })()}
 
       {/* ── Calendar confirm modal ───────────────────────────────────────── */}
       {calendarModalOpen && order && (() => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import VisorDeFotos from "@/components/VisorDeFotos";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -252,6 +253,19 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
 
   // Image lightbox
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  /*
+   * As fotos todas, para se passar de uma à seguinte — ver o comentário igual
+   * em `PedidoDetailModal.tsx`. Este ecrã é a versão de página inteira do
+   * mesmo pedido e tinha o mesmo visor de uma foto só.
+   */
+  const fotosDoPedido = useMemo(
+    () =>
+      parseFiles(order?.filesJson).filter((u) =>
+        /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(u),
+      ),
+    [order?.filesJson],
+  );
 
   function populateEdit(o: Order) {
     // Extrair rawOrderJson como fallback para campos que podem estar null na DB
@@ -1282,20 +1296,18 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
         </div>
       </div>
 
-      {/* ── Lightbox ── */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <img src={lightbox} alt="Preview" className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain" />
-          <button className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-white/20 transition" onClick={() => setLightbox(null)}>
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+      {/* ── Lightbox ── o visor partilhado, com setas, teclas ← → e contador. */}
+      {lightbox &&
+        (() => {
+          const onde = fotosDoPedido.indexOf(lightbox);
+          return (
+            <VisorDeFotos
+              fotos={onde >= 0 ? fotosDoPedido : [lightbox]}
+              indiceInicial={onde >= 0 ? onde : 0}
+              onFechar={() => setLightbox(null)}
+            />
+          );
+        })()}
 
       {/* ── Delete confirmation modal ── */}
       {showDelete && (
