@@ -382,10 +382,11 @@ describe("uma novidade de cada vez, e só as recentes", () => {
     });
     expect(novidadesDoPedido(cheio, TARDE).length).toBeGreaterThan(1);
     const escolhidas = novidadeAContar(cheio, TARDE, tudoLigado);
-    expect(escolhidas).toHaveLength(1);
-    // A fase mais adiantada ganha: o trabalho está feito, e é isso que
-    // interessa agora — não o fecho de anteontem.
+    // A fase mais adiantada vem à FRENTE: o trabalho está feito, e é isso que
+    // interessa agora — não o fecho de anteontem. A lista vem inteira, e quem
+    // manda uma de cada vez é o envio, depois de a mensagem sair.
     expect(escolhidas[0].especie).toBe("trabalho_feito");
+    expect(CEREBRO).toContain("if (jaFalouComEle) break;");
   });
 
   it("o alerta da equipa não compete com a mensagem do cliente", () => {
@@ -695,7 +696,7 @@ describe("insistir tem limite, e o limite é dito", () => {
      */
     expect(CEREBRO).toContain("const pedidosVistos = new Set<number>();");
     expect(CEREBRO).toContain("const visto = a.pedidoId != null && pedidosVistos.has(a.pedidoId);");
-    expect(CEREBRO).toContain("if (!visto) continue;");
+    expect(CEREBRO).toContain("if (!visto) {");
   });
 
   it("uma NOTICIA que fique aberta fecha-se, e nunca entrega a conversa", () => {
@@ -900,7 +901,8 @@ describe("os seis interruptores", () => {
     const i = CEREBRO.indexOf("if (await db.faltaSemearOAssistente()");
     expect(i).toBeGreaterThan(-1);
     const bloco = CEREBRO.slice(i, CEREBRO.indexOf("// ── 1. Contar as novidades"));
-    expect(bloco).toContain("antes_do_assistente");
+    expect(bloco).toContain("semearAvisosDoAssistente(");
+    expect(DB).toContain("antes_do_assistente");
     expect(bloco).toContain("return resumo;");
     expect(bloco).not.toContain("enviarTextoWhatsApp");
     // E vem ANTES de se contar seja o que for.
