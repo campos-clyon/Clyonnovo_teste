@@ -116,3 +116,75 @@ describe("o «porquê?» na mesa", () => {
     expect(PAINEL).toContain("não há ninguém de fora");
   });
 });
+
+describe("redistribuir para alcançar quem entrou depois", () => {
+  /*
+   * "Tem como eu enviar esses pedidos para todos? Adicionei outros pros que
+   * devem ver todos os pedidos disponíveis." — 12-09-2026.
+   *
+   * A rota de redistribuir existia e prometia isto por escrito: «correr outra
+   * vez é seguro, só entram os que faltavam». O código fazia o contrário —
+   * gerava um token novo para TODA a gente e mandava email e push com ele.
+   *
+   * E o token novo não era gravado: sem `reabrir`, o ON DUPLICATE KEY do
+   * `criarNegociacao` só faz `id = LAST_INSERT_ID(id)` e não toca no
+   * `acessoTokenHash`. Quem já tinha o pedido recebia um link que dava 404, e
+   * o histórico escrevia «todos avisados por email» por cima disso.
+   */
+
+  it("quem já tem o pedido não conta como chegada nem como email falhado", () => {
+    const texto = resumoDaDistribuicao({
+      receberam: 3,
+      avisados: 3,
+      jaTinham: 4,
+      falhados: 0,
+      candidatos: 7,
+      motivos: {},
+    } as never);
+    expect(texto).toContain("Chegou a 3");
+    expect(texto).toContain("4 já o tinha(m)");
+    // Sete candidatos, três novos, quatro já o tinham: ninguém ficou de fora.
+    expect(texto).not.toContain("ficam de fora");
+  });
+
+  it("sem ninguém novo, di-lo em vez de dizer que não chegou a ninguém", () => {
+    // «NÃO chegou a nenhum profissional» sobre um pedido que sete pessoas
+    // já têm na mão manda alguém procurar uma avaria que não existe.
+    const texto = resumoDaDistribuicao({
+      receberam: 0,
+      avisados: 0,
+      jaTinham: 7,
+      falhados: 0,
+      candidatos: 7,
+      motivos: {},
+    } as never);
+    expect(texto).toContain("Nenhum profissional NOVO");
+    expect(texto).toContain("7 já o tinha(m)");
+    expect(texto).not.toContain("NAO chegou");
+  });
+
+  it("sem o campo, a conta não vai a NaN", () => {
+    /*
+     * Este resumo é chamado com objectos montados à mão em três rotas. Um
+     * `undefined` não daria erro — daria «os outros NaN ficam de fora» escrito
+     * no registo permanente do pedido.
+     */
+    const texto = resumoDaDistribuicao({
+      receberam: 1,
+      avisados: 1,
+      falhados: 0,
+      candidatos: 4,
+      motivos: { fora_de_alcance: 3 },
+    } as never);
+    expect(texto).not.toContain("NaN");
+    expect(texto).toContain("os outros 3 ficam de fora");
+  });
+
+  it("a distribuição pergunta quem já tem antes de criar seja o que for", () => {
+    const D = readFileSync(join(process.cwd(), "src/lib/distribuir-pedido.ts"), "utf8");
+    expect(D).toContain("const jaTemNegociacao = reabrir");
+    expect(D).toContain("negociacoesDoPedido(pedido.id)");
+    // E com `reabrir` continua a alcançar toda a gente: aí o token É reposto.
+    expect(D).toContain("new Set<number>()");
+  });
+});

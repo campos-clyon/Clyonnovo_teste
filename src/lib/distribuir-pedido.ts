@@ -1,4 +1,9 @@
-import { profissionaisActivos, criarNegociacao, type ProfissionalNaBase } from "./db";
+import {
+  profissionaisActivos,
+  criarNegociacao,
+  negociacoesDoPedido,
+  type ProfissionalNaBase,
+} from "./db";
 import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel";
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
 import { distanciasRodoviarias } from "./distancia-rodoviaria";
@@ -60,6 +65,16 @@ export type ResultadoDaDistribuicao = {
   receberam: number;
   falhados: number;
   candidatos: number;
+  /**
+   * Quantos já tinham este pedido e não foram tocados.
+   *
+   * Redistribuir serve para alcançar quem ENTROU DEPOIS. Quem já o tem fica
+   * como está — com o link que recebeu da primeira vez a funcionar, e com o
+   * histórico de propostas dele intacto. Contá-los à parte é o que permite ao
+   * histórico dizer «chegou a 3 novos; 4 já o tinham» em vez de «chegou a 7»,
+   * que seria mentira para quatro deles.
+   */
+  jaTinham: number;
   /** Porque é que os restantes ficaram de fora. */
   motivos: Record<string, number>;
 };
@@ -120,22 +135,48 @@ export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
    */
   const porque = porqueFicaramDeFora(r.motivos);
 
+  /*
+   * Quem já o tinha conta-se à parte, e diz-se sempre.
+   *
+   * Ao redistribuir para alcançar profissionais novos, «chegou a 3» sem mais
+   * nada deixa a pergunta no ar: e os outros quatro que já o tinham, foram
+   * avisados outra vez? Não foram — e é isso que se escreve, para ninguém ir
+   * procurar um email que não devia existir.
+   */
+  /*
+   * Normalizado, e não lido em cru.
+   *
+   * Este resumo é chamado com objectos montados à mão em três rotas e nos
+   * testes. Um `undefined` aqui não daria erro nenhum — daria uma subtracção
+   * a NaN, e o histórico do pedido escreveria «os outros NaN ficam de fora».
+   * Um número errado num registo permanente é pior do que um campo em falta.
+   */
+  const quantosJaTinham = r.jaTinham ?? 0;
+  const jaTinham =
+    quantosJaTinham > 0 ? ` ${quantosJaTinham} já o tinha(m) e não foi(ram) tocado(s).` : "";
+
   if (r.receberam === 0) {
+    if (quantosJaTinham > 0) {
+      return (
+        `Nenhum profissional NOVO para avisar —${jaTinham}` +
+        (porque ? ` Dos restantes: ${porque}.` : "")
+      );
+    }
     return (
       `NAO chegou a nenhum profissional (${r.candidatos} activos)` +
       (porque ? `. Porquê: ${porque}.` : ".")
     );
   }
 
-  const fora = r.candidatos - r.receberam;
+  const fora = r.candidatos - r.receberam - quantosJaTinham;
   const base =
     `Chegou a ${r.receberam} profissional(is) de ${r.candidatos} activos` +
     (fora > 0 && porque ? ` — os outros ${fora} ficam de fora: ${porque}` : "");
 
-  if (r.avisados >= r.receberam) return `${base}. Todos avisados por email.`;
+  if (r.avisados >= r.receberam) return `${base}. Todos avisados por email.${jaTinham}`;
   return (
     `${base}. Mas so ${r.avisados} recebeu(ram) o email: ` +
-    `${r.receberam - r.avisados} tem o trabalho no painel e NAO foi avisado.`
+    `${r.receberam - r.avisados} tem o trabalho no painel e NAO foi avisado.${jaTinham}`
   );
 }
 
@@ -330,8 +371,37 @@ export async function distribuirPedido(
 
   const recebe = quantoRecebe(pedido.valorDesejadoCliente);
 
+  /*
+   * QUEM JÁ TEM O PEDIDO NÃO É TOCADO OUTRA VEZ.
+   *
+   * A rota de redistribuir promete isto por escrito — «correr outra vez é
+   * seguro: só entram os que faltavam» — e o código fazia o contrário: voltava
+   * a gerar um token para toda a gente e a mandar email e push com ele.
+   *
+   * E o token novo NÃO ERA GRAVADO. Sem `reabrir`, o `ON DUPLICATE KEY UPDATE`
+   * do `criarNegociacao` só faz `id = LAST_INSERT_ID(id)` — não toca no
+   * `acessoTokenHash`. Ou seja: quem já tinha o pedido recebia um email com um
+   * link que `negociacaoPorTokenHash` não encontrava, e que dava 404 sem
+   * sequer o ecrã de «este link expirou». O histórico escrevia «todos avisados
+   * por email» por cima disso.
+   *
+   * Foi isto que apareceu quando o dono acrescentou profissionais novos e quis
+   * mandar-lhes os pedidos parados (12-09-2026): a única forma de os alcançar
+   * partia o link dos que já os tinham.
+   *
+   * Com `reabrir` é diferente e continua igual: aí o token É reposto na base e
+   * o objectivo declarado é recomeçar do zero com toda a gente.
+   */
+  const jaTemNegociacao = reabrir
+    ? new Set<number>()
+    : new Set((await negociacoesDoPedido(pedido.id)).map((n) => Number(n.providerId)));
+
   const envios = await Promise.all(
     elegiveis.map(async (c) => {
+      if (jaTemNegociacao.has(c.profissional.id)) {
+        return { recebeu: false, avisado: false, jaTinha: true };
+      }
+
       // Sem email nao ha como avisar — e sem aviso nao vale a pena criar a
       // negociacao, porque ele nunca saberia que ela existe.
       if (!c.profissional.email) return { recebeu: false, avisado: false };
@@ -404,11 +474,15 @@ export async function distribuirPedido(
 
   const receberam = envios.filter((e) => e.recebeu).length;
   const avisados = envios.filter((e) => e.avisado).length;
+  const jaTinham = envios.filter((e) => "jaTinha" in e && e.jaTinha).length;
 
   return {
     avisados,
     receberam,
-    falhados: envios.length - avisados,
+    jaTinham,
+    // Quem já tinha o pedido não é um email falhado: não se tentou mandar
+    // nenhum. Contá-lo aqui punha o histórico a dizer que o aviso se perdeu.
+    falhados: envios.length - avisados - jaTinham,
     candidatos: candidatos.length,
     motivos: motivos as unknown as Record<string, number>,
   };
