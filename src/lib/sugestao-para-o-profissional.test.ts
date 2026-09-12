@@ -329,3 +329,42 @@ describe("a conta refeita com outro tempo e outra equipa", () => {
     );
   });
 });
+
+describe("a ordem do ecrã da negociação", () => {
+  /*
+   * "Vamos mudar prioridade: coloque «O seu valor a propor» acima de «Sugestão
+   * CLYON, calculada para si»." — 12-09-2026.
+   *
+   * A sugestão é uma referência, não uma ordem. Com ela em primeiro, o número
+   * dela era a primeira coisa que ele lia, e o campo dele só aparecia depois
+   * de uma conta de seis linhas — o que faz um valor sugerido pesar como se
+   * fosse o valor certo.
+   */
+  const ECRA = ler("src/app/profissionais/pedidos/[token]/NegociacaoProfissional.tsx");
+
+  it("o campo dele vem antes da conta da CLYON", () => {
+    const campo = ECRA.indexOf('">O seu valor a propor</p>');
+    const sugestao = ECRA.indexOf("Sugestão CLYON, calculada para si");
+    expect(campo).toBeGreaterThan(0);
+    expect(sugestao).toBeGreaterThan(campo);
+  });
+
+  it("os atalhos continuam a dizer de onde saem", () => {
+    // +10/+20/+40 são «um passo acima da sugestão CLYON», e a sugestão está
+    // logo por baixo — a frase tem de continuar a fazer sentido.
+    expect(ECRA).toContain('rotuloDosAtalhos="Ou um passo acima da sugestão CLYON"');
+  });
+
+  it("o erro fica colado ao botão que o produz, e não sai duas vezes", () => {
+    /*
+     * Com o campo em cima, um erro desenhado a meio do ecrã ficava a uma conta
+     * inteira de distância do botão: ele carregava em «Propor», falhava, e não
+     * via nada. É a lição que este projecto já escreveu no perfil do
+     * profissional — e é pior num telemóvel.
+     */
+    expect(ECRA).toContain("const caixaDeErro =");
+    expect(ECRA).toContain("{!proporComSugestao && caixaDeErro}");
+    // Uma vez dentro do bloco de propor, outra para os restantes casos.
+    expect(ECRA.split("caixaDeErro").length - 1).toBeGreaterThanOrEqual(3);
+  });
+});

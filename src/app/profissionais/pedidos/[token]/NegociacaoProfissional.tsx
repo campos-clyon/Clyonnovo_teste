@@ -225,9 +225,69 @@ export default function NegociacaoProfissional({
     (sugestaoAberta.horas !== sugestaoBase.horas || sugestaoAberta.pessoas !== sugestaoBase.pessoas);
   const referenciaDaProposta = sugestaoAberta ? sugestaoAberta.precoSugerido : valorEmCima;
 
+  /*
+   * O CAMPO DE PROPOR SOBE PARA CIMA DA SUGESTÃO.
+   *
+   * "Vamos mudar prioridade: coloque «O seu valor a propor» acima de «Sugestão
+   * CLYON, calculada para si»." — 12-09-2026.
+   *
+   * A sugestão é uma referência, não uma ordem. Com ela em primeiro, o número
+   * dela era a primeira coisa que ele lia, e o campo dele aparecia depois de
+   * uma conta de seis linhas — o que faz um valor sugerido pesar como se fosse
+   * o valor certo. Quem tem o preço na cabeça escreve-o e avança; quem não
+   * tem, desce e lê a conta. As duas leituras continuam a caber, por esta
+   * ordem.
+   *
+   * Os atalhos de +10/+20/+40 continuam dentro do campo, e continuam a dizer
+   * que são «um passo acima da sugestão CLYON» — que está logo por baixo.
+   */
+  const proporComSugestao = sugestaoAberta != null && podePropor;
+
+  /*
+   * O ERRO ANDA COM O BOTÃO, e não fica onde estava.
+   *
+   * Era desenhado entre a sugestão e as acções. Com o campo a subir, ficava a
+   * uma conta inteira de distância do botão que o produz: ele carregava em
+   * «Propor», falhava, e não via nada — que é a lição que este projecto já
+   * escreveu no perfil do profissional, e é pior num telemóvel.
+   */
+  const caixaDeErro = erro ? (
+    <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {erro}
+    </p>
+  ) : null;
+
   return (
     <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
       <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">A negociação</h2>
+
+      {/*
+        O QUE ELE VEM CÁ FAZER, À CABEÇA. Ver `proporComSugestao` lá acima.
+
+        Havia um botão verde «Propor 93,34 €» com o valor sugerido já lá
+        dentro. "No botão verde vamos colocar o que hoje é «Outro — escrever»;
+        os três botões em baixo: 10 % acima da sugestão CLYON, 20 % e 40 %." O
+        campo é dele; a sugestão, que fica logo abaixo, é a referência.
+      */}
+      {proporComSugestao && sugestaoAberta && (
+        <div className="mt-3">
+          <p className="mb-2 text-sm font-medium text-slate-900">O seu valor a propor</p>
+          <EscolherValor
+            referencia={sugestaoAberta.precoSugerido}
+            direccao="acima"
+            passos={[0.1, 0.2, 0.4]}
+            escreverPrimeiro
+            rotuloDosAtalhos="Ou um passo acima da sugestão CLYON"
+            aEnviar={aEnviar}
+            legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}
+            onPropor={(v) => agir("propor", v)}
+          />
+          <p className="mt-2 text-xs text-slate-500">
+            {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
+          </p>
+          {caixaDeErro}
+        </div>
+      )}
 
       {sugestaoAberta ? (
         /* A conta feita para ele: custos, preço sugerido, o que lhe fica. */
@@ -363,41 +423,12 @@ export default function NegociacaoProfissional({
         </div>
       )}
 
-      {erro && (
-        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {erro}
-        </p>
-      )}
+      {/* O erro só aparece aqui quando o campo de propor NÃO está em cima —
+          senão sairia duas vezes. Lá em cima vai colado ao botão que o produz. */}
+      {!proporComSugestao && caixaDeErro}
 
       {/* Acções */}
       <div className="mt-4 space-y-3">
-        {/*
-          COM A SUGESTÃO À FRENTE, ELE ESCREVE O VALOR DELE.
-
-          Havia um botão verde «Propor 93,34 €» com o valor sugerido. "No
-          botão verde vamos colocar o que hoje é «Outro — escrever»; os três
-          botões em baixo: 10 % acima da sugestão CLYON, 20 % e 40 %." A
-          sugestão fica como referência, não como botão: o campo está em cima
-          com o verde, e os atalhos escrevem nele.
-        */}
-        {sugestaoAberta && podePropor && (
-          <div>
-            <p className="mb-2 text-sm font-medium text-slate-900">O seu valor a propor</p>
-            <EscolherValor
-              referencia={sugestaoAberta.precoSugerido}
-              direccao="acima"
-              passos={[0.1, 0.2, 0.4]}
-              escreverPrimeiro
-              rotuloDosAtalhos="Ou um passo acima da sugestão CLYON"
-              aEnviar={aEnviar}
-              legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}
-              onPropor={(v) => agir("propor", v)}
-            />
-            <p className="mt-2 text-xs text-slate-500">
-              {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
-            </p>
-          </div>
-        )}
 
         {podeAceitar && !sugestaoAberta && (
           <button
