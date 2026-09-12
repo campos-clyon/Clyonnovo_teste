@@ -281,33 +281,27 @@ export async function enviarBotoesWhatsApp(
     return saiu;
   }
   if (ponteConfigurada()) {
-    // Pela ponte não há botões — o whatsapp-web não os tem. O botão vira a
-    // sua instrução em palavras, e o cérebro entende SIM e NÃO do outro lado.
-    const instrucoes = botoes
-      .slice(0, 3)
-      .map((b) => {
-        if (b.id.startsWith("ct:")) return `Para «${b.titulo}», responda SIM.`;
-        if (b.id.startsWith("rc:")) return `Para «${b.titulo}», responda NÃO.`;
-        return `— ${b.titulo}`;
-      })
-      .join("\n");
-    const degradado = `${texto}\n\n${instrucoes}`;
+    /*
+     * Pela ponte não há botões — o whatsapp-web não os tem.
+     *
+     * ANTES ACRESCENTAVA-SE UM MANUAL DE INSTRUÇÕES: «Para "Fechar 300 €",
+     * responda SIM. Para "Recusar", responda NÃO.» Ensinar o cliente a falar
+     * por palavras-chave é a conversa de máquina que se quer acabar — e era
+     * preciso porque do lado de cá só se liam expressões regulares.
+     *
+     * Deixou de ser. A mensagem convida a escrever à vontade, e quem lê a
+     * resposta é o Gemini (ver `traduzirParaAMaquina` em whatsapp-negociacao).
+     * O texto vai como foi escrito.
+     */
+    const degradado = texto;
     const saiu = await porNaFila(para, degradado);
     if (saiu) await registarSaida(para, degradado);
     return saiu;
   }
   if (manualActivo()) {
-    // À mão também não há botões: vai a mesma versão em palavras para a fila,
-    // e regista-se quando alguém a enviar do telemóvel.
-    const instrucoes = botoes
-      .slice(0, 3)
-      .map((b) => {
-        if (b.id.startsWith("ct:")) return `Para «${b.titulo}», responda SIM.`;
-        if (b.id.startsWith("rc:")) return `Para «${b.titulo}», responda NÃO.`;
-        return `— ${b.titulo}`;
-      })
-      .join("\n");
-    return porNaFila(para, `${texto}\n\n${instrucoes}`);
+    // À mão também não há botões — e, pela mesma razão da ponte, também não
+    // há manual de instruções: vai o texto, e a resposta lê-se do outro lado.
+    return porNaFila(para, texto);
   }
   return false;
 }

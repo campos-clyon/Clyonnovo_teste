@@ -191,6 +191,40 @@ function limpar(bruto: unknown): Compreensao | null {
 /** O modelo de recurso: não pensa antes de responder, e por isso é depressa. */
 const MODELO_DE_RESERVA = "gemini-2.0-flash";
 
+/**
+ * A chamada ao Gemini, em cru — o JSON que ele devolveu, ou null.
+ *
+ * Está separada porque há mais do que uma coisa a perguntar-lhe: os campos de
+ * uma recolha, o estado de um fio inteiro, e a resposta a uma proposta. Cada
+ * uma lê o JSON à sua maneira; a canalização — o modelo, o tempo de espera, o
+ * que se escreve nos registos quando falha — é a mesma, e só pode estar num
+ * sítio. Uma segunda cópia divergia no dia em que alguém corrigisse uma.
+ */
+async function pedirJson(
+  modelName: string,
+  apiKey: string,
+  texto: string,
+  sistema: string,
+  segundos: number,
+): Promise<unknown> {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const client = new GoogleGenerativeAI(apiKey);
+  const model = client.getGenerativeModel({
+    model: modelName,
+    systemInstruction: sistema,
+    generationConfig: { responseMimeType: "application/json", temperature: 0 },
+  });
+
+  const resposta = await Promise.race([
+    model.generateContent(texto),
+    new Promise<never>((_, rejeitar) =>
+      setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000),
+    ),
+  ]);
+
+  return jsonDe(resposta.response.text());
+}
+
 async function tentar(
   modelName: string,
   apiKey: string,
@@ -200,22 +234,7 @@ async function tentar(
 ): Promise<Compreensao | null> {
   const comecou = Date.now();
   try {
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({
-      model: modelName,
-      systemInstruction: sistema,
-      generationConfig: { responseMimeType: "application/json", temperature: 0 },
-    });
-
-    const resposta = await Promise.race([
-      model.generateContent(texto),
-      new Promise<never>((_, rejeitar) =>
-        setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000),
-      ),
-    ]);
-
-    const lido = limpar(jsonDe(resposta.response.text()));
+    const lido = limpar(await pedirJson(modelName, apiKey, texto, sistema, segundos));
     // Sem isto, uma queda do Gemini é indistinguível de uma conversa normal: o
     // assistente volta aos números e ninguém sabe porquê. Ver a mensagem da
     // Patrícia Gonçalves, 10-09-2026.
@@ -369,4 +388,151 @@ export async function compreenderFio(
   if (modelName === MODELO_DE_RESERVA) return null;
   const reserva = await tentar(MODELO_DE_RESERVA, apiKey, t, sistema, 10);
   return reserva ? reserva.campos : null;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * A RESPOSTA A UMA PROPOSTA — e o fim do «responda SIM».
+ *
+ * "O bot ainda usa palavras engessadas para se comunicar. Não deve usar sim
+ * ou não nem caracteres especiais, apenas frases e textos — o Gemini deve
+ * entender o contexto." — 12-09-2026.
+ *
+ * O cérebro das propostas lia a resposta com expressões regulares presas à
+ * letra: `^(sim|fechar|aceito|aceitar|pode fechar)$`. Quem escrevesse «pode
+ * ser, fechamos por esse valor» não era entendido — e a mensagem tinha de lhe
+ * ENSINAR a dizer SIM, o que é exactamente a conversa de máquina que se quer
+ * acabar.
+ *
+ * Isto não decide nada: traduz. Devolve o que a pessoa quis dizer, e quem
+ * executa continua a ser o mesmo código, com as mesmas guardas — o valor
+ * continua a passar por `propor`, o fecho por `fecharPeloCliente`. O Gemini
+ * alarga o que se PERCEBE; nunca alarga o que se aceita.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** O que o cliente quer fazer com as propostas que tem em cima da mesa. */
+export type AccaoSobreAProposta =
+  | "fechar"
+  | "recusar"
+  | "contrapropor"
+  | "marcar"
+  | "falar_com_pessoa"
+  | "nada";
+
+export type RespostaDoCliente = {
+  accao: AccaoSobreAProposta;
+  /**
+   * O valor em euros: a contraproposta, ou o que identifica QUAL proposta
+   * ele quer fechar quando há mais do que uma.
+   */
+  valor?: number | null;
+  /** O nome do profissional, quando ele o disse em vez do valor. */
+  profissional?: string | null;
+};
+
+/** Uma proposta em cima da mesa, como o modelo precisa de a ver. */
+export type PropostaNaMesa = { profissional: string; valor: number | null };
+
+function instrucoesDaResposta(mesa: PropostaNaMesa[]): string {
+  const lista =
+    mesa.length > 0
+      ? mesa
+          .map((p) => `- ${p.profissional}: ${p.valor != null ? `${p.valor} euros` : "sem valor ainda"}`)
+          .join("\n")
+      : "(nenhuma neste momento)";
+
+  return `És o assistente da CLYON, uma empresa portuguesa de recolhas, mudanças e limpezas. Um cliente recebeu propostas de profissionais e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
+
+AS PROPOSTAS QUE ELE TEM EM CIMA DA MESA:
+${lista}
+
+Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código:
+
+{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "nada", "valor": number|null, "profissional": string|null }
+
+As acções:
+- "fechar" — aceita uma proposta como ela está ("pode ser", "está bem, fechamos", "aceito o do Manuel", "vamos a isso", "sim").
+- "recusar" — não quer nenhuma ("não, obrigado", "fica para outra altura", "achei caro demais").
+- "contrapropor" — quer pagar outro valor ("consegue por 250?", "dou-lhe 200", "e se fosse 180").
+- "marcar" — já fechou e agora fala de dia ou hora ("pode ser na quinta de manhã").
+- "falar_com_pessoa" — pede para falar com alguém, com um humano.
+- "nada" — tudo o resto: uma pergunta, um agradecimento, uma frase que não decide nada. NA DÚVIDA É ISTO.
+
+O "valor":
+- em "contrapropor", é o valor que ELE quer pagar;
+- em "fechar" ou "recusar", é o valor da proposta que ele escolheu, e SÓ se ele o disse ou se se percebe qual é. Se ele não indicou qual, devolve null.
+- nunca inventes um valor. Um valor errado fecha um negócio errado.
+
+O "profissional" é o nome, e só quando ele o disse.
+
+REGRA QUE MANDA SOBRE TODAS: na dúvida, "nada". Uma frase que possa ser uma pergunta não é um fecho. Fechar um negócio por engano custa dinheiro a duas pessoas; não perceber custa uma mensagem a mais.`;
+}
+
+function limparResposta(bruto: unknown): RespostaDoCliente | null {
+  if (bruto == null || typeof bruto !== "object") return null;
+  const o = bruto as Record<string, unknown>;
+  const accoes: AccaoSobreAProposta[] = [
+    "fechar",
+    "recusar",
+    "contrapropor",
+    "marcar",
+    "falar_com_pessoa",
+    "nada",
+  ];
+  const a = typeof o.accao === "string" ? o.accao.trim() : "";
+  if (!(accoes as string[]).includes(a)) return null;
+
+  const n = typeof o.valor === "number" && Number.isFinite(o.valor) ? o.valor : null;
+  // Um valor fora de escala é um engano de leitura, não uma proposta: a mesa
+  // deste negócio vive entre dezenas e alguns milhares de euros.
+  const valor = n != null && n > 0 && n < 100_000 ? n : null;
+
+  const p = typeof o.profissional === "string" ? o.profissional.trim() : "";
+  return {
+    accao: a as AccaoSobreAProposta,
+    valor,
+    profissional: p.length > 0 ? p.slice(0, 120) : null,
+  };
+}
+
+/**
+ * O que o cliente quis dizer sobre as propostas — lido pelo Gemini.
+ *
+ * Devolve null quando não há chave, quando a chamada falha, e quando a
+ * resposta não se lê. Nesses casos quem chama fica com as expressões
+ * regulares de sempre, que é o comportamento de hoje: uma avaria na Google
+ * não pode fechar nem recusar nada.
+ */
+export async function compreenderResposta(
+  texto: string,
+  mesa: PropostaNaMesa[],
+): Promise<RespostaDoCliente | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const t = texto.trim();
+  if (!t) return null;
+
+  const sistema = instrucoesDaResposta(mesa);
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const comecou = Date.now();
+
+  for (const [modelo, segundos] of [
+    [modelName, 18],
+    [MODELO_DE_RESERVA, 10],
+  ] as const) {
+    try {
+      const lido = limparResposta(await pedirJson(modelo, apiKey, t, sistema, segundos));
+      console.log(
+        `[whatsapp/resposta] ${modelo}: ${lido?.accao ?? "—"}` +
+          `${lido?.valor != null ? ` ${lido.valor} €` : ""}, ${Date.now() - comecou} ms`,
+      );
+      if (lido) return lido;
+    } catch (e) {
+      console.error(
+        `[whatsapp/resposta] ${modelo} falhou aos ${Date.now() - comecou} ms:`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+    if (modelName === MODELO_DE_RESERVA) break;
+  }
+  return null;
 }

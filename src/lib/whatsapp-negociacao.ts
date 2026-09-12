@@ -18,6 +18,7 @@ import {
 } from "@/lib/negociacao";
 import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
 import { enviarBotoesWhatsApp, enviarTextoWhatsApp, telefoneParaWhatsApp } from "@/lib/whatsapp-cloud";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 
 /**
@@ -34,6 +35,11 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
  * pedido #9; texto "300" → contraproposta de 300 €; "27/08 14:30" → data
  * marcada. Tudo fica no histórico como "por WhatsApp".
  */
+
+/** O serviço em palavras — o identificador da base não vai para o cliente. */
+const ETIQUETA_DO_SERVICO: Record<string, string> = Object.fromEntries(
+  SERVICE_CATEGORIES.map((c) => [c.id, c.label]),
+);
 
 function euros(v: number): string {
   return v.toFixed(2).replace(".", ",") + " €";
@@ -316,6 +322,67 @@ type AlvoComValor = Alvo & { valorNaMesa: number | null };
  * profissional pendente, ou aceitação à espera de fecho. Cada uma com o
  * valor em cima da mesa — é por ele que se desambigua quando há várias.
  */
+/** Já se lê sem modelo nenhum? Então não se gasta uma chamada nem 18 segundos. */
+function jaSeLe(texto: string): boolean {
+  const t = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[!.,…]+$/, "")
+    .trim();
+  if (/^(sim|fechar|aceito|aceitar|pode fechar|nao|recusar|recuso|nao quero)$/.test(t)) return true;
+  // Um valor sozinho, uma data, ou um "sim 300" — tudo o que as expressões
+  // regulares de baixo já apanham à letra.
+  if (/^(?:sim|fechar|aceito|aceitar|nao|recusar|recuso)?\s*\d{1,4}(?:[.,]\d{1,2})?\s*(?:€|eur|euros)?$/.test(t)) {
+    return true;
+  }
+  if (/^\d{1,2}[\/\-.]\d{1,2}(?:[\/\-.]\d{2,4})?\s+\d{1,2}[:h]\d{0,2}$/.test(t)) return true;
+  return false;
+}
+
+/**
+ * O que o cliente escreveu, na forma que as expressões regulares já lêem.
+ *
+ * Devolve o texto ORIGINAL sempre que não houver uma leitura segura: sem
+ * chave, sem propostas na mesa, se o modelo falhar, ou se ele próprio disser
+ * que não decidiu nada. O pior caso é, por construção, o comportamento de
+ * ontem.
+ */
+async function traduzirParaAMaquina(original: string, pedidos: number[]): Promise<string> {
+  const { compreensaoDisponivel, compreenderResposta } = await import("@/lib/whatsapp-compreensao");
+  if (!compreensaoDisponivel() || !original || jaSeLe(original)) return original;
+
+  const alvos = await alvosAccionaveis(pedidos);
+  const lido = await compreenderResposta(
+    original,
+    alvos.map((a) => ({ profissional: a.profissionalNome, valor: a.valorNaMesa })),
+  ).catch(() => null);
+  if (!lido) return original;
+
+  /*
+   * O NOME TAMBÉM SERVE PARA ESCOLHER.
+   *
+   * «Aceito o do Manuel» não traz valor nenhum, e com duas propostas na mesa
+   * um «sim» sozinho fecharia a errada. Traduz-se o nome para o valor dele,
+   * que é a chave que o código de baixo usa para escolher a certa.
+   */
+  const porNome =
+    lido.profissional != null
+      ? alvos.find((a) =>
+          a.profissionalNome.toLowerCase().includes(lido.profissional!.toLowerCase()),
+        )
+      : undefined;
+  const valor = lido.valor ?? porNome?.valorNaMesa ?? null;
+
+  if (lido.accao === "fechar") return valor != null ? `sim ${valor}` : "sim";
+  if (lido.accao === "recusar") return valor != null ? `nao ${valor}` : "nao";
+  if (lido.accao === "contrapropor" && lido.valor != null) return String(lido.valor);
+  // "marcar", "falar_com_pessoa" e "nada" seguem com o texto dele: a data tem
+  // o seu próprio leitor, e o resto cai no ponto de situação — que é o que
+  // deve acontecer a uma frase que não decide nada.
+  return original;
+}
+
 async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
   const lista: AlvoComValor[] = [];
   for (const pedidoId of pedidos) {
@@ -434,7 +501,24 @@ export async function tratarMensagemDoCliente(
   }
 
   // ── Texto livre: sim/não, uma data, um valor, ou um ponto de situação ───
-  const texto = conteudo.texto.trim();
+  /*
+   * O GEMINI TRADUZ, E A MÁQUINA CONTINUA A DECIDIR.
+   *
+   * "O bot ainda usa palavras engessadas. Não deve usar sim ou não, apenas
+   * frases e textos — o Gemini deve entender o contexto." — 12-09-2026.
+   *
+   * Em vez de ensinar o cliente a falar por palavras-chave, lê-se o que ele
+   * escreveu e reescreve-se na forma que as expressões regulares já sabem
+   * ler. «Pode ser, fechamos por esse valor» vira «sim 300»; «consegue por
+   * 250?» vira «250».
+   *
+   * Assim nada abaixo muda, e todas as guardas ficam de pé: o fecho continua
+   * a passar por `fecharPeloCliente`, a contraproposta por `propor`. O Gemini
+   * alarga o que se PERCEBE; nunca alarga o que se aceita. E se ele não
+   * estiver configurado, ou falhar, ou não perceber, lê-se o texto original —
+   * que é exactamente o comportamento de sempre.
+   */
+  const texto = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);
 
   // SIM e NÃO — o caminho de quem fala pela ponte, onde não há botões. Sem
   // acentos nem pontuação: "Não!" e "nao" têm de ser a mesma palavra.
@@ -723,10 +807,9 @@ export async function aceitacaoParaOWhatsApp(dados: {
   const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
   return enviarBotoesWhatsApp(
     dados.telefone,
-    `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n` +
-      `${euros(dados.valor)} é sem IVA. Total a pagar: ${euros(conta.total)}, já com o imposto e a taxa CLYON.\n` +
-      `Só paga depois de o trabalho estar feito e confirmado.\n\n` +
-      `Falta só fechar — é o botão em baixo.`,
+    `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n\n` +
+      `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
+      `Falta só a sua confirmação para ficar combinado.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
@@ -751,13 +834,18 @@ export async function propostaParaOWhatsApp(dados: {
   regimeIva: string | null;
 }): Promise<boolean> {
   const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
+  /*
+   * O SERVIÇO EM PALAVRAS, e não o identificador da base.
+   *
+   * Saía «(recolha_moveis)» — linguagem de motor a escapar-se para a frente
+   * de quem não a devia ver, com o traço baixo e tudo.
+   */
+  const servico = dados.servico ? (ETIQUETA_DO_SERVICO[dados.servico] ?? null) : null;
   return enviarBotoesWhatsApp(
     dados.telefone,
-    `${dados.profissionalNome} propõe ${euros(dados.valor)} para o seu pedido #${dados.pedidoId}` +
-      `${dados.servico ? ` (${dados.servico})` : ""}.\n` +
-      `${euros(dados.valor)} é sem IVA. Total a pagar: ${euros(conta.total)}, já com o imposto e a taxa CLYON.\n` +
-      `Só paga depois de o trabalho estar feito e confirmado.\n\n` +
-      `Para contrapropor, responda só com o valor (ex.: 300).`,
+    `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico ? `a sua ${servico.toLowerCase()}` : "o seu pedido"} (pedido #${dados.pedidoId}).\n\n` +
+      `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
+      `Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },
