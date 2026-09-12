@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { PedidoParaOAssistente } from "./db";
+import { PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
 import {
   DIAS_DE_NOVIDADE,
   HORAS_ATE_ESTRANHAR_O_SILENCIO,
@@ -502,22 +503,60 @@ describe("a mesma novidade nunca sai duas vezes", () => {
      * proposta de um cliente para sempre.
      */
     expect(DB).toContain("jaExistia: boolean");
-    expect(DB).toContain("const duplicado = String(e?.message ?? \"\").includes(\"Duplicate entry\")");
     const i = NEGOCIACAO.indexOf("async function podeContarPelaPrimeiraVez(");
-    const corpo = NEGOCIACAO.slice(i, i + 1400);
-    expect(corpo).toContain("if (jaExistia) return false;");
-    expect(corpo).toContain("return true;");
+    const corpo = NEGOCIACAO.slice(i, i + 1600);
+    expect(corpo).toContain("if (jaExistia) return { podeFalar: false, id: null };");
+    expect(corpo).toContain("return { podeFalar: true, id: null };");
+  });
+
+  it("o duplicado reconhece-se pelo CODIGO, e nao so pelo texto do MySQL", () => {
+    // O texto muda com a versao e com o idioma do servidor. Num servidor que
+    // responda noutra lingua, "Duplicate entry" nunca casa - e um aviso
+    // repetido passava a ser lido como avaria, a cada passagem.
+    const i = DB.indexOf("export async function reservarAvisoDoAssistente(");
+    const corpo = DB.slice(i, i + 2400);
+    expect(corpo).toContain('e?.code === "ER_DUP_ENTRY"');
+    expect(corpo).toContain("e?.errno === 1062");
+  });
+
+  it("o envio imediato tambem liberta a chave quando a mensagem nao sai", () => {
+    /*
+     * A reserva e feita antes do envio - tem de ser, senao dois caminhos falam
+     * ao mesmo tempo. Mas o envio pode nao acontecer: a conversa esta entregue
+     * a uma pessoa, o numero esta bloqueado, o canal caiu. Deixar a reserva de
+     * pe fazia desta proposta uma que nunca mais seria anunciada a ninguem - e
+     * ainda por cima com lembretes sobre uma mensagem que o cliente nunca
+     * recebeu.
+     */
+    expect(NEGOCIACAO).toContain("async function libertarSeNaoSaiu(");
+    expect(NEGOCIACAO).toContain("return libertarSeNaoSaiu(primeira.id, saiu);");
+    // Nos DOIS caminhos do envio imediato.
+    const quantas = NEGOCIACAO.split("libertarSeNaoSaiu(primeira.id, saiu)").length - 1;
+    expect(quantas).toBe(2);
   });
 });
 
 describe("insistir tem limite, e o limite é dito", () => {
   it("três toques no máximo, com a escada a crescer", () => {
     expect(TOQUES_NO_MAXIMO).toBe(3);
-    expect(ESCADA_DOS_LEMBRETES.proposta_nova).toEqual([24, 48, 72]);
-    expect(horasAteAoToqueSeguinte("proposta_nova", 0)).toBe(24);
-    expect(horasAteAoToqueSeguinte("proposta_nova", 3)).toBeNull();
-    expect(esgotou("proposta_nova", 3)).toBe(true);
-    expect(esgotou("proposta_nova", 2)).toBe(false);
+    expect(ESCADA_DOS_LEMBRETES.pro_aceitou).toEqual([24, 48, 72]);
+    expect(horasAteAoToqueSeguinte("pro_aceitou", 0)).toBe(24);
+    expect(horasAteAoToqueSeguinte("pro_aceitou", 3)).toBeNull();
+    expect(esgotou("pro_aceitou", 3)).toBe(true);
+    expect(esgotou("pro_aceitou", 2)).toBe(false);
+  });
+
+  it("os lembretes de uma proposta cabem DENTRO da vida dela", () => {
+    /*
+     * A escada da proposta tinha [24, 48, 72] e era uma ficcao. Uma proposta
+     * MORRE as 48 horas, e a partir dai o assistente deixa de a ver como
+     * novidade e fecha o aviso. O segundo toque so chegaria as 72 h - quando ja
+     * nao havia proposta nenhuma sobre que insistir. Na pratica saia UM
+     * lembrete, e os outros dois eram um numero escrito num ficheiro.
+     */
+    expect(ESCADA_DOS_LEMBRETES.proposta_nova).toEqual([12, 24]);
+    const somaDosToques = ESCADA_DOS_LEMBRETES.proposta_nova.reduce((a, b) => a + b, 0);
+    expect(somaDosToques).toBeLessThan(PRAZO_DA_PROPOSTA_HORAS);
   });
 
   it("o trabalho por confirmar pára aos dois: aos sete dias liberta-se sozinho", () => {
@@ -555,6 +594,22 @@ describe("insistir tem limite, e o limite é dito", () => {
     expect(deveTocar("proposta_nova", 0, ha30horas, TARDE)).toBe(true);
     // E de madrugada nunca, por muito atrasado que esteja.
     expect(deveTocar("proposta_nova", 0, ha30horas, MADRUGADA)).toBe(false);
+  });
+
+  it("uma avaria da base nunca volta a ligar um interruptor que o dono desligou", () => {
+    /*
+     * `interruptoresDoAssistente` devolvia os valores de FABRICA quando a
+     * leitura falhava - e dois desses nascem ligados. O dono desligava o
+     * "fechar" porque o assistente andava a fechar negocios errados, o MySQL
+     * tinha um soluco, e o assistente voltava a fechar negocios errados sem
+     * ninguem ter carregado em nada. Um travao que se solta sozinho quando
+     * alguma coisa corre mal nao e um travao.
+     */
+    expect(DB).toContain("let ultimosInterruptores: Record<string, boolean> | null = null;");
+    expect(DB).toContain("return ultimosInterruptores ?? r;");
+    // E quem carrega no botao apaga a memoria, senao ela mentia a seguir.
+    const i = DB.indexOf("export async function definirInterruptorDoAssistente(");
+    expect(DB.slice(i, i + 1400)).toContain("ultimosInterruptores = null;");
   });
 
   it("uma espécie sem escada nunca leva lembrete nenhum", () => {
@@ -740,12 +795,8 @@ describe("fica escrito que foi o assistente", () => {
     expect(DB).toContain("export const HORAS_PARA_DESFAZER = 24;");
     expect(DB).toContain("export async function desfazerFechoDoAssistente(");
     const i = DB.indexOf("export async function desfazerFechoDoAssistente(");
-    const corpo = DB.slice(i, i + 3600);
-    // Repõe a negociação E ressuscita as que morreram com o fecho: desfazer
-    // sem elas deixava o cliente sem as outras propostas, que é metade do
-    // estrago que se está a tentar corrigir.
+    const corpo = DB.slice(i, i + 4200);
     expect(corpo).toContain("if (!alvo.aTempo)");
-    expect(corpo).toContain("estado = 'aberta'");
     expect(corpo).toContain("interromperNumeroWhatsApp");
     // E o retrato é tirado ANTES de se mexer em nada.
     const f = NEGOCIACAO.indexOf("async function fecharPeloCliente(");
@@ -753,6 +804,52 @@ describe("fica escrito que foi o assistente", () => {
     expect(fecho.indexOf("const outras = ")).toBeLessThan(
       fecho.indexOf("encerrarOutrasNegociacoes("),
     );
+  });
+
+  it("mas NAO se desfaz um trabalho que ja andou", () => {
+    /*
+     * Com a prova enviada, a confirmacao dada ou o dinheiro levantado,
+     * desfazer nao e uma correccao: e apagar trabalho feito. A negociacao
+     * voltaria a "aberta" com o valor acordado a NULL, e o profissional via a
+     * carteira dele encolher por causa de um botao do backoffice.
+     */
+    const i = DB.indexOf("export async function desfazerFechoDoAssistente(");
+    const corpo = DB.slice(i, i + 4200);
+    expect(corpo).toContain("n.execucaoEnviadaEm != null || n.confirmadoEm != null || n.pagoEm != null");
+    expect(corpo).toContain('if (n.estado !== "acordada")');
+    // E o guarda vem ANTES de qualquer escrita.
+    expect(corpo.indexOf("execucaoEnviadaEm != null")).toBeLessThan(
+      corpo.indexOf("beginTransaction()"),
+    );
+  });
+
+  it("desfazer e tudo-ou-nada, e repoe cada negociacao no estado que tinha", () => {
+    // Sao quatro escritas. Um desfazer que corra metade deixava uma negociacao
+    // aberta com as irmas mortas, e ninguem saberia qual das metades passou.
+    const i = DB.indexOf("export async function desfazerFechoDoAssistente(");
+    const corpo = DB.slice(i, i + 4200);
+    expect(corpo).toContain("await conn.beginTransaction();");
+    expect(corpo).toContain("await conn.commit();");
+    expect(corpo).toContain("await conn.rollback()");
+    expect(corpo).toContain("conn.release();");
+    // Cada irma volta ao estado DELA, e nao todas a "aberta".
+    expect(corpo).toContain('[e.estado || "aberta", id]');
+    expect(DB).toContain("export type NegociacaoEncerrada = { id: number; estado: string };");
+    expect(NEGOCIACAO).toContain('.map((n) => ({ id: Number(n.id), estado: String(n.estado) }));');
+  });
+
+  it("a janela das 24 horas e medida por UM relogio, o da base", () => {
+    /*
+     * `enviadoEm` e escrito pelo CURRENT_TIMESTAMP do MySQL. Compara-lo com o
+     * Date.now() do Node e misturar dois relogios que podem estar em fusos
+     * diferentes, e uma hora de diferenca transforma a janela em 23 ou em 25 -
+     * e a de 25 e a que deixa desfazer o que ja nao devia.
+     */
+    const i = DB.indexOf("export async function fechosDesfaziveis(");
+    const corpo = DB.slice(i, i + 2600);
+    expect(corpo).toContain("HOUR) AS aTempo");
+    expect(corpo).toContain("aTempo: Number(r.aTempo) === 1,");
+    expect(corpo).not.toContain("Date.now()");
   });
 });
 

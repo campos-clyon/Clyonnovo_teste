@@ -316,7 +316,10 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
         Number(n.id) !== alvo.negociacaoId &&
         (n.estado === "aberta" || n.estado === "aguarda_contratacao"),
     )
-    .map((n) => Number(n.id));
+    // Com o ESTADO de cada uma, e não só o número: repô-las todas como
+    // "aberta" achatava a diferença entre uma onde ninguém tinha proposto nada
+    // e outra onde o profissional já aceitara e faltava o cliente fechar.
+    .map((n) => ({ id: Number(n.id), estado: String(n.estado) }));
   const pendenteDoPro = estado.propostas.some(
     (p) => p.estado === "pendente" && p.por === "profissional",
   );
@@ -748,6 +751,20 @@ export async function tratarMensagemDoCliente(
   // Valor: contraproposta. Aplica-se à negociação mais recente que a espera.
   const valorTexto = texto.match(/^(?:aceito\s+|aceitar\s+|proponho\s+|contraproponho\s+|fechar\s+|sim\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*€?$/i);
   if (valorTexto) {
+    /*
+     * UMA CONTRAPROPOSTA TAMBÉM É UM NÚMERO A ENTRAR NA MESA.
+     *
+     * Passa pelo mesmo interruptor do fecho, e a razão é a mesma: quem leu
+     * "e se fosse 180?" no meio de uma frase foi um modelo de linguagem. Se o
+     * dono desligou o "fechar" porque o assistente andava a ler mal, deixá-lo
+     * continuar a escrever valores na negociação seria desligar metade do
+     * travão e chamar-lhe travão.
+     */
+    const { assistentePode: podeMexerNoValor } = await import("@/lib/db");
+    if (!(await podeMexerNoValor("fechar"))) {
+      await passarAUmaPessoa(telefone, "Fechar desligado - propos um valor");
+      return;
+    }
     const valor = Number(`${valorTexto[1]}.${valorTexto[2] ?? "0"}`);
     for (const pedidoId of pedidos) {
       const linhas = await negociacoesDoPedido(pedidoId);
@@ -919,16 +936,23 @@ export async function guardarFotoDoClienteNoPedido(
  * daqui também o registo do aviso, que é o que põe esta proposta na lista de
  * quem pode levar um lembrete se ficar sem resposta.
  *
- * DEVOLVE `true` QUANDO PODE FALAR. Uma avaria da base devolve `true`, e é de
- * propósito: repetir uma mensagem é chato, e calar a proposta de um cliente
- * para sempre não é.
+ * DEVOLVE `podeFalar: true` quando é a primeira vez. Uma avaria da base
+ * devolve `true`, e é de propósito: repetir uma mensagem é chato, e calar a
+ * proposta de um cliente para sempre não é.
+ *
+ * E DEVOLVE O `id`, porque quem chama tem de o poder LIBERTAR. A reserva é
+ * feita antes do envio — tem de ser, senão dois caminhos falam ao mesmo tempo
+ * — mas o envio pode não acontecer: a conversa está entregue a uma pessoa, o
+ * número está bloqueado, o canal caiu. Deixar a reserva de pé nesse caso fazia
+ * desta proposta uma que nunca mais seria anunciada a ninguém, e ainda por
+ * cima com lembretes sobre uma mensagem que o cliente nunca recebeu.
  */
 async function podeContarPelaPrimeiraVez(
   chave: string,
   especie: string,
   dados: { telefone: string; pedidoId: number; negociacaoId: number },
   resumo: string,
-): Promise<boolean> {
+): Promise<{ podeFalar: boolean; id: number | null }> {
   try {
     const { reservarAvisoDoAssistente, guardarTextoDoAviso } = await import("@/lib/db");
     const { id, jaExistia } = await reservarAvisoDoAssistente({
@@ -938,13 +962,22 @@ async function podeContarPelaPrimeiraVez(
       pedidoId: dados.pedidoId,
       negociacaoId: dados.negociacaoId,
     });
-    if (jaExistia) return false;
+    if (jaExistia) return { podeFalar: false, id: null };
     if (id) await guardarTextoDoAviso(id, resumo);
-    return true;
+    return { podeFalar: true, id };
   } catch (e) {
     console.error("[assistente] não reservei a novidade:", e instanceof Error ? e.message : e);
-    return true;
+    return { podeFalar: true, id: null };
   }
+}
+
+/** A reserva só vale se a mensagem chegou a sair. Senão, apaga-se. */
+async function libertarSeNaoSaiu(id: number | null, saiu: boolean): Promise<boolean> {
+  if (!saiu && id != null) {
+    const { libertarAvisoDoAssistente } = await import("@/lib/db");
+    await libertarAvisoDoAssistente(id).catch(() => {});
+  }
+  return saiu;
 }
 
 export async function aceitacaoParaOWhatsApp(dados: {
@@ -972,10 +1005,10 @@ export async function aceitacaoParaOWhatsApp(dados: {
     dados,
     `${dados.profissionalNome} aceitou ${euros(dados.valor)}.`,
   );
-  if (!primeira) return false;
+  if (!primeira.podeFalar) return false;
 
   const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
-  return enviarBotoesWhatsApp(
+  const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n\n` +
       `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
@@ -985,6 +1018,7 @@ export async function aceitacaoParaOWhatsApp(dados: {
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
     ],
   );
+  return libertarSeNaoSaiu(primeira.id, saiu);
 }
 
 export async function propostaParaOWhatsApp(dados: {
@@ -1020,7 +1054,7 @@ export async function propostaParaOWhatsApp(dados: {
     dados,
     `${dados.profissionalNome} propôs ${euros(dados.valor)}.`,
   );
-  if (!primeira) return false;
+  if (!primeira.podeFalar) return false;
 
   const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
   /*
@@ -1030,7 +1064,7 @@ export async function propostaParaOWhatsApp(dados: {
    * de quem não a devia ver, com o traço baixo e tudo.
    */
   const servico = dados.servico ? (ETIQUETA_DO_SERVICO[dados.servico] ?? null) : null;
-  return enviarBotoesWhatsApp(
+  const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico ? `a sua ${servico.toLowerCase()}` : "o seu pedido"} (pedido #${dados.pedidoId}).\n\n` +
       `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
@@ -1040,4 +1074,5 @@ export async function propostaParaOWhatsApp(dados: {
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },
     ],
   );
+  return libertarSeNaoSaiu(primeira.id, saiu);
 }

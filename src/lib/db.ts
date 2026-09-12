@@ -116,6 +116,10 @@ async function correrMigracoes(
   sqls: string[],
   etiqueta: string,
 ): Promise<void> {
+  // Lista vazia é uma tabela que ainda não precisou de nenhuma migração. Ler o
+  // esquema para não fazer nada seriam duas viagens ao MySQL por arranque a
+  // frio — exactamente o custo que esta função existe para não pagar.
+  if (sqls.length === 0) return;
   const { colunas, indices } = await jaNaTabela(pool, tabela);
   for (const sql of sqls) {
     const coluna = sql.match(ADD_COLUMN)?.[1]?.toLowerCase();
@@ -6977,18 +6981,44 @@ export async function ensureAssistenteTables(): Promise<void> {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  /*
+   * AS COLUNAS QUE VIEREM A SEGUIR ENTRAM AQUI, e não no CREATE acima.
+   *
+   * A partir do primeiro deploy estas tabelas JÁ EXISTEM em produção, e um
+   * `CREATE TABLE IF NOT EXISTS` com uma coluna nova não a acrescenta a
+   * ninguém: não dá erro, não faz nada, e descobre-se pelo primeiro `Unknown
+   * column`. O gancho fica montado desde já, com as listas vazias — sair daqui
+   * custa zero viagens ao MySQL enquanto não houver nada para correr (ver
+   * `correrMigracoes`), e evita que a próxima alteração se lembre tarde de mais
+   * de onde é que ela devia ter ido.
+   */
+  await correrMigracoes(pool, "assistenteAvisos", [], "assistenteAvisos");
+  await correrMigracoes(pool, "assistenteInterruptores", [], "assistenteInterruptores");
+
   assistenteReady = true;
   versaoDoAssistente = VERSAO_DO_ASSISTENTE;
 }
+
+/**
+ * A ÚLTIMA LEITURA QUE CORREU BEM.
+ *
+ * Sem isto, uma avaria da base devolvia os valores de FÁBRICA — e dois desses
+ * nascem ligados. Ou seja: o dono desligava o "fechar" porque o assistente
+ * estava a fechar negócios errados, o MySQL tinha um soluço, e o assistente
+ * voltava a fechar negócios errados sem ninguém ter carregado em nada.
+ *
+ * Um travão que se solta sozinho quando alguma coisa corre mal não é um
+ * travão. Guardado o último estado bom, uma avaria mantém a decisão que a
+ * pessoa tomou, seja ela ligar ou desligar.
+ */
+let ultimosInterruptores: Record<string, boolean> | null = null;
 
 /**
  * Os seis interruptores, como estão agora.
  *
  * Uma capacidade SEM LINHA fica no valor de fábrica dela — ver
  * `interruptoresPorOmissao` em assistente-interruptores.ts, e a razão de nem
- * todas nascerem desligadas está lá escrita. Sem base de dados devolve-se o
- * mesmo: uma avaria não pode ligar sozinha o que estava desligado, nem o
- * contrário.
+ * todas nascerem desligadas está lá escrita.
  */
 export async function interruptoresDoAssistente(): Promise<Record<string, boolean>> {
   const { interruptoresPorOmissao, eCapacidade } = await import("@/lib/assistente-interruptores");
@@ -6996,17 +7026,19 @@ export async function interruptoresDoAssistente(): Promise<Record<string, boolea
   try {
     await ensureAssistenteTables();
     const pool = await getPool();
-    if (!pool) return r;
+    if (!pool) return ultimosInterruptores ?? r;
     const [rows] = (await pool.execute(
       "SELECT capacidade, ligado FROM assistenteInterruptores",
     )) as [Array<{ capacidade: string; ligado: number }>, unknown];
     for (const l of rows) {
       if (eCapacidade(l.capacidade)) r[l.capacidade] = Number(l.ligado) === 1;
     }
+    ultimosInterruptores = r;
+    return r;
   } catch (e) {
     console.error("[assistente] não li os interruptores:", e instanceof Error ? e.message : e);
+    return ultimosInterruptores ?? r;
   }
-  return r;
 }
 
 export async function definirInterruptorDoAssistente(
@@ -7024,6 +7056,9 @@ export async function definirInterruptorDoAssistente(
      ON DUPLICATE KEY UPDATE ligado = VALUES(ligado), porQuem = VALUES(porQuem)`,
     [capacidade, ligado ? 1 : 0, porQuem?.slice(0, 120) ?? null],
   );
+  // A memória do último estado bom fica desactualizada no instante em que
+  // alguém carrega no botão. Apaga-se, para a leitura seguinte ir à base.
+  ultimosInterruptores = null;
 }
 
 /**
@@ -7093,8 +7128,20 @@ export async function reservarAvisoDoAssistente(dados: {
     )) as [{ insertId: number }, unknown];
     return { id: Number(r.insertId) || null, jaExistia: false };
   } catch (e: any) {
-    // "Duplicate entry" é a resposta certa: já foi contado. Não é um erro.
-    const duplicado = String(e?.message ?? "").includes("Duplicate entry");
+    /*
+     * "Já foi contado" é a resposta certa, e não um erro.
+     *
+     * Pergunta-se pelo CÓDIGO primeiro e pelo texto só depois. O texto do
+     * MySQL muda com a versão e com o idioma do servidor; num servidor que
+     * responda noutra língua, "Duplicate entry" nunca casa — e aí um aviso
+     * repetido passava a ser lido como avaria, escrevia-se um erro nos
+     * registos a cada passagem, e o painel do assistente enchia-se de ruído
+     * sobre uma coisa que estava a funcionar como devia.
+     */
+    const duplicado =
+      e?.code === "ER_DUP_ENTRY" ||
+      e?.errno === 1062 ||
+      String(e?.message ?? "").includes("Duplicate entry");
     if (!duplicado) console.error("[assistente] não reservei o aviso:", e?.message);
     return { id: null, jaExistia: duplicado };
   }
@@ -7222,21 +7269,38 @@ export async function fecharAvisosComResposta(): Promise<number> {
       WHERE a.fechadoEm IS NULL
         AND EXISTS (
           SELECT 1 FROM whatsappMensagens m
-           WHERE RIGHT(m.telefone, 9) = RIGHT(a.telefone, 9)
-             AND m.direccao = 'in'
+           WHERE m.criadoEm > NOW() - INTERVAL 30 DAY
              AND m.criadoEm > COALESCE(a.ultimoToqueEm, a.enviadoEm)
+             AND m.direccao = 'in'
+             AND RIGHT(m.telefone, 9) = RIGHT(a.telefone, 9)
         )`,
   )) as [{ affectedRows: number }, unknown];
   return Number(r.affectedRows ?? 0);
 }
 
-/** Limpeza: os avisos de há mais de 60 dias já não contam nada a ninguém. */
+/**
+ * Limpeza. E APAGAR AQUI LIBERTA A CHAVE ÚNICA — é por isso que é selectivo.
+ *
+ * Cada linha desta tabela é a prova de que uma novidade já foi contada. Apagar
+ * uma linha devolve o direito de contar outra vez a mesma coisa ao mesmo
+ * cliente. O que impede isso de acontecer é a janela dos sete dias
+ * (`DIAS_DE_NOVIDADE`) — passado esse prazo a transição deixa de ser novidade
+ * e o assistente já não a anuncia, mesmo sem a linha lá estar.
+ *
+ * Ainda assim: só se apagam as FECHADAS, que são as que já não estão à espera
+ * de nada. Uma linha aberta de há muito tempo é uma conversa que ficou por
+ * resolver, e essa vale a pena ver antes de desaparecer — por isso só sai aos
+ * seis meses, quando já não há ninguém que se lembre dela.
+ */
 export async function limparAvisosVelhos(): Promise<number> {
   await ensureAssistenteTables();
   const pool = await getPool();
   if (!pool) return 0;
   const [r] = (await pool.execute(
-    "DELETE FROM assistenteAvisos WHERE enviadoEm < NOW() - INTERVAL 60 DAY LIMIT 300",
+    `DELETE FROM assistenteAvisos
+      WHERE (fechadoEm IS NOT NULL AND enviadoEm < NOW() - INTERVAL 60 DAY)
+         OR enviadoEm < NOW() - INTERVAL 180 DAY
+      LIMIT 300`,
   )) as [{ affectedRows: number }, unknown];
   return Number(r.affectedRows ?? 0);
 }
@@ -7359,6 +7423,9 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
 
 export const HORAS_PARA_DESFAZER = 24;
 
+/** Uma negociação que morreu com o fecho, e o estado exacto em que estava. */
+export type NegociacaoEncerrada = { id: number; estado: string };
+
 export type RetratoDoFecho = {
   pedidoId: number;
   negociacaoId: number;
@@ -7366,8 +7433,16 @@ export type RetratoDoFecho = {
   estadoAntes: string;
   propostasAntes: string | null;
   valorAntes: number | null;
-  /** As que morreram por causa deste fecho, e que voltam com ele. */
-  encerradas: number[];
+  /**
+   * As que morreram por causa deste fecho, e que voltam com ele — cada uma
+   * COM O ESTADO QUE TINHA.
+   *
+   * Guardar só os números e repô-las todas como "aberta" achatava a diferença
+   * entre uma negociação onde ninguém tinha proposto nada e outra onde o
+   * profissional já tinha aceitado e faltava o cliente fechar. A segunda
+   * voltaria a pedir ao cliente uma decisão que ele já tinha tomado.
+   */
+  encerradas: NegociacaoEncerrada[];
 };
 
 export async function guardarDesfazerDoAviso(id: number, retrato: RetratoDoFecho): Promise<void> {
@@ -7390,34 +7465,56 @@ export type FechoDesfazivel = {
   aTempo: boolean;
 };
 
-/** Os fechos do assistente que ainda estão dentro da janela de arrependimento. */
+/**
+ * Os fechos do assistente que ainda estão dentro da janela de arrependimento.
+ *
+ * UM RELÓGIO SÓ, E É O DA BASE. `enviadoEm` é escrito pelo `CURRENT_TIMESTAMP`
+ * do MySQL; compará-lo com o `Date.now()` do Node é misturar dois relógios que
+ * podem estar em fusos diferentes — o Railway em UTC, a Vercel em UTC, e a
+ * ligação sem `timezone` declarada. Uma hora de diferença transformava a janela
+ * de 24 horas em 23 ou 25, e a de 25 é a que deixa desfazer o que já não devia.
+ * Por isso quem responde "ainda dá?" é o próprio MySQL.
+ */
 export async function fechosDesfaziveis(): Promise<FechoDesfazivel[]> {
   await ensureAssistenteTables();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = (await pool.execute(
-    `SELECT id, enviadoEm, desfazerJson FROM assistenteAvisos
+    `SELECT id, enviadoEm, desfazerJson,
+            (enviadoEm > NOW() - INTERVAL ${HORAS_PARA_DESFAZER} HOUR) AS aTempo
+       FROM assistenteAvisos
       WHERE desfazerJson IS NOT NULL
         AND enviadoEm > NOW() - INTERVAL ${HORAS_PARA_DESFAZER * 2} HOUR
       ORDER BY id DESC
       LIMIT 30`,
   )) as [Array<Record<string, unknown>>, unknown];
-  const agora = Date.now();
+
   const lista: FechoDesfazivel[] = [];
   for (const r of rows) {
     let retrato: RetratoDoFecho | null = null;
     try {
-      retrato = JSON.parse(String(r.desfazerJson)) as RetratoDoFecho;
+      const lido = JSON.parse(String(r.desfazerJson)) as RetratoDoFecho;
+      /*
+       * As linhas antigas guardavam `encerradas` como uma lista de números.
+       * Lê-se na mesma — repostas como "aberta", que era o comportamento
+       * dessas — em vez de se deitar fora um desfazer que ainda vale.
+       */
+      const cruas = (lido as unknown as { encerradas?: unknown }).encerradas;
+      lido.encerradas = Array.isArray(cruas)
+        ? cruas.map((e) =>
+            typeof e === "number" ? { id: e, estado: "aberta" } : (e as NegociacaoEncerrada),
+          )
+        : [];
+      retrato = lido;
     } catch {
       retrato = null;
     }
     if (!retrato) continue;
-    const quando = new Date(String(r.enviadoEm)).getTime();
     lista.push({
       id: Number(r.id),
       enviadoEm: String(r.enviadoEm),
       retrato,
-      aTempo: Number.isFinite(quando) && agora - quando <= HORAS_PARA_DESFAZER * 3600_000,
+      aTempo: Number(r.aTempo) === 1,
     });
   }
   return lista;
@@ -7426,9 +7523,15 @@ export async function fechosDesfaziveis(): Promise<FechoDesfazivel[]> {
 /**
  * Põe tudo como estava. Devolve o que fez, ou a razão de não ter feito.
  *
- * O retrato é a única fonte: repor "o que devia lá estar" a partir do estado
- * de agora seria adivinhar, e adivinhar sobre dinheiro é o que se está a
- * tentar corrigir.
+ * O retrato é a única fonte do que ESTAVA: repor "o que devia lá estar" a
+ * partir do estado de agora seria adivinhar, e adivinhar sobre dinheiro é o
+ * que se está a tentar corrigir. Mas o estado de AGORA manda sobre se se pode
+ * desfazer de todo — ver o guarda logo a seguir.
+ *
+ * TUDO NUMA TRANSACÇÃO. São quatro escritas, e um desfazer que corra metade é
+ * pior do que um que não corra nenhuma: ficava uma negociação aberta com as
+ * irmãs mortas, ou o contrário, e ninguém saberia qual das duas metades tinha
+ * passado.
  */
 export async function desfazerFechoDoAssistente(
   avisoId: number,
@@ -7447,31 +7550,72 @@ export async function desfazerFechoDoAssistente(
   if (!pool) return { ok: false, erro: "Base de dados indisponível." };
   const r = alvo.retrato;
 
-  await pool.execute(
-    "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
-    [r.estadoAntes, r.valorAntes, r.propostasAntes, r.negociacaoId],
-  );
-
-  let repostas = 0;
-  if (Array.isArray(r.encerradas) && r.encerradas.length > 0) {
-    const ids = r.encerradas.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n > 0);
-    if (ids.length > 0) {
-      const [res] = (await pool.execute(
-        `UPDATE negociacoes SET estado = 'aberta'
-          WHERE id IN (${ids.map(() => "?").join(",")}) AND estado = 'morta'`,
-        ids,
-      )) as [{ affectedRows: number }, unknown];
-      repostas = Number(res.affectedRows ?? 0);
-    }
+  /*
+   * O TRABALHO JÁ ANDOU? ENTÃO NÃO SE DESFAZ.
+   *
+   * Se o profissional já enviou a prova, se o cliente já confirmou, ou se o
+   * dinheiro já foi levantado, desfazer não é uma correcção: é apagar um
+   * trabalho feito. A negociação voltaria a "aberta" com o valor acordado a
+   * NULL, e o profissional via a carteira dele encolher por causa de um botão
+   * do backoffice. Vinte e quatro horas chegam para dar por um engano; o que
+   * não chega é para o desfazer depois de alguém ter ido lá a casa.
+   */
+  const [estadoAgora] = (await pool.execute(
+    `SELECT estado, execucaoEnviadaEm, confirmadoEm, pagoEm
+       FROM negociacoes WHERE id = ? LIMIT 1`,
+    [r.negociacaoId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const n = estadoAgora[0];
+  if (!n) return { ok: false, erro: "Essa negociação já não existe." };
+  if (n.execucaoEnviadaEm != null || n.confirmadoEm != null || n.pagoEm != null) {
+    return {
+      ok: false,
+      erro:
+        "O trabalho já avançou (há prova enviada, confirmação ou pagamento). " +
+        "Desfazer aqui apagava trabalho feito — fale com as duas pessoas.",
+    };
+  }
+  if (n.estado !== "acordada") {
+    return {
+      ok: false,
+      erro: `Esta negociação já não está fechada (está "${String(n.estado)}"). Não há fecho para desfazer.`,
+    };
   }
 
-  // A marca sai: um fecho desfeito não se desfaz outra vez.
-  await pool
-    .execute(
+  const conn = await pool.getConnection();
+  let repostas = 0;
+  try {
+    await conn.beginTransaction();
+
+    await conn.execute(
+      "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
+      [r.estadoAntes, r.valorAntes, r.propostasAntes, r.negociacaoId],
+    );
+
+    for (const e of r.encerradas) {
+      const id = Number(e?.id);
+      if (!Number.isInteger(id) || id <= 0) continue;
+      const [res] = (await conn.execute(
+        "UPDATE negociacoes SET estado = ? WHERE id = ? AND estado = 'morta'",
+        [e.estado || "aberta", id],
+      )) as [{ affectedRows: number }, unknown];
+      repostas += Number(res.affectedRows ?? 0);
+    }
+
+    // A marca sai: um fecho desfeito não se desfaz outra vez.
+    await conn.execute(
       "UPDATE assistenteAvisos SET desfazerJson = NULL, fechadoEm = NOW(), fechadoPorque = 'desfeito' WHERE id = ?",
       [avisoId],
-    )
-    .catch(() => {});
+    );
+
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    console.error("[assistente] desfazer falhou:", e instanceof Error ? e.message : e);
+    return { ok: false, erro: "Não foi possível desfazer. Nada foi alterado." };
+  } finally {
+    conn.release();
+  }
 
   await registarSemFalhar({
     acontecimento: "negociacao_encerrada",
@@ -7487,13 +7631,14 @@ export async function desfazerFechoDoAssistente(
   });
 
   // Quem desfez vai ter de falar com o cliente. O assistente cala-se aí.
-  await interromperNumeroWhatsApp(
-    (await telefoneDoPedido(r.pedidoId)) ?? "",
-    "Fecho desfeito - fale com o cliente",
-  ).catch(() => {});
+  const telefone = await telefoneDoPedido(r.pedidoId);
+  if (telefone) {
+    await interromperNumeroWhatsApp(telefone, "Fecho desfeito - fale com o cliente").catch(() => {});
+  }
 
   return { ok: true, pedidoId: r.pedidoId, repostas };
 }
+
 
 async function telefoneDoPedido(pedidoId: number): Promise<string | null> {
   const pool = await getPool();

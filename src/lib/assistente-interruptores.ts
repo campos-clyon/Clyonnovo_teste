@@ -122,8 +122,26 @@ export function eCapacidade(v: unknown): v is Capacidade {
 
 /** Espécies de aviso que admitem lembrete, e de quantas em quantas horas. */
 export const ESCADA_DOS_LEMBRETES: Record<string, number[]> = {
-  // Proposta na mesa sem resposta: 24 h, depois 2 dias, depois 3 dias.
-  proposta_nova: [24, 48, 72],
+  /*
+   * PROPOSTA NA MESA: 12 h, e depois um dia. Dois toques, não três.
+   *
+   * A escada tinha [24, 48, 72] e era uma ficção. Uma proposta MORRE às 48
+   * horas (`PRAZO_DA_PROPOSTA_HORAS`), e a partir daí o assistente deixa de a
+   * ver como novidade e fecha o aviso. O segundo toque só chegaria às 72 h —
+   * quando já não havia proposta nenhuma sobre que insistir. Na prática saía
+   * UM lembrete, e os outros dois eram um número escrito num ficheiro.
+   *
+   * Agora os dois toques cabem dentro da vida da proposta: às 12 h e às 36 h.
+   * Quem não responder até lá não está a ignorar um lembrete — está a deixar a
+   * proposta expirar, que é outra coisa e tem outro fim.
+   */
+  proposta_nova: [12, 24],
+  /*
+   * A ACEITAÇÃO DO PROFISSIONAL não expira: `aguarda_contratacao` fica à
+   * espera do cliente o tempo que for preciso. Aqui os três toques do plano
+   * cabem mesmo — e é o caso que mais interessa, porque há um profissional do
+   * outro lado a contar com o trabalho.
+   */
   pro_aceitou: [24, 48, 72],
   // Trabalho feito por confirmar: dois toques. Aos 7 dias liberta-se sozinho,
   // e esse caminho já existe — insistir mais do que isso não muda nada.
