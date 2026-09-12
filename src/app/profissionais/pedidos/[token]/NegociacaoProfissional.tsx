@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 import { Calculator, CheckCircle2, Clock, HandCoins, Loader2, X } from "lucide-react";
+import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
+/*
+ * A CONTA REFEITA VEM DE `sugestao-ajustada`, e não do módulo da sugestão.
+ *
+ * Este componente corre no BROWSER. O módulo da sugestão importa o
+ * `pricing-helper`, que importa o `db`, que importa o mysql2 e o drizzle:
+ * pedir-lhe a função arrastava a camada de base de dados inteira para o pacote
+ * do cliente, e o `next build` recusa-se — com razão. O TIPO continua a vir de
+ * lá, porque um `import type` desaparece na compilação e não arrasta nada.
+ */
 import {
   sugestaoComOutroTempo,
   horasValidas,
@@ -10,8 +20,7 @@ import {
   HORAS_MAXIMAS,
   PESSOAS_MINIMAS,
   PESSOAS_MAXIMAS,
-  type SugestaoParaOProfissional,
-} from "@/lib/sugestao-para-o-profissional";
+} from "@/lib/sugestao-ajustada";
 import {
   accoesDisponiveis,
   propostasRestantes,
