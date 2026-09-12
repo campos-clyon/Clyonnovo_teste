@@ -47,8 +47,16 @@ describe("os valores da base não chegam ao ecrã", () => {
   });
 
   it("a coluna chama-se Estado, e não Status", () => {
-    expect(SHELL).toContain('"Urgência", "Estado", "Origem"');
+    /*
+     * A lista ganhou a coluna «Fase» entre o Estado e a Origem a 12-09-2026 —
+     * a categoria derivada das negociações. Por isso o que se fixa aqui é a
+     * PALAVRA, e não a vizinhança dela: este teste guarda que o cabeçalho está
+     * em português, não a ordem das colunas.
+     */
+    expect(SHELL).toContain('"Urgência", "Estado",');
+    expect(SHELL).toContain('"Origem", "Data", "Ação"');
     expect(semNotas(SHELL)).not.toContain('"Urgência", "Status"');
+    expect(semNotas(SHELL)).not.toContain('"Status",');
   });
 
   it("o valor legado da mudança continua a ser lido", () => {

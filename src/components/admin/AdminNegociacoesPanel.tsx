@@ -29,6 +29,11 @@ import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
+  categoriaDoPedido,
+  CORES_DA_CATEGORIA,
+  ETIQUETA_DA_CATEGORIA,
+} from "@/lib/assistente-categorias";
+import {
   contaDoCliente,
   regimeDeIva,
   quantoOProfissionalRecebe,
@@ -1452,7 +1457,24 @@ export default function AdminNegociacoesPanel({
         */}
         <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-[auto_72px_minmax(0,1fr)_96px_minmax(0,1.5fr)_128px] md:gap-3">
           <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
-          <span className="text-sm font-bold text-white">#{p.id}</span>
+          <div>
+            <span className="text-sm font-bold text-white">#{p.id}</span>
+            {/*
+              A FASE, derivada e não guardada.
+
+              A mesma etiqueta que aparece na lista de Pedidos, calculada pela
+              mesma função — `categoriaDoPedido`. É esta a linguagem em que o
+              assistente automático vê o mundo, e por isso tem de ser também a
+              que está à vista de quem o pode parar: um assistente a falar de
+              «orçamento enviado» sobre um pedido que o painel chama outra
+              coisa não se consegue vigiar.
+            */}
+            <span
+              className={`mt-1 block w-fit rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${CORES_DA_CATEGORIA[categoriaDoPedido(p)] ?? "border-slate-700 text-slate-400"}`}
+            >
+              {ETIQUETA_DA_CATEGORIA[categoriaDoPedido(p)]}
+            </span>
+          </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-100">{p.contactName ?? "—"}</p>
             <p className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">

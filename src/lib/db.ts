@@ -5761,6 +5761,16 @@ export type Acontecimento =
   | "valor_corrigido"
   /* O profissional marcou ou mudou o dia do trabalho. */
   | "agenda_marcada"
+  /*
+   * O ASSISTENTE AUTOMÁTICO VIU ALGUMA COISA QUE A EQUIPA TEM DE RESOLVER.
+   *
+   * Hoje é um só caso e é o que interessa: um pedido que passou dois dias sem
+   * uma única proposta. Isso não se resolve falando com o cliente — dizer-lhe
+   * "ainda ninguém respondeu" é anunciar-lhe que a plataforma está vazia.
+   * Resolve-se falando com os profissionais ou mexendo no valor de partida, e
+   * por isso o aviso vem para dentro.
+   */
+  | "assistente_alerta"
   // As contas
   | "conta_apagada";
 
@@ -5773,7 +5783,17 @@ export type LinhaDoRegisto = {
   clienteEmail?: string | null;
   clienteNome?: string | null;
   providerNome?: string | null;
-  autorTipo?: "cliente" | "profissional" | "clyon" | "sistema" | null;
+  /**
+   * Quem carregou no botão.
+   *
+   * "assistente" entrou a 12-09-2026, com o assistente automático. Não é
+   * cosmético: quando ele fecha um negócio de trezentos euros está a executar
+   * a decisão do CLIENTE, mas quem interpretou a frase foi um modelo. No dia
+   * de um desacordo, a diferença entre "o cliente disse que sim no site" e "o
+   * cliente escreveu uma frase que o assistente leu como sim" é a história
+   * toda — e sem esta palavra na coluna não havia forma de a contar.
+   */
+  autorTipo?: "cliente" | "profissional" | "clyon" | "sistema" | "assistente" | null;
   autorNome?: string | null;
   resumo?: string | null;
   detalhe?: unknown;
@@ -6884,4 +6904,664 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     whatsappLigado: ligado,
     aDecorrer,
   };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * O ASSISTENTE AUTOMÁTICO — os interruptores e o registo do que ele fez.
+ *
+ * "Quero que o bot do WhatsApp seja um assistente da CLYON automático que faça
+ * a gestão de conversas, trabalhos e clientes. E cada uma dessas ferramentas
+ * deve ter a opção de o admin parar, caso esteja a cometer erros." —
+ * 12-09-2026.
+ *
+ * Duas tabelas, e cada uma responde a uma pergunta:
+ *
+ *   assistenteInterruptores — o que ele pode fazer. Seis linhas, no máximo.
+ *   assistenteAvisos        — o que já disse, a quem, sobre o quê, e quantas
+ *                             vezes insistiu.
+ *
+ * A SEGUNDA É A QUE FAZ A PRIMEIRA VALER ALGUMA COISA. Sem ela, "parar caso
+ * esteja a cometer erros" obriga alguém a ler conversas uma a uma até
+ * encontrar o erro — e o erro descobre-se sempre tarde demais. Com ela, o
+ * painel mostra a lista do que saiu e de onde veio.
+ *
+ * A chave única de cada aviso é o que impede a mesma novidade de ser contada
+ * duas vezes. É por isso que ela é UNIQUE na base e não uma verificação em
+ * memória: dois crons sobrepostos — que a Vercel permite — mandariam a mesma
+ * mensagem duas vezes, e o segundo INSERT tem de falhar.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+let assistenteReady = false;
+const VERSAO_DO_ASSISTENTE = 1;
+let versaoDoAssistente = 0;
+
+export async function ensureAssistenteTables(): Promise<void> {
+  if (assistenteReady && versaoDoAssistente >= VERSAO_DO_ASSISTENTE) return;
+  const pool = await getPool();
+  if (!pool) return;
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS assistenteInterruptores (
+      capacidade    VARCHAR(20) NOT NULL PRIMARY KEY,
+      ligado        TINYINT(1) NOT NULL DEFAULT 0,
+      actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      porQuem       VARCHAR(120) NULL DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS assistenteAvisos (
+      id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      chave         VARCHAR(160) NOT NULL,
+      especie       VARCHAR(40) NOT NULL,
+      telefone      VARCHAR(32) NOT NULL,
+      pedidoId      INT NULL DEFAULT NULL,
+      negociacaoId  INT UNSIGNED NULL DEFAULT NULL,
+      texto         VARCHAR(1000) NULL DEFAULT NULL,
+      enviadoEm     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      toques        TINYINT NOT NULL DEFAULT 0,
+      ultimoToqueEm DATETIME NULL DEFAULT NULL,
+      fechadoEm     DATETIME NULL DEFAULT NULL,
+      fechadoPorque VARCHAR(40) NULL DEFAULT NULL,
+      -- O RETRATO DE ANTES, para o "não era isto" das 24 horas.
+      --
+      -- Só é escrito quando o assistente FECHA um negócio. Guarda o estado da
+      -- negociação e a lista das que morreram com o fecho, porque desfazer sem
+      -- as ressuscitar deixava o cliente sem as outras propostas -- que é
+      -- metade do estrago que se está a tentar desfazer.
+      desfazerJson  LONGTEXT NULL DEFAULT NULL,
+      UNIQUE KEY uq_chave (chave),
+      KEY idx_tel (telefone, id),
+      KEY idx_abertos (fechadoEm, especie),
+      KEY idx_quando (enviadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  assistenteReady = true;
+  versaoDoAssistente = VERSAO_DO_ASSISTENTE;
+}
+
+/**
+ * Os seis interruptores, como estão agora.
+ *
+ * Uma capacidade SEM LINHA fica no valor de fábrica dela — ver
+ * `interruptoresPorOmissao` em assistente-interruptores.ts, e a razão de nem
+ * todas nascerem desligadas está lá escrita. Sem base de dados devolve-se o
+ * mesmo: uma avaria não pode ligar sozinha o que estava desligado, nem o
+ * contrário.
+ */
+export async function interruptoresDoAssistente(): Promise<Record<string, boolean>> {
+  const { interruptoresPorOmissao, eCapacidade } = await import("@/lib/assistente-interruptores");
+  const r: Record<string, boolean> = interruptoresPorOmissao();
+  try {
+    await ensureAssistenteTables();
+    const pool = await getPool();
+    if (!pool) return r;
+    const [rows] = (await pool.execute(
+      "SELECT capacidade, ligado FROM assistenteInterruptores",
+    )) as [Array<{ capacidade: string; ligado: number }>, unknown];
+    for (const l of rows) {
+      if (eCapacidade(l.capacidade)) r[l.capacidade] = Number(l.ligado) === 1;
+    }
+  } catch (e) {
+    console.error("[assistente] não li os interruptores:", e instanceof Error ? e.message : e);
+  }
+  return r;
+}
+
+export async function definirInterruptorDoAssistente(
+  capacidade: string,
+  ligado: boolean,
+  porQuem?: string | null,
+): Promise<void> {
+  const { eCapacidade } = await import("@/lib/assistente-interruptores");
+  if (!eCapacidade(capacidade)) throw new Error("Capacidade desconhecida.");
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO assistenteInterruptores (capacidade, ligado, porQuem) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE ligado = VALUES(ligado), porQuem = VALUES(porQuem)`,
+    [capacidade, ligado ? 1 : 0, porQuem?.slice(0, 120) ?? null],
+  );
+}
+
+/**
+ * O assistente pode fazer ISTO agora?
+ *
+ * Duas perguntas, e as duas têm de dizer que sim: o interruptor geral do
+ * WhatsApp (o "Desligar tudo", que corta tudo de uma vez) e o desta
+ * capacidade. O geral manda sobre o particular — desligar tudo tem de querer
+ * dizer tudo, senão o botão vermelho é uma mentira.
+ */
+export async function assistentePode(capacidade: string): Promise<boolean> {
+  if (!(await whatsappLigado())) return false;
+  const estado = await interruptoresDoAssistente();
+  return estado[capacidade] === true;
+}
+
+export type AvisoDoAssistente = {
+  id: number;
+  chave: string;
+  especie: string;
+  telefone: string;
+  pedidoId: number | null;
+  negociacaoId: number | null;
+  texto: string | null;
+  enviadoEm: string;
+  toques: number;
+  ultimoToqueEm: string | null;
+  fechadoEm: string | null;
+  fechadoPorque: string | null;
+};
+
+/**
+ * Marca uma novidade como contada. Devolve o id só da PRIMEIRA vez.
+ *
+ * É esta função que decide se a mensagem sai: escreve-se a chave ANTES de
+ * falar, e quem perder a corrida não fala. O contrário — falar e depois
+ * registar — deixava a janela onde dois crons sobrepostos mandam a mesma
+ * novidade duas vezes ao mesmo cliente.
+ *
+ * `jaExistia` SEPARA AS DUAS MANEIRAS DE NÃO RESERVAR, e a distinção não é
+ * cosmética: "já foi contado" quer dizer cala-te, e "a base não respondeu"
+ * quer dizer fala à mesma. Com um `null` a dizer as duas coisas, uma avaria de
+ * base de dados calava a proposta de um cliente para sempre — e o pior erro
+ * possível aqui é o silêncio, não a repetição.
+ */
+export async function reservarAvisoDoAssistente(dados: {
+  chave: string;
+  especie: string;
+  telefone: string;
+  pedidoId?: number | null;
+  negociacaoId?: number | null;
+}): Promise<{ id: number | null; jaExistia: boolean }> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return { id: null, jaExistia: false };
+  try {
+    const [r] = (await pool.execute(
+      `INSERT INTO assistenteAvisos (chave, especie, telefone, pedidoId, negociacaoId)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        dados.chave.slice(0, 160),
+        dados.especie.slice(0, 40),
+        soDigitos(dados.telefone),
+        dados.pedidoId ?? null,
+        dados.negociacaoId ?? null,
+      ],
+    )) as [{ insertId: number }, unknown];
+    return { id: Number(r.insertId) || null, jaExistia: false };
+  } catch (e: any) {
+    // "Duplicate entry" é a resposta certa: já foi contado. Não é um erro.
+    const duplicado = String(e?.message ?? "").includes("Duplicate entry");
+    if (!duplicado) console.error("[assistente] não reservei o aviso:", e?.message);
+    return { id: null, jaExistia: duplicado };
+  }
+}
+
+/** Desfaz a reserva quando a mensagem NÃO chegou a sair — senão perdia-se para sempre. */
+export async function libertarAvisoDoAssistente(id: number): Promise<void> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("DELETE FROM assistenteAvisos WHERE id = ?", [id]).catch(() => {});
+}
+
+/** O que saiu mesmo, para o painel mostrar a frase e não só a espécie. */
+export async function guardarTextoDoAviso(id: number, texto: string): Promise<void> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool
+    .execute("UPDATE assistenteAvisos SET texto = ? WHERE id = ?", [texto.slice(0, 1000), id])
+    .catch(() => {});
+}
+
+/**
+ * O aviso deixou de fazer sentido — e diz-se porquê.
+ *
+ * "respondeu", "resolvido" (o estado mudou sozinho), "esgotou" (três toques e
+ * ninguém disse nada), "desligado" (o admin parou a capacidade a meio).
+ */
+export async function fecharAvisoDoAssistente(id: number, porque: string): Promise<void> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool
+    .execute(
+      "UPDATE assistenteAvisos SET fechadoEm = NOW(), fechadoPorque = ? WHERE id = ? AND fechadoEm IS NULL",
+      [porque.slice(0, 40), id],
+    )
+    .catch(() => {});
+}
+
+export async function marcarToqueDoAssistente(id: number): Promise<void> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool
+    .execute(
+      "UPDATE assistenteAvisos SET toques = toques + 1, ultimoToqueEm = NOW() WHERE id = ?",
+      [id],
+    )
+    .catch(() => {});
+}
+
+function linhaDoAviso(r: Record<string, unknown>): AvisoDoAssistente {
+  return {
+    id: Number(r.id),
+    chave: String(r.chave),
+    especie: String(r.especie),
+    telefone: String(r.telefone),
+    pedidoId: r.pedidoId == null ? null : Number(r.pedidoId),
+    negociacaoId: r.negociacaoId == null ? null : Number(r.negociacaoId),
+    texto: r.texto == null ? null : String(r.texto),
+    enviadoEm: String(r.enviadoEm),
+    toques: Number(r.toques ?? 0),
+    ultimoToqueEm: r.ultimoToqueEm == null ? null : String(r.ultimoToqueEm),
+    fechadoEm: r.fechadoEm == null ? null : String(r.fechadoEm),
+    fechadoPorque: r.fechadoPorque == null ? null : String(r.fechadoPorque),
+  };
+}
+
+/**
+ * Os avisos ainda por fechar. É a lista de quem pode levar um lembrete.
+ *
+ * Vem com o instante do ÚLTIMO contacto (o lembrete, ou o aviso original se
+ * ainda não houve nenhum): é dele que a escada dos tempos conta.
+ */
+export async function avisosPorFechar(limite = 200): Promise<AvisoDoAssistente[]> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, chave, especie, telefone, pedidoId, negociacaoId, texto,
+            enviadoEm, toques, ultimoToqueEm, fechadoEm, fechadoPorque
+       FROM assistenteAvisos
+      WHERE fechadoEm IS NULL
+      ORDER BY id ASC
+      LIMIT ${Math.max(1, Math.min(500, Math.floor(limite)))}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.map(linhaDoAviso);
+}
+
+/** O que o assistente andou a fazer — a lista do separador dele no painel. */
+export async function avisosDoAssistente(limite = 60): Promise<AvisoDoAssistente[]> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, chave, especie, telefone, pedidoId, negociacaoId, texto,
+            enviadoEm, toques, ultimoToqueEm, fechadoEm, fechadoPorque
+       FROM assistenteAvisos
+      ORDER BY id DESC
+      LIMIT ${Math.max(1, Math.min(200, Math.floor(limite)))}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.map(linhaDoAviso);
+}
+
+/**
+ * Fecha os avisos a que o cliente já respondeu.
+ *
+ * Uma consulta só, e do lado da base: "existe mensagem DELE mais recente do
+ * que o último contacto nosso?". Fazê-lo em código obrigava a ir buscar as
+ * mensagens de cada número, uma viagem por aviso.
+ *
+ * Devolve quantos fechou, porque um cron que não diz o que fez é um cron que
+ * ninguém sabe se correu.
+ */
+export async function fecharAvisosComResposta(): Promise<number> {
+  await ensureAssistenteTables();
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [r] = (await pool.execute(
+    `UPDATE assistenteAvisos a
+        SET a.fechadoEm = NOW(), a.fechadoPorque = 'respondeu'
+      WHERE a.fechadoEm IS NULL
+        AND EXISTS (
+          SELECT 1 FROM whatsappMensagens m
+           WHERE RIGHT(m.telefone, 9) = RIGHT(a.telefone, 9)
+             AND m.direccao = 'in'
+             AND m.criadoEm > COALESCE(a.ultimoToqueEm, a.enviadoEm)
+        )`,
+  )) as [{ affectedRows: number }, unknown];
+  return Number(r.affectedRows ?? 0);
+}
+
+/** Limpeza: os avisos de há mais de 60 dias já não contam nada a ninguém. */
+export async function limparAvisosVelhos(): Promise<number> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [r] = (await pool.execute(
+    "DELETE FROM assistenteAvisos WHERE enviadoEm < NOW() - INTERVAL 60 DAY LIMIT 300",
+  )) as [{ affectedRows: number }, unknown];
+  return Number(r.affectedRows ?? 0);
+}
+
+export type PedidoParaOAssistente = {
+  id: number;
+  contactName: string | null;
+  contactPhone: string | null;
+  serviceType: string | null;
+  status: string | null;
+  createdAt: Date;
+  dataAgendada: Date | null;
+  negociacoes: Array<{
+    id: number;
+    estado: string;
+    valorAcordado: string | null;
+    propostasJson: string | null;
+    execucaoEnviadaEm: Date | null;
+    confirmadoEm: Date | null;
+    pagoEm: Date | null;
+    dataCombinada: Date | null;
+    avaliadoEm: Date | null;
+    profissionalNome: string;
+    regimeIva: string | null;
+    actualizadaEm: Date;
+  }>;
+};
+
+/**
+ * Os pedidos que o assistente tem de olhar em cada passagem.
+ *
+ * SÓ OS QUE TÊM TELEFONE, porque é por aí que ele fala, e só os dos últimos
+ * quatro meses: um pedido de Fevereiro não tem novidades para dar em Setembro,
+ * e varrer a tabela inteira de dez em dez minutos contra um pool de cinco
+ * ligações era a melhor forma de pôr o painel lento outra vez.
+ *
+ * Os pedidos SEM negociações vêm também — é neles que se vê a falta de
+ * propostas, que é um problema de oferta e não de conversa.
+ */
+export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOAssistente[]> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+
+  const [pedidos] = (await pool.execute(
+    `SELECT o.id, o.contactName, o.contactPhone, o.serviceType, o.status,
+            o.createdAt, o.dataAgendada
+       FROM simulatorOrders o
+      WHERE o.contactPhone IS NOT NULL AND TRIM(o.contactPhone) <> ''
+        AND o.createdAt > NOW() - INTERVAL 120 DAY
+        AND (o.status IS NULL OR o.status NOT IN ('cancelado','rejeitado','arquivado'))
+      ORDER BY o.createdAt DESC
+      LIMIT ${Math.max(1, Math.min(500, Math.floor(limite)))}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+
+  if (pedidos.length === 0) return [];
+  const ids = pedidos.map((p) => Number(p.id));
+
+  const [negs] = (await pool.execute(
+    `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
+            n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
+            n.updatedAt AS actualizadaEm,
+            p.name AS profissionalNome, p.regimeIva
+       FROM negociacoes n
+       JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})`,
+    ids,
+  )) as [Array<Record<string, unknown>>, unknown];
+
+  const porPedido = new Map<number, PedidoParaOAssistente["negociacoes"]>();
+  for (const n of negs) {
+    const k = Number(n.pedidoId);
+    if (!porPedido.has(k)) porPedido.set(k, []);
+    porPedido.get(k)!.push({
+      id: Number(n.id),
+      estado: String(n.estado),
+      valorAcordado: n.valorAcordado == null ? null : String(n.valorAcordado),
+      propostasJson: n.propostasJson == null ? null : String(n.propostasJson),
+      execucaoEnviadaEm: (n.execucaoEnviadaEm as Date) ?? null,
+      confirmadoEm: (n.confirmadoEm as Date) ?? null,
+      pagoEm: (n.pagoEm as Date) ?? null,
+      dataCombinada: (n.dataCombinada as Date) ?? null,
+      avaliadoEm: (n.avaliadoEm as Date) ?? null,
+      profissionalNome: String(n.profissionalNome ?? ""),
+      regimeIva: n.regimeIva == null ? null : String(n.regimeIva),
+      actualizadaEm: (n.actualizadaEm as Date) ?? new Date(0),
+    });
+  }
+
+  return pedidos.map((p) => ({
+    id: Number(p.id),
+    contactName: (p.contactName as string) ?? null,
+    contactPhone: (p.contactPhone as string) ?? null,
+    serviceType: (p.serviceType as string) ?? null,
+    status: (p.status as string) ?? null,
+    createdAt: p.createdAt as Date,
+    dataAgendada: (p.dataAgendada as Date) ?? null,
+    negociacoes: porPedido.get(Number(p.id)) ?? [],
+  }));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * O "NÃO ERA ISTO" — desfazer um fecho do assistente, durante 24 horas.
+ *
+ * Marcar um negócio como aceite liberta um compromisso de centenas de euros
+ * entre duas pessoas, e quem interpretou a frase do cliente foi um modelo de
+ * linguagem. Não basta escrever no histórico que foi o assistente: tem de
+ * haver caminho de volta enquanto o erro ainda é recente.
+ *
+ * VINTE E QUATRO HORAS, e não para sempre. Passado um dia, o profissional já
+ * organizou o dia dele à volta do trabalho, e desfazer deixa de ser uma
+ * correcção para passar a ser um segundo estrago. A partir daí resolve-se
+ * falando com as duas pessoas, que é como se resolve mesmo.
+ *
+ * DESFAZER ENTREGA A CONVERSA A UMA PESSOA. Quem desfez vai ter de falar com o
+ * cliente, e deixar o assistente a mandar mensagens por cima disso seria
+ * exactamente o erro a repetir-se.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export const HORAS_PARA_DESFAZER = 24;
+
+export type RetratoDoFecho = {
+  pedidoId: number;
+  negociacaoId: number;
+  /** Como estava a negociação ANTES do fecho. */
+  estadoAntes: string;
+  propostasAntes: string | null;
+  valorAntes: number | null;
+  /** As que morreram por causa deste fecho, e que voltam com ele. */
+  encerradas: number[];
+};
+
+export async function guardarDesfazerDoAviso(id: number, retrato: RetratoDoFecho): Promise<void> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool
+    .execute("UPDATE assistenteAvisos SET desfazerJson = ? WHERE id = ?", [
+      JSON.stringify(retrato),
+      id,
+    ])
+    .catch(() => {});
+}
+
+export type FechoDesfazivel = {
+  id: number;
+  enviadoEm: string;
+  retrato: RetratoDoFecho;
+  /** Ainda dá para desfazer, ou já passaram as 24 horas? */
+  aTempo: boolean;
+};
+
+/** Os fechos do assistente que ainda estão dentro da janela de arrependimento. */
+export async function fechosDesfaziveis(): Promise<FechoDesfazivel[]> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, enviadoEm, desfazerJson FROM assistenteAvisos
+      WHERE desfazerJson IS NOT NULL
+        AND enviadoEm > NOW() - INTERVAL ${HORAS_PARA_DESFAZER * 2} HOUR
+      ORDER BY id DESC
+      LIMIT 30`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  const agora = Date.now();
+  const lista: FechoDesfazivel[] = [];
+  for (const r of rows) {
+    let retrato: RetratoDoFecho | null = null;
+    try {
+      retrato = JSON.parse(String(r.desfazerJson)) as RetratoDoFecho;
+    } catch {
+      retrato = null;
+    }
+    if (!retrato) continue;
+    const quando = new Date(String(r.enviadoEm)).getTime();
+    lista.push({
+      id: Number(r.id),
+      enviadoEm: String(r.enviadoEm),
+      retrato,
+      aTempo: Number.isFinite(quando) && agora - quando <= HORAS_PARA_DESFAZER * 3600_000,
+    });
+  }
+  return lista;
+}
+
+/**
+ * Põe tudo como estava. Devolve o que fez, ou a razão de não ter feito.
+ *
+ * O retrato é a única fonte: repor "o que devia lá estar" a partir do estado
+ * de agora seria adivinhar, e adivinhar sobre dinheiro é o que se está a
+ * tentar corrigir.
+ */
+export async function desfazerFechoDoAssistente(
+  avisoId: number,
+): Promise<{ ok: true; pedidoId: number; repostas: number } | { ok: false; erro: string }> {
+  const lista = await fechosDesfaziveis();
+  const alvo = lista.find((f) => f.id === avisoId);
+  if (!alvo) return { ok: false, erro: "Esse fecho já não está na lista." };
+  if (!alvo.aTempo) {
+    return {
+      ok: false,
+      erro: `Passaram mais de ${HORAS_PARA_DESFAZER} horas. A partir daqui fale com as duas pessoas.`,
+    };
+  }
+
+  const pool = await getPool();
+  if (!pool) return { ok: false, erro: "Base de dados indisponível." };
+  const r = alvo.retrato;
+
+  await pool.execute(
+    "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
+    [r.estadoAntes, r.valorAntes, r.propostasAntes, r.negociacaoId],
+  );
+
+  let repostas = 0;
+  if (Array.isArray(r.encerradas) && r.encerradas.length > 0) {
+    const ids = r.encerradas.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n > 0);
+    if (ids.length > 0) {
+      const [res] = (await pool.execute(
+        `UPDATE negociacoes SET estado = 'aberta'
+          WHERE id IN (${ids.map(() => "?").join(",")}) AND estado = 'morta'`,
+        ids,
+      )) as [{ affectedRows: number }, unknown];
+      repostas = Number(res.affectedRows ?? 0);
+    }
+  }
+
+  // A marca sai: um fecho desfeito não se desfaz outra vez.
+  await pool
+    .execute(
+      "UPDATE assistenteAvisos SET desfazerJson = NULL, fechadoEm = NOW(), fechadoPorque = 'desfeito' WHERE id = ?",
+      [avisoId],
+    )
+    .catch(() => {});
+
+  await registarSemFalhar({
+    acontecimento: "negociacao_encerrada",
+    pedidoId: r.pedidoId,
+    negociacaoId: r.negociacaoId,
+    autorTipo: "clyon",
+    autorNome: "desfazer",
+    estadoAntes: "acordada",
+    estadoDepois: r.estadoAntes,
+    resumo:
+      `Fecho do assistente desfeito no backoffice. ` +
+      (repostas > 0 ? `${repostas} negociação(ões) reposta(s).` : "Sem outras para repor."),
+  });
+
+  // Quem desfez vai ter de falar com o cliente. O assistente cala-se aí.
+  await interromperNumeroWhatsApp(
+    (await telefoneDoPedido(r.pedidoId)) ?? "",
+    "Fecho desfeito - fale com o cliente",
+  ).catch(() => {});
+
+  return { ok: true, pedidoId: r.pedidoId, repostas };
+}
+
+async function telefoneDoPedido(pedidoId: number): Promise<string | null> {
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT contactPhone FROM simulatorOrders WHERE id = ? LIMIT 1",
+    [pedidoId],
+  )) as [Array<{ contactPhone: string | null }>, unknown];
+  return rows[0]?.contactPhone ?? null;
+}
+
+/**
+ * A CATEGORIA DE CADA PEDIDO — uma consulta para a lista toda.
+ *
+ * "O assistente deve ter categorias mais robustas para gerir os pedidos e
+ * marcar tudo bem organizado." — 12-09-2026.
+ *
+ * A regra vive em `assistente-categorias.ts` e é pura; o que falta é dar-lhe
+ * as negociações. Uma consulta por pedido punha trinta viagens ao Railway para
+ * desenhar uma tabela, contra um pool de cinco ligações — que é exactamente a
+ * doença que o painel acabou de deixar de ter. Uma só, com `IN`, e o
+ * agrupamento faz-se aqui.
+ *
+ * Devolve um mapa por id. Um pedido sem linha no mapa é um pedido sem
+ * negociações, e quem lê trata-o como tal.
+ */
+export async function categoriasDosPedidos(
+  ids: number[],
+): Promise<Record<number, string>> {
+  const limpos = ids.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n > 0);
+  if (limpos.length === 0) return {};
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return {};
+
+  const { categoriaDoPedido } = await import("@/lib/assistente-categorias");
+
+  const [linhas] = (await pool.execute(
+    `SELECT o.id, o.status,
+            n.estado, n.propostasJson, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm
+       FROM simulatorOrders o
+       LEFT JOIN negociacoes n ON n.pedidoId = o.id
+      WHERE o.id IN (${limpos.map(() => "?").join(",")})`,
+    limpos,
+  )) as [Array<Record<string, unknown>>, unknown];
+
+  const porPedido = new Map<number, { status: string | null; negociacoes: any[] }>();
+  for (const l of linhas) {
+    const id = Number(l.id);
+    if (!porPedido.has(id)) {
+      porPedido.set(id, { status: (l.status as string) ?? null, negociacoes: [] });
+    }
+    // O LEFT JOIN devolve uma linha com as colunas da negociação a null quando
+    // o pedido não tem nenhuma. Essa linha não é uma negociação vazia — é a
+    // ausência delas, e contá-la punha um pedido por distribuir a parecer que
+    // tinha uma negociação em estado nenhum.
+    if (l.estado == null) continue;
+    porPedido.get(id)!.negociacoes.push({
+      estado: String(l.estado),
+      propostasJson: l.propostasJson == null ? null : String(l.propostasJson),
+      execucaoEnviadaEm: (l.execucaoEnviadaEm as Date) ?? null,
+      confirmadoEm: (l.confirmadoEm as Date) ?? null,
+      pagoEm: (l.pagoEm as Date) ?? null,
+    });
+  }
+
+  const r: Record<number, string> = {};
+  for (const [id, p] of porPedido) r[id] = categoriaDoPedido(p);
+  return r;
 }

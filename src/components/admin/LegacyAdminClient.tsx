@@ -26,6 +26,11 @@ import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel"
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import { tService, tUrgency } from "@/lib/translations";
+import {
+  CORES_DA_CATEGORIA,
+  ETIQUETA_DA_CATEGORIA,
+  type CategoriaDoPedido,
+} from "@/lib/assistente-categorias";
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
@@ -608,6 +613,15 @@ export default function ColaboradorAdminClient({
   };
   const [pedidos, setPedidos] = useState<SimulatorOrder[]>([]);
   const [pedidosCounts, setPedidosCounts] = useState<Record<string, number>>({});
+  /**
+   * A FASE de cada pedido, vinda da mesma resposta da lista.
+   *
+   * Nao e guardada em coluna nenhuma: e derivada das negociacoes a cada
+   * leitura -- ver `categoriaDoPedido`. Uma coluna de estado escrita a mao em
+   * doze sitios fica errada no primeiro que alguem esquecer, e ai a tabela diz
+   * "orcamento enviado" sobre um pedido que ja foi pago.
+   */
+  const [pedidoCategorias, setPedidoCategorias] = useState<Record<string, string>>({});
   const [pedidosLoading, setPedidosLoading] = useState(false);
   const [pedidosError, setPedidosError] = useState<string | null>(null);
   // Abre nos novos: o que ninguém viu ainda é o que precisa de atenção
@@ -878,6 +892,8 @@ export default function ColaboradorAdminClient({
       });
       setPedidos(safeOrders);
       setPedidosCounts(data.counts ?? {});
+      setPedidoCategorias(data.categorias ?? {});
+      setPedidoCategorias(data.categorias ?? {});
     } catch {
       if (!silent) setPedidosError("Não foi possível carregar os pedidos.");
     } finally {
@@ -1775,7 +1791,7 @@ export default function ColaboradorAdminClient({
                             className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-cyan-600"
                           />
                         </th>
-                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Estado", "Origem", "Data", "Ação"].map((h) => (
+                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Estado", "Fase", "Origem", "Data", "Ação"].map((h) => (
                           <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 last:pr-4 last:text-right">{h}</th>
                         ))}
                       </tr>
@@ -1915,6 +1931,24 @@ export default function ColaboradorAdminClient({
                                 <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusColors[p.status] ?? "bg-slate-500/15 text-slate-400"}`}>
                                   {statusLabel[p.status] ?? p.status}
                                 </span>
+                              </td>
+                              {/*
+                                Fase — derivada das negociações, não guardada.
+
+                                O «Estado» ao lado diz o que a CLYON fez com o
+                                pedido; esta diz onde ele está no negócio: se
+                                já houve proposta, se o cliente aceitou, se o
+                                trabalho está feito. São duas perguntas
+                                diferentes e é por isso que são duas colunas.
+                              */}
+                              <td className="px-2 py-3.5">
+                                {pedidoCategorias[String(p.id)] ? (
+                                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                                    {ETIQUETA_DA_CATEGORIA[pedidoCategorias[String(p.id)] as CategoriaDoPedido] ?? pedidoCategorias[String(p.id)]}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-400">—</span>
+                                )}
                               </td>
                               {/* Origem */}
                               <td className="px-2 py-3.5">

@@ -6,6 +6,7 @@ import {
   TrabalhoEmCurso,
   countSimulatorOrdersByStatus,
   getSimulatorOrderById,
+  categoriasDosPedidos,
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 
@@ -41,7 +42,29 @@ export async function GET(req: NextRequest) {
     getAllSimulatorOrders({ status: status !== "todos" ? status : undefined, search }),
     countSimulatorOrdersByStatus(),
   ]);
-  return NextResponse.json({ orders: sanitizeOrders(orders), counts, role: "admin_geral" });
+
+  /*
+   * A FASE de cada pedido — derivada das negociações, não guardada.
+   *
+   * O `status` diz o que a CLYON fez com o pedido (atribuído, em análise,
+   * cancelado). Não diz nada sobre o que interessa a quem gere: se já houve
+   * proposta, se o cliente aceitou, se o trabalho está feito. Isso vive nas
+   * negociações e calcula-se — ver `categoriaDoPedido`.
+   *
+   * Uma consulta a mais para a lista toda, e não uma por linha. Se falhar, a
+   * lista aparece na mesma sem a coluna: uma fase em falta não pode esconder
+   * os pedidos.
+   */
+  const categorias = await categoriasDosPedidos(
+    (orders as Array<{ id: number }>).map((o) => Number(o.id)),
+  ).catch(() => ({}));
+
+  return NextResponse.json({
+    orders: sanitizeOrders(orders),
+    counts,
+    categorias,
+    role: "admin_geral",
+  });
 }
 
 // PATCH /api/admin/pedidos  — { id, ...fields }

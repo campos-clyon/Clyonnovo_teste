@@ -228,20 +228,57 @@ async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | nu
   };
 }
 
+/**
+ * A linha no histórico do pedido e no registo permanente.
+ *
+ * O `acontecimento` passou a ser escolhido por quem chama, a 12-09-2026. Era
+ * sempre "proposta_feita", mesmo quando o que tinha acontecido era um negócio
+ * FECHADO ou uma proposta RECUSADA — e um vocabulário fechado que diz sempre a
+ * mesma palavra não serve para contar nada. A pergunta "quantos negócios se
+ * fecharam por WhatsApp?" não tinha resposta.
+ *
+ * `autorTipo` vem pela mesma razão e é a mais importante das duas: quando o
+ * assistente fecha, quem interpretou a frase do cliente foi um modelo de
+ * linguagem. No dia de um desacordo, a diferença entre "o cliente carregou no
+ * botão" e "o cliente escreveu uma frase que o assistente leu como sim" é a
+ * história toda.
+ */
 async function registarAccao(
   pedidoId: number,
   negociacaoId: number,
   mensagem: string,
+  acontecimento: Parameters<typeof registarSemFalhar>[0]["acontecimento"] = "proposta_feita",
+  autorTipo: Parameters<typeof registarSemFalhar>[0]["autorTipo"] = "cliente",
 ): Promise<void> {
   await appendOrderHistory(pedidoId, { type: "created", by: null, message: mensagem });
   await registarSemFalhar({
-    acontecimento: "proposta_feita",
+    acontecimento,
     pedidoId,
     negociacaoId,
-    autorTipo: "cliente",
+    autorTipo,
     autorNome: "WhatsApp",
     resumo: mensagem,
   });
+}
+
+/**
+ * O ASSISTENTE PODE DECIDIR ISTO AGORA?
+ *
+ * Se o interruptor "fechar" estiver em baixo, a conversa não fica em silêncio
+ * nem o cliente leva um "não percebi": passa para uma pessoa, e diz-se-lhe que
+ * passou. Um travão que engole a intenção do cliente é pior do que não existir
+ * — ele disse que sim e ninguém lhe respondeu.
+ *
+ * A mensagem sai ANTES de a conversa ser entregue, porque `enviarTextoWhatsApp`
+ * pergunta ao portão e o portão fecha-se com a entrega.
+ */
+async function passarAUmaPessoa(telefone: string, porque: string): Promise<void> {
+  const { interromperNumeroWhatsApp } = await import("@/lib/db");
+  await enviarTextoWhatsApp(
+    telefone,
+    "Percebi o que me disse. Vou passar isto a um colega para confirmar tudo consigo, e ele fala-lhe já de seguida.",
+  );
+  await interromperNumeroWhatsApp(telefone, porque).catch(() => {});
 }
 
 /**
@@ -250,8 +287,36 @@ async function registarAccao(
  * da palavra SIM: um só corpo, para nunca haver dois comportamentos.
  */
 async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
+  const {
+    assistentePode,
+    reservarAvisoDoAssistente,
+    guardarTextoDoAviso,
+    guardarDesfazerDoAviso,
+  } = await import("@/lib/db");
+
+  if (!(await assistentePode("fechar"))) {
+    await passarAUmaPessoa(telefone, "Fechar desligado - quis avancar");
+    return;
+  }
+
   const agora = new Date();
   let estado = alvo.estado;
+
+  /*
+   * O RETRATO DE ANTES, tirado antes de se mexer em nada.
+   *
+   * É ele que sustenta o "não era isto" das 24 horas no painel. Tirá-lo depois
+   * do fecho seria fotografar exactamente o que se quer desfazer; e as
+   * negociações que morrem com o fecho têm de ser lidas AGORA, porque daqui a
+   * três linhas já estão mortas e não há como saber quais eram.
+   */
+  const outras = (await negociacoesDoPedido(alvo.pedidoId))
+    .filter(
+      (n) =>
+        Number(n.id) !== alvo.negociacaoId &&
+        (n.estado === "aberta" || n.estado === "aguarda_contratacao"),
+    )
+    .map((n) => Number(n.id));
   const pendenteDoPro = estado.propostas.some(
     (p) => p.estado === "pendente" && p.por === "profissional",
   );
@@ -279,7 +344,44 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
     alvo.negociacaoId,
     `Cliente contratou ${alvo.profissionalNome} por WhatsApp — negociação #${alvo.negociacaoId}.` +
       (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
+    "negociacao_fechada",
+    "assistente",
   );
+
+  /*
+   * O ASSISTENTE JÁ CONTOU ESTE FECHO — a mensagem sai três linhas abaixo.
+   *
+   * Sem esta reserva, o observador do cron via a negociação acordada, achava
+   * que era novidade, e mandava ao cliente uma segunda mensagem a dizer a
+   * mesma coisa dez minutos depois. A chave é construída pela MESMA função dos
+   * dois lados, de propósito: duas strings escritas à mão acabavam por
+   * divergir numa vírgula e ninguém daria por isso até o cliente se queixar.
+   */
+  try {
+    const { chaveDoFecho } = await import("@/lib/assistente-automatico");
+    const { id } = await reservarAvisoDoAssistente({
+      chave: chaveDoFecho(alvo.negociacaoId),
+      especie: "fechado",
+      telefone,
+      pedidoId: alvo.pedidoId,
+      negociacaoId: alvo.negociacaoId,
+    });
+    if (id) {
+      await guardarTextoDoAviso(id, `Fechado com ${alvo.profissionalNome} pelo assistente.`);
+      await guardarDesfazerDoAviso(id, {
+        pedidoId: alvo.pedidoId,
+        negociacaoId: alvo.negociacaoId,
+        estadoAntes: alvo.estado.estado,
+        propostasAntes: JSON.stringify(alvo.estado.propostas),
+        valorAntes: alvo.estado.valorAcordado ?? null,
+        encerradas: outras,
+      });
+    }
+  } catch (e) {
+    // O negócio já está fechado. Falhar a nota sobre ele não o desfaz.
+    console.error("[assistente] não registei o fecho:", e instanceof Error ? e.message : e);
+  }
+
   const valor = r2.negociacao.valorAcordado ?? 0;
   // O TOTAL, com o IVA de quem factura ja somado. O valor acordado e a base a
   // partir de 29-08-2026, e mandar-lhe so a base por mensagem era prometer-lhe
@@ -294,6 +396,11 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
 
 /** Recusar pelo cliente — o corpo do botão «Recusar» e da palavra NÃO. */
 async function recusarPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
+  const { assistentePode } = await import("@/lib/db");
+  if (!(await assistentePode("fechar"))) {
+    await passarAUmaPessoa(telefone, "Fechar desligado - quis recusar");
+    return;
+  }
   const r = desistir(alvo.estado, "cliente", new Date());
   if (!r.ok) {
     await enviarTextoWhatsApp(telefone, `Não deu para recusar: ${r.erro}`);
@@ -308,6 +415,8 @@ async function recusarPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
     alvo.pedidoId,
     alvo.negociacaoId,
     `Cliente recusou a proposta de ${alvo.profissionalNome} por WhatsApp — negociação #${alvo.negociacaoId}.`,
+    "negociacao_desistida",
+    "assistente",
   );
   await enviarTextoWhatsApp(
     telefone,
@@ -478,6 +587,17 @@ export async function tratarMensagemDoCliente(
      * no fim — ver whatsapp-recolha.ts. Botões não chegam aqui: uma pessoa
      * sem pedido não tem botões para carregar.
      */
+    /*
+     * O INTERRUPTOR "RECOLHER" — desligado, o assistente não faz perguntas.
+     *
+     * Cala-se e não responde nada: a mensagem dele JÁ ficou registada pelo
+     * webhook antes de aqui chegar, por isso aparece na mesa do painel como
+     * qualquer outra conversa, e quem estiver lá vê-a e responde. Inventar uma
+     * resposta automática para dizer que não há resposta automática era a
+     * pior das duas hipóteses.
+     */
+    const { assistentePode } = await import("@/lib/db");
+    if (!(await assistentePode("recolher"))) return;
     if (conteudo.tipo === "texto") await recolherPedidoPorWhatsApp(telefone, conteudo.texto);
     return;
   }
@@ -786,6 +906,47 @@ export async function guardarFotoDoClienteNoPedido(
   }
 }
 
+/**
+ * NÃO CONTAR A MESMA NOVIDADE DUAS VEZES.
+ *
+ * Estes dois envios são imediatos: saem no instante em que a proposta é
+ * gravada, porque uma proposta que chega dez minutos depois já perdeu para
+ * quem respondeu primeiro. O observador do assistente, que passa de dez em dez
+ * minutos, veria a mesma proposta e contá-la-ia outra vez — e o cliente ouvia
+ * tudo a dobrar.
+ *
+ * A mesma chave nos dois caminhos resolve-o, e quem chegar primeiro fala. Sai
+ * daqui também o registo do aviso, que é o que põe esta proposta na lista de
+ * quem pode levar um lembrete se ficar sem resposta.
+ *
+ * DEVOLVE `true` QUANDO PODE FALAR. Uma avaria da base devolve `true`, e é de
+ * propósito: repetir uma mensagem é chato, e calar a proposta de um cliente
+ * para sempre não é.
+ */
+async function podeContarPelaPrimeiraVez(
+  chave: string,
+  especie: string,
+  dados: { telefone: string; pedidoId: number; negociacaoId: number },
+  resumo: string,
+): Promise<boolean> {
+  try {
+    const { reservarAvisoDoAssistente, guardarTextoDoAviso } = await import("@/lib/db");
+    const { id, jaExistia } = await reservarAvisoDoAssistente({
+      chave,
+      especie,
+      telefone: dados.telefone,
+      pedidoId: dados.pedidoId,
+      negociacaoId: dados.negociacaoId,
+    });
+    if (jaExistia) return false;
+    if (id) await guardarTextoDoAviso(id, resumo);
+    return true;
+  } catch (e) {
+    console.error("[assistente] não reservei a novidade:", e instanceof Error ? e.message : e);
+    return true;
+  }
+}
+
 export async function aceitacaoParaOWhatsApp(dados: {
   telefone: string;
   pedidoId: number;
@@ -804,6 +965,15 @@ export async function aceitacaoParaOWhatsApp(dados: {
   // O profissional aceitou o valor DO CLIENTE — falta só o cliente fechar.
   // Sem este aviso, o "sim" do profissional morria no painel: o cliente de
   // telefone propunha um valor e nunca sabia que tinha sido aceite.
+  const { chaveDaAceitacao } = await import("@/lib/assistente-automatico");
+  const primeira = await podeContarPelaPrimeiraVez(
+    chaveDaAceitacao(dados.negociacaoId, dados.valor),
+    "pro_aceitou",
+    dados,
+    `${dados.profissionalNome} aceitou ${euros(dados.valor)}.`,
+  );
+  if (!primeira) return false;
+
   const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
   return enviarBotoesWhatsApp(
     dados.telefone,
@@ -833,6 +1003,25 @@ export async function propostaParaOWhatsApp(dados: {
    */
   regimeIva: string | null;
 }): Promise<boolean> {
+  /*
+   * A chave conta QUANTAS propostas já houve nesta negociação, e não a hora a
+   * que a última foi feita. É a mesma conta que o observador faz do outro
+   * lado, e não depende de relógios: uma data que o MySQL devolva com um
+   * milissegundo de diferença dava duas chaves e duas mensagens.
+   */
+  const { chaveDaProposta } = await import("@/lib/assistente-automatico");
+  const linhas = await negociacoesDoPedido(dados.pedidoId).catch(() => []);
+  const quantas = propostasDe(
+    linhas.find((n) => Number(n.id) === dados.negociacaoId)?.propostasJson ?? null,
+  ).length;
+  const primeira = await podeContarPelaPrimeiraVez(
+    chaveDaProposta(dados.negociacaoId, quantas),
+    "proposta_nova",
+    dados,
+    `${dados.profissionalNome} propôs ${euros(dados.valor)}.`,
+  );
+  if (!primeira) return false;
+
   const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
   /*
    * O SERVIÇO EM PALAVRAS, e não o identificador da base.

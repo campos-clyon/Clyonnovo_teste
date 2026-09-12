@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -736,6 +737,15 @@ export default function AdminWhatsAppPanel() {
           {erro}
         </p>
       )}
+
+      {/*
+        O ASSISTENTE AUTOMÁTICO — os seis interruptores e o que ele fez.
+
+        Fica dobrado por omissão e num ficheiro próprio: quem abre este ecrã
+        vem quase sempre atender alguém, e a mesa tem de ser a primeira coisa
+        que se vê. Os dados dele só são pedidos quando alguém o abre.
+      */}
+      <AdminAssistenteAutoPanel />
 
       {/*
         A MESA. Uma lista, quatro separadores — e as acções de cada número na
