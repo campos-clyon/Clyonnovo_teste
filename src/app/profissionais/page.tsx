@@ -146,13 +146,25 @@ export default function ProfissionaisPage() {
       {/* ── Como se entra ─────────────────────────────────────────────── */}
       <section className="py-10 sm:py-14">
         <div className="mx-auto max-w-2xl px-4 sm:px-6">
+          {/*
+            «ENTRA-SE POR CONVITE» EM CIMA DE UM BOTÃO QUE ABRE UM FORMULÁRIO.
+
+            "Se ele preencheu um formulário, ele não é um convidado — ele está
+            a candidatar-se." — 12-09-2026. O mesmo desencontro do
+            /quero-ser-parceiro, um passo antes: o título prometia um convite e
+            o botão levava a uma candidatura.
+
+            O que filtra não é o convite: é não haver inscrição automática e
+            haver uma pessoa a ler cada candidatura. Isso é verdade — e diz-se
+            sem pedir a ninguém que espere por um convite que não vai chegar.
+          */}
           <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">
-            Entra-se por convite
+            Não há inscrição automática
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Não há inscrição aberta. Deixe a candidatura em dois minutos e, se avançar, enviamos-lhe
-            o link do registo. Depois de o preencher, confirmamos os dados e avisamo-lo
-            quando a conta ficar activa.
+            Deixe a candidatura em dois minutos. É uma pessoa que a lê e, se avançar,
+            recebe por email o link para escolher a palavra-passe e entrar. Os dados de
+            facturação preenche-os já lá dentro, e avisamo-lo quando a conta ficar activa.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
             É de propósito: assim cada profissional na plataforma é alguém com quem já
@@ -165,7 +177,7 @@ export default function ProfissionaisPage() {
               href="/quero-ser-parceiro"
               className="flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-cyan-600 px-6 text-base font-bold text-white transition hover:bg-cyan-500"
             >
-              Quero receber o convite
+              Quero candidatar-me
             </Link>
             <Link
               href="/profissionais/entrar"

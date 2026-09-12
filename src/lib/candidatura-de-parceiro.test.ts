@@ -35,9 +35,59 @@ describe("o botão deixa de mandar para o WhatsApp", () => {
   });
 
   it("a landing dos profissionais também, em vez do formulário de clientes", () => {
-    const i = LANDING.indexOf("Quero receber o convite");
+    // O botão chamava-se «Quero receber o convite» e abria uma candidatura.
+    // "Se ele preencheu um formulário, ele não é um convidado." — 12-09-2026.
+    const i = LANDING.indexOf("Quero candidatar-me");
     expect(i).toBeGreaterThan(0);
     expect(LANDING.slice(Math.max(0, i - 400), i)).toContain('href="/quero-ser-parceiro"');
+  });
+});
+
+describe("não se promete um convite a quem se está a candidatar", () => {
+  /*
+   * Duas coisas desencontradas, apanhadas pelo dono a 12-09-2026 no ecrã que
+   * o candidato vê depois de submeter:
+   *
+   *   1. o texto prometia «o link para completar o registo» — e esse
+   *      formulário deixou de existir a 11-09, quando aprovar passou a criar
+   *      a conta. O que lhe chega é o link da palavra-passe;
+   *   2. dizia-se-lhe «a entrada é por convite» logo a seguir a ele ter
+   *      preenchido um formulário. Convidámo-lo a candidatar-se e, no fim,
+   *      dissemos-lhe que só se entra por convite.
+   */
+  const PAGINA = ler("src/app/quero-ser-parceiro/page.tsx");
+  const FORM = ler("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx");
+
+  /*
+   * Sem comentários e com o espaço normalizado.
+   *
+   * Uma frase escrita em JSX parte-se onde a linha acaba — «uma pessoa que lê
+   * cada\n candidatura» — e um teste que procure a frase inteira chumba por
+   * causa de uma mudança de linha que não mudou nada. O que se quer guardar é
+   * o que se lê no ecrã, e no ecrã não há quebras de linha nenhumas.
+   */
+  const semNotas = (f: string) =>
+    f
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\s+/g, " ");
+
+  it("o ecrã de sucesso promete a palavra-passe, e não um segundo formulário", () => {
+    const visivel = semNotas(FORM);
+    expect(visivel).toContain("escolher a sua palavra-passe");
+    expect(visivel).not.toContain("link para completar o registo");
+  });
+
+  it("nem a página nem o formulário falam de convite a quem se candidata", () => {
+    expect(semNotas(PAGINA)).not.toContain("convite");
+    expect(semNotas(FORM)).not.toContain("convite");
+  });
+
+  it("continua a dizer-se PORQUE é que não há inscrição automática", () => {
+    // A frase do convite existia por uma razão boa: explicar ao cliente que
+    // quem lhe aparece foi verificado. A razão fica; a palavra errada é que sai.
+    expect(semNotas(PAGINA)).toContain("uma pessoa que lê cada candidatura");
+    expect(semNotas(PAGINA)).toContain("foi verificado");
   });
 });
 

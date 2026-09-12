@@ -89,9 +89,19 @@ export default function FormularioDeCandidatura() {
       <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-6 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-3 text-xl font-bold text-[#0B1929]">Recebemos a sua candidatura</h2>
+        {/*
+          O QUE ELE VAI RECEBER MUDOU, E ESTE TEXTO NÃO TINHA MUDADO COM ELE.
+
+          Dizia «o link para completar o registo» — e era verdade até 11-09-2026,
+          quando aprovar passava um convite para um segundo formulário de dez
+          campos. Desde que aprovar CRIA a conta, o que lhe chega é o link para
+          escolher a palavra-passe. Prometer-lhe um formulário que já não existe
+          é prepará-lo para uma coisa e mandar-lhe outra.
+        */}
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-700">
           Vamos olhar para ela e falamos consigo. Se avançar, recebe no email{" "}
-          <strong>{email}</strong> o link para completar o registo.
+          <strong>{email}</strong> o link para escolher a sua palavra-passe e entrar.
+          O NIF, a morada fiscal e o IBAN preenche-os lá dentro, com calma.
         </p>
         <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-slate-500">
           Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa

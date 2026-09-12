@@ -167,10 +167,27 @@ export default function QueroSerParceiroPage() {
       <section className="bg-[#F4F8FB] py-10 sm:py-14">
         <div className="mx-auto max-w-2xl px-4 sm:px-6">
           <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">Candidate-se</h2>
+          {/*
+            «A ENTRADA É POR CONVITE» DITO A QUEM ACABOU DE PREENCHER UM
+            FORMULÁRIO.
+
+            "Se ele preencheu um formulário, ele não é um convidado — ele está
+            a candidatar-se." — 12-09-2026, e a frase estava mesmo a dar-lhe a
+            volta: convidámo-lo a candidatar-se e, no fim, dizíamos-lhe que só
+            se entra por convite.
+
+            A frase existia por uma razão boa — explicar ao profissional porque
+            é que não há inscrição aberta, e ao cliente porque é que quem lhe
+            aparece foi verificado. O que estava errado era a palavra: o que
+            filtra não é o convite, é haver uma pessoa a ler cada candidatura
+            antes de existir conta nenhuma. E isso é verdade dos dois caminhos,
+            do candidato e de quem a CLYON procura.
+          */}
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Leva um minuto. Olhamos para a candidatura e, se avançar, recebe por email o
-            link para completar o registo. A entrada é por convite — é isso que nos
-            permite dizer ao cliente que quem lhe aparece foi verificado.
+            Leva um minuto. Não há inscrição automática: é uma pessoa que lê cada
+            candidatura antes de haver conta — é isso que nos permite dizer ao cliente
+            que quem lhe aparece foi verificado. Se avançar, recebe por email o link
+            para escolher a palavra-passe e entrar.
           </p>
           <div className="mt-6">
             <FormularioDeCandidatura />
