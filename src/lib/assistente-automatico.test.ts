@@ -504,7 +504,7 @@ describe("a mesma novidade nunca sai duas vezes", () => {
      */
     expect(DB).toContain("jaExistia: boolean");
     const i = NEGOCIACAO.indexOf("async function podeContarPelaPrimeiraVez(");
-    const corpo = NEGOCIACAO.slice(i, i + 1600);
+    const corpo = NEGOCIACAO.slice(i, NEGOCIACAO.indexOf("async function libertarSeNaoSaiu("));
     expect(corpo).toContain("if (jaExistia) return { podeFalar: false, id: null };");
     expect(corpo).toContain("return { podeFalar: true, id: null };");
   });
@@ -745,7 +745,7 @@ describe("os seis interruptores", () => {
      * desligar um deixava a outra a falar dez minutos depois.
      */
     const i = NEGOCIACAO.indexOf("async function podeContarPelaPrimeiraVez(");
-    const corpo = NEGOCIACAO.slice(i, i + 2200);
+    const corpo = NEGOCIACAO.slice(i, NEGOCIACAO.indexOf("async function libertarSeNaoSaiu("));
     expect(corpo).toContain('if (!(await assistentePode("propostas"))) return { podeFalar: false, id: null };');
     const p = novidadesDoPedido(
       pedido({ negociacoes: [negociacao({ propostasJson: propostaDoPro(150) })] }),
@@ -765,7 +765,7 @@ describe("os seis interruptores", () => {
     // Guardar a marca de uma conversa que não houve fechava a porta a contá-la
     // mais tarde, quando o botão voltasse a subir.
     const i = NEGOCIACAO.indexOf("async function podeContarPelaPrimeiraVez(");
-    const corpo = NEGOCIACAO.slice(i, i + 2200);
+    const corpo = NEGOCIACAO.slice(i, NEGOCIACAO.indexOf("async function libertarSeNaoSaiu("));
     expect(corpo.indexOf('assistentePode("propostas")')).toBeLessThan(
       corpo.indexOf("reservarAvisoDoAssistente({"),
     );
