@@ -129,18 +129,32 @@ export function sinaisDoTrabalho(t: TrabalhoParaAvaliar): Sinal[] {
     });
   }
 
-  const fotos = t.quantasFotos ?? 0;
-  if (fotos >= 3) {
-    sinais.push({
-      chave: "com_fotos",
-      emoji: "📷",
-      // O número, e não a palavra: cabe na linha e diz mais.
-      texto: `${fotos} fotos`,
-      cls: "border-slate-200 bg-slate-50 text-slate-600",
-    });
-  }
+  /*
+   * O DISTINTIVO «N FOTOS» SAIU — 12-09-2026.
+   *
+   * "Remova o número com a quantidade de fotos; aumente o tamanho da imagem."
+   *
+   * O sinal nasceu quando a miniatura tinha 80 px e se lia como um ícone: era
+   * preciso alguém dizer que havia fotografias. A 112 px isso deixou de ser
+   * preciso — vê-se a fotografia, e o «+9» no canto dela diz quantas mais há,
+   * no sítio onde se vai carregar para as ver.
+   *
+   * Dois distintivos a contar a mesma coisa fazem com que nenhum se leia. Os
+   * que ficam — perto, urgente, bem pago — respondem todos à mesma pergunta:
+   * porque é que este trabalho vale a pena. Quantas fotografias tem não
+   * responde a nada disso.
+   *
+   * A chave `com_fotos` fica no tipo e no peso da ordenação: um pedido com
+   * fotografias continua a valer mais na lista, porque continua a ser mais
+   * fácil de orçamentar. O que deixou de haver é uma etiqueta a dizê-lo.
+   */
 
   return sinais;
+}
+
+/** Um pedido com fotografias é mais fácil de orçamentar — e sobe na lista. */
+function temFotografias(t: TrabalhoParaAvaliar): boolean {
+  return (t.quantasFotos ?? 0) >= 3;
 }
 
 /**
@@ -155,7 +169,10 @@ export function pesoDoTrabalho(t: TrabalhoParaAvaliar): number {
     (chaves.has("perto") ? 8 : 0) +
     (chaves.has("urgente") ? 4 : 0) +
     (chaves.has("bem_pago") ? 3 : 0) +
-    (chaves.has("com_fotos") ? 1 : 0)
+    // As fotografias já não são um distintivo, mas continuam a contar aqui: um
+    // pedido com fotografias é mais fácil de orçamentar, e por isso vale mais
+    // à frente na lista. Ver `temFotografias`.
+    (temFotografias(t) ? 1 : 0)
   );
 }
 

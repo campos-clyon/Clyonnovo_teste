@@ -29,6 +29,9 @@ const TRABALHOS = readFileSync(
   join(process.cwd(), "src/app/profissionais/painel/Trabalhos.tsx"),
   "utf8",
 );
+/** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
+const semNotas = (t: string) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("o foguinho", () => {
   it("acende a menos de 10 km, e não acima", () => {
@@ -90,9 +93,23 @@ describe("os outros sinais", () => {
     expect(porKmPorExtenso({ recebeSeAceitar: 100 })).toBeNull();
   });
 
-  it("as fotografias contam-se em número, para caber na linha", () => {
-    expect(sinaisDoTrabalho({ quantasFotos: 3 }).map((s) => s.texto)).toContain("3 fotos");
-    expect(sinaisDoTrabalho({ quantasFotos: 2 }).map((s) => s.chave)).not.toContain("com_fotos");
+  it("as fotografias deixaram de ser um distintivo — mas continuam a pesar", () => {
+    /*
+     * "Remova o número com a quantidade de fotos; aumente o tamanho da
+     * imagem." — 12-09-2026.
+     *
+     * O sinal nasceu quando a miniatura tinha 80 px e se lia como um ícone:
+     * era preciso alguém dizer que havia fotografias. A 112 px vê-se a
+     * fotografia, e o «+9» no canto dela diz quantas mais há — dois
+     * distintivos a contar a mesma coisa fazem com que nenhum se leia.
+     *
+     * O peso fica: um pedido com fotografias continua a ser mais fácil de
+     * orçamentar, e por isso continua a valer mais à frente na lista.
+     */
+    expect(sinaisDoTrabalho({ quantasFotos: 10 }).map((s) => s.texto).join(" ")).not.toContain(
+      "fotos",
+    );
+    expect(pesoDoTrabalho({ quantasFotos: 3 })).toBeGreaterThan(pesoDoTrabalho({ quantasFotos: 2 }));
   });
 
   it("o €/km escreve-se em português", () => {
@@ -148,6 +165,43 @@ describe("o cartão no painel", () => {
   it("nenhum distintivo parte a meio no telemóvel", () => {
     // Ele mandou-me a fotografia com «Pouca concorrência» na linha de baixo.
     expect(TRABALHOS).toContain("whitespace-nowrap rounded-full border px-2 py-0.5");
+  });
+
+  it("a fotografia é grande — é ela que o faz parar", () => {
+    /*
+     * "Aumente o tamanho da imagem." — 12-09-2026.
+     *
+     * Estava a 80 px, do tamanho de um ícone, e ao lado de quatro linhas de
+     * texto perdia sempre. Um esvaziamento de apartamento e a recolha de uma
+     * cama desmontada são dois trabalhos completamente diferentes, e a
+     * fotografia diz isso num relance que nenhuma descrição consegue.
+     */
+    expect(TRABALHOS).toContain('className="h-28 w-28"');
+    expect(TRABALHOS).toContain("flex h-28 w-28 shrink-0 items-center justify-center");
+    // E o «+N» fica: num quadrado deste tamanho lê-se como galeria.
+    expect(TRABALHOS).toContain("+{fotos.length - 1}");
+  });
+
+  it("a descrição e o botão de arquivar saíram do cartão", () => {
+    /*
+     * "Remova a descrição, isso ele vê quando abrir o pedido. Remova o botão
+     * arquivar aqui; esse botão deve estar apenas ao abrir o pedido."
+     *
+     * Duas linhas de texto corrido eram a mancha onde o olho encalhava, e o
+     * botão em posição absoluta obrigava a reservar-lhe uma faixa branca —
+     * `pb-16` — em TODOS os cartões, para um gesto que se usa uma vez por
+     * semana. Numa lista de vinte trabalhos, isso é um terço do ecrã.
+     */
+    const cartao = TRABALHOS.slice(
+      TRABALHOS.indexOf("onClick={() => abrirTrabalho(p)}"),
+      TRABALHOS.indexOf("// ── Arrumar"),
+    );
+    expect(semNotas(cartao)).not.toContain("WebkitLineClamp: 2");
+    expect(semNotas(cartao)).not.toContain("Sem descrição");
+    expect(semNotas(cartao)).not.toContain("pb-16");
+    expect(semNotas(cartao)).not.toContain('arquivar(p, !p.arquivadoEm)');
+    // E continua a haver onde arrumar: dentro do pedido aberto.
+    expect(TRABALHOS).toContain("arrumarTrabalho(pedido, arquivar)");
   });
 
   it("os sinais só aparecem onde ele ainda decide", () => {

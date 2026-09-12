@@ -272,27 +272,13 @@ export default function Trabalhos({
   /* Mudar de separador fecha a gaveta: a escolha fica, a gaveta não. */
   useEffect(() => setOrdemAberta(false), [separador]);
 
-  const [aArquivar, setAArquivar] = useState<number | null>(null);
-
-  /**
-   * Arruma um trabalho, ou repõe-no.
+  /*
+   * `arquivar` e `aArquivar` saíram daqui com o botão que os usava.
    *
-   * Não apaga nada: muda de separador. O que o cliente vê fica igual, a
-   * carteira conta o mesmo, e o "Arquivados" existe precisamente para nada
-   * desaparecer de vez.
+   * A lista já não arruma nada: o gesto vive no ecrã do pedido aberto, que
+   * tem a sua própria cópia — e espaço para dizer o que ele leva consigo
+   * antes de o fazer.
    */
-  async function arquivar(p: Pedido, arquivar: boolean) {
-    if (arquivar && !confirmarArrumacao(p)) return;
-    setAArquivar(p.negociacaoId);
-    try {
-      if (await arrumarTrabalho(p, arquivar)) onRecarregar();
-    } catch {
-      /* Sem rede não se arruma nada — e não há nada a desfazer. */
-    } finally {
-      setAArquivar(null);
-    }
-  }
-
   /*
    * ⚠️ TODOS OS HOOKS TÊM DE FICAR ACIMA DO `return` QUE VEM A SEGUIR.
    *
@@ -610,16 +596,17 @@ export default function Trabalhos({
           const quando = quandoEOTrabalho(p);
 
           /*
-           * O botão de arrumar aparece em TODOS os separadores.
+           * ARRUMAR CONTINUA A PODER-SE EM TODOS OS SEPARADORES — mas dentro
+           * do pedido, e não no cartão.
            *
-           * Só aparecia nos recusados, terminados e arquivados — "num trabalho
-           * novo seria um convite a esconder o que ainda precisa de resposta".
-           * Ele pediu o contrário: "o pro deve poder arquivar qualquer pedido
-           * nas categorias, para não poluir a tela se não tiver interesse"
-           * (09-09-2026). Arquivar um pedido AINDA ABERTO diz ao cliente que
-           * não há interesse antes de o arrumar — ver `arrumarTrabalho`.
+           * A regra de 09-09-2026 mantém-se: "o pro deve poder arquivar
+           * qualquer pedido nas categorias, para não poluir a tela se não
+           * tiver interesse". O que mudou foi ONDE: "remova o botão arquivar
+           * aqui; esse botão deve estar apenas ao abrir o pedido"
+           * (12-09-2026). O gesto é o mesmo e chama a mesma função; sai é da
+           * lista, onde cobrava uma faixa de espaço a cada cartão para um
+           * botão que se usa uma vez por semana.
            */
-          const podeArrumar = true;
 
           return (
             <div
@@ -633,15 +620,12 @@ export default function Trabalhos({
             <button
               onClick={() => abrirTrabalho(p)}
               /*
-                `pb-16` QUANDO HA BOTAO DE ARQUIVAR.
-                Ele esta em posicao absoluta no canto e o cartao nao lhe
-                reservava espaco nenhum: o fundo branco opaco tapava por
-                completo o distintivo «por carga» — a etiqueta que diz se o
-                valor e o trabalho todo ou cada viagem ao aterro.
+                O `pb-16` saiu com o botão de arquivar.
+                Existia para lhe reservar espaço no canto — dezasseis pixéis de
+                faixa branca por baixo do dinheiro, em todos os cartões da
+                lista. Sem o botão, o cartão acaba onde acaba o conteúdo.
               */
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
-                podeArrumar ? "pb-16" : ""
-              } ${
                 fechado
                   ? "border-emerald-300 ring-1 ring-emerald-100"
                   : quente
@@ -680,12 +664,25 @@ export default function Trabalhos({
               }`}
             >
               <div className="flex gap-3">
-                {/* A primeira foto ao lado do título: é o que identifica o
-                    trabalho de relance, muito antes do texto. */}
+                {/*
+                  A FOTOGRAFIA É O QUE O FAZ PARAR, e por isso cresceu.
+
+                  "Aumente o tamanho da imagem." Estava a 80 px — do tamanho
+                  de um ícone, e ao lado de quatro linhas de texto perdia
+                  sempre. Um esvaziamento de apartamento e a recolha de uma
+                  cama desmontada são dois trabalhos completamente diferentes,
+                  e a fotografia diz isso num relance que nenhuma descrição
+                  consegue. A 112 px dá para VER o que lá está.
+
+                  O «+N» fica: num quadrado deste tamanho lê-se como uma
+                  galeria, e diz que há mais para ver sem gastar uma linha do
+                  cartão. O distintivo «N fotos», esse, saiu — dizia o mesmo
+                  número duas vezes.
+                */}
                 {fotos.length > 0 ? (
                   <div className="relative shrink-0">
                     {/* Foto, video ou PDF — ver `Anexo.tsx`. */}
-                    <Miniatura url={fotos[0].url} nome={fotos[0].name} className="h-20 w-20" />
+                    <Miniatura url={fotos[0].url} nome={fotos[0].name} className="h-28 w-28" />
                     {fotos.length > 1 && (
                       <span className="absolute bottom-1 right-1 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         +{fotos.length - 1}
@@ -693,8 +690,8 @@ export default function Trabalhos({
                     )}
                   </div>
                 ) : (
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                    <Camera className="h-6 w-6 text-slate-300" aria-hidden="true" />
+                  <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+                    <Camera className="h-7 w-7 text-slate-300" aria-hidden="true" />
                   </div>
                 )}
 
@@ -805,28 +802,21 @@ export default function Trabalhos({
                     )}
                   </p>
                   {/*
-                    O QUE É O TRABALHO, sem ter de abrir.
+                    A DESCRIÇÃO SAIU DAQUI.
 
-                    A lista dizia o serviço, a cidade e o dinheiro — tudo
-                    menos aquilo que ele vai fazer. "Recolha de móveis" pode
-                    ser um sofá à porta ou uma casa inteira ao quinto andar,
-                    e é a descrição que separa as duas. Duas linhas chegam
-                    para decidir se vale a pena abrir; o resto está lá dentro.
+                    "Remova a descrição, isso ele vê quando abrir o pedido."
+
+                    Esteve cá por uma boa razão — «Recolha de móveis» pode ser
+                    um sofá à porta ou uma casa inteira ao quinto andar — mas
+                    duas linhas de texto corrido no meio do cartão eram a
+                    mancha onde o olho encalhava. Quem percorre vinte cartões
+                    não lê parágrafos: procura um motivo para parar, e o motivo
+                    são o dinheiro, a distância e a fotografia.
+
+                    A fotografia passou a ter 112 px e responde à mesma
+                    pergunta mais depressa do que o texto respondia. A
+                    descrição inteira está no pedido, a um toque.
                   */}
-                  {p.description?.trim() ? (
-                    <p
-                      className="mt-1.5 overflow-hidden text-xs leading-relaxed text-slate-600"
-                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
-                    >
-                      {p.description.trim()}
-                    </p>
-                  ) : (
-                    /* Sem descrição é informação também — e diz-lhe o que
-                       fazer a seguir em vez de o deixar a adivinhar. */
-                    <p className="mt-1.5 text-xs italic text-amber-700">
-                      Sem descrição — veja as fotografias ou pergunte à CLYON.
-                    </p>
-                  )}
                   {/*
                     QUEBRA DE LINHA, OU O TEXTO LÊ-SE NA VERTICAL.
 
@@ -926,24 +916,27 @@ export default function Trabalhos({
                 </div>
               </div>
             </button>
+            {/*
+              ARQUIVAR SAIU DO CARTÃO — vive dentro do pedido.
 
-            {podeArrumar && (
-              <button
-                onClick={() => arquivar(p, !p.arquivadoEm)}
-                disabled={aArquivar === p.negociacaoId}
-                title={p.arquivadoEm ? "Voltar a mostrar este pedido" : "Tirar este pedido da sua vista"}
-                className="absolute bottom-3 right-3 flex min-h-[44px] items-center gap-1.5 rounded-lg border border-[#E2EEF3] bg-white px-3 text-xs font-semibold text-slate-500 transition active:bg-slate-50 disabled:opacity-50"
-              >
-                {aArquivar === p.negociacaoId ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                ) : p.arquivadoEm ? (
-                  <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
-                {p.arquivadoEm ? "Repor" : "Arquivar"}
-              </button>
-            )}
+              "Remova o botão arquivar aqui; esse botão deve estar apenas ao
+              abrir o pedido."
+
+              Estava em posição absoluta no canto de cada cartão, e cobrava
+              caro por isso: obrigava a reservar-lhe dezasseis pixéis de altura
+              em TODOS os cartões — `pb-16` —, uma faixa branca por baixo do
+              dinheiro que não servia para mais nada. Numa lista de vinte
+              trabalhos, era um terço do ecrã gasto a mostrar vinte vezes o
+              mesmo botão que ele usa uma vez por semana.
+
+              E era um botão a mais numa superfície que é toda ela um botão:
+              o cartão abre ao toque, e ter um gesto destrutivo ao lado do
+              gesto normal é a maneira mais rápida de alguém arquivar um
+              trabalho que queria ver.
+
+              O botão continua onde faz sentido, com espaço para explicar o
+              que leva com ele — no ecrã do pedido aberto.
+            */}
             </div>
           );
         })}
