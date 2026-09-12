@@ -7075,6 +7075,36 @@ export async function assistentePode(capacidade: string): Promise<boolean> {
   return estado[capacidade] === true;
 }
 
+/**
+ * A SEMEADURA — o dia em que o assistente é instalado.
+ *
+ * No instante em que as capacidades novas se ligam, há meses de pedidos na
+ * base com propostas por responder, negócios fechados e trabalhos por
+ * confirmar. TODOS eles são, à letra da derivação, "novidades por contar". Sem
+ * isto, a estreia do assistente seria uma rajada de mensagens sobre coisas que
+ * os clientes já sabem há semanas — e o botão vermelho seria carregado antes
+ * do almoço.
+ *
+ * A semeadura marca tudo o que existe HOJE como já sabido, sem mandar nada. A
+ * partir daí ele só fala de coisas que aconteçam depois de ter chegado.
+ *
+ * DEVOLVE `true` SÓ A QUEM GANHAR A CORRIDA. A marca é uma linha com chave
+ * primária, e o `INSERT IGNORE` faz o resto: duas passagens sobrepostas — que
+ * a Vercel permite — não semeiam as duas. A capacidade `__semeado` não é uma
+ * capacidade: `eCapacidade` não a conhece, por isso nunca aparece no painel
+ * nem pode ser ligada por ninguém.
+ */
+export async function semearOAssistente(): Promise<boolean> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `INSERT IGNORE INTO assistenteInterruptores (capacidade, ligado, porQuem)
+     VALUES ('__semeado', 1, 'instalacao')`,
+  )) as [{ affectedRows: number }, unknown];
+  return Number(r.affectedRows ?? 0) === 1;
+}
+
 export type AvisoDoAssistente = {
   id: number;
   chave: string;

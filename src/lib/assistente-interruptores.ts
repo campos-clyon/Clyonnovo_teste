@@ -26,7 +26,23 @@
 export type Capacidade =
   /** Criar pedidos novos pela conversa — whatsapp-recolha. */
   | "recolher"
-  /** Contar ao cliente as novidades do pedido dele. */
+  /**
+   * Avisar o cliente de que tem uma proposta, no instante em que ela é feita.
+   *
+   * É a SÉTIMA, e o plano falava de seis. Entrou porque a revisão apanhou uma
+   * mentira: o interruptor "avisar" dizia na ficha que travava as propostas e
+   * não travava nenhuma — esse caminho é o imediato, sai de
+   * `propostaParaOWhatsApp` assim que a proposta é gravada, e existia muito
+   * antes de haver assistente nenhum. Um botão que diz que pára uma coisa e não
+   * a pára é pior do que não existir: o dono carrega nele, vê as mensagens
+   * continuarem a sair, e deixa de acreditar no painel.
+   *
+   * São duas coisas diferentes e por isso são dois botões: esta é a mensagem
+   * que corre contra o relógio (uma proposta que chega dez minutos depois já
+   * perdeu para quem respondeu primeiro), e "avisar" é o que se conta a seguir.
+   */
+  | "propostas"
+  /** Contar ao cliente o que muda no pedido depois disso. */
   | "avisar"
   /** Levar o sim e o não do cliente ao motor da negociação. */
   | "fechar"
@@ -39,6 +55,7 @@ export type Capacidade =
 
 export const CAPACIDADES: Capacidade[] = [
   "recolher",
+  "propostas",
   "avisar",
   "fechar",
   "insistir",
@@ -61,10 +78,16 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
       "Deixa de fazer perguntas a quem escreve sem pedido. As mensagens ficam por responder até alguém as ver.",
     porOmissao: true,
   },
+  propostas: {
+    titulo: "Avisar de propostas",
+    oQuePara:
+      "Deixa de dizer ao cliente que recebeu uma proposta, ou que o profissional aceitou a dele. Fica no painel à espera de alguém a escrever à mão.",
+    porOmissao: true,
+  },
   avisar: {
     titulo: "Contar novidades",
     oQuePara:
-      "Deixa de avisar o cliente de propostas novas, de aceitações e de trabalhos dados por feitos.",
+      "Deixa de contar o que muda no pedido depois da proposta: o negócio fechado, e o aviso interno de um pedido que ninguém quis.",
     porOmissao: false,
   },
   fechar: {

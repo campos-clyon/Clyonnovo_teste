@@ -284,7 +284,17 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
           acrescentar({
             especie: "proposta_nova",
             chave: chaveDaProposta(n.id, propostas.length),
-            capacidade: "avisar",
+            /*
+             * "propostas" e não "avisar", e a diferença importa.
+             *
+             * Esta mesma mensagem sai normalmente pelo caminho imediato, no
+             * instante em que a proposta é gravada. O que a passagem faz é
+             * apanhar as que esse caminho falhou. Se as duas não estivessem
+             * debaixo do MESMO interruptor, desligar um deixava a outra a
+             * falar — e o dono carregava em parar e via a mensagem sair na
+             * mesma, dez minutos depois.
+             */
+            capacidade: "propostas",
             negociacaoId: n.id,
             quando: criada,
             texto:
@@ -302,7 +312,9 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
       acrescentar({
         especie: "pro_aceitou",
         chave: chaveDaAceitacao(n.id, acordado),
-        capacidade: "avisar",
+        // Mesma razão da proposta: o caminho imediato e a passagem têm de
+        // obedecer ao mesmo botão.
+        capacidade: "propostas",
         negociacaoId: n.id,
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
@@ -598,6 +610,37 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   for (const p of pedidos) {
     pedidosVistos.add(p.id);
     for (const n of novidadesDoPedido(p, agora)) vivas.set(n.chave, n);
+  }
+
+  /*
+   * ── 0. A SEMEADURA, uma vez na vida ───────────────────────────────────────
+   *
+   * Na primeira passagem, tudo o que está na base é — à letra da derivação —
+   * uma novidade por contar: meses de propostas por responder, negócios
+   * fechados e trabalhos por confirmar. Mandá-las seria estrear o assistente
+   * com uma rajada sobre coisas que os clientes já sabem há semanas.
+   *
+   * Marca-se tudo como já sabido e não se manda nada. A partir daqui ele só
+   * fala do que acontecer depois de ter chegado.
+   */
+  if (await db.semearOAssistente().catch(() => false)) {
+    let marcadas = 0;
+    for (const [chave, n] of vivas) {
+      const { id } = await db.reservarAvisoDoAssistente({
+        chave,
+        especie: n.especie,
+        telefone: n.telefone,
+        pedidoId: n.pedidoId,
+        negociacaoId: n.negociacaoId,
+      });
+      if (!id) continue;
+      await db.fecharAvisoDoAssistente(id, "antes_do_assistente");
+      marcadas++;
+    }
+    resumo.linhas.push(
+      `Primeira passagem: ${marcadas} situação(ões) marcadas como já sabidas. Não saiu mensagem nenhuma.`,
+    );
+    return resumo;
   }
 
   // ── 1. Contar as novidades ──────────────────────────────────────────────

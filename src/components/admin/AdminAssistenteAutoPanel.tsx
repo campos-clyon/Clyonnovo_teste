@@ -75,6 +75,7 @@ const PORQUE_FECHOU: Record<string, string> = {
   esgotou: "três lembretes sem resposta",
   informado: "era só uma notícia",
   desfeito: "desfeito aqui",
+  antes_do_assistente: "já era assim quando ele chegou",
 };
 
 function quando(iso: string): string {

@@ -954,7 +954,25 @@ async function podeContarPelaPrimeiraVez(
   resumo: string,
 ): Promise<{ podeFalar: boolean; id: number | null }> {
   try {
-    const { reservarAvisoDoAssistente, guardarTextoDoAviso } = await import("@/lib/db");
+    const { assistentePode, reservarAvisoDoAssistente, guardarTextoDoAviso } = await import(
+      "@/lib/db"
+    );
+
+    /*
+     * O INTERRUPTOR "AVISAR DE PROPOSTAS" — o que faltava mesmo.
+     *
+     * A ficha do interruptor prometia travar estas duas mensagens e não
+     * travava nenhuma: este caminho é o imediato, sai no instante em que a
+     * proposta é gravada, e nunca perguntava nada a ninguém. Um botão que diz
+     * que pára uma coisa e não a pára é pior do que não existir — o dono
+     * carrega nele, vê as mensagens continuarem a sair, e deixa de acreditar
+     * no painel.
+     *
+     * Com ele em baixo não se reserva chave nenhuma: não foi contado nada, e
+     * guardar a marca de uma conversa que não houve fecharia a porta a
+     * contá-la mais tarde.
+     */
+    if (!(await assistentePode("propostas"))) return { podeFalar: false, id: null };
     const { id, jaExistia } = await reservarAvisoDoAssistente({
       chave,
       especie,

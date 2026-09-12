@@ -273,18 +273,44 @@ três coisas em que o que se fez não é o que estava escrito.
 | 3 | O «sim» e o «não» a passarem pelo motor, com `autorTipo: "assistente"` e o desfazer de 24 h | `whatsapp-negociacao.ts`, `db.ts` |
 | 4 | A escada dos lembretes, três toques, e a hora a que se cala | `assistente-interruptores.ts` |
 | 5 | Véspera, execução, confirmação, agradecimento e avaliação | `assistente-automatico.ts` |
-| 6 | O ecrã do assistente, com os seis interruptores e o que ele fez | `AdminAssistenteAutoPanel.tsx` |
+| 6 | O ecrã do assistente, com os interruptores e o que ele fez | `AdminAssistenteAutoPanel.tsx` |
 
 ### Onde o que se fez não é o que estava escrito
 
-**1. Nem todos os interruptores nascem desligados.** O plano dizia «cada um
-começa desligado». Duas destas capacidades já corriam — a recolha de pedidos
-pela conversa e o fecho por WhatsApp. Pô-las a nascer desligadas não era
-prudência: era desligar em silêncio duas coisas a funcionar, e descobri-lo pelo
-primeiro cliente que ficasse sem resposta. A regra passou a ser: **o
-interruptor de uma capacidade que já funciona nasce ligado; o de uma capacidade
-nova nasce desligado.** Ficam por ligar `avisar`, `insistir`, `acompanhar` e
-`agradecer` — os quatro que o assistente estreia.
+**1. São SETE interruptores, e nem todos nascem desligados.** O plano dizia seis,
+e «cada um começa desligado». Nenhuma das duas coisas sobreviveu ao contacto
+com o código, e por boas razões.
+
+O sétimo é o `propostas`, e entrou porque a revisão apanhou uma mentira: o
+`avisar` prometia na ficha que travava as mensagens de proposta, e não travava
+nenhuma. Essas saem pelo caminho IMEDIATO — no instante em que a proposta é
+gravada — e existiam muito antes de haver assistente. Um botão que diz que pára
+uma coisa e não a pára é pior do que não existir: o dono carrega, vê as
+mensagens continuarem a sair, e deixa de acreditar no painel.
+
+E três destas capacidades já corriam: a recolha pela conversa, o aviso de uma
+proposta, e o fecho por WhatsApp. Pô-las a nascer desligadas não era prudência:
+era desligar em silêncio três coisas a funcionar, e descobri-lo pelo primeiro
+cliente que ficasse sem resposta. A regra passou a ser: **o interruptor de uma
+capacidade que já funciona nasce ligado; o de uma capacidade nova nasce
+desligado.** Ficam por ligar `avisar`, `insistir`, `acompanhar` e `agradecer` —
+os quatro que o assistente estreia.
+
+| Interruptor | O que pára | Nasce |
+|---|---|---|
+| `recolher` | Fazer perguntas a quem escreve sem pedido | ligado |
+| `propostas` | Dizer que recebeu uma proposta, ou que o profissional aceitou | ligado |
+| `avisar` | Contar o que muda depois: o negócio fechado, e o alerta interno | parado |
+| `fechar` | Marcar aceites, recusas e contrapropostas | ligado |
+| `insistir` | Os lembretes de quem não responde | parado |
+| `acompanhar` | A véspera, a execução, a confirmação | parado |
+| `agradecer` | A mensagem de fecho e o pedido de avaliação | parado |
+
+**1b. E não há rajada no primeiro dia.** Na primeira passagem, tudo o que está
+na base é — à letra da derivação — uma novidade por contar: meses de propostas
+por responder e trabalhos por confirmar. O assistente marca isso tudo como já
+sabido e **não manda uma única mensagem**. A partir daí só fala do que acontecer
+depois de ter chegado.
 
 **2. Não trata ninguém por «senhor».** O exemplo pedia «senhor João». A base
 guarda o nome e não guarda o género: «Sr.» num nome que seja de uma senhora é

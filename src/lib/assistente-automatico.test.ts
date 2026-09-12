@@ -125,7 +125,7 @@ describe("as novidades que ele tem para contar", () => {
     expect(p.texto).toContain("150,00 €");
     expect(p.texto).toContain("157,50 €");
     expect(p.texto).toContain("Fred");
-    expect(p.capacidade).toBe("avisar");
+    expect(p.capacidade).toBe("propostas");
   });
 
   it("o serviço vai em palavras, e nunca o identificador da base", () => {
@@ -694,9 +694,10 @@ describe("insistir tem limite, e o limite é dito", () => {
 });
 
 describe("os seis interruptores", () => {
-  it("existem os seis, e cada um diz o que pára", () => {
+  it("existem os sete, e cada um diz o que pára", () => {
     expect(CAPACIDADES).toEqual([
       "recolher",
+      "propostas",
       "avisar",
       "fechar",
       "insistir",
@@ -709,23 +710,86 @@ describe("os seis interruptores", () => {
     }
     expect(eCapacidade("avisar")).toBe(true);
     expect(eCapacidade("apagar_tudo")).toBe(false);
+    // `__semeado` é a marca da instalação, e não uma capacidade: ninguém a
+    // pode ligar pelo painel nem ela aparece na lista.
+    expect(eCapacidade("__semeado")).toBe(false);
   });
 
   it("o que JÁ funcionava nasce ligado; o que é novo nasce parado", () => {
     /*
-     * O plano dizia "todos começam desligados". Duas destas capacidades já
-     * correm hoje — a recolha de pedidos pela conversa e o fecho por WhatsApp.
-     * Pô-las a nascer desligadas não era prudência: era desligar em silêncio
-     * duas coisas a funcionar, e descobri-lo pelo primeiro cliente que ficasse
-     * sem resposta.
+     * O plano dizia "todos começam desligados". Três destas capacidades já
+     * correm hoje — a recolha pela conversa, o aviso de uma proposta nova, e o
+     * fecho por WhatsApp. Pô-las a nascer desligadas não era prudência: era
+     * desligar em silêncio três coisas a funcionar, e descobri-lo pelo primeiro
+     * cliente que ficasse sem resposta.
      */
     const p = interruptoresPorOmissao();
     expect(p.recolher).toBe(true);
+    expect(p.propostas).toBe(true);
     expect(p.fechar).toBe(true);
     expect(p.avisar).toBe(false);
     expect(p.insistir).toBe(false);
     expect(p.acompanhar).toBe(false);
     expect(p.agradecer).toBe(false);
+  });
+
+  it("o interruptor das propostas trava mesmo as DUAS mensagens que promete travar", () => {
+    /*
+     * A ficha do "avisar" dizia que travava as propostas e não travava
+     * nenhuma: o caminho imediato sai de `propostaParaOWhatsApp` no instante
+     * em que a proposta é gravada, e nunca perguntava nada a ninguém. Um botão
+     * que diz que pára uma coisa e não a pára é pior do que não existir.
+     *
+     * E as duas mensagens — a imediata e a que a passagem apanha quando a
+     * imediata falha — obedecem ao MESMO botão. Debaixo de botões diferentes,
+     * desligar um deixava a outra a falar dez minutos depois.
+     */
+    const i = NEGOCIACAO.indexOf("async function podeContarPelaPrimeiraVez(");
+    const corpo = NEGOCIACAO.slice(i, i + 2200);
+    expect(corpo).toContain('if (!(await assistentePode("propostas"))) return { podeFalar: false, id: null };');
+    const p = novidadesDoPedido(
+      pedido({ negociacoes: [negociacao({ propostasJson: propostaDoPro(150) })] }),
+      TARDE,
+    ).find((x) => x.especie === "proposta_nova")!;
+    expect(p.capacidade).toBe("propostas");
+    const a = novidadesDoPedido(
+      pedido({
+        negociacoes: [negociacao({ estado: "aguarda_contratacao", valorAcordado: "200.00" })],
+      }),
+      TARDE,
+    ).find((x) => x.especie === "pro_aceitou")!;
+    expect(a.capacidade).toBe("propostas");
+  });
+
+  it("com o botão em baixo não se reserva chave nenhuma", () => {
+    // Guardar a marca de uma conversa que não houve fechava a porta a contá-la
+    // mais tarde, quando o botão voltasse a subir.
+    const i = NEGOCIACAO.indexOf("async function podeContarPelaPrimeiraVez(");
+    const corpo = NEGOCIACAO.slice(i, i + 2200);
+    expect(corpo.indexOf('assistentePode("propostas")')).toBeLessThan(
+      corpo.indexOf("reservarAvisoDoAssistente({"),
+    );
+  });
+
+  it("na primeira passagem NÃO sai mensagem nenhuma — semeia-se e cala-se", () => {
+    /*
+     * No instante em que as capacidades novas se ligam há meses de pedidos na
+     * base, e todos eles são — à letra da derivação — novidades por contar.
+     * A estreia seria uma rajada sobre coisas que os clientes já sabem há
+     * semanas, e o botão vermelho era carregado antes do almoço.
+     */
+    expect(DB).toContain("export async function semearOAssistente(");
+    expect(DB).toContain("INSERT IGNORE INTO assistenteInterruptores");
+    // A marca tem chave primária: duas passagens sobrepostas não semeiam as duas.
+    expect(DB).toContain("return Number(r.affectedRows ?? 0) === 1;");
+    const i = CEREBRO.indexOf("if (await db.semearOAssistente()");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = CEREBRO.slice(i, i + 1200);
+    expect(bloco).toContain('fecharAvisoDoAssistente(id, "antes_do_assistente")');
+    expect(bloco).toContain("return resumo;");
+    expect(bloco).not.toContain("enviarTextoWhatsApp");
+    // E vem ANTES de se contar seja o que for.
+    expect(i).toBeLessThan(CEREBRO.indexOf("// ── 1. Contar as novidades"));
   });
 
   it("o interruptor geral manda sobre todos — senão o botão vermelho mente", () => {
