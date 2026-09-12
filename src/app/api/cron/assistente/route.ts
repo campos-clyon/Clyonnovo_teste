@@ -5,6 +5,18 @@ import { correrOAssistente } from "@/lib/assistente-automatico";
 export const runtime = "nodejs";
 
 /**
+ * Sessenta segundos, e não os dez por omissão.
+ *
+ * A passagem mais pesada de todas é a PRIMEIRA — a que sela o que já existe —
+ * e é também a única que não se pode dar ao luxo de ser cortada a meio.
+ * Cortada, ficaria trabalho por fazer; e o que ficasse por selar seria
+ * anunciado aos clientes como novidade. A semeadura foi reescrita para caber
+ * numa consulta por lote, mas o tecto do relógio tem de ser dito à mesma:
+ * confiar no valor por omissão é confiar num número que ninguém escolheu.
+ */
+export const maxDuration = 60;
+
+/**
  * A PASSAGEM DO ASSISTENTE — de dez em dez minutos.
  *
  * "Sempre que tenha novidade deve informar o cliente. Caso o cliente não

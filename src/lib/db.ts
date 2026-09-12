@@ -7106,15 +7106,93 @@ export async function assistentePode(capacidade: string): Promise<boolean> {
  * capacidade: `eCapacidade` não a conhece, por isso nunca aparece no painel
  * nem pode ser ligada por ninguém.
  */
-export async function semearOAssistente(): Promise<boolean> {
+export async function faltaSemearOAssistente(): Promise<boolean> {
   await ensureAssistenteTables();
   const pool = await getPool();
   if (!pool) return false;
-  const [r] = (await pool.execute(
-    `INSERT IGNORE INTO assistenteInterruptores (capacidade, ligado, porQuem)
-     VALUES ('__semeado', 1, 'instalacao')`,
-  )) as [{ affectedRows: number }, unknown];
-  return Number(r.affectedRows ?? 0) === 1;
+  const [rows] = (await pool.execute(
+    "SELECT 1 FROM assistenteInterruptores WHERE capacidade = '__semeado' LIMIT 1",
+  )) as [unknown[], unknown];
+  return rows.length === 0;
+}
+
+/**
+ * Marca tudo o que lhe derem como já sabido, numa ida só à base.
+ *
+ * UMA CONSULTA E NÃO DUAS POR LINHA. Uma base com uns meses de vida tem
+ * facilmente umas centenas de situações por marcar; a duas consultas cada
+ * (reservar, fechar) são quase mil viagens ao Railway dentro de uma função da
+ * Vercel que tem segundos para viver. O que acontecia a seguir era o pior de
+ * todos os mundos: a função morria a meio, a marca já estava posta, e as
+ * situações que ficaram por marcar iam ser anunciadas aos clientes como
+ * novidades.
+ *
+ * As linhas entram já FECHADAS. Não são avisos à espera de resposta — são o
+ * retrato do que existia no dia em que ele chegou.
+ */
+export async function semearAvisosDoAssistente(
+  linhas: Array<{
+    chave: string;
+    especie: string;
+    telefone: string;
+    pedidoId: number | null;
+    negociacaoId: number | null;
+  }>,
+): Promise<number> {
+  if (linhas.length === 0) return 0;
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return 0;
+
+  let marcadas = 0;
+  const PORVEZ = 200;
+  for (let i = 0; i < linhas.length; i += PORVEZ) {
+    const lote = linhas.slice(i, i + PORVEZ);
+    const valores: unknown[] = [];
+    for (const l of lote) {
+      valores.push(
+        l.chave.slice(0, 160),
+        l.especie.slice(0, 40),
+        soDigitos(l.telefone),
+        l.pedidoId ?? null,
+        l.negociacaoId ?? null,
+      );
+    }
+    const [r] = (await pool.execute(
+      `INSERT IGNORE INTO assistenteAvisos
+         (chave, especie, telefone, pedidoId, negociacaoId, fechadoEm, fechadoPorque)
+       VALUES ${lote.map(() => "(?, ?, ?, ?, ?, NOW(), 'antes_do_assistente')").join(", ")}`,
+      valores,
+    )) as [{ affectedRows: number }, unknown];
+    marcadas += Number(r.affectedRows ?? 0);
+  }
+  return marcadas;
+}
+
+/**
+ * A marca da semeadura, posta DEPOIS de ela ter corrido.
+ *
+ * Estava a ser posta antes, para servir de tranca contra duas passagens
+ * sobrepostas. Mas essa ordem trocava uma corrida improvável por uma avaria
+ * provável: se a função morresse a meio da semeadura — e ela é longa —, a marca
+ * ficava posta e o que sobrasse por marcar seria anunciado aos clientes como
+ * novidade. Meses de propostas velhas de uma vez.
+ *
+ * Agora a marca vem no fim. Duas passagens a semear ao mesmo tempo fazem o
+ * mesmo trabalho duas vezes, e o `INSERT IGNORE` trata disso sem uma queixa.
+ * Uma passagem que morra a meio deixa a marca por pôr, e a seguinte acaba o
+ * que faltava — que é exactamente o que se quer.
+ */
+export async function marcarAssistenteComoSemeado(): Promise<void> {
+  await ensureAssistenteTables();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool
+    .execute(
+      `INSERT IGNORE INTO assistenteInterruptores (capacidade, ligado, porQuem)
+       VALUES ('__semeado', 1, 'instalacao')`,
+    )
+    .catch(() => {});
 }
 
 export type AvisoDoAssistente = {

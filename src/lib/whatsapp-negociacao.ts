@@ -1077,6 +1077,28 @@ export async function propostaParaOWhatsApp(dados: {
   const quantas = propostasDe(
     linhas.find((n) => Number(n.id) === dados.negociacaoId)?.propostasJson ?? null,
   ).length;
+
+  /*
+   * ZERO PROPOSTAS É IMPOSSÍVEL AQUI — logo, foi a leitura que falhou.
+   *
+   * Esta função corre DEPOIS de a proposta estar gravada: o array tem pelo
+   * menos uma. Um zero só pode vir de a consulta ter falhado ou de a
+   * negociação não ter sido encontrada, e nesse caso a chave sairia
+   * `proposta:77:0` — uma chave que o observador NUNCA produz, porque ele
+   * conta o que está lá. As duas não casavam, e o cliente recebia a mesma
+   * proposta duas vezes: uma agora e outra dez minutos depois.
+   *
+   * Cala-se e deixa-se o trabalho ao cron, que daqui a minutos lê a negociação
+   * outra vez e constrói a chave certa. Dez minutos de atraso numa altura em
+   * que a base já está a falhar é melhor do que uma mensagem a dobrar.
+   */
+  if (quantas === 0) {
+    console.error(
+      `[assistente] não li as propostas da negociação #${dados.negociacaoId} — deixo o aviso ao cron`,
+    );
+    return false;
+  }
+
   const primeira = await podeContarPelaPrimeiraVez(
     chaveDaProposta(dados.negociacaoId, quantas),
     "proposta_nova",

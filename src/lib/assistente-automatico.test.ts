@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { PedidoParaOAssistente } from "./db";
 import { PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
 import {
+  DIAS_ATE_DESISTIR_DE_UM_AVISO,
   DIAS_DE_NOVIDADE,
   HORAS_ATE_DESISTIR_DA_RECOLHA,
   HORAS_ATE_ESTRANHAR_O_SILENCIO,
@@ -839,6 +840,54 @@ describe("os seis interruptores", () => {
     );
   });
 
+  it("com duas propostas na mesa, a segunda nao fica escondida para sempre", () => {
+    /*
+     * O corte de "uma de cada vez" estava a ser feito na LISTA. Com duas
+     * propostas, a lista trazia as duas, o corte ficava com a primeira, e a
+     * primeira ja tinha sido contada. A passagem seguinte fazia a mesma
+     * ordenacao, escolhia a mesma primeira, voltava a ver que ja estava
+     * contada -- e a segunda nunca era anunciada por ninguem. Nao era um
+     * atraso: era uma mensagem que nao existia.
+     */
+    const duas = pedido({
+      negociacoes: [
+        negociacao({ id: 77, propostasJson: propostaDoPro(150) }),
+        negociacao({ id: 78, profissionalNome: "Manuel", propostasJson: propostaDoPro(200) }),
+      ],
+    });
+    const escolhidas = novidadeAContar(duas, TARDE, tudoLigado);
+    expect(escolhidas).toHaveLength(2);
+    expect(escolhidas.map((x) => x.chave)).toEqual([
+      chaveDaProposta(77, 1),
+      chaveDaProposta(78, 1),
+    ]);
+    // E quem corta para uma de cada vez e o envio, DEPOIS de a mensagem sair.
+    expect(CEREBRO).toContain("let jaFalouComEle = false;");
+    expect(CEREBRO).toContain("if (jaFalouComEle) break;");
+    expect(CEREBRO).toContain("jaFalouComEle = true;");
+    expect(semNotas(CEREBRO)).not.toContain("doCliente.slice(0, 1)");
+  });
+
+  it("um aviso que nao se consegue resolver nao entope a lista para sempre", () => {
+    /*
+     * `avisosPorFechar` le os 200 abertos MAIS ANTIGOS. Um aviso cujo pedido
+     * saiu da janela nunca mais fechava, e como e dos mais antigos ficava no
+     * topo dessa lista. Duzentos desses e os lembretes que interessam param em
+     * silencio -- a pior maneira de uma coisa deixar de funcionar.
+     */
+    expect(DIAS_ATE_DESISTIR_DE_UM_AVISO).toBe(14);
+    expect(CEREBRO).toContain('fecharAvisoDoAssistente(a.id, "fora_de_alcance")');
+    expect(CEREBRO).toContain("if (dias > DIAS_ATE_DESISTIR_DE_UM_AVISO) {");
+  });
+
+  it("a entrega diz quantos lembretes houve MESMO, e nao um numero fixo", () => {
+    // A escada da proposta tem dois toques e a da aceitacao tem tres. Um texto
+    // fixo a dizer "tres" mentia em metade das conversas que entrega, e quem a
+    // abrisse ia procurar o terceiro.
+    expect(CEREBRO).toContain("const quantos = a.toques;");
+    expect(semNotas(CEREBRO)).not.toContain("tres lembretes sem resposta");
+  });
+
   it("na primeira passagem NÃO sai mensagem nenhuma — semeia-se e cala-se", () => {
     /*
      * No instante em que as capacidades novas se ligam há meses de pedidos na
@@ -846,18 +895,42 @@ describe("os seis interruptores", () => {
      * A estreia seria uma rajada sobre coisas que os clientes já sabem há
      * semanas, e o botão vermelho era carregado antes do almoço.
      */
-    expect(DB).toContain("export async function semearOAssistente(");
+    expect(DB).toContain("export async function semearAvisosDoAssistente(");
     expect(DB).toContain("INSERT IGNORE INTO assistenteInterruptores");
-    // A marca tem chave primária: duas passagens sobrepostas não semeiam as duas.
-    expect(DB).toContain("return Number(r.affectedRows ?? 0) === 1;");
-    const i = CEREBRO.indexOf("if (await db.semearOAssistente()");
+    const i = CEREBRO.indexOf("if (await db.faltaSemearOAssistente()");
     expect(i).toBeGreaterThan(-1);
-    const bloco = CEREBRO.slice(i, i + 1200);
-    expect(bloco).toContain('fecharAvisoDoAssistente(id, "antes_do_assistente")');
+    const bloco = CEREBRO.slice(i, CEREBRO.indexOf("// ── 1. Contar as novidades"));
+    expect(bloco).toContain("antes_do_assistente");
     expect(bloco).toContain("return resumo;");
     expect(bloco).not.toContain("enviarTextoWhatsApp");
     // E vem ANTES de se contar seja o que for.
     expect(i).toBeLessThan(CEREBRO.indexOf("// ── 1. Contar as novidades"));
+    // As recolhas a meio tambem sao seladas: vem de outra tabela e escapavam.
+    expect(bloco).toContain("chaveDaRecolha(r.telefone, r.actualizadoEm)");
+  });
+
+  it("a marca da semeadura so se poe DEPOIS de ela ter corrido", () => {
+    /*
+     * Estava a ser posta antes, para servir de tranca contra duas passagens
+     * sobrepostas -- e trocava uma corrida improvavel por uma avaria provavel.
+     * Se a leitura dos pedidos falhasse, ou a funcao morresse a meio, a marca
+     * ficava posta e o que sobrasse por selar seria anunciado aos clientes
+     * como novidade: uma semana inteira de novidades de uma vez.
+     */
+    const i = CEREBRO.indexOf("if (await db.faltaSemearOAssistente()");
+    const bloco = CEREBRO.slice(i, CEREBRO.indexOf("// ── 1. Contar as novidades"));
+    expect(bloco.indexOf("semearAvisosDoAssistente(")).toBeLessThan(
+      bloco.indexOf("marcarAssistenteComoSemeado()"),
+    );
+    // Sem ter lido os pedidos, nao se sela nada -- e sobretudo nao se marca.
+    expect(bloco).toContain("if (!leuOsPedidos) {");
+    expect(CEREBRO).toContain("leuOsPedidos = false;");
+    // E uma semeadura que rebente nao poe a marca: `null` e "nao correu".
+    expect(bloco).toContain("if (marcadas == null) {");
+    // Uma consulta por lote, e nao duas por linha: a passagem tem segundos.
+    const s = DB.indexOf("export async function semearAvisosDoAssistente(");
+    expect(DB.slice(s, s + 2000)).toContain("INSERT IGNORE INTO assistenteAvisos");
+    expect(CRON).toContain("export const maxDuration = 60;");
   });
 
   it("o interruptor geral manda sobre todos — senão o botão vermelho mente", () => {

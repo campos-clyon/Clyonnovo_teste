@@ -96,6 +96,16 @@ export const PEDIDOS_POR_PASSAGEM = 300;
 export const HORAS_ATE_DESISTIR_DA_RECOLHA = 72;
 
 /**
+ * Ao fim de quantos dias se desiste de um aviso que não se consegue resolver.
+ *
+ * Toda a escada dos lembretes cabe em seis dias. Um aviso que ao fim de duas
+ * semanas continue sem se conseguir dizer o que lhe aconteceu — porque o
+ * pedido dele saiu da janela lida — não vai lá, e deixá-lo aberto entope a
+ * lista dos que ainda esperam resposta.
+ */
+export const DIAS_ATE_DESISTIR_DE_UM_AVISO = 14;
+
+/**
  * As que não são para o cliente: são para quem gere.
  *
  * "Sem propostas" é um problema de OFERTA e não de conversa. Dizer ao cliente
@@ -164,6 +174,17 @@ export function chaveDaAceitacao(negociacaoId: number, valor: number): string {
 
 export function chaveDoFecho(negociacaoId: number): string {
   return `fechado:${negociacaoId}`;
+}
+
+/**
+ * A recolha a meio identifica-se pelo número e pelo instante em que parou.
+ *
+ * Vive aqui pela mesma razão das outras: é construída em dois sítios — a
+ * semeadura e o caçador de recolhas paradas — e duas strings escritas à mão
+ * acabariam por divergir.
+ */
+export function chaveDaRecolha(telefone: string, actualizadoEm: string): string {
+  return `recolha:${String(telefone).replace(/\D/g, "").slice(-9)}:${actualizadoEm}`;
 }
 
 function euros(v: number): string {
@@ -468,7 +489,20 @@ export function novidadeAContar(
     .filter((n) => !eParaAEquipa(n.especie))
     .sort((a, b) => PRECEDENCIA.indexOf(a.especie) - PRECEDENCIA.indexOf(b.especie));
 
-  return [...daEquipa, ...doCliente.slice(0, 1)];
+  /*
+   * A LISTA VEM INTEIRA, ORDENADA. Quem manda uma de cada vez é quem envia.
+   *
+   * Cortava-se aqui, em `.slice(0, 1)`, e isso escondia uma novidade para
+   * sempre: com DUAS propostas na mesa, a lista traz duas, o corte ficava com
+   * a primeira, e ela já tinha sido contada. A passagem seguinte fazia a mesma
+   * ordenação, escolhia a mesma primeira, voltava a ver que já tinha sido
+   * contada — e a segunda proposta nunca era anunciada por ninguém. Não é um
+   * atraso: é uma mensagem que não existe.
+   *
+   * O limite de uma por passagem continua a valer, e continua a ser preciso;
+   * mas quem o aplica tem de ser quem sabe se a mensagem chegou mesmo a sair.
+   */
+  return [...daEquipa, ...doCliente];
 }
 
 /**
@@ -612,7 +646,20 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
     return resumo;
   }
 
-  const pedidos = await db.pedidosParaOAssistente(PEDIDOS_POR_PASSAGEM).catch(() => []);
+  /*
+   * «NÃO HÁ PEDIDOS» E «NÃO CONSEGUI LER» NÃO SÃO A MESMA COISA.
+   *
+   * Um `.catch(() => [])` sozinho apagava a diferença — e havia uma decisão
+   * importante do outro lado: a semeadura. Com a leitura falhada, a semeadura
+   * selava ZERO situações e punha a marca à mesma; dez minutos depois a base
+   * respondia, a marca já estava posta, e uma semana inteira de novidades
+   * acumuladas ia parar aos clientes de uma vez.
+   */
+  let leuOsPedidos = true;
+  const pedidos = await db.pedidosParaOAssistente(PEDIDOS_POR_PASSAGEM).catch(() => {
+    leuOsPedidos = false;
+    return [];
+  });
   if (pedidos.length >= PEDIDOS_POR_PASSAGEM) {
     // Um tecto que não se anuncia lê-se como "estava tudo visto".
     console.warn(
@@ -657,20 +704,50 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
    * Marca-se tudo como já sabido e não se manda nada. A partir daqui ele só
    * fala do que acontecer depois de ter chegado.
    */
-  if (await db.semearOAssistente().catch(() => false)) {
-    let marcadas = 0;
-    for (const [chave, n] of vivas) {
-      const { id } = await db.reservarAvisoDoAssistente({
-        chave,
-        especie: n.especie,
-        telefone: n.telefone,
-        pedidoId: n.pedidoId,
-        negociacaoId: n.negociacaoId,
-      });
-      if (!id) continue;
-      await db.fecharAvisoDoAssistente(id, "antes_do_assistente");
-      marcadas++;
+  if (await db.faltaSemearOAssistente().catch(() => false)) {
+    /*
+     * SEM TER LIDO OS PEDIDOS, NÃO SE SEMEIA NADA — e, sobretudo, não se
+     * marca. Selar o nada e dizer que está feito é a única maneira de esta
+     * protecção se virar contra si própria.
+     */
+    if (!leuOsPedidos) {
+      resumo.linhas.push("Não consegui ler os pedidos. A instalação fica para a próxima passagem.");
+      return resumo;
     }
+
+    /*
+     * As recolhas a meio vêm de outra tabela e também têm de ser seladas: sem
+     * isto, o dia em que alguém ligasse o "insistir" era o dia em que toda a
+     * gente que tinha deixado um pedido a meio recebia uma mensagem.
+     */
+    const recolhas = await db.listarRecolhasWhatsAppEmCurso().catch(() => []);
+    const marcadas = await db
+      .semearAvisosDoAssistente([
+        ...[...vivas.entries()].map(([chave, n]) => ({
+          chave,
+          especie: n.especie,
+          telefone: n.telefone,
+          pedidoId: n.pedidoId,
+          negociacaoId: n.negociacaoId,
+        })),
+        ...recolhas.map((r) => ({
+          chave: chaveDaRecolha(r.telefone, r.actualizadoEm),
+          especie: "recolha_parada",
+          telefone: r.telefone,
+          pedidoId: null,
+          negociacaoId: null,
+        })),
+      ])
+      // `null` é "não correu", e é diferente de "correu e não havia nada".
+      .catch(() => null);
+
+    if (marcadas == null) {
+      resumo.linhas.push("A instalação falhou a meio. Nada foi marcado, e tenta outra vez.");
+      return resumo;
+    }
+
+    // A marca só depois do trabalho feito. Ver o porquê em db.ts.
+    await db.marcarAssistenteComoSemeado().catch(() => {});
     resumo.linhas.push(
       `Primeira passagem: ${marcadas} situação(ões) marcadas como já sabidas. Não saiu mensagem nenhuma.`,
     );
@@ -679,8 +756,26 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
 
   // ── 1. Contar as novidades ──────────────────────────────────────────────
   for (const p of pedidos) {
+    /*
+     * UMA MENSAGEM AO CLIENTE POR PEDIDO E POR PASSAGEM — contada AQUI, e não
+     * na lista.
+     *
+     * O corte estava a ser feito na lista, com um `.slice(0, 1)`. Com duas
+     * propostas na mesa isso escondia a segunda para sempre: a lista trazia as
+     * duas, o corte ficava com a primeira, e a primeira já tinha sido contada.
+     * A passagem seguinte fazia a mesma ordenação, escolhia a mesma primeira,
+     * voltava a ver que já estava contada — e a segunda nunca era anunciada.
+     * Não era um atraso; era uma mensagem que não existia.
+     *
+     * Contar aqui, depois de a mensagem SAIR, resolve as duas coisas: o
+     * cliente continua a receber uma de cada vez, e nada fica esquecido.
+     */
+    let jaFalouComEle = false;
     for (const n of novidadeAContar(p, agora, podeFazer)) {
-      if (!eParaAEquipa(n.especie) && !horaDeFalar(agora)) continue;
+      if (!eParaAEquipa(n.especie)) {
+        if (jaFalouComEle) break;
+        if (!horaDeFalar(agora)) continue;
+      }
 
       const { id } = await db.reservarAvisoDoAssistente({
         chave: n.chave,
@@ -727,6 +822,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
        * agradecido de volta.
        */
       if (!esperaResposta(n.especie)) await db.fecharAvisoDoAssistente(id, "informado");
+      jaFalouComEle = true;
       resumo.novidades++;
       resumo.linhas.push(`${n.especie} no pedido #${n.pedidoId}.`);
     }
@@ -770,7 +866,27 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
 
     if (especie !== "recolha_parada") {
       const visto = a.pedidoId != null && pedidosVistos.has(a.pedidoId);
-      if (!visto) continue;
+      if (!visto) {
+        /*
+         * FORA DE ALCANCE — mas não para sempre.
+         *
+         * `avisosPorFechar` lê os 200 abertos MAIS ANTIGOS. Um aviso cujo
+         * pedido saiu da janela (foi cancelado, envelheceu, ficou atrás do
+         * tecto) nunca mais fecharia, e como é dos mais antigos ficava no topo
+         * dessa lista. Duzentos desses e a lista enche-se de coisas que já não
+         * se resolvem — e os lembretes que interessam param em silêncio, que é
+         * a pior maneira de uma coisa deixar de funcionar.
+         *
+         * Toda a escada cabe em seis dias. Passados catorze, um aviso que não
+         * se consegue resolver não vai lá.
+         */
+        const dias = (agora.getTime() - new Date(a.enviadoEm).getTime()) / 86_400_000;
+        if (dias > DIAS_ATE_DESISTIR_DE_UM_AVISO) {
+          await db.fecharAvisoDoAssistente(a.id, "fora_de_alcance");
+          resumo.fechados++;
+        }
+        continue;
+      }
       if (!ainda) {
         await db.fecharAvisoDoAssistente(a.id, "resolvido");
         resumo.fechados++;
@@ -797,11 +913,20 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
         await db.arquivarConversaWhatsApp(a.telefone, true).catch(() => {});
         resumo.linhas.push(`Arquivada: ${a.telefone} deixou a recolha a meio.`);
       } else {
+        // Diz-se QUANTOS foram mesmo. A escada da proposta tem dois toques e a
+        // da aceitação tem três; um texto fixo a dizer "três" mentia em metade
+        // das conversas que entrega, e quem a abrir vai procurar o terceiro.
+        const quantos = a.toques;
         await db
-          .interromperNumeroWhatsApp(a.telefone, "Nao responde - tres lembretes sem resposta")
+          .interromperNumeroWhatsApp(
+            a.telefone,
+            `Nao responde - ${quantos} lembrete(s) sem resposta`,
+          )
           .catch(() => {});
         resumo.entregues++;
-        resumo.linhas.push(`Entregue a si: ${a.telefone} não respondeu a três lembretes.`);
+        resumo.linhas.push(
+          `Entregue a si: ${a.telefone} não respondeu a ${quantos} lembrete(s).`,
+        );
       }
       continue;
     }
@@ -845,7 +970,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
        */
       if (horas < 6 || horas > HORAS_ATE_DESISTIR_DA_RECOLHA) continue;
       const { id } = await db.reservarAvisoDoAssistente({
-        chave: `recolha:${String(r.telefone).replace(/\D/g, "").slice(-9)}:${r.actualizadoEm}`,
+        chave: chaveDaRecolha(r.telefone, r.actualizadoEm),
         especie: "recolha_parada",
         telefone: r.telefone,
       });
