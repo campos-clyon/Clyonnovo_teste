@@ -126,6 +126,36 @@ describe("o que se lê, lê-se todo", () => {
     expect(ANEXO).toContain('encaixe === "inteira" ? "object-contain" : "object-cover"');
     expect(TRABALHOS).toContain('encaixe="inteira"');
   });
+
+  it("as fotografias do pedido são um carrossel, e não selos de 70 px", () => {
+    /*
+     * "Ao abrir o pedido quero a primeira imagem já aberta e as demais em
+     * forma de carrossel, só puxa para o lado para ver." — 12-09-2026.
+     *
+     * Estava uma fotografia em grande e as outras numa grelha de quadradinhos
+     * de quatro colunas. Num pedido com dez fotografias, as nove seguintes
+     * eram selos onde não se vê o que interessa — se o sofá está desmontado,
+     * se o corredor tem degraus — e obrigavam a abrir o visor nove vezes para
+     * ver o mesmo que um dedo mostra num gesto.
+     */
+    const galeria = TRABALHOS.slice(
+      TRABALHOS.indexOf("O que o cliente enviou, em grande"),
+      TRABALHOS.indexOf("Toque para ver em ecrã inteiro"),
+    );
+    expect(galeria).toContain("snap-x snap-mandatory overflow-x-auto");
+    expect(galeria).toContain("w-full shrink-0 snap-center");
+    // Todas com o mesmo tamanho, e todas inteiras: a segunda fotografia decide
+    // tanto como a primeira.
+    expect(galeria).toContain('className="mx-auto h-64 w-full"');
+    expect(semNotas(galeria)).not.toContain("grid-cols-4");
+  });
+
+  it("e diz-se quantas são, porque dez bolinhas não se contam de relance", () => {
+    // As bolinhas dizem ONDE ele está; o número diz QUANTAS faltam — e é a
+    // segunda que decide se vale a pena continuar a puxar.
+    expect(TRABALHOS).toContain("{fotoAVer + 1} / {doCliente.length}");
+    expect(TRABALHOS).toContain("puxe para o lado para ver as outras");
+  });
 });
 
 describe("o contraste chega para um telemóvel ao sol", () => {

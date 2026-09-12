@@ -1012,6 +1012,15 @@ function DetalheDoTrabalho({
   /** Qual foto está aberta em ecrã inteiro, ou null. */
   const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
   /**
+   * Em que fotografia do carrossel ele está.
+   *
+   * Sai do `scroll` e serve só para o contador e as bolinhas — o carrossel em
+   * si é o browser a fazer o seu trabalho, com `snap`. Guardar a posição em
+   * estado e mandar no `scrollLeft` a partir daqui dava uma segunda verdade
+   * sobre onde ele está, e as duas discordavam a meio de um gesto.
+   */
+  const [fotoAVer, setFotoAVer] = useState(0);
+  /**
    * Se o mapa chegou.
    *
    * Sem chave da Google configurada, a rota responde 204 — e um 204 no `src`
@@ -1097,52 +1106,91 @@ function DetalheDoTrabalho({
       {/* O que o cliente enviou, em grande. É por aqui que se decide o preço. */}
       {doCliente.length > 0 && (
         <section className="mb-4">
-          {/* A foto INTEIRA, sem cortar.
-              Estava com `object-cover` e ficava recortada em cima e em baixo —
-              e é sobre a fotografia que se decide o preço de uma recolha. O que
-              fica fora do enquadramento é o que faz a viagem render menos do
-              que devia. Fundo escuro porque uma foto ao alto deixa faixas dos
-              lados, e cinzento-claro faz parecer que falta lá alguma coisa. */}
-          <button
-            type="button"
-            onClick={() => setAVer({ lista: doCliente.map((f) => f.url), i: 0 })}
-            className="block w-full overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-slate-200"
-            aria-label="Abrir fotografia em ecrã inteiro"
-          >
-            {/*
-              O PRIMEIRO ANEXO EM GRANDE — e é por ele que se decide o preço.
-              Um PDF de reportagem fotográfica não cabe num `<img>`: aqui
-              mostra-se a ficha, e o toque abre-o no visor por cima.
-            */}
-            <Miniatura
-              url={doCliente[0].url}
-              nome={doCliente[0].name}
-              className="mx-auto h-64 w-full"
-              /* Inteira: é por esta fotografia que ele decide o preço. */
-              encaixe="inteira"
-            />
-          </button>
+          {/*
+            UM CARROSSEL, E NÃO UMA FOTO COM MINIATURAS POR BAIXO.
 
-          {doCliente.length > 1 && (
-            <div className="mt-2 grid grid-cols-4 gap-2">
-              {doCliente.slice(1).map((f, i) => (
+            "Ao abrir o pedido quero a primeira imagem já aberta e as demais em
+            forma de carrossel, só puxa para o lado para ver." — 12-09-2026.
+
+            Estava uma fotografia em grande e as outras numa grelha de
+            quadradinhos de quatro colunas. Num pedido com dez fotografias, as
+            nove seguintes eram selos de 70 px onde não se vê o que interessa —
+            se o sofá está desmontado, se o corredor tem degraus — e obrigavam
+            a abrir o visor em ecrã inteiro nove vezes para ver o mesmo que um
+            dedo mostra num gesto.
+
+            Todas com o mesmo tamanho da primeira, encostadas de lado. `snap`
+            para cada uma parar direita: um carrossel que fica a meio entre
+            duas fotografias lê-se como uma avaria.
+
+            AS FOTOS INTEIRAS, SEM CORTAR. Estava com `object-cover` e ficava
+            recortada em cima e em baixo — e o que fica fora do enquadramento é
+            o que faz a viagem render menos do que devia. Fundo escuro porque
+            uma foto ao alto deixa faixas dos lados, e cinzento-claro faz
+            parecer que falta lá alguma coisa.
+          */}
+          <div className="relative">
+            <div
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                const largura = el.clientWidth || 1;
+                setFotoAVer(Math.min(doCliente.length - 1, Math.round(el.scrollLeft / largura)));
+              }}
+              className="scrollbar-hide flex snap-x snap-mandatory overflow-x-auto rounded-2xl bg-slate-900 ring-1 ring-slate-200"
+            >
+              {doCliente.map((f, i) => (
                 <button
                   key={f.url}
                   type="button"
-                  onClick={() =>
-                    setAVer({ lista: doCliente.map((x) => x.url), i: i + 1 })
-                  }
-                  className="block overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200"
-                  aria-label={`Abrir fotografia ${i + 2}`}
+                  onClick={() => setAVer({ lista: doCliente.map((x) => x.url), i })}
+                  className="block w-full shrink-0 snap-center"
+                  aria-label={`Abrir fotografia ${i + 1} de ${doCliente.length} em ecrã inteiro`}
                 >
-                  <Miniatura url={f.url} nome={f.name} className="aspect-square w-full" />
+                  {/*
+                    Um PDF de reportagem fotográfica não cabe num `<img>`: aqui
+                    mostra-se a ficha, e o toque abre-o no visor por cima.
+                  */}
+                  <Miniatura
+                    url={f.url}
+                    nome={f.name}
+                    className="mx-auto h-64 w-full"
+                    encaixe="inteira"
+                  />
                 </button>
+              ))}
+            </div>
+
+            {doCliente.length > 1 && (
+              /*
+                O CONTADOR NO CANTO, e não só as bolinhas.
+
+                As bolinhas dizem ONDE ele está; o número diz QUANTAS faltam —
+                e é a segunda que decide se vale a pena continuar a puxar. Com
+                dez fotografias, dez bolinhas não se contam de relance.
+              */
+              <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-slate-900/70 px-2 py-0.5 text-[11px] font-semibold text-white">
+                {fotoAVer + 1} / {doCliente.length}
+              </span>
+            )}
+          </div>
+
+          {doCliente.length > 1 && (
+            <div className="mt-2 flex items-center justify-center gap-1.5">
+              {doCliente.map((f, i) => (
+                <span
+                  key={f.url}
+                  aria-hidden="true"
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === fotoAVer ? "w-4 bg-slate-700" : "w-1.5 bg-slate-300"
+                  }`}
+                />
               ))}
             </div>
           )}
 
           <p className="mt-1.5 text-center text-xs text-slate-500">
             Toque para ver em ecrã inteiro
+            {doCliente.length > 1 && " · puxe para o lado para ver as outras"}
           </p>
         </section>
       )}
