@@ -124,7 +124,14 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
     );
   }
 
-  const cartoes: Cartao[] = r
+  /*
+   * Anotado ANTES do filtro, e não depois.
+   *
+   * Sem a anotação aqui, o `seccao: "agenda"` de cada literal infere-se como
+   * `string` e deixa de caber na união — o compilador só se queixa no fim, e
+   * a queixa aponta para o sítio errado.
+   */
+  const todos: Cartao[] = r
     ? [
         {
           chave: "atrasados",
@@ -196,8 +203,12 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           seccao: "whatsapp",
           icone: MessageCircle,
         },
-      ].filter((c) => c.n != null && c.n > 0)
+      ]
     : [];
+
+  // Um zero não ocupa uma caixa: oito caixas a zero não são informação, são
+  // ruído com ar de trabalho — o defeito exacto do ecrã que saiu.
+  const cartoes = todos.filter((c) => c.n != null && c.n > 0);
 
   return (
     <div className="space-y-4">
