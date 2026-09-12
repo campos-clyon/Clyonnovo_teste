@@ -315,3 +315,32 @@ describe("de quem é a vez", () => {
     expect(TRABALHOS).toContain('vez === "cliente"');
   });
 });
+
+describe("a ordem do ecrã do trabalho", () => {
+  /*
+   * "Mova a secção «A negociação» para baixo, ficando apenas acima de «Não é
+   * para si?»" — 12-09-2026.
+   *
+   * A caixa de propor um valor era das primeiras coisas do ecrã, antes das
+   * fotografias, da morada, da distância e dos acessos. Punha-lhe o número à
+   * frente antes de ele ver o que ia carregar — e é sobre as fotografias que
+   * se decide o preço de uma recolha.
+   *
+   * A ordem é o conteúdo aqui: ver o que é, ver onde é, e só então dizer por
+   * quanto.
+   */
+  const TRABALHOS = readFileSync(
+    join(process.cwd(), "src/app/profissionais/painel/Trabalhos.tsx"),
+    "utf8",
+  );
+
+  it("propor vem depois do histórico e antes de arrumar", () => {
+    const historico = TRABALHOS.indexOf("<HistoricoDaNegociacao");
+    const negociacao = TRABALHOS.indexOf("<NegociacaoProfissional");
+    const arrumar = TRABALHOS.indexOf('"Este pedido está arquivado" : "Não é para si?"');
+
+    expect(historico).toBeGreaterThan(0);
+    expect(negociacao).toBeGreaterThan(historico);
+    expect(arrumar).toBeGreaterThan(negociacao);
+  });
+});
