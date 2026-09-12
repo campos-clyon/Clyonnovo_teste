@@ -14,6 +14,8 @@ import {
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
+// Só para MOSTRAR. As taxas não se editam neste ecrã — ver o bloco que o diz.
+import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "@/lib/taxas-plataforma";
 import {
   ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
   type EstadoTicket,
@@ -319,24 +321,67 @@ const siteModules = [
   },
 ];
 
+/*
+ * OS GRUPOS DO ECRÃ DE CONFIGURAÇÕES.
+ *
+ * "Essa tela está desatualizada, trava as configurações reais — inclusive
+ * taxas de pros, CLYON e assistentes." — 12-09-2026.
+ *
+ * Tinha razão, e o problema era de fundo: esta lista é escrita à mão, e o ecrã
+ * SÓ desenha o que estiver aqui. Catorze valores que existem na base ficavam
+ * invisíveis — entre eles a `margem_lucro`, o `custo_km`, o `custo_hora_pessoa`,
+ * o preço por saco de entulho, o gasóleo, e o `pagamento_assistente_por_trabalho`.
+ * Quem abrisse este ecrã via uma dúzia de números e concluía que era isto que
+ * havia para configurar.
+ *
+ * Pior ainda: "Monos" e "Pós-obra" repetiam as MESMAS duas chaves do entulho.
+ * Não eram valores parecidos — eram a mesma linha da base desenhada três
+ * vezes. Mudar o número num dos cartões mudava nos outros dois, e quem visse
+ * isso concluía, com razão, que o ecrã estava avariado.
+ *
+ * O QUE MUDA: a lista continua a servir para AGRUPAR e ORDENAR, mas deixou de
+ * decidir o que se vê. Tudo o que não estiver aqui cai no grupo final, «Outros
+ * valores» — por isso um valor novo nunca mais nasce invisível.
+ */
 const simulatorDisplayGroups = [
   {
+    id: "conta_base",
+    label: "A conta da CLYON",
+    description:
+      "A fórmula que produz a estimativa: quilómetros, pessoas, horas, custos fixos e margem. É daqui que sai o valor sugerido em cada pedido.",
+    keys: [
+      "custo_km",
+      "custo_hora_pessoa",
+      "num_pessoas_equipa",
+      "overhead_por_servico",
+      "margem_lucro",
+      "hora_base",
+    ],
+  },
+  {
+    id: "combustivel",
+    label: "Combustível",
+    description: "Preço do gasóleo e consumo, para o custo por quilómetro.",
+    keys: ["diesel_preco", "km_por_litro"],
+  },
+  {
+    id: "assistentes",
+    label: "Pagamento aos assistentes",
+    description: "O que a CLYON paga a um assistente por cada trabalho tratado.",
+    keys: ["pagamento_assistente_por_trabalho"],
+  },
+  {
     id: "entulho",
-    label: "Entulho",
-    description: "Valores específicos para recolha de entulho.",
-    keys: ["entulho_saco_chao_extra", "entulho_distancia_km", "entulho_multiplicador"],
-  },
-  {
-    id: "monos",
-    label: "Monos",
-    description: "Valores partilhados para recolha de monos e volumes semelhantes.",
-    keys: ["entulho_distancia_km", "entulho_multiplicador"],
-  },
-  {
-    id: "pos_obra",
-    label: "Pós-obra",
-    description: "Valores partilhados para limpeza pós-obra e resíduos de obra.",
-    keys: ["entulho_distancia_km", "entulho_multiplicador"],
+    label: "Entulho, monos e pós-obra",
+    description:
+      "Os mesmos valores servem os três serviços — é uma só configuração, não três.",
+    keys: [
+      "entulho_saco_ensacado",
+      "entulho_saco_chao",
+      "entulho_saco_chao_extra",
+      "entulho_distancia_km",
+      "entulho_multiplicador",
+    ],
   },
   {
     id: "moveis",
@@ -353,15 +398,16 @@ const simulatorDisplayGroups = [
   },
   {
     id: "mudancas",
-    label: "Mudanças",
-    description: "Valores específicos para mudanças e transporte completo.",
-    keys: ["mudancas_distancia_km", "mudancas_multiplicador"],
-  },
-  {
-    id: "camiao",
-    label: "Camião com motorista",
-    description: "Valores partilhados com o serviço de mudanças e transporte simples.",
-    keys: ["mudancas_distancia_km", "mudancas_multiplicador"],
+    label: "Mudanças e camião com motorista",
+    description: "Valores das mudanças e do transporte completo. Também são partilhados.",
+    keys: [
+      "mudancas_distancia_km",
+      "mudancas_multiplicador",
+      "mudanca_2pessoas_hora",
+      "mudanca_3pessoas_hora",
+      "mudanca_minimo_horas",
+      "mudanca_km_limite_recolha",
+    ],
   },
   {
     id: "acessos",
@@ -372,12 +418,6 @@ const simulatorDisplayGroups = [
       "apartamento_sem_elevador_por_andar",
       "acesso_dificil_extra",
     ],
-  },
-  {
-    id: "geral",
-    label: "Base geral",
-    description: "Base horária e referências comuns a todos os simuladores.",
-    keys: ["hora_base"],
   },
 ] as const;
 
@@ -1278,7 +1318,7 @@ export default function ColaboradorAdminClient({
   const simulatorGroups = useMemo(() => {
     const settingsMap = new Map(simulatorSettings.map((setting) => [setting.key, setting]));
 
-    return simulatorDisplayGroups.map((group) => ({
+    const grupos = simulatorDisplayGroups.map((group) => ({
       id: group.id,
       label: group.label,
       description: group.description,
@@ -1286,6 +1326,34 @@ export default function ColaboradorAdminClient({
         .map((key) => settingsMap.get(key))
         .filter((setting): setting is SimulatorSetting => Boolean(setting)),
     }));
+
+    /*
+     * O GRUPO QUE APANHA TUDO O RESTO — e é ele que impede isto de voltar a
+     * acontecer.
+     *
+     * Os grupos acima são escritos à mão, e uma lista escrita à mão fica para
+     * trás: catorze valores existiam na base e não apareciam em lado nenhum
+     * porque ninguém se lembrou de os acrescentar aqui. Quem abria este ecrã
+     * via uma dúzia de números e concluía que era isto o que havia.
+     *
+     * Com este grupo, o pior que pode acontecer a um valor novo é aparecer no
+     * fim, fora do seu lugar. Nunca desaparecer.
+     */
+    const arrumadas = new Set(grupos.flatMap((g) => g.settings.map((s) => s.key)));
+    const sobram = simulatorSettings.filter((s) => !arrumadas.has(s.key));
+
+    return sobram.length > 0
+      ? [
+          ...grupos,
+          {
+            id: "outros",
+            label: "Outros valores",
+            description:
+              "Existem na base e ainda não têm grupo próprio. Aparecem aqui para nunca ficarem escondidos.",
+            settings: sobram,
+          },
+        ]
+      : grupos;
   }, [simulatorSettings]);
 
   const hojeLabel = useMemo(
@@ -3077,6 +3145,47 @@ export default function ColaboradorAdminClient({
                   </button>
                 }
               >
+                {/*
+                  AS TAXAS DA PLATAFORMA NÃO SE EDITAM AQUI — e o ecrã tem de o
+                  dizer, em vez de as calar.
+
+                  "Trava as configurações reais, inclusive taxas de pros e
+                  CLYON." Estas duas não vivem na base: são constantes em
+                  `taxas-plataforma.ts`, porque mexer nelas muda o que já foi
+                  prometido a negociações abertas. Escondê-las fazia este ecrã
+                  parecer o sítio de todas as configurações, e ele não é — quem
+                  as procurasse dava uma volta inteira para não encontrar nada.
+                */}
+                <div className="mb-4 rounded-[20px] border border-amber-400/20 bg-amber-500/[0.06] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">Taxas da plataforma</h3>
+                      <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                        Não se mudam por aqui: vivem no código porque alteram o que já foi
+                        prometido a negociações abertas. Para as mudar, é preciso um deploy.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-4">
+                      <div className="rounded-[14px] border border-white/10 bg-slate-950/40 px-4 py-2 text-center">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                          Cliente
+                        </p>
+                        <p className="text-lg font-semibold text-white">
+                          {Math.round(TAXA_CLIENTE * 100)} %
+                        </p>
+                      </div>
+                      <div className="rounded-[14px] border border-white/10 bg-slate-950/40 px-4 py-2 text-center">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                          Profissional
+                        </p>
+                        <p className="text-lg font-semibold text-white">
+                          {Math.round(TAXA_PROFISSIONAL * 100)} %
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {loadingSimulatorSettings ? (
                   <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-sm text-slate-400">
                     A carregar configurações do simulador...
