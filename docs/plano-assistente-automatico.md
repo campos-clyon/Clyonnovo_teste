@@ -258,3 +258,54 @@ agradecimento no fim do trabalho, e o pedido de avaliação um dia depois, uma v
    assistente hoje trata por «você» sem título.
 
 Diga-me e começo pela fase 1.
+
+---
+
+## O que ficou construído — 12-09-2026
+
+O plano acima é de manhã. Isto é o que está em produção ao fim do dia, e as
+três coisas em que o que se fez não é o que estava escrito.
+
+| Fase | O que entrega | Onde vive |
+|---|---|---|
+| 1 | `categoriaDoPedido` pura + coluna «Fase» nos Pedidos e nas Negociações | `assistente-categorias.ts` |
+| 2 | O observador de transições, o cron e a tabela do que já foi contado | `assistente-automatico.ts`, `/api/cron/assistente` |
+| 3 | O «sim» e o «não» a passarem pelo motor, com `autorTipo: "assistente"` e o desfazer de 24 h | `whatsapp-negociacao.ts`, `db.ts` |
+| 4 | A escada dos lembretes, três toques, e a hora a que se cala | `assistente-interruptores.ts` |
+| 5 | Véspera, execução, confirmação, agradecimento e avaliação | `assistente-automatico.ts` |
+| 6 | O ecrã do assistente, com os seis interruptores e o que ele fez | `AdminAssistenteAutoPanel.tsx` |
+
+### Onde o que se fez não é o que estava escrito
+
+**1. Nem todos os interruptores nascem desligados.** O plano dizia «cada um
+começa desligado». Duas destas capacidades já corriam — a recolha de pedidos
+pela conversa e o fecho por WhatsApp. Pô-las a nascer desligadas não era
+prudência: era desligar em silêncio duas coisas a funcionar, e descobri-lo pelo
+primeiro cliente que ficasse sem resposta. A regra passou a ser: **o
+interruptor de uma capacidade que já funciona nasce ligado; o de uma capacidade
+nova nasce desligado.** Ficam por ligar `avisar`, `insistir`, `acompanhar` e
+`agradecer` — os quatro que o assistente estreia.
+
+**2. Não trata ninguém por «senhor».** O exemplo pedia «senhor João». A base
+guarda o nome e não guarda o género: «Sr.» num nome que seja de uma senhora é
+uma falta de educação que uma máquina não tem desculpa para cometer, e acontece
+à primeira Maria. Vai o nome próprio, sem título.
+
+**3. As seis fases foram entregues de uma vez, e não uma por semana.** O plano
+propunha a fase 1 sozinha durante uns dias. O que a torna segura — ver as
+categorias antes de o assistente falar — está garantido de outra maneira: as
+quatro capacidades novas nascem **desligadas**, por isso o código está lá e não
+faz nada. Liga-se `avisar` quando a coluna «Fase» estiver conferida, e o resto a
+seguir, um de cada vez.
+
+### Como se liga, pela ordem certa
+
+1. Confirmar que `CRON_SECRET` existe na Vercel (sem ele o cron recusa e não se
+   queixa a ninguém).
+2. Abrir os Pedidos e conferir dez «Fases» à mão.
+3. Painel do WhatsApp → **Assistente automático** → ligar `avisar`. Carregar em
+   **Correr agora** e ler a lista do que ele fez.
+4. Uns dias depois, `insistir`. Depois `acompanhar`. Por fim `agradecer`.
+
+Qualquer um deles pára sozinho sem calar os outros, e o botão vermelho lá de
+cima continua a mandar sobre todos.
