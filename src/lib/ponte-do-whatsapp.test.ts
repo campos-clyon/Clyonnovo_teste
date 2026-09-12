@@ -39,10 +39,25 @@ describe("o transporte escolhe o caminho", () => {
     expect(CLOUD).toContain("guardarNaFilaWhatsApp");
   });
 
-  it("os botões degradam para SIM e NÃO em palavras", () => {
-    expect(CLOUD).toContain('b.id.startsWith("ct:")');
-    expect(CLOUD).toContain("responda SIM");
-    expect(CLOUD).toContain("responda NÃO");
+  it("pela ponte vai o texto, e já não um manual de instruções", () => {
+    /*
+     * ERA: os botões degradavam para «Para "Fechar 300 €", responda SIM. Para
+     * "Recusar", responda NÃO.» — porque do lado de cá só se liam expressões
+     * regulares presas à letra.
+     *
+     * "O bot ainda usa palavras engessadas. Não deve usar sim ou não, apenas
+     * frases e textos — o Gemini deve entender o contexto" (12-09-2026). A
+     * mensagem passou a convidar a escrever, e quem lê a resposta é o modelo:
+     * ver `traduzirParaAMaquina` em whatsapp-negociacao.ts.
+     *
+     * O que se guarda aqui é que a ponte continua a mandar a mensagem inteira
+     * — degradar não pode ser perder texto.
+     */
+    const botoes = CLOUD.slice(CLOUD.indexOf("export async function enviarBotoesWhatsApp"));
+    expect(botoes).toContain("const degradado = texto;");
+    expect(botoes).toContain("porNaFila(para, degradado)");
+    // E os botões a sério continuam a existir no caminho da Meta, que os tem.
+    expect(botoes).toContain("buttons: botoes.slice(0, 3)");
   });
 
   it("sem Meta e sem ponte, tudo devolve false — falha fechada", () => {
