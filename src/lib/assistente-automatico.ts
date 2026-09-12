@@ -87,6 +87,15 @@ export const HORAS_ATE_ESTRANHAR_O_SILENCIO = 48;
 export const PEDIDOS_POR_PASSAGEM = 300;
 
 /**
+ * Passado isto, uma recolha a meio já não está parada: está abandonada.
+ *
+ * A diferença entre as duas coisas é se ainda vale a pena tocar-lhes. Sem esta
+ * linha, o dia em que alguém ligasse o "insistir" era o dia em que cinquenta
+ * pessoas recebiam uma mensagem sobre um pedido que abandonaram no Verão.
+ */
+export const HORAS_ATE_DESISTIR_DA_RECOLHA = 72;
+
+/**
  * As que não são para o cliente: são para quem gere.
  *
  * "Sem propostas" é um problema de OFERTA e não de conversa. Dizer ao cliente
@@ -578,6 +587,31 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   // insistir com quem já respondeu é o erro que mais depressa custa o número.
   resumo.fechados += await db.fecharAvisosComResposta().catch(() => 0);
 
+  /*
+   * COM TUDO EM BAIXO, NÃO SE LÊ A BASE À TOA.
+   *
+   * A derivação custa duas consultas e trezentos pedidos, de dez em dez
+   * minutos, para sempre. Se nenhuma das capacidades que precisa dela estiver
+   * ligada, esse trabalho não serve para nada — e um cron que gasta ligações
+   * de um pool de cinco para não fazer nada é a mesma doença de que este
+   * painel acabou de sair.
+   *
+   * A limpeza e o fecho dos que já responderam continuam a correr: esses são
+   * baratos, e o caminho imediato das propostas cria avisos mesmo com a
+   * passagem toda em silêncio.
+   */
+  const precisaDosPedidos =
+    podeFazer("propostas") ||
+    podeFazer("avisar") ||
+    podeFazer("acompanhar") ||
+    podeFazer("agradecer") ||
+    podeFazer("insistir");
+  if (!precisaDosPedidos) {
+    await db.limparAvisosVelhos().catch(() => 0);
+    resumo.linhas.push("Nada ligado. Só se arrumou o que já estava respondido.");
+    return resumo;
+  }
+
   const pedidos = await db.pedidosParaOAssistente(PEDIDOS_POR_PASSAGEM).catch(() => []);
   if (pedidos.length >= PEDIDOS_POR_PASSAGEM) {
     // Um tecto que não se anuncia lê-se como "estava tudo visto".
@@ -715,6 +749,25 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
      * Nesse caso não se fecha nem se insiste — fica quieto até voltar a entrar
      * na janela, ou até a limpeza dos 60 dias o levar.
      */
+    /*
+     * UMA NOTÍCIA QUE FICOU ABERTA FECHA-SE AQUI, e nunca vai à escada.
+     *
+     * Este guarda é a rede por baixo de tudo o resto. `esgotou()` devolve
+     * `true` para qualquer espécie que não esteja na escada — e a seguir o
+     * ciclo ENTREGA a conversa a uma pessoa com a etiqueta "três lembretes sem
+     * resposta". Bastava uma notícia ficar aberta por engano para todas as
+     * conversas dela irem parar à mesa do admin com uma razão falsa.
+     *
+     * E ficava: o fecho por WhatsApp reserva a chave dele fora desta função, e
+     * durante um dia ficou a reservá-la sem a fechar. Corrigiu-se lá; isto
+     * garante que a próxima vez que alguém se esquecer não custe uma conversa.
+     */
+    if (!esperaResposta(especie)) {
+      await db.fecharAvisoDoAssistente(a.id, "informado");
+      resumo.fechados++;
+      continue;
+    }
+
     if (especie !== "recolha_parada") {
       const visto = a.pedidoId != null && pedidosVistos.has(a.pedidoId);
       if (!visto) continue;
@@ -776,7 +829,21 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
     for (const r of recolhas) {
       const desde = new Date(r.actualizadoEm);
       if (Number.isNaN(desde.getTime())) continue;
-      if ((agora.getTime() - desde.getTime()) / 3600_000 < 6) continue;
+      const horas = (agora.getTime() - desde.getTime()) / 3600_000;
+      /*
+       * ENTRE AS SEIS HORAS E OS TRÊS DIAS. Uma janela, e não um mínimo.
+       *
+       * A lista das recolhas em curso traz até cinquenta conversas, e muitas
+       * delas ficaram a meio há meses. Com um simples "mais de seis horas", o
+       * dia em que alguém ligasse o "insistir" era o dia em que cinquenta
+       * pessoas recebiam uma mensagem sobre um pedido que abandonaram no
+       * Verão. Isso não é insistir: é acordar gente.
+       *
+       * Passadas 72 horas, uma recolha a meio já não está parada — está
+       * abandonada, e a diferença entre as duas coisas é justamente se ainda
+       * vale a pena tocar-lhes.
+       */
+      if (horas < 6 || horas > HORAS_ATE_DESISTIR_DA_RECOLHA) continue;
       const { id } = await db.reservarAvisoDoAssistente({
         chave: `recolha:${String(r.telefone).replace(/\D/g, "").slice(-9)}:${r.actualizadoEm}`,
         especie: "recolha_parada",

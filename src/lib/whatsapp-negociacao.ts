@@ -292,6 +292,7 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
     reservarAvisoDoAssistente,
     guardarTextoDoAviso,
     guardarDesfazerDoAviso,
+    fecharAvisoDoAssistente,
   } = await import("@/lib/db");
 
   if (!(await assistentePode("fechar"))) {
@@ -371,6 +372,16 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
     });
     if (id) {
       await guardarTextoDoAviso(id, `Fechado com ${alvo.profissionalNome} pelo assistente.`);
+      /*
+       * E FECHA-SE JÁ. Isto é uma NOTÍCIA, não uma pergunta.
+       *
+       * Deixá-la aberta punha-a na lista de quem não respondeu — e como
+       * "fechado" não tem escada de lembretes, `esgotou()` diz logo que sim e
+       * a passagem seguinte entregava a conversa a uma pessoa com a etiqueta
+       * "três lembretes sem resposta", trinta segundos depois de o cliente ter
+       * fechado o negócio. O melhor desfecho possível lido como o pior.
+       */
+      await fecharAvisoDoAssistente(id, "informado");
       await guardarDesfazerDoAviso(id, {
         pedidoId: alvo.pedidoId,
         negociacaoId: alvo.negociacaoId,

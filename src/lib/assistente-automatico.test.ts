@@ -5,6 +5,7 @@ import type { PedidoParaOAssistente } from "./db";
 import { PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
 import {
   DIAS_DE_NOVIDADE,
+  HORAS_ATE_DESISTIR_DA_RECOLHA,
   HORAS_ATE_ESTRANHAR_O_SILENCIO,
   aindaENovidade,
   chaveDaAceitacao,
@@ -695,6 +696,48 @@ describe("insistir tem limite, e o limite é dito", () => {
     expect(CEREBRO).toContain("const pedidosVistos = new Set<number>();");
     expect(CEREBRO).toContain("const visto = a.pedidoId != null && pedidosVistos.has(a.pedidoId);");
     expect(CEREBRO).toContain("if (!visto) continue;");
+  });
+
+  it("uma NOTICIA que fique aberta fecha-se, e nunca entrega a conversa", () => {
+    /*
+     * `esgotou()` devolve true para qualquer especie que nao esteja na escada,
+     * e a seguir o ciclo ENTREGA a conversa a uma pessoa com a etiqueta "tres
+     * lembretes sem resposta". Bastava uma noticia ficar aberta por engano
+     * para todas as conversas dela irem parar a mesa do admin com uma razao
+     * falsa -- e ficava: o fecho por WhatsApp reservava a chave sem a fechar,
+     * por isso trinta segundos depois de o cliente fechar o negocio a conversa
+     * saia-lhe das maos. O melhor desfecho possivel lido como o pior.
+     */
+    const i = CEREBRO.indexOf("for (const a of abertos)");
+    const bloco = CEREBRO.slice(i, CEREBRO.indexOf("if (!podeFazer(\"insistir\")) continue;", i));
+    expect(bloco).toContain("if (!esperaResposta(especie)) {");
+    expect(bloco.indexOf("if (!esperaResposta(especie))")).toBeLessThan(
+      bloco.indexOf("pedidosVistos.has(a.pedidoId)"),
+    );
+    // E o fecho por WhatsApp ja nao deixa nada aberto.
+    const f = NEGOCIACAO.indexOf("async function fecharPeloCliente(");
+    const fecho = NEGOCIACAO.slice(f, f + 3600);
+    expect(fecho).toContain('fecharAvisoDoAssistente(id, "informado")');
+  });
+
+  it("uma recolha abandonada ha meses nao leva mensagem nenhuma", () => {
+    /*
+     * A lista das recolhas em curso traz ate cinquenta conversas, e muitas
+     * ficaram a meio ha meses. Com um simples "mais de seis horas", o dia em
+     * que alguem ligasse o "insistir" era o dia em que cinquenta pessoas
+     * recebiam uma mensagem sobre um pedido que abandonaram no Verao.
+     */
+    expect(HORAS_ATE_DESISTIR_DA_RECOLHA).toBe(72);
+    expect(CEREBRO).toContain("if (horas < 6 || horas > HORAS_ATE_DESISTIR_DA_RECOLHA) continue;");
+  });
+
+  it("com tudo em baixo, a passagem nao le trezentos pedidos a toa", () => {
+    // Um cron que gasta ligacoes de um pool de cinco para nao fazer nada e a
+    // mesma doenca de que este painel acabou de sair.
+    expect(CEREBRO).toContain("const precisaDosPedidos =");
+    expect(CEREBRO).toContain("if (!precisaDosPedidos) {");
+    const i = CEREBRO.indexOf("if (!precisaDosPedidos) {");
+    expect(i).toBeLessThan(CEREBRO.indexOf("await db.pedidosParaOAssistente("));
   });
 
   it("o tecto de cada passagem é dito em voz alta quando é atingido", () => {
