@@ -48,6 +48,7 @@ import {
   pesoDoTrabalho,
   porQuilometro,
 } from "@/lib/sinais-do-trabalho";
+import { concorrenciaDoPedido } from "@/lib/concorrencia";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
@@ -542,12 +543,26 @@ export default function Trabalhos({
            * quem tinha proposto e estava à espera do cliente.
            */
           const vez = p.estado === "aberta" ? deQuemEAVez(p.propostas) : null;
+          /*
+           * «Sem propostas ainda» virou uma BARRA — ver `concorrencia.ts`.
+           *
+           * O distintivo dizia duas coisas apenas: «sem propostas ainda», ou
+           * nada. E a pergunta que ele faz ao percorrer a lista não é essa —
+           * é «vale a pena eu responder a este?». A barra responde: enche da
+           * esquerda para a direita e passa de verde a vermelho, e lê-se sem
+           * ler número nenhum.
+           *
+           * Só onde ele ainda decide. Num trabalho já contratado, quantos
+           * concorriam é história.
+           */
           const estado =
             vez === "cliente"
               ? { texto: "à espera do cliente", cls: "bg-cyan-50 text-cyan-700" }
               : vez === null && p.estado === "aberta"
-                ? { texto: "sem propostas ainda", cls: "bg-slate-100 text-slate-500" }
+                ? null
                 : (ESTADO[p.estado] ?? { texto: p.estado, cls: "bg-slate-100 text-slate-500" });
+          const concorrencia =
+            p.estado === "aberta" ? concorrenciaDoPedido(p.concorrentes ?? 0) : null;
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
@@ -733,9 +748,11 @@ export default function Trabalhos({
                         novo
                       </span>
                     )}
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${estado.cls}`}>
-                      {estado.texto}
-                    </span>
+                    {estado && (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${estado.cls}`}>
+                        {estado.texto}
+                      </span>
+                    )}
                     {fase && (
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${fase.cls}`}>
                         {fase.texto}
@@ -801,6 +818,36 @@ export default function Trabalhos({
                       </span>
                     )}
                   </p>
+                  {/*
+                    A BARRA DA CONCORRÊNCIA.
+
+                    "Uma barra que começa verde e, se for preenchida, fica
+                    vermelha — vai mudando o tom mediante a quantidade de
+                    propostas que o pedido tem: de 0 verde a 7 vermelho."
+
+                    Fina, larga e sem moldura: é para ser lida pelo canto do
+                    olho enquanto ele percorre a lista, e não para ser
+                    estudada. O texto ao lado não é enfeite — um em cada doze
+                    homens não distingue verde de vermelho, e sem o número
+                    esta barra não lhes dizia nada.
+                  */}
+                  {concorrencia && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div
+                        className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"
+                        role="img"
+                        aria-label={`Concorrência: ${concorrencia.texto}`}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all ${concorrencia.cls}`}
+                          style={{ width: `${Math.max(concorrencia.porCento, 3)}%` }}
+                        />
+                      </div>
+                      <span className="shrink-0 text-[11px] font-semibold text-slate-500">
+                        {concorrencia.texto}
+                      </span>
+                    </div>
+                  )}
                   {/*
                     A DESCRIÇÃO SAIU DAQUI.
 

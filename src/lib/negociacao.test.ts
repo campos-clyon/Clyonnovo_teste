@@ -11,6 +11,7 @@ import {
   estaPrestesAExpirar,
   semSaida,
   MAX_PROPOSTAS_POR_LADO,
+  MAX_PROPOSTAS_POR_EXTENSO,
   PRAZO_DA_PROPOSTA_HORAS,
   type Negociacao,
   type Lado,
@@ -64,7 +65,7 @@ describe("negociacaoNova", () => {
     expect(accoesDisponiveis(n, "profissional", T0)).toEqual(["desistir"]);
   });
 
-  it("a abertura antiga, pelo cliente, gasta uma das cinco dele", () => {
+  it("a abertura antiga, pelo cliente, gasta uma das dele", () => {
     const n = abertaPeloCliente(80, T0);
     expect(propostasRestantes(n, "cliente", T0)).toBe(MAX_PROPOSTAS_POR_LADO - 1);
     expect(propostasRestantes(n, "profissional", T0)).toBe(MAX_PROPOSTAS_POR_LADO);
@@ -102,13 +103,15 @@ describe("alternância", () => {
     n = aplica(propor(n, "cliente", 95, horas(2)));
     n = aplica(propor(n, "profissional", 110, horas(3)));
     expect(propostaPendente(n, horas(3))?.valor).toBe(110);
-    expect(propostasRestantes(n, "cliente", horas(3))).toBe(3);
-    expect(propostasRestantes(n, "profissional", horas(3))).toBe(3);
+    // Duas gastas de cada lado: o que sobra vem da constante, e não de um «3»
+    // escrito à mão — esse mentia no dia em que o limite passou de cinco a sete.
+    expect(propostasRestantes(n, "cliente", horas(3))).toBe(MAX_PROPOSTAS_POR_LADO - 2);
+    expect(propostasRestantes(n, "profissional", horas(3))).toBe(MAX_PROPOSTAS_POR_LADO - 2);
   });
 });
 
-describe("as cinco propostas", () => {
-  /** Faz o cliente e o profissional alternarem até o cliente gastar as cinco. */
+describe("as propostas de cada lado", () => {
+  /** Faz o cliente e o profissional alternarem até um deles as gastar todas. */
   function ateEsgotar(lado: Lado): Negociacao {
     let n = abertaPeloCliente(80, T0);
     let t = 1;
@@ -122,7 +125,7 @@ describe("as cinco propostas", () => {
     return n;
   }
 
-  it("esgotadas as cinco, só resta aceitar ou desistir", () => {
+  it("esgotadas, só resta aceitar ou desistir", () => {
     const n = ateEsgotar("cliente");
     expect(propostasRestantes(n, "cliente", horas(50))).toBe(0);
     const accoes = accoesDisponiveis(n, "cliente", horas(11));
@@ -134,7 +137,8 @@ describe("as cinco propostas", () => {
     const n = ateEsgotar("cliente");
     const r = propor(n, "cliente", 999, horas(11));
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.erro).toContain("cinco propostas");
+    // A palavra vem da constante: com o limite em sete, a frase diz "sete".
+    if (!r.ok) expect(r.erro).toContain(`${MAX_PROPOSTAS_POR_EXTENSO} propostas`);
   });
 });
 

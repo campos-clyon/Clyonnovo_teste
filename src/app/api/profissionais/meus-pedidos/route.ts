@@ -327,6 +327,15 @@ export async function GET(req: NextRequest) {
         distanciaMedidaPor: medidas[i]?.origem ?? null,
         precisaFatura: Boolean(vista.precisaFatura),
         precisaGuiaTransporte: Boolean(vista.precisaGuiaTransporte),
+        /*
+         * A CONCORRÊNCIA — quantos outros já puseram um número neste pedido.
+         *
+         * É a conta que ele faz antes de decidir se vale a pena responder, e o
+         * ecrã não lha sabia dar: sabia só da negociação DELE, e por isso só
+         * sabia dizer «sem propostas ainda» — a mesma frase para o pedido que
+         * ninguém quis e para aquele em que ele é o primeiro de sete.
+         */
+        concorrentes: Number(l.concorrentes ?? 0),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo) : null,

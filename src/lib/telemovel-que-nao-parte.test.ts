@@ -78,9 +78,24 @@ describe("o que se lê, lê-se todo", () => {
     expect(TRABALHOS).toContain('className="line-clamp-2 text-[15px] font-bold text-[#0B1929]"');
   });
 
-  it("o botão de arquivar deixa de tapar o «por carga»", () => {
-    // Está em posição absoluta e o cartão não lhe reservava espaço nenhum.
-    expect(TRABALHOS).toContain('podeArrumar ? "pb-16" : ""');
+  it("o botão de arquivar já não tapa o «por carga» — saiu do cartão", () => {
+    /*
+     * A primeira correcção foi reservar-lhe espaço (`pb-16`): ele estava em
+     * posição absoluta no canto e o fundo branco tapava o distintivo «por
+     * carga», a etiqueta que diz se o valor é o trabalho todo ou cada viagem
+     * ao aterro.
+     *
+     * A segunda foi melhor, e é a de 12-09-2026: "remova o botão arquivar
+     * aqui; esse botão deve estar apenas ao abrir o pedido". Sem botão não há
+     * nada a tapar, e a faixa de dezasseis pixéis que ele obrigava a reservar
+     * em TODOS os cartões saiu com ele.
+     */
+    const cartao = TRABALHOS.slice(
+      TRABALHOS.indexOf("onClick={() => abrirTrabalho(p)}"),
+      TRABALHOS.indexOf("// ── Arrumar"),
+    );
+    expect(cartao).not.toContain("pb-16");
+    expect(cartao).not.toContain("absolute bottom-3 right-3");
   });
 
   it("o email lê-se inteiro, porque deixou de ser um campo desactivado", () => {

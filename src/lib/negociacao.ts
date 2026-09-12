@@ -28,7 +28,42 @@
  *    cliente aceita, fecha — porque a escolha é dele e já a fez.
  */
 
-export const MAX_PROPOSTAS_POR_LADO = 5;
+/**
+ * Quantas propostas cada lado tem.
+ *
+ * Sete desde 12-09-2026, e eram cinco. "Normalmente os pedidos têm direito a 5
+ * propostas; vamos aumentar para 7 — ao fazer isso temos que mudar tudo no
+ * site, inclusive nos termos, para as informações serem coerentes."
+ *
+ * A última frase é a que interessa a quem mexer nisto outra vez: o número
+ * estava escrito À MÃO, por extenso, em cinco ecrãs e nos termos. Mudar a
+ * constante deixava o site a prometer «cinco propostas» a quem já tinha sete —
+ * e os termos são um contrato, não um texto de apoio. Nenhuma dessas frases
+ * volta a ter o número escrito: todas o vão buscar aqui, por extenso, a
+ * `MAX_PROPOSTAS_POR_EXTENSO`.
+ */
+export const MAX_PROPOSTAS_POR_LADO = 7;
+
+/**
+ * O mesmo número em palavras, para as frases que o contam.
+ *
+ * Deriva da constante e não pode divergir dela — era exactamente isso que
+ * acontecia quando cada ecrã escrevia «cinco» à mão.
+ */
+const POR_EXTENSO: Record<number, string> = {
+  1: "uma",
+  2: "duas",
+  3: "três",
+  4: "quatro",
+  5: "cinco",
+  6: "seis",
+  7: "sete",
+  8: "oito",
+  9: "nove",
+  10: "dez",
+};
+export const MAX_PROPOSTAS_POR_EXTENSO =
+  POR_EXTENSO[MAX_PROPOSTAS_POR_LADO] ?? String(MAX_PROPOSTAS_POR_LADO);
 export const PRAZO_DA_PROPOSTA_HORAS = 48;
 /** Quando avisar que está prestes a expirar. */
 export const AVISO_ANTES_DE_EXPIRAR_HORAS = 12;
@@ -230,7 +265,7 @@ export function propor(
       ok: false,
       erro:
         restantes === 0
-          ? "Gastou as cinco propostas. Só pode aceitar ou desistir."
+          ? `Gastou as ${MAX_PROPOSTAS_POR_EXTENSO} propostas. Só pode aceitar ou desistir.`
           : "Já tem uma proposta à espera de resposta — espere que o outro lado responda.",
     };
   }

@@ -9,6 +9,7 @@ import {
   propostaPendente,
   horasAteExpirar,
   MAX_PROPOSTAS_POR_LADO,
+  MAX_PROPOSTAS_POR_EXTENSO,
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
@@ -321,8 +322,8 @@ export default function NegociacaoProfissional({
 
         {!podePropor && restantes === 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-            Gastou as cinco propostas. Só pode aceitar o que está em cima da mesa ou
-            desistir.
+            Gastou as {MAX_PROPOSTAS_POR_EXTENSO} propostas. Só pode aceitar o que está
+            em cima da mesa ou desistir.
           </p>
         )}
 

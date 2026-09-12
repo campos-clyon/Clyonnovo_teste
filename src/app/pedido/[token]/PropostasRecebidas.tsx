@@ -18,6 +18,8 @@ import {
   propostasRestantes,
   propostaPendente,
   MAX_PROPOSTAS_POR_LADO,
+  MAX_PROPOSTAS_POR_EXTENSO,
+  PRAZO_DA_PROPOSTA_HORAS,
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
@@ -789,8 +791,8 @@ export default function PropostasRecebidas({
 
       <Nota titulo="O que acontece quando aceita" className="mt-4">
         Aceitar ou contratar fecha o trabalho com esse profissional, e as outras
-        negociações terminam nesse momento. Tem cinco propostas de cada lado e 48
-        horas para responder a cada uma.
+        negociações terminam nesse momento. Tem {MAX_PROPOSTAS_POR_EXTENSO} propostas de
+        cada lado e {PRAZO_DA_PROPOSTA_HORAS} horas para responder a cada uma.
       </Nota>
 
       {/*

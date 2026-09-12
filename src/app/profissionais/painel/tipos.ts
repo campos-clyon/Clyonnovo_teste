@@ -97,6 +97,14 @@ export type Pedido = {
    */
   valorDaClyon?: number | null;
   /**
+   * Quantos OUTROS profissionais já puseram um número neste pedido.
+   *
+   * A barra da concorrência lê-se daqui — ver `concorrencia.ts`. Zero é uma
+   * corrida de um; seis é uma corrida que ele provavelmente já perdeu, e essa
+   * diferença é a que decide se vale a pena responder.
+   */
+  concorrentes?: number | null;
+  /**
    * Quando ele abriu este trabalho pela primeira vez. `null` = ainda por abrir.
    *
    * É isto que faz o distintivo «novo» apagar-se sozinho. Antes, «novo» queria

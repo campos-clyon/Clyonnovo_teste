@@ -2,6 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SITE_URL } from "@/lib/seo-data";
+/*
+ * OS NÚMEROS DA NEGOCIAÇÃO VÊM DO MOTOR, e não escritos aqui.
+ *
+ * Isto é um contrato. Dizia «cinco propostas» em texto corrido, e no dia em
+ * que o limite passou a sete os termos ficaram a prometer uma coisa que o
+ * site já não fazia — e os termos são o documento a que se recorre quando há
+ * desacordo. Um número escrito à mão num contrato é uma promessa que ninguém
+ * está a manter a par do código.
+ */
+import { MAX_PROPOSTAS_POR_EXTENSO, PRAZO_DA_PROPOSTA_HORAS } from "@/lib/negociacao";
 import {
   IDENTIFICACAO,
   identificacaoCompleta,
@@ -213,7 +223,8 @@ export default function TermosPage() {
             </li>
             <li>
               Os profissionais respondem com propostas. Pode aceitar,
-              contrapropor ou não responder. Cada lado tem cinco propostas e 48
+              contrapropor ou não responder. Cada lado tem{" "}
+              {MAX_PROPOSTAS_POR_EXTENSO} propostas e {PRAZO_DA_PROPOSTA_HORAS}{" "}
               horas para responder a cada uma; passado esse prazo a proposta
               expira.
             </li>

@@ -24,14 +24,24 @@ const PERFIL = ler("src/app/api/profissionais/perfil/route.ts");
 const DB = ler("src/lib/db.ts");
 
 describe("a descrição do lado do profissional", () => {
-  it("vê-se na lista, sem ter de abrir o pedido", () => {
-    expect(ECRA).toContain("p.description?.trim() ?");
-    expect(ECRA).toContain("WebkitLineClamp: 2");
+  it("vê-se INTEIRA ao abrir o pedido — e já não cortada na lista", () => {
+    /*
+     * Esteve na lista, em duas linhas cortadas, e por uma boa razão: a lista
+     * dizia o serviço, a cidade e o dinheiro, tudo menos o que ele ia fazer.
+     *
+     * Saiu a 12-09-2026: "remova a descrição, isso ele vê quando abrir o
+     * pedido". Duas linhas de texto corrido no meio do cartão eram a mancha
+     * onde o olho encalhava, e a fotografia — que passou de 80 para 112 px —
+     * responde à mesma pergunta mais depressa do que o texto respondia.
+     *
+     * O que este teste guarda é o que sempre importou: que a descrição EXISTE
+     * do lado dele, e que a falta dela é dita em vez de ser um espaço mudo.
+     */
+    expect(ECRA).toContain("{pedido.description}");
   });
 
   it("e quando não há, diz-se — em vez de deixar um espaço mudo", () => {
     // Sem descrição é informação também, e diz-lhe o que fazer a seguir.
-    expect(ECRA).toContain("Sem descrição — veja as fotografias ou pergunte à CLYON.");
     expect(ECRA).toContain("O cliente não escreveu uma descrição.");
   });
 });

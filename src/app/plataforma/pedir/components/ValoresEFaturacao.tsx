@@ -2,6 +2,7 @@
 
 import { FileText, Truck, Info } from "lucide-react";
 import type { ErroDeValor } from "@/lib/pedido-valores";
+import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 
 /**
  * Quanto o cliente quer pagar, e o que precisa em papel.
@@ -100,7 +101,7 @@ export default function ValoresEFaturacao({
         <h3 className="text-base font-bold text-slate-900">Precisa de documentos?</h3>
         <p className="mt-1 text-sm text-slate-600">
           Só mostramos o pedido a profissionais que os emitam — para não descobrir
-          ao fim de cinco propostas que afinal não dá.
+          ao fim de {MAX_PROPOSTAS_POR_EXTENSO} propostas que afinal não dá.
         </p>
 
         <div className="mt-4 space-y-3">

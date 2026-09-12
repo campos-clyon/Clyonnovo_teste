@@ -1927,6 +1927,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     pedidoLng: string | null;
     baseLat: string | number | null;
     baseLng: string | number | null;
+    /** Quantos OUTROS profissionais já puseram um número neste pedido. */
+    concorrentes: number | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -1966,6 +1968,25 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
             -- buscar.
             n.abertoProfissionalEm, n.dataCombinada,
+            -- QUANTOS OUTROS JA PROPUSERAM NESTE PEDIDO.
+            --
+            -- A conta que ele faz antes de decidir se vale a pena responder:
+            -- zero propostas e uma corrida de um, seis e uma corrida que
+            -- provavelmente ja perdeu. O cartao dele so sabia da negociacao
+            -- DELE, e por isso so sabia dizer "sem propostas ainda" -- que e a
+            -- mesma frase para o pedido que ninguem quis e para aquele em que
+            -- ele e o primeiro de sete.
+            --
+            -- So as vivas: um concorrente que desistiu ja nao e concorrencia.
+            -- E JSON_LENGTH e nao JSON_SEARCH porque o profissional propoe
+            -- sempre primeiro -- havendo proposta, houve um profissional a
+            -- por um numero na mesa. A subconsulta usa a chave
+            -- `negociacoes_pedido`.
+            (SELECT COUNT(*) FROM negociacoes c
+              WHERE c.pedidoId = n.pedidoId AND c.id <> n.id
+                AND c.estado IN ('aberta', 'aguarda_contratacao', 'acordada')
+                AND JSON_VALID(c.propostasJson) AND JSON_LENGTH(c.propostasJson) > 0
+            ) AS concorrentes,
             o.floor, o.hasElevator, o.parkingDistance,
             -- O que so alguns servicos tem, e sem o qual eles propoem as
             -- cegas: para onde vai uma mudanca (e o acesso do outro lado), e
