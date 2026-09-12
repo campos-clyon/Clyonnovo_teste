@@ -7021,23 +7021,35 @@ let ultimosInterruptores: Record<string, boolean> | null = null;
  * todas nascerem desligadas está lá escrita.
  */
 export async function interruptoresDoAssistente(): Promise<Record<string, boolean>> {
-  const { interruptoresPorOmissao, eCapacidade } = await import("@/lib/assistente-interruptores");
-  const r: Record<string, boolean> = interruptoresPorOmissao();
+  const { interruptoresPorOmissao, interruptoresNaDuvida, eCapacidade } = await import(
+    "@/lib/assistente-interruptores"
+  );
   try {
     await ensureAssistenteTables();
     const pool = await getPool();
-    if (!pool) return ultimosInterruptores ?? r;
+    if (!pool) return ultimosInterruptores ?? interruptoresNaDuvida();
     const [rows] = (await pool.execute(
       "SELECT capacidade, ligado FROM assistenteInterruptores",
     )) as [Array<{ capacidade: string; ligado: number }>, unknown];
+    /*
+     * A leitura CORREU. Uma tabela vazia é uma instalação nova, e aí o que já
+     * funcionava continua a funcionar — é `interruptoresPorOmissao`. Não
+     * confundir com o caso de baixo, em que não se sabe o que lá está.
+     */
+    const r: Record<string, boolean> = interruptoresPorOmissao();
     for (const l of rows) {
       if (eCapacidade(l.capacidade)) r[l.capacidade] = Number(l.ligado) === 1;
     }
     ultimosInterruptores = r;
     return r;
   } catch (e) {
+    /*
+     * NÃO SE CONSEGUIU LER. A memória do último estado bom vale mais do que
+     * qualquer palpite; sem ela, `interruptoresNaDuvida` deixa passar o que
+     * é conversa e trava o que mexe em dinheiro.
+     */
     console.error("[assistente] não li os interruptores:", e instanceof Error ? e.message : e);
-    return ultimosInterruptores ?? r;
+    return ultimosInterruptores ?? interruptoresNaDuvida();
   }
 }
 

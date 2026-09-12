@@ -29,6 +29,7 @@ import {
   esgotou,
   horaDeFalar,
   horasAteAoToqueSeguinte,
+  interruptoresNaDuvida,
   interruptoresPorOmissao,
 } from "./assistente-interruptores";
 
@@ -606,10 +607,35 @@ describe("insistir tem limite, e o limite é dito", () => {
      * alguma coisa corre mal nao e um travao.
      */
     expect(DB).toContain("let ultimosInterruptores: Record<string, boolean> | null = null;");
-    expect(DB).toContain("return ultimosInterruptores ?? r;");
+    expect(DB).toContain("return ultimosInterruptores ?? interruptoresNaDuvida();");
     // E quem carrega no botao apaga a memoria, senao ela mentia a seguir.
     const i = DB.indexOf("export async function definirInterruptorDoAssistente(");
     expect(DB.slice(i, i + 1400)).toContain("ultimosInterruptores = null;");
+  });
+
+  it("«a tabela esta vazia» e «nao sei o que la esta» nao sao a mesma coisa", () => {
+    /*
+     * A memoria e por PROCESSO, e a Vercel tem varios. Um processo frio que
+     * nunca conseguiu ler nao tem memoria nenhuma, e antes caia nos valores de
+     * fabrica -- com o "fechar" LIGADO. Ou seja: o dono desligava o fecho
+     * porque o assistente andava a ler mal as frases, um processo frio nao
+     * conseguia ler o interruptor, e fechava um negocio de centenas de euros
+     * por omissao.
+     *
+     * Na duvida sobre dinheiro, a conversa passa para uma pessoa. E uma
+     * resposta pior, e nunca um erro caro.
+     */
+    const instalacao = interruptoresPorOmissao();
+    const duvida = interruptoresNaDuvida();
+    expect(instalacao.fechar).toBe(true);
+    expect(duvida.fechar).toBe(false);
+    // O que e so conversa continua: o silencio e o pior erro numa conversa.
+    expect(duvida.recolher).toBe(true);
+    expect(duvida.propostas).toBe(true);
+    expect(FICHA_DA_CAPACIDADE.fechar.mexeEmDinheiro).toBe(true);
+    // E as que nascem paradas continuam paradas na duvida.
+    expect(duvida.avisar).toBe(false);
+    expect(duvida.insistir).toBe(false);
   });
 
   it("uma espécie sem escada nunca leva lembrete nenhum", () => {

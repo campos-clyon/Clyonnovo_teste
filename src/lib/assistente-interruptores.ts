@@ -69,6 +69,20 @@ export type FichaDaCapacidade = {
   oQuePara: string;
   /** Nasce ligado? Só as que já corriam antes de haver interruptor. */
   porOmissao: boolean;
+  /**
+   * Esta capacidade mexe em DINHEIRO?
+   *
+   * Decide o que se faz quando não se consegue ler o estado dos interruptores.
+   * Para quase tudo, a resposta certa é continuar: uma proposta que não chega
+   * ao cliente por causa de um soluço do MySQL é pior do que uma que chega.
+   *
+   * Para o fecho é ao contrário. Se o dono desligou o "fechar" porque o
+   * assistente andava a ler mal as frases, e a leitura do interruptor falha, o
+   * assistente NÃO pode voltar a fechar negócios de centenas de euros por
+   * omissão. Na dúvida sobre dinheiro, a conversa passa para uma pessoa — que
+   * é uma resposta pior, e nunca um erro caro.
+   */
+  mexeEmDinheiro?: boolean;
 };
 
 export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
@@ -93,8 +107,9 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
   fechar: {
     titulo: "Fechar negócios",
     oQuePara:
-      "Deixa de marcar aceites e recusas. Quem responder a uma proposta passa para si, com a conversa entregue.",
+      "Deixa de marcar aceites, recusas e contrapropostas. Quem responder a uma proposta passa para si, com a conversa entregue.",
     porOmissao: true,
+    mexeEmDinheiro: true,
   },
   insistir: {
     titulo: "Insistir",
@@ -114,10 +129,36 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
   },
 };
 
-/** O estado de tudo quando a base ainda não tem linha nenhuma. */
+/**
+ * O estado de tudo quando a base ainda não tem linha nenhuma.
+ *
+ * Isto é a INSTALAÇÃO: leu-se a tabela, ela está vazia, e ninguém decidiu nada
+ * ainda. Aqui o que já funcionava continua a funcionar.
+ */
 export function interruptoresPorOmissao(): Record<Capacidade, boolean> {
   const r = {} as Record<Capacidade, boolean>;
   for (const c of CAPACIDADES) r[c] = FICHA_DA_CAPACIDADE[c].porOmissao;
+  return r;
+}
+
+/**
+ * O estado quando NÃO SE CONSEGUIU LER. É outra coisa, e não é a mesma.
+ *
+ * "A tabela está vazia" e "não sei o que está na tabela" davam a mesma resposta,
+ * e não podem dar: na segunda, o dono pode ter desligado alguma coisa e nós não
+ * sabemos. Para quase tudo continua a valer a pena falar — o silêncio é o pior
+ * erro possível numa conversa. Para o que mexe em dinheiro, não: um fecho que
+ * não devia ter acontecido custa centenas de euros a duas pessoas, e um fecho
+ * que passa para uma pessoa custa um telefonema.
+ *
+ * A memória do último estado bom (em db.ts) vem primeiro; isto é o que sobra
+ * quando nem isso existe, num processo que nunca conseguiu ler.
+ */
+export function interruptoresNaDuvida(): Record<Capacidade, boolean> {
+  const r = interruptoresPorOmissao();
+  for (const c of CAPACIDADES) {
+    if (FICHA_DA_CAPACIDADE[c].mexeEmDinheiro) r[c] = false;
+  }
   return r;
 }
 
