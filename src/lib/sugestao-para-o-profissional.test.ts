@@ -17,6 +17,9 @@ import {
 } from "./sugestao-ajustada";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+/** Sem os comentários: o que eles EXPLICAM não pode fazer um teste falhar. */
+const semNotas = (t: string) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 /**
  * A sugestão calculada para o profissional que está a ver o pedido.
@@ -313,7 +316,9 @@ describe("a conta refeita com outro tempo e outra equipa", () => {
      * e é dele que o módulo do servidor importa os formatadores — a
      * dependência aponta para o lado seguro.
      */
-    const AJUSTADA = ler("src/lib/sugestao-ajustada.ts");
+    // `semNotas`: o comentário deste ficheiro EXPLICA que não pode importar o
+    // `pricing-helper`, e o teste não pode falhar por causa da explicação.
+    const AJUSTADA = semNotas(ler("src/lib/sugestao-ajustada.ts"));
     expect(AJUSTADA).not.toContain("pricing-helper");
     expect(AJUSTADA).not.toContain('from "./db"');
     expect(AJUSTADA).toContain("import type { SugestaoParaOProfissional }");
