@@ -75,6 +75,18 @@ export const DIAS_DE_NOVIDADE = 7;
 export const HORAS_ATE_ESTRANHAR_O_SILENCIO = 48;
 
 /**
+ * Quantos pedidos cada passagem olha.
+ *
+ * Há um tecto porque isto corre de dez em dez minutos contra um pool de cinco
+ * ligações, e uma consulta que varra a tabela inteira a esse ritmo põe o painel
+ * lento — a doença que este projecto acabou de deixar de ter. O tecto é
+ * anunciado quando é atingido: um limite silencioso lê-se como "estava tudo
+ * visto", e é assim que se descobre tarde de mais que metade dos clientes nunca
+ * foi avisada.
+ */
+export const PEDIDOS_POR_PASSAGEM = 300;
+
+/**
  * As que não são para o cliente: são para quem gere.
  *
  * "Sem propostas" é um problema de OFERTA e não de conversa. Dizer ao cliente
@@ -554,7 +566,14 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   // insistir com quem já respondeu é o erro que mais depressa custa o número.
   resumo.fechados += await db.fecharAvisosComResposta().catch(() => 0);
 
-  const pedidos = await db.pedidosParaOAssistente().catch(() => []);
+  const pedidos = await db.pedidosParaOAssistente(PEDIDOS_POR_PASSAGEM).catch(() => []);
+  if (pedidos.length >= PEDIDOS_POR_PASSAGEM) {
+    // Um tecto que não se anuncia lê-se como "estava tudo visto".
+    console.warn(
+      `[assistente] a passagem bateu no tecto de ${PEDIDOS_POR_PASSAGEM} pedidos - os mais antigos ficaram de fora`,
+    );
+    resumo.linhas.push(`Atenção: só foram vistos os ${PEDIDOS_POR_PASSAGEM} pedidos mais recentes.`);
+  }
 
   /*
    * O MAPA DE TUDO O QUE AINDA FAZ SENTIDO.
@@ -565,7 +584,19 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
    * o profissional desistiu — e insistir nele era falar de um assunto morto.
    */
   const vivas = new Map<string, Novidade>();
+  /*
+   * E A LISTA DOS PEDIDOS QUE CHEGÁMOS MESMO A OLHAR.
+   *
+   * Sem ela, "a chave desapareceu do mapa" querria dizer duas coisas: o estado
+   * mudou, OU o pedido ficou de fora da janela lida — porque é antigo, porque
+   * foi cancelado, ou porque bateu no tecto desta passagem. Tratar as duas da
+   * mesma maneira dava por resolvido um aviso que continuava à espera de
+   * resposta, e o cliente deixava de levar os lembretes que lhe eram devidos
+   * sem que nada o dissesse.
+   */
+  const pedidosVistos = new Set<number>();
   for (const p of pedidos) {
+    pedidosVistos.add(p.id);
     for (const n of novidadesDoPedido(p, agora)) vivas.set(n.chave, n);
   }
 
@@ -634,11 +665,21 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
      * O estado mudou sozinho: não há nada para lembrar. A recolha a meio é a
      * excepção, porque não vem das negociações — quem a fecha é a resposta do
      * cliente, ou o fim da escada.
+     *
+     * E só se o pedido tiver mesmo sido olhado nesta passagem. Um pedido que
+     * ficou de fora da janela não diz nada sobre o aviso dele: dá-lo por
+     * resolvido era desligar os lembretes de um cliente que continua à espera.
+     * Nesse caso não se fecha nem se insiste — fica quieto até voltar a entrar
+     * na janela, ou até a limpeza dos 60 dias o levar.
      */
-    if (!ainda && especie !== "recolha_parada") {
-      await db.fecharAvisoDoAssistente(a.id, "resolvido");
-      resumo.fechados++;
-      continue;
+    if (especie !== "recolha_parada") {
+      const visto = a.pedidoId != null && pedidosVistos.has(a.pedidoId);
+      if (!visto) continue;
+      if (!ainda) {
+        await db.fecharAvisoDoAssistente(a.id, "resolvido");
+        resumo.fechados++;
+        continue;
+      }
     }
 
     if (!podeFazer("insistir")) continue;

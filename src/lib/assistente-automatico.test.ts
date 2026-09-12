@@ -604,6 +604,26 @@ describe("insistir tem limite, e o limite é dito", () => {
     expect(CEREBRO).toContain('await db.fecharAvisoDoAssistente(a.id, "resolvido");');
   });
 
+  it("mas um pedido que ficou FORA da janela não dá nada por resolvido", () => {
+    /*
+     * "A chave desapareceu do mapa" dizia duas coisas: o estado mudou, ou o
+     * pedido nem foi olhado — por ser antigo, por ter sido cancelado, ou por a
+     * passagem ter batido no tecto. Tratar as duas da mesma maneira desligava
+     * os lembretes de um cliente que continuava à espera, sem nada o dizer.
+     */
+    expect(CEREBRO).toContain("const pedidosVistos = new Set<number>();");
+    expect(CEREBRO).toContain("const visto = a.pedidoId != null && pedidosVistos.has(a.pedidoId);");
+    expect(CEREBRO).toContain("if (!visto) continue;");
+  });
+
+  it("o tecto de cada passagem é dito em voz alta quando é atingido", () => {
+    // Um limite silencioso lê-se como "estava tudo visto", e é assim que se
+    // descobre tarde de mais que metade dos clientes nunca foi avisada.
+    expect(CEREBRO).toContain("export const PEDIDOS_POR_PASSAGEM = 300;");
+    expect(CEREBRO).toContain("if (pedidos.length >= PEDIDOS_POR_PASSAGEM) {");
+    expect(CEREBRO).toContain("console.warn(");
+  });
+
   it("os lembretes mudam de palavras, e o último despede-se", () => {
     const um = textoDoLembrete("proposta_nova", "João", 0, TARDE)!;
     const dois = textoDoLembrete("proposta_nova", "João", 1, TARDE)!;
