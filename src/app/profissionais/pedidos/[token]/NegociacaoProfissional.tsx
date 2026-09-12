@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { Calculator, CheckCircle2, Clock, HandCoins, Loader2, X } from "lucide-react";
-import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
+import {
+  sugestaoComOutroTempo,
+  horasValidas,
+  pessoasValidas,
+  HORAS_MINIMAS,
+  HORAS_MAXIMAS,
+  PESSOAS_MINIMAS,
+  PESSOAS_MAXIMAS,
+  type SugestaoParaOProfissional,
+} from "@/lib/sugestao-para-o-profissional";
 import {
   accoesDisponiveis,
   propostasRestantes,
@@ -177,7 +186,34 @@ export default function NegociacaoProfissional({
   const aberturaDoCliente = !jaRespondeu && (!pendente || pendente.por === "cliente");
   // Nulo quando não há sugestão ou quando ele já respondeu: a verificação de
   // nulo é o que deixa o resto do ecrã usar os números sem mais perguntas.
-  const sugestaoAberta = aberturaDoCliente ? sugestao : null;
+  /*
+   * O TEMPO E A EQUIPA SÃO DELE, e por isso são editáveis.
+   *
+   * "O tempo estimado e a quantidade de pessoas vamos deixar editável, pois é
+   * uma variável." — e é mesmo: o mesmo esvaziamento leva duas horas com três
+   * pessoas ou quatro com uma. O número que a CLYON estima é uma média sobre
+   * trabalhos que não são este, e até aqui ele via a conta feita sobre um
+   * palpite nosso sem ter como a corrigir — a não ser indo ao perfil mudar a
+   * média de TODOS os trabalhos.
+   *
+   * `null` quer dizer "como veio". Só depois de ele mexer é que o ecrã passa a
+   * usar os números dele — assim o valor de partida continua a ser o nosso, e
+   * não um campo vazio à espera de ser preenchido.
+   */
+  const [horasDitas, setHorasDitas] = useState<number | null>(null);
+  const [pessoasDitas, setPessoasDitas] = useState<number | null>(null);
+  const sugestaoBase = aberturaDoCliente ? sugestao : null;
+  const sugestaoAberta =
+    sugestaoBase && (horasDitas != null || pessoasDitas != null)
+      ? sugestaoComOutroTempo(sugestaoBase, {
+          horas: horasDitas ?? sugestaoBase.horas,
+          pessoas: pessoasDitas ?? sugestaoBase.pessoas,
+        })
+      : sugestaoBase;
+  const mexeuNaConta =
+    sugestaoBase != null &&
+    sugestaoAberta != null &&
+    (sugestaoAberta.horas !== sugestaoBase.horas || sugestaoAberta.pessoas !== sugestaoBase.pessoas);
   const referenciaDaProposta = sugestaoAberta ? sugestaoAberta.precoSugerido : valorEmCima;
 
   return (
@@ -208,6 +244,75 @@ export default function NegociacaoProfissional({
               <p className="text-[10px] text-slate-400">recebe {euros(sugestaoAberta.recebeSePropuser)}</p>
             </div>
           </div>
+          {/*
+            O TEMPO E A EQUIPA, EM CAMPOS.
+
+            Ficam por cima das parcelas porque é deles que as parcelas vêm: o
+            olho desce do que ele mexeu para o que isso mudou. Passo de meia
+            hora — ninguém orçamenta a dez minutos — e de uma pessoa.
+
+            A conta refaz-se enquanto ele escreve, sem ir ao servidor: a
+            sugestão já traz todas as parcelas, e refazê-la aqui dá exactamente
+            o mesmo número. Ver `sugestaoComOutroTempo`.
+          */}
+          <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg bg-white/80 p-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] uppercase tracking-wide text-slate-500">
+                Quanto tempo leva
+              </span>
+              <span className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step={0.5}
+                  min={HORAS_MINIMAS}
+                  max={HORAS_MAXIMAS}
+                  value={sugestaoAberta.horas}
+                  onChange={(e) => setHorasDitas(horasValidas(Number(e.target.value)))}
+                  className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold text-[#0B1929] outline-none focus:border-cyan-500"
+                />
+                <span className="text-xs text-slate-500">horas</span>
+              </span>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] uppercase tracking-wide text-slate-500">
+                Quantas pessoas
+              </span>
+              <span className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step={1}
+                  min={PESSOAS_MINIMAS}
+                  max={PESSOAS_MAXIMAS}
+                  value={sugestaoAberta.pessoas}
+                  onChange={(e) => setPessoasDitas(pessoasValidas(Number(e.target.value)))}
+                  className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold text-[#0B1929] outline-none focus:border-cyan-500"
+                />
+                <span className="text-xs text-slate-500">
+                  {sugestaoAberta.pessoas === 1 ? "pessoa" : "pessoas"}
+                </span>
+              </span>
+            </label>
+            {mexeuNaConta && (
+              /*
+                Voltar atrás tem de ser um gesto, e não uma conta de cabeça.
+                Sem isto, quem mexesse tinha de se lembrar dos números com que
+                a conta veio para os repor — e não se lembra.
+              */
+              <button
+                type="button"
+                onClick={() => {
+                  setHorasDitas(null);
+                  setPessoasDitas(null);
+                }}
+                className="min-h-[38px] rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-600 transition active:bg-slate-100"
+              >
+                Repor a nossa conta
+              </button>
+            )}
+          </div>
+
           <ul className="mt-3 space-y-0.5 text-xs text-slate-600">
             {sugestaoAberta.pressupostos.map((linha) => (
               <li key={linha}>· {linha}</li>

@@ -22,6 +22,9 @@ import { join } from "node:path";
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+/** Sem os comentários: o que eles CONTAM não pode fazer um teste falhar. */
+const semNotas = (t: string) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const TRABALHOS = ler("src/app/profissionais/painel/Trabalhos.tsx");
 const AGENDA = ler("src/app/profissionais/painel/Agenda.tsx");
 const CARTEIRA = ler("src/app/profissionais/painel/Carteira.tsx");
@@ -90,9 +93,13 @@ describe("o que se lê, lê-se todo", () => {
      * nada a tapar, e a faixa de dezasseis pixéis que ele obrigava a reservar
      * em TODOS os cartões saiu com ele.
      */
-    const cartao = TRABALHOS.slice(
-      TRABALHOS.indexOf("onClick={() => abrirTrabalho(p)}"),
-      TRABALHOS.indexOf("// ── Arrumar"),
+    // `semNotas`: os comentários CONTAM a história do `pb-16`, e um teste não
+    // pode falhar por causa da explicação de porque é que ele saiu.
+    const cartao = semNotas(
+      TRABALHOS.slice(
+        TRABALHOS.indexOf("onClick={() => abrirTrabalho(p)}"),
+        TRABALHOS.indexOf("// ── Arrumar"),
+      ),
     );
     expect(cartao).not.toContain("pb-16");
     expect(cartao).not.toContain("absolute bottom-3 right-3");

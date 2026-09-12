@@ -1981,7 +1981,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- E JSON_LENGTH e nao JSON_SEARCH porque o profissional propoe
             -- sempre primeiro -- havendo proposta, houve um profissional a
             -- por um numero na mesa. A subconsulta usa a chave
-            -- `negociacoes_pedido`.
+            -- negociacoes_pedido (sem crases: isto vive dentro de um template
+            -- literal, e uma crase fecha-o a meio da consulta).
             (SELECT COUNT(*) FROM negociacoes c
               WHERE c.pedidoId = n.pedidoId AND c.id <> n.id
                 AND c.estado IN ('aberta', 'aguarda_contratacao', 'acordada')

@@ -334,3 +334,101 @@ export function sugerirParaOProfissional(
     pressupostos,
   };
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * A CONTA REFEITA COM OUTRO TEMPO E OUTRA EQUIPA.
+ *
+ * "O tempo estimado e a quantidade de pessoas vamos deixar editável, pois é
+ * uma variável." — 12-09-2026.
+ *
+ * E é mesmo. O mesmo esvaziamento leva duas horas com três pessoas ou quatro
+ * com uma, e o número que a CLYON estima é uma média sobre trabalhos que não
+ * são este. Quem sabe quanto tempo vai demorar é quem o vai fazer — e até
+ * aqui ele via a conta feita sobre um palpite nosso e não tinha como a
+ * corrigir sem ir ao perfil mudar a média de TODOS os trabalhos.
+ *
+ * NÃO SE VOLTA AO SERVIDOR, e não é por pressa: é porque o resultado já traz
+ * todas as parcelas — o custo/hora, o combustível, os fixos, o risco e a
+ * margem. Refazer a conta aqui dá exactamente o mesmo número que o servidor
+ * daria, e dá-o enquanto ele mexe no campo. Uma segunda fórmula seria uma
+ * segunda verdade.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Os limites do que faz sentido escrever. Meia hora a um dia; uma a seis pessoas. */
+export const HORAS_MINIMAS = 0.5;
+export const HORAS_MAXIMAS = 24;
+export const PESSOAS_MINIMAS = 1;
+export const PESSOAS_MAXIMAS = 6;
+
+export function horasValidas(h: number): number {
+  if (!Number.isFinite(h)) return HORAS_MINIMAS;
+  return Math.min(HORAS_MAXIMAS, Math.max(HORAS_MINIMAS, Math.round(h * 2) / 2));
+}
+
+export function pessoasValidas(p: number): number {
+  if (!Number.isFinite(p)) return PESSOAS_MINIMAS;
+  return Math.min(PESSOAS_MAXIMAS, Math.max(PESSOAS_MINIMAS, Math.round(p)));
+}
+
+/**
+ * A mesma sugestão, com outro tempo e outra equipa.
+ *
+ * Devolve a sugestão inteira, para o ecrã não ter de compor nada: os três
+ * números de cima, as parcelas por extenso, e o que lhe fica no fim.
+ */
+export function sugestaoComOutroTempo(
+  base: SugestaoParaOProfissional,
+  pedido: { horas?: number; pessoas?: number },
+): SugestaoParaOProfissional {
+  const horas = horasValidas(pedido.horas ?? base.horas);
+  const pessoas = pessoasValidas(pedido.pessoas ?? base.pessoas);
+  if (horas === base.horas && pessoas === base.pessoas) return base;
+
+  const custoPessoal = aosCentimos(horas * pessoas * base.custoHoraPessoa);
+  const seguroDeRisco = aosCentimos(
+    (base.custoCombustivel + custoPessoal) * (base.riscoPercent / 100),
+  );
+  const custoMinimo = aosCentimos(
+    base.custoCombustivel + custoPessoal + base.custosFixos + seguroDeRisco,
+  );
+  const precoSugerido = aosCentimos(custoMinimo * (1 + base.margem));
+  const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido);
+
+  /*
+   * As parcelas reescrevem-se NO SÍTIO, e não se acrescentam ao fim.
+   *
+   * São duas as que mudam — o pessoal e o seguro de risco, que se calcula
+   * sobre ele. Reescrevê-las pela posição perdia-se à primeira parcela nova;
+   * reconhecê-las pelo princípio da frase sobrevive a isso.
+   */
+  const pressupostos = base.pressupostos.map((linha) => {
+    if (linha.startsWith("Pessoal:")) {
+      const daCasa = linha.includes("(tempo estimado pela CLYON)");
+      return (
+        `Pessoal: ${horasPorExtenso(horas)} × ${pessoas} ${pessoas === 1 ? "pessoa" : "pessoas"}` +
+        ` × ${euros(base.custoHoraPessoa)}/h = ${euros(custoPessoal)}` +
+        (daCasa ? " (tempo que indicou)" : " (o seu tempo médio, deslocação e recolha)")
+      );
+    }
+    if (linha.startsWith("Seguro de risco:")) {
+      return (
+        `Seguro de risco: ${base.riscoPercent} % de ` +
+        `${euros(aosCentimos(base.custoCombustivel + custoPessoal))} = ${euros(seguroDeRisco)}`
+      );
+    }
+    return linha;
+  });
+
+  return {
+    ...base,
+    horas,
+    pessoas,
+    custoPessoal,
+    seguroDeRisco,
+    custoMinimo,
+    precoSugerido,
+    recebeSePropuser,
+    lucroEstimado: aosCentimos(recebeSePropuser - custoMinimo),
+    pressupostos,
+  };
+}

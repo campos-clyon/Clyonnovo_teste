@@ -153,8 +153,12 @@ describe("prazo de 48 horas", () => {
   // chance de quem propôs, bastava ao outro lado calar-se para ganhar.
   it("expirar NÃO gasta chance de quem propôs", () => {
     const n = abertaPeloCliente(80, T0);
-    expect(propostasRestantes(n, "cliente", T0)).toBe(4);
-    expect(propostasRestantes(n, "cliente", horas(PRAZO_DA_PROPOSTA_HORAS + 1))).toBe(5);
+    // Uma gasta antes de expirar, todas de volta depois. Os números saem da
+    // constante: escritos à mão, mentiam no dia em que o limite mudou.
+    expect(propostasRestantes(n, "cliente", T0)).toBe(MAX_PROPOSTAS_POR_LADO - 1);
+    expect(propostasRestantes(n, "cliente", horas(PRAZO_DA_PROPOSTA_HORAS + 1))).toBe(
+      MAX_PROPOSTAS_POR_LADO,
+    );
   });
 
   it("depois de expirar, quem propôs pode propor de novo", () => {

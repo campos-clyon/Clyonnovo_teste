@@ -1724,26 +1724,6 @@ function DetalheDoTrabalho({
           </p>
         </section>
       )}
-
-      {/* A negociação, aqui dentro.
-          Vivia só no link do email, e isso obrigava-o a guardar mensagens
-          antigas para trabalhar — ao terceiro pedido já não sabia qual era
-          qual. O link continua a funcionar; deixou é de ser o único caminho. */}
-      {!fechado && pedido.estado !== "desistida" && pedido.estado !== "morta" && (
-        <NegociacaoProfissional
-          negociacaoId={pedido.negociacaoId}
-          estadoInicial={pedido.estado}
-          propostasIniciais={propostasDe(pedido.propostas)}
-          valorAcordado={pedido.valorAcordado}
-          minimoDoCliente={pedido.querPagar}
-          recebeSeAceitar={
-            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
-          }
-          sugestao={pedido.sugestao ?? null}
-          onMudou={onRecarregar}
-        />
-      )}
-
       {/* O histórico fica FORA da negociação, e por isso sobrevive-lhe.
           A negociação deixa de ser desenhada quando o trabalho fecha — tem lá
           dentro os botões de propor e aceitar — e levava o registo com ela.
@@ -1760,6 +1740,37 @@ function DetalheDoTrabalho({
         }}
         euSou="profissional"
       />
+
+      {/*
+        A NEGOCIAÇÃO DESCE PARA O FIM — logo acima de arquivar.
+
+        "Essa secção vamos movê-la para baixo do pedido, ficando apenas acima
+        de arquivar." Estava a meio do ecrã, entre o que o pedido É e o que já
+        aconteceu nele, e por isso obrigava a saltá-la para ler o resto: quem
+        abre um pedido lê primeiro o trabalho — fotografias, acessos, morada —
+        e só depois decide quanto pede.
+
+        Agora a ordem do ecrã é a ordem da decisão: o que é o trabalho, o que
+        já se passou, quanto pedir por ele, e a saída se não for para si.
+
+        Vivia só no link do email, e isso obrigava-o a guardar mensagens
+        antigas para trabalhar — ao terceiro pedido já não sabia qual era qual.
+        O link continua a funcionar; deixou é de ser o único caminho.
+      */}
+      {!fechado && pedido.estado !== "desistida" && pedido.estado !== "morta" && (
+        <NegociacaoProfissional
+          negociacaoId={pedido.negociacaoId}
+          estadoInicial={pedido.estado}
+          propostasIniciais={propostasDe(pedido.propostas)}
+          valorAcordado={pedido.valorAcordado}
+          minimoDoCliente={pedido.querPagar}
+          recebeSeAceitar={
+            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
+          }
+          sugestao={pedido.sugestao ?? null}
+          onMudou={onRecarregar}
+        />
+      )}
 
       {/* Arrumar — no fim, depois de ler tudo. Em qualquer estado. */}
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-4">
