@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
     const r = await desfazerFechoDoAssistente(id);
     if (!r.ok) return NextResponse.json({ error: r.erro }, { status: 409 });
-    return NextResponse.json({ ok: true, ...r });
+    return NextResponse.json({ ok: true, pedidoId: r.pedidoId, repostas: r.repostas });
   }
 
   return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
