@@ -10,6 +10,7 @@ import {
   profissionalPorEmail,
   slugLivreParaProfissional,
   guardarTokenDePalavraPasse,
+  consumirConvitesDoEmail,
 } from "@/lib/db";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
@@ -102,6 +103,10 @@ export async function POST(req: NextRequest) {
   // Já cá dentro: não se cria uma segunda conta com o mesmo email.
   const jaExiste = await profissionalPorEmail(candidatura.email);
   if (jaExiste) {
+    // E o convite dele, se ficou algum aberto, fecha-se com a candidatura.
+    // Um convite "à espera de resposta" de quem já é profissional é uma linha
+    // que só serve para alguém lhe mandar um convite a mais.
+    await consumirConvitesDoEmail(candidatura.email, jaExiste.id).catch(() => 0);
     await marcarCandidatura(id, "aprovada", quem, null, "Já era profissional.");
     return NextResponse.json({ ok: true, feito: "já é profissional — candidatura arrumada" });
   }
@@ -146,6 +151,22 @@ export async function POST(req: NextRequest) {
       baseLng: geo?.lng ?? null,
     });
 
+    /*
+     * O CONVITE FECHA-SE COM A CONTA.
+     *
+     * Esta é a segunda porta para alguém se tornar profissional, e durante
+     * meses não fechava a porta atrás de si: o convite que tinha sido enviado
+     * a partir desta mesma candidatura ficava "por usar" para sempre. O ecrã
+     * dizia "4 convites à espera de resposta" sobre gente que estava inscrita e
+     * aprovada na lista logo abaixo, com um botão de "Reenviar" ao lado.
+     *
+     * Não impede nada se falhar: a conta já está criada, e um convite por
+     * fechar é um ecrã confuso, não uma avaria.
+     */
+    const convitesFechados = await consumirConvitesDoEmail(candidatura.email, providerId).catch(
+      () => 0,
+    );
+
     const acesso = gerarTokenDeAcesso();
     await guardarTokenDePalavraPasse(
       providerId,
@@ -167,9 +188,10 @@ export async function POST(req: NextRequest) {
       ok: true,
       enviado,
       providerId,
-      feito: enviado
-        ? "conta criada e link da palavra-passe enviado"
-        : "conta criada, email NÃO saiu",
+      convitesFechados,
+      feito:
+        (enviado ? "conta criada e link da palavra-passe enviado" : "conta criada, email NÃO saiu") +
+        (convitesFechados > 0 ? ` — ${convitesFechados} convite(s) por usar arrumado(s)` : ""),
       // Sem email, o link vai para a mão de quem está no painel — é o que
       // permite mandá-lo por WhatsApp em vez de perder a candidatura.
       link: enviado

@@ -2396,10 +2396,42 @@ export async function convitePorEmail(email: string): Promise<ConviteNaBase | un
   return (rows as ConviteNaBase[])[0];
 }
 
+/**
+ * ARRUMA OS CONVITES DE QUEM JÁ TEM CONTA.
+ *
+ * O defeito que isto limpa está descrito em `consumirConvitesDoEmail`: a
+ * aprovação de uma candidatura criava a conta e deixava o convite "por usar"
+ * para sempre. Isso já não acontece — mas os convites que ficaram órfãos antes
+ * da correcção continuavam a encher a lista dos que esperam resposta, com um
+ * botão de "Reenviar" ao lado de gente que está inscrita e aprovada.
+ *
+ * Uma consulta, e é ESCRITA e não maquilhagem: a linha passa a dizer a
+ * verdade, em vez de a lista a esconder. Corrigir isto num ecrã que lê deixava
+ * o mesmo engano em todos os outros sítios que leiam a tabela.
+ *
+ * Nunca lança. Uma arrumação que falhe não pode impedir alguém de ver a lista.
+ */
+async function arrumarConvitesDeQuemJaTemConta(): Promise<void> {
+  const pool = await getPool();
+  if (!pool) return;
+  await pool
+    .execute(
+      `UPDATE convitesProfissionais c
+         JOIN providers p ON LOWER(TRIM(p.email)) = LOWER(TRIM(c.email))
+          SET c.usadoEm = COALESCE(c.usadoEm, NOW()), c.providerId = p.id
+        WHERE c.usadoEm IS NULL AND c.revogadoEm IS NULL`,
+    )
+    .catch((e) => {
+      console.error("[convites] não arrumei os de quem já tem conta:", e?.message);
+    });
+}
+
 export async function listarConvites(): Promise<ConviteNaBase[]> {
   await ensureConvitesTable();
   const pool = await getPool();
   if (!pool) return [];
+  // Antes de mostrar, arruma. Ver o porquê logo acima.
+  await arrumarConvitesDeQuemJaTemConta();
   const [rows] = await pool.execute(
     `SELECT * FROM convitesProfissionais
       ORDER BY (usadoEm IS NULL AND revogadoEm IS NULL) DESC, createdAt DESC
@@ -2425,6 +2457,44 @@ export async function marcarConviteUsado(id: number, providerId: number): Promis
     [providerId, id],
   ) as any[];
   return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * FECHA OS CONVITES ABERTOS DE QUEM JÁ TEM CONTA.
+ *
+ * Há DUAS portas para alguém se tornar profissional, e durante meses só uma
+ * delas fechava o convite atrás de si:
+ *
+ *   · o convite é enviado, a pessoa preenche o formulário, e a inscrição
+ *     gasta o convite — `marcarConviteUsado`;
+ *   · a CANDIDATURA é aprovada no painel, que cria a conta directamente e
+ *     nunca soube que havia um convite.
+ *
+ * Pela segunda porta, o convite ficava "por usar" para sempre. O resultado
+ * era o ecrã a dizer "4 convites à espera de resposta" sobre gente que já
+ * estava inscrita e aprovada na lista logo abaixo — com botões de "Reenviar"
+ * que mandariam um convite a quem já tem conta.
+ *
+ * Fecha-se pelo EMAIL, e não pelo id, porque quem aprova a candidatura não
+ * tem o convite na mão: tem a pessoa. Devolve quantos fechou, para quem
+ * chamar poder dizer o que aconteceu.
+ */
+export async function consumirConvitesDoEmail(
+  email: string,
+  providerId: number,
+): Promise<number> {
+  const limpo = (email ?? "").trim().toLowerCase();
+  if (!limpo) return 0;
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [res] = (await pool.execute(
+    `UPDATE convitesProfissionais
+        SET usadoEm = NOW(), providerId = ?
+      WHERE LOWER(TRIM(email)) = ? AND usadoEm IS NULL AND revogadoEm IS NULL`,
+    [providerId, limpo],
+  )) as [{ affectedRows: number }, unknown];
+  return Number(res.affectedRows ?? 0);
 }
 
 export async function revogarConvite(id: number): Promise<void> {
