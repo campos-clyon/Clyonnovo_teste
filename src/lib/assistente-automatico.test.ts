@@ -666,8 +666,7 @@ describe("insistir tem limite, e o limite é dito", () => {
 
   it("quem respondeu deixa de levar lembretes — e isso é o PRIMEIRO passo", () => {
     // Insistir com quem já respondeu é o erro que mais depressa custa o número.
-    const i = CEREBRO.indexOf("resumo.correu = true;");
-    const bloco = CEREBRO.slice(i, i + 900);
+    const bloco = CEREBRO.slice(CEREBRO.indexOf("export async function correrOAssistente("));
     expect(bloco).toContain("fecharAvisosComResposta()");
     expect(bloco.indexOf("fecharAvisosComResposta")).toBeLessThan(
       bloco.indexOf("pedidosParaOAssistente"),
@@ -716,7 +715,7 @@ describe("insistir tem limite, e o limite é dito", () => {
     );
     // E o fecho por WhatsApp ja nao deixa nada aberto.
     const f = NEGOCIACAO.indexOf("async function fecharPeloCliente(");
-    const fecho = NEGOCIACAO.slice(f, f + 3600);
+    const fecho = NEGOCIACAO.slice(f, NEGOCIACAO.indexOf("async function recusarPeloCliente("));
     expect(fecho).toContain('fecharAvisoDoAssistente(id, "informado")');
   });
 
@@ -933,7 +932,7 @@ describe("fica escrito que foi o assistente", () => {
     expect(corpo).toContain("interromperNumeroWhatsApp");
     // E o retrato é tirado ANTES de se mexer em nada.
     const f = NEGOCIACAO.indexOf("async function fecharPeloCliente(");
-    const fecho = NEGOCIACAO.slice(f, f + 3200);
+    const fecho = NEGOCIACAO.slice(f, NEGOCIACAO.indexOf("async function recusarPeloCliente("));
     expect(fecho.indexOf("const outras = ")).toBeLessThan(
       fecho.indexOf("encerrarOutrasNegociacoes("),
     );
