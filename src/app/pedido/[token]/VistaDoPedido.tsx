@@ -190,6 +190,7 @@ export default async function VistaDoPedido({
         </Link>{" "}
         — leva um toque e não precisa de palavra-passe.
       </Nota>
+      )}
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">
