@@ -45,6 +45,95 @@ export async function getDb() {
   return dbInstance;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * AS MIGRAÇÕES: PERGUNTAR UMA VEZ EM VEZ DE TENTAR SESSENTA.
+ *
+ * "Todos os carregamentos demoram enorme tempo. Não é possível optimizar
+ * isso?" — 12-09-2026.
+ *
+ * Cada `ensure…Table` corria a lista inteira de `ALTER TABLE` a cada arranque
+ * a frio, uma a uma, e apanhava o «Duplicate column» de cada uma. São 48 na
+ * `simulatorOrders` e 11 nas `negociacoes` — cerca de sessenta idas e vindas
+ * ao MySQL do Railway ANTES da primeira leitura de verdade. A um par de
+ * dezenas de milissegundos por viagem, é mais de um segundo gasto a descobrir
+ * que não havia nada para fazer. E o ecrã das negociações chama três destas
+ * antes de mostrar seja o que for.
+ *
+ * A base sabe responder à pergunta certa: que colunas e que índices já tens.
+ * Duas consultas, e a seguir só corre o que falta mesmo. Em regime normal —
+ * que é sempre, depois da primeira vez — são duas viagens em vez de sessenta.
+ *
+ * O QUE NÃO MUDA: a lista continua a ser a fonte da verdade, cada comando
+ * continua protegido, e o que não se souber ler corre à mesma. Uma migração
+ * nova é acrescentada à lista como sempre foi.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+const ADD_COLUMN = /ALTER\s+TABLE\s+\S+\s+ADD\s+COLUMN\s+`?(\w+)`?/i;
+const CREATE_INDEX = /CREATE\s+(?:UNIQUE\s+)?INDEX\s+`?(\w+)`?/i;
+
+/** Em minúsculas: o MySQL não distingue maiúsculas em nomes de coluna. */
+async function jaNaTabela(
+  pool: mysql.Pool,
+  tabela: string,
+): Promise<{ colunas: Set<string>; indices: Set<string> }> {
+  const vazio = { colunas: new Set<string>(), indices: new Set<string>() };
+  try {
+    const [cols, idx] = await Promise.all([
+      pool.execute(
+        `SELECT COLUMN_NAME AS n FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`,
+        [tabela],
+      ),
+      pool.execute(
+        `SELECT DISTINCT INDEX_NAME AS n FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`,
+        [tabela],
+      ),
+    ]);
+    const nomes = (r: unknown) =>
+      new Set(
+        ((r as [Array<{ n: string }>, unknown])[0] ?? []).map((l) => String(l.n).toLowerCase()),
+      );
+    return { colunas: nomes(cols), indices: nomes(idx) };
+  } catch (e) {
+    /*
+     * Sem information_schema não se fica pior do que se estava: devolve-se
+     * vazio, e a lista corre inteira como corria antes. É degradação, não
+     * avaria.
+     */
+    console.error("[migracoes] não li o esquema de", tabela, e instanceof Error ? e.message : e);
+    return vazio;
+  }
+}
+
+/**
+ * Corre só o que falta. `etiqueta` é o prefixo dos registos, para se saber de
+ * que tabela veio a queixa.
+ */
+async function correrMigracoes(
+  pool: mysql.Pool,
+  tabela: string,
+  sqls: string[],
+  etiqueta: string,
+): Promise<void> {
+  const { colunas, indices } = await jaNaTabela(pool, tabela);
+  for (const sql of sqls) {
+    const coluna = sql.match(ADD_COLUMN)?.[1]?.toLowerCase();
+    if (coluna && colunas.has(coluna)) continue;
+    const indice = sql.match(CREATE_INDEX)?.[1]?.toLowerCase();
+    if (indice && indices.has(indice)) continue;
+    try {
+      await pool.execute(sql);
+    } catch (e: any) {
+      // "Duplicate column"/"Duplicate key name" continuam a ser silêncio: a
+      // migração já lá estava e não se soube ler o nome dela.
+      const jaExistia =
+        e?.message?.includes("Duplicate column") || e?.message?.includes("Duplicate key name");
+      if (!jaExistia) console.error(`[${etiqueta}] migração ignorada:`, e?.message);
+    }
+  }
+}
+
 /**
  * Cria uma conexão MySQL2 fresca (não reutiliza singleton) para cada request.
  * Usar nos endpoints API admin para evitar erros de "Connection lost" com Railway.
@@ -810,7 +899,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 4;
+const VERSAO_DAS_NEGOCIACOES = 5;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -907,16 +996,18 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * escrever por cima perdia essa informacao para sempre.
      */
     `ALTER TABLE negociacoes ADD COLUMN dataCombinada DATETIME NULL DEFAULT NULL`,
+    /*
+     * O ÍNDICE QUE FALTAVA AO PAINEL DO PROFISSIONAL.
+     *
+     * A tabela tem `UNIQUE KEY (pedidoId, providerId)` — e um índice só serve
+     * a partir da coluna da ESQUERDA. Uma consulta por `providerId` não o
+     * podia usar, e varria a tabela inteira: de trinta em trinta segundos,
+     * por cada painel de profissional aberto, contra um pool de cinco
+     * ligações. Era isso que punha "Os meus trabalhos" a demorar.
+     */
+    `CREATE INDEX idx_negociacoes_provider ON negociacoes (providerId, updatedAt)`,
   ];
-  for (const sql of colunas) {
-    try {
-      await pool.execute(sql);
-    } catch (e: any) {
-      if (!e?.message?.includes("Duplicate column")) {
-        console.error("[negociacoes] migração ignorada:", e?.message);
-      }
-    }
-  }
+  await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
   negociacoesEnsured = true;
   versaoDasNegociacoes = VERSAO_DAS_NEGOCIACOES;
@@ -3746,18 +3837,7 @@ export async function ensureSimulatorOrdersTable() {
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
       WHERE valorDesejadoCliente IS NULL AND valorMinimoCliente IS NOT NULL`,
   ];
-  for (const sql of migrations) {
-    try { await pool.execute(sql); } catch (e: any) {
-      // Log only non-"duplicate column" errors so we can see real problems.
-      // "Duplicate key name" entra na mesma lista desde que há CREATE INDEX:
-      // é o mesmo caso — a migração já correu — e enchia o log a cada arranque.
-      const jaExistia =
-        e?.message?.includes("Duplicate column") || e?.message?.includes("Duplicate key name");
-      if (!jaExistia) {
-        console.error("[v0] migration skipped:", e?.message);
-      }
-    }
-  }
+  await correrMigracoes(pool, "simulatorOrders", migrations, "simulatorOrders");
   _simulatorOrdersEnsured = true;
   _migrationVersion = MIGRATION_VERSION;
 }
