@@ -940,19 +940,17 @@ export default function AdminNegociacoesPanel({
    * tinha na mão, e fazia-o em silêncio, ao carregar num botão que promete
    * mostrar e não mexer.
    */
-  async function verComoCliente(p: Pedido) {
-    const chave = `c${p.id}`;
-    const jaTem = linksEmClaro[chave];
-    if (jaTem) {
-      window.open(`/pedido/${jaTem}`, "_blank", "noopener");
-      return;
-    }
-    setErro(
-      `Para ver o pedido #${p.id} como o cliente é preciso gerar o link primeiro — ` +
-        `e gerar um link novo faz o anterior deixar de funcionar. ` +
-        `Use "Link para o cliente" se for mesmo para lhe mandar.`,
-    );
-  }
+  /*
+   * `verComoCliente` saiu daqui, e não foi arrumação.
+   *
+   * Era uma função que só sabia dizer que não: abria a página se alguém já
+   * tivesse gerado um link nesta sessão, e caso contrário explicava porque é
+   * que não podia — porque gerar um link novo mata o do cliente.
+   *
+   * Deixou de haver nada para explicar. O botão é agora uma ligação para
+   * `/admin/pedido/<id>`, que mostra a mesma vista sem token nenhum, provada
+   * pela sessão de administrador. Ver deixou de custar o acesso de ninguém.
+   */
 
   async function promover(pedidoId: number, valor?: string) {
     if (!token) return;
@@ -1767,23 +1765,28 @@ export default function AdminNegociacoesPanel({
             {copiado === `c${p.id}` ? "Copiado" : "Link para o cliente"}
           </button>
           {/*
-            «Ver» só abre o que já foi gerado. Sem isso, deixou de gerar por
-            conta própria — era esse passo que apagava, em silêncio, o link que
-            o cliente tinha na mão.
+            VER SEM GASTAR O LINK DO CLIENTE.
+
+            Este botão esteve cinzento até alguém gerar um link de propósito, e
+            a razão era boa: o acesso do cliente vive só em hash, abrir a página
+            dele obrigava a emitir um token novo, e cada token novo MATA o
+            anterior. Espreitar aqui partia o link que ele tem no email.
+
+            Deixou de precisar de token nenhum. `/admin/pedido/<id>` mostra a
+            MESMA vista, provada pela sessão de administrador — que é prova
+            melhor do que um token, e que não se gasta. Abre noutro separador
+            para não perder a mesa de quem está a trabalhar.
           */}
-          <button
-            onClick={() => verComoCliente(p)}
-            disabled={ocupado === `c${p.id}` || !linksEmClaro[`c${p.id}`]}
-            title={
-              linksEmClaro[`c${p.id}`]
-                ? "Abre a página verdadeira do pedido, a mesma que o cliente vê"
-                : "Gere primeiro o link — abrir sem ele obrigaria a criar um novo, e o do cliente morria"
-            }
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-40"
+          <a
+            href={`/admin/pedido/${p.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abre o pedido como o cliente o vê. Não gera link nenhum e não altera nada."
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
           >
             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
             Ver como o cliente
-          </button>
+          </a>
           {/*
             CANCELAR — o cliente desistiu e o trabalho não vai acontecer.
 

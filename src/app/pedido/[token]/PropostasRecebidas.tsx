@@ -116,6 +116,7 @@ export default function PropostasRecebidas({
   pedidoId,
   negociacoesIniciais,
   onMudou,
+  soParaVer = false,
 }: {
   /**
    * O token do link do email, quando se chega por aí.
@@ -129,6 +130,19 @@ export default function PropostasRecebidas({
   negociacoesIniciais: NegociacaoDoCliente[];
   /** Para a conta recarregar a lista depois de uma ação. */
   onMudou?: () => void;
+  /**
+   * O BACKOFFICE ESTÁ A CONFERIR, NÃO A DECIDIR PELO CLIENTE.
+   *
+   * "Ver como o cliente" abre esta mesma lista para o administrador poder
+   * conferir o que o cliente tem à frente. Sem isto, ele tinha à frente os
+   * botões de aceitar e de recusar — e um clique distraído fechava um negócio
+   * de centenas de euros em nome de outra pessoa, com o histórico a dizer que
+   * tinha sido o cliente a fazê-lo.
+   *
+   * A vista é a mesma; os gestos não. É essa a diferença entre conferir e
+   * agir.
+   */
+  soParaVer?: boolean;
 }) {
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
   const [aEnviar, setAEnviar] = useState<number | null>(null);
@@ -369,7 +383,7 @@ export default function PropostasRecebidas({
 
             <button
               onClick={() => agir(acordada.id, "confirmar")}
-              disabled={aEnviar === acordada.id}
+              disabled={soParaVer || aEnviar === acordada.id}
               className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white transition active:bg-emerald-700 disabled:opacity-50"
             >
               {aEnviar === acordada.id && (
@@ -450,7 +464,7 @@ export default function PropostasRecebidas({
                       />
                       <button
                         onClick={() => agir(acordada.id, "avaliar")}
-                        disabled={aEnviar === acordada.id}
+                        disabled={soParaVer || aEnviar === acordada.id}
                         className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-acao font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
                       >
                         {aEnviar === acordada.id && (
@@ -699,7 +713,7 @@ export default function PropostasRecebidas({
                 {accoes.includes("contratar") && (
                   <button
                     onClick={() => agir(n.id, "contratar")}
-                    disabled={aEnviar === n.id}
+                    disabled={soParaVer || aEnviar === n.id}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                   >
                     {aEnviar === n.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -710,7 +724,7 @@ export default function PropostasRecebidas({
                 {accoes.includes("aceitar") && (
                   <button
                     onClick={() => agir(n.id, "aceitar")}
-                    disabled={aEnviar === n.id}
+                    disabled={soParaVer || aEnviar === n.id}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                   >
                     <HandCoins className="h-4 w-4" aria-hidden="true" />
@@ -718,7 +732,7 @@ export default function PropostasRecebidas({
                   </button>
                 )}
 
-                {accoes.includes("propor") && (
+                {accoes.includes("propor") && !soParaVer && (
                   <div className="border-t border-slate-100 pt-3">
                     <p className="mb-2 text-sm font-medium text-slate-700">
                       {accoes.includes("aceitar") || accoes.includes("contratar")
@@ -797,7 +811,7 @@ export default function PropostasRecebidas({
         <div className="mt-6 border-t border-slate-200 pt-5 text-center">
           <button
             onClick={cancelarOPedido}
-            disabled={aEnviar === -1}
+            disabled={soParaVer || aEnviar === -1}
             className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 transition hover:text-red-600 disabled:opacity-50"
           >
             {aEnviar === -1 ? "A cancelar…" : "Já não preciso deste serviço — cancelar o pedido"}

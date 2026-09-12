@@ -84,13 +84,21 @@ export function papelPodeVerSeccao(papel: PapelDoPainel, seccao: string): boolea
 /**
  * As páginas de /admin que o assistente pode abrir.
  *
- * Só a dele. As outras — /admin, /admin/app-clyon/*, /admin/imagens,
- * /admin/metricas… — são do administrador; quem lá chegar com sessão de
- * assistente volta ao painel de assistente.
+ * Só a dele, e as poucas que são extensões do trabalho dela. As outras —
+ * /admin, /admin/app-clyon/*, /admin/imagens, /admin/metricas… — são do
+ * administrador; quem lá chegar com sessão de assistente volta ao painel de
+ * assistente.
+ *
+ * `/admin/pedido/<id>` é uma dessas extensões: mostra o pedido tal como o
+ * cliente o vê, para se conferir o que ele tem à frente. Quem trata das
+ * negociações já lê esse pedido todo no painel — ver a mesma coisa pelos olhos
+ * do cliente não lhe dá nada de novo, e sem isto o botão "Ver como o cliente"
+ * atirava-o de volta para a página inicial sem explicar porquê.
  */
 export function assistentePodeAbrirPagina(pathname: string): boolean {
   const limpo = pathname.replace(/\/+$/, "") || "/";
-  return limpo === PAGINA_INICIAL.assistente || limpo === "/admin/login";
+  if (limpo === PAGINA_INICIAL.assistente || limpo === "/admin/login") return true;
+  return /^\/admin\/pedido\/\d+$/.test(limpo);
 }
 
 /**

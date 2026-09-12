@@ -162,11 +162,51 @@ describe("o ecrã das negociações da CLYON", () => {
   it("ver como o cliente abre a página verdadeira, não uma cópia", () => {
     /*
      * Uma pré-visualização desenhada à parte divergia da real na primeira
-     * alteração à página. Abre-se `/pedido/[token]` noutro separador — o que
-     * o admin vê é EXACTAMENTE o que o cliente vê.
+     * alteração à página. É a MESMA vista — `VistaDoPedido` — servida pelas
+     * duas portas: o link do cliente e a porta do backoffice.
      */
-    expect(PAINEL).toContain("verComoCliente");
-    expect(PAINEL).toMatch(/window\.open\(`\/pedido\/\$\{/);
+    expect(PAINEL).toContain('href={`/admin/pedido/${p.id}`}');
+    const ADMIN = ler("src/app/admin/pedido/[id]/page.tsx");
+    const CLIENTE = ler("src/app/pedido/[token]/page.tsx");
+    expect(ADMIN).toContain("VistaDoPedido");
+    expect(CLIENTE).toContain("VistaDoPedido");
+  });
+
+  it("e abre-a SEM gerar link nenhum", () => {
+    /*
+     * "Gostaria que ao clicar em ver como cliente abrisse o pedido como ele
+     * aparece para o cliente, mas sem gerar links novos." — 12-09-2026.
+     *
+     * O acesso do cliente vive só em hash: abrir a página dele obrigava a
+     * emitir um token novo, e cada token novo MATA o anterior. Foi assim que o
+     * link da D. Sónia (#234) deixou de abrir, com uma proposta de 170 € à
+     * espera do outro lado. A porta do backoffice não tem token: tem o número
+     * do pedido e a sessão de administrador, que é prova melhor e não se
+     * gasta.
+     */
+    const ADMIN = ler("src/app/admin/pedido/[id]/page.tsx");
+    expect(ADMIN).toContain("sessaoDoPainel");
+    expect(ADMIN).toContain("notFound()");
+    expect(ADMIN).not.toContain("gerarTokenDeAcesso");
+    expect(ADMIN).not.toContain("substituirTokenDoPedido");
+  });
+
+  it("e quem confere não decide pelo cliente", () => {
+    /*
+     * A vista é a mesma; os gestos não. Sem isto, o administrador tinha à
+     * frente os botões de aceitar e recusar propostas — e um clique distraído
+     * fechava um negócio de centenas de euros em nome de outra pessoa, com o
+     * histórico a dizer que tinha sido o cliente.
+     */
+    const ADMIN = ler("src/app/admin/pedido/[id]/page.tsx");
+    expect(ADMIN).toContain("soParaVer");
+    const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
+    expect(PROPOSTAS).toContain("soParaVer?: boolean;");
+    // Todos os botões de acção passam pelo mesmo travão.
+    const travados = PROPOSTAS.split("disabled={soParaVer ||").length - 1;
+    expect(travados).toBeGreaterThanOrEqual(5);
+    // E o campo de contraproposta nem chega a ser desenhado.
+    expect(PROPOSTAS).toContain('accoes.includes("propor") && !soParaVer');
   });
 
   it("avisa antes de matar um link que o cliente pode ter", () => {
@@ -184,13 +224,18 @@ describe("o ecrã das negociações da CLYON", () => {
     expect(PAINEL).toContain("async function linkParaOCliente(");
   });
 
-  it("espreitar deixou de ser destrutivo", () => {
-    // Um botão que se chama «ver» não pode apagar nada. Sem link gerado, ele
-    // fica desactivado e diz porquê — em vez de criar um novo em silêncio.
-    const i = PAINEL.indexOf("async function verComoCliente(");
-    const corpo = PAINEL.slice(i, i + 900);
-    expect(corpo).not.toContain("reenviar(");
-    expect(PAINEL).toContain("!linksEmClaro[`c${p.id}`]");
+  it("espreitar deixou de ser destrutivo — e deixou de ser impossível", () => {
+    /*
+     * Um botão que se chama «ver» não pode apagar nada. A primeira resposta a
+     * isso foi desactivá-lo até alguém gerar um link de propósito: já não
+     * apagava, mas também já não servia para nada — que é o que o dono veio
+     * dizer.
+     *
+     * A resposta certa era a terceira: ver sem token. A função que só sabia
+     * dizer que não saiu do painel.
+     */
+    expect(semNotas(PAINEL)).not.toContain("async function verComoCliente(");
+    expect(semNotas(PAINEL)).not.toContain("!linksEmClaro[`c${p.id}`]");
   });
 
   it("gerar para mandar à mão não dispara o email", () => {

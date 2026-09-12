@@ -120,7 +120,10 @@ describe("o caminho da base do preço, do formulário aos dois ecrãs", () => {
   });
 
   it("chega ao ecrã do cliente", () => {
-    const CLIENTE = ler("src/app/pedido/[token]/page.tsx");
+    // A vista do cliente saiu de `page.tsx` para `VistaDoPedido.tsx` a
+    // 12-09-2026: o backoffice passou a mostrá-la também, e duas cópias
+    // divergiam. O que se guarda aqui é a vista, não o ficheiro.
+    const CLIENTE = ler("src/app/pedido/[token]/VistaDoPedido.tsx");
     expect(CLIENTE).toContain('from "@/lib/base-do-preco"');
     expect(CLIENTE).toContain("avisoDaBase(base)");
   });
@@ -138,7 +141,7 @@ describe("«sem IVA» está escrito onde há um número", () => {
   });
 
   it("no ecrã do cliente, junto ao valor que ele indicou", () => {
-    expect(ler("src/app/pedido/[token]/page.tsx")).toContain("· sem IVA");
+    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("· sem IVA");
   });
 
   it("na conta que o cliente paga, cada linha diz o que é", () => {
