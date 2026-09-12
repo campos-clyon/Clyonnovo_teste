@@ -25,6 +25,7 @@ import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
+import { tService, tUrgency } from "@/lib/translations";
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
@@ -415,7 +416,18 @@ function normalizeServiceTypeLabel(value?: string | null): string {
   if (!value) return "—";
   const v = value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (v === "mudanca" || v === "moving") return "Mudança";
-  return value.trim();
+  /*
+   * O SERVIÇO EM PORTUGUÊS, e não o identificador da base.
+   *
+   * Devolvia o valor tal e qual, e a tabela dos pedidos mostrava
+   * «recolha_moveis» e «esvaziamento_a…» — com traço baixo e cortado ao meio.
+   * Linguagem de motor à frente de quem está ao telefone com o cliente.
+   *
+   * `tService` é onde os nomes da casa vivem. O caso da mudança fica acima: o
+   * valor legado «moving» ainda existe em linhas antigas e o mapa não o
+   * conhece.
+   */
+  return tService(value.trim());
 }
 
 function maskName(name: string | null | undefined): string {
@@ -1763,7 +1775,7 @@ export default function ColaboradorAdminClient({
                             className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-cyan-600"
                           />
                         </th>
-                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Status", "Origem", "Data", "Ação"].map((h) => (
+                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Estado", "Origem", "Data", "Ação"].map((h) => (
                           <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 last:pr-4 last:text-right">{h}</th>
                         ))}
                       </tr>
@@ -1883,9 +1895,16 @@ export default function ColaboradorAdminClient({
                               {/* Urgência */}
                               <td className="px-2 py-3.5">
                                 {p.urgency ? (
-                                  <span className={`flex items-center gap-1.5 text-[11px] font-semibold capitalize ${urgencyText[p.urgency] ?? "text-slate-400"}`}>
+                                  <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${urgencyText[p.urgency] ?? "text-slate-400"}`}>
                                     <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${urgencyDot[p.urgency] ?? "bg-slate-500"}`} />
-                                    {p.urgency}
+                                    {/*
+                                      Saía «This_week» e «Flexible»: o valor
+                                      cru da base com um `capitalize` por
+                                      cima, que lhe dava ar de palavra sem o
+                                      ser. O `capitalize` sai com ele — as
+                                      traduções já vêm escritas como se lêem.
+                                    */}
+                                    {tUrgency(p.urgency)}
                                   </span>
                                 ) : (
                                   <span className="text-xs text-slate-600">—</span>
