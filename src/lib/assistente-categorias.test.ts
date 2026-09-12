@@ -5,6 +5,7 @@ import {
   CATEGORIAS_POR_ORDEM,
   CATEGORIAS_VIVAS,
   CORES_DA_CATEGORIA,
+  CORES_DA_CATEGORIA_ESCURO,
   ETIQUETA_DA_CATEGORIA,
   categoriaDoPedido,
   categoriaViva,
@@ -224,6 +225,41 @@ describe("a lista das categorias serve os ecrãs", () => {
     for (const c of CATEGORIAS_POR_ORDEM) {
       expect(ETIQUETA_DA_CATEGORIA[c]).not.toContain("_");
     }
+  });
+
+  it("há uma paleta para o fundo claro e outra para o escuro", () => {
+    /*
+     * "Corrija esses botões" — 12-09-2026, sobre uma pílula cor de creme no
+     * meio de um cartão preto.
+     *
+     * As Negociações são um painel escuro e os Pedidos uma tabela branca. Com
+     * uma paleta só, `bg-amber-50` num cartão preto era uma mancha cheia ao
+     * lado de etiquetas transparentes — e uma mancha cheia lê-se como um
+     * BOTÃO. Alguém ia lá carregar.
+     */
+    for (const c of CATEGORIAS_POR_ORDEM) {
+      expect(CORES_DA_CATEGORIA_ESCURO[c]).toBeTruthy();
+      // Nada de fundos claros no escuro: nem `bg-*-50`, nem `bg-*-100`.
+      expect(CORES_DA_CATEGORIA_ESCURO[c]).not.toMatch(/bg-\w+-(50|100)\b/);
+    }
+    // E o painel escuro usa mesmo a paleta escura.
+    const NEGOCIACOES = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+    expect(NEGOCIACOES).toContain("CORES_DA_CATEGORIA_ESCURO[categoriaDoPedido(p)]");
+    expect(semNotas(NEGOCIACOES)).not.toContain("CORES_DA_CATEGORIA[categoriaDoPedido(p)]");
+  });
+
+  it("a etiqueta nunca se parte ao meio", () => {
+    /*
+     * «Orçamento enviado» numa coluna de 72 px partia-se em duas linhas dentro
+     * da pílula, e o que se via era um botão deformado — não um rótulo. Saiu da
+     * coluna do número para a linha das etiquetas, que tem a largura toda.
+     */
+    const NEGOCIACOES = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+    const PEDIDOS = ler("src/components/admin/LegacyAdminClient.tsx");
+    const i = NEGOCIACOES.indexOf("CORES_DA_CATEGORIA_ESCURO[categoriaDoPedido(p)]");
+    expect(NEGOCIACOES.slice(Math.max(0, i - 200), i)).toContain("whitespace-nowrap");
+    const j = PEDIDOS.indexOf("CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]]");
+    expect(PEDIDOS.slice(Math.max(0, j - 200), j)).toContain("whitespace-nowrap");
   });
 
   it("vivas são as que ainda pedem alguma coisa a alguém", () => {

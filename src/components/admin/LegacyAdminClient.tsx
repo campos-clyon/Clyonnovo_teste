@@ -1943,7 +1943,10 @@ export default function ColaboradorAdminClient({
                               */}
                               <td className="px-2 py-3.5">
                                 {pedidoCategorias[String(p.id)] ? (
-                                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                                  // `whitespace-nowrap`: sem isto, «Orçamento
+                                  // enviado» parte-se ao meio dentro da pílula
+                                  // e o que se vê é um botão deformado.
+                                  <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
                                     {ETIQUETA_DA_CATEGORIA[pedidoCategorias[String(p.id)] as CategoriaDoPedido] ?? pedidoCategorias[String(p.id)]}
                                   </span>
                                 ) : (

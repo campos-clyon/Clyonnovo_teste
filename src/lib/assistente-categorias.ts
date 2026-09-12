@@ -90,6 +90,32 @@ export const CORES_DA_CATEGORIA: Record<string, string> = {
 };
 
 /**
+ * A MESMA FASE, NO FUNDO ESCURO.
+ *
+ * As Negociações são um painel escuro e os Pedidos uma tabela branca. A
+ * paleta de cima é de fundos claros: `bg-amber-50` num cartão preto é uma
+ * mancha cor de creme, e uma mancha cheia ao lado de etiquetas transparentes
+ * lê-se como um BOTÃO — alguém vai lá carregar.
+ *
+ * As cores são as mesmas em significado (âmbar é bola do lado do cliente,
+ * verde é dinheiro a caminho, vermelho é fim sem negócio) e mudam só de
+ * intensidade: aqui são véus sobre o escuro, como todas as outras etiquetas
+ * deste painel.
+ */
+export const CORES_DA_CATEGORIA_ESCURO: Record<string, string> = {
+  criado: "border-slate-700 text-slate-400",
+  a_espera_de_propostas: "border-slate-700 text-slate-400",
+  orcamento_enviado: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  aceite_por_fazer: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  feito_por_confirmar: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
+  concluido: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  pago: "border-emerald-400/40 bg-emerald-400/15 text-emerald-200",
+  recusado: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+  cancelado: "border-slate-700 text-slate-500",
+  arquivado: "border-slate-700 text-slate-500",
+};
+
+/**
  * A ordem em que as categorias fazem sentido numa lista: do princípio ao fim
  * do funil, e os becos sem saída no fim. Serve os separadores do painel.
  */
