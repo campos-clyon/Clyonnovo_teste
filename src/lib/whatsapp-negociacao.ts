@@ -469,16 +469,33 @@ function jaSeLe(texto: string): boolean {
  * que não decidiu nada. O pior caso é, por construção, o comportamento de
  * ontem.
  */
-async function traduzirParaAMaquina(original: string, pedidos: number[]): Promise<string> {
+type Traduzido = {
+  /** O texto na forma que as expressões regulares de baixo já lêem. */
+  texto: string;
+  /**
+   * O QUE ELE QUIS DIZER, QUANDO SE SOUBE.
+   *
+   * Devolvia-se só o texto, e quem chamava não tinha como distinguir «não
+   * percebi» de «percebi, e não há nada a responder». As duas coisas caíam na
+   * mesma linha lá em baixo — o ponto de situação inteiro — e foi assim que
+   * um «Ok, obrigada» levou de volta a mesa com os valores que tinham sido
+   * ditos meia hora antes.
+   */
+  accao: "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "nada" | null;
+};
+
+async function traduzirParaAMaquina(original: string, pedidos: number[]): Promise<Traduzido> {
   const { compreensaoDisponivel, compreenderResposta } = await import("@/lib/whatsapp-compreensao");
-  if (!compreensaoDisponivel() || !original || jaSeLe(original)) return original;
+  if (!compreensaoDisponivel() || !original || jaSeLe(original)) {
+    return { texto: original, accao: null };
+  }
 
   const alvos = await alvosAccionaveis(pedidos);
   const lido = await compreenderResposta(
     original,
     alvos.map((a) => ({ profissional: a.profissionalNome, valor: a.valorNaMesa })),
   ).catch(() => null);
-  if (!lido) return original;
+  if (!lido) return { texto: original, accao: null };
 
   /*
    * O NOME TAMBÉM SERVE PARA ESCOLHER.
@@ -495,13 +512,18 @@ async function traduzirParaAMaquina(original: string, pedidos: number[]): Promis
       : undefined;
   const valor = lido.valor ?? porNome?.valorNaMesa ?? null;
 
-  if (lido.accao === "fechar") return valor != null ? `sim ${valor}` : "sim";
-  if (lido.accao === "recusar") return valor != null ? `nao ${valor}` : "nao";
-  if (lido.accao === "contrapropor" && lido.valor != null) return String(lido.valor);
-  // "marcar", "falar_com_pessoa" e "nada" seguem com o texto dele: a data tem
-  // o seu próprio leitor, e o resto cai no ponto de situação — que é o que
-  // deve acontecer a uma frase que não decide nada.
-  return original;
+  if (lido.accao === "fechar") {
+    return { texto: valor != null ? `sim ${valor}` : "sim", accao: "fechar" };
+  }
+  if (lido.accao === "recusar") {
+    return { texto: valor != null ? `nao ${valor}` : "nao", accao: "recusar" };
+  }
+  if (lido.accao === "contrapropor" && lido.valor != null) {
+    return { texto: String(lido.valor), accao: "contrapropor" };
+  }
+  // "marcar" segue com o texto dele — a data tem o seu próprio leitor. O resto
+  // não se traduz, mas quem chama passa a saber o que era.
+  return { texto: original, accao: lido.accao };
 }
 
 async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
@@ -670,7 +692,36 @@ export async function tratarMensagemDoCliente(
    * estiver configurado, ou falhar, ou não perceber, lê-se o texto original —
    * que é exactamente o comportamento de sempre.
    */
-  const texto = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);
+  const { texto, accao: percebida } = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);
+
+  /*
+   * UM AGRADECIMENTO RESPONDE-SE COM UMA FRASE, NÃO COM UM RELATÓRIO.
+   *
+   *   CLIENTE: Ok, obrigada
+   *   CLYON:   Pedido #311 — propostas em cima da mesa:
+   *            • Manuel Martins transportes: 148,57 € (à sua espera)
+   *            • ...
+   *
+   * A cliente tinha recebido esses valores meia hora antes, e não perguntou
+   * nada. "Também não deve repetir informação." — 13-09-2026.
+   */
+  if (percebida === "agradecer") {
+    await enviarTextoWhatsApp(telefone, "De nada. Qualquer coisa, é só dizer.");
+    return;
+  }
+
+  /*
+   * QUEM PEDE UMA PESSOA RECEBE UMA PESSOA.
+   *
+   * "falar_com_pessoa" era lido, classificado, e depois seguia com o texto
+   * original — que não casava com nada e acabava, também ele, no ponto de
+   * situação. Quem escrevia «posso falar com alguém?» recebia a lista de
+   * preços.
+   */
+  if (percebida === "falar_com_pessoa") {
+    await passarAUmaPessoa(telefone, "Pediu para falar com uma pessoa");
+    return;
+  }
 
   // SIM e NÃO — o caminho de quem fala pela ponte, onde não há botões. Sem
   // acentos nem pontuação: "Não!" e "nao" têm de ser a mesma palavra.
@@ -880,8 +931,29 @@ export async function tratarMensagemDoCliente(
     return;
   }
 
-  // Nada reconhecido: reescreve-se o ecrã — o ponto de situação dele.
-  await enviarTextoWhatsApp(telefone, await ecraDoPedido(pedidos[0]));
+  /*
+   * NADA RECONHECIDO — E O PONTO DE SITUAÇÃO SÓ SERVE SE HOUVER SITUAÇÃO.
+   *
+   * Esta linha era incondicional: tudo o que não fosse sim, não, um valor ou
+   * uma data levava de volta a mesa inteira. Servia para três coisas
+   * diferentes — «não percebi», «tome o seu ponto de situação» e «não tenho
+   * nada a dizer» — e as três saíam iguais. Cinco mensagens seguidas davam
+   * cinco relatórios idênticos.
+   *
+   * O ecrã vale a pena quando a bola está do lado dele: há uma proposta à
+   * espera de resposta, e o que ele precisa é de a ver outra vez para decidir.
+   * Quando não há nada pendente, repetir valores que ele já leu não é
+   * informação — é ruído, e faz o assistente parecer uma máquina a debitar.
+   */
+  const pendentes = await alvosAccionaveis(pedidos);
+  if (pendentes.length === 0) {
+    await enviarTextoWhatsApp(
+      telefone,
+      "Está tudo a andar deste lado. Assim que houver novidades, sou eu a escrever-lhe.",
+    );
+    return;
+  }
+  await enviarTextoWhatsApp(telefone, await ecraDoPedido(pendentes[0].pedidoId));
 }
 
 /**

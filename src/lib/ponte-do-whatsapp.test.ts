@@ -191,6 +191,19 @@ describe("o cérebro entende as palavras", () => {
 
   it("«fechar 300» encontra a proposta de 300 € pelo valor em cima da mesa", () => {
     expect(CEREBRO).toContain("valorNaMesa");
-    expect(CEREBRO).toContain("Math.abs(a.valorNaMesa - valorPedido)");
+    expect(CEREBRO).toContain("Math.abs((a.valorNaMesa as number) - valorPedido)");
+  });
+
+  /*
+   * ...MAS SÓ QUANDO O VALOR CHEGA PARA IDENTIFICAR UMA.
+   *
+   * Era `find` — o primeiro que casasse, e a lista vem dos pedidos por ordem
+   * decrescente de criação. Com dois pedidos abertos a 300 €, «fechar 300»
+   * fechava sempre o mais recente e matava as restantes negociações DESSE
+   * pedido. Um empate não se desempata à sorte.
+   */
+  it("com o mesmo valor em dois pedidos, não fecha nenhum — chama uma pessoa", () => {
+    expect(CEREBRO).toContain("casam.length > 1");
+    expect(CEREBRO).toContain("passarAUmaPessoa");
   });
 });

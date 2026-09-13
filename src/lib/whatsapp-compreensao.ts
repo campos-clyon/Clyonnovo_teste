@@ -416,6 +416,18 @@ export type AccaoSobreAProposta =
   | "contrapropor"
   | "marcar"
   | "falar_com_pessoa"
+  /**
+   * UM AGRADECIMENTO NÃO É UMA PERGUNTA.
+   *
+   * Até 13-09-2026 isto vivia dentro de "nada", ao lado das perguntas e de
+   * tudo o que não se percebia — e "nada" acabava no ponto de situação. Uma
+   * cliente escreveu «Ok, obrigada» e recebeu de volta a mesa inteira, com os
+   * valores que lhe tinham sido ditos meia hora antes. "Também não deve
+   * repetir informação."
+   *
+   * Separá-los é o que permite responder como gente a um, e calar o resto.
+   */
+  | "agradecer"
   | "nada";
 
 export type RespostaDoCliente = {
@@ -447,7 +459,7 @@ ${lista}
 
 Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código:
 
-{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "nada", "valor": number|null, "profissional": string|null }
+{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "nada", "valor": number|null, "profissional": string|null }
 
 As acções:
 - "fechar" — aceita uma proposta como ela está ("pode ser", "está bem, fechamos", "aceito o do Manuel", "vamos a isso", "sim").
@@ -455,7 +467,8 @@ As acções:
 - "contrapropor" — quer pagar outro valor ("consegue por 250?", "dou-lhe 200", "e se fosse 180").
 - "marcar" — já fechou e agora fala de dia ou hora ("pode ser na quinta de manhã").
 - "falar_com_pessoa" — pede para falar com alguém, com um humano.
-- "nada" — tudo o resto: uma pergunta, um agradecimento, uma frase que não decide nada. NA DÚVIDA É ISTO.
+- "agradecer" — agradece ou dá a conversa por arrumada, e não pergunta nada nem decide nada ("ok, obrigada", "está bem", "combinado", "perfeito", "obrigado!", um polegar). É uma frase que não espera resposta nenhuma. CUIDADO: "está bem, fechamos" é "fechar", não isto — se houver qualquer sinal de que ele está a aceitar uma proposta, é "fechar".
+- "nada" — tudo o resto: uma pergunta, uma frase que não se percebe, qualquer coisa que não caiba acima. NA DÚVIDA É ISTO.
 
 O "valor":
 - em "contrapropor", é o valor que ELE quer pagar;
@@ -476,6 +489,7 @@ function limparResposta(bruto: unknown): RespostaDoCliente | null {
     "contrapropor",
     "marcar",
     "falar_com_pessoa",
+    "agradecer",
     "nada",
   ];
   const a = typeof o.accao === "string" ? o.accao.trim() : "";

@@ -83,18 +83,33 @@ describe("o Gemini lê a frase e a máquina continua a decidir", () => {
      */
     expect(NEGOCIACAO).toContain("async function traduzirParaAMaquina(");
     expect(NEGOCIACAO).toContain(
-      "const texto = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);",
+      "const { texto, accao: percebida } = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);",
     );
-    expect(NEGOCIACAO).toContain('if (lido.accao === "fechar") return valor != null ? `sim ${valor}` : "sim";');
+    expect(NEGOCIACAO).toContain('return { texto: valor != null ? `sim ${valor}` : "sim", accao: "fechar" };');
+  });
+
+  /*
+   * ...E DIZ TAMBÉM O QUE PERCEBEU.
+   *
+   * Devolvia só o texto, e quem chamava não tinha como distinguir «não
+   * percebi» de «percebi, e não há nada a responder». Caíam os dois no ponto
+   * de situação — e foi assim que um «Ok, obrigada» levou de volta a mesa
+   * inteira. A tradução continua a não DECIDIR nada; passa só a dizer o que
+   * leu.
+   */
+  it("a acção percebida viaja com o texto", () => {
+    expect(NEGOCIACAO).toContain("type Traduzido = {");
+    expect(NEGOCIACAO).toContain("return { texto: original, accao: lido.accao };");
   });
 
   it("o pior caso é o comportamento de ontem — devolve o original", () => {
     const i = NEGOCIACAO.indexOf("async function traduzirParaAMaquina(");
     const corpo = NEGOCIACAO.slice(i, NEGOCIACAO.indexOf("async function alvosAccionaveis", i));
     // Sem chave, sem texto, ou já legível: nem se tenta.
-    expect(corpo).toContain("if (!compreensaoDisponivel() || !original || jaSeLe(original)) return original;");
+    expect(corpo).toContain("if (!compreensaoDisponivel() || !original || jaSeLe(original)) {");
+    expect(corpo).toContain("return { texto: original, accao: null };");
     // Modelo falhou ou não percebeu: segue o que ele escreveu.
-    expect(corpo).toContain("if (!lido) return original;");
+    expect(corpo).toContain("if (!lido) return { texto: original, accao: null };");
     expect(corpo).toContain(".catch(() => null)");
   });
 
