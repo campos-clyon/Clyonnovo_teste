@@ -23,6 +23,7 @@ import { oSeuServico } from "@/lib/servico-em-palavras";
 import { totalEmPalavras } from "@/lib/conta-em-palavras";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
+import { jaFoiDito } from "@/lib/nao-repetir";
 
 /**
  * O WhatsApp como ecrã da negociação — o cérebro.
@@ -585,6 +586,28 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
   return lista;
 }
 
+/**
+ * O ecrã, mas só se não for a repetição do que já saiu.
+ *
+ * Todo o caminho que leva ao ponto de situação passa por aqui. É a rede por
+ * baixo das separações feitas em `tratarMensagemDoCliente`: se um caminho que
+ * ninguém previu levar ao mesmo texto de há uma hora, ele não volta a sair.
+ * Ver `nao-repetir.ts`.
+ */
+async function mandarOEcra(telefone: string, pedidoId: number): Promise<void> {
+  const texto = await ecraDoPedido(pedidoId);
+  const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+  const gravadas = await mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []);
+  if (jaFoiDito(texto, gravadas, new Date())) {
+    await enviarTextoWhatsApp(
+      telefone,
+      "Está na mesma desde a minha última mensagem. Assim que houver novidades, escrevo-lhe.",
+    );
+    return;
+  }
+  await enviarTextoWhatsApp(telefone, texto);
+}
+
 /** O "ecrã" — o estado das negociações dele, reescrito em texto. */
 async function ecraDoPedido(pedidoId: number): Promise<string> {
   const pedido = await getSimulatorOrderById(pedidoId);
@@ -838,7 +861,7 @@ export async function tratarMensagemDoCliente(
     } else if (alvos.length === 1) {
       alvo = alvos[0];
     } else if (alvos.length === 0) {
-      await enviarTextoWhatsApp(telefone, await ecraDoPedido(pedidos[0]));
+      await mandarOEcra(telefone, pedidos[0]);
       return;
     } else {
       /*
@@ -994,7 +1017,7 @@ export async function tratarMensagemDoCliente(
     );
     return;
   }
-  await enviarTextoWhatsApp(telefone, await ecraDoPedido(pendentes[0].pedidoId));
+  await mandarOEcra(telefone, pendentes[0].pedidoId);
 }
 
 /**

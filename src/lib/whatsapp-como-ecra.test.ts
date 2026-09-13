@@ -157,7 +157,13 @@ describe("o cérebro (whatsapp-negociacao)", () => {
   it("texto com data marca a dataAgendada; valor vira contraproposta; o resto devolve o ponto de situação", () => {
     expect(CEREBRO).toContain("dataAgendada");
     expect(CEREBRO).toMatch(/propor\(estado, "cliente", valor/);
-    expect(CEREBRO).toContain("ecraDoPedido(pedidos[0])");
+    /*
+     * O ponto de situação passa todo por `mandarOEcra`, que é o mesmo envio
+     * com uma rede por baixo: se o texto for igual ao que saiu há pouco para
+     * este número, não volta a sair. Era `enviarTextoWhatsApp(... ecraDoPedido
+     * ...)` escrito nos dois sítios, sem nada a olhar para trás.
+     */
+    expect(CEREBRO).toContain("mandarOEcra(telefone, pedidos[0])");
   });
 
   it("a contraproposta do cliente avisa o profissional pelo caminho de sempre", () => {

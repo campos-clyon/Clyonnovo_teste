@@ -96,9 +96,8 @@ describe("o Gemini lê a frase e a máquina continua a decidir", () => {
      * já sabe ler. Assim nada abaixo muda e todas as guardas ficam de pé.
      */
     expect(NEGOCIACAO).toContain("async function traduzirParaAMaquina(");
-    expect(NEGOCIACAO).toContain(
-      "const { texto, accao: percebida } = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);",
-    );
+    expect(NEGOCIACAO).toContain("} = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);");
+    expect(NEGOCIACAO).toContain("accao: percebida,");
     expect(NEGOCIACAO).toContain('return { texto: valor != null ? `sim ${valor}` : "sim", accao: "fechar" };');
   });
 
