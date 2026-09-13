@@ -478,7 +478,25 @@ type Traduzido = {
    * ditos meia hora antes.
    */
   accao: "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "nada" | null;
+  /**
+   * A NEGOCIAÇÃO QUE ELE NOMEOU, quando disse um nome e só um bateu certo.
+   *
+   * Resolvia-se aqui e deitava-se fora, deixando só o valor — e o valor
+   * não identifica ninguém quando dois profissionais pedem o mesmo. Quem diz
+   * «fico com o do Manuel» está a identificar uma negociação; é essa que
+   * segue, e não um número que pode apontar para outra.
+   */
+  alvo?: AlvoComValor;
 };
+
+/** Sem acentos e em minúsculas — «José» e «jose» são a mesma pessoa. */
+function semAcentos(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+}
 
 async function traduzirParaAMaquina(original: string, pedidos: number[]): Promise<Traduzido> {
   const { compreensaoDisponivel, compreenderResposta } = await import("@/lib/whatsapp-compreensao");
@@ -494,25 +512,35 @@ async function traduzirParaAMaquina(original: string, pedidos: number[]): Promis
   if (!lido) return { texto: original, accao: null };
 
   /*
-   * O NOME TAMBÉM SERVE PARA ESCOLHER.
+   * O NOME TAMBÉM SERVE PARA ESCOLHER — E O NOME É QUE VIAJA, NÃO O VALOR.
    *
    * «Aceito o do Manuel» não traz valor nenhum, e com duas propostas na mesa
-   * um «sim» sozinho fecharia a errada. Traduz-se o nome para o valor dele,
-   * que é a chave que o código de baixo usa para escolher a certa.
+   * um «sim» sozinho fecharia a errada. Traduzia-se o nome para o VALOR dele e
+   * deitava-se o resto fora: o alvo certo era encontrado aqui e reconstruído
+   * lá em baixo a partir do número. Com o Manuel a 300 € num pedido e outro
+   * profissional a 300 € noutro, quem dizia o nome do Manuel com todas as
+   * letras fechava com o outro. O valor não é chave de nada quando há empates.
+   *
+   * EXIGE-SE CORRESPONDÊNCIA ÚNICA. Era `includes` no primeiro que casasse:
+   * «Fred» casa com «Fred Teste» e com «Fred Silva», e um nome curto devolvido
+   * pelo modelo casava com quem calhasse estar primeiro — que é sempre o
+   * pedido mais recente. Dois candidatos não são uma escolha; são uma dúvida,
+   * e uma dúvida não fecha negócios.
    */
-  const porNome =
-    lido.profissional != null
-      ? alvos.find((a) =>
-          a.profissionalNome.toLowerCase().includes(lido.profissional!.toLowerCase()),
+  const casamPeloNome =
+    lido.profissional != null && lido.profissional.trim().length >= 3
+      ? alvos.filter((a) =>
+          semAcentos(a.profissionalNome).includes(semAcentos(lido.profissional as string)),
         )
-      : undefined;
+      : [];
+  const porNome = casamPeloNome.length === 1 ? casamPeloNome[0] : undefined;
   const valor = lido.valor ?? porNome?.valorNaMesa ?? null;
 
   if (lido.accao === "fechar") {
-    return { texto: valor != null ? `sim ${valor}` : "sim", accao: "fechar" };
+    return { texto: valor != null ? `sim ${valor}` : "sim", accao: "fechar", alvo: porNome };
   }
   if (lido.accao === "recusar") {
-    return { texto: valor != null ? `nao ${valor}` : "nao", accao: "recusar" };
+    return { texto: valor != null ? `nao ${valor}` : "nao", accao: "recusar", alvo: porNome };
   }
   if (lido.accao === "contrapropor" && lido.valor != null) {
     return { texto: String(lido.valor), accao: "contrapropor" };
@@ -688,7 +716,11 @@ export async function tratarMensagemDoCliente(
    * estiver configurado, ou falhar, ou não perceber, lê-se o texto original —
    * que é exactamente o comportamento de sempre.
    */
-  const { texto, accao: percebida } = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);
+  const {
+    texto,
+    accao: percebida,
+    alvo: alvoNomeado,
+  } = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);
 
   /*
    * UM AGRADECIMENTO RESPONDE-SE COM UMA FRASE, NÃO COM UM RELATÓRIO.
@@ -751,7 +783,20 @@ export async function tratarMensagemDoCliente(
       `• ${variosPedidos ? `Pedido #${a.pedidoId} — ` : ""}${a.profissionalNome}: ${euros(a.valorNaMesa as number)}`;
     const listaDeAlvos = () => alvos.map(linhaDoAlvo).join("\n");
 
-    let alvo: AlvoComValor | undefined;
+    /*
+     * O NOME MANDA SOBRE O NÚMERO.
+     *
+     * Se ele disse «fico com o do Manuel» e só um Manuel bateu certo, a
+     * negociação já está identificada — e melhor do que qualquer valor, que
+     * pode estar empatado entre dois pedidos. Só se volta a procurar pelo
+     * número quando não houve nome.
+     */
+    let alvo: AlvoComValor | undefined = alvoNomeado;
+    if (alvo) {
+      if (eDeFechar) await fecharPeloCliente(telefone, alvo);
+      else await recusarPeloCliente(telefone, alvo);
+      return;
+    }
     if (valorPedido != null) {
       /*
        * UM EMPATE NÃO SE DESEMPATA EM SILÊNCIO.
@@ -915,7 +960,7 @@ export async function tratarMensagemDoCliente(
         });
         await enviarTextoWhatsApp(
           telefone,
-          `Contraproposta de ${euros(valor)} enviada a ${n.profissionalNome}. Aviso-o assim que responder.`,
+          `Contraproposta de ${euros(valor)} enviada a ${n.profissionalNome}. Escrevo-lhe assim que ele responder.`,
         );
         return;
       }

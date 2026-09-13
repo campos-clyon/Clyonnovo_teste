@@ -474,7 +474,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
           negociacaoId: n.id,
           quando: new Date(confirmado.getTime() + 86_400_000),
           texto:
-            `${ola} Uma última coisa e não o incomodo mais: como é que correu o trabalho de ${pro}? ` +
+            `${ola} Uma última coisa e não volto a incomodar: como é que correu o trabalho de ${pro}? ` +
             `Duas linhas suas ajudam quem vier a seguir a escolher bem.`,
         });
       }
@@ -559,7 +559,7 @@ export function textoDoLembrete(
       );
     }
     return (
-      `${tratamento}fico por aqui para não o estar a incomodar. Se quiser retomar, é só ` +
+      `${tratamento}fico por aqui para não estar a incomodar. Se quiser retomar, é só ` +
       `escrever-me e eu volto a pôr o pedido de pé.`
     );
   }
@@ -592,7 +592,7 @@ export function textoDoLembrete(
   if (especie === "recolha_parada") {
     if (toque === 0) {
       return (
-        `${saudacao(agora)}. Ficámos a meio do seu pedido e não quero deixá-lo pendurado. ` +
+        `${saudacao(agora)}. Ficámos a meio do seu pedido e não quero deixar isto pendurado. ` +
         `Quando puder, continue de onde parámos que eu trato do resto.`
       );
     }

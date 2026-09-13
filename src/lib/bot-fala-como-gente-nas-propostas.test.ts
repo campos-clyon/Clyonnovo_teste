@@ -139,8 +139,32 @@ describe("o Gemini lê a frase e a máquina continua a decidir", () => {
   it("o nome também escolhe a proposta certa", () => {
     // «Aceito o do Manuel» não traz valor, e com duas na mesa um «sim» sozinho
     // fecharia a errada.
-    expect(NEGOCIACAO).toContain("const porNome =");
-    expect(NEGOCIACAO).toContain("a.profissionalNome.toLowerCase().includes(lido.profissional!.toLowerCase())");
+    expect(NEGOCIACAO).toContain("const porNome = casamPeloNome.length === 1 ? casamPeloNome[0] : undefined;");
+  });
+
+  /*
+   * E É O NOME QUE VIAJA, NÃO O VALOR DELE.
+   *
+   * Encontrava-se o alvo certo pelo nome, guardava-se só o valor, e lá em
+   * baixo o alvo era reconstruído a partir desse número. Com o Manuel a 300 €
+   * num pedido e outro profissional a 300 € noutro, quem dizia «fico com o do
+   * Manuel» com todas as letras fechava com o outro.
+   */
+  it("a negociação nomeada segue inteira, e não reduzida a um número", () => {
+    expect(NEGOCIACAO).toContain('accao: "fechar", alvo: porNome');
+    expect(NEGOCIACAO).toContain("let alvo: AlvoComValor | undefined = alvoNomeado;");
+  });
+
+  /*
+   * DOIS CANDIDATOS NÃO SÃO UMA ESCOLHA.
+   *
+   * Era `includes` no primeiro que casasse: «Fred» casa com «Fred Teste» e com
+   * «Fred Silva», e a lista começa sempre pelo pedido mais recente.
+   */
+  it("um nome que bata em dois não fecha nenhum", () => {
+    expect(NEGOCIACAO).toContain("const casamPeloNome =");
+    expect(NEGOCIACAO).toContain("lido.profissional.trim().length >= 3");
+    expect(NEGOCIACAO).not.toContain("alvos.find((a) =>\n          a.profissionalNome");
   });
 });
 

@@ -55,7 +55,7 @@ describe("quem não propôs não tem nome", () => {
 describe("o silêncio não é resposta: diz-se quantos são", () => {
   it("sem proposta nenhuma, conta quem está a ver em vez de calar", () => {
     expect(textoDaMesa(311, [], 3)).toBe(
-      "Pedido #311: ainda sem valores. Estão 3 profissionais a ver o seu pedido — aviso-o assim que chegar o primeiro.",
+      "Pedido #311: ainda sem valores. Estão 3 profissionais a ver o seu pedido — escrevo-lhe assim que chegar o primeiro.",
     );
   });
 

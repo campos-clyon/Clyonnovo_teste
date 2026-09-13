@@ -58,7 +58,7 @@ export function textoDaMesa(
       (aVer === 1
         ? "Está um profissional a ver o seu pedido"
         : `Estão ${aVer} profissionais a ver o seu pedido`) +
-      ` — aviso-o assim que chegar o primeiro.`
+      ` — escrevo-lhe assim que chegar o primeiro.`
     );
   }
 
