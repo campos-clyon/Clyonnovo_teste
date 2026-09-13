@@ -54,7 +54,19 @@ import {
  *      base, e sem tratar por "senhor" um nome cujo género ninguém guardou.
  */
 
-const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+/**
+ * Ler a fonte SEMPRE COM `\n`, venha o ficheiro como vier.
+ *
+ * No Windows o Git faz checkout com CRLF; no Linux da CI, com LF. Os cortes
+ * que se ancoram numa quebra de linha — `"\n}\n"`, `"\n\n"` — não encontram
+ * nada num ficheiro com `\r\n`, o `indexOf` devolve -1, e a fatia passa a ser
+ * meio ficheiro em vez do bocado que se queria ler.
+ *
+ * Chumbava SÓ em Windows, com a CI verde no mesmo commit — que é a pior
+ * espécie de teste falhado: manda procurar um erro que não existe.
+ */
+const ler = (p: string) =>
+  readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
   t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 

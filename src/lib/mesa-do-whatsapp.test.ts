@@ -18,7 +18,20 @@ import { join } from "node:path";
  * onde parou."
  */
 
-const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+/**
+ * Ler a fonte SEMPRE COM `\n`, venha o ficheiro como vier.
+ *
+ * No Windows o Git faz checkout com CRLF; no Linux da CI, com LF. O `corpoDe`
+ * aqui em baixo ancora o fim do corpo em `"\n}\n"` — com CRLF o ficheiro tem
+ * `\r\n}\r\n`, o `indexOf` não encontra nada e devolve -1, e `slice(i, -1)`
+ * passa a apanhar quase o ficheiro inteiro em vez do corpo da função. Os
+ * `not.toContain` chumbavam a apanhar o SQL das funções vizinhas.
+ *
+ * Chumbavam SÓ em Windows, com a CI verde no mesmo commit — que é a pior
+ * espécie de teste falhado: manda procurar um erro que não existe.
+ */
+const ler = (p: string) =>
+  readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
   t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
