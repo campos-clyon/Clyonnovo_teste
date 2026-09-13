@@ -13,6 +13,7 @@ import {
   aceitar,
   contratar,
   desistir,
+  oClienteVeEsta,
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
@@ -20,6 +21,7 @@ import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
 import { enviarBotoesWhatsApp, enviarTextoWhatsApp, telefoneParaWhatsApp } from "@/lib/whatsapp-cloud";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
+import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 
 /**
  * O WhatsApp como ecrã da negociação — o cérebro.
@@ -40,10 +42,6 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 const ETIQUETA_DO_SERVICO: Record<string, string> = Object.fromEntries(
   SERVICE_CATEGORIES.map((c) => [c.id, c.label]),
 );
-
-function euros(v: number): string {
-  return v.toFixed(2).replace(".", ",") + " €";
-}
 
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
@@ -563,17 +561,37 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
         : ` Se já tem data pensada, responda por exemplo: 27/08 14:30`)
     );
   }
-  const linhasTexto = vivas.map((n) => {
-    const ultima = propostasDe(n.propostasJson).at(-1);
+  /*
+   * A REGRA DE QUEM O CLIENTE VÊ É A DE `negociacao.ts`, E NÃO UMA SEGUNDA.
+   *
+   * Há três ecrãs a mostrar esta mesma lista — o link do email, a conta e este
+   * WhatsApp. Escrever aqui «tem valor, logo mostra-se» daria uma quarta
+   * redacção da mesma regra, e a primeira a divergir é sempre aquela para onde
+   * ninguém está a olhar. Um caso concreto em que divergiria: uma negociação
+   * onde só o CLIENTE propôs tem valor e não é proposta nenhuma — o nome do
+   * profissional apareceria como se ele tivesse respondido.
+   */
+  const propostas: LinhaDaMesa[] = [];
+  let aVer = 0;
+  for (const n of vivas) {
+    const lista = propostasDe(n.propostasJson);
+    if (!oClienteVeEsta({ estado: String(n.estado), propostas: lista })) {
+      aVer += 1;
+      continue;
+    }
+    const ultima = lista.at(-1);
     const valor = n.valorAcordado ?? ultima?.valor ?? null;
-    return `• ${n.profissionalNome}: ${valor != null ? euros(Number(valor)) : "sem valor ainda"}${
-      ultima?.por === "profissional" && ultima.estado === "pendente" ? " (à sua espera)" : ""
-    }`;
-  });
-  return (
-    `Pedido #${pedidoId} — propostas em cima da mesa:\n${linhasTexto.join("\n")}\n\n` +
-    `Use os botões da proposta para fechar ou recusar, ou responda com um valor (ex.: 300) para contrapropor.`
-  );
+    if (valor == null) {
+      aVer += 1;
+      continue;
+    }
+    propostas.push({
+      profissionalNome: n.profissionalNome,
+      valor: Number(valor),
+      aSuaEspera: ultima?.por === "profissional" && ultima.estado === "pendente",
+    });
+  }
+  return textoDaMesa(pedidoId, propostas, aVer);
 }
 
 /**
@@ -668,24 +686,53 @@ export async function tratarMensagemDoCliente(
   const naoValor = chave.match(/^(?:nao|recusar|recuso)\s+(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/);
 
   if (simSo || naoSo || simValor || naoValor) {
-    const alvos = await alvosAccionaveis(pedidos);
+    /*
+     * SÓ QUEM PÔS UM NÚMERO NA MESA PODE SER ESCOLHIDO POR UM NÚMERO.
+     *
+     * Um alvo sem valor não se fecha nem se recusa por valor, e listá-lo era
+     * outra forma de dizer ao cliente quem ainda não lhe respondeu.
+     */
+    const alvos = (await alvosAccionaveis(pedidos)).filter((a) => a.valorNaMesa != null);
     const eDeFechar = simSo || Boolean(simValor);
     const valorDito = simValor ?? naoValor;
     const valorPedido = valorDito ? Number(valorDito[1].replace(",", ".")) : null;
 
-    const listaDeAlvos = () =>
-      alvos
-        .map(
-          (a) =>
-            `• ${a.profissionalNome}: ${a.valorNaMesa != null ? euros(a.valorNaMesa) : "sem valor ainda"}`,
-        )
-        .join("\n");
+    // Com propostas de pedidos diferentes na mesma lista, o nome e o valor
+    // podem repetir-se; o número do pedido não.
+    const variosPedidos = new Set(alvos.map((a) => a.pedidoId)).size > 1;
+    const linhaDoAlvo = (a: AlvoComValor) =>
+      `• ${variosPedidos ? `Pedido #${a.pedidoId} — ` : ""}${a.profissionalNome}: ${euros(a.valorNaMesa as number)}`;
+    const listaDeAlvos = () => alvos.map(linhaDoAlvo).join("\n");
 
     let alvo: AlvoComValor | undefined;
     if (valorPedido != null) {
-      alvo = alvos.find(
-        (a) => a.valorNaMesa != null && Math.abs(a.valorNaMesa - valorPedido) < 0.005,
+      /*
+       * UM EMPATE NÃO SE DESEMPATA EM SILÊNCIO.
+       *
+       * Era `alvos.find(...)`: o PRIMEIRO com aquele valor. E `alvos` vem dos
+       * pedidos por ordem decrescente de criação, portanto o primeiro é
+       * sempre o pedido mais recente. Uma cliente com dois pedidos a 148,57 €
+       * que escrevesse «fechar 148,57» fechava com o profissional do pedido
+       * errado — e `fecharPeloCliente` mata logo a seguir todas as outras
+       * negociações DESSE pedido. Irreversível, e do outro lado da linha.
+       *
+       * Não se pergunta «qual delas?»: a pergunta só teria resposta pelo
+       * número do pedido, e um número sozinho é lido aqui como contraproposta
+       * — mandá-la seria armar a armadilha seguinte. Vai para uma pessoa.
+       */
+      const casam = alvos.filter(
+        (a) => Math.abs((a.valorNaMesa as number) - valorPedido) < 0.005,
       );
+      if (casam.length > 1) {
+        await passarAUmaPessoa(
+          telefone,
+          `${casam.length} propostas de ${euros(valorPedido)} em pedidos diferentes (${casam
+            .map((a) => `#${a.pedidoId}`)
+            .join(", ")}) — nao dá para saber qual quer fechar`,
+        );
+        return;
+      }
+      alvo = casam[0];
       if (!alvo && !eDeFechar) {
         await enviarTextoWhatsApp(
           telefone,
@@ -702,8 +749,16 @@ export async function tratarMensagemDoCliente(
       await enviarTextoWhatsApp(telefone, await ecraDoPedido(pedidos[0]));
       return;
     } else {
-      // Várias em cima da mesa: um SIM sozinho fecharia a que ele não queria.
-      const exemplo = alvos[0].valorNaMesa != null ? Math.round(alvos[0].valorNaMesa) : 300;
+      /*
+       * Várias em cima da mesa: um SIM sozinho fecharia a que ele não queria.
+       *
+       * O exemplo é o VALOR EXACTO, e não arredondado. Dizia-se «por exemplo:
+       * fechar 149» sobre uma proposta de 148,57 €, e 149 não está na mesa:
+       * quem seguisse a sugestão à letra não fechava nada — fazia uma
+       * contraproposta de 149 €. A frase que ensina a responder tem de ser
+       * uma frase que funciona.
+       */
+      const exemplo = euros(alvos[0].valorNaMesa as number).replace(" €", "");
       await enviarTextoWhatsApp(
         telefone,
         `Tem ${alvos.length} propostas em cima da mesa:\n${listaDeAlvos()}\n\n` +
