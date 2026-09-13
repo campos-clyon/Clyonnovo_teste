@@ -99,8 +99,11 @@ describe("a regra vive num sítio só", () => {
      */
     const LINK = ler("src/app/pedido/[token]/VistaDoPedido.tsx");
     const i = LINK.indexOf("await negociacoesDoPedido(pedido.id)");
-    const j = LINK.indexOf("perfilPublicoDoProfissional");
+    // A CHAMADA, e não o import — o import está no topo do ficheiro e a
+    // comparação dava-se sempre por perdida.
+    const j = LINK.indexOf("await perfilPublicoDoProfissional(");
     expect(i).toBeGreaterThan(-1);
+    expect(j).toBeGreaterThan(-1);
     // O filtro está na mesma expressão da leitura, e vem ANTES dos perfis.
     expect(LINK.slice(i, i + 200)).toContain("oClienteVeEsta");
     expect(i).toBeLessThan(j);
