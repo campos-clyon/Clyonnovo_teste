@@ -57,9 +57,23 @@ describe("a mensagem deixou de ensinar palavras-chave", () => {
 
   it("o serviço vai em palavras, e não com o traço baixo da base", () => {
     // Saía «(recolha_moveis)» — linguagem de motor à frente de quem não a
-    // devia ver.
-    expect(NEGOCIACAO).toContain("ETIQUETA_DO_SERVICO[dados.servico]");
+    // devia ver. A lista passou a viver em `servico-em-palavras.ts`, com um
+    // teste que chumba se lhe faltar uma categoria: era por uma falta dessas
+    // que o identificador voltava a escapar-se.
+    expect(NEGOCIACAO).toContain("const servico = oSeuServico(dados.servico);");
     expect(NEGOCIACAO).not.toContain("${dados.servico ? ` (${dados.servico})` : \"\"}");
+  });
+
+  /*
+   * ...E COM O ARTIGO CERTO.
+   *
+   * O molde tinha o artigo preso — `a sua ${etiqueta}` — sobre uma lista onde
+   * três das dez são masculinas. Uma cliente leu «propõe 148,57 € para a sua
+   * outro serviço». A frase vem agora feita de origem.
+   */
+  it("o artigo já vem com a frase, e não escrito à mão à volta dela", () => {
+    expect(NEGOCIACAO).not.toContain("a sua ${servico.toLowerCase()}");
+    expect(NEGOCIACAO).toContain("para ${servico} (pedido #${dados.pedidoId})");
   });
 
   it("pela ponte vai o texto como foi escrito, sem manual de instruções", () => {

@@ -6,6 +6,9 @@ import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
 import { saudacao } from "./whatsapp-recolha";
+import { totalEmPalavras } from "./conta-em-palavras";
+import { prazoAutomaticoPorExtenso } from "./pagamento-na-plataforma";
+import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 
 /**
  * O ASSISTENTE AUTOMÁTICO — o que ele vê, e o que decide dizer.
@@ -343,8 +346,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             quando: criada,
             texto:
               `${ola} Acabou de receber uma proposta de ${pro} para ${servico}: ` +
-              `${euros(pendente.valor)} sem IVA, que com o imposto e a taxa da CLYON fica em ` +
-              `${euros(total(pendente.valor, n.regimeIva))}. Só paga depois de o trabalho estar ` +
+              `${euros(pendente.valor)}. ${totalEmPalavras(pendente.valor, n.regimeIva)} ` +
+              `Só paga depois de o trabalho estar ` +
               `feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
           });
         }
@@ -363,8 +366,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
           `${ola} Boas notícias: ${pro} aceitou os ${euros(acordado)} que propôs para ` +
-          `${servico}. Com o imposto e a taxa fica em ${euros(total(acordado, n.regimeIva))}, ` +
-          `e só paga depois de estar feito. Falta só a sua palavra para ficar combinado.`,
+          `${servico}. ${totalEmPalavras(acordado, n.regimeIva)} ` +
+          `Só paga depois de estar feito. Falta só a sua palavra para ficar combinado.`,
       });
     }
 
@@ -436,8 +439,10 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
           // «deu a sua X por feita»: artigo e particípio, os dois presos ao
           // feminino. É também como o ecrã do site o diz ao cliente.
           `${ola} ${pro} diz que está feito e mandou as fotografias. ` +
-          `Diga-me se ficou tudo bem, para eu poder fechar o pedido. Se não me disser nada, ` +
-          `ao fim de sete dias fecha sozinho.`,
+          `Diga-me se ficou tudo bem, para eu poder fechar o pedido. ` +
+          // Os «sete dias» estavam escritos à mão, ao lado de uma constante
+          // que os pode mudar sem esta frase dar por isso.
+          prazoAutomaticoPorExtenso(DIAS_ATE_LIBERTAR_SOZINHO),
       });
     }
 
@@ -566,9 +571,21 @@ export function textoDoLembrete(
         `Se houver alguma coisa menos boa, é agora que dá para resolver.`
       );
     }
+    /*
+     * «E O PROFISSIONAL RECEBE» — NINGUÉM RECEBE NADA.
+     *
+     * Dizia-se ao cliente que, ficando calado, o profissional era pago. Não
+     * é: `A_PLATAFORMA_COBRA` é `false`, a CLYON não guarda dinheiro nenhum, e
+     * o que o prazo faz é escrever uma data em `confirmadoEm` e mandar um
+     * email. Depois do prazo quem deve o dinheiro ao profissional continua a
+     * ser o cliente — que acabou de ler o contrário.
+     *
+     * Era a frase da plataforma que COBRA, dita a quem vive na que não cobra.
+     * Vem agora do sítio onde essa distinção está escrita e testada, com o
+     * prazo a sério em vez de «dentro de poucos dias».
+     */
     return (
-      `${tratamento}se não me disser nada, o pedido fecha-se sozinho dentro de poucos dias e o ` +
-      `profissional recebe. Se houver algum problema, diga-me antes disso.`
+      `${tratamento}${prazoAutomaticoPorExtenso(DIAS_ATE_LIBERTAR_SOZINHO)}`
     );
   }
 

@@ -20,6 +20,7 @@ import {
 import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
 import { enviarBotoesWhatsApp, enviarTextoWhatsApp, telefoneParaWhatsApp } from "@/lib/whatsapp-cloud";
 import { oSeuServico } from "@/lib/servico-em-palavras";
+import { totalEmPalavras } from "@/lib/conta-em-palavras";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 
@@ -1158,11 +1159,11 @@ export async function aceitacaoParaOWhatsApp(dados: {
   );
   if (!primeira.podeFalar) return false;
 
-  const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
+  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva);
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n\n` +
-      `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
+      `${totalDito} Só paga depois de o trabalho estar feito e confirmado.\n\n` +
       `Falta só a sua confirmação para ficar combinado.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
@@ -1229,7 +1230,7 @@ export async function propostaParaOWhatsApp(dados: {
   );
   if (!primeira.podeFalar) return false;
 
-  const conta = contaDoCliente(dados.valor, regimeDeIva(dados.regimeIva));
+  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva);
   /*
    * O SERVIÇO EM PALAVRAS, e não o identificador da base.
    *
@@ -1246,7 +1247,7 @@ export async function propostaParaOWhatsApp(dados: {
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico} (pedido #${dados.pedidoId}).\n\n` +
-      `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
+      `${totalDito} Só paga depois de o trabalho estar feito e confirmado.\n\n` +
       `Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
