@@ -37,6 +37,7 @@ import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
+import AdminConversasPanel from "@/components/admin/AdminConversasPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
 import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
@@ -2789,8 +2790,8 @@ export default function ColaboradorAdminClient({
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">Centro de suporte</p>
                   <h2 className="mt-1 text-2xl font-semibold text-white">Pedidos de ajuda</h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    O que os clientes e profissionais escrevem — na app e na plataforma.
-                    Mais antigo primeiro: quem espera há mais tempo aparece em cima.
+                    Tudo o que os clientes e profissionais nos escrevem, venha de onde vier —
+                    de dentro de um pedido, do WhatsApp, da app ou da plataforma.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2816,6 +2817,23 @@ export default function ColaboradorAdminClient({
                   </Button>
                 </div>
               </div>
+
+              {/* ── Conversas ──────────────────────────────────────────────
+                  A caixa de entrada, e o primeiro bloco do ecrã de propósito:
+                  é o único sítio onde aparecem as mensagens que ficavam presas
+                  dentro de um pedido. Sem esta lista, ler uma delas exigia
+                  saber de antemão qual era o pedido — e quem sabia isso já não
+                  precisava de a procurar. */}
+              <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                  Conversas
+                </h3>
+                <AdminConversasPanel />
+              </div>
+
+              <h3 className="border-t border-slate-700/60 pt-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                Do centro de ajuda da app
+              </h3>
 
               {ticketErro && (
                 <div className="rounded-[16px] border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">

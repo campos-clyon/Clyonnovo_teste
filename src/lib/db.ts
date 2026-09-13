@@ -7922,3 +7922,142 @@ export async function categoriasDosPedidos(
   for (const [id, p] of porPedido) r[id] = categoriaDoPedido(p);
   return r;
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * A CAIXA DE ENTRADA DO SUPORTE — os pedidos que têm conversa lá dentro.
+ *
+ * "Hoje recebi uma mensagem vinda de uma cliente com dúvida no seu pedido, mas
+ * ela ficou presa ao pedido e agora não sei qual era." — 13-09-2026.
+ *
+ * Era literal. Uma resposta de cliente é gravada como uma linha no
+ * `historyJson` do pedido — e não havia consulta nenhuma, em lado nenhum, que
+ * procurasse essas linhas. Para encontrar a mensagem dela era preciso abrir os
+ * pedidos um a um.
+ *
+ * O `LIKE` sobre o JSON não é bonito e é o caminho certo aqui: a alternativa
+ * era uma tabela de mensagens e uma migração do histórico todo, para resolver
+ * um ecrã. A consulta está apertada dos dois lados — só os últimos seis meses,
+ * e com tecto — e o `historyJson` é lido uma vez por pedido, não por mensagem.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export type PedidoComConversa = {
+  id: number;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  serviceType: string | null;
+  historyJson: string | null;
+  updatedAt: Date | null;
+};
+
+export async function pedidosComConversa(limite = 120): Promise<PedidoComConversa[]> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+
+  /*
+   * As três marcas são os `type` que `conversas-de-suporte` reconhece. Escritas
+   * aqui à letra porque um `IN` não atravessa um LONGTEXT — e se alguém
+   * acrescentar um quarto tipo lá, tem de o acrescentar aqui: é por isso que o
+   * teste compara as duas listas.
+   */
+  const [rows] = (await pool.execute(
+    `SELECT id, contactName, contactEmail, contactPhone, serviceType, historyJson, updatedAt
+       FROM simulatorOrders
+      WHERE historyJson IS NOT NULL
+        AND createdAt > NOW() - INTERVAL 180 DAY
+        AND (historyJson LIKE '%"client_reply"%'
+          OR historyJson LIKE '%"info_requested"%'
+          OR historyJson LIKE '%"message_to_client"%')
+      ORDER BY updatedAt DESC
+      LIMIT ${Math.max(1, Math.min(400, Math.floor(limite)))}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    contactName: (r.contactName as string) ?? null,
+    contactEmail: (r.contactEmail as string) ?? null,
+    contactPhone: (r.contactPhone as string) ?? null,
+    serviceType: (r.serviceType as string) ?? null,
+    historyJson: (r.historyJson as string) ?? null,
+    updatedAt: (r.updatedAt as Date) ?? null,
+  }));
+}
+
+/**
+ * Um pedido de ajuda da plataforma, pelo id — para responder a um sem ler 200.
+ */
+export async function ajudaPorId(id: number): Promise<PedidoDeAjudaNaBase | undefined> {
+  await ensureAjudaTable();
+  const pool = await getPool();
+  if (!pool) return undefined;
+  const [rows] = (await pool.execute(
+    "SELECT * FROM pedidosDeAjuda WHERE id = ? LIMIT 1",
+    [id],
+  )) as [PedidoDeAjudaNaBase[], unknown];
+  return rows[0];
+}
+
+/**
+ * Os fios recentes do WhatsApp, de uma só vez.
+ *
+ * A caixa de entrada precisa do FIO de cada número, não da última linha. Pedir
+ * primeiro a lista dos números e depois um fio de cada vez são quarenta idas à
+ * base por cada abertura do ecrã, numa ligação de cinco — e o ecrã abre-se
+ * muitas vezes por dia.
+ *
+ * Aqui traz-se um bloco das mensagens mais recentes e agrupa-se em memória. O
+ * corte é pelo NÚMERO DE MENSAGENS e não por número de conversas: uma conversa
+ * comprida pode empurrar as outras para fora do bloco, e nesse caso o que fica
+ * de fora é sempre o mais antigo — que é o que se quer perder primeiro.
+ *
+ * AS ARQUIVADAS NÃO VÊM. Arquivar é o gesto de dar uma conversa por tratada, e
+ * uma caixa de entrada nova que as fizesse voltar todas desfazia meses de
+ * arrumação no primeiro dia. Continuam onde sempre estiveram — no painel do
+ * WhatsApp, que sabe mostrá-las.
+ */
+export async function fiosRecentesWhatsApp(
+  limiteMensagens = 500,
+): Promise<Array<{ telefone: string; mensagens: Array<{ direccao: string; texto: string; criadoEm: string }> }>> {
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return [];
+
+  const arrumadas = new Set(
+    (await listarConversasArquivadasWhatsApp().catch(() => []))
+      .map((a) => String(a.telefone).replace(/\D/g, "").slice(-9))
+      .filter(Boolean),
+  );
+  const [rows] = (await pool.execute(
+    `SELECT telefone, direccao, texto, criadoEm FROM whatsappMensagens
+      ORDER BY id DESC
+      LIMIT ${Math.max(1, Math.min(2000, Math.floor(limiteMensagens)))}`,
+  )) as [Array<{ telefone: string; direccao: string; texto: string; criadoEm: string }>, unknown];
+
+  /*
+   * Agrupa-se pelos ÚLTIMOS NOVE DÍGITOS, e não pelo número como está escrito.
+   * O mesmo telemóvel entra às vezes com indicativo e outras sem — agrupar
+   * pelo texto do número partia a conversa de uma pessoa em duas, cada uma com
+   * metade do que foi dito. É o mesmo critério de `mensagensDoNumeroWhatsApp`.
+   *
+   * As linhas vêm da mais nova para a mais velha; cada fio é invertido no fim
+   * para se ler de cima para baixo, como numa conversa.
+   */
+  const porNumero = new Map<
+    string,
+    { telefone: string; mensagens: Array<{ direccao: string; texto: string; criadoEm: string }> }
+  >();
+  for (const r of rows) {
+    const chave = String(r.telefone).replace(/\D/g, "").slice(-9);
+    if (!chave || arrumadas.has(chave)) continue;
+    const m = { direccao: r.direccao, texto: r.texto, criadoEm: String(r.criadoEm) };
+    const fio = porNumero.get(chave);
+    // O primeiro a chegar é o mais recente: é esse o número que se mostra.
+    if (fio) fio.mensagens.push(m);
+    else porNumero.set(chave, { telefone: r.telefone, mensagens: [m] });
+  }
+  return [...porNumero.values()].map((f) => ({
+    telefone: f.telefone,
+    mensagens: f.mensagens.reverse(),
+  }));
+}
