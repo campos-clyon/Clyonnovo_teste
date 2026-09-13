@@ -34,7 +34,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
-  title: "Recolha de Camas Usadas em Lisboa, Margem Sul e Setúbal | CLYON",
+  title: "Recolha de Camas e Colchões em Lisboa",
   description:
     "Recolha de camas usadas, estrados, colchões, beliches e mesinhas de cabeceira em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento e transporte incluídos. Peça orçamento.",
   keywords: [

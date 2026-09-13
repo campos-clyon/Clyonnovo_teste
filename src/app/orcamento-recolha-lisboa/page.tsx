@@ -3,14 +3,14 @@ import type { Metadata } from "next";
 import LandingClient from "./LandingClient";
 
 export const metadata: Metadata = {
-  title: "Recolha de Entulho, Móveis e Monos em Lisboa | CLYON",
+  title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
   description:
     "Peça orçamento para recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
   openGraph: {
-    title: "Recolha de Entulho, Móveis e Monos em Lisboa | CLYON",
+    title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
     description:
       "Orçamento rápido por WhatsApp para recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt/orcamento-recolha-lisboa",

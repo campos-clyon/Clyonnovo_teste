@@ -6,6 +6,15 @@ export type BlogPost = {
   keywords: string[];
   readingTime: string;
   publishDate: string;
+  /**
+   * A data do último retoque a sério, quando houve um.
+   *
+   * Sai como `dateModified` no schema, que é o que o Google mostra ao lado
+   * do resultado. Só se põe aqui quando o artigo mudou mesmo: uma data nova
+   * num texto igual é uma promessa de frescura que o leitor desmente no
+   * primeiro parágrafo.
+   */
+  updatedDate?: string;
   heroLabel: string;
   intro: string;
   sections: Array<{

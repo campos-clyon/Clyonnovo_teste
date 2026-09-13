@@ -26,12 +26,12 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_JARDINAGEM = PRECOS.jardinagem;
 
 export const metadata: Metadata = {
-  title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 6h | CLYON",
+  title: "Limpeza de Quintais em Lisboa e Setúbal — 6h",
   description:
     "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 6h!",
   alternates: { canonical: `${SITE_URL}/limpeza-de-quintais` },
   openGraph: {
-    title: "Limpeza de Quintais em Lisboa e Setúbal — Resposta em 6h | CLYON",
+    title: "Limpeza de Quintais em Lisboa e Setúbal — 6h",
     description:
       "Limpeza de quintais e jardins. Recolha de lixo verde e resíduos exteriores em Lisboa e Setúbal.",
     url: `${SITE_URL}/limpeza-de-quintais`,

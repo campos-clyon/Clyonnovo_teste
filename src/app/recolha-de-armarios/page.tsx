@@ -34,7 +34,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
-  title: "Recolha de Armários Usados em Lisboa, Margem Sul e Setúbal | CLYON",
+  title: "Recolha de Armários e Roupeiros em Lisboa",
   description:
     "Recolha de armários usados, roupeiros, cómodas e aparadores em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento porta a porta e destino responsável. Peça orçamento.",
   keywords: [

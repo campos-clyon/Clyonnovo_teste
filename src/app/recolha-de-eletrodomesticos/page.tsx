@@ -34,7 +34,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
-  title: "Recolha de Eletrodomésticos Usados em Lisboa, Margem Sul e Setúbal | CLYON",
+  title: "Recolha de Eletrodomésticos em Lisboa",
   description:
     "Recolha de eletrodomésticos usados: frigoríficos, máquinas de lavar, fogões, micro-ondas e outros equipamentos em Lisboa, Margem Sul e Setúbal. Carregamento e destino responsável.",
   keywords: [

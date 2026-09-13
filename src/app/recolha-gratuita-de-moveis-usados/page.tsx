@@ -23,7 +23,7 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Recolha Gratuita de Móveis Usados em Lisboa, Almada e Setúbal",
+  title: "Recolha Gratuita de Móveis Usados — Como Funciona",
   description:
     "Recolha gratuita de móveis usados em Lisboa, Almada, Setúbal e arredores: quando é possível pela câmara ou doação, e quando faz sentido pagar um serviço profissional que retira, desmonta e entra em casa. Guia completo com contactos e alternativas.",
   keywords: [
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   },
   openGraph: {
-    title: "Recolha Gratuita de Móveis Usados em Lisboa, Almada e Setúbal",
+    title: "Recolha Gratuita de Móveis Usados — Como Funciona",
     description:
       "Guia sobre recolha gratuita de móveis usados em Lisboa, Almada e Setúbal. Câmara, doação ou serviço profissional — quando cada opção faz sentido.",
     url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,

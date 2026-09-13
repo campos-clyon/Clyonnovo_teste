@@ -21,7 +21,7 @@ import {
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 
 export const metadata: Metadata = {
-  title: "Mudanças em Lisboa e Setúbal — Rápidas, Seguras, Sem Stress",
+  title: "Mudanças em Lisboa e Setúbal — Sem Stress",
   description:
     `Mudanças residenciais e comerciais em Lisboa e Setúbal. Embalagem, carga, transporte e montagem por profissionais verificados. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
   alternates: { canonical: `${SITE_URL}/mudancas` },

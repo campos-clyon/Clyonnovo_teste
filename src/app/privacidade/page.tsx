@@ -5,7 +5,7 @@ import { BUSINESS_EMAIL, BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/s
 import { linhaDeIdentificacao } from "@/lib/identificacao-legal";
 
 export const metadata: Metadata = {
-  title: "Política de Privacidade — Recolha de Móveis e Esvaziamento",
+  title: "Política de Privacidade",
   description:
     "Política de privacidade da CLYON: como tratamos os dados dos clientes que pedem recolha de móveis, esvaziamento de casa, recolha de entulho ou mudanças em Lisboa, Margem Sul e Setúbal. Direitos ao abrigo do RGPD.",
   alternates: { canonical: `${SITE_URL}/privacidade` },

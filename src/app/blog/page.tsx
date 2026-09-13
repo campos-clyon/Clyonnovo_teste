@@ -6,7 +6,7 @@ import { getAllBlogPosts } from "@/lib/blog-data";
 import { SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Blog — Como Recolher Móveis, Esvaziar Casa e Doar Recheio em Lisboa",
+  title: "Blog — Recolher Móveis, Esvaziar Casa e Doar",
   description:
     "Guias práticos: como esvaziar uma casa herdada, doar móveis usados em Lisboa, recolha de monos pela câmara vs empresa, preços de recolha de entulho, como preparar uma mudança. Escrito por quem faz o serviço no terreno.",
   keywords: [

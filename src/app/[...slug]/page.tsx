@@ -34,6 +34,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { tituloDaCidade } from "@/lib/titulos-seo";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
 
@@ -54,55 +55,6 @@ function isFurnitureService(serviceSlug: string) {
   return serviceSlug === "recolha-moveis";
 }
 
-function buildTitle(serviceName: string, cityName: string, serviceSlug: string, citySlug: string) {
-  // Páginas de high-priority com titles optimizados para CTR
-  // NOTA: Não incluir "| CLYON" aqui - o template do layout já adiciona
-  if (isFurnitureService(serviceSlug)) {
-    if (citySlug === "lisboa") {
-      return `Recolha de Móveis em Lisboa — Hoje ou Amanhã, ${PRECO_MOVEIS}`;
-    }
-    if (citySlug === "setubal") {
-      return `Recolha de Móveis em Setúbal — Preços ${PRECO_MOVEIS}, Resposta 6h`;
-    }
-    if (citySlug === "almada") {
-      return `Recolha de Móveis em Almada — Resposta Rápida, ${PRECO_MOVEIS}`;
-    }
-    return `Recolha de Móveis em ${cityName} — ${PRECO_MOVEIS}, Orçamento em 6h`;
-  }
-
-  // Recolha de monos — foco em "recolha municipal" e resposta rápida
-  if (serviceSlug === "recolha-monos") {
-    if (citySlug === "lisboa") {
-      return `Recolha de Monos em Lisboa — Alternativa Rápida à Câmara`;
-    }
-    if (citySlug === "almada") {
-      return `Recolha de Monos em Almada — Sem Esperar pela Câmara`;
-    }
-    if (citySlug === "cascais") {
-      return `Recolha de Monos em Cascais — Contactos e Preços 6h`;
-    }
-    return `Recolha de Monos em ${cityName} — Alternativa à Recolha Municipal`;
-  }
-
-  if (serviceSlug === "recolha-entulho") {
-    /*
-      SEM BIG BAGS NO TÍTULO — é o que aparece no Google.
-
-      Prometia «Big Bags» a quem procurava, e a CLYON não os tem: a recolha é
-      a saco de 25 kg. Um título que promete o que a página não cumpre traz
-      cliques que se perdem no primeiro parágrafo. Ver `sacos-de-entulho.ts`.
-    */
-    if (citySlug === "lisboa") {
-      return `Recolha de Entulho em Lisboa — a Saco, ${PRECO_ENTULHO}, 6h`;
-    }
-    if (citySlug === "setubal") {
-      return `Recolha de Entulho em Setúbal — Obras e Remodelações 6h`;
-    }
-    return `Recolha de Entulho em ${cityName} — Sacos de Obra, 6h`;
-  }
-
-  return `${serviceName} em ${cityName} — Orçamento Grátis em 6h`;
-}
 
 function buildDescription(
   serviceName: string,
@@ -324,7 +276,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const { city, service } = parsed;
-  const title = buildTitle(service.name, city.name, service.slug, city.slug);
+  const title = tituloDaCidade(service.name, city.name, service.slug, city.slug);
   const description = buildDescription(
     service.name,
     city.name,
@@ -389,7 +341,7 @@ export default async function ServiceCityPage({ params }: Props) {
   }
 
   const pageUrl = `${SITE_URL}/${getCityServiceSlug(service.slug, city.slug)}`;
-  const title = buildTitle(service.name, city.name, service.slug, city.slug);
+  const title = tituloDaCidade(service.name, city.name, service.slug, city.slug);
   const description = buildDescription(
     service.name,
     city.name,

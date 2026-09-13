@@ -34,7 +34,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
-  title: "Recolha de Sofás em Lisboa, Margem Sul e Setúbal | CLYON",
+  title: "Recolha de Sofás — Lisboa, Margem Sul e Setúbal",
   description:
     "Recolha de sofás usados, sofás velhos, chaise longues e cadeirões em Lisboa, Margem Sul e Setúbal. Carregamento porta a porta, transporte e destino responsável. Peça orçamento.",
   keywords: [

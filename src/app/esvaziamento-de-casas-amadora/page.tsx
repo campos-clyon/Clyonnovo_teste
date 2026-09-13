@@ -14,12 +14,12 @@ const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
-  title: "Esvaziamento de Casas na Amadora | Apartamentos, Garagens e Arrecadações",
+  title: "Esvaziamento de Casas na Amadora — Apartamentos",
   description:
     "Esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos, eletrodomésticos e limpeza associada. Atendemos Reboleira, Damaia, Alfragide, Venteira e mais zonas.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
   openGraph: {
-    title: "Esvaziamento de Casas na Amadora | Apartamentos, Garagens e Arrecadações",
+    title: "Esvaziamento de Casas na Amadora — Apartamentos",
     description:
       "Esvaziamento completo na Amadora com remoção de móveis e limpeza. Reboleira, Damaia, Alfragide, Venteira.",
     url: `${SITE_URL}/esvaziamento-de-casas-amadora`,

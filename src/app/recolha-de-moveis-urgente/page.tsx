@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Recolha de Móveis Urgente Lisboa | Resposta Rápida | CLYON",
+  title: "Recolha de Móveis Urgente em Lisboa — Hoje",
   description:
     "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Resposta no próprio dia, desmontagem incluída e carregamento porta a porta. Ligue agora: 931 632 622.",
   keywords: [
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     canonical: "https://clyon.pt/recolha-de-moveis-urgente",
   },
   openGraph: {
-    title: "Recolha de Móveis Urgente Lisboa | Resposta Rápida | CLYON",
+    title: "Recolha de Móveis Urgente em Lisboa — Hoje",
     description:
       "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
     url: "https://clyon.pt/recolha-de-moveis-urgente",

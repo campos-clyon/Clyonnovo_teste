@@ -11,7 +11,7 @@ import EntrarPorLink from "./EntrarPorLink";
  * externo que a página tocasse.
  */
 export const metadata: Metadata = {
-  title: "Entrar | CLYON",
+  title: "Entrar",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

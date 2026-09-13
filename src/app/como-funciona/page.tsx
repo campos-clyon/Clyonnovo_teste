@@ -12,14 +12,14 @@ import {
 import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Como Funciona — Preço Fixo por IA, Conferido por Uma Pessoa",
+  title: "Como Funciona — Preço Fixo, Conferido por Uma Pessoa",
   description:
     "Descreva o serviço, receba um preço fixo calculado por IA em segundos e alguém da CLYON confirma tudo consigo antes de avançar. Sem negociação, sem surpresas.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
   openGraph: {
-    title: "Como Funciona — Preço Fixo por IA, Conferido por Uma Pessoa",
+    title: "Como Funciona — Preço Fixo, Conferido por Uma Pessoa",
     description:
       "O modelo único da CLYON: velocidade da IA, a confiança de uma revisão humana, execução por um profissional verificado.",
     url: `${SITE_URL}/como-funciona`,

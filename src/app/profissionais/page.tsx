@@ -5,7 +5,7 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
 export const metadata: Metadata = {
-  title: "Receba pedidos na sua zona — CLYON para profissionais",
+  title: "Receba Pedidos na Sua Zona — Para Profissionais",
   description: PROMESSA.metaDosProfissionais,
   alternates: { canonical: "https://clyon.pt/profissionais" },
 };

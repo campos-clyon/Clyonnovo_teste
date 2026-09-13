@@ -18,7 +18,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
 
 export const metadata: Metadata = {
-  title: "Recolha de Sofá Lisboa | Carregamento e Transporte | CLYON",
+  title: "Recolha de Sofá em Lisboa — Transporte Incluído",
   description:
     "Recolha de sofá em Lisboa com carregamento porta a porta e transporte incluído. Os profissionais retiram sofás, chaise longues e cadeirões. Orçamento grátis: 931 632 622.",
   keywords: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     canonical: "https://clyon.pt/recolha-de-sofa-lisboa",
   },
   openGraph: {
-    title: "Recolha de Sofá Lisboa | Carregamento e Transporte | CLYON",
+    title: "Recolha de Sofá em Lisboa — Transporte Incluído",
     description:
       "Recolha de sofá em Lisboa com carregamento porta a porta e transporte incluído. Os profissionais retiram sofás, chaise longues e cadeirões.",
     url: "https://clyon.pt/recolha-de-sofa-lisboa",

@@ -10,7 +10,7 @@ import TrabalhosGallery from "./TrabalhosGallery";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Trabalhos Realizados — Recolha de Móveis e Esvaziamento em Lisboa",
+  title: "Trabalhos Realizados — Recolha e Esvaziamento",
   description:
     `Portfólio de recolhas de móveis, esvaziamentos de casa, recolhas de entulho e mudanças em Lisboa, Margem Sul e Setúbal. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★, ${PRAZO_DE_RESPOSTA.frase.toLowerCase()}.`,
   keywords: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/trabalhos` },
   openGraph: {
-    title: "Trabalhos Realizados — Recolha de Móveis e Esvaziamento em Lisboa",
+    title: "Trabalhos Realizados — Recolha e Esvaziamento",
     description:
       `Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★.`,
     url: `${SITE_URL}/trabalhos`,

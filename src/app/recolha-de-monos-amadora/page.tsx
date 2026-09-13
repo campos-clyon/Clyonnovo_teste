@@ -7,12 +7,12 @@ import { PRECOS } from "@/lib/precos-publicos";
 const SITE_URL = "https://clyon.pt";
 
 export const metadata: Metadata = {
-  title: "Recolha de Monos na Amadora | Móveis Velhos, Sofás e Volumosos",
+  title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",
   description:
     "Recolha de monos na Amadora com carregamento, transporte e remoção de móveis velhos, sofás, colchões, eletrodomésticos e objetos volumosos. Reboleira, Damaia, Alfragide.",
   alternates: { canonical: `${SITE_URL}/recolha-de-monos-amadora` },
   openGraph: {
-    title: "Recolha de Monos na Amadora | Móveis Velhos, Sofás e Volumosos",
+    title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",
     description:
       "Recolha de monos na Amadora com carregamento e transporte. Móveis velhos, sofás, colchões e volumosos.",
     url: `${SITE_URL}/recolha-de-monos-amadora`,

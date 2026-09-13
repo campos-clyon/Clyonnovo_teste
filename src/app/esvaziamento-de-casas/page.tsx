@@ -19,7 +19,7 @@ const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
-  title: "Esvaziar Casa e Apartamento em Lisboa — Heranças, Recheios e Doações",
+  title: "Esvaziamento de Casas e Apartamentos — Heranças",
   description:
     `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços ${PRECO_CASA}. Orçamento grátis em 6h.`,
   keywords: [

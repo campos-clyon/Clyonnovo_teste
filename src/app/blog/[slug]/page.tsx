@@ -68,6 +68,17 @@ export default async function BlogPostPage({ params }: Props) {
     headline: post.title,
     description: post.description,
     datePublished: post.publishDate,
+    /*
+     * A data que o Google mostra no resultado.
+     *
+     * A Betel aparece em primeiro na «recolha de móveis» com um «10/10/2025»
+     * antes do texto; os nossos artigos apareciam sem data nenhuma, e um
+     * artigo sem data lê-se como um artigo velho. Sai a do último retoque
+     * quando existe — e, quando não existe, a da publicação, que é a
+     * verdade: nunca foi tocado desde então. Datar um artigo que não mudou
+     * seria mentir ao Google e ao leitor, e o Google verifica.
+     */
+    dateModified: post.updatedDate ?? post.publishDate,
     author: {
       "@type": "Organization",
       name: BUSINESS_NAME,

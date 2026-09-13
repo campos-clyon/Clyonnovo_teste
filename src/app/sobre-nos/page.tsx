@@ -20,14 +20,14 @@ import {
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Sobre a CLYON | Recolha, Limpeza e Mudanças em Lisboa e Setúbal",
+  title: "Sobre a CLYON — Recolha, Limpeza e Mudanças",
   description:
     "Conheça a CLYON, a equipa por trás dos serviços de recolha, limpeza, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: `${SITE_URL}/sobre-nos`,
   },
   openGraph: {
-    title: "Sobre a CLYON | Recolha, Limpeza e Mudanças em Lisboa e Setúbal",
+    title: "Sobre a CLYON — Recolha, Limpeza e Mudanças",
     description:
       "Uma equipa focada em resposta rápida, orçamento claro e destino licenciado para o que sai de casa.",
     url: `${SITE_URL}/sobre-nos`,

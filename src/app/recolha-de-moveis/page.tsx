@@ -40,7 +40,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
-  title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários",
+  title: "Recolha de Móveis em Lisboa — Sofás e Camas",
   description:
     `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços de ${PRECO_MOVEIS.etiqueta}. Orçamento grátis em 6h.`,
   keywords: [
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/recolha-de-moveis`,
   },
   openGraph: {
-    title: "Recolha de Móveis em Lisboa — Sofás, Camas e Armários",
+    title: "Recolha de Móveis em Lisboa — Sofás e Camas",
     description:
       `Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços de ${PRECO_MOVEIS.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-moveis`,

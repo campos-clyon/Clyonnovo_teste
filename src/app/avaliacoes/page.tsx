@@ -7,7 +7,7 @@ import { reviews } from "@/lib/reviews-data";
 import { BUSINESS_PHONE, SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
-  title: "Avaliações e Testemunhos de Clientes — CLYON Lisboa e Setúbal",
+  title: "Avaliações de Clientes — Lisboa e Setúbal",
   description:
     "37 avaliações no Google e 118 na Fixando, todas a 5 estrelas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.",
   alternates: {

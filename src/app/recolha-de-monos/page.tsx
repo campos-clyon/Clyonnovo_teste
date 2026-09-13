@@ -32,7 +32,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MONOS = PRECOS.recolha_monos;
 
 export const metadata: Metadata = {
-  title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
+  title: "Recolha de Monos em Lisboa — Sem Esperar a Câmara",
   description:
     `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 6h.`,
   keywords: [
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
   openGraph: {
-    title: "Recolha de Monos em Lisboa — Volumosos e Móveis Antigos",
+    title: "Recolha de Monos em Lisboa — Sem Esperar a Câmara",
     description:
       `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 6h.`,
     url: `${SITE_URL}/recolha-de-monos`,

@@ -6,12 +6,12 @@ import { AVALIACOES_TOTAL, NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 
 export const metadata: Metadata = {
-  title: "FAQ — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
+  title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
   description:
     "Perguntas frequentes sobre recolha de móveis, esvaziamento de casa e apartamento em Lisboa. Saiba quanto custa, quais móveis recolhemos, em que zonas atuamos e como funciona o serviço CLYON.",
   alternates: { canonical: "https://clyon.pt/faq" },
   openGraph: {
-    title: "FAQ — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
+    title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
     description:
       "Tudo sobre recolha de móveis, esvaziamento de casas e apartamentos em Lisboa, Margem Sul e Setúbal. Preços, prazos e funcionamento.",
     url: "https://clyon.pt/faq",

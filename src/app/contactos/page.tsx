@@ -51,7 +51,7 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
  */
 
 export const metadata: Metadata = {
-  title: "Contactos CLYON — Telefone, WhatsApp e Orçamento Grátis em 6h",
+  title: "Contactos — Telefone, WhatsApp e Orçamento em 6h",
   description:
     "Fale connosco por telefone, WhatsApp, email ou formulário. Orçamento gratuito e sem compromisso em 6 horas para recolha de móveis, entulho, monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
   keywords: [
