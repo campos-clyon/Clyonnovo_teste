@@ -87,6 +87,6 @@ describe("o ponto de situação só sai quando há situação", () => {
    * espera de resposta fosse do outro.
    */
   it("mostra o pedido que tem alguma coisa à espera, e não o mais recente", () => {
-    expect(CEREBRO).toContain("await ecraDoPedido(pendentes[0].pedidoId)");
+    expect(CEREBRO).toContain("mandarOEcra(telefone, pendentes[0].pedidoId)");
   });
 });

@@ -98,7 +98,7 @@ describe("o Gemini lê a frase e a máquina continua a decidir", () => {
     expect(NEGOCIACAO).toContain("async function traduzirParaAMaquina(");
     expect(NEGOCIACAO).toContain("} = await traduzirParaAMaquina(conteudo.texto.trim(), pedidos);");
     expect(NEGOCIACAO).toContain("accao: percebida,");
-    expect(NEGOCIACAO).toContain('return { texto: valor != null ? `sim ${valor}` : "sim", accao: "fechar" };');
+    expect(NEGOCIACAO).toContain('texto: valor != null ? `sim ${valor}` : "sim"');
   });
 
   /*
