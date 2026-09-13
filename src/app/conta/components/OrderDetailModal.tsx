@@ -15,6 +15,7 @@ import PropostasRecebidas, {
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tFloor } from "@/lib/translations";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
+import { oClienteVeEsta } from "@/lib/negociacao";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -148,7 +149,22 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
    */
   const propostas: NegociacaoDoCliente[] = useMemo(
     () =>
-      (order.negociacoes ?? []).map((n) => ({
+      (order.negociacoes ?? [])
+        /*
+         * SÓ QUEM FEZ PROPOSTA — a mesma regra da página do link.
+         *
+         * Um pedido vai a todos os profissionais elegíveis da zona, e cada um
+         * abre uma negociação no instante em que o recebe, mesmo que nunca lhe
+         * toque. Sem isto, a conta mostrava seis nomes com «à espera da
+         * proposta dele» e enterrava quem tinha mesmo respondido.
+         *
+         * A regra vive em `oClienteVeEsta` porque há dois caminhos até esta
+         * lista, e uma regra escrita duas vezes acaba com dois comportamentos.
+         */
+        .filter((n) =>
+          oClienteVeEsta({ estado: n.estado, propostas: parseHistoryLike(n.propostasJson) }),
+        )
+        .map((n) => ({
         id: n.id,
         estado: n.estado,
         valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,

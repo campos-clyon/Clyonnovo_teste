@@ -3,7 +3,7 @@ import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { lerBase, avisoDaBase } from "@/lib/base-do-preco";
 import { negociacoesDoPedido } from "@/lib/db";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import type { Proposta } from "@/lib/negociacao";
+import { oClienteVeEsta, type Proposta } from "@/lib/negociacao";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
@@ -99,7 +99,24 @@ export default async function VistaDoPedido({
    * de aceitar", e até aqui só ia o nome. São dados REAIS: com zero
    * avaliações o ecrã diz "sem avaliações ainda", não inventa número nenhum.
    */
-  const linhas = await negociacoesDoPedido(pedido.id);
+  /*
+   * SÓ QUEM FEZ PROPOSTA. E o filtro corre AQUI, no servidor.
+   *
+   * Um pedido vai a todos os profissionais elegíveis da zona, e cada um abre
+   * uma negociação no instante em que o recebe — mesmo que nunca lhe toque. O
+   * cliente via seis cartões com nome e avaliações a dizer «à espera da
+   * proposta dele».
+   *
+   * Filtrar no browser tirava-os do ecrã e deixava-os no HTML: os nomes, as
+   * notas e os trabalhos de seis pessoas que o cliente não tem nada que
+   * conhecer viajavam na mesma. Aqui, nem saem da base — e, de caminho,
+   * poupam-se os perfis públicos que não vão ser mostrados a ninguém.
+   *
+   * A regra é a mesma da conta, e vive em `oClienteVeEsta`.
+   */
+  const linhas = (await negociacoesDoPedido(pedido.id)).filter((n) =>
+    oClienteVeEsta({ estado: n.estado, propostas: propostasDe(n.propostasJson) }),
+  );
   const perfis = new Map(
     await Promise.all(
       [...new Set(linhas.map((n) => Number(n.providerId)))].map(

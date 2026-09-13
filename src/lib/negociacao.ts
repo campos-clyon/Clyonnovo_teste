@@ -200,6 +200,39 @@ export function podeFazer(n: Negociacao, lado: Lado, accao: Accao, agora: Date):
   return accoesDisponiveis(n, lado, agora).includes(accao);
 }
 
+/**
+ * O CLIENTE VÊ ESTA NEGOCIAÇÃO?
+ *
+ * "Não quero que apareçam todos os profissionais para os clientes, apenas os
+ * que fizeram propostas." — 12-09-2026, a olhar para seis cartões com nome,
+ * avaliações e «à espera da proposta dele» em cada um.
+ *
+ * Um pedido vai a todos os profissionais elegíveis da zona, e cada um deles
+ * abre uma negociação no instante em que o recebe — mesmo que nunca lhe toque.
+ * Mostrá-las todas fazia três coisas más ao mesmo tempo:
+ *
+ *   · enchia o ecrã de gente que não disse nada, e enterrava quem disse;
+ *   · dava a entender que seis pessoas estavam a trabalhar no pedido dele
+ *     quando podiam estar zero — e a decepção chega quando nenhuma responde;
+ *   · dizia ao cliente A QUEM o pedido foi parar, que é informação nossa e dos
+ *     profissionais, não dele.
+ *
+ * A regra vive aqui porque há DOIS caminhos até esta lista — o link do email e
+ * a conta — e uma regra escrita duas vezes acaba com dois comportamentos. Na
+ * página do link ela corre no servidor, e por isso os nomes dos outros nem
+ * chegam a sair daqui.
+ *
+ * Um acordo vê-se sempre. Depois de fechado, o que interessa é com quem — e
+ * essa negociação já não está à espera de proposta nenhuma.
+ */
+export function oClienteVeEsta(n: {
+  estado: string;
+  propostas: Proposta[];
+}): boolean {
+  if (n.estado === "acordada" || n.estado === "aguarda_contratacao") return true;
+  return n.propostas.some((p) => p.por === "profissional");
+}
+
 export type ResultadoDaAccao =
   | { ok: true; negociacao: Negociacao }
   | { ok: false; erro: string };

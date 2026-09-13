@@ -503,8 +503,19 @@ export default function PropostasRecebidas({
 
   return (
     <section className="mt-4">
+      {/*
+        «RESPONDERAM», e não «a responder».
+
+        Dizia «6 profissionais a responder» sobre seis pessoas que não tinham
+        dito nada — eram só os profissionais a quem o pedido tinha ido parar. A
+        lista passou a mostrar apenas quem fez proposta (ver `oClienteVeEsta`),
+        e a frase tinha de acompanhar: agora o número conta quem respondeu, que
+        é a única coisa que o cliente pode fazer alguma coisa com.
+      */}
       <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-tinta-fraca">
-        {activas.length} {activas.length === 1 ? "profissional" : "profissionais"} a responder
+        {activas.length === 1
+          ? "1 profissional respondeu"
+          : `${activas.length} profissionais responderam`}
       </h2>
 
       {erro && (
