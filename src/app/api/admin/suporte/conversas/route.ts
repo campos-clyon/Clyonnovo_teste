@@ -228,15 +228,19 @@ export async function GET(req: NextRequest) {
            */
           pedidoId: null,
           assunto: String(t.subject ?? "") || null,
-          mensagens: [
-            {
-              de: "eles",
-              texto: String(t.description ?? ""),
-              quando: String(t.created_at),
-              autor: quem,
-            },
-            ...(porTicket.get(String(t.id)) ?? []),
-          ].filter((m) => m.texto.trim()),
+          mensagens: (
+            [
+              // O que ele escreveu ao abrir o ticket é a primeira mensagem da
+              // conversa, e não um campo do cabeçalho: é a pergunta.
+              {
+                de: "eles",
+                texto: String(t.description ?? ""),
+                quando: String(t.created_at),
+                autor: quem,
+              },
+              ...(porTicket.get(String(t.id)) ?? []),
+            ] as MensagemDaConversa[]
+          ).filter((m) => m.texto.trim()),
         });
       }
     }
