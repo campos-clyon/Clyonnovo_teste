@@ -321,6 +321,9 @@ export default function AdminWhatsAppPanel() {
   const [resposta, setResposta] = useState("");
   const [aResponder, setAResponder] = useState(false);
   const [erroDaResposta, setErroDaResposta] = useState("");
+  /* O que ACONTECEU, quando correu bem. A caixa dos erros e vermelha, e uma
+   * confirmacao em vermelho le-se como uma avaria. */
+  const [notaDaResposta, setNotaDaResposta] = useState("");
   /*
    * À mão, os links abrem o WhatsApp Web deste computador. A secção com a
    * escolha Web/telemóvel saiu a pedido do dono ("remova isso, não era o que
@@ -346,6 +349,18 @@ export default function AdminWhatsAppPanel() {
     mensagem: string;
     completo: boolean;
     linhasLidas: number;
+    /*
+     * DUAS CONVERSAS DIFERENTES POR DEBAIXO DO MESMO BOTÃO.
+     *
+     * Na recolha, reler reconstrói campos e pergunta o que falta. Numa conversa
+     * de propostas não há campos nenhuns: o que se faz é voltar a passar pelo
+     * assistente a última mensagem do cliente. As palavras do aviso mudam com
+     * isso — falar de «campos que ele nunca disse» a quem só quer uma resposta
+     * a um «Não» é explicar-lhe uma coisa que não está a acontecer.
+     */
+    propostas?: boolean;
+    ultima?: string;
+    pedido?: number;
   } | null>(null);
   const [aReler, setAReler] = useState(false);
 
@@ -407,6 +422,7 @@ export default function AdminWhatsAppPanel() {
       if (!token) return;
       setConversaAberta(telefone);
       setErroDaResposta("");
+      setNotaDaResposta("");
       try {
         const res = await fetch(`/api/admin/whatsapp?telefone=${encodeURIComponent(telefone)}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -432,6 +448,7 @@ export default function AdminWhatsAppPanel() {
       if (!token) return;
       setAReler(true);
       setErroDaResposta("");
+      setNotaDaResposta("");
       try {
         const res = await fetch("/api/admin/whatsapp", {
           method: "POST",
@@ -451,11 +468,17 @@ export default function AdminWhatsAppPanel() {
             mensagem: dados.mensagem ?? "",
             completo: Boolean(dados.completo),
             linhasLidas: Number(dados.linhasLidas ?? 0),
+            propostas: Boolean(dados.propostas),
+            ultima: typeof dados.ultima === "string" ? dados.ultima : undefined,
+            pedido: typeof dados.pedido === "number" ? dados.pedido : undefined,
           });
           return;
         }
         setReleitura(null);
         if (dados.aviso) setErroDaResposta(dados.aviso);
+        // `feito` não é um aviso de avaria: é o que aconteceu. Pô-lo na caixa
+        // dos erros dizia a quem carregou que tinha corrido mal.
+        if (dados.feito) setNotaDaResposta(String(dados.feito));
         await abrirConversa(telefone);
         await carregar();
       } catch {
@@ -471,6 +494,7 @@ export default function AdminWhatsAppPanel() {
     if (!token || !conversaAberta || !resposta.trim()) return;
     setAResponder(true);
     setErroDaResposta("");
+    setNotaDaResposta("");
     try {
       const res = await fetch("/api/admin/whatsapp", {
         method: "POST",
@@ -979,6 +1003,9 @@ export default function AdminWhatsAppPanel() {
                         </button>
                       </div>
                       {erroDaResposta && <p className="mt-2 text-xs text-red-300">{erroDaResposta}</p>}
+                      {notaDaResposta && (
+                        <p className="mt-2 text-xs text-emerald-300">{notaDaResposta}</p>
+                      )}
 
                       {/*
                         O QUE A RELEITURA PERCEBEU, ANTES DE SAIR.
@@ -989,19 +1016,32 @@ export default function AdminWhatsAppPanel() {
                       {releitura?.telefone === l.telefone && (
                         <div className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
                           <p className="text-xs font-semibold text-cyan-200">
-                            Reli {releitura.linhasLidas} linha
-                            {releitura.linhasLidas === 1 ? "" : "s"} da conversa
-                            {releitura.recuperados.length > 0
-                              ? ` e recuperei: ${releitura.recuperados.join(", ")}.`
-                              : " e não encontrei nada de novo."}
+                            {releitura.propostas ? (
+                              <>
+                                Conversa das propostas
+                                {releitura.pedido ? ` — pedido #${releitura.pedido}` : ""}. Reli{" "}
+                                {releitura.linhasLidas} linha
+                                {releitura.linhasLidas === 1 ? "" : "s"}.
+                              </>
+                            ) : (
+                              <>
+                                Reli {releitura.linhasLidas} linha
+                                {releitura.linhasLidas === 1 ? "" : "s"} da conversa
+                                {releitura.recuperados.length > 0
+                                  ? ` e recuperei: ${releitura.recuperados.join(", ")}.`
+                                  : " e não encontrei nada de novo."}
+                              </>
+                            )}
                           </p>
                           <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-950/60 p-2 text-xs leading-relaxed text-slate-200">
                             {releitura.mensagem}
                           </p>
                           <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                            {releitura.completo
-                              ? "Está tudo respondido — o que vai é o resumo, e o SIM dele regista o pedido."
-                              : "Confirme antes de sair: um campo que ele nunca disse passa nos validadores na mesma."}
+                            {releitura.propostas
+                              ? "Quem responde é o assistente, com as regras de sempre: fechar e recusar continuam a passar pelas mesmas guardas. Nada se fecha só por carregar aqui."
+                              : releitura.completo
+                                ? "Está tudo respondido — o que vai é o resumo, e o SIM dele regista o pedido."
+                                : "Confirme antes de sair: um campo que ele nunca disse passa nos validadores na mesma."}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             <button
@@ -1014,7 +1054,7 @@ export default function AdminWhatsAppPanel() {
                               ) : (
                                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
                               )}
-                              Confirmar e enviar
+                              {releitura.propostas ? "Continuar a conversa" : "Confirmar e enviar"}
                             </button>
                             <button
                               onClick={() => setReleitura(null)}

@@ -273,18 +273,74 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       );
     }
-    // E com pedido activo o cérebro nem chega à recolha: reler escrevia uma
-    // linha que ninguém ia ler, e dava um verde que não queria dizer nada.
+    /*
+     * COM PEDIDO ACTIVO, A CONVERSA É A DAS PROPOSTAS — E CONTINUA-SE NA MESMA.
+     *
+     * Isto devolvia 409: «a conversa dele é a das propostas, não a da recolha».
+     * Estava certo e era inútil. Quem carrega no botão não está a pedir uma
+     * releitura da recolha — está a pedir que o assistente CONTINUE, e para
+     * isso não havia caminho nenhum no painel.
+     *
+     * Uma cliente escreveu «Não» às 14:22 e o assistente não respondeu. O
+     * botão era o gesto certo; só não fazia nada.
+     */
     const activos = await pedidosDoTelefone(telefone);
     if (activos.length > 0) {
-      return NextResponse.json(
-        {
-          error:
-            `Este número já tem o pedido #${activos[0]} a andar. ` +
-            `A conversa dele é a das propostas, não a da recolha.`,
-        },
-        { status: 409 },
+      const {
+        whatsappLigado,
+        numeroBloqueadoWhatsApp,
+        numeroInterrompidoWhatsApp,
+      } = await import("@/lib/db");
+      const { podeContinuar, ultimaDoCliente, oQueVaiFazer } = await import(
+        "@/lib/continuar-a-conversa"
       );
+
+      const fioTodo = await mensagensDoNumeroWhatsApp(telefone, 200);
+      const veredicto = podeContinuar(
+        {
+          ligado: await whatsappLigado(),
+          bloqueado: await numeroBloqueadoWhatsApp(telefone),
+          entregue: await numeroInterrompidoWhatsApp(telefone),
+        },
+        ultimaDoCliente(fioTodo),
+      );
+
+      /*
+       * O PORQUÊ VAI JUNTO COM O NÃO.
+       *
+       * Um botão que não faz nada e não diz porquê manda a pessoa procurar uma
+       * avaria que não existe — e o pior dos motivos, o interruptor geral
+       * desligado, não se vê em lado nenhum na linha da conversa.
+       */
+      if (!veredicto.pode) {
+        return NextResponse.json(
+          { error: `${veredicto.porque} ${veredicto.comoSeResolve}` },
+          { status: 409 },
+        );
+      }
+
+      if (corpo.confirmar !== true) {
+        return NextResponse.json({
+          ok: true,
+          previsao: true,
+          propostas: true,
+          pedido: activos[0],
+          ultima: veredicto.ultima.texto,
+          linhasLidas: fioTodo.length,
+          mensagem: oQueVaiFazer(activos[0], veredicto.ultima.texto),
+        });
+      }
+
+      const { tratarMensagemDoCliente } = await import("@/lib/whatsapp-negociacao");
+      await tratarMensagemDoCliente(telefone, {
+        tipo: "texto",
+        texto: veredicto.ultima.texto,
+      });
+      return NextResponse.json({
+        ok: true,
+        propostas: true,
+        feito: `O assistente voltou a tratar «${veredicto.ultima.texto}» no pedido #${activos[0]}.`,
+      });
     }
 
     const fio = fioParaLeitura(await mensagensDoNumeroWhatsApp(telefone, 200));

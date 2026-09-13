@@ -273,10 +273,19 @@ describe("as guardas da rota", () => {
     expect(bloco).toContain("já deu o pedido #");
   });
 
-  it("recusa quando o número já tem pedido a andar", () => {
+  /*
+   * ISTO RECUSAVA, E A RECUSA ERA INÚTIL.
+   *
+   * «Este número já tem o pedido #311 a andar. A conversa dele é a das
+   * propostas, não a da recolha.» — verdade, e nada feito. Quem carrega no
+   * botão não está a pedir uma releitura da recolha: está a pedir que o
+   * assistente continue. Ver `continuar-a-conversa.ts`.
+   */
+  it("com pedido a andar, continua a conversa das propostas em vez de recusar", () => {
     const bloco = ROTA.slice(ROTA.indexOf('accao === "relerConversa"'));
     expect(bloco).toContain("pedidosDoTelefone(telefone)");
     expect(bloco).toContain("activos.length > 0");
+    expect(bloco).toContain("podeContinuar");
   });
 
   it("sem confirmar, NÃO escreve nada", () => {
