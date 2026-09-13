@@ -19,7 +19,7 @@ import {
 } from "@/lib/negociacao";
 import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
 import { enviarBotoesWhatsApp, enviarTextoWhatsApp, telefoneParaWhatsApp } from "@/lib/whatsapp-cloud";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { oSeuServico } from "@/lib/servico-em-palavras";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 
@@ -37,11 +37,6 @@ import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
  * pedido #9; texto "300" → contraproposta de 300 €; "27/08 14:30" → data
  * marcada. Tudo fica no histórico como "por WhatsApp".
  */
-
-/** O serviço em palavras — o identificador da base não vai para o cliente. */
-const ETIQUETA_DO_SERVICO: Record<string, string> = Object.fromEntries(
-  SERVICE_CATEGORIES.map((c) => [c.id, c.label]),
-);
 
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
@@ -1240,11 +1235,17 @@ export async function propostaParaOWhatsApp(dados: {
    *
    * Saía «(recolha_moveis)» — linguagem de motor a escapar-se para a frente
    * de quem não a devia ver, com o traço baixo e tudo.
+   *
+   * E com o artigo já lá dentro. Escrevia-se `a sua ${etiqueta}` à mão, sobre
+   * uma lista onde três das dez são masculinas: uma cliente leu «propõe
+   * 148,57 € para a sua outro serviço». A frase vem feita de
+   * `servico-em-palavras.ts`, onde não há concordância nenhuma para calcular
+   * — logo não há nenhuma para errar.
    */
-  const servico = dados.servico ? (ETIQUETA_DO_SERVICO[dados.servico] ?? null) : null;
+  const servico = oSeuServico(dados.servico);
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
-    `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico ? `a sua ${servico.toLowerCase()}` : "o seu pedido"} (pedido #${dados.pedidoId}).\n\n` +
+    `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico} (pedido #${dados.pedidoId}).\n\n` +
       `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}. Só paga depois de o trabalho estar feito e confirmado.\n\n` +
       `Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [

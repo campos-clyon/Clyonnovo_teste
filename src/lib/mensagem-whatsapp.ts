@@ -20,17 +20,7 @@
  * informação para ela; nada é inventado nem preenchido com "não indicado".
  */
 
-const SERVICOS: Record<string, string> = {
-  recolha_moveis:           "recolha de móveis",
-  recolha_monos:            "recolha de monos",
-  recolha_entulho:          "recolha de entulho",
-  esvaziamento_casa:        "esvaziamento de casa",
-  esvaziamento_apartamento: "esvaziamento de apartamento",
-  mudanca:                  "mudança",
-  jardinagem:               "jardinagem",
-  manutencao_casa:          "manutenção",
-  outro:                    "serviço",
-};
+import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 
 const QUANDO: Record<string, string> = {
   today:     "para hoje",
@@ -54,9 +44,17 @@ export function primeiroNome(nome: string | null | undefined): string {
   return primeiro.charAt(0).toUpperCase() + primeiro.slice(1);
 }
 
+/**
+ * A lista vive em `servico-em-palavras.ts`, e não aqui.
+ *
+ * Esta era uma segunda lista escrita à mão, já dessincronizada da do produto:
+ * faltava-lhe `montagem_moveis`, e por isso quem pedia montagem via o
+ * identificador da base a sair pela frente — «montagem moveis», sem acento e
+ * com o traço baixo trocado por um espaço. Uma lista escrita duas vezes acaba
+ * sempre assim; a primeira a ficar para trás é aquela para onde ninguém olha.
+ */
 export function rotuloServico(tipo: string | null | undefined): string {
-  if (!tipo) return "serviço";
-  return SERVICOS[tipo] ?? tipo.replace(/_/g, " ");
+  return servicoEmPalavras(tipo);
 }
 
 export type DadosMensagem = {

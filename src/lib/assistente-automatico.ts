@@ -3,7 +3,8 @@ import type { Proposta } from "./negociacao";
 import type { Capacidade } from "./assistente-interruptores";
 import { ESCADA_DOS_LEMBRETES, deveTocar, esgotou, horaDeFalar } from "./assistente-interruptores";
 import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
-import { primeiroNome, rotuloServico } from "./mensagem-whatsapp";
+import { primeiroNome } from "./mensagem-whatsapp";
+import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
 import { saudacao } from "./whatsapp-recolha";
 
 /**
@@ -262,7 +263,20 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
 
   const nome = primeiroNome(p.contactName);
   const ola = comoTratar(p.contactName, agora);
-  const servico = rotuloServico(p.serviceType).toLowerCase();
+  /*
+   * O SERVIÇO EM PALAVRAS, COM O ARTIGO JÁ CERTO.
+   *
+   * Era `rotuloServico(...).toLowerCase()`, e o artigo ficava escrito à mão em
+   * sete mensagens: «para a sua ${servico}». Três das dez categorias são
+   * masculinas, e saía «para a sua esvaziamento de casa».
+   *
+   * Duas formas, porque são duas frases diferentes: `servico` já traz o «a
+   * sua» ou o «o seu» lá dentro e vai para o cliente; `servicoNu` é o nome
+   * despido, para o aviso interno à equipa, onde um possessivo não faz
+   * sentido nenhum.
+   */
+  const servico = oSeuServico(p.serviceType);
+  const servicoNu = servicoEmPalavras(p.serviceType);
   const novidades: Novidade[] = [];
 
   const acrescentar = (n: Omit<Novidade, "telefone" | "pedidoId" | "nome">) =>
@@ -288,7 +302,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: null,
         quando: new Date(criado.getTime() + HORAS_ATE_ESTRANHAR_O_SILENCIO * 3600_000),
         texto:
-          `Pedido #${p.id} (${servico}) está há ${Math.floor(horas / 24)} dia(s) sem uma única ` +
+          `Pedido #${p.id} (${servicoNu}) está há ${Math.floor(horas / 24)} dia(s) sem uma única ` +
           `proposta. ` +
           (p.negociacoes.length === 0
             ? "Não foi distribuído a nenhum profissional."
@@ -328,7 +342,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             negociacaoId: n.id,
             quando: criada,
             texto:
-              `${ola} Acabou de receber uma proposta de ${pro} para a sua ${servico}: ` +
+              `${ola} Acabou de receber uma proposta de ${pro} para ${servico}: ` +
               `${euros(pendente.valor)} sem IVA, que com o imposto e a taxa da CLYON fica em ` +
               `${euros(total(pendente.valor, n.regimeIva))}. Só paga depois de o trabalho estar ` +
               `feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
@@ -348,7 +362,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: n.id,
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
-          `${ola} Boas notícias: ${pro} aceitou os ${euros(acordado)} que propôs para a sua ` +
+          `${ola} Boas notícias: ${pro} aceitou os ${euros(acordado)} que propôs para ` +
           `${servico}. Com o imposto e a taxa fica em ${euros(total(acordado, n.regimeIva))}, ` +
           `e só paga depois de estar feito. Falta só a sua palavra para ficar combinado.`,
       });
@@ -369,7 +383,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
       negociacaoId: n.id,
       quando: comoData(n.actualizadaEm) ?? agora,
       texto:
-        `${ola} Está combinado com ${pro} para a sua ${servico}` +
+        `${ola} Está combinado com ${pro} para ${servico}` +
         (acordado != null
           ? `, por ${euros(acordado)} sem IVA (${euros(total(acordado, n.regimeIva))} no total)`
           : "") +
@@ -386,8 +400,10 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: n.id,
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
-          `${ola} A sua ${servico} ficou marcada para ${diaPorExtenso(marcada)}, às ` +
-          `${horaEmLisboa(marcada)}, com ${pro}. Se precisar de mudar alguma coisa, diga-me.`,
+          // «A sua X ficou marcada» prendia o artigo E o particípio ao
+          // feminino. «Está marcado» não concorda com nada.
+          `${ola} Está marcado: ${diaPorExtenso(marcada)}, às ${horaEmLisboa(marcada)}, ` +
+          `com ${pro}, para ${servico}. Se precisar de mudar alguma coisa, diga-me.`,
       });
     }
 
@@ -403,7 +419,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
           quando: agora,
           texto:
             `${ola} É só para lembrar que amanhã, às ${horaEmLisboa(combinada)}, ${pro} vai ter ` +
-            `consigo para a sua ${servico}. Se houver alguma coisa a mudar, é hoje que dá jeito saber.`,
+            `consigo para ${servico}. Se houver alguma coisa a mudar, é hoje que dá jeito saber.`,
         });
       }
     }
@@ -417,7 +433,9 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: n.id,
         quando: execucao,
         texto:
-          `${ola} ${pro} deu a sua ${servico} por feita e mandou as fotografias. ` +
+          // «deu a sua X por feita»: artigo e particípio, os dois presos ao
+          // feminino. É também como o ecrã do site o diz ao cliente.
+          `${ola} ${pro} diz que está feito e mandou as fotografias. ` +
           `Diga-me se ficou tudo bem, para eu poder fechar o pedido. Se não me disser nada, ` +
           `ao fim de sete dias fecha sozinho.`,
       });
@@ -432,7 +450,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: n.id,
         quando: confirmado,
         texto:
-          `${ola} Está tudo fechado, e fico-lhe grato por ter confiado a sua ${servico} à CLYON. ` +
+          `${ola} Está tudo fechado, e fico-lhe grato por ter confiado ${servico} à CLYON. ` +
           `Foi um gosto tratar disto consigo. Ficamos por aqui para o que precisar.`,
       });
 
