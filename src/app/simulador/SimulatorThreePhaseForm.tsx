@@ -24,6 +24,7 @@ import {
   partirViaENumero,
 } from "@/lib/morada";
 import OrderSummaryCard from "./components/OrderSummaryCard";
+import PedidoDeEmpresaCard from "./components/PedidoDeEmpresaCard";
 import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
@@ -980,7 +981,18 @@ export default function SimulatorThreePhaseForm() {
                 order={formData}
                 onEdit={() => setPhase(1)}
               />
+              <PedidoDeEmpresaCard />
             </div>
+          </div>
+
+          {/*
+            No telemóvel a barra lateral inteira está escondida, e com ela ia o
+            cartão das empresas. Metade de quem abre o simulador abre-o no
+            telefone: aqui ele volta, no fim do formulário, onde quem desistiu
+            de preencher ainda o encontra.
+          */}
+          <div className="lg:hidden">
+            <PedidoDeEmpresaCard />
           </div>
         </div>
       </div>
