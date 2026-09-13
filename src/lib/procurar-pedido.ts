@@ -53,7 +53,15 @@ function soDigitos(s: string): string {
 /** Tudo o que este pedido tem escrito, numa linha só, já planificado. */
 function textoDe(p: PedidoProcuravel): string {
   const pedacos = [
-    `#${p.id}`,
+    /*
+     * «pedido #311», e não só «#311».
+     *
+     * É assim que eles são falados cá dentro, e é assim que são colados de uma
+     * conversa. A palavra «pedido» está em todos, portanto não filtra nada —
+     * mas a sua ausência filtrava tudo: «pedido #311» pedia duas condições e a
+     * primeira não existia em lado nenhum.
+     */
+    `pedido #${p.id}`,
     p.contactName,
     p.contactEmail,
     p.address,

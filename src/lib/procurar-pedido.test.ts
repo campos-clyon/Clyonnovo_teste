@@ -40,6 +40,11 @@ describe("pelo número do pedido", () => {
   it("com cardinal, como ele é falado cá dentro", () => {
     expect(procurarPedidos(MESA, "#311")).toEqual([ANA]);
     expect(procurarPedidos(MESA, "pedido #311")).toEqual([ANA]);
+    expect(procurarPedidos(MESA, "pedido 311")).toEqual([ANA]);
+  });
+
+  it("«pedido» sozinho não filtra nada — são todos pedidos", () => {
+    expect(procurarPedidos(MESA, "pedido")).toEqual(MESA);
   });
 
   /*
