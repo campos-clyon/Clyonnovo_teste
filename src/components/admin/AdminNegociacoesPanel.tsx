@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Pencil,
   RefreshCw,
+  Search,
   Send,
   Trash2,
   UserRound,
@@ -26,6 +27,7 @@ import {
   Star,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+import { combinaComABusca } from "@/lib/procurar-pedido";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import {
@@ -243,6 +245,9 @@ type Pedido = {
   contactEmail: string | null;
   /** O telemóvel, para o orçamento poder sair daqui direito para o WhatsApp. */
   contactPhone: string | null;
+  /** A morada e o código postal — o que a busca do topo procura. */
+  address: string | null;
+  postalCode: string | null;
   valorDesejadoCliente: string | null;
   /** "backoffice", "hero_quote_form", "formulario_contactos", ou null. */
   origem: string | null;
@@ -300,6 +305,10 @@ type PorPromover = {
   city: string | null;
   contactName: string | null;
   contactEmail: string | null;
+  /** Telemóvel, morada e código postal: só servem à busca do topo. */
+  contactPhone: string | null;
+  address: string | null;
+  postalCode: string | null;
   estimateTotal: string | null;
   urgency: string | null;
   createdAt: string;
@@ -562,6 +571,25 @@ export default function AdminNegociacoesPanel({
    * 30 em 30 segundos e nunca é derivado de "há coisas à espera".
    */
   const [soOBloco, setSoOBloco] = useState<ChaveDoBloco | null>(null);
+  /*
+   * A BUSCA DA MESA — e procura mesmo em toda a mesa.
+   *
+   * "Crie uma barra de pesquisa para que eu possa pesquisar com número, nome
+   * ou pedido. Até mesmo por morada ou região." — 13-09-2026.
+   *
+   * Havia uma busca, dentro do bloco «Por enviar», e o comentário dela dizia
+   * porquê: «pô-la no topo da mesa prometia procurar em toda a mesa». A
+   * objecção estava certa; a resposta a ela não é não haver busca no topo — é
+   * a do topo cumprir o que promete. Esta atravessa os seis blocos, e a do
+   * bloco saiu para não haver duas caixas a fazer coisas diferentes.
+   *
+   * ENQUANTO SE PROCURA, O FILTRO DOS CARTÕES CALA-SE. Quem escreve um número
+   * de telefone não sabe — nem tem de saber — se aquele pedido está em «Precisa
+   * de si» ou em «Concluídos». Uma busca que só olhasse para o bloco escolhido
+   * dava «não encontrei» sobre um pedido que está ali à frente. Pela mesma
+   * razão, um bloco fechado abre-se quando tem resultados.
+   */
+  const [busca, setBusca] = useState("");
   /* Que blocos estão fechados. «Concluídos» e «Cancelados» nascem fechados. */
   const [fechados, setFechados] = useState<Set<ChaveDoBloco>>(
     () => new Set(BLOCOS.filter((b) => b.fechadoPorOmissao).map((b) => b.chave)),
@@ -1151,13 +1179,39 @@ export default function AdminNegociacoesPanel({
    * "À espera de SI" só é verdade nas negociações da CLYON — nas dos clientes
    * quem tem de responder é o cliente. No modo "clientes" o aviso não existe.
    */
+  /*
+   * O que a busca deixou passar. Sem termo escrito, é a mesa inteira — a busca
+   * só filtra quando há o que procurar.
+   *
+   * O nome do profissional entra na procura: muita vez o que se tem em mão é
+   * «quem é que estava a tratar do da senhora de Cascais».
+   */
+  const aProcurar = busca.trim().length > 0;
+  const pedidosNaMesa = useMemo(
+    () =>
+      aProcurar
+        ? pedidos.filter((p) =>
+            combinaComABusca(
+              { ...p, profissionais: p.negociacoes.map((n) => n.profissionalNome) },
+              busca,
+            ),
+          )
+        : pedidos,
+    [pedidos, busca, aProcurar],
+  );
+  const porPromoverNaMesa = useMemo(
+    () => (aProcurar ? porPromover.filter((p) => combinaComABusca(p, busca)) : porPromover),
+    [porPromover, busca, aProcurar],
+  );
+  const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;
+
   const aEsperar =
     mostrar === "clientes"
       ? []
-      : pedidos.filter(
+      : pedidosNaMesa.filter(
           (p) => quemNegoceia(p) === "clyon" && p.negociacoes.some(precisaDeSi),
         );
-  const ordenados = [...pedidos].sort(
+  const ordenados = [...pedidosNaMesa].sort(
     (a, b) =>
       Number(b.negociacoes.some(precisaDeSi)) - Number(a.negociacoes.some(precisaDeSi)),
   );
@@ -1308,10 +1362,16 @@ export default function AdminNegociacoesPanel({
     return porNivel[chave];
   }
   function quantosNoBloco(chave: ChaveDoBloco): number {
-    return chave === "porEnviar" ? porPromover.length : pedidosDoBloco(chave).length;
+    return chave === "porEnviar" ? porPromoverNaMesa.length : pedidosDoBloco(chave).length;
   }
   const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar));
-  const blocosVisiveis = soOBloco ? blocosDoModo.filter((b) => b.chave === soOBloco) : blocosDoModo;
+  /*
+   * A procurar, mostram-se todos os blocos: o filtro dos cartões esconderia o
+   * pedido que se está a procurar, e quem escreve um telefone não sabe em que
+   * bloco ele caiu.
+   */
+  const blocosVisiveis =
+    soOBloco && !aProcurar ? blocosDoModo.filter((b) => b.chave === soOBloco) : blocosDoModo;
 
   /*
    * O cartao de um pedido, desenhado uma vez e usado nos dois grupos.
@@ -2238,6 +2298,50 @@ export default function AdminNegociacoesPanel({
       </header>
 
       {/*
+        A BUSCA, ANTES DOS CARTÕES.
+
+        Fica acima dos totais de propósito: os cartões são um filtro, e a busca
+        manda sobre eles — pô-la por baixo sugeria o contrário, que era
+        procurar dentro do que o cartão deixou. A lupa e o «limpar» vivem
+        dentro da caixa; o resultado é dito por palavras logo abaixo, porque
+        uma lista que encolhe sem explicação lê-se como uma avaria.
+      */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            aria-hidden="true"
+          />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            type="search"
+            placeholder="Procurar por número, nome, telefone, morada ou região…"
+            aria-label="Procurar em toda a mesa"
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+          />
+          {aProcurar && (
+            <button
+              type="button"
+              onClick={() => setBusca("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+        {aProcurar && (
+          <p className="mt-2 text-xs text-slate-400" aria-live="polite">
+            {encontrados === 0
+              ? "Nenhum pedido com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
+              : `${encontrados} pedido${encontrados === 1 ? "" : "s"} em toda a mesa` +
+                (soOBloco ? ", incluindo os de fora do bloco escolhido" : "") +
+                "."}
+          </p>
+        )}
+      </div>
+
+      {/*
         Os cartões dos totais — cada um é um filtro, como na Agenda. O de
         «Precisa de si» puxa o olho quando há alguém à espera; em EMERALD e não
         em rose, porque nesta mesa o verde já é "está à espera de si" (a
@@ -2445,7 +2549,17 @@ export default function AdminNegociacoesPanel({
            * em `fechados`. Ao voltar a todos, Concluídos volta a estar como
            * estava — fechado, se ninguém o abriu pelo título.
            */
-          const fechado = soOBloco === b.chave ? false : fechados.has(b.chave);
+          /*
+           * A procurar, um bloco com resultados abre-se sozinho — e um sem
+           * resultados fica fechado, para a lista não encher de cabeçalhos
+           * vazios. «Concluídos» nasce fechado, e é lá que muitas vezes está o
+           * pedido que se anda a procurar.
+           */
+          const fechado = aProcurar
+            ? quantosNoBloco(b.chave) === 0
+            : soOBloco === b.chave
+              ? false
+              : fechados.has(b.chave);
           const [corTexto, corBorda] = b.cor.split(" ");
           return (
             <section key={b.chave} aria-labelledby={`mesa-${b.chave}`}>
@@ -2495,7 +2609,7 @@ export default function AdminNegociacoesPanel({
                 <>
                   <PedidosPorPromover
                     aberto={!fechado}
-                    pedidos={porPromover}
+                    pedidos={porPromoverNaMesa}
                     ocupado={ocupado}
                     onPromover={promover}
                     onArquivar={arquivarPedido}
@@ -2607,7 +2721,7 @@ export default function AdminNegociacoesPanel({
           telefone aqui em cima e envie-o — aparece nesta lista.
         </p>
       )}
-      {soOBloco === null && mostrar !== "clyon" && pedidos.length === 0 && (
+      {soOBloco === null && !aProcurar && mostrar !== "clyon" && pedidos.length === 0 && (
         <p className="mt-6 rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
           Ainda nenhum pedido foi enviado a profissionais.
         </p>
@@ -2878,11 +2992,11 @@ function RespostaDaClyon({
  * A caixa âmbar inteira, com título, pílula e descrição próprios, era o bloco
  * mais alto da mesa e não fechava. Passou a ser um bloco como os outros (ver
  * BLOCOS no pai): o título, a contagem e a dica vivem no cabeçalho colado ao
- * topo que o pai desenha, e este componente devolve só o interior — a busca,
- * o marcar todos, a barra de lote e os grupos por idade, textualmente iguais.
+ * topo que o pai desenha, e este componente devolve só o interior — o marcar
+ * todos, a barra de lote e os grupos por idade, textualmente iguais.
  *
  * `aberto` vem do pai e, quando é falso, o componente devolve null DEPOIS dos
- * hooks: fica montado com o bloco fechado, e a busca, os marcados e o "Mais
+ * hooks: fica montado com o bloco fechado, e os marcados e o "Mais
  * antigos" aberto não se perdem ao fechar e reabrir. Escolher OUTRO cartão em
  * cima desmonta-o e perde-os — aceitável: já hoje `promover()` recarrega a
  * descoberto e o spinner remonta tudo.
@@ -2915,7 +3029,6 @@ function PedidosPorPromover({
   /** Abre o pedido para corrigir — o mesmo editor da mesa. */
   onEditar: (id: number) => void;
 }) {
-  const [busca, setBusca] = useState("");
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   // Os antigos nascem fechados: são os que menos merecem atenção, e são quase
   // sempre os mais numerosos.
@@ -2934,15 +3047,21 @@ function PedidosPorPromover({
 
   const agora = new Date();
 
-  const visiveis = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return pedidos;
-    return pedidos.filter((p) =>
-      [p.contactName, p.city, p.serviceType, String(p.id)]
-        .filter(Boolean)
-        .some((c) => String(c).toLowerCase().includes(termo)),
-    );
-  }, [pedidos, busca]);
+  /*
+   * A BUSCA DESTE BLOCO SUBIU PARA O TOPO DA MESA.
+   *
+   * Estava aqui porque, nas palavras do comentário que a acompanhava, uma
+   * busca no topo «prometia procurar em toda a mesa» e não procurava. Agora
+   * procura — e duas caixas, uma a filtrar seis blocos e outra a filtrar um,
+   * seriam duas respostas diferentes à mesma pergunta.
+   *
+   * O que ela procurava também ficou pelo caminho: nome, cidade, serviço e
+   * número. Nem telefone, nem morada, nem código postal.
+   *
+   * `pedidos` já chega filtrado pelo pai, por isso «marcar todos» continua a
+   * marcar exactamente o que está no ecrã — que era a razão de isto existir.
+   */
+  const visiveis = pedidos;
 
   const grupos = useMemo(() => {
     const g: Record<GrupoDeIdade, PorPromover[]> = {
@@ -2960,8 +3079,8 @@ function PedidosPorPromover({
   // Depois de TODOS os hooks, de propósito: um return antes deles mudava a
   // ordem dos hooks entre desenhos e o React perdia o estado.
   if (!aberto) return null;
-  // Sem pedidos nenhuns o vazio é do pai ("Nada aqui."); "Nada com essa
-  // procura" só faz sentido quando há pedidos e a busca não deixou passar nenhum.
+  // Sem pedidos nenhuns o vazio é do pai — e, a procurar, é o pai que diz que
+  // não encontrou nada. Aqui não se desenha um cabeçalho vazio.
   if (pedidos.length === 0) return null;
 
   const alternar = (id: number) =>
@@ -3115,14 +3234,13 @@ function PedidosPorPromover({
   return (
     <div className="mt-2 pl-1">
       {/*
-        A primeira linha do corpo: marcar todos à esquerda, a busca à direita.
-        A busca vivia na fila do título; o título agora é um <button> do pai e
-        um input lá dentro era HTML inválido. Só procura NESTES pedidos — pô-la
-        no topo da mesa prometia procurar em toda a mesa.
+        Marcar todos marca OS VISIVEIS — grupos fechados incluidos. Se a busca
+        do topo diz "entulho", "todos" sao os de entulho: marcar o que nao esta
+        no ecra seria apagar as escuras.
 
-        Marcar todos marca OS VISIVEIS — o que a busca deixou passar, grupos
-        fechados incluidos. Se a busca diz "entulho", "todos" sao os de
-        entulho: marcar o que nao esta no ecra seria apagar as escuras.
+        A caixa de procurar que vivia aqui a direita subiu para o topo da mesa,
+        onde procura nos seis blocos e tambem por telefone, morada e codigo
+        postal. Ver a nota em `visiveis`.
       */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {visiveis.length > 0 && (
@@ -3138,13 +3256,6 @@ function PedidosPorPromover({
             Marcar todos ({visiveis.length})
           </label>
         )}
-        <input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Procurar por nome, cidade, serviço ou número…"
-          aria-label="Procurar nos pedidos por promover"
-          className="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 sm:ml-auto sm:w-72"
-        />
       </div>
 
       {marcados.size > 0 && (

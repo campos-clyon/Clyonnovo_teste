@@ -63,8 +63,19 @@ describe("o ecrã", () => {
     expect(PAINEL).toContain("antigosAbertos");
   });
 
-  it("deixa procurar", () => {
-    expect(PAINEL).toContain("Procurar por nome, cidade, serviço ou número");
+  /*
+   * A CAIXA DE PROCURAR SUBIU PARA O TOPO DA MESA.
+   *
+   * Estava aqui dentro, e o comentário que a acompanhava explicava porquê: uma
+   * busca no topo «prometia procurar em toda a mesa» e não procurava. Passou a
+   * procurar — nos seis blocos, e também por telefone, morada e código postal,
+   * que esta não conhecia. Duas caixas, uma a filtrar seis blocos e outra a
+   * filtrar um, seriam duas respostas diferentes à mesma pergunta.
+   */
+  it("deixa procurar — de uma caixa só, no topo, que procura em toda a mesa", () => {
+    expect(PAINEL).toContain("Procurar por número, nome, telefone, morada ou região");
+    expect(PAINEL).not.toContain("Procurar por nome, cidade, serviço ou número");
+    expect(PAINEL).not.toContain('aria-label="Procurar nos pedidos por promover"');
   });
 
   it("tem arquivar por linha e apagar por selecção", () => {

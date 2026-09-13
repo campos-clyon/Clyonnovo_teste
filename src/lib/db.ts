@@ -1334,6 +1334,10 @@ export async function pedidosPorPromover(limite = 20): Promise<
     city: string | null;
     contactName: string | null;
     contactEmail: string | null;
+    /** Telemóvel, morada e código postal: é por aqui que a busca da mesa os encontra. */
+    contactPhone: string | null;
+    address: string | null;
+    postalCode: string | null;
     estimateTotal: string | null;
     valorDesejadoCliente: string | null;
     urgency: string | null;
@@ -1350,6 +1354,10 @@ export async function pedidosPorPromover(limite = 20): Promise<
   // precisamente esse que desaparecia desta lista.
   const [rows] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail,
+            -- Para a busca da mesa: "numero, nome ou pedido... ate mesmo por
+            -- morada ou regiao". Este bloco e o maior da mesa, e era o unico
+            -- com busca propria — que nao procurava por nenhuma destas.
+            o.contactPhone, o.address, o.postalCode,
             o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt
        FROM simulatorOrders o
        LEFT JOIN negociacoes n ON n.pedidoId = o.id
@@ -1437,6 +1445,9 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
      * parte, procurava-se a conversa. Três passos onde devia haver um.
      */
     contactPhone: string | null;
+    /** A morada e o código postal — o que a busca da mesa procura. */
+    address: string | null;
+    postalCode: string | null;
     valorDesejadoCliente: string | null;
     /**
      * De onde veio o pedido: "backoffice", "hero_quote_form",
@@ -1497,6 +1508,10 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
   await ensureConcluidosVistosTable();
   const [pedidos] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail, o.contactPhone,
+            -- A morada e o codigo postal vem para a mesa por causa da BUSCA.
+            -- "Ate mesmo por morada ou regiao" — quem tem uma rua na mao nao
+            -- tem o numero do pedido, e era o numero que a mesa exigia.
+            o.address, o.postalCode,
             o.valorDesejadoCliente, o.baseDoPreco, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
             -- A validade do link do cliente serve de MARCA DE VERSAO.
             --
@@ -1560,6 +1575,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     contactName: (p.contactName as string) ?? null,
     contactEmail: (p.contactEmail as string) ?? null,
     contactPhone: (p.contactPhone as string) ?? null,
+    address: (p.address as string) ?? null,
+    postalCode: (p.postalCode as string) ?? null,
     valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
     baseDoPreco: (p.baseDoPreco as string) ?? null,
     origem: (p.origem as string) ?? null,
