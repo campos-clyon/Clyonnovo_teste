@@ -225,6 +225,62 @@ async function pedirJson(
   return jsonDe(resposta.response.text());
 }
 
+/**
+ * QUAL DAS TRÊS AVARIAS FOI.
+ *
+ * Um `null` não distingue «demorou de mais» de «respondeu fora de formato» de
+ * «a Google recusou», e são três coisas com donos diferentes: a primeira
+ * resolve-se dando mais tempo, a segunda mexendo no aviso ao modelo, e a
+ * terceira numa variável de ambiente ou na conta da Google.
+ */
+type TentativaFalhada = { ok: false; motivo: string };
+type TentativaFeita = { ok: true; lido: Compreensao };
+
+async function tentarComMotivo(
+  modelName: string,
+  apiKey: string,
+  texto: string,
+  sistema: string,
+  segundos: number,
+): Promise<TentativaFeita | TentativaFalhada> {
+  const comecou = Date.now();
+  try {
+    const cru = await pedirJson(modelName, apiKey, texto, sistema, segundos);
+    const lido = limpar(cru);
+    if (!lido) {
+      console.error(`[whatsapp/compreensao] ${modelName}: resposta fora de formato`);
+      return {
+        ok: false,
+        motivo:
+          `O ${modelName} respondeu, mas não em JSON que se leia. ` +
+          `É um problema do aviso ao modelo, não da ligação — tentar outra vez costuma dar o mesmo.`,
+      };
+    }
+    console.log(
+      `[whatsapp/compreensao] ${modelName}: ${Object.keys(lido.campos).length} campos,` +
+        ` intenção ${lido.intencao}, ${Date.now() - comecou} ms`,
+    );
+    return { ok: true, lido };
+  } catch (e) {
+    const ms = Date.now() - comecou;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[whatsapp/compreensao] ${modelName} falhou aos ${ms} ms:`, msg);
+
+    // O nosso próprio relógio — a corrida em `pedirJson` — contra tudo o
+    // resto, que vem da Google e traz o motivo dela.
+    if (msg.startsWith("demorou mais de")) {
+      return {
+        ok: false,
+        motivo: `O ${modelName} ${msg} a ler a conversa. Com um fio longo acontece; tente outra vez.`,
+      };
+    }
+    return {
+      ok: false,
+      motivo: `A Google recusou a leitura ao fim de ${(ms / 1000).toFixed(1)} s: ${msg.slice(0, 300)}`,
+    };
+  }
+}
+
 async function tentar(
   modelName: string,
   apiKey: string,
@@ -368,26 +424,68 @@ ${JSON.stringify(jaSabido)}`;
  * não se lê — e nesses casos quem chama não muda nada, que é melhor do que
  * gravar meio estado.
  */
+export type LeituraDoFio =
+  | { ok: true; campos: CamposCrus }
+  | { ok: false; motivo: string };
+
+/**
+ * O MESMO, MAS A DIZER PORQUE É QUE FALHOU.
+ *
+ * Devolvia-se `null` para tudo, e quem chamava só podia escrever uma frase que
+ * juntava três avarias diferentes: «o Gemini não respondeu a tempo ou devolveu
+ * algo que não se lê. Tente outra vez; se voltar a acontecer, veja os registos
+ * da Vercel». São três problemas com donos diferentes — um prazo curto de
+ * mais, um modelo a responder fora de formato, e a Google a recusar a chamada
+ * (chave sem quota, modelo que não existe, conteúdo bloqueado) — e mandar
+ * alguém ler registos é a forma mais cara de descobrir qual deles é.
+ *
+ * O motivo não é um texto de programador: é o que se mostra a quem carregou no
+ * botão, porque é essa pessoa que tem de decidir se tenta outra vez ou se vai
+ * mexer numa variável de ambiente.
+ */
+export async function compreenderFioComMotivo(
+  guiao: string,
+  jaSabido: Record<string, unknown>,
+  agora: Date = new Date(),
+  /** Quanto tempo dar a cada tentativa. Ver a nota no chamador do painel. */
+  prazos: { bom: number; reserva: number } = { bom: 18, reserva: 10 },
+): Promise<LeituraDoFio> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { ok: false, motivo: "Falta a GEMINI_API_KEY neste ambiente." };
+  }
+  const t = guiao.trim();
+  if (!t) {
+    return { ok: false, motivo: "Não há conversa para ler." };
+  }
+
+  const sistema = instrucoesDoFio(resumoDoSabido(jaSabido), agora);
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  const bom = await tentarComMotivo(modelName, apiKey, t, sistema, prazos.bom);
+  if (bom.ok) return { ok: true, campos: bom.lido.campos };
+  if (modelName === MODELO_DE_RESERVA) return { ok: false, motivo: bom.motivo };
+
+  /*
+   * O MOTIVO QUE SE MOSTRA É O DA PRIMEIRA TENTATIVA.
+   *
+   * A segunda corre com um modelo mais fraco e um prazo mais curto: se falhar
+   * também, dizer «o gemini-2.0-flash demorou mais de 10 s» manda a pessoa
+   * atrás do modelo errado. O que interessa saber é porque é que o modelo bom
+   * não deu.
+   */
+  const reserva = await tentarComMotivo(MODELO_DE_RESERVA, apiKey, t, sistema, prazos.reserva);
+  if (reserva.ok) return { ok: true, campos: reserva.lido.campos };
+  return { ok: false, motivo: bom.motivo };
+}
+
 export async function compreenderFio(
   guiao: string,
   jaSabido: Record<string, unknown>,
   agora: Date = new Date(),
 ): Promise<CamposCrus | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  const t = guiao.trim();
-  if (!t) return null;
-
-  const sistema = instrucoesDoFio(resumoDoSabido(jaSabido), agora);
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-
-  // A mesma escada de sempre — 18 s no modelo bom, 10 s no de reserva. Um fio
-  // é maior do que uma mensagem, mas quem espera é a mesma pessoa.
-  const bom = await tentar(modelName, apiKey, t, sistema, 18);
-  if (bom) return bom.campos;
-  if (modelName === MODELO_DE_RESERVA) return null;
-  const reserva = await tentar(MODELO_DE_RESERVA, apiKey, t, sistema, 10);
-  return reserva ? reserva.campos : null;
+  const r = await compreenderFioComMotivo(guiao, jaSabido, agora);
+  return r.ok ? r.campos : null;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

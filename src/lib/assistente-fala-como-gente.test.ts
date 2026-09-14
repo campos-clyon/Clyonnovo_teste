@@ -233,17 +233,23 @@ describe("a ponte aguenta um arranque lento, e não morre à primeira", () => {
 describe("sem chave e falhou não são a mesma avaria", () => {
   const ROTA_ADMIN = ler("src/app/api/admin/whatsapp/route.ts");
 
-  it("a releitura diz QUAL das duas, porque têm donos diferentes", () => {
+  it("a releitura diz QUAL das avarias foi, porque têm donos diferentes", () => {
     /*
      * Dizia "sem chave do Gemini, ou a leitura falhou" — e quem lê aquilo não
      * sabe se tem de ir à Vercel pôr uma variável ou se basta carregar outra
      * vez.
+     *
+     * A segunda metade ainda juntava duas: "não respondeu a tempo OU devolveu
+     * algo que não se lê", e nem mencionava a terceira — a Google a recusar a
+     * chamada. O motivo vem agora de quem o sabe, e a frase que mandava ler os
+     * registos da Vercel saiu daqui.
      */
     const i = ROTA_ADMIN.indexOf("const semChave = !compreensaoDisponivel();");
     expect(i).toBeGreaterThan(-1);
-    const bloco = ROTA_ADMIN.slice(i, i + 900);
+    const bloco = ROTA_ADMIN.slice(i, i + 1400);
     expect(bloco).toContain("falta a GEMINI_API_KEY");
-    expect(bloco).toContain("[whatsapp/compreensao]");
+    expect(bloco).toContain("leitura.motivo");
+    expect(bloco).not.toContain("[whatsapp/compreensao]");
   });
 
   it("a chave que o código lê é a que o .env.example documenta", () => {

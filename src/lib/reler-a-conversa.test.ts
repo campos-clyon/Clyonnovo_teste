@@ -248,16 +248,24 @@ describe("a intenção não viaja do fio para os dados", () => {
     expect(COMPREENSAO).toContain("export async function compreenderFio(");
     expect(COMPREENSAO).toContain("Promise<CamposCrus | null>");
     expect(COMPREENSAO).toContain("NÃO devolvas intenção nenhuma");
+    /*
+     * `compreenderFio` passou a ser a casca fina de `compreenderFioComMotivo`,
+     * que diz TAMBÉM porque é que falhou. O que este teste guarda não muda: o
+     * que sai daqui são campos e nada mais.
+     */
     const corpo = COMPREENSAO.slice(COMPREENSAO.indexOf("export async function compreenderFio("));
-    expect(corpo).toContain("return bom.campos;");
+    expect(corpo).toContain("return r.ok ? r.campos : null;");
     expect(corpo).not.toContain("intencao");
   });
 
   it("mantém a escada de tempos que já existia — 18 s e 10 s", () => {
     // Um fio é maior do que uma mensagem, mas quem espera é a mesma pessoa.
-    const corpo = COMPREENSAO.slice(COMPREENSAO.indexOf("export async function compreenderFio("));
-    expect(corpo).toContain("18");
-    expect(corpo).toContain("10");
+    // Continuam a ser os prazos por omissão; quem chama do painel — onde quem
+    // espera é alguém a olhar para um botão — pede mais.
+    const i = COMPREENSAO.indexOf("export async function compreenderFioComMotivo(");
+    expect(i).toBeGreaterThan(-1);
+    const corpo = COMPREENSAO.slice(i, COMPREENSAO.indexOf("export async function compreenderFio(", i));
+    expect(corpo).toContain("prazos: { bom: number; reserva: number } = { bom: 18, reserva: 10 }");
   });
 });
 

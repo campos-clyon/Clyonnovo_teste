@@ -34,6 +34,20 @@ import { tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 export const runtime = "nodejs";
 
 /**
+ * UM PRAZO MAIOR DO QUE O DA PLATAFORMA POR OMISSÃO.
+ *
+ * Reler uma conversa pede ao Gemini que leia até sessenta linhas e devolva os
+ * campos todos. Com o tempo por omissão, a função podia ser cortada a meio da
+ * leitura — e aí nem a mensagem de erro certa chegava ao painel, porque não
+ * havia ninguém vivo para a escrever.
+ *
+ * É o tecto, não a espera: as leituras normais continuam a responder em
+ * segundos, e o relógio de dentro (ver `compreenderFioComMotivo`) desiste bem
+ * antes disto.
+ */
+export const maxDuration = 60;
+
+/**
  * O painel de controlo do WhatsApp da plataforma.
  *
  * O mesmo poder que o dono tem no Winapp, mas sobre o cérebro DAQUI:
@@ -251,7 +265,7 @@ export async function POST(req: NextRequest) {
       limparFilaWhatsAppDoNumero,
     } = await import("@/lib/db");
     const { fioParaLeitura, guiaoDoFio, releituraDoFio } = await import("@/lib/reler-a-conversa");
-    const { compreenderFio, compreensaoDisponivel } = await import(
+    const { compreenderFioComMotivo, compreensaoDisponivel } = await import(
       "@/lib/whatsapp-compreensao",
     );
     const { pedidosDoTelefone } = await import("@/lib/whatsapp-negociacao");
@@ -352,7 +366,22 @@ export async function POST(req: NextRequest) {
     }
 
     const gravado = guardada?.dados ?? {};
-    const campos = await compreenderFio(guiaoDoFio(fio), gravado as Record<string, unknown>);
+    /*
+     * MAIS TEMPO DO QUE NA CONVERSA, E É DE PROPÓSITO.
+     *
+     * Os 18 s de sempre são para quando do outro lado está um cliente a olhar
+     * para o WhatsApp — aí a espera é o produto. Aqui quem espera é alguém do
+     * backoffice que carregou num botão e está a ver um spinner, e o fio a ler
+     * são até sessenta linhas em vez de uma frase. Um prazo pensado para o
+     * caso apertado era o que fazia esta leitura falhar.
+     */
+    const leitura = await compreenderFioComMotivo(
+      guiaoDoFio(fio),
+      gravado as Record<string, unknown>,
+      new Date(),
+      { bom: 40, reserva: 15 },
+    );
+    const campos = leitura.ok ? leitura.campos : null;
     if (!campos) {
       /*
        * DUAS AVARIAS DIFERENTES, DUAS FRASES DIFERENTES.
@@ -366,7 +395,16 @@ export async function POST(req: NextRequest) {
         {
           error: semChave
             ? "O Gemini não está configurado neste ambiente — falta a GEMINI_API_KEY. Sem ela o assistente também não percebe texto livre: responde pela lista numerada."
-            : "A leitura falhou — o Gemini não respondeu a tempo ou devolveu algo que não se lê. Tente outra vez; se voltar a acontecer, veja os registos da Vercel por «[whatsapp/compreensao]».",
+            : /*
+               * O MOTIVO, E NÃO UM CONVITE A IR LER REGISTOS.
+               *
+               * Dizia «não respondeu a tempo ou devolveu algo que não se lê» —
+               * duas avarias com donos diferentes numa frase só, e uma
+               * terceira (a Google a recusar) que nem era mencionada. Quem
+               * carrega no botão tem de saber se tenta outra vez ou se o
+               * problema é de configuração.
+               */
+              `A leitura falhou. ${leitura.ok ? "" : leitura.motivo}`.trim(),
         },
         { status: 503 },
       );
