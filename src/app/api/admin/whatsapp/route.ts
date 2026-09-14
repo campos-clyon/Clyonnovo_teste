@@ -271,23 +271,6 @@ export async function POST(req: NextRequest) {
     const { pedidosDoTelefone } = await import("@/lib/whatsapp-negociacao");
 
     /*
-     * O GUARDA DO pedidoId. `guardarRecolhaWhatsApp` faz
-     * `ON DUPLICATE KEY UPDATE ... pedidoId = NULL`: escrever por cima de uma
-     * recolha que já deu pedido RESSUSCITA-A, o número volta à lista do painel
-     * e a mensagem seguinte do cliente cai outra vez na recolha.
-     */
-    const guardada = await recolhaWhatsApp(telefone);
-    if (guardada?.pedidoId != null) {
-      return NextResponse.json(
-        {
-          error:
-            `Esta conversa já deu o pedido #${guardada.pedidoId}. ` +
-            `Reler ia reabrir uma recolha que está fechada.`,
-        },
-        { status: 409 },
-      );
-    }
-    /*
      * COM PEDIDO ACTIVO, A CONVERSA É A DAS PROPOSTAS — E CONTINUA-SE NA MESMA.
      *
      * Isto devolvia 409: «a conversa dele é a das propostas, não a da recolha».
@@ -297,6 +280,19 @@ export async function POST(req: NextRequest) {
      *
      * Uma cliente escreveu «Não» às 14:22 e o assistente não respondeu. O
      * botão era o gesto certo; só não fazia nada.
+     *
+     * ESTE TESTE VEM PRIMEIRO, E É POR ISSO QUE ESTÁ AQUI EM CIMA.
+     *
+     * Estava depois do guarda da recolha, e o guarda da recolha respondia
+     * antes dele: «Esta conversa já deu o pedido #317. Reler ia reabrir uma
+     * recolha que está fechada.» Verdade — e a conversa dele já não é a
+     * recolha, é a das propostas, com o cliente a perguntar o valor, se pode
+     * ser sem factura e se o MBWay serve. Uma recolha que deu pedido é
+     * exactamente o caso em que se quer continuar, e era o único que nunca
+     * chegava aqui.
+     *
+     * Nada disto escreve na recolha — só chama o cérebro — por isso passar à
+     * frente do guarda não ressuscita coisa nenhuma.
      */
     const activos = await pedidosDoTelefone(telefone);
     if (activos.length > 0) {
@@ -355,6 +351,30 @@ export async function POST(req: NextRequest) {
         propostas: true,
         feito: `O assistente voltou a tratar «${veredicto.ultima.texto}» no pedido #${activos[0]}.`,
       });
+    }
+
+    /*
+     * O GUARDA DO pedidoId. `guardarRecolhaWhatsApp` faz
+     * `ON DUPLICATE KEY UPDATE ... pedidoId = NULL`: escrever por cima de uma
+     * recolha que já deu pedido RESSUSCITA-A, o número volta à lista do painel
+     * e a mensagem seguinte do cliente cai outra vez na recolha.
+     *
+     * Daqui para baixo é tudo recolha, e é aqui que este guarda manda. Só
+     * chega cá quem NÃO tem pedido activo — ou seja, a recolha deu pedido e
+     * esse pedido já foi cancelado, concluído ou arquivado. Aí não há nada
+     * para continuar de nenhum dos lados, e reabrir a recolha seria o pior dos
+     * dois.
+     */
+    const guardada = await recolhaWhatsApp(telefone);
+    if (guardada?.pedidoId != null) {
+      return NextResponse.json(
+        {
+          error:
+            `Esta conversa já deu o pedido #${guardada.pedidoId}, e esse pedido já não está aberto. ` +
+            `Não há conversa para continuar: reabrir a recolha punha o assistente a perguntar tudo de novo.`,
+        },
+        { status: 409 },
+      );
     }
 
     const fio = fioParaLeitura(await mensagensDoNumeroWhatsApp(telefone, 200));

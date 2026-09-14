@@ -282,6 +282,33 @@ describe("as guardas da rota", () => {
   });
 
   /*
+   * MAS A CONVERSA DAS PROPOSTAS DECIDE-SE PRIMEIRO.
+   *
+   * O guarda acima respondia antes de tudo: «Esta conversa já deu o pedido
+   * #317. Reler ia reabrir uma recolha que está fechada.» Verdade — e a
+   * conversa dele já não era a recolha, era a das propostas, com o cliente a
+   * perguntar o valor, se podia ser sem factura e se o MBWay servia. Uma
+   * recolha que deu pedido é exactamente o caso em que se quer continuar, e
+   * era o único que nunca lá chegava.
+   */
+  it("com pedido activo, a continuação vem ANTES do guarda da recolha", () => {
+    const bloco = ROTA.slice(ROTA.indexOf('accao === "relerConversa"'));
+    const continuacao = bloco.indexOf("const activos = await pedidosDoTelefone(telefone);");
+    const guardaDaRecolha = bloco.indexOf("const guardada = await recolhaWhatsApp(telefone);");
+    expect(continuacao).toBeGreaterThan(-1);
+    expect(guardaDaRecolha).toBeGreaterThan(-1);
+    expect(continuacao).toBeLessThan(guardaDaRecolha);
+  });
+
+  it("e a recusa que sobra diz que o pedido também já fechou", () => {
+    // Só lá chega quem não tem pedido activo: a recolha deu pedido e esse
+    // pedido foi cancelado, concluído ou arquivado. Aí não há mesmo nada para
+    // continuar de nenhum dos lados.
+    const bloco = ROTA.slice(ROTA.indexOf('accao === "relerConversa"'));
+    expect(bloco).toContain("e esse pedido já não está aberto");
+  });
+
+  /*
    * ISTO RECUSAVA, E A RECUSA ERA INÚTIL.
    *
    * «Este número já tem o pedido #311 a andar. A conversa dele é a das
