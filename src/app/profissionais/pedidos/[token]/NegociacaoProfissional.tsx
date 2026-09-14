@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, CheckCircle2, Clock, HandCoins, Loader2, X } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, Clock, HandCoins, Loader2, X } from "lucide-react";
+import { FICHA_DO_AVISO, porGravidade } from "@/lib/avisos-antes-de-cotar";
+import type { AvisoAntesDeCotar } from "@/lib/profissional-elegivel";
 import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
 /*
  * A CONTA REFEITA VEM DE `sugestao-ajustada`, e não do módulo da sugestão.
@@ -97,6 +99,12 @@ export default function NegociacaoProfissional({
   });
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
+  /** O que ele ia fazer, à espera de ele ler os avisos e confirmar. */
+  const [porConfirmar, setPorConfirmar] = useState<{
+    accao: string;
+    valor?: string;
+    avisos: AvisoAntesDeCotar[];
+  } | null>(null);
 
   const agora = new Date();
 
@@ -104,7 +112,7 @@ export default function NegociacaoProfissional({
   const pendente = propostaPendente(negociacao, agora);
   const restantes = propostasRestantes(negociacao, "profissional", agora);
 
-  async function agir(accao: string, valorProposto?: string) {
+  async function agir(accao: string, valorProposto?: string, avisosAceites = false) {
     setAEnviar(true);
     setErro("");
     try {
@@ -113,14 +121,27 @@ export default function NegociacaoProfissional({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accao, valor: valorProposto, negociacaoId }),
+          body: JSON.stringify({ accao, valor: valorProposto, negociacaoId, avisosAceites }),
         },
       );
       const dados = await res.json();
       if (!res.ok) {
+        /*
+         * O SERVIDOR MANDOU PARAR PARA AVISAR — 14-09-2026.
+         *
+         * A fatura e a guia deixaram de esconder o pedido; em troca, param
+         * aqui. Guarda-se o que ele ia fazer para o botão de confirmar poder
+         * repetir a acção exactamente com o mesmo valor — voltar a escrevê-lo
+         * é o género de passo em que se engana um dígito.
+         */
+        if (res.status === 409 && Array.isArray(dados.avisos) && dados.avisos.length > 0) {
+          setPorConfirmar({ accao, valor: valorProposto, avisos: dados.avisos });
+          return;
+        }
         setErro(dados.error ?? "Não foi possível.");
         return;
       }
+      setPorConfirmar(null);
       setNegociacao({
         estado: dados.estado,
         valorAcordado: dados.valorAcordado,
@@ -257,6 +278,71 @@ export default function NegociacaoProfissional({
     </p>
   ) : null;
 
+  /*
+   * A CAIXA AMARELA — o que o cliente pediu e ele não tem marcado.
+   *
+   * Está entre ele e o botão de propósito: não é uma nota de rodapé, é a
+   * última coisa que ele lê antes de o número sair. Diz três coisas, porque
+   * são as três que ele ia ter de perguntar por telefone — o que o cliente
+   * pediu, o que acontece se continuar, e onde se corrige se for só uma caixa
+   * por marcar (que é o caso da maioria: emitem fatura e nunca lá foram).
+   */
+  const caixaDosAvisos = porConfirmar ? (
+    <div className="mt-3 space-y-3">
+      {porGravidade(porConfirmar.avisos).map((a) => {
+        const ficha = FICHA_DO_AVISO[a];
+        const serio = ficha.gravidade === "serio";
+        return (
+          <div
+            key={a}
+            className={`rounded-xl border p-3 ${
+              serio ? "border-orange-300 bg-orange-50" : "border-amber-300 bg-amber-50"
+            }`}
+          >
+            <p
+              className={`flex items-start gap-2 text-sm font-bold ${
+                serio ? "text-orange-900" : "text-amber-900"
+              }`}
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {ficha.titulo}
+            </p>
+            <p
+              className={`mt-1.5 text-sm leading-relaxed ${
+                serio ? "text-orange-800" : "text-amber-800"
+              }`}
+            >
+              {ficha.corpo}
+            </p>
+            <p
+              className={`mt-2 text-xs leading-relaxed ${
+                serio ? "text-orange-700" : "text-amber-700"
+              }`}
+            >
+              {ficha.ondeSeCorrige}
+            </p>
+          </div>
+        );
+      })}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => void agir(porConfirmar.accao, porConfirmar.valor, true)}
+          disabled={aEnviar}
+          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+        >
+          {aEnviar ? "A enviar…" : FICHA_DO_AVISO[porGravidade(porConfirmar.avisos)[0]].botao}
+        </button>
+        <button
+          onClick={() => setPorConfirmar(null)}
+          disabled={aEnviar}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Não avançar
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
       <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">A negociação</h2>
@@ -286,6 +372,7 @@ export default function NegociacaoProfissional({
             {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
           </p>
           {caixaDeErro}
+          {caixaDosAvisos}
         </div>
       )}
 
@@ -426,6 +513,7 @@ export default function NegociacaoProfissional({
       {/* O erro só aparece aqui quando o campo de propor NÃO está em cima —
           senão sairia duas vezes. Lá em cima vai colado ao botão que o produz. */}
       {!proporComSugestao && caixaDeErro}
+      {!proporComSugestao && caixaDosAvisos}
 
       {/* Acções */}
       <div className="mt-4 space-y-3">

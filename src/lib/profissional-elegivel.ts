@@ -23,6 +23,27 @@ export type MotivoDeExclusao =
   | "nao_emite_fatura"
   | "nao_emite_guia";
 
+/**
+ * O QUE JÁ NÃO ESCONDE O PEDIDO, E PASSOU A AVISAR ANTES DE PROPOR.
+ *
+ * "Muitos pedidos não estão a aparecer para todos por causa da fatura e da
+ * guia. Que tal usarmos apenas o raio de acção e as categorias como
+ * referência para o pedido aparecer, e, caso ele não emita fatura e o pedido
+ * tenha essa opção, antes de enviar aparece a mensagem em amarelo." —
+ * 14-09-2026.
+ *
+ * A regra antiga era um filtro cego: quem não tinha a caixa da fatura marcada
+ * nunca via um pedido que a pedisse, e nem ficava a saber que ele existiu.
+ * Custava dos dois lados — o profissional perdia trabalho que podia fazer (a
+ * maioria emite fatura e nunca marcou a caixa) e o cliente ficava com menos
+ * propostas, às vezes com nenhuma.
+ *
+ * Agora QUEM ESCOLHE É QUEM PROPÕE, com o aviso à frente dos olhos. Só o raio
+ * e as categorias escondem um pedido — as duas coisas que são mesmo sobre se
+ * o trabalho lhe serve.
+ */
+export type AvisoAntesDeCotar = "cliente_quer_fatura" | "trabalho_exige_guia";
+
 export type PedidoParaDistribuir = {
   serviceType: string | null;
   precisaFatura: boolean;
@@ -57,9 +78,20 @@ export type ProfissionalParaAvaliar = {
   guiaVerificadaEm: Date | string | null;
 };
 
-export type ResultadoDeElegibilidade =
-  | { elegivel: true }
-  | { elegivel: false; motivos: MotivoDeExclusao[] };
+/**
+ * Deixou de ser união de propósito.
+ *
+ * Um pedido pode ser elegível E trazer um aviso — é justamente o caso novo:
+ * cabe no raio, é da categoria dele, e o cliente pediu fatura que ele não
+ * marcou. Com `{elegivel:true}` sozinho não havia onde pôr esse aviso, e ele
+ * teria de ser recalculado noutro sítio a partir dos mesmos dados. `motivos`
+ * vem sempre, vazio quando é elegível.
+ */
+export type ResultadoDeElegibilidade = {
+  elegivel: boolean;
+  motivos: MotivoDeExclusao[];
+  avisos: AvisoAntesDeCotar[];
+};
 
 /** Normaliza para comparar zonas sem tropeçar em acentos ou maiúsculas. */
 function normalizar(texto: string): string {
@@ -119,20 +151,57 @@ export function avaliarElegibilidade(
     motivos.push("sem_morada");
   }
 
-  // Isto é binário e sabe-se de antemão. Deixar um pedido que exige fatura
-  // chegar a quem não a emite é a negociação inteira a acabar mal ao fim de
-  // cinco propostas — e as duas partes a perderem tempo por nossa causa.
+  /*
+   * A FATURA E A GUIA DEIXARAM DE ESCONDER O PEDIDO — 14-09-2026.
+   *
+   * Eram filtros cegos. Quem não tinha a caixa marcada nunca via o pedido, e
+   * nem sabia que ele existira; a maioria emite fatura e simplesmente nunca
+   * passou por aquele campo do perfil. O cliente ficava com menos propostas
+   * por causa de uma caixa por marcar.
+   *
+   * Passam a ser AVISOS, mostrados a quem vai cotar, antes de cotar. Quem
+   * decide é quem assume o trabalho — mas decide a ver, e não sem saber.
+   */
+  return { elegivel: motivos.length === 0, motivos, avisos: avisosDoTrabalho(pedido, profissional) };
+}
+
+/**
+ * Os avisos deste trabalho para ESTE profissional.
+ *
+ * Função à parte porque tem DOIS chamadores que não podem discordar: a
+ * distribuição, que os mostra no painel ao lado de quem recebeu, e a rota da
+ * proposta, que pára o envio para os confirmar. Se um deles calculasse por sua
+ * conta, o ecrã do profissional avisava de uma coisa e o do administrador de
+ * outra — e a que ninguém está a ver é a que fica errada.
+ */
+export function avisosDoTrabalho(
+  pedido: Pick<PedidoParaDistribuir, "precisaFatura" | "precisaGuiaTransporte">,
+  profissional: Pick<
+    ProfissionalParaAvaliar,
+    "emiteFatura" | "emiteGuiaTransporte" | "guiaVerificadaEm"
+  >,
+): AvisoAntesDeCotar[] {
+  const avisos: AvisoAntesDeCotar[] = [];
+
   if (pedido.precisaFatura && !profissional.emiteFatura) {
-    motivos.push("nao_emite_fatura");
+    avisos.push("cliente_quer_fatura");
   }
 
+  /*
+   * A guia conta como em falta também quando está DECLARADA E POR VERIFICAR.
+   * A declaração sozinha não vale nada — e é pior do que não existir, porque
+   * o cliente confia nela.
+   */
   if (pedido.precisaGuiaTransporte) {
-    if (!profissional.emiteGuiaTransporte || !guiaEstaVerificada(profissional)) {
-      motivos.push("nao_emite_guia");
+    if (
+      !profissional.emiteGuiaTransporte ||
+      !guiaEstaVerificada(profissional as ProfissionalParaAvaliar)
+    ) {
+      avisos.push("trabalho_exige_guia");
     }
   }
 
-  return motivos.length === 0 ? { elegivel: true } : { elegivel: false, motivos };
+  return avisos;
 }
 
 /** Os que devem receber o pedido. */

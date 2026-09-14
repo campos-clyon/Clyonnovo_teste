@@ -123,12 +123,19 @@ describe("avaliarElegibilidade", () => {
   });
 
   describe("fatura", () => {
-    it("um pedido que exige fatura não chega a quem não a emite", () => {
+    it("JÁ NÃO esconde o pedido — avisa quem vai cotar", () => {
+      /*
+       * MUDOU A 14-09-2026. Era um filtro cego: quem não tinha a caixa da
+       * fatura marcada nunca via o pedido, e nem sabia que ele existira. A
+       * maioria emite fatura e simplesmente nunca passou por aquele campo do
+       * perfil — e o cliente ficava com menos propostas por causa disso.
+       */
       const p = pedido({ precisaFatura: true });
-      expect(motivos(avaliarElegibilidade(p, pro({ emiteFatura: false })))).toContain(
-        "nao_emite_fatura",
-      );
-      expect(avaliarElegibilidade(p, pro({ emiteFatura: true })).elegivel).toBe(true);
+      const r = avaliarElegibilidade(p, pro({ emiteFatura: false }));
+      expect(r.elegivel).toBe(true);
+      expect(r.motivos).not.toContain("nao_emite_fatura");
+      expect(r.avisos).toContain("cliente_quer_fatura");
+      expect(avaliarElegibilidade(p, pro({ emiteFatura: true })).avisos).toEqual([]);
     });
 
     it("quem emite fatura continua a receber pedidos que não a exigem", () => {
@@ -143,9 +150,10 @@ describe("avaliarElegibilidade", () => {
     // sozinho vale menos que nenhum, porque o cliente confia nele.
     it("declarar a guia sem verificação não basta", () => {
       const declarouSoznho = pro({ emiteGuiaTransporte: true, guiaVerificadaEm: null });
-      expect(motivos(avaliarElegibilidade(pedidoComGuia, declarouSoznho))).toContain(
-        "nao_emite_guia",
-      );
+      const r = avaliarElegibilidade(pedidoComGuia, declarouSoznho);
+      // Deixou de o excluir a 14-09-2026; continua a não contar como verificada.
+      expect(r.elegivel).toBe(true);
+      expect(r.avisos).toContain("trabalho_exige_guia");
     });
 
     it("aceita quem tem a guia verificada", () => {
@@ -166,7 +174,7 @@ describe("avaliarElegibilidade", () => {
 
     it("uma data corrompida não conta como verificação", () => {
       const mau = pro({ emiteGuiaTransporte: true, guiaVerificadaEm: "isto-nao-e-uma-data" });
-      expect(motivos(avaliarElegibilidade(pedidoComGuia, mau))).toContain("nao_emite_guia");
+      expect(avaliarElegibilidade(pedidoComGuia, mau).avisos).toContain("trabalho_exige_guia");
     });
 
     it("verificação sem declaração também não chega", () => {
@@ -174,7 +182,9 @@ describe("avaliarElegibilidade", () => {
         emiteGuiaTransporte: false,
         guiaVerificadaEm: new Date("2026-08-01"),
       });
-      expect(motivos(avaliarElegibilidade(pedidoComGuia, incoerente))).toContain("nao_emite_guia");
+      expect(avaliarElegibilidade(pedidoComGuia, incoerente).avisos).toContain(
+        "trabalho_exige_guia",
+      );
     });
 
     it("um pedido sem guia não exclui ninguém por causa dela", () => {
@@ -192,16 +202,21 @@ describe("avaliarElegibilidade", () => {
       raioKm: 1,
       emiteFatura: false,
     });
-    const r = motivos(avaliarElegibilidade(pedido({ precisaFatura: true }), mau));
-    expect(r).toEqual(
+    const r = avaliarElegibilidade(pedido({ precisaFatura: true }), mau);
+    expect(r.motivos).toEqual(
       expect.arrayContaining([
         "inactivo",
         "nao_aprovado",
         "categoria_diferente",
         "fora_de_alcance",
-        "nao_emite_fatura",
       ]),
     );
+    /*
+     * A fatura saiu desta lista a 14-09-2026: os MOTIVOS escondem o pedido, os
+     * AVISOS aparecem a quem o vai cotar. Ela mudou de lista, não desapareceu.
+     */
+    expect(r.motivos).not.toContain("nao_emite_fatura");
+    expect(r.avisos).toContain("cliente_quer_fatura");
   });
 });
 

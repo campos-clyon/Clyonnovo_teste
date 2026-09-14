@@ -52,7 +52,13 @@ export async function POST(req: NextRequest) {
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  let corpo: { accao?: unknown; valor?: unknown; negociacaoId?: unknown };
+  let corpo: {
+    accao?: unknown;
+    valor?: unknown;
+    negociacaoId?: unknown;
+    /** O profissional leu os avisos e quer avançar mesmo assim. */
+    avisosAceites?: unknown;
+  };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -77,6 +83,61 @@ export async function POST(req: NextRequest) {
       valorAcordado: linha.valorAcordado != null ? Number(linha.valorAcordado) : null,
       propostas: propostasDe(linha.propostasJson),
     };
+
+    /*
+     * OS AVISOS, ANTES DE O NÚMERO SAIR — 14-09-2026.
+     *
+     * A fatura e a guia deixaram de esconder o pedido (ver
+     * `profissional-elegivel`). Em troca, param aqui: quem vai cotar vê o que
+     * o cliente pediu e confirma, ou não avança.
+     *
+     * SÓ AO PROPOR E AO ACEITAR — as duas acções que criam um compromisso.
+     * Desistir nunca se pergunta duas vezes a ninguém.
+     *
+     * A conta é feita do lado do SERVIDOR e não se fia no que o browser diz:
+     * o `avisosAceites` só serve para saber que o ecrã os mostrou. Quais eram,
+     * e se ainda são, é aqui que se decide.
+     */
+    const compromete = corpo.accao === "propor" || corpo.accao === "aceitar";
+    if (compromete) {
+      const { perfilDoProfissional } = await import("@/lib/db");
+      const { avisosDoTrabalho } = await import("@/lib/profissional-elegivel");
+      const perfil = await perfilDoProfissional(sessao.providerId).catch(() => undefined);
+      const avisos = perfil
+        ? avisosDoTrabalho(
+            {
+              precisaFatura: Number(linha.precisaFatura) === 1,
+              precisaGuiaTransporte: Number(linha.precisaGuiaTransporte) === 1,
+            },
+            {
+              emiteFatura: Number(perfil.emiteFatura) === 1,
+              emiteGuiaTransporte: Number(perfil.emiteGuiaTransporte) === 1,
+              guiaVerificadaEm: (perfil.guiaVerificadaEm as Date | string | null) ?? null,
+            },
+          )
+        : [];
+
+      if (avisos.length > 0 && corpo.avisosAceites !== true) {
+        // 409 e não 400: o pedido está bem formado, falta é uma decisão de
+        // quem o mandou. O ecrã pinta a caixa amarela com o que vem aqui.
+        return NextResponse.json({ error: "Confirme os avisos.", avisos }, { status: 409 });
+      }
+
+      /*
+       * O RASTO. É por isto que o aviso da guia pode dizer «fica registado no
+       * pedido»: sem isto a frase era só uma frase, e no dia em que houvesse
+       * um problema ninguém saberia quem tinha sido avisado de quê.
+       */
+      if (avisos.length > 0) {
+        const { appendOrderHistory } = await import("@/lib/db");
+        const { comoFicaRegistado } = await import("@/lib/avisos-antes-de-cotar");
+        await appendOrderHistory(linha.pedidoId, {
+          type: "aviso_aceite_pelo_profissional",
+          by: { id: sessao.providerId, nome: sessao.nome ?? "profissional", role: "profissional" },
+          message: comoFicaRegistado(avisos, sessao.nome ?? "O profissional"),
+        }).catch(() => {});
+      }
+    }
 
     let resultado;
     switch (corpo.accao) {
