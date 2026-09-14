@@ -106,8 +106,22 @@ describe("o que conta como terminado, e o que nunca se purga", () => {
   it("conta a partir de quando terminou, não de quando nasceu", () => {
     // `updatedAt` e não `createdAt`: qualquer edição atrasa a purga. É a
     // direcção certa de errar.
-    expect(purga).toContain("o.updatedAt < NOW() - INTERVAL");
+    expect(purga).toContain("${relogio} < NOW() - INTERVAL");
     expect(purga).not.toContain("o.createdAt <");
+  });
+
+  /*
+   * E O RELÓGIO É O DA ÚLTIMA COISA QUE ACONTECEU — ao pedido OU às
+   * negociações dele.
+   *
+   * Era só `o.updatedAt`, e `gravarNegociacao` não lhe toca: uma negociação
+   * podia estar a andar — propostas a chegar, o cliente a responder — com o
+   * relógio do pedido parado há noventa dias. A purga levava-a por baixo de
+   * uma conversa viva.
+   */
+  it("uma negociação a mexer atrasa a purga do pedido", () => {
+    expect(purga).toContain("const relogio = `GREATEST(");
+    expect(purga).toContain("SELECT MAX(g2.updatedAt) FROM negociacoes g2 WHERE g2.pedidoId = o.id");
   });
 
   /*
@@ -125,10 +139,39 @@ describe("o que conta como terminado, e o que nunca se purga", () => {
    * não se purga, seja qual for a idade dele.
    */
   it("NUNCA leva um pedido que produziu trabalho — pago ou por pagar", () => {
-    expect(purga).toContain("WHERE g.pedidoId = o.id AND g.estado = 'acordada'");
     expect(purga).toContain("NOT EXISTS");
+    expect(purga).toContain("g.estado IN ('acordada', 'aguarda_contratacao')");
     // A guarda antiga era mais fraca e deixava passar o que já estava pago.
     expect(purga).not.toContain("g.estado = 'acordada' AND g.pagoEm IS NULL");
+  });
+
+  /*
+   * E PROTEGE PELA PROVA, NÃO PELA PALAVRA DO ESTADO.
+   *
+   * Uma primeira versão desta guarda dizia só `estado = 'acordada'`, e tinha
+   * um buraco que três revisores independentes encontraram no mesmo dia:
+   * `matarNegociacoesDoPedido` (db.ts) põe TODAS as negociações de um pedido
+   * em 'morta' — sem olhar a `pagoEm`, `confirmadoEm` ou `execucaoEnviadaEm` —
+   * e `cancelarPedido` chama-a sempre. Cancelar um pedido com trabalho feito e
+   * PAGO desarmava a guarda, e sessenta dias depois o dinheiro saía da conta do
+   * profissional.
+   *
+   * Um valor combinado, um trabalho entregue, uma confirmação ou um pagamento
+   * são factos: ficam nas colunas e nenhum cancelar os apaga. O estado é uma
+   * palavra que muda.
+   */
+  it("e o cancelar não a desarma — protege pelas colunas do dinheiro", () => {
+    expect(purga).toContain("g.valorAcordado IS NOT NULL");
+    expect(purga).toContain("g.execucaoEnviadaEm IS NOT NULL");
+    expect(purga).toContain("g.confirmadoEm IS NOT NULL");
+    expect(purga).toContain("g.pagoEm IS NOT NULL");
+  });
+
+  it("o cron tem tempo para a passagem inteira e para escrever o que fez", () => {
+    // A linha de resumo é escrita no FIM: sem tecto, uma passagem cheia era
+    // cortada a meio e a única prova de que a purga correu não chegava a ser
+    // escrita.
+    expect(ROTA).toContain("export const maxDuration");
   });
 
   it("não desarma o guarda de dentro", () => {

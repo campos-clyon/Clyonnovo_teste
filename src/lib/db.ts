@@ -7021,6 +7021,24 @@ export async function purgarPedidosTerminados(
 
   const abandonados = Math.max(n, Math.floor(diasDosAbandonados));
 
+  /*
+   * O RELOGIO DA RETENCAO E O DA ULTIMA COISA QUE ACONTECEU — ao pedido OU as
+   * negociacoes dele.
+   *
+   * Era so `o.updatedAt`, e `gravarNegociacao` nao lhe toca: uma negociacao
+   * podia estar a andar — propostas a chegar, o cliente a responder — com o
+   * relogio do pedido parado ha noventa dias. A purga levava-a por baixo de
+   * uma conversa viva.
+   *
+   * `negociacoes.updatedAt` e ON UPDATE CURRENT_TIMESTAMP, por isso qualquer
+   * mexida numa negociacao refresca-o sozinha. Escrito uma vez e usado duas,
+   * para os dois prazos nao poderem divergir.
+   */
+  const relogio = `GREATEST(
+          o.updatedAt,
+          COALESCE((SELECT MAX(g2.updatedAt) FROM negociacoes g2 WHERE g2.pedidoId = o.id), o.updatedAt)
+        )`;
+
   const condicao = `
        FROM simulatorOrders o
       WHERE
@@ -7031,31 +7049,46 @@ export async function purgarPedidosTerminados(
          * nao sejam apagados das contas dos pros nem da nossa base."
          * — 14-09-2026.
          *
-         * Hoje nao se verificava. A carteira do profissional e CALCULADA a
-         * partir das linhas de negociacoes (ver carteiraDe): o total ganho, os
-         * movimentos que explicam o saldo, e o proprio disponivel quando o
-         * trabalho ja foi libertado e ainda nao levantado. Apagar a linha
-         * mudava o numero na conta dele.
+         * A carteira do profissional e CALCULADA a partir das linhas de
+         * negociacoes (ver carteiraDe): o total ganho, os movimentos que
+         * explicam o saldo, e o proprio disponivel quando o trabalho ja foi
+         * libertado e ainda nao levantado. Apagar a linha mudava o numero na
+         * conta dele.
          *
-         * A guarda anterior era mais fraca — so travava o que estivesse por
-         * PAGAR. Um trabalho pago continuava a poder ser purgado, e com ele ia
-         * o historico que explica de onde veio aquele dinheiro.
+         * PROTEGE-SE PELA PROVA, E NAO PELA PALAVRA DO ESTADO. Uma primeira
+         * versao desta guarda dizia so estado = 'acordada', e tinha um
+         * buraco que tres revisores independentes encontraram no mesmo dia:
+         * matarNegociacoesDoPedido poe TODAS as negociacoes de um pedido em
+         * 'morta' — sem olhar a pagoEm, confirmadoEm ou
+         * execucaoEnviadaEm — e cancelarPedido chama-a sempre. Cancelar um
+         * pedido com trabalho feito e PAGO desarmava a guarda, e sessenta dias
+         * depois o dinheiro saia da conta do profissional.
          *
-         * Um pedido que produziu trabalho nao se purga. Ponto. As fotografias
-         * dele ficam — e isso e uma troca consciente: o registo de um trabalho
-         * feito vale mais do que o espaco que ocupa.
+         * Um valor combinado, um trabalho entregue, uma confirmacao ou um
+         * pagamento sao factos: ficam gravados nas colunas e nenhum cancelar
+         * os apaga. O estado e uma palavra que muda.
+         *
+         * aguarda_contratacao entra tambem: o profissional ja aceitou e so
+         * falta o cliente fechar. E uma negociacao viva, nao um resto.
          */
         NOT EXISTS (
           SELECT 1 FROM negociacoes g
-           WHERE g.pedidoId = o.id AND g.estado = 'acordada'
+           WHERE g.pedidoId = o.id
+             AND (
+               g.estado IN ('acordada', 'aguarda_contratacao')
+               OR g.valorAcordado IS NOT NULL
+               OR g.execucaoEnviadaEm IS NOT NULL
+               OR g.confirmadoEm IS NOT NULL
+               OR g.pagoEm IS NOT NULL
+             )
         )
         AND (
           /* Os que acabaram: o prazo conta a partir do fim. */
           (COALESCE(o.status, 'pendente') IN ('concluido', 'cancelado', 'arquivado')
-             AND o.updatedAt < NOW() - INTERVAL ${n} DAY)
+             AND ${relogio} < NOW() - INTERVAL ${n} DAY)
           /* Os abandonados a meio: nunca tiveram fim, por isso esperam mais. */
           OR (COALESCE(o.status, 'pendente') NOT IN ('concluido', 'cancelado', 'arquivado')
-             AND o.updatedAt < NOW() - INTERVAL ${abandonados} DAY)
+             AND ${relogio} < NOW() - INTERVAL ${abandonados} DAY)
         )`;
 
   const [cont] = (await pool.execute(`SELECT COUNT(*) AS n ${condicao}`)) as any[];

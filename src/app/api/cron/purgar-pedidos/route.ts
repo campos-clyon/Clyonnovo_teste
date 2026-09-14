@@ -9,6 +9,18 @@ import {
 export const runtime = "nodejs";
 
 /**
+ * TEMPO PARA A PASSAGEM INTEIRA, E PARA ESCREVER O QUE FEZ.
+ *
+ * Cada pedido é uma transacção mais um punhado de chamadas ao Blob para lhe
+ * apagar as fotografias. Com o tempo por omissão, uma passagem cheia podia ser
+ * cortada a meio — e o pior disso não é o que fica por apagar (a passagem
+ * seguinte apanha-o): é a linha de resumo, que é escrita no FIM e é a única
+ * prova de que a purga correu. Uma purga que apaga e não conta o que apagou é
+ * a pior das duas.
+ */
+export const maxDuration = 300;
+
+/**
  * A purga dos pedidos velhos — todos os dias.
  *
  * DOIS PRAZOS E UMA GARANTIA (14-09-2026):
