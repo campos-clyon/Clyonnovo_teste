@@ -5,7 +5,7 @@ import { ESCADA_DOS_LEMBRETES, deveTocar, esgotou, horaDeFalar } from "./assiste
 import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
-import { saudacao } from "./whatsapp-recolha";
+import { comoTratar, saudacao } from "./whatsapp-recolha";
 import { totalEmPalavras } from "./conta-em-palavras";
 import { prazoAutomaticoPorExtenso } from "./pagamento-na-plataforma";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
@@ -242,11 +242,14 @@ export function propostasDe(json: string | null | undefined): Proposta[] {
  * desculpa para cometer, e acontece à primeira Maria. Sem título não se erra,
  * e em português de Portugal "Boa tarde, João" continua a ser uma forma de
  * tratamento correcta de uma empresa para um cliente.
+ *
+ * A IMPLEMENTAÇÃO MUDOU-SE para `whatsapp-recolha`, ao lado da `saudacao` que
+ * ela usa — 14-09-2026, quando a recolha passou a cumprimentar também. Duas
+ * cópias da mesma regra de tratamento acabam sempre com o assistente a tratar
+ * a mesma pessoa de duas maneiras. Continua a sair por aqui para quem já a
+ * importava daqui.
  */
-export function comoTratar(nome: string | null | undefined, agora: Date): string {
-  const p = primeiroNome(nome);
-  return p ? `${saudacao(agora)}, ${p}.` : `${saudacao(agora)}.`;
-}
+export { comoTratar };
 
 /** O que ele paga no fim: o valor do profissional, mais o imposto e a taxa. */
 function total(valor: number, regimeIva: string | null): number {

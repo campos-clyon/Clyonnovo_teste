@@ -4,6 +4,7 @@ import {
   responderComCompreensao,
   primeiroPassoEmFalta,
   perguntaDo,
+  saudacao,
   type EstadoDaRecolha,
 } from "./whatsapp-recolha";
 
@@ -55,8 +56,16 @@ describe("uma frase que diz várias coisas de uma vez", () => {
     /*
      * O passo é a garantia; a frase mudou de "Como se chama?" para "Com quem
      * estou a falar?" quando o assistente deixou de falar como formulário.
+     *
+     * E desde 14-09-2026 vem um bom dia à frente — esta é a PRIMEIRA resposta
+     * da conversa, e uma pergunta seca a quem acabou de escrever «Bom dia» é
+     * o que fez a Sónia Agostinho ser tratada como um formulário.
      */
-    expect(r.resposta).toBe(perguntaDo("nome", r.estado.dados, false));
+    expect(r.resposta).toContain(perguntaDo("nome", r.estado.dados, false));
+    // Da `saudacao` e não à letra: às 10:00 é «Bom dia», mas o que se guarda é
+    // que a resposta ABRE com o cumprimento, não qual deles calhou.
+    expect(r.resposta.startsWith(saudacao(T0))).toBe(true);
+    expect(r.resposta).toContain("Aqui é a CLYON");
   });
 
   it("não pergunta pelo número de nenhuma lista", () => {

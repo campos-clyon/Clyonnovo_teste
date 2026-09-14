@@ -27,6 +27,7 @@
  */
 
 import { SERVICE_CATEGORIES } from "./service-categories";
+import { primeiroNome } from "./mensagem-whatsapp";
 import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
 
 export type PassoDaRecolha =
@@ -315,6 +316,54 @@ export function saudacao(agora: Date = new Date()): string {
 }
 
 /**
+ * COMO SE TRATA A PESSOA: «Bom dia, Sónia.»
+ *
+ * O PRIMEIRO NOME E MAIS NADA. Não «Sra. Sónia», por muito que apeteça: o
+ * género de quem escreve não está guardado em lado nenhum, e adivinhá-lo pelo
+ * nome acerta em Sónia e falha em Alex, em Andrea e em toda a gente com um
+ * nome estrangeiro. Um «senhor» dito a uma senhora estraga a mensagem inteira,
+ * e o primeiro nome não estraga nada.
+ *
+ * Esta regra já era a do assistente automático — mora aqui agora para ser UMA,
+ * e não duas a divergir devagar.
+ */
+export function comoTratar(nome: string | null | undefined, agora: Date): string {
+  const p = primeiroNome(nome);
+  return p ? `${saudacao(agora)}, ${p}.` : `${saudacao(agora)}.`;
+}
+
+/**
+ * O cumprimento da PRIMEIRA resposta desta conversa — e só dela.
+ *
+ * "O assistente respondeu sem bom dia e sem dizer o nome dela." — 14-09-2026.
+ * A Sónia escreveu «Bom dia (...) Com os melhores cumprimentos, Sónia
+ * Agostinho» e levou de volta «Qual é a morada certa?», seco. O nome dela
+ * estava na assinatura e o assistente até o tinha lido — usou-o no resumo,
+ * seis mensagens depois.
+ *
+ * QUAL É A PRIMEIRA? Aquela cuja mensagem chegou com o estado ainda por
+ * estrear — `passoDeEntrada === "servico"`. Não é preciso marca nenhuma nos
+ * dados para saber isto, e é bom que não seja: uma bandeira ali dentro viajava
+ * com o pedido, aparecia na comparação dos dois caminhos de extracção, e era
+ * mais uma coisa a poder ficar dessincronizada.
+ *
+ * Devolve o prefixo e nada mais. Vazio a partir da segunda mensagem, e vazio
+ * também quando a resposta é a própria pergunta do serviço — essa já diz «Bom
+ * dia! Aqui é a CLYON» dentro dela, e dois bons-dias seguidos são piores do
+ * que nenhum.
+ */
+export function aberturaDaResposta(
+  dados: DadosDaRecolha,
+  passoDeEntrada: PassoDaRecolha,
+  passoDeSaida: PassoDaRecolha,
+  agora: Date = new Date(),
+): string {
+  if (passoDeEntrada !== "servico") return "";
+  if (passoDeSaida === "servico") return "";
+  return `${comoTratar(dados.contactName, agora)} Aqui é a CLYON.\n\n`;
+}
+
+/**
  * O que se pergunta em cada passo.
  *
  * FALA-SE COMO SE FALA AO TELEFONE, e não como um formulário.
@@ -339,29 +388,29 @@ export function perguntaDo(
     case "servico":
       return comLista
         ? `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
-        : `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras. Por exemplo: «tenho um sofá e um colchão para tirar de um 3º andar em Cascais, se puder ser sexta de manhã».`;
+        : `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.`;
     case "nome":
       return "Com quem estou a falar?";
     case "morada":
-      return "Qual é a morada certa? Rua e número — é por aí que o profissional se orienta (ex.: Rua Sousa Viterbo 29).";
+      return "Qual é a morada? Rua e número — é por aí que o profissional se orienta.";
     case "codigoPostal":
-      return "E o código postal, com a localidade? (ex.: 2845-513 Amora)";
+      return "E o código postal, com a localidade?";
     case "moradaDestino":
       return "Para onde é a mudança? Rua e número do destino.";
     case "codigoPostalDestino":
       return "E o código postal do destino, com a localidade?";
     case "andar":
       return dados.serviceType === "mudanca"
-        ? "Em que andar fica a casa de origem? (r/c, 2º, cave…)"
-        : "Em que andar é? (r/c, 2º, cave…)";
+        ? "Em que andar fica a casa de origem?"
+        : "Em que andar é?";
     case "elevador":
       return "Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.";
     case "estacionamento":
       return "Dá para encostar a carrinha à porta, ou fica longe?";
     case "entulhoQuantidade":
-      return "Mais ou menos quanto entulho? Em sacos ou em m³ — um número aproximado chega (ex.: 20 sacos).";
+      return "Mais ou menos quanto entulho? Em sacos ou em m³, um número aproximado chega.";
     case "quando":
-      return "Para quando precisa? Pode ser «amanhã de manhã», «sexta às 9», «14/09 às 11:30» — ou sem pressa, se for o caso.";
+      return "Para quando precisa? Se não houver pressa, diga-me também.";
     case "descricao":
       return "Conte-me o que há para levar ou fazer: quantas peças, o tamanho, e o que houver de especial.";
     case "fatura":
@@ -385,7 +434,7 @@ export function resumo(d: DadosDaRecolha): string {
     `Descrição: ${d.description ?? "—"}`,
     `Factura: ${d.precisaFatura ? "sim" : "não"}`,
   ].filter((l): l is string => l != null);
-  return `Confirme, por favor:\n\n${linhas.join("\n")}\n\nEstá tudo certo? Responda SIM para registar. Para corrigir, escreva o campo e o valor novo (ex.: «morada Rua Nova 5», «nome Ana Silva»).`;
+  return `Confirme, por favor:\n\n${linhas.join("\n")}\n\nEstá tudo certo? Responda SIM para registar, ou diga-me o que está errado.`;
 }
 
 export function recolhaNova(): EstadoDaRecolha {
@@ -662,7 +711,7 @@ export function responderNaRecolha(
       return {
         estado,
         resposta:
-          "Para registar responda SIM. Para corrigir, escreva o campo e o valor novo (ex.: «morada Rua Nova 5»). Ou escreva «recomeçar».",
+          "Para registar responda SIM. Se houver algo errado, diga-me o quê. Ou escreva «recomeçar».",
       };
     }
   }
@@ -680,7 +729,13 @@ export function responderNaRecolha(
     estado.passo === "servico" && d.serviceType
       ? `${ETIQUETAS[d.serviceType] ?? d.serviceType} — certo.\n\n`
       : "";
-  return { estado: { passo: proximo, dados: d }, resposta: confirmacao + perguntaDo(proximo, d) };
+  // O cumprimento também por aqui: este é o caminho de quando o Gemini está em
+  // baixo, e uma pessoa que apanhe esse dia merece os mesmos modos.
+  const abertura = aberturaDaResposta(d, estado.passo, proximo, agora);
+  return {
+    estado: { passo: proximo, dados: d },
+    resposta: abertura + confirmacao + perguntaDo(proximo, d),
+  };
 }
 
 /**
@@ -998,7 +1053,22 @@ export function responderComCompreensao(
     return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
   }
 
-  return { estado: { passo, dados: d }, resposta: perguntaDo(passo, d, false) };
+  /*
+   * O BOM DIA, E O NOME DELA.
+   *
+   * "O assistente respondeu sem bom dia e sem dizer o nome dela."
+   *
+   * Quando a primeira mensagem já traz o serviço — «tenho uma mesa grande, 5
+   * cadeiras (...) que precisava que viessem buscar» — o passo `servico` é
+   * saltado, e com ele o único sítio onde havia um cumprimento. A conversa
+   * abria com uma pergunta seca a quem tinha acabado de escrever «Bom dia» e
+   * de assinar o nome.
+   *
+   * Sai UMA vez porque só sai quando a mensagem chegou com o estado por
+   * estrear — não é preciso guardar nada nos dados para isso.
+   */
+  const abertura = aberturaDaResposta(d, estado.passo, passo, agora);
+  return { estado: { passo, dados: d }, resposta: abertura + perguntaDo(passo, d, false) };
 }
 
 /** A mensagem quando o pedido ficou registado. */
