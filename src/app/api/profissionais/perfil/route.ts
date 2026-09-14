@@ -4,6 +4,8 @@ import {
   perfilDoProfissional,
   avaliacoesDoProfissional,
   actualizarPerfilDoProfissional,
+  apagarFotosDoBlob,
+  urlDaFotoDaViatura,
   invalidarVerificacaoDaGuia,
   custosFixosDeJson,
   trabalhosConcluidosDoProfissional,
@@ -521,7 +523,28 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    /*
+     * A FOTOGRAFIA DE ANTES TEM DE SAIR DO BLOB.
+     *
+     * Este é o outro caminho por onde `fotoViaturaUrl` muda — o do envio é a
+     * rota /foto-viatura, que já trata do seu. Aqui a coluna pode ser posta a
+     * null (tirar a fotografia do perfil), e até 14-09-2026 isso só apagava o
+     * ponteiro: o ficheiro continuava a responder no endereço público onde
+     * estava, com a matrícula à vista, sem nada na base a dizer que existia.
+     *
+     * Lê-se ANTES do UPDATE — depois já não há por onde saber qual era.
+     */
+    const fotoAntiga =
+      "fotoViaturaUrl" in mudancas ? await urlDaFotoDaViatura(sessao.providerId) : null;
+
     await actualizarPerfilDoProfissional(sessao.providerId, mudancas);
+
+    // Só depois de a base já não lhe apontar: ao contrário, uma falha a meio
+    // deixava o perfil a mostrar uma imagem partida.
+    if (fotoAntiga && fotoAntiga !== mudancas.fotoViaturaUrl) {
+      const saiu = await apagarFotosDoBlob([fotoAntiga]).catch(() => 0);
+      if (saiu === 0) console.error("[profissionais/perfil PUT] a anterior ficou no Blob:", fotoAntiga);
+    }
 
     // Mexer na guia volta a pôr a verificação por fazer. O distintivo que o
     // cliente vê tem de continuar a garantir um número que alguém confirmou.

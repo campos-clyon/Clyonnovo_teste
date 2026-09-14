@@ -3240,6 +3240,78 @@ export async function actualizarPerfilDoProfissional(
 }
 
 /**
+ * O endereço da fotografia da viatura, e mais nada.
+ *
+ * Existe para quem vai substituí-la ou tirá-la precisar de saber qual era a
+ * anterior para a apagar do Blob. `perfilDoProfissional` traria a linha
+ * inteira — trinta colunas, incluindo IBAN e morada fiscal — para se ler um
+ * campo.
+ */
+export async function urlDaFotoDaViatura(providerId: number): Promise<string | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute(
+    "SELECT fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1",
+    [providerId],
+  )) as any[];
+  return (linhas as Array<{ fotoViaturaUrl: string | null }>)[0]?.fotoViaturaUrl ?? null;
+}
+
+/**
+ * TROCAR A FOTOGRAFIA DA VIATURA, e dizer qual era a de antes.
+ *
+ * O nome do ficheiro leva a hora (`viaturas/<id>-<agora>.jpg`) e
+ * `addRandomSuffix: false` — ou seja, cada envio cria um ficheiro NOVO e o
+ * anterior nunca era apagado. Trocar a fotografia cinco vezes deixava cinco
+ * fotografias da viatura de alguém no Blob, públicas, e só a última tinha
+ * ponteiro na base. As outras quatro ficavam sem ninguém saber que existiam.
+ * Verificado a 14-09-2026.
+ *
+ * Lê e escreve na mesma transacção, com `FOR UPDATE`. Ler primeiro e escrever
+ * depois, em duas chamadas, tinha uma janela: dois envios ao mesmo tempo
+ * liam ambos a mesma antiga, apagavam-na duas vezes, e uma das novas ficava
+ * órfã na mesma.
+ *
+ * Devolve o endereço anterior — quem chama é que o apaga do Blob, DEPOIS de a
+ * transacção fechar. Aqui dentro seria uma chamada de rede a prender a linha.
+ */
+export async function trocarFotoDaViatura(
+  providerId: number,
+  novoUrl: string,
+): Promise<string | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [linhas] = (await conn.execute(
+      "SELECT fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
+      [providerId],
+    )) as any[];
+    const antiga = (linhas as Array<{ fotoViaturaUrl: string | null }>)[0]?.fotoViaturaUrl ?? null;
+    await conn.execute("UPDATE providers SET fotoViaturaUrl = ? WHERE id = ?", [
+      novoUrl,
+      providerId,
+    ]);
+    await conn.commit();
+    // A mesma não se apaga: seria apagar a que acabou de ficar no perfil.
+    return antiga && antiga !== novoUrl ? antiga : null;
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* já houve rollback ou commit */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
  * Mexer no número de transportador põe a guia outra vez por verificar.
  *
  * Sem isto, bastava inscrever-se com um número verdadeiro, ser verificado, e
@@ -6552,6 +6624,15 @@ export type ApagarProfissionalResultado = {
   negociacoes: number;
   /** Linhas do registo permanente que perderam o nome. */
   registosAnonimizados: number;
+  /**
+   * A fotografia da viatura saiu mesmo do Blob?
+   *
+   * Falso quando não havia nenhuma — e também quando o Blob recusou. Nesse
+   * segundo caso fica escrito nos registos: a conta já se foi, e a fotografia
+   * de uma carrinha com a matrícula à vista continua a responder no endereço
+   * público onde estava.
+   */
+  fotoDaViaturaApagada: boolean;
 };
 
 export async function apagarProfissional(
@@ -6577,11 +6658,20 @@ export async function apagarProfissional(
 
     // `FOR UPDATE` para que nada mude entre a verificação e o apagar.
     const [pLinhas] = (await conn.execute(
-      "SELECT id, name, email, estado FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
+      // A fotografia da viatura vem daqui porque daqui a pouco a coluna é
+      // limpa: depois do UPDATE já não há por onde saber o endereço do
+      // ficheiro, e ele fica no Blob, público, para sempre.
+      "SELECT id, name, email, estado, fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
       [providerId],
     )) as any[];
     const p = (
-      pLinhas as Array<{ id: number; name: string; email: string | null; estado: string | null }>
+      pLinhas as Array<{
+        id: number;
+        name: string;
+        email: string | null;
+        estado: string | null;
+        fotoViaturaUrl: string | null;
+      }>
     )[0];
     if (!p) {
       await conn.rollback();
@@ -6689,17 +6779,28 @@ export async function apagarProfissional(
        * para sempre. As três colunas da morada fiscal tinham o mesmo problema —
        * só a rua saía, o código postal e a localidade ficavam.
        *
-       * Há um teste que compara esta lista com as colunas da tabela e chumba
-       * quando aparece uma que identifica alguém e não é limpa aqui.
+       * A 14-09-2026 aconteceu outra vez, e com duas de cada vez: a
+       * `fotoViaturaUrl` (a viatura dele, com a matrícula à vista) e o
+       * `senhaTokenHash` — o token de definição de palavra-passe. Esse é o
+       * que assusta: uma conta apagada ficava com uma credencial viva lá
+       * dentro. Hoje a rota de definir senha recusa o estado «apagado», e é
+       * por isso que nunca foi explorável; mas a guarda estava toda do lado de
+       * lá, e a credencial não tinha razão nenhuma para continuar aqui.
+       *
+       * Há um teste que compara esta lista com as colunas REAIS da tabela e
+       * chumba quando aparece uma que não está decidida de um lado ou do outro.
+       * Antes comparava a lista consigo própria, que é como as três passaram.
        */
       await conn.execute(
         `UPDATE providers
             SET name = 'Profissional removido',
                 slug = CONCAT('removido-', id),
                 email = NULL, phone = NULL, nif = NULL, city = NULL,
-                passwordHash = NULL, iban = NULL, ibanTitular = NULL, mbway = NULL,
+                passwordHash = NULL, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL,
+                iban = NULL, ibanTitular = NULL, mbway = NULL,
                 moradaFiscal = NULL, codigoPostalFiscal = NULL, localidadeFiscal = NULL,
                 numeroTransportador = NULL,
+                fotoViaturaUrl = NULL,
                 categorias = NULL, zonas = NULL,
                 baseLat = NULL, baseLng = NULL,
                 isActive = 0, estado = 'apagado'
@@ -6724,11 +6825,36 @@ export async function apagarProfissional(
 
     const registosAnonimizados = await anonimizarRegisto({ providerId }, "conta_profissional");
 
+    /*
+     * A FOTOGRAFIA DA VIATURA, DEPOIS DA TRANSACÇÃO.
+     *
+     * A mesma ordem das fotografias dos pedidos e do evento na agenda: a base
+     * fecha primeiro, e só depois se vai buscar o que vive fora dela. Uma
+     * chamada ao Blob a meio da transacção prende a linha de `providers`
+     * enquanto se espera pela internet.
+     *
+     * Vale nos DOIS casos — anonimizada ou apagada a sério. Até 14-09-2026 não
+     * valia em nenhum: a coluna nem sequer era limpa, e a fotografia de uma
+     * carrinha, com a matrícula à vista, ficava num endereço público para
+     * sempre. "Se o pro foi removido, ele deveria ter sido 100% apagado."
+     */
+    let fotoDaViaturaApagada = false;
+    if (p.fotoViaturaUrl) {
+      fotoDaViaturaApagada = (await apagarFotosDoBlob([p.fotoViaturaUrl])) > 0;
+      if (!fotoDaViaturaApagada) {
+        console.error(
+          `[apagarProfissional] a fotografia da viatura de #${providerId} ficou no Blob:`,
+          p.fotoViaturaUrl,
+        );
+      }
+    }
+
     return {
       modo: temPassado ? "anonimizado" : "removido",
       nome: p.name,
       negociacoes: negociacoes.length,
       registosAnonimizados,
+      fotoDaViaturaApagada,
     };
   } catch (e) {
     try {

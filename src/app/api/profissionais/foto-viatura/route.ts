@@ -6,7 +6,7 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
   verificarSessaoDoProfissional,
 } from "@/lib/profissional-auth";
-import { actualizarPerfilDoProfissional } from "@/lib/db";
+import { apagarFotosDoBlob, trocarFotoDaViatura } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -93,7 +93,25 @@ export async function POST(req: NextRequest) {
 
     // Grava-se aqui e não no ecrã seguinte: uma fotografia que sobe e não fica
     // no perfil é o pior dos dois mundos — ocupa espaço e não serve a ninguém.
-    await actualizarPerfilDoProfissional(sessao.providerId, { fotoViaturaUrl: blob.url });
+    const antiga = await trocarFotoDaViatura(sessao.providerId, blob.url);
+
+    /*
+     * E A ANTIGA SAI DO BLOB.
+     *
+     * A hora no nome faz de cada envio um ficheiro novo — é o que evita a
+     * cache no telemóvel — mas nada apagava o de antes. Trocar a fotografia
+     * cinco vezes deixava cinco fotografias da viatura de alguém, públicas, e
+     * só a última com ponteiro na base: as outras ficavam sem ninguém saber
+     * que existiam. Verificado a 14-09-2026.
+     *
+     * Depois de a base já ter a nova, e nunca antes: se o Blob falhar, fica
+     * uma fotografia a mais — chato. Ao contrário, ficava o perfil a apontar
+     * para um ficheiro apagado — uma imagem partida no ecrã do cliente.
+     */
+    if (antiga) {
+      const saiu = await apagarFotosDoBlob([antiga]).catch(() => 0);
+      if (saiu === 0) console.error("[foto-viatura] a anterior ficou no Blob:", antiga);
+    }
 
     return NextResponse.json({ ok: true, url: blob.url });
   } catch (e) {
