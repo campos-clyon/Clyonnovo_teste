@@ -137,8 +137,18 @@ export function servicoDoTexto(texto: string): string | null {
 /** "sim"/"não" em todas as formas que um teclado escreve; null se não é nenhuma. */
 export function simOuNao(texto: string): "sim" | "nao" | null {
   const t = semAcentos(texto).replace(/[.!,]+$/, "");
-  if (/^(s|sim|yes|claro|ha|tem|com certeza|sim tem|sim ha|exacto|exato|ok|certo|isso)$/.test(t)) return "sim";
-  if (/^(n|nao|nope|nem|nao tem|nao ha|sem|negativo)$/.test(t)) return "nao";
+  /*
+   * O inglês entra aqui porque o cliente PASSOU a poder ser inglês: desde
+   * 14-09-2026 a pergunta sai na língua dele, e quem lê «reply YES» responde
+   * YES. Este é o caminho sem Gemini — o que resta quando o modelo está em
+   * baixo — e sem estas palavras ele deixava de fora justamente os clientes
+   * que a tradução acabou de trazer.
+   *
+   * «no» só aqui, sozinho e sem acento: o «no» português («no prédio») nunca
+   * chega a esta comparação porque nunca vem só.
+   */
+  if (/^(s|sim|yes|yeah|yep|sure|claro|ha|tem|com certeza|sim tem|sim ha|exacto|exato|ok|okay|certo|correct|isso)$/.test(t)) return "sim";
+  if (/^(n|nao|no|nope|nem|nao tem|nao ha|sem|negativo)$/.test(t)) return "nao";
   if (/^sim\b/.test(t)) return "sim";
   if (/^nao\b/.test(t)) return "nao";
   return null;

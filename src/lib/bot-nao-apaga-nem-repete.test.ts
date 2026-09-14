@@ -218,6 +218,15 @@ describe("o teclado de quem está do outro lado", () => {
     // corrigir. Aqui apanha recolha, releitura e negociação, nos três canais.
     const CLOUD = ler("src/lib/whatsapp-cloud.ts");
     const i = CLOUD.indexOf("async function enviarTextoPorCanal(");
-    expect(CLOUD.slice(i, i + 200)).toContain("texto = paraTeclado(texto);");
+    const corpo = CLOUD.slice(i, i + 400);
+    expect(corpo).toContain("paraTeclado(texto)");
+    /*
+     * E TAMBÉM DEPOIS DE TRADUZIR — 14-09-2026.
+     *
+     * A tradução volta do Gemini com as aspas curvas e os travessões que esta
+     * função existe para tirar. Normalizar só o português deixava passar em
+     * inglês exactamente os caracteres que partem o teclado de quem responde.
+     */
+    expect(corpo).toContain("paraTeclado(await naLinguaDoCliente(");
   });
 });

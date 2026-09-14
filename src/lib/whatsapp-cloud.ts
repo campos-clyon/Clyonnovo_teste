@@ -208,8 +208,64 @@ export function paraTeclado(texto: string): string {
     .replace(/ /g, " ");
 }
 
+/**
+ * A MENSAGEM NA LÍNGUA DE QUEM A VAI LER.
+ *
+ * "O bot devia adaptar a língua do cliente, ele está a ignorar que o cliente
+ * não sabe português." — 14-09-2026.
+ *
+ * Está aqui, e não nos trinta e cinco sítios que escrevem para o cliente, por
+ * uma razão só: por aqui passa TUDO — a recolha, as propostas, o assistente
+ * automático, e o que o painel escreve à mão. Posta na composição, cada
+ * mensagem nova que alguém acrescentasse nascia outra vez em português, e
+ * ninguém se lembraria porquê.
+ *
+ * O que se REGISTA é o português. O fio do painel tem de continuar legível
+ * para quem atende — se ficasse a tradução, uma conversa em francês passava a
+ * ser ilegível dos dois lados.
+ */
+async function naLinguaDoCliente(para: string, texto: string): Promise<string> {
+  try {
+    const { linguaDoNumero } = await import("./db");
+    const lingua = await linguaDoNumero(para);
+    if (!lingua) return texto;
+    const { traduzirParaOCliente } = await import("./traduzir-para-o-cliente");
+    return await traduzirParaOCliente(texto, lingua);
+  } catch (e) {
+    // Traduzir é um extra. Falhar devolve o português, que é o que sempre saiu.
+    console.error("[whatsapp/lingua] não traduzi:", e instanceof Error ? e.message : e);
+    return texto;
+  }
+}
+
+/**
+ * Os títulos dos botões, um a um, com o tecto dos 20 caracteres a mandar.
+ *
+ * O `id` não se traduz nunca: é o que volta no webhook e diz qual foi
+ * carregado. Traduzi-lo partia a leitura da resposta — e partia-a só para os
+ * clientes estrangeiros, que é a avaria mais difícil de encontrar.
+ */
+async function botoesNaLinguaDoCliente(
+  para: string,
+  botoes: Array<{ id: string; titulo: string }>,
+): Promise<Array<{ id: string; titulo: string }>> {
+  try {
+    const { linguaDoNumero } = await import("./db");
+    const lingua = await linguaDoNumero(para);
+    if (!lingua) return botoes;
+    const { traduzirTituloDeBotao } = await import("./traduzir-para-o-cliente");
+    return await Promise.all(
+      botoes.map(async (b) => ({ id: b.id, titulo: await traduzirTituloDeBotao(b.titulo, lingua) })),
+    );
+  } catch (e) {
+    console.error("[whatsapp/lingua] botões em português:", e instanceof Error ? e.message : e);
+    return botoes;
+  }
+}
+
 async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean> {
-  texto = paraTeclado(texto);
+  const emPortugues = paraTeclado(texto);
+  texto = paraTeclado(await naLinguaDoCliente(para, emPortugues));
   let saiu = false;
   if (whatsappConfigurado()) {
     saiu = await enviar({
@@ -224,7 +280,9 @@ async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean
     // alguém a marcar como enviada — antes disso ainda não saiu de lado nenhum.
     return porNaFila(para, texto);
   }
-  if (saiu) await registarSaida(para, texto);
+  // O REGISTO FICA EM PORTUGUÊS. É o fio que quem atende lê no painel, e uma
+  // conversa em francês guardada em francês é ilegível dos dois lados.
+  if (saiu) await registarSaida(para, emPortugues);
   return saiu;
 }
 
@@ -257,6 +315,18 @@ export async function enviarBotoesWhatsApp(
   botoes: Array<{ id: string; titulo: string }>,
 ): Promise<boolean> {
   if (!(await autorizadoAFalarCom(para))) return false;
+
+  /*
+   * O corpo traduz-se; os TÍTULOS dos botões traduzem-se um a um e só se
+   * couberem nos 20 caracteres da API. Ver `traduzirTituloDeBotao`: um título
+   * grande de mais não encurta o botão, faz a Meta recusar a MENSAGEM INTEIRA.
+   * O `id` nunca se toca — é ele que volta no webhook e diz o que carregaram.
+   */
+  const emPortugues = texto;
+  const botoesPT = botoes.slice(0, 3);
+  texto = await naLinguaDoCliente(para, texto);
+  botoes = await botoesNaLinguaDoCliente(para, botoesPT);
+
   if (whatsappConfigurado()) {
     const saiu = await enviar({
       to: telefoneParaWhatsApp(para),
@@ -273,9 +343,10 @@ export async function enviarBotoesWhatsApp(
       },
     });
     if (saiu) {
+      // Em português, como o texto: é o fio que o painel mostra.
       await registarSaida(
         para,
-        `${texto}\n[botões: ${botoes.slice(0, 3).map((b) => b.titulo).join(" · ")}]`,
+        `${emPortugues}\n[botões: ${botoesPT.map((b) => b.titulo).join(" · ")}]`,
       );
     }
     return saiu;
@@ -295,7 +366,7 @@ export async function enviarBotoesWhatsApp(
      */
     const degradado = texto;
     const saiu = await porNaFila(para, degradado);
-    if (saiu) await registarSaida(para, degradado);
+    if (saiu) await registarSaida(para, emPortugues);
     return saiu;
   }
   if (manualActivo()) {

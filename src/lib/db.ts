@@ -6,6 +6,7 @@ import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizad
 export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
 import { carteiraDe } from "@/lib/carteira";
+import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -4849,6 +4850,28 @@ export async function registarMensagemWhatsApp(
     "INSERT INTO whatsappMensagens (telefone, direccao, texto) VALUES (?, ?, ?)",
     [digitos, direccao, texto.slice(0, 4096)],
   );
+
+  /*
+   * A LÍNGUA APANHA-SE AQUI, e não no webhook.
+   *
+   * Por aqui passa TUDO o que entra, venha da Meta, da ponte ou do painel — é
+   * o único sítio onde isso é verdade. Posta no webhook, a detecção ficava de
+   * fora do caminho da ponte, e o primeiro cliente estrangeiro a entrar por lá
+   * levava português outra vez.
+   *
+   * Só o que ELES escrevem conta: o que sai é nosso e é sempre português, e
+   * contá-lo era ensinar o sistema que toda a gente fala português.
+   *
+   * Falhar aqui não pode travar o registo da mensagem — a conversa vale mais
+   * do que a língua em que ela é respondida.
+   */
+  if (direccao === "in") {
+    const detectada = linguaAGuardar(texto);
+    if (detectada) {
+      await guardarLinguaDoNumero(digitos, detectada).catch(() => {});
+    }
+  }
+
   // A limpeza anda à boleia da escrita: sem cron próprio, sem tabela a
   // crescer para sempre. O LIMIT trava o custo de cada passagem.
   await pool
@@ -8077,4 +8100,99 @@ export async function fiosRecentesWhatsApp(
     telefone: f.telefone,
     mensagens: f.mensagens.reverse(),
   }));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * A LÍNGUA DE CADA NÚMERO.
+ *
+ * "O bot devia adaptar a língua do cliente, ele está a ignorar que o cliente
+ * não sabe português." — 14-09-2026.
+ *
+ * Uma linha por telemóvel, e só quando NÃO é português: o português é o padrão
+ * e não precisa de ser escrito. Assim a tabela tem o tamanho do problema — os
+ * estrangeiros — e não o tamanho da lista de clientes.
+ *
+ * A decisão é do `lingua-do-cliente`, que não fala com ninguém. Aqui só se
+ * guarda o que ele deu por evidente.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+let linguasWhatsAppReady = false;
+async function ensureWhatsappLinguasTable() {
+  if (linguasWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappLinguas (
+      telefone   VARCHAR(32) NOT NULL PRIMARY KEY,
+      lingua     VARCHAR(8)  NOT NULL,
+      criadoEm   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      alteradoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  linguasWhatsAppReady = true;
+}
+
+/** A língua guardada para um número, ou null — e null quer dizer português. */
+export async function linguaDoNumero(telefone: string): Promise<Lingua | null> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return null;
+  try {
+    await ensureWhatsappLinguasTable();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      "SELECT lingua FROM whatsappLinguas WHERE RIGHT(telefone, 9) = RIGHT(?, 9) LIMIT 1",
+      [digitos],
+    )) as [Array<{ lingua: string }>, unknown];
+    const lida = rows[0]?.lingua;
+    return linguaValida(lida) ? lida : null;
+  } catch {
+    /*
+     * Falhar a ler a língua escreve em português, que é o comportamento de
+     * sempre. Nunca pode impedir a mensagem de sair.
+     */
+    return null;
+  }
+}
+
+/**
+ * Guardar a língua de um número — e NUNCA voltar atrás sozinho.
+ *
+ * Uma pessoa que escreve em inglês manda «ok» e «sim» pelo meio, como toda a
+ * gente. Se cada mensagem pudesse redecidir, um «sim» a meio da conversa
+ * devolvia-a ao português e a seguinte voltava ao inglês — o assistente a
+ * mudar de língua de balão para balão. Escreve-se uma vez e fica.
+ */
+export async function guardarLinguaDoNumero(telefone: string, lingua: Lingua): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return;
+  await ensureWhatsappLinguasTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "INSERT IGNORE INTO whatsappLinguas (telefone, lingua) VALUES (?, ?)",
+    [digitos, lingua],
+  );
+}
+
+/** Do painel: corrigir à mão o que a detecção não apanhou, ou apanhou mal. */
+export async function porLinguaDoNumero(telefone: string, lingua: Lingua | null): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return;
+  await ensureWhatsappLinguasTable();
+  const pool = await getPool();
+  if (!pool) return;
+  if (!lingua || lingua === "pt") {
+    // Voltar ao português é APAGAR a linha, e não escrever "pt": o padrão vive
+    // na ausência, e uma linha a dizer "pt" é uma linha que alguém lê ao contrário.
+    await pool.execute("DELETE FROM whatsappLinguas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [
+      digitos,
+    ]);
+    return;
+  }
+  await pool.execute(
+    `INSERT INTO whatsappLinguas (telefone, lingua) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE lingua = VALUES(lingua)`,
+    [digitos, lingua],
+  );
 }

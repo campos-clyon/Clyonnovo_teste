@@ -29,8 +29,19 @@ describe("o registo das conversas", () => {
   it("tudo o que sai fica registado — nos dois envios e nas duas vias", () => {
     expect(CLOUD).toContain("registarSaida");
     // O caminho comum regista; os botões registam nas duas variantes.
-    expect(CLOUD).toContain("if (saiu) await registarSaida(para, texto);");
+    expect(CLOUD).toContain("if (saiu) await registarSaida(para, emPortugues);");
     expect(CLOUD).toContain("[botões:");
+  });
+
+  it("o que fica registado é o PORTUGUÊS, e não a tradução", () => {
+    /*
+     * Desde 14-09-2026 a mensagem sai na língua do cliente. O fio do painel
+     * continua a ser lido por quem atende, em português: guardar a tradução
+     * fazia de uma conversa em francês uma conversa ilegível dos dois lados —
+     * e a mesa do WhatsApp deixava de servir para o que serve.
+     */
+    expect(CLOUD).toContain("const emPortugues");
+    expect(CLOUD).not.toContain("registarSaida(para, texto)");
   });
 
   it("tudo o que entra fica registado — texto, botão (pelo TÍTULO) e fotografia", () => {
