@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/assistente",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/alcancar-pedidos",
+      "schedule": "15 * * * *"
     }
   ]
 }

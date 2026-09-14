@@ -1328,6 +1328,39 @@ export async function substituirTokenDaNegociacao(
  * não pediu para entrar num mercado — promover o pedido faz-lhe chegar um email
  * com propostas de terceiros, e isso não pode acontecer por omissão.
  */
+/**
+ * OS PEDIDOS ABERTOS QUE PODEM CHEGAR A MAIS ALGUÉM.
+ *
+ * Já estão na plataforma (têm negociações), ninguém foi contratado, e ainda
+ * estão dentro do prazo de retenção. É a lista que a passagem de alcance
+ * revisita — ver `alcancar-pedidos.ts` para o porquê de isto existir.
+ *
+ * Devolve só os ids: o que a distribuição precisa é do pedido inteiro, e esse
+ * vai-se buscar um a um, com as coordenadas gravadas pelo caminho.
+ */
+export async function pedidosAbertosParaAlcancar(dias: number, limite: number): Promise<number[]> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT o.id
+       FROM simulatorOrders o
+      WHERE EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
+        -- Contratado e o trabalho e de alguem: manda-lo a mais um seria
+        -- po-lo a orcamentar uma coisa que ja nao esta a venda.
+        AND NOT EXISTS (
+          SELECT 1 FROM negociacoes a WHERE a.pedidoId = o.id AND a.estado = 'acordada'
+        )
+        AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
+        AND o.createdAt >= NOW() - INTERVAL ? DAY
+      ORDER BY o.createdAt DESC
+      LIMIT ?`,
+    [String(Math.max(1, Math.floor(dias))), String(Math.max(1, Math.floor(limite)))],
+  )) as any[];
+  return (rows as Array<{ id: number }>).map((r) => Number(r.id));
+}
+
 export async function pedidosPorPromover(limite = 20): Promise<
   Array<{
     id: number;
