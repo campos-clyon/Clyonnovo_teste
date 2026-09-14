@@ -236,6 +236,26 @@ async function pedirJson(
 type TentativaFalhada = { ok: false; motivo: string };
 type TentativaFeita = { ok: true; lido: Compreensao };
 
+/**
+ * O TERMÓMETRO — a avaria que não se via.
+ *
+ * A 14-09-2026 a quota do Gemini esgotou-se, e o assistente passou o dia a
+ * responder por palavras-chave a clientes que escreviam frases normais. Não
+ * houve um sinal em lado nenhum: a falha é apanhada e o caminho antigo segue,
+ * que é o comportamento certo — mas ninguém ficou a saber. Ficou registado no
+ * estado do WhatsApp, e o painel di-lo em cima.
+ *
+ * Nunca atira: um termómetro avariado não pode travar o doente.
+ */
+async function anotar(motivo: string | null): Promise<void> {
+  try {
+    const { anotarSaudeDaCompreensao } = await import("@/lib/db");
+    await anotarSaudeDaCompreensao(motivo);
+  } catch {
+    /* sem base, sem termómetro — e a leitura segue na mesma */
+  }
+}
+
 async function tentarComMotivo(
   modelName: string,
   apiKey: string,
@@ -463,8 +483,14 @@ export async function compreenderFioComMotivo(
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   const bom = await tentarComMotivo(modelName, apiKey, t, sistema, prazos.bom);
-  if (bom.ok) return { ok: true, campos: bom.lido.campos };
-  if (modelName === MODELO_DE_RESERVA) return { ok: false, motivo: bom.motivo };
+  if (bom.ok) {
+    await anotar(null);
+    return { ok: true, campos: bom.lido.campos };
+  }
+  if (modelName === MODELO_DE_RESERVA) {
+    await anotar(bom.motivo);
+    return { ok: false, motivo: bom.motivo };
+  }
 
   /*
    * O MOTIVO QUE SE MOSTRA É O DA PRIMEIRA TENTATIVA.
@@ -475,7 +501,11 @@ export async function compreenderFioComMotivo(
    * não deu.
    */
   const reserva = await tentarComMotivo(MODELO_DE_RESERVA, apiKey, t, sistema, prazos.reserva);
-  if (reserva.ok) return { ok: true, campos: reserva.lido.campos };
+  if (reserva.ok) {
+    await anotar(null);
+    return { ok: true, campos: reserva.lido.campos };
+  }
+  await anotar(bom.motivo);
   return { ok: false, motivo: bom.motivo };
 }
 
@@ -627,6 +657,13 @@ export async function compreenderResposta(
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const comecou = Date.now();
 
+  /*
+   * O PRIMEIRO MOTIVO É O QUE FICA — ver `compreenderFioComMotivo`. A segunda
+   * tentativa corre com um modelo mais fraco; dizer que foi ESSE que falhou
+   * manda quem lê atrás do modelo errado.
+   */
+  let primeiroMotivo: string | null = null;
+
   for (const [modelo, segundos] of [
     [modelName, 18],
     [MODELO_DE_RESERVA, 10],
@@ -637,14 +674,30 @@ export async function compreenderResposta(
         `[whatsapp/resposta] ${modelo}: ${lido?.accao ?? "—"}` +
           `${lido?.valor != null ? ` ${lido.valor} €` : ""}, ${Date.now() - comecou} ms`,
       );
-      if (lido) return lido;
+      if (lido) {
+        await anotar(null);
+        return lido;
+      }
+      primeiroMotivo ??= `O ${modelo} respondeu, mas não em JSON que se leia.`;
     } catch (e) {
-      console.error(
-        `[whatsapp/resposta] ${modelo} falhou aos ${Date.now() - comecou} ms:`,
-        e instanceof Error ? e.message : e,
-      );
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[whatsapp/resposta] ${modelo} falhou aos ${Date.now() - comecou} ms:`, msg);
+      primeiroMotivo ??= msg.startsWith("demorou mais de")
+        ? `O ${modelo} ${msg} a ler a resposta do cliente.`
+        : `A Google recusou a leitura: ${msg.slice(0, 300)}`;
     }
     if (modelName === MODELO_DE_RESERVA) break;
   }
+
+  /*
+   * AQUI É QUE ESTAVA O SILÊNCIO.
+   *
+   * Devolvia-se `null` e o cérebro seguia pelas expressões regulares, que é o
+   * comportamento certo — uma avaria na Google não pode fechar nem recusar
+   * nada. Só que ninguém ficava a saber que ela tinha acontecido, e o
+   * assistente passou um dia inteiro a responder por palavras-chave a quem
+   * escrevia frases normais.
+   */
+  await anotar(primeiroMotivo ?? "A leitura da resposta do cliente falhou, sem motivo registado.");
   return null;
 }

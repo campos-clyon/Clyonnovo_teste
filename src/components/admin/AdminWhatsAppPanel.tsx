@@ -66,6 +66,13 @@ type Estado = {
   recolhas?: Array<{ telefone: string; passo: string; actualizadoEm: string }>;
   /** As que já foram dadas por tratadas. Saem da mesa, não do registo. */
   arquivadas?: Array<{ telefone: string; criadoEm: string }>;
+  /**
+   * A leitura das mensagens está em baixo? `null` quando está de pé.
+   *
+   * Sem isto, uma quota esgotada do Gemini é indistinguível de tudo estar bem:
+   * o assistente volta às palavras-chave e ninguém dá por nada.
+   */
+  compreensao?: { quando: string; motivo: string } | null;
 };
 
 /** O passo da recolha, em palavras de painel. */
@@ -719,6 +726,39 @@ export default function AdminWhatsAppPanel() {
   return (
     <div className="space-y-4">
       {/* O interruptor geral: o estado em letras grandes e UM gesto ao lado. */}
+      {/*
+        A COMPREENSÃO EM BAIXO — a avaria que não se via.
+
+        A 14-09-2026 a quota do Gemini esgotou-se. O assistente passou o dia a
+        responder por palavras-chave a clientes que escreviam frases normais
+        («Sim serve», «Aceito a proposta da Revolution»), e não houve um sinal
+        em lado nenhum — a falha é apanhada e o caminho antigo segue, que é o
+        comportamento certo, mas ninguém ficava a saber. Foi descoberto a ler
+        uma conversa à mão, um dia depois.
+
+        Fica em cima de tudo, e com o motivo de quem recusou: «429 quota
+        excedida» e «falta a chave» têm remédios diferentes.
+      */}
+      {estado.compreensao && (
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-amber-200">
+            <Bot className="h-4 w-4" aria-hidden="true" />O assistente não está a PERCEBER as
+            mensagens
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
+            Continua a responder, mas só ao que consegue ler por palavras — um «sim», um valor, uma
+            data. Frases como «Sim serve» ou «Aceito a proposta do João» passam-lhe ao lado.
+          </p>
+          <p className="mt-2 rounded-lg bg-slate-950/50 p-2 font-mono text-[11px] leading-relaxed text-amber-100/70">
+            {estado.compreensao.motivo}
+          </p>
+          <p className="mt-1 text-[11px] text-amber-100/60">
+            Última falha: {desde(estado.compreensao.quando)}. Esta linha desaparece sozinha na
+            primeira leitura que corra bem.
+          </p>
+        </section>
+      )}
+
       <section
         className={`rounded-2xl border p-5 ${
           estado.ligado

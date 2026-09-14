@@ -67,7 +67,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ mensagens: await mensagensDoNumeroWhatsApp(telefone) });
   }
 
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas] =
+  const { saudeDaCompreensao } = await import("@/lib/db");
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao] =
     await Promise.all([
       whatsappLigado(),
       listarNumerosInterrompidosWhatsApp(),
@@ -79,6 +80,8 @@ export async function GET(req: NextRequest) {
       conversasWhatsApp(80),
       listarRecolhasWhatsAppEmCurso().catch(() => []),
       listarConversasArquivadasWhatsApp().catch(() => []),
+      // Quando a leitura das mensagens falhou pela última vez, e porquê.
+      saudeDaCompreensao().catch(() => null),
     ]);
   return NextResponse.json({
     ligado,
@@ -93,6 +96,13 @@ export async function GET(req: NextRequest) {
     recolhas,
     // As que já foram dadas por tratadas: saem da mesa, não do registo.
     arquivadas,
+    /*
+     * A SAÚDE DA COMPREENSÃO — null quando está de pé.
+     *
+     * Sem isto, uma quota esgotada do Gemini é indistinguível de tudo estar
+     * bem: o assistente volta às palavras-chave e ninguém dá por nada.
+     */
+    compreensao,
   });
 }
 

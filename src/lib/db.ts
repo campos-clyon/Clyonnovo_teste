@@ -4818,7 +4818,73 @@ async function ensureWhatsappEstadoTables() {
       actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  /*
+   * A SAÚDE DA COMPREENSÃO — a avaria que não se via.
+   *
+   * A 14-09-2026 a quota do Gemini esgotou-se. O assistente passou o dia a
+   * responder por palavras-chave a clientes que escreviam frases normais
+   * («Sim serve», «Aceito a proposta da Revolution»), e não houve UM sinal em
+   * lado nenhum: a falha é apanhada e o caminho antigo segue, que é o
+   * comportamento certo — mas ninguém ficou a saber. O dono descobriu a ler
+   * uma conversa à mão, um dia depois.
+   *
+   * Duas colunas na linha de estado que já existe: quando falhou pela última
+   * vez, e porquê, nas palavras de quem recusou. Limpa-se à primeira leitura
+   * que corra bem.
+   */
+  for (const sql of [
+    `ALTER TABLE whatsappEstado ADD COLUMN compreensaoFalhouEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE whatsappEstado ADD COLUMN compreensaoMotivo VARCHAR(400) NULL DEFAULT NULL`,
+  ]) {
+    await pool.execute(sql).catch(() => {});
+  }
   whatsappEstadoReady = true;
+}
+
+/**
+ * A última leitura correu bem, ou não — e porquê.
+ *
+ * Nunca atira: isto é um termómetro, e um termómetro avariado não pode
+ * impedir o assistente de responder. `null` limpa — a leitura voltou.
+ */
+export async function anotarSaudeDaCompreensao(motivo: string | null): Promise<void> {
+  try {
+    await ensureWhatsappEstadoTables();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      motivo == null
+        ? `INSERT INTO whatsappEstado (id, compreensaoFalhouEm, compreensaoMotivo)
+           VALUES (1, NULL, NULL)
+           ON DUPLICATE KEY UPDATE compreensaoFalhouEm = NULL, compreensaoMotivo = NULL`
+        : `INSERT INTO whatsappEstado (id, compreensaoFalhouEm, compreensaoMotivo)
+           VALUES (1, NOW(), ?)
+           ON DUPLICATE KEY UPDATE compreensaoFalhouEm = NOW(), compreensaoMotivo = VALUES(compreensaoMotivo)`,
+      motivo == null ? [] : [motivo.slice(0, 400)],
+    );
+  } catch {
+    /* um termómetro não trava o doente */
+  }
+}
+
+/** O que o painel mostra sobre a compreensão: null quando está de pé. */
+export async function saudeDaCompreensao(): Promise<{ quando: string; motivo: string } | null> {
+  try {
+    await ensureWhatsappEstadoTables();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      "SELECT compreensaoFalhouEm, compreensaoMotivo FROM whatsappEstado WHERE id = 1",
+    )) as [Array<{ compreensaoFalhouEm: Date | null; compreensaoMotivo: string | null }>, unknown];
+    const r = rows[0];
+    if (!r?.compreensaoFalhouEm) return null;
+    return {
+      quando: String(r.compreensaoFalhouEm),
+      motivo: r.compreensaoMotivo ?? "sem motivo registado",
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function interromperNumeroWhatsApp(telefone: string, motivo?: string): Promise<void> {
