@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { lerBase, avisoDaBase } from "@/lib/base-do-preco";
+import { avisoDosItens } from "@/lib/itens-a-mais";
 import { negociacoesDoPedido } from "@/lib/db";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { oClienteVeEsta, type Proposta } from "@/lib/negociacao";
@@ -296,6 +297,18 @@ export default async function VistaDoPedido({
           {avisoDaBase(base) && (
             <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
               {avisoDaBase(base)}
+            </p>
+          )}
+
+          {/*
+            E O CASO CONTRÁRIO: o que acontece se aparecerem coisas a mais.
+            Um orçamento dado sobre fotografias cobre o que está nas
+            fotografias. Dizê-lo aqui, antes de ele decidir, é o que impede que
+            no dia seja uma surpresa — para ele e para quem vai buscar.
+          */}
+          {avisoDosItens(base, "cliente") && (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-700">
+              {avisoDosItens(base, "cliente")}
             </p>
           )}
 

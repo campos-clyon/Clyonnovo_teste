@@ -51,6 +51,7 @@ import {
 import { concorrenciaDoPedido } from "@/lib/concorrencia";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
+import { avisoDosItens } from "@/lib/itens-a-mais";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
 /**
@@ -1688,6 +1689,21 @@ function DetalheDoTrabalho({
         {avisoDaBase(lerBase(pedido.baseDoPreco)) && (
           <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
             {avisoDaBase(lerBase(pedido.baseDoPreco))}
+          </p>
+        )}
+
+        {/*
+          E O CASO CONTRÁRIO: o que vale o que aparecer a mais.
+
+          "Nestes casos o cliente diz sempre que são só 2 sacos, mas depois
+          aparecem mais coisas." O orçamento é dado sobre fotografias, e a
+          lista encolhe sem má intenção nenhuma. A regra fica escrita à frente
+          dos dois ANTES de fecharem — é isso que a torna combinável no dia em
+          vez de uma discussão à porta.
+        */}
+        {avisoDosItens(lerBase(pedido.baseDoPreco), "profissional") && (
+          <p className="mt-2 rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] px-3 py-2 text-sm leading-relaxed text-cyan-100">
+            {avisoDosItens(lerBase(pedido.baseDoPreco), "profissional")}
           </p>
         )}
       </section>
