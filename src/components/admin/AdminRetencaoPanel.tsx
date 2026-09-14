@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Camera, Loader2, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarX,
+  Camera,
+  Loader2,
+  MessageSquare,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 /**
@@ -28,6 +36,10 @@ type Estado = {
   elegiveis: number;
   naProximaPassagem: number;
   fotografias: number;
+  eventos: number;
+  recolhasAbandonadas: number;
+  recolhasOrfas: number;
+  diasDasRecolhas: number;
   restantes: number;
   naMira: number[];
   ultimas: Array<{
@@ -126,7 +138,7 @@ export default function AdminRetencaoPanel() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <p className="text-2xl font-bold text-white">{estado.elegiveis}</p>
           <p className="mt-1 text-xs text-slate-400">
@@ -155,7 +167,48 @@ export default function AdminRetencaoPanel() {
           </p>
           <p className="mt-1 text-xs text-slate-400">fotografias sairiam com eles</p>
         </div>
+        {/*
+          OS EVENTOS DA AGENDA, ao lado das fotografias e pela mesma razão.
+
+          Cada evento leva o nome do cliente, o telefone, a morada e o andar.
+          Até 14-09-2026 nada os apagava: o pedido ia-se, o `calendarEventId`
+          ia-se com ele, e o evento ficava numa agenda sem ninguém saber que lá
+          estava. Este número é o que sai da agenda na primeira passagem a
+          sério.
+        */}
+        <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <p className="flex items-center gap-2 text-2xl font-bold text-white">
+            <CalendarX className="h-5 w-5 text-slate-400" aria-hidden="true" />
+            {estado.eventos}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">eventos sairiam da agenda do Google</p>
+        </div>
       </div>
+
+      {/*
+        O BLOCO DE NOTAS DO ASSISTENTE, à parte dos pedidos porque não é um
+        pedido: é a conversa do WhatsApp a meio, com o nome e a morada de quem
+        respondeu e nunca chegou ao fim. Nada a apagava pela idade até
+        14-09-2026. As órfãs são piores do que as abandonadas — essas apontam
+        para um pedido que a purga já levou, e eram a cópia que sobrevivia.
+      */}
+      {(estado.recolhasAbandonadas > 0 || estado.recolhasOrfas > 0) && (
+        <p className="mt-3 flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-300">
+          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+          <span>
+            No assistente do WhatsApp:{" "}
+            <strong className="text-white">{estado.recolhasAbandonadas}</strong> conversa(s) parada(s)
+            há mais de {estado.diasDasRecolhas} dias
+            {estado.recolhasOrfas > 0 && (
+              <>
+                {" "}e <strong className="text-amber-300">{estado.recolhasOrfas}</strong> de pedidos
+                que já não existem
+              </>
+            )}
+            . Guardam nome e morada, e saem na mesma passagem.
+          </span>
+        </p>
+      )}
 
       {/*
         OS NÚMEROS DOS PEDIDOS, e não só a contagem. Antes de armar uma coisa

@@ -253,7 +253,10 @@ describe("a trava: modo seco enquanto não houver cópia de segurança", () => {
   });
 
   it("a seco regista SEMPRE, mesmo o zero — é o número que se quer ver", () => {
-    expect(ROTA).toContain("|| !r.aSerio");
+    // A guarda ganhou mais condições (as recolhas do WhatsApp) e passou a
+    // estar partida por linhas. O que este teste guarda é `!r.aSerio` ser uma
+    // das razões para registar — não a forma como a condição está escrita.
+    expect(ROTA).toMatch(/!r\.aSerio\s*(\|\||\r?\n)/);
     expect(ROTA).toContain("MODO SECO");
     expect(ROTA).toContain("PURGA_ARMADA=sim");
   });

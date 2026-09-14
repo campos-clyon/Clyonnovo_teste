@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { purgarPedidosTerminados, registarSemFalhar } from "@/lib/db";
+import {
+  purgarPedidosTerminados,
+  purgarRecolhasDoWhatsApp,
+  registarSemFalhar,
+} from "@/lib/db";
 import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
+  DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
   purgaArmada,
 } from "@/lib/retencao";
@@ -68,12 +73,52 @@ export async function GET(req: NextRequest) {
     });
 
     /*
+     * E O BLOCO DE NOTAS DO ASSISTENTE, na mesma passagem e a seguir.
+     *
+     * A seguir de propósito: a purga acabou de apagar pedidos, e cada um deles
+     * pode ter deixado uma linha em `whatsappRecolhas` a apontar para um
+     * pedido que já não existe — com o nome e a morada do cliente lá dentro.
+     * Corrê-la antes deixava essas para a noite seguinte.
+     *
+     * Uma falha aqui não pode estragar o relatório da purga, que é a parte que
+     * interessa: fica contada como zero e escrita nos registos.
+     */
+    const recolhas = await purgarRecolhasDoWhatsApp(DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP, {
+      aSerio: armada,
+    }).catch((e) => {
+      console.error("[cron/purgar-pedidos] recolhas do WhatsApp:", e);
+      return { abandonadas: 0, orfas: 0, aSerio: armada };
+    });
+
+    /*
      * Em modo seco regista-se SEMPRE que houvesse alguma coisa a apagar, e não
      * só quando se apagou: o número é justamente o que se quer ver antes de
      * armar. A seco, um "zero" também vale a pena — diz que não há nada
      * acumulado, que é uma resposta.
      */
-    if (r.expurgados > 0 || r.falhados.length > 0 || !r.aSerio) {
+    /*
+     * As recolhas ditas por palavras, e só quando há alguma. Uma linha a dizer
+     * "0 recolhas" todas as noites durante meses é ruído que ensina a não ler
+     * o resumo — e é justamente este resumo que decide se a purga se arma.
+     */
+    const recolhasEmPalavras =
+      recolhas.abandonadas > 0 || recolhas.orfas > 0
+        ? (r.aSerio ? ". Do assistente saíram " : ". E do assistente sairiam ") +
+          [
+            recolhas.abandonadas > 0 ? `${recolhas.abandonadas} recolha(s) abandonada(s)` : null,
+            recolhas.orfas > 0 ? `${recolhas.orfas} sem pedido nenhum por trás` : null,
+          ]
+            .filter(Boolean)
+            .join(" e ")
+        : "";
+
+    if (
+      r.expurgados > 0 ||
+      r.falhados.length > 0 ||
+      !r.aSerio ||
+      recolhas.abandonadas > 0 ||
+      recolhas.orfas > 0
+    ) {
       await registarSemFalhar({
         acontecimento: "pedido_expurgado",
         autorTipo: "sistema",
@@ -81,13 +126,28 @@ export async function GET(req: NextRequest) {
         resumo: r.aSerio
           ? `Purga (${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias os terminados, ${DIAS_PARA_OS_ABANDONADOS} os abandonados): ${r.expurgados} pedido(s) expurgado(s), ` +
             `${r.fotosApagadas} fotografia(s) apagada(s)` +
+            (r.eventosApagados > 0 ? `, ${r.eventosApagados} evento(s) tirado(s) da agenda` : "") +
+            (r.eventosQueFicaram > 0
+              ? `, ${r.eventosQueFicaram} evento(s) ficaram na agenda e têm de sair à mão`
+              : "") +
             (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
-            (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "")
-          : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s) e ` +
-            `${r.fotosApagadas} fotografia(s)` +
+            (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
+            recolhasEmPalavras
+          : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s), ` +
+            `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
             (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
+            recolhasEmPalavras +
             `. Para armar, ponha PURGA_ARMADA=sim na Vercel.`,
-        detalhe: { falhados: r.falhados, restantes: r.restantes, aSerio: r.aSerio, naMira: r.naMira },
+        detalhe: {
+          falhados: r.falhados,
+          restantes: r.restantes,
+          aSerio: r.aSerio,
+          naMira: r.naMira,
+          eventosApagados: r.eventosApagados,
+          eventosQueFicaram: r.eventosQueFicaram,
+          recolhasAbandonadas: recolhas.abandonadas,
+          recolhasOrfas: recolhas.orfas,
+        },
       });
     }
 
@@ -106,7 +166,7 @@ export async function GET(req: NextRequest) {
       console.error(`[cron/purgar-pedidos] pedido #${f.pedidoId} não foi expurgado: ${f.erro}`);
     }
 
-    return NextResponse.json({ ok: true, ...r });
+    return NextResponse.json({ ok: true, ...r, recolhas });
   } catch (error) {
     console.error("[cron/purgar-pedidos]", error);
     return NextResponse.json({ error: "Erro ao purgar" }, { status: 500 });

@@ -36,6 +36,26 @@ export const DIAS_DE_RETENCAO_DOS_PEDIDOS = 60;
 export const DIAS_PARA_OS_ABANDONADOS = 90;
 
 /**
+ * AS RECOLHAS DO WHATSAPP A MEIO — a conversa que nunca virou pedido.
+ *
+ * `whatsappRecolhas` guarda, por número de telefone, o que a pessoa já
+ * respondeu ao assistente: o nome, a morada, o código postal, o que tem para
+ * levar. Uma linha por número, em JSON. Quando a conversa dá um pedido, fica lá
+ * o `pedidoId`; quando a pessoa desiste a meio, ficava lá TUDO, para sempre —
+ * nada no repositório apagava estas linhas pela idade. Verificado a 14-09-2026.
+ *
+ * O PRAZO É O DOS ABANDONADOS, e de propósito: é o que o dono fixou para as
+ * coisas que nunca chegaram ao fim, e uma recolha a meio é exactamente isso.
+ *
+ * Pode ser muito mais curto sem se perder nada. O próprio assistente já ignora
+ * uma recolha parada há mais de 24 horas (ver `paradaHaMuito` em
+ * whatsapp-negociacao.ts): a partir daí a linha não serve para conversa
+ * nenhuma, só guarda a morada de alguém. Baixar este número é seguro; é uma
+ * decisão do dono, não do código, e por isso está aqui e não escrito no SQL.
+ */
+export const DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP = DIAS_PARA_OS_ABANDONADOS;
+
+/**
  * A PURGA ESTÁ ARMADA? Por omissão, NÃO.
  *
  * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron

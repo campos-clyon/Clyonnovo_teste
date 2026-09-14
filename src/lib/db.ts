@@ -4404,7 +4404,7 @@ export async function deleteSimulatorOrder(
   // Ler ANTES de apagar. Depois de o DELETE correr não há a quem perguntar.
   const [pedidos] = (await pool.execute(
     `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt,
-            filesJson
+            filesJson, calendarEventId, calendarTargetId
        FROM simulatorOrders WHERE id = ? LIMIT 1`,
     [id],
   )) as any[];
@@ -4494,6 +4494,18 @@ export async function deleteSimulatorOrder(
         criadoEm: pedido?.createdAt ?? null,
         // Quantas havia, e não quais: o registo guarda que houve prova, não a prova.
         fotografias: fotos.length,
+        /*
+         * O PONTEIRO PARA O EVENTO, GUARDADO ANTES DE SE PERDER.
+         *
+         * A tentativa de o apagar vem depois da transacção e pode falhar — a
+         * Google em baixo, a chave por renovar. Sem isto escrito, o id ia-se
+         * com a linha e ficava um evento com o nome, o telefone e a morada do
+         * cliente numa agenda que ninguém volta a abrir, sem forma de lá
+         * chegar. Um id de agenda não é dado pessoal; é o que permite apagar
+         * à mão o que ficou.
+         */
+        calendarEventId: (pedido?.calendarEventId as string) ?? null,
+        calendarTargetId: (pedido?.calendarTargetId as string) ?? null,
         negociacoes: negociacoes.map((n) => ({
           id: Number(n.id),
           providerId: Number(n.providerId),
@@ -4553,7 +4565,31 @@ export async function deleteSimulatorOrder(
   // falhe fica no erro do Blob e não desfaz o apagar — o registo já diz
   // quantas havia.
   const fotosApagadas = await apagarFotosDoBlob(fotos);
-  return { fotos: fotos.length, fotosApagadas };
+
+  /*
+   * E O EVENTO NA AGENDA DO GOOGLE, pela mesma ordem e pela mesma razão.
+   *
+   * Ele leva o nome do cliente, o telefone, a morada e o andar. Apagava-se o
+   * pedido e ele ficava lá — e o `calendarEventId`, que era a única forma de
+   * lhe chegar, ia-se com a linha. Agora fica escrito no registo acima antes
+   * de a linha se ir, e a tentativa de o apagar é aqui: fora da transacção,
+   * porque é uma chamada de rede, e a prender a ligação à base enquanto se
+   * espera pela Google seria pagar com o caminho crítico.
+   *
+   * Falhar não desfaz nada nem atira: o pedido já está apagado.
+   */
+  const { apagarEventoDoCalendario } = await import("./apagar-evento-do-calendario");
+  const evento = await apagarEventoDoCalendario(
+    (pedido?.calendarEventId as string) ?? null,
+    (pedido?.calendarTargetId as string) ?? null,
+  );
+
+  return {
+    fotos: fotos.length,
+    fotosApagadas,
+    eventoApagado: evento.apagado,
+    eventoNaAgenda: evento.erro ? ((pedido?.calendarEventId as string) ?? null) : null,
+  };
 }
 
 // ── Web Push: subscrições do navegador ───────────────────────────────────────
@@ -6949,6 +6985,13 @@ export type ResultadoDaPurga = {
   expurgados: number;
   falhados: Array<{ pedidoId: number; erro: string }>;
   fotosApagadas: number;
+  /** Eventos tirados da agenda do Google — o nome, o telefone e a morada iam neles. */
+  eventosApagados: number;
+  /**
+   * Eventos que a Google não deixou apagar. O id de cada um fica no registo do
+   * pedido (`calendarEventId` no detalhe), que é por onde se lá chega à mão.
+   */
+  eventosQueFicaram: number;
   /** Elegíveis que não couberam nesta passagem. */
   restantes: number;
   /**
@@ -6970,6 +7013,30 @@ export type ResultadoDaPurga = {
  * pelo lado errado. Uma contagem que erre por baixo num relatório é um
  * incómodo; um apagar que erre é irreversível.
  */
+/**
+ * Quantos destes pedidos têm evento na agenda do Google, sem lhes tocar.
+ *
+ * Também só o modo seco. É o número que se quer ver antes de armar: diz
+ * quantos eventos com nome, telefone e morada vão sair da agenda na primeira
+ * passagem a sério. `clyon-order-...` não conta — é um marcador nosso de antes
+ * de haver agenda, e não existe evento nenhum do lado da Google.
+ */
+async function contarEventosDe(ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const pool = await getPool();
+  if (!pool) return 0;
+  const marcas = ids.map(() => "?").join(",");
+  const [linhas] = (await pool.execute(
+    `SELECT COUNT(*) AS n FROM simulatorOrders
+      WHERE id IN (${marcas})
+        AND calendarEventId IS NOT NULL
+        AND calendarEventId <> ''
+        AND calendarEventId NOT LIKE 'clyon-order-%'`,
+    ids,
+  )) as any[];
+  return Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+}
+
 async function contarFotografiasDe(ids: number[]): Promise<number> {
   if (ids.length === 0) return 0;
   const pool = await getPool();
@@ -7115,6 +7182,8 @@ export async function purgarPedidosTerminados(
       expurgados: ids.length,
       falhados: [],
       fotosApagadas: await contarFotografiasDe(ids),
+      eventosApagados: await contarEventosDe(ids),
+      eventosQueFicaram: 0,
       restantes: Math.max(0, elegiveis - ids.length),
       aSerio: false,
       naMira: ids,
@@ -7123,6 +7192,8 @@ export async function purgarPedidosTerminados(
 
   let expurgados = 0;
   let fotosApagadas = 0;
+  let eventosApagados = 0;
+  let eventosQueFicaram = 0;
   const falhados: Array<{ pedidoId: number; erro: string }> = [];
   for (const id of ids) {
     try {
@@ -7134,6 +7205,10 @@ export async function purgarPedidosTerminados(
       });
       expurgados += 1;
       fotosApagadas += r.fotosApagadas;
+      if (r.eventoApagado) eventosApagados += 1;
+      // Um evento que ficou na agenda é dado pessoal que sobreviveu à purga.
+      // Conta-se para que apareça no resumo em vez de passar em silêncio.
+      if (r.eventoNaAgenda) eventosQueFicaram += 1;
     } catch (e) {
       // Um que falhe não pode parar os outros — e fica dito qual, e porquê.
       falhados.push({ pedidoId: id, erro: e instanceof Error ? e.message : String(e) });
@@ -7145,9 +7220,95 @@ export async function purgarPedidosTerminados(
     expurgados,
     falhados,
     fotosApagadas,
+    eventosApagados,
+    eventosQueFicaram,
     restantes: Math.max(0, elegiveis - ids.length),
     aSerio: true,
     naMira: [],
+  };
+}
+
+export type ResultadoDasRecolhas = {
+  /** As que ficaram a meio e já passaram do prazo. */
+  abandonadas: number;
+  /** As que apontam para um pedido que já não existe — o pedido foi-se, a cópia ficou. */
+  orfas: number;
+  aSerio: boolean;
+};
+
+/**
+ * AS RECOLHAS DO WHATSAPP QUE JÁ NÃO SERVEM A NINGUÉM.
+ *
+ * `whatsappRecolhas` é o bloco de notas do assistente: por cada número, o que
+ * a pessoa já respondeu — nome, morada, código postal, o que tem para levar —
+ * em JSON. Apagava-se por telefone (quando a pessoa pede, ou quando a conversa
+ * é apagada) e nunca pela idade. Uma conversa abandonada a meio guardava a
+ * morada de alguém indefinidamente. Verificado a 14-09-2026.
+ *
+ * DUAS COISAS SAEM, E SÃO DIFERENTES:
+ *
+ *   · as ABANDONADAS — sem `pedidoId`, paradas há mais do que o prazo. Nunca
+ *     deram pedido nenhum, e o assistente já nem as lê passadas 24 horas;
+ *
+ *   · as ÓRFÃS — com `pedidoId` de um pedido que JÁ NÃO EXISTE. Estas são a
+ *     fuga que a purga dos pedidos abria sozinha: o pedido era expurgado aos
+ *     60 dias, com as fotografias e tudo, e a morada do cliente sobrevivia
+ *     aqui numa linha que ninguém olhava. Não têm prazo — assim que o pedido
+ *     deixa de existir, a cópia deixa de ter razão de ser.
+ *
+ * Corre DEPOIS da purga dos pedidos, na mesma passagem, para levar já as
+ * órfãs que ela acabou de criar.
+ */
+export async function purgarRecolhasDoWhatsApp(
+  dias: number,
+  opcoes: { aSerio?: boolean } = {},
+): Promise<ResultadoDasRecolhas> {
+  const aSerio = opcoes.aSerio !== false;
+  const n = Math.max(1, Math.floor(dias));
+  await ensureWhatsappRecolhasTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  /*
+   * A mesma condição escrita uma vez para contar e para apagar. Duas cópias
+   * podiam divergir — e a divergência que interessa é a pior: o modo seco a
+   * dizer um número e a passagem a sério a apagar outro.
+   */
+  const abandonada = `r.pedidoId IS NULL AND r.actualizadoEm < NOW() - INTERVAL ${n} DAY`;
+  const orfa = `r.pedidoId IS NOT NULL AND o.id IS NULL`;
+
+  if (!aSerio) {
+    const [linhas] = (await pool.execute(
+      `SELECT
+         SUM(CASE WHEN ${abandonada} THEN 1 ELSE 0 END) AS abandonadas,
+         SUM(CASE WHEN ${orfa} THEN 1 ELSE 0 END) AS orfas
+         FROM whatsappRecolhas r
+         LEFT JOIN simulatorOrders o ON o.id = r.pedidoId`,
+    )) as any[];
+    const c = (linhas as Array<{ abandonadas: number | null; orfas: number | null }>)[0];
+    return {
+      abandonadas: Number(c?.abandonadas ?? 0),
+      orfas: Number(c?.orfas ?? 0),
+      aSerio: false,
+    };
+  }
+
+  // As órfãs primeiro: são as que não têm prazo nenhum a correr a favor delas.
+  const [rOrfas] = (await pool.execute(
+    `DELETE r FROM whatsappRecolhas r
+       LEFT JOIN simulatorOrders o ON o.id = r.pedidoId
+      WHERE ${orfa}`,
+  )) as any[];
+  const [rAbandonadas] = (await pool.execute(
+    `DELETE r FROM whatsappRecolhas r
+      WHERE ${abandonada}`,
+  )) as any[];
+
+  return {
+    orfas: Number((rOrfas as { affectedRows?: number })?.affectedRows ?? 0),
+    abandonadas: Number((rAbandonadas as { affectedRows?: number })?.affectedRows ?? 0),
+    aSerio: true,
   };
 }
 

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { purgarPedidosTerminados, registoParaOBackoffice } from "@/lib/db";
+import {
+  purgarPedidosTerminados,
+  purgarRecolhasDoWhatsApp,
+  registoParaOBackoffice,
+} from "@/lib/db";
 import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
+  DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
   purgaArmada,
 } from "@/lib/retencao";
@@ -33,12 +38,18 @@ export async function GET(req: NextRequest) {
   if (err) return err;
 
   try {
-    const [conta, ultimas] = await Promise.all([
+    const [conta, recolhas, ultimas] = await Promise.all([
       // `aSerio: false` — conta e devolve antes de apagar. Ver a função.
       purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, {
         aSerio: false,
         diasDosAbandonados: DIAS_PARA_OS_ABANDONADOS,
       }),
+      // O bloco de notas do assistente, pela mesma regra e também sem tocar.
+      purgarRecolhasDoWhatsApp(DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP, { aSerio: false }).catch(() => ({
+        abandonadas: 0,
+        orfas: 0,
+        aSerio: false,
+      })),
       registoParaOBackoffice({ acontecimento: "pedido_expurgado", limite: 20 }).catch(() => []),
     ]);
 
@@ -51,6 +62,18 @@ export async function GET(req: NextRequest) {
       /** Quantos a próxima passagem levaria, e quantas fotografias com eles. */
       naProximaPassagem: conta.expurgados,
       fotografias: conta.fotosApagadas,
+      /**
+       * E quantos eventos sairiam da agenda do Google. Cada um leva o nome, o
+       * telefone e a morada do cliente — até 14-09-2026 ficavam lá para sempre.
+       */
+      eventos: conta.eventosApagados,
+      /**
+       * O bloco de notas do assistente: as conversas paradas a meio e as que
+       * apontam para um pedido que já não existe. Ambas guardam nome e morada.
+       */
+      recolhasAbandonadas: recolhas.abandonadas,
+      recolhasOrfas: recolhas.orfas,
+      diasDasRecolhas: DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
       restantes: conta.restantes,
       /** Os números dos pedidos na mira, para se poder ir ver um antes. */
       naMira: conta.naMira ?? [],
