@@ -18,12 +18,18 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
-import { enviarBotoesWhatsApp, enviarTextoWhatsApp, telefoneParaWhatsApp } from "@/lib/whatsapp-cloud";
+import {
+  enviarBotoesWhatsApp,
+  enviarTextoWhatsApp,
+  paraTeclado,
+  telefoneParaWhatsApp,
+} from "@/lib/whatsapp-cloud";
 import { oSeuServico } from "@/lib/servico-em-palavras";
 import { totalEmPalavras } from "@/lib/conta-em-palavras";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 import { jaFoiDito } from "@/lib/nao-repetir";
+import { lerARespostaDirecta, jaSeLeSemModelo } from "@/lib/ler-a-resposta";
 
 /**
  * O WhatsApp como ecrã da negociação — o cérebro.
@@ -449,6 +455,9 @@ function jaSeLe(texto: string): boolean {
     .replace(/[!.,…]+$/, "")
     .trim();
   if (/^(sim|fechar|aceito|aceitar|pode fechar|nao|recusar|recuso|nao quero)$/.test(t)) return true;
+  // Tudo o que a leitura sem modelo já apanha — «sim serve», «não serve»,
+  // «aceito 300», «Revolution 94». Ver `ler-a-resposta.ts`.
+  if (jaSeLeSemModelo(texto)) return true;
   // Um valor sozinho, uma data, ou um "sim 300" — tudo o que as expressões
   // regulares de baixo já apanham à letra.
   if (/^(?:sim|fechar|aceito|aceitar|nao|recusar|recuso)?\s*\d{1,4}(?:[.,]\d{1,2})?\s*(?:€|eur|euros)?$/.test(t)) {
@@ -598,7 +607,17 @@ async function mandarOEcra(telefone: string, pedidoId: number): Promise<void> {
   const texto = await ecraDoPedido(pedidoId);
   const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
   const gravadas = await mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []);
-  if (jaFoiDito(texto, gravadas, new Date())) {
+  /*
+   * COMPARA-SE O QUE FICA GRAVADO, E NÃO O QUE SE ESCREVEU.
+   *
+   * O envio passa por `paraTeclado` antes de registar — troca o travessão por
+   * hífen, as aspas curvas por rectas, as reticências por três pontos. O que
+   * eu escrevo aqui tem «Pedido #318 — o que já recebeu» e o que fica na base
+   * tem «Pedido #318 - o que já recebeu». Comparados assim nunca batiam, e a
+   * guarda contra repetir nunca disparava: uma cliente levou o mesmo ecrã às
+   * 14:50 e às 14:54.
+   */
+  if (jaFoiDito(paraTeclado(texto), gravadas, new Date())) {
     await enviarTextoWhatsApp(
       telefone,
       "Está na mesma desde a minha última mensagem. Assim que houver novidades, escrevo-lhe.",
@@ -782,12 +801,23 @@ export async function tratarMensagemDoCliente(
     .replace(/[̀-ͯ]/g, "")
     .replace(/[!.,…]+$/, "")
     .trim();
-  const simSo = /^(sim|fechar|aceito|aceitar|pode fechar)$/.test(chave);
-  const naoSo = /^(nao|recusar|recuso|nao quero)$/.test(chave);
-  const simValor = chave.match(/^(?:sim|fechar|aceito|aceitar)\s+(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/);
-  const naoValor = chave.match(/^(?:nao|recusar|recuso)\s+(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/);
+  /*
+   * A LEITURA SEM MODELO — o degrau abaixo do Gemini.
+   *
+   * Era `^(sim|fechar|aceito|aceitar|pode fechar)$`: a palavra exacta e mais
+   * nada. «Sim serve» falhava por ter duas palavras, e no dia em que o Gemini
+   * não responde o assistente volta a exigir palavras-chave sem dizer a
+   * ninguém que voltou. A lista está em `ler-a-resposta.ts`, escrita frase a
+   * frase — cada uma fecha ou recusa um negócio de centenas de euros.
+   */
+  const lida = lerARespostaDirecta(chave);
+  const simSo = lida?.tipo === "sim" && lida.valor == null;
+  const naoSo = lida?.tipo === "nao" && lida.valor == null;
+  const simValor = lida?.tipo === "sim" && lida.valor != null ? lida.valor : null;
+  const naoValor = lida?.tipo === "nao" && lida.valor != null ? lida.valor : null;
+  const nomeEValor = lida?.tipo === "nome_e_valor" ? lida : null;
 
-  if (simSo || naoSo || simValor || naoValor) {
+  if (simSo || naoSo || simValor != null || naoValor != null || nomeEValor) {
     /*
      * SÓ QUEM PÔS UM NÚMERO NA MESA PODE SER ESCOLHIDO POR UM NÚMERO.
      *
@@ -795,9 +825,15 @@ export async function tratarMensagemDoCliente(
      * outra forma de dizer ao cliente quem ainda não lhe respondeu.
      */
     const alvos = (await alvosAccionaveis(pedidos)).filter((a) => a.valorNaMesa != null);
-    const eDeFechar = simSo || Boolean(simValor);
-    const valorDito = simValor ?? naoValor;
-    const valorPedido = valorDito ? Number(valorDito[1].replace(",", ".")) : null;
+    /*
+     * «Revolution 94» é um SIM — ele está a escolher entre as que recebeu.
+     *
+     * Era a forma que o próprio ponto de situação ensinava («Diga qual pelo
+     * valor») e a única que ele não sabia ler: a cliente escreveu-a às 14:54 e
+     * levou de volta a lista outra vez.
+     */
+    const eDeFechar = simSo || simValor != null || Boolean(nomeEValor);
+    const valorPedido = simValor ?? naoValor ?? nomeEValor?.valor ?? null;
 
     // Com propostas de pedidos diferentes na mesma lista, o nome e o valor
     // podem repetir-se; o número do pedido não.
@@ -835,9 +871,20 @@ export async function tratarMensagemDoCliente(
        * número do pedido, e um número sozinho é lido aqui como contraproposta
        * — mandá-la seria armar a armadilha seguinte. Vai para uma pessoa.
        */
-      const casam = alvos.filter(
-        (a) => Math.abs((a.valorNaMesa as number) - valorPedido) < 0.005,
-      );
+      /*
+       * O NOME, QUANDO ELE O DISSE, APERTA A ESCOLHA.
+       *
+       * «Revolution 94» traz as duas coisas, e as duas têm de bater na mesma
+       * negociação. É o que torna esta leitura segura sem modelo nenhum: o
+       * valor sozinho pode estar empatado, mas valor E nome ao mesmo tempo
+       * identificam uma só — ou nenhuma, e aí não se fecha nada.
+       */
+      const casam = alvos
+        .filter((a) => Math.abs((a.valorNaMesa as number) - valorPedido) < 0.005)
+        .filter(
+          (a) =>
+            !nomeEValor || semAcentos(a.profissionalNome).includes(semAcentos(nomeEValor.nome)),
+        );
       if (casam.length > 1) {
         await passarAUmaPessoa(
           telefone,

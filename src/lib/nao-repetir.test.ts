@@ -70,8 +70,20 @@ describe("está ligada ao caminho que se repetia", () => {
 
   it("todo o ponto de situação passa por lá", () => {
     expect(CEREBRO).toContain("async function mandarOEcra(");
-    expect(CEREBRO).toContain("jaFoiDito(texto, gravadas, new Date())");
     expect(CEREBRO).toContain("mensagensDoNumeroWhatsApp(telefone, 20)");
+  });
+
+  /*
+   * E COMPARA-SE O QUE FICA GRAVADO, NÃO O QUE SE ESCREVEU.
+   *
+   * O envio passa por `paraTeclado` antes de registar: troca o travessão por
+   * hífen e as aspas curvas por rectas. O texto escrito tem «Pedido #318 — o
+   * que já recebeu» e o gravado tem «Pedido #318 - o que já recebeu».
+   * Comparados assim nunca batiam, e esta guarda nunca disparou: uma cliente
+   * levou o mesmo ecrã às 14:50 e às 14:54.
+   */
+  it("compara a forma que vai para a base, e não a de origem", () => {
+    expect(CEREBRO).toContain("jaFoiDito(paraTeclado(texto), gravadas, new Date())");
   });
 
   /*
