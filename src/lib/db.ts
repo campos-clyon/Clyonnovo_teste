@@ -7009,22 +7009,53 @@ async function contarFotografiasDe(ids: number[]): Promise<number> {
  */
 export async function purgarPedidosTerminados(
   dias: number,
-  opcoes: { aSerio?: boolean } = {},
+  opcoes: { aSerio?: boolean; diasDosAbandonados?: number } = {},
 ): Promise<ResultadoDaPurga> {
   const aSerio = opcoes.aSerio !== false;
   const n = Math.max(1, Math.floor(dias));
+  const diasDosAbandonados = opcoes.diasDosAbandonados ?? n;
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
+  const abandonados = Math.max(n, Math.floor(diasDosAbandonados));
+
   const condicao = `
        FROM simulatorOrders o
-      WHERE o.status IN ('concluido', 'cancelado', 'arquivado')
-        AND o.updatedAt < NOW() - INTERVAL ${n} DAY
-        AND NOT EXISTS (
+      WHERE
+        /*
+         * O DINHEIRO NUNCA SE APAGA — e é por isto que esta linha vem primeiro.
+         *
+         * "Quero que garanta que os valores gerados pelos trabalhos concluidos
+         * nao sejam apagados das contas dos pros nem da nossa base."
+         * — 14-09-2026.
+         *
+         * Hoje nao se verificava. A carteira do profissional e CALCULADA a
+         * partir das linhas de negociacoes (ver carteiraDe): o total ganho, os
+         * movimentos que explicam o saldo, e o proprio disponivel quando o
+         * trabalho ja foi libertado e ainda nao levantado. Apagar a linha
+         * mudava o numero na conta dele.
+         *
+         * A guarda anterior era mais fraca — so travava o que estivesse por
+         * PAGAR. Um trabalho pago continuava a poder ser purgado, e com ele ia
+         * o historico que explica de onde veio aquele dinheiro.
+         *
+         * Um pedido que produziu trabalho nao se purga. Ponto. As fotografias
+         * dele ficam — e isso e uma troca consciente: o registo de um trabalho
+         * feito vale mais do que o espaco que ocupa.
+         */
+        NOT EXISTS (
           SELECT 1 FROM negociacoes g
-           WHERE g.pedidoId = o.id AND g.estado = 'acordada' AND g.pagoEm IS NULL
+           WHERE g.pedidoId = o.id AND g.estado = 'acordada'
+        )
+        AND (
+          /* Os que acabaram: o prazo conta a partir do fim. */
+          (COALESCE(o.status, 'pendente') IN ('concluido', 'cancelado', 'arquivado')
+             AND o.updatedAt < NOW() - INTERVAL ${n} DAY)
+          /* Os abandonados a meio: nunca tiveram fim, por isso esperam mais. */
+          OR (COALESCE(o.status, 'pendente') NOT IN ('concluido', 'cancelado', 'arquivado')
+             AND o.updatedAt < NOW() - INTERVAL ${abandonados} DAY)
         )`;
 
   const [cont] = (await pool.execute(`SELECT COUNT(*) AS n ${condicao}`)) as any[];

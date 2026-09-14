@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DIAS_DE_RETENCAO_DOS_PEDIDOS } from "./retencao";
+import { DIAS_DE_RETENCAO_DOS_PEDIDOS, DIAS_PARA_OS_ABANDONADOS } from "./retencao";
 
 /**
  * A PURGA DOS 60 DIAS — verificada, e construída.
@@ -73,8 +73,34 @@ describe("a purga corre", () => {
 describe("o que conta como terminado, e o que nunca se purga", () => {
   const purga = corpoDe("purgarPedidosTerminados");
 
-  it("só concluídos, cancelados e arquivados — nunca um pedido a andar", () => {
-    expect(purga).toContain("o.status IN ('concluido', 'cancelado', 'arquivado')");
+  it("os que acabaram, aos 60 dias", () => {
+    expect(purga).toContain(
+      "COALESCE(o.status, 'pendente') IN ('concluido', 'cancelado', 'arquivado')",
+    );
+  });
+
+  /*
+   * E OS ABANDONADOS, AOS 90.
+   *
+   * "Vamos apagar os pendentes após 90 dias." — 14-09-2026. O estado por
+   * omissão é `pendente`, e um pedido que o cliente abandona a meio ficava lá
+   * para sempre, com a morada e as fotografias de dentro de casa dele. Eram os
+   * únicos que a purga nunca tocava — e são a maioria dos antigos.
+   *
+   * Noventa e não sessenta porque estes não têm data de fim: um `pendente` de
+   * há 60 dias ainda pode ser um cliente que voltou de férias.
+   */
+  it("e os abandonados a meio, aos 90 — com um prazo próprio", () => {
+    expect(purga).toContain(
+      "COALESCE(o.status, 'pendente') NOT IN ('concluido', 'cancelado', 'arquivado')",
+    );
+    expect(purga).toContain("INTERVAL ${abandonados} DAY");
+    expect(DIAS_PARA_OS_ABANDONADOS).toBe(90);
+    expect(DIAS_PARA_OS_ABANDONADOS).toBeGreaterThan(DIAS_DE_RETENCAO_DOS_PEDIDOS);
+  });
+
+  it("o cron passa-lhe os dois prazos", () => {
+    expect(ROTA).toContain("diasDosAbandonados: DIAS_PARA_OS_ABANDONADOS");
   });
 
   it("conta a partir de quando terminou, não de quando nasceu", () => {
@@ -84,16 +110,25 @@ describe("o que conta como terminado, e o que nunca se purga", () => {
     expect(purga).not.toContain("o.createdAt <");
   });
 
-  it("NUNCA leva um pedido com dinheiro por pagar ao profissional", () => {
-    /*
-     * O TESTE QUE IMPORTA. A carteira lê as negociações cruas para
-     * sobreviver à purga; `deleteSimulatorOrder` apaga-as com o pedido. Sem
-     * esta guarda, a dívida a um profissional desaparecia com a linha.
-     * `acordada` sem `pagoEm` cobre o trabalho por confirmar E o confirmado
-     * por pagar.
-     */
-    expect(purga).toContain("g.estado = 'acordada' AND g.pagoEm IS NULL");
+  /*
+   * O TESTE QUE IMPORTA, E QUE FICOU MAIS APERTADO A 14-09-2026.
+   *
+   * Era «nunca um pedido com dinheiro POR PAGAR»: `acordada` sem `pagoEm`. Um
+   * trabalho já pago continuava a poder ser purgado — e a carteira do
+   * profissional é CALCULADA a partir destas linhas (ver `carteiraDe`), por
+   * isso apagá-la tirava-lhe o total ganho e o movimento que explica o saldo.
+   *
+   * "Quero que garanta que os valores gerados pelos trabalhos concluídos não
+   * sejam apagados das contas dos pros nem da nossa base."
+   *
+   * Agora é qualquer `acordada`, paga ou não: um pedido que produziu trabalho
+   * não se purga, seja qual for a idade dele.
+   */
+  it("NUNCA leva um pedido que produziu trabalho — pago ou por pagar", () => {
+    expect(purga).toContain("WHERE g.pedidoId = o.id AND g.estado = 'acordada'");
     expect(purga).toContain("NOT EXISTS");
+    // A guarda antiga era mais fraca e deixava passar o que já estava pago.
+    expect(purga).not.toContain("g.estado = 'acordada' AND g.pagoEm IS NULL");
   });
 
   it("não desarma o guarda de dentro", () => {
@@ -156,7 +191,8 @@ describe("a trava: modo seco enquanto não houver cópia de segurança", () => {
     expect(RETENCAO).toContain("export function purgaArmada()");
     expect(RETENCAO).toContain('=== "sim"');
     expect(ROTA).toContain("const armada = purgaArmada();");
-    expect(ROTA).toContain("{ aSerio: armada }");
+    // Sem o fecho: a chamada ganhou o segundo prazo, o dos abandonados.
+    expect(ROTA).toContain("aSerio: armada,");
   });
 
   it("a seco devolve o que APAGARIA, e sai antes de apagar", () => {

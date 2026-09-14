@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { purgarPedidosTerminados, registarSemFalhar } from "@/lib/db";
-import { DIAS_DE_RETENCAO_DOS_PEDIDOS, purgaArmada } from "@/lib/retencao";
+import {
+  DIAS_DE_RETENCAO_DOS_PEDIDOS,
+  DIAS_PARA_OS_ABANDONADOS,
+  purgaArmada,
+} from "@/lib/retencao";
 
 export const runtime = "nodejs";
 
 /**
- * A purga dos pedidos terminados — todos os dias, aos 60 dias.
+ * A purga dos pedidos velhos — todos os dias.
+ *
+ * DOIS PRAZOS E UMA GARANTIA (14-09-2026):
+ *
+ *   · os que acabaram — concluído, cancelado, arquivado — aos 60 dias;
+ *   · os ABANDONADOS a meio, que nunca tiveram fim, aos 90;
+ *   · e NUNCA um pedido que tenha produzido trabalho, seja qual for a idade.
+ *
+ * A garantia é a que faltava. A carteira do profissional é calculada a partir
+ * das linhas de `negociacoes`: apagar um trabalho concluído tirava-lhe o total
+ * ganho e o movimento que explica o saldo. "Quero que garanta que os valores
+ * gerados pelos trabalhos concluídos não sejam apagados das contas dos pros
+ * nem da nossa base."
  *
  * O CÓDIGO FALAVA DELA COMO SE EXISTISSE
  *
@@ -33,7 +49,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const armada = purgaArmada();
-    const r = await purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, { aSerio: armada });
+    const r = await purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, {
+      aSerio: armada,
+      // Os abandonados esperam mais: nunca tiveram fim a partir do qual contar.
+      diasDosAbandonados: DIAS_PARA_OS_ABANDONADOS,
+    });
 
     /*
      * Em modo seco regista-se SEMPRE que houvesse alguma coisa a apagar, e não
@@ -47,7 +67,7 @@ export async function GET(req: NextRequest) {
         autorTipo: "sistema",
         autorNome: "retenção",
         resumo: r.aSerio
-          ? `Purga dos ${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias: ${r.expurgados} pedido(s) expurgado(s), ` +
+          ? `Purga (${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias os terminados, ${DIAS_PARA_OS_ABANDONADOS} os abandonados): ${r.expurgados} pedido(s) expurgado(s), ` +
             `${r.fotosApagadas} fotografia(s) apagada(s)` +
             (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
             (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "")

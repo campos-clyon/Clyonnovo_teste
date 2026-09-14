@@ -18,6 +18,24 @@
 export const DIAS_DE_RETENCAO_DOS_PEDIDOS = 60;
 
 /**
+ * OS ABANDONADOS — os que nunca chegaram a lado nenhum.
+ *
+ * "Vamos apagar os pendentes após 90 dias." — 14-09-2026.
+ *
+ * A purga só olhava para os estados de fim: concluído, cancelado, arquivado. O
+ * estado por omissão de um pedido é `pendente`, e um pedido que o cliente
+ * abandona a meio fica lá para sempre — com a morada, o texto e as fotografias
+ * de dentro de casa dele. São a maioria dos antigos, e eram os únicos que a
+ * purga nunca tocava.
+ *
+ * NOVENTA E NÃO SESSENTA porque estes não têm data de fim. Um pedido concluído
+ * há 60 dias está mesmo acabado; um `pendente` de há 60 dias ainda pode ser um
+ * cliente que voltou de férias. Trinta dias a mais custam pouco e evitam apagar
+ * uma conversa que ainda estava viva.
+ */
+export const DIAS_PARA_OS_ABANDONADOS = 90;
+
+/**
  * A PURGA ESTÁ ARMADA? Por omissão, NÃO.
  *
  * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron
