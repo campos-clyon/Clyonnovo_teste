@@ -543,6 +543,31 @@ export function primeiroPassoEmFalta(dados: DadosDaRecolha): PassoDaRecolha {
 const PALAVRAS_DE_MORADA =
   /\b(rua|avenida|av|estrada|travessa|largo|praceta|praca|beco|caminho|quinta|urbanizacao|bairro|lote|azinhaga|calcada|alameda|rotunda|zona|edificio)\b/;
 
+/**
+ * Isto parece uma morada, EM RESPOSTA À PERGUNTA DA MORADA?
+ *
+ * Aqui um número sozinho chega, porque a pergunta acabou de ser feita: quem
+ * responde «91» a «qual é a morada?» está a dar a morada.
+ */
+export function pareceMorada(texto: string): boolean {
+  const t = texto.trim();
+  if (t.length < 6) return false;
+  return /\d/.test(t) || PALAVRAS_DE_MORADA.test(semAcentos(t));
+}
+
+/**
+ * E a mesma pergunta, SEM a pergunta — a varrer um fio inteiro.
+ *
+ * Aqui o número não chega, e o teste apanhou-o à primeira: «Ok.Ligarei entao
+ * depois das 14h» tem um dígito e ia ser gravado como a morada do cliente. Sem
+ * uma pergunta a estreitar o que se procura, só a palavra de rua distingue uma
+ * morada de uma frase qualquer com um número lá dentro.
+ */
+export function temPalavraDeRua(texto: string): boolean {
+  const t = texto.trim();
+  return t.length >= 6 && PALAVRAS_DE_MORADA.test(semAcentos(t));
+}
+
 /** As correcções no resumo: «morada …», «nome …», «andar …», «quando …», «descrição …». */
 function corrigir(dados: DadosDaRecolha, texto: string, agora: Date): DadosDaRecolha | null {
   // [\s\S] em vez da flag /s: o alvo do TypeScript do projecto não a aceita.

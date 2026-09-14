@@ -3,6 +3,8 @@ import {
   primeiroPassoEmFalta,
   perguntaDo,
   resumo,
+  codigoPostalELocalidade,
+  temPalavraDeRua,
   type DadosDaRecolha,
   type PassoDaRecolha,
 } from "./whatsapp-recolha";
@@ -253,4 +255,77 @@ export function mensagemDaReleitura(
       : "Vamos continuar de onde ficámos.";
 
   return `${abertura}\n\n${perguntaDo(passo, dados, false)}`;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * A RELEITURA SEM MODELO NENHUM.
+ *
+ * "Ele releu e veio com a pergunta mais feia possível — o endereço está enorme
+ * à frente dele, como é que ele não leu?" — 14-09-2026, sobre isto:
+ *
+ *   CLIENTE: Rua Francisco Andrade Alapraia Sao Joao do estoril   10:42
+ *   CLIENTE: Codigo postal 2765-094                               10:43
+ *   ...
+ *   CLYON:   Qual é a morada? Rua e número — é por aí que o
+ *            profissional se orienta.
+ *
+ * Com o Gemini sem quota, a releitura não lia NADA e o botão limitava-se a
+ * repetir a pergunta do passo onde a conversa tinha ficado. Era honesto e era
+ * estúpido: um código postal são quatro dígitos e três, e uma morada começa
+ * por «Rua». Nada disto precisa de um modelo de linguagem.
+ *
+ * É O DEGRAU ABAIXO, e não um substituto. O Gemini lê «é no 3º sem elevador,
+ * em Cascais, sexta de manhã» — isto lê o que tem forma própria: a morada, o
+ * código postal e o nome quando ele o apresenta. O resto continua a ser
+ * perguntado, que é melhor do que ser adivinhado.
+ *
+ * NA DÚVIDA NÃO SE LÊ. Um campo inventado é muito pior do que um campo a
+ * menos: quem o vir no resumo assume que foi o cliente que o disse.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** «Está a falar com Ana Almeida», «sou o João», «chamo-me Maria». */
+const DIZ_O_NOME =
+  /(?:falar\s+com|fala\s+com|sou\s+(?:o|a)|chamo-me|meu\s+nome\s+e|meu\s+nome\s+é|aqui\s+(?:e|é)\s+(?:o|a))\s+([A-Za-zÀ-ú][A-Za-zÀ-ú'’-]*(?:\s+[A-Za-zÀ-ú][A-Za-zÀ-ú'’-]*){0,2})/i;
+
+/**
+ * O que se consegue ler do fio sem perguntar a ninguém.
+ *
+ * Lê-se de trás para a frente: a última vez que ele disse a morada é a que
+ * vale, porque as pessoas corrigem-se.
+ */
+export function camposDoFioSemModelo(
+  fio: MensagemDoFio[],
+  jaSabido: DadosDaRecolha,
+): CamposCrus {
+  const campos: CamposCrus = {};
+  const dele = fio.filter((m) => m.direccao === "in" && m.texto.trim());
+
+  for (let i = dele.length - 1; i >= 0; i -= 1) {
+    const t = dele[i].texto.trim();
+
+    /*
+     * O CÓDIGO POSTAL É O MAIS SEGURO DE TODOS: quatro dígitos e três não se
+     * confundem com mais nada numa conversa destas.
+     */
+    if (!campos.codigoPostal && !jaSabido.postalCode) {
+      const { postalCode } = codigoPostalELocalidade(t);
+      if (postalCode) campos.codigoPostal = t.slice(0, 200);
+    }
+
+    /*
+     * A MORADA, pela mesma regra do passo da morada — e nunca a linha que é só
+     * o código postal, que já foi lida acima.
+     */
+    if (!campos.morada && !jaSabido.address && temPalavraDeRua(t)) {
+      const soCodigoPostal = /^\s*(?:codigo\s+postal\s*:?\s*)?\d{4}\s*-?\s*\d{3}\b/i.test(t);
+      if (!soCodigoPostal) campos.morada = t.slice(0, 300);
+    }
+
+    if (!campos.nome && !jaSabido.contactName) {
+      const m = t.match(DIZ_O_NOME);
+      if (m) campos.nome = m[1].trim().slice(0, 120);
+    }
+  }
+
+  return campos;
 }

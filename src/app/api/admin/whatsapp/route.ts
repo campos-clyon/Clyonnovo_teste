@@ -412,10 +412,30 @@ export async function POST(req: NextRequest) {
       new Date(),
       { bom: 40, reserva: 15 },
     );
-    const campos = leitura.ok ? leitura.campos : null;
+    /*
+     * SEM MODELO, LÊ-SE O QUE TEM FORMA PRÓPRIA.
+     *
+     * "Ele releu e veio com a pergunta mais feia possível — o endereço está
+     * enorme à frente dele, como é que ele não leu?" — 14-09-2026.
+     *
+     * Com o Gemini sem quota, isto não lia NADA e limitava-se a repetir a
+     * pergunta do passo onde a conversa ficou. Era honesto e era estúpido: um
+     * código postal são quatro dígitos e três, e uma morada começa por «Rua».
+     * Nada disso precisa de um modelo de linguagem. Ver `camposDoFioSemModelo`.
+     */
+    const { camposDoFioSemModelo } = await import("@/lib/reler-a-conversa");
+    const semModelo = leitura.ok
+      ? null
+      : camposDoFioSemModelo(fio, gravado as Parameters<typeof camposDoFioSemModelo>[1]);
+    const campos =
+      leitura.ok
+        ? leitura.campos
+        : semModelo && Object.keys(semModelo).length > 0
+          ? semModelo
+          : null;
 
     /*
-     * SEM LEITURA, CONTINUA-SE NA MESMA — DE ONDE ELE PAROU.
+     * SEM LEITURA NENHUMA, CONTINUA-SE NA MESMA — DE ONDE ELE PAROU.
      *
      * "Ao clicar em Reler e continuar ele deve ler tudo e continuar a conversa
      * de onde parou." — 14-09-2026, com a quota do Gemini esgotada.
