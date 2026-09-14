@@ -479,17 +479,16 @@ export default function PainelDoProfissional() {
         />
       )}
 
+      {/*
+        AS AVALIACOES SAIRAM DAQUI — 14-09-2026.
+
+        "Vamos levar as avaliações para dentro do perfil." Eram uma linha de
+        menu com a media ao lado, e o perfil era um formulario sem nada dele
+        la dentro. Agora vivem no perfil, por baixo dos dados, com a coroa e
+        os numeros no topo. A media continua a ver-se aqui de relance, no
+        cabecalho do painel.
+      */}
       <GrupoDeLinhas className="mb-4">
-        <LinhaDeMenu
-          icone={Star}
-          rotulo="Avaliações"
-          valor={
-            perfil?.avaliacao != null
-              ? `${perfil.avaliacao.toFixed(1).replace(".", ",")} · ${perfil.quantasAvaliacoes}`
-              : "—"
-          }
-          onClick={() => abrir("avaliacoes")}
-        />
         <LinhaDeMenu
           icone={Briefcase}
           rotulo="Os meus trabalhos"

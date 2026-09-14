@@ -121,7 +121,13 @@ describe("o profissional passou a poder activá-los", () => {
   it("o cartão aparece no painel dele, à cabeça do menu", () => {
     expect(PAINEL).toContain("<AvisosNoTelemovel />");
     const i = PAINEL.indexOf("<AvisosNoTelemovel />");
-    const j = PAINEL.indexOf('rotulo="Avaliações"');
+    /*
+     * A ancora era a linha «Avaliações», que saiu do menu a 14-09-2026 — as
+     * avaliacoes passaram para dentro do perfil. A regra e a mesma: o cartao
+     * vem ANTES do menu. Ancora-se na primeira linha que la ficou.
+     */
+    const j = PAINEL.indexOf('rotulo="Os meus trabalhos"');
+    expect(j).toBeGreaterThan(-1);
     expect(i).toBeLessThan(j);
   });
 

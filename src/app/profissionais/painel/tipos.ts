@@ -190,6 +190,12 @@ export type Perfil = {
   /** Média das avaliações, ou null enquanto não houver nenhuma. */
   avaliacao: number | null;
   quantasAvaliacoes: number;
+  /** Trabalhos confirmados pelo cliente. E o numero do cartao do perfil. */
+  trabalhosConcluidos?: number;
+  /** «carrinha», «camiao» — a palavra que ja existia. */
+  tipoVeiculo?: string;
+  /** A fotografia da viatura, no Blob. Null enquanto nao puser nenhuma. */
+  fotoViaturaUrl?: string | null;
   /** As avaliações recebidas, sem quem as escreveu. */
   ultimasAvaliacoes: Array<{
     estrelas: number;

@@ -21,6 +21,7 @@ import {
 } from "@/lib/custos-fixos-do-profissional";
 import type { Perfil as PerfilTipo } from "./tipos";
 import MoradaDaBase from "./MoradaDaBase";
+import Avaliacoes from "./Avaliacoes";
 
 /**
  * O perfil, em secções pequenas.
@@ -35,6 +36,8 @@ import MoradaDaBase from "./MoradaDaBase";
  * escrever-nos — e para que ninguém deixe de receber trabalho sem perceber
  * porquê.
  */
+
+import CartaoDoPerfil from "./CartaoDoPerfil";
 
 export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seguranca";
 
@@ -354,6 +357,26 @@ export default function Perfil({
 
       <AvisoDaSeccao faltas={faltasAqui} onComoFunciona={onComoFunciona} />
 
+      {/*
+        O CARTAO DELE, no topo e so nos dados.
+
+        "Quero que deixe esse perfil mais pro, com coisas legais para eles."
+        O perfil era um formulario; isto e a outra metade — o que ele
+        construiu, dito por numeros que ja existiam.
+      */}
+      {seccao === "dados" && (
+        <CartaoDoPerfil
+          nome={dados.nome}
+          conta={{
+            media: dados.avaliacao ?? null,
+            quantasAvaliacoes: dados.quantasAvaliacoes ?? 0,
+            trabalhosConcluidos: dados.trabalhosConcluidos ?? 0,
+          }}
+          fotoViaturaUrl={dados.fotoViaturaUrl}
+          tipoVeiculo={dados.tipoVeiculo}
+        />
+      )}
+
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         {/* ── Dados ────────────────────────────────────────────────────────── */}
         {seccao === "dados" && (
@@ -419,6 +442,37 @@ export default function Perfil({
               */}
               <p className={`${CAIXA} break-all bg-slate-50 text-slate-500`}>{dados.email}</p>
             </Campo>
+
+            {/*
+              A VIATURA.
+
+              "Vamos adicionar a opção de colocar a foto do camião no perfil,
+              para nós sabermos qual é o camião/carrinha." O `tipoVeiculo` ja
+              existia e diz «carrinha» — uma palavra que nao distingue uma
+              carrinha de caixa aberta de uma fechada, e e essa diferenca que
+              decide se um sofa apanha chuva.
+
+              Sobe e grava de uma vez, na propria rota: uma fotografia que
+              sobe e fica a espera do Guardar e uma fotografia que se perde.
+            */}
+            {/*
+              AS AVALIACOES, DENTRO DO PERFIL — 14-09-2026.
+
+              "Vamos levar as avaliações para dentro do perfil." Eram uma
+              linha de menu a parte, e o perfil era um formulario sem nada
+              dele la dentro.
+            */}
+            <Avaliacoes
+              avaliacoes={dados.ultimasAvaliacoes ?? []}
+              media={dados.avaliacao ?? null}
+              quantas={dados.quantasAvaliacoes ?? 0}
+              dentroDoPerfil
+            />
+
+            <FotoDaViatura
+              url={dados.fotoViaturaUrl ?? null}
+              onMudou={(u) => setDados((d) => ({ ...d, fotoViaturaUrl: u }))}
+            />
 
             <Guardar
               onClick={() =>
@@ -1162,5 +1216,81 @@ export default function Perfil({
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * A FOTOGRAFIA DA VIATURA — sobe e grava de uma vez.
+ *
+ * Nao espera pelo Guardar da seccao: uma fotografia que fica pendurada a
+ * espera de um botao e uma fotografia que se perde quando ele fecha o ecra.
+ * A rota grava o endereco no perfil dele assim que o ficheiro chega.
+ */
+function FotoDaViatura({
+  url,
+  onMudou,
+}: {
+  url: string | null;
+  onMudou: (u: string | null) => void;
+}) {
+  const [aEnviar, setAEnviar] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function enviar(f: File) {
+    setAEnviar(true);
+    setErro("");
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await fetch("/api/profissionais/foto-viatura", { method: "POST", body: fd });
+      const d = await res.json();
+      if (!res.ok || !d.url) {
+        setErro(d.error ?? "Nao foi possivel guardar a fotografia.");
+        return;
+      }
+      onMudou(d.url as string);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  return (
+    <Campo
+      etiqueta="A sua viatura"
+      ajuda="Uma fotografia da carrinha ou camiao. E assim que sabemos o que cabe — e o cliente ve quem lhe chega a porta."
+    >
+      <div className="flex items-center gap-3">
+        {url ? (
+          <img
+            src={url}
+            alt="A sua viatura"
+            className="h-20 w-28 shrink-0 rounded-xl border border-slate-200 object-cover"
+          />
+        ) : (
+          <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
+            sem foto
+          </div>
+        )}
+        <div className="min-w-0">
+          <label className="inline-block cursor-pointer rounded-lg border border-[#0A6E8A] px-3 py-2 text-sm font-medium text-[#0A6E8A] hover:bg-[#0A6E8A]/5">
+            {aEnviar ? "A enviar…" : url ? "Trocar fotografia" : "Escolher fotografia"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={aEnviar}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void enviar(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {erro && <p className="mt-1.5 text-xs text-red-600">{erro}</p>}
+        </div>
+      </div>
+    </Campo>
   );
 }

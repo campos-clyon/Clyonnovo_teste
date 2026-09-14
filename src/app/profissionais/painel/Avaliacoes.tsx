@@ -27,15 +27,24 @@ export default function Avaliacoes({
   media,
   quantas,
   onVoltar,
+  dentroDoPerfil = false,
 }: {
   avaliacoes: AvaliacaoRecebida[];
   media: number | null;
   quantas: number;
-  onVoltar: () => void;
+  onVoltar?: () => void;
+  /**
+   * Desenhado DENTRO do perfil, e nao como ecra proprio — 14-09-2026.
+   *
+   * "Vamos levar as avaliações para dentro do perfil." Dentro nao ha
+   * cabecalho nem botao de voltar: ja ha um, do ecra que o contem, e dois
+   * seguidos sao dois sitios para carregar que fazem coisas diferentes.
+   */
+  dentroDoPerfil?: boolean;
 }) {
   return (
     <>
-      <CabecalhoDeEcra titulo="Avaliações" onVoltar={onVoltar} />
+      {!dentroDoPerfil && <CabecalhoDeEcra titulo="Avaliações" onVoltar={() => onVoltar?.()} />}
 
       {/* O número grande ao centro, como na carteira. */}
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-6 text-center shadow-sm">

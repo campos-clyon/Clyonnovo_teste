@@ -586,6 +586,24 @@ export async function ensureProvidersSchema(): Promise<void> {
       // Os custos DELE, para a sugestão de valor ser calculada com os números
       // dele e não com os de referência da CLYON. Nulos = usa a referência.
       // Ver `sugestao-para-o-profissional.ts`.
+      /*
+       * A FOTOGRAFIA DA VIATURA — 14-09-2026.
+       *
+       * "Vamos adicionar a opção de colocar a foto do camião no perfil, para
+       * nós sabermos qual é o camião/carrinha."
+       *
+       * O tipoVeiculo já existia e diz «carrinha» ou «camião» — uma palavra
+       * que não distingue uma carrinha de caixa aberta de uma fechada, e é
+       * essa diferença que decide se um sofá apanha chuva. A fotografia diz
+       * numa vez o que a palavra nunca disse.
+       *
+       * É o endereço no Blob, como as fotos dos pedidos: a coluna guarda o
+       * URL e mais nada, e o ficheiro vive onde vivem os outros.
+       */
+      {
+        name: "fotoViaturaUrl",
+        sql: "ALTER TABLE providers ADD COLUMN fotoViaturaUrl VARCHAR(500) NULL DEFAULT NULL",
+      },
       {
         name: "custoKm",
         sql: "ALTER TABLE providers ADD COLUMN custoKm DECIMAL(6,2) NULL DEFAULT NULL",
@@ -3136,7 +3154,7 @@ export async function perfilDoProfissional(
      */
     `SELECT id, name, email, phone, nif, city,
             baseLat, baseLng,
-            moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
+            moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo, fotoViaturaUrl,
             categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt,
@@ -3179,6 +3197,7 @@ export async function actualizarPerfilDoProfissional(
     "codigoPostalFiscal",
     "localidadeFiscal",
     "tipoVeiculo",
+    "fotoViaturaUrl",
     "iban",
     "ibanTitular",
     "mbway",
@@ -8468,5 +8487,30 @@ export async function atrasoDeRespostaDoAssistente(): Promise<number> {
     return valor;
   } catch {
     return SEM_ATRASO;
+  }
+}
+
+/**
+ * Quantos trabalhos este profissional levou até ao fim.
+ *
+ * "Quero que deixe esse perfil mais pro, com coisas legais para eles."
+ * — 14-09-2026. É o número que ele quer ver: não o que falta preencher, o que
+ * já fez. Conta-se o CONFIRMADO pelo cliente, e não o acordado — um trabalho
+ * fechado e nunca feito não é um trabalho feito.
+ *
+ * Falhar devolve zero: o cartão do perfil mostra menos, e nunca um erro.
+ */
+export async function trabalhosConcluidosDoProfissional(providerId: number): Promise<number> {
+  try {
+    await ensureNegociacoesTable();
+    const pool = await getPool();
+    if (!pool) return 0;
+    const [rows] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM negociacoes WHERE providerId = ? AND confirmadoEm IS NOT NULL",
+      [providerId],
+    )) as [Array<{ n: number }>, unknown];
+    return Number(rows[0]?.n ?? 0);
+  } catch {
+    return 0;
   }
 }

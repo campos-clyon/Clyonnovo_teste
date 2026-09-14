@@ -6,6 +6,7 @@ import {
   actualizarPerfilDoProfissional,
   invalidarVerificacaoDaGuia,
   custosFixosDeJson,
+  trabalhosConcluidosDoProfissional,
 } from "@/lib/db";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import {
@@ -84,6 +85,7 @@ export async function GET(req: NextRequest) {
     // A média e quantas. A média sozinha mente: 5,0 de uma avaliação não é
     // melhor do que 4,6 de quarenta.
     const avaliacoes = await avaliacoesDoProfissional(sessao.providerId);
+    const trabalhosConcluidos = await trabalhosConcluidosDoProfissional(sessao.providerId);
     const reputacao = mediaDasAvaliacoes(
       avaliacoes.map((a) => ({ estrelas: Number(a.estrelas) })),
     );
@@ -104,6 +106,12 @@ export async function GET(req: NextRequest) {
         moradaFiscal: p.moradaFiscal ?? "",
         codigoPostalFiscal: p.codigoPostalFiscal ?? "",
         localidadeFiscal: p.localidadeFiscal ?? "",
+        /*
+         * A fotografia da viatura. Null quando ainda não pôs nenhuma — e o
+         * ecrã convida, em vez de mostrar uma moldura vazia.
+         */
+        tipoVeiculo: p.tipoVeiculo ?? "",
+        fotoViaturaUrl: (p.fotoViaturaUrl as string | null) ?? null,
         categorias: listaGravada(p.categorias),
         zonas: listaGravada(p.zonas),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
@@ -131,6 +139,8 @@ export async function GET(req: NextRequest) {
         desde: p.createdAt ?? null,
         avaliacao: reputacao.media,
         quantasAvaliacoes: reputacao.quantas,
+        /* O que ele ja fez, para o cartao do perfil. Ver distincoes-do-profissional. */
+        trabalhosConcluidos,
         // A lista toda, não as cinco últimas: o ecrã das avaliações mostra-as
         // todas, e a consulta já traz no máximo cem.
         ultimasAvaliacoes: avaliacoes.map((a) => ({
@@ -295,6 +305,33 @@ export async function PUT(req: NextRequest) {
 
   if ("localidadeFiscal" in corpo) {
     mudancas.localidadeFiscal = texto(corpo.localidadeFiscal) || null;
+  }
+
+  if ("tipoVeiculo" in corpo) {
+    mudancas.tipoVeiculo = texto(corpo.tipoVeiculo).slice(0, 60) || null;
+  }
+
+  /*
+   * A FOTOGRAFIA DA VIATURA — 14-09-2026.
+   *
+   * Guarda-se o ENDEREÇO, não o ficheiro: o upload vai direito ao Blob pelo
+   * mesmo caminho das fotos dos pedidos, e aqui só chega o URL que ele
+   * devolveu.
+   *
+   * Só se aceita um endereço do NOSSO armazenamento. Sem isto, o campo era
+   * um sítio onde qualquer pessoa punha o URL que quisesse — e o painel
+   * passava a carregar imagens de um servidor de outra pessoa, que vê quem
+   * as abre e pode trocá-las depois de aprovadas.
+   */
+  if ("fotoViaturaUrl" in corpo) {
+    const u = texto(corpo.fotoViaturaUrl);
+    if (!u) mudancas.fotoViaturaUrl = null;
+    else if (!u.startsWith("https://") || !u.includes(".public.blob.vercel-storage.com/")) {
+      erros.push({
+        campo: "fotoViaturaUrl",
+        mensagem: "A fotografia tem de ser enviada por aqui, não colada de outro sítio.",
+      });
+    } else mudancas.fotoViaturaUrl = u.slice(0, 500);
   }
 
   /*
