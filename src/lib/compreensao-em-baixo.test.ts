@@ -39,7 +39,7 @@ describe("a falha fica registada", () => {
     const i = COMPREENSAO.indexOf("export async function compreenderFioComMotivo");
     const corpo = COMPREENSAO.slice(i, COMPREENSAO.indexOf("export async function compreenderFio(", i));
     expect(corpo).toContain("await anotar(null);");
-    expect(corpo).toContain("await anotar(bom.motivo);");
+    expect(corpo).toContain("await anotar(motivo);");
   });
 
   it("e uma leitura boa limpa o aviso", () => {

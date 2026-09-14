@@ -4835,6 +4835,14 @@ async function ensureWhatsappEstadoTables() {
   for (const sql of [
     `ALTER TABLE whatsappEstado ADD COLUMN compreensaoFalhouEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE whatsappEstado ADD COLUMN compreensaoMotivo VARCHAR(400) NULL DEFAULT NULL`,
+    /*
+     * QUEM ESTÁ DE CASTIGO POR FALTA DE QUOTA, E ATÉ QUANDO.
+     *
+     * Com o `gemini-2.5-flash` esgotado, cada frase de cada cliente gastava
+     * uma chamada condenada antes de chegar ao modelo que ainda podia
+     * responder. Ver `gemini-em-descanso.ts`.
+     */
+    `ALTER TABLE whatsappEstado ADD COLUMN modelosEmDescanso TEXT NULL DEFAULT NULL`,
   ]) {
     await pool.execute(sql).catch(() => {});
   }
@@ -4864,6 +4872,36 @@ export async function anotarSaudeDaCompreensao(motivo: string | null): Promise<v
     );
   } catch {
     /* um termómetro não trava o doente */
+  }
+}
+
+/** Os modelos de castigo por falta de quota — ver `gemini-em-descanso.ts`. */
+export async function lerModelosEmDescanso(): Promise<string | null> {
+  try {
+    await ensureWhatsappEstadoTables();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      "SELECT modelosEmDescanso FROM whatsappEstado WHERE id = 1",
+    )) as [Array<{ modelosEmDescanso: string | null }>, unknown];
+    return rows[0]?.modelosEmDescanso ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function guardarModelosEmDescanso(json: string): Promise<void> {
+  try {
+    await ensureWhatsappEstadoTables();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `INSERT INTO whatsappEstado (id, modelosEmDescanso) VALUES (1, ?)
+       ON DUPLICATE KEY UPDATE modelosEmDescanso = VALUES(modelosEmDescanso)`,
+      [json.slice(0, 2000)],
+    );
+  } catch {
+    /* sem memória do castigo, tenta-se na mesma — é o comportamento de antes */
   }
 }
 

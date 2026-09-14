@@ -256,6 +256,41 @@ async function anotar(motivo: string | null): Promise<void> {
   }
 }
 
+/**
+ * A ESCADA DE MODELOS, com quem está sem quota no fim dela.
+ *
+ * Era percorrida do princípio a cada mensagem. Com o modelo bom esgotado, cada
+ * frase de cada cliente gastava uma chamada condenada antes de chegar ao que
+ * ainda podia responder. Ver `gemini-em-descanso.ts`.
+ */
+async function escadaDeModelos(preferido: string): Promise<string[]> {
+  const escada = [preferido, MODELO_DE_RESERVA];
+  try {
+    const { lerModelosEmDescanso } = await import("@/lib/db");
+    const { modelosAUsar, lerDescansos } = await import("@/lib/gemini-em-descanso");
+    return modelosAUsar(escada, lerDescansos(await lerModelosEmDescanso()), new Date());
+  } catch {
+    return [...new Set(escada)];
+  }
+}
+
+/** Sem quota, de castigo — para a mensagem seguinte não voltar a lá bater. */
+async function porDeCastigo(modelo: string, mensagem: string): Promise<void> {
+  try {
+    const { eFaltaDeQuota, pôrADescansar, lerDescansos } = await import(
+      "@/lib/gemini-em-descanso"
+    );
+    if (!eFaltaDeQuota(mensagem)) return;
+    const { lerModelosEmDescanso, guardarModelosEmDescanso } = await import("@/lib/db");
+    const agora = new Date();
+    const novos = pôrADescansar(lerDescansos(await lerModelosEmDescanso()), modelo, agora);
+    await guardarModelosEmDescanso(JSON.stringify(novos));
+    console.warn(`[whatsapp/compreensao] ${modelo} sem quota — de castigo até ${novos[modelo]}`);
+  } catch {
+    /* sem memória do castigo, tenta-se na mesma */
+  }
+}
+
 async function tentarComMotivo(
   modelName: string,
   apiKey: string,
@@ -482,31 +517,35 @@ export async function compreenderFioComMotivo(
   const sistema = instrucoesDoFio(resumoDoSabido(jaSabido), agora);
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-  const bom = await tentarComMotivo(modelName, apiKey, t, sistema, prazos.bom);
-  if (bom.ok) {
-    await anotar(null);
-    return { ok: true, campos: bom.lido.campos };
-  }
-  if (modelName === MODELO_DE_RESERVA) {
-    await anotar(bom.motivo);
-    return { ok: false, motivo: bom.motivo };
+  const escada = await escadaDeModelos(modelName);
+  let primeiroMotivo: string | null = null;
+
+  for (const [i, modelo] of escada.entries()) {
+    const r = await tentarComMotivo(
+      modelo,
+      apiKey,
+      t,
+      sistema,
+      i === 0 ? prazos.bom : prazos.reserva,
+    );
+    if (r.ok) {
+      await anotar(null);
+      return { ok: true, campos: r.lido.campos };
+    }
+    await porDeCastigo(modelo, r.motivo);
+    /*
+     * O MOTIVO QUE SE MOSTRA É O DA PRIMEIRA TENTATIVA.
+     *
+     * As seguintes correm com modelos mais fracos e prazos mais curtos: se
+     * falharem também, dizer «o gemini-2.0-flash demorou mais de 10 s» manda a
+     * pessoa atrás do modelo errado.
+     */
+    primeiroMotivo ??= r.motivo;
   }
 
-  /*
-   * O MOTIVO QUE SE MOSTRA É O DA PRIMEIRA TENTATIVA.
-   *
-   * A segunda corre com um modelo mais fraco e um prazo mais curto: se falhar
-   * também, dizer «o gemini-2.0-flash demorou mais de 10 s» manda a pessoa
-   * atrás do modelo errado. O que interessa saber é porque é que o modelo bom
-   * não deu.
-   */
-  const reserva = await tentarComMotivo(MODELO_DE_RESERVA, apiKey, t, sistema, prazos.reserva);
-  if (reserva.ok) {
-    await anotar(null);
-    return { ok: true, campos: reserva.lido.campos };
-  }
-  await anotar(bom.motivo);
-  return { ok: false, motivo: bom.motivo };
+  const motivo = primeiroMotivo ?? "A leitura falhou sem motivo registado.";
+  await anotar(motivo);
+  return { ok: false, motivo };
 }
 
 export async function compreenderFio(
@@ -664,10 +703,8 @@ export async function compreenderResposta(
    */
   let primeiroMotivo: string | null = null;
 
-  for (const [modelo, segundos] of [
-    [modelName, 18],
-    [MODELO_DE_RESERVA, 10],
-  ] as const) {
+  for (const [i, modelo] of (await escadaDeModelos(modelName)).entries()) {
+    const segundos = i === 0 ? 18 : 10;
     try {
       const lido = limparResposta(await pedirJson(modelo, apiKey, t, sistema, segundos));
       console.log(
@@ -682,11 +719,11 @@ export async function compreenderResposta(
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`[whatsapp/resposta] ${modelo} falhou aos ${Date.now() - comecou} ms:`, msg);
+      await porDeCastigo(modelo, msg);
       primeiroMotivo ??= msg.startsWith("demorou mais de")
         ? `O ${modelo} ${msg} a ler a resposta do cliente.`
         : `A Google recusou a leitura: ${msg.slice(0, 300)}`;
     }
-    if (modelName === MODELO_DE_RESERVA) break;
   }
 
   /*

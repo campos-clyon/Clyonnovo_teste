@@ -72,10 +72,11 @@ describe("as três avarias estão escritas à parte", () => {
    * Se falhar também, dizer «o gemini-2.0-flash demorou mais de 10 s» manda a
    * pessoa atrás do modelo errado.
    */
-  it("o motivo mostrado é o do modelo bom, e não o do de reserva", () => {
+  it("o motivo mostrado é o da PRIMEIRA tentativa, e não o da última", () => {
     const i = COMPREENSAO.indexOf("export async function compreenderFioComMotivo");
     const corpo = COMPREENSAO.slice(i, COMPREENSAO.indexOf("export async function compreenderFio(", i));
-    expect(corpo).toContain("return { ok: false, motivo: bom.motivo };");
+    // `??=` só escreve à primeira: as tentativas seguintes não lhe tocam.
+    expect(corpo).toContain("primeiroMotivo ??= r.motivo;");
   });
 });
 

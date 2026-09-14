@@ -368,6 +368,17 @@ export default function AdminWhatsAppPanel() {
     propostas?: boolean;
     ultima?: string;
     pedido?: number;
+    /**
+     * Não se releu — só se continua.
+     *
+     * Reler e continuar são duas coisas, e só a primeira precisa do Gemini.
+     * Com a quota esgotada, o botão devolvia um erro e deixava a conversa
+     * onde estava: nem lia, nem continuava. Agora repete a pergunta do passo
+     * onde ela ficou — e diz que foi só isso, porque deixar passar por
+     * releitura o que foi repetir a pergunta punha quem carregou a acreditar
+     * que os campos tinham sido recuperados.
+     */
+    semLeitura?: boolean;
   } | null>(null);
   const [aReler, setAReler] = useState(false);
 
@@ -476,6 +487,7 @@ export default function AdminWhatsAppPanel() {
             completo: Boolean(dados.completo),
             linhasLidas: Number(dados.linhasLidas ?? 0),
             propostas: Boolean(dados.propostas),
+            semLeitura: Boolean(dados.semLeitura),
             ultima: typeof dados.ultima === "string" ? dados.ultima : undefined,
             pedido: typeof dados.pedido === "number" ? dados.pedido : undefined,
           });
@@ -1056,7 +1068,12 @@ export default function AdminWhatsAppPanel() {
                       {releitura?.telefone === l.telefone && (
                         <div className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
                           <p className="text-xs font-semibold text-cyan-200">
-                            {releitura.propostas ? (
+                            {releitura.semLeitura ? (
+                              <>
+                                Não consegui RELER — mas continuo. Vou repetir a pergunta do passo
+                                onde a conversa ficou.
+                              </>
+                            ) : releitura.propostas ? (
                               <>
                                 Conversa das propostas
                                 {releitura.pedido ? ` — pedido #${releitura.pedido}` : ""}. Reli{" "}
@@ -1077,7 +1094,9 @@ export default function AdminWhatsAppPanel() {
                             {releitura.mensagem}
                           </p>
                           <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                            {releitura.propostas
+                            {releitura.semLeitura
+                              ? "Os campos que ele já respondeu ficam como estão — não foram relidos. Isto só põe a conversa a andar outra vez."
+                              : releitura.propostas
                               ? "Quem responde é o assistente, com as regras de sempre: fechar e recusar continuam a passar pelas mesmas guardas. Nada se fecha só por carregar aqui."
                               : releitura.completo
                                 ? "Está tudo respondido — o que vai é o resumo, e o SIM dele regista o pedido."
@@ -1094,7 +1113,9 @@ export default function AdminWhatsAppPanel() {
                               ) : (
                                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
                               )}
-                              {releitura.propostas ? "Continuar a conversa" : "Confirmar e enviar"}
+                              {releitura.propostas || releitura.semLeitura
+                                ? "Continuar a conversa"
+                                : "Confirmar e enviar"}
                             </button>
                             <button
                               onClick={() => setReleitura(null)}

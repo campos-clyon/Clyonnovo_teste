@@ -275,6 +275,7 @@ export async function POST(req: NextRequest) {
       limparFilaWhatsAppDoNumero,
     } = await import("@/lib/db");
     const { fioParaLeitura, guiaoDoFio, releituraDoFio } = await import("@/lib/reler-a-conversa");
+    const { perguntaDo } = await import("@/lib/whatsapp-recolha");
     const { compreenderFioComMotivo, compreensaoDisponivel } = await import(
       "@/lib/whatsapp-compreensao",
     );
@@ -412,6 +413,51 @@ export async function POST(req: NextRequest) {
       { bom: 40, reserva: 15 },
     );
     const campos = leitura.ok ? leitura.campos : null;
+
+    /*
+     * SEM LEITURA, CONTINUA-SE NA MESMA — DE ONDE ELE PAROU.
+     *
+     * "Ao clicar em Reler e continuar ele deve ler tudo e continuar a conversa
+     * de onde parou." — 14-09-2026, com a quota do Gemini esgotada.
+     *
+     * RELER e CONTINUAR são duas coisas, e só a primeira precisa do Gemini.
+     * Sem ele não se reconstrói o que o cliente já respondeu — mas sabe-se
+     * exactamente em que passo a recolha ficou, porque isso está gravado. O
+     * botão devolvia um erro e deixava a conversa exactamente onde estava; era
+     * o pior dos dois mundos: nem lia, nem continuava.
+     *
+     * Continua a dizer que não releu. Deixar passar por releitura o que foi só
+     * repetir a pergunta punha quem carregou a acreditar que os campos tinham
+     * sido recuperados.
+     */
+    if (!campos && guardada) {
+      const passo = guardada.passo as Parameters<typeof perguntaDo>[0];
+      const dados = gravado as Parameters<typeof perguntaDo>[1];
+
+      if (corpo.confirmar !== true) {
+        return NextResponse.json({
+          ok: true,
+          previsao: true,
+          semLeitura: true,
+          recuperados: [],
+          passo,
+          completo: false,
+          linhasLidas: fio.length,
+          mensagem: perguntaDo(passo, dados, !compreensaoDisponivel()),
+        });
+      }
+
+      const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
+      const saiu = await enviarTextoWhatsApp(telefone, perguntaDo(passo, dados, !compreensaoDisponivel()));
+      return NextResponse.json({
+        ok: true,
+        semLeitura: true,
+        feito: saiu
+          ? `Não consegui reler (${leitura.ok ? "" : leitura.motivo}), mas retomei a conversa no passo onde ela parou.`
+          : `Não consegui reler nem falar com este número — veja se a conversa está entregue a alguém ou bloqueada.`,
+      });
+    }
+
     if (!campos) {
       /*
        * DUAS AVARIAS DIFERENTES, DUAS FRASES DIFERENTES.
