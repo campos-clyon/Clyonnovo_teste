@@ -27,7 +27,7 @@ describe("quem entra na lista de propostas", () => {
     const r = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "TRSul", propostasJson: proposta("profissional", 270) },
     ]);
-    expect(r).toEqual([{ profissional: "TRSul", valor: 270, total: 283.5 }]);
+    expect(r).toEqual([{ profissional: "TRSul", valor: 270, total: 286.61 }]);
   });
 
   it("entra quem ACEITOU o valor do cliente", () => {
@@ -42,7 +42,7 @@ describe("quem entra na lista de propostas", () => {
         propostasJson: proposta("cliente", 330, "aceite"),
       },
     ]);
-    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, total: 346.5 }]);
+    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, total: 350.30 }]);
   });
 
   it("NÃO entra quem ainda não respondeu", () => {
@@ -140,7 +140,7 @@ describe("a mensagem", () => {
      */
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
     });
     expect(m).toContain("sem IVA");
     expect(m).toContain("total a pagar");
@@ -150,7 +150,7 @@ describe("a mensagem", () => {
     // Numa mensagem de WhatsApp, o que vem depois do link não se lê.
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
     });
     expect(m.indexOf("sem IVA")).toBeLessThan(m.indexOf(base.link));
   });
@@ -192,7 +192,7 @@ describe("a mensagem", () => {
     // Regra de voz do site: quem executa é o profissional.
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
     });
     expect(m).toContain("quem faz o trabalho é o profissional que escolher");
   });
@@ -200,7 +200,7 @@ describe("a mensagem", () => {
   it("o link vai lá dentro, inteiro", () => {
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
     });
     expect(m).toContain(base.link);
   });
@@ -208,7 +208,7 @@ describe("a mensagem", () => {
   it("os valores saem em português — vírgula decimal e o símbolo depois", () => {
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
     });
     expect(m).toContain("TRSul: 270,00 €");
   });
@@ -288,15 +288,15 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const normal = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "B", propostasJson: proposta("profissional", 300), regimeIva: "normal" },
     ]);
-    // 300 + 5 % = 315; 300 + 69 de IVA + 15 = 384. (5 % ao cliente desde 07-09-2026.)
-    expect(isento[0].total).toBe(315);
-    expect(normal[0].total).toBe(384);
+    // Desde 14-09-2026 a taxa da CLYON tambem leva IVA: 300 + 15 + 3,45 = 318,45.
+    expect(isento[0].total).toBe(318.45);
+    expect(normal[0].total).toBe(387.45);
   });
 
   it("ordena pelo TOTAL e não pela base", () => {
     /*
      * Com regimes diferentes as duas ordens divergem: 280 € de quem liquida
-     * IVA são 358,40 € a pagar, e 300 € de um isento são 315 €. Ordenar pela
+     * IVA sao 361,62 € a pagar, e 300 € de um isento sao 318,45 €. Ordenar pela
      * base punha o mais caro primeiro e dizia-lhe que era o mais barato.
      */
     const r = propostasParaOCliente([
@@ -314,7 +314,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const r = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "X", propostasJson: proposta("profissional", 100) },
     ]);
-    expect(r[0].total).toBe(105);
+    expect(r[0].total).toBe(106.15);
   });
 
   it("NÃO promete «recusar» — esse botão não existe", () => {
@@ -325,7 +325,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
      */
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).not.toContain("recusar");
@@ -336,7 +336,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     // Metade dos profissionais está na isenção do artigo 53.º.
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, total: 283.5 }],
+      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("nem todos os profissionais cobram");
@@ -412,11 +412,11 @@ describe("quando o trabalho já está fechado", () => {
   });
 
   it("mas encontra-se, e traz o total certo do regime dele", () => {
-    // 330 + 75,90 de IVA + 16,50 de taxa (5 %) = 422,40.
+    // 330 + 16,50 de taxa + 79,70 de IVA (75,90 do servico + 3,80 da taxa) = 426,20.
     expect(trabalhoFechado(fechada)).toEqual({
       profissional: "Sthefanny Lemos",
       valor: 330,
-      total: 422.4,
+      total: 426.2,
     });
   });
 
@@ -430,8 +430,8 @@ describe("quando o trabalho já está fechado", () => {
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("Está combinado com Sthefanny Lemos");
-    // 330 + 75,90 de IVA + 16,50 de taxa (5 %) = 422,40.
-    expect(m).toContain("422,40 € a pagar");
+    // 330 + 16,50 de taxa + 79,70 de IVA (75,90 do servico + 3,80 da taxa) = 426,20.
+    expect(m).toContain("426,20 € a pagar");
     expect(m).not.toContain("aceita a proposta que preferir");
     expect(m).not.toContain("Ainda não temos propostas");
   });

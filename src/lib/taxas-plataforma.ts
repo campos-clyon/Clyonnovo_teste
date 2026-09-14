@@ -17,9 +17,21 @@
  * Como todos os ecrãs, emails e mensagens leem estas duas constantes, a troca
  * é aqui e só aqui; os testes em `taxas-plataforma.test.ts` têm os números.
  *
- * O IVA NÃO ENTRA NISTO. Quem factura o serviço é o profissional, e o imposto
- * é do regime dele: soma-se ao que o cliente paga e segue com ele — a CLYON
- * não o cobra nem fica com ele. Ver `ivaSobre` e `contaDoCliente` em baixo.
+ * O IVA ENTRA, E SÃO DOIS — corrigido a 14-09-2026.
+ *
+ * Dizia aqui que "o IVA não entra nisto", e era verdade a meias: o do serviço
+ * é do profissional e vai na factura dele, isso não mudou. O que faltava era o
+ * da TAXA. "O cliente pagou 107,52 mas a factura é de apenas 103,32" — os
+ * 4,20 € de taxa eram somados a seco, sem imposto e sem documento nenhum, em
+ * todos os trabalhos desde sempre.
+ *
+ * A CLYON passou a assumir as facturas. São duas, de duas empresas:
+ *
+ *   profissional → cliente:  serviço + IVA do regime DELE
+ *   CLYON        → cliente:  taxa + IVA da CLYON
+ *   CLYON        → profissional: a comissão de `TAXA_PROFISSIONAL`
+ *
+ * Ver `ivaSobre` e `contaDoCliente` em baixo.
  */
 
 /** Somada ao valor acordado, no que o cliente paga. */
@@ -90,13 +102,40 @@ export function ivaSobre(base: number, regime: RegimeIva): number {
   return regime === "normal" ? aosCentimos(base * TAXA_IVA) : 0;
 }
 
+/**
+ * A CLYON está no regime normal e liquida IVA na taxa que cobra ao cliente.
+ *
+ * "A CLYON vai assumir as facturas, então vamos fazer valor mais taxa mais
+ * IVA." — 14-09-2026.
+ *
+ * Constante e não um `true` escondido na conta: o regime da CLYON é uma coisa
+ * do mundo, muda com a empresa e não com o código, e no dia em que mudar há um
+ * sítio para o dizer. Ver `contaDoCliente`.
+ */
+export const CLYON_LIQUIDA_IVA = true;
+
 export type ContaDoCliente = {
   /** O valor acordado com o profissional, sem imposto. */
   servico: number;
-  /** O IVA do serviço — zero quando o profissional está isento. */
+  /**
+   * TODO o imposto da conta — o do serviço mais o da taxa.
+   *
+   * É este que se mostra ao cliente, numa linha só: «IVA (23 %)». Somar os
+   * dois na apresentação é legítimo porque a taxa é a mesma; o que NÃO se pode
+   * é calculá-los juntos, e é por isso que os dois de baixo existem.
+   */
   iva: number;
   /** A taxa da CLYON ao cliente: `TAXA_CLIENTE` sobre o serviço. */
   taxa: number;
+  /**
+   * O IVA do SERVIÇO, que vai na factura do profissional. Zero se for isento.
+   *
+   * Separado do da taxa porque são duas facturas de duas empresas. Quem emite
+   * precisa de saber qual é o seu — e a soma na linha do ecrã não lho diz.
+   */
+  ivaDoServico: number;
+  /** O IVA da TAXA, que vai na factura da CLYON ao cliente. */
+  ivaDaTaxa: number;
   /** O que sai da carteira dele. É este o número grande. */
   total: number;
   /** Se há linha de imposto para mostrar. */
@@ -113,13 +152,36 @@ export type ContaDoCliente = {
  */
 export function contaDoCliente(acordado: number, regime: RegimeIva): ContaDoCliente {
   const servico = aosCentimos(acordado);
-  const iva = ivaSobre(servico, regime);
   const taxa = aosCentimos(servico * TAXA_CLIENTE);
+
+  /*
+   * DOIS IMPOSTOS, DE DUAS EMPRESAS — 14-09-2026.
+   *
+   * "O cliente pagou 107,52 mas a factura é de apenas 103,32." Estava certo: a
+   * taxa da CLYON era somada a seco, sem imposto e sem documento. O cliente
+   * pagava 4,20 € que não apareciam em factura nenhuma, em todos os trabalhos
+   * desde sempre.
+   *
+   * A CLYON passa a assumir as facturas, e a conta passa a ser valor + taxa +
+   * IVA. O total dá o mesmo que somar tudo e aplicar 23 % no fim — o imposto é
+   * proporcional — MAS NÃO SE PODE CALCULAR ASSIM:
+   *
+   * um profissional na isenção do artigo 53.º não liquida imposto nenhum. Com
+   * uma conta feita no fim sobre a soma, ele levava 23 % sobre o serviço dele
+   * — um imposto que não pode emitir e que ninguém pode entregar ao Estado.
+   * Calcula-se por vendedor; só a APRESENTAÇÃO é que junta as duas linhas.
+   */
+  const ivaDoServico = ivaSobre(servico, regime);
+  const ivaDaTaxa = CLYON_LIQUIDA_IVA ? aosCentimos(taxa * TAXA_IVA) : 0;
+  const iva = aosCentimos(ivaDoServico + ivaDaTaxa);
+
   return {
     servico,
     iva,
     taxa,
-    total: aosCentimos(servico + iva + taxa),
+    ivaDoServico,
+    ivaDaTaxa,
+    total: aosCentimos(servico + taxa + iva),
     temIva: iva > 0,
   };
 }

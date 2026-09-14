@@ -1631,19 +1631,36 @@ export default function AdminNegociacoesPanel({
                 taxa. Separa-se, para o dinheiro se ler como circula.
               */
               const conta = contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva));
-              const aoProfissional = Math.round((conta.servico + conta.iva) * 100) / 100;
+              /*
+                AS DUAS FACTURAS, com o número de cada uma — 14-09-2026.
+
+                "O cliente pagou 107,52 mas a factura é de apenas 103,32." A
+                diferença eram os 4,20 € de taxa, que o cliente pagava e que
+                não apareciam em documento nenhum. A CLYON passou a assumir as
+                facturas, e esta linha passa a dizer QUEM FACTURA O QUÊ — que é
+                a pergunta que se faz aqui e para a qual era preciso ir buscar
+                uma calculadora.
+              */
+              const facturaDoPro = Math.round((conta.servico + conta.ivaDoServico) * 100) / 100;
+              const facturaDaClyon = Math.round((conta.taxa + conta.ivaDaTaxa) * 100) / 100;
               return (
                 <p className="mt-1 text-slate-300">
                   Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong> sem IVA
-                  {" · "}o cliente paga <strong>{euros(conta.total)}</strong>
+                  {" · "}o cliente paga <strong>{euros(conta.total)}</strong>, em duas facturas
                   {" — "}
-                  {euros(aoProfissional)} ao profissional
-                  {conta.temIva ? ` (com o IVA dele, ${euros(conta.iva)}, na factura dele)` : " (isento de IVA)"}
+                  <strong>{euros(facturaDoPro)}</strong> do profissional
+                  {conta.ivaDoServico > 0
+                    ? ` (${euros(conta.servico)} + IVA ${euros(conta.ivaDoServico)})`
+                    : " (isento de IVA)"}
                   {" e "}
-                  {euros(conta.taxa)} de taxa à CLYON
+                  <strong>{euros(facturaDaClyon)}</strong> da CLYON
+                  {conta.ivaDaTaxa > 0
+                    ? ` (taxa ${euros(conta.taxa)} + IVA ${euros(conta.ivaDaTaxa)})`
+                    : ` (taxa ${euros(conta.taxa)})`}
                   {" · "}o profissional recebe, sem IVA,{" "}
                   <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado)))}</strong>
                   {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
+                  {" (a facturar ao profissional)"}
                 </p>
               );
             })()}

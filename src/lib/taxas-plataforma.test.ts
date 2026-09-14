@@ -88,28 +88,63 @@ describe("IVA — soma-se ao valor acordado, e não se decompõe dele", () => {
 });
 
 describe("a conta do cliente", () => {
-  it("350 € acordados no regime normal dão 448,00 € a pagar", () => {
-    // Serviço 350 + IVA 80,50 (do profissional) + taxa CLYON 17,50 = 448,00.
+  it("350 € acordados no regime normal dão 452,03 € a pagar", () => {
+    /*
+     * MUDOU A 14-09-2026: "o cliente pagou 107,52 mas a factura é de apenas
+     * 103,32". A taxa da CLYON era somada a seco, sem imposto e sem documento.
+     * A CLYON passou a assumir as facturas, e a conta é valor + taxa + IVA.
+     *
+     * Serviço 350 + taxa 17,50 + IVA 84,53 (80,50 do profissional + 4,03 da
+     * taxa) = 452,03.
+     */
     const c = contaDoCliente(350, "normal");
     expect(c.servico).toBe(350);
-    expect(c.iva).toBe(80.5);
     expect(c.taxa).toBe(17.5);
-    expect(c.total).toBe(448);
+    expect(c.ivaDoServico).toBe(80.5);
+    expect(c.ivaDaTaxa).toBe(4.03);
+    expect(c.iva).toBe(84.53);
+    expect(c.total).toBe(452.03);
     expect(c.temIva).toBe(true);
   });
 
-  it("os mesmos 350 € com um isento dão 367,50 €", () => {
+  it("com um ISENTO ainda há IVA — o da taxa, que é da CLYON", () => {
+    /*
+     * A parte que não é óbvia. O profissional isento não liquida nada sobre o
+     * serviço dele; a CLYON liquida sobre a taxa DELA na mesma, porque é outra
+     * empresa e outra factura. Antes disto o isento não tinha imposto nenhum,
+     * e os 17,50 € ficavam sem documento.
+     */
     const c = contaDoCliente(350, "isento");
-    expect(c.iva).toBe(0);
-    expect(c.total).toBe(367.5);
-    expect(c.temIva).toBe(false);
+    expect(c.ivaDoServico).toBe(0);
+    expect(c.ivaDaTaxa).toBe(4.03);
+    expect(c.iva).toBe(4.03);
+    expect(c.total).toBe(371.53);
+    expect(c.temIva).toBe(true);
+  });
+
+  it("o IVA total é sempre a soma dos dois — nunca uma conta sobre a soma", () => {
+    /*
+     * Dá o mesmo número enquanto as duas partes estiverem à mesma taxa, e é
+     * por isso que a apresentação os pode juntar numa linha. O que NÃO pode é
+     * ser calculado assim: com o profissional isento, 23 % sobre (serviço +
+     * taxa) dava-lhe um imposto que ele não pode emitir.
+     */
+    for (const v of [10, 84, 350, 1000]) {
+      for (const r of ["isento", "normal"] as const) {
+        const c = contaDoCliente(v, r);
+        expect(c.iva).toBe(Number((c.ivaDoServico + c.ivaDaTaxa).toFixed(2)));
+      }
+    }
+    expect(contaDoCliente(350, "isento").iva).toBeLessThan(
+      contaDoCliente(350, "normal").iva,
+    );
   });
 
   it("as três parcelas somam sempre o total, sem cêntimos a sobrar", () => {
     for (const v of [5, 33.33, 99.99, 100, 237.5, 1000, 12345.67]) {
       for (const r of ["isento", "normal"] as const) {
         const c = contaDoCliente(v, r);
-        expect(Number((c.servico + c.iva + c.taxa).toFixed(2))).toBe(c.total);
+        expect(Number((c.servico + c.taxa + c.iva).toFixed(2))).toBe(c.total);
       }
     }
   });

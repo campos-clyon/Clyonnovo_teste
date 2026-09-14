@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { contaDoCliente } from "./taxas-plataforma";
 import { totalEmPalavras } from "./conta-em-palavras";
 
 /**
@@ -18,23 +19,35 @@ import { totalEmPalavras } from "./conta-em-palavras";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
-describe("só se fala de IVA quando há IVA", () => {
-  it("profissional isento: a frase não inventa um imposto", () => {
-    const t = totalEmPalavras(300, "isento");
-    expect(t).toBe("Com a taxa CLYON, fica em 315,00 €.");
-    expect(t).not.toContain("IVA");
+describe("a frase diz o mesmo que a conta", () => {
+  /*
+   * MUDOU A 14-09-2026. A taxa da CLYON passou a levar IVA — ela assume as
+   * facturas, e a conta é valor + taxa + IVA. Consequência que não é óbvia:
+   * MESMO COM UM PROFISSIONAL ISENTO há agora imposto na conta, porque o da
+   * taxa é da CLYON e não dele.
+   */
+  it("profissional isento: o imposto que resta é o da taxa, e é da CLYON", () => {
+    // 300 + taxa 15,00 + IVA da taxa 3,45 = 318,45. Do serviço, zero.
+    expect(totalEmPalavras(300, "isento")).toBe("Com o IVA e a taxa CLYON, fica em 318,45 €.");
   });
 
-  it("profissional que liquida: o imposto aparece, e a conta fecha", () => {
-    // 300 + 23 % (69,00) + 5 % (15,00) = 384,00
-    expect(totalEmPalavras(300, "normal")).toBe("Com o IVA e a taxa CLYON, fica em 384,00 €.");
+  it("profissional que liquida: os dois impostos, e a conta fecha", () => {
+    // 300 + taxa 15,00 + IVA 72,45 (69,00 do serviço + 3,45 da taxa) = 387,45
+    expect(totalEmPalavras(300, "normal")).toBe("Com o IVA e a taxa CLYON, fica em 387,45 €.");
   });
 
   it("regime por preencher conta como isento — e a frase acompanha", () => {
     // É o que `regimeDeIva` faz: só «normal» é normal. A frase tem de dizer o
     // mesmo que a conta, seja qual for o valor da coluna.
-    expect(totalEmPalavras(300, null)).toBe("Com a taxa CLYON, fica em 315,00 €.");
-    expect(totalEmPalavras(300, "")).toBe("Com a taxa CLYON, fica em 315,00 €.");
+    expect(totalEmPalavras(300, null)).toBe("Com o IVA e a taxa CLYON, fica em 318,45 €.");
+    expect(totalEmPalavras(300, "")).toBe("Com o IVA e a taxa CLYON, fica em 318,45 €.");
+  });
+
+  it("o isento continua a pagar MENOS imposto do que o que liquida", () => {
+    // A distinção que interessa não desapareceu: mudou de «nenhum imposto»
+    // para «só o da taxa». Se um dia isto empatar, alguém aplicou 23 % sobre
+    // a soma em vez de por vendedor.
+    expect(contaDoCliente(300, "isento").iva).toBeLessThan(contaDoCliente(300, "normal").iva);
   });
 });
 
