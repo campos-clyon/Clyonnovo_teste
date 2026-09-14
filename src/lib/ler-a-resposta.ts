@@ -37,7 +37,12 @@ export function normalizar(texto: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[!;…?]+/g, " ")
-    .replace(/([.,])(?!\d)/g, " ")
+    /*
+     * Os dois pontos entram na mesma regra por causa de «Revolution: 84» — a
+     * cliente copia o nome da lista, com os dois pontos e tudo. Entre dígitos
+     * ficam, que é onde eles são uma hora: «14:30».
+     */
+    .replace(/([.,:])(?!\d)/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -110,6 +115,15 @@ export type LeituraDirecta =
    * valor») sem depois a saber ler.
    */
   | { tipo: "nome_e_valor"; nome: string; valor: number }
+  /**
+   * «Aceito a proposta da Revolution» — um sim com um nome e sem número.
+   *
+   * É a forma mais humana de todas, e a que menos se parece com uma
+   * palavra-chave. O `nome` vai inteiro, com os artigos e tudo: quem o tem de
+   * casar com um profissional é o cérebro, que sabe quem existe.
+   */
+  | { tipo: "sim_nome"; nome: string }
+  | { tipo: "nao_nome"; nome: string }
   | null;
 
 function valorDe(texto: string): number | null {
@@ -135,13 +149,24 @@ export function lerARespostaDirecta(texto: string): LeituraDirecta {
 
   const sim = t.match(SIM_COM_VALOR);
   if (sim) {
-    const v = valorDe(sim[1].trim());
+    const resto = sim[1].trim();
+    const v = valorDe(resto);
     if (v != null) return { tipo: "sim", valor: v };
+    /*
+     * «Aceito a proposta da Revolution» — sem número nenhum.
+     *
+     * O resto vai inteiro, artigos e tudo, porque aqui não se sabe quem
+     * existe. Quem o casa com um profissional é o cérebro, e exige que bata
+     * num só.
+     */
+    if (resto.length >= 3) return { tipo: "sim_nome", nome: resto };
   }
   const nao = t.match(NAO_COM_VALOR);
   if (nao) {
-    const v = valorDe(nao[1].trim());
+    const resto = nao[1].trim();
+    const v = valorDe(resto);
     if (v != null) return { tipo: "nao", valor: v };
+    if (resto.length >= 3) return { tipo: "nao_nome", nome: resto };
   }
 
   const so = valorDe(t);

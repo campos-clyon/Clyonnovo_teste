@@ -816,8 +816,20 @@ export async function tratarMensagemDoCliente(
   const simValor = lida?.tipo === "sim" && lida.valor != null ? lida.valor : null;
   const naoValor = lida?.tipo === "nao" && lida.valor != null ? lida.valor : null;
   const nomeEValor = lida?.tipo === "nome_e_valor" ? lida : null;
+  const simNome = lida?.tipo === "sim_nome" ? lida : null;
+  const naoNome = lida?.tipo === "nao_nome" ? lida : null;
+  /** O nome que ele disse, seja em que forma for. Casa-se lá dentro. */
+  const pistaDeNome = nomeEValor?.nome ?? simNome?.nome ?? naoNome?.nome ?? null;
 
-  if (simSo || naoSo || simValor != null || naoValor != null || nomeEValor) {
+  if (
+    simSo ||
+    naoSo ||
+    simValor != null ||
+    naoValor != null ||
+    nomeEValor ||
+    simNome ||
+    naoNome
+  ) {
     /*
      * SÓ QUEM PÔS UM NÚMERO NA MESA PODE SER ESCOLHIDO POR UM NÚMERO.
      *
@@ -832,8 +844,26 @@ export async function tratarMensagemDoCliente(
      * valor») e a única que ele não sabia ler: a cliente escreveu-a às 14:54 e
      * levou de volta a lista outra vez.
      */
-    const eDeFechar = simSo || simValor != null || Boolean(nomeEValor);
+    const eDeFechar = simSo || simValor != null || Boolean(nomeEValor) || Boolean(simNome);
     const valorPedido = simValor ?? naoValor ?? nomeEValor?.valor ?? null;
+
+    /*
+     * O NOME QUE ELE DISSE, CASADO COM QUEM EXISTE.
+     *
+     * Nos dois sentidos de propósito: «Manuel» está DENTRO de «Manuel Martins
+     * transportes», e «a proposta da Revolution» CONTÉM «Revolution». Uma só
+     * direcção deixava de fora metade das formas de o dizer.
+     *
+     * O que torna isto seguro não é a comparação — é a unicidade. Se a pista
+     * bater em dois, não se fecha nada.
+     */
+    const porPista = pistaDeNome
+      ? alvos.filter((a) => {
+          const dele = semAcentos(a.profissionalNome);
+          const dito = semAcentos(pistaDeNome);
+          return dele.includes(dito) || dito.includes(dele);
+        })
+      : [];
 
     // Com propostas de pedidos diferentes na mesma lista, o nome e o valor
     // podem repetir-se; o número do pedido não.
@@ -851,6 +881,26 @@ export async function tratarMensagemDoCliente(
      * número quando não houve nome.
      */
     let alvo: AlvoComValor | undefined = alvoNomeado;
+
+    /*
+     * UM NOME SEM NÚMERO TAMBÉM CHEGA, se bater num só.
+     *
+     * «Aceito a proposta da Revolution» é a forma mais humana de todas, e a
+     * que menos se parece com uma palavra-chave: não traz valor nenhum, e sem
+     * isto caía no ramo das «2 propostas em cima da mesa» — que lhe respondia
+     * pedindo exactamente aquilo que ela acabara de dizer.
+     */
+    if (!alvo && valorPedido == null && porPista.length === 1) {
+      alvo = porPista[0];
+    }
+    if (!alvo && valorPedido == null && porPista.length > 1) {
+      await passarAUmaPessoa(
+        telefone,
+        `Disse «${pistaDeNome}» e isso bate em ${porPista.length} profissionais — nao dá para saber qual`,
+      );
+      return;
+    }
+
     if (alvo) {
       if (eDeFechar) await fecharPeloCliente(telefone, alvo);
       else await recusarPeloCliente(telefone, alvo);
@@ -881,10 +931,7 @@ export async function tratarMensagemDoCliente(
        */
       const casam = alvos
         .filter((a) => Math.abs((a.valorNaMesa as number) - valorPedido) < 0.005)
-        .filter(
-          (a) =>
-            !nomeEValor || semAcentos(a.profissionalNome).includes(semAcentos(nomeEValor.nome)),
-        );
+        .filter((a) => !pistaDeNome || porPista.includes(a));
       if (casam.length > 1) {
         await passarAUmaPessoa(
           telefone,

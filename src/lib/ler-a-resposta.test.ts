@@ -149,7 +149,8 @@ describe("ligado ao cérebro, com as guardas de sempre", () => {
    * nada. É o que torna esta leitura segura sem modelo nenhum.
    */
   it("o nome aperta a escolha, e o empate continua a ir para uma pessoa", () => {
-    expect(CEREBRO).toContain("semAcentos(nomeEValor.nome)");
+    expect(CEREBRO).toContain("const pistaDeNome =");
+    expect(CEREBRO).toContain("!pistaDeNome || porPista.includes(a)");
     expect(CEREBRO).toContain("casam.length > 1");
     expect(CEREBRO).toContain("passarAUmaPessoa");
   });
@@ -167,5 +168,54 @@ describe("o ecrã repetido — a guarda comparava o texto errado", () => {
    */
   it("compara-se o que fica gravado, e não o que se escreveu", () => {
     expect(CEREBRO).toContain("jaFoiDito(paraTeclado(texto), gravadas, new Date())");
+  });
+});
+
+describe("as formas do segundo exemplo — pedido #315", () => {
+  /*
+   *   CLIENTE: Revolution: 84                    15:04
+   *   CLIENTE: Aceito a proposta da Revolution   15:04
+   *
+   * As duas levaram de volta o mesmo ponto de situação — que lhe respondia
+   * pedindo exactamente aquilo que ela acabara de dizer.
+   */
+  it("«Revolution: 84» — os dois pontos vêm colados quando se copia da lista", () => {
+    expect(lerARespostaDirecta("Revolution: 84")).toEqual({
+      tipo: "nome_e_valor",
+      nome: "revolution",
+      valor: 84,
+    });
+  });
+
+  it("«Aceito a proposta da Revolution» — um sim com nome e sem número", () => {
+    expect(lerARespostaDirecta("Aceito a proposta da Revolution")).toEqual({
+      tipo: "sim_nome",
+      nome: "a proposta da revolution",
+    });
+  });
+
+  it("e o mesmo do lado do não", () => {
+    expect(lerARespostaDirecta("Recuso a proposta da Revolution")).toEqual({
+      tipo: "nao_nome",
+      nome: "a proposta da revolution",
+    });
+  });
+
+  it("uma hora continua a ser uma hora, e não um nome com número", () => {
+    // Os dois pontos entre dígitos ficam: «14:30» não é «14 30».
+    expect(lerARespostaDirecta("27/08 14:30")).toBeNull();
+  });
+});
+
+describe("o nome casa-se nos dois sentidos, e só vale se bater num só", () => {
+  const CEREBRO = ler("src/lib/whatsapp-negociacao.ts");
+
+  it("«Manuel» está dentro do nome dele; «a proposta da Revolution» contém o dele", () => {
+    expect(CEREBRO).toContain("dele.includes(dito) || dito.includes(dele)");
+  });
+
+  it("uma pista que bate em dois não fecha nada — vai para uma pessoa", () => {
+    expect(CEREBRO).toContain("porPista.length > 1");
+    expect(CEREBRO).toContain("porPista.length === 1");
   });
 });
