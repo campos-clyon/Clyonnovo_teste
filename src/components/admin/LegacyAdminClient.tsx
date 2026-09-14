@@ -26,6 +26,7 @@ import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
+import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import { tService, tUrgency } from "@/lib/translations";
 import {
@@ -3107,6 +3108,27 @@ export default function ColaboradorAdminClient({
                   Abrir gestor de imagens
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
+              </div>
+
+              {/*
+                A RETENÇÃO, em cima dos separadores.
+
+                O registo permanente era escrito e nunca lido — três funções
+                para o consultar, nenhuma chamada em lado nenhum. E era lá que
+                a purga escrevia, todas as noites, o número de pedidos que
+                apagaria. Ou seja: a única coisa que era preciso ver antes de a
+                armar era a única que não se via.
+              */}
+              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Retenção dos pedidos
+                </p>
+                <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
+                  O que a purga automática apagaria — pedidos e fotografias. Nunca leva um pedido
+                  que produziu trabalho: a carteira dos profissionais é calculada a partir dessas
+                  linhas.
+                </p>
+                <AdminRetencaoPanel />
               </div>
 
               {/* Navegação por abas */}
