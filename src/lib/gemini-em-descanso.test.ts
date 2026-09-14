@@ -175,3 +175,30 @@ describe("e o botão continua mesmo quando a leitura falha", () => {
     expect(ROTA).toContain("Não consegui reler nem falar com este número");
   });
 });
+
+describe("o modelo do assistente tem uma variável só dele", () => {
+  const COMPREENSAO = ler("src/lib/whatsapp-compreensao.ts");
+
+  /*
+   * `GEMINI_MODEL` é lida por QUATRO sítios com feitios diferentes: o chat do
+   * simulador quer o nome com prefixo (`google/gemini-2.0-flash`, como a porta
+   * da Vercel os chama) e este quer o nome nu. Mudá-la para desencravar o
+   * WhatsApp partia o simulador pelo caminho — e ninguém ligaria as duas
+   * coisas.
+   */
+  it("WHATSAPP_GEMINI_MODEL manda, e GEMINI_MODEL continua a valer", () => {
+    expect(COMPREENSAO).toContain(
+      'process.env.WHATSAPP_GEMINI_MODEL || process.env.GEMINI_MODEL || "gemini-2.5-flash"',
+    );
+  });
+
+  it("e as três leituras usam-na", () => {
+    const quantas = COMPREENSAO.split("modeloDoAssistente()").length - 1;
+    // Uma na definição, três nos usos.
+    expect(quantas).toBeGreaterThanOrEqual(4);
+  });
+
+  it("está documentada para quem for pô-la na Vercel", () => {
+    expect(ler(".env.example")).toContain("WHATSAPP_GEMINI_MODEL=");
+  });
+});

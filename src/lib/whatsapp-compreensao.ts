@@ -84,6 +84,23 @@ export function compreensaoDisponivel(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
+/**
+ * O MODELO DO ASSISTENTE, E SÓ DELE.
+ *
+ * `GEMINI_MODEL` é lida por quatro sítios com feitios diferentes: o chat do
+ * simulador espera o nome com prefixo (`google/gemini-2.0-flash`, que é como a
+ * porta da Vercel os chama), a análise de fotografias espera o nome nu, e a
+ * agenda outro. Mudá-la para desencravar o WhatsApp — que foi o que esteve
+ * quase a acontecer a 14-09-2026, com a quota esgotada — partia o simulador
+ * pelo caminho, e ninguém ligaria as duas coisas.
+ *
+ * Com uma variável própria, trocar o modelo do assistente é uma decisão sobre
+ * o assistente e mais nada. Sem ela, continua tudo como estava.
+ */
+function modeloDoAssistente(): string {
+  return process.env.WHATSAPP_GEMINI_MODEL || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+}
+
 function instrucoes(
   jaSabido: Record<string, unknown>,
   agora: Date,
@@ -389,7 +406,7 @@ export async function compreender(
   if (!t) return null;
 
   const sistema = instrucoes(resumoDoSabido(jaSabido), agora, perguntaPendente);
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const modelName = modeloDoAssistente();
 
   /*
    * DUAS TENTATIVAS, E PORQUÊ.
@@ -515,7 +532,7 @@ export async function compreenderFioComMotivo(
   }
 
   const sistema = instrucoesDoFio(resumoDoSabido(jaSabido), agora);
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const modelName = modeloDoAssistente();
 
   const escada = await escadaDeModelos(modelName);
   let primeiroMotivo: string | null = null;
@@ -693,7 +710,7 @@ export async function compreenderResposta(
   if (!t) return null;
 
   const sistema = instrucoesDaResposta(mesa);
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const modelName = modeloDoAssistente();
   const comecou = Date.now();
 
   /*
