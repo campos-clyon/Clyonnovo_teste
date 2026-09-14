@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import {
+  atrasoDeRespostaDoAssistente,
   avisosDoAssistente,
+  definirConfiguracaoDoAssistente,
   definirInterruptorDoAssistente,
   desfazerFechoDoAssistente,
   fechosDesfaziveis,
   interruptoresDoAssistente,
 } from "@/lib/db";
 import { correrOAssistente } from "@/lib/assistente-automatico";
+import {
+  ATRASO_MAXIMO,
+  CHAVE_DO_ATRASO,
+  canalRespeitaOAtraso,
+  lerAtraso,
+} from "@/lib/assistente-tempo-de-resposta";
+import { canalWhatsApp } from "@/lib/whatsapp-cloud";
 
 export const runtime = "nodejs";
 
@@ -30,14 +39,25 @@ export async function GET(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  const [interruptores, avisos, desfaziveis] = await Promise.all([
+  const [interruptores, avisos, desfaziveis, atraso] = await Promise.all([
     interruptoresDoAssistente(),
     avisosDoAssistente(60).catch(() => []),
     fechosDesfaziveis().catch(() => []),
+    atrasoDeRespostaDoAssistente().catch(() => 0),
   ]);
+
+  const canal = canalWhatsApp();
 
   return NextResponse.json({
     interruptores,
+    atraso,
+    /*
+     * O painel precisa de saber se o canal em uso respeita o atraso. Pela API
+     * da Meta a mensagem sai direta e o campo seria uma promessa por cumprir —
+     * e um campo que mente é pior do que um campo que não existe.
+     */
+    atrasoAplicaSe: canalRespeitaOAtraso(canal),
+    canal,
     avisos,
     // Só os que ainda estão dentro da janela: mostrar um botão que vai recusar
     // é pior do que não mostrar botão nenhum.
@@ -50,7 +70,13 @@ export async function POST(req: NextRequest) {
   const { err } = await requireAdminGeral(req);
   if (err) return err;
 
-  let corpo: { accao?: unknown; capacidade?: unknown; ligado?: unknown; id?: unknown };
+  let corpo: {
+    accao?: unknown;
+    capacidade?: unknown;
+    ligado?: unknown;
+    id?: unknown;
+    segundos?: unknown;
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -71,6 +97,29 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json({ ok: true, interruptores: await interruptoresDoAssistente() });
+  }
+
+  /*
+   * O TEMPO DE RESPOSTA.
+   *
+   * Recusa-se o que não se percebe em vez de arredondar: um campo mal
+   * preenchido que virasse «dez minutos» calava o assistente durante dez
+   * minutos sem ninguém perceber porquê.
+   */
+  if (accao === "atraso") {
+    const segundos = lerAtraso(corpo.segundos);
+    if (segundos == null) {
+      return NextResponse.json(
+        { error: `Diga um número de segundos entre 0 e ${ATRASO_MAXIMO}.` },
+        { status: 400 },
+      );
+    }
+    try {
+      await definirConfiguracaoDoAssistente(CHAVE_DO_ATRASO, String(segundos), "backoffice");
+    } catch {
+      return NextResponse.json({ error: "Não foi possível guardar." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, atraso: segundos });
   }
 
   /*

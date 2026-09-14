@@ -154,8 +154,19 @@ async function enviar(corpo: Record<string, unknown>): Promise<boolean> {
 /** Deixa a mensagem na fila para o Winapp a vir buscar. */
 async function porNaFila(para: string, texto: string): Promise<boolean> {
   try {
-    const { guardarNaFilaWhatsApp } = await import("@/lib/db");
-    await guardarNaFilaWhatsApp(telefoneParaWhatsApp(para), texto.slice(0, 4096));
+    const { guardarNaFilaWhatsApp, atrasoDeRespostaDoAssistente } = await import("@/lib/db");
+    /*
+     * O TEMPO DE RESPOSTA DO ASSISTENTE, e é só aqui que ele existe.
+     *
+     * A linha entra na fila com uma hora a partir da qual pode sair; a ponte,
+     * que vem buscá-la de poucos em poucos segundos, não a leva antes disso.
+     * Ninguém dorme à espera e não há cron novo — o atraso é o intervalo entre
+     * duas rondas de quem já estava a passar.
+     *
+     * Falhar a ler devolve zero, que é responder já: o comportamento de sempre.
+     */
+    const atraso = await atrasoDeRespostaDoAssistente().catch(() => 0);
+    await guardarNaFilaWhatsApp(telefoneParaWhatsApp(para), texto.slice(0, 4096), atraso);
     return true;
   } catch (e) {
     console.error("[whatsapp] fila falhou", e);

@@ -8,6 +8,7 @@ import {
   FICHA_DA_CAPACIDADE,
   type Capacidade,
 } from "@/lib/assistente-interruptores";
+import { ATRASOS_SUGERIDOS, atrasoPorExtenso } from "@/lib/assistente-tempo-de-resposta";
 
 /**
  * O ECRÃ DO ASSISTENTE AUTOMÁTICO.
@@ -49,6 +50,11 @@ type Desfazivel = {
 
 type Estado = {
   interruptores: Record<string, boolean>;
+  /** Segundos que o assistente espera antes de a resposta poder sair. */
+  atraso: number;
+  /** O canal em uso passa pela fila? Pela API da Meta a resposta é imediata. */
+  atrasoAplicaSe: boolean;
+  canal: string;
   avisos: Aviso[];
   desfaziveis: Desfazivel[];
   podeMexer: boolean;
@@ -215,6 +221,53 @@ export default function AdminAssistenteAutoPanel() {
             </p>
           ) : (
             <>
+              {/* ── Tempo de resposta ─────────────────────────────────── */}
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">Tempo de resposta</p>
+                    <p className="text-xs leading-relaxed text-slate-500">
+                      Quanto tempo o assistente espera antes de responder. Serve para não
+                      parecer uma máquina — e para lhe dar tempo de assumir a conversa antes
+                      de ele falar.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300">
+                    {atrasoPorExtenso(estado.atraso)}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {ATRASOS_SUGERIDOS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => void agir({ accao: "atraso", segundos: s })}
+                      disabled={ocupado || !estado.podeMexer}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:opacity-40 ${
+                        estado.atraso === s
+                          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                          : "border-slate-700 text-slate-300 hover:bg-slate-800"
+                      }`}
+                      title={estado.podeMexer ? undefined : "Só o administrador mexe nisto."}
+                    >
+                      {atrasoPorExtenso(s)}
+                    </button>
+                  ))}
+                </div>
+
+                {/*
+                 * Dizer quando o campo NÃO manda. Pela API da Meta a mensagem
+                 * sai direta e não passa pela fila — um número aqui a prometer
+                 * um atraso que não acontece é pior do que não haver número.
+                 */}
+                {!estado.atrasoAplicaSe && estado.atraso > 0 && (
+                  <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-300">
+                    O canal em uso ({estado.canal}) envia na hora e não passa pela fila — este
+                    tempo só se aplica à ponte do Winapp e ao envio à mão.
+                  </p>
+                )}
+              </div>
+
               {/* ── Os seis interruptores ─────────────────────────────── */}
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-xs leading-relaxed text-slate-400">

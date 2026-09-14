@@ -4616,17 +4616,56 @@ async function ensureFilaWhatsAppTable() {
       KEY idx_por_enviar (enviadoEm, criadoEm)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  /*
+   * A HORA A PARTIR DA QUAL ESTA RESPOSTA PODE SAIR — 14-09-2026.
+   *
+   * É aqui que vive o «tempo de resposta» do assistente. A ponte não recebe a
+   * resposta, vem BUSCÁ-LA: basta a linha não ser entregue antes da hora e o
+   * atraso acontece sozinho, ao segundo, sem ninguém a dormir à espera e sem
+   * cron nenhum.
+   *
+   * NULL quer dizer «pode sair já», que é o que todas as linhas antigas são —
+   * e é por isso que a coluna nasce NULL em vez de NOW(): uma fila cheia no
+   * momento da migração não pode ficar toda com a data da migração.
+   *
+   * Em tabela que já existe o CREATE acima não acrescenta coluna nenhuma; daí
+   * o ALTER à parte, que falha em silêncio quando ela já lá está.
+   */
+  await pool
+    .execute("ALTER TABLE whatsappFila ADD COLUMN enviarApartirDe DATETIME NULL DEFAULT NULL")
+    .catch(() => {});
   filaWhatsAppReady = true;
 }
 
-export async function guardarNaFilaWhatsApp(telefone: string, texto: string): Promise<void> {
+export async function guardarNaFilaWhatsApp(
+  telefone: string,
+  texto: string,
+  /** Segundos a esperar antes de a ponte a poder levar. Ver `assistente-tempo-de-resposta`. */
+  atrasoSegundos = 0,
+): Promise<void> {
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  await pool.execute("INSERT INTO whatsappFila (telefone, texto) VALUES (?, ?)", [
-    telefone,
-    texto,
-  ]);
+  const espera = Math.max(0, Math.min(600, Math.floor(atrasoSegundos)));
+  if (espera === 0) {
+    // Sem atraso a coluna fica NULL, e não NOW(): é a diferença entre «pode
+    // sair já» e «pôde sair naquele instante», e só a primeira é verdade.
+    await pool.execute("INSERT INTO whatsappFila (telefone, texto) VALUES (?, ?)", [
+      telefone,
+      texto,
+    ]);
+    return;
+  }
+  /*
+   * A conta é do MySQL e não do Node. A comparação na leitura é feita contra
+   * o NOW() do servidor da base; somar aqui em JavaScript metia dois relógios
+   * na mesma decisão, e a diferença entre eles aparecia como segundos a mais
+   * ou a menos no atraso — o género de erro que ninguém liga ao relógio.
+   */
+  await pool.execute(
+    "INSERT INTO whatsappFila (telefone, texto, enviarApartirDe) VALUES (?, ?, NOW() + INTERVAL ? SECOND)",
+    [telefone, texto, espera],
+  );
 }
 
 export interface MensagemNaFilaWhatsApp {
@@ -4653,10 +4692,18 @@ export async function filaWhatsAppPorEnviar(limite = 20): Promise<MensagemNaFila
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
   if (!pool) return [];
-  // Mais velhas primeiro: numa conversa, a ordem é significado.
+  /*
+   * Mais velhas primeiro: numa conversa, a ordem é significado.
+   *
+   * E NADA ANTES DA HORA — é aqui que o «tempo de resposta» do assistente
+   * acontece. A ponte vem buscar de poucos em poucos segundos; a linha que
+   * ainda não pode sair simplesmente não vem nesta ronda, e vem na seguinte.
+   * O NULL é o passado inteiro da tabela, e quer dizer «pode sair já».
+   */
   const [rows] = (await pool.execute(
     `SELECT id, telefone, texto FROM whatsappFila
       WHERE enviadoEm IS NULL
+        AND (enviarApartirDe IS NULL OR enviarApartirDe <= NOW())
       ORDER BY criadoEm ASC, id ASC
       LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
   )) as [Array<{ id: number; telefone: string; texto: string }>, unknown];
@@ -8228,4 +8275,94 @@ export async function porLinguaDoNumero(telefone: string, lingua: Lingua | null)
      ON DUPLICATE KEY UPDATE lingua = VALUES(lingua)`,
     [digitos, lingua],
   );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * AS CONFIGURAÇÕES DO ASSISTENTE — as que não são um sim/não.
+ *
+ * "Quero adicionar configurações para o assistente, A PRIMEIRA será tempo de
+ * resposta." — 14-09-2026.
+ *
+ * «A primeira» é a palavra que desenha esta tabela. Uma coluna por definição
+ * obrigava a uma migração por cada ideia; chave e valor em texto aguentam as
+ * que vierem sem tocar no esquema. O preço é a validação passar a ser de quem
+ * lê — e é por isso que cada leitura tem a sua função com o seu tipo, em vez
+ * de andar por aí um `string | null` que cada sítio interpreta à sua maneira.
+ *
+ * Os interruptores ficam onde estão: são sete booleanos com uma tabela feita
+ * para eles, e enfiá-los aqui como "sim"/"nao" era perder o tipo para ganhar
+ * uma tabela a menos.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+let configuracoesDoAssistenteReady = false;
+async function ensureConfiguracoesDoAssistente() {
+  if (configuracoesDoAssistenteReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS assistenteConfiguracoes (
+      chave         VARCHAR(40) NOT NULL PRIMARY KEY,
+      valor         VARCHAR(200) NOT NULL,
+      actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      porQuem       VARCHAR(120) NULL DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  configuracoesDoAssistenteReady = true;
+}
+
+export async function configuracaoDoAssistente(chave: string): Promise<string | null> {
+  try {
+    await ensureConfiguracoesDoAssistente();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      "SELECT valor FROM assistenteConfiguracoes WHERE chave = ? LIMIT 1",
+      [chave],
+    )) as [Array<{ valor: string }>, unknown];
+    return rows[0]?.valor ?? null;
+  } catch (e) {
+    // Falhar a ler uma configuração não pode calar o assistente: quem chama
+    // fica com a omissão, que é sempre o comportamento de sempre.
+    console.error("[assistente] não li a configuração", chave, e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+export async function definirConfiguracaoDoAssistente(
+  chave: string,
+  valor: string,
+  porQuem?: string | null,
+): Promise<void> {
+  await ensureConfiguracoesDoAssistente();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO assistenteConfiguracoes (chave, valor, porQuem) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE valor = VALUES(valor), porQuem = VALUES(porQuem)`,
+    [chave.slice(0, 40), valor.slice(0, 200), porQuem?.slice(0, 120) ?? null],
+  );
+  atrasoLembrado = null;
+}
+
+/*
+ * O atraso é lido a CADA mensagem que sai. Guardá-lo por um minuto tira essa
+ * consulta do caminho da resposta sem custar nada em frescura: mudá-lo no
+ * painel apaga a memória, e portanto a mudança vê-se já.
+ */
+let atrasoLembrado: { valor: number; ate: number } | null = null;
+
+/** Quantos segundos o assistente espera antes de a resposta poder sair. */
+export async function atrasoDeRespostaDoAssistente(): Promise<number> {
+  const { CHAVE_DO_ATRASO, atrasoGuardado, SEM_ATRASO } = await import(
+    "@/lib/assistente-tempo-de-resposta"
+  );
+  if (atrasoLembrado && atrasoLembrado.ate > Date.now()) return atrasoLembrado.valor;
+  try {
+    const cru = await configuracaoDoAssistente(CHAVE_DO_ATRASO);
+    const valor = cru == null ? SEM_ATRASO : atrasoGuardado(cru);
+    atrasoLembrado = { valor, ate: Date.now() + 60_000 };
+    return valor;
+  } catch {
+    return SEM_ATRASO;
+  }
 }
