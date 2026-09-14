@@ -515,6 +515,15 @@ export function primeiroPassoEmFalta(dados: DadosDaRecolha): PassoDaRecolha {
   return ordem.find((p) => !respondido(p, dados)) ?? "confirmar";
 }
 
+/**
+ * As palavras que fazem de uma frase uma morada.
+ *
+ * Sem número e sem nenhuma destas, o que veio não é uma morada — é conversa a
+ * responder a outra pergunta. Sem acentos porque é assim que se compara aqui.
+ */
+const PALAVRAS_DE_MORADA =
+  /\b(rua|avenida|av|estrada|travessa|largo|praceta|praca|beco|caminho|quinta|urbanizacao|bairro|lote|azinhaga|calcada|alameda|rotunda|zona|edificio)\b/;
+
 /** As correcções no resumo: «morada …», «nome …», «andar …», «quando …», «descrição …». */
 function corrigir(dados: DadosDaRecolha, texto: string, agora: Date): DadosDaRecolha | null {
   // [\s\S] em vez da flag /s: o alvo do TypeScript do projecto não a aceita.
@@ -524,8 +533,26 @@ function corrigir(dados: DadosDaRecolha, texto: string, agora: Date): DadosDaRec
   const valor = m[2].trim();
   const d = { ...dados };
   if (campo === "nome") d.contactName = valor.slice(0, 120);
-  else if (campo === "morada") d.address = valor.slice(0, 300);
-  else if (campo === "destino") d.moradaDestino = valor.slice(0, 300);
+  else if (campo === "morada") {
+    d.address = valor.slice(0, 300);
+    /*
+     * O CÓDIGO POSTAL VEM NO MESMO SACO — 14-09-2026.
+     *
+     * Ela escreveu «Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544
+     * Lisboa» e foi-lhe perguntado o código postal a seguir, duas vezes. Aqui
+     * guardava-se a linha inteira como morada e mais nada; o caso `morada` do
+     * passo a passo já fazia esta extracção, e eram duas leituras da mesma
+     * frase a discordar uma da outra.
+     */
+    const cp = codigoPostalELocalidade(valor);
+    if (cp.postalCode) {
+      d.postalCode = cp.postalCode;
+      d.address =
+        valor.replace(/(\d{4})\s*-?\s*(\d{3}).*$/, "").replace(/[,\s]+$/, "").slice(0, 300) ||
+        d.address;
+      if (cp.city && cp.city !== d.address) d.city = cp.city.replace(d.address, "").trim() || null;
+    }
+  } else if (campo === "destino") d.moradaDestino = valor.slice(0, 300);
   else if (/^(codigo|cp|postal|localidade)$/.test(campo)) {
     const { postalCode, city } = codigoPostalELocalidade(valor);
     if (postalCode) d.postalCode = postalCode;
@@ -584,6 +611,42 @@ export function responderNaRecolha(
     };
   }
 
+  /*
+   * QUANDO ELA DIZ O CAMPO, É ESSE QUE SE PREENCHE — 14-09-2026.
+   *
+   * A conversa da Ana Filipa Rodrigues, às 16:07. Ela escreveu «Morada:
+   * Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa» enquanto a pergunta
+   * pendente era «Com quem estou a falar?» — e a morada inteira foi gravada
+   * como o NOME dela. A seguir, «É um apartamento e tem elevador» virou a
+   * morada. O resumo que lhe foi mostrado dizia, à letra:
+   *
+   *   Nome: Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa
+   *   Morada: É um apartamento e tem elevador, O meu nome é Ana Filipa (...)
+   *
+   * A causa não era não perceber: era perguntar e depois arrumar a mensagem
+   * SEGUINTE na gaveta da pergunta, fosse ela qual fosse. Num WhatsApp
+   * ninguém responde por ordem — responde-se à terceira pergunta atrás, com o
+   * campo escrito à frente, como ela fez seis vezes.
+   *
+   * O leitor de rótulos já existia; só corria no resumo final. Passa a correr
+   * SEMPRE, e devolve `null` quando o rótulo não é um campo conhecido — por
+   * isso «Está acima» continua a ser tratado como resposta à pergunta em cima.
+   *
+   * No passo do resumo não se intercepta: ali a resposta certa é mostrar o
+   * resumo outra vez, e isso é do caso «confirmar».
+   */
+  if (estado.passo !== "confirmar") {
+    const dito = corrigir(estado.dados, t, agora);
+    if (dito) {
+      const passo = primeiroPassoEmFalta(dito);
+      const abertura = aberturaDaResposta(dito, estado.passo, passo, agora);
+      return {
+        estado: { passo, dados: dito },
+        resposta: abertura + perguntaDo(passo, dito, false),
+      };
+    }
+  }
+
   const d: DadosDaRecolha = { ...estado.dados };
 
   switch (estado.passo) {
@@ -599,7 +662,12 @@ export function responderNaRecolha(
       break;
     }
     case "nome": {
-      if (t.length < 2 || /\d{6,}/.test(t)) {
+      /*
+       * Um nome não tem dois pontos nem seis dígitos seguidos. O que ela
+       * escreveu — «Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544
+       * Lisboa» — passava por aqui sem uma queixa e ficava a ser o nome dela.
+       */
+      if (t.length < 2 || /\d{6,}/.test(t) || t.includes(":") || t.length > 80) {
         return { estado, resposta: "Diga-me o seu nome, por favor." };
       }
       d.contactName = t.slice(0, 120);
@@ -607,7 +675,18 @@ export function responderNaRecolha(
     }
     case "morada": {
       if (t.length < 5) {
-        return { estado, resposta: "Preciso da rua e do número (ex.: Rua Sousa Viterbo 29)." };
+        return { estado, resposta: "Preciso da rua e do número." };
+      }
+      /*
+       * Uma morada tem um número ou uma palavra de rua. Sem nenhum dos dois,
+       * «É um apartamento e tem elevador» era gravado como a morada — e o
+       * profissional recebia isso no lugar de onde tem de ir.
+       */
+      if (!/\d/.test(t) && !PALAVRAS_DE_MORADA.test(semAcentos(t))) {
+        return {
+          estado,
+          resposta: "Preciso da rua e do número — é por aí que o profissional se orienta.",
+        };
       }
       d.address = t.slice(0, 300);
       // Se já veio com o código postal, aproveita-se e não se volta a perguntar.
