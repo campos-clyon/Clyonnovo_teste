@@ -152,6 +152,25 @@ export function simOuNao(texto: string): "sim" | "nao" | null {
   if (/^(n|nao|no|nope|nem|nao tem|nao ha|sem|negativo)$/.test(t)) return "nao";
   if (/^sim\b/.test(t)) return "sim";
   if (/^nao\b/.test(t)) return "nao";
+
+  /*
+   * O SIM QUE NÃO USA A PALAVRA «SIM».
+   *
+   *   CLYON:   Dá para encostar a carrinha à porta, ou fica longe?
+   *   CLIENTE: Dá desde que tenha lugares livres
+   *   CLYON:   Dá para estacionar à porta? Responda sim ou não.
+   *
+   * Ele respondeu com o VERBO DA PERGUNTA, que é a forma mais natural de
+   * responder em português — «Dá para estacionar?» «Dá.» — e levou de volta
+   * uma ordem para falar como uma máquina. A ressalva («desde que tenha
+   * lugares livres») não muda a resposta: dá.
+   *
+   * O «não» manda sobre isto porque é testado ACIMA: «não dá» já saiu daqui
+   * como «nao» antes de chegar a esta linha.
+   */
+  if (/^(da|pode|consegue|tem|ha|existe|cabe|e possivel|sem problema|sem problemas)\b/.test(t)) {
+    return "sim";
+  }
   return null;
 }
 

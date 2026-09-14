@@ -297,8 +297,42 @@ async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean
   return saiu;
 }
 
+/**
+ * O CÉREBRO NÃO DIZ A MESMA COISA DUAS VEZES.
+ *
+ * "O assistente continua a fazer perguntas repetidas." Numa conversa só, a
+ * 14-09-2026: «Qual é a morada?» duas vezes no mesmo minuto, e «Com quem estou
+ * a falar?» quatro vezes em cinco minutos — enquanto o cliente respondia.
+ *
+ * O guarda está AQUI e não em cada sítio que escreve, porque são dezenas e
+ * qualquer um novo nasceria sem ele. E está em `enviarTextoWhatsApp` — a porta
+ * do cérebro — e não em `enviarTextoPorCanal`, que é por onde passa também o
+ * que uma PESSOA escreve no painel: se ela decidir repetir-se, é uma decisão
+ * dela e ninguém lha tira.
+ *
+ * DEVOLVE `true` quando engole. A mensagem ESTÁ no telemóvel dele — foi
+ * entregue há dois minutos — e devolver `false` faria as reservas do
+ * assistente (`podeContarPelaPrimeiraVez`) libertarem-se e tentarem outra vez,
+ * num ciclo que só produzia mais cópias.
+ */
 export async function enviarTextoWhatsApp(para: string, texto: string): Promise<boolean> {
   if (!(await autorizadoAFalarCom(para))) return false;
+
+  try {
+    const { jaFoiDito, MINUTOS_SEM_REPETIR_A_MESMA } = await import("@/lib/nao-repetir");
+    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+    const recentes = await mensagensDoNumeroWhatsApp(para, 20);
+    // O que fica gravado é a forma `paraTeclado` — comparar a de origem nunca
+    // bate, e foi assim que a primeira versão desta guarda não disparou uma
+    // única vez.
+    if (jaFoiDito(paraTeclado(texto), recentes, new Date(), MINUTOS_SEM_REPETIR_A_MESMA / 60)) {
+      console.warn(`[whatsapp] engoli uma repetição para ${para}: ${texto.slice(0, 80)}`);
+      return true;
+    }
+  } catch {
+    /* sem memória, fala — é o comportamento de antes */
+  }
+
   return enviarTextoPorCanal(para, texto);
 }
 

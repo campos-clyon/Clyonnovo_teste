@@ -25,6 +25,28 @@
 /** Quanto tempo uma mesma mensagem continua a ser uma repetição. */
 export const HORAS_SEM_REPETIR = 6;
 
+/**
+ * E o mesmo, para TUDO o que o assistente escreve.
+ *
+ * "O assistente continua a fazer perguntas repetidas." — 14-09-2026, sobre
+ * isto, numa conversa só:
+ *
+ *   19:54  Qual é a morada? Rua e número - é por aí que o profissional...
+ *   19:54  Qual é a morada? Rua e número - é por aí que o profissional...
+ *   19:54  Desculpe, não apanhei. Com quem estou a falar?
+ *   19:56  Com quem estou a falar?
+ *   19:58  Com quem estou a falar?
+ *
+ * Dez minutos e não seis horas: uma pergunta por responder pode ser repetida
+ * mais tarde — isso é insistir, e é legítimo. O que não é legítimo é dizê-la
+ * outra vez enquanto a anterior ainda está no ecrã dele.
+ *
+ * SE NÃO HÁ NADA DE NOVO A DIZER, é melhor não dizer nada: a mensagem do
+ * cliente continua a ser lida na mesma, e o silêncio de dois minutos custa
+ * menos do que a terceira cópia da mesma pergunta.
+ */
+export const MINUTOS_SEM_REPETIR_A_MESMA = 10;
+
 export type SaidaGravada = {
   direccao: string;
   texto: string;
