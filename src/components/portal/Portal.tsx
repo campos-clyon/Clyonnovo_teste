@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ChevronRight, ChevronLeft, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ChevronLeft, type LucideIcon } from "lucide-react";
 
 /**
  * O TRIÂNGULO COM O PONTO DE EXCLAMAÇÃO — «isto ainda não está feito».
@@ -156,7 +156,15 @@ export function LinhaDeMenu({
         </span>
       )}
       {valor && <span className="text-sm text-slate-500">{valor}</span>}
-      <ChevronRight className="h-5 w-5 shrink-0 text-slate-300" aria-hidden="true" />
+      {/*
+        SEM SETINHA — 14-09-2026, "remova as setinhas".
+
+        Estava em todas as linhas de todos os menus a dizer o que a linha ja
+        dizia: e um botao, tem estado de toque, abre alguma coisa. Vinte
+        setas iguais numa coluna sao ruido, e o que se perde ao tira-las e
+        nada — o que se ganha e o valor a direita passar a ser a ultima coisa
+        que se le, que e onde esta a informacao.
+      */}
     </button>
   );
 }

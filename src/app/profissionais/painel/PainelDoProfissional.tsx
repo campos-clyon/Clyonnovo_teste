@@ -87,7 +87,22 @@ export default function PainelDoProfissional() {
   const router = useRouter();
   const params = useSearchParams();
 
-  const pedido = params.get("ecra") ?? "menu";
+  /*
+   * ABRE NOS TRABALHOS — 14-09-2026.
+   *
+   * "Faça com que as contas, ao abrir ou recarregar, sempre abram Os meus
+   * trabalhos por padrão."
+   *
+   * E o que ele vem ca ver. Abrir no menu obrigava a um toque para chegar ao
+   * unico ecra que interessa a quem entra — e num telemovel esse toque
+   * acontecia dez vezes por dia.
+   *
+   * O MENU CONTINUA A SER UM ECRA, agora com endereco proprio (?ecra=menu).
+   * Sem isso, o "voltar" de uma seccao caia no endereco sem query, que passou
+   * a querer dizer «trabalhos» — e a hierarquia que ele descreveu (trabalho →
+   * lista → menu → site) perdia um degrau.
+   */
+  const pedido = params.get("ecra") ?? "trabalhos";
   const ecra: Ecra = (ECRAS_VALIDOS as string[]).includes(pedido) ? (pedido as Ecra) : "menu";
 
   /*
@@ -269,7 +284,7 @@ export default function PainelDoProfissional() {
       return;
     }
     if (ecra !== "menu") {
-      router.push("/profissionais/painel");
+      router.push("/profissionais/painel?ecra=menu");
       return;
     }
     window.location.href = "/";
@@ -277,7 +292,7 @@ export default function PainelDoProfissional() {
 
   function abrir(destino: Ecra) {
     router.push(
-      destino === "menu" ? "/profissionais/painel" : `/profissionais/painel?ecra=${destino}`,
+      `/profissionais/painel?ecra=${destino}`,
     );
   }
 
