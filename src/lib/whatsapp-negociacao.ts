@@ -30,6 +30,7 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 import { jaFoiDito } from "@/lib/nao-repetir";
 import { lerARespostaDirecta, jaSeLeSemModelo } from "@/lib/ler-a-resposta";
+import { lerAData, diaPorPalavras, quandoSera } from "@/lib/ler-a-data";
 
 /**
  * O WhatsApp como ecrã da negociação — o cérebro.
@@ -287,7 +288,12 @@ async function passarAUmaPessoa(telefone: string, porque: string): Promise<void>
  * pendente (se o houver) e contratar. É o mesmo caminho do botão «Fechar» e
  * da palavra SIM: um só corpo, para nunca haver dois comportamentos.
  */
-async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
+async function fecharPeloCliente(
+  telefone: string,
+  alvo: Alvo,
+  /** O que ele escreveu ao fechar — pode trazer o dia lá dentro. */
+  diaQueEleDisse?: string,
+): Promise<void> {
   const {
     assistentePode,
     reservarAvisoDoAssistente,
@@ -402,10 +408,28 @@ async function fecharPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
   // partir de 29-08-2026, e mandar-lhe so a base por mensagem era prometer-lhe
   // um numero que ele nao ia pagar.
   const conta = contaDoCliente(valor, regimeDeIva(alvo.regimeIva));
+  /*
+   * SE ELE JÁ DISSE O DIA, NÃO SE LHE PERGUNTA SE TEM DATA PENSADA.
+   *
+   * «Sim, estou interessada, pode ser no próximo dia 16?» traz a aceitação e o
+   * dia na mesma linha. A frase de sempre — «se já tem data pensada, responda
+   * por exemplo 27/08 14:30» — respondia a quem acabara de dar a data com um
+   * convite para a dar, e com uma lição de formato por cima.
+   *
+   * Falta só a hora, e é só a hora que se pergunta. O exemplo continua lá
+   * porque a resposta tem de ser legível do outro lado: pedir a hora sem dizer
+   * como é que ela se escreve seria fazer uma pergunta que não se sabe ler.
+   */
+  const dito = diaQueEleDisse ? lerAData(diaQueEleDisse) : null;
+  const sobreODia =
+    dito && dito.hora == null
+      ? `\n\nVi que falou no ${diaPorPalavras(dito)}. A que horas lhe dá jeito? Diga-me o dia e a hora juntos — por exemplo, ${dito.dia} às 10h.`
+      : ` Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`;
+
   await enviarTextoWhatsApp(
     telefone,
     `Fechado com ${alvo.profissionalNome} por ${euros(valor)} sem IVA (total a pagar: ${euros(conta.total)}).\n\n` +
-      `O profissional recebeu a morada e o seu contacto. Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`,
+      `O profissional recebeu a morada e o seu contacto.${sobreODia}`,
   );
 }
 
@@ -902,7 +926,7 @@ export async function tratarMensagemDoCliente(
     }
 
     if (alvo) {
-      if (eDeFechar) await fecharPeloCliente(telefone, alvo);
+      if (eDeFechar) await fecharPeloCliente(telefone, alvo, conteudo.texto);
       else await recusarPeloCliente(telefone, alvo);
       return;
     }
@@ -977,22 +1001,37 @@ export async function tratarMensagemDoCliente(
     }
 
     if (alvo) {
-      if (eDeFechar) await fecharPeloCliente(telefone, alvo);
+      if (eDeFechar) await fecharPeloCliente(telefone, alvo, conteudo.texto);
       else await recusarPeloCliente(telefone, alvo);
       return;
     }
   }
 
-  // Data: dd/mm hh:mm (ano opcional). Só faz sentido com trabalho fechado.
-  const data = texto.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?\s+(\d{1,2})[:hH](\d{2})?$/);
-  if (data) {
-    const [, dia, mes, anoStr, hora, minuto] = data;
+  /*
+   * A DATA, COMO AS PESSOAS A ESCREVEM.
+   *
+   * Era `dd/mm hh:mm` e mais nada, e a mensagem de fecho ENSINAVA essa forma.
+   * «dia 16 às 10h» é como se fala, e ficava por ler. Ver `ler-a-data.ts`: um
+   * número sozinho continua a ser contraproposta, porque a hora exige marca.
+   */
+  const lidaAData = lerAData(texto);
+  if (lidaAData && lidaAData.hora == null) {
+    /*
+     * O DIA SEM A HORA NÃO MARCA NADA — mas também não se deita fora.
+     * Pergunta-se só o que falta, e repete-se o dia para ele saber que foi
+     * ouvido.
+     */
+    await enviarTextoWhatsApp(
+      telefone,
+      `Anotei o ${diaPorPalavras(lidaAData)}. A que horas lhe dá jeito? ` +
+        `Diga-me o dia e a hora juntos — por exemplo, ${lidaAData.dia} às 10h.`,
+    );
+    return;
+  }
+  if (lidaAData) {
     const agora = new Date();
-    const ano = anoStr ? Number(anoStr.length === 2 ? `20${anoStr}` : anoStr) : agora.getFullYear();
-    const d = new Date(ano, Number(mes) - 1, Number(dia), Number(hora), Number(minuto ?? 0));
-    // Sem ano e já passou? É do ano que vem — ninguém marca para trás.
-    if (!anoStr && d.getTime() < agora.getTime() - 3600_000) d.setFullYear(ano + 1);
-    if (Number.isNaN(d.getTime()) || d.getTime() < agora.getTime() - 3600_000) {
+    const d = quandoSera(lidaAData, agora);
+    if (!d) {
       await enviarTextoWhatsApp(telefone, "Essa data já passou — confirme o dia e a hora (ex.: 27/08 14:30).");
       return;
     }
