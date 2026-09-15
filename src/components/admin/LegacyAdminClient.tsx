@@ -15,7 +15,6 @@ import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 // Só para MOSTRAR. As taxas não se editam neste ecrã — ver o bloco que o diz.
-import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "@/lib/taxas-plataforma";
 import {
   ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
   type EstadoTicket,
@@ -586,6 +585,26 @@ export default function ColaboradorAdminClient({
   const [loadingSimulatorSettings, setLoadingSimulatorSettings] = useState(false);
   const [savingSettingKey, setSavingSettingKey] = useState<string | null>(null);
 
+  /*
+   * AS TAXAS DA PLATAFORMA — 15-09-2026.
+   *
+   * Estavam neste ecrã como duas caixas a dizer "não se mudam por aqui".
+   * Passaram a mudar-se, depois de cada negociação passar a guardar a sua:
+   * mudar a percentagem já não reescreve o que foi prometido a ninguém.
+   */
+  const [taxas, setTaxas] = useState<{
+    cliente: number;
+    profissional: number;
+    origem: { cliente: number; profissional: number };
+  } | null>(null);
+  const [taxasRascunho, setTaxasRascunho] = useState<{ cliente: string; profissional: string }>({
+    cliente: "",
+    profissional: "",
+  });
+  const [taxasAGravar, setTaxasAGravar] = useState(false);
+  const [taxasErro, setTaxasErro] = useState("");
+  const [taxasGuardadas, setTaxasGuardadas] = useState("");
+
   // Estatísticas do gestor de imagens (para a aba "Imagens do site")
   const [imageStats, setImageStats] = useState<{
     total: number;
@@ -757,6 +776,7 @@ export default function ColaboradorAdminClient({
     // respondiam 403 e a primeira punha uma faixa de erro no ecrã inteiro.
     if (papel === "admin") {
       void carregarSimulatorSettings(storedToken);
+      void carregarTaxas(storedToken);
       void carregarImageStats(storedToken);
       setLoading(false);
     }
@@ -864,6 +884,50 @@ export default function ColaboradorAdminClient({
       setError(err instanceof Error ? err.message : "Não foi possível carregar os valores do simulador.");
     } finally {
       setLoadingSimulatorSettings(false);
+    }
+  };
+
+  const carregarTaxas = async (authToken: string) => {
+    try {
+      const r = await fetch("/api/admin/taxas", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      setTaxas({ cliente: d.cliente, profissional: d.profissional, origem: d.origem });
+      // Em pontos percentuais, que é como uma pessoa as escreve: 5 e não 0,05.
+      setTaxasRascunho({
+        cliente: String(Math.round(d.cliente * 10000) / 100).replace(".", ","),
+        profissional: String(Math.round(d.profissional * 10000) / 100).replace(".", ","),
+      });
+    } catch {
+      // Falhar a ler as taxas não pode partir o ecrã das configurações: a
+      // caixa fica a dizer que não as conseguiu ler, e o resto funciona.
+    }
+  };
+
+  const gravarTaxas = async () => {
+    setTaxasAGravar(true);
+    setTaxasErro("");
+    setTaxasGuardadas("");
+    try {
+      const r = await fetch("/api/admin/taxas", {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(taxasRascunho),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setTaxasErro(d.error ?? "Não foi possível guardar.");
+        return;
+      }
+      setTaxas({ cliente: d.cliente, profissional: d.profissional, origem: d.origem });
+      setTaxasGuardadas("Guardado. Vale para os pedidos que chegarem a partir de agora.");
+    } catch {
+      setTaxasErro("Erro de rede.");
+    } finally {
+      setTaxasAGravar(false);
     }
   };
 
@@ -3197,33 +3261,86 @@ export default function ColaboradorAdminClient({
                   as procurasse dava uma volta inteira para não encontrar nada.
                 */}
                 <div className="mb-4 rounded-[20px] border border-amber-400/20 bg-amber-500/[0.06] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold text-white">Taxas da plataforma</h3>
-                      <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                        Não se mudam por aqui: vivem no código porque alteram o que já foi
-                        prometido a negociações abertas. Para as mudar, é preciso um deploy.
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-4">
-                      <div className="rounded-[14px] border border-white/10 bg-slate-950/40 px-4 py-2 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                          Cliente
-                        </p>
-                        <p className="text-lg font-semibold text-white">
-                          {Math.round(TAXA_CLIENTE * 100)} %
-                        </p>
-                      </div>
-                      <div className="rounded-[14px] border border-white/10 bg-slate-950/40 px-4 py-2 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                          Profissional
-                        </p>
-                        <p className="text-lg font-semibold text-white">
-                          {Math.round(TAXA_PROFISSIONAL * 100)} %
-                        </p>
-                      </div>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Taxas da plataforma</h3>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                      A comissão da CLYON sobre cada trabalho. Uma taxa nova vale só para os
+                      pedidos que chegarem aos profissionais a partir do momento em que a
+                      guardar — cada negociação leva a sua gravada desde que nasce, e por isso
+                      nada do que já foi prometido muda: nem uma carteira, nem o total de um
+                      pedido fechado, nem uma proposta que o cliente já recebeu.
+                    </p>
                   </div>
+
+                  {taxas === null ? (
+                    <p className="mt-3 text-xs text-slate-500">A ler as taxas…</p>
+                  ) : (
+                    <>
+                      <div className="mt-3 flex flex-wrap items-end gap-4">
+                        {(
+                          [
+                            ["cliente", "Cliente", "somada ao que ele paga"],
+                            ["profissional", "Profissional", "descontada ao que ele recebe"],
+                          ] as const
+                        ).map(([campo, etiqueta, ajuda]) => (
+                          <label key={campo} className="block">
+                            <span className="block text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                              {etiqueta}
+                            </span>
+                            <span className="mt-1 flex items-center gap-1.5 rounded-[14px] border border-white/10 bg-slate-950/40 px-3 py-2">
+                              <input
+                                value={taxasRascunho[campo]}
+                                onChange={(e) => {
+                                  setTaxasRascunho((t) => ({ ...t, [campo]: e.target.value }));
+                                  setTaxasGuardadas("");
+                                  setTaxasErro("");
+                                }}
+                                inputMode="decimal"
+                                className="w-16 bg-transparent text-lg font-semibold text-white outline-none"
+                                aria-label={`Taxa ao ${etiqueta.toLowerCase()}, em por cento`}
+                              />
+                              <span className="text-lg font-semibold text-slate-400">%</span>
+                            </span>
+                            <span className="mt-1 block text-[10px] text-slate-500">{ajuda}</span>
+                          </label>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => void gravarTaxas()}
+                          disabled={taxasAGravar}
+                          className="rounded-[14px] bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                        >
+                          {taxasAGravar ? "A guardar…" : "Guardar taxas"}
+                        </button>
+                      </div>
+
+                      {/*
+                        O TOTAL, porque é o número que decide.
+                        Ninguém pensa "5 e 6": pensa "a CLYON fica com 11".
+                      */}
+                      <p className="mt-3 text-xs text-slate-400">
+                        A CLYON fica com{" "}
+                        <strong className="text-white">
+                          {Math.round((taxas.cliente + taxas.profissional) * 10000) / 100} %
+                        </strong>{" "}
+                        de cada trabalho, das duas pontas.
+                        {(taxas.cliente !== taxas.origem.cliente ||
+                          taxas.profissional !== taxas.origem.profissional) && (
+                          <>
+                            {" "}
+                            Antes eram {Math.round(taxas.origem.cliente * 10000) / 100} % e{" "}
+                            {Math.round(taxas.origem.profissional * 10000) / 100} %.
+                          </>
+                        )}
+                      </p>
+
+                      {taxasErro && <p className="mt-2 text-xs text-red-300">{taxasErro}</p>}
+                      {taxasGuardadas && (
+                        <p className="mt-2 text-xs text-emerald-300">{taxasGuardadas}</p>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 {loadingSimulatorSettings ? (

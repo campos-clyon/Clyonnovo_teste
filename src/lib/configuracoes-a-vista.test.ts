@@ -20,10 +20,8 @@ import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "./taxas-plataforma";
  * um valor que exista e que ninguém veja.
  */
 
-const ADMIN = readFileSync(
-  join(process.cwd(), "src/components/admin/LegacyAdminClient.tsx"),
-  "utf8",
-);
+const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+const ADMIN = ler("src/components/admin/LegacyAdminClient.tsx");
 
 /** As chaves nomeadas nos grupos do ecrã. */
 function chavesDosGrupos(): string[] {
@@ -91,18 +89,56 @@ describe("o ecrã das configurações mostra tudo o que existe", () => {
   });
 });
 
-describe("as taxas dizem onde vivem, em vez de se calarem", () => {
-  it("o ecrã mostra-as e explica que não se editam ali", () => {
+/*
+ * ISTO GUARDAVA O CONTRÁRIO — e o contrário deixou de ser verdade.
+ *
+ * Até 15-09-2026 o ecrã mostrava as duas taxas e dizia «não se mudam por
+ * aqui», porque mudá-las teria reescrito o que já foi prometido. Passaram a
+ * mudar-se, depois de cada negociação passar a guardar a sua. O que este bloco
+ * guarda agora é a promessa nova, que é mais forte: que se possam mudar, e que
+ * mudá-las não toque em nada do que já existe.
+ */
+describe("as taxas mudam-se aqui, e só valem para a frente", () => {
+  it("o ecrã tem os dois campos e um botão", () => {
     expect(ADMIN).toContain("Taxas da plataforma");
-    expect(ADMIN).toContain("TAXA_CLIENTE");
-    expect(ADMIN).toContain("TAXA_PROFISSIONAL");
-    expect(ADMIN).toContain("Não se mudam por aqui");
+    expect(ADMIN).toContain("taxasRascunho");
+    expect(ADMIN).toContain("gravarTaxas");
+    expect(ADMIN).toContain("Guardar taxas");
   });
 
-  it("continuam a ser 5 % e 6 % — o ecrã lê a constante, não um número escrito", () => {
+  it("diz, onde se vê, que só vale para os pedidos seguintes", () => {
+    // É a única coisa que quem está a mudar a percentagem precisa de saber, e
+    // a que evita a pergunta "isto vai mexer no que já está fechado?".
+    expect(ADMIN).toContain("a partir de agora");
+    expect(ADMIN).toMatch(/nada do que já foi prometido muda/);
+  });
+
+  it("mostra o que está EM VIGOR, e não a constante do código", () => {
+    /*
+     * A constante passou a ser só a queda para negociações antigas. Um ecrã
+     * que a mostrasse dizia 5 % e 6 % para sempre, mesmo depois de alguém ter
+     * mudado as taxas — e seria a mentira mais cara deste painel.
+     */
+    expect(ADMIN).not.toContain("Math.round(TAXA_CLIENTE * 100)");
+    expect(ADMIN).not.toContain("Math.round(TAXA_PROFISSIONAL * 100)");
+    expect(ADMIN).toContain("/api/admin/taxas");
+  });
+
+  it("as de origem continuam a ser 5 % e 6 %", () => {
+    // É o que vale para tudo o que foi criado antes de haver coluna. Mexer
+    // nelas reescrevia o que já foi facturado.
     expect(Math.round(TAXA_CLIENTE * 100)).toBe(5);
     expect(Math.round(TAXA_PROFISSIONAL * 100)).toBe(6);
-    expect(ADMIN).toContain("Math.round(TAXA_CLIENTE * 100)");
-    expect(ADMIN).toContain("Math.round(TAXA_PROFISSIONAL * 100)");
+  });
+
+  it("só o administrador lá chega — não um assistente", () => {
+    const ROTA = ler("src/app/api/admin/taxas/route.ts");
+    expect(ROTA).toContain("requireAdminGeral");
+    expect(ROTA).not.toContain("requireAdmin(req)");
+  });
+
+  it("e a rota não toca em negociação nenhuma", () => {
+    const ROTA = ler("src/app/api/admin/taxas/route.ts");
+    expect(ROTA).not.toContain("UPDATE negociacoes");
   });
 });
