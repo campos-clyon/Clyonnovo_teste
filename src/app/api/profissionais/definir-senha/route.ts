@@ -9,6 +9,7 @@ import {
   hashDaPalavraPasse,
   assinarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
+  porSessaoNaResposta,
   DURACAO_SESSAO_SEGUNDOS,
 } from "@/lib/profissional-auth";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
@@ -97,15 +98,15 @@ export async function POST(req: NextRequest) {
       await hashDaPalavraPasse(corpo.palavraPasse as string),
     );
 
-    const token = await assinarSessaoDoProfissional(linha.id, linha.name);
+    /*
+     * Aqui fica lembrado sem perguntar: quem acabou de definir a
+     * palavra-passe esta no equipamento dele, e acabou de a escrever. Pedir-
+     * lhe a escolha no mesmo ecra era uma pergunta a mais no unico momento em
+     * que ele so quer entrar.
+     */
+    const token = await assinarSessaoDoProfissional(linha.id, linha.name, true);
     const resposta = NextResponse.json({ ok: true, nome: linha.name });
-    resposta.cookies.set(COOKIE_SESSAO_PROFISSIONAL, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: DURACAO_SESSAO_SEGUNDOS,
-    });
+    porSessaoNaResposta(resposta, token, true);
     return resposta;
   } catch (error) {
     console.error("[profissionais/definir-senha]", error);

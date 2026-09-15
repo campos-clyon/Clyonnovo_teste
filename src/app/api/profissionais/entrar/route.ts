@@ -4,8 +4,10 @@ import {
   palavraPasseConfere,
   assinarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
+  porSessaoNaResposta,
   DURACAO_SESSAO_SEGUNDOS,
 } from "@/lib/profissional-auth";
+import { lerLembrar } from "@/lib/manter-sessao";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "profissional-entrar", 10, 600);
   if (limite.erro) return limite.erro;
 
-  let corpo: { email?: unknown; palavraPasse?: unknown };
+  let corpo: { email?: unknown; palavraPasse?: unknown; lembrar?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -91,15 +93,17 @@ export async function POST(req: NextRequest) {
 
     await registarAcessoDoProfissional(p.id);
 
-    const token = await assinarSessaoDoProfissional(p.id, p.name);
+    /*
+     * MANTER-ME LIGADO — 15-09-2026.
+     *
+     * Vem marcada por omissao, que e o que o sistema sempre fez. Desmarca-la
+     * e dizer «este computador nao e meu»: a sessao passa a morrer com o
+     * browser. Ver `manter-sessao` para as duas duracoes.
+     */
+    const lembrar = lerLembrar(corpo.lembrar);
+    const token = await assinarSessaoDoProfissional(p.id, p.name, lembrar);
     const resposta = NextResponse.json({ ok: true, nome: p.name });
-    resposta.cookies.set(COOKIE_SESSAO_PROFISSIONAL, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: DURACAO_SESSAO_SEGUNDOS,
-    });
+    porSessaoNaResposta(resposta, token, lembrar);
     return resposta;
   } catch (error) {
     console.error("[profissionais/entrar]", error);

@@ -22,7 +22,43 @@ describe("sessão do profissional", () => {
   it("assina e verifica", async () => {
     const t = await assinarSessaoDoProfissional(7, "Transportes Silva");
     const s = await verificarSessaoDoProfissional(t);
-    expect(s).toEqual({ providerId: 7, nome: "Transportes Silva", type: TIPO_PROFISSIONAL });
+    expect(s).toMatchObject({
+      providerId: 7,
+      nome: "Transportes Silva",
+      type: TIPO_PROFISSIONAL,
+      // Por omissao fica lembrado — e o que o sistema sempre fez.
+      lembrar: true,
+    });
+    // A validade vem do token, e e ela que decide a renovacao.
+    expect(typeof s?.expiraEm).toBe("number");
+  });
+
+  it("quem desmarca a caixa fica com uma sessao curta", async () => {
+    /*
+     * A escolha viaja DENTRO do token: tem de sobreviver a cada renovacao, e
+     * um cookie a parte podia ser apagado sozinho e deixar a sessao sem saber
+     * o que ela e.
+     */
+    const t = await assinarSessaoDoProfissional(7, "Transportes Silva", false);
+    const s = await verificarSessaoDoProfissional(t);
+    expect(s?.lembrar).toBe(false);
+  });
+
+  it("um token de ANTES desta mudanca conta como lembrado", async () => {
+    /*
+     * Os tokens ja assinados nao tem `lembrar`. Le-los como "nao lembrar"
+     * deitava fora, de uma vez, toda a gente que estava ligada no dia em que
+     * isto subisse — e eles eram trinta dias de cookie persistente.
+     */
+    const antigo = await new jose.SignJWT({
+      providerId: 9,
+      nome: "Antiga",
+      type: TIPO_PROFISSIONAL,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("30d")
+      .sign(new TextEncoder().encode(process.env.JWT_SECRET as string));
+    expect((await verificarSessaoDoProfissional(antigo))?.lembrar).toBe(true);
   });
 
   it("recusa vazio, lixo e assinatura de outra chave", async () => {

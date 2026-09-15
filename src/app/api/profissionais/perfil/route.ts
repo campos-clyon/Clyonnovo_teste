@@ -14,6 +14,7 @@ import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
+  renovarSessaoSePreciso,
 } from "@/lib/profissional-auth";
 import {
   nifValido,
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
 
     const iban = typeof p.iban === "string" ? p.iban : "";
 
-    return NextResponse.json({
+    const resposta = NextResponse.json({
       perfil: {
         nome: p.name ?? "",
         email: p.email ?? "",
@@ -152,6 +153,24 @@ export async function GET(req: NextRequest) {
         })),
       },
     });
+
+    /*
+     * A SESSAO RENOVA-SE ENQUANTO ELE USA O PAINEL — 15-09-2026.
+     *
+     * "Garanta que funcione para eles nao terem de entrar com senha varias
+     * vezes ao dia." Os trinta dias contavam-se do dia em que ele entrou: ao
+     * trigesimo primeiro era posto fora por muito que tivesse trabalhado todos
+     * os dias. Agora contam-se da ultima vez que ca esteve.
+     *
+     * AQUI e nao noutra rota porque o painel pede SEMPRE o perfil — ao abrir e
+     * de minuto a minuto. E a unica que se pode prometer que corre em todas as
+     * visitas.
+     *
+     * So passada metade do prazo, e so a quem pediu para ficar ligado: as duas
+     * condicoes estao em `devePrologar`. Falhar nao impede a resposta.
+     */
+    await renovarSessaoSePreciso(resposta, sessao);
+    return resposta;
   } catch (error) {
     console.error("[profissionais/perfil GET]", error);
     return NextResponse.json({ error: "Erro ao carregar o perfil" }, { status: 500 });

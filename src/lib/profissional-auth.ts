@@ -1,4 +1,10 @@
 import * as jose from "jose";
+import {
+  LEMBRAR_POR_OMISSAO,
+  devePrologar,
+  duracaoDaSessao,
+  maxAgeDoCookie,
+} from "./manter-sessao";
 import * as bcrypt from "bcryptjs";
 
 /**
@@ -29,6 +35,16 @@ export type SessaoDoProfissional = {
   providerId: number;
   nome: string;
   type: typeof TIPO_PROFISSIONAL;
+  /**
+   * Ele pediu para ficar ligado — ver `manter-sessao`.
+   *
+   * Viaja DENTRO do token e nao num cookie ao lado: a escolha tem de sobreviver
+   * a cada renovacao, e um cookie a parte podia ser apagado sozinho e deixar a
+   * sessao sem saber o que ela e.
+   */
+  lembrar: boolean;
+  /** Quando o token deixa de valer, em segundos. E o que decide a renovacao. */
+  expiraEm: number | null;
 };
 
 function chave() {
@@ -45,10 +61,21 @@ function chave() {
 export async function assinarSessaoDoProfissional(
   providerId: number,
   nome: string,
+  /**
+   * Manter-me ligado. Por omissao SIM — e o que o sistema sempre fez, e o que
+   * ele quer em quase todos os casos. Ver `LEMBRAR_POR_OMISSAO`.
+   */
+  lembrar: boolean = LEMBRAR_POR_OMISSAO,
 ): Promise<string> {
-  return new jose.SignJWT({ providerId, nome, type: TIPO_PROFISSIONAL })
+  /*
+   * O prazo sai da escolha, e nao de um "30d" escrito a mao aqui. Eram dois
+   * numeros a ter de concordar — este e o `maxAge` do cookie — e o dia em que
+   * discordassem dava um token vivo dentro de um cookie morto, ou o inverso:
+   * uma sessao que o browser guarda e o servidor recusa.
+   */
+  return new jose.SignJWT({ providerId, nome, type: TIPO_PROFISSIONAL, lembrar })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
+    .setExpirationTime(`${duracaoDaSessao(lembrar)}s`)
     .sign(chave());
 }
 
@@ -65,7 +92,19 @@ export async function verificarSessaoDoProfissional(
     if (p.type !== TIPO_PROFISSIONAL) return null;
     if (typeof p.providerId !== "number" || typeof p.nome !== "string") return null;
 
-    return { providerId: p.providerId, nome: p.nome, type: TIPO_PROFISSIONAL };
+    return {
+      providerId: p.providerId,
+      nome: p.nome,
+      type: TIPO_PROFISSIONAL,
+      /*
+       * Os tokens assinados ANTES desta mudanca nao tem `lembrar`. Contam como
+       * lembrados, que e o que eram: trinta dias de cookie persistente. Le-los
+       * como "nao lembrar" deitava fora, de uma vez, toda a gente que estava
+       * ligada no dia em que isto subisse.
+       */
+      lembrar: p.lembrar === false ? false : true,
+      expiraEm: typeof p.exp === "number" ? p.exp : null,
+    };
   } catch {
     return null;
   }
@@ -118,6 +157,70 @@ export async function palavraPasseConfere(
   try {
     return await bcrypt.compare(valor, hashGuardado);
   } catch {
+    return false;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * O COOKIE, NUM SÍTIO SÓ.
+ *
+ * Eram três rotas a escrevê-lo com cinco opções copiadas à mão — entrar,
+ * definir a palavra-passe, e agora a renovação. Cinco opções copiadas três
+ * vezes é uma que um dia fica diferente das outras, e a que fica diferente é
+ * sempre a que ninguém olha: um `httpOnly` esquecido abre a sessão ao
+ * JavaScript da página, e um `maxAge` esquecido faz dela um cookie que morre
+ * com o browser. Foi por isso que isto passou a ter nome.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+type RespostaComCookies = {
+  cookies: {
+    set: (nome: string, valor: string, opcoes: Record<string, unknown>) => unknown;
+  };
+};
+
+/** Escreve a sessão na resposta, com as opções certas para a escolha dele. */
+export function porSessaoNaResposta(
+  resposta: RespostaComCookies,
+  token: string,
+  lembrar: boolean,
+): void {
+  resposta.cookies.set(COOKIE_SESSAO_PROFISSIONAL, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAgeDoCookie(lembrar),
+  });
+}
+
+/**
+ * RENOVAR A SESSÃO DE QUEM ESTÁ A USAR O PAINEL.
+ *
+ * "Garanta que funcione para eles não terem de entrar com senha várias vezes
+ * ao dia." — 15-09-2026.
+ *
+ * Sem isto, os trinta dias contavam-se do dia em que ele entrou: ao trigésimo
+ * primeiro era posto fora por muito que tivesse trabalhado todos os dias.
+ * Agora o prazo conta-se da última vez que cá esteve — enquanto usar, nunca sai.
+ *
+ * Só depois de METADE do prazo, e só a quem pediu para ser lembrado. As duas
+ * condições estão em `devePrologar`, com o porquê de cada uma.
+ *
+ * Não devolve erro: falhar a renovar deixa a sessão como estava, que ainda
+ * tem quinze dias pela frente. Nunca pode impedir a resposta de sair.
+ */
+export async function renovarSessaoSePreciso(
+  resposta: RespostaComCookies,
+  sessao: SessaoDoProfissional,
+  agora: Date = new Date(),
+): Promise<boolean> {
+  if (!devePrologar(sessao.expiraEm, sessao.lembrar, agora)) return false;
+  try {
+    const token = await assinarSessaoDoProfissional(sessao.providerId, sessao.nome, sessao.lembrar);
+    porSessaoNaResposta(resposta, token, sessao.lembrar);
+    return true;
+  } catch (e) {
+    console.error("[profissional-auth] não renovei a sessão:", e instanceof Error ? e.message : e);
     return false;
   }
 }

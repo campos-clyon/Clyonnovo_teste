@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DIAS_A_LEMBRAR, LEMBRAR_POR_OMISSAO } from "@/lib/manter-sessao";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
@@ -13,6 +14,14 @@ export default function EntrarForm() {
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
   const [semPalavraPasse, setSemPalavraPasse] = useState(false);
+  /*
+   * MARCADA POR OMISSAO — e uma decisao, nao um descuido.
+   *
+   * E o que ele quer em quase todos os casos: entra do telemovel dele, para
+   * ver os trabalhos dele. A caixa existe para quem precisa do contrario
+   * poder dize-lo. Ver `LEMBRAR_POR_OMISSAO` em manter-sessao.
+   */
+  const [lembrar, setLembrar] = useState(LEMBRAR_POR_OMISSAO);
 
   async function submeter(ev: React.FormEvent) {
     ev.preventDefault();
@@ -23,7 +32,7 @@ export default function EntrarForm() {
       const res = await fetch("/api/profissionais/entrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, palavraPasse }),
+        body: JSON.stringify({ email, palavraPasse, lembrar }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -94,6 +103,33 @@ export default function EntrarForm() {
               </button>
             </div>
           </div>
+
+          {/*
+            MANTER-ME LIGADO — 15-09-2026.
+
+            "Crie a opcao manter-me conectado, e garanta que funcione para eles
+            nao terem de entrar com senha varias vezes ao dia."
+
+            A frase por baixo diz o prazo em vez de prometer "para sempre": um
+            numero e uma promessa que se pode cumprir, e e o que distingue
+            esta caixa de um enfeite.
+          */}
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={lembrar}
+              onChange={(e) => setLembrar(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+            />
+            <span className="text-sm text-slate-700">
+              Manter-me ligado
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {lembrar
+                  ? `Nao pede a palavra-passe outra vez durante ${DIAS_A_LEMBRAR} dias — e enquanto for usando, nunca pede.`
+                  : "Termina quando fechar o browser. Escolha isto num computador que nao e seu."}
+              </span>
+            </span>
+          </label>
 
           {erro && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
