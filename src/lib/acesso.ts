@@ -46,15 +46,30 @@ const ORIGEM_LABELS: Record<string, string> = {
   quero_contratar: "Contratar",
   quero_contratar_header: "Contratar",
   simulador: "Simulador",
+  /*
+   * Estava a cair no valor cru — «whatsapp», em minúsculas, no meio de
+   * etiquetas todas com maiúscula. Não era um erro, era a falta de uma linha
+   * aqui: sem entrada no mapa, mostra-se o slug tal e qual.
+   */
+  whatsapp: "WhatsApp",
   // Enquanto o MVP estiver fechado, estes pedidos são de teste e caem na mesma
   // lista dos reais. Sem uma etiqueta que salte à vista, alguém da equipa
   // liga a um cliente que não existe, ou manda uma carrinha a uma morada
   // inventada.
   plataforma: "TESTE · plataforma",
-  // Registado à mão pela equipa, a partir de um WhatsApp ou de um telefonema.
-  // Merece etiqueta própria: nestes, quem responde às propostas é a CLYON e
-  // não o cliente — e quem abrir a lista tem de saber isso sem ter de entrar.
-  backoffice: "Registado pela CLYON",
+  /*
+   * Registado à mão pela equipa, a partir de um WhatsApp ou de um telefonema.
+   * Merece etiqueta própria: nestes, quem responde às propostas é a CLYON e
+   * não o cliente — e quem abrir a lista tem de saber isso sem ter de entrar.
+   *
+   * UMA PALAVRA, e não «Registado pela CLYON» — 15-09-2026. Esta era a única
+   * etiqueta com três palavras, e numa coluna estreita partia-se em três
+   * linhas: a pílula ficava um bloco alto e torto e esticava a altura da linha
+   * inteira, ao lado de «Simulador» e «Contactos» que cabem numa. Debaixo do
+   * cabeçalho «Origem», «CLYON» diz o mesmo — de onde veio — e diz igual às
+   * outras.
+   */
+  backoffice: "CLYON",
 };
 
 export type OrigemPedido = { label: string; slug: string };

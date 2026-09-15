@@ -2096,7 +2096,14 @@ export default function ColaboradorAdminClient({
                               </td>
                               {/* Origem */}
                               <td className="px-2 py-3.5">
-                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${origemStyle}`}>
+                                {/*
+                                  `whitespace-nowrap` pela mesma razão da pílula
+                                  da Fase: numa coluna estreita, «Formulário do
+                                  site» partia-se ao meio dentro da pílula e o
+                                  que se via era um bloco torto a esticar a
+                                  altura da linha inteira.
+                                */}
+                                <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${origemStyle}`}>
                                   {origemLabel}
                                 </span>
                               </td>
