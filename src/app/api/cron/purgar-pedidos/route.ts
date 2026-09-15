@@ -3,6 +3,7 @@ import {
   purgarPedidosTerminados,
   purgarRecolhasDoWhatsApp,
   registarSemFalhar,
+  tentarOsEventosPorApagar,
 } from "@/lib/db";
 import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
@@ -91,11 +92,24 @@ export async function GET(req: NextRequest) {
     });
 
     /*
-     * Em modo seco regista-se SEMPRE que houvesse alguma coisa a apagar, e não
-     * só quando se apagou: o número é justamente o que se quer ver antes de
-     * armar. A seco, um "zero" também vale a pena — diz que não há nada
-     * acumulado, que é uma resposta.
+     * OS EVENTOS QUE FICARAM DE OUTRAS NOITES, tentados outra vez.
+     *
+     * Estes correm SEMPRE, armada ou não: não apagam pedido nenhum, arrumam o
+     * que já foi apagado. Um pedido cujo evento não saiu é dado pessoal a mais
+     * na agenda — e a passagem seguinte é a única coisa que o tira de lá sem
+     * alguém se lembrar.
      */
+    const eventos = await tentarOsEventosPorApagar(50).catch((e) => {
+      console.error("[cron/purgar-pedidos] eventos por apagar:", e);
+      return { tentados: 0, apagados: 0, ficaram: 0, desistidos: 0 };
+    });
+    if (eventos.tentados > 0) {
+      console.warn(
+        `[cron/purgar-pedidos] eventos atrasados: ${eventos.tentados} tentado(s), ` +
+          `${eventos.apagados} apagado(s), ${eventos.ficaram} ainda por sair, ${eventos.desistidos} desistido(s)`,
+      );
+    }
+
     /*
      * As recolhas ditas por palavras, e só quando há alguma. Uma linha a dizer
      * "0 recolhas" todas as noites durante meses é ruído que ensina a não ler
@@ -112,12 +126,26 @@ export async function GET(req: NextRequest) {
             .join(" e ")
         : "";
 
+    const eventosEmPalavras =
+      eventos.tentados > 0
+        ? `. Da lista de atrasados: ${eventos.apagados} saíram da agenda` +
+          (eventos.ficaram > 0 ? `, ${eventos.ficaram} ainda por sair` : "") +
+          (eventos.desistidos > 0 ? `, ${eventos.desistidos} desistido(s) ao fim de muitas noites` : "")
+        : "";
+
+    /*
+     * Em modo seco regista-se SEMPRE que houvesse alguma coisa a apagar, e não
+     * só quando se apagou: o número é justamente o que se quer ver antes de
+     * armar. A seco, um "zero" também vale a pena — diz que não há nada
+     * acumulado, que é uma resposta.
+     */
     if (
       r.expurgados > 0 ||
       r.falhados.length > 0 ||
       !r.aSerio ||
       recolhas.abandonadas > 0 ||
-      recolhas.orfas > 0
+      recolhas.orfas > 0 ||
+      eventos.tentados > 0
     ) {
       await registarSemFalhar({
         acontecimento: "pedido_expurgado",
@@ -143,11 +171,13 @@ export async function GET(req: NextRequest) {
               : "") +
             (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
             (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
-            recolhasEmPalavras
+            recolhasEmPalavras +
+            eventosEmPalavras
           : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s), ` +
             `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
             (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
             recolhasEmPalavras +
+            eventosEmPalavras +
             `. Para armar, ponha PURGA_ARMADA=sim na Vercel.`,
         detalhe: {
           falhados: r.falhados,
@@ -159,6 +189,7 @@ export async function GET(req: NextRequest) {
           eventosNaoEncontrados: r.eventosNaoEncontrados,
           recolhasAbandonadas: recolhas.abandonadas,
           recolhasOrfas: recolhas.orfas,
+          eventosAtrasados: eventos,
         },
       });
     }

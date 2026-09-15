@@ -7,6 +7,7 @@ import {
   ensureUsersSchema,
   apagarContaDeCliente,
   apagarFotosDoBlob,
+  guardarEventoPorApagar,
   ContaComPendencias,
 } from "@/lib/db";
 
@@ -334,6 +335,16 @@ export async function DELETE(req: NextRequest) {
         for (const ev of r.eventos) {
           const fim = await apagarEventoDoCalendario(ev.eventId, ev.calendarId);
           if (!fim.apagado && !fim.naoExistia) {
+            // Vai para a lista de arrumação: o cron da purga tenta outra vez
+            // todas as noites até sair. Sem isto, uma avaria da Google na hora
+            // exacta em que a pessoa pede o apagamento deixava os dados dela
+            // na agenda para sempre.
+            await guardarEventoPorApagar(
+              ev.eventId,
+              ev.calendarId,
+              null,
+              fim.erro ?? "404 — evento ou agenda",
+            );
             console.error(
               `[api/users/me DELETE] o evento ${ev.eventId} ficou na agenda:`,
               fim.erro ?? "404 — evento ou agenda",

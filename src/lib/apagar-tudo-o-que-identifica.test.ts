@@ -193,8 +193,15 @@ describe("sem passado, é mesmo apagada", () => {
   });
 
   it("o passado é o que decide, e conta-se antes", () => {
+    // As TRÊS coisas que fazem a linha ficar, e não a forma como estão
+    // escritas: a contagem dos pedidos passou a ser uma lista de números (são
+    // eles que permitem ir tirar o nome dele da folha do Google Sheets).
     expect(DB).toContain("const temPassado =");
-    expect(DB).toContain("negociacoes.length > 0 || levantamentos.length > 0 || pedidosAtribuidos > 0");
+    const i = DB.indexOf("const temPassado =");
+    const condicao = DB.slice(i, i + 200);
+    expect(condicao).toContain("negociacoes.length > 0");
+    expect(condicao).toContain("levantamentos.length > 0");
+    expect(condicao).toMatch(/pedidos\w*\.length > 0/);
   });
 
   it("não se apaga uma conta com dinheiro pelo meio", () => {

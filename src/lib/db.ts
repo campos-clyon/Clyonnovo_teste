@@ -4578,10 +4578,23 @@ export async function deleteSimulatorOrder(
          */
         calendarEventId: (pedido?.calendarEventId as string) ?? null,
         calendarTargetId: (pedido?.calendarTargetId as string) ?? null,
+        /*
+         * O NÚMERO DO PROFISSIONAL, E NÃO O NOME DELE.
+         *
+         * Esta linha-retrato não leva `providerId` na coluna — leva vários
+         * profissionais dentro do detalhe. E `anonimizarRegisto` procura por
+         * `clienteEmail = ? OR providerId = ?`: quando o profissional apagava
+         * a conta, esta linha não casava com o WHERE, o `detalheJson` não era
+         * limpo, e o nome dele ficava aqui dentro para sempre. É à letra o
+         * erro que o comentário da própria tabela descreve — limpar as colunas
+         * do nome e deixá-lo escrito dentro do JSON ao lado.
+         *
+         * O nome não se perde: há uma linha por profissional logo a seguir,
+         * com `providerId` na coluna, e essa a anonimização apanha.
+         */
         negociacoes: negociacoes.map((n) => ({
           id: Number(n.id),
           providerId: Number(n.providerId),
-          profissional: (n.profissionalNome as string) ?? null,
           estado: n.estado,
           valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
           execucaoEnviadaEm: n.execucaoEnviadaEm ?? null,
@@ -4672,6 +4685,18 @@ export async function deleteSimulatorOrder(
    * permite ir à agenda apagá-lo à mão.
    */
   if (ficouNaAgenda) {
+    /*
+     * Primeiro a lista de arrumação, que é o que faz alguma coisa acontecer.
+     * O registo é para se ler; a lista é para o cron voltar a tentar amanhã.
+     * E sobrevive à anonimização, que apaga o detalhe do registo — era aí que
+     * o ponteiro se perdia, justamente no pedido de apagamento.
+     */
+    await guardarEventoPorApagar(
+      ficouNaAgenda,
+      (pedido?.calendarTargetId as string) ?? null,
+      id,
+      evento.erro ?? "404 — evento ou agenda",
+    );
     await registarSemFalhar({
       acontecimento: contexto.acontecimento ?? "pedido_apagado",
       pedidoId: id,
@@ -5386,11 +5411,18 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
   await pool
     .execute("DELETE FROM whatsappRecolhas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
     .catch(() => {});
+  /*
+   * A FILA INTEIRA, E NÃO SÓ O QUE AINDA NÃO SAIU.
+   *
+   * Isto tinha `enviadoEm IS NULL`, e a intenção era boa: travar o que estava
+   * à espera de sair. Mas o efeito era prometer o apagar da conversa e deixar
+   * metade dela — cada linha já entregue guarda o TEXTO da resposta, e as
+   * respostas do assistente citam o nome, a morada e o resumo do pedido. O
+   * painel dizia «conversa apagada» e o fio continuava numa tabela ao lado.
+   * Verificado a 15-09-2026.
+   */
   await pool
-    .execute(
-      "DELETE FROM whatsappFila WHERE enviadoEm IS NULL AND RIGHT(telefone, 9) = RIGHT(?, 9)",
-      [digitos],
-    )
+    .execute("DELETE FROM whatsappFila WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
     .catch(() => {});
   // Arquivada e apagada não é estado nenhum: sem fio, a linha sai da mesa por si.
   await pool
@@ -6691,6 +6723,11 @@ export type ApagarProfissionalResultado = {
    * público onde estava.
    */
   fotoDaViaturaApagada: boolean;
+  /**
+   * Linhas da folha do Google Sheets onde o nome dele deu lugar a
+   * «Profissional removido». Zero quando não há folha configurada.
+   */
+  linhasDaFolha: number;
 };
 
 export async function apagarProfissional(
@@ -6805,12 +6842,15 @@ export async function apagarProfissional(
 
     // Há passado? Então a linha fica — as negociações apontam-lhe por número, e
     // o cliente que o contratou continua a ter direito ao histórico dele.
+    // Os números, e não só a contagem: são eles que permitem ir tirar o nome
+    // dele da folha do Google Sheets, mais abaixo.
     const [oLinhas] = (await conn.execute(
-      "SELECT COUNT(*) AS n FROM simulatorOrders WHERE providerId = ?",
+      "SELECT id FROM simulatorOrders WHERE providerId = ?",
       [providerId],
     )) as any[];
-    const pedidosAtribuidos = Number((oLinhas as Array<{ n: number }>)[0]?.n ?? 0);
-    const temPassado = negociacoes.length > 0 || levantamentos.length > 0 || pedidosAtribuidos > 0;
+    const pedidosDele = (oLinhas as Array<{ id: number }>).map((l) => Number(l.id));
+    const temPassado =
+      negociacoes.length > 0 || levantamentos.length > 0 || pedidosDele.length > 0;
 
     await registarNaTransaccao(conn, {
       acontecimento: "conta_apagada",
@@ -6907,12 +6947,30 @@ export async function apagarProfissional(
       }
     }
 
+    /*
+     * E O NOME DELE NA FOLHA DO GOOGLE SHEETS.
+     *
+     * Cada pedido concluído escreve na folha uma linha com o nome de quem o
+     * fez. Nada voltava lá — nem a purga, nem isto: a base ficava anonimizada
+     * e o nome continuava numa folha partilhada, ao lado de trabalhos, valores
+     * e localidades. Verificado a 15-09-2026.
+     *
+     * Import dinâmico porque `google-sheets.ts` importa deste ficheiro; e
+     * depois do commit, como tudo o que vive fora da base.
+     */
+    let linhasDaFolha = 0;
+    if (pedidosDele.length > 0) {
+      const { limparNomeDoProfissionalNaFolha } = await import("./google-sheets");
+      linhasDaFolha = await limparNomeDoProfissionalNaFolha(pedidosDele).catch(() => 0);
+    }
+
     return {
       modo: temPassado ? "anonimizado" : "removido",
       nome: p.name,
       negociacoes: negociacoes.length,
       registosAnonimizados,
       fotoDaViaturaApagada,
+      linhasDaFolha,
     };
   } catch (e) {
     try {
@@ -7295,6 +7353,163 @@ async function contarEventosDe(ids: number[]): Promise<number> {
     ids,
   )) as any[];
   return Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * OS EVENTOS QUE FICARAM POR APAGAR — a lista de coisas por arrumar.
+ *
+ * Quando a Google recusa apagar um evento, o pedido já se foi e o `eventId`
+ * é a única forma de lá voltar. Estava escrito no detalhe do registo
+ * permanente — e isso tinha um buraco que a revisão apanhou: `anonimizarRegisto`
+ * põe `detalheJson = NULL` em todas as linhas do titular. Ou seja, o ponteiro
+ * desaparecia exactamente no dia em que a pessoa pedia o apagamento, que é
+ * quando ele fazia falta.
+ *
+ * Esta tabela não é história, é uma lista de tarefas: só ids de eventos e de
+ * agendas, nada que identifique ninguém, e cada linha sai dela assim que o
+ * evento sair da agenda. Por isso pode — e deve — sobreviver à anonimização.
+ *
+ * O cron da purga tenta-as todas as noites. Uma avaria da Google que dure dois
+ * dias arruma-se sozinha ao terceiro.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Ao fim de tantas noites a responder 404, a linha sai da lista. */
+const TENTATIVAS_ATE_DESISTIR = 20;
+
+let eventosPorApagarReady = false;
+async function ensureEventosPorApagarTable() {
+  if (eventosPorApagarReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS eventosPorApagar (
+      id         INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      eventId    VARCHAR(255) NOT NULL,
+      calendarId VARCHAR(255) NULL,
+      pedidoId   INT NULL,
+      tentativas INT NOT NULL DEFAULT 1,
+      ultimoErro VARCHAR(300) NULL,
+      criadoEm   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      tentadoEm  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_evento (eventId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  eventosPorApagarReady = true;
+}
+
+/**
+ * Põe um evento na lista, ou conta mais uma tentativa se já lá estava.
+ *
+ * Nunca atira: quem chama está a acabar de apagar um pedido ou uma conta, e
+ * não pode ver essa operação falhar por causa da lista de arrumação.
+ */
+export async function guardarEventoPorApagar(
+  eventId: string,
+  calendarId: string | null,
+  pedidoId: number | null,
+  erro: string | null,
+): Promise<void> {
+  try {
+    await ensureEventosPorApagarTable();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `INSERT INTO eventosPorApagar (eventId, calendarId, pedidoId, ultimoErro)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         tentativas = tentativas + 1,
+         ultimoErro = VALUES(ultimoErro),
+         calendarId = COALESCE(VALUES(calendarId), calendarId)`,
+      [eventId, calendarId, pedidoId, erro ? erro.slice(0, 300) : null],
+    );
+  } catch (e) {
+    console.error("[guardarEventoPorApagar] não gravou", eventId, e);
+  }
+}
+
+export type ResultadoDosEventosPorApagar = {
+  tentados: number;
+  apagados: number;
+  ficaram: number;
+  /** Desistiu-se ao fim de muitas noites a 404 — provavelmente já lá não está. */
+  desistidos: number;
+};
+
+/**
+ * Tenta outra vez os eventos que ficaram. Corre no cron da purga.
+ *
+ * Sai da lista quando o evento sai da agenda, e também quando a Google diz 410
+ * («foi apagado») — nos dois casos o trabalho está feito. Um 404 mantém-se na
+ * lista, porque pode ser a agenda a ter deixado de estar partilhada e isso
+ * arranja-se; ao fim de `TENTATIVAS_ATE_DESISTIR` noites desiste-se, com o id
+ * escrito nos registos.
+ */
+export async function tentarOsEventosPorApagar(
+  limite = 50,
+): Promise<ResultadoDosEventosPorApagar> {
+  await ensureEventosPorApagarTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const n = Math.max(1, Math.min(500, Math.floor(limite)));
+  const [linhas] = (await pool.execute(
+    `SELECT id, eventId, calendarId, pedidoId, tentativas
+       FROM eventosPorApagar ORDER BY tentadoEm ASC LIMIT ${n}`,
+  )) as any[];
+  const lista = linhas as Array<{
+    id: number;
+    eventId: string;
+    calendarId: string | null;
+    pedidoId: number | null;
+    tentativas: number;
+  }>;
+  if (lista.length === 0) return { tentados: 0, apagados: 0, ficaram: 0, desistidos: 0 };
+
+  const { apagarEventoDoCalendario } = await import("./apagar-evento-do-calendario");
+  let apagados = 0;
+  let ficaram = 0;
+  let desistidos = 0;
+
+  for (const l of lista) {
+    const fim = await apagarEventoDoCalendario(l.eventId, l.calendarId);
+    if (fim.apagado || fim.naoExistia) {
+      await pool.execute("DELETE FROM eventosPorApagar WHERE id = ?", [l.id]).catch(() => {});
+      if (fim.apagado) apagados += 1;
+      continue;
+    }
+    if (fim.naoEncontrado && l.tentativas + 1 >= TENTATIVAS_ATE_DESISTIR) {
+      await pool.execute("DELETE FROM eventosPorApagar WHERE id = ?", [l.id]).catch(() => {});
+      desistidos += 1;
+      console.warn(
+        `[tentarOsEventosPorApagar] desisti do evento ${l.eventId} ao fim de ${l.tentativas + 1} noites a 404`,
+      );
+      continue;
+    }
+    await guardarEventoPorApagar(
+      l.eventId,
+      l.calendarId,
+      l.pedidoId,
+      fim.erro ?? "404 — evento ou agenda",
+    );
+    ficaram += 1;
+  }
+
+  return { tentados: lista.length, apagados, ficaram, desistidos };
+}
+
+/** Quantos estão à espera. Para o painel da retenção. */
+export async function quantosEventosPorApagar(): Promise<number> {
+  try {
+    await ensureEventosPorApagarTable();
+    const pool = await getPool();
+    if (!pool) return 0;
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM eventosPorApagar",
+    )) as any[];
+    return Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch {
+    return 0;
+  }
 }
 
 /**

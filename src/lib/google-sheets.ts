@@ -101,3 +101,61 @@ export async function exportCompletedOrderToSheet(order: OrderRowSource): Promis
     console.error(`[google-sheets] Falha ao exportar pedido #${order.id}:`, err instanceof Error ? err.message : err);
   }
 }
+
+/**
+ * TIRAR O NOME DE UM PROFISSIONAL DA FOLHA.
+ *
+ * A folha guarda, por cada pedido concluído, o NOME de quem o fez (coluna G).
+ * Nada voltava lá: nem a purga, nem o apagar da conta. O profissional apagava
+ * a conta, a base ficava anonimizada — e o nome dele continuava numa folha
+ * partilhada, ao lado de trabalhos, valores e localidades, para sempre.
+ * Verificado a 15-09-2026.
+ *
+ * MATCHA-SE PELO NÚMERO DO PEDIDO, e não pelo nome. Dois profissionais podem
+ * chamar-se o mesmo, e apagar a conta de um não pode levar o nome do outro. A
+ * coluna A já tem o número do pedido, por isso não é preciso mexer na forma da
+ * folha.
+ *
+ * NUNCA ATIRA. Quem chama está a acabar de apagar uma conta, e essa operação
+ * não pode falhar por causa de uma folha de cálculo. O que não sair fica
+ * escrito nos registos.
+ */
+export async function limparNomeDoProfissionalNaFolha(
+  pedidoIds: number[],
+  substituto = "Profissional removido",
+): Promise<number> {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId || pedidoIds.length === 0) return 0;
+
+  try {
+    const sheets = getSheetsClient();
+    // Só a coluna A: é o número do pedido, e é tudo o que é preciso para
+    // saber em que linha está cada um. Puxar a folha inteira era trazer os
+    // valores todos para dentro do processo sem razão nenhuma.
+    const leitura = await sheets.spreadsheets.values.get({ spreadsheetId, range: "A:A" });
+    const linhas = leitura.data.values ?? [];
+    const procurados = new Set(pedidoIds.map((n) => String(n)));
+
+    const alteracoes: Array<{ range: string; values: string[][] }> = [];
+    for (let i = 0; i < linhas.length; i += 1) {
+      const idNaFolha = String(linhas[i]?.[0] ?? "").trim();
+      if (!procurados.has(idNaFolha)) continue;
+      // As linhas da folha contam a partir de 1.
+      alteracoes.push({ range: `G${i + 1}`, values: [[substituto]] });
+    }
+    if (alteracoes.length === 0) return 0;
+
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data: alteracoes },
+    });
+    console.log(`[google-sheets] nome do profissional limpo em ${alteracoes.length} linha(s).`);
+    return alteracoes.length;
+  } catch (err) {
+    console.error(
+      "[google-sheets] não foi possível limpar o nome do profissional:",
+      err instanceof Error ? err.message : err,
+    );
+    return 0;
+  }
+}

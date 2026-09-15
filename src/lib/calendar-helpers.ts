@@ -135,8 +135,20 @@ export async function generateOperationalSummary(order: Record<string, any>): Pr
       ? getMovingAddresses(order)
       : { originAddress: "", destinationAddress: "", originAccess: {}, destinationAccess: {}, movingDistance: {} };
 
+  /*
+   * O NOME DO CLIENTE NÃO VAI PARA AQUI — 15-09-2026.
+   *
+   * Isto manda os dados do pedido para a API do Gemini, que é um terceiro, e
+   * não há caminho nenhum para apagar de lá o que já foi enviado. A morada e a
+   * descrição são precisas: o resumo é para a equipa saber onde vai e o que
+   * leva. O nome não é — o próprio pedido acima diz o que incluir («o que
+   * fazer, moradas, itens, avisos de acesso») e o nome não está lá.
+   *
+   * E não se perde nada: a ficha do evento já leva o nome, o telefone e o
+   * email em campos próprios (ver `buildStructuredDescription`), escritos por
+   * nós e sem passar por modelo nenhum.
+   */
   const parts: string[] = [
-    `Cliente: ${order.contactName || "—"}`,
     `Serviço: ${order.serviceType || "—"}`,
     `Descrição original: ${order.description || "—"}`,
   ];
