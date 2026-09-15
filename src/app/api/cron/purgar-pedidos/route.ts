@@ -130,6 +130,17 @@ export async function GET(req: NextRequest) {
             (r.eventosQueFicaram > 0
               ? `, ${r.eventosQueFicaram} evento(s) ficaram na agenda e têm de sair à mão`
               : "") +
+            /*
+             * O 404 à parte, e com o que ele quer dizer escrito ao lado.
+             *
+             * A Google responde 404 tanto a «este evento já não existe» como a
+             * «esta agenda não está partilhada contigo». Um é normal; muitos
+             * de seguida são a partilha da agenda a ter caído — e é preciso
+             * que isso se leia como avaria, e não como trabalho feito.
+             */
+            (r.eventosNaoEncontrados > 0
+              ? `, ${r.eventosNaoEncontrados} com 404 (evento já apagado, ou a agenda deixou de estar partilhada com a service account)`
+              : "") +
             (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
             (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
             recolhasEmPalavras
@@ -145,6 +156,7 @@ export async function GET(req: NextRequest) {
           naMira: r.naMira,
           eventosApagados: r.eventosApagados,
           eventosQueFicaram: r.eventosQueFicaram,
+          eventosNaoEncontrados: r.eventosNaoEncontrados,
           recolhasAbandonadas: recolhas.abandonadas,
           recolhasOrfas: recolhas.orfas,
         },

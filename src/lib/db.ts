@@ -4655,12 +4655,49 @@ export async function deleteSimulatorOrder(
     (pedido?.calendarEventId as string) ?? null,
     (pedido?.calendarTargetId as string) ?? null,
   );
+  const ficouNaAgenda =
+    evento.erro || evento.naoEncontrado ? ((pedido?.calendarEventId as string) ?? null) : null;
+
+  /*
+   * UM EVENTO QUE FICOU TEM DE SER DITO A ALGUÉM.
+   *
+   * A purga da noite conta-os no resumo. O caminho HUMANO não contava nada: as
+   * três rotas que apagam um pedido no backoffice não olham para o que esta
+   * função devolve, e respondiam «Pedido excluído com sucesso» com o nome, o
+   * telefone e a morada do cliente ainda na agenda partilhada. E é justamente
+   * o caminho humano que se usa quando alguém pede o apagamento dos dados.
+   *
+   * Escreve-se aqui, e não em cada rota, porque aqui é onde se sabe. O registo
+   * é lido pelo painel da retenção — é lá que isto aparece, com o id que
+   * permite ir à agenda apagá-lo à mão.
+   */
+  if (ficouNaAgenda) {
+    await registarSemFalhar({
+      acontecimento: contexto.acontecimento ?? "pedido_apagado",
+      pedidoId: id,
+      autorTipo: "sistema",
+      autorNome: "agenda",
+      resumo:
+        `O pedido #${id} foi apagado, mas o evento na agenda do Google NÃO saiu` +
+        (evento.naoEncontrado
+          ? " — a Google respondeu 404, que tanto pode ser o evento como a agenda não estar partilhada."
+          : ` — ${evento.erro}`),
+      detalhe: {
+        calendarEventId: ficouNaAgenda,
+        calendarTargetId: (pedido?.calendarTargetId as string) ?? null,
+        naoEncontrado: Boolean(evento.naoEncontrado),
+      },
+    });
+  }
 
   return {
     fotos: fotos.length,
     fotosApagadas,
     eventoApagado: evento.apagado,
-    eventoNaAgenda: evento.erro ? ((pedido?.calendarEventId as string) ?? null) : null,
+    /** Não saiu da agenda — por erro ou por 404. O id é por onde se lá chega. */
+    eventoNaAgenda: ficouNaAgenda,
+    /** 404: o evento OU a agenda. Muitos de seguida são configuração partida. */
+    eventoNaoEncontrado: Boolean(evento.naoEncontrado),
   };
 }
 
@@ -4773,6 +4810,27 @@ export async function guardarNaFilaWhatsApp(
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  /*
+   * A LIMPEZA ANDA À BOLEIA DA ESCRITA, como nas mensagens.
+   *
+   * `whatsappFila` guarda o telefone e o TEXTO de cada resposta que sai — e as
+   * respostas do assistente citam o nome, a morada e o resumo do pedido.
+   * `whatsappMensagens` tem limpeza aos 60 dias desde sempre; a fila não tinha
+   * nenhuma. O único DELETE por número, no apagar da conversa, tem
+   * `enviadoEm IS NULL` — apaga só o que ainda não saiu. Ou seja: apagar a
+   * conversa, apagar o pedido, apagar a conta — nada tocava nas linhas já
+   * entregues, que ficavam desde o primeiro dia da ponte.
+   *
+   * Sessenta dias, o mesmo prazo das mensagens, e só o que já foi entregue: o
+   * que está por sair não tem idade que chegue e ainda é trabalho por fazer.
+   * O LIMIT trava o custo de cada passagem.
+   */
+  await pool
+    .execute(
+      "DELETE FROM whatsappFila WHERE enviadoEm IS NOT NULL AND enviadoEm < NOW() - INTERVAL 60 DAY LIMIT 200",
+    )
+    .catch(() => {});
+
   const espera = Math.max(0, Math.min(600, Math.floor(atrasoSegundos)));
   if (espera === 0) {
     // Sem atraso a coluna fica NULL, e não NOW(): é a diferença entre «pode
@@ -6907,6 +6965,19 @@ export type ApagarContaDeClienteResultado = {
   registosAnonimizados: number;
   /** URLs das fotografias, para quem chamou as remover do Blob. */
   fotos: string[];
+  /**
+   * Os eventos na agenda do Google, para quem chamou os remover — pela mesma
+   * razão e da mesma maneira que as fotografias.
+   *
+   * ESTE ERA O BURACO MAIOR DOS TRÊS, e é o caminho do RGPD: a pessoa escreve
+   * ELIMINAR em /conta e espera que os dados dela se vão. A linha do pedido
+   * era anonimizada, as fotografias saíam do Blob — e o evento, com o nome, o
+   * telefone, a morada, o andar e a descrição que ela própria escreveu, ficava
+   * na agenda partilhada. Nem a purga lá chegava: um pedido que foi agendado
+   * tem quase sempre negociação com valor, e a guarda do dinheiro protege-o
+   * para sempre. Ficaria lá indefinidamente.
+   */
+  eventos: Array<{ eventId: string; calendarId: string | null }>;
 };
 
 export async function apagarContaDeCliente(
@@ -6929,10 +7000,20 @@ export async function apagarContaDeCliente(
     await conn.beginTransaction();
 
     const [oLinhas] = (await conn.execute(
-      "SELECT id, filesJson FROM simulatorOrders WHERE LOWER(contactEmail) = ? FOR UPDATE",
+      // O evento vem daqui pela mesma razão das fotografias: o UPDATE que se
+      // segue anonimiza a linha, e é a última oportunidade de saber o que
+      // havia. O `calendarEventId` em si não é apagado — enquanto o evento não
+      // sair da agenda, é ele o ponteiro que lá chega.
+      `SELECT id, filesJson, calendarEventId, calendarTargetId
+         FROM simulatorOrders WHERE LOWER(contactEmail) = ? FOR UPDATE`,
       [alvo],
     )) as any[];
-    const pedidos = oLinhas as Array<{ id: number; filesJson: string | null }>;
+    const pedidos = oLinhas as Array<{
+      id: number;
+      filesJson: string | null;
+      calendarEventId: string | null;
+      calendarTargetId: string | null;
+    }>;
 
     /*
      * Trabalhos por fechar.
@@ -6974,6 +7055,16 @@ export async function apagarContaDeCliente(
       } catch {
         /* JSON estragado — não há URLs a salvar dele */
       }
+    }
+
+    // E os eventos, recolhidos aqui e apagados por quem chamou.
+    const eventos: Array<{ eventId: string; calendarId: string | null }> = [];
+    for (const p of pedidos) {
+      const ev = (p.calendarEventId ?? "").trim();
+      // `clyon-order-...` é marcador nosso de antes de haver agenda; do lado
+      // da Google não existe evento nenhum com esse id.
+      if (!ev || ev.startsWith("clyon-order-")) continue;
+      eventos.push({ eventId: ev, calendarId: p.calendarTargetId ?? null });
     }
 
     if (pedidos.length > 0) {
@@ -7026,7 +7117,7 @@ export async function apagarContaDeCliente(
 
     const registosAnonimizados = await anonimizarRegisto({ clienteEmail: alvo }, "conta_cliente");
 
-    return { pedidos: pedidos.length, registosAnonimizados, fotos };
+    return { pedidos: pedidos.length, registosAnonimizados, fotos, eventos };
   } catch (e) {
     try {
       await conn.rollback();
@@ -7118,6 +7209,15 @@ export type ResultadoDaPurga = {
    * pedido (`calendarEventId` no detalhe), que é por onde se lá chega à mão.
    */
   eventosQueFicaram: number;
+  /**
+   * Destes, quantos foram 404.
+   *
+   * A Google responde 404 tanto a «este evento já não existe» como a «esta
+   * agenda não está partilhada contigo». Um ou dois são normais; cem seguidos
+   * são a agenda a ter deixado de estar partilhada — e sem este número
+   * separado isso lia-se no registo como cem apagados com sucesso.
+   */
+  eventosNaoEncontrados: number;
   /** Elegíveis que não couberam nesta passagem. */
   restantes: number;
   /**
@@ -7139,30 +7239,6 @@ export type ResultadoDaPurga = {
  * pelo lado errado. Uma contagem que erre por baixo num relatório é um
  * incómodo; um apagar que erre é irreversível.
  */
-/**
- * Quantos destes pedidos têm evento na agenda do Google, sem lhes tocar.
- *
- * Também só o modo seco. É o número que se quer ver antes de armar: diz
- * quantos eventos com nome, telefone e morada vão sair da agenda na primeira
- * passagem a sério. `clyon-order-...` não conta — é um marcador nosso de antes
- * de haver agenda, e não existe evento nenhum do lado da Google.
- */
-async function contarEventosDe(ids: number[]): Promise<number> {
-  if (ids.length === 0) return 0;
-  const pool = await getPool();
-  if (!pool) return 0;
-  const marcas = ids.map(() => "?").join(",");
-  const [linhas] = (await pool.execute(
-    `SELECT COUNT(*) AS n FROM simulatorOrders
-      WHERE id IN (${marcas})
-        AND calendarEventId IS NOT NULL
-        AND calendarEventId <> ''
-        AND calendarEventId NOT LIKE 'clyon-order-%'`,
-    ids,
-  )) as any[];
-  return Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
-}
-
 async function contarFotografiasDe(ids: number[]): Promise<number> {
   if (ids.length === 0) return 0;
   const pool = await getPool();
@@ -7195,6 +7271,30 @@ async function contarFotografiasDe(ids: number[]): Promise<number> {
     }
   }
   return n;
+}
+
+/**
+ * Quantos destes pedidos têm evento na agenda do Google, sem lhes tocar.
+ *
+ * Também só o modo seco. É o número que se quer ver antes de armar: diz
+ * quantos eventos com nome, telefone e morada vão sair da agenda na primeira
+ * passagem a sério. `clyon-order-...` não conta — é um marcador nosso de antes
+ * de haver agenda, e não existe evento nenhum do lado da Google.
+ */
+async function contarEventosDe(ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const pool = await getPool();
+  if (!pool) return 0;
+  const marcas = ids.map(() => "?").join(",");
+  const [linhas] = (await pool.execute(
+    `SELECT COUNT(*) AS n FROM simulatorOrders
+      WHERE id IN (${marcas})
+        AND calendarEventId IS NOT NULL
+        AND calendarEventId <> ''
+        AND calendarEventId NOT LIKE 'clyon-order-%'`,
+    ids,
+  )) as any[];
+  return Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
 }
 
 /**
@@ -7282,7 +7382,22 @@ export async function purgarPedidosTerminados(
           /* Os abandonados a meio: nunca tiveram fim, por isso esperam mais. */
           OR (COALESCE(o.status, 'pendente') NOT IN ('concluido', 'cancelado', 'arquivado')
              AND ${relogio} < NOW() - INTERVAL ${abandonados} DAY)
-        )`;
+        )
+        /*
+         * UM TRABALHO MARCADO PARA O FUTURO NÃO É LIXO ANTIGO.
+         *
+         * O relógio da purga é a última vez que a LINHA mexeu, e não o dia do
+         * trabalho. Uma mudança reservada em Janeiro para 20 de Julho fica com
+         * o relógio parado em Janeiro: ninguém lhe volta a tocar, e em Abril os
+         * noventa dias dos abandonados apanhavam-na. Antes isto era mau — o
+         * pedido ia-se e o trabalho continuava na agenda. Desde que a purga
+         * passou a apagar o evento, é pior: some a linha E some o evento, e a
+         * equipa não aparece no dia.
+         *
+         * Enquanto a data marcada não passar, o pedido não se toca. Depois de
+         * passar, os prazos de cima voltam a mandar.
+         */
+        AND (o.scheduledDate IS NULL OR o.scheduledDate < CURDATE())`;
 
   const [cont] = (await pool.execute(`SELECT COUNT(*) AS n ${condicao}`)) as any[];
   const elegiveis = Number((cont as Array<{ n: number }>)[0]?.n ?? 0);
@@ -7310,6 +7425,7 @@ export async function purgarPedidosTerminados(
       fotosApagadas: await contarFotografiasDe(ids),
       eventosApagados: await contarEventosDe(ids),
       eventosQueFicaram: 0,
+      eventosNaoEncontrados: 0,
       restantes: Math.max(0, elegiveis - ids.length),
       aSerio: false,
       naMira: ids,
@@ -7320,6 +7436,7 @@ export async function purgarPedidosTerminados(
   let fotosApagadas = 0;
   let eventosApagados = 0;
   let eventosQueFicaram = 0;
+  let eventosNaoEncontrados = 0;
   const falhados: Array<{ pedidoId: number; erro: string }> = [];
   for (const id of ids) {
     try {
@@ -7335,6 +7452,7 @@ export async function purgarPedidosTerminados(
       // Um evento que ficou na agenda é dado pessoal que sobreviveu à purga.
       // Conta-se para que apareça no resumo em vez de passar em silêncio.
       if (r.eventoNaAgenda) eventosQueFicaram += 1;
+      if (r.eventoNaoEncontrado) eventosNaoEncontrados += 1;
     } catch (e) {
       // Um que falhe não pode parar os outros — e fica dito qual, e porquê.
       falhados.push({ pedidoId: id, erro: e instanceof Error ? e.message : String(e) });
@@ -7348,6 +7466,7 @@ export async function purgarPedidosTerminados(
     fotosApagadas,
     eventosApagados,
     eventosQueFicaram,
+    eventosNaoEncontrados,
     restantes: Math.max(0, elegiveis - ids.length),
     aSerio: true,
     naMira: [],

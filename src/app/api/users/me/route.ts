@@ -315,6 +315,34 @@ export async function DELETE(req: NextRequest) {
       });
     }
 
+    /*
+     * E OS EVENTOS NA AGENDA DO GOOGLE, pela mesma razão e no mesmo sítio.
+     *
+     * Era o buraco maior dos três, e logo no caminho do RGPD: a pessoa escreve
+     * ELIMINAR, a linha do pedido é anonimizada, as fotografias saem — e o
+     * evento, com o nome, o telefone, a morada, o andar e a descrição que ela
+     * própria escreveu, ficava na agenda partilhada da CLYON. Nem a purga lá
+     * chegava: um pedido agendado quase sempre tem negociação com valor, e a
+     * guarda do dinheiro protege-o para sempre.
+     *
+     * O que fica por apagar fica escrito com o id — é por aí que se lá chega à
+     * mão. Nunca atira: a conta já está apagada quando isto corre.
+     */
+    if (r.eventos.length > 0) {
+      after(async () => {
+        const { apagarEventoDoCalendario } = await import("@/lib/apagar-evento-do-calendario");
+        for (const ev of r.eventos) {
+          const fim = await apagarEventoDoCalendario(ev.eventId, ev.calendarId);
+          if (!fim.apagado && !fim.naoExistia) {
+            console.error(
+              `[api/users/me DELETE] o evento ${ev.eventId} ficou na agenda:`,
+              fim.erro ?? "404 — evento ou agenda",
+            );
+          }
+        }
+      });
+    }
+
     return NextResponse.json({ success: true, pedidos: r.pedidos });
   } catch (err) {
     if (err instanceof ContaComPendencias) {

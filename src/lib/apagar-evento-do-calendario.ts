@@ -21,12 +21,34 @@
  * apagá-lo à mão.
  */
 
-/** A chave privada como ela vem do ambiente — com os \n por desescapar. */
-function chavePrivada(raw: string): string {
+/**
+ * A chave privada como ela vem do ambiente.
+ *
+ * A Vercel entrega-a numa linha só, com os `\n` LITERAIS — barra invertida
+ * mais a letra n, dois caracteres — e é preciso trocá-los por quebras de linha
+ * a sério ou o PEM não assina nada.
+ *
+ * ESTA LINHA JÁ ESTEVE ERRADA, E PASSOU POR TODOS OS TESTES. Estava
+ * `.replace(/\n/g, "\n")`: num literal de expressão regular, `/\n/` é a quebra
+ * de linha a sério, e o substituto é a mesma quebra de linha. Trocava uma
+ * quebra de linha por uma quebra de linha — uma operação nula. A chave chegava
+ * ao `google.auth.JWT` numa linha só, a assinatura rebentava com
+ * «DECODER routines::unsupported», o catch apanhava, e o resultado era
+ * `{ apagado: false }` em TODAS as chamadas: nenhum evento saía da agenda e a
+ * purga contava-os como «ficaram». Uma funcionalidade inteira, feita por causa
+ * do RGPD, que nunca teria apagado nada.
+ *
+ * Os outros três sítios do repositório que lêem esta variável escrevem-na bem
+ * — `normalizePrivateKey` em pedidos/[id]/calendar/route.ts, o diagnóstico em
+ * calendar/debug, e google-sheets.ts. São três cópias da mesma regra, e esta
+ * foi a quarta a divergir à primeira tentativa. Há um teste em baixo que lhe
+ * dá uma chave na forma escapada e exige quebras de linha a sério à saída.
+ */
+export function chavePrivada(raw: string): string {
   return raw
     .trim()
     .replace(/^["']|["']$/g, "")
-    .replace(/\n/g, "\n")
+    .replace(/\\n/g, "\n")
     .replace(/\r/g, "");
 }
 
@@ -68,11 +90,51 @@ export function eEventoASerio(eventId: string | null | undefined): boolean {
 export type FimDoEvento = {
   /** Foi apagado agora. */
   apagado: boolean;
-  /** Já lá não estava — o que também é o resultado que se queria. */
+  /**
+   * Não havia nada para apagar, e isso é uma passagem limpa: sem id, um
+   * marcador nosso, ou a Google a dizer 410 («foi apagado»).
+   */
   naoExistia?: boolean;
+  /**
+   * A GOOGLE RESPONDEU 404 — E ISSO NÃO É BOA NOTÍCIA.
+   *
+   * Ela devolve o mesmo 404 para «este evento já não existe» e para «esta
+   * agenda não existe, ou não está partilhada contigo» — a rota que cria os
+   * eventos já trata o 404 como o segundo caso, e diz-o ao utilizador. Contar
+   * os dois como «já não estava» fazia uma passagem em que os cem eventos
+   * falharam por a agenda ter deixado de estar partilhada ler-se, no registo,
+   * como cem apagados com sucesso.
+   *
+   * Fica à parte para que um número alto se leia pelo que é: configuração
+   * partida, e não trabalho feito.
+   */
+  naoEncontrado?: boolean;
   /** Ficou por apagar, e isto é o que o impediu. */
   erro?: string;
 };
+
+/**
+ * O código HTTP da resposta, quando houve uma.
+ *
+ * NÃO SE CLASSIFICA PELO TEXTO DA MENSAGEM. A primeira versão fazia
+ * `/not found/i.test(msg)` e lia «invalid_grant: Invalid grant: account not
+ * found» — que é a service account apagada no Google Cloud, uma avaria de
+ * autenticação — como «o evento já não estava». Com a agenda inteira intacta e
+ * nada apagado, a purga escrevia uma noite inteira de sucessos.
+ *
+ * `undefined` quando não houve resposta nenhuma: rede, DNS, o token a falhar.
+ * Isso nunca é «já não estava».
+ */
+function codigoDaResposta(e: unknown): number | undefined {
+  const err = e as {
+    code?: number | string;
+    status?: number;
+    response?: { status?: number };
+  };
+  const bruto = err?.response?.status ?? err?.status ?? err?.code;
+  const n = typeof bruto === "string" ? Number(bruto) : bruto;
+  return typeof n === "number" && Number.isFinite(n) && n >= 100 && n < 600 ? n : undefined;
+}
 
 /**
  * Apaga um evento da agenda. Devolve o que aconteceu, e NUNCA atira.
@@ -105,16 +167,18 @@ export async function apagarEventoDoCalendario(
     await calendar.events.delete({ calendarId: agendaDaClyon(calendarId), eventId: id });
     return { apagado: true };
   } catch (e) {
-    const err = e as { code?: number | string; message?: string };
-    const msg = err?.message ?? String(e);
-    /*
-     * 404 e 410 são "já lá não está", e isso é o resultado que se queria.
-     * Contá-los como falha enchia os registos de alarmes sobre trabalho feito.
-     */
-    const codigo = Number(err?.code);
-    if (codigo === 404 || codigo === 410 || /\b(404|410)\b/.test(msg) || /not found|already deleted/i.test(msg)) {
-      return { apagado: false, naoExistia: true };
+    const msg = (e as { message?: string })?.message ?? String(e);
+    const codigo = codigoDaResposta(e);
+
+    // 410 é a Google a dizer «isto foi apagado». É o resultado que se queria.
+    if (codigo === 410) return { apagado: false, naoExistia: true };
+
+    // 404 pode ser o evento OU a agenda. Ver `naoEncontrado`.
+    if (codigo === 404) {
+      console.warn("[apagarEventoDoCalendario] 404 no evento", id, "— evento ou agenda:", msg);
+      return { apagado: false, naoEncontrado: true };
     }
+
     console.error("[apagarEventoDoCalendario] evento", id, "ficou na agenda:", msg);
     return { apagado: false, erro: msg.slice(0, 300) };
   }
