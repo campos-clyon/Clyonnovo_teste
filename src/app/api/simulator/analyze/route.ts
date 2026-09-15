@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { modeloDoGemini, MODELO_ACTUAL } from "@/lib/modelo-do-gemini";
 import type { NextRequest } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { buscarImagemExterna } from "@/lib/url-externo-seguro";
@@ -107,9 +108,10 @@ Retorna APENAS o JSON sem texto adicional.`;
 
   try {
     const client = new GoogleGenerativeAI(apiKey);
-    // gemini-1.5-flash suporta googleSearchRetrieval grounding
+    // O grounding pelo googleSearchRetrieval acompanha o modelo actual — ver
+    // modelo-do-gemini.ts. Estava fixo no gemini-1.5-flash, que a Google retirou.
     const groundingModel = client.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: MODELO_ACTUAL,
       tools: [{ googleSearchRetrieval: { dynamicRetrievalConfig: { dynamicThreshold: 0.3 } } }],
     });
 
@@ -253,7 +255,7 @@ export async function POST(req: NextRequest) {
     } satisfies EstimateResult);
   }
 
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const modelName = modeloDoGemini(process.env.GEMINI_MODEL);
 
   // ── 3. Chamar Gemini com timeout rígido ──────────────────────────────────
   let analysis: EstimateResult;

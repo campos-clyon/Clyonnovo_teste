@@ -188,7 +188,7 @@ describe("o modelo do assistente tem uma variável só dele", () => {
    */
   it("WHATSAPP_GEMINI_MODEL manda, e GEMINI_MODEL continua a valer", () => {
     expect(COMPREENSAO).toContain(
-      'process.env.WHATSAPP_GEMINI_MODEL || process.env.GEMINI_MODEL || "gemini-2.5-flash"',
+      'modeloDoGemini(process.env.WHATSAPP_GEMINI_MODEL, process.env.GEMINI_MODEL)',
     );
   });
 

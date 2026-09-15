@@ -24,6 +24,7 @@
  */
 
 import { SERVICE_CATEGORIES } from "./service-categories";
+import { escadaLimpa, modeloDoGemini, MODELO_ACTUAL } from "./modelo-do-gemini";
 
 /** O que a pessoa quer fazer com esta mensagem, para lá dos dados que dá. */
 export type Intencao =
@@ -98,7 +99,7 @@ export function compreensaoDisponivel(): boolean {
  * o assistente e mais nada. Sem ela, continua tudo como estava.
  */
 function modeloDoAssistente(): string {
-  return process.env.WHATSAPP_GEMINI_MODEL || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  return modeloDoGemini(process.env.WHATSAPP_GEMINI_MODEL, process.env.GEMINI_MODEL);
 }
 
 function instrucoes(
@@ -205,8 +206,16 @@ function limpar(bruto: unknown): Compreensao | null {
   return { intencao, campos };
 }
 
-/** O modelo de recurso: não pensa antes de responder, e por isso é depressa. */
-const MODELO_DE_RESERVA = "gemini-2.0-flash";
+/**
+ * O SEGUNDO DEGRAU — só quando a variável de ambiente nomeia outro modelo.
+ *
+ * Era o `gemini-2.0-flash`, irmão de geração do que a Google retirou, e foi
+ * com ele que a escada acabou a devolver 404 nos dois degraus. Aqui não se
+ * inventa um nome «mais fraco»: um modelo adivinhado devolve 404 tão depressa
+ * como o anterior e gasta os segundos de quem está à espera no WhatsApp.
+ * Quando os dois coincidem, a guarda mais abaixo evita a segunda tentativa.
+ */
+const MODELO_DE_RESERVA = MODELO_ACTUAL;
 
 /**
  * A chamada ao Gemini, em cru — o JSON que ele devolveu, ou null.
@@ -281,7 +290,7 @@ async function anotar(motivo: string | null): Promise<void> {
  * ainda podia responder. Ver `gemini-em-descanso.ts`.
  */
 async function escadaDeModelos(preferido: string): Promise<string[]> {
-  const escada = [preferido, MODELO_DE_RESERVA];
+  const escada = escadaLimpa(preferido);
   try {
     const { lerModelosEmDescanso } = await import("@/lib/db");
     const { modelosAUsar, lerDescansos } = await import("@/lib/gemini-em-descanso");

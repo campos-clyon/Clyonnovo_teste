@@ -5,6 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { modeloDoGemini } from "./modelo-do-gemini";
 
 export const GEMINI_TIMEOUT_MS = 4000;
 
@@ -188,7 +189,7 @@ Dados do pedido:
 ${parts.join("\n")}`;
 
   const client = new GoogleGenerativeAI(apiKey);
-  const model  = client.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+  const model  = client.getGenerativeModel({ model: modeloDoGemini(process.env.GEMINI_MODEL) });
 
   const result = await Promise.race([
     model.generateContent(prompt),

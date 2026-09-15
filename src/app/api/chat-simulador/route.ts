@@ -5,7 +5,7 @@ import { calculateFastEstimate } from "@/lib/pricing-helper";
 import type { OrderData } from "@/app/simulador/types";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
-const MODEL = process.env.GEMINI_MODEL || "google/gemini-2.0-flash";
+const MODEL = process.env.CHAT_MODEL || "google/gemini-2.0-flash";
 
 interface GeminiResponse {
   assistantMessage: string;
