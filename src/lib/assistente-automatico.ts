@@ -167,6 +167,18 @@ const PRECEDENCIA: EspecieDeAviso[] = [
  * lados.
  * ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * O mesmo telemóvel, escrito de todas as maneiras.
+ *
+ * O mesmo número chega às vezes com indicativo e outras sem. Comparar o texto
+ * cru fazia de uma pessoa duas — e duas pessoas recebem duas mensagens, que é
+ * exactamente o que se está aqui a evitar. Últimos nove dígitos, como no resto
+ * do WhatsApp da plataforma.
+ */
+function soDigitosDoTelefone(telefone: string): string {
+  return String(telefone).replace(/[^0-9]/g, "").slice(-9);
+}
+
 /** Quantas propostas já houve identifica a proposta sem depender de relógios. */
 export function chaveDaProposta(negociacaoId: number, quantasPropostas: number): string {
   return `proposta:${negociacaoId}:${quantasPropostas}`;
@@ -868,6 +880,26 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
 
   // ── 2. Insistir com quem não respondeu ──────────────────────────────────
   const abertos = await db.avisosPorFechar().catch(() => []);
+
+  /*
+   * UMA PESSOA, UMA MENSAGEM POR PASSAGEM — 15-09-2026.
+   *
+   * "Assistente disparou mensagens repetidas." A CLAUDIA recebeu TRÊS vezes,
+   * às 15:41, a mesma frase: «a proposta que lhe mandei continua à espera de
+   * si». Palavra por palavra, três balões seguidos.
+   *
+   * A causa é este ciclo: ele corre um AVISO de cada vez, e o pedido #288
+   * dela tinha três propostas — Manuel Martins, Nova Recolha e TRSul. Três
+   * avisos, criados quase à mesma hora, a chegar ao mesmo degrau da escada na
+   * mesma passagem. Cada um mandou o seu lembrete, e o texto nem nomeia a
+   * proposta: saíram três frases idênticas.
+   *
+   * O lembrete é PARA A PESSOA, não para a linha da tabela. Quem já foi
+   * lembrado nesta passagem não volta a sê-lo — os outros avisos dela ficam
+   * para a passagem seguinte, e a escada deles não anda entretanto.
+   */
+  const jaLembradosNestaPassagem = new Set<string>();
+
   for (const a of abertos) {
     const especie = a.especie as EspecieDeAviso;
     const ainda = vivas.get(a.chave);
@@ -971,14 +1003,43 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
 
     if (!deveTocar(especie, a.toques, desde, agora)) continue;
 
+    /*
+     * Já se falou com esta pessoa nesta passagem: cala-se.
+     *
+     * SEM marcar o toque. Marcá-lo gastava um degrau da escada dela numa
+     * mensagem que ela nunca recebeu — e ao fim de dois avisos por fechar a
+     * escada esgotava-se sem que nada tivesse sido dito. O aviso fica como
+     * está e volta a ser olhado daqui a dez minutos.
+     */
+    const quem = soDigitosDoTelefone(a.telefone);
+    if (jaLembradosNestaPassagem.has(quem)) continue;
+
     const texto = textoDoLembrete(especie, ainda?.nome ?? "", a.toques, agora);
     if (!texto) continue;
 
     const saiu = await enviarTextoWhatsApp(a.telefone, texto).catch(() => false);
     if (!saiu) continue;
-    await db.marcarToqueDoAssistente(a.id);
+    jaLembradosNestaPassagem.add(quem);
+
+    /*
+     * E O TOQUE CONTA PARA TODOS OS AVISOS DA MESMA ESPÉCIE DELA.
+     *
+     * A frase que saiu — «a proposta que lhe mandei continua à espera» — vale
+     * pelas três propostas: não nomeia nenhuma, e a pessoa que a lê responde
+     * sobre o pedido, não sobre uma linha da nossa tabela. Contar o toque só
+     * num deixava os outros dois a tentar outra vez de dez em dez minutos,
+     * que é a mesma avaria com outro relógio.
+     */
+    const daMesmaEspecie = abertos.filter(
+      (o) => o.especie === a.especie && soDigitosDoTelefone(o.telefone) === quem,
+    );
+    for (const o of daMesmaEspecie) await db.marcarToqueDoAssistente(o.id);
+
     resumo.lembretes++;
-    resumo.linhas.push(`Lembrete ${a.toques + 1} sobre ${especie} a ${a.telefone}.`);
+    resumo.linhas.push(
+      `Lembrete ${a.toques + 1} sobre ${especie} a ${a.telefone}` +
+        (daMesmaEspecie.length > 1 ? ` (${daMesmaEspecie.length} avisos).` : "."),
+    );
   }
 
   // ── 3. As recolhas paradas a meio ───────────────────────────────────────
