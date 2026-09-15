@@ -7,6 +7,9 @@ import {
   servicoComArtigo,
   trabalhoFechado,
 } from "./mensagem-das-propostas";
+// As fixturas trazem a taxa de origem, que é o que elas sempre significaram:
+// foram escritas quando 5 % era a única taxa que existia.
+import { TAXA_CLIENTE } from "./taxas-plataforma";
 
 /**
  * A mensagem que ele manda ao cliente com as propostas.
@@ -27,7 +30,7 @@ describe("quem entra na lista de propostas", () => {
     const r = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "TRSul", propostasJson: proposta("profissional", 270) },
     ]);
-    expect(r).toEqual([{ profissional: "TRSul", valor: 270, total: 286.61 }]);
+    expect(r).toEqual([{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }]);
   });
 
   it("entra quem ACEITOU o valor do cliente", () => {
@@ -42,7 +45,7 @@ describe("quem entra na lista de propostas", () => {
         propostasJson: proposta("cliente", 330, "aceite"),
       },
     ]);
-    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, total: 350.30 }]);
+    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, taxaCliente: TAXA_CLIENTE, total: 350.30 }]);
   });
 
   it("NÃO entra quem ainda não respondeu", () => {
@@ -117,7 +120,7 @@ describe("o artigo concorda com o serviço", () => {
   it("e a frase reescreve-se em volta disso", () => {
     const m = mensagemDasPropostas({
       servico: "serviço novo qualquer",
-      propostas: [{ profissional: "X", valor: 100, total: 106.0 }],
+      propostas: [{ profissional: "X", valor: 100, taxaCliente: TAXA_CLIENTE, total: 106.0 }],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("para o seu pedido");
@@ -140,7 +143,7 @@ describe("a mensagem", () => {
      */
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
     });
     expect(m).toContain("sem IVA");
     expect(m).toContain("total a pagar");
@@ -150,7 +153,7 @@ describe("a mensagem", () => {
     // Numa mensagem de WhatsApp, o que vem depois do link não se lê.
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
     });
     expect(m.indexOf("sem IVA")).toBeLessThan(m.indexOf(base.link));
   });
@@ -169,13 +172,13 @@ describe("a mensagem", () => {
   });
 
   it("singular e plural, com o número certo", () => {
-    const uma = mensagemDasPropostas({ ...base, propostas: [{ profissional: "A", valor: 1, total: 1.06 }] });
+    const uma = mensagemDasPropostas({ ...base, propostas: [{ profissional: "A", valor: 1, taxaCliente: TAXA_CLIENTE, total: 1.06 }] });
     expect(uma).toContain("uma proposta");
     const duas = mensagemDasPropostas({
       ...base,
       propostas: [
-        { profissional: "A", valor: 1, total: 1.06 },
-        { profissional: "B", valor: 2, total: 2.12 },
+        { profissional: "A", valor: 1, taxaCliente: TAXA_CLIENTE, total: 1.06 },
+        { profissional: "B", valor: 2, taxaCliente: TAXA_CLIENTE, total: 2.12 },
       ],
     });
     expect(duas).toContain("2 propostas");
@@ -192,7 +195,7 @@ describe("a mensagem", () => {
     // Regra de voz do site: quem executa é o profissional.
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
     });
     expect(m).toContain("quem faz o trabalho é o profissional que escolher");
   });
@@ -200,7 +203,7 @@ describe("a mensagem", () => {
   it("o link vai lá dentro, inteiro", () => {
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
     });
     expect(m).toContain(base.link);
   });
@@ -208,7 +211,7 @@ describe("a mensagem", () => {
   it("os valores saem em português — vírgula decimal e o símbolo depois", () => {
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
     });
     expect(m).toContain("TRSul: 270,00 €");
   });
@@ -274,7 +277,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
   it("cada linha traz o valor E o total", () => {
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, total: 348.3 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 348.3 }],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("TRSul: 270,00 € — total a pagar 348,30 €");
@@ -325,7 +328,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
      */
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).not.toContain("recusar");
@@ -336,7 +339,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     // Metade dos profissionais está na isenção do artigo 53.º.
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, total: 286.61 }],
+      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("nem todos os profissionais cobram");
@@ -419,6 +422,9 @@ describe("quando o trabalho já está fechado", () => {
     expect(trabalhoFechado(fechada)).toEqual({
       profissional: "Sthefanny Lemos",
       valor: 330,
+      // A negociação não guarda taxa nenhuma nesta fixtura: vale a de origem,
+      // que é o que uma linha anterior a haver coluna sempre significou.
+      taxaCliente: TAXA_CLIENTE,
       total: 426.2,
     });
   });

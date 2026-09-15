@@ -1,9 +1,23 @@
 import type { Proposta } from "./negociacao";
-import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_CLIENTE } from "./taxas-plataforma";
+import { contaDoCliente, regimeDeIva, taxasDaNegociacao } from "./taxas-plataforma";
 
-/** "5%" — lido da constante, para a mensagem nunca dizer uma taxa que já não é. */
-const TAXA_CLIENTE_TEXTO = `${Math.round(TAXA_CLIENTE * 100)}%`;
 import { PROMESSA } from "./pagamento-na-plataforma";
+
+/**
+ * «5%» — a taxa DAQUELA negociação, escrita para uma pessoa ler.
+ *
+ * Era lido da constante, e isso passou a ser uma mentira no dia em que a taxa
+ * ficou editável: o total já vinha calculado com a taxa que a negociação
+ * guardou, e a frase ao lado continuava a dizer 5 %. Uma frase e um número a
+ * discordar sobre dinheiro, na mesma linha.
+ *
+ * Sem decimais quando é redonda — «5%» e não «5,0%» — e com vírgula quando
+ * não é, que é como se escreve em português.
+ */
+function taxaEmTexto(fraccao: number): string {
+  const pontos = Math.round(fraccao * 10000) / 100;
+  return `${(Number.isInteger(pontos) ? String(pontos) : pontos.toFixed(2)).replace(".", ",")}%`;
+}
 
 /**
  * A MENSAGEM PRONTA A MANDAR AO CLIENTE, com as propostas que recebeu.
@@ -27,6 +41,15 @@ import { PROMESSA } from "./pagamento-na-plataforma";
 
 export type PropostaParaOCliente = {
   profissional: string;
+  /*
+   * A TAXA DESTA NEGOCIAÇÃO, para a frase e a conta dizerem o mesmo.
+   *
+   * A mensagem dizia «a taxa CLYON de 5 %» lido da constante, enquanto o
+   * total já era calculado com a taxa que aquela negociação guardou. Com uma
+   * taxa mudada no backoffice, o cliente lia 5 % e pagava outra coisa — uma
+   * frase e um número a discordar sobre dinheiro, na mesma linha.
+   */
+  taxaCliente: number;
   /** O valor que ELE pede, sem IVA. */
   valor: number;
   /**
@@ -114,6 +137,7 @@ export function propostasParaOCliente(
     saida.push({
       profissional: n.profissionalNome,
       valor,
+      taxaCliente: taxasDaNegociacao(n).cliente,
       total: contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total,
     });
   }
@@ -151,6 +175,7 @@ export function trabalhoFechado(
     return {
       profissional: n.profissionalNome,
       valor,
+      taxaCliente: taxasDaNegociacao(n).cliente,
       total: contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total,
     };
   }
@@ -256,7 +281,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
         ` ${euros(d.fechado.valor)} sem IVA, ${euros(d.fechado.total)} a pagar` +
-        ` (já com o imposto do profissional e a taxa CLYON de ${TAXA_CLIENTE_TEXTO}).`,
+        ` (já com o imposto do profissional e a taxa CLYON de ${taxaEmTexto(d.fechado.taxaCliente)}).`,
     );
     linhas.push("");
     linhas.push(
@@ -285,6 +310,18 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     }
     linhas.push("");
     /*
+     * A TAXA, quando é a mesma em todas as propostas.
+     *
+     * Na prática é sempre: as negociações de um pedido nascem todas no mesmo
+     * instante e guardam a mesma taxa. Mas um pedido reaberto depois de a taxa
+     * mudar pode ter negociações de duas gerações — e aí a frase não pode dizer
+     * um número, porque não há UM número. Cala-se sobre a percentagem e diz só
+     * que a taxa entra no total, que é a parte que interessa e continua a ser
+     * verdade. Cada linha acima já tem o seu total certo.
+     */
+    const taxas = new Set(d.propostas.map((p) => p.taxaCliente));
+    const taxaUnica = taxas.size === 1 ? [...taxas][0] : null;
+    /*
      * O IVA NA MESMA LINHA DOS VALORES, e não num rodapé.
      *
      * "Temos de deixar claro que todos os valores praticados são sem IVA,
@@ -306,7 +343,9 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      */
     linhas.push(
       "O primeiro valor é sem IVA. No total já entram o imposto — que nem todos" +
-        ` os profissionais cobram — e a taxa CLYON de ${TAXA_CLIENTE_TEXTO}.`,
+        (taxaUnica != null
+          ? ` os profissionais cobram — e a taxa CLYON de ${taxaEmTexto(taxaUnica)}.`
+          : " os profissionais cobram — e a taxa CLYON."),
     );
     linhas.push("");
     /*
