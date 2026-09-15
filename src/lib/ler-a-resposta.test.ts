@@ -219,3 +219,57 @@ describe("o nome casa-se nos dois sentidos, e só vale se bater num só", () => 
     expect(CEREBRO).toContain("porPista.length === 1");
   });
 });
+
+/**
+ * A conversa do pedido #323, a 15-09-2026.
+ *
+ *   CLYON:   Manuel Martins transportes propõe 280,00 €…
+ *   CLIENTE: Parece-me bem                    → ponto de situação
+ *   CLIENTE: 250 contraporposta               → «está na mesma»
+ *
+ * Duas mensagens, duas decisões perdidas. A primeira era um sim que não
+ * estava na lista; a segunda foi lida como o profissional «contraporposta» a
+ * 250 €, que o cérebro foi procurar e não encontrou. O painel continuou a
+ * mostrar a proposta de 280 € à espera de resposta.
+ */
+describe("o pedido #323 — o sim e a contraproposta que se perderam", () => {
+  it("«Parece-me bem» é um sim", () => {
+    expect(lerARespostaDirecta("Parece-me bem")).toEqual({ tipo: "sim", valor: null });
+  });
+
+  it("e também sem o hífen, que é como muita gente escreve", () => {
+    expect(lerARespostaDirecta("parece me bem")).toEqual({ tipo: "sim", valor: null });
+  });
+
+  it("«250 contraporposta» não é um profissional chamado contraporposta", () => {
+    // null aqui quer dizer «um valor sozinho» — a contraproposta tem o seu
+    // leitor, no cérebro. O que não pode é virar um nome.
+    expect(lerARespostaDirecta("250 contraporposta")).toBeNull();
+  });
+
+  it("nem escrita direito, nem com a palavra à frente do número", () => {
+    expect(lerARespostaDirecta("250 contraproposta")).toBeNull();
+    expect(lerARespostaDirecta("contraproposta 250")).toBeNull();
+  });
+
+  it("mas um nome a sério com um número continua a ser um nome com um número", () => {
+    expect(lerARespostaDirecta("Revolution 94")).toEqual({
+      tipo: "nome_e_valor",
+      nome: "revolution",
+      valor: 94,
+    });
+  });
+
+  it("«ok» continua de fora — é reacção, não aceitação", () => {
+    expect(lerARespostaDirecta("ok")).toBeNull();
+  });
+});
+
+describe("o cérebro lê a contraproposta com a palavra colada", () => {
+  const CEREBRO = ler("src/lib/whatsapp-negociacao.ts");
+
+  it("a expressão do valor aceita o «contra…» dos dois lados", () => {
+    expect(CEREBRO).toContain("A PALAVRA PODE VIR DOS DOIS LADOS DO NÚMERO");
+    expect(CEREBRO).toContain("|propostas?))?");
+  });
+});

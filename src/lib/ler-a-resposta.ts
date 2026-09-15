@@ -66,6 +66,20 @@ export const SIM_EXACTO = new Set([
   "sim pode ser",
   "esta bem",
   "sim esta bem",
+  /*
+   * «Parece-me bem» é a forma mais natural de aceitar um preço em português,
+   * e faltava. A 15-09-2026 o Joao Pereira respondeu-a à proposta de 280 € do
+   * pedido #323 e levou de volta o ponto de situação.
+   *
+   * Continuam de fora «ok», «ótimo» e «perfeito»: são reacções, não
+   * aceitações, e a seguir a elas vem tantas vezes um «obrigado» que fecha a
+   * conversa sem fechar negócio. Ver a nota do «Ok, obrigada» acima.
+   */
+  "parece-me bem",
+  "parece me bem",
+  "parece bem",
+  "por mim tudo bem",
+  "por mim esta bem",
   "aceito",
   "sim aceito",
   "aceito sim",
@@ -102,6 +116,32 @@ const SIM_COM_VALOR = /^(?:sim|fechar|aceito|aceitar|pode fechar|fechamos)\s+(.+
 const NAO_COM_VALOR = /^(?:nao|recusar|recuso)\s+(.+)$/;
 /** «300», «300,50», «300 €», «300 euros». */
 const SO_UM_VALOR = /^(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?$/;
+
+/**
+ * Palavras que acompanham um número sem serem o nome de ninguém.
+ *
+ * Nenhum profissional se chama «contraproposta» nem «euros». O `contra*`
+ * apanha de propósito o que vier escrito torto — «contraporposta», que foi o
+ * que o cliente escreveu —, porque uma palavra que começa por «contra» ao
+ * lado de um preço não é uma empresa de mudanças.
+ */
+const NAO_SAO_NOMES = new Set([
+  "proposta",
+  "propostas",
+  "valor",
+  "preco",
+  "euro",
+  "euros",
+  "eur",
+  "oferta",
+  "fica",
+  "por",
+  "e",
+]);
+
+function naoEUmNome(palavra: string): boolean {
+  return palavra.startsWith("contra") || NAO_SAO_NOMES.has(palavra);
+}
 
 export type LeituraDirecta =
   | { tipo: "sim"; valor: number | null }
@@ -175,8 +215,24 @@ export function lerARespostaDirecta(texto: string): LeituraDirecta {
   /*
    * NOME E VALOR. O nome é tudo o que não é o número, e vai inteiro para quem
    * o tem de casar com um profissional — aqui não se sabe quem existe.
+   *
+   * MAS NEM TUDO O QUE ACOMPANHA UM NÚMERO É UM NOME. A 15-09-2026 o cliente
+   * do pedido #323 escreveu «250 contraporposta» — o valor e a palavra que
+   * diz o que fazer com ele. Isto lia-o como o profissional «contraporposta»
+   * a 250 €, ia procurá-lo, não o encontrava, e devolvia o ponto de situação.
+   * A contraproposta de 250 € nunca chegou à mesa.
+   *
+   * Quem acompanha o número com a palavra da própria negociação não está a
+   * escolher ninguém: está a dizer o que já se sabe. Nesse caso o número fica
+   * sozinho, que é como se lê uma contraproposta.
    */
   const palavras = t.split(" ");
+  const semONumero = palavras.filter((p) => valorDe(p) == null);
+  if (semONumero.length > 0 && semONumero.every(naoEUmNome)) {
+    const soUm = palavras.map(valorDe).filter((v): v is number => v != null);
+    if (soUm.length === 1) return null; // um valor sozinho, e tem o seu leitor
+  }
+
   if (palavras.length >= 2) {
     const ultima = valorDe(palavras[palavras.length - 1]);
     const primeira = valorDe(palavras[0]);

@@ -1062,8 +1062,22 @@ export async function tratarMensagemDoCliente(
     return;
   }
 
-  // Valor: contraproposta. Aplica-se à negociação mais recente que a espera.
-  const valorTexto = texto.match(/^(?:aceito\s+|aceitar\s+|proponho\s+|contraproponho\s+|fechar\s+|sim\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*€?$/i);
+  /*
+   * Valor: contraproposta. Aplica-se à negociação mais recente que a espera.
+   *
+   * A PALAVRA PODE VIR DOS DOIS LADOS DO NÚMERO. Exigia-se que o número
+   * estivesse sozinho, ou com um verbo à frente. O cliente do pedido #323
+   * escreveu «250 contraporposta» — o valor e, a seguir, a palavra que diz o
+   * que fazer com ele, torta como lhe saiu. Não casava com nada, e a
+   * contraproposta de 250 € nunca entrou na mesa.
+   *
+   * O `contra\S*` é de propósito mais largo do que a palavra certa: ao lado
+   * de um preço, o que começa por «contra» é sempre isto, escreva-se como se
+   * escrever.
+   */
+  const valorTexto = texto.match(
+    /^(?:aceito\s+|aceitar\s+|proponho\s+|contra\S*\s+|fechar\s+|sim\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?(?:\s+(?:contra\S*|propostas?))?\s*$/i,
+  );
   if (valorTexto) {
     /*
      * UMA CONTRAPROPOSTA TAMBÉM É UM NÚMERO A ENTRAR NA MESA.
