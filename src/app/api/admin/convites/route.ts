@@ -5,6 +5,7 @@ import {
   criarConvite,
   convitePorEmail,
   revogarConvite,
+  apagarConvites,
   renovarConvite,
   marcarConviteEnviado,
   profissionalPorEmail,
@@ -16,6 +17,9 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { comChave } from "@/lib/acesso-mvp";
 
 export const runtime = "nodejs";
+
+/** Quantos convites se apagam numa chamada. Ver a nota do «apagar». */
+const MAXIMO_A_APAGAR = 50;
 
 /**
  * Os convites a profissionais.
@@ -97,6 +101,41 @@ export async function POST(req: NextRequest) {
     }
     await revogarConvite(id);
     return NextResponse.json({ ok: true, feito: "revogado" });
+  }
+
+  /*
+   * ── Apagar, vários de uma vez ────────────────────────────────────────────
+   *
+   * "Coloque a opção marcar vários aqui, quero poder apagar vários"
+   * — 15-09-2026.
+   *
+   * Anular marcava e deixava o convite na lista; a lista nunca encolhia. Isto
+   * apaga mesmo — e apaga os usados também, que são precisamente os que
+   * enchem a vista depois de o profissional já estar cá dentro. Apagar o
+   * convite não apaga quem se inscreveu: ver `apagarConvites`.
+   *
+   * UMA PERGUNTA, UMA RESPOSTA, como em /api/admin/negociacoes/apagar. O que
+   * interessa a quem carregou no botão é quantos saíram, não o resultado de
+   * cada um.
+   *
+   * Cinquenta por chamada: é uma só instrução na base, mas um `IN` sem tecto
+   * com uma selecção de "marcar todos" numa lista de trezentos é uma consulta
+   * que ninguém previu.
+   */
+  if (corpo.accao === "apagar") {
+    const brutos = Array.isArray(corpo.ids) ? corpo.ids : [corpo.id];
+    const ids = brutos.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "Nenhum convite indicado." }, { status: 400 });
+    }
+    if (ids.length > MAXIMO_A_APAGAR) {
+      return NextResponse.json(
+        { error: `São ${ids.length}. Apague no máximo ${MAXIMO_A_APAGAR} de cada vez.` },
+        { status: 400 },
+      );
+    }
+    const apagados = await apagarConvites(ids);
+    return NextResponse.json({ ok: true, feito: "apagado", apagados });
   }
 
   // ── Reenviar: token novo, o anterior deixa de servir ─────────────────────

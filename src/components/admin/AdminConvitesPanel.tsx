@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound, Loader2, Mail, RefreshCw, Send, X } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Mail, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { TIPOS_DE_VEICULO, etiquetaDoVeiculo } from "@/lib/convite-profissional";
 import AdminCandidaturasPanel from "@/components/admin/AdminCandidaturasPanel";
@@ -52,6 +52,16 @@ export default function AdminConvitesPanel() {
   const [linkEmClaro, setLinkEmClaro] = useState("");
   const [linkDeEntrada, setLinkDeEntrada] = useState("");
   const [copiado, setCopiado] = useState(false);
+  /*
+   * Os que estão marcados para apagar.
+   *
+   * "Coloque a opção marcar vários aqui, quero poder apagar vários" —
+   * 15-09-2026. Anular deixava o convite na lista com outra etiqueta, e a
+   * lista só crescia: dos oito que lá estavam, seis eram de gente que já se
+   * tinha inscrito havia semanas.
+   */
+  const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  const [aApagar, setAApagar] = useState(false);
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -108,6 +118,63 @@ export default function AdminConvitesPanel() {
       return false;
     } finally {
       setOcupado(null);
+    }
+  }
+
+  function alternar(id: number) {
+    setMarcados((antes) => {
+      const novo = new Set(antes);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
+
+  function marcarTodos() {
+    setMarcados((antes) =>
+      antes.size === convites.length ? new Set() : new Set(convites.map((c) => c.id)),
+    );
+  }
+
+  /**
+   * Apagar os marcados, de vez.
+   *
+   * O `confirm` é o mesmo da mesa dos pedidos, e diz o que se perde: um
+   * convite apagado não se recupera, mas quem já se inscreveu por ele fica
+   * onde está. É a pergunta que toda a gente faz antes de carregar, e é a
+   * única forma de a responder antes de ser tarde.
+   */
+  async function apagarMarcados() {
+    if (!token || marcados.size === 0) return;
+    const quantos = marcados.size;
+    if (
+      !confirm(
+        `Apagar ${quantos} convite${quantos === 1 ? "" : "s"}?\n\n` +
+          `Saem da lista para sempre. Quem já se inscreveu continua registado ` +
+          `como profissional — o que desaparece é o convite por onde entrou.`,
+      )
+    ) {
+      return;
+    }
+    setAApagar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/convites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "apagar", ids: [...marcados] }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível apagar.");
+        return;
+      }
+      setMarcados(new Set());
+      await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAApagar(false);
     }
   }
 
@@ -284,12 +351,76 @@ export default function AdminConvitesPanel() {
         </button>
       </div>
 
+      {/*
+        MARCAR TODOS — só aparece quando há lista para marcar.
+
+        Fica em cima, alinhado com as caixas das linhas, para se perceber de
+        relance que a coluna da esquerda é de selecção e não de estado.
+      */}
+      {convites.length > 0 && (
+        <label className="mb-2 flex w-fit cursor-pointer items-center gap-2 text-xs text-slate-400 hover:text-slate-200">
+          <input
+            type="checkbox"
+            checked={marcados.size === convites.length}
+            onChange={marcarTodos}
+            className="h-4 w-4 cursor-pointer accent-cyan-500"
+          />
+          {marcados.size === convites.length ? "Desmarcar todos" : "Marcar todos"}
+        </label>
+      )}
+
+      {/*
+        A barra só existe quando há algo marcado — um botão de apagar sempre à
+        vista é um botão de apagar à espera de um clique distraído. É a mesma
+        barra da mesa dos pedidos, de propósito: quem aprendeu a usar uma sabe
+        usar a outra.
+      */}
+      {marcados.size > 0 && (
+        <div className="sticky top-2 z-20 mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-600 bg-slate-900/90 px-4 py-3 backdrop-blur">
+          <p className="text-sm font-semibold text-slate-100">
+            {marcados.size} convite{marcados.size === 1 ? "" : "s"} seleccionado
+            {marcados.size === 1 ? "" : "s"}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMarcados(new Set())}
+              className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+            >
+              Desmarcar
+            </button>
+            <button
+              onClick={apagarMarcados}
+              disabled={aApagar}
+              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
+            >
+              {aApagar ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Apagar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         {convites.map((c) => (
           <article
             key={c.id}
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-3"
+            className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${
+              marcados.has(c.id)
+                ? "border-cyan-600/60 bg-cyan-500/5"
+                : "border-slate-700/60 bg-slate-900/60"
+            }`}
           >
+            <input
+              type="checkbox"
+              checked={marcados.has(c.id)}
+              onChange={() => alternar(c.id)}
+              aria-label={`Marcar o convite de ${c.nome}`}
+              className="h-4 w-4 cursor-pointer accent-cyan-500"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-white">{c.nome}</span>

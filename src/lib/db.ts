@@ -2783,6 +2783,38 @@ export async function revogarConvite(id: number): Promise<void> {
   );
 }
 
+/**
+ * Apaga convites da lista, de vez.
+ *
+ * ANULAR NÃO É APAGAR, e era só isso que havia. `revogarConvite` marca a data
+ * e o convite fica na lista para sempre — bom para quem quer saber o que
+ * aconteceu, mau para uma lista que só cresce e onde já ninguém encontra os
+ * convites que interessam.
+ *
+ * APAGAR UM CONVITE USADO NÃO APAGA O PROFISSIONAL. É o convite que guarda o
+ * `providerId`, e não o contrário: não há chave estrangeira nenhuma a apontar
+ * para cá. Quem já se inscreveu fica onde está, com a conta dele — o que
+ * desaparece é a linha que diz por onde entrou.
+ *
+ * Devolve quantas linhas saíram, que é o que quem carregou no botão quer
+ * saber: o resultado do conjunto, não o de cada uma.
+ */
+export async function apagarConvites(ids: number[]): Promise<number> {
+  const limpos = [...new Set(ids)].filter((id) => Number.isInteger(id) && id > 0);
+  if (limpos.length === 0) return 0;
+  await ensureConvitesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  // Os ids são inteiros verificados um a um acima; os `?` são o que impede o
+  // resto.
+  const marcas = limpos.map(() => "?").join(", ");
+  const [res] = (await pool.execute(
+    `DELETE FROM convitesProfissionais WHERE id IN (${marcas})`,
+    limpos,
+  )) as [{ affectedRows?: number }, unknown];
+  return res?.affectedRows ?? 0;
+}
+
 /** Um token novo para o mesmo convite — o anterior deixa de servir. */
 export async function renovarConvite(
   id: number,
