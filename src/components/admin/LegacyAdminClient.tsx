@@ -2879,8 +2879,8 @@ export default function ColaboradorAdminClient({
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">Centro de suporte</p>
                   <h2 className="mt-1 text-2xl font-semibold text-white">Pedidos de ajuda</h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    Tudo o que os clientes e profissionais nos escrevem, venha de onde vier —
-                    de dentro de um pedido, do WhatsApp, da app ou da plataforma.
+                    O que os clientes e profissionais nos escrevem de dentro de um pedido, da
+                    app ou da plataforma. As conversas de WhatsApp têm ecrã próprio, ali ao lado.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

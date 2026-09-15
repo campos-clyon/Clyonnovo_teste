@@ -253,6 +253,24 @@ describe("o WhatsApp NÃO entra aqui", () => {
     expect(semNotas(get)).not.toContain("whatsappMensagens");
   });
 
+  it("o ecrã não promete WhatsApp no subtítulo", () => {
+    /*
+     * Dizia «de dentro de um pedido, do WhatsApp, da app ou da plataforma».
+     * Uma promessa por cumprir no cabeçalho manda procurar aqui o que está
+     * noutro sítio — e foi o que ficou para trás quando o canal saiu.
+     */
+    expect(ECRA).not.toContain("de dentro de um pedido, do WhatsApp");
+  });
+
+  it("a lista pede SEM CACHE — senão o Actualizar é um enfeite", () => {
+    /*
+     * Um GET que o browser guarde devolve a mesma lista ao carregar em
+     * «Actualizar», e faz parecer que uma mudança no servidor não pegou.
+     * Era o único painel deste backoffice a que isto faltava.
+     */
+    expect(PAINEL).toContain("cache: \"no-store\"");
+  });
+
   it("e não há por onde responder por WhatsApp a partir daqui", () => {
     // Responder existe no painel do WhatsApp, que é onde a conversa vive.
     expect(semNotas(ROTA)).not.toContain("enviarTextoManualWhatsApp");

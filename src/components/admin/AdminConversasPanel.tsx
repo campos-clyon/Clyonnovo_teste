@@ -94,7 +94,17 @@ export default function AdminConversasPanel() {
     if (!token) return;
     setACarregar(true);
     try {
+      /*
+       * SEM CACHE — 15-09-2026.
+       *
+       * Faltava, e é o único painel deste backoffice a que faltava. Um GET
+       * que o browser guarde faz do botão «Actualizar» um enfeite: carrega-se
+       * nele e vem de volta a mesma lista. É também a explicação mais provável
+       * para as conversas de WhatsApp continuarem a aparecer depois de terem
+       * saído do servidor.
+       */
       const res = await fetch("/api/admin/suporte/conversas", {
+        cache: "no-store",
         headers: { Authorization: `Bearer ${token}` },
       });
       const dados: Resposta = await res.json();
