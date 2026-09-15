@@ -12,6 +12,7 @@
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "contrato:sql": "node scripts/contrato-sql.mjs",
+    "copia": "node scripts/copia-de-seguranca.mjs",
     "seo:datas": "node scripts/gerar-datas-conteudo.mjs",
     "seo:indexnow": "node scripts/indexnow.mjs",
     "sitemap": "node scripts/generate-sitemap.mjs"

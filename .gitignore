@@ -106,6 +106,16 @@ temp/
 *.sqlite
 *.sqlite3
 
+# Cópias de segurança da base (scripts/copia-de-seguranca.mjs).
+#
+# NUNCA no git. O ficheiro tem a base inteira lá dentro — nomes, moradas,
+# telefones, IBANs de toda a gente. O script grava por omissão na pasta onde
+# correr, que é muitas vezes esta, e um `git add -A` distraído punha os dados
+# de todos os clientes num repositório para sempre (um commit não se apaga).
+copia-clyon-*.sql
+*.sql.gz
+*.dump
+
 # Ficheiros exemplo de apps (APK/XAPK grandes)
 Apps exemplos/
 
