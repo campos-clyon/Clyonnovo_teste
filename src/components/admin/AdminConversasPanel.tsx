@@ -53,10 +53,6 @@ const CAIXA_POR_ORIGEM: Record<OrigemDaConversa, { dica: string; saida: string }
     saida:
       "Fica gravada no pedido de suporte. A app pode ainda não ter ecrã de respostas — confirme por email ou telefone.",
   },
-  whatsapp: {
-    dica: "Responder por WhatsApp",
-    saida: "Vai por WhatsApp, para o número dela.",
-  },
 };
 
 /** A hora como se lê num telemóvel: hoje são horas, ontem é «ontem», o resto é data. */

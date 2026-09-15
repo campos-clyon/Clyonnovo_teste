@@ -4,7 +4,6 @@ import {
   ajudaPorId,
   ajudasParaAdmin,
   appendOrderHistory,
-  fiosRecentesWhatsApp,
   pedidosComConversa,
   responderPedidoDeAjuda,
 } from "@/lib/db";
@@ -16,7 +15,6 @@ import {
   type ConversaDeSuporte,
   type MensagemDaConversa,
 } from "@/lib/conversas-de-suporte";
-import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { rotuloServico } from "@/lib/mensagem-whatsapp";
 import { rotuloDoAssunto } from "@/lib/ajuda-plataforma";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -33,20 +31,22 @@ export const dynamic = "force-dynamic";
  * mensagens venham parar aqui, devidamente separadas como no WhatsApp."
  * — 13-09-2026.
  *
- * O problema não era o desenho do ecrã: era que uma mensagem podia cair em
- * quatro sítios diferentes, e um deles — a resposta dentro de um pedido — não
- * tinha ecrã nenhum. Esta rota vai aos quatro e devolve UMA lista.
+ * O problema era que uma pergunta escrita DENTRO de um pedido não aparecia em
+ * lista nenhuma: para a ler era preciso abrir o pedido certo, e para saber
+ * qual era o pedido certo era preciso já a ter lido.
  *
  * A RESPOSTA SAI POR ONDE A MENSAGEM ENTROU, e isso é metade do valor disto.
  * Uma pessoa que perguntou dentro do pedido dela espera a resposta no pedido
  * dela; responder-lhe por outro canal é fazê-la procurar. É a `chave` que
- * guarda essa informação — `pedido:283`, `whatsapp:912…` — e é por isso que
+ * guarda essa informação — `pedido:283`, `plataforma:12` — e é por isso que
  * ela não é um número solto.
  *
- * São mesmo os quatro canais, e não três. Os tickets da app já tinham lista e
- * fio próprios neste ecrã — mas o que ele pediu foi que TODAS as mensagens
- * viessem parar ao mesmo sítio, e deixar um canal de fora obrigava a olhar
- * para dois sítios na mesma.
+ * ⚠️ O WHATSAPP NÃO ESTÁ AQUI, e é a correcção de 15-09-2026: "esse é o
+ * Suporte, não é para ser o WhatsApp; pedi para ele ser ORGANIZADO como o
+ * WhatsApp, mas não para trazer as suas conversas". O «como no wpp» era sobre
+ * a FORMA — fio de balões em vez de tabela de estados. O WhatsApp tem o ecrã
+ * dele, com a mesa e os separadores; trazê-lo para cá dava dois sítios para a
+ * mesma coisa e enterrava o que só existe aqui.
  *
  * A resposta a um ticket da app é a única que NÃO sai daqui: o painel manda-a
  * para `/api/admin/suporte/[id]/mensagens`, que já existe e já sabe passar o
@@ -149,30 +149,24 @@ export async function GET(req: NextRequest) {
     console.error("[suporte/conversas] plataforma:", e instanceof Error ? e.message : e);
   }
 
-  /* ── 3. O WhatsApp ─────────────────────────────────────────────────────── */
-  try {
-    for (const f of await fiosRecentesWhatsApp()) {
-      if (f.mensagens.length === 0) continue;
-      conversas.push({
-        chave: chaveDaConversa("whatsapp", f.telefone),
-        origem: "whatsapp",
-        quem: f.telefone,
-        contacto: f.telefone,
-        pedidoId: null,
-        assunto: null,
-        mensagens: f.mensagens.map((m) => ({
-          de: m.direccao === "in" ? "eles" : "clyon",
-          texto: m.texto,
-          quando: m.criadoEm,
-          autor: null,
-        })),
-      });
-    }
-  } catch (e) {
-    console.error("[suporte/conversas] whatsapp:", e instanceof Error ? e.message : e);
-  }
+  /*
+   * O WHATSAPP SAIU DAQUI — 15-09-2026.
+   *
+   * "Esse é o Suporte, não é para ser o WhatsApp. Eu pedi para ele ser
+   * ORGANIZADO como o WhatsApp, mas não para trazer as suas conversas."
+   *
+   * Eu li o pedido a mais. "Como no wpp" era sobre a FORMA — fio de balões em
+   * vez de tabela de estados — e eu trouxe também o conteúdo. O WhatsApp tem
+   * o ecrã dele, com a mesa, os separadores, o assumir e o bloquear; repetir
+   * as mesmas conversas aqui dava dois sítios para a mesma coisa e enterrava
+   * o que só existe aqui.
+   *
+   * O que fica é o que NÃO tem outro sítio: a pergunta presa dentro de um
+   * pedido — a que deu origem a tudo isto — a ajuda escrita na plataforma, e
+   * os tickets da app.
+   */
 
-  /* ── 4. O centro de ajuda da app ───────────────────────────────────────── */
+  /* ── 3. O centro de ajuda da app ───────────────────────────────────────── */
   try {
     const sb = getSupabaseAdmin();
     const { data: tickets } = await sb
@@ -312,24 +306,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    if (alvo.origem === "whatsapp") {
-      /*
-       * Pelo caminho À MÃO, que passa por cima do portão de propósito: o
-       * portão cala o assistente automático, e aqui quem escreve é uma pessoa.
-       * É o mesmo caminho do botão «Responder» do painel do WhatsApp.
-       */
-      const saiu = await enviarTextoManualWhatsApp(alvo.id, texto);
-      if (!saiu) {
-        return NextResponse.json(
-          {
-            error:
-              "Não consegui enviar. A razão mais comum é a janela de 24 horas do WhatsApp estar fechada.",
-          },
-          { status: 409 },
-        );
-      }
-      return NextResponse.json({ ok: true });
-    }
 
     /*
      * Só sobra a app, e essa o painel manda para a rota que já existe. Se

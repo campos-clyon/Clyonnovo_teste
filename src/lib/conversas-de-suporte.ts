@@ -14,7 +14,7 @@
  *   · a ajuda da plataforma     → `pedidosDeAjuda`, no MySQL;
  *   · uma resposta DENTRO de um pedido → uma linha no `historyJson` desse
  *     pedido, visível só para quem abrisse esse pedido;
- *   · o WhatsApp               → `whatsappMensagens`, com painel próprio.
+ *   · o WhatsApp               → tem painel próprio, e fica lá.
  *
  * O terceiro é o que o perdeu. Uma cliente respondeu a um pedido de informação,
  * a mensagem ficou dentro do pedido #qualquer-coisa, e não havia lista nenhuma
@@ -27,13 +27,22 @@
  */
 
 /** De onde veio a conversa. Decide o distintivo, e por onde a resposta sai. */
-export type OrigemDaConversa = "pedido" | "plataforma" | "app" | "whatsapp";
+/**
+ * ⚠️ O WHATSAPP NÃO É UMA ORIGEM DESTE ECRÃ — 15-09-2026.
+ *
+ * "Esse é o Suporte, não é para ser o WhatsApp. Pedi para ele ser ORGANIZADO
+ * como o WhatsApp, mas não para trazer as suas conversas."
+ *
+ * Esteve cá dois dias e saiu. O WhatsApp tem o ecrã dele — com a mesa, os
+ * separadores, o assumir e o bloquear — e repeti-lo aqui dava dois sítios
+ * para responder à mesma pessoa. Aqui fica só o que NÃO tem outro sítio.
+ */
+export type OrigemDaConversa = "pedido" | "plataforma" | "app";
 
 export const ROTULO_DA_ORIGEM: Record<OrigemDaConversa, string> = {
   pedido: "No pedido",
   plataforma: "Plataforma",
   app: "App",
-  whatsapp: "WhatsApp",
 };
 
 /**
@@ -46,7 +55,6 @@ export const CORES_DA_ORIGEM: Record<OrigemDaConversa, string> = {
   pedido: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
   plataforma: "border-violet-500/30 bg-violet-500/10 text-violet-300",
   app: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-  whatsapp: "border-[#25D366]/30 bg-[#25D366]/10 text-[#25D366]",
 };
 
 export type MensagemDaConversa = {
@@ -61,7 +69,7 @@ export type MensagemDaConversa = {
 
 export type ConversaDeSuporte = {
   /**
-   * O endereço desta conversa: `pedido:283`, `plataforma:12`, `whatsapp:912…`.
+   * O endereço desta conversa: `pedido:283`, `plataforma:12`, `app:uuid`.
    *
    * É por aqui que a resposta sabe por onde sair. Um id numérico sozinho não
    * chegava: o #12 da plataforma e o #12 de um pedido são conversas
@@ -201,7 +209,7 @@ export function lerChave(chave: string): { origem: OrigemDaConversa; id: string 
   const origem = chave.slice(0, i);
   const id = chave.slice(i + 1);
   if (!id) return null;
-  if (origem !== "pedido" && origem !== "plataforma" && origem !== "app" && origem !== "whatsapp") {
+  if (origem !== "pedido" && origem !== "plataforma" && origem !== "app") {
     return null;
   }
   return { origem, id };

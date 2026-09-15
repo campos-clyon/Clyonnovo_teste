@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  ROTULO_DA_ORIGEM,
   TIPOS_DE_CONVERSA,
   chaveDaConversa,
   conversaDoHistorico,
@@ -175,9 +176,9 @@ describe("a ordem da caixa de entrada", () => {
 describe("o endereço da conversa", () => {
   it("vai e volta", () => {
     expect(lerChave(chaveDaConversa("pedido", 283))).toEqual({ origem: "pedido", id: "283" });
-    expect(lerChave(chaveDaConversa("whatsapp", "351912345678"))).toEqual({
-      origem: "whatsapp",
-      id: "351912345678",
+    expect(lerChave(chaveDaConversa("app", "abc-123"))).toEqual({
+      origem: "app",
+      id: "abc-123",
     });
   });
 
@@ -227,41 +228,36 @@ describe("a consulta que foi buscar o que estava perdido", () => {
   });
 });
 
-describe("os fios do WhatsApp vêm de uma só ida à base", () => {
-  const fios = DB.slice(DB.indexOf("export async function fiosRecentesWhatsApp"));
-  const get = ROTA.slice(ROTA.indexOf("export async function GET"), ROTA.indexOf("export async function POST"));
-
-  it("a caixa de entrada não pede um fio de cada vez", () => {
-    /*
-     * A lista dos números e depois um fio por número são dezenas de consultas
-     * por cada abertura do ecrã, numa ligação de cinco. E o ecrã abre-se muitas
-     * vezes por dia — é a caixa de entrada de quem atende.
-     */
-    expect(get).toContain("fiosRecentesWhatsApp()");
-    expect(semNotas(get)).not.toContain("mensagensDoNumeroWhatsApp");
+describe("o WhatsApp NÃO entra aqui", () => {
+  /*
+   * "Esse é o Suporte, não é para ser o WhatsApp. Eu pedi para ele ser
+   * ORGANIZADO como o WhatsApp, mas não para trazer as suas conversas."
+   * — 15-09-2026.
+   *
+   * Eu li o pedido a mais: «como no wpp» era sobre a FORMA — fio de balões em
+   * vez de tabela de estados — e trouxe também o conteúdo. Esteve cá dois
+   * dias. O WhatsApp tem o ecrã dele, com a mesa, os separadores, o assumir e
+   * o bloquear; repeti-lo aqui dava dois sítios para responder à mesma pessoa
+   * e enterrava o que só existe neste.
+   */
+  it("não é uma origem possível — o compilador não deixa", () => {
+    expect(Object.keys(ROTULO_DA_ORIGEM)).toEqual(["pedido", "plataforma", "app"]);
   });
 
-  it("agrupa pelos últimos nove dígitos, para o mesmo telemóvel não dar duas conversas", () => {
-    // O mesmo número entra às vezes com indicativo e outras sem.
-    expect(fios).toContain('.replace(/\\D/g, "").slice(-9)');
+  it("a rota não lê a tabela das mensagens do WhatsApp", () => {
+    const get = ROTA.slice(
+      ROTA.indexOf("export async function GET"),
+      ROTA.indexOf("export async function POST"),
+    );
+    expect(semNotas(get)).not.toContain("fiosRecentesWhatsApp");
+    expect(semNotas(get)).not.toContain("whatsappMensagens");
   });
 
-  it("tem tecto, e o que fica de fora é o mais antigo", () => {
-    expect(fios).toContain("ORDER BY id DESC");
-    expect(fios).toContain("LIMIT");
-  });
-
-  it("o que já foi arrumado não volta a aparecer", () => {
-    /*
-     * Arquivar é o gesto de dar uma conversa por tratada. Uma caixa de entrada
-     * nova que as fizesse voltar todas desfazia meses de arrumação no primeiro
-     * dia — e a desconfiança fica para sempre.
-     */
-    expect(fios).toContain("listarConversasArquivadasWhatsApp()");
-    expect(fios).toContain("arrumadas.has(chave)");
+  it("e não há por onde responder por WhatsApp a partir daqui", () => {
+    // Responder existe no painel do WhatsApp, que é onde a conversa vive.
+    expect(semNotas(ROTA)).not.toContain("enviarTextoManualWhatsApp");
   });
 });
-
 describe("a resposta sai por onde a pergunta entrou", () => {
   const post = ROTA.slice(ROTA.indexOf("export async function POST"));
 
@@ -278,10 +274,7 @@ describe("a resposta sai por onde a pergunta entrou", () => {
   });
 
   it("a ajuda da plataforma é respondida na plataforma, e as respostas acumulam-se", () => {
-    const ramo = post.slice(
-      post.indexOf('alvo.origem === "plataforma"'),
-      post.indexOf('alvo.origem === "whatsapp"'),
-    );
+    const ramo = post.slice(post.indexOf('alvo.origem === "plataforma"'));
     expect(ramo).toContain("responderPedidoDeAjuda");
     expect(ramo).toContain("anteriores.push");
     // Respondeu-se: fica à espera de quem perguntou. Fechar é decisão de quem
@@ -299,12 +292,6 @@ describe("a resposta sai por onde a pergunta entrou", () => {
     expect(ROTA).toContain("anteriores.push({ texto: texto.slice(0, 4000), em:");
   });
 
-  it("o WhatsApp sai à mão, por cima do portão, e diz porquê quando não sai", () => {
-    const ramo = post.slice(post.indexOf('alvo.origem === "whatsapp"'));
-    expect(ramo).toContain("enviarTextoManualWhatsApp");
-    // O único não que resta é o do próprio WhatsApp: a janela de 24 h.
-    expect(ramo).toContain("24 horas");
-  });
 
   it("uma chave que não se reconhece não escreve em lado nenhum", () => {
     expect(post).toContain("Conversa desconhecida.");
@@ -317,25 +304,27 @@ describe("a resposta sai por onde a pergunta entrou", () => {
   });
 });
 
-describe("os quatro canais, e nenhum de fora", () => {
+describe("os três canais que não têm outro sítio", () => {
   const get = ROTA.slice(ROTA.indexOf("export async function GET"), ROTA.indexOf("export async function POST"));
 
-  it("lê os quatro sítios onde uma mensagem pode cair", () => {
-    // "Faça com que todas as mensagens venham parar aqui." Deixar um canal de
-    // fora obrigava a olhar para dois sítios na mesma.
+  it("lê os três sítios que não têm ecrã próprio", () => {
+    /*
+     * A pergunta presa dentro de um pedido — a que deu origem a tudo isto —,
+     * a ajuda escrita na plataforma, e os tickets da app. O WhatsApp tem o
+     * ecrã dele e fica lá.
+     */
     expect(get).toContain("pedidosComConversa()");
     expect(get).toContain("ajudasParaAdmin()");
-    expect(get).toContain("fiosRecentesWhatsApp()");
     expect(get).toContain("support_tickets");
   });
 
   it("uma origem em baixo não apaga as outras da lista", () => {
     /*
-     * Quatro consultas a quatro sítios diferentes. Se a do WhatsApp rebentar,
-     * as mensagens dos pedidos têm de aparecer na mesma — senão a avaria de
-     * hoje volta pela porta do lado.
+     * Três consultas a três sítios diferentes. Se a da app rebentar,
+     * as mensagens dos pedidos têm de aparecer na mesma — senão a avaria que
+     * isto veio curar volta pela porta do lado.
      */
-    expect(get.match(/catch \(e\)/g)?.length).toBe(4);
+    expect(get.match(/catch \(e\)/g)?.length).toBe(3);
     expect(get).toContain("ordenarConversas(conversas)");
   });
 
@@ -379,7 +368,7 @@ describe("o ecrã", () => {
     expect(PAINEL).toContain("ROTULO_DA_ORIGEM");
   });
 
-  it("diz sempre por onde a resposta vai sair — nos quatro canais", () => {
+  it("diz sempre por onde a resposta vai sair — nos três canais", () => {
     /*
      * Escrever sem saber se a pessoa recebe é o que faz ninguém escrever. E na
      * app a frase tem de ser honesta: a resposta fica gravada, mas pode ainda
@@ -387,7 +376,6 @@ describe("o ecrã", () => {
      * mensagem perdida, agora do nosso lado.
      */
     expect(PAINEL).toContain("Vai para o histórico do pedido");
-    expect(PAINEL).toContain("Vai por WhatsApp");
     expect(PAINEL).toContain("Vai para a conta dela");
     expect(PAINEL).toContain("A app pode ainda não ter ecrã de respostas");
   });
