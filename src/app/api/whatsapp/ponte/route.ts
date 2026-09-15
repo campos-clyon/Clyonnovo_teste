@@ -91,17 +91,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Falta o telefone" }, { status: 400 });
   }
 
+  /*
+   * O QUE ENTROU FICA REGISTADO, DECIDA-SE O QUE SE DECIDIR A SEGUIR.
+   *
+   * "Esse pedido nunca apareceu aqui no assistente." — 15-09-2026, sobre a
+   * conversa do Hugo Silva (+351 913 466 982): video, morada, andar, elevador
+   * e um preco de 350 EUR combinado no WhatsApp, e nem uma linha no painel.
+   *
+   * Havia DOIS caminhos nesta rota que voltavam para tras sem escrever nada:
+   * o aviso de que o dono respondeu a mao ("interromper") e o site desligado.
+   * E a mesma avaria que ja tinha sido corrigida a 10-09 para as conversas
+   * entregues a uma pessoa, e a licao ficou escrita: CALAR O ASSISTENTE E NAO
+   * GUARDAR A CONVERSA SAO DUAS DECISOES DIFERENTES, e so a primeira foi
+   * pedida. Faltava aplica-la aos outros dois caminhos.
+   *
+   * A EXCEPCAO E O NUMERO BLOQUEADO, e essa e de proposito: bloquear existe
+   * para os contactos pessoais e para quem o dono decidiu que o assunto nao e
+   * com o site. Guardar-lhes as mensagens era o contrario de bloquear.
+   */
+  async function guardarOQueEntrou() {
+    try {
+      const { registarMensagemWhatsApp } = await import("@/lib/db");
+      if (fotoBase64) await registarMensagemWhatsApp(telefone, "in", "[fotografia]");
+      if (texto.trim()) await registarMensagemWhatsApp(telefone, "in", texto);
+    } catch (e) {
+      // Nunca pode travar a resposta a ponte: ela fica a espera para saber de
+      // quem e a conversa, e um erro aqui calava-a.
+      console.error("[ponte] nao registei a mensagem:", e instanceof Error ? e.message : e);
+    }
+  }
+
   // O Winapp a avisar: o dono respondeu À MÃO a este número. Responder à mão
   // é a forma mais natural de dizer "esta conversa é minha" — o cérebro
   // cala-se até alguém carregar em "Devolver ao site" no backoffice.
   if (corpo.accao === "interromper") {
+    // Se o aviso trouxer a mensagem que o levou a responder, ela fica.
+    await guardarOQueEntrou();
     await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp");
     return NextResponse.json({ ok: true });
   }
 
   // Bloqueado ou desligado no painel: o site lava as mãos por inteiro — o
   // Winapp fica com a conversa e aplica as regras locais dele.
-  if (!(await whatsappLigado()) || (await numeroBloqueadoWhatsApp(telefone))) {
+  if (await numeroBloqueadoWhatsApp(telefone)) {
+    // Bloqueado: nem se responde, nem se guarda. E o que bloquear quer dizer.
+    return NextResponse.json({ meu: false, paraEnviar: [] });
+  }
+  if (!(await whatsappLigado())) {
+    /*
+     * Desligado no painel, o site lava as maos da RESPOSTA — mas nao da
+     * memoria. Ligar outra vez e encontrar a caixa vazia era perder tudo o
+     * que os clientes escreveram enquanto esteve desligado.
+     */
+    await guardarOQueEntrou();
     return NextResponse.json({ meu: false, paraEnviar: [] });
   }
 
