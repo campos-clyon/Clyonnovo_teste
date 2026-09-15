@@ -1721,7 +1721,14 @@ export default function ColaboradorAdminClient({
                     Pedidos do simulador
                   </h2>
                 </div>
-                <div className="flex items-center gap-2">
+                {/*
+                  `flex-wrap`: no telemóvel os três não cabem em linha, e sem
+                  isto o último — o «Actualizar» — ficava cortado a meio,
+                  encostado ao limite do ecrã e sem se conseguir carregar nele.
+                  A quebra põe-nos em duas filas em vez de os empurrar para
+                  fora.
+                */}
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "arquivado" ? "todos" : "arquivado")}
@@ -2099,13 +2106,23 @@ export default function ColaboradorAdminClient({
                                   ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
                                   : "—"}
                               </td>
-                              {/* Ação */}
+                              {/*
+                                Ação — quatro botões que não cabiam em linha.
+
+                                Sem largura máxima, a célula pedia a largura de
+                                todos eles seguidos (Arquivar, Realizado,
+                                Rejeitado, Abrir) e empurrava a tabela para
+                                além do ecrã: o último ficava cortado ao meio
+                                contra a borda, e no telemóvel nem aparecia.
+                                Com um tecto, quebram para duas filas dentro da
+                                própria célula e a tabela volta a caber.
+                              */}
                               <td className="py-3.5 pl-2 pr-4">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="ml-auto flex max-w-[15rem] flex-wrap items-center justify-end gap-1.5">
                                   {!isAdminGeral && !p.assignedToId && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
                                       onClick={(e) => { e.stopPropagation(); setConfirmAcceptPedido(p); }}
                                     >
                                       Aceitar
@@ -2114,7 +2131,7 @@ export default function ColaboradorAdminClient({
                                   {!isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         if (!token || !p.id) return;
@@ -2134,7 +2151,7 @@ export default function ColaboradorAdminClient({
                                   {isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         if (!token || !p.id) return;
@@ -2171,14 +2188,14 @@ export default function ColaboradorAdminClient({
                                     <>
                                       <button
                                         type="button"
-                                        className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                                        className="shrink-0 whitespace-nowrap rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
                                         onClick={(e) => { e.stopPropagation(); fecharPedido(p, "concluido"); }}
                                       >
                                         Realizado
                                       </button>
                                       <button
                                         type="button"
-                                        className="rounded-[8px] border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition"
+                                        className="shrink-0 whitespace-nowrap rounded-[8px] border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition"
                                         onClick={(e) => { e.stopPropagation(); fecharPedido(p, "rejeitado"); }}
                                       >
                                         Rejeitado
@@ -2188,7 +2205,7 @@ export default function ColaboradorAdminClient({
                                   {isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="rounded-[8px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 transition"
                                       onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
                                     >
                                       Abrir
