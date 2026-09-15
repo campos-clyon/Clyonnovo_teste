@@ -61,6 +61,10 @@ export async function POST(req: NextRequest) {
       negociacaoId: l.id,
       estado: l.estado,
       valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
+      // A comissão DESTE trabalho, e não a de hoje: a taxa pode mudar no
+      // backoffice, e a carteira não pode mudar com ela.
+      taxaCliente: l.taxaCliente,
+      taxaProfissional: l.taxaProfissional,
       execucaoEnviadaEm: l.execucaoEnviadaEm,
       confirmadoEm: l.confirmadoEm,
       pagoEm: l.pagoEm,

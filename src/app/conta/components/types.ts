@@ -1,4 +1,4 @@
-import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
 export interface UserProfile {
   id: number;
@@ -68,6 +68,9 @@ export interface NegociacaoDoPedido {
   pedidoId: number;
   estado: string;
   valorAcordado: string | null;
+  /** A comissão com que esta negociação nasceu. Nulas = as de origem. */
+  taxaCliente?: string | null;
+  taxaProfissional?: string | null;
   propostasJson: string | null;
   execucaoEnviadaEm: string | null;
   provaJson: string | null;
@@ -232,7 +235,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
     // seguinte. O valor acordado é SEM IVA — o imposto de quem factura soma-se.
     const paga =
       acordado != null
-        ? contaDoCliente(acordado, regimeDeIva(fechada.regimeIva)).total
+        ? contaDoCliente(acordado, regimeDeIva(fechada.regimeIva), taxasDaNegociacao(fechada)).total
         : null;
 
     if (fechada.confirmadoEm || fechada.pagoEm) {

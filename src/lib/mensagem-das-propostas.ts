@@ -1,5 +1,5 @@
 import type { Proposta } from "./negociacao";
-import { contaDoCliente, regimeDeIva, TAXA_CLIENTE } from "./taxas-plataforma";
+import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_CLIENTE } from "./taxas-plataforma";
 
 /** "5%" — lido da constante, para a mensagem nunca dizer uma taxa que já não é. */
 const TAXA_CLIENTE_TEXTO = `${Math.round(TAXA_CLIENTE * 100)}%`;
@@ -48,6 +48,15 @@ type NegociacaoParaLer = {
   propostasJson: string | null;
   /** O regime de quem factura — decide se ao valor acresce IVA. */
   regimeIva?: string | null;
+  /*
+   * A comissão com que esta negociação nasceu.
+   *
+   * É o número que o cliente vê na mensagem — «fica em 387,45 €» — e é uma
+   * promessa. A taxa pode mudar no backoffice; o que já foi dito a alguém
+   * não pode mudar com ela.
+   */
+  taxaCliente?: string | number | null;
+  taxaProfissional?: string | number | null;
 };
 
 function lerPropostas(json: string | null): Proposta[] {
@@ -105,7 +114,7 @@ export function propostasParaOCliente(
     saida.push({
       profissional: n.profissionalNome,
       valor,
-      total: contaDoCliente(valor, regimeDeIva(n.regimeIva)).total,
+      total: contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total,
     });
   }
 
@@ -142,7 +151,7 @@ export function trabalhoFechado(
     return {
       profissional: n.profissionalNome,
       valor,
-      total: contaDoCliente(valor, regimeDeIva(n.regimeIva)).total,
+      total: contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total,
     };
   }
   return null;

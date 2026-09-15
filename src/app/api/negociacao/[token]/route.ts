@@ -31,7 +31,7 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
 import { tService } from "@/lib/translations";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -355,7 +355,9 @@ export async function POST(
             contactoNome: doPedido?.contactName ?? null,
             contactoTelefone: doPedido?.contactPhone ?? null,
             recebeLiquido:
-              nova.valorAcordado != null ? quantoOProfissionalRecebe(nova.valorAcordado) : null,
+              nova.valorAcordado != null
+                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(doProfissional))
+                : null,
             baseUrl: urlDeAccaoDoPedido(req.headers),
           });
 
@@ -368,7 +370,9 @@ export async function POST(
             email: String(alvo.email),
             servico: tService(doPedido?.serviceType) || "Trabalho",
             valorQueRecebe:
-              nova.valorAcordado != null ? quantoOProfissionalRecebe(nova.valorAcordado) : 0,
+              nova.valorAcordado != null
+                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(doProfissional))
+                : 0,
             pedidoId,
           });
         }

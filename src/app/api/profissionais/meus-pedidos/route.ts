@@ -13,7 +13,7 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
 import { vistaParaOEstado } from "@/lib/pedido-valores";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 
@@ -217,6 +217,15 @@ export async function GET(req: NextRequest) {
        */
       const minimo = valorPendenteDoCliente(l.propostasJson);
       const acordado = l.valorAcordado != null ? Number(l.valorAcordado) : null;
+      /*
+       * A comissão DESTA negociação, e não a de hoje.
+       *
+       * Todos os números deste ecrã são líquidos — o que ele recebe, não o
+       * bruto. Com a taxa a poder mudar no backoffice, calcular pela actual
+       * fazia um trabalho fechado no mês passado aparecer-lhe com outro valor
+       * do que aquele com que o aceitou.
+       */
+      const taxasDela = taxasDaNegociacao(l);
       const fase = faseDoTrabalho(l as never);
 
       return {
@@ -338,8 +347,8 @@ export async function GET(req: NextRequest) {
         concorrentes: Number(l.concorrentes ?? 0),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.
         querPagar: minimo,
-        recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo) : null,
-        recebeSeFechado: acordado != null ? quantoOProfissionalRecebe(acordado) : null,
+        recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDela) : null,
+        recebeSeFechado: acordado != null ? quantoOProfissionalRecebe(acordado, taxasDela) : null,
         /*
          * O VALOR QUE A CLYON PÔS NO PEDIDO — no líquido dele.
          *
@@ -355,7 +364,7 @@ export async function GET(req: NextRequest) {
          */
         valorDaClyon:
           l.valorDesejadoCliente != null
-            ? quantoOProfissionalRecebe(Number(l.valorDesejadoCliente))
+            ? quantoOProfissionalRecebe(Number(l.valorDesejadoCliente), taxasDela)
             : null,
         // A conta feita para ele — com os km da base dele, pela estrada quando dá.
         sugestao: sugestaoSegura(

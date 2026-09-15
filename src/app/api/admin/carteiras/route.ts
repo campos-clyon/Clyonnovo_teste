@@ -5,6 +5,7 @@ import {
   quantoOProfissionalRecebe,
   comissaoDaClyon,
   contaDoCliente,
+  taxasDaNegociacao,
   regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
               p.moradaFiscal, p.codigoPostalFiscal, p.localidadeFiscal,
               p.regimeIva, p.emiteFatura,
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
+              n.taxaCliente, n.taxaProfissional,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
               o.serviceType, o.city
          FROM providers p
@@ -149,7 +151,8 @@ export async function GET(req: NextRequest) {
 
       if (l.negociacaoId == null || l.valorAcordado == null) continue;
       const acordado = Number(l.valorAcordado);
-      const recebe = quantoOProfissionalRecebe(acordado);
+      const taxas = taxasDaNegociacao(l);
+      const recebe = quantoOProfissionalRecebe(acordado, taxas);
       /*
        * A COMISSÃO DA CASA, no mesmo trabalho e nos mesmos três montes.
        *
@@ -163,11 +166,11 @@ export async function GET(req: NextRequest) {
        * comissão de um trabalho por fazer ainda não é ganho: é uma promessa,
        * como o dinheiro cativo do lado do cliente.
        */
-      const comissao = comissaoDaClyon(acordado);
+      const comissao = comissaoDaClyon(acordado, taxas);
       // O que o cliente paga a serio: o valor acordado e SEM IVA, e o imposto
       // do regime de quem factura soma-se por cima. Sem isto, o "facturado aos
       // clientes" ficava 23% abaixo do que ha mesmo facturado.
-      const clientePaga = contaDoCliente(acordado, regimeDeIva(l.regimeIva)).total;
+      const clientePaga = contaDoCliente(acordado, regimeDeIva(l.regimeIva), taxas).total;
 
       const trabalho: TrabalhoPorPagar = {
         negociacaoId: Number(l.negociacaoId),
@@ -274,11 +277,18 @@ export async function POST(req: NextRequest) {
 
   try {
     const [antes] = (await pool.execute(
-      `SELECT n.pedidoId, n.valorAcordado, p.name AS profissionalNome
+      `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
+              p.name AS profissionalNome
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
-    )) as [Array<{ pedidoId: number; valorAcordado: string | null; profissionalNome: string }>, unknown];
+    )) as [Array<{
+        pedidoId: number;
+        valorAcordado: string | null;
+        taxaCliente: string | null;
+        taxaProfissional: string | null;
+        profissionalNome: string;
+      }>, unknown];
     const linha = antes[0];
     if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
 
@@ -297,7 +307,9 @@ export async function POST(req: NextRequest) {
     }
 
     const recebe =
-      linha.valorAcordado != null ? quantoOProfissionalRecebe(Number(linha.valorAcordado)) : null;
+      linha.valorAcordado != null
+        ? quantoOProfissionalRecebe(Number(linha.valorAcordado), taxasDaNegociacao(linha))
+        : null;
     const porQuem = colab?.nome ?? "a CLYON";
     const quanto = recebe != null ? `${recebe.toFixed(2).replace(".", ",")} €` : "o valor acordado";
 

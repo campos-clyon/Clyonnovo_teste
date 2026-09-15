@@ -385,7 +385,10 @@ describe("o cliente vê o total ANTES de carregar no botão", () => {
      * preço final antes de se comprometer.
      */
     const ECRA = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    expect(ECRA).toContain("contaDoCliente(emCima, regimeDeIva(n.regimeIva)).total");
+    // A conta vem da função, e não de um número escrito à mão no ecrã. A forma
+    // exacta da chamada não é o que isto guarda — ganhou um argumento com as
+    // taxas daquela negociação e continua a ser a mesma promessa.
+    expect(ECRA).toContain("contaDoCliente(emCima, regimeDeIva(n.regimeIva)");
     expect(ECRA).toContain("a pagar");
   });
 });

@@ -23,7 +23,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { contaDoCliente, regimeDeIva, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
@@ -54,6 +54,16 @@ export type NegociacaoDoCliente = {
   id: number;
   estado: string;
   valorAcordado: number | null;
+  /*
+   * A COMISSÃO COM QUE ESTA NEGOCIAÇÃO NASCEU.
+   *
+   * O total deste ecrã é o número que o cliente decide em cima — e é uma
+   * promessa. A taxa pode mudar no backoffice; o que já foi mostrado a alguém
+   * não pode mudar com ela. Nulas querem dizer "anterior a isto" e valem as de
+   * origem.
+   */
+  taxaCliente?: string | number | null;
+  taxaProfissional?: string | number | null;
   propostas: Proposta[];
   profissionalNome: string;
   /*
@@ -294,6 +304,7 @@ export default function PropostasRecebidas({
           const conta = contaDoCliente(
             acordada.valorAcordado ?? 0,
             regimeDeIva(acordada.regimeIva),
+            taxasDaNegociacao(acordada),
           );
           return (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
@@ -697,7 +708,7 @@ export default function PropostasRecebidas({
                   */}
                   {emCima != null && (
                     <div className="text-xs font-semibold text-acao">
-                      {euros(contaDoCliente(emCima, regimeDeIva(n.regimeIva)).total)} a pagar
+                      {euros(contaDoCliente(emCima, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total)} a pagar
                     </div>
                   )}
                   <div className="text-xs text-tinta-fraca">
@@ -766,7 +777,7 @@ export default function PropostasRecebidas({
                           não ia pagar — e o sítio onde uma conta destas engana
                           mais é exactamente aqui, antes de ele decidir.
                         */
-                        const c = contaDoCliente(v, regimeDeIva(n.regimeIva));
+                        const c = contaDoCliente(v, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
                         return c.temIva
                           ? `Se ele aceitar, paga ${euros(c.total)} — ${euros(c.servico)} + IVA + taxa CLYON.`
                           : `Se ele aceitar, paga ${euros(c.total)} com a taxa CLYON.`;

@@ -134,6 +134,7 @@ export async function loadContaData(email: string, name: string | null) {
       if (ids.length > 0) {
         const [negs] = (await pool.execute(
           `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
+                  n.taxaCliente, n.taxaProfissional,
                   n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
                   n.estrelas,
                   p.name AS profissionalNome, p.phone AS profissionalTelefone,

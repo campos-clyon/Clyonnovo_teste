@@ -10,7 +10,7 @@ import {
 } from "@/lib/profissional-auth";
 import { carteiraDe, type TrabalhoNaCarteira } from "@/lib/carteira";
 import { faseDoTrabalho } from "@/lib/trabalho";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { ibanEncurtado } from "@/lib/iban";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 
@@ -48,6 +48,10 @@ export async function GET(req: NextRequest) {
       negociacaoId: l.id,
       estado: l.estado,
       valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
+      // A comissão DESTE trabalho, e não a de hoje: a taxa pode mudar no
+      // backoffice, e a carteira não pode mudar com ela.
+      taxaCliente: l.taxaCliente,
+      taxaProfissional: l.taxaProfissional,
       execucaoEnviadaEm: l.execucaoEnviadaEm,
       confirmadoEm: l.confirmadoEm,
       pagoEm: l.pagoEm,
@@ -77,7 +81,7 @@ export async function GET(req: NextRequest) {
               l.serviceType ??
               "Trabalho",
             zona: l.city,
-            valor: quantoOProfissionalRecebe(valor),
+            valor: quantoOProfissionalRecebe(valor, taxasDaNegociacao(l)),
             fase: faseDoTrabalho(l as never),
             data: l.confirmadoEm ?? l.execucaoEnviadaEm ?? l.updatedAt,
           };

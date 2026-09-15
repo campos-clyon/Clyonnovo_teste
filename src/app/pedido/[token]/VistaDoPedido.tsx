@@ -150,6 +150,10 @@ export default async function VistaDoPedido({
       id: n.id,
       estado: n.estado,
       valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+      // A comissão desta negociação, para o total que o ecrã mostra ser o
+      // mesmo com que ela nasceu — e não o de hoje.
+      taxaCliente: n.taxaCliente ?? null,
+      taxaProfissional: n.taxaProfissional ?? null,
       propostas: propostasDe(n.propostasJson),
       profissionalNome: n.profissionalNome,
       // O contacto do profissional só depois de o contratar — a simetria do que

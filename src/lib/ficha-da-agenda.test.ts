@@ -85,8 +85,9 @@ describe("a ficha mostra o que ele pediu para ver", () => {
     expect(FICHA_NUA).toContain("euros(t.valorAcordado)");
     expect(FICHA_NUA).toContain("euros(t.recebe)");
     expect(FICHA_NUA).toContain("euros(t.clientePaga)");
-    expect(ROTA).toContain("quantoOProfissionalRecebe(Number(l.valorAcordado))");
-    expect(ROTA).toContain("contaDoCliente(Number(l.valorAcordado), regimeDeIva(l.regimeIva))");
+    // Sem o parêntese de fecho: ganharam o argumento das taxas da negociação.
+    expect(ROTA).toContain("quantoOProfissionalRecebe(Number(l.valorAcordado)");
+    expect(ROTA).toContain("contaDoCliente(Number(l.valorAcordado), regimeDeIva(l.regimeIva)");
   });
 
   it("o profissional e o dia marcado", () => {

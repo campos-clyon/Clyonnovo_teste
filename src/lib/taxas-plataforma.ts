@@ -34,11 +34,80 @@
  * Ver `ivaSobre` e `contaDoCliente` em baixo.
  */
 
-/** Somada ao valor acordado, no que o cliente paga. */
+/**
+ * AS TAXAS DE ORIGEM — e porque é que elas continuam a ser constantes.
+ *
+ * A partir de 15-09-2026 a taxa pode ser mudada no backoffice. Estas duas
+ * deixaram de ser "a taxa" e passaram a ser outra coisa: o que valia ANTES de
+ * alguém poder mudá-la.
+ *
+ * Toda a negociação guarda as suas (ver `taxasDaNegociacao`). Uma que não
+ * guarde nada é anterior a esta mudança — e o que ela valia era isto. Por isso
+ * estes números não podem voltar a mexer-se: mudá-los reescreveria o que já
+ * foi facturado.
+ */
 export const TAXA_CLIENTE = 0.05;
-
-/** Descontada ao valor acordado, no que o profissional recebe. */
 export const TAXA_PROFISSIONAL = 0.06;
+
+/** As duas juntas, como elas viajam pelo código. */
+export type Taxas = {
+  /** Somada ao valor acordado, no que o cliente paga. */
+  cliente: number;
+  /** Descontada ao valor acordado, no que o profissional recebe. */
+  profissional: number;
+};
+
+export const TAXAS_DE_ORIGEM: Taxas = {
+  cliente: TAXA_CLIENTE,
+  profissional: TAXA_PROFISSIONAL,
+};
+
+/** Nenhuma taxa passa daqui. Uma gralha de 0,06 para 6 não pode chegar à conta. */
+export const TAXA_MAXIMA = 0.5;
+
+/**
+ * Uma percentagem que se pode usar numa conta de dinheiro — ou nada.
+ *
+ * ⚠️ O TEXTO VAZIO TEM DE SAIR ANTES DA CONVERSÃO. `Number("")` é zero, e zero
+ * é uma taxa legítima: uma coluna vazia virava uma comissão de 0 % em
+ * silêncio, sem erro nenhum, e a CLYON deixava de ganhar no trabalho sem
+ * ninguém perceber porquê. Foi um teste que o apanhou, não a leitura do
+ * código.
+ */
+function taxaValida(v: unknown): number | null {
+  if (typeof v === "string" && v.trim() === "") return null;
+  const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN;
+  if (!Number.isFinite(n) || n < 0 || n > TAXA_MAXIMA) return null;
+  return n;
+}
+
+/**
+ * AS TAXAS DE UMA NEGOCIAÇÃO — as que ELA guardou, e não as de hoje.
+ *
+ * Esta função é a razão de ser da mudança toda. Até 15-09-2026 não havia
+ * coluna nenhuma de taxa: todos os números de dinheiro eram calculados ao vivo
+ * a partir das constantes — a carteira do profissional, o total do cliente, e
+ * até os trabalhos JÁ PAGOS. Mudar a percentagem reescrevia o passado inteiro:
+ * o total ganho de cada profissional, o que cada cliente pagou, e os números
+ * que já tinham ido em factura.
+ *
+ * A taxa fica presa quando a negociação NASCE — quando o pedido chega ao
+ * profissional — e nunca mais muda. Assim nenhum número que alguém já viu pode
+ * mudar: nem a proposta que o cliente recebeu no WhatsApp, nem a carteira, nem
+ * uma factura. Uma taxa nova só se aplica a pedidos distribuídos a partir daí.
+ *
+ * Sem coluna gravada, são as de origem: a linha é anterior a isto existir.
+ * Um valor fora do sítio também cai para as de origem — uma conta de dinheiro
+ * nunca pode ser feita com um número que não se percebe.
+ */
+export function taxasDaNegociacao(
+  linha: { taxaCliente?: unknown; taxaProfissional?: unknown } | null | undefined,
+): Taxas {
+  return {
+    cliente: taxaValida(linha?.taxaCliente) ?? TAXA_CLIENTE,
+    profissional: taxaValida(linha?.taxaProfissional) ?? TAXA_PROFISSIONAL,
+  };
+}
 
 function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -150,9 +219,19 @@ export type ContaDoCliente = {
  * cópias de uma conta de dinheiro são quatro números diferentes à espera de
  * acontecer.
  */
-export function contaDoCliente(acordado: number, regime: RegimeIva): ContaDoCliente {
+export function contaDoCliente(
+  acordado: number,
+  regime: RegimeIva,
+  /*
+   * As da negociação, quando quem chama as tem. Sem elas, as de origem — que
+   * é o certo para uma linha anterior a haver taxas guardadas, e o que mantém
+   * compiláveis os sítios onde não há negociação nenhuma (uma simulação, um
+   * texto de ajuda).
+   */
+  taxas: Taxas = TAXAS_DE_ORIGEM,
+): ContaDoCliente {
   const servico = aosCentimos(acordado);
-  const taxa = aosCentimos(servico * TAXA_CLIENTE);
+  const taxa = aosCentimos(servico * taxas.cliente);
 
   /*
    * DOIS IMPOSTOS, DE DUAS EMPRESAS — 14-09-2026.
@@ -196,8 +275,8 @@ export function contaDoCliente(acordado: number, regime: RegimeIva): ContaDoClie
  *
  * Para o que o cliente paga a sério, use `contaDoCliente`.
  */
-export function servicoMaisTaxa(acordado: number): number {
-  return aosCentimos(acordado * (1 + TAXA_CLIENTE));
+export function servicoMaisTaxa(acordado: number, taxas: Taxas = TAXAS_DE_ORIGEM): number {
+  return aosCentimos(acordado * (1 + taxas.cliente));
 }
 
 /**
@@ -210,11 +289,14 @@ export function servicoMaisTaxa(acordado: number): number {
  * SEM IVA, sempre. O imposto que ele liquida, quando liquida, é dele e vai
  * na factura dele ao cliente; não passa por esta conta.
  */
-export function quantoOProfissionalRecebe(acordado: number): number {
-  return aosCentimos(acordado * (1 - TAXA_PROFISSIONAL));
+export function quantoOProfissionalRecebe(
+  acordado: number,
+  taxas: Taxas = TAXAS_DE_ORIGEM,
+): number {
+  return aosCentimos(acordado * (1 - taxas.profissional));
 }
 
 /** O que fica para a CLYON sobre um trabalho fechado. */
-export function comissaoDaClyon(acordado: number): number {
-  return aosCentimos(servicoMaisTaxa(acordado) - quantoOProfissionalRecebe(acordado));
+export function comissaoDaClyon(acordado: number, taxas: Taxas = TAXAS_DE_ORIGEM): number {
+  return aosCentimos(servicoMaisTaxa(acordado, taxas) - quantoOProfissionalRecebe(acordado, taxas));
 }

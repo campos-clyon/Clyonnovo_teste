@@ -60,8 +60,11 @@ describe("a rota que corrige o valor", () => {
   it("refaz as contas a partir do valor, e não guarda cópias", () => {
     // Do valor acordado saem o que ele recebe, o que o cliente paga, o IVA e a
     // comissão. Guardar quatro números seria guardar quatro discordâncias.
-    expect(ROTA).toContain("quantoOProfissionalRecebe(novo)");
-    expect(ROTA).toContain("contaDoCliente(novo, regime)");
+    // Sem o parêntese de fecho: as duas chamadas ganharam um argumento (as
+    // taxas daquela negociação) e o que isto guarda é a conta vir da função,
+    // não a forma da chamada.
+    expect(ROTA).toContain("quantoOProfissionalRecebe(novo");
+    expect(ROTA).toContain("contaDoCliente(novo, regime");
     expect(ROTA).toContain("regimeDeIva(linha.regimeIva)");
   });
 

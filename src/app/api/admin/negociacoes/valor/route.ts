@@ -5,6 +5,7 @@ import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import {
   quantoOProfissionalRecebe,
   contaDoCliente,
+  taxasDaNegociacao,
   regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm,
+              n.taxaCliente, n.taxaProfissional,
               p.name AS profissionalNome, p.regimeIva
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
@@ -87,6 +89,8 @@ export async function POST(req: NextRequest) {
         pedidoId: number;
         estado: string;
         valorAcordado: string | null;
+        taxaCliente: string | null;
+        taxaProfissional: string | null;
         confirmadoEm: Date | null;
         pagoEm: Date | null;
         profissionalNome: string;
@@ -145,8 +149,9 @@ export async function POST(req: NextRequest) {
     ]);
 
     const regime = regimeDeIva(linha.regimeIva);
-    const recebe = quantoOProfissionalRecebe(novo);
-    const conta = contaDoCliente(novo, regime);
+    const taxas = taxasDaNegociacao(linha);
+    const recebe = quantoOProfissionalRecebe(novo, taxas);
+    const conta = contaDoCliente(novo, regime, taxas);
     const eur = (v: number) => v.toFixed(2).replace(".", ",") + " €";
 
     const porQuem = colab?.nome ?? "a CLYON";

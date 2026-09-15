@@ -7,6 +7,11 @@ export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
 import { carteiraDe } from "@/lib/carteira";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
+import {
+  TAXAS_DE_ORIGEM,
+  TAXA_MAXIMA,
+  type Taxas,
+} from "@/lib/taxas-plataforma";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -228,6 +233,136 @@ export async function getSimulatorSettings(): Promise<typeof simulatorSettings.$
     console.error("[Database] Error fetching simulator settings:", error);
     return [];
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * AS TAXAS DA PLATAFORMA, MUDÁVEIS NO BACKOFFICE — 15-09-2026.
+ *
+ * "Os campos das taxas da plataforma devem ser editáveis pelo admin e deve
+ * mudar para todos correctamente."
+ *
+ * Guardam-se em PONTOS PERCENTUAIS (5,00 e 6,00) e não em fracção: a coluna de
+ * `simulatorSettings` é DECIMAL(10,2), e 0,05 gravado ali sobrevive por pouco —
+ * 0,055 já não. Em pontos, duas casas chegam para meio ponto percentual.
+ *
+ * MUDAR A TAXA NÃO MEXE EM NADA DO QUE JÁ EXISTE. Cada negociação guarda as
+ * suas quando nasce; isto é só o que se grava na PRÓXIMA. Ver
+ * `taxasDaNegociacao` em taxas-plataforma.ts para o porquê.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export const CHAVE_TAXA_CLIENTE = "taxa_cliente";
+export const CHAVE_TAXA_PROFISSIONAL = "taxa_profissional";
+
+/**
+ * Uma percentagem lida da base, em pontos, convertida para fracção.
+ *
+ * O texto vazio sai antes da conversão, pela mesma razão de `taxaValida`:
+ * `Number("")` é zero, e zero é uma taxa legítima.
+ */
+function fraccaoDePontos(v: unknown, seFaltar: number): number {
+  if (typeof v === "string" && v.trim() === "") return seFaltar;
+  const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN;
+  if (!Number.isFinite(n) || n < 0) return seFaltar;
+  const f = n / 100;
+  return f > TAXA_MAXIMA ? seFaltar : f;
+}
+
+/**
+ * As taxas em vigor HOJE — as que a próxima negociação vai guardar.
+ *
+ * Sem linha na base, as de origem. Sem base sequer, as de origem: um erro de
+ * ligação não pode virar uma taxa de zero por cento.
+ *
+ * Sem cache de propósito. Isto corre quando nasce uma negociação — dezenas de
+ * vezes por dia, não milhares — e uma cache aqui era um sítio onde a taxa que
+ * se vê no painel e a que se grava podiam discordar durante uns minutos, em
+ * dinheiro, sem ninguém perceber porquê.
+ */
+export async function taxasActuais(): Promise<Taxas> {
+  try {
+    await ensureSimulatorSettingsTable();
+    const pool = await getPool();
+    if (!pool) return TAXAS_DE_ORIGEM;
+    const [linhas] = (await pool.execute(
+      "SELECT `key`, value FROM simulatorSettings WHERE `key` IN (?, ?)",
+      [CHAVE_TAXA_CLIENTE, CHAVE_TAXA_PROFISSIONAL],
+    )) as any[];
+    const porChave = new Map(
+      (linhas as Array<{ key: string; value: unknown }>).map((l) => [l.key, l.value]),
+    );
+    return {
+      cliente: fraccaoDePontos(porChave.get(CHAVE_TAXA_CLIENTE), TAXAS_DE_ORIGEM.cliente),
+      profissional: fraccaoDePontos(
+        porChave.get(CHAVE_TAXA_PROFISSIONAL),
+        TAXAS_DE_ORIGEM.profissional,
+      ),
+    };
+  } catch (e) {
+    console.error("[taxasActuais] não li as taxas, uso as de origem:", e);
+    return TAXAS_DE_ORIGEM;
+  }
+}
+
+/** O mesmo, com o nome que diz para que serve no sítio onde é usado. */
+async function taxasParaUmaNegociacaoNova(): Promise<Taxas> {
+  return taxasActuais();
+}
+
+/**
+ * Mudar as taxas. Devolve as que ficaram.
+ *
+ * Recusa o que não for um número entre 0 e `TAXA_MAXIMA` — uma gralha de 6
+ * para 60 não pode chegar à conta de ninguém. E escreve no registo permanente
+ * quem mudou, de quanto para quanto: uma percentagem que muda sozinha, sem
+ * nome nem data, é a pior linha de um livro de contas.
+ */
+export async function guardarTaxas(
+  novas: { cliente: number; profissional: number },
+  quem: string,
+): Promise<Taxas> {
+  const valida = (n: number, nome: string) => {
+    if (!Number.isFinite(n) || n < 0 || n > TAXA_MAXIMA) {
+      throw new Error(
+        `A taxa d${nome} tem de estar entre 0 % e ${Math.round(TAXA_MAXIMA * 100)} %.`,
+      );
+    }
+    return Math.round(n * 10000) / 10000;
+  };
+  const cliente = valida(novas.cliente, "o cliente");
+  const profissional = valida(novas.profissional, "o profissional");
+
+  const antes = await taxasActuais();
+
+  await upsertSimulatorSetting({
+    key: CHAVE_TAXA_CLIENTE,
+    label: "Taxa CLYON ao cliente",
+    category: "taxas",
+    unit: "%",
+    value: (cliente * 100).toFixed(2),
+    description: "Somada ao valor acordado, no que o cliente paga.",
+  });
+  await upsertSimulatorSetting({
+    key: CHAVE_TAXA_PROFISSIONAL,
+    label: "Taxa CLYON ao profissional",
+    category: "taxas",
+    unit: "%",
+    value: (profissional * 100).toFixed(2),
+    description: "Descontada ao valor acordado, no que o profissional recebe.",
+  });
+
+  const pct = (n: number) => `${(n * 100).toFixed(2).replace(".", ",")} %`;
+  await registarSemFalhar({
+    acontecimento: "taxas_alteradas",
+    autorTipo: "clyon",
+    autorNome: quem,
+    resumo:
+      `Taxas da plataforma alteradas: cliente ${pct(antes.cliente)} → ${pct(cliente)}, ` +
+      `profissional ${pct(antes.profissional)} → ${pct(profissional)}. ` +
+      "Só se aplica a negociações criadas a partir de agora.",
+    detalhe: { antes, depois: { cliente, profissional } },
+  });
+
+  return { cliente, profissional };
 }
 
 export async function upsertSimulatorSetting(data: {
@@ -1029,6 +1164,27 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * ligações. Era isso que punha "Os meus trabalhos" a demorar.
      */
     `CREATE INDEX idx_negociacoes_provider ON negociacoes (providerId, updatedAt)`,
+    /*
+     * A TAXA FICA PRESA À NEGOCIAÇÃO — 15-09-2026.
+     *
+     * "Os campos das taxas da plataforma devem ser editáveis pelo admin e deve
+     * mudar para todos correctamente."
+     *
+     * Não havia coluna nenhuma de taxa, e todos os números de dinheiro eram
+     * calculados AO VIVO a partir das constantes — a carteira do profissional,
+     * o total do cliente, e até os trabalhos já pagos. Tornar a percentagem
+     * editável sem isto reescrevia o passado inteiro: o total ganho de cada
+     * profissional, o que cada cliente pagou, e os números que já tinham ido
+     * em factura.
+     *
+     * Gravam-se quando a negociação NASCE e nunca mais mudam. NULL quer dizer
+     * "anterior a isto existir", e nesse caso valem as de origem (5 % e 6 %) —
+     * ver `taxasDaNegociacao`. Não se faz backfill de propósito: um UPDATE em
+     * massa numa tabela de dinheiro, para gravar o que a ausência já diz, é
+     * risco sem ganho.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN taxaCliente DECIMAL(6,4) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN taxaProfissional DECIMAL(6,4) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1049,6 +1205,9 @@ export type NegociacaoNaBase = {
   provaJson?: string | null;
   confirmadoEm?: Date | string | null;
   pagoEm?: Date | string | null;
+  /** A comissão com que ESTA negociação nasceu. Nulas = as de origem. */
+  taxaCliente?: string | number | null;
+  taxaProfissional?: string | number | null;
 };
 
 /**
@@ -1176,13 +1335,32 @@ export async function criarNegociacao(
        execucaoEnviadaEm = NULL, provaJson = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
-       arquivadoProfissionalEm = NULL`
+       arquivadoProfissionalEm = NULL,
+       taxaCliente = VALUES(taxaCliente),
+       taxaProfissional = VALUES(taxaProfissional)`
     : `id = LAST_INSERT_ID(id)`;
+  /*
+   * REABRIR TAMBÉM RENOVA A TAXA, e é a única linha daquele UPDATE que mexe em
+   * dinheiro. Reabrir substitui as propostas todas: o que o cliente tinha visto
+   * deixa de existir por decisão de quem reabriu, e não há promessa a proteger.
+   * Uma negociação reaberta é uma negociação a nascer outra vez.
+   */
+
+  /*
+   * A TAXA QUE ESTA NEGOCIAÇÃO VAI TER PARA SEMPRE.
+   *
+   * Grava-se no nascimento e não se lhe toca mais. É o que permite mudar a
+   * percentagem no backoffice sem reescrever o que já foi prometido: nem a
+   * proposta que o cliente recebeu no WhatsApp, nem a carteira do
+   * profissional, nem uma factura já emitida.
+   */
+  const taxas = await taxasParaUmaNegociacaoNova();
 
   const [res] = await pool.execute(
     `INSERT INTO negociacoes
-       (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson)
-     VALUES (?, ?, ?, ?, ?)
+       (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson,
+        taxaCliente, taxaProfissional)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE ${aoRepetir}`,
     [
       dados.pedidoId,
@@ -1190,6 +1368,8 @@ export async function criarNegociacao(
       dados.acessoTokenHash,
       dados.acessoTokenExpiraEm,
       dados.propostasJson,
+      taxas.cliente,
+      taxas.profissional,
     ],
   ) as any[];
 
@@ -1595,6 +1775,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     // como se lá chegou — que é justamente o que se quer ver quando uma
     // negociação corre mal.
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.propostasJson,
+            n.taxaCliente, n.taxaProfissional,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
             n.estrelas, n.avaliadoEm, n.dataCombinada,
@@ -1954,6 +2135,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     pedidoId: number;
     estado: string;
     valorAcordado: string | null;
+    /** A comissão com que esta negociação nasceu. Nulas = as de origem. */
+    taxaCliente: string | null;
+    taxaProfissional: string | null;
     propostasJson: string | null;
     updatedAt: Date;
     execucaoEnviadaEm: Date | null;
@@ -2019,6 +2203,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   if (!pool) return [];
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
+            n.taxaCliente, n.taxaProfissional,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
@@ -6309,7 +6494,20 @@ export type Acontecimento =
    */
   | "assistente_alerta"
   // As contas
-  | "conta_apagada";
+  | "conta_apagada"
+  /*
+   * ALGUÉM MUDOU A COMISSÃO DA CLYON.
+   *
+   * É a única coisa no backoffice que muda quanto a empresa cobra, e a única
+   * que muda o dinheiro de todos os trabalhos futuros de uma vez. Uma
+   * percentagem que aparece diferente sem nome nem data é a pior linha de um
+   * livro de contas — daqui a um ano ninguém sabe quando passou de 6 para 7,
+   * nem quem decidiu.
+   *
+   * Não afecta nada do que já existe: cada negociação leva a sua taxa gravada
+   * desde que nasce.
+   */
+  | "taxas_alteradas";
 
 export type LinhaDoRegisto = {
   acontecimento: Acontecimento;
@@ -6780,7 +6978,8 @@ export async function apagarProfissional(
     // Negociações cruas — sem passar pelos pedidos, que podem já ter sido
     // expurgados sem que isso apague o dinheiro que geraram.
     const [nLinhas] = (await conn.execute(
-      `SELECT id, estado, valorAcordado, execucaoEnviadaEm, confirmadoEm, pagoEm
+      `SELECT id, estado, valorAcordado, taxaCliente, taxaProfissional,
+              execucaoEnviadaEm, confirmadoEm, pagoEm
          FROM negociacoes WHERE providerId = ?`,
       [providerId],
     )) as any[];
@@ -6788,6 +6987,8 @@ export async function apagarProfissional(
       id: number;
       estado: string;
       valorAcordado: string | number | null;
+      taxaCliente: string | null;
+      taxaProfissional: string | null;
       execucaoEnviadaEm: Date | null;
       confirmadoEm: Date | null;
       pagoEm: Date | null;
@@ -6821,6 +7022,10 @@ export async function apagarProfissional(
         negociacaoId: n.id,
         estado: n.estado,
         valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+        // A comissão de cada trabalho, e não a de hoje: isto decide se a conta
+        // pode ser apagada, e um saldo recalculado à taxa nova mentia.
+        taxaCliente: n.taxaCliente,
+        taxaProfissional: n.taxaProfissional,
         execucaoEnviadaEm: n.execucaoEnviadaEm,
         confirmadoEm: n.confirmadoEm,
         pagoEm: n.pagoEm,
@@ -8502,6 +8707,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
 
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
+            n.taxaCliente, n.taxaProfissional,
             n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
             n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.regimeIva

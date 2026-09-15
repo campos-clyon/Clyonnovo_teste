@@ -35,7 +35,8 @@ describe("a rota manda o valor da CLYON", () => {
      */
     expect(ROTA).toContain("valorDaClyon:");
     const bloco = ROTA.slice(ROTA.indexOf("valorDaClyon:"), ROTA.indexOf("valorDaClyon:") + 220);
-    expect(bloco).toContain("quantoOProfissionalRecebe(Number(l.valorDesejadoCliente))");
+    // Sem o parêntese de fecho: ganhou o argumento das taxas da negociação.
+    expect(bloco).toContain("quantoOProfissionalRecebe(Number(l.valorDesejadoCliente)");
   });
 
   it("sem valor no pedido, vai nulo — e não zero", () => {

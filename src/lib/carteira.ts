@@ -1,4 +1,4 @@
-import { quantoOProfissionalRecebe } from "./taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { estaLibertado, faseDoTrabalho, type Trabalho } from "./trabalho";
 
 /**
@@ -20,6 +20,17 @@ import { estaLibertado, faseDoTrabalho, type Trabalho } from "./trabalho";
 export type TrabalhoNaCarteira = Trabalho & {
   negociacaoId: number;
   valorAcordado: number | null;
+  /*
+   * A COMISSÃO QUE ESTE TRABALHO TEVE, e não a de hoje.
+   *
+   * A taxa passou a poder mudar no backoffice (15-09-2026). Sem estas duas, a
+   * carteira era recalculada à taxa actual sempre que alguém a abria — e
+   * mudar a percentagem mexia no total ganho de trabalhos feitos e pagos há
+   * meses. Vêm da linha da negociação; nulas querem dizer "anterior a isto" e
+   * valem as de origem.
+   */
+  taxaProfissional?: number | string | null;
+  taxaCliente?: number | string | null;
 };
 
 export type Levantamento = {
@@ -54,9 +65,10 @@ function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-function liquido(valorAcordado: number | null): number {
-  if (valorAcordado == null || !Number.isFinite(valorAcordado)) return 0;
-  return quantoOProfissionalRecebe(valorAcordado);
+function liquido(t: TrabalhoNaCarteira): number {
+  const v = t.valorAcordado;
+  if (v == null || !Number.isFinite(v)) return 0;
+  return quantoOProfissionalRecebe(v, taxasDaNegociacao(t));
 }
 
 export function carteiraDe(
@@ -69,7 +81,7 @@ export function carteiraDe(
 
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
-    const valor = liquido(t.valorAcordado);
+    const valor = liquido(t);
     // A libertação por prazo conta como confirmada mesmo antes de alguém correr
     // o processo que grava a data — senão o profissional via o prazo passar e o
     // dinheiro continuar preso, que é a única coisa que não lhe podemos fazer.

@@ -5,6 +5,7 @@ import { naAgenda } from "@/lib/agenda-dos-trabalhos";
 import {
   quantoOProfissionalRecebe,
   contaDoCliente,
+  taxasDaNegociacao,
   regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
+              n.taxaCliente, n.taxaProfissional,
               n.dataCombinada, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
               o.dataAgendada, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
@@ -85,10 +87,10 @@ export async function GET(req: NextRequest) {
          * regime dele). Sem os três à vista, corrige-se 135 para 230 sem
          * reparar que a transferência passou a ser de 218,50 €.
          */
-        recebe: l.valorAcordado != null ? quantoOProfissionalRecebe(Number(l.valorAcordado)) : null,
+        recebe: l.valorAcordado != null ? quantoOProfissionalRecebe(Number(l.valorAcordado), taxasDaNegociacao(l)) : null,
         clientePaga:
           l.valorAcordado != null
-            ? contaDoCliente(Number(l.valorAcordado), regimeDeIva(l.regimeIva)).total
+            ? contaDoCliente(Number(l.valorAcordado), regimeDeIva(l.regimeIva), taxasDaNegociacao(l)).total
             : null,
         /* A data ainda se corrige depois disto — mas não em silêncio. */
         jaConfirmado: Boolean(l.confirmadoEm),

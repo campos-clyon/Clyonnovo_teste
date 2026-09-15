@@ -1,4 +1,4 @@
-import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
 
 /**
@@ -26,8 +26,16 @@ import { euros } from "@/lib/texto-da-mesa";
  * NÃO VIVE EM `taxas-plataforma.ts` de propósito: esse ficheiro é o da conta e
  * não se lhe toca. Aqui só se escreve em português o que ele calcula.
  */
-export function totalEmPalavras(valor: number, regimeIva: string | null): string {
-  const conta = contaDoCliente(valor, regimeDeIva(regimeIva));
+export function totalEmPalavras(
+  valor: number,
+  regimeIva: string | null,
+  /*
+   * As taxas DESTA negociação. Sem elas, as de origem — que é o certo para
+   * uma conversa que ainda não tem negociação nenhuma por trás.
+   */
+  taxas?: Taxas,
+): string {
+  const conta = contaDoCliente(valor, regimeDeIva(regimeIva), taxas);
   return conta.temIva
     ? `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}.`
     : `Com a taxa CLYON, fica em ${euros(conta.total)}.`;
