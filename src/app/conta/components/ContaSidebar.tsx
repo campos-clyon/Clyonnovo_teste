@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import { limparFotografias } from "@/lib/ultima-fotografia";
 import UserAvatar from "@/components/UserAvatar";
 import {
   ClipboardList,
@@ -56,7 +57,11 @@ export default function ContaSidebar({
         </div>
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => {
+            // Sair leva a fotografia atrás — ver `ultima-fotografia`.
+            limparFotografias();
+            void signOut({ callbackUrl: "/" });
+          }}
           className="mt-1 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-tinta-fraca transition hover:bg-slate-50 hover:text-slate-600"
         >
           <LogOut className="h-3.5 w-3.5" />

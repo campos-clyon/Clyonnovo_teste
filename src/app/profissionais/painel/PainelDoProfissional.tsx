@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
@@ -22,6 +22,11 @@ import {
 import { GrupoDeLinhas, LinhaDeMenu, euros } from "@/components/portal/Portal";
 import InstalarNoTelemovel from "@/components/portal/InstalarNoTelemovel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import {
+  guardarFotografia,
+  lerFotografia,
+  limparFotografias,
+} from "@/lib/ultima-fotografia";
 import Trabalhos from "./Trabalhos";
 import Carteira from "./Carteira";
 import Historico from "./Historico";
@@ -83,6 +88,16 @@ const ESTADO_DA_CONTA: Record<string, { texto: string; cls: string }> = {
   suspenso: { texto: "suspenso", cls: "bg-slate-200 text-slate-600" },
 };
 
+/** O que se guarda para o painel abrir já com alguma coisa. Ver `ultima-fotografia`. */
+type Fotografia = {
+  nome: string;
+  pedidos: Pedido[];
+  carteira: DadosDaCarteira | null;
+  perfil: Perfil | null;
+};
+
+const CHAVE_DO_PAINEL = "pro:painel";
+
 export default function PainelDoProfissional() {
   const router = useRouter();
   const params = useSearchParams();
@@ -114,11 +129,26 @@ export default function PainelDoProfissional() {
    */
   const trabalhoAberto = Number(params.get("trabalho")) || null;
 
-  const [nome, setNome] = useState("");
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [carteira, setCarteira] = useState<DadosDaCarteira | null>(null);
-  const [perfil, setPerfil] = useState<Perfil | null>(null);
-  const [aCarregar, setACarregar] = useState(true);
+  /*
+   * O PAINEL ABRE COM O QUE MOSTROU DA ÚLTIMA VEZ — 16-09-2026.
+   *
+   * "isso deve ser instantâneo também para os profissionais e clientes."
+   *
+   * A cada entrada — mudar de página, voltar atrás, recarregar — isto nascia
+   * vazio e ficava na roda até a API responder. Um ecrã branco, todas as
+   * vezes, a caminho de mostrar exactamente o que já lá tinha estado.
+   *
+   * Agora o primeiro desenho é a última fotografia, e a chamada corre por
+   * baixo. Quem nunca abriu o painel continua a ver a roda — é a única altura
+   * em que ela diz alguma coisa.
+   */
+  const guardado = useMemo(() => lerFotografia<Fotografia>(CHAVE_DO_PAINEL), []);
+
+  const [nome, setNome] = useState(guardado?.nome ?? "");
+  const [pedidos, setPedidos] = useState<Pedido[]>(guardado?.pedidos ?? []);
+  const [carteira, setCarteira] = useState<DadosDaCarteira | null>(guardado?.carteira ?? null);
+  const [perfil, setPerfil] = useState<Perfil | null>(guardado?.perfil ?? null);
+  const [aCarregar, setACarregar] = useState(guardado == null);
   const [erro, setErro] = useState("");
 
   /*
@@ -286,6 +316,19 @@ export default function PainelDoProfissional() {
   }, [carregar]);
 
   /*
+   * Grava-se o que está no ecrã, e não o que veio da rede.
+   *
+   * Assim a fotografia é sempre igual ao que ele viu da última vez — incluindo
+   * quando uma das chamadas secundárias falhou e o canto ficou como estava. E
+   * corre depois de cada mudança, e não dentro do `carregar`, para não haver
+   * dois sítios a decidir o que é «a última».
+   */
+  useEffect(() => {
+    if (aCarregar) return;
+    guardarFotografia(CHAVE_DO_PAINEL, { nome, pedidos, carteira, perfil } satisfies Fotografia);
+  }, [aCarregar, nome, pedidos, carteira, perfil]);
+
+  /*
    * De minuto a minuto, sem dar por isso.
    *
    * Um pedido tem 48 horas de prazo, mas quem está com o painel aberto à
@@ -345,6 +388,9 @@ export default function PainelDoProfissional() {
   }
 
   async function sair() {
+    // Sair leva a fotografia atrás: senão, quem abrir o painel a seguir no
+    // mesmo separador via, por um instante, os trabalhos de quem saiu.
+    limparFotografias();
     await fetch("/api/profissionais/sair", { method: "POST" });
     router.push("/profissionais/entrar");
   }

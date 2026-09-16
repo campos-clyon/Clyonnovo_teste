@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import { guardarFotografia, lerFotografia } from "@/lib/ultima-fotografia";
 import {
   SERVICE_LABELS,
   estadoNaPlataforma,
@@ -38,14 +39,39 @@ function Metrica({ rotulo, valor }: { rotulo: string; valor: string | number }) 
   );
 }
 
+/**
+ * O que se guarda para a lista abrir já com alguma coisa.
+ *
+ * SÓ O PRIMEIRO ECRÃ — filtro «todos», página 1. É com ele que a conta abre, e
+ * guardar os outros dava a quem voltasse a lista de «Concluído» por baixo do
+ * separador «Todos» durante o instante até a resposta chegar. Uma fotografia
+ * que mostra outra coisa é pior do que não haver fotografia.
+ */
+type Fotografia = { orders: Order[]; total: number; grandTotal: number; pages: number };
+
+const CHAVE_DOS_PEDIDOS = "cliente:pedidos";
+
 export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }) {
   const [filter, setFilter]   = useState("todos");
   const [page, setPage]       = useState(1);
-  const [orders, setOrders]   = useState<Order[]>([]);
-  const [total, setTotal]     = useState(0);
-  const [grandTotal, setGrandTotal] = useState(0);
-  const [pages, setPages]     = useState(1);
-  const [loading, setLoading] = useState(true);
+  /*
+   * ABRE COM O QUE MOSTROU DA ÚLTIMA VEZ — 16-09-2026.
+   *
+   * "isso deve ser instantâneo também para os profissionais e clientes."
+   *
+   * A lista nascia vazia a cada entrada e ficava na roda até a API responder,
+   * a caminho de mostrar exactamente o que já lá tinha estado. Agora o
+   * primeiro desenho é a última fotografia e a chamada corre por baixo. Quem
+   * nunca abriu a conta continua a ver a roda — é a única altura em que ela
+   * informa alguém.
+   */
+  const guardado = useMemo(() => lerFotografia<Fotografia>(CHAVE_DOS_PEDIDOS), []);
+
+  const [orders, setOrders]   = useState<Order[]>(guardado?.orders ?? []);
+  const [total, setTotal]     = useState(guardado?.total ?? 0);
+  const [grandTotal, setGrandTotal] = useState(guardado?.grandTotal ?? 0);
+  const [pages, setPages]     = useState(guardado?.pages ?? 1);
+  const [loading, setLoading] = useState(guardado == null);
   const [selected, setSelected] = useState<Order | null>(null);
 
   /**
@@ -100,6 +126,12 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
   );
 
   useEffect(() => { void fetchOrders(filter, page); }, [filter, page, fetchOrders]);
+
+  // Guarda-se o primeiro ecrã, e só ele — ver a nota de `Fotografia`.
+  useEffect(() => {
+    if (loading || filter !== "todos" || page !== 1) return;
+    guardarFotografia(CHAVE_DOS_PEDIDOS, { orders, total, grandTotal, pages } satisfies Fotografia);
+  }, [loading, filter, page, orders, total, grandTotal, pages]);
 
   /*
    * De minuto a minuto, sem dar por isso.
@@ -180,7 +212,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
       </div>
 
       {/* Loading */}
-      {loading && (
+      {loading && orders.length === 0 && (
         <div className="flex justify-center py-16">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00B4D8] border-t-transparent" />
         </div>

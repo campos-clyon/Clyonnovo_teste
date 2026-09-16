@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import { limparFotografias } from "@/lib/ultima-fotografia";
 import UserAvatar from "@/components/UserAvatar";
 import {
   Bell,
@@ -103,7 +104,11 @@ export default function MenuMovel({
           icone={LogOut}
           rotulo="Sair"
           tom="perigo"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => {
+            // Sair leva a fotografia atrás — ver `ultima-fotografia`.
+            limparFotografias();
+            void signOut({ callbackUrl: "/" });
+          }}
         />
       </GrupoDeLinhas>
     </div>
