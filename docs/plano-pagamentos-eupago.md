@@ -60,6 +60,83 @@ Nem uma coluna, nem um estado, nem um ecrã.
 
 ## 2. Os cinco riscos, por ordem de gravidade
 
+### 2.0 O que o contrato do euPago já respondeu *(lido a 16-09-2026)*
+
+**O dinheiro vem todo para a CLYON, e o euPago não reparte.**
+
+> *«Os valores devidos pelo Cliente à Eupago serão deduzidos diretamente das
+> quantias cobradas aos Consumidores, no momento da sua liquidação, antes da
+> transferência para a conta bancária do Cliente.»*
+
+Não há pagamento repartido neste contrato: o euPago cobra o cliente final,
+desconta a comissão dele, e transfere o líquido para **uma** conta bancária — a
+da CLYON. O modelo 1 do ponto 2.1 está fora da mesa, a menos que eles tenham um
+produto de marketplace que não está aqui.
+
+**E o euPago afasta-se explicitamente da relação com o cliente final:**
+
+> *«A Eupago não intervirá, direta ou indiretamente, na relação contratual
+> estabelecida entre o Cliente e os seus Consumidores»* · *«Assumir a
+> responsabilidade exclusiva por litígios relativos a bens e serviços»*
+
+Ou seja: **toda a disputa é da CLYON**. O euPago processa e mais nada.
+
+**Três obrigações que entram no produto, e não são opcionais:**
+
+1. Dizer aos clientes, nas comunicações, que **os pagamentos são processados
+   pelo euPago**. Vai ao ecrã de pagamento e aos Termos.
+2. Comunicar qualquer operação não autorizada **em 2 dias úteis**. Passado
+   esse prazo o euPago não responde por ela — o que faz da reconciliação
+   diária uma obrigação contratual e não uma boa prática.
+3. Reclamações podem ir ao **Banco de Portugal** (supervisor do euPago) e a
+   entidades de RAL (CNIACC, CICAP).
+
+**⚠️ E uma cláusula que pode prender dinheiro nosso — «Reserva de fundos»:**
+
+> *«A Eupago poderá (…) reter temporariamente parte dos montantes recebidos a
+> favor do Cliente, a título de reserva de fundos (…) para assegurar o
+> cumprimento (…) de pedidos de reembolso, estornos ou casos de fraude.»* E se
+> os reembolsos passarem um limite: *«suspender ou limitar a prestação dos
+> serviços; exigir garantias adicionais.»*
+
+Isto importa muito: **a carteira do profissional pode dizer «disponível» e o
+dinheiro não estar na conta da CLYON.** O livro de movimentos (ponto 2.4) tem de
+saber distinguir *o que é dele* de *o que já cá está* — senão prometemos um
+levantamento que não podemos pagar.
+
+#### O preço, e uma conclusão que não esperava
+
+| Método | Custo (sem IVA) |
+|---|---|
+| MB WAY | 0,07 € + **0,70 %** |
+| Multibanco | **0,66 €** fixo |
+| Payshop | 0,81 € fixo |
+| Anuidade | 0 € |
+
+O MB WAY é percentual e o Multibanco é fixo, e **cruzam-se aos 84,29 €**. Acima
+disso o Multibanco é mais barato para nós — e quase todos os trabalhos estão
+acima:
+
+| Cliente paga | MB WAY | Multibanco | Diferença |
+|---|---|---|---|
+| 100 € | 0,77 € | 0,66 € | 0,11 € |
+| 318 € | 2,30 € | 0,66 € | **1,64 €** |
+| 500 € | 3,57 € | 0,66 € | **2,91 €** |
+| 1 000 € | 7,07 € | 0,66 € | **6,41 €** |
+
+Num trabalho de 300 € com um profissional isento, o cliente paga 318,45 € e a
+comissão da CLYON é 33 €. O MB WAY leva 2,30 € — **7 % da nossa comissão**. O
+Multibanco levaria 0,66 €, ou 2 %.
+
+**Não muda a decisão de começar pelo MB WAY** — é instantâneo, o cliente confirma
+no telemóvel em segundos, e a referência Multibanco pode ficar dois dias por
+pagar com o profissional à espera. A rapidez vale o 1,64 €. Mas é bom saber que
+a escolha tem preço, e que a 100 trabalhos por mês são ~164 €.
+
+E note-se: **a comissão é sobre o valor TODO**, incluindo a parte que é do
+profissional. É um custo próprio do modelo de caução que não existiria se o
+cliente lhe pagasse directamente.
+
 ### 2.1 ⚠️ Quem pode segurar dinheiro de outra pessoa — a pergunta que não é técnica
 
 Se o cliente paga 300 € à CLYON e a CLYON paga 282 € ao profissional daqui a uma
@@ -69,9 +146,8 @@ formalidade.
 
 Os mercados resolvem-no de três maneiras:
 
-1. **Pagamento repartido no PSP** — o euPago paga a cada um directamente e a
-   CLYON nunca toca no dinheiro do pro. É o mais limpo. *É preciso perguntar ao
-   euPago se tem este produto.*
+1. ~~**Pagamento repartido no PSP**~~ — **fora**: o contrato transfere tudo para
+   uma conta só, a da CLYON (ver 2.0).
 2. **Em nome próprio** — a CLYON compra o serviço ao pro e vende-o ao cliente. O
    dinheiro é receita da CLYON e o pagamento ao pro é pagar a um fornecedor.
    **Colide com a facturação que já desenhámos**, em que é o profissional que
@@ -80,10 +156,17 @@ Os mercados resolvem-no de três maneiras:
    É o que melhor encaixa no que já está construído, mas tem de estar escrito no
    contrato do profissional e nos Termos.
 
-**Não sou advogado e não vou fingir que sou.** O que digo é: esta pergunta tem
-de ser feita ao euPago e ao contabilista **antes** de o primeiro euro entrar, e
-a resposta muda o desenho. É o único ponto deste documento que pode obrigar a
-recomeçar.
+**O contrato do euPago não resolve isto — sharpens.** Ele fala de *«litígios
+relativos a bens e serviços»* do Cliente para com os seus *Consumidores*, ou
+seja: está escrito a assumir que a CLYON vende o que cobra. Isso é o modelo 2.
+Se a CLYON cobrar um serviço que o **profissional** presta e factura, está a
+receber por conta de terceiro — e o contrato não contempla esse caso nem o
+proíbe. Simplesmente não fala dele.
+
+**Não sou advogado e não vou fingir que sou.** O que digo é: a escolha entre 2 e
+3 tem de ser feita com o contabilista **antes** de o primeiro euro entrar, e a
+resposta muda quem factura o quê — que é código que já existe e teria de mudar.
+É o único ponto deste documento que pode obrigar a recomeçar.
 
 ### 2.2 O limite do MB WAY parte os trabalhos grandes
 
@@ -143,14 +226,21 @@ Cada fase acaba com uma coisa que funciona e é verificável. Nenhuma liga o
 
 ### Fase 0 — Perguntas antes de código *(sua, com o euPago)*
 
-1. O euPago tem pagamento repartido / marketplace? Se não, qual dos três
-   modelos do ponto 2.1 nos aconselham?
-2. Qual é o tecto do MB WAY por operação?
-3. O MB WAY tem estorno pela API? Total e parcial? Até quantos dias?
-4. Qual é o formato da assinatura do webhook, e onde se configura o URL?
-5. Há ambiente de testes (sandbox) com credenciais próprias?
+| # | Pergunta | Estado |
+|---|---|---|
+| 1 | Pagamento repartido / marketplace? | ✅ **Não** — o contrato transfere tudo para uma conta. Falta só decidir o modelo 2 ou 3, e isso é com o contabilista |
+| 2 | Tecto do MB WAY por operação? | ❌ por responder |
+| 3 | Estorno de MB WAY pela API — total, parcial, prazo? | ❌ **bloqueia** |
+| 4 | Assinatura do webhook e onde se configura o URL? | ❌ **bloqueia** |
+| 5 | Sandbox com credenciais próprias? | ❌ por responder |
+| 6 | *(nova)* Vão aplicar reserva de fundos? Qual a percentagem e quanto tempo? | ❌ **importa muito** — ver 2.0 |
 
-**Sem as respostas 1, 3 e 4 não começo.** As outras dão para contornar.
+As 3 e 4 são documentação técnica: peça-lhes o **manual da API e do webhook**, e
+provavelmente vêm as duas de uma vez, com a 2 e a 5 à mistura.
+
+A 6 é a que ninguém se lembra de perguntar e depois dói: se eles retiverem 10 %
+durante 30 dias, a carteira do profissional diz «disponível» e a conta da CLYON
+não tem com que pagar.
 
 ### Fase 1 — O livro de movimentos, sem cobrar nada
 
