@@ -56,7 +56,8 @@ type GalleryFormState = {
 };
 
 const defaultForm: GalleryFormState = {
-  section: "hero",
+  // O carrossel saiu do site: o que se carrega hoje vai para a galeria.
+  section: "showcase",
   title: "",
   subtitle: "",
   description: "",
@@ -136,7 +137,7 @@ async function optimizeImageFile(file: File, section: GallerySection) {
   return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
 }
 
-export default function ImageManagerClient() {
+export default function ImageManagerClient({ embutido = false }: { embutido?: boolean } = {}) {
   const router = useRouter();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -349,26 +350,50 @@ export default function ImageManagerClient() {
     return true;
   });
 
+  /*
+   * O MESMO GESTOR, EM DOIS SÍTIOS — 16-09-2026.
+   *
+   * "Faça com que o gestor abra aqui mesmo."
+   *
+   * Era uma página à parte: das Configs saía-se do backoffice, geriam-se as
+   * imagens e voltava-se atrás. Para trocar uma fotografia da galeria isso são
+   * duas viagens e a perda do sítio onde se estava.
+   *
+   * Embutido, tira-se a moldura de página inteira — o fundo que vai até ao fim
+   * do ecrã, a margem larga e o «Voltar ao painel», que dentro das Configs não
+   * leva a lado nenhum. O que faz o trabalho é exactamente o mesmo código: um
+   * segundo gestor era um segundo sítio para corrigir cada erro.
+   */
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#060f1a_0%,#07111c_100%)] px-4 py-8 md:px-6 md:py-10">
-      <div className="mx-auto max-w-7xl space-y-5">
+    <div
+      className={
+        embutido
+          ? ""
+          : "min-h-screen bg-[linear-gradient(180deg,#060f1a_0%,#07111c_100%)] px-4 py-8 md:px-6 md:py-10"
+      }
+    >
+      <div className={embutido ? "space-y-5" : "mx-auto max-w-7xl space-y-5"}>
 
         {/* Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <button
-              type="button"
-              onClick={() => router.push("/admin")}
-              className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 hover:text-cyan-300"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Voltar ao painel
-            </button>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Gestor de imagens</p>
-            <h1 className="mt-1.5 text-3xl font-semibold text-white">
-              Carrossel e galeria de trabalhos
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-300">
+            {!embutido && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => router.push("/admin")}
+                  className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 hover:text-cyan-300"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Voltar ao painel
+                </button>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
+                  Gestor de imagens
+                </p>
+                <h1 className="mt-1.5 text-3xl font-semibold text-white">Galeria de trabalhos</h1>
+              </>
+            )}
+            <p className={`max-w-2xl text-sm leading-6 text-slate-300 ${embutido ? "" : "mt-1.5"}`}>
               Carregue, substitua, ordene e oculte imagens do site sem editar código.
             </p>
           </div>
@@ -396,7 +421,20 @@ export default function ImageManagerClient() {
 
         {/* Cards de resumo */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCard icon={LayoutGrid} label="Carrossel topo" value={heroItems.length} tone="cyan" />
+          {/*
+            O CARROSSEL SAIU DO SITE — 16-09-2026. "apague tudo aquilo que já
+            não serve, ex: carrossel já não existe."
+
+            Confirmei antes de mexer: o `HeroBackground` da homepage são
+            gradientes em CSS, sem imagem nenhuma, e nada no site desenha a
+            secção `hero`. Nove imagens estavam a ser geridas para um sítio que
+            deixou de existir.
+
+            NÃO SE APAGAM SOZINHAS. Continuam à vista, com o nome que diz a
+            verdade, para ele as apagar quando quiser — tirá-las da lista era
+            deixá-las no armazenamento sem maneira de lá chegar.
+          */}
+          <SummaryCard icon={LayoutGrid} label="Já não usadas no site" value={heroItems.length} tone="cyan" />
           <SummaryCard icon={Images} label="Galeria de trabalhos" value={showcaseItems.length} tone="emerald" />
           <SummaryCard icon={UploadCloud} label="Imagens ativas" value={activeCount} tone="slate" />
         </div>
@@ -440,7 +478,7 @@ export default function ImageManagerClient() {
                     onChange={(event) => updateNewItem("section", event.target.value as GallerySection)}
                     className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300"
                   >
-                    <option value="hero">Carrossel topo</option>
+                    {/* Sem carrossel no site, não se carregam imagens novas para lá. */}
                     <option value="showcase">Galeria de trabalhos</option>
                   </select>
                 </DField>
@@ -663,7 +701,7 @@ export default function ImageManagerClient() {
                                 </DField>
                                 <DField label="Secção">
                                   <select value={item.section} onChange={(e) => updateItem(item.id, "section", e.target.value as GallerySection)} className="h-10 w-full rounded-[14px] border border-white/10 bg-[#0a1a28] px-3 text-sm text-white outline-none transition focus:border-cyan-300">
-                                    <option value="hero">Carrossel topo</option>
+                                    {/* Sem carrossel no site, não se carregam imagens novas para lá. */}
                                     <option value="showcase">Galeria de trabalhos</option>
                                   </select>
                                 </DField>

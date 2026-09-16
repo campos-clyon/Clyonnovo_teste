@@ -86,6 +86,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import ImageManagerClient from "@/components/admin/ImageManagerClient";
 
 type SimulatorSetting = {
   key: string;
@@ -3418,50 +3419,25 @@ export default function ColaboradorAdminClient({
               {settingsTab === "imagens" && (
                 <ActionCard
                   title="Imagens do site"
-                  description="Gira o carrossel da homepage e a galeria de trabalhos. Use o painel dedicado para fazer upload, substituir ou apagar imagens."
+                  description="A galeria de trabalhos que aparece em clyon.pt/trabalhos. Carregue, substitua, ordene e oculte — tudo aqui."
                 >
-                  <div className="space-y-4">
-                    <div className="rounded-[16px] border border-emerald-300/20 bg-emerald-400/[0.07] px-4 py-3 text-sm text-emerald-100">
-                      Imagens guardadas no Vercel Blob — persistentes entre deploys. Use o painel para gerir uploads.
-                    </div>
-                    {loadingImageStats ? (
-                      <div className="rounded-[16px] border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-slate-400">
-                        A carregar estatísticas das imagens…
-                      </div>
-                    ) : imageStats ? (
-                      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        <SummaryStat icon={ImagePlus} label="Total" value={String(imageStats.total)} helper="Imagens geridas" tone="cyan" />
-                        <SummaryStat icon={CheckCircle2} label="Ativas" value={String(imageStats.ativas)} helper="Visíveis no site" tone="emerald" />
-                        <SummaryStat icon={ImagePlus} label="Carrossel" value={String(imageStats.hero)} helper="Secção topo" tone="slate" />
-                        <SummaryStat icon={ImagePlus} label="Galeria" value={String(imageStats.showcase)} helper="Trabalhos" tone="slate" />
-                      </div>
-                    ) : null}
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-5">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400/20">
-                          <ImagePlus className="h-5 w-5 text-cyan-200" />
-                        </div>
-                        <h3 className="mt-3 text-base font-semibold text-white">Carrossel topo</h3>
-                        <p className="mt-1 text-xs text-slate-400">Imagens em destaque na homepage. Recomendado: 1800px largura máxima.</p>
-                      </div>
-                      <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-5">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/20">
-                          <ImagePlus className="h-5 w-5 text-emerald-200" />
-                        </div>
-                        <h3 className="mt-3 text-base font-semibold text-white">Galeria de trabalhos</h3>
-                        <p className="mt-1 text-xs text-slate-400">Casos reais com grupos e fases (antes, durante, depois). Recomendado: 1600px.</p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => router.push("/admin/imagens")}
-                      className="h-11 w-full rounded-2xl bg-cyan-400 text-slate-950 hover:bg-cyan-300"
-                    >
-                      <ImagePlus className="mr-2 h-4 w-4" />
-                      Abrir o gestor de imagens completo
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
+                  {/*
+                    O GESTOR ABRE AQUI — 16-09-2026.
+
+                    "Faça com que o gestor abra aqui mesmo e apague tudo aquilo
+                    que já não serve, ex: carrossel já não existe."
+
+                    Era uma página à parte: das Configs saía-se do backoffice,
+                    trocava-se uma fotografia e voltava-se atrás. Duas viagens e
+                    a perda do sítio onde se estava. É o MESMO componente, em
+                    modo embutido — um segundo gestor era um segundo sítio para
+                    corrigir cada erro.
+
+                    Os cartões que resumiam o carrossel saíram com ele: o
+                    `HeroBackground` da homepage são gradientes em CSS, e nada
+                    no site desenha a secção `hero`.
+                  */}
+                  <ImageManagerClient embutido />
                 </ActionCard>
               )}
 
