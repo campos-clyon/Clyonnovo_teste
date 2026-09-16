@@ -3265,6 +3265,315 @@ export type LevantamentoNaBase = {
   createdAt: Date;
 };
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * O LIVRO DE MOVIMENTOS DA CARTEIRA — Fase 1 do plano dos pagamentos.
+ *
+ * Ver `src/lib/livro-da-carteira.ts` para o porquê e as regras. Aqui está só a
+ * parte que fala com o MySQL.
+ *
+ * NADA NESTA TABELA SE REESCREVE. Uma linha é um facto que aconteceu; corrigir
+ * um engano é lançar um movimento novo. É a única forma de o saldo se
+ * conseguir explicar daqui a um ano — e de se poder comparar com o extracto do
+ * euPago, que também não reescreve o passado.
+ * ────────────────────────────────────────────────────────────────────────── */
+let movimentosReady = false;
+async function ensureMovimentosTable() {
+  if (movimentosReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS movimentosDaCarteira (
+      id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      providerId     INT UNSIGNED NOT NULL,
+      tipo           VARCHAR(30) NOT NULL,
+      valor          DECIMAL(10,2) NOT NULL,
+      disponivelEm   DATETIME NULL DEFAULT NULL,
+      chave          VARCHAR(120) NOT NULL,
+      negociacaoId   INT UNSIGNED NULL,
+      pedidoId       INT NULL,
+      levantamentoId INT UNSIGNED NULL,
+      referencia     VARCHAR(80) NULL,
+      nota           VARCHAR(255) NULL,
+      criadoEm       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_movimento (chave),
+      KEY idx_provider (providerId, disponivelEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  movimentosReady = true;
+}
+
+/**
+ * Lança movimentos. Lançar o mesmo duas vezes não faz nada na segunda.
+ *
+ * A idempotência é a `UNIQUE KEY` em `chave`, e não um `if` antes do INSERT: o
+ * `if` tem uma janela entre a verificação e a escrita, e dois webhooks do
+ * euPago a chegar ao mesmo tempo cabem lá dentro. O índice não tem janela.
+ *
+ * `INSERT IGNORE` e não `ON DUPLICATE KEY UPDATE`: o que já foi lançado não se
+ * actualiza — é um facto passado. Se o valor estivesse errado, a correcção é
+ * outro movimento.
+ *
+ * Devolve quantos entraram mesmo, que é o que permite dizer «já estava tudo
+ * lançado» em vez de «lancei 300 outra vez».
+ */
+export async function lancarMovimentos(
+  movimentos: Array<{
+    providerId: number;
+    tipo: string;
+    valor: number;
+    disponivelEm: Date | null;
+    chave: string;
+    negociacaoId?: number | null;
+    pedidoId?: number | null;
+    levantamentoId?: number | null;
+    referencia?: string | null;
+    nota?: string | null;
+  }>,
+): Promise<number> {
+  if (movimentos.length === 0) return 0;
+  await ensureMovimentosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  let entraram = 0;
+  for (const m of movimentos) {
+    const [r] = (await pool.execute(
+      `INSERT IGNORE INTO movimentosDaCarteira
+         (providerId, tipo, valor, disponivelEm, chave,
+          negociacaoId, pedidoId, levantamentoId, referencia, nota)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        m.providerId,
+        m.tipo,
+        m.valor,
+        m.disponivelEm ? toMySQLDateTime(m.disponivelEm) : null,
+        m.chave.slice(0, 120),
+        m.negociacaoId ?? null,
+        m.pedidoId ?? null,
+        m.levantamentoId ?? null,
+        m.referencia ?? null,
+        m.nota ? m.nota.slice(0, 255) : null,
+      ],
+    )) as any[];
+    entraram += Number((r as { affectedRows?: number })?.affectedRows ?? 0);
+  }
+  return entraram;
+}
+
+export type MovimentoNaBase = {
+  id: number;
+  providerId: number;
+  tipo: string;
+  valor: string;
+  disponivelEm: Date | null;
+  chave: string;
+  negociacaoId: number | null;
+  pedidoId: number | null;
+  levantamentoId: number | null;
+  referencia: string | null;
+  nota: string | null;
+  criadoEm: Date;
+};
+
+export async function movimentosDoProfissional(
+  providerId: number,
+): Promise<MovimentoNaBase[]> {
+  await ensureMovimentosTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT * FROM movimentosDaCarteira WHERE providerId = ? ORDER BY id ASC",
+    [providerId],
+  )) as any[];
+  return rows as MovimentoNaBase[];
+}
+
+/**
+ * OS TRABALHOS E OS LEVANTAMENTOS DE TODOS, EM DUAS CONSULTAS.
+ *
+ * Duas, e não duas por profissional: com quarenta profissionais eram oitenta
+ * idas ao MySQL, cada uma a pagar a latência do Vercel até ao Railway, para uma
+ * conferência que se quer poder correr sempre que apetecer.
+ */
+async function tudoOQueOLivroPrecisa(): Promise<
+  Map<
+    number,
+    {
+      trabalhos: Array<Record<string, unknown>>;
+      levantamentos: Array<{ id: number; valor: number; estado: string; criadoEm: Date }>;
+    }
+  >
+> {
+  await ensureNegociacoesTable();
+  await ensureLevantamentosTable();
+  const pool = await getPool();
+  if (!pool) return new Map();
+
+  const [nLinhas] = (await pool.execute(
+    `SELECT id, providerId, pedidoId, estado, valorAcordado,
+            taxaCliente, taxaProfissional,
+            execucaoEnviadaEm, confirmadoEm, pagoEm
+       FROM negociacoes`,
+  )) as any[];
+  const [lLinhas] = (await pool.execute(
+    "SELECT id, providerId, valor, estado, createdAt FROM levantamentos",
+  )) as any[];
+
+  const porProvider = new Map<
+    number,
+    {
+      trabalhos: Array<Record<string, unknown>>;
+      levantamentos: Array<{ id: number; valor: number; estado: string; criadoEm: Date }>;
+    }
+  >();
+  const doProvider = (id: number) => {
+    if (!porProvider.has(id)) porProvider.set(id, { trabalhos: [], levantamentos: [] });
+    return porProvider.get(id)!;
+  };
+
+  for (const n of nLinhas as Array<Record<string, any>>) {
+    doProvider(Number(n.providerId)).trabalhos.push({
+      negociacaoId: Number(n.id),
+      pedidoId: n.pedidoId != null ? Number(n.pedidoId) : null,
+      estado: n.estado,
+      valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+      taxaCliente: n.taxaCliente,
+      taxaProfissional: n.taxaProfissional,
+      execucaoEnviadaEm: n.execucaoEnviadaEm,
+      confirmadoEm: n.confirmadoEm,
+      pagoEm: n.pagoEm,
+    });
+  }
+  for (const l of lLinhas as Array<Record<string, any>>) {
+    doProvider(Number(l.providerId)).levantamentos.push({
+      id: Number(l.id),
+      valor: Number(l.valor),
+      estado: String(l.estado),
+      criadoEm: l.createdAt,
+    });
+  }
+  return porProvider;
+}
+
+export type DivergenciaDoLivro = {
+  providerId: number;
+  campo: string;
+  carteiraDeHoje: number;
+  livro: number;
+};
+
+export type ConferenciaDoLivro = {
+  profissionais: number;
+  /** Movimentos que o livro deveria ter, contados a partir do que já existe. */
+  movimentosEsperados: number;
+  /** Quantos estão mesmo gravados. */
+  movimentosGravados: number;
+  /** Os que faltam lançar. Zero depois de construído. */
+  porLancar: number;
+  /**
+   * ONDE É QUE OS DOIS CAMINHOS DISCORDAM.
+   *
+   * Tem de ser uma lista vazia. É a única coisa que autoriza a trocar os
+   * leitores: enquanto houver uma linha aqui, há um profissional que ia ver o
+   * saldo mudar — e a promessa desta fase é que nenhum veja.
+   */
+  divergencias: DivergenciaDoLivro[];
+};
+
+/**
+ * CONFERIR O LIVRO CONTRA A CARTEIRA DE HOJE, profissional a profissional.
+ *
+ * Não escreve nada. Corre os dois caminhos sobre os mesmos dados reais e
+ * compara os cinco números de cada carteira.
+ *
+ * Os testes já provam a equivalência sobre quinhentas carteiras geradas. Isto
+ * prova-a sobre as que existem mesmo — que é outra coisa, porque os dados reais
+ * têm formas que ninguém inventa: uma negociação sem valor, um levantamento de
+ * um profissional apagado, uma data que ficou a nulo em 2026.
+ */
+export async function conferirOLivro(): Promise<ConferenciaDoLivro> {
+  const { carteiraDoLivro, livroDe } = await import("@/lib/livro-da-carteira");
+  const tudo = await tudoOQueOLivroPrecisa();
+
+  const pool = await getPool();
+  await ensureMovimentosTable();
+  const [gLinhas] = pool
+    ? ((await pool.execute("SELECT chave FROM movimentosDaCarteira")) as any[])
+    : [[]];
+  const gravadas = new Set(
+    (gLinhas as Array<{ chave: string }>).map((l) => l.chave),
+  );
+
+  const agora = new Date();
+  const divergencias: DivergenciaDoLivro[] = [];
+  let esperados = 0;
+  let porLancar = 0;
+
+  for (const [providerId, { trabalhos, levantamentos }] of tudo) {
+    const livro = livroDe(providerId, trabalhos as never, levantamentos as never);
+    esperados += livro.length;
+    for (const m of livro) if (!gravadas.has(m.chave)) porLancar += 1;
+
+    const hoje = carteiraDe(trabalhos as never, levantamentos as never, agora);
+    const doLivro = carteiraDoLivro(livro, agora);
+    for (const campo of ["cativo", "disponivel", "aCaminho", "levantado", "totalGanho"] as const) {
+      if (hoje[campo] !== doLivro[campo]) {
+        divergencias.push({
+          providerId,
+          campo,
+          carteiraDeHoje: hoje[campo],
+          livro: doLivro[campo],
+        });
+      }
+    }
+  }
+
+  return {
+    profissionais: tudo.size,
+    movimentosEsperados: esperados,
+    movimentosGravados: gravadas.size,
+    porLancar,
+    divergencias,
+  };
+}
+
+/**
+ * ESCREVER O LIVRO a partir do que já existe.
+ *
+ * Pode correr as vezes que quiser: a chave única de cada movimento faz a
+ * segunda passagem não lançar nada. É de propósito que é assim e não uma
+ * migração de uma vez só — uma migração que falhe a meio deixa metade do livro
+ * escrito e ninguém sabe qual metade.
+ */
+export async function construirOLivro(): Promise<{
+  lancados: number;
+  profissionais: number;
+}> {
+  const { livroDe } = await import("@/lib/livro-da-carteira");
+  const tudo = await tudoOQueOLivroPrecisa();
+  let lancados = 0;
+  for (const [providerId, { trabalhos, levantamentos }] of tudo) {
+    const livro = livroDe(providerId, trabalhos as never, levantamentos as never);
+    lancados += await lancarMovimentos(livro);
+  }
+  return { lancados, profissionais: tudo.size };
+}
+
+/** Quantas linhas tem o livro, ao todo. Para o ecrã saber se já foi construído. */
+export async function quantosMovimentos(): Promise<number> {
+  try {
+    await ensureMovimentosTable();
+    const pool = await getPool();
+    if (!pool) return 0;
+    const [r] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM movimentosDaCarteira",
+    )) as any[];
+    return Number((r as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function levantamentosDoProfissional(
   providerId: number,
 ): Promise<LevantamentoNaBase[]> {
@@ -6740,6 +7049,14 @@ export type Acontecimento =
    * por isso o aviso vem para dentro.
    */
   | "assistente_alerta"
+  /*
+   * O LIVRO DE MOVIMENTOS DA CARTEIRA FOI CONSTRUÍDO.
+   *
+   * Não muda saldo nenhum — escreve à parte o que já era verdade. Fica no
+   * registo porque é o momento a partir do qual passa a haver um livro, e um
+   * dia alguém vai querer saber quando é que ele começou.
+   */
+  | "livro_construido"
   // As contas
   | "conta_apagada"
   /*

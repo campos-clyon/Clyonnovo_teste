@@ -26,6 +26,7 @@ import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
+import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import { tService, tUrgency } from "@/lib/translations";
 import {
@@ -3268,6 +3269,30 @@ export default function ColaboradorAdminClient({
                   linhas.
                 </p>
                 <AdminRetencaoPanel />
+              </div>
+
+              {/*
+                O LIVRO DE MOVIMENTOS — Fase 1 dos pagamentos.
+
+                A carteira do profissional e hoje calculada a partir das
+                negociacoes. Vai passar a ser a soma de linhas de um livro,
+                porque uma soma derivada nao se reconcilia com o extracto do
+                euPago e nao tem onde escrever um reembolso parcial.
+
+                Fica aqui, ao lado da retencao, porque as duas sao a mesma
+                especie de coisa: o sitio onde se ve o que vai acontecer ANTES
+                de acontecer.
+              */}
+              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Livro da carteira
+                </p>
+                <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
+                  A caminho de a CLYON segurar o dinheiro entre o cliente e o profissional. Aqui
+                  compara-se a carteira de hoje com a que sai do livro de movimentos — e so se
+                  avanca quando derem exactamente o mesmo numero.
+                </p>
+                <AdminLivroPanel />
               </div>
 
               {/* Navegação por abas */}
