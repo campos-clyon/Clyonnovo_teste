@@ -180,6 +180,40 @@ export function porResponder(c: ConversaDeSuporte): boolean {
   return ultima?.de === "eles";
 }
 
+/** O instante de uma data como as fontes a gravam ('2026-09-16 18:35:02'). */
+function instante(quando: string | null | undefined): number {
+  if (!quando) return 0;
+  const t = new Date(String(quando).replace(" ", "T")).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+/**
+ * QUANTAS MENSAGENS DELES CHEGARAM DEPOIS DA ÚLTIMA VEZ QUE ISTO FOI ABERTO.
+ *
+ * É o número do círculo verde, como no WhatsApp — e é outra coisa que
+ * `porResponder`. Aquela diz «a bola está do nosso lado» e só se apaga quando
+ * se responde; esta diz «ainda não leu isto» e apaga-se ao abrir. As duas
+ * fazem falta: a primeira é a fila de trabalho, a segunda é a notificação.
+ *
+ * "Já abri as 3 mensagens novas mas os pontos verdes ainda estão presentes."
+ * — 16-09-2026. Estavam certos, mas respondiam à outra pergunta.
+ *
+ * Sem marca de leitura, contam-se TODAS as mensagens deles: uma conversa que
+ * nunca foi aberta está inteira por ler. É também o que acontece se a marca se
+ * perder — e é o lado seguro do engano, porque o contrário esconderia
+ * mensagens que ninguém viu.
+ */
+export function porLer(c: ConversaDeSuporte, lidoEm?: string | null): number {
+  const marca = instante(lidoEm);
+  let n = 0;
+  for (const m of c.mensagens) {
+    if (m.de !== "eles") continue;
+    if (marca && instante(m.quando) <= marca) continue;
+    n += 1;
+  }
+  return n;
+}
+
 /**
  * A ordem da lista: primeiro quem espera por nós, depois o resto — e dentro de
  * cada grupo, a mais recente à frente.

@@ -1395,6 +1395,25 @@ export default function ColaboradorAdminClient({
   }, [activeSection, ticketsFiltro]);
 
   /*
+   * O SUPORTE ABERTO ACTUALIZA-SE DE DEZ EM DEZ SEGUNDOS — 16-09-2026.
+   *
+   * "Remova o botão actualizar e garanta que essas informações sejam
+   * actualizadas a cada 10s sem que o admin perceba."
+   *
+   * O botão saiu, e sem isto a lista de tickets só se movia de dois em dois
+   * minutos — o ciclo que existe para acertar o contador do menu, e que
+   * continua a correr em pano de fundo. Dez segundos é o ritmo de quem está
+   * com o ecrã aberto à espera que alguém responda; só corre com a secção à
+   * vista, e o hook pára sozinho com o separador escondido.
+   */
+  useAutoRefresh(
+    () => {
+      if (token) carregarTickets(token, ticketsFiltro, true);
+    },
+    { intervalMs: 10_000, enabled: activeSection === "suporte" && Boolean(token) },
+  );
+
+  /*
    * Os pedidos, à cabeça.
    *
    * Era «para o overview», e deixou de o ser: o Início passou a ter resumo
@@ -2922,15 +2941,14 @@ export default function ColaboradorAdminClient({
                     ))}
                     <option value="todos" className="bg-slate-900">Todos</option>
                   </select>
-                  <Button
-                    type="button"
-                    disabled={ticketsLoading}
-                    onClick={() => carregarTickets(token, ticketsFiltro)}
-                    className="h-10 rounded-[12px] bg-sky-500 px-4 text-white hover:bg-sky-400 disabled:opacity-60"
-                  >
-                    <RefreshCw className={`mr-2 h-4 w-4 ${ticketsLoading ? "animate-spin" : ""}`} />
-                    {ticketsLoading ? "A actualizar…" : "Actualizar"}
-                  </Button>
+                  {/*
+                    O BOTÃO «ACTUALIZAR» SAIU DAQUI — 16-09-2026.
+                    "Remova o botão actualizar e garanta que essas informações
+                    sejam actualizadas a cada 10s sem que o admin perceba."
+
+                    O filtro fica: esse é uma escolha de quem está a ver, e não
+                    uma tarefa que o ecrã lhe dá.
+                  */}
                 </div>
               </div>
 

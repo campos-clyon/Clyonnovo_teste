@@ -67,10 +67,23 @@ describe("o painel actualiza-se sozinho", () => {
     expect(PAINEL).toContain('if (!silencioso) setErro("Erro de rede.")');
   });
 
-  it("mas o botão Actualizar continua a ser barulhento", () => {
-    // `onClick={carregar}` passava o evento do clique como primeiro argumento,
-    // e o evento é truthy: o botão ficava silencioso sem ninguém pedir.
-    expect(PAINEL).toContain("onClick={() => carregar()}");
+  it("e já não há botão nenhum para carregar", () => {
+    /*
+     * ESTE TESTE GUARDAVA O BOTÃO. O botão saiu a 16-09-2026: "remova o botão
+     * actualizar e garanta que essas informações sejam actualizadas a cada 10s
+     * sem que o admin perceba."
+     *
+     * O que ele guardava por baixo continua a valer, e é por isso que não se
+     * apaga: `onClick={carregar}` passava o evento do clique como primeiro
+     * argumento, e o evento é truthy — o carregamento ficava silencioso sem
+     * ninguém pedir. Se algum dia voltar um botão, que volte com os parênteses.
+     */
     expect(PAINEL).not.toContain("onClick={carregar}");
+    expect(PAINEL).not.toContain("RefreshCw");
+  });
+
+  it("o ciclo é de dez segundos", () => {
+    // É uma pessoa à espera de resposta do outro lado.
+    expect(PAINEL).toContain("intervalMs: 10_000");
   });
 });

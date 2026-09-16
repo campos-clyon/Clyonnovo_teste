@@ -317,8 +317,20 @@ describe("a resposta sai por onde a pergunta entrou", () => {
   });
 
   it("a rota é de quem entra no backoffice, e mais ninguém", () => {
-    expect(ROTA).toContain("requireAdmin(req)");
-    expect(ROTA.match(/requireAdmin\(req\)/g)?.length).toBe(2);
+    /*
+     * CADA VERBO EXIGE ADMIN — e conta-se contra os verbos que existem, não
+     * contra um número escrito à mão.
+     *
+     * Estava `toBe(2)`, e partiu-se ao acrescentar o PATCH que marca uma
+     * conversa como lida. O problema de um número fixo não é partir-se: é que
+     * a correcção óbvia — pôr 3 — passa a verde tanto um PATCH com guarda como
+     * um sem ela. Assim, um verbo novo sem `requireAdmin` chumba.
+     */
+    const verbos = [
+      ...ROTA.matchAll(/export async function (GET|POST|PUT|PATCH|DELETE)\(/g),
+    ].map((m) => m[1]);
+    expect(verbos.length).toBeGreaterThan(1);
+    expect(ROTA.match(/requireAdmin\(req\)/g)?.length).toBe(verbos.length);
   });
 });
 

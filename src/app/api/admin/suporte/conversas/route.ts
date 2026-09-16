@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   ajudaPorId,
   ajudasParaAdmin,
+  leiturasDoSuporte,
+  marcarSuporteLido,
   appendOrderHistory,
   pedidosComConversa,
   responderPedidoDeAjuda,
@@ -86,7 +88,7 @@ function respostasDaAjuda(respostaJson: string | null): RespostaDaAjuda[] {
 }
 
 export async function GET(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   const conversas: ConversaDeSuporte[] = [];
@@ -259,7 +261,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ aEsperar });
   }
 
-  return NextResponse.json({ conversas: ordenarConversas(conversas), aEsperar });
+  /*
+   * ATÉ QUANDO É QUE ESTE COLABORADOR JÁ LEU CADA CONVERSA.
+   *
+   * Sai daqui, com as conversas, e não numa chamada à parte: o contador de
+   * não-lidas é feito da diferença entre as duas coisas, e pedi-las em dois
+   * momentos deixava o ecrã a piscar um número errado entre uma e outra.
+   */
+  const lidas = colab ? await leiturasDoSuporte(colab.id) : {};
+
+  return NextResponse.json({ conversas: ordenarConversas(conversas), aEsperar, lidas });
 }
 
 /**
@@ -336,5 +347,50 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[suporte/conversas POST]", e);
     return NextResponse.json({ error: "Não foi possível enviar." }, { status: 500 });
+  }
+}
+
+/**
+ * MARCAR UMA CONVERSA COMO LIDA.
+ *
+ * "Já abri as 3 mensagens novas mas os pontos verdes ainda estão presentes."
+ *
+ * O ponto verde nunca quis dizer «por ler» — dizia «à espera de resposta», e
+ * essa não se apaga por se abrir a conversa: apaga-se por se responder. O que
+ * faltava era a outra marca, a do WhatsApp, e é esta.
+ *
+ * PATCH e não POST: o POST desta rota envia uma resposta ao cliente, e são
+ * duas coisas de gravidade muito diferente para partilharem verbo.
+ */
+export async function PATCH(req: NextRequest) {
+  const { err, colab } = await requireAdmin(req);
+  if (err) return err;
+  if (!colab) return NextResponse.json({ error: "Sem sessão." }, { status: 401 });
+
+  let corpo: { chave?: unknown };
+  try {
+    corpo = (await req.json()) as typeof corpo;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  const chave = typeof corpo.chave === "string" ? corpo.chave.trim() : "";
+  // A chave tem de ser uma das nossas. Sem isto, a tabela enchia-se do que
+  // quer que alguém mandasse no corpo.
+  if (!chave || !lerChave(chave)) {
+    return NextResponse.json({ error: "Conversa desconhecida." }, { status: 400 });
+  }
+
+  try {
+    await marcarSuporteLido(colab.id, chave);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    /*
+     * Falhar a marcar como lida não é notícia para quem está a ler: a conversa
+     * abriu, o texto está no ecrã, e o contador volta a aparecer na próxima
+     * passagem. Fica nos registos e mais nada.
+     */
+    console.error("[suporte/conversas PATCH]", e);
+    return NextResponse.json({ ok: false }, { status: 200 });
   }
 }

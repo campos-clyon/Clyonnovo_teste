@@ -2523,6 +2523,90 @@ export async function ajudasDoProfissional(providerId: number): Promise<PedidoDe
   return rows as PedidoDeAjudaNaBase[];
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * QUEM JÁ LEU O QUÊ, NA CAIXA DE ENTRADA DO SUPORTE — 16-09-2026.
+ *
+ * "Já abri as 3 mensagens novas mas os pontos verdes ainda estão presentes."
+ *
+ * E estavam bem: o ponto verde nunca quis dizer «por ler» — dizia «à espera de
+ * resposta», que é outra coisa e não se apaga por se abrir a conversa. Faltava
+ * a primeira: uma marca de leitura.
+ *
+ * POR COLABORADOR, e não partilhada. Dois assistentes na mesma caixa cada um
+ * tem as suas mensagens por ler; se fosse partilhada, o primeiro a abrir
+ * escondia-a ao segundo — que é exactamente o contrário do que um contador de
+ * não-lidas serve para fazer.
+ *
+ * A `chave` é a da conversa (`pedido:283`, `app:12`) e não um id de tabela: as
+ * conversas vêm de três sítios diferentes — tickets no Supabase, pedidos de
+ * ajuda no MySQL e respostas dentro do histórico de um pedido — e nenhum deles
+ * tem onde guardar isto.
+ * ────────────────────────────────────────────────────────────────────────── */
+let suporteLidoReady = false;
+async function ensureSuporteLidoTable() {
+  if (suporteLidoReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS suporteLido (
+      colaboradorId INT NOT NULL,
+      chave         VARCHAR(120) NOT NULL,
+      lidoEm        DATETIME NOT NULL,
+      PRIMARY KEY (colaboradorId, chave)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  suporteLidoReady = true;
+}
+
+/** Até quando é que este colaborador já leu cada conversa. */
+export async function leiturasDoSuporte(
+  colaboradorId: number,
+): Promise<Record<string, string>> {
+  try {
+    await ensureSuporteLidoTable();
+    const pool = await getPool();
+    if (!pool) return {};
+    const [linhas] = (await pool.execute(
+      "SELECT chave, lidoEm FROM suporteLido WHERE colaboradorId = ?",
+      [colaboradorId],
+    )) as any[];
+    const saida: Record<string, string> = {};
+    for (const l of linhas as Array<{ chave: string; lidoEm: Date | string }>) {
+      saida[l.chave] = toMySQLDateTime(new Date(l.lidoEm));
+    }
+    return saida;
+  } catch (e) {
+    /*
+     * Sem marcas, tudo aparece por ler — e isso é o lado seguro do engano.
+     * Ao contrário, uma falha de leitura escondia mensagens que ninguém viu.
+     */
+    console.error("[leiturasDoSuporte]", e);
+    return {};
+  }
+}
+
+/**
+ * Marca uma conversa como lida até agora.
+ *
+ * `NOW()` do MySQL e não a hora do browser: as mensagens são gravadas com o
+ * relógio do servidor, e um portátil dois minutos adiantado marcava como lidas
+ * mensagens que ainda não tinham chegado.
+ */
+export async function marcarSuporteLido(
+  colaboradorId: number,
+  chave: string,
+): Promise<void> {
+  await ensureSuporteLidoTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `INSERT INTO suporteLido (colaboradorId, chave, lidoEm)
+     VALUES (?, ?, NOW())
+     ON DUPLICATE KEY UPDATE lidoEm = NOW()`,
+    [colaboradorId, chave.slice(0, 120)],
+  );
+}
+
 export async function ajudasParaAdmin(estado?: string): Promise<PedidoDeAjudaNaBase[]> {
   await ensureAjudaTable();
   const pool = await getPool();

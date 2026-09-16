@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { ArrowLeft, ExternalLink, Loader2, RefreshCw, Search, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, Search, Send } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   CORES_DA_ORIGEM,
   ROTULO_DA_ORIGEM,
   lerChave,
+  porLer,
   porResponder,
   type ConversaDeSuporte,
   type OrigemDaConversa,
@@ -30,7 +31,12 @@ import {
  * ordem, e por quem.
  */
 
-type Resposta = { conversas: ConversaDeSuporte[]; error?: string };
+type Resposta = {
+  conversas: ConversaDeSuporte[];
+  /** Até quando este colaborador já leu cada conversa, por chave. */
+  lidas?: Record<string, string>;
+  error?: string;
+};
 
 /**
  * O que se escreve, e POR ONDE VAI SAIR.
@@ -89,6 +95,15 @@ export default function AdminConversasPanel() {
   const [procura, setProcura] = useState("");
   const [texto, setTexto] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
+  /*
+   * AS MARCAS DE LEITURA, vindas com as conversas.
+   *
+   * Guardadas por colaborador na base — abrir no telemóvel limpa o contador
+   * no computador, como no WhatsApp. Duas pessoas na mesma caixa mantêm cada
+   * uma as suas: se fosse partilhada, a primeira a abrir escondia a mensagem
+   * à segunda.
+   */
+  const [lidas, setLidas] = useState<Record<string, string>>({});
   const fimDoFio = useRef<HTMLDivElement | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
@@ -114,6 +129,7 @@ export default function AdminConversasPanel() {
         return;
       }
       setConversas(dados.conversas ?? []);
+      setLidas(dados.lidas ?? {});
       setErro("");
     } catch {
       if (!silencioso) setErro("Erro de rede.");
@@ -143,10 +159,39 @@ export default function AdminConversasPanel() {
    * escrever.
    */
   useAutoRefresh(() => carregar(true), {
-    intervalMs: 45_000,
+    intervalMs: 10_000,
     enabled: ready && Boolean(token),
     paused: aEnviar,
   });
+
+  /**
+   * Marcar uma conversa como lida — e apagar o contador JÁ.
+   *
+   * O número desaparece no instante em que se carrega, sem esperar pela rede:
+   * quem abre uma conversa espera ver o contador ir-se, e um badge que fica
+   * meio segundo depois do clique lê-se como «não funcionou». A gravação vai a
+   * caminho e a passagem seguinte confirma-a.
+   *
+   * Falhar não diz nada a ninguém. A conversa abriu, o texto está no ecrã, e
+   * o contador volta a aparecer daqui a dez segundos — que é a forma certa de
+   * dizer que não ficou gravado.
+   */
+  const marcarLida = useCallback(
+    async (chave: string) => {
+      if (!token) return;
+      setLidas((l) => ({ ...l, [chave]: new Date().toISOString().slice(0, 19).replace("T", " ") }));
+      try {
+        await fetch("/api/admin/suporte/conversas", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ chave }),
+        });
+      } catch {
+        /* silêncio — ver o comentário acima */
+      }
+    },
+    [token],
+  );
 
   const lista = useMemo(() => {
     const q = procura.trim().toLowerCase();
@@ -243,16 +288,16 @@ export default function AdminConversasPanel() {
               className="h-9 w-56 rounded-lg border border-slate-600 bg-slate-950 pl-8 pr-3 text-xs text-white outline-none focus:border-cyan-500"
             />
           </div>
-          <button
-            onClick={() => carregar()}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${aCarregar ? "animate-spin" : ""}`}
-              aria-hidden="true"
-            />
-            Actualizar
-          </button>
+          {/*
+            O BOTÃO «ACTUALIZAR» SAIU DAQUI — 16-09-2026.
+            "Remova o botão actualizar e garanta que essas informações sejam
+            actualizadas a cada 10s sem que o admin perceba."
+
+            Um botão de actualizar é uma tarefa que o ecrã dá a quem o usa:
+            «lembre-se de carregar aqui para saber se alguém escreveu». O
+            ciclo já traz tudo sozinho, e ninguém carrega num botão para ver
+            se tem mensagens novas no WhatsApp.
+          */}
         </div>
       </div>
 
@@ -282,12 +327,14 @@ export default function AdminConversasPanel() {
             {lista.map((c) => {
               const ultima = c.mensagens[c.mensagens.length - 1];
               const espera = porResponder(c);
+              const novas = porLer(c, lidas[c.chave]);
               return (
                 <button
                   key={c.chave}
                   onClick={() => {
                     setAberta(c.chave);
                     setTexto("");
+                    void marcarLida(c.chave);
                   }}
                   className={`flex w-full items-start gap-3 border-b border-slate-800/80 p-3 text-left transition hover:bg-white/[0.03] ${
                     c.chave === aberta ? "bg-white/[0.06]" : ""
@@ -314,12 +361,42 @@ export default function AdminConversasPanel() {
                       {c.pedidoId !== null && (
                         <span className="shrink-0 text-[10px] text-slate-500">#{c.pedidoId}</span>
                       )}
-                      {espera && (
+                      {/*
+                        O CONTADOR, como no WhatsApp: um círculo verde com o
+                        número de mensagens por ler. Apaga ao abrir.
+
+                        O ponto que aqui estava dizia «à espera de resposta»,
+                        e essa não se apaga por se abrir — apaga-se por se
+                        responder. Continua a existir, na linha de cima («N à
+                        espera de resposta») e na ordem da lista, que é onde
+                        serve de fila de trabalho.
+                      */}
+                      {novas > 0 ? (
                         <span
-                          className="ml-auto h-2 w-2 shrink-0 rounded-full bg-emerald-400"
-                          title="À espera de resposta"
-                          aria-label="À espera de resposta"
-                        />
+                          className="ml-auto flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold leading-none text-slate-950"
+                          title={`${novas} por ler`}
+                          aria-label={`${novas} mensagens por ler`}
+                        >
+                          {novas > 99 ? "99+" : novas}
+                        </span>
+                      ) : (
+                        espera && (
+                          /*
+                            AMARELO, e não verde — 16-09-2026.
+
+                            São duas coisas diferentes e têm de se distinguir
+                            de relance: o verde com número é «não leu isto» e
+                            apaga ao abrir; o amarelo é «já leu, mas ainda não
+                            respondeu» e só se apaga quando se responde. Com a
+                            mesma cor, abrir uma conversa parecia não ter feito
+                            nada.
+                          */
+                          <span
+                            className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-400"
+                            title="Lida, mas ainda à espera de resposta"
+                            aria-label="Lida, mas ainda à espera de resposta"
+                          />
+                        )
                       )}
                     </span>
                     <span className="mt-1 block truncate text-xs text-slate-400">

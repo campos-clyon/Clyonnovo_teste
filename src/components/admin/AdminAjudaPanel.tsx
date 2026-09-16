@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { Check, Loader2, RefreshCw, Send } from "lucide-react";
+import { Check, Loader2, Send } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 /**
@@ -90,7 +90,11 @@ export default function AdminAjudaPanel() {
    * erros de rede, pára com o separador escondido e volta a buscar assim que
    * ele reaparece.
    */
-  useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
+  // Dez segundos, como o resto do Suporte: é uma pessoa à espera do outro lado.
+  useAutoRefresh(() => carregar(true), {
+    intervalMs: 10_000,
+    enabled: ready && Boolean(token),
+  });
 
   async function responder(id: number, estado: string) {
     setOcupado(id);
@@ -133,13 +137,11 @@ export default function AdminAjudaPanel() {
             ? "Nada por tratar na plataforma."
             : `${porTratar} por tratar`}
         </p>
-        <button
-          onClick={() => carregar()}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-        >
-          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          Actualizar
-        </button>
+        {/*
+          O botão «Actualizar» saiu daqui — 16-09-2026. O ciclo automático já
+          traz isto sozinho; um botão de actualizar é uma tarefa que o ecrã dá
+          a quem o usa.
+        */}
       </div>
 
       {erro && (
