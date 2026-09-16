@@ -10,6 +10,8 @@ import {
   MessageSquare,
   ShieldCheck,
   Trash2,
+  Archive,
+  Download,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
@@ -241,25 +243,45 @@ export default function AdminRetencaoPanel() {
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-        <p className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+      {/*
+        O REGISTO FECHA-SE — 16-09-2026.
+        "Organize essa tela, coloque as informações dentro de botões para não
+        poluir a tela."
+
+        Eram vinte linhas de «Pedido apagado — retenção de 60 dias», todas
+        iguais, a empurrar para baixo tudo o que interessa ler primeiro: os
+        números e o aviso de a purga estar armada. Um registo serve para se ir
+        lá quando se desconfia de alguma coisa — não para estar aberto sempre.
+
+        `<details>` e não estado em React: fecha e abre sozinho, o browser
+        lembra-se do foco, e funciona sem JavaScript nenhum.
+      */}
+      <details className="rounded-xl border border-slate-800 bg-slate-950/60">
+        <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-xs font-semibold text-slate-300 hover:text-white">
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />O que a purga escreveu no registo
           permanente
-        </p>
-        {estado.ultimas.length === 0 ? (
-          <p className="mt-2 text-xs text-slate-500">
-            Ainda nada. O cron corre às 04:30; a primeira linha aparece amanhã.
-          </p>
-        ) : (
-          <ul className="mt-2 space-y-1.5">
-            {estado.ultimas.map((l) => (
-              <li key={l.id} className="text-xs leading-relaxed text-slate-400">
-                <span className="text-slate-500">{quando(l.ocorridoEm)}</span> — {l.resumo}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+          <span className="ml-auto rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">
+            {estado.ultimas.length}
+          </span>
+        </summary>
+        <div className="px-4 pb-4">
+          {estado.ultimas.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Ainda nada. O cron corre às 04:30; a primeira linha aparece amanhã.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {estado.ultimas.map((l) => (
+                <li key={l.id} className="text-xs leading-relaxed text-slate-400">
+                  <span className="text-slate-500">{quando(l.ocorridoEm)}</span> — {l.resumo}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </details>
+
+      <ArquivoDosApagados />
 
       <button
         onClick={() => void carregar()}
@@ -270,5 +292,146 @@ export default function AdminRetencaoPanel() {
         Contar outra vez
       </button>
     </div>
+  );
+}
+
+type LinhaDoArquivo = {
+  id: number;
+  pedidoId: number;
+  motivo: string | null;
+  clienteNome: string | null;
+  clienteEmail: string | null;
+  criadoEm: string;
+  tamanho: number;
+};
+
+/** Kilobytes redondos: ninguém precisa de saber que são 12 438 bytes. */
+function tamanhoLegivel(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${Math.round(bytes / 1024)} kB`;
+}
+
+/**
+ * O ARQUIVO DOS PEDIDOS APAGADOS.
+ *
+ * "leve os arquivos dos nossos históricos de pedidos que foram apagados para
+ * as configs, assim o admin pode baixar e visualizar quando necessário."
+ * — 16-09-2026.
+ *
+ * O registo permanente, ali em cima, diz QUE um pedido foi apagado. Isto guarda
+ * O QUE ELE ERA: a descrição, as negociações todas e o histórico — incluindo as
+ * conversas de suporte que tinham sido escritas dentro dele, que até agora se
+ * iam com a linha.
+ *
+ * Fechado por omissão, como o registo. Uma lista de duzentos ficheiros que
+ * ninguém abre num mês normal não pode ser a primeira coisa deste ecrã.
+ */
+function ArquivoDosApagados() {
+  const { token, ready } = useAdminAuth();
+  const [linhas, setLinhas] = useState<LinhaDoArquivo[]>([]);
+  const [aCarregar, setACarregar] = useState(false);
+  const [erro, setErro] = useState("");
+  const [jaPediu, setJaPediu] = useState(false);
+
+  /*
+   * Só se vai buscar quando ele abre.
+   *
+   * Está fechado na esmagadora maioria das visitas: pedir a lista ao carregar
+   * o ecrã era uma consulta por cada entrada nas Configs, para nada.
+   */
+  async function abrir() {
+    if (jaPediu || !token) return;
+    setJaPediu(true);
+    setACarregar(true);
+    try {
+      const res = await fetch("/api/admin/arquivo", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível ler o arquivo.");
+        return;
+      }
+      setLinhas(dados.arquivos ?? []);
+      setErro("");
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setACarregar(false);
+    }
+  }
+
+  return (
+    <details
+      className="rounded-xl border border-slate-800 bg-slate-950/60"
+      onToggle={(ev) => {
+        if ((ev.currentTarget as HTMLDetailsElement).open && ready) void abrir();
+      }}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-xs font-semibold text-slate-300 hover:text-white">
+        <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+        Arquivo dos pedidos apagados — para descarregar
+        {linhas.length > 0 && (
+          <span className="ml-auto rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">
+            {linhas.length}
+          </span>
+        )}
+      </summary>
+      <div className="px-4 pb-4">
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          O que cada pedido era antes de a purga passar: descrição, negociações e histórico,
+          conversas de suporte incluídas. Guardado na base e não num endereço público — leva
+          dados pessoais de clientes.
+        </p>
+
+        {aCarregar && (
+          <p className="flex items-center gap-2 text-xs text-slate-400">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />A ler…
+          </p>
+        )}
+        {erro && <p className="text-xs text-red-300">{erro}</p>}
+
+        {!aCarregar && !erro && linhas.length === 0 && jaPediu && (
+          <p className="text-xs text-slate-500">
+            Ainda nada aqui. Os pedidos apagados antes de 16-09-2026 não deixaram cópia — só a
+            linha no registo permanente.
+          </p>
+        )}
+
+        {linhas.length > 0 && (
+          <ul className="space-y-1.5">
+            {linhas.map((l) => (
+              <li
+                key={l.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-slate-800/80 px-3 py-2 text-xs"
+              >
+                <span className="font-semibold text-slate-200">#{l.pedidoId}</span>
+                <span className="text-slate-400">{l.clienteNome ?? "sem nome"}</span>
+                <span className="text-slate-600">{quando(l.criadoEm)}</span>
+                <span className="text-slate-600">{tamanhoLegivel(l.tamanho)}</span>
+                <span className="ml-auto flex gap-2">
+                  <a
+                    href={`/api/admin/arquivo/${l.id}?ver=1`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg border border-slate-600 px-2.5 py-1 font-semibold text-slate-300 hover:bg-slate-800"
+                  >
+                    Ver
+                  </a>
+                  <a
+                    href={`/api/admin/arquivo/${l.id}`}
+                    className="flex items-center gap-1 rounded-lg border border-slate-600 px-2.5 py-1 font-semibold text-slate-300 hover:bg-slate-800"
+                  >
+                    <Download className="h-3 w-3" aria-hidden="true" />
+                    Descarregar
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
   );
 }

@@ -4746,6 +4746,101 @@ export class TrabalhoEmCurso extends Error {
  * um pedido foi apagado sem dizer porquê responde a metade da pergunta que
  * alguém virá fazer.
  */
+/**
+ * O ARQUIVO DOS PEDIDOS APAGADOS.
+ *
+ * Um pedido por linha, com o retrato completo: a linha do pedido, as
+ * negociações todas e os endereços das fotografias que foram com ele. É o que
+ * permite responder a «o que é que esse cliente pediu em Maio» depois de a
+ * purga ter passado.
+ *
+ * ISTO ESTENDE A RETENÇÃO, e quem manda nisso é o dono dos dados. A purga
+ * apaga ao fim de 60 ou 90 dias; este arquivo guarda o conteúdo para lá disso,
+ * fora da vista do cliente e só acessível a quem tem sessão de administração.
+ * Se um dia for preciso apagar de vez — um pedido de eliminação, por exemplo —
+ * é esta tabela que também tem de ser limpa.
+ */
+let arquivoDePedidosEnsured = false;
+export async function ensureArquivoDePedidosTable(): Promise<void> {
+  if (arquivoDePedidosEnsured) return;
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS arquivoDePedidos (
+      id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      pedidoId     INT UNSIGNED NOT NULL,
+      motivo       VARCHAR(200) NULL,
+      clienteNome  VARCHAR(200) NULL,
+      clienteEmail VARCHAR(200) NULL,
+      dados        LONGTEXT NOT NULL,
+      criadoEm     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY arquivo_pedido (pedidoId),
+      KEY arquivo_data (criadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  arquivoDePedidosEnsured = true;
+}
+
+export type LinhaDoArquivo = {
+  id: number;
+  pedidoId: number;
+  motivo: string | null;
+  clienteNome: string | null;
+  clienteEmail: string | null;
+  criadoEm: string;
+  tamanho: number;
+};
+
+/**
+ * A lista, sem o conteúdo.
+ *
+ * O `dados` de cada linha pode ter dezenas de kilobytes; a lista serve para
+ * escolher qual se quer, e trazê-los todos para desenhar uma tabela era
+ * arrastar o arquivo inteiro a cada abertura do ecrã.
+ */
+export async function arquivosDePedidos(limite = 200): Promise<LinhaDoArquivo[]> {
+  await ensureArquivoDePedidosTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const n = Math.max(1, Math.min(500, Math.floor(limite)));
+  const [linhas] = (await pool.execute(
+    `SELECT id, pedidoId, motivo, clienteNome, clienteEmail, criadoEm,
+            CHAR_LENGTH(dados) AS tamanho
+       FROM arquivoDePedidos
+      ORDER BY id DESC
+      LIMIT ${n}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  return linhas.map((l) => ({
+    id: Number(l.id),
+    pedidoId: Number(l.pedidoId),
+    motivo: (l.motivo as string) ?? null,
+    clienteNome: (l.clienteNome as string) ?? null,
+    clienteEmail: (l.clienteEmail as string) ?? null,
+    criadoEm: String(l.criadoEm),
+    tamanho: Number(l.tamanho ?? 0),
+  }));
+}
+
+/** Um arquivo inteiro, para descarregar. */
+export async function arquivoDoPedido(
+  id: number,
+): Promise<{ pedidoId: number; criadoEm: string; dados: string } | null> {
+  await ensureArquivoDePedidosTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute(
+    "SELECT pedidoId, criadoEm, dados FROM arquivoDePedidos WHERE id = ? LIMIT 1",
+    [Math.floor(id)],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const l = linhas[0];
+  if (!l) return null;
+  return {
+    pedidoId: Number(l.pedidoId),
+    criadoEm: String(l.criadoEm),
+    dados: String(l.dados),
+  };
+}
+
 export async function deleteSimulatorOrder(
   id: number,
   contexto: {
@@ -4839,9 +4934,45 @@ export async function deleteSimulatorOrder(
     );
   }
 
+  await ensureArquivoDePedidosTable();
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+
+    /*
+     * O ARQUIVO, ESCRITO ANTES DE A LINHA SE IR — 16-09-2026.
+     *
+     * "leve os arquivos dos nossos históricos de pedidos que foram apagados
+     * para as configs, assim o admin pode baixar e visualizar quando
+     * necessário."
+     *
+     * O `registoPermanente` guardava um resumo: quem, que serviço, que zona,
+     * quanto, quantas fotografias. Serve para provar que o pedido existiu, não
+     * para o voltar a ler — e o que desaparecia com a linha era o resto: a
+     * descrição, as negociações todas e o `historyJson`, onde vivem as
+     * conversas de suporte escritas dentro do pedido.
+     *
+     * Dentro da MESMA transacção do apagar, pela mesma razão que o retrato: ou
+     * as duas coisas acontecem, ou nenhuma acontece. Um arquivo escrito e um
+     * apagar falhado dava dois pedidos onde havia um.
+     *
+     * NA BASE E NÃO NO BLOB. Isto leva nome, email, telefone e morada de
+     * clientes. As fotografias já vivem num Blob público com nome aleatório;
+     * um ficheiro com a ficha completa de alguém não pode viver assim. Aqui
+     * sai por uma rota de administração, a quem tem sessão.
+     */
+    await conn.execute(
+      `INSERT INTO arquivoDePedidos (pedidoId, motivo, clienteNome, clienteEmail, dados)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        id,
+        contexto.motivo,
+        (pedido?.contactName as string) ?? null,
+        (pedido?.contactEmail as string) ?? null,
+        JSON.stringify({ pedido, negociacoes, fotografias: fotos }),
+      ],
+    );
 
     /*
      * O retrato, escrito dentro da transacção.
