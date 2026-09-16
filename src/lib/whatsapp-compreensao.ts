@@ -669,6 +669,17 @@ export type AccaoSobreAProposta =
    * Separá-los é o que permite responder como gente a um, e calar o resto.
    */
   | "agradecer"
+  /*
+   * PERGUNTAR COMO VAI NÃO É NÃO DIZER NADA — 16-09-2026.
+   *
+   * "nada" servia as duas coisas, e a resposta de circunstância — «está tudo
+   * a andar deste lado» — saía para ambas. Quem escrevia a pedir um orçamento
+   * novo levava-a na cara, duas vezes seguidas, na primeira conversa que teve
+   * connosco.
+   *
+   * Separados: esta é a única em que aquela frase é a resposta certa.
+   */
+  | "ponto_de_situacao"
   | "nada";
 
 export type RespostaDoCliente = {
@@ -700,7 +711,7 @@ ${lista}
 
 Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código:
 
-{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "nada", "valor": number|null, "profissional": string|null }
+{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "ponto_de_situacao" | "nada", "valor": number|null, "profissional": string|null }
 
 As acções:
 - "fechar" — aceita uma proposta como ela está ("pode ser", "está bem, fechamos", "aceito o do Manuel", "vamos a isso", "sim").
@@ -709,6 +720,7 @@ As acções:
 - "marcar" — já fechou e agora fala de dia ou hora ("pode ser na quinta de manhã").
 - "falar_com_pessoa" — pede para falar com alguém, com um humano.
 - "agradecer" — agradece ou dá a conversa por arrumada, e não pergunta nada nem decide nada ("ok, obrigada", "está bem", "combinado", "perfeito", "obrigado!", um polegar). É uma frase que não espera resposta nenhuma. CUIDADO: "está bem, fechamos" é "fechar", não isto — se houver qualquer sinal de que ele está a aceitar uma proposta, é "fechar".
+- "ponto_de_situacao" — pergunta como vai o trabalho QUE JA EXISTE, sem pedir nada de novo ("ha novidades?", "como esta o meu pedido?", "ja alguem respondeu?", "entao?"). CUIDADO: quem descreve um servico — o que tem para levar, de onde, para quando — NAO esta a perguntar pelo estado, mesmo que ja tenha outro pedido connosco. Isso e "nada", e alguem trata dele.
 - "nada" — tudo o resto: uma pergunta, uma frase que não se percebe, qualquer coisa que não caiba acima. NA DÚVIDA É ISTO.
 
 O "valor":
@@ -731,6 +743,7 @@ function limparResposta(bruto: unknown): RespostaDoCliente | null {
     "marcar",
     "falar_com_pessoa",
     "agradecer",
+    "ponto_de_situacao",
     "nada",
   ];
   const a = typeof o.accao === "string" ? o.accao.trim() : "";

@@ -535,7 +535,16 @@ type Traduzido = {
    * um «Ok, obrigada» levou de volta a mesa com os valores que tinham sido
    * ditos meia hora antes.
    */
-  accao: "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "nada" | null;
+  accao:
+    | "fechar"
+    | "recusar"
+    | "contrapropor"
+    | "marcar"
+    | "falar_com_pessoa"
+    | "agradecer"
+    | "ponto_de_situacao"
+    | "nada"
+    | null;
   /**
    * A NEGOCIAÇÃO QUE ELE NOMEOU, quando disse um nome e só um bateu certo.
    *
@@ -1182,10 +1191,39 @@ export async function tratarMensagemDoCliente(
    */
   const pendentes = await alvosAccionaveis(pedidos);
   if (pendentes.length === 0) {
-    await enviarTextoWhatsApp(
-      telefone,
-      "Está tudo a andar deste lado. Assim que houver novidades, sou eu a escrever-lhe.",
-    );
+    /*
+     * TER UM PEDIDO NÃO QUER DIZER QUE SE ESTÁ A FALAR DELE — 16-09-2026.
+     *
+     * "corrija o assistente com urgência, primeira mensagem do cliente."
+     *
+     *   CLIENTE: Olá! Gostava de pedir um orçamento à CLYON.
+     *   CLYON:   Está tudo a andar deste lado. Assim que houver novidades,
+     *            sou eu a escrever-lhe.
+     *   CLIENTE: Esvaziei uma arrecadação e tenho lixo para levar, pois com a
+     *            inundação estragou tudo
+     *   CLYON:   Está tudo a andar deste lado. (…)
+     *
+     * O cérebro decidia pelo QUE ELA TEM — um pedido na base, sem nada
+     * pendente — e não pelo QUE ELA ESCREVEU. Quem está a pedir um orçamento
+     * novo levava de volta uma frase de circunstância, duas vezes seguidas.
+     *
+     * Chegar aqui já quer dizer muito: não era um sim, um não, um valor, uma
+     * data, um agradecimento nem um pedido para falar com alguém — e não há
+     * proposta nenhuma à espera dela. Uma pessoa que escreve nessas condições
+     * está a pedir alguma coisa, e quem sabe ler isso é o assistente da
+     * recolha, que lê texto livre e pergunta o que falta.
+     *
+     * A frase antiga fica para quem pergunta mesmo como vai o trabalho — o
+     * modelo marca isso como `ponto_de_situacao`, e aí ela é a resposta certa.
+     */
+    if (percebida === "ponto_de_situacao") {
+      await enviarTextoWhatsApp(
+        telefone,
+        "Está tudo a andar deste lado. Assim que houver novidades, sou eu a escrever-lhe.",
+      );
+      return;
+    }
+    await recolherPedidoPorWhatsApp(telefone, conteudo.texto);
     return;
   }
   await mandarOEcra(telefone, pendentes[0].pedidoId);

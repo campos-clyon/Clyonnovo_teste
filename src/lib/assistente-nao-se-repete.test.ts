@@ -33,7 +33,7 @@ describe("um agradecimento não é uma pergunta", () => {
     expect(COMPREENSAO).toContain('"agradecer" — agradece ou dá a conversa por arrumada');
     // E continua a ser uma das acções que o modelo pode devolver.
     expect(COMPREENSAO).toContain(
-      '{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "nada"',
+      '{ "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "ponto_de_situacao" | "nada"',
     );
   });
 
