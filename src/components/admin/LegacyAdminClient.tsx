@@ -571,7 +571,7 @@ export default function ColaboradorAdminClient({
 
   // Aba ativa da página Configurações
   const [settingsTab, setSettingsTab] = useState<
-    "simulador" | "funcoes" | "imagens" | "seguranca" | "empresa"
+    "simulador" | "imagens" | "seguranca" | "empresa"
   >("simulador");
 
   const [senhaAtualAdmin, setSenhaAtualAdmin] = useState("");
@@ -3273,8 +3273,25 @@ export default function ColaboradorAdminClient({
               <div className="flex flex-wrap gap-2 rounded-[20px] border border-white/10 bg-white/[0.02] p-2">
                 {(
                   [
-                    { id: "simulador", label: "Valores do simulador", icon: Euro },
-                    { id: "funcoes", label: "Colaboradores e funções", icon: Users },
+                    /*
+                     * TAXAS, E NÃO «VALORES DO SIMULADOR» — 16-09-2026.
+                     *
+                     * "Essa tela ainda trata de muitas coisas que já não fazem
+                     * sentido para nós. Motor de preços já não é preciso
+                     * configurá-lo aqui, podemos remover isso. Colaboradores e
+                     * funções já não existe, nem sequer existe dados."
+                     *
+                     * O separador «Colaboradores e funções» era um botão sem
+                     * ecrã por trás: não havia `settingsTab === "funcoes"` em
+                     * lado nenhum. Quem entrava numa conta de backoffice já era
+                     * gerido em **Assistentes**, noutro módulo e noutra tabela.
+                     *
+                     * Os valores do motor saíram da vista. Continuam na base e
+                     * continuam a alimentar a sugestão que o profissional vê —
+                     * ver a nota ao fundo deste separador — mas deixaram de
+                     * ocupar o ecrã onde se tratam as decisões de negócio.
+                     */
+                    { id: "simulador", label: "Taxas e comissões", icon: Euro },
                     { id: "imagens", label: "Imagens do site", icon: ImagePlus },
                     { id: "seguranca", label: "Segurança", icon: ShieldCheck },
                     { id: "empresa", label: "Dados da empresa", icon: Building2 },
@@ -3298,30 +3315,8 @@ export default function ColaboradorAdminClient({
 
               {settingsTab === "simulador" && (
               <ActionCard
-                title="Valores do simulador"
-                description="Todos os valores do simulador estão visíveis abaixo, separados por categoria operacional para facilitar a gestão."
-                headerExtra={
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const res = await fetch("/api/admin/settings/reseed", {
-                          method: "POST",
-                          headers: { Authorization: `Bearer ${token}` },
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.error || "Erro desconhecido");
-                        await carregarSimulatorSettings(token);
-                        setError("");
-                      } catch (e) {
-                        setError(e instanceof Error ? e.message : "Erro ao repor defaults.");
-                      }
-                    }}
-                    className="rounded-[12px] border border-slate-600 bg-slate-800/60 px-4 py-2 text-xs text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-300"
-                  >
-                    Repor defaults
-                  </button>
-                }
+                title="Taxas e comissões"
+                description="A comissão da CLYON sobre cada trabalho. Reembolsos e disputas tratam-se na App CLYON; as contas e as percentagens dos assistentes, na secção Assistentes."
               >
                 {/*
                   AS TAXAS DA PLATAFORMA NÃO SE EDITAM AQUI — e o ecrã tem de o
@@ -3417,87 +3412,6 @@ export default function ColaboradorAdminClient({
                   )}
                 </div>
 
-                {loadingSimulatorSettings ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-sm text-slate-400">
-                    A carregar configurações do simulador...
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {simulatorGroups.map((group) => (
-                      <div
-                        key={group.id}
-                        className="rounded-[24px] border border-cyan-300/15 bg-white/[0.03] p-5"
-                      >
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <div>
-                            <h3 className="text-lg font-semibold text-white">{group.label}</h3>
-                            <p className="text-sm text-slate-400">
-                              {group.description}
-                            </p>
-                          </div>
-                          <div className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1 text-xs uppercase tracking-[0.18em] text-cyan-200">
-                            {group.settings.length} valor(es)
-                          </div>
-                        </div>
-
-                        {group.settings.length === 0 ? (
-                          <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-400">
-                            Sem valores configurados nesta categoria.
-                          </div>
-                        ) : (
-                        <div className="grid gap-4 xl:grid-cols-2">
-                          {group.settings.map((setting) => (
-                            <div
-                              key={setting.key}
-                              className="rounded-[20px] border border-white/10 bg-slate-950/40 p-4"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-white">{setting.label}</p>
-                                  <p className="mt-1 text-xs leading-6 text-slate-400">
-                                    {setting.description || "Sem descrição adicional."}
-                                  </p>
-                                  <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-slate-500">
-                                    Chave: {setting.key}
-                                  </p>
-                                </div>
-                                <span className="rounded-full border border-cyan-300/20 bg-cyan-400/[0.08] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-cyan-100">
-                                  {formatSimulatorUnit(setting.unit)}
-                                </span>
-                              </div>
-
-                              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-                                <Field label="Valor">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={simulatorDrafts[setting.key] ?? ""}
-                                    onChange={(event) =>
-                                      setSimulatorDrafts((state) => ({
-                                        ...state,
-                                        [setting.key]: event.target.value,
-                                      }))
-                                    }
-                                    className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white outline-none transition focus:border-cyan-300"
-                                  />
-                                </Field>
-                                <Button
-                                  type="button"
-                                  disabled={savingSettingKey === setting.key}
-                                  onClick={() => guardarSimulatorSetting(setting)}
-                                  className="h-11 rounded-2xl bg-cyan-400 px-5 text-slate-950 hover:bg-cyan-300"
-                                >
-                                  {savingSettingKey === setting.key ? "A guardar..." : "Guardar"}
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </ActionCard>
               )}
 
