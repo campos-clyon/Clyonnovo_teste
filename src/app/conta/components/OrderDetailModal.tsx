@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2, Car, Route } from "lucide-react";
+import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import {
   SERVICE_LABELS,
@@ -13,7 +13,7 @@ import PropostasRecebidas, {
   type NegociacaoDoCliente,
 } from "@/app/pedido/[token]/PropostasRecebidas";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
-import { tElevator, tParking, tUrgency, tFloor } from "@/lib/translations";
+import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { oClienteVeEsta } from "@/lib/negociacao";
 
@@ -378,27 +378,23 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                 </p>
               </div>
             )}
-            {order.parkingDistance && (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
-                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <Car className="h-3.5 w-3.5" /> Estacionamento
-                </div>
-                <p className="mt-1 text-sm text-slate-800">
-                  {tParking(order.parkingDistance)}
-                </p>
-              </div>
-            )}
-            {order.distanceKm != null && (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
-                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <Route className="h-3.5 w-3.5" /> Distância
-                </div>
-                <p className="mt-1 text-sm text-slate-800">
-                  {Number(order.distanceKm).toFixed(1)} km
-                  {order.distanceText && <span className="ml-1.5 text-xs text-slate-500">· {order.distanceText}</span>}
-                </p>
-              </div>
-            )}
+            {/*
+              O ESTACIONAMENTO E A DISTÂNCIA SAÍRAM DAQUI — 16-09-2026.
+
+              "não é a CLYON que faz as recolhas, então deve remover isto; e
+              não use mais a base da CLYON como referência para nada — as
+              nossas ligações são cliente » profissionais."
+
+              A distância era medida da base da CLYON ao cliente, e a CLYON não
+              vai lá: quem vai é o profissional, que parte da base dele. Era um
+              número interno a passar por informação, e não dizia nada a quem o
+              lia. O estacionamento saiu com ela por decisão do dono: é a
+              resposta que o próprio cliente deu, e ele não precisa de a ver de
+              volta.
+
+              Continuam ambos onde são precisos — no painel do profissional e
+              no backoffice, que é quem trabalha com eles.
+            */}
             {order.recurrenceFrequency && (
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Recorrência</div>
