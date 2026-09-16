@@ -1472,8 +1472,27 @@ function DetalheDoTrabalho({
         </section>
       )}
 
-      {/* Morada e contacto: só existem depois de ser contratado. */}
-      {fechado && pedido.morada && (
+      {/*
+        MORADA E CONTACTO: DEPOIS DE CONTRATADO, E ATÉ O TRABALHO FECHAR.
+        — 16-09-2026.
+
+        "Se o cliente confirmou a finalização, os dados «Onde e com quem»
+        deveriam sumir."
+
+        Tem razão, e é mais do que arrumação. A morada, o nome e o telefone de
+        alguém são dados que o profissional recebe para FAZER o trabalho — não
+        são um prémio por o ter feito. Acabado o serviço, a necessidade que os
+        justificava acabou com ele, e ficam à vista de quem abrir o telemóvel
+        dele numa lista que só cresce.
+
+        Enquanto há trabalho por fazer, estão lá com os botões todos: Maps,
+        Waze, ligar, WhatsApp. Confirmado ou pago, saem — e o que fica é o
+        valor, a avaliação e o histórico, que é o que ainda lhe diz respeito.
+      */}
+      {fechado &&
+        pedido.morada &&
+        pedido.fase !== "confirmado" &&
+        pedido.fase !== "pago" && (
         <section className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <h2 className="text-xs font-bold uppercase tracking-wide text-emerald-700">
             Onde e com quem
