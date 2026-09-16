@@ -60,18 +60,102 @@ Nem uma coluna, nem um estado, nem um ecrã.
 
 ## 2. Os cinco riscos, por ordem de gravidade
 
-### 2.0 O que o contrato do euPago já respondeu *(lido a 16-09-2026)*
+### 2.0 O que o contrato e a documentação técnica responderam *(16-09-2026)*
 
-**O dinheiro vem todo para a CLYON, e o euPago não reparte.**
+> **Correcção do que eu próprio escrevi há uma hora.** Com base só no contrato,
+> dei o pagamento repartido como «fora da mesa». **Está errado: o euPago tem
+> Split Payments.** O contrato não o menciona — a documentação técnica sim. Foi
+> o link que ele mandou que o mostrou, e muda a decisão mais importante deste
+> plano. Fica aqui em vez de ser apagado, porque o erro foi ler um contrato
+> comercial como se fosse a lista de produtos.
 
-> *«Os valores devidos pelo Cliente à Eupago serão deduzidos diretamente das
-> quantias cobradas aos Consumidores, no momento da sua liquidação, antes da
-> transferência para a conta bancária do Cliente.»*
+#### ✅ SPLIT PAYMENTS EXISTE — e reabre o modelo mais limpo
 
-Não há pagamento repartido neste contrato: o euPago cobra o cliente final,
-desconta a comissão dele, e transfere o líquido para **uma** conta bancária — a
-da CLYON. O modelo 1 do ponto 2.1 está fora da mesa, a menos que eles tenham um
-produto de marketplace que não está aqui.
+<https://eupago.readme.io/reference/split-payments>
+
+Uma referência de pagamento repartida por vários beneficiários, para Multibanco,
+MB WAY, Pix, Apple Pay e Google Pay:
+
+```
+amount            o total que o cliente paga
+identifier        o nosso identificador
+adminCallback     o URL do webhook
+alias             o telemóvel (só MB WAY)
+beneficiaries[]   externKey  (obrigatório) — a chave do beneficiário
+                  amount     (obrigatório) — quanto vai para ele
+                  identifier
+                  immediatePayment — se lhe é pago já
+```
+
+**Isto resolve o ponto 2.1 pela raiz**: o euPago paga ao profissional
+directamente, e a CLYON nunca segura dinheiro dele. A pergunta regulatória
+deixa de se pôr, porque deixa de haver dinheiro de terceiros nas nossas mãos.
+
+**Tem um preço, e é real:** cada beneficiário precisa de uma `externKey`, que
+não é a nossa API Key e se obtém em <suporte@eupago.pt>. Ou seja: **cada
+profissional tem de ser registado no euPago.** É trabalho de inscrição — e é o
+mesmo que o Stripe Connect faz, pela mesma razão legal.
+
+E o `immediatePayment` é exactamente o botão da caução: repartir o pagamento
+mas **não** pagar ao profissional já, e libertar quando o cliente confirmar.
+*Falta confirmar como se dispara essa libertação — não vem na página.*
+
+#### ✅ Reembolso: existe, e é parcial
+
+<https://eupago.readme.io/reference/refund> — `POST /api/management/v1.02/refund/{trid}`
+
+> *«Accepts partial and total amount refunds.»* · *«For MB WAY and Credit Card
+> transactions, is not mandatory to fill IBAN and BIC params.»*
+
+Campos: `amount`, `trid`, e opcionais `iban`, `bic`, `reason`. **Sem prazo
+limite documentado.** ⚠️ Atenção a uma diferença que parte integrações: o
+reembolso usa **OAuth Bearer token**, e a criação de pagamentos usa
+**`Authorization: ApiKey …`**. São dois mecanismos e dois caminhos de erro.
+
+#### ✅ Webhook: HMAC SHA-256, e as retentativas escritas
+
+<https://eupago.readme.io/reference/realtime-webhooks-20>
+
+- POST em JSON, com `transactions` (entity, reference, identifier, method,
+  amount, fees, date, **trid**, status), `channel` e `data`;
+- **`X-Signature`** — HMAC SHA-256. Encriptação AES-256-CBC opcional, com o IV
+  em `X-Initialization-Vector`;
+- retentativas **de 2 em 2 minutos, 3 vezes; depois de hora a hora, 24 horas**;
+- espera **HTTP 200** para dar a comunicação por entregue.
+
+**Não há chave de idempotência.** Fazemo-la nós, com o `trid` — uma coluna
+única na base, não um `if` no código.
+
+E as retentativas explicam a defesa que o ponto 2.3 pedia: se o nosso servidor
+estiver em baixo dez minutos, o euPago volta. Se estiver em baixo mais do que
+24 horas, não volta — e é para esse caso que a sondagem de recurso existe.
+
+#### ✅ Sandbox e produção
+
+`https://sandbox.eupago.pt/api/…` — e para produção *«replace the word
+'sandbox' with 'clientes'»*. Chave em **Canais → Channel Listing**, no menu que
+ele já tem aberto.
+
+#### ✅ O tecto do MB WAY: 99 999 € — eu tinha exagerado
+
+A página do MB WAY diz **«Montante máximo: 99 999€»**. O tecto do euPago não é
+problema nenhum. **O que continua a valer é o limite do banco de QUEM PAGA**, e
+esse não está na nossa mão — mas é o banco dele que lho diz, e a mensagem de
+erro tem de o repetir sem inventar.
+
+#### ⚠️ `mbway/authorize` + `mbway/capture` NÃO servem de caução
+
+Existem, e à primeira vista pareciam a peça perfeita: autorizar agora, capturar
+quando o trabalho estiver feito. **Não são isso.** As duas páginas dizem a mesma
+frase — *«o cliente tem 5 minutos para executar o pagamento»* — e cinco minutos
+não é uma semana. Vale a pena perguntar, mas não conto com isto.
+
+#### ⚠️ `payouts` é só de consulta
+
+`GET /api/management/v1.02/payouts?start_date&end_date` lista os pagamentos
+feitos. **Não envia dinheiro.** O pagamento ao profissional continua a ser
+transferência à mão — a menos que o Split Payments o faça por nós, que é mais
+uma razão para ir por aí.
 
 **E o euPago afasta-se explicitamente da relação com o cliente final:**
 
@@ -146,27 +230,28 @@ formalidade.
 
 Os mercados resolvem-no de três maneiras:
 
-1. ~~**Pagamento repartido no PSP**~~ — **fora**: o contrato transfere tudo para
-   uma conta só, a da CLYON (ver 2.0).
+1. ✅ **Pagamento repartido no PSP** — **existe** (ver 2.0). O euPago paga ao
+   profissional directamente; a CLYON nunca toca no dinheiro dele. Custa uma
+   `externKey` por profissional, ou seja, inscrevê-los no euPago.
 2. **Em nome próprio** — a CLYON compra o serviço ao pro e vende-o ao cliente. O
    dinheiro é receita da CLYON e o pagamento ao pro é pagar a um fornecedor.
    **Colide com a facturação que já desenhámos**, em que é o profissional que
    factura o serviço ao cliente.
 3. **Como agente de cobrança do profissional** — a CLYON recebe *em nome dele*.
-   É o que melhor encaixa no que já está construído, mas tem de estar escrito no
-   contrato do profissional e nos Termos.
+   Não exige nada ao euPago, mas tem de estar escrito no contrato do
+   profissional e nos Termos — e é a hipótese que o contrato do euPago **não
+   contempla**, porque está escrito a assumir que a CLYON vende o que cobra
+   (*«litígios relativos a bens e serviços»*).
 
-**O contrato do euPago não resolve isto — sharpens.** Ele fala de *«litígios
-relativos a bens e serviços»* do Cliente para com os seus *Consumidores*, ou
-seja: está escrito a assumir que a CLYON vende o que cobra. Isso é o modelo 2.
-Se a CLYON cobrar um serviço que o **profissional** presta e factura, está a
-receber por conta de terceiro — e o contrato não contempla esse caso nem o
-proíbe. Simplesmente não fala dele.
+**A minha recomendação é o 1**, e com convicção: é o único em que a pergunta
+regulatória deixa de existir em vez de ser respondida. O 3 obriga a defender uma
+posição jurídica; o 1 dispensa-a. O preço — inscrever cada profissional — é
+trabalho de uma vez por profissional e é exactamente o que o Stripe Connect faz.
 
-**Não sou advogado e não vou fingir que sou.** O que digo é: a escolha entre 2 e
-3 tem de ser feita com o contabilista **antes** de o primeiro euro entrar, e a
-resposta muda quem factura o quê — que é código que já existe e teria de mudar.
-É o único ponto deste documento que pode obrigar a recomeçar.
+**Não sou advogado e não vou fingir que sou.** Mas a diferença entre os dois
+primeiros é grande: no 1, a CLYON nunca segura dinheiro de ninguém; no 2 e no 3,
+segura. Se o euPago confirmar o Split Payments para o nosso caso, não vejo razão
+para escolher outro.
 
 ### 2.2 O limite do MB WAY parte os trabalhos grandes
 
@@ -228,19 +313,26 @@ Cada fase acaba com uma coisa que funciona e é verificável. Nenhuma liga o
 
 | # | Pergunta | Estado |
 |---|---|---|
-| 1 | Pagamento repartido / marketplace? | ✅ **Não** — o contrato transfere tudo para uma conta. Falta só decidir o modelo 2 ou 3, e isso é com o contabilista |
-| 2 | Tecto do MB WAY por operação? | ❌ por responder |
-| 3 | Estorno de MB WAY pela API — total, parcial, prazo? | ❌ **bloqueia** |
-| 4 | Assinatura do webhook e onde se configura o URL? | ❌ **bloqueia** |
-| 5 | Sandbox com credenciais próprias? | ❌ por responder |
-| 6 | *(nova)* Vão aplicar reserva de fundos? Qual a percentagem e quanto tempo? | ❌ **importa muito** — ver 2.0 |
+| 1 | Pagamento repartido / marketplace? | ✅ **Existe** — Split Payments |
+| 2 | Tecto do MB WAY por operação? | ✅ **99 999 €** no euPago; o limite real é o do banco de quem paga |
+| 3 | Estorno de MB WAY pela API? | ✅ **Sim, parcial e total**, sem prazo documentado |
+| 4 | Assinatura do webhook? | ✅ **`X-Signature`, HMAC SHA-256** |
+| 5 | Sandbox? | ✅ `sandbox.eupago.pt` |
 
-As 3 e 4 são documentação técnica: peça-lhes o **manual da API e do webhook**, e
-provavelmente vêm as duas de uma vez, com a 2 e a 5 à mistura.
+**Ficam quatro, e são todas de e-mail para <suporte@eupago.pt>:**
 
-A 6 é a que ninguém se lembra de perguntar e depois dói: se eles retiverem 10 %
-durante 30 dias, a carteira do profissional diz «disponível» e a conta da CLYON
-não tem com que pagar.
+| # | Pergunta | Porque importa |
+|---|---|---|
+| 6 | Como se obtém a **`externKey`** de cada profissional? Que documentos, e quanto demora? | Decide se o modelo 1 é praticável. Se for uma semana por profissional, não é |
+| 7 | Com `immediatePayment: false`, **como se liberta** depois o dinheiro do beneficiário? Por API? Quanto tempo pode ficar retido? | É a caução inteira. Sem isto, o Split resolve o regulatório mas não o prazo de confirmação |
+| 8 | Vão aplicar **reserva de fundos**? Qual percentagem, quanto tempo? | Ver 2.0 — a carteira pode dizer «disponível» e não haver com que pagar |
+| 9 | Onde se põe o **segredo do HMAC** do webhook, e qual é a string exacta que é assinada? | Sem isto não se valida a assinatura, e um webhook que não se valida é uma porta aberta para creditar carteiras |
+
+A **7** é a que decide o desenho. As outras três resolvem-se com uma resposta
+qualquer.
+
+*Perguntas 1 a 5 respondidas pela documentação em
+<https://eupago.readme.io> — não foi preciso perguntar a ninguém.*
 
 ### Fase 1 — O livro de movimentos, sem cobrar nada
 
