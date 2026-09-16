@@ -72,6 +72,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     guardarRecolhaWhatsApp,
     apagarRecolhaWhatsApp,
     interromperNumeroWhatsApp,
+    mensagensDoNumeroWhatsApp,
   } = await import("@/lib/db");
   const {
     responderNaRecolha,
@@ -101,6 +102,29 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
    * decide o que fica gravado e o que se pergunta a seguir.
    */
   const agora = new Date();
+
+  /*
+   * A CONVERSA VAI COM A MENSAGEM.
+   *
+   * "não quero ficar criando palavras para ele, quero que garanta que o gemini
+   * esteja analisando as conversas" — 16-09-2026.
+   *
+   * O modelo via uma frase de cada vez. Daí vinham os erros todos de um dia:
+   * perguntou duas vezes a morada que o Alex tinha acabado de dar, leu «Quero
+   * retirar» como «quero desistir do pedido» e ofereceu-se para apagar tudo, e
+   * respondeu «não apanhei» a «acredito que caiba tudo no elevador» — que era
+   * a resposta óbvia à pergunta anterior.
+   *
+   * Vinte linhas: chegam para o fio de uma recolha inteira (a do Alex teve
+   * vinte e cinco em quinze minutos) sem encher o pedido de texto que já não
+   * diz nada. A mensagem de agora já está lá dentro, porque a ponte regista o
+   * que entra antes de decidir o que fazer com isso.
+   *
+   * Se a base falhar, vai vazio e o modelo lê como lia antes — pior, mas não
+   * calado.
+   */
+  const fio = await mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []);
+
   const responder = async (e: Estado) => {
     /*
      * A PERGUNTA VAI COM A MENSAGEM.
@@ -111,7 +135,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
      * não tinha como cair no caminho antigo quando o modelo não percebe.
      */
     const pendente = perguntaPendente(e.passo, e.dados as never);
-    const c = await compreender(texto, e.dados as Record<string, unknown>, agora, pendente);
+    const c = await compreender(texto, e.dados as Record<string, unknown>, agora, pendente, fio);
     return c
       ? responderComCompreensao(e, c, agora, { texto })
       : responderNaRecolha(e, texto, agora);

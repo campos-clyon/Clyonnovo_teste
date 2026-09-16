@@ -116,7 +116,8 @@ describe("a pergunta em cima da mesa viaja com a mensagem", () => {
     expect(COMPREENSAO).toContain("A PERGUNTA QUE A CLYON ACABOU DE FAZER");
     expect(COMPREENSAO).toContain("perguntaPendente?: string");
     expect(NEGOCIACAO).toContain("const pendente = perguntaPendente(e.passo, e.dados as never);");
-    expect(NEGOCIACAO).toContain("agora, pendente)");
+    // Desde 16-09-2026 leva tambem o fio da conversa. Ver `o-fio-vai-com-a-mensagem`.
+    expect(NEGOCIACAO).toContain("agora, pendente, fio)");
   });
 
   it("a pergunta cabe numa linha — no passo do serviço não leva o bom dia", () => {

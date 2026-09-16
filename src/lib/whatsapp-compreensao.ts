@@ -102,10 +102,30 @@ function modeloDoAssistente(): string {
   return modeloDoGemini(process.env.WHATSAPP_GEMINI_MODEL, process.env.GEMINI_MODEL);
 }
 
+/** Uma linha da conversa, como ela vai para o modelo. */
+export type LinhaDoFio = { direccao: string; texto: string };
+
+/**
+ * A conversa escrita para o modelo ler, com as duas vozes.
+ *
+ * Vazio quando não há nada — e nesse caso o bloco nem aparece nas instruções,
+ * para o modelo não ficar a olhar para um cabeçalho sem nada por baixo.
+ */
+function fioEscrito(fio: LinhaDoFio[]): string {
+  return fio
+    .map((l) => {
+      const quem = l.direccao === "out" ? "CLYON" : "cliente";
+      return `${quem}: ${l.texto.replace(/\s*\n\s*/g, " ").trim().slice(0, 400)}`;
+    })
+    .filter((l) => l.length > 8)
+    .join("\n");
+}
+
 function instrucoes(
   jaSabido: Record<string, unknown>,
   agora: Date,
   perguntaPendente?: string,
+  fio: LinhaDoFio[] = [],
 ): string {
   const servicos = SERVICE_CATEGORIES.map((c) => `- ${c.id}: ${c.label}`).join("\n");
   const dia = agora.toLocaleDateString("pt-PT", {
@@ -129,6 +149,20 @@ Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código, com es
 A REGRA MAIS IMPORTANTE DE TODAS: a mensagem que vais ler é, quase sempre, uma RESPOSTA à pergunta que a CLYON acabou de fazer. Lê-a ao lado dessa pergunta e não sozinha. Um "não" a seguir a "Há elevador?" quer dizer que não há elevador — não quer dizer que a pessoa desistiu. Um "não preciso" a seguir a "Precisa de factura?" quer dizer que não precisa de FACTURA.
 
 A PERGUNTA QUE A CLYON ACABOU DE FAZER: ${perguntaPendente ?? "(ainda nenhuma — é o início da conversa)"}
+${
+  fio.length === 0
+    ? ""
+    : `
+A CONVERSA ATÉ AGORA, do princípio ao fim. A ÚLTIMA linha do cliente é a que tens de interpretar; as outras estão aqui para a perceberes:
+
+${fioEscrito(fio)}
+
+O que isto te obriga a fazer:
+- NÃO voltes a dar por não dito o que já está escrito aí em cima. Se a morada, o nome ou o andar já lá estão, estão sabidos — mesmo que a última mensagem não os repita.
+- LÊ a última mensagem como continuação do que vem antes, e nunca como se fosse a primeira frase da conversa. «Quero retirar» a seguir a «estou com uns entulhos aqui na loja» é ele a dizer o que precisa de levar; não é ele a retirar o pedido.
+- Uma resposta curta pertence à última pergunta da CLYON, mesmo que fale de outra coisa. «Acredito que caiba tudo no elevador», a seguir a «Há elevador?», é um sim ao elevador.
+- Se a CLYON já disse a mesma coisa duas vezes seguidas aí em cima, é sinal de que não percebeu — não a faças dizer uma terceira.`
+}
 
 A intenção:
 - "falar_com_pessoa" — pede para falar com alguém, com um humano, diz que não quer bots.
@@ -408,13 +442,27 @@ export async function compreender(
    * inteira de uma cliente.
    */
   perguntaPendente?: string,
+  /**
+   * A CONVERSA, e não só a última frase.
+   *
+   * Ler o fio inteiro já existia — `compreenderFio` —, mas vivia num botão do
+   * backoffice. A conversa a sério via uma frase de cada vez, e daí vinham
+   * quase todos os erros que o dono apanhou a 15-09-2026: perguntar a morada
+   * que o cliente tinha acabado de dar, ler «Quero retirar» como desistir do
+   * pedido, e responder «não apanhei» a uma frase que era a resposta óbvia à
+   * pergunta anterior.
+   *
+   * Uma frase de WhatsApp não quer dizer nada sozinha. Quem a lê sem o que
+   * vem antes está a adivinhar, por muito bom que seja o modelo.
+   */
+  fio: LinhaDoFio[] = [],
 ): Promise<Compreensao | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   const t = texto.trim();
   if (!t) return null;
 
-  const sistema = instrucoes(resumoDoSabido(jaSabido), agora, perguntaPendente);
+  const sistema = instrucoes(resumoDoSabido(jaSabido), agora, perguntaPendente, fio);
   const modelName = modeloDoAssistente();
 
   /*
