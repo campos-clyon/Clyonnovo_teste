@@ -112,7 +112,7 @@ export default function ContaCliente({
    * separador está escondido, não mexe em estados de "a carregar", e cala-se
    * quando falha.
    */
-  useAutoRefresh(recarregar, { intervalMs: 30_000 });
+  useAutoRefresh(recarregar);
 
   // Quantas propostas esperam por ele, somadas. É o que o distintivo mostra —
   // e é o mesmo número em qualquer sítio onde apareça.

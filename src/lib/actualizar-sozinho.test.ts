@@ -20,18 +20,41 @@ const CLIENTE = ler("src/app/conta/ContaCliente.tsx");
 const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 const CICLO = ler("src/components/admin/useAutoRefresh.ts");
 
-describe("trinta segundos, nas três pontas", () => {
-  it("o profissional, o cliente e o backoffice na mesma cadência", () => {
+describe("uma cadência só, nas três pontas", () => {
+  /*
+   * ISTO PEDIA 30 SEGUNDOS EM CADA FICHEIRO — e era essa a forma errada.
+   *
+   * "Vamos unificar tudo, fazer tudo actualizar junto em 20s com um único."
+   * — 16-09-2026. Cada um dos vinte e dois sítios trazia o seu número, e para
+   * mudar o ritmo era preciso mudar vinte e dois — e no dia seguinte já havia
+   * um por mudar. Pior: dois painéis do mesmo ecrã mostravam estados de
+   * momentos diferentes.
+   *
+   * O número passou a viver uma vez, no hook. O que isto guarda agora é que
+   * NINGUÉM volte a trazer o seu.
+   */
+  it("o número vive num sítio só", () => {
+    expect(CICLO).toContain("export const INTERVALO_DO_CICLO = 20_000");
+  });
+
+  it("e nenhum ecrã traz o seu", () => {
     for (const ficheiro of [PRO, CLIENTE, MESA]) {
-      expect(ficheiro).toContain("intervalMs: 30_000");
+      expect(ficheiro).not.toContain("intervalMs");
     }
   });
 
   it("o backoffice actualiza em SILÊNCIO — a lista não pode piscar", () => {
     // carregar(true) não acende estados de "a carregar": sem isto a lista
-    // saltava de 30 em 30 segundos e um valor a ser escrito perdia-se.
-    expect(MESA).toContain("useAutoRefresh(() => carregar(true), { intervalMs: 30_000 })");
+    // saltava a cada batida e um valor a ser escrito perdia-se.
+    expect(MESA).toContain("useAutoRefresh(() => carregar(true))");
     expect(MESA).toContain("if (!silencioso) setACarregar(true);");
+  });
+
+  it("há um temporizador, e não um por ecrã", () => {
+    // O pulso vive fora do React: é um recurso do separador, não de um
+    // componente. Um setInterval por dentro de cada hook era o problema.
+    expect(CICLO).toContain("const ouvintes = new Set<Batida>()");
+    expect(CICLO.match(/setInterval\(/g)?.length).toBe(2); // o pulso + o relógio do "há N min"
   });
 
   it("e o ciclo pára com o separador escondido, em vez de gastar pedidos", () => {

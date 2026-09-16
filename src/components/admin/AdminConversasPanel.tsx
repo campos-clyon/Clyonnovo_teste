@@ -159,7 +159,6 @@ export default function AdminConversasPanel() {
    * escrever.
    */
   useAutoRefresh(() => carregar(true), {
-    intervalMs: 10_000,
     enabled: ready && Boolean(token),
     paused: aEnviar,
   });

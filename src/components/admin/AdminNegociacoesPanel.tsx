@@ -730,7 +730,7 @@ export default function AdminNegociacoesPanel({
    * É a mesma cadência do painel do profissional e da conta do cliente: as
    * três pontas da mesma negociação a ver o mesmo estado ao mesmo tempo.
    */
-  useAutoRefresh(() => carregar(true), { intervalMs: 30_000 });
+  useAutoRefresh(() => carregar(true));
 
   /** Há quanto tempo o que está no ecrã foi lido da base. */
   const quandoFoiLido = (() => {

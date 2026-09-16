@@ -110,10 +110,14 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
   useEffect(() => {
     if (!ready) return;
     void carregar();
-    // O painel fica aberto o dia todo numa secretária. De dois em dois
-    // minutos chega — não é um monitor de sala de controlo.
-    const t = setInterval(() => void carregar(), 120_000);
-    return () => clearInterval(t);
+    /*
+     * O CICLO NÃO ESTÁ AQUI — está no pulso partilhado, mais abaixo.
+     *
+     * Havia um temporizador próprio de dois em dois minutos E o hook: o painel
+     * carregava a dobrar, em momentos diferentes, e era esse o género de coisa
+     * que a unificação de 16-09-2026 veio acabar. Aqui fica só a primeira
+     * leitura.
+     */
   }, [ready, carregar]);
 
   /*

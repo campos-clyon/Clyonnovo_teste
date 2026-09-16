@@ -140,7 +140,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
    * o pedido. Sem isto, ele via um ecrã parado e concluía que ninguém tinha
    * respondido — e a proposta tem 48 horas de prazo a correr.
    */
-  useAutoRefresh(() => fetchOrders(filter, page, true), { intervalMs: 60_000 });
+  useAutoRefresh(() => fetchOrders(filter, page, true));
 
   const handleFilter = (f: string) => { setFilter(f); setPage(1); };
 

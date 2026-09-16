@@ -337,7 +337,7 @@ export default function PainelDoProfissional() {
    * frente — um ecrã minimizado não gasta pedidos, e ao voltar não mostra
    * dados de há uma hora.
    */
-  useAutoRefresh(carregar, { intervalMs: 30_000 });
+  useAutoRefresh(carregar);
 
   /**
    * A porta para fora do painel.

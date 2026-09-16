@@ -404,10 +404,12 @@ export default function AdminWhatsAppPanel() {
   useEffect(() => {
     if (!ready) return;
     void carregar();
-    // O estado muda fora daqui (o Winapp interrompe, a fila esvazia): o ecrã
-    // acompanha sozinho, como o painel do profissional.
-    const t = setInterval(() => void carregar(), 30_000);
-    return () => clearInterval(t);
+    /*
+     * O CICLO NÃO ESTÁ AQUI — está no pulso partilhado, mais abaixo. Havia um
+     * temporizador próprio de trinta em trinta segundos E o hook: o painel
+     * carregava a dobrar, em momentos diferentes. Aqui fica só a primeira
+     * leitura.
+     */
   }, [ready, carregar]);
 
   /*

@@ -1359,7 +1359,6 @@ export default function ColaboradorAdminClient({
       if (token) carregarLeads(token, leadPeriodo, leadStatusFilter, true);
     },
     {
-      intervalMs: 30_000,
       enabled: activeSection === "leads" && Boolean(token),
       paused: savingLeadStatus,
     },
@@ -1372,10 +1371,17 @@ export default function ColaboradorAdminClient({
     // Mudar de filtro ou de pesquisa muda o que está à vista. Manter a
     // marcação seria agir sobre linhas que a pessoa já não vê.
     setPedidosMarcados(new Set());
-    const interval = setInterval(() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true), 120000);
-    return () => clearInterval(interval);
+    // O ciclo está no pulso partilhado, logo a seguir. Aqui fica a primeira
+    // leitura e a limpeza da marcação.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, pedidoStatusFilter, pedidoSearchDebounced]);
+
+  useAutoRefresh(
+    () => {
+      if (token) carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
+    },
+    { enabled: activeSection === "pedidos" && Boolean(token) },
+  );
 
   // O contador do menu tem de estar certo mesmo sem se abrir a secção — é
   // essa a razão de ele existir. Sem isto voltávamos ao mesmo: ninguém abre
@@ -1384,8 +1390,6 @@ export default function ColaboradorAdminClient({
     // O suporte não é do assistente; sem a secção não há contador para acertar.
     if (!token || !podeVer("suporte")) return;
     carregarTickets(token, ticketsFiltro, true);
-    const intervalo = setInterval(() => carregarTickets(token, ticketsFiltro, true), 120000);
-    return () => clearInterval(intervalo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, ticketsFiltro]);
 
@@ -1395,22 +1399,23 @@ export default function ColaboradorAdminClient({
   }, [activeSection, ticketsFiltro]);
 
   /*
-   * O SUPORTE ABERTO ACTUALIZA-SE DE DEZ EM DEZ SEGUNDOS — 16-09-2026.
+   * OS TICKETS, NO PULSO PARTILHADO — e sem a secção precisar de estar aberta.
    *
    * "Remova o botão actualizar e garanta que essas informações sejam
-   * actualizadas a cada 10s sem que o admin perceba."
+   * actualizadas (…) sem que o admin perceba." O botão saiu.
    *
-   * O botão saiu, e sem isto a lista de tickets só se movia de dois em dois
-   * minutos — o ciclo que existe para acertar o contador do menu, e que
-   * continua a correr em pano de fundo. Dez segundos é o ritmo de quem está
-   * com o ecrã aberto à espera que alguém responda; só corre com a secção à
-   * vista, e o hook pára sozinho com o separador escondido.
+   * NÃO ESTÁ PRESO A `activeSection`, e é de propósito: o contador do menu tem
+   * de estar certo mesmo com o Suporte fechado — é essa a razão de ele existir,
+   * e ninguém abre o que não sabe que tem coisas lá dentro. Havia aqui um
+   * temporizador próprio de dois em dois minutos só para isso; agora é a mesma
+   * batida que serve as duas coisas, e o contador e a lista deixam de poder
+   * discordar.
    */
   useAutoRefresh(
     () => {
       if (token) carregarTickets(token, ticketsFiltro, true);
     },
-    { intervalMs: 10_000, enabled: activeSection === "suporte" && Boolean(token) },
+    { enabled: Boolean(token) && podeVer("suporte") },
   );
 
   /*

@@ -147,9 +147,10 @@ describe("o ecrã", () => {
     expect(PAINEL).not.toContain("RefreshCw");
   });
 
-  it("actualiza-se de dez em dez segundos", () => {
-    expect(PAINEL).toContain("intervalMs: 10_000");
+  it("actualiza-se sozinho, no pulso do backoffice inteiro", () => {
+    // O ritmo vive em useAutoRefresh.ts e mais lado nenhum.
     expect(PAINEL).toContain("useAutoRefresh");
+    expect(PAINEL).not.toContain("intervalMs");
   });
 
   it("e pára enquanto se escreve uma resposta", () => {
@@ -162,7 +163,7 @@ describe("os outros dois botões do Suporte", () => {
   it("saíram os três: as conversas, os tickets da app e a plataforma", () => {
     const AJUDA = ler("src/components/admin/AdminAjudaPanel.tsx");
     expect(AJUDA).not.toContain("RefreshCw");
-    expect(AJUDA).toContain("intervalMs: 10_000");
+    expect(AJUDA).toContain("useAutoRefresh");
 
     const ADMIN = ler("src/components/admin/LegacyAdminClient.tsx");
     const i = ADMIN.indexOf('activeSection === "suporte" && (');
@@ -174,8 +175,14 @@ describe("os outros dois botões do Suporte", () => {
   });
 
   it("e a lista de tickets ganhou o ciclo que o botão fazia à mão", () => {
+    /*
+     * Sem prender à secção aberta: o contador do menu tem de estar certo com
+     * o Suporte fechado — é essa a razão de ele existir. A mesma batida serve
+     * o contador e a lista, e deixam de poder discordar.
+     */
     const ADMIN = ler("src/components/admin/LegacyAdminClient.tsx");
-    expect(ADMIN).toContain('enabled: activeSection === "suporte" && Boolean(token)');
+    expect(ADMIN).toContain("carregarTickets(token, ticketsFiltro, true)");
+    expect(ADMIN).toContain('enabled: Boolean(token) && podeVer("suporte")');
   });
 });
 

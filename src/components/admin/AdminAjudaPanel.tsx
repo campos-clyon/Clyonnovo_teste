@@ -90,11 +90,7 @@ export default function AdminAjudaPanel() {
    * erros de rede, pára com o separador escondido e volta a buscar assim que
    * ele reaparece.
    */
-  // Dez segundos, como o resto do Suporte: é uma pessoa à espera do outro lado.
-  useAutoRefresh(() => carregar(true), {
-    intervalMs: 10_000,
-    enabled: ready && Boolean(token),
-  });
+  useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
   async function responder(id: number, estado: string) {
     setOcupado(id);

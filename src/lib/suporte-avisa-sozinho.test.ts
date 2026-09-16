@@ -82,8 +82,9 @@ describe("o painel actualiza-se sozinho", () => {
     expect(PAINEL).not.toContain("RefreshCw");
   });
 
-  it("o ciclo é de dez segundos", () => {
-    // É uma pessoa à espera de resposta do outro lado.
-    expect(PAINEL).toContain("intervalMs: 10_000");
+  it("e não traz cadência própria — o ritmo é o do backoffice inteiro", () => {
+    // "Vamos unificar tudo, fazer tudo actualizar junto em 20s com um único."
+    // O número vive em useAutoRefresh.ts, uma vez.
+    expect(PAINEL).not.toContain("intervalMs");
   });
 });
