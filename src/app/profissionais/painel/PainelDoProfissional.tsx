@@ -138,21 +138,41 @@ export default function PainelDoProfissional() {
   const fotografiaAnterior = useRef<Map<number, string> | null>(null);
 
   const carregar = useCallback(async () => {
+    // Declaradas cá fora porque são esperadas DEPOIS do `finally` — é lá que o
+    // ecrã já abriu, e é para lá que a carteira e o perfil vão a caminho.
+    let pedirCarteira: Promise<Response | null> = Promise.resolve(null);
+    let pedirPerfil: Promise<Response | null> = Promise.resolve(null);
     try {
       // Sempre a versão de agora: depois de gravar os custos no perfil, a
       // sugestão de cada trabalho muda, e uma cópia guardada mostrava a antiga.
-      const [rp, rc, rf] = await Promise.all([
-        fetch("/api/profissionais/meus-pedidos", { cache: "no-store" }),
-        fetch("/api/profissionais/carteira", { cache: "no-store" }),
-        fetch("/api/profissionais/perfil", { cache: "no-store" }),
-      ]);
+      /*
+       * AS TRÊS PARTEM JUNTAS, MAS O ECRÃ NÃO ESPERA PELAS TRÊS — 16-09-2026.
+       *
+       * "demora muito carregar cada info, cada passo; isso na Fixando ou no
+       * Óscar não acontece."
+       *
+       * Estavam num `Promise.all` e o painel ficava na roda até a MAIS LENTA
+       * responder. Os trabalhos — que é o que ele vem ver — chegavam e ficavam
+       * escondidos à espera da carteira e do perfil, que só enchem dois
+       * cantos.
+       *
+       * Continuam a partir ao mesmo tempo: são criadas aqui, todas de uma vez.
+       * O que muda é a ordem por que se esperam. O `.catch` está nas duas
+       * secundárias porque, se a principal devolver 401 e sairmos daqui, elas
+       * ficam sem ninguém a esperá-las.
+       */
+      pedirCarteira = fetch("/api/profissionais/carteira", { cache: "no-store" }).catch(
+        () => null,
+      );
+      pedirPerfil = fetch("/api/profissionais/perfil", { cache: "no-store" }).catch(() => null);
+      const rp = await fetch("/api/profissionais/meus-pedidos", { cache: "no-store" });
 
-      if (rp.status === 401 || rc.status === 401 || rf.status === 401) {
+      if (rp.status === 401) {
         router.push("/profissionais/entrar");
         return;
       }
 
-      const [dp, dc, df] = await Promise.all([rp.json(), rc.json(), rf.json()]);
+      const dp = await rp.json();
 
       /*
        * Só se troca o que mudou de facto.
@@ -224,21 +244,40 @@ export default function PainelDoProfissional() {
           JSON.stringify(antes) === JSON.stringify(novos) ? antes : novos,
         );
       }
-      if (rc.ok) {
-        setCarteira((antes) =>
-          JSON.stringify(antes) === JSON.stringify(dc) ? antes : dc,
-        );
-      }
-      if (rf.ok) {
-        setPerfil((antes) =>
-          JSON.stringify(antes) === JSON.stringify(df.perfil) ? antes : df.perfil,
-        );
-      }
       setErro(rp.ok ? "" : (dp.error ?? "Erro ao carregar."));
     } catch {
       setErro("Erro de rede.");
     } finally {
+      // O ECRÃ ABRE AQUI, com os trabalhos. O resto entra por baixo.
       setACarregar(false);
+    }
+
+    /*
+     * A carteira e o perfil enchem-se quando chegarem.
+     *
+     * Falhar aqui não é notícia: o painel já está de pé e a mostrar o que
+     * interessa. Um canto por preencher é muito melhor do que uma roda a
+     * girar sobre um ecrã em branco.
+     */
+    try {
+      const rc = await pedirCarteira;
+      if (rc?.ok) {
+        const dc = await rc.json();
+        setCarteira((antes) => (JSON.stringify(antes) === JSON.stringify(dc) ? antes : dc));
+      }
+    } catch {
+      /* fica como estava */
+    }
+    try {
+      const rf = await pedirPerfil;
+      if (rf?.ok) {
+        const df = await rf.json();
+        setPerfil((antes) =>
+          JSON.stringify(antes) === JSON.stringify(df.perfil) ? antes : df.perfil,
+        );
+      }
+    } catch {
+      /* fica como estava */
     }
   }, [router]);
 

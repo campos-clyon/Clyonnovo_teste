@@ -143,24 +143,55 @@ export async function GET(req: NextRequest) {
      * ao listar" e um ecra vazio -- ele perdia tudo por causa de uma linha de
      * enfeite. Falhando, cala-se: sem contexto, o painel continua de pe.
      */
+    /*
+     * DUAS CONSULTAS PARA TODOS, E NÃO DUAS POR CADA UM — 16-09-2026.
+     *
+     * "demora muito carregar cada info, cada passo; isso na Fixando ou no
+     * Óscar não acontece."
+     *
+     * Era um `for` com dois `await` lá dentro: com dez trabalhos contratados
+     * eram VINTE idas e voltas ao MySQL, uma de cada vez, cada uma a pagar a
+     * latência do Vercel até ao Railway. Meio segundo largo de espera — e para
+     * uma linha de enfeite, «Cliente desde X · N trabalhos», que o profissional
+     * nem sempre lê.
+     *
+     * Agora são duas, independentemente de serem três clientes ou trinta. O
+     * `IN` é montado com uma marca por email, nunca por concatenação.
+     */
     try {
       const pool = emailsContratados.length > 0 ? await getPool() : null;
       if (pool) {
+        const marcas = emailsContratados.map(() => "?").join(", ");
+        const [uLinhas, cLinhas] = await Promise.all([
+          pool.execute(
+            `SELECT LOWER(email) AS email, createdAt FROM users
+              WHERE LOWER(email) IN (${marcas}) AND deletedAt IS NULL`,
+            emailsContratados,
+          ) as Promise<any[]>,
+          pool.execute(
+            `SELECT LOWER(o.contactEmail) AS email, COUNT(*) AS n
+               FROM negociacoes n
+               JOIN simulatorOrders o ON o.id = n.pedidoId
+              WHERE LOWER(o.contactEmail) IN (${marcas}) AND n.confirmadoEm IS NOT NULL
+              GROUP BY LOWER(o.contactEmail)`,
+            emailsContratados,
+          ) as Promise<any[]>,
+        ]);
+
+        const desdeQuando = new Map<string, Date>();
+        for (const r of (uLinhas[0] ?? []) as Array<{ email: string; createdAt?: Date }>) {
+          if (r.createdAt) desdeQuando.set(r.email, r.createdAt);
+        }
+        const quantos = new Map<string, number>();
+        for (const r of (cLinhas[0] ?? []) as Array<{ email: string; n: number }>) {
+          quantos.set(r.email, Number(r.n ?? 0));
+        }
+
         for (const email of emailsContratados) {
-          const [uLinhas] = (await pool.execute(
-            "SELECT createdAt FROM users WHERE email = ? AND deletedAt IS NULL LIMIT 1",
-            [email],
-          )) as any[];
-          const [cLinhas] = (await pool.execute(
-            `SELECT COUNT(*) AS n FROM negociacoes n
-              JOIN simulatorOrders o ON o.id = n.pedidoId
-             WHERE LOWER(o.contactEmail) = ? AND n.confirmadoEm IS NOT NULL`,
-            [email],
-          )) as any[];
-          const desde = (uLinhas as Array<{ createdAt?: Date }>)[0]?.createdAt ?? null;
+          const desde = desdeQuando.get(email) ?? null;
           contextoDoCliente.set(email, {
             desde: desde ? new Date(desde).toISOString() : null,
-            confirmados: Number((cLinhas as Array<{ n: number }>)[0]?.n ?? 0),
+            confirmados: quantos.get(email) ?? 0,
           });
         }
       }

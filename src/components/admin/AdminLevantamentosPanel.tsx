@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, Loader2, RefreshCw, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
@@ -49,9 +50,9 @@ export default function AdminLevantamentosPanel() {
   const [aRecusar, setARecusar] = useState<number | null>(null);
   const [motivo, setMotivo] = useState("");
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
-    setACarregar(true);
+    if (!silencioso) setACarregar(true);
     try {
       const res = await fetch("/api/admin/levantamentos", {
         headers: { Authorization: `Bearer ${token}` },
@@ -73,6 +74,20 @@ export default function AdminLevantamentosPanel() {
   useEffect(() => {
     if (ready) carregar();
   }, [ready, carregar]);
+
+  /*
+   * NOVIDADES SEM F5 — 16-09-2026.
+   *
+   * "sempre que quero ver as novidades tenho que ficar atualizando tudo, mas
+   * isso não devia acontecer (…) como no WhatsApp, quando alguém envia
+   * mensagem." Catorze dos dezasseis painéis deste backoffice não tinham
+   * ciclo nenhum.
+   *
+   * Silencioso de propósito: não mexe no estado de carregamento, não grita
+   * erros de rede, pára com o separador escondido e volta a buscar assim que
+   * ele reaparece.
+   */
+  useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
   async function processar(id: number, estado: "pago" | "recusado", nota?: string) {
     setOcupado(id);
@@ -119,7 +134,7 @@ export default function AdminLevantamentosPanel() {
               )}`}
         </p>
         <button
-          onClick={carregar}
+          onClick={() => carregar()}
           className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, Inbox, Loader2, Send, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -62,7 +63,7 @@ export default function AdminCandidaturasPanel() {
   const [linkEmClaro, setLinkEmClaro] = useState("");
   const [verTratadas, setVerTratadas] = useState(false);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
     try {
       const res = await fetch("/api/admin/candidaturas", {
@@ -78,6 +79,20 @@ export default function AdminCandidaturasPanel() {
   useEffect(() => {
     if (ready) void carregar();
   }, [ready, carregar]);
+
+  /*
+   * NOVIDADES SEM F5 — 16-09-2026.
+   *
+   * "sempre que quero ver as novidades tenho que ficar atualizando tudo, mas
+   * isso não devia acontecer (…) como no WhatsApp, quando alguém envia
+   * mensagem." Catorze dos dezasseis painéis deste backoffice não tinham
+   * ciclo nenhum.
+   *
+   * Silencioso de propósito: não mexe no estado de carregamento, não grita
+   * erros de rede, pára com o separador escondido e volta a buscar assim que
+   * ele reaparece.
+   */
+  useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
   async function agir(id: number, accao: "aprovar" | "recusar") {
     if (!token) return;

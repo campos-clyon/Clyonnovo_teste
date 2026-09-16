@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
   BadgeCheck,
   Check,
@@ -81,9 +82,9 @@ export default function AdminProfissionaisPanel() {
   const [busca, setBusca] = useState("");
   const [aEditar, setAEditar] = useState<number | null>(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
-    setACarregar(true);
+    if (!silencioso) setACarregar(true);
     try {
       const res = await fetch("/api/admin/profissionais", {
         headers: { Authorization: `Bearer ${token}` },
@@ -105,6 +106,20 @@ export default function AdminProfissionaisPanel() {
   useEffect(() => {
     if (ready && token) carregar();
   }, [ready, token, carregar]);
+
+  /*
+   * NOVIDADES SEM F5 — 16-09-2026.
+   *
+   * "sempre que quero ver as novidades tenho que ficar atualizando tudo, mas
+   * isso não devia acontecer (…) como no WhatsApp, quando alguém envia
+   * mensagem." Catorze dos dezasseis painéis deste backoffice não tinham
+   * ciclo nenhum.
+   *
+   * Silencioso de propósito: não mexe no estado de carregamento, não grita
+   * erros de rede, pára com o separador escondido e volta a buscar assim que
+   * ele reaparece.
+   */
+  useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
   async function actuar(id: number, corpo: Record<string, unknown>) {
     if (!token) return;
@@ -243,7 +258,7 @@ export default function AdminProfissionaisPanel() {
           {contagens.todos} inscritos · {contagens.aprovado} a receber pedidos
         </p>
         <button
-          onClick={carregar}
+          onClick={() => carregar()}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />

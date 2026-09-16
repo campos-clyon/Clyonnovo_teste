@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
   Check,
   Copy,
@@ -203,6 +204,20 @@ export default function AdminCarteirasPanel() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  /*
+   * NOVIDADES SEM F5 — 16-09-2026.
+   *
+   * "sempre que quero ver as novidades tenho que ficar atualizando tudo, mas
+   * isso não devia acontecer (…) como no WhatsApp, quando alguém envia
+   * mensagem." Catorze dos dezasseis painéis deste backoffice não tinham
+   * ciclo nenhum.
+   *
+   * Silencioso de propósito: não mexe no estado de carregamento, não grita
+   * erros de rede, pára com o separador escondido e volta a buscar assim que
+   * ele reaparece.
+   */
+  useAutoRefresh(() => carregar(true), { enabled: Boolean(token) });
 
   async function marcarPago(t: Trabalho, nome: string) {
     if (!token) return;
