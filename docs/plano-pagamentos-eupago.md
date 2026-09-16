@@ -130,6 +130,66 @@ E as retentativas explicam a defesa que o ponto 2.3 pedia: se o nosso servidor
 estiver em baixo dez minutos, o euPago volta. Se estiver em baixo mais do que
 24 horas, não volta — e é para esse caso que a sondagem de recurso existe.
 
+#### ✅ O webhook configura-se no backoffice, e o segredo é NOSSO
+
+*Visto no backoffice a 16-09-2026: **Gestão → Canais → Listagem de Canais →
+Editar → Webhooks 2.0**.*
+
+Existe um canal, chamado **CLYON**, com a Chave API. Dentro do «Editar», a
+secção **Webhooks 2.0** tem exactamente o que faltava saber:
+
+| Campo | O que é |
+|---|---|
+| **Software Integrado** | Uma lista (WooCommerce, Shopify, Magento…) com **«Integração Personalizada»** — é a nossa |
+| **Encriptar Webhook** | Sim / Não — é o AES-256-CBC. Começar em **Não**: uma coisa de cada vez |
+| **Webhook Endpoint** | O nosso URL |
+| **Chave Criptográfica** | O segredo do HMAC — com um botão **«Gerar Chave Criptográfica»** |
+| **Tipo de Webhook** | Pagamento · Cancelamento · Expiração · Erro · **Reembolso** |
+
+**O segredo é gerado por nós, ali, e não pedido a ninguém.** A pergunta 9 está
+respondida sem e-mail nenhum. E dá para subscrever o **Reembolso** — ou seja, um
+estorno também nos avisa, o que é meio caminho para a reconciliação.
+
+Há ainda, ao lado, avisos por e-mail por tipo — incluindo **«Erro de Webhook
+2.0»**. Vale a pena ligar esse para o `geral@clyon.pt`: é o aviso de que o nosso
+servidor não respondeu 200, e chega por um canal que não depende do nosso
+servidor estar de pé.
+
+#### 🔴 O «Cronograma de Pagamentos» — o achado que muda a Fase 4
+
+*Backoffice: **Gestão → Conta → Ficha de Conta → Definições**.*
+
+> *«Defina uma programação para receber pagamentos automaticamente.»* ·
+> *«Saída de fundos ocorrerá automaticamente sempre que o saldo da conta
+> exceder os 90 000 €.»*
+
+**Não está configurado nenhum.** Quer dizer que, como está hoje, o dinheiro
+**fica na conta do euPago** e só sai sozinho acima de 90 000 €.
+
+Isto não é um problema — é uma peça. **O saldo no euPago pode ser a própria
+caução.** O dinheiro entra, fica lá sob o nosso controlo, e sai quando nós
+mandarmos. Não precisa de passar pela conta bancária da CLYON para depois
+voltar a sair.
+
+Muda duas coisas no plano:
+
+- a Fase 4 deixa de ser «transferir à mão da conta da CLYON» e passa a ser uma
+  pergunta ao euPago sobre como ordenar a saída para o IBAN do profissional;
+- e obriga a uma decisão que ninguém tomou: **com que periodicidade queremos
+  que o euPago nos transfira?** Deixar sem cronograma é deixar o dinheiro lá;
+  pôr diário é tirá-lo de lá todos os dias. A resposta depende do modelo que
+  escolhermos em 2.1.
+
+#### ℹ️ Duas coisas que vi e vale a pena ter presente
+
+O preçário no backoffice confirma o contrato ao cêntimo: MB WAY `0,07 € +
+0,70 %` (retenção mínima 0,05 €, máxima 100 000 €), Multibanco `0,66 €` fixos.
+
+E a **Atividade declarada da conta é «Demolição»**. Faz sentido para a CLYON de
+hoje. Se a plataforma passar a cobrar por conta de profissionais, isso é outra
+actividade — e é o género de coisa que o euPago olha quando avalia risco. Vale a
+pena dizer-lho antes de eles darem por ela.
+
 #### ✅ Sandbox e produção
 
 `https://sandbox.eupago.pt/api/…` — e para produção *«replace the word
@@ -325,14 +385,18 @@ Cada fase acaba com uma coisa que funciona e é verificável. Nenhuma liga o
 |---|---|---|
 | 6 | Como se obtém a **`externKey`** de cada profissional? Que documentos, e quanto demora? | Decide se o modelo 1 é praticável. Se for uma semana por profissional, não é |
 | 7 | Com `immediatePayment: false`, **como se liberta** depois o dinheiro do beneficiário? Por API? Quanto tempo pode ficar retido? | É a caução inteira. Sem isto, o Split resolve o regulatório mas não o prazo de confirmação |
-| 8 | Vão aplicar **reserva de fundos**? Qual percentagem, quanto tempo? | Ver 2.0 — a carteira pode dizer «disponível» e não haver com que pagar |
-| 9 | Onde se põe o **segredo do HMAC** do webhook, e qual é a string exacta que é assinada? | Sem isto não se valida a assinatura, e um webhook que não se valida é uma porta aberta para creditar carteiras |
+| 8 | Vão aplicar **reserva de fundos**? Qual percentagem, quanto tempo? | Ver 2.0 — a carteira pode dizer «disponível» e não haver com que pagar. Não aparece em lado nenhum do backoffice |
+| ~~9~~ | ~~Onde se põe o segredo do HMAC?~~ | ✅ **Respondida no backoffice** — geramo-lo nós, em Canais → Editar → Webhooks 2.0 |
 
-A **7** é a que decide o desenho. As outras três resolvem-se com uma resposta
-qualquer.
+E uma que nasceu do backoffice:
 
-*Perguntas 1 a 5 respondidas pela documentação em
-<https://eupago.readme.io> — não foi preciso perguntar a ninguém.*
+| 10 | Qual é a **string exacta que é assinada** pelo HMAC — o corpo cru? com que codificação? | Podemos gerar a chave, mas se assinarmos coisa diferente da que eles assinam, a validação falha sempre e parece que o webhook está partido |
+
+A **7** é a que decide o desenho. A **10** é a que vai custar uma tarde se não
+vier respondida.
+
+*Perguntas 1 a 5 respondidas pela documentação em <https://eupago.readme.io>; a
+9 respondida pelo próprio backoffice. Não foi preciso perguntar nenhuma delas.*
 
 ### Fase 1 — O livro de movimentos, sem cobrar nada
 
