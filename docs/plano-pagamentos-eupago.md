@@ -281,6 +281,30 @@ E note-se: **a comissão é sobre o valor TODO**, incluindo a parte que é do
 profissional. É um custo próprio do modelo de caução que não existiria se o
 cliente lhe pagasse directamente.
 
+#### A conta, como o dono a definiu *(16-09-2026)*
+
+| | |
+|---|---|
+| Valor acordado entre cliente e profissional | 100,00 € |
+| **O cliente paga** (+5 %) | **105,00 €** |
+| **O profissional recebe** (−6 %) | **94,00 €** |
+| Bruto da CLYON | 11,00 € |
+| euPago, MB WAY sobre 105 € | −0,81 € |
+| **Líquido da CLYON** | **10,20 €** |
+
+*«Não vamos cobrar dos profissionais parceiros — vamos apenas pagá-los já menos
+os 6 %.»* Não há factura da CLYON ao profissional: a comissão é **descontada no
+que se lhe paga**, e o número que ele vê no ecrã é o que lhe chega à conta.
+
+**E a comissão do euPago sai da parte da CLYON** — decisão do dono, e é a que
+protege a promessa: se fosse repartida proporcionalmente, o profissional
+receberia 93,28 € em vez dos 94,00 € que lhe foram prometidos quando aceitou o
+trabalho. Um número prometido num ecrã e outro na conta é a forma mais rápida de
+perder um profissional.
+
+Fica como pergunta 3 ao euPago: não *quem paga* — isso está decidido — mas
+**como se indica** que é a CLYON.
+
 ### 2.1 ⚠️ Quem pode segurar dinheiro de outra pessoa — a pergunta que não é técnica
 
 Se o cliente paga 300 € à CLYON e a CLYON paga 282 € ao profissional daqui a uma
