@@ -12,6 +12,7 @@ import {
   conversaDoHistorico,
   lerChave,
   ordenarConversas,
+  porResponder,
   type ConversaDeSuporte,
   type MensagemDaConversa,
 } from "@/lib/conversas-de-suporte";
@@ -242,7 +243,23 @@ export async function GET(req: NextRequest) {
     console.error("[suporte/conversas] app:", e instanceof Error ? e.message : e);
   }
 
-  return NextResponse.json({ conversas: ordenarConversas(conversas) });
+  const aEsperar = conversas.filter(porResponder).length;
+
+  /*
+   * SÓ A CONTAGEM, quando é para o selo do menu.
+   *
+   * "enviei uma mensagem como teste mas não recebi notificação no admin"
+   * — 16-09-2026. O selo do Suporte contava `support_tickets`, e uma pergunta
+   * escrita DENTRO de um pedido não é um ticket: é uma conversa, e ficava sem
+   * aviso nenhum. Agora o menu também conta estas — mas não tem de arrastar a
+   * lista inteira, com todas as mensagens de todas as conversas, de dois em
+   * dois minutos só para saber um número.
+   */
+  if (new URL(req.url).searchParams.get("so") === "contagem") {
+    return NextResponse.json({ aEsperar });
+  }
+
+  return NextResponse.json({ conversas: ordenarConversas(conversas), aEsperar });
 }
 
 /**

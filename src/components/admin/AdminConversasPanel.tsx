@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { ArrowLeft, ExternalLink, Loader2, RefreshCw, Search, Send } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
@@ -90,9 +91,9 @@ export default function AdminConversasPanel() {
   const [aEnviar, setAEnviar] = useState(false);
   const fimDoFio = useRef<HTMLDivElement | null>(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
-    setACarregar(true);
+    if (!silencioso) setACarregar(true);
     try {
       /*
        * SEM CACHE — 15-09-2026.
@@ -115,15 +116,37 @@ export default function AdminConversasPanel() {
       setConversas(dados.conversas ?? []);
       setErro("");
     } catch {
-      setErro("Erro de rede.");
+      if (!silencioso) setErro("Erro de rede.");
     } finally {
-      setACarregar(false);
+      if (!silencioso) setACarregar(false);
     }
   }, [token]);
 
   useEffect(() => {
     if (ready) carregar();
   }, [ready, carregar]);
+
+  /*
+   * A CAIXA DE ENTRADA ACTUALIZA-SE SOZINHA — 16-09-2026.
+   *
+   * "enviei uma mensagem como teste mas não recebi notificação no admin (…)
+   * acho que devo dar f5 para ver. Porém não devia ser assim, deve ser
+   * automático."
+   *
+   * Tinha razão, e este era o único painel do backoffice sem o ciclo que todos
+   * os outros já têm. Uma caixa de entrada que só mostra o que havia quando a
+   * abriram não é uma caixa de entrada.
+   *
+   * Quarenta e cinco segundos: é uma pessoa à espera de resposta do outro
+   * lado, e o ciclo pára sozinho com o separador escondido. E pára enquanto se
+   * escreve uma resposta, para a lista não mudar por baixo de quem está a
+   * escrever.
+   */
+  useAutoRefresh(() => carregar(true), {
+    intervalMs: 45_000,
+    enabled: ready && Boolean(token),
+    paused: aEnviar,
+  });
 
   const lista = useMemo(() => {
     const q = procura.trim().toLowerCase();
@@ -221,7 +244,7 @@ export default function AdminConversasPanel() {
             />
           </div>
           <button
-            onClick={carregar}
+            onClick={() => carregar()}
             className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
           >
             <RefreshCw

@@ -1018,8 +1018,35 @@ export default function ColaboradorAdminClient({
       const d = await r.json();
       if (r.ok) {
         setTickets(d.tickets ?? []);
-        setTicketsPorTratar(d.porTratar ?? 0);
         setTicketErro(null);
+        /*
+         * O SELO CONTA O QUE O PAINEL MOSTRA, e não só os tickets.
+         *
+         * "enviei uma mensagem também como teste mas não recebi notificação no
+         * admin" — 16-09-2026. A mensagem foi escrita DENTRO de um pedido, na
+         * conta do cliente. Isso não é um ticket da app: é uma conversa, e o
+         * selo contava `support_tickets` e mais nada. Ninguém foi avisado.
+         *
+         * NÃO SE SOMAM AS DUAS CONTAGENS. A rota das conversas já traz os
+         * tickets da app lá dentro — somá-las contava-os duas vezes, e um selo
+         * que exagera deixa de se acreditar nele ao fim de dois dias.
+         *
+         * Vai só a contagem (`?so=contagem`): o menu não precisa de arrastar
+         * todas as mensagens de todas as conversas de dois em dois minutos. Se
+         * falhar, fica a dos tickets — um selo incompleto é melhor do que
+         * nenhum.
+         */
+        const soTickets = Number(d.porTratar ?? 0);
+        try {
+          const rc = await fetch(`/api/admin/suporte/conversas?so=contagem&_=${Date.now()}`, {
+            cache: "no-store",
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          const dc = await rc.json();
+          setTicketsPorTratar(rc.ok ? Number(dc.aEsperar ?? soTickets) : soTickets);
+        } catch {
+          setTicketsPorTratar(soTickets);
+        }
       } else {
         setTicketErro(d.error ?? "Não foi possível carregar o suporte.");
       }
