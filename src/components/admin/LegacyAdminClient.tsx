@@ -2549,7 +2549,7 @@ export default function ColaboradorAdminClient({
                         <Icon className="h-3.5 w-3.5" />
                         {stat.label}
                       </div>
-                      <p className="mt-2 text-3xl font-semibold text-white">{loadingLeads ? "—" : stat.value}</p>
+                      <p className="mt-2 text-3xl font-semibold text-white">{loadingLeads && leads.length === 0 ? "—" : stat.value}</p>
                     </div>
                   );
                 })}
@@ -2602,8 +2602,8 @@ export default function ColaboradorAdminClient({
                         <Icon className="h-3 w-3" />
                         {stat.label}
                       </div>
-                      <p className="mt-1.5 text-2xl font-semibold text-white">{loadingLeads ? "—" : stat.hoje}</p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">{loadingLeads ? "" : `${stat.semana} esta semana`}</p>
+                      <p className="mt-1.5 text-2xl font-semibold text-white">{loadingLeads && leads.length === 0 ? "—" : stat.hoje}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-500">{loadingLeads && leads.length === 0 ? "" : `${stat.semana} esta semana`}</p>
                     </div>
                   );
                 })}

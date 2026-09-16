@@ -341,7 +341,20 @@ export default function AdminAgendaPanel() {
         </p>
       )}
 
-      {aCarregar ? (
+      {/*
+        «A CARREGAR» SÓ QUANDO NÃO HÁ NADA PARA MOSTRAR — 16-09-2026.
+
+        "as telas abrem rapidamente com o conteúdo já no site; eu fico à espera
+        de carregar as infos."
+
+        O gate era `aCarregar ?` e mais nada: bastava voltar a esta secção para
+        a agenda inteira desaparecer e dar lugar a uma roda, mesmo com os
+        trabalhos já em memória e prestes a chegar iguais. Agora a lista antiga
+        fica à vista enquanto a nova não chega, e a roda só aparece a quem
+        ainda não tem nada — que é a única altura em que ela informa alguma
+        coisa.
+      */}
+      {aCarregar && trabalhos.length === 0 ? (
         <p className="mt-6 flex items-center gap-2 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />A carregar…
         </p>

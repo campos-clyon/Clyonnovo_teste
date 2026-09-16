@@ -482,7 +482,14 @@ export default function AdminCarteirasPanel() {
         </p>
       )}
 
-      {aCarregar ? (
+      {/*
+        «A ler» só quando não há nada lido — ver a nota igual na Agenda.
+
+        Voltar a esta secção trocava as carteiras todas por «A ler…», mesmo
+        com os saldos já na memória. Quem já tem números fica a vê-los; a
+        actualização entra por baixo.
+      */}
+      {aCarregar && carteiras.length === 0 ? (
         <p className="mt-6 text-sm text-slate-500">A ler…</p>
       ) : carteiras.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-8 text-center text-sm text-slate-500">
