@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Star, MapPin, ShieldCheck, FileText, Truck, CalendarDays, Circle } from "lucide-react";
-import { perfilPublicoPorSlug, type PerfilPublico } from "@/lib/perfil-publico-do-profissional";
+import {
+  perfilPublicoPorSlug,
+  temAlgoParaMostrar,
+  type PerfilPublico,
+} from "@/lib/perfil-publico-do-profissional";
 import { tService } from "@/lib/translations";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
 
@@ -66,9 +70,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       : null,
   ].filter(Boolean);
 
+  /*
+   * UMA PÁGINA SEM NADA PARA MOSTRAR NÃO PEDE PARA SER INDEXADA.
+   *
+   * Dezasseis destas estavam em «Detectada, mas não indexada» no Search
+   * Console. Parte da razão eram páginas órfãs — nenhum link interno lhes
+   * apontava, e isso resolve-se com os blocos de `ProfissionaisComPagina`. A
+   * outra parte é esta: um profissional recém-aprovado tem um nome, uma
+   * cidade e mais nada. Pedir ao Google que indexe isso é gastar crédito
+   * nosso para ele responder que não — e essa recusa paga-se nas outras
+   * páginas do domínio.
+   *
+   * A página CONTINUA A RESPONDER 200 e continua a servir para o que foi
+   * feita: o cliente que recebeu uma proposta abre o link e vê com quem vai
+   * lidar. O que ela não faz é pedir lugar no índice antes de ter o que
+   * dizer. Ao primeiro trabalho confirmado, passa a pedir — sozinha, sem
+   * ninguém ter de se lembrar.
+   *
+   * A regra é a mesma do sitemap, e está escrita uma vez só em
+   * `temAlgoParaMostrar`.
+   */
+  const paraOGoogle = temAlgoParaMostrar(p);
+
   return {
     title: `${p.nome} — ${servicos[0] ?? "Profissional"} ${onde ? `em ${onde} ` : ""}| CLYON`,
     description: `${p.nome}: ${pedacos.join(" · ")}. Peça um orçamento sem compromisso.`,
+    ...(paraOGoogle ? {} : { robots: { index: false, follow: true } }),
     alternates: { canonical: `${SITE_URL}/profissionais/${slug}` },
     openGraph: {
       title: `${p.nome} | CLYON`,

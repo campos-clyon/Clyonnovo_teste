@@ -14,6 +14,7 @@ import {
 import { notFound } from "next/navigation";
 
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
+import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 import {
   getCityServiceContent,
   getCityBaseContent,
@@ -961,6 +962,22 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      {/*
+        OS PROFISSIONAIS DESTA CIDADE.
+
+        É o link que faltava às páginas deles: estas páginas de cidade já estão
+        indexadas e já recebem visitas, e é daqui que a autoridade passa. Só
+        aparece se houver mesmo alguém a trabalhar nesta zona — «Profissionais
+        em Almada» com uma empresa de Setúbal é pior do que não haver secção.
+      */}
+      <ProfissionaisComPagina
+        cidade={city.name}
+        titulo={`Profissionais que trabalham em ${city.name}`}
+        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade em ${city.name} — veja a nota de cada um antes de escolher.`}
+        fundo="bg-[#F4F8FB]"
+        limite={6}
+      />
 
       <script
         type="application/ld+json"

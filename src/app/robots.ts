@@ -26,7 +26,24 @@ const PRIVADO = [
   "/admin",
   "/admin/",
   "/painel/",
-  "/conta",
+  /*
+   * ⚠️ `/conta` À SECA BLOQUEAVA `/contactos`.
+   *
+   * Em robots.txt um `Disallow` é um PREFIXO, não um caminho: `/conta` casa
+   * com tudo o que comece por essas seis letras — `/contactos`, `/contacto`,
+   * `/contactos/seja-o-que-for`. A página de contactos do site estava
+   * bloqueada ao Google desde sempre, e o Search Console dizia-o em «Indexada,
+   * mas bloqueada pelo robots.txt», com a validação a falhar a 15-09-2026.
+   *
+   * Uma página de contactos bloqueada é das piores para um negócio local: é
+   * ela que carrega a morada, o telefone e o horário, e é dela que o Google
+   * tira metade do que sabe sobre uma empresa com sede física.
+   *
+   * `$` ancora no fim — `/conta` exactamente — e a linha seguinte apanha tudo
+   * o que está lá dentro. As duas juntas dizem o que `/conta` queria dizer.
+   */
+  "/conta$",
+  "/conta/",
   // Ecrãs de autenticação
   "/auth",
   "/auth/",

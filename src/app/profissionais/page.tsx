@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const metadata: Metadata = {
   title: "Receba Pedidos na Sua Zona — Para Profissionais",
@@ -188,6 +189,22 @@ export default function ProfissionaisPage() {
           </div>
         </div>
       </section>
+
+      {/*
+        QUEM JÁ CÁ ESTÁ — prova para quem está a pensar candidatar-se, e o
+        link interno de que as páginas deles precisavam.
+
+        Serve as duas coisas ao mesmo tempo, e por isso vive aqui e não numa
+        página nova: um transportador que está a decidir quer ver quem já
+        trabalha connosco, e «tem uma página sua, que aparece no Google» deixa
+        de ser uma promessa quando ele pode abrir as dos outros.
+      */}
+      <ProfissionaisComPagina
+        titulo="Quem já trabalha na CLYON"
+        descricao="Cada profissional aprovado tem uma página sua, que cresce sozinha com as avaliações dos trabalhos que faz. A sua também, assim que fechar o primeiro."
+        fundo="bg-slate-50"
+        limite={9}
+      />
     </div>
   );
 }

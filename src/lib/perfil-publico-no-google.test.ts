@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { temAlgoParaMostrar } from "./perfil-publico-do-profissional";
 
 /**
  * CADA PROFISSIONAL PASSA A TER UMA PÁGINA — e é a única do site que se
@@ -56,11 +57,42 @@ describe("a página existe e o Google chega lá", () => {
      * sitemap inteiro rebentava sem DATABASE_URL. Um sitemap com menos páginas
      * é um problema pequeno; um que não responde faz o Google desistir de o
      * pedir.
+     *
+     * A consulta mudou-se para `profissionaisComPagina` — o sitemap e os
+     * blocos de links internos passaram a precisar dos mesmos dados, e duas
+     * consultas quase iguais divergem sempre. A promessa é a mesma e passou a
+     * ser guardada onde a consulta agora vive.
      */
-    const f = LIB.slice(LIB.indexOf("export async function slugsDosProfissionais"));
+    const f = LIB.slice(LIB.indexOf("export async function profissionaisComPagina"));
     const corpo = f.slice(0, f.indexOf("\n}"));
     expect(corpo.indexOf("try {")).toBeLessThan(corpo.indexOf("ensureProvidersSchema"));
     expect(corpo).toContain("return [];");
+  });
+
+  it("e quem não tem nada para mostrar fica FORA do sitemap", () => {
+    /*
+     * Dezasseis destas páginas estavam em «Detectada, mas não indexada». Um
+     * profissional recém-aprovado tem um nome, uma cidade e mais nada — e uma
+     * página assim não é indexada por mais que se peça. Declará-la é gastar
+     * crédito nosso para o Google responder que não, e essa recusa paga-se nas
+     * outras páginas do domínio.
+     *
+     * A página continua a responder 200: o cliente que recebeu uma proposta
+     * chega lá pelo link. O que ela não faz é pedir lugar no índice antes de
+     * ter o que dizer.
+     */
+    const f = LIB.slice(LIB.indexOf("export async function slugsDosProfissionais"));
+    expect(f).toContain("filter(temAlgoParaMostrar)");
+    expect(temAlgoParaMostrar({ quantasAvaliacoes: 0, trabalhosConcluidos: 0 })).toBe(false);
+    expect(temAlgoParaMostrar({ quantasAvaliacoes: 0, trabalhosConcluidos: 1 })).toBe(true);
+    expect(temAlgoParaMostrar({ quantasAvaliacoes: 1, trabalhosConcluidos: 0 })).toBe(true);
+  });
+
+  it("e a página dele diz o mesmo ao Google, sem ninguém ter de se lembrar", () => {
+    // A regra está escrita uma vez e usada nos dois sítios: se divergirem, o
+    // sitemap promete uma página que a própria página recusa.
+    expect(PAGINA_NUA).toContain("temAlgoParaMostrar(p)");
+    expect(PAGINA_NUA).toContain("robots: { index: false, follow: true }");
   });
 
   it("tem canónico próprio e dados estruturados", () => {
@@ -83,8 +115,10 @@ describe("só aparece quem a CLYON aprovou", () => {
   });
 
   it("o sitemap segue a mesma regra", () => {
-    const f = LIB.slice(LIB.indexOf("export async function slugsDosProfissionais"));
+    // A consulta vive em `profissionaisComPagina`, e o sitemap sai dela.
+    const f = LIB.slice(LIB.indexOf("export async function profissionaisComPagina"));
     expect(f).toContain("estado = 'aprovado'");
+    expect(f).toContain("isActive = 1");
     expect(f).toContain("isClyon = 0");
   });
 

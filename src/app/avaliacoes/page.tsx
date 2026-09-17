@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Star, Quote, MessageCircle } from "lucide-react";
 
 import HeroBackground from "@/components/HeroBackground";
+import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 import { reviews } from "@/lib/reviews-data";
 import { BUSINESS_PHONE, SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
 
@@ -246,6 +247,20 @@ export default function AvaliacoesPage() {
           </div>
         </div>
       </section>
+
+      {/*
+        QUEM FEZ ESTES TRABALHOS — e é daqui que se chega à página de cada um.
+
+        As páginas dos profissionais estavam órfãs: nenhuma página do site lhes
+        ligava, só o sitemap as declarava, e o Google respondia «Detectada, mas
+        não indexada». Esta é a página do site onde o link faz mais sentido —
+        as avaliações em cima são dos trabalhos que eles fizeram.
+      */}
+      <ProfissionaisComPagina
+        titulo="Os profissionais que fazem estes trabalhos"
+        descricao="A CLYON liga o cliente a profissionais independentes — são eles que carregam, transportam e deixam o espaço limpo. Abra a página de cada um para ver a nota, os serviços que faz e as zonas onde trabalha."
+        fundo="bg-white"
+      />
 
       {/* ── CTA FINAL ────────────────────────────────────────────────── */}
       <section className="bg-[#F4F8FB] pb-16 pt-2 lg:pb-20">

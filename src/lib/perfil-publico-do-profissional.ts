@@ -168,27 +168,125 @@ export async function perfilPublicoPorSlug(slug: string): Promise<PerfilPublico 
   return perfilPublicoDoProfissional(Number(id));
 }
 
-/** Os endereços que entram no sitemap. Só aprovados, e só com slug. */
-export async function slugsDosProfissionais(): Promise<string[]> {
-  /*
-   * TUDO dentro do try, e o `ensureProvidersSchema` é o que mais importa lá
-   * estar: é ele que abre ligação à base, e foi ele que ficou de fora à
-   * primeira tentativa. O sitemap passou a rebentar sem `DATABASE_URL` — que é
-   * exactamente o caso que este `catch` existe para cobrir.
-   */
+/**
+ * UM PROFISSIONAL COMO ELE APARECE NUMA LISTA — o cartão, não a página.
+ *
+ * A página dele faz três consultas à base (perfil, contagens, avaliações).
+ * Uma lista de vinte não pode fazer sessenta: isto traz numa só o que um
+ * cartão precisa de mostrar, e nada mais.
+ */
+export type ProfissionalNaLista = {
+  slug: string;
+  nome: string;
+  cidade: string | null;
+  zonas: string[];
+  categorias: string[];
+  notaMedia: number | null;
+  quantasAvaliacoes: number;
+  trabalhosConcluidos: number;
+};
+
+/**
+ * TEM ALGUMA COISA PARA MOSTRAR?
+ *
+ * A regra é uma só, e vale nos três sítios: no sitemap, no `noindex` da
+ * própria página, e na ordem da lista. Um perfil sem uma avaliação e sem um
+ * trabalho concluído é um nome e pouco mais — e uma página assim não é
+ * indexada por mais que se peça. Pedi-lo ao Google é gastar crédito nosso
+ * para ele nos dizer que não.
+ *
+ * A página CONTINUA A EXISTIR e a responder 200: o cliente que recebeu uma
+ * proposta chega lá pelo link e vê com quem vai lidar. O que ela não faz é
+ * pedir para ser indexada antes de ter o que dizer. No dia em que ele fechar
+ * o primeiro trabalho, passa a pedir — sozinha.
+ */
+export function temAlgoParaMostrar(p: {
+  quantasAvaliacoes: number;
+  trabalhosConcluidos: number;
+}): boolean {
+  return p.quantasAvaliacoes > 0 || p.trabalhosConcluidos > 0;
+}
+
+/**
+ * TODOS OS QUE TÊM PÁGINA, numa consulta só.
+ *
+ * Ordena-se por quem tem mais para mostrar: avaliações primeiro, trabalhos a
+ * seguir, e o nome a desempatar para a ordem não dançar entre dois pedidos
+ * iguais — uma lista que muda de ordem sozinha lê-se como aleatória, e o
+ * Google vê uma página diferente em cada rastreio.
+ *
+ * SE A BASE ESTIVER EM BAIXO devolve uma lista vazia em vez de rebentar. Quem
+ * chama isto são páginas públicas e o sitemap: um bloco a menos é um problema
+ * pequeno, uma página a 500 não é.
+ */
+/*
+ * A MESMA LISTA, UMA VEZ SÓ POR MINUTO.
+ *
+ * Este bloco vai ao fim de cada página de cidade, e são cento e cinquenta
+ * páginas geradas no build. Sem isto era uma consulta igual por cada uma —
+ * cento e cinquenta viagens à base para trazer as mesmas dez linhas, e um
+ * build a abrir ligações em paralelo é onde uma pool se esgota.
+ *
+ * Um minuto: em produção cada instância guarda a lista esse tempo. É uma
+ * lista pública de nomes e notas, e ninguém repara que um profissional novo
+ * aparece sessenta segundos depois — as próprias páginas só revalidam de hora
+ * a hora ou de dia a dia.
+ */
+let emCache: { quando: number; lista: ProfissionalNaLista[] } | null = null;
+const VALIDADE_DA_LISTA = 60_000;
+
+export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
+  if (emCache && Date.now() - emCache.quando < VALIDADE_DA_LISTA) return emCache.lista;
   try {
     await ensureProvidersSchema();
     const pool = await getPool();
     if (!pool) return [];
     const [linhas] = (await pool.execute(
-      `SELECT slug FROM providers
-        WHERE estado = 'aprovado' AND isActive = 1 AND isClyon = 0
-          AND slug IS NOT NULL AND slug <> ''
-        ORDER BY slug`,
+      `SELECT p.slug, p.name, p.city, p.zonas, p.categorias,
+              COUNT(n.id) AS concluidos,
+              AVG(CASE WHEN n.estrelas IS NOT NULL THEN n.estrelas END) AS media,
+              SUM(CASE WHEN n.estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados
+         FROM providers p
+         LEFT JOIN negociacoes n
+           ON n.providerId = p.id
+          AND n.estado = 'acordada'
+          AND n.confirmadoEm IS NOT NULL
+        WHERE p.estado = 'aprovado' AND p.isActive = 1 AND p.isClyon = 0
+          AND p.slug IS NOT NULL AND p.slug <> ''
+        GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias
+        ORDER BY avaliados DESC, concluidos DESC, p.name ASC`,
     )) as any[];
-    return (linhas as Array<{ slug: string }>).map((l) => String(l.slug));
+    const saida = (linhas as Array<Record<string, unknown>>).map((l) => ({
+      slug: String(l.slug),
+      nome: String(l.name ?? ""),
+      cidade: typeof l.city === "string" && l.city ? l.city : null,
+      zonas: lista(l.zonas),
+      categorias: lista(l.categorias),
+      notaMedia: l.media != null ? Math.round(Number(l.media) * 10) / 10 : null,
+      quantasAvaliacoes: Number(l.avaliados ?? 0),
+      trabalhosConcluidos: Number(l.concluidos ?? 0),
+    }));
+    emCache = { quando: Date.now(), lista: saida };
+    return saida;
   } catch {
-    /* O sitemap gera-se com o que houver. Uma base em baixo não o parte. */
+    /*
+     * A FALHA NÃO SE GUARDA. Guardar uma lista vazia por um minuto era
+     * transformar um soluço da base em sessenta segundos de páginas sem
+     * bloco — e, num build, em cento e cinquenta páginas sem ele.
+     */
     return [];
   }
+}
+
+/**
+ * Os endereços que entram no sitemap.
+ *
+ * SÓ OS QUE TÊM ALGUMA COISA PARA MOSTRAR — ver `temAlgoParaMostrar`.
+ * Declarávamos todos os aprovados, e o Google respondia com «Detectada, mas
+ * não indexada» em dezasseis deles. Um sitemap onde metade dos endereços é
+ * recusada ensina-o a desconfiar do sitemap todo, incluindo das páginas de
+ * serviço que nos interessam mesmo.
+ */
+export async function slugsDosProfissionais(): Promise<string[]> {
+  return (await profissionaisComPagina()).filter(temAlgoParaMostrar).map((p) => p.slug);
 }

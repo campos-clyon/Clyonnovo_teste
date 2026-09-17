@@ -6,6 +6,7 @@ import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
 import { listTrabalhos } from "@/lib/db";
 import { SITE_URL, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import TrabalhosGallery from "./TrabalhosGallery";
+import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const revalidate = 300;
 
@@ -296,6 +297,17 @@ export default async function TrabalhosPage() {
           </div>
         </div>
       </section>
+
+      {/*
+        QUEM FEZ ISTO. Um portefólio sem as pessoas por trás é um álbum; com
+        elas, é uma prova — e cada nome é um link para uma página que se
+        escreve sozinha à medida que ele trabalha.
+      */}
+      <ProfissionaisComPagina
+        titulo="Quem fez estes trabalhos"
+        descricao="Profissionais independentes que recebem os pedidos pela CLYON. Cada um tem a sua página, com a nota que os clientes lhe deram e as zonas onde trabalha."
+        fundo="bg-[#F4F8FB]"
+      />
 
       <section className="bg-white pb-16 lg:pb-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
