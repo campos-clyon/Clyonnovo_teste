@@ -25,7 +25,7 @@ import {
   telefoneParaWhatsApp,
 } from "@/lib/whatsapp-cloud";
 import { oSeuServico } from "@/lib/servico-em-palavras";
-import { totalEmPalavras } from "@/lib/conta-em-palavras";
+import { totalEmPalavras, comFacturaEmPalavras } from "@/lib/conta-em-palavras";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 import { jaFoiDito } from "@/lib/nao-repetir";
@@ -428,9 +428,13 @@ async function fecharPeloCliente(
   }
 
   const valor = r2.negociacao.valorAcordado ?? 0;
-  // O TOTAL, com o IVA de quem factura ja somado. O valor acordado e a base a
-  // partir de 29-08-2026, e mandar-lhe so a base por mensagem era prometer-lhe
-  // um numero que ele nao ia pagar.
+  /*
+   * O QUE ELE PAGA — valor mais taxa, SEM IVA — e a factura numa linha à parte.
+   *
+   * Mandar-lhe só a base era prometer-lhe um número que ele não ia pagar: a
+   * taxa acresce. Mandar-lhe o total com imposto era o oposto — um número que
+   * ele não reconhece e que, se não quiser factura, também não vai pagar.
+   */
   const conta = contaDoCliente(valor, regimeDeIva(alvo.regimeIva));
   /*
    * SE ELE JÁ DISSE O DIA, NÃO SE LHE PERGUNTA SE TEM DATA PENSADA.
@@ -452,7 +456,8 @@ async function fecharPeloCliente(
 
   await enviarTextoWhatsApp(
     telefone,
-    `Fechado com ${alvo.profissionalNome} por ${euros(valor)} sem IVA (total a pagar: ${euros(conta.total)}).\n\n` +
+    `Fechado com ${alvo.profissionalNome}: ${euros(conta.semIva)} a pagar (${euros(valor)} para ele mais a taxa CLYON). ` +
+      `${comFacturaEmPalavras(valor, alvo.regimeIva ?? null)}\n\n` +
       `O profissional recebeu a morada e o seu contacto.${sobreODia}`,
   );
 }
@@ -694,13 +699,11 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
   }
   const acordada = vivas.find((n) => n.estado === "acordada");
   if (acordada) {
-    const total = contaDoCliente(
-      Number(acordada.valorAcordado ?? 0),
-      regimeDeIva(acordada.regimeIva),
-    ).total;
+    const acordado = Number(acordada.valorAcordado ?? 0);
+    const semIva = contaDoCliente(acordado, regimeDeIva(acordada.regimeIva)).semIva;
     return (
-      `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} por ${euros(Number(acordada.valorAcordado ?? 0))} sem IVA ` +
-      `(total a pagar: ${euros(total)}).` +
+      `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} — ${euros(semIva)} a pagar ` +
+      `(${euros(acordado)} para ele mais a taxa CLYON, sem IVA).` +
       (pedido?.dataAgendada
         ? ""
         : ` Se já tem data pensada, responda por exemplo: 27/08 14:30`)

@@ -313,7 +313,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                 {Number(preco).toFixed(2)} €
               </div>
               <div className="mt-1 text-[11px] text-tinta-fraca">
-                {precoEAcordado ? "total a pagar" : "sem IVA"}
+                {precoEAcordado ? "a pagar, sem IVA" : "sem IVA"}
               </div>
             </div>
           ) : order.estimateMin != null && order.estimateMax != null ? (
@@ -602,7 +602,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             <span className="text-xs text-tinta-fraca">Criado a {formatDate(order.createdAt)}</span>
             {preco != null && (
               <span className="text-base font-bold text-slate-900">
-                {Number(preco).toFixed(2)} € {precoEAcordado ? "a pagar" : "s/IVA"}
+                {Number(preco).toFixed(2)} € {precoEAcordado ? "a pagar, s/IVA" : "s/IVA"}
               </span>
             )}
             {preco == null && order.estimateMin != null && order.estimateMax != null && (

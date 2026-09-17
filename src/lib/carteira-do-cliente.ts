@@ -91,7 +91,10 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     const acordado = valor(t.valorAcordado);
     if (acordado == null) continue;
 
-    const total = contaDoCliente(acordado, regimeDeIva(t.regimeIva)).total;
+    // SEM IVA — o mesmo número que lhe foi dito em todo o lado. A carteira a
+    // dizer 361,20 € sobre um trabalho anunciado a 294,00 € era a terceira
+    // versão do mesmo preço; o imposto, quando ele pedir factura, acresce.
+    const total = contaDoCliente(acordado, regimeDeIva(t.regimeIva)).semIva;
     const confirmado = quando(t.confirmadoEm) ?? quando(t.pagoEm);
 
     if (confirmado) pago += total;

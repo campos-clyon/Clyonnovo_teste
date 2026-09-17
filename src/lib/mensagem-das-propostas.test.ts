@@ -9,7 +9,7 @@ import {
 } from "./mensagem-das-propostas";
 // As fixturas trazem a taxa de origem, que é o que elas sempre significaram:
 // foram escritas quando 5 % era a única taxa que existia.
-import { TAXA_CLIENTE } from "./taxas-plataforma";
+import { TAXA_CLIENTE, contaDoCliente } from "./taxas-plataforma";
 
 /**
  * A mensagem que ele manda ao cliente com as propostas.
@@ -25,12 +25,51 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const proposta = (por: string, valor: number, estado = "pendente") =>
   JSON.stringify([{ por, valor, estado, criadaEm: "2026-08-29T10:00:00Z" }]);
 
+/**
+ * Uma proposta de fixtura, com a conta feita pela casa e não à mão.
+ *
+ * Estas fixturas tinham o total escrito a dedo — «total: 286.61» — e cada vez
+ * que a conta mudou foi preciso reescrever catorze números em catorze sítios,
+ * à mão, sobre dinheiro. Onde o que se está a testar é a MENSAGEM e não a
+ * aritmética, a conta vem de onde ela vive.
+ *
+ * Onde é a aritmética que está em causa, os números continuam escritos por
+ * extenso nos testes — é lá que eles provam alguma coisa.
+ */
+const umaProposta = (
+  profissional: string,
+  valor: number,
+  regime: "isento" | "normal" = "isento",
+) => {
+  const c = contaDoCliente(valor, regime);
+  return {
+    profissional,
+    valor,
+    taxaCliente: TAXA_CLIENTE,
+    semIva: c.semIva,
+    total: c.total,
+    ivaDoServico: c.ivaDoServico,
+  };
+};
+
 describe("quem entra na lista de propostas", () => {
   it("entra quem CONTRAPROPÔS", () => {
     const r = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "TRSul", propostasJson: proposta("profissional", 270) },
     ]);
-    expect(r).toEqual([{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }]);
+    // 270 + 13,50 de taxa = 283,50 sem IVA; com factura, mais 3,11 do IVA da
+    // taxa = 286,61. Os dois números, porque a mensagem diz o primeiro e a
+    // linha da factura diz o segundo.
+    expect(r).toEqual([
+      {
+        profissional: "TRSul",
+        valor: 270,
+        taxaCliente: TAXA_CLIENTE,
+        semIva: 283.5,
+        total: 286.61,
+        ivaDoServico: 0,
+      },
+    ]);
   });
 
   it("entra quem ACEITOU o valor do cliente", () => {
@@ -45,7 +84,17 @@ describe("quem entra na lista de propostas", () => {
         propostasJson: proposta("cliente", 330, "aceite"),
       },
     ]);
-    expect(r).toEqual([{ profissional: "Sthefanny Lemos", valor: 330, taxaCliente: TAXA_CLIENTE, total: 350.30 }]);
+    // 330 + 16,50 de taxa = 346,50 sem IVA; 350,30 com o IVA da taxa.
+    expect(r).toEqual([
+      {
+        profissional: "Sthefanny Lemos",
+        valor: 330,
+        taxaCliente: TAXA_CLIENTE,
+        semIva: 346.5,
+        total: 350.3,
+        ivaDoServico: 0,
+      },
+    ]);
   });
 
   it("NÃO entra quem ainda não respondeu", () => {
@@ -120,7 +169,7 @@ describe("o artigo concorda com o serviço", () => {
   it("e a frase reescreve-se em volta disso", () => {
     const m = mensagemDasPropostas({
       servico: "serviço novo qualquer",
-      propostas: [{ profissional: "X", valor: 100, taxaCliente: TAXA_CLIENTE, total: 106.0 }],
+      propostas: [umaProposta("X", 100)],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("para o seu pedido");
@@ -140,20 +189,26 @@ describe("a mensagem", () => {
     /*
      * É a razão de metade deste trabalho. Um cliente que leia 270 € e pague
      * 351,72 € sente-se enganado — e tem razão em sentir-se.
+     *
+     * Desde 17-09-2026 é ao contrário: o número que ele lê é o SEM IVA, e é
+     * também o que ele paga se não pedir factura. O que acresce com factura
+     * fica dito, numa linha e uma vez só.
      */
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m).toContain("sem IVA");
-    expect(m).toContain("total a pagar");
+    expect(m).toContain("Valores sem IVA");
+    // 270 + 13,50 de taxa. É o número dele, e está na linha da proposta.
+    expect(m).toContain("TRSul: 283,50 €");
+    expect(m).toContain("Com factura");
   });
 
   it("o aviso do IVA fica ANTES do link, encostado aos números", () => {
     // Numa mensagem de WhatsApp, o que vem depois do link não se lê.
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
     });
     expect(m.indexOf("sem IVA")).toBeLessThan(m.indexOf(base.link));
   });
@@ -172,13 +227,13 @@ describe("a mensagem", () => {
   });
 
   it("singular e plural, com o número certo", () => {
-    const uma = mensagemDasPropostas({ ...base, propostas: [{ profissional: "A", valor: 1, taxaCliente: TAXA_CLIENTE, total: 1.06 }] });
+    const uma = mensagemDasPropostas({ ...base, propostas: [umaProposta("A", 1)] });
     expect(uma).toContain("uma proposta");
     const duas = mensagemDasPropostas({
       ...base,
       propostas: [
-        { profissional: "A", valor: 1, taxaCliente: TAXA_CLIENTE, total: 1.06 },
-        { profissional: "B", valor: 2, taxaCliente: TAXA_CLIENTE, total: 2.12 },
+        umaProposta("A", 1),
+        umaProposta("B", 2),
       ],
     });
     expect(duas).toContain("2 propostas");
@@ -195,7 +250,7 @@ describe("a mensagem", () => {
     // Regra de voz do site: quem executa é o profissional.
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
     });
     expect(m).toContain("quem faz o trabalho é o profissional que escolher");
   });
@@ -203,7 +258,7 @@ describe("a mensagem", () => {
   it("o link vai lá dentro, inteiro", () => {
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
     });
     expect(m).toContain(base.link);
   });
@@ -211,9 +266,11 @@ describe("a mensagem", () => {
   it("os valores saem em português — vírgula decimal e o símbolo depois", () => {
     const m = mensagemDasPropostas({
       ...base,
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m).toContain("TRSul: 270,00 €");
+    // O número à frente do nome é o que ele paga; o valor do profissional
+    // fica ao lado, entre parênteses, porque é sobre esse que se negoceia.
+    expect(m).toContain("TRSul: 283,50 € (270,00 € para ele mais a taxa CLYON)");
   });
 });
 
@@ -274,13 +331,16 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
    * Foi a mudança do IVA que abriu esse buraco. A mensagem tapa-o antes de ele
    * abrir seja o que for, e o ecrã foi corrigido a par.
    */
-  it("cada linha traz o valor E o total", () => {
+  it("cada linha traz o que ele paga, e o valor do profissional ao lado", () => {
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 348.3 }],
+      propostas: [umaProposta("TRSul", 270, "normal")],
       link: "https://clyon.pt/pedido/abc",
     });
-    expect(m).toContain("TRSul: 270,00 € — total a pagar 348,30 €");
+    expect(m).toContain("TRSul: 283,50 € (270,00 € para ele mais a taxa CLYON)");
+    // E o imposto, para quem o liquida, numa linha à parte — não no meio dos
+    // valores, que é onde ninguém o consegue ler.
+    expect(m).toContain("Com factura acrescem 23 % de IVA.");
   });
 
   it("o total sai do regime de QUEM FACTURA, e não de uma conta fixa", () => {
@@ -296,19 +356,25 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     expect(normal[0].total).toBe(387.45);
   });
 
-  it("ordena pelo TOTAL e não pela base", () => {
+  it("ordena pelo número que ele VÊ", () => {
     /*
-     * Com regimes diferentes as duas ordens divergem: 280 € de quem liquida
-     * IVA sao 361,62 € a pagar, e 300 € de um isento sao 318,45 €. Ordenar pela
-     * base punha o mais caro primeiro e dizia-lhe que era o mais barato.
+     * Quem lê uma lista de preços lê-a de cima para baixo à procura do menor.
+     * Se a ordem não for a dos números à vista, a lista parece desarrumada e
+     * ele deixa de confiar nela.
+     *
+     * Ordenava-se pelo total com imposto, e com regimes diferentes as duas
+     * ordens divergiam: 280 € de quem liquida IVA eram 361,62 € a pagar, e
+     * 300 € de um isento eram 318,45 €. Desde que o que se mostra é o valor
+     * sem IVA — 294,00 € e 315,00 € — a ordem passou a ser a dos olhos.
      */
     const r = propostasParaOCliente([
-      { estado: "aberta", profissionalNome: "Base baixa, total alto", propostasJson: proposta("profissional", 280), regimeIva: "normal" },
-      { estado: "aberta", profissionalNome: "Base alta, total baixo", propostasJson: proposta("profissional", 300), regimeIva: "isento" },
+      { estado: "aberta", profissionalNome: "Liquida IVA", propostasJson: proposta("profissional", 280), regimeIva: "normal" },
+      { estado: "aberta", profissionalNome: "Isento", propostasJson: proposta("profissional", 300), regimeIva: "isento" },
     ]);
-    expect(r[0].profissional).toBe("Base alta, total baixo");
-    expect(r[0].total).toBeLessThan(r[1].total);
-    expect(r[0].valor).toBeGreaterThan(r[1].valor);
+    expect(r[0].profissional).toBe("Liquida IVA");
+    expect(r[0].semIva).toBe(294);
+    expect(r[1].semIva).toBe(315);
+    expect(r[0].semIva).toBeLessThan(r[1].semIva);
   });
 
   it("na dúvida sobre o regime, NÃO inventa imposto", () => {
@@ -318,6 +384,9 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
       { estado: "aberta", profissionalNome: "X", propostasJson: proposta("profissional", 100) },
     ]);
     expect(r[0].total).toBe(106.15);
+    // E o que ele lê é 105,00 €: o serviço mais a taxa, sem imposto nenhum.
+    expect(r[0].semIva).toBe(105);
+    expect(r[0].ivaDoServico).toBe(0);
   });
 
   it("NÃO promete «recusar» — esse botão não existe", () => {
@@ -328,22 +397,35 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
      */
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).not.toContain("recusar");
     expect(m).toContain("aceita a proposta que preferir");
   });
 
-  it("fala do imposto sem anunciar 23% a toda a gente", () => {
-    // Metade dos profissionais está na isenção do artigo 53.º.
+  it("fala do imposto sem anunciar 23 % a quem não os cobra", () => {
+    // Metade dos profissionais está na isenção do artigo 53.º. A quem contrata
+    // um deles, o que acresce com factura é só o imposto da NOSSA taxa.
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
-      propostas: [{ profissional: "TRSul", valor: 270, taxaCliente: TAXA_CLIENTE, total: 286.61 }],
+      propostas: [umaProposta("TRSul", 270)],
+      link: "https://clyon.pt/pedido/abc",
+    });
+    expect(m).toContain("Com factura acresce só o IVA da taxa.");
+    expect(m).not.toContain("23 %");
+  });
+
+  it("e numa lista com os dois casos não inventa uma percentagem", () => {
+    // Não há UM número para dizer: um dos dois liquida e o outro não. Diz-se
+    // o que é certo dos dois, em vez de um número que engana metade da lista.
+    const m = mensagemDasPropostas({
+      servico: "recolha de entulho",
+      propostas: [umaProposta("TRSul", 270), umaProposta("Oscar", 280, "normal")],
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("nem todos os profissionais cobram");
-    expect(m).not.toContain("23%");
+    expect(m).not.toContain("23 %");
   });
 });
 
@@ -417,15 +499,18 @@ describe("quando o trabalho já está fechado", () => {
     expect(propostasParaOCliente(fechada)).toEqual([]);
   });
 
-  it("mas encontra-se, e traz o total certo do regime dele", () => {
-    // 330 + 16,50 de taxa + 79,70 de IVA (75,90 do servico + 3,80 da taxa) = 426,20.
+  it("mas encontra-se, e traz os dois números certos do regime dele", () => {
+    // 330 + 16,50 de taxa = 346,50 sem IVA. Com factura, mais 79,70 de imposto
+    // (75,90 do serviço + 3,80 da taxa) = 426,20.
     expect(trabalhoFechado(fechada)).toEqual({
       profissional: "Sthefanny Lemos",
       valor: 330,
       // A negociação não guarda taxa nenhuma nesta fixtura: vale a de origem,
       // que é o que uma linha anterior a haver coluna sempre significou.
       taxaCliente: TAXA_CLIENTE,
+      semIva: 346.5,
       total: 426.2,
+      ivaDoServico: 75.9,
     });
   });
 
@@ -439,8 +524,10 @@ describe("quando o trabalho já está fechado", () => {
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("Está combinado com Sthefanny Lemos");
-    // 330 + 16,50 de taxa + 79,70 de IVA (75,90 do servico + 3,80 da taxa) = 426,20.
-    expect(m).toContain("426,20 € a pagar");
+    // 330 + 16,50 de taxa = 346,50, que é o que ele paga se não pedir factura.
+    expect(m).toContain("346,50 € a pagar");
+    // E o imposto, numa linha à parte: 426,20 com factura.
+    expect(m).toContain("Com factura acrescem 23 % de IVA: 426,20 €.");
     expect(m).not.toContain("aceita a proposta que preferir");
     expect(m).not.toContain("Ainda não temos propostas");
   });

@@ -263,9 +263,15 @@ export function propostasDe(json: string | null | undefined): Proposta[] {
  */
 export { comoTratar };
 
-/** O que ele paga no fim: o valor do profissional, mais o imposto e a taxa. */
-function total(valor: number, regimeIva: string | null): number {
-  return contaDoCliente(valor, regimeDeIva(regimeIva)).total;
+/**
+ * O que ele paga: o valor do profissional mais a taxa, SEM IVA.
+ *
+ * "Vamos apresentar os valores sempre sem IVA." — 17-09-2026. O imposto
+ * continua calculado em `contaDoCliente`; quem o quiser dizer usa
+ * `comFacturaEmPalavras`, que o diz numa linha e uma vez só.
+ */
+function semIvaDoCliente(valor: number, regimeIva: string | null): number {
+  return contaDoCliente(valor, regimeDeIva(regimeIva)).semIva;
 }
 
 /**
@@ -403,7 +409,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
       texto:
         `${ola} Está combinado com ${pro} para ${servico}` +
         (acordado != null
-          ? `, por ${euros(acordado)} sem IVA (${euros(total(acordado, n.regimeIva))} no total)`
+          ? `, por ${euros(semIvaDoCliente(acordado, n.regimeIva))} (${euros(acordado)} para ele mais a taxa CLYON, sem IVA)`
           : "") +
         `. Ele já tem a morada e o seu contacto.` +
         (combinada ? "" : " Se já tem dia pensado, diga-me qual que eu deixo marcado."),

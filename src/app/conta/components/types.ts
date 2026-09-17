@@ -232,10 +232,15 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
     //
     // A conta vem de contaDoCliente e não de um 1.06 escrito aqui: a taxa e o
     // IVA mudam num sítio só, e uma cópia à mão passaria a mentir no dia
-    // seguinte. O valor acordado é SEM IVA — o imposto de quem factura soma-se.
+    // seguinte.
+    //
+    // SEM IVA, que é como se apresentam os valores desde 17-09-2026. O imposto
+    // continua calculado e continua a aparecer — na linha que diz o que
+    // acresce a quem quiser factura, e não no número grande.
     const paga =
       acordado != null
-        ? contaDoCliente(acordado, regimeDeIva(fechada.regimeIva), taxasDaNegociacao(fechada)).total
+        ? contaDoCliente(acordado, regimeDeIva(fechada.regimeIva), taxasDaNegociacao(fechada))
+            .semIva
         : null;
 
     if (fechada.confirmadoEm || fechada.pagoEm) {

@@ -1,30 +1,27 @@
-import { contaDoCliente, regimeDeIva, type Taxas } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
 
+/** «23 %», escrito uma vez a partir da constante. */
+const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
+
 /**
- * O TOTAL DITO AO CLIENTE — E SÓ SE FALA DE IVA QUANDO HÁ IVA.
+ * O QUE O CLIENTE PAGA — SEM IVA, QUE É COMO SE APRESENTAM OS VALORES.
  *
- * Saía sempre a mesma frase:
+ * "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje factura
+ * são mais 23 %, deixamos isso claro apenas." — 17-09-2026.
  *
- *   «Com o IVA e a taxa CLYON, fica em 315,00 €.»
+ * Saía «Com o IVA e a taxa CLYON, fica em 318,45 €» — um número que junta
+ * três coisas e não diz qual é a dele. Um cliente que não queria factura leu
+ * isso, não percebeu, e pagou ao profissional os 280 € dele sem os 14 € da
+ * nossa taxa. A conta estava certa e a mensagem perdeu-nos o dinheiro.
  *
- * ...e 315 eram 300 mais 5 % de taxa, com ZERO de imposto. O regime é do
- * profissional, não nosso: um isento pelo artigo 53.º não liquida IVA nenhum,
- * e a coluna `providers.regimeIva` nasce em `isento` — ou seja, o caso comum é
- * exactamente aquele em que a frase mentia.
+ * Agora há UM número — serviço mais taxa, sem imposto — e uma linha a dizer o
+ * que acresce com factura. É a convenção de toda a gente neste mercado, e é a
+ * única que o cliente consegue repetir em voz alta.
  *
- * Acaba mal das duas maneiras. O cliente de um isento fica à espera de uma
- * factura com 23 % que nunca vai chegar, ou desconfia de quem lho disse. E o
- * cliente de quem liquida IVA mas tem o perfil por preencher lê 315,00 € e
- * recebe uma factura de 384,00 €.
- *
- * O ecrã do site já distingue os dois casos há muito — `contaDoCliente`
- * devolve `temIva` precisamente para isto. O WhatsApp, que é o único canal que
- * fala sozinho e sem ninguém a rever, era o único que não ramificava. A frase
- * passa a estar escrita uma vez só, aqui.
- *
- * NÃO VIVE EM `taxas-plataforma.ts` de propósito: esse ficheiro é o da conta e
- * não se lhe toca. Aqui só se escreve em português o que ele calcula.
+ * NÃO SE TOCOU NA CONTA. `contaDoCliente` continua a calcular o imposto por
+ * vendedor, por causa da isenção do artigo 53.º; o que mudou foi qual dos
+ * números dela é que se diz primeiro.
  */
 export function totalEmPalavras(
   valor: number,
@@ -36,7 +33,30 @@ export function totalEmPalavras(
   taxas?: Taxas,
 ): string {
   const conta = contaDoCliente(valor, regimeDeIva(regimeIva), taxas);
-  return conta.temIva
-    ? `Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}.`
-    : `Com a taxa CLYON, fica em ${euros(conta.total)}.`;
+  const factura = comFacturaEmPalavras(valor, regimeIva, taxas);
+  return `Com a taxa CLYON, fica em ${euros(conta.semIva)} sem IVA.${factura ? ` ${factura}` : ""}`;
+}
+
+/**
+ * A LINHA DA FACTURA — a única frase que fala de imposto, e só uma vez.
+ *
+ * Diz «23 %» a quem vai mesmo pagar 23 %, e não a toda a gente: o regime é do
+ * profissional, e um isento pelo artigo 53.º não liquida nada sobre o serviço.
+ * A quem o contrata, o que acresce com factura é só o imposto da nossa taxa —
+ * poucos euros — e anunciar-lhe 23 % seria mostrar-lhe um imposto que ninguém
+ * pode entregar ao Estado.
+ *
+ * Em ambos os casos vai o total com factura ao lado, para que a frase não
+ * deixe uma conta por fazer a quem a lê no telemóvel.
+ */
+export function comFacturaEmPalavras(
+  valor: number,
+  regimeIva: string | null,
+  taxas?: Taxas,
+): string {
+  const conta = contaDoCliente(valor, regimeDeIva(regimeIva), taxas);
+  if (conta.iva <= 0) return "";
+  return conta.ivaDoServico > 0
+    ? `Com factura acrescem ${POR_CENTO} de IVA: ${euros(conta.total)}.`
+    : `Com factura acrescem ${euros(conta.iva)} de IVA da taxa CLYON: ${euros(conta.total)}.`;
 }

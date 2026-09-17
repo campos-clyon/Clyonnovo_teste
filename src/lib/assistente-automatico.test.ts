@@ -1268,7 +1268,7 @@ describe("fala como gente", () => {
     // Um preço inventado é uma promessa que o profissional não cumpre. Todos
     // os números destas mensagens vêm de `contaDoCliente` ou da proposta real.
     expect(CEREBRO).toContain('from "./taxas-plataforma"');
-    expect(CEREBRO).toContain("contaDoCliente(valor, regimeDeIva(regimeIva)).total");
+    expect(CEREBRO).toContain("contaDoCliente(valor, regimeDeIva(regimeIva)).semIva");
   });
 
   it("as chaves são estáveis e distintas entre espécies", () => {

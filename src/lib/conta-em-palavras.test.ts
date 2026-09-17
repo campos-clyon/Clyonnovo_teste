@@ -2,45 +2,62 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { contaDoCliente } from "./taxas-plataforma";
-import { totalEmPalavras } from "./conta-em-palavras";
+import { totalEmPalavras, comFacturaEmPalavras } from "./conta-em-palavras";
 
 /**
- * O WHATSAPP DEIXA DE ANUNCIAR IVA A QUEM NÃO O PAGA.
+ * O QUE SE DIZ AO CLIENTE É O VALOR SEM IVA — E O IMPOSTO NUMA LINHA SÓ.
  *
- * A frase era sempre a mesma — «Com o IVA e a taxa CLYON, fica em 315,00 €» —
- * e 315 eram 300 mais 5 % de taxa, com ZERO de imposto. O regime é do
- * profissional: um isento pelo artigo 53.º não liquida IVA nenhum, e a coluna
- * `providers.regimeIva` nasce em `isento`. O caso comum era exactamente aquele
- * em que a frase mentia.
+ * "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje factura
+ * são mais 23 %, deixamos isso claro apenas." — 17-09-2026.
  *
- * O ecrã do site já distinguia os dois casos. O WhatsApp, que é o único canal
- * que fala sozinho e sem ninguém a rever, era o único que não ramificava.
+ * Saía «Com o IVA e a taxa CLYON, fica em 318,45 €»: um número que junta três
+ * coisas e não diz qual é a dele. Um cliente que não queria factura leu isso,
+ * não percebeu, e acabou a pagar ao profissional os 280 € dele — sem os 14 €
+ * da nossa taxa. A conta estava certa; foi a mensagem que perdeu o dinheiro.
+ *
+ * A conta NÃO mudou. `contaDoCliente` continua a calcular o imposto por
+ * vendedor, por causa da isenção do artigo 53.º. O que mudou foi qual dos
+ * números dela é que se diz primeiro.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
 describe("a frase diz o mesmo que a conta", () => {
-  /*
-   * MUDOU A 14-09-2026. A taxa da CLYON passou a levar IVA — ela assume as
-   * facturas, e a conta é valor + taxa + IVA. Consequência que não é óbvia:
-   * MESMO COM UM PROFISSIONAL ISENTO há agora imposto na conta, porque o da
-   * taxa é da CLYON e não dele.
-   */
-  it("profissional isento: o imposto que resta é o da taxa, e é da CLYON", () => {
-    // 300 + taxa 15,00 + IVA da taxa 3,45 = 318,45. Do serviço, zero.
-    expect(totalEmPalavras(300, "isento")).toBe("Com o IVA e a taxa CLYON, fica em 318,45 €.");
+  it("o número grande é serviço mais taxa, sem imposto", () => {
+    // 300 + taxa 15,00 = 315,00. É este o número que ele tem de reconhecer.
+    expect(totalEmPalavras(300, "isento")).toContain("fica em 315,00 € sem IVA.");
+    expect(totalEmPalavras(300, "normal")).toContain("fica em 315,00 € sem IVA.");
   });
 
-  it("profissional que liquida: os dois impostos, e a conta fecha", () => {
+  it("profissional isento: o imposto que resta é o da taxa, e é da CLYON", () => {
+    /*
+     * MESMO COM UM PROFISSIONAL ISENTO há imposto na conta, porque o da taxa é
+     * da CLYON e não dele — 14-09-2026. São 3,45 €, e não 23 %: anunciar-lhe
+     * 23 % era mostrar-lhe um imposto que ninguém entrega ao Estado.
+     */
+    expect(totalEmPalavras(300, "isento")).toBe(
+      "Com a taxa CLYON, fica em 315,00 € sem IVA. " +
+        "Com factura acrescem 3,45 € de IVA da taxa CLYON: 318,45 €.",
+    );
+  });
+
+  it("profissional que liquida: aí sim, 23 %, e a conta fecha", () => {
     // 300 + taxa 15,00 + IVA 72,45 (69,00 do serviço + 3,45 da taxa) = 387,45
-    expect(totalEmPalavras(300, "normal")).toBe("Com o IVA e a taxa CLYON, fica em 387,45 €.");
+    expect(totalEmPalavras(300, "normal")).toBe(
+      "Com a taxa CLYON, fica em 315,00 € sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.",
+    );
   });
 
   it("regime por preencher conta como isento — e a frase acompanha", () => {
     // É o que `regimeDeIva` faz: só «normal» é normal. A frase tem de dizer o
     // mesmo que a conta, seja qual for o valor da coluna.
-    expect(totalEmPalavras(300, null)).toBe("Com o IVA e a taxa CLYON, fica em 318,45 €.");
-    expect(totalEmPalavras(300, "")).toBe("Com o IVA e a taxa CLYON, fica em 318,45 €.");
+    expect(totalEmPalavras(300, null)).toBe(totalEmPalavras(300, "isento"));
+    expect(totalEmPalavras(300, "")).toBe(totalEmPalavras(300, "isento"));
+  });
+
+  it("«23 %» só a quem vai mesmo pagar 23 %", () => {
+    expect(comFacturaEmPalavras(300, "normal")).toContain("23 %");
+    expect(comFacturaEmPalavras(300, "isento")).not.toContain("23 %");
   });
 
   it("o isento continua a pagar MENOS imposto do que o que liquida", () => {
@@ -48,6 +65,13 @@ describe("a frase diz o mesmo que a conta", () => {
     // para «só o da taxa». Se um dia isto empatar, alguém aplicou 23 % sobre
     // a soma em vez de por vendedor.
     expect(contaDoCliente(300, "isento").iva).toBeLessThan(contaDoCliente(300, "normal").iva);
+  });
+
+  it("e o valor sem IVA é o MESMO nos dois regimes", () => {
+    // É a razão de ele servir para apresentar: não depende do regime de quem
+    // factura, e por isso é o único número que se pode dizer antes de saber
+    // com quem o cliente vai ficar.
+    expect(contaDoCliente(300, "isento").semIva).toBe(contaDoCliente(300, "normal").semIva);
   });
 });
 
@@ -65,6 +89,13 @@ describe("a frase está escrita uma vez só", () => {
     expect(CEREBRO).toContain("totalEmPalavras(dados.valor, dados.regimeIva)");
     expect(AVISOS).toContain("totalEmPalavras(pendente.valor, n.regimeIva)");
     expect(AVISOS).toContain("totalEmPalavras(acordado, n.regimeIva)");
+  });
+
+  it("e a percentagem sai da constante, e não escrita à mão", () => {
+    // 23 % é uma coisa do mundo e muda por decreto. Escrita à mão numa frase,
+    // muda em todo o lado menos ali.
+    const FRASE = ler("src/lib/conta-em-palavras.ts");
+    expect(FRASE).toContain("Math.round(TAXA_IVA * 100)");
   });
 });
 

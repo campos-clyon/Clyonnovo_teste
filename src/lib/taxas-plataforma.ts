@@ -205,7 +205,24 @@ export type ContaDoCliente = {
   ivaDoServico: number;
   /** O IVA da TAXA, que vai na factura da CLYON ao cliente. */
   ivaDaTaxa: number;
-  /** O que sai da carteira dele. É este o número grande. */
+  /**
+   * O SERVIÇO MAIS A TAXA, SEM IMPOSTO — e é ESTE o número que se lhe diz.
+   *
+   * "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje
+   * factura são mais 23 %, deixamos isso claro apenas." — 17-09-2026.
+   *
+   * Veio de um caso concreto: um cliente que não queria factura leu uma conta
+   * cheia de linhas, não percebeu qual era o número dele, e acabou a pagar ao
+   * profissional os 280 € dele — sem os 14 € da nossa taxa. Uma conta com
+   * quatro linhas e um total que ninguém pediu não é transparência: é ruído,
+   * e o ruído sai caro a quem o escreve.
+   *
+   * NÃO SUBSTITUI `total`. O imposto continua calculado, por vendedor e como
+   * sempre — só deixa de ser o número grande, e passa a ser a linha que diz o
+   * que acresce a quem quiser factura.
+   */
+  semIva: number;
+  /** O que sai da carteira dele COM FACTURA: serviço + taxa + imposto. */
   total: number;
   /** Se há linha de imposto para mostrar. */
   temIva: boolean;
@@ -260,6 +277,7 @@ export function contaDoCliente(
     taxa,
     ivaDoServico,
     ivaDaTaxa,
+    semIva: aosCentimos(servico + taxa),
     total: aosCentimos(servico + taxa + iva),
     temIva: iva > 0,
   };

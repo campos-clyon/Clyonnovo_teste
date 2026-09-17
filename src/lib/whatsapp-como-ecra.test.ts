@@ -170,11 +170,15 @@ describe("o cérebro (whatsapp-negociacao)", () => {
     expect(CEREBRO).toContain('quemPropos: "cliente"');
   });
 
-  it("o total com a taxa CLYON aparece antes de o cliente fechar", () => {
-    // "total com a taxa" passou a "total a pagar": o valor acordado e a base e
-    // o IVA soma-se, por isso a mensagem tem de dizer o numero final.
+  it("o que ele paga com a taxa CLYON aparece antes de o cliente fechar", () => {
+    // O valor acordado e a base: a taxa acresce, e mandar-lhe so a base era
+    // prometer-lhe um numero que ele nao ia pagar.
+    //
+    // SEM IVA desde 17-09-2026 -- "vamos apresentar os valores sempre sem
+    // IVA". O imposto continua calculado, e sai na linha da factura.
     expect(CEREBRO).toContain("contaDoCliente(");
-    expect(CEREBRO).toContain("total a pagar");
+    expect(CEREBRO).toContain("a pagar");
+    expect(CEREBRO).toContain(".semIva");
   });
 });
 

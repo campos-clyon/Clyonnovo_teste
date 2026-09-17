@@ -285,20 +285,20 @@ export default function PropostasRecebidas({
           Contratou {acordada.profissionalNome}
         </h2>
         {/*
-          A CONTA INTEIRA, e o total em baixo a fechar.
+          DUAS LINHAS E UM TOTAL — SEM IVA.
 
-          "Temos de deixar claro que todos os valores praticados sao sem IVA,
-          principalmente para os clientes."
+          "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje
+          factura sao mais 23%, deixamos isso claro apenas." -- 17-09-2026.
 
-          O valor acordado e a BASE: o imposto soma-se por cima, e nao se
-          decompoe de dentro dele como se fazia ate 29-08-2026. Por isso cada
-          linha diz o que e, e o numero grande e o unico que ele tem de olhar
-          para saber quanto sai da carteira.
+          Tinha quatro linhas -- servico, IVA, taxa, total -- e um cliente que
+          nao queria factura leu-as todas e acabou a pagar ao profissional os
+          280 EUR dele, sem os 14 EUR da nossa taxa. Quatro linhas nao sao mais
+          transparencia do que duas: sao mais sitios onde se perder.
 
-          O IVA so aparece a quem o liquida. O regime e do profissional, nao
-          nosso: um isento pelo art. 53.o nao cobra IVA nenhum, e mostrar uma
-          linha de 23% a quem o contrata seria mostrar-lhe um imposto que nao
-          deve -- e que ninguem pode entregar ao Estado.
+          O imposto nao desapareceu da conta, so deixou de ser uma linha da
+          tabela. Fica em baixo, a dizer o que acresce A QUEM QUISER FACTURA --
+          e com a percentagem so quando ela e verdade, porque o regime e do
+          profissional e um isento pelo art. 53.o nao liquida nada.
         */}
         {(() => {
           const conta = contaDoCliente(
@@ -317,27 +317,20 @@ export default function PropostasRecebidas({
                 </span>
                 <span className="text-slate-900">{euros(conta.servico)}</span>
               </div>
-              {conta.temIva ? (
-                <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
-                  <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)}%)</span>
-                  <span className="text-slate-900">{euros(conta.iva)}</span>
-                </div>
-              ) : (
-                <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
-                  <span className="text-slate-600">IVA</span>
-                  <span className="text-tinta-fraca">
-                    isento (art. 53.º)
-                  </span>
-                </div>
-              )}
               <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
                 <span className="text-slate-600">Taxa CLYON</span>
                 <span className="text-slate-900">{euros(conta.taxa)}</span>
               </div>
               <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
                 <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
-                <span className="text-lg font-bold text-emerald-700">{euros(conta.total)}</span>
+                <span className="text-lg font-bold text-emerald-700">{euros(conta.semIva)}</span>
               </div>
+              <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
+                Valores sem IVA.{" "}
+                {conta.ivaDoServico > 0
+                  ? `Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`
+                  : `Se quiser factura, acresce o IVA da taxa CLYON: ${euros(conta.total)}.`}
+              </p>
             </div>
           );
         })()}
@@ -708,7 +701,7 @@ export default function PropostasRecebidas({
                   */}
                   {emCima != null && (
                     <div className="text-xs font-semibold text-acao">
-                      {euros(contaDoCliente(emCima, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total)} a pagar
+                      {euros(contaDoCliente(emCima, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).semIva)} a pagar
                     </div>
                   )}
                   <div className="text-xs text-tinta-fraca">
@@ -778,9 +771,7 @@ export default function PropostasRecebidas({
                           mais é exactamente aqui, antes de ele decidir.
                         */
                         const c = contaDoCliente(v, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
-                        return c.temIva
-                          ? `Se ele aceitar, paga ${euros(c.total)} — ${euros(c.servico)} + IVA + taxa CLYON.`
-                          : `Se ele aceitar, paga ${euros(c.total)} com a taxa CLYON.`;
+                        return `Se ele aceitar, paga ${euros(c.semIva)} com a taxa CLYON — sem IVA.`;
                       }}
                       onPropor={(valor) => agir(n.id, "propor", valor)}
                     />

@@ -1,5 +1,5 @@
 import type { Proposta } from "./negociacao";
-import { contaDoCliente, regimeDeIva, taxasDaNegociacao } from "./taxas-plataforma";
+import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
 
 import { PROMESSA } from "./pagamento-na-plataforma";
 
@@ -14,6 +14,9 @@ import { PROMESSA } from "./pagamento-na-plataforma";
  * Sem decimais quando é redonda — «5%» e não «5,0%» — e com vírgula quando
  * não é, que é como se escreve em português.
  */
+/** «23 %», escrito uma vez a partir da constante. */
+const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
+
 function taxaEmTexto(fraccao: number): string {
   const pontos = Math.round(fraccao * 10000) / 100;
   return `${(Number.isInteger(pontos) ? String(pontos) : pontos.toFixed(2)).replace(".", ",")}%`;
@@ -53,16 +56,22 @@ export type PropostaParaOCliente = {
   /** O valor que ELE pede, sem IVA. */
   valor: number;
   /**
-   * O que o cliente paga por esta proposta: valor + IVA do regime DELE + taxa.
+   * O QUE ELE PAGA: valor mais a taxa CLYON, SEM IVA. É o número da mensagem.
    *
-   * Vai na mensagem ao lado do valor, e não escondido atrás do link. No ecrã
-   * do cliente, o cartão da proposta mostra o valor cru e o total só aparece
-   * DEPOIS de contratar — ele decidia a olhar para 270 € e descobria 348,30 €
-   * a seguir ao clique. Enquanto esse ecrã não mudar, é esta mensagem que o
-   * protege; e mesmo depois de mudar, um número que se lê no WhatsApp antes de
-   * abrir seja o que for continua a valer mais.
+   * "Vamos apresentar os valores sempre sem IVA." — 17-09-2026. Vai ao lado do
+   * valor e não escondido atrás do link: no ecrã do cliente o cartão mostra o
+   * valor cru, e quem lê no WhatsApp decide antes de abrir seja o que for.
    */
+  semIva: number;
+  /** O que pagaria COM FACTURA: o de cima mais o imposto. Fica numa linha só. */
   total: number;
+  /**
+   * O imposto DO SERVIÇO desta proposta — zero se o profissional for isento.
+   *
+   * Existe para a frase da factura não anunciar 23 % a quem contrata um
+   * isento do artigo 53.º: aí o que acresce é só o imposto da nossa taxa.
+   */
+  ivaDoServico: number;
 };
 
 type NegociacaoParaLer = {
@@ -134,27 +143,31 @@ export function propostasParaOCliente(
     if (ultima.estado === "recusada" || ultima.estado === "expirada") continue;
 
     const valor = Number(ultima.valor);
+    const conta = contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
     saida.push({
       profissional: n.profissionalNome,
       valor,
       taxaCliente: taxasDaNegociacao(n).cliente,
-      total: contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total,
+      semIva: conta.semIva,
+      total: conta.total,
+      ivaDoServico: conta.ivaDoServico,
     });
   }
 
   /*
-   * Do mais barato para o mais caro, PELO TOTAL e não pela base.
-   *
-   * Com regimes de IVA diferentes as duas ordens divergem: 280 € de quem
-   * liquida IVA são 361,20 € a pagar, e 300 € de um isento são 318 €. Ordenar
-   * pela base punha o mais caro primeiro e dizia-lhe que era o mais barato.
+   * Do mais barato para o mais caro, PELO NÚMERO QUE ELE VÊ.
    *
    * Ordena-se porque quem lê uma lista de preços lê-a de cima para baixo à
    * procura do menor, e comparar três números no telemóvel é trabalho que se
    * lhe pode poupar. A escolha continua inteiramente dele — e o mais barato
    * nem sempre é o que ele quer.
+   *
+   * Pelo `semIva`, que é o que está escrito em cada linha. Ordenava-se pelo
+   * total com imposto, e com regimes diferentes as duas ordens divergiam — a
+   * lista aparecia desordenada aos olhos de quem a lia, porque os números à
+   * vista não eram os números da ordenação. Ordena-se pelo que se mostra.
    */
-  return saida.sort((a, b) => a.total - b.total);
+  return saida.sort((a, b) => a.semIva - b.semIva);
 }
 
 /**
@@ -172,17 +185,38 @@ export function trabalhoFechado(
     const ultima = lerPropostas(n.propostasJson).at(-1);
     const valor = Number(ultima?.valor);
     if (!Number.isFinite(valor)) continue;
+    const conta = contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
     return {
       profissional: n.profissionalNome,
       valor,
       taxaCliente: taxasDaNegociacao(n).cliente,
-      total: contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).total,
+      semIva: conta.semIva,
+      total: conta.total,
+      ivaDoServico: conta.ivaDoServico,
     };
   }
   return null;
 }
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+
+/**
+ * A ÚNICA FRASE QUE FALA DE IMPOSTO, e só se diz uma vez por mensagem.
+ *
+ * "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje factura
+ * são mais 23 %, deixamos isso claro apenas." — 17-09-2026.
+ *
+ * «23 %» só a quem vai mesmo pagar 23 %: o regime é do profissional, e um
+ * isento pelo artigo 53.º não liquida nada sobre o serviço. A quem o contrata,
+ * o que acresce com factura é só o imposto da NOSSA taxa — poucos euros — e
+ * anunciar-lhe 23 % era mostrar-lhe um imposto que ninguém entrega ao Estado.
+ */
+function comFactura(p: PropostaParaOCliente): string {
+  if (p.total <= p.semIva) return "";
+  return p.ivaDoServico > 0
+    ? `Com factura acrescem ${POR_CENTO} de IVA: ${euros(p.total)}.`
+    : `Com factura acresce o IVA da taxa CLYON: ${euros(p.total)}.`;
+}
 
 /**
  * O primeiro nome, para a saudação.
@@ -278,11 +312,22 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * trabalho no fim. Mandar-lhe a lista de propostas depois de ter
      * escolhido seria pedir-lhe para decidir o que já decidiu.
      */
+    /*
+      UM NÚMERO, e o imposto numa linha à parte.
+
+      Dizia «280,00 € sem IVA, 361,20 € a pagar (já com o imposto do
+      profissional e a taxa CLYON de 5 %)» — três números e uma parêntese numa
+      frase só, lida na rua, no telemóvel. Um cliente que não queria factura
+      leu isto, não percebeu qual era o dele, e pagou ao profissional os 280 €
+      sem os 14 € da nossa taxa.
+    */
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
-        ` ${euros(d.fechado.valor)} sem IVA, ${euros(d.fechado.total)} a pagar` +
-        ` (já com o imposto do profissional e a taxa CLYON de ${taxaEmTexto(d.fechado.taxaCliente)}).`,
+        ` ${euros(d.fechado.semIva)} a pagar` +
+        ` (${euros(d.fechado.valor)} para ele mais a taxa CLYON de ${taxaEmTexto(d.fechado.taxaCliente)}).`,
     );
+    const facturaDoFechado = comFactura(d.fechado);
+    if (facturaDoFechado) linhas.push(facturaDoFechado);
     linhas.push("");
     linhas.push(
       PROMESSA.whatsappConfirmar,
@@ -306,7 +351,17 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     );
     linhas.push("");
     for (const p of d.propostas) {
-      linhas.push(`${p.profissional}: ${euros(p.valor)} — total a pagar ${euros(p.total)}`);
+      /*
+        UM NÚMERO POR PROFISSIONAL — o que ele paga se não pedir factura.
+
+        Dizia «280,00 € — total a pagar 361,20 €», e com três propostas eram
+        seis números numa mensagem de telemóvel. O valor dele fica entre
+        parênteses porque é sobre ele que se negoceia; o número à frente do
+        nome é o único que o cliente tem de comparar.
+      */
+      linhas.push(
+        `${p.profissional}: ${euros(p.semIva)} (${euros(p.valor)} para ele mais a taxa CLYON)`,
+      );
     }
     linhas.push("");
     /*
@@ -322,30 +377,24 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     const taxas = new Set(d.propostas.map((p) => p.taxaCliente));
     const taxaUnica = taxas.size === 1 ? [...taxas][0] : null;
     /*
-     * O IVA NA MESMA LINHA DOS VALORES, e não num rodapé.
-     *
-     * "Temos de deixar claro que todos os valores praticados são sem IVA,
-     * principalmente para os clientes."
-     *
-     * Numa mensagem de WhatsApp, o que vem depois do link não se lê. Esta
-     * frase fica encostada aos números, que é onde a dúvida nasce — e diz para
-     * onde ir buscar o total, em vez de deixar a conta ao cliente.
-     */
-    /*
      * O IVA ENCOSTADO AOS NÚMEROS, e não num rodapé.
      *
      * Numa mensagem de WhatsApp, o que vem depois do link não se lê. Esta
-     * frase fica onde a dúvida nasce.
+     * frase fica onde a dúvida nasce — e é a ÚNICA que fala de imposto.
      *
-     * "nem todos cobram" e não "23%": o imposto é do regime de quem factura, e
-     * um profissional na isenção do artigo 53.º não liquida nenhum. Anunciar
-     * 23% a toda a gente mostrava a metade deles um imposto que não devem.
+     * "23 %" só quando é verdade para todos os da lista: o imposto é do regime
+     * de quem factura, e um profissional na isenção do artigo 53.º não liquida
+     * nenhum. Numa lista com os dois casos não há uma percentagem para dizer,
+     * e diz-se o que é certo em vez de um número que engana metade dela.
      */
+    const comImposto = d.propostas.filter((p) => p.ivaDoServico > 0).length;
     linhas.push(
-      "O primeiro valor é sem IVA. No total já entram o imposto — que nem todos" +
-        (taxaUnica != null
-          ? ` os profissionais cobram — e a taxa CLYON de ${taxaEmTexto(taxaUnica)}.`
-          : " os profissionais cobram — e a taxa CLYON."),
+      `Valores sem IVA, já com a taxa CLYON${taxaUnica != null ? ` de ${taxaEmTexto(taxaUnica)}` : ""}.` +
+        (comImposto === 0
+          ? " Com factura acresce só o IVA da taxa."
+          : comImposto === quantas
+            ? ` Com factura acrescem ${POR_CENTO} de IVA.`
+            : " Com factura acresce o IVA de quem o liquida — nem todos os profissionais cobram."),
     );
     linhas.push("");
     /*

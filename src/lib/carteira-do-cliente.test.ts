@@ -2,8 +2,14 @@ import { describe, it, expect } from "vitest";
 import { carteiraDoCliente, type TrabalhoDoCliente } from "./carteira-do-cliente";
 import { contaDoCliente } from "./taxas-plataforma";
 
-/** Sem regime gravado, a carteira conta sem IVA — que e o caso dos isentos. */
-const paga = (v: number) => contaDoCliente(v, "isento").total;
+/*
+ * O QUE ELE PAGA: valor mais taxa, SEM IVA.
+ *
+ * "Vamos apresentar os valores sempre sem IVA." — 17-09-2026. A carteira a
+ * dizer 361,20 € sobre um trabalho anunciado a 294,00 € era a terceira versão
+ * do mesmo preço, e a que ninguém tinha visto antes.
+ */
+const paga = (v: number) => contaDoCliente(v, "isento").semIva;
 
 const t = (p: Partial<TrabalhoDoCliente>): TrabalhoDoCliente => ({
   negociacaoId: 1,
