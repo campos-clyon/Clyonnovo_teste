@@ -351,7 +351,14 @@ type PorPromover = {
  * quiser: PRECISAM = [n1, porEnviar, n2] e a caixa desactivada enquanto há um
  * cartão escolhido.
  */
-type ChaveDoBloco = "n1" | "porEnviar" | "n2" | "n3" | "concluidos" | "cancelados";
+type ChaveDoBloco =
+  | "porConfirmar"
+  | "n1"
+  | "porEnviar"
+  | "n2"
+  | "n3"
+  | "concluidos"
+  | "cancelados";
 type Mostrar = "tudo" | "clyon" | "clientes";
 
 const BLOCOS: Array<{
@@ -374,6 +381,35 @@ const BLOCOS: Array<{
    * dinheiro: uma proposta expira em 48 horas, e um trabalho por confirmar é
    * dinheiro cativo. Até aqui vivia debaixo do bloco âmbar.
    */
+  /*
+   * TRABALHO FEITO NÃO É PROPOSTA POR RESPONDER — 17-09-2026.
+   *
+   * "Os trabalhos concluídos à espera de validação estão misturados com os à
+   * espera dos clientes."
+   *
+   * Os dois precisavam dele, e por isso viviam no mesmo bloco — mas precisam
+   * de COISAS DIFERENTES. Num, alguém tem de responder a uma proposta antes
+   * de ela expirar. No outro, o trabalho já foi feito, o profissional já lá
+   * esteve, e o que falta é o cliente reconhecê-lo para o dinheiro se
+   * libertar. Misturados, a linha do #325 — «Trabalho feito por Manuel
+   * Martins, falta confirmar 75 €» — lia-se como mais uma à espera de
+   * resposta, e ficava para depois.
+   *
+   * PRIMEIRO DE TODOS, e é a única coisa que passa à frente do «Precisa de
+   * si»: aqui está dinheiro de um profissional preso à espera de um gesto
+   * que ninguém fez. Uma proposta que expira perde-se um negócio; isto
+   * segura o que já foi ganho.
+   */
+  {
+    chave: "porConfirmar",
+    titulo: "Feitos, à espera de confirmação",
+    dica:
+      "O trabalho está feito e o dinheiro do profissional está preso até alguém o confirmar. Abra o pedido e confirme, ou lembre o cliente.",
+    Icone: CheckCircle2,
+    cor: "text-amber-300 border-amber-500/60",
+    corDoNumero: "text-amber-300",
+    visivelEm: () => true,
+  },
   {
     chave: "n1",
     titulo: "Precisa de si",
@@ -1279,7 +1315,14 @@ export default function AdminNegociacoesPanel({
     const porData = (a: Pedido, b: Pedido) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
-    const precisam = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porData);
+    /*
+     * Os que precisam dele partem-se em dois — ver a nota do bloco
+     * `porConfirmar`. Um pedido com as duas coisas a acontecer ao mesmo tempo
+     * fica no dos feitos: é lá que está o dinheiro preso.
+     */
+    const precisamDeSi = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porData);
+    const porConfirmar = precisamDeSi.filter((p) => p.negociacoes.some(esperaConfirmacao));
+    const precisam = precisamDeSi.filter((p) => !p.negociacoes.some(esperaConfirmacao));
     const restantes = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi));
     /* Fechado com alguém é outra coisa: já não se espera proposta nenhuma. */
     const contratados = restantes
@@ -1319,6 +1362,13 @@ export default function AdminNegociacoesPanel({
     // "Resposta" ficou curto: um trabalho já feito não espera uma resposta,
     // espera que alguém o reconheça e liberte o dinheiro. As duas coisas
     // param aqui à espera dele, e a nota tem de as caber às duas.
+    bloco(
+      "porConfirmar",
+      "Feitos, à espera de confirmação",
+      "o trabalho está feito — falta confirmar para o dinheiro sair",
+      "text-amber-300",
+      porConfirmar,
+    );
     bloco("n1", "Precisa de si", "nada avança sem si", "text-emerald-300", precisam);
     bloco("n2", "À espera de propostas", "a bola está com os profissionais", "text-sky-300", aoAr);
     bloco(
@@ -1341,12 +1391,21 @@ export default function AdminNegociacoesPanel({
    * três contagens na mesma. `nivelDe` usa as DUAS mesmas condições do memo,
    * pela mesma ordem, e tem de andar a par com ele.
    */
-  function nivelDe(p: Pedido): "n1" | "n2" | "n3" {
+  function nivelDe(p: Pedido): "porConfirmar" | "n1" | "n2" | "n3" {
+    // Os feitos primeiro, e na mesma ordem do memo acima — as duas listas têm
+    // de andar a par, senão os cartões de cima contam uma coisa e os blocos
+    // mostram outra.
+    if (p.negociacoes.some(esperaConfirmacao)) return "porConfirmar";
     if (p.negociacoes.some(precisaDeSi)) return "n1";
     if (p.negociacoes.some((n) => n.estado === "acordada")) return "n3";
     return "n2";
   }
-  const porNivel: Record<"n1" | "n2" | "n3", Pedido[]> = { n1: [], n2: [], n3: [] };
+  const porNivel: Record<"porConfirmar" | "n1" | "n2" | "n3", Pedido[]> = {
+    porConfirmar: [],
+    n1: [],
+    n2: [],
+    n3: [],
+  };
   for (const e of activosOrdenados) {
     // A ordem interna — mais recente primeiro — vem preservada do memo; as
     // entradas de separador continuam a ser produzidas e deixam de ser desenhadas.
