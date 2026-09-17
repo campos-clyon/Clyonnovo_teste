@@ -6311,8 +6311,39 @@ export async function listarRecolhasWhatsAppEmCurso(): Promise<
   await ensureWhatsappRecolhasTable();
   const pool = await getPool();
   if (!pool) return [];
+  /*
+   * QUEM JÁ TEM UM PEDIDO A ANDAR NÃO ESTÁ «A MEIO» DE NADA — 17-09-2026.
+   *
+   * "Os clientes estão a reclamar que recebem muitas informações (…) enviar
+   * mensagens mais precisas, sem spam."
+   *
+   * Isto olhava só para a tabela das recolhas e perguntava uma coisa:
+   * `pedidoId IS NULL` — esta conversa não chegou a criar um pedido. O que
+   * não vê é que a pessoa pode ter criado o pedido POR OUTRO CAMINHO: pelo
+   * site, pelo telefone, pelo backoffice.
+   *
+   * Foi o que aconteceu ao João Martins. Tinha uma recolha antiga por acabar
+   * no WhatsApp e o pedido #322 contratado e marcado para a manhã seguinte.
+   * No mesmo dia recebeu «ficámos a meio do seu pedido, continue de onde
+   * parámos» e, horas depois, «se entretanto já não precisa, não se preocupe
+   * em responder» — sobre um trabalho que estava agendado.
+   *
+   * Duas mensagens erradas valem mais do que dez certas: quem as lê deixa de
+   * acreditar nas outras. Agora pergunta-se também se aquele número tem
+   * pedido vivo, pelos últimos 9 dígitos, como em `pedidosDoTelefone`.
+   */
   const [rows] = (await pool.execute(
-    "SELECT telefone, passo, actualizadoEm FROM whatsappRecolhas WHERE pedidoId IS NULL ORDER BY actualizadoEm DESC LIMIT 50",
+    `SELECT r.telefone, r.passo, r.actualizadoEm
+       FROM whatsappRecolhas r
+      WHERE r.pedidoId IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM simulatorOrders o
+           WHERE RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9)
+                 = RIGHT(REGEXP_REPLACE(r.telefone, '[^0-9]', ''), 9)
+             AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'arquivado'))
+        )
+      ORDER BY r.actualizadoEm DESC
+      LIMIT 50`,
   )) as [Array<{ telefone: string; passo: string; actualizadoEm: string }>, unknown];
   return rows.map((r) => ({ ...r, actualizadoEm: String(r.actualizadoEm) }));
 }
