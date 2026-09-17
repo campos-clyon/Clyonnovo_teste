@@ -19,6 +19,36 @@ import { join } from "node:path";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const ECRA = ler("src/app/profissionais/painel/Trabalhos.tsx");
+
+/*
+ * O CÓDIGO SEM COMENTÁRIOS.
+ *
+ * O comentário que explica esta mudança cita as classes antigas —
+ * `text-slate-700` — para dizer de onde viemos. Um teste que procure essa
+ * classe no ficheiro inteiro encontra-a lá dentro e chumba uma correcção que
+ * está feita.
+ */
+const SEM_COMENTARIOS = ECRA.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "");
+
+/** O bloco da descrição: do teste do `trim()` até ao texto dela. */
+const DESCRICAO = (() => {
+  const i = SEM_COMENTARIOS.indexOf("{pedido.description?.trim() ?");
+  const j = SEM_COMENTARIOS.indexOf("{pedido.description}", i);
+  return SEM_COMENTARIOS.slice(i, j);
+})();
+
+/** O que fica sem descrição: do fim do bloco de cima até ao fim do ramo. */
+const SEM_DESCRICAO = (() => {
+  const i = SEM_COMENTARIOS.indexOf("{pedido.description}");
+  const j = SEM_COMENTARIOS.indexOf("propor.", i);
+  return SEM_COMENTARIOS.slice(i, j);
+})();
+
+/** A lista de baixo — cidade, dia, factura. É contra esta que se destaca. */
+const META = (() => {
+  const i = SEM_COMENTARIOS.indexOf('<ul className="mt-3 space-y-1.5');
+  return SEM_COMENTARIOS.slice(i, SEM_COMENTARIOS.indexOf("</ul>", i));
+})();
 const FORM = ler("src/app/plataforma/pedir/components/CompactOrderDetails.tsx");
 const PERFIL = ler("src/app/api/profissionais/perfil/route.ts");
 const DB = ler("src/lib/db.ts");
@@ -43,6 +73,44 @@ describe("a descrição do lado do profissional", () => {
   it("e quando não há, diz-se — em vez de deixar um espaço mudo", () => {
     // Sem descrição é informação também, e diz-lhe o que fazer a seguir.
     expect(ECRA).toContain("O cliente não escreveu uma descrição.");
+  });
+
+  /*
+   * E VÊ-SE. "Vamos destacar melhor a descrição com uma cor diferente, está
+   * muito sumido no meio de tudo." — 17-09-2026.
+   *
+   * Estar lá não chegava: saía em `text-sm text-slate-700`, um passo de
+   * cinzento acima da lista de baixo e nem isso ao lado da caixa do acesso. A
+   * frase que decide o preço lia-se como uma etiqueta. Uma informação que
+   * ninguém lê custa o mesmo que uma informação que não existe.
+   */
+  it("tem painel próprio, na cor da marca — e não é mais um cinzento", () => {
+    expect(DESCRICAO).toContain("border-acao");
+    expect(DESCRICAO).toContain("text-tinta");
+    expect(DESCRICAO).toContain("font-semibold");
+    expect(DESCRICAO).not.toContain("text-slate-700");
+  });
+
+  it("e o que está à volta CONTINUA discreto — senão não há destaque nenhum", () => {
+    /*
+     * Destacar é uma diferença, não um volume. Se a lista de baixo subisse
+     * com ela, voltávamos ao princípio com mais tinta gasta — e é assim que
+     * um cartão fica todo a gritar e nada a dizer.
+     *
+     * A lista fica no cinzento de base. A EXCEPÇÃO é o dia, que já era
+     * carregado antes desta mudança e por boa razão: uma recolha marcada para
+     * amanhã decide se ele sequer pode propor. São dois destaques, e chegam.
+     */
+    expect(META).toContain('text-sm text-slate-600');
+    expect(META).not.toContain("bg-[#EAF6F9]");
+    expect(META).not.toContain("text-[15px]");
+  });
+
+  it("a falta de descrição fica âmbar, que é um aviso e não a marca", () => {
+    // Aqui não há nada para ler: há uma coisa a fazer antes de propor um
+    // valor. Duas mensagens diferentes não podem ter a mesma cor.
+    expect(SEM_DESCRICAO).toContain("amber");
+    expect(SEM_DESCRICAO).not.toContain("border-acao");
   });
 });
 

@@ -1198,22 +1198,46 @@ function DetalheDoTrabalho({
 
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
         {/*
+          O QUE O CLIENTE ESCREVEU — a linha mais importante do cartão.
+
+          "Vamos destacar melhor a descrição com uma cor diferente, está muito
+          sumido no meio de tudo." — 17-09-2026. Tinha razão: saía em
+          `text-sm text-slate-700`, um passo de cinzento acima da lista de
+          baixo e nem isso ao lado da caixa do acesso. A frase que decide o
+          preço — «tenho uma cama e um colchão» — lia-se como uma etiqueta.
+
+          Passa a ter painel próprio, na cor da marca: barra à esquerda,
+          fundo claro e o texto em `tinta`, maior e mais carregado do que tudo
+          o resto. Quem abre o cartão lê primeiro o que há para levar, e só
+          depois onde e quando.
+
           `break-words` — o `whitespace-pre-line` quebra em espaços mas NUNCA
           dentro de uma palavra. Uma ligação do OLX ou um email transbordava o
           cartão, e o que passava dos 360 px era cortado pelo `overflow-x:
-          hidden` da página, sem rolamento que o recuperasse. É este o texto
-          onde o cliente diz o que há para levar.
+          hidden` da página, sem rolamento que o recuperasse.
         */}
         {pedido.description?.trim() ? (
-          <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-700">
-            {pedido.description}
-          </p>
+          <div className="rounded-xl border-l-[3px] border-acao bg-[#EAF6F9] px-3.5 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-acao">
+              O que o cliente pede
+            </p>
+            <p className="mt-1 whitespace-pre-line break-words text-[15px] font-semibold leading-relaxed text-tinta">
+              {pedido.description}
+            </p>
+          </div>
         ) : (
-          <p className="text-sm leading-relaxed text-amber-700">
-            O cliente não escreveu uma descrição. Veja as fotografias, e se
-            faltar alguma coisa para dar um preço justo, peça à CLYON antes de
-            propor.
-          </p>
+          /*
+            SEM DESCRIÇÃO É UM AVISO, e por isso fica âmbar e não na cor da
+            marca: aqui não há nada para ler, há uma coisa a fazer antes de
+            propor um valor.
+          */
+          <div className="rounded-xl border-l-[3px] border-amber-400 bg-amber-50 px-3.5 py-3">
+            <p className="text-sm leading-relaxed text-amber-800">
+              O cliente não escreveu uma descrição. Veja as fotografias, e se
+              faltar alguma coisa para dar um preço justo, peça à CLYON antes de
+              propor.
+            </p>
+          </div>
         )}
         <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
           <li className="flex items-center gap-2">

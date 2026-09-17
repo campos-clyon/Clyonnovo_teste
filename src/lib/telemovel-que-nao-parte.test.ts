@@ -66,7 +66,15 @@ describe("nada se lê na vertical", () => {
      * rolamento que o recuperasse. É o texto onde o cliente diz o que há para
      * levar.
      */
-    expect(TRABALHOS).toContain("whitespace-pre-line break-words text-sm leading-relaxed");
+    expect(TRABALHOS).toContain("whitespace-pre-line break-words");
+    /*
+     * O TAMANHO SAIU DESTA ASSERÇÃO a 17-09-2026, quando a descrição ganhou
+     * painel próprio e passou de 14 para 15 px — "está muito sumido no meio
+     * de tudo". O que este teste guarda é a quebra dentro da palavra, e essa
+     * não depende do tamanho da letra. Prendê-lo à linha de classes inteira
+     * fazia-o chumbar a cada mudança de aspecto, que é como um teste ensina
+     * as pessoas a apagá-lo.
+     */
   });
 });
 
