@@ -1478,6 +1478,31 @@ function DetalheDoTrabalho({
           </p>
 
           {/*
+            EM QUE PÉ ESTÁ O DINHEIRO — ANTES DE ELE SAIR DE CASA.
+
+            Decisão de 17-09-2026: *«vê que está por pagar e decide»*. Não se
+            bloqueia o trabalho; dá-se-lhe a informação no momento em que ela
+            serve para alguma coisa, que é antes de pegar na furgoneta.
+
+            `null` é «a plataforma ainda não cobra» e não mostra nada — mostrar
+            «não pago» nesse estado era alarmar todos os profissionais de uma
+            vez por uma pergunta que ainda não existe.
+          */}
+          {pedido.clientePagou === true && (
+            <p className="mt-2.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold leading-relaxed text-emerald-900">
+              O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o
+              trabalho está feito.
+            </p>
+          )}
+          {pedido.clientePagou === false && (
+            <p className="mt-2.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-relaxed text-slate-700">
+              <strong className="font-semibold">O cliente ainda não pagou à CLYON.</strong> Pode ir
+              fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir
+              esperar, diga-nos e falamos com ele.
+            </p>
+          )}
+
+          {/*
             E AQUI GRAVA-SE O QUE FICOU COMBINADO.
 
             "Também deve ter a opção do pro corrigir a sua agenda, podendo

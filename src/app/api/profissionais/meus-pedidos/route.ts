@@ -16,6 +16,8 @@ import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
+import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
+import { negociacoesPagas } from "@/lib/pagamentos-na-base";
 
 export const runtime = "nodejs";
 // Nunca em cache: a sugestão de cada pedido depende dos custos que ele acabou
@@ -82,6 +84,19 @@ export async function GET(req: NextRequest) {
 
   try {
     const linhas = await negociacoesDoProfissional(sessao.providerId);
+
+    /*
+     * Quais é que o cliente já pagou — uma consulta para a lista toda.
+     *
+     * `null` enquanto a plataforma não cobrar: não há pagamentos por onde
+     * perguntar, e uma viagem ao MySQL por cada abertura do painel de cada
+     * profissional para não devolver nada é desperdício puro.
+     */
+    const pagos = A_PLATAFORMA_COBRA
+      ? new Set(
+          (await negociacoesPagas(linhas.map((l) => l.id))).keys(),
+        )
+      : null;
 
     const agora = new Date();
 
@@ -264,6 +279,18 @@ export async function GET(req: NextRequest) {
         pedidoId: l.pedidoId,
         estado: l.estado,
         fase,
+        /*
+         * O CLIENTE JÁ PAGOU ESTE TRABALHO À CLYON? — decisão de 17-09-2026.
+         *
+         * *«Vê que está por pagar e decide.»* O profissional continua a receber
+         * a morada e o contacto como sempre; o que muda é que passa a saber em
+         * que pé está o dinheiro ANTES de sair de casa, em vez de descobrir
+         * depois que o valor lhe ficou em «por cobrar».
+         *
+         * `null` quando a plataforma ainda não cobra: aí a pergunta não existe,
+         * e o ecrã não mostra nada — que é diferente de mostrar «não pago».
+         */
+        clientePagou: pagos == null ? null : pagos.has(l.id),
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,

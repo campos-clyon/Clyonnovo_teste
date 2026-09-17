@@ -8,6 +8,15 @@ export type Pedido = {
   pedidoId: number;
   estado: string;
   fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
+  /**
+   * O CLIENTE já pagou este trabalho À CLYON. `null` = a pergunta não existe.
+   *
+   * Nulo enquanto a plataforma não cobrar — e nulo não é «não pagou». Um é
+   * «ainda não há pagamentos nesta plataforma», o outro é «este cliente não
+   * pagou». Mostrar o primeiro como o segundo alarmava todos os profissionais
+   * de uma vez.
+   */
+  clientePagou?: boolean | null;
   diasAteLibertar: number | null;
   provaJson: string | null;
   /** O JSON das propostas, tal como vem da base. */
