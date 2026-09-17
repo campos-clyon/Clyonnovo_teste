@@ -209,6 +209,27 @@ async function garantirTabelas() {
   prontas = true;
 }
 
+/**
+ * ⚠️ UM INTEIRO PARA IR DENTRO DO SQL — porque `LIMIT ?` NÃO FUNCIONA.
+ *
+ * O `pool.execute` do mysql2 usa instruções preparadas, e o MySQL não aceita
+ * marcadores em `LIMIT` nem em `INTERVAL ? MINUTE`. Não falha a compilar nem
+ * avisa: rebenta em produção com «Incorrect arguments to mysqld_stmt_execute»,
+ * e o ecrã diz só «Não foi possível ler os pagamentos».
+ *
+ * Foi exactamente o que aconteceu a 17-09-2026 — e o resto de `db.ts` já fazia
+ * isto assim há meses. Escrevi as consultas novas sem olhar para o lado.
+ *
+ * Interpolar é seguro AQUI e só aqui: o valor passa por `Math.floor` e por um
+ * tecto, e o que sai desta função é sempre um número. Nunca se faça isto com
+ * nada que venha de fora.
+ */
+function inteiro(v: number, minimo: number, maximo: number): number {
+  const n = Math.floor(Number(v));
+  if (!Number.isFinite(n)) return minimo;
+  return Math.max(minimo, Math.min(maximo, n));
+}
+
 /** O MySQL devolve DECIMAL como texto. Um `Number` esquecido soma «10»+«5»=«105». */
 function numero(v: unknown): number | null {
   if (v == null) return null;
@@ -584,10 +605,9 @@ export async function pendentesParaSondar(
       WHERE estado = 'pendente'
         AND metodo = 'multibanco'
         AND referencia IS NOT NULL
-        AND criadoEm <= DATE_SUB(NOW(), INTERVAL ? MINUTE)
+        AND criadoEm <= DATE_SUB(NOW(), INTERVAL ${inteiro(minutosMinimos, 1, 10_080)} MINUTE)
       ORDER BY criadoEm ASC
-      LIMIT ?`,
-    [Math.max(1, Math.floor(minutosMinimos)), Math.max(1, Math.floor(limite))],
+      LIMIT ${inteiro(limite, 1, 200)}`,
   )) as any[];
   return (linhas as Record<string, unknown>[]).map(comoPagamento);
 }
@@ -641,8 +661,7 @@ export async function ultimosPagamentos(limite = 25): Promise<Pagamento[]> {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
-    "SELECT * FROM pagamentos ORDER BY id DESC LIMIT ?",
-    [Math.max(1, Math.floor(limite))],
+    `SELECT * FROM pagamentos ORDER BY id DESC LIMIT ${inteiro(limite, 1, 200)}`,
   )) as any[];
   return (linhas as Record<string, unknown>[]).map(comoPagamento);
 }
@@ -680,8 +699,7 @@ export async function avisosPorAplicar(limite = 25): Promise<AvisoPorAplicar[]> 
        FROM avisosDoEupago
       WHERE aplicado = 0
       ORDER BY recebidoEm DESC
-      LIMIT ?`,
-    [Math.max(1, Math.floor(limite))],
+      LIMIT ${inteiro(limite, 1, 200)}`,
   )) as any[];
   return (linhas as Record<string, unknown>[]).map((l) => ({
     id: Number(l.id),

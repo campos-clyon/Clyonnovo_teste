@@ -64,7 +64,19 @@ export async function GET(req: NextRequest) {
       avisos,
     });
   } catch (error) {
+    /*
+     * A MENSAGEM DIZ O QUE FALHOU, e não só que falhou.
+     *
+     * «Não foi possível ler os pagamentos» é uma parede: quem a lê fica sem
+     * saber por onde começar, e a única pista ficava num registo do servidor a
+     * que ninguém chega de um telemóvel. Isto é uma rota de administração — o
+     * detalhe vai para quem já está autenticado, e poupou-me a adivinhar.
+     */
     console.error("[admin/pagamentos]", error);
-    return NextResponse.json({ error: "Não foi possível ler os pagamentos." }, { status: 500 });
+    const porque = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { error: "Não foi possível ler os pagamentos.", detalhe: porque.slice(0, 300) },
+      { status: 500 },
+    );
   }
 }

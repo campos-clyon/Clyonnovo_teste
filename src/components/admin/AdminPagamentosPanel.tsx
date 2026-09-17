@@ -110,7 +110,9 @@ export default function AdminPagamentosPanel() {
         });
         const d = await r.json();
         if (!r.ok) {
-          setErro(d.error ?? "Não foi possível ler.");
+          // O detalhe vem junto, e é ele que diz por onde começar. Ver a nota
+          // na rota: isto é backoffice, não um ecrã de cliente.
+          setErro([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível ler.");
           return;
         }
         setEstado(d);
