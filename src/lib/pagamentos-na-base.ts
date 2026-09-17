@@ -91,6 +91,17 @@ export type Pagamento = {
    * eram indistinguíveis daqui a seis meses.
    */
   comFactura: boolean;
+  /**
+   * Um pagamento a sério, feito para PROVAR a integração antes de a cobrança
+   * abrir a toda a gente. Ver `podeCobrar` em `eupago.ts`.
+   *
+   * Fica marcado porque o dinheiro é real e entra na conta como qualquer
+   * outro. Sem esta coluna, daqui a três meses ninguém distingue os euros de
+   * teste dos euros de clientes — e quem tentar conciliar não percebe de onde
+   * vieram. NÃO se esconde dos totais: o dinheiro está lá, e uma conciliação
+   * que não bate com o extracto do euPago não serve para nada.
+   */
+  deTeste: boolean;
   /** O que o euPago confirmou ter recebido. */
   valorPago: number | null;
   /** O que o euPago cobrou pela operação. Sai da parte da CLYON. */
@@ -126,6 +137,7 @@ async function garantirTabelas() {
       ambiente       VARCHAR(10) NOT NULL,
       valor          DECIMAL(10,2) NOT NULL,
       comFactura     TINYINT(1) NOT NULL DEFAULT 0,
+      deTeste        TINYINT(1) NOT NULL DEFAULT 0,
       valorPago      DECIMAL(10,2) NULL DEFAULT NULL,
       comissaoEupago DECIMAL(10,2) NULL DEFAULT NULL,
       referencia     VARCHAR(40) NULL DEFAULT NULL,
@@ -175,6 +187,25 @@ async function garantirTabelas() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  /*
+   * As colunas que nasceram depois da tabela.
+   *
+   * `CREATE TABLE IF NOT EXISTS` não acrescenta nada a uma tabela que já
+   * existe — e esta já existe em produção desde a primeira vez que alguém
+   * abriu o painel. Uma tentativa falhada por «coluna duplicada» é uma ida ao
+   * MySQL por arranque a frio, e só por arranque a frio: `prontas` guarda o
+   * resto.
+   */
+  for (const sql of [
+    "ALTER TABLE pagamentos ADD COLUMN deTeste TINYINT(1) NOT NULL DEFAULT 0",
+  ]) {
+    try {
+      await pool.execute(sql);
+    } catch {
+      // Já lá estava. É o caso normal a partir da segunda vez.
+    }
+  }
+
   prontas = true;
 }
 
@@ -196,6 +227,7 @@ function comoPagamento(l: Record<string, unknown>): Pagamento {
     ambiente: String(l.ambiente) as Ambiente,
     valor: numero(l.valor) ?? 0,
     comFactura: Number(l.comFactura) === 1,
+    deTeste: Number(l.deTeste) === 1,
     valorPago: numero(l.valorPago),
     comissaoEupago: numero(l.comissaoEupago),
     referencia: (l.referencia as string) ?? null,
@@ -228,6 +260,8 @@ export async function abrirPagamento(d: {
   ambiente: Ambiente;
   valor: number;
   comFactura: boolean;
+  /** Dinheiro a sério, mas para provar a integração. Ver `podeCobrar`. */
+  deTeste?: boolean;
   telemovel?: string | null;
   expiraEm?: Date | null;
 }): Promise<number> {
@@ -238,8 +272,8 @@ export async function abrirPagamento(d: {
   const [r] = (await pool.execute(
     `INSERT INTO pagamentos
        (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,
-        telemovel, expiraEm)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        deTeste, telemovel, expiraEm)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       d.negociacaoId,
       d.pedidoId,
@@ -248,6 +282,7 @@ export async function abrirPagamento(d: {
       d.ambiente,
       d.valor,
       d.comFactura ? 1 : 0,
+      d.deTeste ? 1 : 0,
       d.telemovel ?? null,
       d.expiraEm ? toMySQLDateTime(d.expiraEm) : null,
     ],

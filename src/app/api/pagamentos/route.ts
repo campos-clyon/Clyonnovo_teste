@@ -107,7 +107,20 @@ export async function GET(req: NextRequest) {
      * servidor. Por isso a resposta di-lo, e o ecrã decide-se com ela.
      */
     const conf = configuracaoDoEupago(process.env);
-    const disponivel = conf.ok && podeCobrar(conf.config, A_PLATAFORMA_COBRA).pode;
+    const disponivel =
+      conf.ok &&
+      podeCobrar(conf.config, A_PLATAFORMA_COBRA, {
+        email: acesso.trabalho.emailDoCliente,
+        // O valor mais alto dos dois: se o tecto de teste travar o com
+        // factura, é melhor o ecrã não aparecer do que aparecer e falhar
+        // quando ele escolher a factura.
+        valor: quantoOClientePaga(
+          acesso.trabalho.acordado,
+          acesso.trabalho.regime,
+          acesso.trabalho.taxas,
+          true,
+        ),
+      }).pode;
 
     return NextResponse.json({
       disponivel,
@@ -163,7 +176,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Escolha MB WAY ou Multibanco." }, { status: 400 });
   }
 
-  // ── A porta ──────────────────────────────────────────────────────────────
   const conf = configuracaoDoEupago(process.env);
   if (!conf.ok) {
     console.error("[pagamentos] sem configuração:", conf.falta);
@@ -172,15 +184,14 @@ export async function POST(req: NextRequest) {
       { status: 503 },
     );
   }
-  const porta = podeCobrar(conf.config, A_PLATAFORMA_COBRA);
-  if (!porta.pode) {
-    console.warn("[pagamentos] porta fechada:", porta.porque);
-    return NextResponse.json(
-      { error: "Os pagamentos no site ainda não estão disponíveis." },
-      { status: 503 },
-    );
-  }
 
+  /*
+   * O ACESSO VEM ANTES DA PORTA, e a ordem mudou de propósito (17-09-2026).
+   *
+   * Desde que existe o portão de testador, a porta já não responde a uma
+   * pergunta geral — responde sobre ESTA pessoa e ESTE valor. Só se sabe quem
+   * está a pagar depois de confirmar que o trabalho é dela.
+   */
   const acesso = await trabalhoQueSePodePagar(Number(corpo.pedidoId), Number(corpo.negociacaoId), {
     token: corpo.token,
     email: await quemEstaAPagar(req),
@@ -190,6 +201,20 @@ export async function POST(req: NextRequest) {
 
   const comFactura = corpo.comFactura === true;
   const valor = quantoOClientePaga(t.acordado, t.regime, t.taxas, comFactura);
+
+  // ── A porta ──────────────────────────────────────────────────────────────
+  const porta = podeCobrar(conf.config, A_PLATAFORMA_COBRA, {
+    email: t.emailDoCliente,
+    valor,
+  });
+  if (!porta.pode) {
+    console.warn("[pagamentos] porta fechada:", porta.porque);
+    return NextResponse.json(
+      { error: "Os pagamentos no site ainda não estão disponíveis." },
+      { status: 503 },
+    );
+  }
+
   const recusa = porqueNaoPodeCobrar(metodo, valor);
   if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
 
@@ -261,6 +286,9 @@ export async function POST(req: NextRequest) {
       ambiente: conf.config.ambiente,
       valor,
       comFactura,
+      // Dinheiro a sério, mas para provar a integração. Fica marcado para que
+      // daqui a três meses se saiba de onde vieram estes euros.
+      deTeste: porta.modo === "teste",
       telemovel,
       expiraEm,
     });

@@ -93,7 +93,27 @@ export type ConfiguracaoDoEupago = {
   base: string;
   /** O segredo do HMAC dos webhooks. Gerado por nós no backoffice do euPago. */
   segredoDoWebhook: string | null;
+  /** Os emails que podem ser cobrados a sério antes de a cobrança abrir. */
+  emailsDeTeste: string[];
 };
+
+/**
+ * O TECTO DE UM PAGAMENTO DE TESTE, em euros.
+ *
+ * Um teste prova-se com um euro. Este número existe para que um engano — o
+ * email de teste a cair num pedido verdadeiro de 300 € — seja recusado em vez
+ * de cobrado. É a diferença entre um erro de 1 € e um erro que se tem de
+ * devolver ao cliente com um pedido de desculpas.
+ */
+export const MAXIMO_DE_TESTE = 5;
+
+/** Emails, em minúsculas e sem espaços. Vazio quando não há nenhum. */
+function listaDeEmails(bruto: string | undefined): string[] {
+  return (bruto ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.includes("@"));
+}
 
 /**
  * A configuração, ou a razão pela qual não há nenhuma.
@@ -133,6 +153,7 @@ export function configuracaoDoEupago(
       ambiente,
       base: BASE_DO_EUPAGO[ambiente],
       segredoDoWebhook: env.EUPAGO_WEBHOOK_SEGREDO?.trim() || null,
+      emailsDeTeste: listaDeEmails(env.EUPAGO_EMAILS_DE_TESTE),
     },
   };
 }
@@ -148,20 +169,72 @@ export function configuracaoDoEupago(
  * Na sandbox não há dinheiro nenhum, e por isso a porta está sempre aberta —
  * é o que permite provar a integração toda antes de o interruptor mexer.
  */
+export type Cobranca =
+  | {
+      pode: true;
+      /**
+       * `sandbox` não é dinheiro. `aberta` é o produto a funcionar. `teste` é
+       * uma excepção nomeada — dinheiro a sério, de quem sabe que está a
+       * testar, com tecto.
+       */
+      modo: "sandbox" | "aberta" | "teste";
+    }
+  | { pode: false; porque: string };
+
 export function podeCobrar(
   config: ConfiguracaoDoEupago,
   aPlataformaCobra: boolean,
-): { pode: true } | { pode: false; porque: string } {
-  if (config.ambiente === "sandbox") return { pode: true };
-  if (!aPlataformaCobra) {
-    return {
-      pode: false,
-      porque:
-        "Em produção e com A_PLATAFORMA_COBRA a falso: os ecrãs dizem ao cliente " +
-        "que paga ao profissional no fim, e cobrá-lo agora seria contrariá-los.",
-    };
+  /**
+   * Quem vai pagar e quanto. Sem isto, só se sabe responder às duas perguntas
+   * gerais — e o portão de testador é sobre uma pessoa em concreto.
+   */
+  quem?: { email?: string | null; valor?: number },
+): Cobranca {
+  if (config.ambiente === "sandbox") return { pode: true, modo: "sandbox" };
+  if (aPlataformaCobra) return { pode: true, modo: "aberta" };
+
+  /*
+   * O PORTÃO DE TESTADOR — 17-09-2026, e nasceu de uma objecção certa.
+   *
+   * *«Temos a conta principal validada pelo euPago e vamos usar a demo? Já
+   * tentámos antes e não funcionou.»*
+   *
+   * E a objecção era boa, por uma razão que eu não tinha pesado: **a sandbox
+   * não consegue provar o que mais importa.** Ninguém paga uma referência de
+   * demonstração num multibanco verdadeiro nem confirma um MB WAY de
+   * demonstração no telemóvel — e é precisamente o pagamento a sério que
+   * produz o webhook assinado a sério que este código tem de saber verificar.
+   * A sandbox prova que a chave serve. Mais nada.
+   *
+   * Por isso abre-se em produção, mas só para uma pessoa nomeada e por um
+   * valor pequeno. O dono paga um euro a si próprio, o dinheiro entra na conta
+   * dele, e a cadeia inteira fica provada com as peças verdadeiras.
+   *
+   * DUAS CONDIÇÕES, E AS DUAS SÃO NECESSÁRIAS:
+   *   · o email tem de estar na lista, escrita à mão numa variável;
+   *   · o valor tem de caber no tecto, para um engano custar um euro e não
+   *     trezentos.
+   */
+  const email = quem?.email?.trim().toLowerCase();
+  if (email && config.emailsDeTeste.includes(email)) {
+    const valor = quem?.valor;
+    if (valor != null && valor > MAXIMO_DE_TESTE) {
+      return {
+        pode: false,
+        porque:
+          `Um pagamento de teste não pode passar de ${MAXIMO_DE_TESTE} € — ` +
+          `este é de ${valor.toFixed(2)} €. Use um pedido pequeno.`,
+      };
+    }
+    return { pode: true, modo: "teste" };
   }
-  return { pode: true };
+
+  return {
+    pode: false,
+    porque:
+      "Em produção e com A_PLATAFORMA_COBRA a falso: os ecrãs dizem ao cliente " +
+      "que paga ao profissional no fim, e cobrá-lo agora seria contrariá-los.",
+  };
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   BASE_DO_EUPAGO,
   DIAS_DE_PRAZO_DA_REFERENCIA,
+  MAXIMO_DE_TESTE,
   MAXIMO_POR_PAGAMENTO,
   MINIMO_MULTIBANCO,
   configuracaoDoEupago,
@@ -424,5 +425,98 @@ describe("o que se pede ao banco é o que o ecrã mostrou", () => {
 
     // E a parte da CLYON continua a ser 11 € — o IVA é do Estado, não nosso.
     expect(c.semIva - quantoOProfissionalRecebe(100)).toBe(11);
+  });
+});
+
+/**
+ * O PORTÃO DE TESTADOR — 17-09-2026.
+ *
+ * *«Temos a conta principal validada pelo euPago e vamos usar a demo? Já
+ * tentámos antes e não funcionou.»*
+ *
+ * A objecção era boa por uma razão que faltava pesar: **a sandbox não prova o
+ * que mais importa.** Ninguém paga uma referência de demonstração num
+ * multibanco verdadeiro nem confirma um MB WAY de demonstração no telemóvel — e
+ * é o pagamento a sério que produz o webhook assinado a sério.
+ *
+ * Por isso abre-se em produção, mas só para uma pessoa nomeada e por um valor
+ * pequeno. Estes testes são o contorno dessa excepção.
+ */
+describe("o portão de testador", () => {
+  const PRODUCAO = {
+    EUPAGO_API_KEY: "k",
+    EUPAGO_AMBIENTE: "producao",
+    EUPAGO_EMAILS_DE_TESTE: "dono@clyon.pt, outro@clyon.pt",
+  };
+
+  it("deixa passar quem está na lista, por um valor pequeno", () => {
+    const r = podeCobrar(configDe(PRODUCAO), false, { email: "dono@clyon.pt", valor: 1.05 });
+    expect(r.pode).toBe(true);
+    if (r.pode) expect(r.modo).toBe("teste");
+  });
+
+  it("não olha a maiúsculas nem a espaços no email", () => {
+    expect(
+      podeCobrar(configDe(PRODUCAO), false, { email: "  DONO@Clyon.PT " , valor: 1 }).pode,
+    ).toBe(true);
+  });
+
+  /*
+   * ⚠️ O TECTO É O QUE FAZ DE UM ENGANO UM ERRO DE UM EURO.
+   *
+   * O email de teste a cair num pedido verdadeiro de 300 € tem de ser
+   * recusado — senão cobra-se um cliente a sério por acidente, e devolve-se
+   * com um pedido de desculpas.
+   */
+  it("recusa um valor acima do tecto, mesmo a um testador", () => {
+    const r = podeCobrar(configDe(PRODUCAO), false, { email: "dono@clyon.pt", valor: 318.45 });
+    expect(r.pode).toBe(false);
+    if (!r.pode) expect(r.porque).toContain(String(MAXIMO_DE_TESTE));
+  });
+
+  it("no limite exacto passa", () => {
+    expect(
+      podeCobrar(configDe(PRODUCAO), false, { email: "dono@clyon.pt", valor: MAXIMO_DE_TESTE })
+        .pode,
+    ).toBe(true);
+  });
+
+  it("quem não está na lista continua fechado", () => {
+    for (const quem of [
+      { email: "cliente@gmail.com", valor: 1 },
+      { email: null, valor: 1 },
+      undefined,
+    ]) {
+      const r = podeCobrar(configDe(PRODUCAO), false, quem);
+      expect(r.pode, JSON.stringify(quem)).toBe(false);
+    }
+  });
+
+  /*
+   * A variável esquecida não pode abrir nada. É o mesmo princípio da
+   * `EUPAGO_AMBIENTE`: o valor por omissão de uma coisa que mexe em dinheiro
+   * tem de ser o que não cobra a ninguém.
+   */
+  it("sem a variável, o portão nem existe", () => {
+    const c = configDe({ EUPAGO_API_KEY: "k", EUPAGO_AMBIENTE: "producao" });
+    expect(c.emailsDeTeste).toEqual([]);
+    expect(podeCobrar(c, false, { email: "dono@clyon.pt", valor: 1 }).pode).toBe(false);
+  });
+
+  it("lixo na lista não vira email", () => {
+    const c = configDe({ ...PRODUCAO, EUPAGO_EMAILS_DE_TESTE: " , sem-arroba , ,, " });
+    expect(c.emailsDeTeste).toEqual([]);
+  });
+
+  it("com a cobrança aberta, o modo é «aberta» e a lista deixa de contar", () => {
+    const r = podeCobrar(configDe(PRODUCAO), true, { email: "qualquer@gmail.com", valor: 999 });
+    expect(r.pode).toBe(true);
+    if (r.pode) expect(r.modo).toBe("aberta");
+  });
+
+  it("em sandbox o modo é «sandbox», e não há tecto nenhum", () => {
+    const r = podeCobrar(configDe(SANDBOX), false, { email: "qualquer@gmail.com", valor: 999 });
+    expect(r.pode).toBe(true);
+    if (r.pode) expect(r.modo).toBe("sandbox");
   });
 });

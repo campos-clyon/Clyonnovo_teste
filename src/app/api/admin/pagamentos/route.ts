@@ -50,6 +50,13 @@ export async function GET(req: NextRequest) {
             temSegredoDoWebhook: Boolean(conf.config.segredoDoWebhook),
             aberta: podeCobrar(conf.config, A_PLATAFORMA_COBRA).pode,
             plataformaCobra: A_PLATAFORMA_COBRA,
+            /*
+             * Quantos emails podem pagar a sério antes de a cobrança abrir.
+             * O NÚMERO e não a lista: quem administra precisa de saber que o
+             * portão está aberto e para quantos, não de ver emails num ecrã
+             * que se mostra a quem entra no backoffice.
+             */
+            testadores: conf.config.emailsDeTeste.length,
           }
         : { configurado: false, falta: conf.falta, plataformaCobra: A_PLATAFORMA_COBRA },
       resumo,

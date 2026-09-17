@@ -25,6 +25,7 @@ type Ligacao = {
   temSegredoDoWebhook?: boolean;
   aberta?: boolean;
   plataformaCobra: boolean;
+  testadores?: number;
 };
 
 type Pagamento = {
@@ -221,6 +222,17 @@ export default function AdminPagamentosPanel() {
                   A_PLATAFORMA_COBRA ligado. Os ecrãs dizem-lhe hoje que paga ao profissional no
                   fim.
                 </span>
+              </p>
+            )}
+            {/*
+              O portão de testador é uma excepção nomeada, e uma excepção que
+              se esquece aberta deixa de ser excepção. Por isso aparece sempre
+              que existe — e some sozinha quando a variável for apagada.
+            */}
+            {!ligacao.aberta && (ligacao.testadores ?? 0) > 0 && (
+              <p className="text-cyan-300">
+                Portão de testador ABERTO para {ligacao.testadores} email(s) — esses pagam a sério,
+                até {5} € por pagamento. Apague a EUPAGO_EMAILS_DE_TESTE quando acabar de testar.
               </p>
             )}
           </div>

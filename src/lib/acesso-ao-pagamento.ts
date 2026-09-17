@@ -32,6 +32,13 @@ export type TrabalhoAPagar = {
   taxas: Taxas;
   /** O telemóvel que o cliente deixou no pedido, para sugerir no MB WAY. */
   telefoneDoCliente: string | null;
+  /**
+   * O email de quem pediu. Decide o portao de testador -- ver `podeCobrar`.
+   *
+   * NAO sai desta funcao para ecra nenhum: e o pedido do cliente, e quem o ve
+   * ja o conhece. Serve so para a decisao do lado do servidor.
+   */
+  emailDoCliente: string | null;
 };
 
 export type Acesso =
@@ -108,6 +115,7 @@ export async function trabalhoQueSePodePagar(
       taxas: taxasDaNegociacao(linha),
       telefoneDoCliente:
         ((pedido as { contactPhone?: string | null }).contactPhone ?? "").trim() || null,
+      emailDoCliente: (pedido.contactEmail ?? "").trim().toLowerCase() || null,
     },
   };
 }
