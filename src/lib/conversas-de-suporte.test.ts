@@ -355,7 +355,13 @@ describe("os três canais que não têm outro sítio", () => {
      * isto veio curar volta pela porta do lado.
      */
     expect(get.match(/catch \(e\)/g)?.length).toBe(3);
-    expect(get).toContain("ordenarConversas(conversas)");
+    /*
+     * A ORDEM APLICA-SE AO QUE SE MOSTRA — 17-09-2026, quando apareceu o
+     * apagar. A lista passa por `semOsApagados` antes de ser ordenada (ou por
+     * `soOsApagados`, na papeleira); o que este teste guarda é que continua a
+     * sair ordenada, e não a forma exacta da chamada.
+     */
+    expect(get).toContain("ordenarConversas(semOsApagados(conversas, apagados))");
   });
 
   it("um ticket da app não finge ser um pedido deste painel", () => {

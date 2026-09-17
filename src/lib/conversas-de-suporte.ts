@@ -237,6 +237,93 @@ export function chaveDaConversa(origem: OrigemDaConversa, id: string | number): 
   return `${origem}:${id}`;
 }
 
+/* ── APAGAR ─────────────────────────────────────────────────────────────── */
+
+/**
+ * APAGAR AQUI É TIRAR DA CAIXA DE ENTRADA, E NÃO DESTRUIR O REGISTO.
+ *
+ * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
+ *
+ * Esta caixa não é dona de nada: é uma VISTA sobre três sítios que já
+ * existiam antes dela — o `historyJson` de um pedido, a tabela de ajuda da
+ * plataforma e os tickets da app. Um DELETE a sério aqui apagava a linha do
+ * histórico de um pedido, que é o registo de operações desse pedido e a prova
+ * do que foi dito ao cliente; e do lado dele a mensagem continuava a existir
+ * na mesma, porque a conversa é dele também.
+ *
+ * Por isso apagar é ESCONDER DESTE ECRÃ, com o nome de quem o fez e a data.
+ * Resolve o que ele quer resolver — as conversas de teste a ocupar a lista —
+ * sem apagar o que ninguém pediu para apagar, e com volta atrás.
+ *
+ * A mesma mecânica serve a conversa inteira e uma mensagem só: a chave da
+ * conversa é `pedido:133`, a de uma mensagem é `pedido:133#<marca>`.
+ */
+
+/**
+ * A MARCA DE UMA MENSAGEM, para se poder apagar uma sem apagar as outras.
+ *
+ * As mensagens não têm identificador: são entradas de um array, num JSON, em
+ * três formatos diferentes. Guardar a POSIÇÃO seria frágil — basta uma
+ * entrada nova mais acima e a marca passa a apontar para outra frase — e a
+ * frase errada apagada é pior do que não haver botão nenhum.
+ *
+ * Então a marca é feita do que a mensagem É: a hora mais o texto, resumidos
+ * num número (FNV-1a, 32 bits). Duas mensagens iguais, escritas no mesmo
+ * segundo, na mesma conversa, teriam a mesma marca — e nesse caso apagar uma
+ * apaga a outra. É o único engano possível aqui, e é aceitável: são a mesma
+ * frase repetida.
+ */
+export function marcaDaMensagem(m: MensagemDaConversa): string {
+  const cru = `${String(m.quando)}|${m.texto}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < cru.length; i += 1) {
+    h ^= cru.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/** O endereço de UMA mensagem: a conversa dela, e a marca. */
+export function chaveDaMensagem(chaveDaConversa: string, m: MensagemDaConversa): string {
+  return `${chaveDaConversa}#${marcaDaMensagem(m)}`;
+}
+
+/**
+ * AS CONVERSAS SEM O QUE FOI APAGADO.
+ *
+ * Puro de propósito: é aqui que se decide o que o ecrã mostra, e uma decisão
+ * dessas tem de poder ser interrogada sem base de dados nenhuma.
+ *
+ * Uma conversa que fique SEM MENSAGENS NENHUMAS depois de se apagarem as
+ * dela desaparece da lista. Deixá-la era deixar um nome e uma data a apontar
+ * para um fio vazio — e ninguém que apagou as três mensagens de um teste quer
+ * continuar a ver o teste na lista.
+ */
+export function semOsApagados(
+  conversas: ConversaDeSuporte[],
+  apagados: Iterable<string>,
+): ConversaDeSuporte[] {
+  const fora = apagados instanceof Set ? apagados : new Set(apagados);
+  if (fora.size === 0) return conversas;
+  const saida: ConversaDeSuporte[] = [];
+  for (const c of conversas) {
+    if (fora.has(c.chave)) continue;
+    const mensagens = c.mensagens.filter((m) => !fora.has(chaveDaMensagem(c.chave, m)));
+    if (mensagens.length === 0) continue;
+    saida.push(mensagens.length === c.mensagens.length ? c : { ...c, mensagens });
+  }
+  return saida;
+}
+
+/** Só as que foram apagadas por inteiro — é isto que a papeleira mostra. */
+export function soOsApagados(
+  conversas: ConversaDeSuporte[],
+  apagados: Iterable<string>,
+): ConversaDeSuporte[] {
+  const fora = apagados instanceof Set ? apagados : new Set(apagados);
+  return conversas.filter((c) => fora.has(c.chave));
+}
+
 export function lerChave(chave: string): { origem: OrigemDaConversa; id: string } | null {
   const i = String(chave).indexOf(":");
   if (i <= 0) return null;

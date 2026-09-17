@@ -3,10 +3,13 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   ajudaPorId,
   ajudasParaAdmin,
+  apagadosDoSuporte,
+  apagarDoSuporte,
   leiturasDoSuporte,
   marcarSuporteLido,
   appendOrderHistory,
   pedidosComConversa,
+  reporNoSuporte,
   responderPedidoDeAjuda,
 } from "@/lib/db";
 import {
@@ -15,6 +18,8 @@ import {
   lerChave,
   ordenarConversas,
   porResponder,
+  semOsApagados,
+  soOsApagados,
   type ConversaDeSuporte,
   type MensagemDaConversa,
 } from "@/lib/conversas-de-suporte";
@@ -245,7 +250,30 @@ export async function GET(req: NextRequest) {
     console.error("[suporte/conversas] app:", e instanceof Error ? e.message : e);
   }
 
-  const aEsperar = conversas.filter(porResponder).length;
+  /*
+   * O QUE FOI APAGADO SAI DAQUI — e o «apagado» é só deste ecrã.
+   *
+   * A caixa é uma vista sobre três sítios que não lhe pertencem; o que ela
+   * pode fazer é deixar de mostrar. Ver `apagadosDoSuporte`, que explica
+   * porque não é um DELETE a sério.
+   *
+   * A papeleira pede-se com `?papeleira=1` e mostra exactamente o contrário:
+   * o que está escondido, para se poder repor.
+   */
+  const apagados = new Set(await apagadosDoSuporte());
+  const papeleira = new URL(req.url).searchParams.get("papeleira") === "1";
+  const visiveis = papeleira
+    ? ordenarConversas(soOsApagados(conversas, apagados))
+    : ordenarConversas(semOsApagados(conversas, apagados));
+
+  /*
+   * A CONTAGEM CONTA O QUE SE VÊ.
+   *
+   * O selo do menu diz «tem N à espera de si». Contar uma conversa que ele
+   * apagou era mandá-lo procurar por uma coisa que não está na lista — e a
+   * única saída seria repô-la para o selo se calar.
+   */
+  const aEsperar = semOsApagados(conversas, apagados).filter(porResponder).length;
 
   /*
    * SÓ A CONTAGEM, quando é para o selo do menu.
@@ -270,7 +298,7 @@ export async function GET(req: NextRequest) {
    */
   const lidas = colab ? await leiturasDoSuporte(colab.id) : {};
 
-  return NextResponse.json({ conversas: ordenarConversas(conversas), aEsperar, lidas });
+  return NextResponse.json({ conversas: visiveis, aEsperar, lidas, papeleira });
 }
 
 /**
@@ -392,5 +420,60 @@ export async function PATCH(req: NextRequest) {
      */
     console.error("[suporte/conversas PATCH]", e);
     return NextResponse.json({ ok: false }, { status: 200 });
+  }
+}
+
+/**
+ * APAGAR UMA CONVERSA, OU UMA MENSAGEM — e repor.
+ *
+ * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
+ *
+ * Apagar aqui é TIRAR DESTA CAIXA. Não toca no histórico do pedido, que é o
+ * registo de operações e a prova do que foi dito; não toca no ticket da app
+ * nem na linha da ajuda; e do lado do cliente a conversa fica como estava,
+ * porque é dele também.
+ *
+ * Com `repor: true` volta atrás — e repor uma conversa traz-lhe as mensagens
+ * que tinham sido apagadas uma a uma. Um fio com buracos que ninguém se
+ * lembra de ter feito é pior do que o fio inteiro.
+ */
+export async function DELETE(req: NextRequest) {
+  const { err, colab } = await requireAdmin(req);
+  if (err) return err;
+
+  let corpo: { chave?: unknown; repor?: unknown };
+  try {
+    corpo = (await req.json()) as typeof corpo;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  const chave = typeof corpo.chave === "string" ? corpo.chave.trim() : "";
+  /*
+   * A chave tem de ser uma das nossas, seja a de uma conversa (`pedido:133`)
+   * ou a de uma mensagem (`pedido:133#4ab2xy`). Sem esta verificação, a
+   * tabela enchia-se do que quer que alguém mandasse no corpo — e uma
+   * papeleira que aceita tudo é uma tabela que cresce para sempre.
+   */
+  const daConversa = chave.includes("#") ? chave.slice(0, chave.indexOf("#")) : chave;
+  if (!chave || chave.length > 190 || !lerChave(daConversa)) {
+    return NextResponse.json({ error: "Conversa desconhecida." }, { status: 400 });
+  }
+
+  try {
+    if (corpo.repor === true) {
+      await reporNoSuporte(chave);
+      return NextResponse.json({ ok: true, reposta: true });
+    }
+    await apagarDoSuporte(chave, colab?.nome ?? null);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    /*
+     * Aqui o silêncio não serve. Ao contrário da marca de lida, isto é uma
+     * acção que ele pediu e está a ver: se não ficou gravado, a conversa
+     * volta a aparecer na próxima passagem e ele fica sem saber porquê.
+     */
+    console.error("[suporte/conversas DELETE]", e);
+    return NextResponse.json({ error: "Não foi possível apagar." }, { status: 500 });
   }
 }

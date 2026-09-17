@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { ArrowLeft, ExternalLink, Loader2, Search, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, RotateCcw, Search, Send, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   CORES_DA_ORIGEM,
   ROTULO_DA_ORIGEM,
+  chaveDaMensagem,
   lerChave,
   porLer,
   porResponder,
   type ConversaDeSuporte,
+  type MensagemDaConversa,
   type OrigemDaConversa,
 } from "@/lib/conversas-de-suporte";
 
@@ -86,6 +88,39 @@ function inicial(nome: string): string {
   return l || "?";
 }
 
+/**
+ * O caixote de uma mensagem. Aparece ao passar por cima, e no telemóvel fica.
+ *
+ * Componente à parte porque o fio desenha-o duas vezes — uma de cada lado do
+ * balão — e duas cópias do mesmo botão divergem à primeira alteração.
+ */
+function BotaoApagarMensagem({
+  chave,
+  m,
+  apagar,
+}: {
+  chave: string;
+  m: MensagemDaConversa;
+  apagar: (chave: string, pergunta: string) => void | Promise<void>;
+}) {
+  const resumo = m.texto.length > 60 ? `${m.texto.slice(0, 60)}…` : m.texto;
+  return (
+    <button
+      onClick={() =>
+        void apagar(
+          chave,
+          `Apagar esta mensagem da caixa de entrada?\n\n«${resumo}»\n\nSai daqui. Continua no histórico do pedido e do lado de quem a escreveu.`,
+        )
+      }
+      title="Apagar da caixa de entrada"
+      aria-label="Apagar esta mensagem da caixa de entrada"
+      className="shrink-0 rounded-lg p-1 text-slate-600 opacity-60 transition hover:bg-red-500/10 hover:text-red-300 md:opacity-0 md:group-hover:opacity-100"
+    >
+      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+    </button>
+  );
+}
+
 export default function AdminConversasPanel() {
   const { token, ready } = useAdminAuth();
   const [conversas, setConversas] = useState<ConversaDeSuporte[]>([]);
@@ -104,6 +139,16 @@ export default function AdminConversasPanel() {
    * à segunda.
    */
   const [lidas, setLidas] = useState<Record<string, string>>({});
+  /*
+   * A PAPELEIRA — o avesso desta lista.
+   *
+   * Apagar aqui é tirar da caixa de entrada, não destruir: o histórico do
+   * pedido fica, o ticket da app fica, e do lado do cliente a conversa é dele
+   * também. Sem um sítio onde ver o que foi escondido, «apagar» passava a ser
+   * um botão sem volta atrás — e um botão sem volta atrás é um botão em que
+   * ninguém carrega com confiança.
+   */
+  const [papeleira, setPapeleira] = useState(false);
   const fimDoFio = useRef<HTMLDivElement | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
@@ -119,10 +164,13 @@ export default function AdminConversasPanel() {
        * para as conversas de WhatsApp continuarem a aparecer depois de terem
        * saído do servidor.
        */
-      const res = await fetch("/api/admin/suporte/conversas", {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `/api/admin/suporte/conversas${papeleira ? "?papeleira=1" : ""}`,
+        {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const dados: Resposta = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Erro ao carregar as conversas.");
@@ -136,7 +184,7 @@ export default function AdminConversasPanel() {
     } finally {
       if (!silencioso) setACarregar(false);
     }
-  }, [token]);
+  }, [token, papeleira]);
 
   useEffect(() => {
     if (ready) carregar();
@@ -190,6 +238,67 @@ export default function AdminConversasPanel() {
       }
     },
     [token],
+  );
+
+  /**
+   * APAGAR — uma conversa inteira, ou uma mensagem só.
+   *
+   * Some do ecrã ANTES da rede responder, como a marca de lida: quem carrega
+   * no caixote espera ver a linha ir-se, e meio segundo de espera lê-se como
+   * «não funcionou». Se a gravação falhar, o `carregar()` do fim traz a
+   * conversa de volta — que é a forma certa de dizer que não ficou feito.
+   */
+  const apagar = useCallback(
+    async (chave: string, pergunta: string) => {
+      if (!token || !window.confirm(pergunta)) return;
+      setConversas((cs) =>
+        cs
+          .map((c) =>
+            c.chave === chave
+              ? null
+              : {
+                  ...c,
+                  mensagens: c.mensagens.filter((m) => chaveDaMensagem(c.chave, m) !== chave),
+                },
+          )
+          .filter((c): c is ConversaDeSuporte => c !== null && c.mensagens.length > 0),
+      );
+      if (chave === aberta) setAberta(null);
+      try {
+        const res = await fetch("/api/admin/suporte/conversas", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ chave }),
+        });
+        if (!res.ok) setErro("Não foi possível apagar.");
+      } catch {
+        setErro("Erro de rede.");
+      } finally {
+        await carregar(true);
+      }
+    },
+    [token, aberta, carregar],
+  );
+
+  /** Repor o que estava escondido. Traz as mensagens apagadas uma a uma. */
+  const repor = useCallback(
+    async (chave: string) => {
+      if (!token) return;
+      setConversas((cs) => cs.filter((c) => c.chave !== chave));
+      if (chave === aberta) setAberta(null);
+      try {
+        await fetch("/api/admin/suporte/conversas", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ chave, repor: true }),
+        });
+      } catch {
+        setErro("Erro de rede.");
+      } finally {
+        await carregar(true);
+      }
+    },
+    [token, aberta, carregar],
   );
 
   const lista = useMemo(() => {
@@ -270,11 +379,40 @@ export default function AdminConversasPanel() {
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-400">
-          {aEsperar === 0
-            ? "Ninguém à espera de resposta."
-            : `${aEsperar} à espera de resposta`}
+          {papeleira
+            ? "Conversas apagadas — repostas voltam à caixa de entrada."
+            : aEsperar === 0
+              ? "Ninguém à espera de resposta."
+              : `${aEsperar} à espera de resposta`}
         </p>
         <div className="flex items-center gap-2">
+          {/*
+            A PAPELEIRA, à vista.
+
+            Apagar sem um sítio onde ver o que foi apagado é um botão sem
+            volta atrás — e num botão sem volta atrás ninguém carrega com
+            confiança. Aqui apagar é só tirar da caixa: o histórico do pedido
+            fica, o ticket da app fica, e o que o cliente vê não muda.
+          */}
+          <button
+            onClick={() => {
+              setAberta(null);
+              setProcura("");
+              setPapeleira((v) => !v);
+            }}
+            className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition ${
+              papeleira
+                ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
+                : "border-slate-600 text-slate-400 hover:bg-slate-800"
+            }`}
+          >
+            {papeleira ? (
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {papeleira ? "Voltar à caixa" : "Apagadas"}
+          </button>
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
@@ -308,8 +446,9 @@ export default function AdminConversasPanel() {
 
       {conversas.length === 0 ? (
         <p className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-          Ainda ninguém escreveu. Quando alguém responder dentro de um pedido, pelo WhatsApp ou
-          pela plataforma, a conversa aparece aqui.
+          {papeleira
+            ? "Não há nada apagado. O que apagar da caixa de entrada fica aqui, e pode ser reposto."
+            : "Ainda ninguém escreveu. Quando alguém responder dentro de um pedido, pelo WhatsApp ou pela plataforma, a conversa aparece aqui."}
         </p>
       ) : (
         <div className="grid gap-3 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
@@ -328,16 +467,28 @@ export default function AdminConversasPanel() {
               const espera = porResponder(c);
               const novas = porLer(c, lidas[c.chave]);
               return (
-                <button
+                /*
+                  UM `div` À VOLTA, e não um botão dentro de outro.
+
+                  A linha inteira é um botão — abrir a conversa é o gesto
+                  normal. O caixote tem de ser outro botão, e um botão dentro
+                  de um botão é HTML inválido: o browser desfaz o encaixe e o
+                  clique passa a ir para o sítio errado. Ficam lado a lado,
+                  com o caixote por cima, na mesma caixa relativa.
+                */
+                <div
                   key={c.chave}
+                  className={`group relative border-b border-slate-800/80 ${
+                    c.chave === aberta ? "bg-white/[0.06]" : ""
+                  }`}
+                >
+                <button
                   onClick={() => {
                     setAberta(c.chave);
                     setTexto("");
                     void marcarLida(c.chave);
                   }}
-                  className={`flex w-full items-start gap-3 border-b border-slate-800/80 p-3 text-left transition hover:bg-white/[0.03] ${
-                    c.chave === aberta ? "bg-white/[0.06]" : ""
-                  }`}
+                  className="flex w-full items-start gap-3 p-3 text-left transition hover:bg-white/[0.03]"
                 >
                   <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-slate-200">
                     {inicial(c.quem)}
@@ -398,11 +549,42 @@ export default function AdminConversasPanel() {
                         )
                       )}
                     </span>
-                    <span className="mt-1 block truncate text-xs text-slate-400">
+                    <span className="mt-1 block truncate pr-7 text-xs text-slate-400">
                       {ultima ? (ultima.de === "clyon" ? "Você: " : "") + ultima.texto : "—"}
                     </span>
                   </span>
                 </button>
+
+                {/*
+                  Visível sempre no telemóvel, e só no rato do lado do rato:
+                  `group-hover` nunca dispara num ecrã táctil, e um botão que
+                  só aparece ao passar por cima é um botão que não existe em
+                  metade dos aparelhos.
+                */}
+                <button
+                  onClick={() =>
+                    papeleira
+                      ? void repor(c.chave)
+                      : void apagar(
+                          c.chave,
+                          `Apagar a conversa com ${c.quem}?\n\nSai desta caixa de entrada. O histórico do pedido e o que a pessoa vê do lado dela não mudam — e pode repô-la em «Apagadas».`,
+                        )
+                  }
+                  title={papeleira ? "Repor na caixa de entrada" : "Apagar da caixa de entrada"}
+                  aria-label={papeleira ? `Repor a conversa com ${c.quem}` : `Apagar a conversa com ${c.quem}`}
+                  className={`absolute bottom-2 right-2 rounded-lg p-1.5 opacity-60 transition md:opacity-0 md:group-hover:opacity-100 ${
+                    papeleira
+                      ? "text-slate-400 hover:bg-cyan-500/10 hover:text-cyan-300"
+                      : "text-slate-500 hover:bg-red-500/10 hover:text-red-300"
+                  }`}
+                >
+                  {papeleira ? (
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                </button>
+                </div>
               );
             })}
           </div>
@@ -457,8 +639,23 @@ export default function AdminConversasPanel() {
                   {fio.mensagens.map((m, i) => (
                     <div
                       key={i}
-                      className={`flex ${m.de === "clyon" ? "justify-end" : "justify-start"}`}
+                      className={`group flex items-center gap-1.5 ${
+                        m.de === "clyon" ? "justify-end" : "justify-start"
+                      }`}
                     >
+                      {/*
+                        O CAIXOTE DO LADO DE FORA DO BALÃO, e do lado de
+                        dentro do fio: à esquerda quando o balão está à
+                        direita, e ao contrário. Dentro do balão tapava o
+                        texto; encostado à borda do painel, ficava longe da
+                        mensagem a que diz respeito.
+
+                        Só nas nossas e nas dele — na papeleira as mensagens
+                        não se apagam uma a uma, repõe-se a conversa inteira.
+                      */}
+                      {m.de === "clyon" && !papeleira && (
+                        <BotaoApagarMensagem chave={chaveDaMensagem(fio.chave, m)} m={m} apagar={apagar} />
+                      )}
                       <div
                         className={`max-w-[85%] rounded-2xl px-3 py-2 ${
                           m.de === "clyon"
@@ -477,11 +674,35 @@ export default function AdminConversasPanel() {
                           {quando(m.quando)}
                         </p>
                       </div>
+                      {m.de !== "clyon" && !papeleira && (
+                        <BotaoApagarMensagem chave={chaveDaMensagem(fio.chave, m)} m={m} apagar={apagar} />
+                      )}
                     </div>
                   ))}
                   <div ref={fimDoFio} />
                 </div>
 
+                {/*
+                  NA PAPELEIRA NÃO SE RESPONDE. A caixa de escrever dá lugar
+                  ao botão de repor: responder a uma conversa que se apagou
+                  era mandá-la de volta pela porta das traseiras, e ficar sem
+                  saber se ela está na caixa ou não.
+                */}
+                {papeleira ? (
+                  <div className="border-t border-slate-800 p-3">
+                    <button
+                      onClick={() => void repor(fio.chave)}
+                      className="flex h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-500/50 bg-cyan-500/10 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                      Repor na caixa de entrada
+                    </button>
+                    <p className="mt-1.5 text-[11px] text-slate-500">
+                      Volta para a lista com as mensagens todas, incluindo as que foram apagadas
+                      uma a uma.
+                    </p>
+                  </div>
+                ) : (
                 <div className="border-t border-slate-800 p-3">
                   <div className="flex items-end gap-2">
                     <textarea
@@ -515,6 +736,7 @@ export default function AdminConversasPanel() {
                     {CAIXA_POR_ORIGEM[fio.origem].saida}
                   </p>
                 </div>
+                )}
               </>
             )}
           </div>

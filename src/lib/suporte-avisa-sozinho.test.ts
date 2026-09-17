@@ -27,7 +27,15 @@ const MENU = ler("src/components/admin/LegacyAdminClient.tsx");
 
 describe("a rota sabe dizer quantos esperam por nós", () => {
   it("conta as conversas por responder", () => {
-    expect(ROTA).toContain("const aEsperar = conversas.filter(porResponder).length");
+    /*
+     * E SÓ AS QUE ESTÃO À VISTA — 17-09-2026, quando apareceu o apagar.
+     *
+     * Contar uma conversa que ele apagou era mandá-lo procurar por uma coisa
+     * que não está na lista, e a única forma de calar o selo seria repô-la.
+     */
+    expect(ROTA).toContain(
+      "const aEsperar = semOsApagados(conversas, apagados).filter(porResponder).length",
+    );
   });
 
   it("e sabe responder só com o número, para o menu não arrastar a lista toda", () => {

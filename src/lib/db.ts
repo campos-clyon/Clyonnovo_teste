@@ -2608,6 +2608,106 @@ export async function marcarSuporteLido(
   );
 }
 
+/* ── A PAPELEIRA DO SUPORTE ─────────────────────────────────────────────── */
+
+/**
+ * O QUE FOI APAGADO DA CAIXA DE ENTRADA DO SUPORTE.
+ *
+ * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
+ *
+ * A caixa do suporte não é dona de nada: mostra o que está no `historyJson`
+ * de um pedido, na tabela da ajuda e nos tickets da app. Apagar a sério
+ * arrancava uma linha do histórico de um pedido — que é o registo de
+ * operações desse pedido, e a prova do que foi dito ao cliente — e do lado
+ * dele a mensagem ficava na mesma, porque a conversa é dele também.
+ *
+ * Então guarda-se aqui O QUE NÃO SE QUER VER, com quem o escondeu e quando.
+ * A lista é pequena por natureza (limpezas de teste, enganos) e a volta atrás
+ * é apagar a linha.
+ *
+ * A chave é a da conversa (`pedido:133`) ou a de uma mensagem
+ * (`pedido:133#4ab2xy`) — ver `chaveDaMensagem`.
+ */
+let suporteApagadoReady = false;
+async function ensureSuporteApagadoTable() {
+  if (suporteApagadoReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS suporteApagado (
+      chave     VARCHAR(190) NOT NULL,
+      apagadoEm DATETIME NOT NULL,
+      apagadoPor VARCHAR(120) NULL,
+      PRIMARY KEY (chave)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  suporteApagadoReady = true;
+}
+
+/** As chaves escondidas. Uma falha devolve lista vazia — mostra tudo. */
+export async function apagadosDoSuporte(): Promise<string[]> {
+  try {
+    await ensureSuporteApagadoTable();
+    const pool = await getPool();
+    if (!pool) return [];
+    const [linhas] = (await pool.execute("SELECT chave FROM suporteApagado")) as any[];
+    return (linhas as Array<{ chave: string }>).map((l) => String(l.chave));
+  } catch (e) {
+    /*
+     * O LADO SEGURO DO ENGANO É MOSTRAR A MAIS.
+     *
+     * Sem esta lista, uma conversa apagada volta a aparecer — chato, e
+     * visível. Ao contrário, uma falha a ler escondia conversas que ninguém
+     * mandou esconder, e ninguém dava por isso: é o género de avaria que só
+     * se descobre quando um cliente pergunta porque não lhe respondemos.
+     */
+    console.error("[apagadosDoSuporte]", e);
+    return [];
+  }
+}
+
+/** Esconde uma conversa, ou uma mensagem, da caixa de entrada do suporte. */
+export async function apagarDoSuporte(chave: string, por: string | null): Promise<void> {
+  await ensureSuporteApagadoTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `INSERT INTO suporteApagado (chave, apagadoEm, apagadoPor)
+     VALUES (?, NOW(), ?)
+     ON DUPLICATE KEY UPDATE apagadoEm = NOW(), apagadoPor = VALUES(apagadoPor)`,
+    [chave.slice(0, 190), (por ?? "").slice(0, 120) || null],
+  );
+}
+
+/**
+ * Volta a mostrar o que estava escondido.
+ *
+ * A conversa inteira arrasta consigo as mensagens dela: quem repõe uma
+ * conversa quer o fio como ele era, e não um fio com buracos que ele já não
+ * se lembra de ter feito.
+ */
+export async function reporNoSuporte(chave: string): Promise<void> {
+  await ensureSuporteApagadoTable();
+  const pool = await getPool();
+  if (!pool) return;
+  /*
+   * SEM `LIKE`, de propósito.
+   *
+   * O prefixo faz-se aqui e a base recebe igualdades. Um `LIKE` obrigava a
+   * escapar o `%` e o `_` da chave — hoje nenhuma os tem, e no dia em que
+   * tivesse, um `%` esvaziava a papeleira inteira sem ninguém perceber
+   * porquê. Esta tabela tem uma mão-cheia de linhas por natureza: são
+   * limpezas de testes e enganos, não é um registo que cresça.
+   */
+  const [linhas] = (await pool.execute("SELECT chave FROM suporteApagado")) as any[];
+  const alvos = (linhas as Array<{ chave: string }>)
+    .map((l) => String(l.chave))
+    .filter((k) => k === chave || k.startsWith(`${chave}#`));
+  if (alvos.length === 0) return;
+  const marcas = alvos.map(() => "?").join(", ");
+  await pool.execute(`DELETE FROM suporteApagado WHERE chave IN (${marcas})`, alvos);
+}
+
 export async function ajudasParaAdmin(estado?: string): Promise<PedidoDeAjudaNaBase[]> {
   await ensureAjudaTable();
   const pool = await getPool();
