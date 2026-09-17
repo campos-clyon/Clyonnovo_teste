@@ -1559,12 +1559,31 @@ export default function AdminNegociacoesPanel({
       <article
         key={p.id}
         id={`pedido-${p.id}`}
+        /*
+          O QUE ESTÁ ABERTO É AZUL, e ganha a tudo o resto.
+
+          "Mude a cor da borda do pedido que eu estiver com ele aberto para não
+          me confundir, pois fica tudo verde." — 17-09-2026.
+
+          O verde marcava duas coisas ao mesmo tempo — «concluído por ver» e
+          «tem proposta à espera de si» — e num bloco de dez pedidos à espera
+          era verde de cima a baixo. Aberto um deles, ele crescia para meio
+          ecrã com as negociações todas lá dentro, e a borda continuava igual à
+          dos outros: quem descia perdia de vista onde tinha entrado.
+
+          O azul não compete com nada nesta lista: o verde é o estado do
+          negócio e o azul é onde ELE está. Por isso vem primeiro na cadeia —
+          um pedido aberto deixa de mostrar o estado na borda, e não faz falta,
+          porque está aberto à frente dele com tudo escrito por dentro.
+        */
         className={`scroll-mt-24 rounded-2xl border bg-slate-900 p-4 shadow-sm ${
-          porVer
-            ? "border-emerald-400 ring-2 ring-emerald-400/40"
-            : espera
-              ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
-              : "border-slate-800"
+          aberto
+            ? "border-sky-400 ring-2 ring-sky-400/40"
+            : porVer
+              ? "border-emerald-400 ring-2 ring-emerald-400/40"
+              : espera
+                ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                : "border-slate-800"
         }`}
       >
         {/*
