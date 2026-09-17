@@ -2608,6 +2608,161 @@ export async function marcarSuporteLido(
   );
 }
 
+/* ── O SELO VERMELHO DE CADA SECÇÃO ─────────────────────────────────────── */
+
+/**
+ * ATÉ QUANDO É QUE ESTE COLABORADOR JÁ VIU CADA SECÇÃO.
+ *
+ * "Coloque todas as categorias para terem notificações como no supp, mas devem
+ * sumir ao abrir ou visualizar." — 17-09-2026.
+ *
+ * Uma marca por pessoa e por secção, como a do suporte: duas pessoas na mesma
+ * conta mantêm cada uma a sua, senão a primeira a abrir apagava o aviso à
+ * segunda — e a segunda nunca saberia que tinha entrado um pedido.
+ */
+let backofficeVistoReady = false;
+async function ensureBackofficeVistoTable() {
+  if (backofficeVistoReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS backofficeVisto (
+      colaboradorId INT NOT NULL,
+      seccao        VARCHAR(40) NOT NULL,
+      vistoEm       DATETIME NOT NULL,
+      PRIMARY KEY (colaboradorId, seccao)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  backofficeVistoReady = true;
+}
+
+export async function vistosDoBackoffice(
+  colaboradorId: number,
+): Promise<Record<string, string>> {
+  try {
+    await ensureBackofficeVistoTable();
+    const pool = await getPool();
+    if (!pool) return {};
+    const [linhas] = (await pool.execute(
+      "SELECT seccao, vistoEm FROM backofficeVisto WHERE colaboradorId = ?",
+      [colaboradorId],
+    )) as any[];
+    const saida: Record<string, string> = {};
+    for (const l of linhas as Array<{ seccao: string; vistoEm: Date | string }>) {
+      saida[String(l.seccao)] = toMySQLDateTime(new Date(l.vistoEm));
+    }
+    return saida;
+  } catch (e) {
+    console.error("[vistosDoBackoffice]", e);
+    return {};
+  }
+}
+
+/**
+ * Marca uma secção como vista AGORA.
+ *
+ * `NOW()` do MySQL e não a hora do browser: as linhas são gravadas com o
+ * relógio do servidor, e um portátil dois minutos adiantado marcava como
+ * vistas coisas que ainda não tinham chegado.
+ */
+export async function marcarSeccaoVista(
+  colaboradorId: number,
+  seccao: string,
+): Promise<void> {
+  await ensureBackofficeVistoTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `INSERT INTO backofficeVisto (colaboradorId, seccao, vistoEm)
+     VALUES (?, ?, NOW())
+     ON DUPLICATE KEY UPDATE vistoEm = NOW()`,
+    [colaboradorId, seccao.slice(0, 40)],
+  );
+}
+
+/**
+ * QUANTAS COISAS NOVAS HÁ EM CADA SECÇÃO, desde o instante que lhe for dado.
+ *
+ * Uma consulta por secção, e cada uma conta o que ALI é novidade — que não é
+ * a mesma coisa em todas:
+ *
+ *   · pedidos       — pedidos que entraram e ainda estão em jogo;
+ *   · profissionais — quem se inscreveu;
+ *   · agenda        — trabalhos marcados ou remarcados;
+ *   · whatsapp      — mensagens que ELES nos mandaram (as nossas não são aviso);
+ *   · carteiras     — trabalhos confirmados, que é quando o dinheiro mexe;
+ *   · levantamentos — pedidos de levantamento por processar.
+ *
+ * Cada uma no seu `try`: uma tabela em baixo apaga o número dela e não os dos
+ * outros. Um selo a menos é um problema pequeno; um menu que não desenha é um
+ * backoffice que não abre.
+ */
+export async function contarNovidades(
+  desde: Record<string, Date>,
+): Promise<Record<string, number>> {
+  const saida: Record<string, number> = {};
+  const pool = await getPool();
+  if (!pool) return saida;
+
+  const um = async (seccao: string, sql: string, params: unknown[]) => {
+    try {
+      const [linhas] = (await pool.execute(sql, params)) as any[];
+      saida[seccao] = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+    } catch (e) {
+      console.error(`[contarNovidades:${seccao}]`, e instanceof Error ? e.message : e);
+    }
+  };
+
+  await um(
+    "pedidos",
+    `SELECT COUNT(*) AS n FROM simulatorOrders
+      WHERE createdAt > ?
+        AND (status IS NULL OR status NOT IN ('arquivado','concluido','cancelado'))`,
+    [desde.pedidos],
+  );
+
+  await um(
+    "profissionais",
+    "SELECT COUNT(*) AS n FROM providers WHERE createdAt > ? AND isClyon = 0",
+    [desde.profissionais],
+  );
+
+  /*
+   * A agenda muda por duas vias — um trabalho novo marcado, ou um remarcado —
+   * e as duas interessam a quem a lê de manhã. `actualizadaEm` apanha as duas.
+   */
+  await um(
+    "agenda",
+    `SELECT COUNT(*) AS n FROM negociacoes
+      WHERE estado = 'acordada' AND dataCombinada IS NOT NULL AND actualizadaEm > ?`,
+    [desde.agenda],
+  );
+
+  /*
+   * Só as que vêm de fora. Contar as nossas punha o selo a acender por causa
+   * do que nós próprios acabámos de escrever.
+   */
+  await um(
+    "whatsapp",
+    "SELECT COUNT(*) AS n FROM whatsappMensagens WHERE direccao = 'in' AND criadoEm > ?",
+    [desde.whatsapp],
+  );
+
+  await um(
+    "carteiras",
+    "SELECT COUNT(*) AS n FROM negociacoes WHERE confirmadoEm IS NOT NULL AND confirmadoEm > ?",
+    [desde.carteiras],
+  );
+
+  await um(
+    "levantamentos",
+    "SELECT COUNT(*) AS n FROM levantamentos WHERE estado = 'pedido' AND createdAt > ?",
+    [desde.levantamentos],
+  );
+
+  return saida;
+}
+
 /* ── A PAPELEIRA DO SUPORTE ─────────────────────────────────────────────── */
 
 /**
@@ -6512,12 +6667,30 @@ export async function countSimulatorOrdersByStatus(): Promise<Record<string, num
     }
     
     
-    // Usar uma única query otimizada para contar tudo
+    /*
+     * «NOVOS» É O QUE NINGUÉM ABRIU **E AINDA ESTÁ EM JOGO**.
+     *
+     * "Diz que tem 3 pedidos novos mas se já foi visto tem que ficar em 0."
+     * — 17-09-2026. O cartão dizia 3 e a lista, com o filtro «Novos»
+     * escolhido, aparecia vazia.
+     *
+     * O `pendente_viewed` varria a tabela inteira — incluindo arquivados,
+     * concluídos e cancelados. E do outro lado, `pedidoNoFiltro` manda um
+     * arquivado para a prateleira dos arquivados e um concluído para a dos
+     * realizados, aconteça o que acontecer ao `viewedAt`. Ou seja: três
+     * pedidos que ninguém abriu, mas que já saíram da fila, ficavam a contar
+     * para sempre num cartão onde era impossível chegar a eles.
+     *
+     * Já tinha havido uma divergência entre este número e aquela lista, e a
+     * lição é a mesma: uma palavra, uma definição.
+     */
     const [countRows] = await pool.execute(
       `SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'pendente' THEN 1 ELSE 0 END) as pendente_status,
-        SUM(CASE WHEN viewedAt IS NULL THEN 1 ELSE 0 END) as pendente_viewed,
+        SUM(CASE WHEN viewedAt IS NULL
+                  AND (status IS NULL OR status NOT IN ('arquivado','concluido','cancelado'))
+                 THEN 1 ELSE 0 END) as pendente_viewed,
         SUM(CASE WHEN status = 'atribuido' THEN 1 ELSE 0 END) as atribuido,
         SUM(CASE WHEN status = 'em_analise' THEN 1 ELSE 0 END) as em_analise,
         SUM(CASE WHEN status = 'aprovado' THEN 1 ELSE 0 END) as aprovado,

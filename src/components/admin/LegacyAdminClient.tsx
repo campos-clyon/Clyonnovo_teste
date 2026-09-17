@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import { papelGuardadoNoBrowser } from "@/hooks/useAdminAuth";
@@ -20,6 +20,7 @@ import {
   type EstadoTicket,
 } from "@/lib/suporte";
 import ContasPanel from "@/components/admin/ContasPanel";
+import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
 import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
@@ -697,6 +698,17 @@ export default function ColaboradorAdminClient({
   const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
   const [tickets, setTickets] = useState<TicketSuporte[]>([]);
   const [ticketsPorTratar, setTicketsPorTratar] = useState(0);
+  /*
+   * O QUE ACONTECEU DESDE QUE ELE OLHOU, por secção.
+   *
+   * "Coloque todas as categorias para terem notificações como no supp, mas
+   * devem sumir ao abrir ou visualizar." — 17-09-2026.
+   *
+   * Diferente do selo do Suporte, e de propósito: aquele conta quem espera
+   * por resposta e só se apaga respondendo; este conta o que chegou e apaga-se
+   * por se abrir. As duas perguntas existem, e uma não responde à outra.
+   */
+  const [novidades, setNovidades] = useState<Record<string, number>>({});
   const [ticketsFiltro, setTicketsFiltro] = useState<"por_tratar" | "todos" | EstadoTicket>("por_tratar");
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketAberto, setTicketAberto] = useState<TicketDetalhe | null>(null);
@@ -1060,6 +1072,53 @@ export default function ColaboradorAdminClient({
     }
   };
 
+  /** Os selos do menu, numa chamada só. Falhar é ficar sem selos, e mais nada. */
+  const carregarNovidades = useCallback(async (authToken: string) => {
+    if (!authToken) return;
+    try {
+      const r = await fetch(`/api/admin/novidades?_=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const d = await r.json();
+      if (r.ok) setNovidades(d.novidades ?? {});
+    } catch {
+      /* Um selo a menos não é notícia para ninguém. */
+    }
+  }, []);
+
+  /**
+   * ABRIR É VER — e o número desaparece ANTES da rede responder.
+   *
+   * Quem carrega numa secção espera ver o selo ir-se. Meio segundo de espera
+   * pelo servidor lê-se como «não funcionou», e ao segundo dia ninguém
+   * acredita no número. A gravação vai a caminho; se falhar, o selo volta na
+   * passagem seguinte — que é a forma certa de o dizer.
+   */
+  const marcarSeccaoVista = useCallback(
+    (seccao: string) => {
+      if (!SECCOES_COM_AVISO.includes(seccao as never)) return;
+      setNovidades((n) => (n[seccao] ? { ...n, [seccao]: 0 } : n));
+      if (!token) return;
+      void fetch("/api/admin/novidades", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ seccao }),
+      }).catch(() => {});
+    },
+    [token],
+  );
+
+  /*
+   * A SECÇÃO ABERTA CONTA COMO VISTA, venha ela de um clique no menu ou de um
+   * link antigo. Preso ao `activeSection` e não ao `onClick` do botão: há
+   * mais de um caminho para lá chegar, e um selo que só se apaga por um deles
+   * é um selo que fica aceso sem razão.
+   */
+  useEffect(() => {
+    if (token) marcarSeccaoVista(activeSection);
+  }, [activeSection, token, marcarSeccaoVista]);
+
   const abrirTicket = async (id: string) => {
     if (!token) return;
     setTicketResposta("");
@@ -1422,6 +1481,26 @@ export default function ColaboradorAdminClient({
   );
 
   /*
+   * OS SELOS DAS OUTRAS SECÇÕES, na mesma batida partilhada.
+   *
+   * Uma chamada só para o menu inteiro — seis, uma por secção, era o género
+   * de coisa que se paga na factura e no tempo de resposta de toda a gente.
+   *
+   * Como o do suporte, NÃO está preso à secção aberta: um selo que só se
+   * actualiza quando se abre aquilo que ele anuncia não serve para nada.
+   */
+  useEffect(() => {
+    if (token) void carregarNovidades(token);
+  }, [token, carregarNovidades]);
+
+  useAutoRefresh(
+    () => {
+      if (token) void carregarNovidades(token);
+    },
+    { enabled: Boolean(token) },
+  );
+
+  /*
    * Os pedidos, à cabeça.
    *
    * Era «para o overview», e deixou de o ser: o Início passou a ter resumo
@@ -1679,6 +1758,19 @@ export default function ColaboradorAdminClient({
                         >
                           <Icon className="h-4 w-4 flex-shrink-0" />
                           <span className="truncate">{sectionLabels[item.id]}</span>
+                          {/*
+                            DOIS SELOS, E SÃO COISAS DIFERENTES.
+
+                            O do Suporte conta QUEM ESPERA POR RESPOSTA: é uma
+                            fila de trabalho e só se esvazia respondendo. O das
+                            outras secções conta O QUE CHEGOU DESDE QUE ELE
+                            OLHOU, e apaga-se por se abrir — "devem sumir ao
+                            abrir ou visualizar".
+
+                            Nunca aparecem os dois no mesmo item: o Suporte não
+                            está em `SECCOES_COM_AVISO`, precisamente porque já
+                            tinha o seu e é melhor.
+                          */}
                           {item.id === "suporte" && ticketsPorTratar > 0 && (
                             <span
                               className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
@@ -1687,6 +1779,16 @@ export default function ColaboradorAdminClient({
                               title={`${ticketsPorTratar} por tratar`}
                             >
                               {ticketsPorTratar}
+                            </span>
+                          )}
+                          {(novidades[item.id] ?? 0) > 0 && (
+                            <span
+                              className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                active ? "bg-white/25 text-white" : "bg-rose-500 text-white"
+                              }`}
+                              title={`${novidades[item.id]} desde a última vez que abriu`}
+                            >
+                              {novidades[item.id]! > 99 ? "99+" : novidades[item.id]}
                             </span>
                           )}
                         </button>
