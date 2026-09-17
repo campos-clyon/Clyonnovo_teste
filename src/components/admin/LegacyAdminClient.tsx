@@ -27,6 +27,7 @@ import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel"
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
+import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import { tService, tUrgency } from "@/lib/translations";
 import {
@@ -3293,6 +3294,28 @@ export default function ColaboradorAdminClient({
                   avanca quando derem exactamente o mesmo numero.
                 </p>
                 <AdminLivroPanel />
+              </div>
+
+              {/*
+                O QUE ENTROU PELO euPAGO.
+
+                Ao lado do livro porque sao as duas metades da mesma coisa: o
+                livro diz o que cada profissional tem a receber, e isto diz o
+                que o cliente ja pagou. Um dia encontram-se.
+
+                O numero que interessa aqui nao e o total recebido -- e o dos
+                avisos por aplicar. Cada um e dinheiro que se moveu do lado do
+                euPago e nao se moveu do nosso, e nenhum da erro em lado nenhum.
+              */}
+              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Pagamentos dos clientes
+                </p>
+                <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
+                  MB WAY e Multibanco, pelo euPago. Quem diz que um trabalho foi pago e o webhook
+                  deles — nunca o ecra do cliente.
+                </p>
+                <AdminPagamentosPanel />
               </div>
 
               {/* Navegação por abas */}

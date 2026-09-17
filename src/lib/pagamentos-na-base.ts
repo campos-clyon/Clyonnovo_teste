@@ -43,8 +43,35 @@ export type EstadoDoPagamento =
   /** O cliente pediu outro meio de pagamento para o mesmo trabalho. */
   | "substituido";
 
-/** Os que ainda podem vir a ser pagos. */
-export const ESTADOS_ABERTOS: EstadoDoPagamento[] = ["pendente"];
+/**
+ * ⚠️ OS ESTADOS EM QUE UM PAGAMENTO AINDA PODE SER PAGO — e não é só «pendente».
+ *
+ * Esta lista nasceu de um erro meu, e é o género de erro que só se vê a
+ * desenhar a corrida no papel:
+ *
+ *   o cliente pede MB WAY, paga, e o aviso vem a caminho;
+ *   impaciente, carrega em «pedir outra vez»;
+ *   nós fechamos o primeiro como `cancelado`;
+ *   o aviso chega — e já não encontra a linha pendente.
+ *
+ * O cliente ficava sem os 105 € e sem trabalho nenhum registado.
+ *
+ * O que manda é uma pergunta só: **isto foi fechado por NÓS ou por ELES?**
+ *
+ *   · `cancelado` fomos nós que desistimos de esperar. O banco dele não sabe
+ *     disso, e o dinheiro pode ter saído na mesma;
+ *   · `substituido` idem — e pior: uma referência Multibanco substituída
+ *     CONTINUA VÁLIDA no homebanking dele. É por aqui que entra o pagamento em
+ *     duplicado, e tem de entrar, para ser visto e devolvido;
+ *   · `expirado` foi o euPago a dizê-lo, e uma referência expirada não se paga;
+ *   · `falhado` nunca chegou a existir referência nenhuma;
+ *   · `pago` já está, e é o índice único que impede o resto.
+ */
+export const AINDA_PODE_SER_PAGO: EstadoDoPagamento[] = [
+  "pendente",
+  "cancelado",
+  "substituido",
+];
 
 export type Pagamento = {
   id: number;
@@ -385,12 +412,13 @@ export async function darPorPago(
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
+  const podeAinda = AINDA_PODE_SER_PAGO.map(() => "?").join(", ");
   try {
     const [r] = (await pool.execute(
       `UPDATE pagamentos
           SET estado = 'pago', negociacaoPaga = ?, trid = ?,
               valorPago = ?, comissaoEupago = ?, pagoEm = ?, erro = NULL
-        WHERE id = ? AND estado = 'pendente'`,
+        WHERE id = ? AND estado IN (${podeAinda})`,
       [
         negociacaoId,
         d.trid.slice(0, 60),
@@ -398,6 +426,7 @@ export async function darPorPago(
         d.comissao,
         toMySQLDateTime(d.quando ?? new Date()),
         pagamentoId,
+        ...AINDA_PODE_SER_PAGO,
       ],
     )) as any[];
 
@@ -411,7 +440,10 @@ export async function darPorPago(
       );
       return { feito: true };
     }
-    return { feito: false, porque: "O pagamento já não estava pendente." };
+    return {
+      feito: false,
+      porque: "O pagamento já estava fechado de uma forma que não admite pagamento.",
+    };
   } catch (e) {
     const codigo = (e as { code?: string })?.code;
     if (codigo === CHAVE_REPETIDA) {
@@ -490,11 +522,20 @@ export async function darPorReembolsado(
  * Os pendentes com idade — a matéria-prima da sondagem de recurso.
  *
  * O webhook é a fonte da verdade e não é de confiar: se o nosso servidor
- * estiver em baixo mais de 24 horas, o euPago desiste, e o cliente pagou e o
- * ecrã diz que não. Esta lista é o que se vai perguntar ao euPago, um a um.
+ * estiver em baixo mais de 24 horas, o euPago desiste, e fica um cliente que
+ * pagou com um ecrã a dizer que não pagou. Não há aviso nenhum a avisar que um
+ * aviso não chegou — por isso a pergunta tem de partir de cá.
  *
- * Só os que chegaram a ter referência: um pagamento sem referência nunca foi
- * pedido ao euPago e não há nada a perguntar sobre ele.
+ * ⚠️ SÓ MULTIBANCO, e é uma limitação e não uma escolha: o `multibanco/info`
+ * pergunta POR REFERÊNCIA, e uma operação MB WAY não tem referência que se
+ * consulte por aí. A consulta equivalente para MB WAY (`TRID Information`) usa
+ * OAuth, que é outro mecanismo e fica para quando fizer falta. Na prática dói
+ * pouco: o MB WAY resolve-se em cinco minutos ou não se resolve.
+ *
+ * E NÃO SE FECHA NADA POR IDADE. Um MB WAY antigo fica `pendente` para sempre
+ * de propósito: se o marcássemos expirado e o aviso de pagamento chegasse
+ * atrasado, já não havia linha onde o aplicar. O ecrã do cliente mostra-o como
+ * expirado pela data; a base guarda a porta aberta.
  */
 export async function pendentesParaSondar(
   minutosMinimos: number,
@@ -506,6 +547,7 @@ export async function pendentesParaSondar(
   const [linhas] = (await pool.execute(
     `SELECT * FROM pagamentos
       WHERE estado = 'pendente'
+        AND metodo = 'multibanco'
         AND referencia IS NOT NULL
         AND criadoEm <= DATE_SUB(NOW(), INTERVAL ? MINUTE)
       ORDER BY criadoEm ASC
@@ -513,6 +555,66 @@ export async function pendentesParaSondar(
     [Math.max(1, Math.floor(minutosMinimos)), Math.max(1, Math.floor(limite))],
   )) as any[];
   return (linhas as Record<string, unknown>[]).map(comoPagamento);
+}
+
+/** Os últimos, para o painel da CLYON. */
+export async function ultimosPagamentos(limite = 25): Promise<Pagamento[]> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT * FROM pagamentos ORDER BY id DESC LIMIT ?",
+    [Math.max(1, Math.floor(limite))],
+  )) as any[];
+  return (linhas as Record<string, unknown>[]).map(comoPagamento);
+}
+
+export type AvisoPorAplicar = {
+  id: number;
+  trid: string;
+  estado: string;
+  pagamentoId: number | null;
+  valor: number | null;
+  metodo: string | null;
+  nota: string | null;
+  recebidoEm: Date;
+};
+
+/**
+ * ⚠️ O QUE O euPAGO NOS DISSE E NÓS NÃO APLICÁMOS — a lista que tem de estar
+ * vazia.
+ *
+ * Cada linha aqui é dinheiro que se moveu do lado deles sem se mover do nosso:
+ * um pagamento em duplicado por devolver, um valor que não bate certo, um
+ * aviso de um pagamento que não existe. Nenhuma se resolve sozinha, e nenhuma
+ * dá erro em lado nenhum — por isso tem de haver um sítio onde se vejam.
+ *
+ * É também o que o contrato do euPago obriga a vigiar: uma operação não
+ * autorizada tem de lhes ser comunicada em DOIS DIAS ÚTEIS, passados os quais
+ * eles não respondem por ela.
+ */
+export async function avisosPorAplicar(limite = 25): Promise<AvisoPorAplicar[]> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT id, trid, estado, pagamentoId, valor, metodo, nota, recebidoEm
+       FROM avisosDoEupago
+      WHERE aplicado = 0
+      ORDER BY recebidoEm DESC
+      LIMIT ?`,
+    [Math.max(1, Math.floor(limite))],
+  )) as any[];
+  return (linhas as Record<string, unknown>[]).map((l) => ({
+    id: Number(l.id),
+    trid: String(l.trid),
+    estado: String(l.estado),
+    pagamentoId: l.pagamentoId == null ? null : Number(l.pagamentoId),
+    valor: numero(l.valor),
+    metodo: (l.metodo as string) ?? null,
+    nota: (l.nota as string) ?? null,
+    recebidoEm: l.recebidoEm as Date,
+  }));
 }
 
 export type ResumoDosPagamentos = {

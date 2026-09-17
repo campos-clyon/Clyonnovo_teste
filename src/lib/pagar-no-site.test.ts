@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
+import { AINDA_PODE_SER_PAGO } from "./pagamentos-na-base";
 
 /**
  * AS DEFESAS DO DINHEIRO, GUARDADAS CONTRA UMA EDIÇÃO DISTRAÍDA.
@@ -82,10 +83,32 @@ describe("as garantias que só a base dá", () => {
   });
 
   it("nada anda para trás: as transições exigem o estado de partida", () => {
-    // `darPorPago` só pega numa linha pendente. Um «expirado» atrasado — e
-    // chegam fora de ordem — não desfaz um pagamento já feito.
-    expect(BASE).toMatch(/SET estado = 'pago'[\s\S]*?WHERE id = \? AND estado = 'pendente'/);
+    // Um «expirado» atrasado — e chegam fora de ordem — não desfaz um
+    // pagamento já feito, porque não encontra a linha onde a esperava.
+    expect(BASE).toMatch(/SET estado = 'pago'[\s\S]*?WHERE id = \? AND estado IN/);
     expect(BASE).toMatch(/SET estado = 'reembolsado'[\s\S]*?WHERE id = \? AND estado = 'pago'/);
+    expect(BASE).toMatch(/SET estado = \?[\s\S]*?WHERE id = \? AND estado = 'pendente'/);
+  });
+
+  /*
+   * ⚠️ UM PAGAMENTO QUE NÓS FECHÁMOS AINDA PODE TER SIDO PAGO.
+   *
+   * O cliente pede MB WAY, paga, e enquanto o aviso vem a caminho carrega em
+   * «pedir outra vez»; nós fechamos o primeiro como `cancelado`; o aviso chega
+   * e já não encontra a linha. Sem esta lista, os 105 € entravam na conta da
+   * CLYON sem ficarem registados em lado nenhum.
+   *
+   * O que separa os dois grupos é uma pergunta: foi fechado por NÓS ou por
+   * ELES? Uma referência que nós substituímos continua válida no homebanking.
+   */
+  it("o que fechámos nós ainda aceita pagamento; o que o euPago fechou, não", () => {
+    expect(BASE).toContain("AINDA_PODE_SER_PAGO");
+    for (const nosso of ["pendente", "cancelado", "substituido"]) {
+      expect(AINDA_PODE_SER_PAGO, nosso).toContain(nosso);
+    }
+    for (const deles of ["expirado", "falhado", "pago", "reembolsado"]) {
+      expect(AINDA_PODE_SER_PAGO, deles).not.toContain(deles);
+    }
   });
 
   it("o reembolso liberta o índice, senão o trabalho nunca mais se podia pagar", () => {
