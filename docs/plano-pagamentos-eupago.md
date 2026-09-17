@@ -305,6 +305,36 @@ perder um profissional.
 Fica como pergunta 3 ao euPago: não *quem paga* — isso está decidido — mas
 **como se indica** que é a CLYON.
 
+### 2.0-bis 🔴 O euPago RESPONDEU, e a resposta foi «não» *(17-09-2026, 18:19)*
+
+Joana Diniz, Técnica Administrativa-Comercial do euPago, respondendo à nota
+sobre a actividade declarada — *«a atividade declarada na nossa conta é
+«Demolição» (…) o que vai passar pela vossa plataforma são pagamentos de
+serviços feitos por profissionais parceiros, repartidos entre eles e nós (…)
+diga-me se é preciso atualizar alguma coisa do nosso lado»*:
+
+> **«Não será possível fazer esta situação.»**
+
+Cinco palavras, e **põem em causa o modelo inteiro da secção 2.1.** O que ela
+diz é que a conta de hoje não serve para cobrar em nome de terceiros — que é
+exactamente o que a plataforma faz.
+
+**O que isto NÃO invalida**, e é preciso ser exacto: nada do que está escrito
+em código assume pagamento repartido. As referências são MB WAY e Multibanco
+simples, o dinheiro entra numa conta da CLYON, e o profissional continua a ser
+pago à mão como sempre foi. O que fica em causa é o **direito de o fazer**, e
+isso não é um problema de software.
+
+**O que fica por saber, e é tudo:** ela não diz *porquê* nem *o que seria
+preciso*. «Não é possível» pode ser três coisas muito diferentes — não é
+possível nesta conta com esta actividade declarada; não é possível sem um
+contrato de marketplace que eles tenham e não esteja assinado; ou não é
+possível de todo com o euPago. A diferença entre a primeira e a terceira é a
+diferença entre um formulário e mudar de fornecedor.
+
+**Enquanto isto não estiver respondido por escrito, `A_PLATAFORMA_COBRA` não
+muda.** É precisamente para isto que o interruptor existe.
+
 ### 2.1 ⚠️ Quem pode segurar dinheiro de outra pessoa — a pergunta que não é técnica
 
 Se o cliente paga 300 € à CLYON e a CLYON paga 282 € ao profissional daqui a uma
@@ -327,10 +357,14 @@ Os mercados resolvem-no de três maneiras:
    contempla**, porque está escrito a assumir que a CLYON vende o que cobra
    (*«litígios relativos a bens e serviços»*).
 
-**A minha recomendação é o 1**, e com convicção: é o único em que a pergunta
-regulatória deixa de existir em vez de ser respondida. O 3 obriga a defender uma
-posição jurídica; o 1 dispensa-a. O preço — inscrever cada profissional — é
-trabalho de uma vez por profissional e é exactamente o que o Stripe Connect faz.
+**A minha recomendação era o 1** — era o único em que a pergunta regulatória
+deixava de existir em vez de ser respondida. **O euPago disse que não** (ver
+2.0-bis), e enquanto não disser o contrário por escrito, o 1 está fora.
+
+O que sobra não é bonito: o 2 colide com a facturação já desenhada, e o 3 é a
+posição que o contrato deles não contempla. Antes de escolher entre os dois,
+falta a pergunta que ninguém fez ainda — **o que é que seria preciso para o 1
+ser possível?**
 
 **Não sou advogado e não vou fingir que sou.** Mas a diferença entre os dois
 primeiros é grande: no 1, a CLYON nunca segura dinheiro de ninguém; no 2 e no 3,
