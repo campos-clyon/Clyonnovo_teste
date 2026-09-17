@@ -27,6 +27,7 @@ import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "@/lib/
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
+import PagarTrabalho from "@/components/PagarTrabalho";
 import { PROMESSA, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
 
 
@@ -128,6 +129,8 @@ export default function PropostasRecebidas({
   pedidoId,
   negociacoesIniciais,
   onMudou,
+  precisaFatura = false,
+  telefoneDoCliente,
   soParaVer = false,
 }: {
   /**
@@ -142,6 +145,10 @@ export default function PropostasRecebidas({
   negociacoesIniciais: NegociacaoDoCliente[];
   /** Para a conta recarregar a lista depois de uma ação. */
   onMudou?: () => void;
+  /** O que ele respondeu no pedido. Serve de valor de partida no pagamento. */
+  precisaFatura?: boolean;
+  /** Para não o obrigar a escrever o telemóvel outra vez no MB WAY. */
+  telefoneDoCliente?: string | null;
   /**
    * O BACKOFFICE ESTÁ A CONFERIR, NÃO A DECIDIR PELO CLIENTE.
    *
@@ -334,6 +341,24 @@ export default function PropostasRecebidas({
             </div>
           );
         })()}
+        {/*
+          ONDE SE PAGA — e só enquanto houver o que pagar.
+          Depois de confirmado ou pago, o trabalho está fechado e não há nada a
+          cobrar. O componente decide-se com o servidor: se a cobrança não
+          estiver aberta, não desenha nada em vez de mostrar uma caixa que dá
+          erro a quem carregar nela.
+        */}
+        {pedidoId != null &&
+          (acordada.fase === "a_executar" || acordada.fase === "a_confirmar") && (
+            <PagarTrabalho
+              pedidoId={pedidoId}
+              negociacaoId={acordada.id}
+              token={token}
+              precisaFatura={precisaFatura}
+              telefoneSugerido={telefoneDoCliente}
+              soParaVer={soParaVer}
+            />
+          )}
         {/* ── O que falta acontecer ───────────────────────────────────────── */}
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">

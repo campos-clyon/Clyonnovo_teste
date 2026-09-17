@@ -111,6 +111,10 @@ export async function GET(request: NextRequest) {
          o.canceladoPeloCliente,
          o.recurrenceFrequency, o.recurringDiscountPercent,
          o.clientRating, o.clientRatingComment,
+         -- Os dois são DELE e servem ao ecrã de pagamento: o que ele
+         -- respondeu sobre factura decide o valor que se lhe pede, e o
+         -- telemóvel poupa-lhe escrevê-lo outra vez no MB WAY.
+         o.precisaFatura, o.contactPhone,
          o.providerId, o.assignedToId, o.assignedToName,
          p.name AS providerName, p.phone AS providerPhone
        FROM simulatorOrders o

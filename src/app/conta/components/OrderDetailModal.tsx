@@ -339,6 +339,8 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             pedidoId={order.id}
             negociacoesIniciais={propostas}
             onMudou={() => onOrderChange?.({})}
+            precisaFatura={Boolean(order.precisaFatura)}
+            telefoneDoCliente={order.contactPhone ?? null}
           />
         )}
 

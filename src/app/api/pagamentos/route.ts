@@ -98,9 +98,43 @@ export async function GET(req: NextRequest) {
 
   try {
     const linhas = await pagamentosDaNegociacao(acesso.trabalho.negociacaoId);
+    /*
+     * `disponivel` EXISTE PARA O ECRÃ NÃO APARECER QUANDO NÃO SERVE.
+     *
+     * Se a porta estiver fechada, o cliente não pode ver uma caixa de
+     * pagamento que responde 503 quando ele carrega. E o navegador não tem
+     * como saber se estamos em sandbox ou em produção — isso é uma variável do
+     * servidor. Por isso a resposta di-lo, e o ecrã decide-se com ela.
+     */
+    const conf = configuracaoDoEupago(process.env);
+    const disponivel = conf.ok && podeCobrar(conf.config, A_PLATAFORMA_COBRA).pode;
+
     return NextResponse.json({
+      disponivel,
       pagamentos: linhas.map(paraOCliente),
       pago: linhas.some((l) => l.estado === "pago"),
+      /*
+       * Os dois números, calculados no SERVIDOR e enviados juntos.
+       *
+       * O ecrã já os sabe calcular — mas se os calculasse outra vez para o
+       * botão, passavam a existir duas contas para o mesmo pagamento, e o dia
+       * em que discordassem era o dia em que o cliente via um valor e o banco
+       * lhe pedia outro.
+       */
+      valores: {
+        semFactura: quantoOClientePaga(
+          acesso.trabalho.acordado,
+          acesso.trabalho.regime,
+          acesso.trabalho.taxas,
+          false,
+        ),
+        comFactura: quantoOClientePaga(
+          acesso.trabalho.acordado,
+          acesso.trabalho.regime,
+          acesso.trabalho.taxas,
+          true,
+        ),
+      },
     });
   } catch (e) {
     console.error("[pagamentos GET]", e);

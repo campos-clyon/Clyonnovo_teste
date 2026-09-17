@@ -59,6 +59,15 @@ export interface Order {
   distanceKm: number | null;
   distanceText: string | null;
   filesJson: string | null;
+  /**
+   * O que ele respondeu sobre factura no pedido, e o telemóvel que deixou.
+   *
+   * Os dois servem ao ecrã de pagamento: o primeiro decide o valor que se lhe
+   * pede (com factura acresce o IVA da taxa), o segundo evita pedir-lhe o
+   * número outra vez no MB WAY.
+   */
+  precisaFatura?: number | boolean | null;
+  contactPhone?: string | null;
   /** As propostas dos profissionais, quando o pedido está na plataforma. */
   negociacoes?: NegociacaoDoPedido[];
 }

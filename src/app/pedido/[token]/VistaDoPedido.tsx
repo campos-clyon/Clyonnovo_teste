@@ -188,7 +188,10 @@ export default async function VistaDoPedido({
 
       <PropostasRecebidas
         token={token}
+        pedidoId={pedido.id}
         negociacoesIniciais={negociacoesDoCliente}
+        precisaFatura={Boolean(pedido.precisaFatura)}
+        telefoneDoCliente={pedido.contactPhone ?? null}
         soParaVer={soParaVer}
       />
 
