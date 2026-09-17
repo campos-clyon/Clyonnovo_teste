@@ -361,10 +361,42 @@ Os mercados resolvem-no de três maneiras:
 deixava de existir em vez de ser respondida. **O euPago disse que não** (ver
 2.0-bis), e enquanto não disser o contrário por escrito, o 1 está fora.
 
-O que sobra não é bonito: o 2 colide com a facturação já desenhada, e o 3 é a
-posição que o contrato deles não contempla. Antes de escolher entre os dois,
-falta a pergunta que ninguém fez ainda — **o que é que seria preciso para o 1
-ser possível?**
+### ✅ A DECISÃO DO DONO: seguir sem esperar pela resposta *(17-09-2026)*
+
+> *«Vamos continuar sem a Joana. Os pagamentos recebidos vão para a conta usando
+> o euPago; **não fica nada no euPago cativo — apenas o site diz isso**, e não
+> liberta o levantamento sem que o cliente confirme o trabalho realizado.
+> Depois de confirmado, nós libertamos, e o pro pode levantar o saldo através
+> de pedidos que podem demorar até 24 h. Se não for possível fazer com o
+> euPago, fazemos manualmente.»*
+
+É o **modelo 3** — a CLYON recebe e paga ao profissional depois —, com o euPago
+reduzido ao que ele nunca recusou: processar um MB WAY e uma referência. O
+dinheiro entra numa conta da CLYON e sai por transferência à mão.
+
+**O que isto obriga o software a garantir**, e é a parte que muda tudo:
+
+| | |
+|---|---|
+| A caução **não existe** do lado do euPago | quem a segura é o site |
+| «Cativo» tem de querer dizer **temos o dinheiro** | senão é a mesma mentira de antes |
+| Um trabalho **por pagar** não é cativo nem disponível | é um quarto número: **por cobrar** |
+| O pagamento **manda sobre a fase** | confirmado e não pago não se levanta |
+| Nem o prazo de 7 dias o liberta | o prazo não inventa dinheiro que ninguém entregou |
+
+Feito em `carteira.ts` (`porCobrarDe`, `oClientePagou`) e provado em
+`carteira.test.ts`, no mundo com o interruptor já ligado.
+
+**E o que fica por decidir** — duas coisas, e nenhuma é de software:
+
+1. **O cliente é obrigado a pagar antes de o profissional ir?** Hoje a caixa de
+   pagamento aparece no trabalho fechado e ninguém o obriga. Se a garantia é
+   para ser real, o profissional devia saber que só vai depois de o dinheiro
+   entrar — e isso é uma mudança de produto, não uma linha de código.
+2. **O prazo de 7 dias sobrevive?** *«Não liberta sem que o cliente confirme»*
+   lido à letra mata-o. Mas ele existe para um cliente que nunca mais volta ao
+   site não prender o dinheiro do profissional para sempre. Ficou como está — é
+   o comportamento de hoje — à espera de decisão.
 
 **Não sou advogado e não vou fingir que sou.** Mas a diferença entre os dois
 primeiros é grande: no 1, a CLYON nunca segura dinheiro de ninguém; no 2 e no 3,
