@@ -161,12 +161,24 @@ describe("a carteira usa a taxa de cada trabalho", () => {
     expect(CARTEIRA).toContain("taxaProfissional?: number | string | null");
   });
 
-  it("e quem a monta traz as colunas da base", () => {
+  /*
+   * A conversão vivia copiada nas duas rotas — a da carteira e a do
+   * levantamento — e passou a viver num sítio só (17-09-2026), quando lhe
+   * juntámos o pagamento do cliente. O que este teste guarda não é onde ela
+   * está: é que as colunas continuam a ser trazidas, e que continua a haver
+   * UMA. Duas cópias de uma regra de dinheiro acabam a discordar sobre quem
+   * recebe.
+   */
+  it("e quem a monta traz as colunas da base, num sítio só", () => {
+    const MONTA = ler("src/lib/carteira-do-profissional.ts");
+    expect(MONTA).toContain("taxaProfissional: l.taxaProfissional");
+    expect(MONTA).toContain("taxaCliente: l.taxaCliente");
+
     for (const p of [
       "src/app/api/profissionais/carteira/route.ts",
       "src/app/api/profissionais/levantamento/route.ts",
     ]) {
-      expect(ler(p), p).toContain("taxaProfissional: l.taxaProfissional");
+      expect(ler(p), p).toContain("trabalhosDaCarteira(linhas)");
     }
   });
 });

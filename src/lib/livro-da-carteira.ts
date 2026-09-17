@@ -4,7 +4,13 @@ import {
   faseDoTrabalho,
   type Trabalho,
 } from "./trabalho";
-import type { Carteira, Levantamento, TrabalhoNaCarteira } from "./carteira";
+import {
+  oClientePagou,
+  type Carteira,
+  type ComoLerACarteira,
+  type Levantamento,
+  type TrabalhoNaCarteira,
+} from "./carteira";
 
 /**
  * O LIVRO DE MOVIMENTOS DA CARTEIRA — a fundação para a CLYON segurar dinheiro.
@@ -142,8 +148,21 @@ export function quandoLiberta(t: Trabalho): Date | null {
  */
 export function movimentoDoTrabalho(
   t: TrabalhoNaCarteira & { providerId: number; pedidoId?: number | null },
+  opcoes: ComoLerACarteira = {},
 ): MovimentoDaCarteira | null {
   if (faseDoTrabalho(t) === "a_negociar") return null;
+  /*
+   * UM TRABALHO POR PAGAR NÃO GERA MOVIMENTO NENHUM.
+   *
+   * E não é uma omissão — é a definição de movimento. O livro regista dinheiro
+   * que SE MOVEU; enquanto o cliente não paga, não se moveu nada. Escrever cá
+   * uma linha a zero, ou uma linha «pendente», era pôr no livro uma coisa que
+   * não aconteceu, e o livro deixava de se poder comparar com o extracto.
+   *
+   * O que o profissional tem a receber continua a ver-se — em `porCobrar`, que
+   * se calcula das negociações e não daqui. Ver `porCobrarDe` em `carteira.ts`.
+   */
+  if (!oClientePagou(t, opcoes)) return null;
   const v = t.valorAcordado;
   if (v == null || !Number.isFinite(v)) return null;
 
@@ -211,6 +230,14 @@ export function movimentosDoLevantamento(
 export function carteiraDoLivro(
   movimentos: MovimentoDaCarteira[],
   agora: Date,
+  /*
+   * O POR COBRAR VEM DE FORA, e é a única coisa desta carteira que não sai do
+   * livro. Tem de ser: é trabalho feito e não pago, ou seja, precisamente o que
+   * ainda não é um movimento. Quem chama calcula-o com `porCobrarDe` sobre as
+   * mesmas negociações — a mesma função que a carteira de hoje usa, para os
+   * dois caminhos não poderem divergir aqui.
+   */
+  porCobrar = 0,
 ): Carteira {
   let cativo = 0;
   let ganhoLibertado = 0;
@@ -239,11 +266,12 @@ export function carteiraDoLivro(
   }
 
   return {
+    porCobrar: aosCentimos(porCobrar),
     cativo: aosCentimos(cativo),
     disponivel: Math.max(0, aosCentimos(ganhoLibertado - aCaminho - levantado)),
     aCaminho: aosCentimos(aCaminho),
     levantado: aosCentimos(levantado),
-    totalGanho: aosCentimos(cativo + ganhoLibertado),
+    totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado),
   };
 }
 
@@ -261,10 +289,11 @@ export function livroDe(
   providerId: number,
   trabalhos: TrabalhoNaCarteira[],
   levantamentos: Array<Levantamento & { criadoEm?: Date | string | null }>,
+  opcoes: ComoLerACarteira = {},
 ): MovimentoDaCarteira[] {
   const saida: MovimentoDaCarteira[] = [];
   for (const t of trabalhos) {
-    const m = movimentoDoTrabalho({ ...t, providerId });
+    const m = movimentoDoTrabalho({ ...t, providerId }, opcoes);
     if (m) saida.push(m);
   }
   for (const l of levantamentos) {

@@ -15,6 +15,7 @@ import {
   EXPLICACAO_DA_RECUSA,
   type TrabalhoNaCarteira,
 } from "@/lib/carteira";
+import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 
 export const runtime = "nodejs";
 
@@ -57,18 +58,9 @@ export async function POST(req: NextRequest) {
     ]);
 
     const agora = new Date();
-    const trabalhos: TrabalhoNaCarteira[] = linhas.map((l) => ({
-      negociacaoId: l.id,
-      estado: l.estado,
-      valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
-      // A comissão DESTE trabalho, e não a de hoje: a taxa pode mudar no
-      // backoffice, e a carteira não pode mudar com ela.
-      taxaCliente: l.taxaCliente,
-      taxaProfissional: l.taxaProfissional,
-      execucaoEnviadaEm: l.execucaoEnviadaEm,
-      confirmadoEm: l.confirmadoEm,
-      pagoEm: l.pagoEm,
-    }));
+    // A MESMA conversão que a rota da carteira usa — e tem de ser a mesma: uma
+    // a mostrar «por cobrar» e a outra a deixar levantar seria o pior dos dois.
+    const trabalhos: TrabalhoNaCarteira[] = await trabalhosDaCarteira(linhas);
 
     const carteira = carteiraDe(
       trabalhos,

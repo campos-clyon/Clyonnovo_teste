@@ -1,17 +1,40 @@
+import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { estaLibertado, faseDoTrabalho, type Trabalho } from "./trabalho";
 
 /**
  * A carteira do profissional.
  *
- * Três números, e a diferença entre eles é a promessa toda da plataforma:
+ * Quatro números, e a diferença entre eles é a promessa toda da plataforma:
  *
- *   · CATIVO — o trabalho está fechado e o cliente já pagou à CLYON, mas ainda
- *     não confirmou que está feito. É a garantia dele. Para o profissional é a
- *     certeza de que o dinheiro existe e está do lado de cá — que é exactamente
- *     o que ele não tem quando combina por fora;
+ *   · POR COBRAR — o trabalho está feito e o cliente AINDA NÃO PAGOU. Não é
+ *     dinheiro de ninguém: não está cá, não está lá, não há nada a libertar;
+ *   · CATIVO — o cliente pagou à CLYON e ainda não confirmou que está feito. É
+ *     a garantia dele. Para o profissional é a certeza de que o dinheiro
+ *     existe e está do lado de cá — que é exactamente o que ele não tem quando
+ *     combina por fora;
  *   · DISPONÍVEL — confirmado, e ainda não pedido;
  *   · A CAMINHO — pedido, e ainda não transferido.
+ *
+ * ⚠️ «CATIVO» TEM DE QUERER DIZER «TEMOS O DINHEIRO» — 17-09-2026.
+ *
+ * *«Os pagamentos recebidos vão para a conta usando o euPago; não fica nada no
+ * euPago cativo, apenas o site diz isso — e não liberta o levantamento sem que
+ * o cliente confirme o trabalho realizado.»*
+ *
+ * Como o dinheiro fica numa conta da CLYON e não numa caução do euPago, é o
+ * SITE que segura a promessa. E uma promessa dita por software só vale se o
+ * software se recusar a dizê-la quando não é verdade: um trabalho por pagar a
+ * aparecer como «cativo» seria exactamente a mentira que
+ * `pagamento-na-plataforma.ts` existe para não se repetir — um saldo cativo que
+ * ninguém cativou.
+ *
+ * Por isso o pagamento MANDA SOBRE A FASE. Um trabalho confirmado pelo cliente
+ * mas não pago não vai para «disponível»: fica em «por cobrar». Senão, a CLYON
+ * transferia a um profissional dinheiro que nunca recebeu.
+ *
+ * Enquanto `A_PLATAFORMA_COBRA` for falso nada disto se aplica — não há
+ * pagamentos para verificar, e a carteira é exactamente a de sempre.
  *
  * Todos os valores são LÍQUIDOS. O bruto não aparece em sítio nenhum do lado do
  * profissional: ver a decisão em taxas-plataforma.ts.
@@ -31,6 +54,29 @@ export type TrabalhoNaCarteira = Trabalho & {
    */
   taxaProfissional?: number | string | null;
   taxaCliente?: number | string | null;
+  /**
+   * QUANDO O CLIENTE PAGOU ESTE TRABALHO À CLYON. `null` = ainda não pagou.
+   *
+   * Vem da tabela `pagamentos` (ver `negociacoesPagas`), e não da negociação:
+   * um pagamento é um facto do banco, não um estado do acordo.
+   *
+   * Só conta com `A_PLATAFORMA_COBRA` ligado. Antes disso é sempre nulo — não
+   * há pagamentos nenhuns — e a carteira comporta-se como sempre se comportou.
+   */
+  clientePagouEm?: Date | string | null;
+};
+
+/** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
+export type ComoLerACarteira = {
+  /**
+   * A plataforma já cobra o cliente?
+   *
+   * Vem de `A_PLATAFORMA_COBRA` por omissão. É um parâmetro e não uma leitura
+   * directa da constante para que os testes possam provar os DOIS
+   * comportamentos — o de hoje e o do dia em que o interruptor mudar — sem ter
+   * de mexer num ficheiro do produto para os correr.
+   */
+  aPlataformaCobra?: boolean;
 };
 
 export type Levantamento = {
@@ -41,6 +87,13 @@ export type Levantamento = {
 };
 
 export type Carteira = {
+  /**
+   * Trabalho feito que o cliente ainda não pagou.
+   *
+   * Não é dinheiro de ninguém e não se levanta. Zero enquanto a plataforma não
+   * cobrar — nesse mundo não há pagamentos por onde esperar.
+   */
+  porCobrar: number;
   /** Fechado e pago pelo cliente, à espera da confirmação. */
   cativo: number;
   /** Confirmado, menos o que já pediu ou levantou. */
@@ -71,17 +124,66 @@ function liquido(t: TrabalhoNaCarteira): number {
   return quantoOProfissionalRecebe(v, taxasDaNegociacao(t));
 }
 
+/**
+ * O CLIENTE JÁ PAGOU ESTE TRABALHO?
+ *
+ * Com a plataforma a não cobrar, a resposta é sempre «sim» — e tem de ser: não
+ * existem pagamentos, e responder «não» punha a carteira inteira de todos os
+ * profissionais em «por cobrar» no dia em que este ficheiro mudasse.
+ */
+export function oClientePagou(
+  t: TrabalhoNaCarteira,
+  opcoes: ComoLerACarteira = {},
+): boolean {
+  if (!(opcoes.aPlataformaCobra ?? A_PLATAFORMA_COBRA)) return true;
+  return t.clientePagouEm != null;
+}
+
+/**
+ * Quanto é que este profissional tem em trabalho feito e por pagar.
+ *
+ * Existe como função própria — e exportada — porque é usada de dois sítios: da
+ * carteira calculada e do livro de movimentos. O livro NÃO tem uma linha para
+ * isto, e não deve ter: um movimento é dinheiro que se moveu, e aqui não se
+ * moveu nada ainda. Escrever nele um trabalho por pagar era voltar a pôr no
+ * livro uma coisa que não aconteceu.
+ */
+export function porCobrarDe(
+  trabalhos: TrabalhoNaCarteira[],
+  opcoes: ComoLerACarteira = {},
+): number {
+  let total = 0;
+  for (const t of trabalhos) {
+    if (faseDoTrabalho(t) === "a_negociar") continue;
+    if (!oClientePagou(t, opcoes)) total += liquido(t);
+  }
+  return aosCentimos(total);
+}
+
 export function carteiraDe(
   trabalhos: TrabalhoNaCarteira[],
   levantamentos: Levantamento[],
   agora: Date,
+  opcoes: ComoLerACarteira = {},
 ): Carteira {
+  let porCobrar = 0;
   let cativo = 0;
   let ganhoLibertado = 0;
 
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
     const valor = liquido(t);
+
+    /*
+     * O PAGAMENTO MANDA SOBRE A FASE, e a ordem destas duas linhas é a regra
+     * toda. Um trabalho confirmado pelo cliente mas NÃO PAGO não pode ir para
+     * «disponível»: seria a CLYON a transferir dinheiro que nunca recebeu.
+     */
+    if (!oClientePagou(t, opcoes)) {
+      porCobrar += valor;
+      continue;
+    }
+
     // A libertação por prazo conta como confirmada mesmo antes de alguém correr
     // o processo que grava a data — senão o profissional via o prazo passar e o
     // dinheiro continuar preso, que é a única coisa que não lhe podemos fazer.
@@ -100,11 +202,15 @@ export function carteiraDe(
   const disponivel = Math.max(0, aosCentimos(ganhoLibertado - aCaminho - levantado));
 
   return {
+    porCobrar: aosCentimos(porCobrar),
     cativo: aosCentimos(cativo),
     disponivel,
     aCaminho: aosCentimos(aCaminho),
     levantado: aosCentimos(levantado),
-    totalGanho: aosCentimos(cativo + ganhoLibertado),
+    // Inclui o por cobrar: «tudo o que já ganhou» é sobre o trabalho feito, e
+    // é assim que este número sempre se comportou. Onde está cada parte
+    // dizem-no os outros quatro.
+    totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado),
   };
 }
 
@@ -112,6 +218,8 @@ export type RecusaDeLevantamento =
   | "sem_iban"
   | "abaixo_do_minimo"
   | "saldo_insuficiente"
+  /** Tem o trabalho feito, mas o cliente ainda não pagou. */
+  | "a_espera_do_cliente"
   | "valor_invalido"
   | "ja_tem_pedido";
 
@@ -131,7 +239,16 @@ export function recusaDoLevantamento(
   if (temPedidoPendente) return "ja_tem_pedido";
   if (!Number.isFinite(valor) || valor <= 0) return "valor_invalido";
   if (valor < MINIMO_PARA_LEVANTAR) return "abaixo_do_minimo";
-  if (aosCentimos(valor) > carteira.disponivel) return "saldo_insuficiente";
+  if (aosCentimos(valor) > carteira.disponivel) {
+    /*
+     * PORQUE É QUE NÃO CHEGA — e não só que não chega.
+     *
+     * «Não tem esse valor disponível» a quem tem três trabalhos feitos e por
+     * cobrar é uma frase que não explica nada e manda a pessoa escrever para o
+     * apoio. Se o que falta está à espera do cliente, é isso que se lhe diz.
+     */
+    return carteira.porCobrar > 0 ? "a_espera_do_cliente" : "saldo_insuficiente";
+  }
   return null;
 }
 
@@ -139,6 +256,8 @@ export const EXPLICACAO_DA_RECUSA: Record<RecusaDeLevantamento, string> = {
   sem_iban: "Falta indicar o IBAN onde quer receber. Está no separador Perfil.",
   abaixo_do_minimo: "O mínimo por transferência é de " + MINIMO_PARA_LEVANTAR + " euros.",
   saldo_insuficiente: "Não tem esse valor disponível.",
+  a_espera_do_cliente:
+    "Esse valor ainda está por cobrar — o cliente não pagou. Assim que o pagamento entrar e ele confirmar o trabalho, fica disponível.",
   valor_invalido: "Indique um valor.",
   ja_tem_pedido: "Já tem um pedido de transferência a ser processado.",
 };

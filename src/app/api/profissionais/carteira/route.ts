@@ -9,6 +9,7 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
 import { carteiraDe, type TrabalhoNaCarteira } from "@/lib/carteira";
+import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { ibanEncurtado } from "@/lib/iban";
@@ -44,18 +45,9 @@ export async function GET(req: NextRequest) {
 
     const agora = new Date();
 
-    const trabalhos: TrabalhoNaCarteira[] = linhas.map((l) => ({
-      negociacaoId: l.id,
-      estado: l.estado,
-      valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
-      // A comissão DESTE trabalho, e não a de hoje: a taxa pode mudar no
-      // backoffice, e a carteira não pode mudar com ela.
-      taxaCliente: l.taxaCliente,
-      taxaProfissional: l.taxaProfissional,
-      execucaoEnviadaEm: l.execucaoEnviadaEm,
-      confirmadoEm: l.confirmadoEm,
-      pagoEm: l.pagoEm,
-    }));
+    // A conversão vive num sítio só: a rota do levantamento usa a MESMA, e duas
+    // cópias de uma regra de dinheiro acabam a discordar sobre quem recebe.
+    const trabalhos: TrabalhoNaCarteira[] = await trabalhosDaCarteira(linhas);
 
     const carteira = carteiraDe(
       trabalhos,

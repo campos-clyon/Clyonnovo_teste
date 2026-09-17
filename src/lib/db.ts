@@ -5,7 +5,8 @@ import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealiza
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
 export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
-import { carteiraDe } from "@/lib/carteira";
+import { carteiraDe, porCobrarDe } from "@/lib/carteira";
+import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
   TAXAS_DE_ORIGEM,
@@ -3415,6 +3416,18 @@ async function tudoOQueOLivroPrecisa(): Promise<
             execucaoEnviadaEm, confirmadoEm, pagoEm
        FROM negociacoes`,
   )) as any[];
+  /*
+   * QUEM JÁ PAGOU — e vem de uma consulta à parte, não de um JOIN.
+   *
+   * A tabela `pagamentos` nasce à primeira utilização (`garantirTabelas` em
+   * `pagamentos-na-base.ts`). Um JOIN contra ela partia esta função em qualquer
+   * base onde ainda não existisse — o que inclui a de hoje e qualquer cópia de
+   * segurança restaurada.
+   */
+  const { negociacoesPagas } = await import("@/lib/pagamentos-na-base");
+  const pagos = A_PLATAFORMA_COBRA
+    ? await negociacoesPagas((nLinhas as Array<{ id: number }>).map((n) => Number(n.id)))
+    : new Map<number, Date>();
   const [lLinhas] = (await pool.execute(
     "SELECT id, providerId, valor, estado, createdAt FROM levantamentos",
   )) as any[];
@@ -3442,6 +3455,9 @@ async function tudoOQueOLivroPrecisa(): Promise<
       execucaoEnviadaEm: n.execucaoEnviadaEm,
       confirmadoEm: n.confirmadoEm,
       pagoEm: n.pagoEm,
+      // O CLIENTE a pagar à CLYON — não confundir com `pagoEm`, que é a CLYON
+      // a pagar ao profissional. Ver `carteira-do-profissional.ts`.
+      clientePagouEm: pagos.get(Number(n.id)) ?? null,
     });
   }
   for (const l of lLinhas as Array<Record<string, any>>) {
@@ -3515,8 +3531,22 @@ export async function conferirOLivro(): Promise<ConferenciaDoLivro> {
     for (const m of livro) if (!gravadas.has(m.chave)) porLancar += 1;
 
     const hoje = carteiraDe(trabalhos as never, levantamentos as never, agora);
-    const doLivro = carteiraDoLivro(livro, agora);
-    for (const campo of ["cativo", "disponivel", "aCaminho", "levantado", "totalGanho"] as const) {
+    /*
+     * O «por cobrar» não sai do livro — é trabalho feito e NÃO pago, ou seja,
+     * exactamente o que ainda não é um movimento. Calcula-se das negociações,
+     * com a mesma função que a carteira de hoje usa, e entra na comparação
+     * como os outros: se um dia divergir, é porque um dos dois caminhos deixou
+     * de contar um trabalho, e isso é o que este ecrã existe para apanhar.
+     */
+    const doLivro = carteiraDoLivro(livro, agora, porCobrarDe(trabalhos as never));
+    for (const campo of [
+      "porCobrar",
+      "cativo",
+      "disponivel",
+      "aCaminho",
+      "levantado",
+      "totalGanho",
+    ] as const) {
       if (hoje[campo] !== doLivro[campo]) {
         divergencias.push({
           providerId,
@@ -7629,25 +7659,27 @@ export async function apagarProfissional(
       );
     }
 
+    const { trabalhosDaCarteira } = await import("@/lib/carteira-do-profissional");
     const carteira = carteiraDe(
-      negociacoes.map((n) => ({
-        negociacaoId: n.id,
-        estado: n.estado,
-        valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
-        // A comissão de cada trabalho, e não a de hoje: isto decide se a conta
-        // pode ser apagada, e um saldo recalculado à taxa nova mentia.
-        taxaCliente: n.taxaCliente,
-        taxaProfissional: n.taxaProfissional,
-        execucaoEnviadaEm: n.execucaoEnviadaEm,
-        confirmadoEm: n.confirmadoEm,
-        pagoEm: n.pagoEm,
-      })) as never,
+      // A MESMA conversão do painel dele — incluindo saber se o cliente já
+      // pagou. Isto decide se uma conta pode ser apagada, e apagá-la com
+      // dinheiro dele à espera seria irreversível.
+      (await trabalhosDaCarteira(negociacoes as never)) as never,
       levantamentos,
       new Date(),
     );
 
     const euros = (n: number) => n.toFixed(2).replace(".", ",");
     if (carteira.cativo > 0) motivos.push(`tem ${euros(carteira.cativo)} € cativos`);
+    /*
+     * Trabalho feito e por cobrar também trava. É o caso mais fácil de
+     * esquecer — o dinheiro não está cá, e por isso não aparece em nenhum dos
+     * outros números — e é o pior de apagar: fica um trabalho feito, um
+     * cliente por cobrar, e ninguém a quem pagar quando ele pagar.
+     */
+    if (carteira.porCobrar > 0) {
+      motivos.push(`tem ${euros(carteira.porCobrar)} € de trabalho feito por cobrar`);
+    }
     if (carteira.disponivel > 0) motivos.push(`tem ${euros(carteira.disponivel)} € por levantar`);
     if (carteira.aCaminho > 0)
       motivos.push(`tem ${euros(carteira.aCaminho)} € em transferência por processar`);

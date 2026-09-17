@@ -557,6 +557,49 @@ export async function pendentesParaSondar(
   return (linhas as Record<string, unknown>[]).map(comoPagamento);
 }
 
+/**
+ * QUAIS DESTES TRABALHOS É QUE O CLIENTE JÁ PAGOU — e quando.
+ *
+ * É a ponte entre a tabela dos pagamentos e a carteira do profissional, e é a
+ * consulta que impede a CLYON de transferir dinheiro que nunca recebeu: sem
+ * ela, um trabalho confirmado pelo cliente contava como «disponível» tivesse
+ * ele pago ou não.
+ *
+ * Uma consulta para a lista toda, e não uma por negociação. A carteira de um
+ * profissional com quarenta trabalhos fazia quarenta viagens ao MySQL — e a
+ * carteira abre-se a cada visita ao painel.
+ *
+ * Lê a coluna `negociacaoPaga` e não `estado = 'pago'` de propósito: é a mesma
+ * coluna do índice único, e por isso é impossível haver aqui duas linhas para o
+ * mesmo trabalho. Um reembolso põe-na a nulo e o trabalho volta a contar como
+ * por cobrar — que é o que ele passa a ser.
+ */
+export async function negociacoesPagas(
+  negociacaoIds: number[],
+): Promise<Map<number, Date>> {
+  const ids = [...new Set(negociacaoIds.filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return new Map();
+
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [linhas] = (await pool.execute(
+    `SELECT negociacaoPaga AS negociacaoId, pagoEm
+       FROM pagamentos
+      WHERE negociacaoPaga IN (${ids.map(() => "?").join(", ")})`,
+    ids,
+  )) as any[];
+
+  const mapa = new Map<number, Date>();
+  for (const l of linhas as Array<{ negociacaoId: number; pagoEm: Date | null }>) {
+    // `pagoEm` pode faltar numa linha antiga; a data exacta não muda nada aqui
+    // — o que conta é que existe pagamento.
+    mapa.set(Number(l.negociacaoId), l.pagoEm ?? new Date(0));
+  }
+  return mapa;
+}
+
 /** Os últimos, para o painel da CLYON. */
 export async function ultimosPagamentos(limite = 25): Promise<Pagamento[]> {
   await garantirTabelas();

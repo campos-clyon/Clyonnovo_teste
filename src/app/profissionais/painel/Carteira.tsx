@@ -59,6 +59,30 @@ export default function Carteira({
       <CabecalhoDeEcra titulo="A minha carteira" onVoltar={onVoltar} />
 
       <section className="overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
+        {/*
+          ⚠️ «POR COBRAR» É UMA LINHA SEPARADA DE «CATIVO», E TEM DE SER.
+
+          Cativo quer dizer «a CLYON tem o seu dinheiro». Por cobrar quer dizer
+          «o cliente ainda não pagou» — não está cá nem lá. Juntá-los numa linha
+          só era prometer-lhe uma garantia sobre dinheiro que ninguém entregou,
+          que é exactamente o erro que `pagamento-na-plataforma.ts` existe para
+          não se repetir.
+
+          Só aparece quando há: enquanto a plataforma não cobrar, é sempre zero.
+        */}
+        {carteira.porCobrar > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
+            <span className="text-sm text-amber-900">
+              Por cobrar
+              <span className="block text-xs text-amber-700">
+                trabalho feito que o cliente ainda não pagou
+              </span>
+            </span>
+            <span className="text-base font-semibold text-amber-900">
+              {euros(carteira.porCobrar)}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-600">
             {PROMESSA.proRotuloDoCativo}
@@ -253,8 +277,17 @@ function PedirTransferencia({
                   2,56:1 de contraste, num telemovel muitas vezes ao sol.
                 */
                 className="mt-3 text-center text-xs leading-relaxed text-slate-600">
-          O mínimo por transferência é de {MINIMO_PARA_LEVANTAR} €. Fazemos a transferência
-          para o IBAN indicado — costuma chegar em um a dois dias úteis.
+          {/*
+            DUAS DURAÇÕES, E SÃO MESMO DUAS — 17-09-2026.
+
+            "Pedidos que podem demorar até 24H" é o tempo que a CLYON leva a
+            tratar do pedido, e é uma promessa nossa. O que vem a seguir é o
+            banco, e não depende de nós. Juntá-las numa frase só fazia da
+            segunda uma promessa que não podemos cumprir.
+          */}
+          O mínimo por transferência é de {MINIMO_PARA_LEVANTAR} €. Tratamos do pedido em até
+          24 horas e transferimos para o IBAN indicado; depois disso, o banco costuma demorar
+          mais um dia útil.
         </p>
       </section>
     </>

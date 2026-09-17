@@ -22,7 +22,7 @@ const liquidoDe200 = quantoOProfissionalRecebe(200);
 describe("carteiraDe", () => {
   it("uma carteira vazia é toda a zeros", () => {
     const c = carteiraDe([], [], agora);
-    expect(c).toEqual({ cativo: 0, disponivel: 0, aCaminho: 0, levantado: 0, totalGanho: 0 });
+    expect(c).toEqual({ porCobrar: 0, cativo: 0, disponivel: 0, aCaminho: 0, levantado: 0, totalGanho: 0 });
   });
 
   // O que ainda se está a negociar não é dinheiro dele. Contá-lo mostrava um
@@ -162,5 +162,117 @@ describe("recusaDoLevantamento", () => {
 
   it("aceita levantar tudo", () => {
     expect(recusaDoLevantamento(cheia.disponivel, cheia, true, false)).toBeNull();
+  });
+});
+
+/**
+ * ⚠️ O MUNDO EM QUE A PLATAFORMA JÁ COBRA — 17-09-2026.
+ *
+ * *«Os pagamentos recebidos vão para a conta usando o euPago; não fica nada no
+ * euPago cativo, apenas o site diz isso — e não liberta o levantamento sem que
+ * o cliente confirme o trabalho realizado.»*
+ *
+ * Como o dinheiro fica numa conta da CLYON e não numa caução do euPago, é o
+ * SITE que segura a promessa. Estes testes são essa promessa escrita: sem eles,
+ * o dia em que `A_PLATAFORMA_COBRA` mudar é o dia em que se descobre que
+ * «cativo» queria dizer outra coisa.
+ *
+ * Passa-se `aPlataformaCobra` à mão de propósito — para se poder provar o mundo
+ * de amanhã sem mexer no interruptor de hoje.
+ */
+const COBRA = { aPlataformaCobra: true } as const;
+
+describe("com a plataforma a cobrar, o pagamento manda sobre a fase", () => {
+  const pago = trabalho({
+    confirmadoEm: haDias(1),
+    clientePagouEm: haDias(2),
+  });
+  const porPagar = trabalho({ negociacaoId: 2, confirmadoEm: haDias(1) });
+
+  it("um trabalho pago e confirmado fica disponível, como sempre", () => {
+    const c = carteiraDe([pago], [], agora, COBRA);
+    expect(c.disponivel).toBe(liquidoDe200);
+    expect(c.porCobrar).toBe(0);
+  });
+
+  /*
+   * O TESTE QUE IMPEDE A CLYON DE TRANSFERIR O QUE NUNCA RECEBEU.
+   *
+   * O cliente confirmou que o trabalho está feito, mas não pagou. Sem esta
+   * regra, o valor ia para «disponível» e o profissional podia levantá-lo —
+   * com dinheiro que não existe em conta nenhuma.
+   */
+  it("confirmado mas NÃO pago não fica disponível — fica por cobrar", () => {
+    const c = carteiraDe([porPagar], [], agora, COBRA);
+    expect(c.disponivel).toBe(0);
+    expect(c.cativo).toBe(0);
+    expect(c.porCobrar).toBe(liquidoDe200);
+  });
+
+  /*
+   * E o prazo de sete dias também não o liberta. É a mesma armadilha por
+   * outro caminho: o prazo existe para o cliente não prender o dinheiro do
+   * profissional — não para inventar dinheiro que ninguém entregou.
+   */
+  it("nem o prazo automático liberta um trabalho por pagar", () => {
+    const velho = trabalho({ negociacaoId: 3, execucaoEnviadaEm: haDias(30) });
+    const c = carteiraDe([velho], [], agora, COBRA);
+    expect(c.disponivel).toBe(0);
+    expect(c.porCobrar).toBe(liquidoDe200);
+  });
+
+  it("pago e por confirmar é «cativo» — e aí o site diz a verdade", () => {
+    const c = carteiraDe(
+      [trabalho({ execucaoEnviadaEm: haDias(1), clientePagouEm: haDias(2) })],
+      [],
+      agora,
+      COBRA,
+    );
+    expect(c.cativo).toBe(liquidoDe200);
+    expect(c.porCobrar).toBe(0);
+    expect(c.disponivel).toBe(0);
+  });
+
+  it("o total ganho continua a contar o trabalho feito, pago ou não", () => {
+    const c = carteiraDe([pago, porPagar], [], agora, COBRA);
+    expect(c.totalGanho).toBe(liquidoDe200 * 2);
+    expect(c.disponivel).toBe(liquidoDe200);
+    expect(c.porCobrar).toBe(liquidoDe200);
+  });
+
+  /*
+   * ⚠️ E SEM O INTERRUPTOR, NADA DISTO ACONTECE.
+   *
+   * É o teste que protege os profissionais de hoje: se `oClientePagou`
+   * respondesse «não» quando não há pagamentos, a carteira inteira de toda a
+   * gente ia para «por cobrar» no primeiro deploy.
+   */
+  it("sem a plataforma a cobrar, um trabalho sem pagamento conta como sempre contou", () => {
+    const c = carteiraDe([porPagar], [], agora, { aPlataformaCobra: false });
+    expect(c.porCobrar).toBe(0);
+    expect(c.disponivel).toBe(liquidoDe200);
+  });
+});
+
+describe("a recusa diz porquê, e não só que não chega", () => {
+  const aEsperaDoCliente = carteiraDe(
+    [trabalho({ confirmadoEm: haDias(1) })],
+    [],
+    agora,
+    COBRA,
+  );
+
+  it("com trabalho por cobrar, explica que o cliente é que não pagou", () => {
+    expect(recusaDoLevantamento(50, aEsperaDoCliente, true, false)).toBe("a_espera_do_cliente");
+  });
+
+  it("sem nada por cobrar, continua a ser saldo insuficiente", () => {
+    const vazia = carteiraDe([], [], agora, COBRA);
+    expect(recusaDoLevantamento(50, vazia, true, false)).toBe("saldo_insuficiente");
+  });
+
+  // A falta de IBAN vem primeiro: é a única que ele resolve sozinho e já.
+  it("a falta de IBAN continua a mandar em tudo o resto", () => {
+    expect(recusaDoLevantamento(50, aEsperaDoCliente, false, false)).toBe("sem_iban");
   });
 });

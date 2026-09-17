@@ -132,6 +132,14 @@ export type Movimento = {
 };
 
 export type Carteira = {
+  /**
+   * Trabalho feito que o cliente ainda não pagou — nem cá nem lá.
+   *
+   * Linha separada de `cativo` de propósito: cativo quer dizer «a CLYON tem o
+   * seu dinheiro», e juntá-los prometia uma garantia sobre dinheiro que ninguém
+   * entregou. Zero enquanto a plataforma não cobrar.
+   */
+  porCobrar: number;
   cativo: number;
   disponivel: number;
   aCaminho: number;
