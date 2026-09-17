@@ -7088,6 +7088,23 @@ export type Acontecimento =
    * dia alguém vai querer saber quando é que ele começou.
    */
   | "livro_construido"
+  /*
+   * O CLIENTE PAGOU NO SITE — fase 2 do plano dos pagamentos.
+   *
+   * São quatro e não um, porque são quatro momentos com consequências
+   * diferentes. O «pedido» é uma referência gerada, e não prova nada. O
+   * «recebido» é dinheiro que entrou. O «falhado» é o que explica um cliente ao
+   * telefone a dizer que tentou e não conseguiu.
+   *
+   * E o «em duplicado» é o que nenhuma integração escreve no primeiro dia e
+   * toda a gente acaba por precisar: o cliente pagou o MB WAY e pagou TAMBÉM a
+   * referência Multibanco que tinha ficado aberta. É dinheiro a mais na nossa
+   * conta que é dele, e tem de aparecer a alguém para ser devolvido.
+   */
+  | "pagamento_pedido"
+  | "pagamento_recebido"
+  | "pagamento_falhado"
+  | "pagamento_em_duplicado"
   // As contas
   | "conta_apagada"
   /*

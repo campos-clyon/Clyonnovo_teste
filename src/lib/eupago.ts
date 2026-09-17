@@ -486,13 +486,36 @@ export function lerRespostaDoMultibanco(estadoHttp: number, json: unknown): Resp
 }
 
 /**
- * O QUE O CLIENTE PAGA — e há um só sítio a decidi-lo.
+ * O QUE SE PEDE AO BANCO DELE — e há um só sítio a decidi-lo.
  *
- * Existe aqui, e não no sítio que constrói o pedido, porque é o número que vai
- * para o banco dele. A conta é a de `contaDoCliente`: serviço + taxa da CLYON
- * + os dois IVAs. Recalculá-la ao lado seria abrir a porta a pedir-lhe um
- * valor diferente do que o ecrã lhe mostrou.
+ * ⚠️ HÁ DOIS NÚMEROS, E NÃO É UMA DÚVIDA MINHA: É O QUE O PRODUTO DIZ.
+ *
+ * Desde 17-09-2026 — *«vamos apresentar os valores sempre sem IVA, caso o
+ * cliente deseje factura são mais 23 %»* — o ecrã do cliente mostra DOIS
+ * valores sobre o mesmo trabalho:
+ *
+ *     100 € acordados        →   105,00 €   «a pagar»          (`semIva`)
+ *                                106,15 €   «se quiser factura» (`total`)
+ *
+ * Só há uma regra que não se pode quebrar aqui: **pede-se ao banco o número
+ * que ele leu.** Um cliente que viu 105 e recebe no telemóvel um pedido de
+ * 106,15 recusa-o — e tem razão em recusá-lo. É a forma mais rápida de perder
+ * alguém no último passo.
+ *
+ * Por isso a factura é uma ESCOLHA do cliente, feita no ecrã de pagamento,
+ * antes de o valor sair daqui — e fica gravada na linha do pagamento, porque é
+ * ela que decide o documento que se emite a seguir.
+ *
+ * (O IVA da taxa é devido à mesma, haja factura ou não. Isso é uma questão
+ * fiscal da CLYON e não uma questão de software: ver a nota em
+ * `taxas-plataforma.ts`, que já a levanta.)
  */
-export function quantoOClientePaga(acordado: number, regime: RegimeIva, taxas?: Taxas): number {
-  return contaDoCliente(acordado, regime, taxas).total;
+export function quantoOClientePaga(
+  acordado: number,
+  regime: RegimeIva,
+  taxas?: Taxas,
+  comFactura = false,
+): number {
+  const c = contaDoCliente(acordado, regime, taxas);
+  return comFactura ? c.total : c.semIva;
 }

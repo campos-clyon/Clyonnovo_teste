@@ -364,17 +364,37 @@ describe("um código que não conhecemos nunca é sucesso", () => {
   });
 });
 
-describe("o que o cliente paga é a conta do cliente, e não outra", () => {
+describe("o que se pede ao banco é o que o ecrã mostrou", () => {
   /*
-   * Se estas duas contas divergirem, o ecrã mostra um número e o banco pede
-   * outro. É a forma mais rápida de perder a confiança de alguém.
+   * ⚠️ O TESTE QUE PROTEGE O ÚLTIMO PASSO.
+   *
+   * Desde 17-09-2026 o ecrã do cliente mostra `semIva` como «a pagar», e o
+   * `total` só na linha de quem quer factura. Um cliente que leu 105 e recebe
+   * no telemóvel um pedido de 106,15 recusa-o — e tem razão em recusá-lo.
+   *
+   * Se alguém trocar isto, é aqui que rebenta antes de rebentar num MB WAY.
    */
-  it("é exactamente o total de contaDoCliente, isento ou normal", () => {
+  it("sem factura, é o `semIva` — o número grande do ecrã", () => {
     for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
       for (const regime of ["isento", "normal"] as const) {
-        expect(quantoOClientePaga(acordado, regime)).toBe(contaDoCliente(acordado, regime).total);
+        expect(quantoOClientePaga(acordado, regime)).toBe(contaDoCliente(acordado, regime).semIva);
       }
     }
+  });
+
+  it("com factura, é o total com imposto — o número da linha de baixo", () => {
+    for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
+      for (const regime of ["isento", "normal"] as const) {
+        expect(quantoOClientePaga(acordado, regime, undefined, true)).toBe(
+          contaDoCliente(acordado, regime).total,
+        );
+      }
+    }
+  });
+
+  it("os dois números do exemplo do dono: 105,00 sem factura e 106,15 com", () => {
+    expect(quantoOClientePaga(100, "isento")).toBe(105);
+    expect(quantoOClientePaga(100, "isento", undefined, true)).toBe(106.15);
   });
 
   /*
@@ -393,17 +413,16 @@ describe("o que o cliente paga é a conta do cliente, e não outra", () => {
    * Fica escrito num teste, e não num comentário, porque é a única forma de
    * alguém dar por isso antes de o ver no extracto.
    */
-  it("100 € acordados com um isento: o cliente paga 106,15 — 105 mais o IVA da taxa", () => {
+  it("100 € acordados com um isento: 105 sem factura, 106,15 com", () => {
     const c = contaDoCliente(100, "isento");
     expect(c.servico).toBe(100);
     expect(c.taxa).toBe(5);
     expect(c.ivaDoServico).toBe(0); // isento: não liquida imposto nenhum
     expect(c.ivaDaTaxa).toBe(1.15); // 23 % sobre os 5 € da CLYON
-    expect(quantoOClientePaga(100, "isento")).toBe(106.15);
+    expect(c.semIva).toBe(105);
+    expect(c.total).toBe(106.15);
 
     // E a parte da CLYON continua a ser 11 € — o IVA é do Estado, não nosso.
-    expect(quantoOClientePaga(100, "isento") - c.ivaDaTaxa - quantoOProfissionalRecebe(100)).toBe(
-      11,
-    );
+    expect(c.semIva - quantoOProfissionalRecebe(100)).toBe(11);
   });
 });
