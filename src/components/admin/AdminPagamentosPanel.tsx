@@ -76,11 +76,25 @@ const CORES: Record<string, string> = {
   reembolsado: "text-cyan-300",
 };
 
+type Prova = {
+  ok: boolean;
+  temSegredoDoWebhook?: boolean;
+  ambiente?: string;
+  base?: string;
+  entidade?: string | null;
+  referencia?: string | null;
+  codigo?: string | null;
+  porque?: string;
+  pista?: string | null;
+};
+
 export default function AdminPagamentosPanel() {
   const { token, ready } = useAdminAuth();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [aCarregar, setACarregar] = useState(false);
+  const [prova, setProva] = useState<Prova | null>(null);
+  const [aProvar, setAProvar] = useState(false);
 
   // O ciclo partilhado não pode acender o estado de carregamento: o ecrã
   // piscava de vinte em vinte segundos enquanto alguém lê uma linha.
@@ -114,6 +128,28 @@ export default function AdminPagamentosPanel() {
   }, [ready, carregar]);
 
   useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
+
+  /**
+   * A prova de ligação: pede uma referência de 1 € que ninguém paga.
+   *
+   * Não cobra a ninguém e não escreve nada — serve só para responder à única
+   * pergunta que não se consegue responder olhando: **a chave serve?**
+   */
+  async function provar() {
+    setAProvar(true);
+    setProva(null);
+    try {
+      const r = await fetch("/api/admin/pagamentos/testar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProva((await r.json()) as Prova);
+    } catch {
+      setProva({ ok: false, porque: "Erro de rede." });
+    } finally {
+      setAProvar(false);
+    }
+  }
 
   if (!estado && (aCarregar || !erro)) {
     return (
@@ -186,6 +222,42 @@ export default function AdminPagamentosPanel() {
                   fim.
                 </span>
               </p>
+            )}
+          </div>
+        )}
+
+        {/*
+          A ÚNICA PERGUNTA QUE NÃO SE RESPONDE A OLHAR: a chave serve?
+          O erro mais provável é `EUPAGO_AMBIENTE=sandbox` com a chave de
+          produção — as duas casas do euPago têm contas separadas.
+        */}
+        {ligacao.configurado && (
+          <div className="mt-3 border-t border-slate-700/60 pt-3">
+            <button
+              type="button"
+              onClick={() => void provar()}
+              disabled={aProvar}
+              className="rounded-[14px] border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 disabled:opacity-40"
+            >
+              {aProvar ? "A perguntar ao euPago…" : "Provar a ligação"}
+            </button>
+            <span className="ml-2 text-[11px] text-slate-500">
+              pede uma referência de 1 € que ninguém paga — não cobra nem grava nada
+            </span>
+
+            {prova?.ok && (
+              <p className="mt-2 text-xs text-emerald-300">
+                A chave serve. Referência de teste {prova.entidade} / {prova.referencia} criada em{" "}
+                {prova.base}.
+                {prova.temSegredoDoWebhook === false &&
+                  " Falta o segredo do webhook — sem ele nenhum pagamento chega a ser dado por pago."}
+              </p>
+            )}
+            {prova && !prova.ok && (
+              <div className="mt-2 text-xs text-red-300">
+                <p>{prova.porque}</p>
+                {prova.pista && <p className="mt-1 text-amber-300">{prova.pista}</p>}
+              </div>
             )}
           </div>
         )}

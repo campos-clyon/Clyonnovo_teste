@@ -331,9 +331,27 @@ export function dataParaOEupago(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * O identificador de uma chamada que não é de ninguém — só para ver se a
+ * chave serve.
+ *
+ * NÃO é parseável por `idDoIdentificador`, e é de propósito: se alguém pagar
+ * por engano uma referência de teste, o aviso chega e é arrumado como
+ * «identificador alheio» em vez de creditar um pagamento que não existe.
+ */
+export const IDENTIFICADOR_DE_TESTE = "clyon-site-teste";
+
 export type DadosDoPagamento = {
   /** O id da nossa linha em `pagamentos`. Vira o `identifier`. */
   pagamentoId: number;
+  /**
+   * Um identificador à mão, em vez do que sai do `pagamentoId`.
+   *
+   * Existe só para a prova de ligação do backoffice — ver
+   * `IDENTIFICADOR_DE_TESTE`. Em tudo o resto fica por preencher, porque o
+   * identificador TEM de ser o fio que liga o aviso ao pagamento.
+   */
+  identificador?: string;
   /** O que o cliente paga, já com taxa e IVA. Ver `quantoOClientePaga`. */
   valor: number;
   /** Só MB WAY. */
@@ -366,7 +384,7 @@ export function corpoDoMbway(d: DadosDoPagamento): {
   if (!tel) return null;
   return {
     payment: {
-      identifier: identificadorDoPagamento(d.pagamentoId),
+      identifier: d.identificador ?? identificadorDoPagamento(d.pagamentoId),
       amount: { value: aosCentimos(d.valor), currency: "EUR" },
       customerPhone: tel.customerPhone,
       countryCode: tel.countryCode,
@@ -395,7 +413,7 @@ export function corpoDoMultibanco(
   const corpo = {
     chave,
     valor: aosCentimos(d.valor),
-    id: identificadorDoPagamento(d.pagamentoId),
+    id: d.identificador ?? identificadorDoPagamento(d.pagamentoId),
     per_dup: 0 as const,
   };
   return d.prazo ? { ...corpo, data_fim: dataParaOEupago(d.prazo) } : corpo;
