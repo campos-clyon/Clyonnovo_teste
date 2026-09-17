@@ -54,21 +54,45 @@ export function assinaturaValida(
   const recebida = cabecalho.trim();
   if (recebida === "") return false;
 
-  const esperada = crypto.createHmac("sha256", segredo).update(corpoCru, "utf8").digest();
-
-  for (const codificacao of ["base64", "hex"] as const) {
-    try {
-      const bytes = Buffer.from(recebida, codificacao);
-      // `timingSafeEqual` rebenta com tamanhos diferentes, e um resumo
-      // SHA-256 tem sempre 32 bytes: o tamanho errado já é resposta.
-      if (bytes.length === esperada.length && crypto.timingSafeEqual(bytes, esperada)) {
-        return true;
+  for (const um of segredosDe(segredo)) {
+    const esperada = crypto.createHmac("sha256", um).update(corpoCru, "utf8").digest();
+    for (const codificacao of ["base64", "hex"] as const) {
+      try {
+        const bytes = Buffer.from(recebida, codificacao);
+        // `timingSafeEqual` rebenta com tamanhos diferentes, e um resumo
+        // SHA-256 tem sempre 32 bytes: o tamanho errado já é resposta.
+        if (bytes.length === esperada.length && crypto.timingSafeEqual(bytes, esperada)) {
+          return true;
+        }
+      } catch {
+        // Codificação que não descodifica — passa à seguinte.
       }
-    } catch {
-      // Codificação que não descodifica — passa à seguinte.
     }
   }
   return false;
+}
+
+/**
+ * MAIS DO QUE UM SEGREDO, SEPARADOS POR VÍRGULA — e há uma razão concreta.
+ *
+ * O euPago tem duas casas com CONTAS SEPARADAS: a sandbox e a produção. Cada
+ * uma tem o seu canal, e cada canal gera a sua chave criptográfica. Com uma
+ * variável a guardar um segredo só, o dia de trocar de casa é o dia em que é
+ * preciso acertar TRÊS variáveis ao mesmo tempo — e a que se esquece é sempre
+ * esta, porque é a única cujo esquecimento não dá erro à frente de ninguém:
+ * dá 401 a avisos que chegam sozinhos, de madrugada, sem ninguém a ver.
+ *
+ * Com os dois lá dentro, a troca de ambiente deixa de poder partir o webhook.
+ *
+ * E NÃO ENFRAQUECE NADA: cada segredo continua a ser um segredo, e quem não
+ * tiver nenhum deles não produz assinatura nenhuma. Aceitar dois assinantes
+ * legítimos não é o mesmo que aceitar mais um qualquer.
+ */
+export function segredosDe(bruto: string): string[] {
+  return bruto
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s !== "");
 }
 
 /**

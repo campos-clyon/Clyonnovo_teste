@@ -5,6 +5,7 @@ import {
   assinaturaValida,
   confereComOPedido,
   lerAvisoDoEupago,
+  segredosDe,
   type AvisoDoEupago,
 } from "./webhook-do-eupago";
 
@@ -270,5 +271,47 @@ describe("o aviso bate certo com o que pedimos?", () => {
 
   it("um aviso que não diz quanto foi pago não dá nada por pago", () => {
     expect(confereComOPedido(aviso({ valor: null }), pedido)).not.toBeNull();
+  });
+});
+
+/**
+ * OS DOIS SEGREDOS — 17-09-2026.
+ *
+ * A sandbox e a produção do euPago são contas separadas, cada uma com o seu
+ * canal e a sua chave criptográfica. Com uma variável a guardar um segredo só,
+ * trocar de ambiente obrigava a acertar três variáveis ao mesmo tempo — e a que
+ * se esquece é sempre esta, porque é a única cujo esquecimento não dá erro à
+ * frente de ninguém: dá 401 a avisos que chegam de madrugada.
+ */
+describe("dois segredos ao mesmo tempo — sandbox e produção", () => {
+  const corpo = avisoCru();
+  const DOIS = `${SEGREDO}, segredo-da-producao`;
+
+  it("aceita o primeiro", () => {
+    expect(assinaturaValida(corpo, assinar(corpo, SEGREDO), DOIS)).toBe(true);
+  });
+
+  it("aceita o segundo", () => {
+    expect(assinaturaValida(corpo, assinar(corpo, "segredo-da-producao"), DOIS)).toBe(true);
+  });
+
+  /*
+   * Aceitar dois assinantes legítimos não é o mesmo que aceitar mais um
+   * qualquer. Se isto passasse, a lista teria deixado de ser uma lista de
+   * segredos e passado a ser uma porta aberta.
+   */
+  it("continua a recusar um terceiro", () => {
+    expect(assinaturaValida(corpo, assinar(corpo, "outro qualquer"), DOIS)).toBe(false);
+  });
+
+  it("espaços à volta não contam, e uma vírgula solta não abre nada", () => {
+    expect(assinaturaValida(corpo, assinar(corpo, SEGREDO), `  ${SEGREDO}  ,  `)).toBe(true);
+    expect(assinaturaValida(corpo, assinar(corpo, ""), ",,,")).toBe(false);
+    expect(segredosDe(",,,")).toEqual([]);
+  });
+
+  it("um segredo sozinho continua a funcionar como sempre", () => {
+    expect(assinaturaValida(corpo, assinar(corpo), SEGREDO)).toBe(true);
+    expect(segredosDe(SEGREDO)).toEqual([SEGREDO]);
   });
 });
