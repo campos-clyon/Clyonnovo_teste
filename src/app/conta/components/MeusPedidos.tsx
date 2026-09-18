@@ -243,8 +243,16 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
           <ul className="space-y-3">
             {orders.map((o) => {
               const plataforma = estadoNaPlataforma(o);
-              const preco =
-                plataforma.valor ?? o.precoFinalIva ?? o.precoFinal ?? o.estimateTotal;
+              /*
+               * SEM A ESTIMATIVA DO MOTOR — 18-09-2026.
+               *
+               * "Vamos deixar de apresentar esse valor estimado para o
+               * cliente." Na lista era pior do que no detalhe: um número por
+               * linha, todos com o mesmo aspecto, e sem nada a dizer quais
+               * eram um acordo e quais eram um palpite calculado a partir do
+               * formulário. Ficam os que alguém decidiu.
+               */
+              const preco = plataforma.valor ?? o.precoFinalIva ?? o.precoFinal;
               const local = o.city ?? o.address?.split(",").pop()?.trim();
               // Uma proposta à espera dele é a única coisa nesta lista com
               // prazo a correr — 48 horas. Sem nada que a distinga, o pedido

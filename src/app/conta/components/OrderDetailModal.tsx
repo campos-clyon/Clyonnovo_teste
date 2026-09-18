@@ -107,10 +107,25 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
    * bloco do acordo, três centímetros abaixo, dizia "Total a pagar 636,00 €".
    * Dois números no mesmo ecrã para a mesma pergunta, e o mais visível era o
    * que já não valia.
+   *
+   * ⚠️ A ESTIMATIVA DO MOTOR SAIU DAQUI — 18-09-2026.
+   *
+   * "Vamos deixar de apresentar esse valor estimado para o cliente."
+   *
+   * O pedido #342 abria com «127,43 € · sem IVA» em corpo grande, e aquele
+   * número não era de ninguém: saía do motor de preços a partir do
+   * formulário, antes de existir proposta nenhuma. O próprio histórico do
+   * pedido dizia-o — «confirmar a morada antes de fechar o preço» — mas isso
+   * lê-se três ecrãs abaixo, e o que fica na cabeça do cliente é o número
+   * grande do topo. Quando as propostas chegam a 180 €, quem ancorou nos 127
+   * sente-se enganado, e tem razão em sentir-se.
+   *
+   * O que FICA são números que alguém decidiu: o acordado com o profissional,
+   * e o `precoFinal` que a CLYON envia ao aprovar um pedido. O que sai é só o
+   * palpite da máquina.
    */
   const naPlataforma = estadoNaPlataforma(order);
-  const preco =
-    naPlataforma.valor ?? order.precoFinalIva ?? order.precoFinal ?? order.estimateTotal;
+  const preco = naPlataforma.valor ?? order.precoFinalIva ?? order.precoFinal;
   const precoEAcordado = naPlataforma.legenda === "acordado";
 
   // O detalhe já não é uma sobreposição: bloquear o scroll da página aqui
@@ -316,14 +331,21 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                 {precoEAcordado ? "a pagar, sem IVA" : "sem IVA"}
               </div>
             </div>
-          ) : order.estimateMin != null && order.estimateMax != null ? (
-            <div className="text-right">
-              <div className="text-xl font-bold leading-none text-slate-900">
-                {Number(order.estimateMin).toFixed(0)}–{Number(order.estimateMax).toFixed(0)} €
-              </div>
-              <div className="mt-1 text-[11px] text-tinta-fraca">estimativa</div>
+          ) : (
+            /*
+              SEM VALOR AINDA, dito por extenso — e não um espaço em branco.
+
+              O intervalo da estimativa estava aqui, e saiu pela mesma razão
+              que o número: é um palpite da máquina a ocupar o lugar mais
+              visível do ecrã. Mas deixar o canto vazio fazia parecer que
+              faltava carregar alguma coisa. Uma frase curta responde à
+              pergunta que ele veio fazer, que é «quanto vai custar»: ainda
+              não se sabe, e diz-se quem é que vai dizer.
+            */
+            <div className="max-w-[9rem] text-right text-[11px] leading-snug text-tinta-fraca">
+              O valor vem nas propostas dos profissionais
             </div>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -605,11 +627,6 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             {preco != null && (
               <span className="text-base font-bold text-slate-900">
                 {Number(preco).toFixed(2)} € {precoEAcordado ? "a pagar, s/IVA" : "s/IVA"}
-              </span>
-            )}
-            {preco == null && order.estimateMin != null && order.estimateMax != null && (
-              <span className="text-sm font-semibold text-slate-700">
-                {Number(order.estimateMin).toFixed(0)}–{Number(order.estimateMax).toFixed(0)} € estimativa
               </span>
             )}
           </div>

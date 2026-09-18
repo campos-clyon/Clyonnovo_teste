@@ -175,7 +175,6 @@ export default async function VistaDoPedido({
   const desejado = euros(pedido.valorDesejadoCliente);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
   const base = lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco);
-  const estimativa = euros(pedido.estimateTotal ?? pedido.estimateMax);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
@@ -319,19 +318,29 @@ export default async function VistaDoPedido({
             </p>
           )}
 
-          {estimativa && (
-            <div className="flex items-baseline justify-between gap-4 border-t border-slate-100 pt-3">
-              <span className="text-sm text-slate-600">A nossa estimativa</span>
-              <span className="text-lg font-semibold text-acao">{estimativa}</span>
-            </div>
-          )}
+          {/*
+            A NOSSA ESTIMATIVA SAIU DAQUI — 18-09-2026.
+
+            "Vamos deixar de apresentar esse valor estimado para o cliente."
+
+            Era um número calculado pelo motor a partir do formulário, antes
+            de existir proposta nenhuma e antes sequer de a morada estar
+            confirmada. Vinha em corpo grande e na cor de acção, ao lado do
+            valor que ELE indicou — dois números com o mesmo peso a responder
+            à mesma pergunta, e um deles não era de ninguém.
+
+            O problema não é a estimativa estar errada: é ela ancorar. Quem lê
+            127 € antes de as propostas chegarem lê 180 € como um aumento, e
+            não como o preço. A CLYON não faz as recolhas e não é ela quem
+            decide o preço — dizer um número «nosso» antes de os profissionais
+            falarem era entrar numa conversa que não é nossa.
+          */}
 
           <Nota titulo="De onde vêm estes números">
             O valor que indicou é o ponto de partida: é o que os profissionais
-            veem quando o pedido lhes chega, e a partir dele fazem propostas. A
-            estimativa é nossa, é informativa e não muda nada — serve de
-            referência antes das propostas. Quem decide o preço são vocês os
-            dois.
+            veem quando o pedido lhes chega, e a partir dele fazem propostas.
+            Quem decide o preço são vocês os dois — nós não pomos aqui nenhum
+            valor nosso.
           </Nota>
         </div>
       </section>
