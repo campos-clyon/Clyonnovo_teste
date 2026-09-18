@@ -60,3 +60,56 @@ describe("o ecrã", () => {
     expect(PAINEL).toContain('{ecra === "agenda" && (');
   });
 });
+
+/**
+ * EDITAR A AGENDA A PARTIR DA AGENDA — 18-09-2026.
+ *
+ * *«Os profissionais devem ter a opção de editar as suas agendas para ajustar
+ * as datas e horários dos trabalhos.»*
+ *
+ * Já podiam — mas só dentro do cartão do trabalho, noutro ecrã. Na agenda viam
+ * que estava errado e tinham de sair dali para o corrigir. É a mesma lição que
+ * o botão de arquivar já tinha ensinado: ninguém sai da agenda para ir arrumar
+ * a agenda.
+ */
+describe("o dia muda-se de dentro da agenda", () => {
+  const MARCAR = ler("src/app/profissionais/painel/MarcarODia.tsx");
+  const TRABALHOS = ler("src/app/profissionais/painel/Trabalhos.tsx");
+
+  it("a agenda monta o mesmo componente que a ficha do trabalho", () => {
+    expect(AGENDA).toContain('import MarcarODia from "./MarcarODia"');
+    expect(TRABALHOS).toContain('import MarcarODia from "./MarcarODia"');
+  });
+
+  /*
+   * UM SÓ SÍTIO A GRAVAR. Duas cópias do formulário acabavam com duas regras
+   * de data — e a que ficasse para trás gravava por cima do que o cliente
+   * pediu, que é precisamente o que a rota existe para impedir.
+   */
+  it("e só ele fala com a rota", () => {
+    expect(MARCAR).toContain('fetch("/api/profissionais/agenda"');
+    expect(TRABALHOS).not.toContain('fetch("/api/profissionais/agenda"');
+  });
+
+  it("sem data, o campo já está aberto — é o que a secção pede", () => {
+    expect(AGENDA).toContain("Sem data marcada — combine com o cliente e marque aqui.");
+    // A frase antiga mandava esperar pela CLYON, e deixou de ser verdade.
+    expect(AGENDA).not.toContain("a CLYON regista-a no pedido");
+  });
+
+  it("com data, abre-se um de cada vez", () => {
+    // Oito campos de data abertos ao mesmo tempo não é uma agenda: é um
+    // formulário. E o gesto principal deste ecrã é ligar ao cliente.
+    expect(AGENDA).toContain("aMudar === p.negociacaoId");
+    expect(AGENDA).toContain("Mudar o dia ou a hora");
+  });
+
+  /*
+   * O campo diz a hora LOCAL e a data vem em ISO com Z. Sem esta conversão, um
+   * trabalho das 11h aparecia às 10h — e bastava gravar para o adiantar.
+   */
+  it("o campo não anda uma hora para trás", () => {
+    expect(MARCAR).toContain("d.getHours()");
+    expect(MARCAR).not.toContain("toISOString().slice(0, 16)");
+  });
+});

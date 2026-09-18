@@ -6,6 +6,7 @@ import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import type { Pedido } from "./tipos";
 import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
+import MarcarODia from "./MarcarODia";
 
 /**
  * A agenda do profissional — os trabalhos contratados, por dia.
@@ -120,6 +121,22 @@ export default function Agenda({
    */
   const [aArquivar, setAArquivar] = useState<number | null>(null);
 
+  /*
+   * EDITAR A AGENDA A PARTIR DA AGENDA — 18-09-2026.
+   *
+   * *«Os profissionais devem ter a opção de editar as suas agendas para
+   * ajustar as datas e horários dos trabalhos.»*
+   *
+   * Já podiam, mas só dentro do cartão do trabalho, noutro ecrã. Aqui viam que
+   * estava errado e tinham de sair para o corrigir — a mesma lição do botão de
+   * arquivar, que também só existia lá: ninguém sai da agenda para ir arrumar
+   * a agenda.
+   *
+   * Um de cada vez. Oito campos de data abertos ao mesmo tempo não é um ecrã
+   * de agenda — é um formulário.
+   */
+  const [aMudar, setAMudar] = useState<number | null>(null);
+
   async function arquivar(p: Pedido) {
     if (!confirmarArrumacao(p)) return;
     setAArquivar(p.negociacaoId);
@@ -217,9 +234,54 @@ export default function Agenda({
           Pôr no calendário do telemóvel
         </a>
       ) : (
-        <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
-          Sem data marcada — combine com o cliente e a CLYON regista-a no pedido.
-        </p>
+        /*
+          SEM DATA: O CAMPO ABRE JÁ.
+          Esta secção existe para pedir uma coisa — que ele marque o dia. Pôr um
+          botão a abrir um campo era um toque a mais para chegar à única acção
+          que a secção pede.
+
+          E a frase mudou. Dizia «combine com o cliente e a CLYON regista-a no
+          pedido», o que já não era verdade: quem regista é ele, aqui.
+        */
+        <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2">
+          <p className="text-xs leading-relaxed text-amber-800">
+            Sem data marcada — combine com o cliente e marque aqui.
+          </p>
+          <MarcarODia pedido={p} onGravado={onRecarregar} compacto />
+        </div>
+      )}
+
+      {/*
+        MUDAR O DIA, para quem já tem um.
+
+        Fechado por omissão e discreto de propósito: a agenda existe para ele
+        ligar ao cliente e ver onde tem de estar. Um campo de data aberto em
+        cada um dos oito cartões do dia empurrava o telefone para fora do ecrã.
+
+        Aberto, é o mesmo componente da ficha do trabalho — e grava pela mesma
+        rota, que é quem guarda as regras.
+      */}
+      {comHora && (
+        <div className="mt-2">
+          {aMudar === p.negociacaoId ? (
+            <MarcarODia
+              pedido={p}
+              onGravado={() => {
+                setAMudar(null);
+                onRecarregar();
+              }}
+              compacto
+            />
+          ) : (
+            <button
+              onClick={() => setAMudar(p.negociacaoId)}
+              className="flex min-h-[40px] w-full items-center justify-center gap-1.5 text-xs font-semibold text-acao transition active:opacity-70"
+            >
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              Mudar o dia ou a hora
+            </button>
+          )}
+        </div>
       )}
 
       {/*
