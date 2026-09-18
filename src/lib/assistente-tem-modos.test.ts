@@ -10,6 +10,7 @@ import {
   type DadosDaRecolha,
   type PassoDaRecolha,
 } from "./whatsapp-recolha";
+import { comoTratar as comoTratarDoAutomatico } from "./assistente-automatico";
 
 /**
  * O ASSISTENTE TEM MODOS.
@@ -164,13 +165,27 @@ describe("os exemplos desnecessários", () => {
 });
 
 describe("a regra do tratamento vive num sítio só", () => {
-  it("o assistente automático usa a MESMA função da recolha", async () => {
+  /*
+   * ⚠️ O IMPORT É ESTÁTICO, LÁ EM CIMA, E ISSO NÃO É ESTILO — 18-09-2026.
+   *
+   * Estava aqui um `await import("./assistente-automatico")`, e este teste
+   * levava 85 ms sozinho e ESTOIRAVA AOS 5000 ms na suite inteira. Não era
+   * lentidão: é que um import dinâmico manda transformar o módulo naquele
+   * instante, dentro do limite de tempo do teste, a competir com duzentos
+   * ficheiros a fazer o mesmo.
+   *
+   * Em cima, a transformação acontece na recolha — que não tem limite — e o
+   * corpo do teste volta a ser o que sempre foi: uma comparação.
+   *
+   * Um teste que falha de vez em quando é pior do que um teste a menos: ao fim
+   * de duas semanas ninguém olha para o vermelho.
+   */
+  it("o assistente automático usa a MESMA função da recolha", () => {
     /*
      * Estavam a ser duas cópias. Duas cópias de uma regra de tratamento acabam
      * sempre com a mesma pessoa a ser tratada de duas maneiras pelo mesmo
      * sistema — e a que ninguém corrige é a que ninguém está a ver.
      */
-    const auto = await import("./assistente-automatico");
-    expect(auto.comoTratar).toBe(comoTratar);
+    expect(comoTratarDoAutomatico).toBe(comoTratar);
   });
 });

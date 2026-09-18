@@ -56,6 +56,50 @@ type Corpo = {
   telemovel?: unknown;
 };
 
+/**
+ * O QUE JÁ FOI PEDIDO A ESTE CLIENTE — e se ele pagou.
+ *
+ * Sem isto, gerar uma referência era um gesto sem memória: a seguir ao clique
+ * via-se o resultado, e no dia seguinte o ecrã estava como se nada tivesse
+ * acontecido. Quem abrisse o pedido não tinha como saber se já tinha sido
+ * pedido dinheiro àquele cliente — e a saída era gerar outra referência, que é
+ * exactamente o que faz alguém pagar duas vezes.
+ *
+ * Devolve a mensagem outra vez, montada aqui. É o que permite reenviá-la dois
+ * dias depois sem ter de gerar nada de novo: a referência que o cliente tem na
+ * mão continua a ser aquela.
+ */
+export async function GET(req: NextRequest) {
+  const { err } = await requireAdmin(req);
+  if (err) return err;
+
+  const negociacaoId = Number(req.nextUrl.searchParams.get("negociacaoId"));
+  const acesso = await trabalhoVistoPeloBackoffice(negociacaoId);
+  if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
+
+  try {
+    const linhas = await pagamentosDaNegociacao(negociacaoId);
+    const conf = configuracaoDoEupago(process.env);
+    return NextResponse.json({
+      /*
+       * Dizer que não está configurado é diferente de dizer que não há
+       * pagamentos. Sem isto, um euPago por ligar parecia um cliente que
+       * ainda não tinha pago.
+       */
+      configurado: conf.ok,
+      falta: conf.ok ? null : conf.falta,
+      pagamentos: linhas.map((l) => paraOEcra(l, acesso.trabalho, l.comFactura)),
+    });
+  } catch (e) {
+    console.error("[admin/pagamentos/criar GET]", e);
+    const porque = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: "Não foi possível ler os pagamentos deste pedido.", detalhe: porque.slice(0, 300) },
+      { status: 500 },
+    );
+  }
+}
+
 function metodoValido(v: unknown): MetodoDePagamento | null {
   return typeof v === "string" && (METODOS as string[]).includes(v)
     ? (v as MetodoDePagamento)
@@ -273,6 +317,10 @@ function paraOEcra(
     referencia: p.referencia,
     telemovel: p.telemovel,
     expiraEm: p.expiraEm,
+    // Quando entrou, e quanto entrou mesmo — o que o euPago confirmou, não o
+    // que nós pedimos. Se divergirem, é isso que se quer ver.
+    pagoEm: p.pagoEm,
+    valorPago: p.valorPago,
     criadoEm: p.criadoEm,
     mensagem: mensagemDaReferencia({
       pedidoId: t.pedidoId,

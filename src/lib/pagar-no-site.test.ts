@@ -240,8 +240,14 @@ describe("o caminho do backoffice", () => {
    */
   it("a mensagem é escrita no servidor, não no ecrã", () => {
     expect(ADMIN).toContain("mensagemDaReferencia(");
+    /*
+     * O ecrã MOSTRA uma mensagem que recebeu; não constrói nenhuma. Anda-se
+     * pelo que ele NÃO chama, e não pelo nome da variável que a guarda — esta
+     * asserção já chumbou uma vez por o `pagamento` ter passado a `mostrar`,
+     * o que não mudava nada do que ela protege.
+     */
     expect(ECRA).not.toContain("mensagemDaReferencia(");
-    expect(ECRA).toContain("pagamento.mensagem");
+    expect(ECRA).toMatch(/\w+\.mensagem\b/);
   });
 
   /*

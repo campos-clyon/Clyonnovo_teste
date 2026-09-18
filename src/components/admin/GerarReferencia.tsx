@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, CreditCard, Landmark, Loader2, Smartphone } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { linkDoWhatsApp } from "@/lib/mensagem-da-referencia";
@@ -31,12 +32,52 @@ type Pagamento = {
   metodo: "mbway" | "multibanco";
   estado: string;
   valor: number;
+  valorPago: number | null;
   entidade: string | null;
   referencia: string | null;
   telemovel: string | null;
   expiraEm: string | null;
+  pagoEm: string | null;
+  criadoEm: string;
   mensagem: string;
 };
+
+const QUANDO = (iso: string) => new Date(iso).toLocaleString("pt-PT");
+
+/**
+ * O QUE JÁ ACONTECEU A ESTE PEDIDO, em uma linha.
+ *
+ * Existe porque gerar uma referência não pode ser um gesto sem memória. No dia
+ * seguinte, quem abre o pedido tem de ver que já foi pedido dinheiro àquele
+ * cliente — senão gera outra, e é assim que alguém paga duas vezes.
+ */
+function Estado({ p }: { p: Pagamento }) {
+  if (p.estado === "pago") {
+    return (
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+        Pago {euros(p.valorPago ?? p.valor)}
+        {p.pagoEm ? ` · ${QUANDO(p.pagoEm)}` : ""} · {p.metodo === "mbway" ? "MB WAY" : "Multibanco"}
+      </p>
+    );
+  }
+  if (p.estado === "pendente") {
+    const expirou = p.expiraEm != null && new Date(p.expiraEm).getTime() < Date.now();
+    return (
+      <p className={`text-xs ${expirou ? "text-slate-500" : "text-amber-300"}`}>
+        {expirou ? "Expirou" : "À espera do pagamento"} ·{" "}
+        {p.metodo === "mbway" ? "MB WAY" : "Multibanco"} · {euros(p.valor)}
+        {p.expiraEm ? ` · ${expirou ? "expirou" : "até"} ${QUANDO(p.expiraEm)}` : ""}
+      </p>
+    );
+  }
+  return (
+    <p className="text-xs text-slate-500">
+      {p.estado} · {p.metodo === "mbway" ? "MB WAY" : "Multibanco"} · {euros(p.valor)} ·{" "}
+      {QUANDO(p.criadoEm)}
+    </p>
+  );
+}
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
 
@@ -93,10 +134,60 @@ export default function GerarReferencia({
   const [erro, setErro] = useState("");
   const [pagamento, setPagamento] = useState<Pagamento | null>(null);
   const [copiada, setCopiada] = useState(false);
+  /*
+   * Voltar ao formulario, com uma referencia viva na mao.
+   *
+   * "Gerar outra" nao pode limpar so o que se acabou de gerar: por baixo esta
+   * a que veio da base, e o ecra voltava a mostra-la como se nada fosse.
+   *
+   * Nao ha risco nenhum em deixar pedir: se for uma referencia Multibanco
+   * viva, o SERVIDOR recusa e devolve a mesma -- duas referencias vivas para
+   * o mesmo trabalho e como alguem paga duas vezes, e essa regra nao pode
+   * morar num ecra.
+   */
+  const [aPedirOutra, setAPedirOutra] = useState(false);
+  /** O histórico deste pedido. `null` enquanto não se leu. */
+  const [historico, setHistorico] = useState<Pagamento[] | null>(null);
+
+  /*
+   * LÊ-SE SEMPRE, ABERTO OU FECHADO.
+   *
+   * O resumo de uma linha — «Pago 105,00 € a 18/09» — tem de estar à vista
+   * sem ninguém abrir nada: é a resposta à pergunta que se faz ao olhar para
+   * um trabalho fechado, e obrigar a um clique para a ver é escondê-la.
+   */
+  const ler = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await fetch(`/api/admin/pagamentos/criar?negociacaoId=${negociacaoId}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json();
+      if (r.ok) setHistorico(d.pagamentos ?? []);
+    } catch {
+      /* Sem rede fica o que estava. O botão de gerar diz o que falhar. */
+    }
+  }, [token, negociacaoId]);
+
+  useEffect(() => {
+    void ler();
+  }, [ler]);
+
+  // O ciclo partilhado do backoffice: um MB WAY resolve-se em segundos e o
+  // aviso chega sozinho, mas só o servidor sabe quando chegou.
+  useAutoRefresh(() => ler(), { enabled: Boolean(token) });
+
+  const jaPago = historico?.find((p) => p.estado === "pago") ?? null;
+  const porPagar =
+    historico?.find(
+      (p) => p.estado === "pendente" && (!p.expiraEm || new Date(p.expiraEm).getTime() > Date.now()),
+    ) ?? null;
 
   async function gerar(metodo: "mbway" | "multibanco") {
     setAGerar(metodo);
     setErro("");
+    setAPedirOutra(false);
     try {
       const r = await fetch("/api/admin/pagamentos/criar", {
         method: "POST",
@@ -115,6 +206,7 @@ export default function GerarReferencia({
         return;
       }
       setPagamento(d.pagamento);
+      void ler();
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -124,18 +216,45 @@ export default function GerarReferencia({
 
   if (!aberto) {
     return (
-      <button
-        onClick={() => setAberto(true)}
-        className="mt-3 flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-600 hover:text-cyan-300"
-      >
-        <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-        Gerar referência de pagamento
-      </button>
+      <div className="mt-3">
+        {/*
+          O ESTADO PRIMEIRO, E SEM SE ABRIR NADA.
+
+          «Pago 105,00 € a 18/09» é a resposta à pergunta que se faz ao olhar
+          para um trabalho fechado. Escondê-la atrás de um clique era pedir a
+          alguém que procurasse o que devia estar à frente.
+        */}
+        {jaPago ? (
+          <Estado p={jaPago} />
+        ) : porPagar ? (
+          <Estado p={porPagar} />
+        ) : null}
+        <button
+          onClick={() => setAberto(true)}
+          className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-600 hover:text-cyan-300"
+        >
+          <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+          {jaPago
+            ? "Ver o pagamento"
+            : porPagar
+              ? "Ver ou reenviar a referência"
+              : "Gerar referência de pagamento"}
+        </button>
+      </div>
     );
   }
 
   const valor = comFactura ? comFacturaValor : semFactura;
-  const link = pagamento ? linkDoWhatsApp(telefoneDoCliente, pagamento.mensagem) : null;
+  /*
+   * O QUE SE MOSTRA: o que se acabou de gerar, ou o que já estava à espera.
+   *
+   * A segunda parte é a que faz a diferença dois dias depois — a referência
+   * que o cliente tem na mão continua a ser aquela, e reenviá-la é melhor do
+   * que gerar outra. Duas referências vivas para o mesmo trabalho é como
+   * alguém paga duas vezes.
+   */
+  const mostrar = aPedirOutra ? null : (pagamento ?? porPagar);
+  const link = mostrar ? linkDoWhatsApp(telefoneDoCliente, mostrar.mensagem) : null;
 
   return (
     <div className="mt-3 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.05] p-3">
@@ -152,7 +271,20 @@ export default function GerarReferencia({
         </button>
       </div>
 
-      {!pagamento ? (
+      {jaPago ? (
+        <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.08] p-3">
+          <Estado p={jaPago} />
+          {/*
+            SEM BOTAO DE GERAR. Um trabalho pago nao precisa de outra
+            referencia, e o indice unico da base recusa-a de qualquer forma --
+            mas oferece-la era convidar alguem a mandar ao cliente uma
+            referencia que ele ia pagar pela segunda vez.
+          */}
+          <p className="mt-1 text-[11px] text-slate-400">
+            O dinheiro entrou na conta do euPago. Nada mais a cobrar neste trabalho.
+          </p>
+        </div>
+      ) : !mostrar ? (
         <>
           {/*
             A FACTURA DECIDE O NÚMERO, e por isso escolhe-se ANTES de gerar.
@@ -222,23 +354,23 @@ export default function GerarReferencia({
       ) : (
         <>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
-            {pagamento.metodo === "multibanco" ? (
+            {mostrar.metodo === "multibanco" ? (
               <>
-                <Copiavel rotulo="Entidade" valor={pagamento.entidade ?? "—"} />
-                <Copiavel rotulo="Referência" valor={pagamento.referencia ?? "—"} />
-                <Copiavel rotulo="Valor" valor={euros(pagamento.valor)} />
+                <Copiavel rotulo="Entidade" valor={mostrar.entidade ?? "—"} />
+                <Copiavel rotulo="Referência" valor={mostrar.referencia ?? "—"} />
+                <Copiavel rotulo="Valor" valor={euros(mostrar.valor)} />
               </>
             ) : (
               <>
-                <Copiavel rotulo="Telemóvel" valor={pagamento.telemovel ?? "—"} />
-                <Copiavel rotulo="Valor" valor={euros(pagamento.valor)} />
+                <Copiavel rotulo="Telemóvel" valor={mostrar.telemovel ?? "—"} />
+                <Copiavel rotulo="Valor" valor={euros(mostrar.valor)} />
               </>
             )}
           </div>
 
-          {pagamento.expiraEm && (
+          {mostrar.expiraEm && (
             <p className="mt-2 text-[11px] text-slate-500">
-              Válida até {new Date(pagamento.expiraEm).toLocaleString("pt-PT")}
+              Válida até {new Date(mostrar.expiraEm).toLocaleString("pt-PT")}
             </p>
           )}
 
@@ -247,14 +379,14 @@ export default function GerarReferencia({
             aqui era uma segunda versão do que se está a cobrar.
           */}
           <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-slate-700 bg-slate-950/60 p-3 font-sans text-xs leading-relaxed text-slate-300">
-            {pagamento.mensagem}
+            {mostrar.mensagem}
           </pre>
 
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               onClick={async () => {
                 try {
-                  await navigator.clipboard.writeText(pagamento.mensagem);
+                  await navigator.clipboard.writeText(mostrar.mensagem);
                   setCopiada(true);
                   setTimeout(() => setCopiada(false), 2500);
                 } catch {
@@ -281,7 +413,10 @@ export default function GerarReferencia({
               </a>
             )}
             <button
-              onClick={() => setPagamento(null)}
+              onClick={() => {
+                setPagamento(null);
+                setAPedirOutra(true);
+              }}
               className="text-xs text-slate-500 hover:text-slate-300"
             >
               gerar outra
