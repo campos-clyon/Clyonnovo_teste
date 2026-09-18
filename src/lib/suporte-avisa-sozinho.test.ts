@@ -38,9 +38,27 @@ describe("a rota sabe dizer quantos esperam por nós", () => {
     );
   });
 
-  it("e sabe responder só com o número, para o menu não arrastar a lista toda", () => {
+  it("e sabe responder só com os números, para o menu não arrastar a lista toda", () => {
     expect(ROTA).toContain('searchParams.get("so") === "contagem"');
-    expect(ROTA).toContain("NextResponse.json({ aEsperar })");
+    // O que importa é a saída antecipada: o menu pergunta de dois em dois
+    // minutos e não tem de receber todas as mensagens de todas as conversas.
+    expect(ROTA).toContain("porLer: totalPorLer(");
+    expect(ROTA).not.toMatch(/=== "contagem"[\s\S]{0,400}conversas: visiveis/);
+  });
+
+  /*
+   * ⚠️ O SELO CONTA O QUE ESTÁ POR LER — 18-09-2026.
+   *
+   * *«Aqui no supp deve aparecer notificação apenas das mensagens não lidas.»*
+   *
+   * São duas perguntas e as duas fazem falta, cada uma no seu sítio: POR LER
+   * apaga-se ao abrir e é o selo; POR RESPONDER só se apaga respondendo e é o
+   * ponto amarelo da lista. Um selo que fica aceso depois de se ter lido tudo
+   * ensina em dois dias a ignorar o número.
+   */
+  it("e sabe dizer quantas mensagens estão por ler", () => {
+    expect(ROTA).toContain("leiturasDoSuporte(colab.id)");
+    expect(ROTA).toContain("totalPorLer(semOsApagados(conversas, apagados), marcas)");
   });
 });
 
@@ -51,8 +69,16 @@ describe("o selo do menu conta o que o painel mostra", () => {
 
   it("e NÃO soma as duas contagens — os tickets da app já lá estão dentro", () => {
     // Somá-las contava-os duas vezes, e um selo que exagera deixa de valer.
-    expect(MENU).not.toMatch(/soTickets \+ Number\(dc\.aEsperar/);
-    expect(MENU).toContain("Number(dc.aEsperar ?? soTickets)");
+    expect(MENU).not.toMatch(/soTickets \+ Number\(dc\./);
+  });
+
+  /*
+   * O número do menu é o das mensagens POR LER, e não o das que esperam
+   * resposta. `aEsperar` fica como recurso: se uma versão antiga da rota ainda
+   * não souber responder `porLer`, um selo aproximado é melhor do que nenhum.
+   */
+  it("o selo conta as mensagens por ler", () => {
+    expect(MENU).toContain("Number(dc.porLer ?? dc.aEsperar ?? soTickets)");
   });
 
   it("se a contagem falhar, fica a dos tickets — melhor incompleto do que nenhum", () => {

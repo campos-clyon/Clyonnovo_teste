@@ -20,6 +20,7 @@ import {
   porResponder,
   semOsApagados,
   soOsApagados,
+  totalPorLer,
   type ConversaDeSuporte,
   type MensagemDaConversa,
 } from "@/lib/conversas-de-suporte";
@@ -286,7 +287,26 @@ export async function GET(req: NextRequest) {
    * dois minutos só para saber um número.
    */
   if (new URL(req.url).searchParams.get("so") === "contagem") {
-    return NextResponse.json({ aEsperar });
+    /*
+     * O SELO CONTA O QUE ESTÁ POR LER — mudou a 18-09-2026.
+     *
+     * *«Aqui no supp deve aparecer notificação apenas das mensagens não
+     * lidas.»*
+     *
+     * Contava `aEsperar`, que é outra pergunta: «em quantas é que a bola está
+     * do nosso lado». Essa não se apaga por se ler — só por responder — e um
+     * selo que continua aceso depois de se ter lido tudo ensina em dois dias a
+     * ignorar o número.
+     *
+     * As duas continuam a existir, cada uma no seu sítio: esta no selo do
+     * menu, `aEsperar` no ponto amarelo da lista. Vão as duas na resposta
+     * porque custam o mesmo e poupam uma segunda ida à base.
+     */
+    const marcas = colab ? await leiturasDoSuporte(colab.id) : {};
+    return NextResponse.json({
+      aEsperar,
+      porLer: totalPorLer(semOsApagados(conversas, apagados), marcas),
+    });
   }
 
   /*

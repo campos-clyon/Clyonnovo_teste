@@ -10,6 +10,7 @@ import {
   ordenarConversas,
   porResponder,
   semOEmbrulho,
+  totalPorLer,
   ultimaEm,
   type ConversaDeSuporte,
 } from "./conversas-de-suporte";
@@ -430,5 +431,60 @@ describe("o ecrã", () => {
     expect(ECRA.indexOf("<AdminConversasPanel />")).toBeLessThan(
       ECRA.indexOf("<AdminAjudaPanel />"),
     );
+  });
+});
+
+/**
+ * ⚠️ O SELO DO MENU CONTA O QUE ESTÁ POR LER — 18-09-2026.
+ *
+ * *«Aqui no supp deve aparecer notificação apenas das mensagens não lidas.»*
+ *
+ * Antes contava `porResponder`, que é outra pergunta. As duas continuam a
+ * existir e as duas fazem falta — mas cada uma no seu sítio: por ler é o selo
+ * e apaga-se ao abrir; por responder é o ponto amarelo e só se apaga
+ * respondendo.
+ */
+describe("totalPorLer", () => {
+  const conversa = (chave: string, mensagens: Array<{ de: string; quando: string }>) =>
+    ({ chave, mensagens }) as never;
+
+  it("soma as mensagens deles que chegaram depois da marca de leitura", () => {
+    const cs = [
+      conversa("a", [
+        { de: "eles", quando: "2026-09-18T10:00:00Z" },
+        { de: "eles", quando: "2026-09-18T12:00:00Z" },
+      ]),
+      conversa("b", [{ de: "eles", quando: "2026-09-18T09:00:00Z" }]),
+    ];
+    expect(totalPorLer(cs, { a: "2026-09-18T11:00:00Z" })).toBe(2); // 1 de "a" + 1 de "b"
+  });
+
+  it("uma conversa lida depois da última mensagem não conta", () => {
+    const cs = [conversa("a", [{ de: "eles", quando: "2026-09-18T10:00:00Z" }])];
+    expect(totalPorLer(cs, { a: "2026-09-18T11:00:00Z" })).toBe(0);
+  });
+
+  /*
+   * Sem marca nenhuma, a conversa está inteira por ler — é o lado seguro do
+   * engano, porque o contrário esconderia mensagens que ninguém viu.
+   */
+  it("sem marca, conta tudo o que eles escreveram", () => {
+    const cs = [
+      conversa("a", [
+        { de: "eles", quando: "2026-09-18T10:00:00Z" },
+        { de: "nos", quando: "2026-09-18T10:05:00Z" },
+        { de: "eles", quando: "2026-09-18T10:10:00Z" },
+      ]),
+    ];
+    expect(totalPorLer(cs, {})).toBe(2);
+  });
+
+  it("o que NÓS escrevemos nunca conta", () => {
+    const cs = [conversa("a", [{ de: "nos", quando: "2026-09-18T10:00:00Z" }])];
+    expect(totalPorLer(cs, {})).toBe(0);
+  });
+
+  it("caixa vazia é zero", () => {
+    expect(totalPorLer([], {})).toBe(0);
   });
 });

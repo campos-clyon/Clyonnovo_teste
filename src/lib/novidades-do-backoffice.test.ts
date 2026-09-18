@@ -221,3 +221,39 @@ describe("o menu acende e apaga", () => {
     expect(ROTA).toContain("nenhumaNovidade()");
   });
 });
+
+/**
+ * ⚠️ UM SELO QUE APONTA PARA UMA LISTA TEM DE CONTAR AS LINHAS DESSA LISTA.
+ *
+ * *«Carteira marca que tem notificação mas quando abro não há nada.»*
+ * — 18-09-2026. E não havia mesmo: o ecrã dizia «POR TRANSFERIR 0,00 €,
+ * 0 profissionais».
+ *
+ * Contava-se qualquer trabalho confirmado nas últimas horas, INCLUINDO os que
+ * já tinham sido pagos ao profissional. Um trabalho confirmado e pago no mesmo
+ * dia acendia o selo e não deixava nada para ver.
+ */
+describe("o selo das carteiras conta o que a carteira mostra", () => {
+  const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
+  /*
+   * Recorta-se entre os dois nomes de secção, e não por um pedaço de código
+   * com quebras de linha lá dentro: os ficheiros estão em CRLF e um `\n`
+   * escrito à mão nunca lá acerta. Já foi apanhado antes.
+   */
+  const inicio = DB.indexOf('"carteiras",', DB.indexOf("async function contarNovidades"));
+  const consulta = DB.slice(inicio, DB.indexOf('"levantamentos",', inicio));
+
+  it("exclui o que já foi pago — não há nada a transferir", () => {
+    expect(consulta).toContain("n.pagoEm IS NULL");
+  });
+
+  it("e exclui os trabalhos da própria casa, que não entram naquela lista", () => {
+    expect(consulta).toContain("p.isClyon = 0");
+  });
+
+  it("continua a ser «desde que olhaste», e não um total", () => {
+    // O dono pediu selos que somem ao abrir. Um contador do que falta fazer
+    // ficava aceso depois de se olhar, que é o contrário do que ele pediu.
+    expect(consulta).toContain("n.confirmadoEm > ?");
+  });
+});

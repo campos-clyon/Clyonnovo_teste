@@ -1058,7 +1058,21 @@ export default function ColaboradorAdminClient({
             headers: { Authorization: `Bearer ${authToken}` },
           });
           const dc = await rc.json();
-          setTicketsPorTratar(rc.ok ? Number(dc.aEsperar ?? soTickets) : soTickets);
+          /*
+           * POR LER, e não «à espera de resposta» — 18-09-2026.
+           *
+           * "Aqui no supp deve aparecer notificação apenas das mensagens não
+           * lidas."
+           *
+           * `aEsperar` conta as conversas em que a bola está do nosso lado, e
+           * essas não se apagam por se lerem — só por se responder. O selo
+           * ficava aceso depois de já se ter lido tudo, e um número que não
+           * desaparece quando o trabalho está feito ensina a ignorá-lo.
+           *
+           * A outra pergunta continua a ter resposta no ecrã: é o ponto
+           * amarelo na lista, e o "N à espera de resposta" por cima dela.
+           */
+          setTicketsPorTratar(rc.ok ? Number(dc.porLer ?? dc.aEsperar ?? soTickets) : soTickets);
         } catch {
           setTicketsPorTratar(soTickets);
         }

@@ -335,3 +335,34 @@ export function lerChave(chave: string): { origem: OrigemDaConversa; id: string 
   }
   return { origem, id };
 }
+
+/**
+ * QUANTAS MENSAGENS DELES ESTÃO POR LER, NA CAIXA INTEIRA.
+ *
+ * É o número do selo vermelho do menu, e passou a ser este a 18-09-2026:
+ *
+ * *«Aqui no supp deve aparecer notificação apenas das mensagens não lidas.»*
+ *
+ * Antes contava `porResponder` — as conversas em que a bola está do nosso
+ * lado. São duas perguntas diferentes e as duas continuam a fazer falta, mas
+ * cada uma no seu sítio:
+ *
+ *   · POR LER      → o selo do menu. Apaga-se ao abrir. É uma notificação;
+ *   · POR RESPONDER → o ponto amarelo na lista. Só se apaga respondendo. É uma
+ *                     fila de trabalho, e continua lá depois de se ter lido.
+ *
+ * Um selo que não se apaga quando já se leu tudo ensina em dois dias a ignorar
+ * o número — e a partir daí deixa de avisar seja do que for.
+ *
+ * Conta MENSAGENS e não conversas: é o que «mensagens não lidas» quer dizer, e
+ * é o que o WhatsApp mostra. Dez perguntas seguidas de uma pessoa são dez
+ * coisas para ler, não uma.
+ */
+export function totalPorLer(
+  conversas: ConversaDeSuporte[],
+  lidas: Record<string, string | null | undefined>,
+): number {
+  let n = 0;
+  for (const c of conversas) n += porLer(c, lidas[c.chave]);
+  return n;
+}

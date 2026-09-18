@@ -2748,9 +2748,32 @@ export async function contarNovidades(
     [desde.whatsapp],
   );
 
+  /*
+   * ⚠️ O SELO DAS CARTEIRAS SÓ CONTA O QUE AINDA ESTÁ POR TRANSFERIR.
+   *
+   * *«Carteira marca que tem notificação mas quando abro não há nada.»*
+   * — 18-09-2026. E não havia mesmo: o ecrã dizia «POR TRANSFERIR 0,00 €,
+   * 0 profissionais».
+   *
+   * Contava-se `confirmadoEm > ?` e mais nada — ou seja, qualquer trabalho
+   * confirmado nas últimas horas, INCLUINDO os que já tinham sido pagos ao
+   * profissional. Um trabalho confirmado e pago no mesmo dia acendia o selo e
+   * não deixava nada para ver.
+   *
+   * As duas condições que faltavam são as mesmas que a consulta das carteiras
+   * usa para decidir o que aparece no ecrã: `pagoEm IS NULL` (senão já não há
+   * o que transferir) e `isClyon = 0` (os trabalhos da própria casa não
+   * entram naquela lista). Um selo que aponta para uma lista tem de contar as
+   * linhas dessa lista, e não outras parecidas.
+   */
   await um(
     "carteiras",
-    "SELECT COUNT(*) AS n FROM negociacoes WHERE confirmadoEm IS NOT NULL AND confirmadoEm > ?",
+    `SELECT COUNT(*) AS n
+       FROM negociacoes n
+       JOIN providers p ON p.id = n.providerId AND p.isClyon = 0
+      WHERE n.confirmadoEm IS NOT NULL
+        AND n.pagoEm IS NULL
+        AND n.confirmadoEm > ?`,
     [desde.carteiras],
   );
 
