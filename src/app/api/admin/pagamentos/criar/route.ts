@@ -1,0 +1,289 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth-helper";
+import { registarSemFalhar } from "@/lib/db";
+import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
+import {
+  DIAS_DE_PRAZO_DA_REFERENCIA,
+  METODOS,
+  MINUTOS_DO_MBWAY,
+  NOME_DO_METODO,
+  configuracaoDoEupago,
+  podeCobrarPeloBackoffice,
+  porqueNaoPodeCobrar,
+  quantoOClientePaga,
+  type MetodoDePagamento,
+} from "@/lib/eupago";
+import { mensagemDaReferencia } from "@/lib/mensagem-da-referencia";
+import { pedirPagamento } from "@/lib/pedir-ao-eupago";
+import {
+  abrirPagamento,
+  fecharSemPagar,
+  marcarFalhado,
+  marcarPedido,
+  pagamentosDaNegociacao,
+} from "@/lib/pagamentos-na-base";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
+ * O ADMIN GERA A REFERÊNCIA, PEDIDO A PEDIDO.
+ *
+ * *«Vamos colocar apenas para o admin gerar as referências e enviar
+ * individualmente para cada pedido.»* — 18-09-2026.
+ *
+ * É uma decisão melhor do que o ecrã aberto que estava feito, e por uma razão
+ * que não é técnica: numa cobrança nova, o que falta não é o botão — é a
+ * confiança de que cada caso correu bem. Com uma pessoa a decidir pedido a
+ * pedido, cada referência tem alguém a olhar para ela, e o primeiro erro custa
+ * um cliente em vez de cem.
+ *
+ * A PORTA AQUI É OUTRA, e está explicada em `podeCobrarPeloBackoffice`: não se
+ * exige o `A_PLATAFORMA_COBRA` porque não há nada de automático — há um
+ * administrador autenticado, um pedido concreto, e uma mensagem que ele vai
+ * escrever a seguir. O que se mantém é a exigência de configuração: sem chave
+ * não se pede nada a ninguém.
+ *
+ * NÃO MANDA A MENSAGEM. Devolve-a escrita, para ele a mandar pelo canal em que
+ * já está a falar com aquele cliente. Mandar por nós seria decidir o canal e o
+ * momento por ele — e é dele a conversa.
+ */
+
+type Corpo = {
+  negociacaoId?: unknown;
+  metodo?: unknown;
+  comFactura?: unknown;
+  telemovel?: unknown;
+};
+
+function metodoValido(v: unknown): MetodoDePagamento | null {
+  return typeof v === "string" && (METODOS as string[]).includes(v)
+    ? (v as MetodoDePagamento)
+    : null;
+}
+
+export async function POST(req: NextRequest) {
+  const { err, colab } = await requireAdmin(req);
+  if (err) return err;
+
+  let corpo: Corpo;
+  try {
+    corpo = (await req.json()) as Corpo;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  const metodo = metodoValido(corpo.metodo);
+  if (!metodo) {
+    return NextResponse.json({ error: "Escolha MB WAY ou Multibanco." }, { status: 400 });
+  }
+
+  const conf = configuracaoDoEupago(process.env);
+  if (!conf.ok) {
+    // Ao contrário do ecrã do cliente, aqui diz-se o que falta: quem lê é
+    // quem pode ir pôr a variável.
+    return NextResponse.json({ error: conf.falta }, { status: 503 });
+  }
+  const porta = podeCobrarPeloBackoffice(conf.config);
+  if (!porta.pode) return NextResponse.json({ error: porta.porque }, { status: 503 });
+
+  const acesso = await trabalhoVistoPeloBackoffice(Number(corpo.negociacaoId));
+  if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
+  const t = acesso.trabalho;
+
+  const comFactura = corpo.comFactura === true;
+  const valor = quantoOClientePaga(t.acordado, t.regime, t.taxas, comFactura);
+  const recusa = porqueNaoPodeCobrar(metodo, valor);
+  if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
+
+  const telemovel =
+    metodo === "mbway"
+      ? (typeof corpo.telemovel === "string" ? corpo.telemovel.trim() : "") || t.telefoneDoCliente
+      : null;
+
+  try {
+    const jaHa = await pagamentosDaNegociacao(t.negociacaoId);
+
+    /*
+     * JÁ ESTÁ PAGO. A garantia é o índice único da base; isto é a cortesia de
+     * não deixar alguém gerar uma segunda referência para um trabalho pago e
+     * mandá-la ao cliente sem reparar.
+     */
+    const pago = jaHa.find((l) => l.estado === "pago");
+    if (pago) {
+      return NextResponse.json(
+        { error: `Este trabalho já foi pago em ${pago.metodo === "mbway" ? "MB WAY" : "Multibanco"}.` },
+        { status: 409 },
+      );
+    }
+
+    /*
+     * UMA REFERÊNCIA MULTIBANCO VIVA CHEGA — não se emite outra.
+     *
+     * A que já foi mandada ao cliente continua válida no homebanking dele.
+     * Emitir uma segunda para o mesmo trabalho é a forma mais directa de ele
+     * pagar as duas, e nenhum banco lhe diz que já pagou a outra.
+     *
+     * O MB WAY é o contrário: são cinco minutos, e quem carrega outra vez é
+     * quem fechou a notificação sem querer. Pede-se outro e fecha-se o
+     * anterior.
+     */
+    const aberto = jaHa.find(
+      (l) =>
+        l.estado === "pendente" &&
+        l.metodo === metodo &&
+        l.valor === valor &&
+        l.comFactura === comFactura,
+    );
+    if (aberto && metodo === "multibanco") {
+      const vivo = !aberto.expiraEm || aberto.expiraEm.getTime() > Date.now();
+      if (vivo) {
+        return NextResponse.json({
+          reaproveitada: true,
+          pagamento: paraOEcra(aberto, t, comFactura),
+        });
+      }
+    }
+    for (const l of jaHa) {
+      if (l.estado === "pendente" && l.metodo === "mbway" && metodo === "mbway") {
+        await fecharSemPagar(l.id, "cancelado", { motivo: "Pedido outro MB WAY pelo backoffice." });
+      }
+    }
+
+    const agora = Date.now();
+    const expiraEm =
+      metodo === "mbway"
+        ? new Date(agora + MINUTOS_DO_MBWAY * 60_000)
+        : new Date(agora + DIAS_DE_PRAZO_DA_REFERENCIA * 86_400_000);
+
+    const pagamentoId = await abrirPagamento({
+      negociacaoId: t.negociacaoId,
+      pedidoId: t.pedidoId,
+      providerId: t.providerId,
+      metodo,
+      ambiente: conf.config.ambiente,
+      valor,
+      comFactura,
+      telemovel,
+      expiraEm,
+    });
+
+    const r = await pedirPagamento(conf.config, metodo, {
+      pagamentoId,
+      valor,
+      telemovel,
+      prazo: metodo === "multibanco" ? expiraEm : null,
+    });
+
+    if (!r.ok) {
+      await marcarFalhado(pagamentoId, r.recusa.paraNos);
+      await registarSemFalhar({
+        acontecimento: "pagamento_falhado",
+        pedidoId: t.pedidoId,
+        negociacaoId: t.negociacaoId,
+        providerId: t.providerId,
+        autorTipo: "clyon",
+        autorNome: colab?.nome ?? "a CLYON",
+        resumo: `${NOME_DO_METODO[metodo]} recusado: ${r.recusa.paraNos}`,
+        detalhe: { pagamentoId, metodo, valor, codigo: r.recusa.codigo },
+      });
+      /*
+       * Aqui vai a versão PARA NÓS, e não a do cliente. Quem lê isto é quem
+       * pode resolver — e «não foi possível, tente outra vez» não diz a
+       * ninguém que a chave é do ambiente errado.
+       */
+      return NextResponse.json({ error: r.recusa.paraNos }, { status: 502 });
+    }
+
+    await marcarPedido(pagamentoId, {
+      referencia: r.referencia,
+      entidade: r.entidade,
+      transacaoId: r.trid,
+    });
+
+    await registarSemFalhar({
+      acontecimento: "pagamento_pedido",
+      pedidoId: t.pedidoId,
+      negociacaoId: t.negociacaoId,
+      providerId: t.providerId,
+      autorTipo: "clyon",
+      autorNome: colab?.nome ?? "a CLYON",
+      resumo:
+        `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € ` +
+        `${comFactura ? "com" : "sem"} factura, para enviar ao cliente. Ainda não está pago.`,
+      detalhe: { pagamentoId, metodo, valor, ambiente: conf.config.ambiente },
+    });
+
+    const linha = (await pagamentosDaNegociacao(t.negociacaoId)).find((l) => l.id === pagamentoId);
+    return NextResponse.json({
+      pagamento: linha
+        ? paraOEcra(linha, t, comFactura)
+        : {
+            id: pagamentoId,
+            metodo,
+            estado: "pendente",
+            valor,
+            comFactura,
+            entidade: r.entidade,
+            referencia: r.referencia,
+            expiraEm,
+            telemovel,
+            mensagem: mensagemDaReferencia({
+              pedidoId: t.pedidoId,
+              metodo,
+              valor,
+              entidade: r.entidade,
+              referencia: r.referencia,
+              telemovel,
+              expiraEm,
+              cliente: t.nomeDoCliente,
+              comFactura,
+            }),
+          },
+    });
+  } catch (e) {
+    console.error("[admin/pagamentos/criar]", e);
+    const porque = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: "Não foi possível gerar a referência.", detalhe: porque.slice(0, 300) },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * A linha da base mais a mensagem já escrita.
+ *
+ * A mensagem constrói-se AQUI, no servidor, e não no ecrã: é ela que o cliente
+ * vai ler, e leva lá dentro o valor. Uma segunda versão montada no navegador
+ * era uma segunda verdade sobre quanto se está a cobrar.
+ */
+function paraOEcra(
+  p: Awaited<ReturnType<typeof pagamentosDaNegociacao>>[number],
+  t: { pedidoId: number; nomeDoCliente: string | null },
+  comFactura: boolean,
+) {
+  return {
+    id: p.id,
+    metodo: p.metodo,
+    estado: p.estado,
+    valor: p.valor,
+    comFactura: p.comFactura,
+    entidade: p.entidade,
+    referencia: p.referencia,
+    telemovel: p.telemovel,
+    expiraEm: p.expiraEm,
+    criadoEm: p.criadoEm,
+    mensagem: mensagemDaReferencia({
+      pedidoId: t.pedidoId,
+      metodo: p.metodo,
+      valor: p.valor,
+      entidade: p.entidade,
+      referencia: p.referencia,
+      telemovel: p.telemovel,
+      expiraEm: p.expiraEm,
+      cliente: t.nomeDoCliente,
+      comFactura,
+    }),
+  };
+}

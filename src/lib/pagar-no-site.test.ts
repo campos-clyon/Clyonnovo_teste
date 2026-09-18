@@ -176,3 +176,86 @@ describe("o ecrã do cliente não faz contas de dinheiro", () => {
     expect(ECRA).toContain("if (!estado.disponivel) return null");
   });
 });
+
+/**
+ * ⚠️ O ADMIN GERA A REFERÊNCIA, PEDIDO A PEDIDO — 18-09-2026.
+ *
+ * *«Vamos colocar apenas para o admin gerar as referências e enviar
+ * individualmente para cada pedido.»*
+ *
+ * A porta aqui é OUTRA, e isso merece um teste em vez de um comentário: não se
+ * exige `A_PLATAFORMA_COBRA` porque não há nada de automático — há um
+ * administrador autenticado, um pedido concreto, e uma mensagem que ele vai
+ * escrever a seguir. O que NÃO muda é tudo o resto.
+ */
+describe("o caminho do backoffice", () => {
+  const ADMIN = ler("src/app/api/admin/pagamentos/criar/route.ts");
+  const ECRA = ler("src/components/admin/GerarReferencia.tsx");
+
+  it("exige administração autenticada", () => {
+    expect(ADMIN).toContain("requireAdmin(req)");
+  });
+
+  it("tem porta própria, e ela exige configuração", () => {
+    expect(ADMIN).toContain("podeCobrarPeloBackoffice(conf.config)");
+    /*
+     * SEM OS COMENTÁRIOS, e é a lição de sempre: o comentário desta rota
+     * EXPLICA porque é que não se exige o interruptor, e por isso nomeia-o.
+     * Proibir uma palavra que a própria explicação contém é chumbar por se
+     * ter escrito bem.
+     */
+    const codigo = ADMIN.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(codigo).not.toContain("A_PLATAFORMA_COBRA");
+  });
+
+  /*
+   * As regras do TRABALHO não são sobre quem pergunta — são sobre o que se
+   * pode cobrar. Fechado, com valor, e só uma vez.
+   */
+  it("passa pelas mesmas regras do trabalho que o caminho do cliente", () => {
+    expect(ADMIN).toContain("trabalhoVistoPeloBackoffice(");
+    expect(ADMIN).toContain("porqueNaoPodeCobrar(metodo, valor)");
+    expect(ADMIN).toContain('l.estado === "pago"');
+  });
+
+  /*
+   * Uma referência Multibanco já mandada continua válida no homebanking do
+   * cliente. Emitir uma segunda para o mesmo trabalho é a forma mais directa
+   * de ele pagar as duas.
+   */
+  it("não emite uma segunda referência Multibanco para o mesmo trabalho", () => {
+    expect(ADMIN).toContain('aberto && metodo === "multibanco"');
+    expect(ADMIN).toContain("reaproveitada: true");
+  });
+
+  it("fica registado quem a gerou — é o que separa uma pessoa do sistema", () => {
+    expect(ADMIN).toContain('acontecimento: "pagamento_pedido"');
+    expect(ADMIN).toContain('autorTipo: "clyon"');
+  });
+
+  /*
+   * A mensagem leva o VALOR lá dentro. Montá-la no navegador era uma segunda
+   * versão do que se está a cobrar — e a que divergisse seria a que o cliente
+   * lia.
+   */
+  it("a mensagem é escrita no servidor, não no ecrã", () => {
+    expect(ADMIN).toContain("mensagemDaReferencia(");
+    expect(ECRA).not.toContain("mensagemDaReferencia(");
+    expect(ECRA).toContain("pagamento.mensagem");
+  });
+
+  /*
+   * Escolher o canal e o momento por quem está a falar com o cliente seria
+   * decidir uma coisa que não é nossa. Entrega-se o texto.
+   */
+  it("não manda a mensagem — entrega-a", () => {
+    expect(ECRA).toContain("linkDoWhatsApp(");
+    expect(ECRA).toContain("Copiar mensagem");
+  });
+
+  it("o ecrã não faz contas de dinheiro: recebe os dois valores", () => {
+    expect(ECRA).not.toContain("contaDoCliente");
+    expect(ECRA).toContain("semFactura");
+    expect(ECRA).toContain("comFacturaValor");
+  });
+});

@@ -169,6 +169,39 @@ export function configuracaoDoEupago(
  * Na sandbox não há dinheiro nenhum, e por isso a porta está sempre aberta —
  * é o que permite provar a integração toda antes de o interruptor mexer.
  */
+/**
+ * A PORTA DO BACKOFFICE — e é outra, de propósito.
+ *
+ * *«Vamos colocar apenas para o admin gerar as referências e enviar
+ * individualmente para cada pedido.»* — 18-09-2026.
+ *
+ * `podeCobrar` protege a cobrança AUTOMÁTICA: um ecrã aberto a qualquer
+ * cliente, em que ninguém olha para cada caso. É por isso que lá dentro se
+ * pergunta pelo `A_PLATAFORMA_COBRA` — porque o produto inteiro diz ao cliente
+ * que paga ao profissional no fim, e um botão self-service contradiz isso sem
+ * ninguém dar por ela.
+ *
+ * AQUI NÃO HÁ NADA DE AUTOMÁTICO. Há uma pessoa autenticada no backoffice, a
+ * olhar para um pedido concreto, a decidir que aquele cliente vai pagar por
+ * aqui — e, presumivelmente, a dizer-lho na mesma conversa em que lhe manda a
+ * referência. Exigir-lhe o interruptor global era obrigá-la a mudar o discurso
+ * do site inteiro para cobrar um cliente.
+ *
+ * O que SE MANTÉM é a única coisa que não se dispensa: tem de haver
+ * configuração. Sem chave não se pede nada a ninguém.
+ *
+ * E fica REGISTADO. É o que separa «uma pessoa decidiu» de «o sistema fez»:
+ * ver `pagamento_pedido` no registo permanente.
+ */
+export function podeCobrarPeloBackoffice(
+  config: ConfiguracaoDoEupago,
+): { pode: true } | { pode: false; porque: string } {
+  if (!config.chave) {
+    return { pode: false, porque: "Falta a chave do euPago." };
+  }
+  return { pode: true };
+}
+
 export type Cobranca =
   | {
       pode: true;

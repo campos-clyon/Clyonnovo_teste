@@ -1,4 +1,5 @@
 import {
+  getPool,
   getSimulatorOrderById,
   negociacoesDoPedido,
 } from "./db";
@@ -32,11 +33,13 @@ export type TrabalhoAPagar = {
   taxas: Taxas;
   /** O telemóvel que o cliente deixou no pedido, para sugerir no MB WAY. */
   telefoneDoCliente: string | null;
+  /** O nome de quem pediu — a mensagem da referência trata-o por ele. */
+  nomeDoCliente: string | null;
   /**
-   * O email de quem pediu. Decide o portao de testador -- ver `podeCobrar`.
+   * O email de quem pediu. Decide o portão de testador — ver `podeCobrar`.
    *
-   * NAO sai desta funcao para ecra nenhum: e o pedido do cliente, e quem o ve
-   * ja o conhece. Serve so para a decisao do lado do servidor.
+   * NÃO sai desta função para ecrã nenhum: é o pedido do cliente, e quem o vê
+   * já o conhece. Serve só para a decisão do lado do servidor.
    */
   emailDoCliente: string | null;
 };
@@ -115,9 +118,51 @@ export async function trabalhoQueSePodePagar(
       taxas: taxasDaNegociacao(linha),
       telefoneDoCliente:
         ((pedido as { contactPhone?: string | null }).contactPhone ?? "").trim() || null,
+      nomeDoCliente: ((pedido as { contactName?: string | null }).contactName ?? "").trim() || null,
       emailDoCliente: (pedido.contactEmail ?? "").trim().toLowerCase() || null,
     },
   };
+}
+
+/**
+ * O MESMO TRABALHO, VISTO DO BACKOFFICE — sem credencial do cliente.
+ *
+ * *«Vamos colocar apenas para o admin gerar as referências.»* — 18-09-2026.
+ *
+ * Aqui não há token nem sessão de cliente: quem pergunta é um administrador
+ * autenticado, e a prova disso fica à porta da rota. O que continua igual são
+ * as regras do TRABALHO — tem de estar fechado e ter valor —, porque essas não
+ * são sobre quem pergunta: são sobre o que se pode cobrar.
+ *
+ * Partilha a mesma forma de saída que o caminho do cliente. Duas formas do
+ * mesmo trabalho acabavam com duas contas do mesmo dinheiro.
+ */
+export async function trabalhoVistoPeloBackoffice(negociacaoId: number): Promise<Acesso> {
+  if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
+    return { ok: false, estado: 400, erro: "Negociação não indicada." };
+  }
+
+  const pool = await getPool();
+  if (!pool) return { ok: false, estado: 503, erro: "Base indisponível." };
+
+  const [linhas] = (await pool.execute(
+    "SELECT pedidoId FROM negociacoes WHERE id = ? LIMIT 1",
+    [negociacaoId],
+  )) as [Array<{ pedidoId: number }>, unknown];
+  const pedidoId = linhas[0]?.pedidoId;
+  if (pedidoId == null) {
+    return { ok: false, estado: 404, erro: "Negociação não encontrada." };
+  }
+
+  /*
+   * Reaproveita o caminho do cliente com a credencial já dada por boa. É o que
+   * garante que as duas portas concordam sobre o que é um trabalho cobrável —
+   * e quando alguém mudar essa regra, muda-a num sítio só.
+   */
+  const pedido = await getSimulatorOrderById(Number(pedidoId));
+  return trabalhoQueSePodePagar(Number(pedidoId), negociacaoId, {
+    email: (pedido?.contactEmail ?? "").trim() || null,
+  });
 }
 
 /** O hash do token, para quem precise dele sem repetir o import. */

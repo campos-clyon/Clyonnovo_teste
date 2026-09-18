@@ -54,6 +54,7 @@ import {
 } from "@/lib/mensagem-das-propostas";
 import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import GerarReferencia from "@/components/admin/GerarReferencia";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
@@ -245,6 +246,14 @@ type Pedido = {
   contactEmail: string | null;
   /** O telemóvel, para o orçamento poder sair daqui direito para o WhatsApp. */
   contactPhone: string | null;
+  /**
+   * O cliente pediu factura no formulário.
+   *
+   * Decide o valor da referência de pagamento: com factura acresce o IVA da
+   * taxa CLYON. Já vinha na consulta (`o.precisaFatura`) e só faltava dizê-lo
+   * aqui.
+   */
+  precisaFatura?: number | boolean | null;
   /** A morada e o código postal — o que a busca do topo procura. */
   address: string | null;
   postalCode: string | null;
@@ -1740,6 +1749,36 @@ export default function AdminNegociacoesPanel({
                   {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
                   {" (a facturar ao profissional)"}
                 </p>
+              );
+            })()}
+
+            {/*
+              COBRAR O CLIENTE — 18-09-2026.
+
+              "Vamos colocar apenas para o admin gerar as referências e enviar
+              individualmente para cada pedido."
+
+              Fica AQUI, no bloco do trabalho fechado, e não numa secção
+              própria: a pergunta «quanto é que este cliente tem a pagar»
+              responde-se três linhas acima, e é essa conta que a referência
+              vai cobrar. Noutro ecrã era preciso trazer o número na cabeça.
+
+              Fechado por omissão — ver o componente. Abrir um trabalho
+              concluído é, na maior parte das vezes, para conferir contas.
+            */}
+            {(() => {
+              const conta = contaDoCliente(
+                Number(acordada.valorAcordado),
+                regimeDeIva(acordada.regimeIva),
+              );
+              return (
+                <GerarReferencia
+                  negociacaoId={acordada.id}
+                  telefoneDoCliente={p.contactPhone ?? null}
+                  precisaFatura={Boolean(p.precisaFatura)}
+                  semFactura={conta.semIva}
+                  comFacturaValor={conta.total}
+                />
               );
             })()}
 
