@@ -68,6 +68,23 @@ export function avisoDaBase(b: BaseDoPreco): string | null {
     : null;
 }
 
+/**
+ * O MESMO AVISO, mas sem um valor ao lado a que possa chamar «este».
+ *
+ * Na página do cliente deixou de haver número nenhum nesta zona — o valor que
+ * ele indicou saiu de lá a 18-09-2026 — e as propostas ficam no topo, longe
+ * daqui. «Este valor» passou a apontar para o vazio.
+ *
+ * Duas frases quase iguais e não uma: onde há um número ao lado, «este valor»
+ * é mais curto e mais claro do que uma perífrase; onde não há, mentia. A
+ * decisão que as duas transmitem é a mesma, e é isso que interessa.
+ */
+export function avisoDaBaseParaOCliente(b: BaseDoPreco): string | null {
+  return b === "carga"
+    ? "O preço deste pedido é POR CARGA. Combine quantas cargas são antes de fechar."
+    : null;
+}
+
 /** "150,00 € por carga" ou "150,00 €" — o número e a unidade, juntos. */
 export function precoComBase(texto: string, b: BaseDoPreco): string {
   return b === "carga" ? `${texto} por carga` : texto;

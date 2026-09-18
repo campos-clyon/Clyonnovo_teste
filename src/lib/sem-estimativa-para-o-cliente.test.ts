@@ -74,10 +74,29 @@ describe("mas os valores que alguém decidiu continuam lá", () => {
     );
   });
 
-  it("e o valor que o CLIENTE indicou é dele, não é nosso", () => {
-    // É o ponto de partida das propostas e foi ele que o escreveu. Tirá-lo
-    // seria tirar-lhe a única referência que ele próprio pôs no pedido.
-    expect(LINK).toContain("O valor que indicou");
+  it("e o valor de arranque sai da página do cliente — é dos profissionais", () => {
+    /*
+     * ISTO ERA O CONTRÁRIO, e durou um dia.
+     *
+     * Na véspera guardava-se aqui que o «valor que indicou» ficava — «é o
+     * ponto de partida das propostas e foi ele que o escreveu». No dia
+     * seguinte, a ver o #298: "o valor que eu indiquei não deveria estar
+     * visível para os clientes, apenas para os pros."
+     *
+     * Tem razão, e a razão vê-se no ecrã: lia-se «Contratou a TRSul, 350,00 €»
+     * em cima e «O valor que indicou 340,00 €» em baixo — dois números para a
+     * mesma pergunta, com dez euros de diferença e nada a dizer qual valia.
+     * Aquele número serve para os profissionais fazerem propostas; devolvê-lo
+     * ao cliente não lhe dizia nada de novo e dizia-lhe uma coisa errada.
+     */
+    expect(LINK).not.toContain("O valor que indicou");
+    expect(LINK).not.toContain("valorDesejadoCliente");
+  });
+
+  it("mas continua a chegar a quem faz as propostas", () => {
+    // Sem ele, o profissional propõe às cegas — e é assim que nascem as
+    // propostas que depois não se aguentam à porta do cliente.
+    expect(ler("src/lib/pedido-valores.ts")).toContain('"valorDesejadoCliente"');
   });
 });
 
@@ -91,14 +110,18 @@ describe("e o lugar onde o número estava não fica em branco", () => {
     expect(DETALHE).toContain("O valor vem nas propostas dos profissionais");
   });
 
-  it("e a página do link deixou de prometer um número nosso", () => {
-    expect(LINK).not.toContain("A nossa estimativa");
+  it("e a página do link deixou de escrever números", () => {
     /*
-     * Com os espaços arrumados: uma frase dentro de JSX quebra onde o
-     * formatador quiser, e prender um teste a essa quebra é prendê-lo à
-     * largura da linha em vez de ao que lá está escrito.
+     * Saíram os três, em dois dias: a estimativa do motor, o valor que o
+     * cliente indicou, e a nota que explicava a origem dos dois. O dinheiro
+     * que ele vê está todo no bloco das propostas, que tem a sua própria
+     * conta e o seu próprio «sem IVA».
+     *
+     * A prova mais dura de que não sobrou nenhum: o formatador de euros desta
+     * página foi apagado por não ter quem o chamasse.
      */
-    expect(LINK.replace(/\s+/g, " ")).toContain("nós não pomos aqui nenhum valor nosso");
+    expect(LINK).not.toContain("A nossa estimativa");
+    expect(LINK).not.toContain("function euros(");
   });
 });
 

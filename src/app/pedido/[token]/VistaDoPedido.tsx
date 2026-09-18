@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
-import { lerBase, avisoDaBase } from "@/lib/base-do-preco";
+import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import { negociacoesDoPedido } from "@/lib/db";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -33,11 +33,13 @@ import { perfilPublicoDoProfissional } from "@/lib/perfil-publico-do-profissiona
  * justamente para conferir o que o cliente vê.
  */
 
-function euros(valor: unknown): string | null {
-  const n = typeof valor === "string" ? Number(valor) : typeof valor === "number" ? valor : NaN;
-  if (!Number.isFinite(n)) return null;
-  return n.toFixed(2).replace(".", ",") + " €";
-}
+/*
+ * O `euros` desta vista saiu com o último número que ela escrevia.
+ *
+ * Formatava dois: a estimativa do motor, que saiu a 18-09-2026, e o valor que
+ * o cliente indicou, que saiu no mesmo dia. Esta página deixou de dizer
+ * dinheiro — quem o diz é o bloco das propostas, que tem o seu.
+ */
 
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
@@ -172,7 +174,6 @@ export default async function VistaDoPedido({
   });
 
   const fotos = fotosDoPedido(pedido.filesJson);
-  const desejado = euros(pedido.valorDesejadoCliente);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
   const base = lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco);
 
@@ -277,32 +278,39 @@ export default async function VistaDoPedido({
         )}
       </section>
 
+      {/*
+        O VALOR QUE ELE INDICOU SAIU DAQUI — 18-09-2026.
+
+        "O valor que eu indiquei não deveria estar visível para os clientes,
+        apenas para os pros."
+
+        Aquele número é o PONTO DE PARTIDA DOS PROFISSIONAIS: é o que lhes
+        chega com o pedido e é a partir dele que fazem propostas. Devolvê-lo ao
+        cliente na página dele não lhe dizia nada de novo — foi ele ou nós que
+        o escrevemos — e dizia-lhe uma coisa errada: no #298 lia-se «Contratou
+        a TRSul, 350,00 €» em cima e «O valor que indicou 340,00 €» em baixo,
+        dois números para a mesma pergunta, com dez euros de diferença e nada
+        a explicar qual valia.
+
+        O que fica são os DOIS AVISOS, que não são valores: o da carga e o do
+        que o orçamento cobre. Continuam a fazer falta, e agora estão sozinhos
+        — por isso a secção mudou de nome e só aparece quando há algum.
+      */}
+      {(avisoDaBaseParaOCliente(base) || avisoDosItens(base, "cliente")) && (
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">
-          Os valores
+          Antes de fechar
         </h2>
 
         <div className="mt-3 space-y-3">
-          {desejado && (
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm text-slate-600">
-                O valor que indicou
-                <span className="block text-xs text-tinta-fraca">
-                  {base === "carga" ? "por cada carga" : "pelo trabalho todo"} · sem IVA
-                </span>
-              </span>
-              <span className="text-lg font-bold text-tinta">{desejado}</span>
-            </div>
-          )}
-
           {/*
             O AVISO DA CARGA, e só quando o preço é por carga.
             Um «150 €» sem unidade tanto é o trabalho inteiro como cada viagem
             ao aterro — e a diferença só aparece no fim, com o trabalho feito.
           */}
-          {avisoDaBase(base) && (
+          {avisoDaBaseParaOCliente(base) && (
             <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
-              {avisoDaBase(base)}
+              {avisoDaBaseParaOCliente(base)}
             </p>
           )}
 
@@ -336,14 +344,21 @@ export default async function VistaDoPedido({
             falarem era entrar numa conversa que não é nossa.
           */}
 
-          <Nota titulo="De onde vêm estes números">
-            O valor que indicou é o ponto de partida: é o que os profissionais
-            veem quando o pedido lhes chega, e a partir dele fazem propostas.
-            Quem decide o preço são vocês os dois — nós não pomos aqui nenhum
-            valor nosso.
-          </Nota>
+          {/*
+            A NOTA "DE ONDE VÊM ESTES NÚMEROS" SAIU COM OS NÚMEROS.
+
+            Explicava o valor que ele indicou — que já não está aqui — e a
+            estimativa do motor, que saiu na véspera. Uma nota a explicar a
+            origem de números que a secção não mostra é ruído com ar de
+            transparência.
+
+            O que ela dizia de útil continua dito onde importa: quem decide o
+            preço são os dois, e isso está no rodapé da página, ao lado de
+            «quem executa o trabalho é o profissional que escolher».
+          */}
         </div>
       </section>
+      )}
 
       <p className="mt-6 text-center text-xs leading-relaxed text-tinta-fraca">
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho

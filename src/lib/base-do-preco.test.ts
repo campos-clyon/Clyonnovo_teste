@@ -125,7 +125,13 @@ describe("o caminho da base do preço, do formulário aos dois ecrãs", () => {
     // divergiam. O que se guarda aqui é a vista, não o ficheiro.
     const CLIENTE = ler("src/app/pedido/[token]/VistaDoPedido.tsx");
     expect(CLIENTE).toContain('from "@/lib/base-do-preco"');
-    expect(CLIENTE).toContain("avisoDaBase(base)");
+    /*
+     * A VARIANTE SEM VALOR AO LADO — 18-09-2026. A página do cliente deixou
+     * de mostrar números nesta zona («o valor que eu indiquei não deveria
+     * estar visível para os clientes»), e «Este valor é POR CARGA» passou a
+     * apontar para o vazio. O aviso é o mesmo; a frase é que muda.
+     */
+    expect(CLIENTE).toContain("avisoDaBaseParaOCliente(base)");
   });
 });
 
@@ -140,8 +146,17 @@ describe("«sem IVA» está escrito onde há um número", () => {
     expect(PAINEL).toContain("o valor é sem IVA");
   });
 
-  it("no ecrã do cliente, junto ao valor que ele indicou", () => {
-    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("· sem IVA");
+  it("no ecrã do cliente, junto aos valores que ele vê", () => {
+    /*
+     * ERA NA LINHA DO «VALOR QUE INDICOU», e essa saiu a 18-09-2026: aquele
+     * número é o ponto de partida dos profissionais e não tinha nada que
+     * voltar para o ecrã dele.
+     *
+     * A promessa não muda de sítio, muda de página: o dinheiro que o cliente
+     * vê está todo no bloco das propostas, e é lá que tem de dizer que é sem
+     * IVA. A `VistaDoPedido` já não escreve nenhum número.
+     */
+    expect(ler("src/app/pedido/[token]/PropostasRecebidas.tsx")).toContain("sem IVA");
   });
 
   it("na conta que o cliente paga, cada linha diz o que é", () => {
