@@ -36,11 +36,67 @@ type Trabalho = {
   pedidoId: number;
   servico: string | null;
   cidade: string | null;
+  /** Quem contratou, e onde. É por aqui que se reconhece o trabalho. */
+  cliente: string | null;
+  telefoneDoCliente: string | null;
+  morada: string | null;
+  quando: string | null;
+  profissional: string;
   valorAcordado: number;
   recebe: number;
   confirmadoEm: string | null;
   aguardaConfirmacao: boolean;
 };
+
+/**
+ * QUEM, ONDE E QUANDO — a linha que faz o trabalho ser reconhecível.
+ *
+ * *«Para eu dizer se já paguei preciso saber de qual se trata: nome do
+ * cliente, número e localidade. Também quem realizou.»* — 18-09-2026.
+ *
+ * O botão «Já paguei» tira dinheiro da conta da CLYON com base no
+ * reconhecimento de quem carrega nele, e «#325 · Recolha de móveis ·
+ * Carcavelos» não chega para reconhecer nada. Quem paga tem a transferência no
+ * homebanking de um lado e esta lista do outro; o que faz a ponte entre as
+ * duas é o NOME e o TELEFONE, não o número do pedido.
+ *
+ * O telemóvel é clicável: metade destas dúvidas resolve-se com uma chamada, e
+ * obrigar a copiar o número para o telefone é a diferença entre ligar e deixar
+ * para depois.
+ *
+ * Vive fora dos dois blocos — «por pagar» e «a decorrer» — porque os dois
+ * mostram o mesmo trabalho e só diferem no botão da direita. Duas cópias
+ * acabavam com dois formatos.
+ */
+function QuemOndeQuando({ t }: { t: Trabalho }) {
+  const linha = [
+    t.cliente,
+    t.morada ?? t.cidade,
+    // A data só quando há: um "sem data" em cada linha é ruído, e a maior
+    // parte dos trabalhos fecha-se sem dia marcado.
+    t.quando ? new Date(t.quando).toLocaleDateString("pt-PT") : null,
+  ].filter(Boolean);
+
+  if (linha.length === 0 && !t.telefoneDoCliente) return null;
+
+  return (
+    <p className="text-[11px] leading-relaxed text-slate-400">
+      {linha.join(" · ")}
+      {t.telefoneDoCliente && (
+        <>
+          {linha.length > 0 ? " · " : ""}
+          <a
+            href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
+            className="text-cyan-400 hover:underline"
+          >
+            {t.telefoneDoCliente}
+          </a>
+        </>
+      )}
+      <span className="block text-slate-500">feito por {t.profissional}</span>
+    </p>
+  );
+}
 
 type Ficha = {
   id: number;
@@ -619,6 +675,7 @@ export default function AdminCarteirasPanel() {
                           #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
                           {t.cidade ? ` · ${t.cidade}` : ""}
                         </p>
+                        <QuemOndeQuando t={t} />
                         <p className="text-[11px] text-slate-500">
                           Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
                           {" "}
@@ -669,6 +726,7 @@ export default function AdminCarteirasPanel() {
                           #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
                           {t.cidade ? ` · ${t.cidade}` : ""}
                         </p>
+                        <QuemOndeQuando t={t} />
                         <p className="text-[11px] text-slate-600">
                           Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
                           {" "}

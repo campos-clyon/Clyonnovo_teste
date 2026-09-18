@@ -39,6 +39,14 @@ type TrabalhoPorPagar = {
   pedidoId: number;
   servico: string | null;
   cidade: string | null;
+  /** Quem contratou. É por aqui que se reconhece o trabalho. */
+  cliente: string | null;
+  telefoneDoCliente: string | null;
+  morada: string | null;
+  /** O dia combinado, quando há. Muita gente lembra-se do dia e não do número. */
+  quando: string | null;
+  /** Quem o fez. Vem na linha para ela se explicar fora do cartão. */
+  profissional: string;
   valorAcordado: number;
   recebe: number;
   confirmadoEm: string | null;
@@ -62,7 +70,21 @@ export async function GET(req: NextRequest) {
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
               n.taxaCliente, n.taxaProfissional,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
-              o.serviceType, o.city
+              o.serviceType, o.city,
+              /*
+               * QUEM, ONDE E QUANDO — para o trabalho ser RECONHECÍVEL.
+               *
+               * "Para eu dizer se já paguei preciso saber de qual se trata:
+               * nome do cliente, número e localidade." — 18-09-2026.
+               *
+               * E tinha razão: o botão «Já paguei» tira dinheiro da conta da
+               * CLYON com base no reconhecimento de quem carrega, e
+               * «#325 · Recolha de móveis · Carcavelos» não chega para
+               * reconhecer nada. Quem paga tem a transferência no homebanking
+               * de um lado e esta lista do outro; o que faz a ponte entre as
+               * duas é o NOME e o TELEFONE, não o número do pedido.
+               */
+              o.contactName, o.contactPhone, o.address, o.scheduledDate
          FROM providers p
          /*
           * TODAS as acordadas, e nao so as confirmadas.
@@ -177,6 +199,11 @@ export async function GET(req: NextRequest) {
         pedidoId: Number(l.pedidoId),
         servico: (l.serviceType as string) ?? null,
         cidade: (l.city as string) ?? null,
+        cliente: ((l.contactName as string) ?? "").trim() || null,
+        telefoneDoCliente: ((l.contactPhone as string) ?? "").trim() || null,
+        morada: ((l.address as string) ?? "").trim() || null,
+        quando: l.scheduledDate ? String(l.scheduledDate).slice(0, 10) : null,
+        profissional: ficha.nome,
         valorAcordado: acordado,
         recebe,
         confirmadoEm: l.confirmadoEm ? new Date(l.confirmadoEm as string).toISOString() : null,

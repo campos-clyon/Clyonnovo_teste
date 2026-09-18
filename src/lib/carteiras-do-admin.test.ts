@@ -284,3 +284,45 @@ describe("a comissão da casa", () => {
     expect(PAINEL).toContain("facturados aos clientes até hoje");
   });
 });
+
+/**
+ * RECONHECER O TRABALHO ANTES DE CARREGAR EM «JÁ PAGUEI».
+ *
+ * *«Para eu dizer se já paguei preciso saber de qual se trata: nome do
+ * cliente, número e localidade. Também quem realizou.»* — 18-09-2026.
+ *
+ * O botão tira dinheiro da conta da CLYON com base no reconhecimento de quem
+ * carrega nele. «#325 · Recolha de móveis · Carcavelos» não chega: quem paga
+ * tem a transferência no homebanking de um lado e esta lista do outro, e o que
+ * faz a ponte entre as duas é o nome e o telefone.
+ */
+describe("o trabalho é reconhecível", () => {
+  it("a consulta traz quem contratou, onde e quando", () => {
+    for (const coluna of ["o.contactName", "o.contactPhone", "o.address", "o.scheduledDate"]) {
+      expect(semComentarios(ROTA), coluna).toContain(coluna);
+    }
+  });
+
+  it("e a resposta leva-os até ao ecrã", () => {
+    for (const campo of ["cliente:", "telefoneDoCliente:", "morada:", "profissional:"]) {
+      expect(semComentarios(ROTA), campo).toContain(campo);
+    }
+  });
+
+  /*
+   * Os dois blocos — «por pagar» e «a decorrer» — mostram o mesmo trabalho e
+   * só diferem no botão da direita. Duas cópias da identificação acabavam com
+   * dois formatos, e um deles a ficar para trás.
+   */
+  it("os dois blocos usam a mesma identificação, e não duas cópias", () => {
+    const sem = semComentarios(PAINEL);
+    expect(sem).toContain("function QuemOndeQuando");
+    expect(sem.match(/<QuemOndeQuando t=\{t\} \/>/g) ?? []).toHaveLength(2);
+  });
+
+  it("o telemóvel do cliente liga-se com um toque", () => {
+    // Metade destas dúvidas resolve-se com uma chamada. Obrigar a copiar o
+    // número é a diferença entre ligar e deixar para depois.
+    expect(PAINEL).toContain("href={`tel:${t.telefoneDoCliente");
+  });
+});
