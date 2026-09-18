@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { completarComAMorada } from "@/lib/morada-partida";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -360,14 +361,38 @@ export default function RegistarPedido({
           const p2 = (n: number) => String(n).padStart(2, "0");
           return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
         };
+        /*
+         * O CÓDIGO POSTAL QUE VEIO DENTRO DA MORADA — 18-09-2026.
+         *
+         * "Os dados do cliente, mesmo vindo com o código postal no endereço,
+         * ele não vem no campo «Código postal»."
+         *
+         * As pessoas escrevem a morada toda numa linha. O campo ficava vazio
+         * com um placeholder por baixo — 2845-513, que é a morada da CLYON — e
+         * quem olhasse de lado lia o placeholder como se fosse o valor do
+         * cliente.
+         *
+         * E não é decoração: é o código postal, com a localidade, que localiza
+         * a morada, e são as coordenadas que decidem que profissionais
+         * alcançam o trabalho. Um pedido sem ele chega a menos gente.
+         *
+         * Nunca escreve por cima do que já lá está, e não mexe na morada. Ver
+         * `morada-partida.ts`.
+         */
+        const daMorada = completarComAMorada({
+          address: o.address ?? "",
+          postalCode: o.postalCode ?? "",
+          city: o.city ?? "",
+        });
+
         setF({
           serviceType: o.serviceType ?? "",
           contactName: o.contactName ?? "",
           contactPhone: o.contactPhone ?? "",
           contactEmail: o.contactEmail ?? "",
           address: o.address ?? "",
-          city: o.city ?? "",
-          postalCode: o.postalCode ?? "",
+          city: daMorada.city,
+          postalCode: daMorada.postalCode,
           floor: o.floor ?? "",
           hasElevator: o.hasElevator ?? "",
           parkingDistance: o.parkingDistance ?? "",
@@ -505,6 +530,23 @@ export default function RegistarPedido({
           <input
             value={f.address}
             onChange={(e) => muda("address", e.target.value)}
+            /*
+              AO SAIR DO CAMPO, ARRUMA O QUE VEIO COLADO.
+              Quem cola uma morada inteira — e é o que se faz quando ela chega
+              por WhatsApp — deixava o código postal e a localidade por
+              preencher. Aqui apanha-se, sem apagar nada do que ele escreveu e
+              sem tocar no que já estivesse nos outros dois campos.
+            */
+            onBlur={() =>
+              setF((a) => ({
+                ...a,
+                ...completarComAMorada({
+                  address: a.address,
+                  postalCode: a.postalCode,
+                  city: a.city,
+                }),
+              }))
+            }
             placeholder="Rua e número — ex.: Rua Sousa Viterbo 29"
             className={campo}
           />
