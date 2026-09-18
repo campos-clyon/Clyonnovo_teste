@@ -324,6 +324,26 @@ export function propor(
 }
 
 /**
+ * Porque é que não dá para aceitar — na linguagem de quem está a olhar.
+ *
+ * Quase sempre a resposta não é «não há proposta»: é «o outro lado respondeu
+ * antes de si». Um ecrã aberto há dez minutos não sabe disso, e quem carrega
+ * no botão merece saber o que mudou e não que o botão é mentira.
+ */
+function porqueNaoPodeAceitar(n: Negociacao): string {
+  if (n.estado === "acordada") {
+    return "Este trabalho já ficou fechado — o cliente respondeu entretanto.";
+  }
+  if (n.estado === "aguarda_contratacao") {
+    return "Já aceitou este valor. Falta só o cliente confirmar que o contrata.";
+  }
+  if (n.estado === "desistida" || n.estado === "morta") {
+    return "Esta negociação já terminou.";
+  }
+  return "Não há proposta para aceitar.";
+}
+
+/**
  * Aceitar a proposta do outro lado.
  *
  * O cliente aceitar fecha; o profissional aceitar não. A assimetria é a regra
@@ -332,7 +352,20 @@ export function propor(
  */
 export function aceitar(n: Negociacao, lado: Lado, agora: Date): ResultadoDaAccao {
   if (!podeFazer(n, lado, "aceitar", agora)) {
-    return { ok: false, erro: "Não há proposta para aceitar." };
+    /*
+     * O PORQUÊ, E NÃO SÓ O NÃO — 18-09-2026.
+     *
+     * O profissional tinha o ecrã aberto com «Aceitar 350,00 €» à frente,
+     * carregou, e leu «Não há proposta para aceitar». Os dois na mesma
+     * imagem: um botão a oferecer e uma frase a dizer que não existe.
+     *
+     * A frase não estava errada — `accoesDisponiveis` devolve lista vazia
+     * assim que a negociação fecha — mas respondia à pergunta errada. O que
+     * tinha acontecido é que o CLIENTE já tinha respondido entretanto, e a
+     * página dele era de antes disso. Dizer-lho por extenso transforma um
+     * ecrã avariado numa notícia: o trabalho ficou fechado.
+     */
+    return { ok: false, erro: porqueNaoPodeAceitar(n) };
   }
 
   const pendente = propostaPendente(n, agora)!;

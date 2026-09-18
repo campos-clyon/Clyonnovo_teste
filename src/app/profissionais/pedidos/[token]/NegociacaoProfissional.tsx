@@ -139,6 +139,21 @@ export default function NegociacaoProfissional({
           return;
         }
         setErro(dados.error ?? "Não foi possível.");
+        /*
+         * E RECARREGA — senão o ecrã continua a oferecer o que o servidor
+         * acabou de recusar.
+         *
+         * Foi o que se viu a 18-09-2026: o botão «Aceitar 350,00 €» e a frase
+         * «não há proposta para aceitar» na mesma imagem. O cliente tinha
+         * respondido entretanto e esta página era de antes; sem ir buscar o
+         * estado novo, ficava a convidar para uma acção impossível até alguém
+         * dar F5.
+         *
+         * Uma recusa é precisamente o sinal de que o que está no ecrã já não é
+         * o que está na base. A mensagem fica; os botões é que passam a dizer
+         * a verdade.
+         */
+        onMudou?.();
         return;
       }
       setPorConfirmar(null);
