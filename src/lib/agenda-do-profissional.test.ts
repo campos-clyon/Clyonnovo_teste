@@ -113,3 +113,35 @@ describe("o dia muda-se de dentro da agenda", () => {
     expect(MARCAR).not.toContain("toISOString().slice(0, 16)");
   });
 });
+
+/**
+ * ⚠️ O BUG DAS 15H QUE VIRAVAM 16H — 18-09-2026.
+ *
+ * *«Eu troco o horário para as 15h00 e salvo, mas ele não muda realmente.»*
+ *
+ * Mudava — para as 16h00. O campo envia a hora do relógio sem fuso nenhum, e
+ * quem a lia era o servidor da Vercel, que corre em UTC. Uma hora à frente de
+ * Março a Outubro, e certo no Inverno: a pior espécie de erro, porque
+ * desaparece quando alguém o vai procurar.
+ */
+describe("a hora que ele escreve é a hora que fica", () => {
+  const MARCAR = ler("src/app/profissionais/painel/MarcarODia.tsx");
+  const ROTA_AGENDA = ler("src/app/api/profissionais/agenda/route.ts");
+
+  it("o ecrã fecha a hora num instante antes de a enviar", () => {
+    // No navegador, `new Date` de um texto sem fuso usa o fuso de QUEM
+    // ESCREVEU — que é o relógio que ele tem à frente.
+    expect(MARCAR).toContain("d.toISOString()");
+    expect(MARCAR).toContain("quando: quandoParaEnviar");
+  });
+
+  /*
+   * E o servidor deixou de usar `new Date` sobre o texto cru. Um telemóvel
+   * com a versão antiga em cache continua a enviar o formato sem fuso, e é
+   * melhor gravar a hora certa do que recusar o pedido dele.
+   */
+  it("e o servidor lê o que não traz fuso como hora de Lisboa", () => {
+    expect(ROTA_AGENDA).toContain("instanteEmLisboa(cru)");
+    expect(ROTA_AGENDA).not.toContain("const d = new Date(cru)");
+  });
+});

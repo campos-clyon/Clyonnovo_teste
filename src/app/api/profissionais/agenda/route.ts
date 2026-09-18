@@ -4,6 +4,7 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
+import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
 
@@ -57,8 +58,25 @@ export async function POST(req: NextRequest) {
   const cru = typeof corpo.quando === "string" ? corpo.quando.trim() : "";
   let quando: Date | null = null;
   if (cru) {
-    const d = new Date(cru);
-    if (Number.isNaN(d.getTime())) {
+    /*
+     * ⚠️ «15:00» É UMA HORA EM LISBOA, NÃO UM INSTANTE — corrigido a 18-09-2026.
+     *
+     * *«Eu troco o horário para as 15h00 e salvo, mas ele não muda
+     * realmente.»* Mudava: para as 16h00.
+     *
+     * Estava aqui um `new Date(cru)`, e uma string sem fuso é lida como hora
+     * LOCAL DO SERVIDOR. O servidor da Vercel corre em UTC, Lisboa em Setembro
+     * está uma hora à frente, e o relógio andava sempre +1 de Março a Outubro —
+     * e acertava no Inverno, que é a pior espécie de erro, porque desaparece
+     * quando alguém o vai procurar.
+     *
+     * O ecrã passou a enviar ISO com fuso, e isso passa tal e qual. Isto
+     * continua a saber ler o outro formato porque um telemóvel com a versão
+     * antiga em cache continua a enviá-lo — e é melhor gravar a hora certa do
+     * que recusar o pedido dele.
+     */
+    const d = instanteEmLisboa(cru);
+    if (!d) {
       return NextResponse.json({ error: "Data inválida." }, { status: 400 });
     }
     /*

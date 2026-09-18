@@ -72,10 +72,34 @@ export default function MarcarODia({
     setAGravar(true);
     setErro("");
     try {
+      /*
+       * ⚠️ ENVIA-SE UM INSTANTE, NÃO UMA HORA DE RELÓGIO — 18-09-2026.
+       *
+       * *«Eu troco o horário para as 15h00 e salvo, mas ele não muda
+       * realmente.»* Mudava: para as 16h00.
+       *
+       * O campo dá `2026-09-18T15:00`, sem fuso nenhum. Enviado assim, quem o
+       * lia era o servidor — que corre em UTC — e 15:00 viravam 15:00 UTC, ou
+       * seja 16:00 em Lisboa no Verão.
+       *
+       * Aqui, no navegador, `new Date` desse texto usa o fuso DE QUEM ESCREVEU,
+       * que é o certo: é o relógio que ele tem à frente. O `toISOString`
+       * fecha-o num instante que já não depende de onde é lido.
+       */
+      let quandoParaEnviar = "";
+      if (quando) {
+        const d = new Date(quando);
+        if (Number.isNaN(d.getTime())) {
+          setErro("Data inválida.");
+          return;
+        }
+        quandoParaEnviar = d.toISOString();
+      }
+
       const res = await fetch("/api/profissionais/agenda", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ negociacaoId: pedido.negociacaoId, quando }),
+        body: JSON.stringify({ negociacaoId: pedido.negociacaoId, quando: quandoParaEnviar }),
       });
       const r = await res.json();
       if (!res.ok) {
