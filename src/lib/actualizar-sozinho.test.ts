@@ -44,9 +44,16 @@ describe("uma cadência só, nas três pontas", () => {
   });
 
   it("o backoffice actualiza em SILÊNCIO — a lista não pode piscar", () => {
-    // carregar(true) não acende estados de "a carregar": sem isto a lista
-    // saltava a cada batida e um valor a ser escrito perdia-se.
-    expect(MESA).toContain("useAutoRefresh(() => carregar(true))");
+    /*
+     * carregar(true) não acende estados de "a carregar": sem isto a lista
+     * saltava a cada batida e um valor a ser escrito perdia-se.
+     *
+     * O segundo argumento entrou a 18-09-2026 e é outra coisa: diz se vem a
+     * mesa inteira ou só os mais recentes. Sem ele, trinta segundos depois de
+     * escrever na busca a lista voltava aos recentes e o pedido encontrado
+     * desaparecia. O que este teste guarda é o silêncio, que é o primeiro.
+     */
+    expect(MESA).toMatch(/useAutoRefresh\(\(\) => carregar\(true[,)]/);
     expect(MESA).toContain("if (!silencioso) setACarregar(true);");
   });
 

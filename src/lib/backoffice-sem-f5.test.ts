@@ -36,7 +36,14 @@ describe("todos os painéis que carregam dados se actualizam sozinhos", () => {
     it(`${f.replace("Admin", "").replace("Panel.tsx", "")} tem o ciclo`, () => {
       const fonte = ler(f);
       expect(fonte).toContain('from "@/components/admin/useAutoRefresh"');
-      expect(fonte).toMatch(/useAutoRefresh\(\(\) => carregar\(true\)/);
+      /*
+       * O QUE ISTO GUARDA É O `true` — a batida é silenciosa e não acende o
+       * "a carregar". Os argumentos a seguir são de cada painel: a mesa das
+       * negociações passa um segundo, para a batida não encolher a lista por
+       * baixo de quem está a procurar. Prender o teste ao parêntese fechado
+       * fazia-o chumbar por causa de um argumento que não é da promessa.
+       */
+      expect(fonte).toMatch(/useAutoRefresh\(\(\) => carregar\(true[,)]/);
     });
 
     it(`${f.replace("Admin", "").replace("Panel.tsx", "")}: o ciclo é silencioso`, () => {

@@ -1739,6 +1739,30 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
    * Nunca nas duas, nunca em nenhuma.
    */
   await ensureConcluidosVistosTable();
+  /*
+   * O QUE AINDA ESTÁ EM JOGO NUNCA CAI FORA DO LIMITE.
+   *
+   * "Não encontro esse trabalho (…) os trabalhos que ainda não foram
+   * concluídos mas foram criados e não finalizados devem estar em algum
+   * lugar." — 18-09-2026. Era o #298: contratado com a TRSul, com a data já
+   * passada, e invisível na mesa.
+   *
+   * A ordem era só por data, com um limite. À trigésima primeira entrada, um
+   * trabalho contratado e por fazer desaparecia do ecrã sem aviso nenhum — e
+   * a busca do painel filtra o que está carregado, por isso procurar pelo
+   * número também não o trazia de volta. Um trabalho combinado com um
+   * cliente, com dinheiro por mover, saía do backoffice só porque entretanto
+   * tinham entrado trinta pedidos novos.
+   *
+   * Com a ordem de baixo, o limite passa a cortar SÓ pela cauda do que já
+   * acabou. Se um dia cortar alguma coisa, corta um cancelado ou um
+   * concluído — que têm prateleira própria e não esperam por ninguém.
+   *
+   * Pela coluna `status` e não pelo `confirmadoEm` da negociação: a conclusão
+   * a sério lê-se lá (ver `pedidoConcluido`, no painel), e essa não está
+   * nesta linha. O engano possível é um trabalho confirmado ficar do lado dos
+   * vivos — que é o lado seguro do engano: aparece a mais, nunca a menos.
+   */
   const [pedidos] = await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.contactName, o.contactEmail, o.contactPhone,
             -- A morada e o codigo postal vem para a mesa por causa da BUSCA.
@@ -1762,7 +1786,9 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
        FROM simulatorOrders o
        LEFT JOIN concluidosVistos v ON v.pedidoId = o.id
       WHERE EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
-      ORDER BY o.createdAt DESC
+      -- O que ainda esta em jogo primeiro: o limite corta so pela cauda do
+      -- que ja acabou. Ver a nota acima.
+      ORDER BY (o.status IN ('cancelado','concluido','arquivado')) ASC, o.createdAt DESC
       LIMIT ?`,
     [String(limite)],
   ) as any[];

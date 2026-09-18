@@ -635,6 +635,12 @@ export default function AdminNegociacoesPanel({
    * razão, um bloco fechado abre-se quando tem resultados.
    */
   const [busca, setBusca] = useState("");
+  /*
+   * Já foi buscar a mesa inteira? Uma vez por sessão chega: procura-se várias
+   * vezes seguidas, e ir buscar quinhentos pedidos a cada tecla era pôr o
+   * ecrã a trabalhar contra quem escreve.
+   */
+  const [temTudo, setTemTudo] = useState(false);
   /* Que blocos estão fechados. «Concluídos» e «Cancelados» nascem fechados. */
   const [fechados, setFechados] = useState<Set<ChaveDoBloco>>(
     () => new Set(BLOCOS.filter((b) => b.fechadoPorOmissao).map((b) => b.chave)),
@@ -729,11 +735,18 @@ export default function AdminNegociacoesPanel({
    * pode apagar o ecrã onde ele está. A lista renova-se por baixo; o que ele
    * está a ler fica.
    */
-  const carregar = useCallback(async (silencioso = false) => {
+  const carregar = useCallback(async (silencioso = false, tudo = false) => {
     if (!token) return;
     if (!silencioso) setACarregar(true);
     try {
-      const res = await fetch("/api/admin/negociacoes", {
+      /*
+       * COM BUSCA ESCRITA, A MESA INTEIRA.
+       *
+       * A busca filtra o que está carregado, e o que está carregado são os
+       * mais recentes. Um trabalho contratado há dois meses não se encontrava
+       * por número, por morada, nem por nada — não estava cá.
+       */
+      const res = await fetch(`/api/admin/negociacoes${tudo ? "?tudo=1" : ""}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const dados = await res.json();
@@ -742,6 +755,7 @@ export default function AdminNegociacoesPanel({
         return;
       }
       setPedidos(dados.pedidos ?? []);
+      if (tudo) setTemTudo(true);
       setLidoEm(Date.now());
       setErro("");
 
@@ -775,7 +789,14 @@ export default function AdminNegociacoesPanel({
    * É a mesma cadência do painel do profissional e da conta do cliente: as
    * três pontas da mesma negociação a ver o mesmo estado ao mesmo tempo.
    */
-  useAutoRefresh(() => carregar(true));
+  /*
+   * A BATIDA NÃO ENCOLHE A LISTA POR BAIXO DE QUEM ESTÁ A PROCURAR.
+   *
+   * Sem o `temTudo`, trinta segundos depois de escrever na caixa a mesa
+   * voltava aos mais recentes e o pedido encontrado desaparecia do ecrã — sem
+   * nada a explicar porquê.
+   */
+  useAutoRefresh(() => carregar(true, temTudo));
 
   /** Há quanto tempo o que está no ecrã foi lido da base. */
   const quandoFoiLido = (() => {
@@ -1232,6 +1253,21 @@ export default function AdminNegociacoesPanel({
    * «quem é que estava a tratar do da senhora de Cascais».
    */
   const aProcurar = busca.trim().length > 0;
+
+  /*
+   * BASTA COMEÇAR A ESCREVER PARA A MESA INTEIRA VIR.
+   *
+   * "Não encontro esse trabalho." — o #298 estava contratado e por fazer, e
+   * a mesa carrega os mais recentes: ele tinha caído do fim da lista, e a
+   * busca só filtra o que está carregado.
+   *
+   * Uma vez por sessão, e não a cada tecla: quem procura escreve, apaga e
+   * escreve outra vez, e cada uma dessas teclas seria uma viagem à base.
+   */
+  useEffect(() => {
+    if (aProcurar && !temTudo && token) void carregar(true, true);
+  }, [aProcurar, temTudo, token, carregar]);
+
   const pedidosNaMesa = useMemo(
     () =>
       aProcurar
@@ -2414,7 +2450,9 @@ export default function AdminNegociacoesPanel({
             ? `${daClyon.length} negociação(ões) da CLYON.`
             : mostrar === "clientes"
               ? `${dosClientes.length} negociação(ões) de clientes.`
-              : `${pedidos.length} pedidos na plataforma.`}{" "}
+              : temTudo
+                ? `${pedidos.length} pedidos na plataforma.`
+                : `${pedidos.length} pedidos na mesa — os mais recentes. Escreva na busca para procurar em todos.`}{" "}
           Carregue num cartão para ver só esse bloco; o título de cada bloco abre e fecha.
         </p>
         {/*
