@@ -2,6 +2,7 @@ import type { Proposta } from "./negociacao";
 import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
 
 import { PROMESSA } from "./pagamento-na-plataforma";
+import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 
 /**
  * «5%» — a taxa DAQUELA negociação, escrita para uma pessoa ler.
@@ -328,6 +329,14 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     );
     const facturaDoFechado = comFactura(d.fechado);
     if (facturaDoFechado) linhas.push(facturaDoFechado);
+    /*
+      E COMO É QUE ESTE NÚMERO FOI FEITO.
+
+      Aqui é onde mais importa: já está combinado, e o que falta é o dia. Se
+      o valor mudar à porta, é agora que ele tem de saber que isso é possível
+      — e não no instante em que acontece.
+    */
+    linhas.push(ORCAMENTO_A_DISTANCIA);
     linhas.push("");
     linhas.push(
       PROMESSA.whatsappConfirmar,
@@ -396,6 +405,17 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
             ? ` Com factura acrescem ${POR_CENTO} de IVA.`
             : " Com factura acresce o IVA de quem o liquida — nem todos os profissionais cobram."),
     );
+    /*
+     * COMO É QUE ESTES NÚMEROS FORAM FEITOS, na linha a seguir aos números.
+     *
+     * "Temos que também dizer aos clientes, de forma simples, que esses
+     * orçamentos são online, portanto carecem de confirmação de uma colega no
+     * local." — 18-09-2026.
+     *
+     * Encostada aos valores e antes do link, pela mesma razão que a linha do
+     * IVA: numa mensagem de WhatsApp, o que vem depois do link não se lê.
+     */
+    linhas.push(ORCAMENTOS_A_DISTANCIA);
     linhas.push("");
     /*
      * NÃO SE PROMETE "RECUSAR": esse botão não existe.

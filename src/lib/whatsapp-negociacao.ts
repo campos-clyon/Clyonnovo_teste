@@ -26,6 +26,7 @@ import {
 } from "@/lib/whatsapp-cloud";
 import { oSeuServico } from "@/lib/servico-em-palavras";
 import { totalEmPalavras, comFacturaEmPalavras } from "@/lib/conta-em-palavras";
+import { ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 import { jaFoiDito } from "@/lib/nao-repetir";
@@ -1443,8 +1444,8 @@ export async function aceitacaoParaOWhatsApp(dados: {
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n\n` +
-      `${totalDito} Só paga depois de o trabalho estar feito e confirmado.\n\n` +
-      `Falta só a sua confirmação para ficar combinado.`,
+      `${totalDito} ${ORCAMENTO_A_DISTANCIA}\n\n` +
+      `Só paga depois de o trabalho estar feito e confirmado. Falta só a sua confirmação para ficar combinado.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
@@ -1527,8 +1528,8 @@ export async function propostaParaOWhatsApp(dados: {
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico} (pedido #${dados.pedidoId}).\n\n` +
-      `${totalDito} Só paga depois de o trabalho estar feito e confirmado.\n\n` +
-      `Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
+      `${totalDito} ${ORCAMENTO_A_DISTANCIA}\n\n` +
+      `Só paga depois de o trabalho estar feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },

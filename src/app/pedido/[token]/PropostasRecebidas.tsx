@@ -24,6 +24,7 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
@@ -337,6 +338,15 @@ export default function PropostasRecebidas({
                 {conta.ivaDoServico > 0
                   ? `Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`
                   : `Se quiser factura, acresce o IVA da taxa CLYON: ${euros(conta.total)}.`}
+                {" "}
+                {/*
+                  E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.
+
+                  Aqui é onde mais importa: já está contratado, e o que falta é
+                  o dia. Se o valor mudar à porta, é agora que ele tem de saber
+                  que isso é possível, e não no instante em que acontece.
+                */}
+                {ORCAMENTO_A_DISTANCIA}
               </p>
             </div>
           );
@@ -541,11 +551,26 @@ export default function PropostasRecebidas({
         e a frase tinha de acompanhar: agora o número conta quem respondeu, que
         é a única coisa que o cliente pode fazer alguma coisa com.
       */}
-      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-tinta-fraca">
+      <h2 className="mb-1.5 text-sm font-bold uppercase tracking-wide text-tinta-fraca">
         {activas.length === 1
           ? "1 profissional respondeu"
           : `${activas.length} profissionais responderam`}
       </h2>
+
+      {/*
+        O QUE ESTES NÚMEROS SÃO, antes de ele escolher um.
+
+        "Temos que também dizer aos clientes, de forma simples, que esses
+        orçamentos são online, portanto carecem de confirmação de uma colega no
+        local." — 18-09-2026.
+
+        Por cima dos cartões e não num rodapé: quem decide, decide a olhar
+        para os valores, e uma advertência que vem depois da decisão não é uma
+        advertência — é uma desculpa.
+      */}
+      <p className="mb-3 text-xs leading-relaxed text-tinta-fraca">
+        {ORCAMENTOS_A_DISTANCIA}
+      </p>
 
       {erro && (
         <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
