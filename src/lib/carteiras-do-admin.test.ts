@@ -168,10 +168,55 @@ describe("os três montes", () => {
     expect(bloco).not.toContain("Já paguei");
   });
 
+  /*
+   * DEIXOU DE SER UMA LISTA E PASSOU A SER TRÊS SECÇÕES — 18-09-2026.
+   *
+   * *«Muitas informações nessa tela misturadas; organize tudo de modo
+   * profissional.»* Estavam todos no mesmo monte e com o mesmo cartão: quem
+   * tem 500 € à espera de transferência e quem nunca fez um trabalho ocupavam
+   * o mesmo espaço.
+   *
+   * O que este teste guarda continua a ser o mesmo — quem tem dinheiro a
+   * caminho não é «sem nada» e não cai no fundo. Só que agora tem secção
+   * própria, com título, em vez de estar no meio de uma lista corrida.
+   */
   it("quem tem trabalho a decorrer não cai no fundo com os parados", () => {
-    // Tem dinheiro a caminho: não é «sem nada».
     expect(PAINEL).toContain("const aDecorrer = carteiras.filter(");
-    expect(PAINEL).toContain("[...comSaldo, ...aDecorrer, ...parados]");
+
+    /*
+     * Procura-se só DEPOIS do início da lista. «A decorrer» aparece duas
+     * vezes no ficheiro — uma dentro do cartão de cada profissional, outra
+     * como título de secção — e a primeira está acima de tudo.
+     */
+    const lista = PAINEL.slice(PAINEL.indexOf("Ainda não há profissionais"));
+    const aPagar = lista.indexOf("A pagar agora");
+    const decorrer = lista.indexOf("A decorrer ·");
+    const semNada = lista.indexOf("Sem movimento ·");
+    expect(aPagar).toBeGreaterThan(0);
+    expect(decorrer).toBeGreaterThan(aPagar);
+    expect(semNada).toBeGreaterThan(decorrer);
+  });
+
+  /*
+   * O que não tem nada a receber nem a caminho fica FECHADO. Não há gesto
+   * nenhum a fazer com ele, e eram dezasseis a empurrar para baixo os dois que
+   * interessavam.
+   */
+  it("os parados abrem-se por escolha, e não por omissão", () => {
+    expect(PAINEL).toContain("useState(false)");
+    expect(PAINEL).toContain("{verParados && (");
+  });
+
+  /*
+   * ERA ISTO QUE ENCHIA O ECRÃ: duas caixas de IBAN e MB WAY, mais a morada
+   * fiscal, repetidas em cada profissional — incluindo aqueles a quem não se
+   * devia nada. O bloco de pagamento só faz sentido onde se vai pagar.
+   */
+  it("o bloco de IBAN e MB WAY só aparece em quem se vai pagar", () => {
+    expect(PAINEL).toContain('{modo === "pagar" && (');
+    const i = PAINEL.indexOf("Transferência");
+    const abre = PAINEL.lastIndexOf('modo === "pagar"', i);
+    expect(abre).toBeGreaterThan(0);
   });
 
   it("os três totais aparecem no topo", () => {
@@ -314,10 +359,19 @@ describe("o trabalho é reconhecível", () => {
    * só diferem no botão da direita. Duas cópias da identificação acabavam com
    * dois formatos, e um deles a ficar para trás.
    */
-  it("os dois blocos usam a mesma identificação, e não duas cópias", () => {
+  /*
+   * Juntaram-se numa só a 18-09-2026: os dois blocos passaram a usar a mesma
+   * `LinhaDoTrabalho`, e a identificação vive lá dentro uma vez. É mais forte
+   * do que duas cópias iguais — não há como divergirem.
+   */
+  it("os dois montes usam a mesma linha, e não duas cópias", () => {
     const sem = semComentarios(PAINEL);
     expect(sem).toContain("function QuemOndeQuando");
-    expect(sem.match(/<QuemOndeQuando t=\{t\} \/>/g) ?? []).toHaveLength(2);
+    expect(sem).toContain("function LinhaDoTrabalho");
+    expect(sem.match(/<QuemOndeQuando t=\{t\} \/>/g) ?? []).toHaveLength(1);
+    // Os dois montes montam-na: o que muda é o botão da direita.
+    expect(sem).toContain("pagavel />");
+    expect(sem).toContain("pagavel={false}");
   });
 
   it("o telemóvel do cliente liga-se com um toque", () => {

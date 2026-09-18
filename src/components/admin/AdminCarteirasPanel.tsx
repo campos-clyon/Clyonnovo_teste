@@ -12,6 +12,8 @@ import {
   Smartphone,
   Landmark,
   Pencil,
+  ChevronDown,
+  Clock,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
@@ -313,6 +315,280 @@ export default function AdminCarteirasPanel() {
   const aDecorrer = carteiras.filter((c) => c.totalPorPagar === 0 && c.totalPorFinalizar > 0);
   const parados = carteiras.filter((c) => c.totalPorPagar === 0 && c.totalPorFinalizar === 0);
 
+  /*
+   * QUEM ESTÁ FECHADO E QUEM ESTÁ ABERTO.
+   *
+   * Os «sem movimento» ficam fechados em bloco — não há gesto nenhum a fazer
+   * com eles. Os trabalhos «a decorrer» fecham-se por profissional: seis
+   * linhas de três andares cada, vezes cinco profissionais, é o que fazia esta
+   * página ter três ecrãs de altura sem nada para fazer em nenhum deles.
+   */
+  const [verParados, setVerParados] = useState(false);
+  const [abertos, setAbertos] = useState<Record<number, boolean>>({});
+
+  /** Uma linha de trabalho. O botão da direita é o que muda de um monte para o outro. */
+  function LinhaDoTrabalho({ t, nome, pagavel }: { t: Trabalho; nome: string; pagavel: boolean }) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-3 py-2">
+        <div className="min-w-0">
+          <p className={`text-sm font-medium ${pagavel ? "text-slate-200" : "text-slate-400"}`}>
+            #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
+            {t.cidade ? ` · ${t.cidade}` : ""}
+          </p>
+          <QuemOndeQuando t={t} />
+          <p className={`text-[11px] ${pagavel ? "text-slate-500" : "text-slate-600"}`}>
+            Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}{" "}
+            <button
+              onClick={() => setACorrigir({ t, nome, valor: String(t.valorAcordado) })}
+              className="ml-1 inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-400 hover:border-cyan-600 hover:text-cyan-300"
+            >
+              <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
+              corrigir
+            </button>
+          </p>
+        </div>
+        {pagavel ? (
+          <button
+            onClick={() => marcarPago(t, nome)}
+            disabled={ocupado === t.negociacaoId}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {ocupado === t.negociacaoId ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Já paguei
+          </button>
+        ) : (
+          <span
+            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+              t.aguardaConfirmacao ? "bg-amber-500/15 text-amber-300" : "bg-slate-800 text-slate-400"
+            }`}
+          >
+            {t.aguardaConfirmacao ? "falta confirmar" : "por fazer"}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  /**
+   * O CARTÃO DE UM PROFISSIONAL, em três pesos.
+   *
+   * O mesmo profissional, com a mesma informação por trás, mostrado conforme o
+   * que há para fazer com ele:
+   *
+   *   · «pagar»    — vai abrir-se o banco. O IBAN à vista, o trabalho
+   *                  identificado, e o botão de dar por pago;
+   *   · «decorrer» — não se faz nada hoje. Só quanto aí vem e quantos trabalhos;
+   *   · «parado»   — não se faz nada nunca. Uma linha, e o IBAN só se existir.
+   *
+   * O BLOCO DE PAGAMENTO SÓ APARECE ONDE SE PAGA. Era isto que enchia o ecrã:
+   * duas caixas grandes de IBAN e MB WAY, mais a morada fiscal, repetidas em
+   * cada um dos dezoito profissionais — incluindo os dezasseis a quem não se
+   * devia nada.
+   */
+  function Cartao({ c, modo }: { c: Ficha; modo: "pagar" | "decorrer" | "parado" }) {
+    const aberto = abertos[c.id] ?? false;
+    const semComoReceber = !c.iban && !c.mbway;
+
+    return (
+      <article
+        className={`rounded-2xl border bg-slate-900 ${
+          modo === "pagar"
+            ? "border-emerald-500/25 p-4"
+            : modo === "decorrer"
+              ? "border-slate-800 p-3.5"
+              : "border-slate-800/70 p-3"
+        }`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3
+              className={`flex items-center gap-2 font-bold ${
+                modo === "parado" ? "text-sm text-slate-300" : "text-base text-white"
+              }`}
+            >
+              <Wallet className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+              {c.nome}
+              {!c.activo && (
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                  inactivo
+                </span>
+              )}
+            </h3>
+            <p className="mt-1 text-xs text-slate-500">
+              {c.nif ? `NIF ${c.nif}` : "sem NIF"}
+              {" · "}
+              {c.emiteFatura
+                ? `passa fatura (${c.regimeIva ?? "regime por indicar"})`
+                : "não passa fatura"}
+              {c.telefone ? ` · ${c.telefone}` : ""}
+            </p>
+          </div>
+          <div className="text-right">
+            <p
+              className={`font-[Poppins] font-bold ${
+                modo === "pagar" ? "text-xl text-emerald-300" : "text-base text-slate-400"
+              }`}
+            >
+              {euros(modo === "pagar" ? c.totalPorPagar : c.totalPorFinalizar)}
+            </p>
+            <p className="text-[11px] text-slate-500">
+              {modo === "pagar"
+                ? "por transferir"
+                : modo === "decorrer"
+                  ? "a caminho"
+                  : c.jaPago > 0
+                    ? `${euros(c.jaPago)} já pagos`
+                    : "nada em curso"}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Por onde lhe pagar: só onde se vai pagar ──────────────────── */}
+        {modo === "pagar" && (
+          <>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <Landmark className="h-3.5 w-3.5" aria-hidden="true" />
+                  Transferência
+                </p>
+                {c.iban ? (
+                  <>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <code className="min-w-0 flex-1 truncate font-mono text-sm text-slate-100">
+                        {c.iban}
+                      </code>
+                      <Copiar valor={c.iban} rotulo="o IBAN" />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {c.ibanTitular ? (
+                        <>
+                          Titular: <span className="text-slate-300">{c.ibanTitular}</span>
+                        </>
+                      ) : (
+                        /* Um nome que não bate com o IBAN é transferência devolvida. */
+                        <span className="text-amber-400">Sem titular indicado.</span>
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1.5 text-sm text-amber-400">Sem IBAN.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <Smartphone className="h-3.5 w-3.5" aria-hidden="true" />
+                  MB WAY
+                </p>
+                {c.mbway ? (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <code className="min-w-0 flex-1 font-mono text-sm text-slate-100">
+                      {c.mbway}
+                    </code>
+                    <Copiar valor={c.mbway} rotulo="o MB WAY" />
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-sm text-slate-500">Sem MB WAY.</p>
+                )}
+              </div>
+            </div>
+
+            {/* A morada fiscal é para o documento, não para o pagamento —
+                por isso vem depois, e mais discreta. */}
+            <p className="mt-2 text-xs text-slate-500">
+              {c.moradaFiscal ? (
+                <>
+                  Morada fiscal:{" "}
+                  <span className="text-slate-400">
+                    {[c.moradaFiscal, c.codigoPostalFiscal, c.localidadeFiscal]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                </>
+              ) : (
+                <span className="text-amber-500/80">Morada fiscal por indicar.</span>
+              )}
+            </p>
+          </>
+        )}
+
+        {/*
+          NOS OUTROS DOIS, UMA LINHA E SÓ QUANDO É PRECISA.
+
+          Um bloco de IBAN em quem não tem nada a receber é ruído. Mas a quem
+          tem dinheiro A CAMINHO vale a pena avisar já, para se pedir o IBAN
+          antes de o trabalho fechar — e não depois, com o dinheiro parado e o
+          profissional à espera.
+        */}
+        {modo === "decorrer" && semComoReceber && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Sem IBAN nem MB WAY — peça-lhos antes de o trabalho fechar.
+          </p>
+        )}
+        {modo === "parado" && (
+          <p className="mt-1.5 truncate font-mono text-xs text-slate-600">
+            {c.iban ?? (c.mbway ? `MB WAY ${c.mbway}` : "sem IBAN nem MB WAY")}
+          </p>
+        )}
+
+        {/* ── Os trabalhos por pagar, um a um ───────────────────────────── */}
+        {modo === "pagar" && c.porPagar.length > 0 && (
+          <div className="mt-3 space-y-1.5 border-t border-slate-800 pt-3">
+            {c.porPagar.map((t) => (
+              <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={c.nome} pagavel />
+            ))}
+          </div>
+        )}
+
+        {/*
+          O QUE ESTÁ A DECORRER — fechado, e sem botão de pagar.
+
+          Não é dinheiro dele ainda: está do lado do cliente e só se solta
+          quando o trabalho for confirmado. Um botão aqui seria um convite a
+          pagar por trabalho que ainda não foi feito.
+
+          Fechado porque ninguém faz nada com ele hoje — mas contam-se quantos
+          são e quanto valem, que é o que decide se vale a pena esperar pela
+          próxima transferência ou fazer já esta.
+        */}
+        {modo !== "parado" && c.porFinalizar.length > 0 && (
+          <div className="mt-3 border-t border-slate-800 pt-3">
+            <button
+              onClick={() => setAbertos((a) => ({ ...a, [c.id]: !aberto }))}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                A decorrer · {c.porFinalizar.length}{" "}
+                {c.porFinalizar.length === 1 ? "trabalho" : "trabalhos"} ·{" "}
+                {euros(c.totalPorFinalizar)}
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform ${
+                  aberto ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+            {aberto && (
+              <div className="mt-2 space-y-1.5">
+                {c.porFinalizar.map((t) => (
+                  <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={c.nome} pagavel={false} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </article>
+    );
+  }
+
+
   return (
     <section className="rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
       {/*
@@ -552,209 +828,96 @@ export default function AdminCarteirasPanel() {
           Ainda não há profissionais com trabalho fechado.
         </p>
       ) : (
-        <div className="mt-6 space-y-3">
-          {[...comSaldo, ...aDecorrer, ...parados].map((c) => (
-            <article
-              key={c.id}
-              className={`rounded-2xl border bg-slate-900 p-4 ${
-                c.totalPorPagar > 0
-                  ? "border-slate-700"
-                  : c.totalPorFinalizar > 0
-                    ? "border-slate-800"
-                    : "border-slate-800 opacity-60"
-              }`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="flex items-center gap-2 text-base font-bold text-white">
-                    <Wallet className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                    {c.nome}
-                    {!c.activo && (
-                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
-                        inactivo
-                      </span>
-                    )}
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {c.nif ? `NIF ${c.nif}` : "sem NIF"}
-                    {" · "}
-                    {c.emiteFatura ? `passa fatura (${c.regimeIva ?? "regime por indicar"})` : "não passa fatura"}
-                    {c.telefone ? ` · ${c.telefone}` : ""}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-[Poppins] text-xl font-bold text-white">
-                    {euros(c.totalPorPagar)}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    por transferir
-                    {c.totalPorFinalizar > 0
-                      ? ` · ${euros(c.totalPorFinalizar)} por finalizar`
-                      : ""}
-                    {c.jaPago > 0 ? ` · ${euros(c.jaPago)} já pagos` : ""}
-                  </p>
-                </div>
-              </div>
+        <>
+          {/*
+            ⚠️ TRÊS SECÇÕES, E NÃO UMA LISTA — 18-09-2026.
 
-              {/* ── Por onde lhe pagar ──────────────────────────────────── */}
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    <Landmark className="h-3.5 w-3.5" aria-hidden="true" />
-                    Transferência
-                  </p>
-                  {c.iban ? (
-                    <>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <code className="min-w-0 flex-1 truncate font-mono text-sm text-slate-100">
-                          {c.iban}
-                        </code>
-                        <Copiar valor={c.iban} rotulo="o IBAN" />
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {c.ibanTitular ? (
-                          <>
-                            Titular: <span className="text-slate-300">{c.ibanTitular}</span>
-                          </>
-                        ) : (
-                          /* Um nome que não bate com o IBAN é transferência devolvida. */
-                          <span className="text-amber-400">Sem titular indicado.</span>
-                        )}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1.5 text-sm text-amber-400">Sem IBAN.</p>
-                  )}
-                </div>
+            "Muitas informações nessa tela misturadas; organize tudo de modo
+            profissional."
 
-                <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    <Smartphone className="h-3.5 w-3.5" aria-hidden="true" />
-                    MB WAY
-                  </p>
-                  {c.mbway ? (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <code className="min-w-0 flex-1 font-mono text-sm text-slate-100">
-                        {c.mbway}
-                      </code>
-                      <Copiar valor={c.mbway} rotulo="o MB WAY" />
-                    </div>
-                  ) : (
-                    <p className="mt-1.5 text-sm text-slate-500">Sem MB WAY.</p>
-                  )}
-                </div>
-              </div>
+            Estavam todos na mesma lista e com o mesmo cartão: quem tem 500 €
+            à espera de transferência e quem nunca fez um trabalho ocupavam o
+            mesmo espaço, cada um com o seu bloco de IBAN, de MB WAY e de
+            morada fiscal. Num ecrã com dezoito profissionais, os dois que
+            precisam de alguma coisa desaparecem no meio dos dezasseis que não.
 
-              {/* A morada fiscal é para o documento, não para o pagamento —
-                  por isso vem depois, e mais discreta. */}
-              <p className="mt-2 text-xs text-slate-500">
-                {c.moradaFiscal ? (
-                  <>
-                    Morada fiscal:{" "}
-                    <span className="text-slate-400">
-                      {[c.moradaFiscal, c.codigoPostalFiscal, c.localidadeFiscal]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-amber-500/80">Morada fiscal por indicar.</span>
-                )}
+            A separação é pelo GESTO, que é o que muda de um grupo para o
+            outro:
+
+              · A PAGAR    — abre-se o banco e transfere-se. Precisa do IBAN à
+                             vista e do trabalho identificado;
+              · A DECORRER — não se faz nada hoje. Basta saber quanto aí vem;
+              · SEM NADA   — não se faz nada nunca. Só existe para se poder
+                             procurar alguém, e por isso está fechado.
+          */}
+          {comSaldo.length > 0 && (
+            <section className="mt-6">
+              <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                <Landmark className="h-3.5 w-3.5" aria-hidden="true" />A pagar agora ·{" "}
+                {euros(total)}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Trabalho feito e confirmado. Transfira no banco e marque aqui.
               </p>
+              <div className="mt-3 space-y-3">
+                {comSaldo.map((c) => (
+                  <Cartao key={c.id} c={c} modo="pagar" />
+                ))}
+              </div>
+            </section>
+          )}
 
-              {/* ── Os trabalhos por pagar, um a um ─────────────────────── */}
-              {c.porPagar.length > 0 && (
-                <div className="mt-3 space-y-1.5 border-t border-slate-800 pt-3">
-                  {c.porPagar.map((t) => (
-                    <div
-                      key={t.negociacaoId}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-200">
-                          #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
-                          {t.cidade ? ` · ${t.cidade}` : ""}
-                        </p>
-                        <QuemOndeQuando t={t} />
-                        <p className="text-[11px] text-slate-500">
-                          Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
-                          {" "}
-                          <button
-                            onClick={() => setACorrigir({ t, nome: c.nome, valor: String(t.valorAcordado) })}
-                            className="ml-1 inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-400 hover:border-cyan-600 hover:text-cyan-300"
-                          >
-                            <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
-                            corrigir
-                          </button>
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => marcarPago(t, c.nome)}
-                        disabled={ocupado === t.negociacaoId}
-                        className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
-                      >
-                        {ocupado === t.negociacaoId ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                        )}
-                        Já paguei
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {aDecorrer.length > 0 && (
+            <section className="mt-7">
+              <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />A decorrer ·{" "}
+                {euros(porFinalizar)}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Fechado com o profissional e ainda por fazer ou por confirmar. Nada a
+                transferir hoje.
+              </p>
+              <div className="mt-3 space-y-2">
+                {aDecorrer.map((c) => (
+                  <Cartao key={c.id} c={c} modo="decorrer" />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {parados.length > 0 && (
+            <section className="mt-7">
               {/*
-                O QUE ESTÁ A DECORRER — sem botão de pagar.
-
-                Não é dinheiro dele ainda: está cativo do lado do cliente e só
-                se solta quando o trabalho for confirmado. Um botão aqui seria
-                um convite a pagar por trabalho que ainda não foi feito.
+                FECHADO POR OMISSÃO. São profissionais sem nada a receber e sem
+                nada a caminho — não há gesto nenhum a fazer com eles. Ficam
+                atrás de um clique para se poder confirmar um IBAN ou procurar
+                um nome, que é a única razão para os abrir.
               */}
-              {c.porFinalizar.length > 0 && (
-                <div className="mt-3 space-y-1.5 border-t border-slate-800 pt-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    A decorrer
-                  </p>
-                  {c.porFinalizar.map((t) => (
-                    <div
-                      key={t.negociacaoId}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-400">
-                          #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
-                          {t.cidade ? ` · ${t.cidade}` : ""}
-                        </p>
-                        <QuemOndeQuando t={t} />
-                        <p className="text-[11px] text-slate-600">
-                          Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}
-                          {" "}
-                          <button
-                            onClick={() => setACorrigir({ t, nome: c.nome, valor: String(t.valorAcordado) })}
-                            className="ml-1 inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-400 hover:border-cyan-600 hover:text-cyan-300"
-                          >
-                            <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
-                            corrigir
-                          </button>
-                        </p>
-                      </div>
-                      <span
-                        className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          t.aguardaConfirmacao
-                            ? "bg-amber-500/15 text-amber-300"
-                            : "bg-slate-800 text-slate-400"
-                        }`}
-                      >
-                        {t.aguardaConfirmacao ? "falta confirmar" : "por fazer"}
-                      </span>
-                    </div>
+              <button
+                onClick={() => setVerParados((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2.5 text-left transition hover:border-slate-700"
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Sem movimento · {parados.length}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  {verParados ? "esconder" : "ver"}
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${verParados ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  />
+                </span>
+              </button>
+              {verParados && (
+                <div className="mt-2 space-y-2">
+                  {parados.map((c) => (
+                    <Cartao key={c.id} c={c} modo="parado" />
                   ))}
                 </div>
               )}
-            </article>
-          ))}
-        </div>
+            </section>
+          )}
+        </>
       )}
     </section>
   );

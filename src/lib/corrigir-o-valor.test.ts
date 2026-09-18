@@ -93,7 +93,18 @@ describe("o botão na carteira", () => {
      * que o git muda de ramo. Uma asserção que atravessa uma mudança de linha
      * passa aqui e falha na promoção — que foi exactamente o que aconteceu.
      */
-    expect(PAINEL.split("setACorrigir({ t, nome: c.nome").length - 1).toBeGreaterThanOrEqual(2);
+    /*
+     * DEIXOU DE SER DUAS CÓPIAS — 18-09-2026, quando as carteiras passaram a
+     * ter secções. Os dois montes usam a MESMA `LinhaDoTrabalho`, e o botão
+     * vive lá dentro uma vez. É mais forte do que duas cópias iguais: não há
+     * como um dos montes ficar para trás.
+     */
+    const sem = PAINEL.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(sem).toContain("function LinhaDoTrabalho");
+    expect(sem).toContain("setACorrigir({ t, nome, valor: String(t.valorAcordado) })");
+    // Montada nos dois: por pagar e a decorrer.
+    expect(sem).toContain("pagavel />");
+    expect(sem).toContain("pagavel={false}");
   });
 
   it("mostra a conta refeita ANTES de gravar", () => {
