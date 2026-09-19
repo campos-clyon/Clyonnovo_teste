@@ -740,6 +740,25 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "fotoViaturaUrl",
         sql: "ALTER TABLE providers ADD COLUMN fotoViaturaUrl VARCHAR(500) NULL DEFAULT NULL",
       },
+      /*
+       * AS VIATURAS, NO PLURAL — 19-09-2026.
+       *
+       * "Vamos colocar a opção deles colocarem fotos dos veículos."
+       *
+       * Era uma. Quem tem uma carrinha de caixa aberta e um camião tinha de
+       * escolher qual mostrava, e quem tem uma só não conseguia mostrar o
+       * interior — que é o que decide se um sofá cabe e se apanha chuva.
+       *
+       * `fotoViaturaUrl` FICA, e passa a ser a primeira da lista. Meia dúzia
+       * de sítios lêem-na — o cartão do perfil, a ficha no backoffice, a
+       * anonimização — e trocá-los todos por uma lista era mexer em coisas que
+       * funcionam para mostrar uma fotografia a mais. Quem escreve mantém as
+       * duas de acordo, num sítio só: ver `guardarFotosDaViatura`.
+       */
+      {
+        name: "fotosViaturaJson",
+        sql: "ALTER TABLE providers ADD COLUMN fotosViaturaJson TEXT NULL DEFAULT NULL",
+      },
       {
         name: "custoKm",
         sql: "ALTER TABLE providers ADD COLUMN custoKm DECIMAL(6,2) NULL DEFAULT NULL",
@@ -4202,28 +4221,77 @@ export async function urlDaFotoDaViatura(providerId: number): Promise<string | n
   return (linhas as Array<{ fotoViaturaUrl: string | null }>)[0]?.fotoViaturaUrl ?? null;
 }
 
-/**
- * TROCAR A FOTOGRAFIA DA VIATURA, e dizer qual era a de antes.
+/*
+ * `trocarFotoDaViatura` SAIU DAQUI — 19-09-2026.
  *
- * O nome do ficheiro leva a hora (`viaturas/<id>-<agora>.jpg`) e
- * `addRandomSuffix: false` — ou seja, cada envio cria um ficheiro NOVO e o
- * anterior nunca era apagado. Trocar a fotografia cinco vezes deixava cinco
- * fotografias da viatura de alguém no Blob, públicas, e só a última tinha
- * ponteiro na base. As outras quatro ficavam sem ninguém saber que existiam.
- * Verificado a 14-09-2026.
+ * Trocava UMA fotografia, e as viaturas passaram a ser várias: "vamos colocar
+ * a opção deles colocarem fotos dos veículos". Quem grava agora é
+ * `guardarFotosDaViatura`, que faz o mesmo sobre uma lista — mesma
+ * transacção, mesmo `FOR UPDATE`, e as órfãs devolvidas a quem chama para
+ * serem apagadas do Blob depois de a transacção fechar.
  *
- * Lê e escreve na mesma transacção, com `FOR UPDATE`. Ler primeiro e escrever
- * depois, em duas chamadas, tinha uma janela: dois envios ao mesmo tempo
- * liam ambos a mesma antiga, apagavam-na duas vezes, e uma das novas ficava
- * órfã na mesma.
- *
- * Devolve o endereço anterior — quem chama é que o apaga do Blob, DEPOIS de a
- * transacção fechar. Aqui dentro seria uma chamada de rede a prender a linha.
+ * Ficava como código morto com um teste à volta a dar-lhe ar de vivo.
  */
-export async function trocarFotoDaViatura(
+
+/**
+ * QUANTAS FOTOGRAFIAS DE VIATURA CABEM NUM PERFIL.
+ *
+ * Seis: uma carrinha por fora, uma por dentro, e sobra para quem tem duas.
+ * Sem limite, um perfil com trinta fotografias é um perfil que ninguém abre —
+ * e trinta ficheiros no Blob por cada profissional que descobre o botão.
+ */
+export const MAX_FOTOS_DA_VIATURA = 6;
+
+/** A lista, lida com cuidado: um JSON estragado não pode calar o perfil. */
+function lerFotos(json: unknown, principal: string | null): string[] {
+  if (typeof json === "string" && json.trim()) {
+    try {
+      const l = JSON.parse(json);
+      if (Array.isArray(l)) {
+        const urls = l.map(String).filter((u) => u.trim());
+        if (urls.length > 0) return urls;
+      }
+    } catch {
+      /* cai para a de baixo */
+    }
+  }
+  /*
+   * SEM LISTA, VALE A ANTIGA. É o que faz os perfis de antes de 19-09-2026
+   * continuarem a mostrar a viatura que já lá estava, sem migração nenhuma a
+   * correr sobre a base.
+   */
+  return principal ? [principal] : [];
+}
+
+/** As fotografias das viaturas dele, por ordem. A primeira é a que o representa. */
+export async function fotosDaViatura(providerId: number): Promise<string[]> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [linhas] = (await pool.execute(
+    "SELECT fotosViaturaJson, fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1",
+    [providerId],
+  )) as any[];
+  const l = (linhas as Array<{ fotosViaturaJson: string | null; fotoViaturaUrl: string | null }>)[0];
+  return l ? lerFotos(l.fotosViaturaJson, l.fotoViaturaUrl) : [];
+}
+
+/**
+ * GRAVA A LISTA, E MANTÉM A COLUNA ANTIGA DE ACORDO COM ELA.
+ *
+ * `fotoViaturaUrl` passou a ser a PRIMEIRA da lista, e é isso que deixa o
+ * cartão do perfil, a ficha do backoffice e a anonimização continuarem a
+ * funcionar sem saberem que há mais. Duas colunas a dizer a mesma coisa só se
+ * aguentam se houver um sítio só a escrevê-las — é este.
+ *
+ * Devolve o que ficou de fora, para quem chama poder apagar do Blob: uma
+ * fotografia sem ponteiro na base é um ficheiro público que ninguém sabe que
+ * existe.
+ */
+export async function guardarFotosDaViatura(
   providerId: number,
-  novoUrl: string,
-): Promise<string | null> {
+  urls: string[],
+): Promise<{ fotos: string[]; orfas: string[] }> {
   await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
@@ -4232,17 +4300,24 @@ export async function trocarFotoDaViatura(
   try {
     await conn.beginTransaction();
     const [linhas] = (await conn.execute(
-      "SELECT fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
+      "SELECT fotosViaturaJson, fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
       [providerId],
     )) as any[];
-    const antiga = (linhas as Array<{ fotoViaturaUrl: string | null }>)[0]?.fotoViaturaUrl ?? null;
-    await conn.execute("UPDATE providers SET fotoViaturaUrl = ? WHERE id = ?", [
-      novoUrl,
-      providerId,
-    ]);
+    const l = (linhas as Array<{ fotosViaturaJson: string | null; fotoViaturaUrl: string | null }>)[0];
+    const antes = l ? lerFotos(l.fotosViaturaJson, l.fotoViaturaUrl) : [];
+
+    const fotos = [...new Set(urls.map((u) => String(u).trim()).filter(Boolean))].slice(
+      0,
+      MAX_FOTOS_DA_VIATURA,
+    );
+
+    await conn.execute(
+      "UPDATE providers SET fotosViaturaJson = ?, fotoViaturaUrl = ? WHERE id = ?",
+      [JSON.stringify(fotos), fotos[0] ?? null, providerId],
+    );
     await conn.commit();
-    // A mesma não se apaga: seria apagar a que acabou de ficar no perfil.
-    return antiga && antiga !== novoUrl ? antiga : null;
+
+    return { fotos, orfas: antes.filter((u) => !fotos.includes(u)) };
   } catch (e) {
     try {
       await conn.rollback();
@@ -7918,7 +7993,7 @@ export async function apagarProfissional(
       // A fotografia da viatura vem daqui porque daqui a pouco a coluna é
       // limpa: depois do UPDATE já não há por onde saber o endereço do
       // ficheiro, e ele fica no Blob, público, para sempre.
-      "SELECT id, name, email, estado, fotoViaturaUrl FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
+      "SELECT id, name, email, estado, fotoViaturaUrl, fotosViaturaJson FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
       [providerId],
     )) as any[];
     const p = (
@@ -7928,6 +8003,7 @@ export async function apagarProfissional(
         email: string | null;
         estado: string | null;
         fotoViaturaUrl: string | null;
+        fotosViaturaJson: string | null;
       }>
     )[0];
     if (!p) {
@@ -8069,7 +8145,7 @@ export async function apagarProfissional(
                 iban = NULL, ibanTitular = NULL, mbway = NULL,
                 moradaFiscal = NULL, codigoPostalFiscal = NULL, localidadeFiscal = NULL,
                 numeroTransportador = NULL,
-                fotoViaturaUrl = NULL,
+                fotoViaturaUrl = NULL, fotosViaturaJson = NULL,
                 categorias = NULL, zonas = NULL,
                 baseLat = NULL, baseLng = NULL,
                 isActive = 0, estado = 'apagado'
@@ -8107,13 +8183,20 @@ export async function apagarProfissional(
      * carrinha, com a matrícula à vista, ficava num endereço público para
      * sempre. "Se o pro foi removido, ele deveria ter sido 100% apagado."
      */
+    /*
+     * TODAS, e não só a primeira — 19-09-2026, quando as viaturas passaram a
+     * ser várias. Limpar a coluna antiga e deixar as outras cinco no Blob era
+     * fazer metade do trabalho e ficar com a consciência tranquila.
+     */
+    const fotosDeleteViatura = lerFotos(p.fotosViaturaJson, p.fotoViaturaUrl);
     let fotoDaViaturaApagada = false;
-    if (p.fotoViaturaUrl) {
-      fotoDaViaturaApagada = (await apagarFotosDoBlob([p.fotoViaturaUrl])) > 0;
+    if (fotosDeleteViatura.length > 0) {
+      const sairam = await apagarFotosDoBlob(fotosDeleteViatura);
+      fotoDaViaturaApagada = sairam >= fotosDeleteViatura.length;
       if (!fotoDaViaturaApagada) {
         console.error(
-          `[apagarProfissional] a fotografia da viatura de #${providerId} ficou no Blob:`,
-          p.fotoViaturaUrl,
+          `[apagarProfissional] ${fotosDeleteViatura.length - sairam} fotografia(s) da viatura de #${providerId} ficaram no Blob:`,
+          fotosDeleteViatura,
         );
       }
     }

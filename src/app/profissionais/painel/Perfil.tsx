@@ -470,8 +470,10 @@ export default function Perfil({
             />
 
             <FotoDaViatura
-              url={dados.fotoViaturaUrl ?? null}
-              onMudou={(u) => setDados((d) => ({ ...d, fotoViaturaUrl: u }))}
+              fotos={dados.fotosViatura ?? (dados.fotoViaturaUrl ? [dados.fotoViaturaUrl] : [])}
+              onMudou={(urls) =>
+                setDados((d) => ({ ...d, fotosViatura: urls, fotoViaturaUrl: urls[0] ?? null }))
+              }
             />
 
             <Guardar
@@ -1226,15 +1228,20 @@ export default function Perfil({
  * espera de um botao e uma fotografia que se perde quando ele fecha o ecra.
  * A rota grava o endereco no perfil dele assim que o ficheiro chega.
  */
+/** Quantas cabem. O mesmo número que a rota impõe — ver `MAX_FOTOS_DA_VIATURA`. */
+const MAXIMO_DE_VIATURAS = 6;
+
 function FotoDaViatura({
-  url,
+  fotos,
   onMudou,
 }: {
-  url: string | null;
-  onMudou: (u: string | null) => void;
+  fotos: string[];
+  onMudou: (urls: string[]) => void;
 }) {
   const [aEnviar, setAEnviar] = useState(false);
+  const [aApagar, setAApagar] = useState<string | null>(null);
   const [erro, setErro] = useState("");
+  const cheio = fotos.length >= MAXIMO_DE_VIATURAS;
 
   async function enviar(f: File) {
     setAEnviar(true);
@@ -1244,11 +1251,11 @@ function FotoDaViatura({
       fd.append("file", f);
       const res = await fetch("/api/profissionais/foto-viatura", { method: "POST", body: fd });
       const d = await res.json();
-      if (!res.ok || !d.url) {
+      if (!res.ok || !Array.isArray(d.fotos)) {
         setErro(d.error ?? "Nao foi possivel guardar a fotografia.");
         return;
       }
-      onMudou(d.url as string);
+      onMudou(d.fotos as string[]);
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -1256,26 +1263,70 @@ function FotoDaViatura({
     }
   }
 
+  async function apagar(url: string) {
+    setAApagar(url);
+    setErro("");
+    try {
+      const res = await fetch("/api/profissionais/foto-viatura", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const d = await res.json();
+      if (!res.ok || !Array.isArray(d.fotos)) {
+        setErro(d.error ?? "Nao foi possivel apagar.");
+        return;
+      }
+      onMudou(d.fotos as string[]);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAApagar(null);
+    }
+  }
+
   return (
     <Campo
-      etiqueta="A sua viatura"
-      ajuda="Uma fotografia da carrinha ou camiao. E assim que sabemos o que cabe — e o cliente ve quem lhe chega a porta."
+      etiqueta="As suas viaturas"
+      ajuda="Fotografias das carrinhas ou camioes — por fora e por dentro. E assim que sabemos o que cabe, e o cliente ve quem lhe chega a porta. A primeira e a que o representa."
     >
-      <div className="flex items-center gap-3">
-        {url ? (
-          <img
-            src={url}
-            alt="A sua viatura"
-            className="h-20 w-28 shrink-0 rounded-xl border border-slate-200 object-cover"
-          />
-        ) : (
-          <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
-            sem foto
+      {/*
+        VARIAS, E NAO UMA — 19-09-2026.
+
+        "Vamos colocar a opcao deles colocarem fotos dos veiculos."
+
+        Era uma so. Quem tem uma carrinha de caixa aberta e um camiao tinha de
+        escolher qual mostrava, e quem tem uma so nao conseguia mostrar o
+        interior — que e o que decide se um sofa cabe e se apanha chuva a
+        caminho.
+
+        A PRIMEIRA E A QUE O REPRESENTA: e ela que vai para o cartao do perfil
+        e para a ficha no backoffice. Dito na ajuda, porque um profissional que
+        ponha o camiao em ultimo nao percebia porque e que aparecia a carrinha.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
+        {fotos.map((u) => (
+          <div key={u} className="relative">
+            <img
+              src={u}
+              alt="A sua viatura"
+              className="h-20 w-28 rounded-xl border border-slate-200 object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => void apagar(u)}
+              disabled={aApagar === u}
+              aria-label="Apagar esta fotografia"
+              className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
+            >
+              {aApagar === u ? "…" : "×"}
+            </button>
           </div>
-        )}
-        <div className="min-w-0">
-          <label className="inline-block cursor-pointer rounded-lg border border-[#0A6E8A] px-3 py-2 text-sm font-medium text-[#0A6E8A] hover:bg-[#0A6E8A]/5">
-            {aEnviar ? "A enviar…" : url ? "Trocar fotografia" : "Escolher fotografia"}
+        ))}
+
+        {!cheio && (
+          <label className="flex h-20 w-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#0A6E8A]/50 bg-[#0A6E8A]/5 text-xs font-medium text-[#0A6E8A] hover:bg-[#0A6E8A]/10">
+            {aEnviar ? "A enviar…" : fotos.length === 0 ? "Escolher foto" : "Acrescentar"}
             <input
               type="file"
               accept="image/*"
@@ -1288,9 +1339,15 @@ function FotoDaViatura({
               }}
             />
           </label>
-          {erro && <p className="mt-1.5 text-xs text-red-600">{erro}</p>}
-        </div>
+        )}
       </div>
+
+      {cheio && (
+        <p className="mt-1.5 text-xs text-slate-500">
+          Ja tem {MAXIMO_DE_VIATURAS} fotografias. Apague uma para acrescentar outra.
+        </p>
+      )}
+      {erro && <p className="mt-1.5 text-xs text-red-600">{erro}</p>}
     </Campo>
   );
 }

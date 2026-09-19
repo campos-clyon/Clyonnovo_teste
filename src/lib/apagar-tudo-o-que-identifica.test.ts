@@ -55,6 +55,12 @@ const IDENTIFICAM = [
   "localidadeFiscal",
   "numeroTransportador",
   "fotoViaturaUrl",
+  /*
+   * As outras viaturas — 19-09-2026, quando deixaram de ser uma só. Cada
+   * fotografia tem uma matrícula à vista; limpar a primeira e deixar as
+   * outras cinco era fazer metade do trabalho.
+   */
+  "fotosViaturaJson",
   // Um token de definição de palavra-passe é uma CREDENCIAL, e sobrevivia à
   // conta. A rota recusa o estado «apagado», e é só por isso que nunca foi
   // explorável — a guarda estava toda do lado de lá.
@@ -144,10 +150,13 @@ describe("a anonimização", () => {
     // responder no endereço público onde estava, sem nada na base a dizer que
     // existia — que é o pior dos dois, porque ninguém o voltava a encontrar.
     expect(anonimizacao).toContain("fotoViaturaUrl = NULL");
+    // E a lista das outras — desde 19-09-2026 são várias, e cada uma tem uma
+    // matrícula à vista.
+    expect(anonimizacao).toContain("fotosViaturaJson = NULL");
     const i = DB.indexOf("export async function apagarProfissional(");
     const corpo = DB.slice(i, DB.indexOf("\nexport ", i + 1));
     expect(corpo).toContain("p.fotoViaturaUrl");
-    expect(corpo).toContain("apagarFotosDoBlob([p.fotoViaturaUrl])");
+    expect(corpo).toContain("apagarFotosDoBlob(fotosDeleteViatura)");
     // Depois do commit: uma chamada ao Blob a meio da transacção prende a
     // linha de `providers` enquanto se espera pela internet.
     expect(corpo.indexOf("apagarFotosDoBlob")).toBeGreaterThan(corpo.indexOf("conn.commit()"));

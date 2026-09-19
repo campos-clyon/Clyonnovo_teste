@@ -5,6 +5,7 @@ import {
   avaliacoesDoProfissional,
   actualizarPerfilDoProfissional,
   apagarFotosDoBlob,
+  fotosDaViatura,
   urlDaFotoDaViatura,
   invalidarVerificacaoDaGuia,
   custosFixosDeJson,
@@ -115,6 +116,12 @@ export async function GET(req: NextRequest) {
          */
         tipoVeiculo: p.tipoVeiculo ?? "",
         fotoViaturaUrl: (p.fotoViaturaUrl as string | null) ?? null,
+        /*
+         * A LISTA INTEIRA — 19-09-2026, quando as viaturas passaram a ser
+         * várias. `fotoViaturaUrl` continua a sair porque é a primeira, e é
+         * dela que vivem o cartão do perfil e a ficha do backoffice.
+         */
+        fotosViatura: await fotosDaViatura(sessao.providerId),
         categorias: listaGravada(p.categorias),
         zonas: listaGravada(p.zonas),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,

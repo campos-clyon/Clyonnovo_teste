@@ -213,6 +213,12 @@ export type Perfil = {
   tipoVeiculo?: string;
   /** A fotografia da viatura, no Blob. Null enquanto nao puser nenhuma. */
   fotoViaturaUrl?: string | null;
+  /*
+   * TODAS AS VIATURAS — 19-09-2026. A de cima continua a existir e é a
+   * primeira desta lista: é dela que vivem o cartão do perfil e a ficha no
+   * backoffice, que só mostram uma.
+   */
+  fotosViatura?: string[];
   /** As avaliações recebidas, sem quem as escreveu. */
   ultimasAvaliacoes: Array<{
     estrelas: number;
