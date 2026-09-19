@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
+  actualizarCandidatura,
   listarCandidaturas,
   candidaturaPorId,
   marcarCandidatura,
 } from "@/lib/candidaturas";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { tipoDeVeiculoValido } from "@/lib/convite-profissional";
 import {
   criarProfissional,
   profissionalPorEmail,
@@ -62,6 +65,88 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[admin/candidaturas GET]", e);
     return NextResponse.json({ candidaturas: [] });
+  }
+}
+
+/**
+ * CORRIGIR ANTES DE APROVAR.
+ *
+ * "Eu tenho que ter o poder de editar antes de aprovar." — 19-09-2026.
+ *
+ * Aprovar cria a conta com o que está escrito aqui: o nome vai para o perfil
+ * público, o email é por onde ele entra e recebe o link da palavra-passe, o
+ * telefone é por onde o cliente lhe liga. O que chega de um formulário aberto
+ * chega como as pessoas escrevem — nomes em minúsculas, telefones com espaços
+ * a mais, e «remodeklação».
+ *
+ * PATCH e não POST: o POST desta rota APROVA — cria uma conta e manda um email
+ * a uma pessoa. Uma correcção de texto e uma aprovação a partilharem verbo era
+ * um engano à espera de acontecer.
+ */
+export async function PATCH(req: NextRequest) {
+  const { err } = await requireAdmin(req);
+  if (err) return err;
+
+  let corpo: Record<string, unknown>;
+  try {
+    corpo = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  const id = Number(corpo.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return NextResponse.json({ error: "Candidatura inválida." }, { status: 400 });
+  }
+
+  const texto = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const nome = texto(corpo.nome, 120);
+  const email = texto(corpo.email, 200).toLowerCase();
+
+  if (!nome) return NextResponse.json({ error: "O nome não pode ficar vazio." }, { status: 400 });
+  /*
+   * O email verifica-se a sério, e não só por ser não-vazio: é para ele que
+   * sai o link da palavra-passe, e um endereço impossível aprovado é uma conta
+   * que ninguém abre e um candidato que nunca mais aparece.
+   */
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return NextResponse.json({ error: "Esse email não parece um email." }, { status: 400 });
+  }
+
+  // Só ids de serviços que existem: a lista do ecrã é a mesma, mas o corpo do
+  // pedido é de quem o mandar.
+  const validos = new Set(SERVICE_CATEGORIES.map((c) => c.id));
+  const servicos = Array.isArray(corpo.servicos)
+    ? [...new Set(corpo.servicos.map(String).filter((s) => validos.has(s)))]
+    : [];
+
+  const veiculo = texto(corpo.tipoVeiculo, 60);
+
+  try {
+    const mudou = await actualizarCandidatura(id, {
+      nome,
+      email,
+      telefone: texto(corpo.telefone, 30) || null,
+      cidade: texto(corpo.cidade, 120) || null,
+      tipoVeiculo: tipoDeVeiculoValido(veiculo) ? veiculo : null,
+      servicos,
+      mensagem: texto(corpo.mensagem, 1000) || null,
+    });
+    if (!mudou) {
+      /*
+       * Ou já não existe, ou já foi tratada. Depois de aprovada existe uma
+       * conta, e é ela que manda: editar aqui mudava um registo histórico e
+       * deixava dois sítios a discordar sobre a mesma pessoa.
+       */
+      return NextResponse.json(
+        { error: "Essa candidatura já foi tratada — corrija na ficha do profissional." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("[admin/candidaturas PATCH]", e);
+    return NextResponse.json({ error: "Não foi possível guardar." }, { status: 500 });
   }
 }
 

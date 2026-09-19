@@ -184,6 +184,66 @@ export async function guardarCandidatura(dados: {
   return { id: Number(res.insertId), repetida: false };
 }
 
+/**
+ * CORRIGIR UMA CANDIDATURA ANTES DE A APROVAR.
+ *
+ * "Eu tenho que ter o poder de editar antes de aprovar." — 19-09-2026.
+ *
+ * Aprovar CRIA A CONTA com exactamente o que o candidato escreveu — o nome
+ * vai para o perfil público, o email é por onde ele entra, o telefone é por
+ * onde o cliente lhe liga. E o que chega por um formulário aberto chega como
+ * as pessoas escrevem: «estofos kid lda» em minúsculas, um telefone com
+ * espaços a mais, uma cidade mal apanhada, um serviço que ele marcou por
+ * engano. Até aqui a única saída era aprovar e ir corrigir à ficha do
+ * profissional depois — com o email já enviado e o nome errado já no Google.
+ *
+ * SÓ ENQUANTO NÃO ESTIVER TRATADA. Depois de aprovada existe uma conta, e
+ * essa é a que manda: editar aqui mudava um registo histórico e não mudava
+ * nada do que interessa — dois sítios a discordar sobre a mesma pessoa. A
+ * ficha do profissional é onde se corrige a partir daí.
+ *
+ * O EMAIL TAMBÉM SE CORRIGE, e é o campo onde um engano custa mais: é para lá
+ * que vai o link da palavra-passe. Um `@gmail.con` aprovado é uma conta que
+ * ninguém abre e um candidato que nunca mais aparece.
+ *
+ * E O TEXTO LIVRE, que é onde os enganos se vêem primeiro — «também temos
+ * equipas para remodeklação em geral». É o que uma pessoa da CLYON lê quando
+ * decide, e fica no registo do que ele disse que faz.
+ */
+export async function actualizarCandidatura(
+  id: number,
+  dados: {
+    nome: string;
+    email: string;
+    telefone: string | null;
+    cidade: string | null;
+    tipoVeiculo: string | null;
+    servicos: string[];
+    mensagem: string | null;
+  },
+): Promise<boolean> {
+  await ensureCandidaturasTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [res] = (await pool.execute(
+    `UPDATE candidaturasProfissionais
+        SET nome = ?, email = ?, telefone = ?, cidade = ?, tipoVeiculo = ?,
+            servicosJson = ?, mensagem = ?
+      WHERE id = ? AND estado IN ('nova', 'convidada')`,
+    [
+      dados.nome.slice(0, 120),
+      dados.email.slice(0, 200),
+      dados.telefone?.slice(0, 30) ?? null,
+      dados.cidade?.slice(0, 120) ?? null,
+      dados.tipoVeiculo?.slice(0, 60) ?? null,
+      JSON.stringify(dados.servicos.slice(0, 12)),
+      dados.mensagem?.slice(0, 1000) ?? null,
+      id,
+    ],
+  )) as [{ affectedRows?: number }, unknown];
+  return (res?.affectedRows ?? 0) > 0;
+}
+
 /** As candidaturas para o painel — as por tratar primeiro, e as mais novas à frente. */
 export async function listarCandidaturas(limite = 60): Promise<Candidatura[]> {
   await ensureCandidaturasTable();

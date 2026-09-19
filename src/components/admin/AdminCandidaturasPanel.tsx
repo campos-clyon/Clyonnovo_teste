@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { Check, Copy, Inbox, Loader2, Send, X } from "lucide-react";
+import { Check, Copy, Inbox, Loader2, Pencil, Save, Send, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { etiquetaDoVeiculo } from "@/lib/convite-profissional";
+import { etiquetaDoVeiculo, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 
 /**
  * QUEM SE CANDIDATOU PELO SITE.
@@ -47,6 +47,20 @@ const ETIQUETA_DO_SERVICO: Record<string, string> = Object.fromEntries(
   SERVICE_CATEGORIES.map((c) => [c.id, c.label]),
 );
 
+/** O que está a ser corrigido, antes de ir para a base. */
+type Rascunho = {
+  nome: string;
+  email: string;
+  telefone: string;
+  cidade: string;
+  tipoVeiculo: string;
+  servicos: string[];
+  mensagem: string;
+};
+
+const CAMPO =
+  "w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500";
+
 function quando(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
@@ -62,6 +76,17 @@ export default function AdminCandidaturasPanel() {
   const [aviso, setAviso] = useState("");
   const [linkEmClaro, setLinkEmClaro] = useState("");
   const [verTratadas, setVerTratadas] = useState(false);
+  /*
+   * A CANDIDATURA QUE ESTÁ A SER CORRIGIDA, e o rascunho dela.
+   *
+   * "Eu tenho que ter o poder de editar antes de aprovar." — 19-09-2026.
+   *
+   * Uma de cada vez: abrir duas ao mesmo tempo num ecrã que se actualiza
+   * sozinho é como se perde o que se estava a escrever.
+   */
+  const [aEditar, setAEditar] = useState<number | null>(null);
+  const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  const [aGuardar, setAGuardar] = useState(false);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -92,7 +117,62 @@ export default function AdminCandidaturasPanel() {
    * erros de rede, pára com o separador escondido e volta a buscar assim que
    * ele reaparece.
    */
-  useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
+  /*
+   * O CICLO PÁRA ENQUANTO ELE ESCREVE.
+   *
+   * Sem isto, a lista renovava-se de trinta em trinta segundos por baixo de
+   * uma correcção a meio — e o nome que ele estava a arranjar voltava ao que
+   * estava.
+   */
+  useAutoRefresh(() => carregar(true), {
+    enabled: ready && Boolean(token),
+    paused: aEditar !== null,
+  });
+
+  /** Abrir a correcção com o que lá está — e não com campos vazios. */
+  function abrirEdicao(c: Candidatura) {
+    setErro("");
+    setAviso("");
+    setAEditar(c.id);
+    setRascunho({
+      nome: c.nome,
+      email: c.email,
+      telefone: c.telefone ?? "",
+      cidade: c.cidade ?? "",
+      tipoVeiculo: c.tipoVeiculo ?? "",
+      servicos: [...c.servicos],
+      mensagem: c.mensagem ?? "",
+    });
+  }
+
+  function fecharEdicao() {
+    setAEditar(null);
+    setRascunho(null);
+  }
+
+  async function guardarEdicao(id: number) {
+    if (!token || !rascunho) return;
+    setAGuardar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/candidaturas", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, ...rascunho }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível guardar.");
+        return;
+      }
+      fecharEdicao();
+      await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAGuardar(false);
+    }
+  }
 
   async function agir(id: number, accao: "aprovar" | "recusar") {
     if (!token) return;
@@ -211,6 +291,152 @@ export default function AdminCandidaturasPanel() {
               key={c.id}
               className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-3"
             >
+              {aEditar === c.id && rascunho ? (
+                /*
+                  CORRIGIR ANTES DE APROVAR.
+
+                  "Eu tenho que ter o poder de editar antes de aprovar."
+                  — 19-09-2026, a olhar para «estofos kid lda» em minúsculas e
+                  para «também temos equipas para remodeklação em geral».
+
+                  Aprovar cria a conta com exactamente o que está aqui: o nome
+                  vai para o perfil público, o email é por onde ele entra e
+                  recebe o link da palavra-passe, o telefone é por onde o
+                  cliente lhe liga. Corrigir depois obrigava a aprovar primeiro
+                  — com o email já enviado e o nome errado já gravado.
+                */
+                <div className="space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Nome
+                      </span>
+                      <input
+                        value={rascunho.nome}
+                        onChange={(e) => setRascunho({ ...rascunho, nome: e.target.value })}
+                        className={CAMPO}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Email — é para aqui que vai o link
+                      </span>
+                      <input
+                        value={rascunho.email}
+                        onChange={(e) => setRascunho({ ...rascunho, email: e.target.value })}
+                        className={CAMPO}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Telefone
+                      </span>
+                      <input
+                        value={rascunho.telefone}
+                        onChange={(e) => setRascunho({ ...rascunho, telefone: e.target.value })}
+                        className={CAMPO}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Cidade — é daqui que sai a base dele
+                      </span>
+                      <input
+                        value={rascunho.cidade}
+                        onChange={(e) => setRascunho({ ...rascunho, cidade: e.target.value })}
+                        className={CAMPO}
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Veículo
+                    </span>
+                    <select
+                      value={rascunho.tipoVeiculo}
+                      onChange={(e) => setRascunho({ ...rascunho, tipoVeiculo: e.target.value })}
+                      className={CAMPO}
+                    >
+                      <option value="">Não disse</option>
+                      {TIPOS_DE_VEICULO.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div>
+                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Serviços que faz
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SERVICE_CATEGORIES.map((s) => {
+                        const marcado = rascunho.servicos.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() =>
+                              setRascunho({
+                                ...rascunho,
+                                servicos: marcado
+                                  ? rascunho.servicos.filter((x) => x !== s.id)
+                                  : [...rascunho.servicos, s.id],
+                              })
+                            }
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+                              marcado
+                                ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-300"
+                                : "border-slate-700 text-slate-400 hover:bg-slate-800"
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      O que ele escreveu
+                    </span>
+                    <textarea
+                      value={rascunho.mensagem}
+                      onChange={(e) => setRascunho({ ...rascunho, mensagem: e.target.value })}
+                      rows={3}
+                      className={`${CAMPO} resize-y`}
+                    />
+                  </label>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      onClick={() => void guardarEdicao(c.id)}
+                      disabled={aGuardar}
+                      className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+                    >
+                      {aGuardar ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                      Guardar
+                    </button>
+                    <button
+                      onClick={fecharEdicao}
+                      disabled={aGuardar}
+                      className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                    <p className="self-center text-[11px] text-slate-500">
+                      Guardar não aprova nada — só corrige o que fica gravado.
+                    </p>
+                  </div>
+                </div>
+              ) : (
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-white">
@@ -254,6 +480,21 @@ export default function AdminCandidaturasPanel() {
 
                 {(c.estado === "nova" || c.estado === "convidada") && (
                   <div className="flex shrink-0 gap-2">
+                    {/*
+                      EDITAR ANTES DE APROVAR — e antes do botão que aprova.
+
+                      À esquerda do «Aprovar» de propósito: a ordem dos botões
+                      é a ordem do trabalho. Primeiro confere-se e corrige-se,
+                      depois é que se cria a conta e sai o email.
+                    */}
+                    <button
+                      onClick={() => abrirEdicao(c)}
+                      disabled={ocupado === c.id}
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      Editar
+                    </button>
                     <button
                       /* Confirmação: isto cria uma conta e manda um email a uma
                          pessoa. Enquanto era só um convite, um toque a mais
@@ -297,6 +538,7 @@ export default function AdminCandidaturasPanel() {
                   <Check className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
                 )}
               </div>
+              )}
             </li>
           ))}
         </ul>
