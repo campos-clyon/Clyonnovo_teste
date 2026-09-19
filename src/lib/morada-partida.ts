@@ -62,6 +62,38 @@ export function partirMorada(morada: string | null | undefined): MoradaPartida {
 }
 
 /**
+ * O CÓDIGO POSTAL QUE FICOU ENTERRADO NO `rawOrderJson`.
+ *
+ * *«PEDIDOS CONTINUA A VIR SEM CÓDIGO POSTAL»* — 19-09-2026.
+ *
+ * A rota do simulador tinha um comentário a dizer que a coluna não existia, e
+ * por isso nunca a escreveu. A coluna existe há meses; o comentário é que
+ * ficou. Resultado: em todos os pedidos nascidos no site, o valor veio certo
+ * do Google e foi parar a dois níveis de profundidade num JSON, com a coluna a
+ * nulo.
+ *
+ * O erro está corrigido à nascença. Isto é para os que já cá estão: em vez de
+ * um UPDATE em massa numa tabela viva — que é um risco sem pressa nenhuma —,
+ * lê-se de onde ele ficou. Quem abrir e gravar o pedido põe-no na coluna, um a
+ * um e por vontade de alguém.
+ */
+export function codigoPostalGuardado(rawOrderJson: string | null | undefined): string {
+  if (!rawOrderJson) return "";
+  try {
+    const cru = JSON.parse(rawOrderJson) as Record<string, unknown>;
+    const de = (v: unknown) => {
+      const cp = (v as { postalCode?: unknown } | undefined)?.postalCode;
+      return typeof cp === "string" ? cp.trim() : "";
+    };
+    // `originAddress` é o das mudanças, onde a morada de partida é a que conta.
+    return de(cru.address) || de(cru.originAddress) || "";
+  } catch {
+    /* JSON estragado é o mesmo que não ter nada lá dentro. */
+    return "";
+  }
+}
+
+/**
  * O que falta preencher, a partir do que a morada já diz.
  *
  * ⚠️ NUNCA ESCREVE POR CIMA DO QUE JÁ LÁ ESTÁ. Se alguém corrigiu o código

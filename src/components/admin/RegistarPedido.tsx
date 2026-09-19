@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
-import { completarComAMorada } from "@/lib/morada-partida";
+import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -379,9 +379,18 @@ export default function RegistarPedido({
          * Nunca escreve por cima do que já lá está, e não mexe na morada. Ver
          * `morada-partida.ts`.
          */
+        /*
+         * TRÊS SÍTIOS, POR ESTA ORDEM: a coluna, o JSON, e a morada.
+         *
+         * A coluna é a verdade quando existe. A seguir vem o `rawOrderJson` —
+         * onde a rota do simulador o deixou enterrado durante meses, por causa
+         * de um comentário que dizia que a coluna não existia (ver
+         * `codigoPostalGuardado`). Por último tenta-se lê-lo de dentro da
+         * morada, que é o caso de quem a escreveu toda numa linha.
+         */
         const daMorada = completarComAMorada({
           address: o.address ?? "",
-          postalCode: o.postalCode ?? "",
+          postalCode: o.postalCode || codigoPostalGuardado(o.rawOrderJson),
           city: o.city ?? "",
         });
 

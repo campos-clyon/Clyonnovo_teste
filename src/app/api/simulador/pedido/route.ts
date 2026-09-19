@@ -259,7 +259,29 @@ export async function POST(req: NextRequest) {
       // vila francesa, enquanto a morada escolhida dizia Lisboa: a zona do
       // pedido ficou errada, e com ela a comparação por zonas na distribuição.
       city: order.address?.city || order.originAddress?.city || order.city || null,
-      // postalCode: não existe como coluna separada na DB — guardado em rawOrderJson
+      /*
+       * ⚠️ O CÓDIGO POSTAL — e o comentário que o escondeu durante meses.
+       *
+       * Estava aqui escrito «não existe como coluna separada na DB — guardado
+       * em rawOrderJson». Era verdade quando foi escrito, e deixou de o ser
+       * quando alguém acrescentou a coluna (`db.ts`: ALTER TABLE
+       * simulatorOrders ADD COLUMN postalCode). Ninguém apagou o comentário, e
+       * por isso TODOS os pedidos nascidos no site ficaram com o campo a nulo,
+       * com o valor guardado a dois níveis de profundidade num JSON.
+       *
+       * "PEDIDOS CONTINUA A VIR SEM CÓDIGO POSTAL" — 19-09-2026, e continuava
+       * mesmo: dois dias antes tínhamos arranjado o caso em que ele vem DENTRO
+       * da morada, que é outro. Este é o caso em que ele vem certo do
+       * autocomplete do Google e é deitado fora à chegada.
+       *
+       * E não é cosmético. O código postal, com a localidade, é o que localiza
+       * a morada — e são as coordenadas que decidem que profissionais alcançam
+       * o trabalho. Um pedido sem ele chega a menos gente.
+       *
+       * O Google devolve-o em `address.postalCode` (ver `place-details`); a
+       * segunda hipótese é para quem escreveu a morada à mão.
+       */
+      postalCode: order.address?.postalCode || order.originAddress?.postalCode || order.postalCode || null,
       floor: (() => {
         const v = order.serviceType === "mudanca"
           ? (order.originAccess?.floor ?? order.floor)

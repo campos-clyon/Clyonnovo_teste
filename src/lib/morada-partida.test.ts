@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { completarComAMorada, partirMorada } from "./morada-partida";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { codigoPostalGuardado, completarComAMorada, partirMorada } from "./morada-partida";
 
 /**
  * *«Os dados do cliente, mesmo vindo com o código postal no endereço, ele não
@@ -102,5 +104,100 @@ describe("completar os campos vazios", () => {
     expect(
       completarComAMorada({ address: "Rua Sousa Viterbo 29", postalCode: "", city: "" }),
     ).toEqual({ postalCode: "", city: "" });
+  });
+});
+
+/**
+ * ⚠️ O COMENTÁRIO QUE ESCONDEU O CÓDIGO POSTAL DURANTE MESES.
+ *
+ * *«PEDIDOS CONTINUA A VIR SEM CÓDIGO POSTAL»* — 19-09-2026.
+ *
+ * A rota do simulador tinha escrito «não existe como coluna separada na DB —
+ * guardado em rawOrderJson». Era verdade quando foi escrito, e deixou de o ser
+ * quando alguém acrescentou a coluna. Ninguém apagou o comentário, e todos os
+ * pedidos nascidos no site ficaram com o campo a nulo — com o valor certo,
+ * vindo do Google, a dois níveis de profundidade num JSON.
+ */
+describe("recuperar o que ficou no rawOrderJson", () => {
+  it("lê o código postal de onde o simulador o deixou", () => {
+    const cru = JSON.stringify({
+      serviceType: "recolha_moveis",
+      address: { formattedAddress: "Largo X, 4", city: "Linda-a-Velha", postalCode: "2795-242" },
+    });
+    expect(codigoPostalGuardado(cru)).toBe("2795-242");
+  });
+
+  it("nas mudanças, vale o da morada de partida", () => {
+    const cru = JSON.stringify({
+      originAddress: { postalCode: "1000-169" },
+      destinationAddress: { postalCode: "4000-007" },
+    });
+    expect(codigoPostalGuardado(cru)).toBe("1000-169");
+  });
+
+  it("um JSON estragado é o mesmo que não ter nada", () => {
+    for (const mau of [null, undefined, "", "{isto não é json", "{}", '{"address":{}}']) {
+      expect(codigoPostalGuardado(mau), String(mau)).toBe("");
+    }
+  });
+
+  /*
+   * A ORDEM IMPORTA: a coluna é a verdade quando existe. Se alguém a corrigiu à
+   * mão porque o Google devolveu o código postal errado, essa correcção não
+   * pode ser desfeita pelo que ficou no JSON antigo.
+   */
+  it("a coluna manda sobre o JSON", () => {
+    const cru = JSON.stringify({ address: { postalCode: "2795-242" } });
+    const daColuna = "1000-169";
+    expect(
+      completarComAMorada({
+        address: "Largo X, 4",
+        postalCode: daColuna || codigoPostalGuardado(cru),
+        city: "",
+      }).postalCode,
+    ).toBe("1000-169");
+  });
+});
+
+/**
+ * ⚠️ O GUARDA QUE IMPEDE ISTO DE VOLTAR.
+ *
+ * O erro não foi de código — foi de um COMENTÁRIO que deixou de ser verdade e
+ * que ninguém apagou. A rota lia-se bem, fazia sentido, e estava errada há
+ * meses. Um teste a olhar para a rota é a única coisa que apanha isso.
+ */
+describe("a rota do simulador grava o código postal", () => {
+  const ROTA = readFileSync(
+    join(process.cwd(), "src/app/api/simulador/pedido/route.ts"),
+    "utf8",
+  );
+
+  it("escreve a coluna, e não só o JSON", () => {
+    expect(ROTA).toContain("postalCode: order.address?.postalCode");
+  });
+
+  /*
+   * SEM OS COMENTÁRIOS — e é a terceira vez em dois dias que esta lição se
+   * paga. O comentário que hoje está na rota CITA o antigo, para explicar
+   * porque é que o campo esteve nulo durante meses. Proibir a frase à letra
+   * era chumbar por se ter escrito bem.
+   *
+   * O que se guarda é que a afirmação errada não está em CÓDIGO VIVO.
+   */
+  it("o código já não diz que a coluna não existe", () => {
+    const codigo = ROTA.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(codigo).not.toContain("não existe como coluna separada");
+    expect(codigo).toContain("postalCode:");
+  });
+
+  /*
+   * Não é cosmético: o código postal, com a localidade, é o que localiza a
+   * morada — e são as coordenadas que decidem que profissionais alcançam o
+   * trabalho. Um pedido sem ele chega a menos gente.
+   */
+  it("e as outras portas de entrada continuam a gravá-la", () => {
+    const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+    expect(ler("src/app/api/hero-quote/route.ts")).toContain("postalCode: codigoPostal");
+    expect(ler("src/lib/registar-pedido-por-whatsapp.ts")).toContain("postalCode,");
   });
 });
