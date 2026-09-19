@@ -77,7 +77,13 @@ describe("quem procura procura em tudo", () => {
      * recentes e o pedido encontrado desaparecia do ecrã — sem nada a
      * explicar porquê, que é a pior maneira de perder uma coisa.
      */
-    expect(MESA).toContain("useAutoRefresh(() => carregar(true, temTudo));");
+    /*
+     * O que isto guarda é o `temTudo` passado à batida. As opções ao lado são
+     * outra promessa — desde 19-09-2026 a batida também pára enquanto alguém
+     * escreve uma nota — e prender o teste ao parêntese fechado fazia-o
+     * chumbar por causa de um argumento que não é o desta.
+     */
+    expect(MESA).toContain("useAutoRefresh(() => carregar(true, temTudo)");
   });
 
   it("o ecrã diz que está a mostrar os recentes, em vez de o deixar adivinhar", () => {

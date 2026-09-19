@@ -25,6 +25,7 @@ import {
   Link as LinkIcon,
   Check,
   Star,
+  StickyNote,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { combinaComABusca } from "@/lib/procurar-pedido";
@@ -261,6 +262,18 @@ type Pedido = {
   /** "backoffice", "hero_quote_form", "formulario_contactos", ou null. */
   origem: string | null;
   status: string | null;
+  /**
+   * A NOTA DA EQUIPA SOBRE ESTE PEDIDO.
+   *
+   * "O Sr. Rui Santos pediu para esperar até segunda para tomar uma decisão;
+   * se tivesse como colocarmos uma etiqueta no pedido dele ou uma anotação,
+   * seria mais fácil." — 19-09-2026.
+   *
+   * É a MESMA coluna que o ecrã do pedido já escrevia, e não um campo novo:
+   * duas notas sobre a mesma coisa acabam a dizer coisas diferentes, e a que
+   * fica por ler é sempre a que tinha a informação.
+   */
+  notasInternas?: string | null;
   /** Quando o admin abriu o pedido depois de concluído. Null = por ver. */
   concluidoVistoEm: string | null;
   /**
@@ -641,6 +654,15 @@ export default function AdminNegociacoesPanel({
    * ecrã a trabalhar contra quem escreve.
    */
   const [temTudo, setTemTudo] = useState(false);
+  /*
+   * A NOTA QUE ESTÁ A SER ESCRITA, e o pedido a que pertence.
+   *
+   * Uma de cada vez: num ecrã que se actualiza sozinho de trinta em trinta
+   * segundos, duas caixas abertas é como se perde o que se estava a escrever.
+   */
+  const [notaAberta, setNotaAberta] = useState<number | null>(null);
+  const [rascunhoDaNota, setRascunhoDaNota] = useState("");
+  const [aGuardarNota, setAGuardarNota] = useState(false);
   /* Que blocos estão fechados. «Concluídos» e «Cancelados» nascem fechados. */
   const [fechados, setFechados] = useState<Set<ChaveDoBloco>>(
     () => new Set(BLOCOS.filter((b) => b.fechadoPorOmissao).map((b) => b.chave)),
@@ -796,7 +818,48 @@ export default function AdminNegociacoesPanel({
    * voltava aos mais recentes e o pedido encontrado desaparecia do ecrã — sem
    * nada a explicar porquê.
    */
-  useAutoRefresh(() => carregar(true, temTudo));
+  /*
+   * E PÁRA ENQUANTO ELE ESCREVE UMA NOTA.
+   *
+   * Sem isto, a lista renovava-se por baixo de uma frase a meio — e o que ele
+   * estava a escrever voltava ao que estava.
+   */
+  useAutoRefresh(() => carregar(true, temTudo), { paused: notaAberta !== null });
+
+  /**
+   * GUARDAR A NOTA DE UM PEDIDO.
+   *
+   * Vai pela rota do pedido, que é a que o ecrã do detalhe já usa: é a mesma
+   * coluna, e duas rotas a escrever o mesmo campo acabam com regras
+   * diferentes sobre ele.
+   *
+   * A lista muda ANTES da rede responder. Quem escreve uma nota espera vê-la
+   * ficar; meio segundo de espera lê-se como «não guardou». Se falhar, o
+   * `carregar` do fim traz a de antes de volta.
+   */
+  async function guardarNota(id: number, texto: string) {
+    if (!token) return;
+    const limpo = texto.trim().slice(0, 500);
+    setAGuardarNota(true);
+    setErro("");
+    setPedidos((lista) =>
+      lista.map((p) => (p.id === id ? { ...p, notasInternas: limpo || null } : p)),
+    );
+    try {
+      const res = await fetch(`/api/admin/pedidos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notasInternas: limpo || null }),
+      });
+      if (!res.ok) setErro("Não foi possível guardar a nota.");
+      setNotaAberta(null);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAGuardarNota(false);
+      await carregar(true, temTudo);
+    }
+  }
 
   /** Há quanto tempo o que está no ecrã foi lido da base. */
   const quandoFoiLido = (() => {
@@ -1732,6 +1795,98 @@ export default function AdminNegociacoesPanel({
                 : "Abrir"}
           </button>
         </div>
+
+        {/*
+          A NOTA DO PEDIDO — à vista na linha, sem abrir nada.
+
+          "O Sr. Rui Santos pediu para esperar até segunda para tomar uma
+          decisão; se tivesse como colocarmos uma etiqueta no pedido dele ou
+          uma anotação, seria mais fácil." — 19-09-2026.
+
+          É a MESMA coluna que o ecrã do pedido já escrevia (`notasInternas`) e
+          não um campo novo: duas notas sobre a mesma coisa acabam a dizer
+          coisas diferentes, e a que fica por ler é sempre a que tinha a
+          informação.
+
+          Âmbar, e não a cor de um estado: isto não é o que o pedido É, é o que
+          nós sabemos sobre ele. Sobre o bloco verde de quem espera por si, uma
+          linha âmbar lê-se como um papel colado por cima — que é exactamente
+          o que ela é.
+        */}
+        {notaAberta === p.id ? (
+          <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
+            <textarea
+              value={rascunhoDaNota}
+              onChange={(e) => setRascunhoDaNota(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter guarda, Shift+Enter muda de linha. Uma nota é uma
+                // linha; obrigar ao rato para a gravar é um passo a mais.
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void guardarNota(p.id, rascunhoDaNota);
+                }
+                if (e.key === "Escape") setNotaAberta(null);
+              }}
+              rows={2}
+              autoFocus
+              maxLength={500}
+              placeholder="Ex.: pediu para esperar até segunda-feira"
+              className="w-full resize-none rounded-lg border border-slate-600 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400"
+            />
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => void guardarNota(p.id, rascunhoDaNota)}
+                disabled={aGuardarNota}
+                className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+              >
+                {aGuardarNota ? "A guardar…" : "Guardar"}
+              </button>
+              <button
+                onClick={() => setNotaAberta(null)}
+                disabled={aGuardarNota}
+                className="rounded-lg border border-slate-600 px-2.5 py-1 text-[11px] text-slate-400 hover:bg-slate-800 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              {p.notasInternas && (
+                <button
+                  onClick={() => void guardarNota(p.id, "")}
+                  disabled={aGuardarNota}
+                  className="text-[11px] text-slate-500 underline hover:text-red-300 disabled:opacity-50"
+                >
+                  Apagar a nota
+                </button>
+              )}
+              <span className="ml-auto text-[10px] text-slate-500">
+                A mesma nota do ecrã do pedido.
+              </span>
+            </div>
+          </div>
+        ) : p.notasInternas ? (
+          <button
+            onClick={() => {
+              setRascunhoDaNota(p.notasInternas ?? "");
+              setNotaAberta(p.id);
+            }}
+            className="mt-2 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1.5 text-left transition hover:border-amber-400/50"
+          >
+            <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+            <span className="whitespace-pre-line break-words text-xs leading-relaxed text-amber-200/90">
+              {p.notasInternas}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setRascunhoDaNota("");
+              setNotaAberta(p.id);
+            }}
+            className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-600 transition hover:text-amber-300"
+          >
+            <StickyNote className="h-3 w-3" aria-hidden="true" />
+            Anotar
+          </button>
+        )}
 
         {aberto && (
           <>

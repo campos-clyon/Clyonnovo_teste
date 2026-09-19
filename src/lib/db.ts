@@ -1711,6 +1711,14 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
      */
     origem: string | null;
     status: string | null;
+    /**
+     * A nota que a equipa escreveu sobre este pedido.
+     *
+     * A mesma coluna que o ecrã do pedido já escrevia — e não um campo novo:
+     * duas notas sobre a mesma coisa acabam a dizer coisas diferentes, e a
+     * que fica por ler é sempre a que tinha a informação.
+     */
+    notasInternas: string | null;
     /** Quando o admin abriu este pedido DEPOIS de concluído. Null = por ver. */
     concluidoVistoEm: Date | null;
     linkExpiraEm: Date | null;
@@ -1789,6 +1797,16 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- tem o numero do pedido, e era o numero que a mesa exigia.
             o.address, o.postalCode,
             o.valorDesejadoCliente, o.baseDoPreco, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
+            -- A NOTA DO PEDIDO, para a mesa a poder mostrar sem abrir nada.
+            --
+            -- "O Sr. Rui Santos pediu para esperar ate segunda para tomar uma
+            -- decisao; se tivesse como colocarmos uma etiqueta no pedido dele
+            -- ou uma anotacao, seria mais facil." -- 19-09-2026.
+            --
+            -- A coluna ja existia e ja se escrevia no ecra do pedido. O que
+            -- faltava era chegar aqui: uma nota que so se le abrindo o pedido
+            -- um a um nao serve para decidir o que fazer a seguir.
+            o.notasInternas,
             -- A validade do link do cliente serve de MARCA DE VERSAO.
             --
             -- Cada token novo poe uma data nova (agora + 30 dias), por isso
@@ -1860,6 +1878,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     baseDoPreco: (p.baseDoPreco as string) ?? null,
     origem: (p.origem as string) ?? null,
     status: (p.status as string) ?? null,
+    notasInternas: (p.notasInternas as string) ?? null,
     concluidoVistoEm: (p.concluidoVistoEm as Date) ?? null,
     /* A marca de versão do link do cliente — ver o comentário na consulta. */
     linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
