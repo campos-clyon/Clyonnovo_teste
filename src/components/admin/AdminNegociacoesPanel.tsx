@@ -1890,13 +1890,32 @@ export default function AdminNegociacoesPanel({
 
         {aberto && (
           <>
-        {concluido && acordada && acordada.valorAcordado != null && (
-          // O dinheiro completo, à cabeça: o que o cliente pagou, a taxa, o
-          // que o profissional recebe. Abrir um concluído é para conferir
-          // contas — não para as reconstruir proposta a proposta.
+        {/*
+          AS CONTAS APARECEM AO FECHAR O NEGÓCIO, E NÃO SÓ NO FIM — 19-09-2026.
+
+          "Após aceitar uma proposta deveria ter a opção de gerar referências
+          para pagamento dos valores."
+
+          Este bloco — as contas e o botão de cobrar — só existia quando o
+          trabalho já estava CONCLUÍDO. Mas é no instante em que o negócio
+          fecha que o valor deixa de mudar, e é aí que se cobra: a CLYON
+          recebe, guarda, e paga ao profissional depois de o trabalho estar
+          feito e confirmado. Esperar pelo fim para pedir o dinheiro é ficar
+          sem a garantia que o modelo inteiro assenta em ter.
+
+          O que continua preso ao concluído é a AVALIAÇÃO, lá em baixo: pedir
+          uma nota sobre um trabalho que ainda não aconteceu não faz sentido
+          nenhum.
+        */}
+        {acordada && acordada.valorAcordado != null && (
+          // O dinheiro completo, à cabeça: o que o cliente paga, a taxa, o
+          // que o profissional recebe. Abrir um trabalho fechado é para
+          // conferir contas — não para as reconstruir proposta a proposta.
           <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3 text-sm">
             <p className="font-semibold text-emerald-300">
-              Trabalho concluído com {acordada.profissionalNome}
+              {concluido
+                ? `Trabalho concluído com ${acordada.profissionalNome}`
+                : `Fechado com ${acordada.profissionalNome} — falta o trabalho acontecer`}
             </p>
             {(() => {
               /*
@@ -1976,11 +1995,15 @@ export default function AdminNegociacoesPanel({
             {/*
               A NOTA DO PROFISSIONAL, aqui e não noutro sítio.
 
-              É o único ecrã onde alguém olha para um trabalho já fechado, e o
+              É o único ecrã onde alguém olha para um trabalho já feito, e o
               único momento em que a memória do que correu bem ainda está
               fresca. Pedi-la noutra altura é pedi-la a quem já não se lembra.
+
+              E SÓ DEPOIS DE CONCLUÍDO — 19-09-2026, quando este bloco passou a
+              aparecer logo ao fechar o negócio. Pedir uma nota sobre um
+              trabalho que ainda não aconteceu não faz sentido nenhum.
             */}
-            {acordada.avaliadoEm ? (
+            {!concluido ? null : acordada.avaliadoEm ? (
               <p className="mt-2.5 flex items-center gap-1.5 text-xs text-amber-300">
                 <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
                 {acordada.estrelas} de 5 · avaliado a {quando(acordada.avaliadoEm)}
