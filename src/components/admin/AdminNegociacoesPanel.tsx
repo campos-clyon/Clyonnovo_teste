@@ -28,6 +28,22 @@ import {
   StickyNote,
 } from "lucide-react";
 import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+/*
+ * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
+ *
+ * A mesa tinha a sua própria ideia do que é uma proposta por responder: «tem
+ * `estado: pendente`». O motor tem outra, e é a que manda — `propostaPendente`
+ * deixa cair as que passaram das 48 horas. As duas discordavam, e via-se:
+ *
+ *   o #320 mostrava «Revolution · espera resposta · 322,00 €» com um botão
+ *   «Aceitar 322,00 €», sobre uma proposta de 14 de Setembro. Carregar dava
+ *   409 e «Não há proposta para aceitar» — o servidor tinha razão, e o ecrã
+ *   tinha convidado.
+ *
+ * Uma regra escrita duas vezes acaba sempre com dois comportamentos. Esta
+ * passa a ser lida daqui.
+ */
+import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
@@ -102,6 +118,23 @@ type Negociacao = {
   actualizadaEm: string;
 };
 
+/**
+ * JÁ PASSARAM AS 48 HORAS?
+ *
+ * A conta é do motor — `estaExpirada` — e é aqui que se lhe entrega a
+ * proposta. O molde local diz `estado: string` porque vem de um `JSON.parse`
+ * e o TypeScript não tem como saber o que lá está; o do motor é a união dos
+ * quatro estados possíveis. A conversão é feita NUMA linha, aqui, e não
+ * espalhada por cada sítio que precise de saber se o prazo passou.
+ *
+ * Se o JSON trouxer um estado que não existe, `estaExpirada` responde `false`
+ * — não é «pendente», logo não expira. É o lado seguro: mostra-se a mais, e
+ * vê-se; ao contrário, escondia-se uma proposta viva.
+ */
+function expirou(p: Proposta, agora: Date): boolean {
+  return estaExpirada(p as PropostaDoMotor, agora);
+}
+
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
   try {
@@ -152,9 +185,41 @@ function esperaResposta(n: Negociacao): boolean {
   // alguem carregar em contratar. Nao ha proposta pendente nenhuma para
   // encontrar — e por isso que tem de ser uma condicao a parte.
   if (n.estado === "aguarda_contratacao") return true;
+  /*
+   * E NÃO CONTA AS QUE JÁ EXPIRARAM — 20-09-2026.
+   *
+   * Uma proposta expira 48 horas depois de ser feita; está escrito no
+   * cabeçalho deste mesmo bloco. Mas esta função só olhava para o `estado`
+   * gravado, que continua a dizer «pendente» para sempre — o prazo é uma
+   * conta sobre a data, não um carimbo na base.
+   *
+   * O resultado era a mesa a dizer «espera resposta» sobre uma proposta de
+   * há seis dias, a pôr o pedido em «Precisa de si», e a oferecer um botão
+   * que o servidor recusa. Quem ali estava não esperava por nada: o prazo
+   * tinha passado e o que falta é pedir outra proposta.
+   */
+  const agora = new Date();
   return propostasDe(n.propostasJson).some(
-    (x) => x.estado === "pendente" && x.por === "profissional",
+    (x) => x.estado === "pendente" && x.por === "profissional" && !expirou(x, agora),
   );
+}
+
+/**
+ * A ÚLTIMA PROPOSTA DELE, SE TIVER EXPIRADO.
+ *
+ * Tirar a proposta expirada de «espera resposta» é metade do trabalho; a
+ * outra metade é dizer porquê. Sem isto, o cartão passava a mostrar só
+ * «aberta» e ninguém percebia que tinha havido ali um valor em cima da mesa
+ * — e que o que falta agora é pedir outro.
+ */
+function propostaExpiradaDele(n: Negociacao): Proposta | null {
+  if (n.estado !== "aberta") return null;
+  const agora = new Date();
+  const dele = propostasDe(n.propostasJson).filter(
+    (x) => x.por === "profissional" && x.estado === "pendente",
+  );
+  const ultima = dele[dele.length - 1];
+  return ultima && expirou(ultima, agora) ? ultima : null;
 }
 
 /**
@@ -2362,6 +2427,20 @@ export default function AdminNegociacoesPanel({
                       </span>
                     )}
                     {/*
+                      E QUANDO O PRAZO PASSOU, DIZ-SE.
+
+                      Tirar a proposta caduca do «espera resposta» é metade do
+                      trabalho; a outra é não deixar a linha calada. Sem isto,
+                      o cartão passava a mostrar só «aberta» e ninguém
+                      percebia que tinha havido ali um valor.
+                    */}
+                    {propostaExpiradaDele(n) && (
+                      <span className="flex items-center gap-1 rounded-full bg-slate-700/60 px-2 py-0.5 text-xs font-semibold text-slate-400">
+                        <Clock className="h-3 w-3" aria-hidden="true" />
+                        proposta expirada
+                      </span>
+                    )}
+                    {/*
                       O valor em cima da mesa, SEMPRE — e de quem é. Era isto
                       que faltava: sabia-se que havia "1 proposta" e não se via
                       o número sem abrir a troca.
@@ -3191,9 +3270,21 @@ function RespostaDaClyon({
     negociacao.estado === "morta";
   if (fechado) return null;
 
+  /*
+   * SÓ AS QUE AINDA ESTÃO DE PÉ — ver `esperaResposta`.
+   *
+   * O botão «Aceitar 322,00 €» estava a ser desenhado sobre uma proposta de
+   * 14 de Setembro, e o servidor respondia 409. Um botão que o servidor
+   * recusa é pior do que botão nenhum: ensina a pessoa a desconfiar do ecrã.
+   */
+  const agora = new Date();
   const pendenteDoProfissional = propostas.find(
-    (x) => x.estado === "pendente" && x.por === "profissional",
+    (x) => x.estado === "pendente" && x.por === "profissional" && !expirou(x, agora),
   );
+  /* A que caducou, para o ecrã dizer o que aconteceu em vez de ficar calado. */
+  const expiradaDoProfissional = pendenteDoProfissional
+    ? null
+    : propostas.filter((x) => x.estado === "pendente" && x.por === "profissional").at(-1);
 
   async function agir(accao: string, v?: string) {
     if (!authToken) return;
@@ -3279,6 +3370,22 @@ function RespostaDaClyon({
             {aEnviar === "aceitar" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
             Aceitar {Number(pendenteDoProfissional.valor).toFixed(2).replace(".", ",")} €
           </button>
+        )}
+
+        {/*
+          O QUE ACONTECEU AO VALOR QUE ELE TINHA POSTO.
+
+          Em vez do botão que o servidor recusava. Dizer «expirou» e mostrar o
+          número responde à pergunta que a pessoa tem à frente — «então e os
+          322 €?» — e aponta para o que há a fazer: contrapor, ou pedir-lhe
+          outra proposta pelo «Reenviar» ao lado.
+        */}
+        {expiradaDoProfissional && (
+          <span className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs text-slate-400">
+            <Clock className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+            Os {Number(expiradaDoProfissional.valor).toFixed(2).replace(".", ",")} € dele
+            expiraram — contraponha, ou peça-lhe outra proposta.
+          </span>
         )}
 
         <input
