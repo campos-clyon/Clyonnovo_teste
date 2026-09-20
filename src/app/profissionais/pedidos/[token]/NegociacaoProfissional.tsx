@@ -27,7 +27,6 @@ import {
   accoesDisponiveis,
   propostasRestantes,
   propostaPendente,
-  horasAteExpirar,
   MAX_PROPOSTAS_POR_LADO,
   MAX_PROPOSTAS_POR_EXTENSO,
   type Negociacao,
@@ -489,11 +488,16 @@ export default function NegociacaoProfissional({
               <li key={linha}>· {linha}</li>
             ))}
           </ul>
-          {pendente && (
-            <p className="mt-2 text-xs text-slate-500">
-              {Math.max(0, Math.round(horasAteExpirar(pendente, agora)))} h para responder
-            </p>
-          )}
+          {/*
+            O RELÓGIO SAIU DAQUI — 20-09-2026.
+
+            "Remova o tempo, já que os pedidos vão ser apagados em 60 dias."
+
+            Dizia «12 h para responder» sobre uma proposta que já não morre à
+            hora nenhuma. Um número a correr para zero, num ecrã onde nada
+            acontece a zero, é pior do que não haver número: ensina a desconfiar
+            de tudo o resto que lá está escrito. Ver `AS_PROPOSTAS_EXPIRAM`.
+          */}
         </div>
       ) : (
         /* O que está em cima da mesa */
@@ -517,11 +521,7 @@ export default function NegociacaoProfissional({
               <span className="text-xl font-bold text-emerald-600">{euros(recebeSeFechar)}</span>
             </div>
           )}
-          {pendente && (
-            <p className="mt-2 text-xs text-slate-500">
-              {Math.max(0, Math.round(horasAteExpirar(pendente, agora)))} h para responder
-            </p>
-          )}
+          {/* O relógio saiu daqui — ver a nota acima. */}
         </div>
       )}
 
@@ -578,7 +578,7 @@ export default function NegociacaoProfissional({
         {!podePropor && restantes > 0 && pendente?.por === "profissional" && (
           <p className="text-xs text-slate-500">
             A sua proposta está à espera de resposta. Não pode fazer outra até o cliente
-            responder ou o prazo acabar.
+            responder.
           </p>
         )}
 
@@ -596,7 +596,7 @@ export default function NegociacaoProfissional({
       <Nota titulo="Porque é que não há mensagens" className="mt-4">
         A negociação é só de valores. Sem conversa não há combinação por fora — e
         é isso que mantém o pagamento garantido de ambos os lados. Tem cinco
-        propostas e 48 horas para responder a cada uma.
+        propostas, e a sua fica de pé até o cliente lhe responder.
       </Nota>
     </section>
   );

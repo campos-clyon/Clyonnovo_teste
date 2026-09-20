@@ -89,13 +89,20 @@ describe("os números", () => {
     expect(PAGINA_LIMPA).not.toMatch(/mudan[çc]as?[^<]{0,40}desde \d/i);
   });
 
-  it("o prazo prometido é o do resto do site, e não o velho 48h", () => {
+  it("o prazo prometido é o do resto do site, e já não há 48h nenhumas", () => {
     expect(PRAZO_DE_RESPOSTA.porExtenso).toBe("6 horas");
-    // As 48 horas aparecem UMA vez e a propósito de outra coisa: é o tempo que
-    // uma proposta demora a expirar, não o tempo de resposta. Foi confundir os
-    // dois que pôs a homepage a prometer 6h no topo e 48h dois ecrãs abaixo.
-    expect([...PAGINA_LIMPA.matchAll(/48\s*horas/gi)]).toHaveLength(1);
-    expect(PAGINA_LIMPA).toContain("expira sozinha ao fim de 48 horas");
+    /*
+     * Este teste admitia UMA aparição das 48 horas, a propósito de outra coisa:
+     * era o tempo que uma proposta demorava a expirar, não o tempo de resposta.
+     * Foi confundir os dois que pôs a homepage a prometer 6 h no topo e 48 h
+     * dois ecrãs abaixo, e por isso o número ficou contado.
+     *
+     * A 20-09-2026 as propostas deixaram de expirar (ver `AS_PROPOSTAS_EXPIRAM`)
+     * e a frase saiu. Agora não sobra nenhuma — o que é mais fácil de defender:
+     * nesta página, «48 horas» só pode ser uma promessa de resposta enganada.
+     */
+    expect([...PAGINA_LIMPA.matchAll(/48\s*horas/gi)]).toHaveLength(0);
+    expect(PAGINA_LIMPA).toContain("as propostas ficam de pé até lhes responder");
     expect(PAGINA_LIMPA).not.toMatch(/(resposta|respondemos|orçamento)[^.]{0,40}48\s*h/i);
   });
 });

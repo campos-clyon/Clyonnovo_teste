@@ -68,6 +68,33 @@ export const PRAZO_DA_PROPOSTA_HORAS = 48;
 /** Quando avisar que está prestes a expirar. */
 export const AVISO_ANTES_DE_EXPIRAR_HORAS = 12;
 
+/**
+ * AS PROPOSTAS DEIXARAM DE MORRER SOZINHAS — 20-09-2026.
+ *
+ * "Remova o tempo, já que os pedidos vão ser apagados em 60 dias."
+ *
+ * O prazo de 48 horas existia para uma coisa: impedir que uma proposta ficasse
+ * viva para sempre. Mas já há quem trate disso — a purga apaga o pedido ao fim
+ * de 60 dias, e com ele a negociação inteira. O prazo era uma segunda regra
+ * para o mesmo problema, e a mais curta das duas estava a fazer mal:
+ *
+ *   o #320 tinha três profissionais com valores em cima da mesa — 322 €, 350 €
+ *   e 329 € — e dois deles já não se podiam aceitar. O cliente demorou quatro
+ *   dias a decidir, como as pessoas demoram, e a plataforma respondeu-lhe que
+ *   as propostas tinham caducado. Ninguém desistiu do negócio: foi o relógio.
+ *
+ * O QUE ISTO CUSTA, e fica escrito porque é real: um valor de há 50 dias passa
+ * a poder ser aceite com um toque, e o profissional pode já não o querer. A
+ * defesa continua a existir e é a que sempre valeu — quem fecha é uma pessoa
+ * da CLYON, com o profissional do outro lado do telefone.
+ *
+ * A MECÂNICA FICA TODA DE PÉ, atrás desta constante: `estaExpirada`,
+ * `expiraEm`, os avisos, o distintivo na mesa. Voltar atrás é pôr `true` aqui.
+ * O que NÃO volta sozinho são os textos — as frases que prometiam «48 horas
+ * para responder» foram reescritas, e teriam de ser escritas outra vez.
+ */
+export const AS_PROPOSTAS_EXPIRAM = false;
+
 export type Lado = "cliente" | "profissional";
 
 export type EstadoDaProposta = "pendente" | "aceite" | "recusada" | "expirada";
@@ -110,6 +137,9 @@ export function expiraEm(proposta: Proposta): Date {
 }
 
 export function estaExpirada(proposta: Proposta, agora: Date): boolean {
+  // Ver `AS_PROPOSTAS_EXPIRAM`. Com o prazo desligado, uma proposta pendente
+  // fica pendente — quem lhe põe fim é uma resposta, ou a purga dos 60 dias.
+  if (!AS_PROPOSTAS_EXPIRAM) return false;
   return proposta.estado === "pendente" && expiraEm(proposta).getTime() <= agora.getTime();
 }
 
@@ -119,6 +149,8 @@ export function horasAteExpirar(proposta: Proposta, agora: Date): number {
 }
 
 export function estaPrestesAExpirar(proposta: Proposta, agora: Date): boolean {
+  // Sem prazo não há véspera de prazo: não se avisa ninguém de nada.
+  if (!AS_PROPOSTAS_EXPIRAM) return false;
   if (proposta.estado !== "pendente") return false;
   const h = horasAteExpirar(proposta, agora);
   return h > 0 && h <= AVISO_ANTES_DE_EXPIRAR_HORAS;
@@ -127,9 +159,14 @@ export function estaPrestesAExpirar(proposta: Proposta, agora: Date): boolean {
 /**
  * A proposta que está em cima da mesa, se houver.
  *
- * Uma proposta pendente cujo prazo passou não conta como pendente, mesmo que
- * ninguém tenha corrido o processo que a marca como expirada. O tempo é o que
- * é, e depender de uma tarefa agendada para dizer a verdade sobre o estado
+ * Desde 20-09-2026 o tempo não lhe mexe: uma proposta pendente fica pendente
+ * até alguém responder, ou até a purga apagar o pedido aos 60 dias. Ver
+ * `AS_PROPOSTAS_EXPIRAM`.
+ *
+ * Se o prazo voltar, volta a valer aqui a razão pela qual a conta é feita neste
+ * sítio e não lida da base: uma proposta cujo prazo passou não conta como
+ * pendente, mesmo que ninguém tenha corrido o processo que a marca como
+ * expirada. Depender de uma tarefa agendada para dizer a verdade sobre o estado
  * dava respostas diferentes conforme a tarefa tivesse corrido ou não.
  */
 export function propostaPendente(n: Negociacao, agora: Date): Proposta | null {

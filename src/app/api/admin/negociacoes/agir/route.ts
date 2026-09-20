@@ -365,9 +365,10 @@ export async function POST(req: NextRequest) {
         (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
     });
 
-    // Avisar o profissional. Uma proposta que ninguém vê expira em 48 horas, e
-    // perder um trabalho porque ninguém foi ver a página é a pior forma de o
-    // perder. Nunca lança: a proposta já está gravada.
+    // Avisar o profissional. Uma proposta que ninguém vê não morre (já não há
+    // prazo, ver `AS_PROPOSTAS_EXPIRAM`), mas fica parada — e perder um
+    // trabalho porque ninguém foi ver a página é a pior forma de o perder.
+    // Nunca lança: a proposta já está gravada.
     if (accao === "propor" && nova.valorAcordado == null) {
       await avisarDaProposta({
         pedidoId,

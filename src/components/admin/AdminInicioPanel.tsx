@@ -165,7 +165,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           chave: "esperam",
           n: r.esperamResposta,
           titulo: "à espera de si",
-          porque: "Propostas em que a CLYON responde pelo cliente. Uma expira em 48 horas.",
+          porque: "Propostas em que a CLYON responde pelo cliente, e que ficam aqui até alguém responder.",
           seccao: "negociacoes_clyon",
           icone: MessageCircle,
           urgente: true,

@@ -310,7 +310,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Recebe propostas com valores",
-                  `Normalmente mais do que uma, ${PRAZO_DE_RESPOSTA.porExtenso} depois. Pode aceitar, pode contrapropor, e pode não fazer nada — uma proposta expira sozinha ao fim de 48 horas.`,
+                  `Normalmente mais do que uma, ${PRAZO_DE_RESPOSTA.porExtenso} depois. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [
                   "Escolhe, e só depois se paga",

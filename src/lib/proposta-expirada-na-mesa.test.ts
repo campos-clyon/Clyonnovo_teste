@@ -23,6 +23,21 @@ import { estaExpirada, propostaPendente, type Negociacao } from "./negociacao";
  * vista era a errada.
  *
  * Uma regra escrita duas vezes acaba sempre com dois comportamentos.
+ *
+ * ── E NO DIA SEGUINTE O PRAZO FOI-SE — 20-09-2026 ─────────────────────────
+ *
+ * "Remova o tempo, já que os pedidos vão ser apagados em 60 dias."
+ *
+ * O #320 tinha três valores em cima da mesa e dois já não se podiam aceitar. A
+ * mesa passou a dizer a verdade (é o que este ficheiro guarda), e a verdade era
+ * má: o cliente demorou quatro dias a decidir, como as pessoas demoram, e
+ * perdeu duas propostas por isso. Quem apaga propostas velhas passa a ser só a
+ * purga dos 60 dias.
+ *
+ * O QUE ESTE FICHEIRO CONTINUA A GUARDAR, e é a parte que vale: a mesa lê a
+ * regra do motor em vez de escrever a sua. Isso não mudou nem deve mudar — é
+ * por isso que a mesa acompanhou o interruptor sem se lhe tocar. O que mudou
+ * foi a resposta do motor, e é isso que os dois primeiros testes dizem agora.
  */
 
 const ler = (p: string) =>
@@ -37,19 +52,19 @@ const agora = new Date("2026-09-20T02:00:00Z");
 const haSeisDias = new Date("2026-09-14T14:40:51Z");
 const haUmaHora = new Date("2026-09-20T01:00:00Z");
 
-describe("o motor já sabia — e é dele que a mesa passa a ler", () => {
-  it("uma proposta de há seis dias está expirada, diga o que disser o estado", () => {
+describe("o motor manda, e hoje o motor diz que não expira", () => {
+  it("uma proposta de há seis dias já NÃO está expirada", () => {
     /*
-     * É este o ponto: o `estado` gravado diz «pendente» e continuará a dizer.
-     * Quem responde à pergunta é a data.
+     * Era `true` até 20-09-2026. O `estado` gravado sempre disse «pendente» —
+     * o que deixou de haver é uma conta sobre a data a contradizê-lo.
      */
     const velha = { por: "profissional" as const, valor: 322, criadaEm: haSeisDias, estado: "pendente" as const };
     expect(velha.estado).toBe("pendente");
-    expect(estaExpirada(velha, agora)).toBe(true);
+    expect(estaExpirada(velha, agora)).toBe(false);
   });
 
-  it("e por isso não há proposta pendente nenhuma para aceitar", () => {
-    // Exactamente o que o servidor respondeu com 409.
+  it("e por isso os 322 € do #320 voltam a estar em cima da mesa", () => {
+    // O caso que deu 409 — e que hoje passa.
     const n = {
       estado: "aberta",
       valorAcordado: null,
@@ -57,11 +72,12 @@ describe("o motor já sabia — e é dele que a mesa passa a ler", () => {
         { por: "profissional", valor: 322, criadaEm: haSeisDias, estado: "pendente" },
       ],
     } as unknown as Negociacao;
-    expect(propostaPendente(n, agora)).toBeNull();
+    expect(propostaPendente(n, agora)?.valor).toBe(322);
   });
 
   it("uma de há uma hora continua de pé", () => {
-    // A correcção não pode fechar a porta ao que funciona.
+    // Já passava antes do interruptor, e continua a passar depois: é o teste
+    // que garante que nenhuma das duas mudanças fechou a porta ao caso normal.
     const n = {
       estado: "aberta",
       valorAcordado: null,
@@ -74,6 +90,12 @@ describe("o motor já sabia — e é dele que a mesa passa a ler", () => {
 });
 
 describe("a mesa passa a usar a mesma conta", () => {
+  /*
+   * ESTE BLOCO É O QUE IMPORTA A LONGO PRAZO. Com o prazo desligado, `expirou`
+   * devolve sempre `false` e nada disto se vê no ecrã — mas é exactamente por
+   * a mesa ler a regra do motor que ela acompanhou o interruptor sem uma linha
+   * de trabalho. No dia em que o prazo voltar, volta tudo junto.
+   */
   it("importa a regra do motor em vez de escrever a sua", () => {
     expect(MESA).toContain('from "@/lib/negociacao"');
     expect(MESA).toContain("estaExpirada(p as PropostaDoMotor, agora)");

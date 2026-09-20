@@ -9,7 +9,7 @@
  * escrever na mesma, e aí a página não serviu para nada.
  */
 
-import { MAX_PROPOSTAS_POR_LADO, PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
+import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "./taxas-plataforma";
@@ -63,10 +63,10 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   {
     pergunta: "Como funcionam as propostas?",
     resposta:
-      `Cada lado tem ${MAX_PROPOSTAS_POR_LADO} propostas e ${PRAZO_DA_PROPOSTA_HORAS} horas ` +
-      "para responder a cada uma. Só valores, sem mensagens — é isso que impede combinações " +
-      "por fora e o que mantém o pagamento garantido. Se a proposta expirar, não gasta " +
-      "nenhuma das suas. Aceitar não fecha o trabalho: o cliente ainda tem de o contratar.",
+      `Cada lado tem ${MAX_PROPOSTAS_POR_LADO} propostas, e uma proposta fica de pé até ` +
+      "alguém lhe responder. Só valores, sem mensagens — é isso que impede combinações " +
+      "por fora e o que mantém o pagamento garantido. Aceitar não fecha o trabalho: o " +
+      "cliente ainda tem de o contratar.",
   },
   {
     pergunta: "Quando é que vejo a morada do cliente?",

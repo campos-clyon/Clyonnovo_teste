@@ -32,8 +32,8 @@ import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
  *
  * A mesa tinha a sua própria ideia do que é uma proposta por responder: «tem
- * `estado: pendente`». O motor tem outra, e é a que manda — `propostaPendente`
- * deixa cair as que passaram das 48 horas. As duas discordavam, e via-se:
+ * `estado: pendente`». O motor tem outra, e é a que manda. As duas discordavam,
+ * e via-se:
  *
  *   o #320 mostrava «Revolution · espera resposta · 322,00 €» com um botão
  *   «Aceitar 322,00 €», sobre uma proposta de 14 de Setembro. Carregar dava
@@ -42,6 +42,11 @@ import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/
  *
  * Uma regra escrita duas vezes acaba sempre com dois comportamentos. Esta
  * passa a ser lida daqui.
+ *
+ * ⚠️ E NO MESMO DIA O PRAZO FOI-SE. Removido o prazo das 48 horas, o motor
+ * passou a responder «não expira» a tudo, e esta mesa acompanhou sem que se lhe
+ * tocasse numa linha — é exactamente para isto que a regra vive num sítio só.
+ * O aparato do prazo fica de pé, desligado, atrás de `AS_PROPOSTAS_EXPIRAM`.
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
@@ -119,7 +124,11 @@ type Negociacao = {
 };
 
 /**
- * JÁ PASSARAM AS 48 HORAS?
+ * ESTA PROPOSTA AINDA ESTÁ VIVA?
+ *
+ * Chamava-se «já passaram as 48 horas?» e desde 20-09-2026 a resposta é sempre
+ * «não» — ver `AS_PROPOSTAS_EXPIRAM`. A pergunta continua a ser feita aqui, e
+ * por aqui volta a valer se o prazo voltar.
  *
  * A conta é do motor — `estaExpirada` — e é aqui que se lhe entrega a
  * proposta. O molde local diz `estado: string` porque vem de um `JSON.parse`
@@ -168,10 +177,12 @@ function quando(v: string | null): string {
  * Ha aqui uma proposta a espera de resposta da CLYON?
  *
  * E a unica pergunta que o painel nao respondia. O profissional contrapropoe,
- * a proposta dura 48 horas, e do lado do backoffice nada mudava: a negociacao
- * continuava a dizer "aberta · 2 propostas", fechada atras de um chevron, no
- * fundo de uma pagina. Quem abrisse o painel nao tinha como saber que alguem
- * estava do outro lado a contar as horas.
+ * e do lado do backoffice nada mudava: a negociacao continuava a dizer
+ * "aberta · 2 propostas", fechada atras de um chevron, no fundo de uma pagina.
+ * Quem abrisse o painel nao tinha como saber que alguem estava do outro lado a
+ * espera. (Escrevia-se aqui "a contar as horas": desde 20-09-2026 nao ha horas
+ * a contar, e a espera nao tem fim a vista — o que torna a pergunta mais
+ * urgente, nao menos.)
  *
  * Uma proposta do CLIENTE pendente esta a espera do profissional — nao e
  * connosco. So conta a que veio do profissional.
@@ -188,10 +199,11 @@ function esperaResposta(n: Negociacao): boolean {
   /*
    * E NÃO CONTA AS QUE JÁ EXPIRARAM — 20-09-2026.
    *
-   * Uma proposta expira 48 horas depois de ser feita; está escrito no
-   * cabeçalho deste mesmo bloco. Mas esta função só olhava para o `estado`
-   * gravado, que continua a dizer «pendente» para sempre — o prazo é uma
-   * conta sobre a data, não um carimbo na base.
+   * Hoje não expira nenhuma (`AS_PROPOSTAS_EXPIRAM`), pelo que este guarda não
+   * deixa cair nada. Fica porque a razão de existir é a de sempre: esta função
+   * só olhava para o `estado` gravado, que continua a dizer «pendente» para
+   * sempre, e o prazo — quando há — é uma conta sobre a data, não um carimbo
+   * na base.
    *
    * O resultado era a mesa a dizer «espera resposta» sobre uma proposta de
    * há seis dias, a pôr o pedido em «Precisa de si», e a oferecer um botão
@@ -465,8 +477,10 @@ const BLOCOS: Array<{
 }> = [
   /*
    * Primeiro de cima para baixo porque é o único nível onde a demora custa
-   * dinheiro: uma proposta expira em 48 horas, e um trabalho por confirmar é
-   * dinheiro cativo. Até aqui vivia debaixo do bloco âmbar.
+   * dinheiro: há um profissional à espera de resposta, e um trabalho por
+   * confirmar é dinheiro cativo. Até aqui vivia debaixo do bloco âmbar. (Dizia-se
+   * «uma proposta expira em 48 horas» — já não expira, e a demora custa o mesmo:
+   * o que se perde é o profissional, não a proposta.)
    */
   /*
    * TRABALHO FEITO NÃO É PROPOSTA POR RESPONDER — 17-09-2026.
@@ -501,7 +515,7 @@ const BLOCOS: Array<{
     chave: "n1",
     titulo: "Precisa de si",
     dica:
-      "Nada avança sem si. Uma proposta expira 48 horas depois de ser feita — responda, ou feche o negócio, em nome do cliente, dentro do pedido.",
+      "Nada avança sem si. A proposta fica de pé até alguém responder — responda, ou feche o negócio, em nome do cliente, dentro do pedido.",
     Icone: Clock,
     cor: "text-emerald-300 border-emerald-500/60",
     corDoNumero: "text-emerald-300",
@@ -1462,8 +1476,8 @@ export default function AdminNegociacoesPanel({
    *
    *   1. Precisa de si — há uma proposta pendente e a CLYON é que responde,
    *      OU um trabalho já executado à espera de ser confirmado. É o único
-   *      nível onde a demora custa dinheiro: uma proposta expira em 48 horas,
-   *      e um trabalho por confirmar é dinheiro que fica cativo e um
+   *      nível onde a demora custa dinheiro: há um profissional à espera de
+   *      resposta, e um trabalho por confirmar é dinheiro que fica cativo e um
    *      profissional que já lá foi e ainda não recebeu.
    *   2. À espera de propostas — o pedido saiu e ainda ninguém fechou nada.
    *      É o nível que pode morrer de silêncio: se os profissionais não
@@ -3069,10 +3083,12 @@ export default function AdminNegociacoesPanel({
                     ) : (
                       <>
                         {/* ── Propostas à espera de nós ─────────────────────────
-                            O profissional contrapropõe e a proposta expira em 48
-                            horas. Até aqui nada dizia isso: a negociação ficava
-                            fechada num cartão no fundo da página, a dizer "aberta ·
-                            2 propostas" como todas as outras.
+                            O profissional contrapropõe e fica à espera. Até aqui
+                            nada dizia isso: a negociação ficava fechada num cartão
+                            no fundo da página, a dizer "aberta · 2 propostas" como
+                            todas as outras. (Dizia-se aqui que a proposta expirava
+                            em 48 horas — já não expira, ver `AS_PROPOSTAS_EXPIRAM`,
+                            e por isso pode ficar à espera sem fim.)
 
                             Estes atalhos existem para essa resposta não se perder
                             por ninguém a ter visto. Saltam para o pedido e a

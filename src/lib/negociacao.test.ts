@@ -8,12 +8,14 @@ import {
   accoesDisponiveis,
   propostasRestantes,
   propostaPendente,
+  expiraEm,
   estaPrestesAExpirar,
   semSaida,
   MAX_PROPOSTAS_POR_LADO,
   MAX_PROPOSTAS_POR_EXTENSO,
   PRAZO_DA_PROPOSTA_HORAS,
   type Negociacao,
+  type Proposta,
   type Lado,
 } from "./negociacao";
 
@@ -142,45 +144,83 @@ describe("as propostas de cada lado", () => {
   });
 });
 
-describe("prazo de 48 horas", () => {
-  it("uma proposta expira ao fim do prazo", () => {
+/**
+ * AS PROPOSTAS DEIXARAM DE MORRER SOZINHAS — 20-09-2026.
+ *
+ * "Remova o tempo, já que os pedidos vão ser apagados em 60 dias."
+ *
+ * Este bloco chamava-se «prazo de 48 horas» e guardava o contrário do que
+ * guarda agora. A regra existia para impedir que uma proposta ficasse viva
+ * para sempre — e já havia quem tratasse disso: a purga apaga o pedido aos 60
+ * dias, e com ele a negociação inteira. Eram duas regras para o mesmo
+ * problema, e a mais curta estava a fazer mal:
+ *
+ *   o #320 tinha três valores em cima da mesa — 322 €, 350 € e 329 € — e dois
+ *   deles já não se podiam aceitar. O cliente demorou quatro dias a decidir,
+ *   como as pessoas demoram, e a plataforma respondeu-lhe que as propostas
+ *   tinham caducado. Ninguém desistiu do negócio: foi o relógio.
+ *
+ * A mecânica fica toda de pé atrás de `AS_PROPOSTAS_EXPIRAM`, e estes testes
+ * passam a guardar o que ela faz DESLIGADA — que é o estado em que está.
+ */
+describe("as propostas não morrem sozinhas", () => {
+  it("uma proposta de há meses continua de pé", () => {
     const n = abertaPeloCliente(80, T0);
     expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS - 1))).not.toBeNull();
-    expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS))).toBeNull();
+    expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS))).not.toBeNull();
+    // Cinquenta dias depois — já perto da purga — e ainda lá está.
+    expect(propostaPendente(n, horas(24 * 50))).not.toBeNull();
   });
 
-  // A regra que impede o silêncio de ser a melhor jogada: se expirar gastasse
-  // chance de quem propôs, bastava ao outro lado calar-se para ganhar.
-  it("expirar NÃO gasta chance de quem propôs", () => {
+  it("e aceita-se, por mais tempo que tenha passado", () => {
+    /*
+     * Era isto que dava 409 na mesa: «Não há proposta para aceitar» sobre um
+     * valor que estava à frente dos olhos de quem carregava no botão.
+     */
     const n = abertaPeloCliente(80, T0);
-    // Uma gasta antes de expirar, todas de volta depois. Os números saem da
-    // constante: escritos à mão, mentiam no dia em que o limite mudou.
+    const muitoDepois = horas(24 * 50);
+    expect(accoesDisponiveis(n, "profissional", muitoDepois)).toContain("aceitar");
+    expect(aceitar(n, "profissional", muitoDepois).ok).toBe(true);
+  });
+
+  it("a chance continua gasta — o tempo já não a devolve", () => {
+    /*
+     * Mudou com a regra, e é a consequência que vale a pena ter escrita: a
+     * chance voltava porque a proposta morria. Sem morte, a proposta continua
+     * em cima da mesa a ocupar a vez de quem a fez — que é o que ela é.
+     */
+    const n = abertaPeloCliente(80, T0);
     expect(propostasRestantes(n, "cliente", T0)).toBe(MAX_PROPOSTAS_POR_LADO - 1);
-    expect(propostasRestantes(n, "cliente", horas(PRAZO_DA_PROPOSTA_HORAS + 1))).toBe(
-      MAX_PROPOSTAS_POR_LADO,
-    );
+    expect(propostasRestantes(n, "cliente", horas(24 * 50))).toBe(MAX_PROPOSTAS_POR_LADO - 1);
   });
 
-  it("depois de expirar, quem propôs pode propor de novo", () => {
+  it("e quem propôs continua à espera, em vez de poder propor outra vez", () => {
+    // Com prazo, o silêncio do outro lado devolvia-lhe a vez. Agora a vez é
+    // de quem ainda não respondeu, e é assim que fica.
     const n = abertaPeloCliente(80, T0);
-    const depois = horas(PRAZO_DA_PROPOSTA_HORAS + 1);
-    expect(accoesDisponiveis(n, "cliente", depois)).toContain("propor");
-    expect(propor(n, "cliente", 85, depois).ok).toBe(true);
+    expect(accoesDisponiveis(n, "cliente", horas(24 * 50))).not.toContain("propor");
   });
 
-  it("uma proposta expirada já não se aceita", () => {
-    const n = abertaPeloCliente(80, T0);
-    const depois = horas(PRAZO_DA_PROPOSTA_HORAS + 1);
-    expect(accoesDisponiveis(n, "profissional", depois)).not.toContain("aceitar");
-    expect(aceitar(n, "profissional", depois).ok).toBe(false);
-  });
-
-  it("avisa antes de expirar", () => {
+  it("ninguém é avisado de um prazo que não existe", () => {
     const n = abertaPeloCliente(80, T0);
     const p = n.propostas[0];
-    expect(estaPrestesAExpirar(p, horas(1))).toBe(false);
-    expect(estaPrestesAExpirar(p, horas(40))).toBe(true);
-    expect(estaPrestesAExpirar(p, horas(PRAZO_DA_PROPOSTA_HORAS + 1))).toBe(false);
+    for (const h of [1, 40, PRAZO_DA_PROPOSTA_HORAS + 1, 24 * 50]) {
+      expect(estaPrestesAExpirar(p, horas(h)), `${h} h`).toBe(false);
+    }
+  });
+
+  it("mas uma proposta JÁ MARCADA como expirada continua morta", () => {
+    /*
+     * As que o prazo apanhou antes de 20-09-2026 têm `estado: "expirada"`
+     * gravado, e já foi dito às pessoas que tinham caducado. Ressuscitá-las
+     * seria pôr em cima da mesa um valor que os dois lados dão por encerrado.
+     */
+    const n = abertaPeloCliente(80, T0);
+    const morta = {
+      ...n,
+      propostas: [{ ...n.propostas[0], estado: "expirada" as const }],
+    };
+    expect(propostaPendente(morta, horas(1))).toBeNull();
   });
 });
 
@@ -269,7 +309,22 @@ describe("valores", () => {
 });
 
 describe("datas vindas da base como texto", () => {
-  it("uma proposta com criadaEm em ISO comporta-se igual", () => {
+  /*
+   * O `criadaEm` chega do MySQL como texto e do código como `Date`, e o motor
+   * faz contas de datas sobre ele. Este teste apanhava isso pelo prazo — uma
+   * proposta em ISO expirava à mesma hora que uma com `Date`. Desde 20-09-2026
+   * as propostas não expiram (ver `AS_PROPOSTAS_EXPIRAM`), pelo que a conta
+   * passa a ser lida onde ainda vive: em `expiraEm`, que é o que voltaria a
+   * mandar no dia em que o prazo voltasse.
+   */
+  it("o criadaEm em ISO dá as mesmas contas que um Date", () => {
+    const texto: Proposta = { por: "cliente", valor: 80, criadaEm: T0.toISOString(), estado: "pendente" };
+    const objecto: Proposta = { por: "cliente", valor: 80, criadaEm: T0, estado: "pendente" };
+    expect(expiraEm(texto).getTime()).toBe(expiraEm(objecto).getTime());
+    expect(expiraEm(texto).getTime()).toBe(horas(PRAZO_DA_PROPOSTA_HORAS).getTime());
+  });
+
+  it("e uma proposta em ISO está em cima da mesa como qualquer outra", () => {
     const n: Negociacao = {
       estado: "aberta",
       valorAcordado: null,
@@ -278,6 +333,6 @@ describe("datas vindas da base como texto", () => {
       ],
     };
     expect(propostaPendente(n, horas(1))?.valor).toBe(80);
-    expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS + 1))).toBeNull();
+    expect(propostaPendente(n, horas(PRAZO_DA_PROPOSTA_HORAS + 1))?.valor).toBe(80);
   });
 });

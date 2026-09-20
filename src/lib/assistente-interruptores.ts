@@ -187,19 +187,23 @@ export function eCapacidade(v: unknown): v is Capacidade {
 /** Espécies de aviso que admitem lembrete, e de quantas em quantas horas. */
 export const ESCADA_DOS_LEMBRETES: Record<string, number[]> = {
   /*
-   * PROPOSTA NA MESA: 12 h, e depois um dia. Dois toques, não três.
+   * PROPOSTA NA MESA: 12 h, depois um dia, depois dois. Três toques.
    *
-   * A escada tinha [24, 48, 72] e era uma ficção. Uma proposta MORRE às 48
-   * horas (`PRAZO_DA_PROPOSTA_HORAS`), e a partir daí o assistente deixa de a
-   * ver como novidade e fecha o aviso. O segundo toque só chegaria às 72 h —
-   * quando já não havia proposta nenhuma sobre que insistir. Na prática saía
-   * UM lembrete, e os outros dois eram um número escrito num ficheiro.
+   * A escada tinha [24, 48, 72] e era uma ficção: a proposta morria às 48 h, o
+   * assistente deixava de a ver como novidade, e o segundo toque só chegaria às
+   * 72 h — quando já não havia proposta nenhuma sobre que insistir. Saía UM
+   * lembrete, e os outros dois eram um número escrito num ficheiro. Encurtou-se
+   * para [12, 24] para caber dentro da vida da proposta.
    *
-   * Agora os dois toques cabem dentro da vida da proposta: às 12 h e às 36 h.
-   * Quem não responder até lá não está a ignorar um lembrete — está a deixar a
-   * proposta expirar, que é outra coisa e tem outro fim.
+   * DESDE 20-09-2026 a proposta não morre (ver `AS_PROPOSTAS_EXPIRAM`), e o
+   * terceiro toque volta a caber — 12 h, 36 h, 84 h. O primeiro continua a ser
+   * cedo porque há um profissional à espera, e o último é a fronteira: ao fim
+   * dele a conversa passa para a mesa do admin com a etiqueta de quem não
+   * responde. O que já não acontece é o silêncio ser a saída — antes, quem não
+   * respondesse deixava a proposta expirar; agora ela fica lá, e alguém tem de
+   * lhe pegar.
    */
-  proposta_nova: [12, 24],
+  proposta_nova: [12, 24, 48],
   /*
    * A ACEITAÇÃO DO PROFISSIONAL não expira: `aguarda_contratacao` fica à
    * espera do cliente o tempo que for preciso. Aqui os três toques do plano

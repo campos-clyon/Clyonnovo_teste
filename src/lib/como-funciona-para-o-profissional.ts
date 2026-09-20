@@ -1,4 +1,4 @@
-import { MAX_PROPOSTAS_POR_LADO, PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
+import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { PROMESSA } from "./pagamento-na-plataforma";
@@ -19,9 +19,11 @@ import type { SeccaoComFalta } from "./perfil-por-completar";
  * — e a versão que o convence a inscrever-se não pode ser mais generosa do que
  * a que ele lê depois.
  *
- * OS NÚMEROS VÊM DAS CONSTANTES QUE OS PRODUZEM. A comissão, o prazo das
+ * OS NÚMEROS VÊM DAS CONSTANTES QUE OS PRODUZEM. A comissão, o número de
  * propostas, os dias até fechar sozinho: escritos à mão, ficavam desactualizados
  * no dia em que qualquer um mudasse, e a página passava a mentir com confiança.
+ * O prazo das propostas esteve nesta lista até 20-09-2026, e saiu porque deixou
+ * de existir — ver `AS_PROPOSTAS_EXPIRAM`.
  *
  * E O DINHEIRO VEM DA `PROMESSA`. Enquanto a CLYON não cobrar o cliente, o que
  * aqui se diz é o que acontece mesmo — não uma garantia que não existe. Ver
@@ -65,10 +67,10 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
     chave: "propostas",
     titulo: "Propõe o seu valor, e o cliente responde",
     texto:
-      `Cada lado tem ${MAX_PROPOSTAS_POR_LADO} propostas e ${PRAZO_DA_PROPOSTA_HORAS} horas ` +
-      "para responder a cada uma. Só valores, sem mensagens — é isso que impede combinações " +
-      "por fora e o que mantém tudo escrito. Se uma proposta expirar, não gasta nenhuma das " +
-      "suas. E aceitar não fecha o trabalho: o cliente ainda tem de o contratar.",
+      `Cada lado tem ${MAX_PROPOSTAS_POR_LADO} propostas, e a sua fica de pé até o cliente ` +
+      "lhe responder. Só valores, sem mensagens — é isso que impede combinações por fora e " +
+      "o que mantém tudo escrito. E aceitar não fecha o trabalho: o cliente ainda tem de o " +
+      "contratar.",
   },
   {
     chave: "morada",

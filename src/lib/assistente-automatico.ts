@@ -1,5 +1,5 @@
 import type { PedidoParaOAssistente } from "./db";
-import type { Proposta } from "./negociacao";
+import { estaExpirada, type Proposta } from "./negociacao";
 import type { Capacidade } from "./assistente-interruptores";
 import { ESCADA_DOS_LEMBRETES, deveTocar, esgotou, horaDeFalar } from "./assistente-interruptores";
 import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
@@ -347,9 +347,20 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
       const pendente = [...propostas].reverse().find((pr) => pr.estado === "pendente");
       const criada = pendente ? comoData(pendente.criadaEm) : null;
       if (pendente && pendente.por === "profissional" && criada) {
-        // Uma proposta cujo prazo de 48 h passou já não espera por ninguém.
-        const horas = (agora.getTime() - criada.getTime()) / 3600_000;
-        if (horas < 48) {
+        /*
+         * A TERCEIRA CÓPIA DA MESMA REGRA — corrigida a 20-09-2026.
+         *
+         * Estava aqui `if (horas < 48)`, escrito à mão. A mesa do backoffice
+         * tinha a sua versão, o motor tinha a dele, e este tinha a sua: três
+         * respostas para «esta proposta ainda está viva?». No dia em que o
+         * prazo foi removido, as duas primeiras acompanharam e esta não — o
+         * assistente calava-se ao fim de 48 h sobre uma proposta que continuava
+         * em cima da mesa, e era ao cliente que demora quatro dias a decidir
+         * que ele deixava de falar. Exactamente quem mais precisava do aviso.
+         *
+         * Agora pergunta ao motor. Ver `AS_PROPOSTAS_EXPIRAM`.
+         */
+        if (!estaExpirada(pendente, agora)) {
           acrescentar({
             especie: "proposta_nova",
             chave: chaveDaProposta(n.id, propostas.length),

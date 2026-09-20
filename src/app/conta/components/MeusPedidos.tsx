@@ -138,7 +138,9 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
    *
    * As propostas dos profissionais chegam enquanto o cliente está a olhar para
    * o pedido. Sem isto, ele via um ecrã parado e concluía que ninguém tinha
-   * respondido — e a proposta tem 48 horas de prazo a correr.
+   * respondido — e do outro lado há um profissional à espera. (Dizia-se aqui que
+   * a proposta tinha 48 horas de prazo a correr; já não tem, mas a razão é a
+   * mesma e nada melhor: quem espera é uma pessoa.)
    */
   useAutoRefresh(() => fetchOrders(filter, page, true));
 
@@ -255,9 +257,9 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
               const preco = plataforma.valor ?? o.precoFinalIva ?? o.precoFinal;
               const local = o.city ?? o.address?.split(",").pop()?.trim();
               // Uma proposta à espera dele é a única coisa nesta lista com
-              // prazo a correr — 48 horas. Sem nada que a distinga, o pedido
-              // com uma proposta em cima da mesa parece igual ao que está
-              // simplesmente à espera de alguém.
+              // alguém do outro lado a contar com a resposta. Sem nada que a
+              // distinga, o pedido com uma proposta em cima da mesa parece igual
+              // ao que está simplesmente à espera de alguém.
               const aEsperar = plataforma.urgente ? 1 : 0;
               return (
                 <li

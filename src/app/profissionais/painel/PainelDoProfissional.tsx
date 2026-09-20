@@ -331,8 +331,9 @@ export default function PainelDoProfissional() {
   /*
    * De minuto a minuto, sem dar por isso.
    *
-   * Um pedido tem 48 horas de prazo, mas quem está com o painel aberto à
-   * espera de trabalho não devia ter de carregar em F5 para o ver chegar. O
+   * Quem está com o painel aberto à espera de trabalho não devia ter de
+   * carregar em F5 para o ver chegar — e num mercado onde o primeiro a
+   * responder leva o trabalho, cada minuto de ecrã parado é dinheiro. O
    * ciclo pára com o separador escondido e vai buscar assim que ele volta à
    * frente — um ecrã minimizado não gasta pedidos, e ao voltar não mostra
    * dados de há uma hora.

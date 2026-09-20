@@ -5,14 +5,16 @@ import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
-import { PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
+
 
 /**
  * O aviso de que há uma proposta à espera.
  *
- * Sem isto, a negociação só existia para quem tivesse o ecrã aberto. Uma
- * proposta tem 48 horas e depois expira sozinha — perder um trabalho porque
- * ninguém foi ver a página é a forma mais estúpida de o perder.
+ * Sem isto, a negociação só existia para quem tivesse o ecrã aberto — perder um
+ * trabalho porque ninguém foi ver a página é a forma mais estúpida de o perder.
+ * Desde 20-09-2026 a proposta já não morre à espera (ver `AS_PROPOSTAS_EXPIRAM`),
+ * mas o aviso conta mais, não menos: é a única coisa que traz a pessoa de volta,
+ * e agora não há prazo nenhum a fazer-lhe pressão por ela.
  *
  * O email diz o valor e leva um botão. Não pede resposta por email nem explica
  * o modelo: quem recebe isto já negociou uma vez, e o que precisa é de chegar
@@ -111,8 +113,8 @@ export async function avisarClienteDaProposta(p: {
       </p>
       ${botao(url, "Ver a proposta")}
       <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-        A proposta dura ${PRAZO_DA_PROPOSTA_HORAS} horas. Se não responder, expira e ele
-        pode fazer outra.
+        A proposta fica de pé até lhe responder. Pode demorar o tempo que precisar
+        para decidir.
       </p>`),
   );
 }
@@ -147,8 +149,8 @@ export async function avisarProfissionalDaProposta(p: {
       </p>
       ${botao(url, "Responder")}
       <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-        Tem ${PRAZO_DA_PROPOSTA_HORAS} horas para responder. Depois disso a proposta
-        expira — e uma proposta expirada não gasta nenhuma das suas.
+        A contraproposta fica à sua espera — não tem prazo. Quanto mais cedo
+        responder, menos hipóteses há de o cliente fechar com outro.
       </p>`),
   );
 }

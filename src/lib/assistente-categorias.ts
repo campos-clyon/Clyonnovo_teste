@@ -163,8 +163,10 @@ export const CATEGORIAS_VIVAS: CategoriaDoPedido[] = [
   "criado",
   "a_espera_de_propostas",
   "orcamento_enviado",
-  // Uma contraproposta à espera do profissional é das mais vivas que há: tem
-  // 48 horas a correr e morre sozinha se ninguém olhar.
+  // Uma contraproposta à espera do profissional é das mais vivas que há: fica
+  // parada até alguém lhe pegar, e desde 20-09-2026 já não morre sozinha para
+  // resolver o problema (ver `AS_PROPOSTAS_EXPIRAM`) — o assistente é que tem
+  // de a ir buscar.
   "com_o_profissional",
   "aceite_por_fazer",
   "feito_por_confirmar",

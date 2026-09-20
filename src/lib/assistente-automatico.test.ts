@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { PedidoParaOAssistente } from "./db";
-import { PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
 import {
   DIAS_ATE_DESISTIR_DE_UM_AVISO,
   DIAS_DE_NOVIDADE,
@@ -155,16 +154,36 @@ describe("as novidades que ele tem para contar", () => {
     }
   });
 
-  it("uma proposta com mais de 48 horas já não é novidade nenhuma", () => {
-    // O prazo da proposta é de 48 h. Passado isso ela não espera por ninguém,
-    // e anunciá-la seria mandar o cliente responder a uma coisa morta.
+  it("uma proposta de há dias CONTINUA a ser novidade — porque continua viva", () => {
+    /*
+     * Dizia o contrário até 20-09-2026: «uma proposta com mais de 48 horas já
+     * não é novidade nenhuma», porque o prazo a matava e anunciá-la seria
+     * mandar o cliente responder a uma coisa morta.
+     *
+     * O prazo foi-se (ver `AS_PROPOSTAS_EXPIRAM`) e a coisa já não está morta.
+     * Calar-se sobre ela era castigar precisamente quem demora a decidir — o
+     * cliente do #320 demorou quatro dias, e era a ele que o assistente
+     * deixava de falar. Quem manda nisto é o motor, não um 48 escrito aqui.
+     */
     const n = novidadesDoPedido(
       pedido({
         negociacoes: [negociacao({ propostasJson: propostaDoPro(150, "2026-09-14T13:00:00Z") })],
       }),
       TARDE,
     );
-    expect(n.find((x) => x.especie === "proposta_nova")).toBeUndefined();
+    expect(n.find((x) => x.especie === "proposta_nova")).toBeDefined();
+  });
+
+  it("e é o motor quem decide isso, não uma conta escrita aqui", () => {
+    // Era a terceira cópia da mesma regra. Duas acompanharam a mudança e esta
+    // não — é isso que este teste impede que volte a acontecer. O código é lido
+    // SEM COMENTÁRIOS: o comentário que explica a correcção cita o `if` antigo,
+    // e um teste que se lê a si próprio passa a dizer o contrário do que quer.
+    const codigo = ler("src/lib/assistente-automatico.ts")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(codigo).toContain("estaExpirada(pendente, agora)");
+    expect(codigo).not.toMatch(/horas\s*<\s*48/);
   });
 
   it("uma proposta do CLIENTE não é novidade para o cliente", () => {
@@ -562,17 +581,21 @@ describe("insistir tem limite, e o limite é dito", () => {
     expect(esgotou("pro_aceitou", 2)).toBe(false);
   });
 
-  it("os lembretes de uma proposta cabem DENTRO da vida dela", () => {
+  it("os lembretes de uma proposta sao tres, e o primeiro e cedo", () => {
     /*
-     * A escada da proposta tinha [24, 48, 72] e era uma ficcao. Uma proposta
-     * MORRE as 48 horas, e a partir dai o assistente deixa de a ver como
-     * novidade e fecha o aviso. O segundo toque so chegaria as 72 h - quando ja
-     * nao havia proposta nenhuma sobre que insistir. Na pratica saia UM
-     * lembrete, e os outros dois eram um numero escrito num ficheiro.
+     * A escada tinha [24, 48, 72] e era uma ficcao: a proposta morria as 48 h,
+     * o assistente fechava o aviso, e o segundo toque so chegaria as 72 h -
+     * quando ja nao havia proposta sobre que insistir. Saia UM lembrete. Foi
+     * encurtada para [12, 24] para caber dentro da vida da proposta.
+     *
+     * Desde 20-09-2026 a proposta nao morre, e o terceiro toque volta a caber:
+     * 12 h, 36 h, 84 h. O primeiro continua cedo porque ha um profissional a
+     * espera; depois do ultimo, a conversa passa para a mesa do admin.
      */
-    expect(ESCADA_DOS_LEMBRETES.proposta_nova).toEqual([12, 24]);
-    const somaDosToques = ESCADA_DOS_LEMBRETES.proposta_nova.reduce((a, b) => a + b, 0);
-    expect(somaDosToques).toBeLessThan(PRAZO_DA_PROPOSTA_HORAS);
+    expect(ESCADA_DOS_LEMBRETES.proposta_nova).toEqual([12, 24, 48]);
+    expect(ESCADA_DOS_LEMBRETES.proposta_nova[0]).toBeLessThan(24);
+    expect(esgotou("proposta_nova", 3)).toBe(true);
+    expect(esgotou("proposta_nova", 2)).toBe(false);
   });
 
   it("o trabalho por confirmar pára aos dois: aos sete dias liberta-se sozinho", () => {

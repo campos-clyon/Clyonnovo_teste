@@ -9,7 +9,7 @@ import {
   type PerfilParaCompletar,
 } from "./perfil-por-completar";
 import { PASSOS_DO_PROFISSIONAL, passoDaSeccao } from "./como-funciona-para-o-profissional";
-import { MAX_PROPOSTAS_POR_LADO, PRAZO_DA_PROPOSTA_HORAS } from "./negociacao";
+import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { A_PLATAFORMA_COBRA, PROMESSA } from "./pagamento-na-plataforma";
 import { RAIO_POR_OMISSAO_KM } from "./inscricao-profissional";
 
@@ -228,7 +228,18 @@ describe("o «como funciona» diz o mesmo aos dois lados", () => {
   it("os números vêm das constantes, e não escritos à mão", () => {
     const propostas = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "propostas");
     expect(propostas?.texto).toContain(`${MAX_PROPOSTAS_POR_LADO} propostas`);
-    expect(propostas?.texto).toContain(`${PRAZO_DA_PROPOSTA_HORAS} horas`);
+  });
+
+  it("e já não prometem um prazo que não existe", () => {
+    /*
+     * Até 20-09-2026 este passo dizia «e 48 horas para responder a cada uma».
+     * As propostas deixaram de expirar (ver `AS_PROPOSTAS_EXPIRAM`), e uma
+     * promessa de prazo no «como funciona» é das piores de deixar para trás:
+     * é lida antes de a pessoa se inscrever, e é sobre ela que decide se vale
+     * a pena responder depressa.
+     */
+    const propostas = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "propostas");
+    expect(propostas?.texto).not.toMatch(/horas para responder|expirar|caduca/);
   });
 
   it("o passo do dinheiro lê a fonte única, e não uma frase escrita à mão", () => {

@@ -11,7 +11,7 @@ import { SITE_URL } from "@/lib/seo-data";
  * desacordo. Um número escrito à mão num contrato é uma promessa que ninguém
  * está a manter a par do código.
  */
-import { MAX_PROPOSTAS_POR_EXTENSO, PRAZO_DA_PROPOSTA_HORAS } from "@/lib/negociacao";
+import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import {
   IDENTIFICACAO,
   identificacaoCompleta,
@@ -224,9 +224,8 @@ export default function TermosPage() {
             <li>
               Os profissionais respondem com propostas. Pode aceitar,
               contrapropor ou não responder. Cada lado tem{" "}
-              {MAX_PROPOSTAS_POR_EXTENSO} propostas e {PRAZO_DA_PROPOSTA_HORAS}{" "}
-              horas para responder a cada uma; passado esse prazo a proposta
-              expira.
+              {MAX_PROPOSTAS_POR_EXTENSO} propostas, e uma proposta fica de pé
+              até alguém lhe responder.
             </li>
             <li>
               Quando aceita uma proposta, o trabalho fica fechado com esse
