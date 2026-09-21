@@ -2,7 +2,7 @@ import { lerBase } from "@/lib/base-do-preco";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getSimulatorOrderById, appendOrderHistory } from "@/lib/db";
+import { getSimulatorOrderById, appendOrderHistory, negociacoesDoPedido } from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
@@ -43,6 +43,31 @@ export async function POST(req: NextRequest) {
 
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
+
+  /*
+   * UM TRABALHO FECHADO NÃO ESTÁ À VENDA — 21-09-2026.
+   *
+   * O cron do alcance já tinha esta regra por escrito: «mandá-lo a mais um
+   * seria pô-lo a orçamentar uma coisa que já não está à venda». Esta rota
+   * não a tinha, e o botão passou a estar à vista em qualquer estado. Sem
+   * isto, redistribuir o #355 — fechado com a Nova Recolha por 309 € — punha
+   * mais sete profissionais a propor sobre um trabalho que já tem dono.
+   *
+   * Recusa-se com o nome e com a saída: quem quer mesmo mandar a outros tem
+   * primeiro de desfazer o fecho, e isso é um gesto à parte, com registo.
+   */
+  const fechada = (await negociacoesDoPedido(pedidoId)).find((n) => n.estado === "acordada");
+  if (fechada) {
+    return NextResponse.json(
+      {
+        error:
+          `Este pedido está fechado com ${fechada.profissionalNome} e não se redistribui assim. ` +
+          "Para o mandar a outros, desista primeiro dessa negociação em nome do cliente — " +
+          "dentro do pedido — e volte a carregar em Redistribuir.",
+      },
+      { status: 409 },
+    );
+  }
 
   if (pedido.valorDesejadoCliente == null) {
     return NextResponse.json(

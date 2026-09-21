@@ -2350,12 +2350,43 @@ export default function AdminNegociacoesPanel({
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
             Editar pedido
           </button>
+          {/*
+            REDISTRIBUIR, À VISTA E EM QUALQUER ESTADO — 21-09-2026.
+
+            "Eu quero redistribuir esse pedido, mude o botão «Ficha e
+            distribuição» para fazer isso."
+
+            O botão de redistribuir já existia, mas só aparecia quando NINGUÉM
+            tinha sido notificado — o caso raro. No caso comum (chegou a oito,
+            dois responderam, nenhum serve) o dono via «Ficha e distribuição»,
+            abria a ficha, e não encontrava lá o botão. O que se pedia era
+            «mandar a mais gente», e é isso que o botão passa a fazer daqui.
+
+            O que acontece ao carregar depende do pedido, e a resposta diz-o:
+            quem já tem a negociação aberta não é tocado; quem a perdeu para
+            outro (morta) volta a recebê-la; quem disse que não (desistida)
+            fica em paz. E um pedido FECHADO não se redistribui — a rota
+            recusa e diz com quem está fechado e o que fazer primeiro.
+          */}
+          <button
+            onClick={() => redistribuir(p.id)}
+            disabled={ocupado === `r${p.id}`}
+            title="Voltar a enviar este pedido aos profissionais elegíveis que ainda não o têm"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-50"
+          >
+            {ocupado === `r${p.id}` ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Redistribuir
+          </button>
           <button
             onClick={() => setAEditar(p.id)}
-            title="A ficha completa do backoffice — inclui a Distribuição e o histórico"
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+            title="A ficha completa do backoffice — inclui o histórico"
+            className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
           >
-            Ficha e distribuição
+            Ficha
           </button>
           {/*
             GERAR O LINK, que é o que ele faz noventa por cento das vezes.

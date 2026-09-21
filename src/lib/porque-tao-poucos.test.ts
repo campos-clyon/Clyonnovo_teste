@@ -182,10 +182,17 @@ describe("redistribuir para alcançar quem entrou depois", () => {
 
   it("a distribuição pergunta quem já tem antes de criar seja o que for", () => {
     const D = readFileSync(join(process.cwd(), "src/lib/distribuir-pedido.ts"), "utf8");
-    expect(D).toContain("const jaTemNegociacao = reabrir");
-    expect(D).toContain("negociacoesDoPedido(pedido.id)");
-    // E com `reabrir` continua a alcançar toda a gente: aí o token É reposto.
-    expect(D).toContain("new Set<number>()");
+    /*
+     * Chamava-se `jaTemNegociacao` e era UM conjunto com todas as linhas,
+     * fosse qual fosse o estado — e trancava o pedido para sempre a quem o
+     * tinha perdido para outro. Desde 21-09-2026 são três conjuntos (viva,
+     * desistida, morta) lidos das mesmas linhas. O que este teste guarda não
+     * mudou: pergunta-se à base quem já tem, ANTES de criar seja o que for.
+     */
+    expect(D).toContain("const linhasExistentes = reabrir ? [] : await negociacoesDoPedido(pedido.id)");
+    // E com `reabrir` continua a alcançar toda a gente: a lista vem vazia e
+    // o token É reposto.
+    expect(D).toContain("jaTemViva.has(c.profissional.id)");
   });
 });
 

@@ -417,13 +417,38 @@ export async function distribuirPedido(
    * Com `reabrir` é diferente e continua igual: aí o token É reposto na base e
    * o objectivo declarado é recomeçar do zero com toda a gente.
    */
-  const jaTemNegociacao = reabrir
-    ? new Set<number>()
-    : new Set((await negociacoesDoPedido(pedido.id)).map((n) => Number(n.providerId)));
+  /*
+   * QUEM «JÁ TEM» O PEDIDO — e uma negociação morta não conta como ter.
+   *
+   * Isto era um conjunto com TODAS as linhas, fosse qual fosse o estado, e o
+   * resultado era um pedido bloqueado para sempre: um profissional que
+   * perdeu o negócio para outro nunca mais o recebia, mesmo com o pedido
+   * outra vez aberto e ele outra vez elegível. O histórico escrevia «8 já o
+   * tinham», que se lia como «chegou a 8». (Apanhado a 21-09-2026.)
+   *
+   * Três casos, e não são iguais:
+   *   · VIVA (aberta, à espera de contratação, acordada) — não se toca, pela
+   *     razão de sempre: reabrir gerava um token que não era gravado;
+   *   · MORTA — perdeu para outro. O pedido voltou a estar à venda, e ele
+   *     volta a recebê-lo. Reabre-se a linha dele;
+   *   · DESISTIDA — ele disse «não estou interessado». Fica em paz. Mandar
+   *     outra vez a quem disse que não é o que ensina a ignorar os avisos.
+   */
+  const linhasExistentes = reabrir ? [] : await negociacoesDoPedido(pedido.id);
+  const VIVAS = new Set(["aberta", "aguarda_contratacao", "acordada"]);
+  const jaTemViva = new Set(
+    linhasExistentes.filter((n) => VIVAS.has(n.estado)).map((n) => Number(n.providerId)),
+  );
+  const disseQueNao = new Set(
+    linhasExistentes.filter((n) => n.estado === "desistida").map((n) => Number(n.providerId)),
+  );
+  const perdeuParaOutro = new Set(
+    linhasExistentes.filter((n) => n.estado === "morta").map((n) => Number(n.providerId)),
+  );
 
   const envios = await Promise.all(
     elegiveis.map(async (c) => {
-      if (jaTemNegociacao.has(c.profissional.id)) {
+      if (jaTemViva.has(c.profissional.id) || disseQueNao.has(c.profissional.id)) {
         return { recebeu: false, avisado: false, jaTinha: true };
       }
 
@@ -446,7 +471,7 @@ export async function distribuirPedido(
           propostasJson: JSON.stringify(negociacaoNova(new Date()).propostas),
           // A forma decide as taxas que esta negociação grava. Ver `criarNegociacao`.
           formaDePagamento: lerForma(pedido.formaDePagamento),
-        }, { reabrir });
+        }, { reabrir: reabrir || perdeuParaOutro.has(c.profissional.id) });
         token = acesso.token;
       } catch (err) {
         console.error(

@@ -265,7 +265,10 @@ describe("o retrato do pedido", () => {
 describe("quem recebe", () => {
   it("o recomeço passa pela distribuição normal — mesmo raio, mesma categoria", () => {
     expect(DISTRIBUIR).toContain("reabrir = false");
-    expect(DISTRIBUIR).toContain("{ reabrir }");
+    // Era `{ reabrir }`. Desde 21-09-2026 uma negociação morta reabre-se por
+    // si (perdeu para outro, o pedido voltou a estar à venda); o `reabrir`
+    // do recomeço continua a ser o primeiro termo — recomeçar reabre tudo.
+    expect(DISTRIBUIR).toContain("{ reabrir: reabrir || perdeuParaOutro.has(c.profissional.id) }");
     // A elegibilidade não é contornada: continua a ser a mesma regra.
     expect(DISTRIBUIR).toContain("avaliarElegibilidade");
   });
