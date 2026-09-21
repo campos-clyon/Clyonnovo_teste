@@ -55,6 +55,15 @@ export type TrabalhoNaCarteira = Trabalho & {
   taxaProfissional?: number | string | null;
   taxaCliente?: number | string | null;
   /**
+   * COMO O CLIENTE PAGOU — 21-09-2026. Nulo = na plataforma.
+   *
+   * Em «dinheiro» o valor foi entregue ao profissional em mão e NUNCA passou
+   * pela CLYON. Não é por cobrar (já foi pago), não é cativo (não o temos), e
+   * não pode ser disponível (não há de onde o transferir). É outro cesto —
+   * `recebidoEmMao` — e é decidido ANTES de se perguntar se o cliente pagou.
+   */
+  formaDePagamento?: string | null;
+  /**
    * QUANDO O CLIENTE PAGOU ESTE TRABALHO À CLYON. `null` = ainda não pagou.
    *
    * Vem da tabela `pagamentos` (ver `negociacoesPagas`), e não da negociação:
@@ -102,7 +111,16 @@ export type Carteira = {
   aCaminho: number;
   /** Já transferido. */
   levantado: number;
-  /** Tudo o que já ganhou, líquido — cativo incluído. */
+  /**
+   * RECEBIDO EM MÃO — trabalho pago em dinheiro, no local, já feito.
+   *
+   * Conta no total ganho e em mais lado nenhum: não se transfere, porque
+   * nunca esteve cá. Um profissional que recebeu 120 € em notas e viu 112,80 €
+   * «disponíveis» na CLYON podia pedi-los — e o único travão era uma pessoa no
+   * backoffice a olhar para um número. Foi o defeito que este cesto fecha.
+   */
+  recebidoEmMao: number;
+  /** Tudo o que já ganhou, líquido — cativo e recebido em mão incluídos. */
   totalGanho: number;
 };
 
@@ -122,6 +140,31 @@ function liquido(t: TrabalhoNaCarteira): number {
   const v = t.valorAcordado;
   if (v == null || !Number.isFinite(v)) return 0;
   return quantoOProfissionalRecebe(v, taxasDaNegociacao(t));
+}
+
+/** O serviço foi pago ao profissional em mão, no local? */
+export function foiPagoEmMao(t: Pick<TrabalhoNaCarteira, "formaDePagamento">): boolean {
+  return t.formaDePagamento === "dinheiro";
+}
+
+/**
+ * Quanto é que este profissional já recebeu em dinheiro, no local.
+ *
+ * Só o que já está FEITO — confirmado, ou libertado pelo prazo. Um trabalho
+ * em dinheiro ainda por fazer não é dinheiro recebido; é um trabalho por
+ * fazer, e vê-se na lista de trabalhos, não na carteira.
+ *
+ * Exportada pela mesma razão de `porCobrarDe`: o livro não tem movimento para
+ * isto (nada se moveu pela CLYON) e recebe-o de fora, da mesma função.
+ */
+export function recebidoEmMaoDe(trabalhos: TrabalhoNaCarteira[], agora: Date): number {
+  let total = 0;
+  for (const t of trabalhos) {
+    if (!foiPagoEmMao(t)) continue;
+    if (faseDoTrabalho(t) === "a_negociar") continue;
+    if (estaLibertado(t, agora)) total += liquido(t);
+  }
+  return aosCentimos(total);
 }
 
 /**
@@ -155,6 +198,8 @@ export function porCobrarDe(
   let total = 0;
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
+    // Pago em mão não é por cobrar: já foi cobrado, ao profissional, no local.
+    if (foiPagoEmMao(t)) continue;
     if (!oClientePagou(t, opcoes)) total += liquido(t);
   }
   return aosCentimos(total);
@@ -169,10 +214,21 @@ export function carteiraDe(
   let porCobrar = 0;
   let cativo = 0;
   let ganhoLibertado = 0;
+  let recebidoEmMao = 0;
 
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
     const valor = liquido(t);
+
+    /*
+     * O DINHEIRO EM MÃO DECIDE-SE PRIMEIRO — antes de perguntar se o cliente
+     * pagou à CLYON, porque a pergunta não faz sentido: pagou ao profissional.
+     * Só conta depois de feito; antes disso não é dinheiro de ninguém ainda.
+     */
+    if (foiPagoEmMao(t)) {
+      if (estaLibertado(t, agora)) recebidoEmMao += valor;
+      continue;
+    }
 
     /*
      * O PAGAMENTO MANDA SOBRE A FASE, e a ordem destas duas linhas é a regra
@@ -207,10 +263,11 @@ export function carteiraDe(
     disponivel,
     aCaminho: aosCentimos(aCaminho),
     levantado: aosCentimos(levantado),
-    // Inclui o por cobrar: «tudo o que já ganhou» é sobre o trabalho feito, e
-    // é assim que este número sempre se comportou. Onde está cada parte
-    // dizem-no os outros quatro.
-    totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado),
+    recebidoEmMao: aosCentimos(recebidoEmMao),
+    // Inclui o por cobrar e o recebido em mão: «tudo o que já ganhou» é sobre
+    // o trabalho feito, e é assim que este número sempre se comportou. Onde
+    // está cada parte dizem-no os outros cinco.
+    totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado + recebidoEmMao),
   };
 }
 
@@ -220,6 +277,8 @@ export type RecusaDeLevantamento =
   | "saldo_insuficiente"
   /** Tem o trabalho feito, mas o cliente ainda não pagou. */
   | "a_espera_do_cliente"
+  /** O que recebeu foi em dinheiro, no local — já está com ele e não se transfere. */
+  | "pago_em_mao"
   | "valor_invalido"
   | "ja_tem_pedido";
 
@@ -247,7 +306,11 @@ export function recusaDoLevantamento(
      * cobrar é uma frase que não explica nada e manda a pessoa escrever para o
      * apoio. Se o que falta está à espera do cliente, é isso que se lhe diz.
      */
-    return carteira.porCobrar > 0 ? "a_espera_do_cliente" : "saldo_insuficiente";
+    if (carteira.porCobrar > 0) return "a_espera_do_cliente";
+    // «Não tem esse valor disponível» a quem tem 120 € recebidos em notas é
+    // uma frase que manda a pessoa escrever para o apoio. Diz-se o que é.
+    if (carteira.recebidoEmMao > 0) return "pago_em_mao";
+    return "saldo_insuficiente";
   }
   return null;
 }
@@ -258,6 +321,8 @@ export const EXPLICACAO_DA_RECUSA: Record<RecusaDeLevantamento, string> = {
   saldo_insuficiente: "Não tem esse valor disponível.",
   a_espera_do_cliente:
     "Esse valor ainda está por cobrar — o cliente não pagou. Assim que o pagamento entrar e ele confirmar o trabalho, fica disponível.",
+  pago_em_mao:
+    "Esse valor foi-lhe pago em dinheiro, no local. Já está consigo — não passou pela CLYON e não há nada para transferir.",
   valor_invalido: "Indique um valor.",
   ja_tem_pedido: "Já tem um pedido de transferência a ser processado.",
 };

@@ -17,7 +17,8 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { contaDoCliente, regimeDeIva } from "@/lib/taxas-plataforma";
+import { contaDoCliente, regimeDeIva, taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
+import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import {
   enviarBotoesWhatsApp,
   enviarTextoWhatsApp,
@@ -235,6 +236,10 @@ type Alvo = {
   profissionalNome: string;
   /** O regime de quem factura: decide se o total leva IVA por cima. */
   regimeIva: string | null;
+  /** Como o cliente paga. Em dinheiro, a mensagem diz quanto vai em notas. */
+  formaDePagamento: FormaDePagamento;
+  /** As taxas gravadas nesta negociação — em dinheiro não são as de origem. */
+  taxas: Taxas;
   estado: Negociacao;
 };
 
@@ -245,6 +250,8 @@ async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | nu
   return {
     pedidoId,
     regimeIva: n.regimeIva ?? null,
+    formaDePagamento: lerForma((n as { formaDePagamento?: unknown }).formaDePagamento),
+    taxas: taxasDaNegociacao(n),
     negociacaoId,
     profissionalNome: n.profissionalNome,
     estado: {
@@ -436,7 +443,7 @@ async function fecharPeloCliente(
    * taxa acresce. Mandar-lhe o total com imposto era o oposto — um número que
    * ele não reconhece e que, se não quiser factura, também não vai pagar.
    */
-  const conta = contaDoCliente(valor, regimeDeIva(alvo.regimeIva));
+  const conta = contaDoCliente(valor, regimeDeIva(alvo.regimeIva), alvo.taxas);
   /*
    * SE ELE JÁ DISSE O DIA, NÃO SE LHE PERGUNTA SE TEM DATA PENSADA.
    *
@@ -455,10 +462,21 @@ async function fecharPeloCliente(
       ? `\n\nVi que falou no ${diaPorPalavras(dito)}. A que horas lhe dá jeito? Diga-me o dia e a hora juntos — por exemplo, ${dito.dia} às 10h.`
       : ` Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`;
 
+  /*
+   * EM DINHEIRO SÃO DUAS ENTREGAS — 21-09-2026. Este é o ÚNICO ecrã de conta
+   * de quem fecha por WhatsApp: não passa pelo «Fica assim» do site. Se a
+   * frase não disser quanto vai em notas e quanto vai à CLYON, ele chega ao
+   * fim do trabalho sem saber quanto trazer — ou dá tudo ao profissional e a
+   * taxa fica por pagar.
+   */
+  const oQuePaga =
+    alvo.formaDePagamento === "dinheiro"
+      ? `${totalEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas, "dinheiro")}`
+      : `${euros(conta.semIva)} a pagar (${euros(valor)} para ele mais a taxa CLYON). ` +
+        `${comFacturaEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas)}`;
   await enviarTextoWhatsApp(
     telefone,
-    `Fechado com ${alvo.profissionalNome}: ${euros(conta.semIva)} a pagar (${euros(valor)} para ele mais a taxa CLYON). ` +
-      `${comFacturaEmPalavras(valor, alvo.regimeIva ?? null)}\n\n` +
+    `Fechado com ${alvo.profissionalNome}: ${oQuePaga}\n\n` +
       `O profissional recebeu a morada e o seu contacto.${sobreODia}`,
   );
 }
@@ -646,6 +664,8 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
         negociacaoId: Number(n.id),
         profissionalNome: n.profissionalNome,
         regimeIva: n.regimeIva ?? null,
+        formaDePagamento: lerForma((n as { formaDePagamento?: unknown }).formaDePagamento),
+        taxas: taxasDaNegociacao(n),
         estado: {
           estado: n.estado as Negociacao["estado"],
           valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
@@ -701,10 +721,17 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
   const acordada = vivas.find((n) => n.estado === "acordada");
   if (acordada) {
     const acordado = Number(acordada.valorAcordado ?? 0);
-    const semIva = contaDoCliente(acordado, regimeDeIva(acordada.regimeIva)).semIva;
+    // `acordada` é a linha crua da base, não um `Alvo`: as taxas e a forma
+    // lêem-se daqui, das colunas gravadas.
+    const taxasDela = taxasDaNegociacao(acordada);
+    const formaDela = lerForma((acordada as { formaDePagamento?: unknown }).formaDePagamento);
+    const semIva = contaDoCliente(acordado, regimeDeIva(acordada.regimeIva), taxasDela).semIva;
+    const comoPaga =
+      formaDela === "dinheiro"
+        ? ` ${totalEmPalavras(acordado, acordada.regimeIva ?? null, taxasDela, "dinheiro")}`
+        : ` ${euros(semIva)} a pagar (${euros(acordado)} para ele mais a taxa CLYON, sem IVA).`;
     return (
-      `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} — ${euros(semIva)} a pagar ` +
-      `(${euros(acordado)} para ele mais a taxa CLYON, sem IVA).` +
+      `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} —${comoPaga}` +
       (pedido?.dataAgendada
         ? ""
         : ` Se já tem data pensada, responda por exemplo: 27/08 14:30`)

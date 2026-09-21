@@ -1,4 +1,5 @@
 import { lerBase } from "@/lib/base-do-preco";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import {
   matarNegociacoesDoPedido,
   negociacoesDoPedido,
@@ -216,6 +217,7 @@ export async function recomecarDoZero(
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
       baseDoPreco: lerBase(pedido.baseDoPreco),
+      formaDePagamento: lerForma(pedido.formaDePagamento),
       lat: geo.lat,
       lng: geo.lng,
       baseUrl,

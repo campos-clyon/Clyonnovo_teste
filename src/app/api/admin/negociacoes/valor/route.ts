@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lerForma, excedeONumerario, MAXIMO_EM_NUMERARIO } from "@/lib/forma-de-pagamento";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
@@ -123,6 +124,28 @@ export async function POST(req: NextRequest) {
     const antigo = linha.valorAcordado != null ? Number(linha.valorAcordado) : null;
     if (antigo != null && Math.abs(antigo - novo) < 0.005) {
       return NextResponse.json({ error: "O valor é o mesmo." }, { status: 400 });
+    }
+
+    /*
+     * O TECTO DO NUMERÁRIO VERIFICA-SE AQUI TAMBÉM — 21-09-2026.
+     *
+     * «O #242 foi combinado a 135 € e o trabalho foram 230.» Um tecto que só
+     * se verifica ao contratar é um tecto que a correcção do valor salta. Em
+     * dinheiro, um valor acima do legal não se corrige para lá: muda-se a forma
+     * de pagamento primeiro.
+     */
+    if (
+      lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento) === "dinheiro" &&
+      excedeONumerario(novo)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Este trabalho é pago em dinheiro e a lei não permite numerário a partir de ` +
+            `${MAXIMO_EM_NUMERARIO} €. Mude a forma de pagamento antes de corrigir o valor.`,
+        },
+        { status: 409 },
+      );
     }
 
     /*

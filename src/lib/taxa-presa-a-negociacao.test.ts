@@ -124,8 +124,15 @@ describe("as contas usam a taxa que lhes dão", () => {
 describe("a taxa grava-se quando a negociação nasce", () => {
   const criar = corpoDe("criarNegociacao");
 
-  it("as duas colunas vão no INSERT", () => {
-    expect(criar).toContain("taxaCliente, taxaProfissional)");
+  it("as duas colunas vão no INSERT — e, desde 21-09-2026, mais duas ao lado", () => {
+    /*
+     * Dizia `taxaCliente, taxaProfissional)` — o parêntese fechava a lista. A
+     * forma de pagamento e o acréscimo passaram a nascer na mesma linha, pela
+     * mesma razão de as taxas nascerem aqui: congelam-se com a negociação e
+     * nunca mais mudam. O que o teste guarda continua a ser o mesmo — as
+     * taxas vão no INSERT — só deixou de exigir que sejam as últimas.
+     */
+    expect(criar).toContain("taxaCliente, taxaProfissional, formaDePagamento, acrescimoPagamento)");
     expect(criar).toContain("taxas.cliente");
     expect(criar).toContain("taxas.profissional");
   });

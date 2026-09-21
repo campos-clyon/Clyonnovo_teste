@@ -1904,6 +1904,8 @@ function DetalheDoTrabalho({
           }
           sugestao={pedido.sugestao ?? null}
           onMudou={onRecarregar}
+          taxas={pedido.taxas}
+          formaDePagamento={pedido.formaDePagamento ?? null}
         />
       )}
 

@@ -140,6 +140,12 @@ export interface OrderData {
   precisaFatura?: boolean;
   /** Se precisa de guia de transporte (e-GAR) — exige transportador licenciado. */
   precisaGuiaTransporte?: boolean;
+  /**
+   * Como quer pagar: "na_plataforma", "dinheiro" ou "pos_recolha". Escolhe-se
+   * ao pedir — antes de existir profissional nenhum — e é o profissional quem
+   * mais precisa de o saber. Ver `src/lib/forma-de-pagamento.ts`.
+   */
+  formaDePagamento?: string;
 }
 
 export type EstimateStatus = "estimated" | "needs_more_info" | "onsite_required";

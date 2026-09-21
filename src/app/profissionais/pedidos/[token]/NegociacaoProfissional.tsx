@@ -32,7 +32,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
@@ -65,6 +65,8 @@ export default function NegociacaoProfissional({
   recebeSeAceitar,
   sugestao = null,
   onMudou,
+  taxas,
+  formaDePagamento = null,
 }: {
   /**
    * O token do link do email, quando se chega por aí.
@@ -90,6 +92,14 @@ export default function NegociacaoProfissional({
   sugestao?: SugestaoParaOProfissional | null;
   /** Para o painel recarregar a lista depois de uma acção. */
   onMudou?: () => void;
+  /**
+   * AS TAXAS DESTA NEGOCIAÇÃO — 21-09-2026. Sem elas o botão contava com as
+   * de hoje, e num trabalho em dinheiro dizia «recebe 112,80 €» a quem vai
+   * receber 120,00 € em mão.
+   */
+  taxas?: Taxas;
+  /** Como o cliente paga. Em dinheiro, o botão diz «em mão». */
+  formaDePagamento?: string | null;
 }) {
   const [negociacao, setNegociacao] = useState<Negociacao>({
     estado: estadoInicial as Negociacao["estado"],
@@ -213,7 +223,8 @@ export default function NegociacaoProfissional({
   const podeAceitar = accoes.includes("aceitar");
   const valorEmCima = pendente?.valor ?? minimoDoCliente;
   const recebeSeFechar =
-    valorEmCima != null ? quantoOProfissionalRecebe(valorEmCima) : recebeSeAceitar;
+    valorEmCima != null ? quantoOProfissionalRecebe(valorEmCima, taxas) : recebeSeAceitar;
+  const emMao = formaDePagamento === "dinheiro";
 
   /*
    * A ABERTURA É UMA SUGESTÃO, NÃO UM VALOR PARA ACEITAR.
@@ -546,6 +557,7 @@ export default function NegociacaoProfissional({
             <span>Aceitar {euros(valorEmCima)}</span>
             <span className="text-sm font-semibold text-emerald-50">
               recebe {euros(recebeSeFechar)}
+              {emMao ? " em mão" : ""}
             </span>
           </button>
         )}

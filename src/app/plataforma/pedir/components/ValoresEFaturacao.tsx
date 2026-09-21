@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, Truck, Info } from "lucide-react";
+import { FORMA_EM_PALAVRAS, formasDisponiveis, lerForma } from "@/lib/forma-de-pagamento";
+import { Banknote, CreditCard, FileText, Truck, Info } from "lucide-react";
 import type { ErroDeValor } from "@/lib/pedido-valores";
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 
@@ -31,6 +32,7 @@ export default function ValoresEFaturacao({
   valorDesejadoCliente,
   precisaFatura,
   precisaGuiaTransporte,
+  formaDePagamento,
   erros,
   onChange,
 }: {
@@ -38,6 +40,8 @@ export default function ValoresEFaturacao({
   valorDesejadoCliente?: string;
   precisaFatura?: boolean;
   precisaGuiaTransporte?: boolean;
+  /** Como quer pagar. Em falta, na plataforma. */
+  formaDePagamento?: string;
   erros: ErroDeValor[];
   onChange: (campo: string, valor: unknown) => void;
 }) {
@@ -97,6 +101,56 @@ export default function ValoresEFaturacao({
       </div>
 
       {/* ── Faturação ─────────────────────────────────────────────────── */}
+      {/*
+        COMO QUER PAGAR — 21-09-2026.
+
+        AQUI, e não depois de aceitar: é o único momento antes de o profissional
+        pensar num número. Ele aceita um trabalho de 120 € em notas de outra
+        maneira do que um já pago, e a escolha tem de estar feita quando o
+        pedido lhe chega. Escolher depois era mudar as regras a quem já propôs.
+
+        O «pagar depois» só aparece quando estiver ligado — ver
+        `formasDisponiveis`. Um pedido não pode nascer com uma forma que os
+        Termos ainda não prometem.
+      */}
+      <div>
+        <h3 className="text-base font-bold text-slate-900">Como prefere pagar?</h3>
+        <p className="mt-1 text-sm text-slate-600">
+          O profissional vê a sua escolha antes de propor. Pode mudar de ideias até
+          contratar alguém.
+        </p>
+        <div className="mt-4 space-y-3">
+          {formasDisponiveis().map((f) => (
+            <label
+              key={f}
+              className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-gray-300 bg-white p-4 transition hover:border-cyan-400 has-[:checked]:border-cyan-600 has-[:checked]:bg-cyan-50"
+            >
+              <input
+                type="radio"
+                name="formaDePagamento"
+                value={f}
+                checked={lerForma(formaDePagamento) === f}
+                onChange={() => onChange("formaDePagamento", f)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-cyan-600"
+              />
+              <span className="flex-1">
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  {f === "dinheiro" ? (
+                    <Banknote className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                  )}
+                  {FORMA_EM_PALAVRAS[f].curta}
+                </span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
+                  {FORMA_EM_PALAVRAS[f].cliente}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       <div>
         <h3 className="text-base font-bold text-slate-900">Precisa de documentos?</h3>
         <p className="mt-1 text-sm text-slate-600">

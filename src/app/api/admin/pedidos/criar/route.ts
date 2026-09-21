@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerBase } from "@/lib/base-do-preco";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { createSimulatorOrder, appendOrderHistory } from "@/lib/db";
@@ -56,6 +57,8 @@ type Corpo = {
   baseDoPreco?: string;
   precisaFatura?: boolean;
   precisaGuiaTransporte?: boolean;
+  /** Como o cliente paga. `lerForma` recusa o que não está à venda. */
+  formaDePagamento?: string;
   /** O valor de partida, se a equipa já combinou um ao telefone. */
   valor?: string | number | null;
 };
@@ -336,6 +339,9 @@ export async function POST(req: NextRequest) {
       baseDoPreco: lerBase(corpo.baseDoPreco),
       precisaFatura: corpo.precisaFatura === true ? 1 : 0,
       precisaGuiaTransporte: corpo.precisaGuiaTransporte === true ? 1 : 0,
+      // Os clientes do telefone entram por aqui — e são os que mais escolhem
+      // dinheiro. Sem isto, a forma ficava nula exactamente para eles.
+      formaDePagamento: lerForma(corpo.formaDePagamento),
       acessoTokenHash: acesso.hash,
       acessoTokenExpiraEm: acesso.expiraEm,
     };

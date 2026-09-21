@@ -73,6 +73,27 @@ export const FICHA_DO_AVISO: Record<AvisoAntesDeCotar, FichaDoAviso> = {
     botao: "Sou transportador registado — continuar",
     gravidade: "serio",
   },
+  /*
+   * O DINHEIRO NO LOCAL — 21-09-2026.
+   *
+   * Não há nada a corrigir no perfil: é uma escolha do cliente. O que este
+   * aviso faz é dizer-lhe as duas coisas que mudam a decisão dele — recebe o
+   * acordado INTEIRO, em mão, e é ele quem passa o recibo — e deixar no
+   * histórico que ele soube antes de propor.
+   */
+  cliente_paga_em_dinheiro: {
+    curto: "Paga em dinheiro, no local",
+    titulo: "Este cliente escolheu pagar em dinheiro, no local",
+    corpo:
+      "O cliente vai pagar-lhe o valor acordado por inteiro, em mão, no fim do " +
+      "trabalho — a CLYON não lhe desconta comissão neste caso; cobra a taxa dela " +
+      "ao cliente, à parte. É a si que cabe passar o recibo ou a factura do que " +
+      "receber. Se preferir não trabalhar com dinheiro, pode simplesmente não " +
+      "responder a este pedido.",
+    ondeSeCorrige: "",
+    botao: "Aceito receber em dinheiro — continuar",
+    gravidade: "aviso",
+  },
 };
 
 /** Os avisos pela ordem em que se mostram: o mais sério em cima. */

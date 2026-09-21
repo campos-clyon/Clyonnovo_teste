@@ -240,6 +240,13 @@ export interface SimulatorOrder {
    * 'baseDoPreco' does not exist». Ler com `lerBase()`, que trata do nulo.
    */
   baseDoPreco?: string | null;
+  /**
+   * Como o cliente escolheu pagar: "na_plataforma", "dinheiro" ou
+   * "pos_recolha". Nulo = anterior a haver escolha = na plataforma. Ler com
+   * `lerForma()` de `forma-de-pagamento.ts`, que trata do nulo e do que não
+   * está à venda.
+   */
+  formaDePagamento?: string | null;
   /** SHA-256 do token de acesso. O token em claro vive só no link. */
   acessoTokenHash?: string | null;
   acessoTokenExpiraEm?: Date | string | null;
@@ -354,6 +361,7 @@ export interface InsertSimulatorOrder {
   valorMaximoCliente?: string | null;
   precisaFatura?: boolean | number | null;
   precisaGuiaTransporte?: boolean | number | null;
+  formaDePagamento?: string | null;
   /** Só o hash. O token em claro vive no link e mais lado nenhum. */
   acessoTokenHash?: string | null;
   acessoTokenExpiraEm?: Date | null;

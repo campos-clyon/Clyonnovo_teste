@@ -687,7 +687,33 @@ export function quantoOClientePaga(
   regime: RegimeIva,
   taxas?: Taxas,
   comFactura = false,
+  /** O acréscimo da forma de pagamento. Ver `contaDoCliente`. */
+  acrescimo = 0,
 ): number {
-  const c = contaDoCliente(acordado, regime, taxas);
+  const c = contaDoCliente(acordado, regime, taxas, acrescimo);
   return comFactura ? c.total : c.semIva;
+}
+
+/**
+ * O QUE A CLYON COBRA QUANDO O SERVIÇO FOI PAGO EM MÃO — 21-09-2026.
+ *
+ * Em dinheiro, o profissional já recebeu o serviço no local. A referência que
+ * o backoffice gera é SÓ a parte da CLYON: a taxa (que em dinheiro leva os dois
+ * lados, ver `taxasParaAForma`) e o acréscimo, se houver. Sem factura é a
+ * base; com factura leva o IVA da CLYON por cima — o mesmo interruptor que o
+ * cartão já tem.
+ *
+ * Nunca o `semIva` inteiro: 126,00 € a um cliente que acabou de dar 120,00 €
+ * em notas ao profissional é cobrar-lhe o serviço duas vezes.
+ */
+export function quantoACLYONCobra(
+  acordado: number,
+  regime: RegimeIva,
+  taxas?: Taxas,
+  comFactura = false,
+  acrescimo = 0,
+): number {
+  const c = contaDoCliente(acordado, regime, taxas, acrescimo);
+  const base = Math.round((c.taxa + c.acrescimo) * 100) / 100;
+  return comFactura ? Math.round((base + c.ivaDaTaxa) * 100) / 100 : base;
 }

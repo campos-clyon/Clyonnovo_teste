@@ -5,6 +5,7 @@ import {
 } from "./db";
 import { hashDeToken, verificarTokenDeAcesso } from "./pedido-acesso";
 import { regimeDeIva, taxasDaNegociacao, type RegimeIva, type Taxas } from "./taxas-plataforma";
+import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 
 /**
  * QUEM É QUE PODE PAGAR ESTE TRABALHO.
@@ -31,6 +32,10 @@ export type TrabalhoAPagar = {
   regime: RegimeIva;
   /** As taxas que ESTA negociação guardou — nunca as de hoje. */
   taxas: Taxas;
+  /** Como o cliente paga. Em dinheiro, a referência é só a parte da CLYON. */
+  formaDePagamento: FormaDePagamento;
+  /** O acréscimo gravado (o «pagar depois»), em euros. Zero quase sempre. */
+  acrescimo: number;
   /** O telemóvel que o cliente deixou no pedido, para sugerir no MB WAY. */
   telefoneDoCliente: string | null;
   /** O nome de quem pediu — a mensagem da referência trata-o por ele. */
@@ -165,6 +170,11 @@ export async function trabalhoQueSePodePagar(
       acordado,
       regime: regimeDeIva(linha.regimeIva),
       taxas: taxasDaNegociacao(linha),
+      formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
+      acrescimo: (() => {
+        const a = Number((linha as { acrescimoPagamento?: unknown }).acrescimoPagamento ?? 0);
+        return Number.isFinite(a) && a > 0 ? a : 0;
+      })(),
       telefoneDoCliente:
         ((pedido as { contactPhone?: string | null }).contactPhone ?? "").trim() || null,
       nomeDoCliente: ((pedido as { contactName?: string | null }).contactName ?? "").trim() || null,

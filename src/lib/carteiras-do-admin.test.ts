@@ -140,11 +140,27 @@ describe("os três montes", () => {
      */
     const i = ROTA.indexOf("Três montes");
     expect(i).toBeGreaterThan(-1);
-    const bloco = ROTA.slice(i, i + 700);
-    // Pago sai primeiro, por finalizar a seguir, e o resto é por pagar. Cada
-    // ramo termina em `continue`, para nenhum trabalho contar duas vezes.
+    /*
+     * A FATIA É MEDIDA ATÉ AO FIM DO CICLO, e não 700 caracteres — 21-09-2026.
+     *
+     * Entrou um QUARTO monte antes dos três: o dinheiro no local, que não é a
+     * CLYON quem paga e por isso sai do ciclo antes de chegar ao «pago».
+     * O bloco dele empurrou `l.pagoEm != null` para fora da janela fixa e o
+     * teste chumbou por a janela ser pequena, não por a ordem ter mudado.
+     */
+    const fim = ROTA.indexOf("const carteiras = [...porProfissional.values()]", i);
+    expect(fim).toBeGreaterThan(i);
+    const bloco = ROTA.slice(i, fim);
+    // O dinheiro sai primeiro de todos — não é a CLYON quem o paga. Depois:
+    // pago, por finalizar, e o resto é por pagar. Cada ramo termina em
+    // `continue`, para nenhum trabalho contar duas vezes.
+    expect(bloco.indexOf('lerForma(l.formaDePagamento) === "dinheiro"')).toBeLessThan(
+      bloco.indexOf("l.pagoEm != null"),
+    );
     expect(bloco.indexOf("l.pagoEm != null")).toBeLessThan(bloco.indexOf("l.confirmadoEm == null"));
-    expect((bloco.match(/continue;/g) ?? []).length).toBe(2);
+    // Três e não dois: o dinheiro no local também sai por `continue`, antes
+    // do pago — para um trabalho pago em mão nunca cair em «por pagar».
+    expect((bloco.match(/continue;/g) ?? []).length).toBe(3);
   });
 
   it("a consulta deixou de filtrar só as confirmadas", () => {

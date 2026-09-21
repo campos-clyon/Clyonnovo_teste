@@ -89,6 +89,10 @@ export type Pedido = {
   querPagar: number | null;
   recebeSeAceitar: number | null;
   recebeSeFechado: number | null;
+  /** As taxas gravadas nesta negociação — para o ecrã contar como o servidor conta. */
+  taxas?: { cliente: number; profissional: number };
+  /** Como o cliente paga: na_plataforma, dinheiro ou pos_recolha. */
+  formaDePagamento?: string | null;
   /**
    * A conta da CLYON feita PARA ELE: custos com os quilómetros dele, preço
    * sugerido e o que lhe fica. Ver `sugestao-para-o-profissional.ts`.
@@ -153,6 +157,8 @@ export type Carteira = {
   disponivel: number;
   aCaminho: number;
   levantado: number;
+  /** Pago em dinheiro, no local. Já está com ele; nunca passou pela CLYON. */
+  recebidoEmMao?: number;
   totalGanho: number;
 };
 

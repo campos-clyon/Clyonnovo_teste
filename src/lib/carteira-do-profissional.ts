@@ -20,6 +20,7 @@ export async function trabalhosDaCarteira(
     valorAcordado?: unknown;
     taxaCliente?: unknown;
     taxaProfissional?: unknown;
+    formaDePagamento?: unknown;
     execucaoEnviadaEm?: Date | string | null;
     confirmadoEm?: Date | string | null;
     pagoEm?: Date | string | null;
@@ -44,6 +45,8 @@ export async function trabalhosDaCarteira(
     // backoffice, e a carteira não pode mudar com ela.
     taxaCliente: l.taxaCliente as number | string | null | undefined,
     taxaProfissional: l.taxaProfissional as number | string | null | undefined,
+    // Em dinheiro, o valor vai para outro cesto e nunca para «disponível».
+    formaDePagamento: typeof l.formaDePagamento === "string" ? l.formaDePagamento : null,
     execucaoEnviadaEm: l.execucaoEnviadaEm,
     confirmadoEm: l.confirmadoEm,
     pagoEm: l.pagoEm,

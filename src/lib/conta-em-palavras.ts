@@ -1,5 +1,6 @@
 import { contaDoCliente, regimeDeIva, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
+import type { FormaDePagamento } from "@/lib/forma-de-pagamento";
 
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
@@ -31,9 +32,26 @@ export function totalEmPalavras(
    * uma conversa que ainda não tem negociação nenhuma por trás.
    */
   taxas?: Taxas,
+  /** Como o cliente paga. Em dinheiro, a frase diz quanto vai em notas. */
+  forma: FormaDePagamento = "na_plataforma",
 ): string {
   const conta = contaDoCliente(valor, regimeDeIva(regimeIva), taxas);
   const factura = comFacturaEmPalavras(valor, regimeIva, taxas);
+  /*
+   * EM DINHEIRO SÃO DUAS ENTREGAS, e a frase tem de as separar — 21-09-2026.
+   *
+   * «Fica em 133,20 € sem IVA» a quem vai dar 120 € em notas ao profissional
+   * e pagar 13,20 € à CLYON por referência é um número que ele não consegue
+   * repetir em voz alta, e é assim que se perde a taxa.
+   */
+  if (forma === "dinheiro") {
+    return (
+      `Paga ${euros(conta.servico)} em dinheiro ao profissional, no local` +
+      `${conta.ivaDoServico > 0 ? ` (${euros(conta.servico + conta.ivaDoServico)} se pedir factura)` : ""}` +
+      `, e ${euros(conta.taxa)} de taxa à CLYON por referência` +
+      `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com factura)` : ""}.`
+    );
+  }
   return `Com a taxa CLYON, fica em ${euros(conta.semIva)} sem IVA.${factura ? ` ${factura}` : ""}`;
 }
 

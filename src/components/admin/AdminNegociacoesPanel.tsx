@@ -62,9 +62,11 @@ import {
   regimeDeIva,
   quantoOProfissionalRecebe,
   comissaoDaClyon,
+  taxasDaNegociacao,
   TAXA_CLIENTE,
   TAXA_PROFISSIONAL,
 } from "@/lib/taxas-plataforma";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
@@ -120,6 +122,11 @@ type Negociacao = {
    * mandava cobrar 23% a menos do que ha a cobrar.
    */
   regimeIva?: string | null;
+  /** Como o cliente paga esta negociação. Nulo = na plataforma. */
+  formaDePagamento?: string | null;
+  acrescimoPagamento?: string | number | null;
+  taxaCliente?: string | number | null;
+  taxaProfissional?: string | number | null;
   criadaEm: string;
   actualizadaEm: string;
 };
@@ -2129,7 +2136,13 @@ export default function AdminNegociacoesPanel({
                 dele, e é a ele que o cliente o paga. O que vai à CLYON é só a
                 taxa. Separa-se, para o dinheiro se ler como circula.
               */
-              const conta = contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva));
+              const emDinheiro = lerForma(acordada.formaDePagamento) === "dinheiro";
+              const taxasDela = taxasDaNegociacao(acordada);
+              const conta = contaDoCliente(
+                Number(acordada.valorAcordado),
+                regimeDeIva(acordada.regimeIva),
+                taxasDela,
+              );
               /*
                 AS DUAS FACTURAS, com o número de cada uma — 14-09-2026.
 
@@ -2157,9 +2170,19 @@ export default function AdminNegociacoesPanel({
                     ? ` (taxa ${euros(conta.taxa)} + IVA ${euros(conta.ivaDaTaxa)})`
                     : ` (taxa ${euros(conta.taxa)})`}
                   {" · "}o profissional recebe, sem IVA,{" "}
-                  <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado)))}</strong>
-                  {" · "}comissão CLYON {euros(comissaoDaClyon(Number(acordada.valorAcordado)))}
-                  {" (a facturar ao profissional)"}
+                  <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela))}</strong>
+                  {/*
+                    A COMISSÃO, DITA COMO É — 21-09-2026.
+
+                    Dizia «comissão CLYON 13,20 € (a facturar ao profissional)»
+                    — os 11 %, cliente e profissional somados — e mandava
+                    facturar tudo ao profissional. Só a parte dele é dele.
+                    Em dinheiro não se lhe factura nada: a CLYON cobra os dois
+                    lados ao cliente, por referência.
+                  */}
+                  {emDinheiro
+                    ? ` · em dinheiro: ele recebe ${euros(Number(acordada.valorAcordado))} em mão e a CLYON cobra ${euros(conta.taxa)} ao cliente por referência`
+                    : ` · comissão CLYON ${euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))} (${euros(conta.taxa)} do cliente + ${euros(Math.round((Number(acordada.valorAcordado) - quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela)) * 100) / 100)} a facturar ao profissional)`}
                 </p>
               );
             })()}
@@ -2179,17 +2202,31 @@ export default function AdminNegociacoesPanel({
               concluído é, na maior parte das vezes, para conferir contas.
             */}
             {(() => {
+              /*
+                AS TAXAS DESTA NEGOCIAÇÃO, e não as de hoje — 21-09-2026. Era
+                daqui que saía o número da referência euPago sem taxas, ou
+                seja, com as constantes: num trabalho em dinheiro pedia
+                126,00 € a quem já tinha dado 120,00 € em notas.
+              */
+              const taxasDela = taxasDaNegociacao(acordada);
+              const emDinheiro = lerForma(acordada.formaDePagamento) === "dinheiro";
+              const acrescimo = Number(acordada.acrescimoPagamento ?? 0) || 0;
               const conta = contaDoCliente(
                 Number(acordada.valorAcordado),
                 regimeDeIva(acordada.regimeIva),
+                taxasDela,
+                acrescimo,
               );
+              const soAClyon = Math.round((conta.taxa + conta.acrescimo) * 100) / 100;
               return (
                 <GerarReferencia
                   negociacaoId={acordada.id}
                   telefoneDoCliente={p.contactPhone ?? null}
                   precisaFatura={Boolean(p.precisaFatura)}
-                  semFactura={conta.semIva}
-                  comFacturaValor={conta.total}
+                  semFactura={emDinheiro ? soAClyon : conta.semIva}
+                  comFacturaValor={
+                    emDinheiro ? Math.round((soAClyon + conta.ivaDaTaxa) * 100) / 100 : conta.total
+                  }
                 />
               );
             })()}

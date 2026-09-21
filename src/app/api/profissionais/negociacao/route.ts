@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import {
   negociacoesDoProfissional,
   gravarNegociacao,
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
             {
               precisaFatura: Number(linha.precisaFatura) === 1,
               precisaGuiaTransporte: Number(linha.precisaGuiaTransporte) === 1,
+              formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
             },
             {
               emiteFatura: Number(perfil.emiteFatura) === 1,

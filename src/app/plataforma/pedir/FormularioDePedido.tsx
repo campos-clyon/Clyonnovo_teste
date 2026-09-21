@@ -1464,6 +1464,7 @@ function Phase3Contact({
         valorDesejadoCliente={formData.valorDesejadoCliente}
         precisaFatura={formData.precisaFatura}
         precisaGuiaTransporte={formData.precisaGuiaTransporte}
+        formaDePagamento={formData.formaDePagamento}
         erros={errosDeValor}
         onChange={updateField}
       />

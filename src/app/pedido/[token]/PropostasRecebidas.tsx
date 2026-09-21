@@ -23,6 +23,7 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
@@ -65,6 +66,9 @@ export type NegociacaoDoCliente = {
    */
   taxaCliente?: string | number | null;
   taxaProfissional?: string | number | null;
+  /** Como o cliente paga esta negociação. Nulo = na plataforma. */
+  formaDePagamento?: string | null;
+  acrescimoPagamento?: string | number | null;
   propostas: Proposta[];
   profissionalNome: string;
   /*
@@ -328,10 +332,29 @@ export default function PropostasRecebidas({
                 <span className="text-slate-600">Taxa CLYON</span>
                 <span className="text-slate-900">{euros(conta.taxa)}</span>
               </div>
-              <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
-                <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
-                <span className="text-lg font-bold text-emerald-700">{euros(conta.semIva)}</span>
-              </div>
+              {/*
+                EM DINHEIRO SÃO DUAS ENTREGAS — 21-09-2026. Um total só, a
+                quem vai dar notas ao profissional e pagar a taxa por
+                referência, é um número que ele não consegue repetir em voz
+                alta. Diz-se o que vai para cada lado.
+              */}
+              {lerForma(acordada.formaDePagamento) === "dinheiro" ? (
+                <div className="mt-2 space-y-1 border-t border-slate-200 pt-2 text-sm">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="font-semibold text-slate-900">Em dinheiro, ao profissional</span>
+                    <span className="text-lg font-bold text-emerald-700">{euros(conta.servico)}</span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-slate-600">À CLYON, por referência</span>
+                    <span className="font-semibold text-slate-900">{euros(conta.taxa)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
+                  <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+                  <span className="text-lg font-bold text-emerald-700">{euros(conta.semIva)}</span>
+                </div>
+              )}
               <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
                 Valores sem IVA.{" "}
                 {conta.ivaDoServico > 0

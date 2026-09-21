@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import {
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
               p.moradaFiscal, p.codigoPostalFiscal, p.localidadeFiscal,
               p.regimeIva, p.emiteFatura,
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
-              n.taxaCliente, n.taxaProfissional,
+              n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
               o.serviceType, o.city,
               /*
@@ -160,6 +161,8 @@ export async function GET(req: NextRequest) {
         porPagar: [] as TrabalhoPorPagar[],
         /* Acordado, com o dinheiro do cliente cativo, e ainda por confirmar. */
         porFinalizar: [] as TrabalhoPorPagar[],
+        /** Pago em dinheiro, ao profissional, no local. Não é a CLYON quem paga. */
+        recebidoEmMao: 0,
         jaPago: 0,
         totalPorPagar: 0,
         totalPorFinalizar: 0,
@@ -212,6 +215,28 @@ export async function GET(req: NextRequest) {
       };
 
       /* Três montes, e cada trabalho está exactamente num deles. */
+      /*
+       * EM DINHEIRO NÃO HÁ NADA A PAGAR PELA CLYON — 21-09-2026.
+       *
+       * O cliente entregou o serviço ao profissional em mão. Esta lista é «a
+       * quem pagar», e pô-lo em «por pagar» era o botão «Já paguei» a tirar da
+       * conta da CLYON dinheiro que nunca lá entrou. Conta-se à parte, e a
+       * comissão da CLYON neste trabalho vem da referência ao cliente — não
+       * do profissional.
+       */
+      if (lerForma(l.formaDePagamento) === "dinheiro") {
+        if (l.confirmadoEm != null) {
+          ficha.recebidoEmMao = Math.round((ficha.recebidoEmMao + recebe) * 100) / 100;
+          clyon.ganha = Math.round((clyon.ganha + comissao) * 100) / 100;
+          clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
+        } else {
+          clyon.porFinalizar = Math.round((clyon.porFinalizar + comissao) * 100) / 100;
+          ficha.porFinalizar.push(trabalho);
+          ficha.totalPorFinalizar = Math.round((ficha.totalPorFinalizar + recebe) * 100) / 100;
+        }
+        continue;
+      }
+
       if (l.pagoEm != null) {
         ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
         clyon.fechada = Math.round((clyon.fechada + comissao) * 100) / 100;

@@ -6,6 +6,7 @@ import {
 } from "./trabalho";
 import {
   oClientePagou,
+  foiPagoEmMao,
   type Carteira,
   type ComoLerACarteira,
   type Levantamento,
@@ -152,6 +153,16 @@ export function movimentoDoTrabalho(
 ): MovimentoDaCarteira | null {
   if (faseDoTrabalho(t) === "a_negociar") return null;
   /*
+   * E UM TRABALHO PAGO EM MÃO TAMBÉM NÃO — 21-09-2026.
+   *
+   * O livro regista dinheiro que passou pela CLYON. Em dinheiro, o cliente
+   * entregou o valor ao profissional no local e a CLYON nunca lhe tocou: não
+   * entrou, não ficou cativo, não se liberta, não se transfere. Uma linha aqui
+   * punha-o em «disponível» e a CLYON transferia dinheiro que nunca recebeu.
+   * Vê-se em `recebidoEmMao`, que vem de fora — como `porCobrar`.
+   */
+  if (foiPagoEmMao(t)) return null;
+  /*
    * UM TRABALHO POR PAGAR NÃO GERA MOVIMENTO NENHUM.
    *
    * E não é uma omissão — é a definição de movimento. O livro regista dinheiro
@@ -238,6 +249,8 @@ export function carteiraDoLivro(
    * dois caminhos não poderem divergir aqui.
    */
   porCobrar = 0,
+  /** O recebido em mão, pela mesma razão: nunca foi um movimento. `recebidoEmMaoDe`. */
+  recebidoEmMao = 0,
 ): Carteira {
   let cativo = 0;
   let ganhoLibertado = 0;
@@ -271,7 +284,8 @@ export function carteiraDoLivro(
     disponivel: Math.max(0, aosCentimos(ganhoLibertado - aCaminho - levantado)),
     aCaminho: aosCentimos(aCaminho),
     levantado: aosCentimos(levantado),
-    totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado),
+    recebidoEmMao: aosCentimos(recebidoEmMao),
+    totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado + recebidoEmMao),
   };
 }
 

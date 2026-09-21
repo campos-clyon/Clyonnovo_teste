@@ -9,6 +9,7 @@ import {
   NOME_DO_METODO,
   configuracaoDoEupago,
   podeCobrarPeloBackoffice,
+  quantoACLYONCobra,
   porqueNaoPodeCobrar,
   quantoOClientePaga,
   type MetodoDePagamento,
@@ -148,7 +149,17 @@ export async function POST(req: NextRequest) {
   const t = acesso.trabalho;
 
   const comFactura = corpo.comFactura === true;
-  const valor = quantoOClientePaga(t.acordado, t.regime, t.taxas, comFactura);
+  /*
+   * EM DINHEIRO COBRA-SE SÓ A PARTE DA CLYON — 21-09-2026.
+   *
+   * O serviço já foi pago ao profissional, em mão. Gerar aqui o `semIva`
+   * inteiro era pedir 126,00 € a quem acabou de dar 120,00 € em notas — o
+   * serviço cobrado duas vezes. Ver `quantoACLYONCobra`.
+   */
+  const valor =
+    t.formaDePagamento === "dinheiro"
+      ? quantoACLYONCobra(t.acordado, t.regime, t.taxas, comFactura, t.acrescimo)
+      : quantoOClientePaga(t.acordado, t.regime, t.taxas, comFactura, t.acrescimo);
   const recusa = porqueNaoPodeCobrar(metodo, valor);
   if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
 

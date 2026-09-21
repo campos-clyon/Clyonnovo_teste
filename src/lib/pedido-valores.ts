@@ -121,6 +121,8 @@ export const CAMPOS_VISIVEIS_AO_PROFISSIONAL = [
   "valorDesejadoCliente",
   "precisaFatura",
   "precisaGuiaTransporte",
+  // Como o cliente paga. Ele propõe de outra maneira sabendo que é em mão.
+  "formaDePagamento",
   "status",
   "createdAt",
   /*

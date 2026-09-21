@@ -1,4 +1,5 @@
 import { lerBase } from "@/lib/base-do-preco";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSimulatorOrderById, appendOrderHistory } from "@/lib/db";
@@ -89,6 +90,7 @@ export async function POST(req: NextRequest) {
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
       baseDoPreco: lerBase(pedido.baseDoPreco),
+      formaDePagamento: lerForma(pedido.formaDePagamento),
       lat,
       lng,
       baseUrl: urlDeAccaoDoPedido(req.headers),

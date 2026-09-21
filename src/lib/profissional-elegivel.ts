@@ -42,12 +42,20 @@ export type MotivoDeExclusao =
  * e as categorias escondem um pedido — as duas coisas que são mesmo sobre se
  * o trabalho lhe serve.
  */
-export type AvisoAntesDeCotar = "cliente_quer_fatura" | "trabalho_exige_guia";
+import type { FormaDePagamento } from "./forma-de-pagamento";
+
+export type AvisoAntesDeCotar =
+  | "cliente_quer_fatura"
+  | "trabalho_exige_guia"
+  /** O cliente escolheu pagar em dinheiro, no local — ele recebe o acordado inteiro, em mão. */
+  | "cliente_paga_em_dinheiro";
 
 export type PedidoParaDistribuir = {
   serviceType: string | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
+  /** Como o cliente paga. Em falta, na plataforma. Ver `forma-de-pagamento.ts`. */
+  formaDePagamento?: FormaDePagamento;
   /** Distância em km entre a base do profissional e o local do trabalho. */
   distanciaKm: number | null;
   /** Usado quando não há distância medida. */
@@ -175,7 +183,7 @@ export function avaliarElegibilidade(
  * outra — e a que ninguém está a ver é a que fica errada.
  */
 export function avisosDoTrabalho(
-  pedido: Pick<PedidoParaDistribuir, "precisaFatura" | "precisaGuiaTransporte">,
+  pedido: Pick<PedidoParaDistribuir, "precisaFatura" | "precisaGuiaTransporte" | "formaDePagamento">,
   profissional: Pick<
     ProfissionalParaAvaliar,
     "emiteFatura" | "emiteGuiaTransporte" | "guiaVerificadaEm"
@@ -185,6 +193,17 @@ export function avisosDoTrabalho(
 
   if (pedido.precisaFatura && !profissional.emiteFatura) {
     avisos.push("cliente_quer_fatura");
+  }
+
+  /*
+   * O DINHEIRO É UM AVISO, NUNCA UM FILTRO — 21-09-2026.
+   *
+   * Ele aceita um trabalho de 120 € em notas de outra maneira do que um já
+   * pago, e tem de o saber ANTES de propor. Mas filtrar seria deixar um cliente
+   * que escolheu dinheiro sem proposta nenhuma e sem perceber porquê.
+   */
+  if (pedido.formaDePagamento === "dinheiro") {
+    avisos.push("cliente_paga_em_dinheiro");
   }
 
   /*

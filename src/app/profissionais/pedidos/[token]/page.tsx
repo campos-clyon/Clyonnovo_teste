@@ -10,7 +10,7 @@ import {
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { vistaDoProfissional } from "@/lib/pedido-valores";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { getActivePricingMap } from "@/lib/pricing-helper";
 import {
@@ -220,8 +220,10 @@ export default async function PaginaDoPedidoProfissional({
         propostasIniciais={propostasDe(negociacao.propostasJson)}
         valorAcordado={negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null}
         minimoDoCliente={minimo}
-        recebeSeAceitar={minimo != null ? quantoOProfissionalRecebe(minimo) : null}
+        recebeSeAceitar={minimo != null ? quantoOProfissionalRecebe(minimo, taxasDaNegociacao(negociacao)) : null}
         sugestao={sugestao}
+        taxas={taxasDaNegociacao(negociacao)}
+        formaDePagamento={(negociacao as { formaDePagamento?: string | null }).formaDePagamento ?? null}
       />
 
       {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email

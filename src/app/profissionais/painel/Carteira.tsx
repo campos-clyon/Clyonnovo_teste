@@ -83,6 +83,24 @@ export default function Carteira({
             </span>
           </div>
         )}
+        {/*
+          RECEBIDO EM MÃO — 21-09-2026. Trabalho pago em dinheiro, no local.
+          Conta no total ganho e nunca em «disponível»: nunca passou pela CLYON
+          e não há nada para transferir. Só aparece quando há.
+        */}
+        {(carteira.recebidoEmMao ?? 0) > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+            <span className="text-sm text-slate-600">
+              Recebido em mão
+              <span className="block text-xs text-slate-400">
+                pago em dinheiro, no local — já está consigo
+              </span>
+            </span>
+            <span className="text-base font-semibold text-slate-700">
+              {euros(carteira.recebidoEmMao ?? 0)}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-600">
             {PROMESSA.proRotuloDoCativo}

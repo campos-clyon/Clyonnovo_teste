@@ -14,6 +14,7 @@ import {
 } from "@/lib/profissional-auth";
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
@@ -407,6 +408,14 @@ export async function GET(req: NextRequest) {
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDela) : null,
         recebeSeFechado: acordado != null ? quantoOProfissionalRecebe(acordado, taxasDela) : null,
+        /*
+         * AS TAXAS DESTA NEGOCIAÇÃO, para o ecrã fazer a conta certa sobre um
+         * valor que ainda não existe aqui — o que ele está a escrever na caixa.
+         * Sem elas, o ecrã calculava com as de hoje: num trabalho em dinheiro
+         * dizia «recebe 112,80 €» a quem vai receber 120,00 € em mão.
+         */
+        taxas: taxasDela,
+        formaDePagamento: lerForma(l.formaDePagamento),
         /*
          * O VALOR QUE A CLYON PÔS NO PEDIDO — no líquido dele.
          *

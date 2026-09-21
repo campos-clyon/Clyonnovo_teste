@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { lerForma } from "@/lib/forma-de-pagamento";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import {
@@ -359,6 +360,8 @@ export async function POST(req: NextRequest) {
       ...valoresParaGravar,
       precisaFatura: order.precisaFatura === true ? 1 : 0,
       precisaGuiaTransporte: order.precisaGuiaTransporte === true ? 1 : 0,
+      // A escolha do cliente. `lerForma` recusa o que não está à venda.
+      formaDePagamento: lerForma(order.formaDePagamento),
       acessoTokenHash: acesso.hash,
       acessoTokenExpiraEm: acesso.expiraEm,
     };

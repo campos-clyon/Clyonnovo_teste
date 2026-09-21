@@ -196,6 +196,8 @@ export type ContaDoCliente = {
   iva: number;
   /** A taxa da CLYON ao cliente: `TAXA_CLIENTE` sobre o serviço. */
   taxa: number;
+  /** O acréscimo fixo da CLYON (o «pagar depois»), em euros e sem IVA. Zero quase sempre. */
+  acrescimo: number;
   /**
    * O IVA do SERVIÇO, que vai na factura do profissional. Zero se for isento.
    *
@@ -246,9 +248,25 @@ export function contaDoCliente(
    * texto de ajuda).
    */
   taxas: Taxas = TAXAS_DE_ORIGEM,
+  /**
+   * UM ACRÉSCIMO FIXO DA CLYON, em euros e sem IVA — 21-09-2026.
+   *
+   * Nasceu para o «pagar depois da recolha» (+5 €) e é deliberadamente um
+   * número em euros e não uma taxa: 5 € num trabalho de 30 € e 5 € num de
+   * 900 € são os mesmos 5 €. Entra na base da CLYON — leva o IVA da CLYON por
+   * cima, aparece na factura da CLYON — e NUNCA no valor acordado, onde o
+   * profissional receberia 4,70 € de 5 € sem ninguém ter decidido isso.
+   *
+   * Por omissão zero, e com zero nenhum número desta função muda: é o que
+   * mantém certos os quarenta totais escritos à mão nos testes. E é também o
+   * perigo — um sítio que se esqueça de o passar não dá erro, dá outro número.
+   * Ver `forma-de-pagamento.ts` e os testes que percorrem os chamadores.
+   */
+  acrescimo = 0,
 ): ContaDoCliente {
   const servico = aosCentimos(acordado);
   const taxa = aosCentimos(servico * taxas.cliente);
+  const extra = aosCentimos(Number.isFinite(acrescimo) && acrescimo > 0 ? acrescimo : 0);
 
   /*
    * DOIS IMPOSTOS, DE DUAS EMPRESAS — 14-09-2026.
@@ -268,17 +286,21 @@ export function contaDoCliente(
    * Calcula-se por vendedor; só a APRESENTAÇÃO é que junta as duas linhas.
    */
   const ivaDoServico = ivaSobre(servico, regime);
-  const ivaDaTaxa = CLYON_LIQUIDA_IVA ? aosCentimos(taxa * TAXA_IVA) : 0;
+  // O IVA da CLYON é sobre a parte TODA da CLYON: a taxa e o acréscimo. O nome
+  // `ivaDaTaxa` ficou — mudá-lo era churn em seis ficheiros sem mudar uma
+  // conta — mas lê-se «o IVA do que é da CLYON».
+  const ivaDaTaxa = CLYON_LIQUIDA_IVA ? aosCentimos((taxa + extra) * TAXA_IVA) : 0;
   const iva = aosCentimos(ivaDoServico + ivaDaTaxa);
 
   return {
     servico,
     iva,
     taxa,
+    acrescimo: extra,
     ivaDoServico,
     ivaDaTaxa,
-    semIva: aosCentimos(servico + taxa),
-    total: aosCentimos(servico + taxa + iva),
+    semIva: aosCentimos(servico + taxa + extra),
+    total: aosCentimos(servico + taxa + extra + iva),
     temIva: iva > 0,
   };
 }

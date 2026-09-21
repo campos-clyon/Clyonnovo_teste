@@ -50,10 +50,16 @@ describe("o destaque de por ver", () => {
 describe("as contas completas ao abrir", () => {
   it("o resumo diz o acordado, o que o cliente paga, a taxa, o que o profissional recebe e a comissão", () => {
     expect(MESA).toContain("Trabalho concluído com");
-    expect(MESA).toContain(
-      "contaDoCliente(Number(acordada.valorAcordado), regimeDeIva(acordada.regimeIva))",
-    );
-    expect(MESA).toContain("quantoOProfissionalRecebe(Number(acordada.valorAcordado))");
-    expect(MESA).toContain("comissaoDaClyon(Number(acordada.valorAcordado))");
+    /*
+     * COM AS TAXAS DA NEGOCIAÇÃO, e não as de hoje — 21-09-2026.
+     *
+     * Este teste fixava as três chamadas SEM taxas, ou seja, com as constantes
+     * de hoje. Estava a guardar um defeito: num trabalho pago em dinheiro a
+     * negociação grava `profissional: 0`, e a mesa dizia «recebe 112,80 €» a
+     * quem recebe 120,00 € em mão. As três passam a levar `taxasDela`.
+     */
+    expect(MESA).toContain("const taxasDela = taxasDaNegociacao(acordada);");
+    expect(MESA).toContain("quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela)");
+    expect(MESA).toContain("comissaoDaClyon(Number(acordada.valorAcordado), taxasDela)");
   });
 });

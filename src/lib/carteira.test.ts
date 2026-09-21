@@ -22,7 +22,19 @@ const liquidoDe200 = quantoOProfissionalRecebe(200);
 describe("carteiraDe", () => {
   it("uma carteira vazia é toda a zeros", () => {
     const c = carteiraDe([], [], agora);
-    expect(c).toEqual({ porCobrar: 0, cativo: 0, disponivel: 0, aCaminho: 0, levantado: 0, totalGanho: 0 });
+    // `recebidoEmMao` entrou a 21-09-2026 com o dinheiro no local: o que foi
+    // pago ao profissional em mão nunca passou pela CLYON, e não pode ir para
+    // «disponível». É o sexto número, e é escrito aqui à mão de propósito —
+    // quem acrescentar um cesto à carteira tem de vir cá dizer o que ele é.
+    expect(c).toEqual({
+      porCobrar: 0,
+      cativo: 0,
+      disponivel: 0,
+      aCaminho: 0,
+      levantado: 0,
+      recebidoEmMao: 0,
+      totalGanho: 0,
+    });
   });
 
   // O que ainda se está a negociar não é dinheiro dele. Contá-lo mostrava um

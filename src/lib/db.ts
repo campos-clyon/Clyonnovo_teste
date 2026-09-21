@@ -5,7 +5,13 @@ import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealiza
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
 export type { TrabalhoRealizadoData };
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
-import { carteiraDe, porCobrarDe } from "@/lib/carteira";
+import { carteiraDe, porCobrarDe, recebidoEmMaoDe } from "@/lib/carteira";
+import {
+  lerForma,
+  taxasParaAForma,
+  acrescimoDaForma,
+  type FormaDePagamento,
+} from "@/lib/forma-de-pagamento";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -1236,6 +1242,19 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN taxaCliente DECIMAL(6,4) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN taxaProfissional DECIMAL(6,4) NULL DEFAULT NULL`,
+    /*
+     * COMO O CLIENTE PAGA, congelado com as taxas — 21-09-2026.
+     *
+     * Nulo = «anterior a haver escolha» = na plataforma. Sem backfill, pela
+     * mesma razão das taxas: uma linha antiga lê-se como o que ela era.
+     *
+     * ⚠️ O ACRÉSCIMO VAI EM EUROS NUMA COLUNA PRÓPRIA, e NUNCA dentro de
+     * `taxaCliente`: essa é DECIMAL(6,4) e `taxaValida` rejeita em silêncio
+     * tudo acima de `TAXA_MAXIMA` — um 5 escrito lá cai nas taxas de origem
+     * sem erro nenhum e vira 5 %. Ver `forma-de-pagamento.ts`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN formaDePagamento VARCHAR(16) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN acrescimoPagamento DECIMAL(10,2) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1356,6 +1375,12 @@ export async function criarNegociacao(
     acessoTokenHash: string;
     acessoTokenExpiraEm: Date;
     propostasJson: string;
+    /**
+     * Como o cliente escolheu pagar. Decide as taxas que ESTA negociação grava
+     * e o acréscimo — em dinheiro, a comissão do profissional passa para a taxa
+     * do cliente e ele fica a zero. Em falta, a forma de sempre.
+     */
+    formaDePagamento?: FormaDePagamento;
   },
   /**
    * Recomeçar do zero: se já houver negociação com este profissional, ela é
@@ -1388,7 +1413,9 @@ export async function criarNegociacao(
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        arquivadoProfissionalEm = NULL,
        taxaCliente = VALUES(taxaCliente),
-       taxaProfissional = VALUES(taxaProfissional)`
+       taxaProfissional = VALUES(taxaProfissional),
+       formaDePagamento = VALUES(formaDePagamento),
+       acrescimoPagamento = VALUES(acrescimoPagamento)`
     : `id = LAST_INSERT_ID(id)`;
   /*
    * REABRIR TAMBÉM RENOVA A TAXA, e é a única linha daquele UPDATE que mexe em
@@ -1405,13 +1432,24 @@ export async function criarNegociacao(
    * proposta que o cliente recebeu no WhatsApp, nem a carteira do
    * profissional, nem uma factura já emitida.
    */
-  const taxas = await taxasParaUmaNegociacaoNova();
+  /*
+   * E A FORMA DE PAGAMENTO DECIDE AS TAXAS — 21-09-2026.
+   *
+   * Em dinheiro, o profissional recebe o acordado inteiro em mão e a CLYON
+   * cobra os dois lados ao cliente: `taxasParaAForma` transforma as taxas de
+   * hoje em `cliente: 0.11, profissional: 0` antes de as gravar. A partir
+   * daqui ninguém precisa de saber que houve dinheiro — a conta, a carteira e
+   * as facturas seguem as taxas gravadas, como sempre seguiram.
+   */
+  const forma = lerForma(dados.formaDePagamento);
+  const taxas = taxasParaAForma(forma, await taxasParaUmaNegociacaoNova());
+  const acrescimo = acrescimoDaForma(forma);
 
   const [res] = await pool.execute(
     `INSERT INTO negociacoes
        (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson,
-        taxaCliente, taxaProfissional)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+        taxaCliente, taxaProfissional, formaDePagamento, acrescimoPagamento)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE ${aoRepetir}`,
     [
       dados.pedidoId,
@@ -1421,6 +1459,8 @@ export async function criarNegociacao(
       dados.propostasJson,
       taxas.cliente,
       taxas.profissional,
+      forma,
+      acrescimo > 0 ? acrescimo : null,
     ],
   ) as any[];
 
@@ -1870,7 +1910,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     // como se lá chegou — que é justamente o que se quer ver quando uma
     // negociação corre mal.
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.propostasJson,
-            n.taxaCliente, n.taxaProfissional,
+            n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
             n.estrelas, n.avaliadoEm, n.dataCombinada,
@@ -2278,6 +2318,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     baseLng: string | number | null;
     /** Quantos OUTROS profissionais já puseram um número neste pedido. */
     concorrentes: number | null;
+    /** Como o cliente paga. Nulo = na plataforma. Ver `forma-de-pagamento.ts`. */
+    formaDePagamento: string | null;
+    acrescimoPagamento: string | number | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -2299,7 +2342,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   if (!pool) return [];
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
-            n.taxaCliente, n.taxaProfissional,
+            n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
@@ -3785,7 +3828,7 @@ async function tudoOQueOLivroPrecisa(): Promise<
 
   const [nLinhas] = (await pool.execute(
     `SELECT id, providerId, pedidoId, estado, valorAcordado,
-            taxaCliente, taxaProfissional,
+            taxaCliente, taxaProfissional, formaDePagamento,
             execucaoEnviadaEm, confirmadoEm, pagoEm
        FROM negociacoes`,
   )) as any[];
@@ -3825,6 +3868,9 @@ async function tudoOQueOLivroPrecisa(): Promise<
       valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
       taxaCliente: n.taxaCliente,
       taxaProfissional: n.taxaProfissional,
+      // Em dinheiro o valor nunca passou pela CLYON: a carteira põe-no noutro
+      // cesto e o livro não lhe escreve movimento nenhum. Ver `carteira.ts`.
+      formaDePagamento: (n.formaDePagamento as string | null) ?? null,
       execucaoEnviadaEm: n.execucaoEnviadaEm,
       confirmadoEm: n.confirmadoEm,
       pagoEm: n.pagoEm,
@@ -3911,7 +3957,14 @@ export async function conferirOLivro(): Promise<ConferenciaDoLivro> {
      * como os outros: se um dia divergir, é porque um dos dois caminhos deixou
      * de contar um trabalho, e isso é o que este ecrã existe para apanhar.
      */
-    const doLivro = carteiraDoLivro(livro, agora, porCobrarDe(trabalhos as never));
+    // O «recebido em mão» também vem de fora, pela mesma razão do «por cobrar»:
+    // dinheiro que nunca passou pela CLYON não é um movimento do livro.
+    const doLivro = carteiraDoLivro(
+      livro,
+      agora,
+      porCobrarDe(trabalhos as never),
+      recebidoEmMaoDe(trabalhos as never, agora),
+    );
     for (const campo of [
       "porCobrar",
       "cativo",
@@ -5140,6 +5193,9 @@ export async function ensureSimulatorOrdersTable() {
     // `base-do-preco.ts`. Por omissao 'total', que e o que todos os pedidos
     // que ja existem sempre quiseram dizer.
     `ALTER TABLE simulatorOrders ADD COLUMN baseDoPreco VARCHAR(10) NULL DEFAULT NULL`,
+    // A escolha do cliente ao pedir. Copia-se para cada negociação ao
+    // distribuir; é lá que fica congelada. Ver `forma-de-pagamento.ts`.
+    `ALTER TABLE simulatorOrders ADD COLUMN formaDePagamento VARCHAR(16) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -5287,6 +5343,9 @@ const COLUNAS_PEDIDO_EDITAVEIS = new Set<string>([
   // 121,43 na base, a fotografia anexada evaporava-se e a caixa da fatura nao
   // guardava. O ecra dava o pedido por actualizado e nao era verdade.
   "valorDesejadoCliente", "precisaFatura", "filesJson", "baseDoPreco",
+  // A forma de pagamento. Sem isto aqui, o editor do backoffice mandava-a e
+  // a lista ignorava-a em silêncio — exactamente o que aconteceu ao #228.
+  "formaDePagamento",
 ]);
 
 export async function updateSimulatorOrder(
@@ -5339,6 +5398,7 @@ export async function updateSimulatorOrder(
     valorDesejadoCliente: string | null;
     precisaFatura: number;
     filesJson: string | null;
+    formaDePagamento: string | null;
   }>
 ) {
   await ensureSimulatorOrdersTable();
@@ -10121,7 +10181,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
 
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
-            n.taxaCliente, n.taxaProfissional,
+            n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
             n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.regimeIva

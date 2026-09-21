@@ -10,6 +10,7 @@ import { telemovelParaWhatsApp } from "./whatsapp-cloud";
 import { avisoDePedidoAoProfissional } from "./aviso-de-pedido-ao-profissional";
 import { TAXAS_DE_ORIGEM } from "./taxas-plataforma";
 import { type BaseDoPreco } from "./base-do-preco";
+import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import { urlDeAccao } from "./url-do-site";
 import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel";
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
@@ -58,6 +59,11 @@ export type PedidoParaDistribuicao = {
    * três cargas, e é mentir a quem vai fazer a viagem.
    */
   baseDoPreco: BaseDoPreco;
+  /**
+   * Como o cliente escolheu pagar — 21-09-2026. Copia-se para cada negociação
+   * ao nascer, e é lá que fica congelada com as taxas. Em falta, a de sempre.
+   */
+  formaDePagamento?: FormaDePagamento;
 };
 
 export type ResultadoDaDistribuicao = {
@@ -298,6 +304,8 @@ export async function avaliarAlcance(pedido: {
       serviceType: pedido.serviceType,
       precisaFatura: pedido.precisaFatura,
       precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+      // Sem forma de pagamento: isto é o diagnóstico de quem ficou de fora, e
+      // o dinheiro é um aviso, nunca um motivo de exclusão.
       city: pedido.city,
     },
     foraDeAlcance,
@@ -377,6 +385,7 @@ export async function distribuirPedido(
       serviceType: pedido.serviceType,
       precisaFatura: pedido.precisaFatura,
       precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+      formaDePagamento: lerForma(pedido.formaDePagamento),
       city: pedido.city,
     },
     // Todos: a contagem salta os elegíveis sozinha. O filtro que aqui estava
@@ -435,6 +444,8 @@ export async function distribuirPedido(
           acessoTokenHash: acesso.hash,
           acessoTokenExpiraEm: acesso.expiraEm,
           propostasJson: JSON.stringify(negociacaoNova(new Date()).propostas),
+          // A forma decide as taxas que esta negociação grava. Ver `criarNegociacao`.
+          formaDePagamento: lerForma(pedido.formaDePagamento),
         }, { reabrir });
         token = acesso.token;
       } catch (err) {
