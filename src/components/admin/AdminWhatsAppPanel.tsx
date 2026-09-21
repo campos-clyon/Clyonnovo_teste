@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -129,13 +130,12 @@ function ultimos9(t: string): string {
   return t.replace(/\D/g, "").slice(-9);
 }
 
-function formatarTelefone(t: string): string {
-  const d = t.replace(/\D/g, "");
-  if (d.length === 12 && d.startsWith("351")) {
-    return `+351 ${d.slice(3, 6)} ${d.slice(6, 9)} ${d.slice(9)}`;
-  }
-  return d;
-}
+/*
+ * Esta função era uma cópia, palavra por palavra, da que estava no painel do
+ * assistente — e eu ia escrever uma terceira para a mesa. Três cópias de seis
+ * linhas é como um número passa a aparecer de três maneiras no mesmo ecrã.
+ */
+const formatarTelefone = (t: string) => telefoneLegivel(t, { comIndicativo: true });
 
 function desde(iso: string): string {
   const d = new Date(iso);

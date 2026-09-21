@@ -10,6 +10,7 @@ import {
   type Capacidade,
 } from "@/lib/assistente-interruptores";
 import { ATRASOS_SUGERIDOS, atrasoPorExtenso } from "@/lib/assistente-tempo-de-resposta";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /**
  * O ECRÃ DO ASSISTENTE AUTOMÁTICO.
@@ -89,14 +90,6 @@ function quando(iso: string): string {
   const d = new Date(iso.replace(" ", "T"));
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-
-function telefoneBonito(t: string): string {
-  const d = t.replace(/\D/g, "");
-  if (d.length === 12 && d.startsWith("351")) {
-    return `+351 ${d.slice(3, 6)} ${d.slice(6, 9)} ${d.slice(9)}`;
-  }
-  return d;
 }
 
 export default function AdminAssistenteAutoPanel() {
@@ -399,7 +392,7 @@ export default function AdminAssistenteAutoPanel() {
                           <span className="text-[11px] text-slate-500">{quando(a.enviadoEm)}</span>
                         </div>
                         <p className="text-xs text-slate-500">
-                          {telefoneBonito(a.telefone)}
+                          {telefoneLegivel(a.telefone, { comIndicativo: true })}
                           {a.pedidoId ? ` · pedido #${a.pedidoId}` : ""}
                           {a.toques > 0 ? ` · ${a.toques} lembrete(s)` : ""}
                           {a.fechadoPorque

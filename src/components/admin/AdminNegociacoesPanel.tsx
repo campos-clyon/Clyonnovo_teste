@@ -75,6 +75,7 @@ import {
   trabalhoFechado,
 } from "@/lib/mensagem-das-propostas";
 import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
 import RegistarPedido from "./RegistarPedido";
@@ -1878,7 +1879,33 @@ export default function AdminNegociacoesPanel({
           <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
           <span className="text-sm font-bold text-white">#{p.id}</span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-100">{p.contactName ?? "—"}</p>
+            {/*
+              O NOME E O NÚMERO, NA MESMA LINHA.
+
+              "Passe a colocar o número à frente dos nomes, para a fácil
+              identificação do pedido." — 21-09-2026.
+
+              Metade destes clientes não tem email: a conversa acontece toda no
+              WhatsApp, e o que o telemóvel mostra é um número, não um nome.
+              Sem ele aqui, encontrar o pedido de quem acabou de escrever era
+              abrir a busca e colar — vinte vezes por dia.
+
+              Não quebra: o nome encolhe e o número fica inteiro. Um número
+              cortado a meio é pior do que nenhum, porque parece um número.
+            */}
+            <p className="flex min-w-0 items-baseline gap-2">
+              <span className="truncate text-sm font-semibold text-slate-100">
+                {p.contactName ?? "—"}
+              </span>
+              {telefoneLegivel(p.contactPhone) && (
+                <span
+                  title="Telemóvel do cliente"
+                  className="shrink-0 font-mono text-xs tabular-nums text-cyan-300/90"
+                >
+                  {telefoneLegivel(p.contactPhone)}
+                </span>
+              )}
+            </p>
             <p className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
               {/*
                 A FASE, derivada e não guardada — e na linha das etiquetas, não
