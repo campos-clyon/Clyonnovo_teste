@@ -770,6 +770,16 @@ export default function AdminNegociacoesPanel({
   /* A versão do link que temos em mão, por pedido — ver `linkExpiraEm`. */
   const [versaoDoLink, setVersaoDoLink] = useState<Record<string, string>>({});
 
+  /*
+   * O QUE CORREU MAL AO MANDAR O ORÇAMENTO, DITO NO CARTÃO.
+   *
+   * Isto vivia no `erro` geral, que se mostra no TOPO do painel. Quem carrega
+   * em «Enviar orçamento» está a meio de uma lista de catorze pedidos, a
+   * dezenas de linhas do topo: a explicação aparecia num sítio que ele não
+   * estava a olhar, e o botão ficava com ar de não fazer nada.
+   */
+  const [avisoDoOrcamento, setAvisoDoOrcamento] = useState<Record<number, string>>({});
+
   /* A explicação do alcance, por pedido, quando alguém a pede. */
   const [alcances, setAlcances] = useState<Record<number, string>>({});
 
@@ -1125,34 +1135,90 @@ export default function AdminNegociacoesPanel({
    * O QUE ISTO NÃO FAZ: não envia sozinho. O último toque é dele, dentro do
    * WhatsApp, com o texto à frente — uma mensagem a um cliente não sai desta
    * casa sem alguém a ter lido.
+   *
+   * ⚠️ O SEPARADOR ABRE-SE NO GESTO, E NÃO NO FIM.
+   *
+   * "Por que o botão «Enviar orçamento» não funciona?" — 21-09-2026.
+   *
+   * Fazia o trabalho todo e não se via nada. `window.open` só é permitido
+   * enquanto o browser ainda se lembra do clique — cinco segundos —, e aqui
+   * vinha DEPOIS de uma caixa de confirmação para ler e de duas idas ao
+   * servidor, uma delas a recarregar a mesa inteira. Passado esse tempo o
+   * Chrome recusa a janela em silêncio: nenhum separador, nenhum erro.
+   *
+   * E o pior não era o separador que faltava: o link do cliente JÁ tinha sido
+   * rodado. Carregar parecia não fazer nada, e tinha feito exactamente a parte
+   * destrutiva — o link que ele lhe mandara ontem passava a dar erro.
+   *
+   * Agora o separador abre-se no instante do clique, com uma linha a dizer que
+   * está a ir, e só é levado para a conversa quando a mensagem está pronta. A
+   * mesa recarrega no fim, fora do caminho. E se mesmo assim não abrir, diz-se
+   * no cartão — a mensagem fica na caixa de baixo, que é o caminho à mão.
    */
   async function enviarOrcamento(p: Pedido) {
     const chave = `c${p.id}`;
     const propostas = propostasParaOCliente(p.negociacoes);
     if (propostas.length === 0) {
-      setErro(`O pedido #${p.id} ainda não tem nenhuma proposta para mandar ao cliente.`);
-      return;
-    }
-    if (!numeroParaWhatsApp(p.contactPhone)) {
-      setErro(
-        `O pedido #${p.id} não tem um telemóvel que dê para abrir no WhatsApp. ` +
-          `Use "Link para o cliente" e mande por outro meio.`,
-      );
+      setAvisoDoOrcamento((a) => ({
+        ...a,
+        [p.id]: "Este pedido ainda não tem nenhuma proposta para mandar ao cliente.",
+      }));
       return;
     }
 
+    /*
+     * Sem telemóvel que abra no WhatsApp, isto deixou de ser um beco.
+     *
+     * Antes recusava-se e mandava-se a pessoa usar outro botão. Mas o que vale
+     * nesta acção é a MENSAGEM — os valores certos, o imposto dito, o link lá
+     * dentro. O WhatsApp é só o transporte. Sem número, prepara-se na mesma e
+     * fica à mão para copiar e mandar por SMS, email ou o que for.
+     */
+    const temNumero = Boolean(numeroParaWhatsApp(p.contactPhone));
+
     if (
       !window.confirm(
-        `Abrir o WhatsApp com o orçamento do pedido #${p.id} escrito?\n\n` +
+        (temNumero
+          ? `Abrir o WhatsApp com o orçamento do pedido #${p.id} escrito?\n\n`
+          : `Preparar o orçamento do pedido #${p.id} para copiar?\n\n` +
+            `Este cliente não tem um telemóvel que abra no WhatsApp — a mensagem ` +
+            `fica aqui em baixo, pronta a copiar.\n\n`) +
           `Gera um link novo do pedido — se já lhe mandou um antes, esse deixa de funcionar.\n\n` +
           `A mensagem não sai sozinha: fica à sua frente para enviar.`,
       )
     )
       return;
 
+    /*
+     * O SEPARADOR PRIMEIRO, ainda dentro do gesto — é esta linha que conserta
+     * o botão. Vazio por enquanto: leva-se lá a conversa daqui a um segundo.
+     *
+     * Sem `noopener` de propósito: com ele o browser devolve `null` e ficava-se
+     * sem a mão para o levar ao WhatsApp. Corta-se o `opener` logo a seguir,
+     * que dá a mesma garantia e deixa-nos a referência.
+     */
+    const janela = temNumero ? window.open("", "_blank") : null;
+    if (janela) {
+      try {
+        janela.opener = null;
+        janela.document.write(
+          '<!doctype html><meta charset="utf-8"><title>A abrir o WhatsApp</title>' +
+            '<body style="margin:0;display:flex;align-items:center;justify-content:center;' +
+            'height:100vh;font:15px system-ui,sans-serif;background:#0f172a;color:#cbd5e1">' +
+            "A preparar o orçamento para o WhatsApp…",
+        );
+        janela.document.close();
+      } catch {
+        /* Um separador em branco também serve — o que conta é já existir. */
+      }
+    }
+
     const t = await reenviar(chave, { pedidoId: p.id, para: "cliente", paraCopiar: true });
-    if (!t) return;
-    await carregar(true);
+    if (!t) {
+      /* O erro já está dito por `reenviar`; o separador vazio não fica para trás. */
+      janela?.close();
+      return;
+    }
 
     const url = `${window.location.origin}/pedido/${t}`;
     const texto = mensagemDasPropostas({
@@ -1163,9 +1229,39 @@ export default function AdminNegociacoesPanel({
       fechado: trabalhoFechado(p.negociacoes),
       link: url,
     });
-
     const destino = linkDeWhatsApp(p.contactPhone, texto);
-    if (destino) window.open(destino, "_blank", "noopener");
+
+    if (janela && destino) {
+      janela.location.href = destino;
+      setAvisoDoOrcamento((a) => {
+        const c = { ...a };
+        delete c[p.id];
+        return c;
+      });
+    } else {
+      /*
+       * Não abriu — e isso diz-se, em vez de deixar o ecrã calado com o link
+       * já rodado. O trabalho não se perdeu: a mensagem está pronta na caixa.
+       */
+      setAvisoDoOrcamento((a) => ({
+        ...a,
+        [p.id]: destino
+          ? "O browser bloqueou o separador do WhatsApp. A mensagem está pronta aqui em baixo — " +
+            "carregue em “Do meu WhatsApp” ou “Copiar mensagem”."
+          : "Este cliente não tem um telemóvel que abra no WhatsApp. A mensagem está pronta aqui " +
+            "em baixo, para copiar e mandar por onde quiser.",
+      }));
+    }
+
+    /*
+     * A MESA RECARREGA NO FIM, e não a meio.
+     *
+     * Continua a ser precisa — a caixa da mensagem só se mostra quando o
+     * `linkExpiraEm` da lista bate certo com o marcador que acabámos de
+     * guardar. Mas é a chamada mais lenta deste ecrã, e tê-la ANTES de abrir o
+     * separador era o que fazia o browser esquecer-se do clique.
+     */
+    await carregar(true);
   }
 
   /**
@@ -2224,7 +2320,7 @@ export default function AdminNegociacoesPanel({
               title={
                 numeroParaWhatsApp(p.contactPhone)
                   ? "Gera o link e abre o WhatsApp com as propostas escritas. Não envia sozinho."
-                  : "Este cliente não tem um telemóvel que dê para abrir no WhatsApp"
+                  : "Sem WhatsApp neste cliente: prepara a mensagem aqui em baixo, para copiar"
               }
               className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
             >
@@ -2314,6 +2410,19 @@ export default function AdminNegociacoesPanel({
             Reenviar ao cliente
           </button>
         </div>
+
+        {/*
+          O QUE ACONTECEU AO ORÇAMENTO, À VISTA DE QUEM CARREGOU.
+
+          No cartão, e não no topo do painel: quem carrega em «Enviar
+          orçamento» está a meio de uma lista longa, e um aviso a cinquenta
+          linhas de distância é um aviso que ninguém lê.
+        */}
+        {avisoDoOrcamento[p.id] && (
+          <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+            {avisoDoOrcamento[p.id]}
+          </p>
+        )}
 
         {/*
           O LINK, E SE AINDA ESTÁ VIVO.

@@ -93,3 +93,84 @@ describe("a mesa manda o orçamento num gesto", () => {
     expect(corpo).toContain("contactPhone: (p.contactPhone as string) ?? null");
   });
 });
+
+/**
+ * ⚠️ O BOTÃO QUE FAZIA TUDO E NÃO ABRIA NADA.
+ *
+ * *«Por que o botão "Enviar orçamento" não funciona?»* — 21-09-2026.
+ *
+ * `window.open` só é permitido enquanto o browser ainda se lembra do clique —
+ * cinco segundos. A chamada vinha depois de uma caixa de confirmação para ler
+ * e de duas idas ao servidor, uma delas a recarregar a mesa inteira. Passado
+ * esse tempo o Chrome recusa a janela EM SILÊNCIO: sem separador e sem erro.
+ *
+ * E o link do cliente já tinha sido rodado nessa altura — ou seja, carregar
+ * parecia não fazer nada e tinha feito só a parte destrutiva.
+ *
+ * O que estes testes guardam é a ORDEM, que é onde o erro vivia. Olham para o
+ * código sem comentários: o comentário da função cita o erro para o explicar,
+ * e proibir a frase à letra era chumbar por se ter escrito bem.
+ */
+describe("a ordem que faz o separador abrir", () => {
+  const PAINEL = readFileSync(
+    join(process.cwd(), "src/components/admin/AdminNegociacoesPanel.tsx"),
+    "utf8",
+  );
+  const CORPO = PAINEL.slice(
+    PAINEL.indexOf("async function enviarOrcamento"),
+    PAINEL.indexOf("Espreitar o que o cliente vê"),
+  )
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  it("a função ainda está onde estes testes a procuram", () => {
+    // Sem isto, um corte mal feito deixava o resto a passar sobre um vazio.
+    expect(CORPO).toContain("const janela");
+    expect(CORPO.length).toBeGreaterThan(400);
+  });
+
+  it("o separador abre-se ANTES da primeira espera", () => {
+    const abre = CORPO.indexOf("window.open(");
+    const espera = CORPO.indexOf("await ");
+    expect(abre).toBeGreaterThan(-1);
+    expect(espera).toBeGreaterThan(-1);
+    expect(abre).toBeLessThan(espera);
+  });
+
+  it("sem `noopener` — com ele o browser não devolve o separador", () => {
+    /*
+     * `window.open(url, "_blank", "noopener")` devolve `null` por desenho:
+     * ficávamos sem a mão para levar o separador ao WhatsApp. O `opener` é
+     * cortado à mão logo a seguir, que dá a mesma garantia.
+     */
+    expect(CORPO).toContain('window.open("", "_blank")');
+    expect(CORPO).toContain("janela.opener = null");
+  });
+
+  it("a mesa recarrega no fim, e não a meio", () => {
+    const vai = CORPO.indexOf("janela.location.href");
+    const recarrega = CORPO.indexOf("carregar(true)");
+    expect(vai).toBeGreaterThan(-1);
+    expect(recarrega).toBeGreaterThan(vai);
+  });
+
+  it("quando não abre, quem carregou fica a saber — no cartão", () => {
+    /*
+     * O `erro` geral mostra-se no TOPO do painel, e quem carrega neste botão
+     * está a meio de uma lista de catorze pedidos. Era uma explicação num
+     * sítio para onde ninguém estava a olhar.
+     */
+    expect(CORPO).not.toContain("setErro(");
+    expect(CORPO).toContain("setAvisoDoOrcamento(");
+    expect(PAINEL).toContain("{avisoDoOrcamento[p.id]}");
+  });
+
+  it("sem telemóvel deixou de ser um beco — a mensagem prepara-se na mesma", () => {
+    /*
+     * O que vale nesta acção é a MENSAGEM: os valores certos, o imposto dito,
+     * o link lá dentro. O WhatsApp é só o transporte.
+     */
+    expect(CORPO).toContain("const temNumero");
+    expect(CORPO).toContain("temNumero ? window.open");
+  });
+});
