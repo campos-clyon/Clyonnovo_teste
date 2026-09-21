@@ -23,13 +23,19 @@ import {
 
 describe("secções", () => {
   it("o assistente vê exactamente pedidos, profissionais, negociações, agenda e WhatsApp", () => {
+    // Seis desde 21-09-2026: o suporte entrou a pedido do dono. A lista fica
+    // escrita à mão de propósito — quem acrescenta uma secção ao assistente
+    // tem de vir cá dizer que o fez, porque é uma porta que se abre.
     expect([...SECCOES_DO_ASSISTENTE].sort()).toEqual(
-      ["agenda", "negociacoes_clyon", "pedidos", "profissionais", "whatsapp"].sort(),
+      ["agenda", "negociacoes_clyon", "pedidos", "profissionais", "whatsapp", "suporte"].sort(),
     );
   });
 
-  it("não vê leads, contas, suporte, configs, carteiras, levantamentos, testadores nem equipa", () => {
-    for (const s of ["overview", "leads", "contas", "suporte", "configs", "site", "carteiras", "levantamentos", "testadores", "equipa", "app_clyon", "negociacoes"]) {
+  it("não vê leads, contas, configs, carteiras, levantamentos, testadores nem equipa", () => {
+    // O SUPORTE SAIU DESTA LISTA a 21-09-2026 — «Adicione o supp para as
+    // opções dos assistentes também». É conversa com clientes, como o
+    // WhatsApp: trabalho do dia a dia, não configuração.
+    for (const s of ["overview", "leads", "contas", "configs", "site", "carteiras", "levantamentos", "testadores", "equipa", "app_clyon", "negociacoes"]) {
       expect(assistentePodeVerSeccao(s)).toBe(false);
     }
   });
@@ -154,6 +160,7 @@ describe("secções por assistente", () => {
   it("diz que secções abrem cada rota", () => {
     expect(seccoesQueAbrem("/api/admin/agenda")).toEqual(["agenda"]);
     expect(seccoesQueAbrem("/api/admin/whatsapp")).toEqual(["whatsapp"]);
+    expect(seccoesQueAbrem("/api/admin/suporte")).toEqual(["suporte"]);
     expect(seccoesQueAbrem("/api/admin/convites")).toEqual(["profissionais"]);
     expect(seccoesQueAbrem("/api/admin/negociacoes/agir")).toEqual(["negociacoes_clyon"]);
     expect(seccoesQueAbrem("/api/admin/negociacoes/valor")).toEqual(["negociacoes_clyon", "agenda"]);

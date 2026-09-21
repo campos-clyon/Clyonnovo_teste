@@ -2,7 +2,12 @@ import { lerBase } from "@/lib/base-do-preco";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getSimulatorOrderById, appendOrderHistory, negociacoesDoPedido } from "@/lib/db";
+import {
+  getSimulatorOrderById,
+  appendOrderHistory,
+  negociacoesDoPedido,
+  gravarNegociacao,
+} from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
@@ -26,10 +31,10 @@ export const runtime = "nodejs";
  *
  */
 export async function POST(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown };
+  let corpo: { pedidoId?: unknown; reabrir?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -58,15 +63,57 @@ export async function POST(req: NextRequest) {
    */
   const fechada = (await negociacoesDoPedido(pedidoId)).find((n) => n.estado === "acordada");
   if (fechada) {
-    return NextResponse.json(
-      {
-        error:
-          `Este pedido está fechado com ${fechada.profissionalNome} e não se redistribui assim. ` +
-          "Para o mandar a outros, desista primeiro dessa negociação em nome do cliente — " +
-          "dentro do pedido — e volte a carregar em Redistribuir.",
-      },
-      { status: 409 },
-    );
+    /*
+     * REABRIR E REDISTRIBUIR — 21-09-2026, um gesto e não dois.
+     *
+     * "Sim quero Reabrir e redistribuir."
+     *
+     * O motor recusa `desistir` numa negociação acordada, e recusa bem: um
+     * fecho é final para os dois lados. Desfazê-lo é um poder do BACKOFFICE,
+     * não uma acção do motor — e por isso vive aqui, com o nome de quem o fez
+     * no histórico, e não numa nova entrada de `accoesDisponiveis`.
+     *
+     * A NEGOCIAÇÃO DESFEITA FICA «DESISTIDA», e é a escolha certa entre as
+     * duas mortes: «morta» é «perdeu para outro» e voltaria a receber o pedido
+     * na redistribuição; «desistida» fica em paz. Quem falhou um trabalho
+     * fechado não é a primeira pessoa a quem se manda o mesmo trabalho outra
+     * vez.
+     *
+     * ⚠️ NÃO SE REABRE O QUE JÁ ACONTECEU. Trabalho enviado como feito,
+     * confirmado ou pago tem dinheiro por trás — o do profissional na
+     * carteira, ou o do cliente numa referência. Desfazer isso é outra
+     * conversa (uma correcção de valor, um reembolso), nunca um clique.
+     */
+    const jaAconteceu =
+      fechada.execucaoEnviadaEm != null || fechada.confirmadoEm != null || fechada.pagoEm != null;
+    if (corpo.reabrir !== true || jaAconteceu) {
+      return NextResponse.json(
+        {
+          error: jaAconteceu
+            ? `Este trabalho está fechado com ${fechada.profissionalNome} e já foi dado como feito, ` +
+              "confirmado ou pago. Não se reabre com um clique — corrija o valor ou trate do reembolso primeiro."
+            : `Este pedido está fechado com ${fechada.profissionalNome}. Reabrir desfaz esse fecho ` +
+              "em nome do cliente e manda o pedido a todos os outros.",
+          fechadaCom: fechada.profissionalNome,
+          podeReabrir: !jaAconteceu,
+        },
+        { status: 409 },
+      );
+    }
+
+    await gravarNegociacao(Number(fechada.id), {
+      estado: "desistida",
+      valorAcordado: null,
+      propostasJson: fechada.propostasJson ?? "[]",
+    });
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message:
+        `CLYON (${colab?.nome ?? "a CLYON"}) desfez o fecho com ${fechada.profissionalNome} ` +
+        `(negociação #${fechada.id}, ${Number(fechada.valorAcordado ?? 0).toFixed(2)} €) em nome do cliente, ` +
+        "para redistribuir.",
+    });
   }
 
   if (pedido.valorDesejadoCliente == null) {

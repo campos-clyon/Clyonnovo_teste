@@ -6436,6 +6436,45 @@ export async function desligarAvisosPeloTelefone(telefone: string): Promise<void
   }
 }
 
+/**
+ * COMO ESTÁ A FILA DOS AVISOS — 21-09-2026.
+ *
+ * "Acabei de adicionar trabalho novo mas Revolution não recebeu mensagem no
+ *  wpp a avisar."
+ *
+ * A resposta era invisível. Três fechaduras e uma fila entre a distribuição e
+ * o envio — e nenhum ecrã dizia em qual delas o aviso ficou. Quem pergunta
+ * «porque é que não chegou» tem de poder ver: quantos estão por sair, quantos
+ * saíram, e quantos não saíram e porquê.
+ */
+export async function comoEstaAFilaDeAvisos(): Promise<{
+  porSair: number;
+  enviados: number;
+  naoSairam: number;
+}> {
+  const vazio = { porSair: 0, enviados: 0, naoSairam: 0 };
+  try {
+    await ensureAvisosAoProfissionalTable();
+    const pool = await getPool();
+    if (!pool) return vazio;
+    const [linhas] = (await pool.execute(
+      `SELECT
+         SUM(enviadoEm IS NULL AND porqueNaoSaiu IS NULL) AS porSair,
+         SUM(enviadoEm IS NOT NULL) AS enviados,
+         SUM(porqueNaoSaiu IS NOT NULL) AS naoSairam
+       FROM avisosAoProfissional`,
+    )) as [Array<Record<string, unknown>>, unknown];
+    const l = linhas[0] ?? {};
+    return {
+      porSair: Number(l.porSair ?? 0),
+      enviados: Number(l.enviados ?? 0),
+      naoSairam: Number(l.naoSairam ?? 0),
+    };
+  } catch {
+    return vazio;
+  }
+}
+
 /** Quantos profissionais activos já disseram que sim. Para o cartão do painel. */
 export async function quantosProfissionaisQueremAvisos(): Promise<{
   sim: number;

@@ -56,6 +56,8 @@ type Estado = {
   atraso: number;
   /** Quantos profissionais já disseram que sim aos avisos no WhatsApp. */
   queremAvisos?: { sim: number; total: number };
+  /** Como está a fila dos avisos de pedido novo — por sair, enviados, falhados. */
+  filaDeAvisos?: { porSair: number; enviados: number; naoSairam: number };
   /** O canal em uso passa pela fila? Pela API da Meta a resposta é imediata. */
   atrasoAplicaSe: boolean;
   canal: string;
@@ -318,6 +320,29 @@ export default function AdminAssistenteAutoPanel() {
                               {estado.queremAvisos
                                 ? ` ${estado.queremAvisos.sim} de ${estado.queremAvisos.total} profissionais activaram os avisos no painel deles.`
                                 : ""}
+                              {/*
+                                A FILA — 21-09-2026, e nasceu de uma pergunta:
+                                «adicionei trabalho novo e o Revolution não
+                                recebeu mensagem». A resposta estava em três
+                                fechaduras e numa passagem de dez em dez
+                                minutos, e nenhum ecrã a dizia. Agora diz.
+                              */}
+                              {estado.filaDeAvisos &&
+                              (estado.filaDeAvisos.porSair > 0 ||
+                                estado.filaDeAvisos.enviados > 0 ||
+                                estado.filaDeAvisos.naoSairam > 0) ? (
+                                <span className="mt-1 block text-slate-400">
+                                  Fila: {estado.filaDeAvisos.porSair} por sair ·{" "}
+                                  {estado.filaDeAvisos.enviados} enviados ·{" "}
+                                  {estado.filaDeAvisos.naoSairam} não saíram. Saem até quatro em
+                                  cada passagem, entre as 9h e as 21h.
+                                </span>
+                              ) : (
+                                <span className="mt-1 block text-slate-400">
+                                  Nunca foi enfileirado um aviso. Com o interruptor em baixo, a
+                                  distribuição nem chega a tentar.
+                                </span>
+                              )}
                             </p>
                           )}
                         </div>

@@ -1440,18 +1440,38 @@ export default function AdminNegociacoesPanel({
     }
   }
 
-  async function redistribuir(pedidoId: number) {
+  /**
+   * Um pedido fechado que o dono quer voltar a pôr à venda. Fica aqui, e não
+   * num `confirm()` do browser, para a pergunta ter o nome do profissional e
+   * o botão dizer o que faz.
+   */
+  const [reabrirPendente, setReabrirPendente] = useState<{
+    pedidoId: number;
+    nome: string;
+  } | null>(null);
+
+  async function redistribuir(pedidoId: number, reabrir = false) {
     if (!token) return;
     setOcupado(`r${pedidoId}`);
     setErro("");
+    setReabrirPendente(null);
     try {
       const res = await fetch("/api/admin/negociacoes/redistribuir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId }),
+        body: JSON.stringify(reabrir ? { pedidoId, reabrir: true } : { pedidoId }),
       });
       const dados = await res.json();
       if (!res.ok) {
+        /*
+         * FECHADO COM ALGUÉM: em vez de um erro, uma pergunta — 21-09-2026.
+         * A rota diz com quem está fechado e se se pode reabrir; o cartão
+         * mostra o botão «Reabrir e redistribuir» só nesse caso.
+         */
+        if (res.status === 409 && dados.podeReabrir === true && typeof dados.fechadaCom === "string") {
+          setReabrirPendente({ pedidoId, nome: dados.fechadaCom });
+          return;
+        }
         setErro(dados.error ?? "Não foi possível redistribuir.");
         return;
       }
@@ -2388,6 +2408,32 @@ export default function AdminNegociacoesPanel({
           >
             Ficha
           </button>
+          {reabrirPendente?.pedidoId === p.id && (
+            <div className="basis-full rounded-lg border border-amber-500/40 bg-amber-950/30 p-3">
+              <p className="text-xs leading-relaxed text-amber-200">
+                Este pedido está fechado com <strong>{reabrirPendente.nome}</strong>. Reabrir
+                desfaz esse fecho em nome do cliente — fica no histórico com o seu nome — e
+                manda o pedido a todos os outros profissionais elegíveis. {reabrirPendente.nome}{" "}
+                não o volta a receber.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  onClick={() => redistribuir(p.id, true)}
+                  disabled={ocupado === `r${p.id}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Reabrir e redistribuir
+                </button>
+                <button
+                  onClick={() => setReabrirPendente(null)}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-amber-200/80 hover:bg-amber-900/40"
+                >
+                  Deixar como está
+                </button>
+              </div>
+            </div>
+          )}
           {/*
             GERAR O LINK, que é o que ele faz noventa por cento das vezes.
 

@@ -4,8 +4,10 @@
  * ADMINISTRADOR — vê tudo, faz tudo. É a conta que já existia.
  *
  * ASSISTENTE — trabalha no dia a dia da plataforma: pedidos, profissionais,
- * negociações, agenda e WhatsApp. Não vê leads, contas de clientes, suporte,
- * configurações, carteiras nem levantamentos, e não apaga nada — arquiva. A
+ * negociações, agenda, WhatsApp e, desde 21-09-2026, suporte («Adicione o
+ * supp para as opções dos assistentes também»). Não vê leads, contas de
+ * clientes, configurações, carteiras nem levantamentos, e não apaga nada —
+ * arquiva. A
  * conta é criada, desactivada e reposta pelo administrador, na secção
  * "Assistentes" do painel dele.
  *
@@ -46,6 +48,9 @@ export const SECCOES_DO_ASSISTENTE = [
   "negociacoes_clyon",
   "agenda",
   "whatsapp",
+  // O suporte é conversa com clientes, como o WhatsApp — é trabalho do dia
+  // a dia, não configuração. Entrou a 21-09-2026 a pedido do dono.
+  "suporte",
 ] as const;
 
 export type SeccaoDoAssistente = (typeof SECCOES_DO_ASSISTENTE)[number];
@@ -56,6 +61,7 @@ export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   negociacoes_clyon: "Negociações",
   agenda: "Agenda",
   whatsapp: "WhatsApp",
+  suporte: "Suporte",
 };
 
 export function assistentePodeVerSeccao(seccao: string): seccao is SeccaoDoAssistente {
@@ -145,6 +151,7 @@ const SECCOES_QUE_ABREM: Array<{ prefixo: string; seccoes: SeccaoDoAssistente[] 
   { prefixo: "/api/admin/candidaturas", seccoes: ["profissionais"] },
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
   { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
+  { prefixo: "/api/admin/suporte", seccoes: ["suporte"] },
 ];
 
 /** As secções que abrem esta rota; vazio quer dizer "qualquer assistente". */

@@ -3,6 +3,7 @@ import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import {
   atrasoDeRespostaDoAssistente,
   quantosProfissionaisQueremAvisos,
+  comoEstaAFilaDeAvisos,
   avisosDoAssistente,
   definirConfiguracaoDoAssistente,
   definirInterruptorDoAssistente,
@@ -40,12 +41,13 @@ export async function GET(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  const [interruptores, avisos, desfaziveis, atraso, queremAvisos] = await Promise.all([
+  const [interruptores, avisos, desfaziveis, atraso, queremAvisos, filaDeAvisos] = await Promise.all([
     interruptoresDoAssistente(),
     avisosDoAssistente(60).catch(() => []),
     fechosDesfaziveis().catch(() => []),
     atrasoDeRespostaDoAssistente().catch(() => 0),
     quantosProfissionaisQueremAvisos().catch(() => ({ sim: 0, total: 0 })),
+    comoEstaAFilaDeAvisos().catch(() => ({ porSair: 0, enviados: 0, naoSairam: 0 })),
   ]);
 
   const canal = canalWhatsApp();
@@ -72,6 +74,13 @@ export async function GET(req: NextRequest) {
      * ligar por eles. Ver `avisos-whatsapp/route.ts` para o porquê.
      */
     queremAvisos,
+    /*
+     * A FILA, para «não chegou» deixar de ser um mistério — 21-09-2026.
+     * Entre a distribuição e o telemóvel há três fechaduras e uma passagem de
+     * dez em dez minutos. Sem estes números, a única forma de saber onde o
+     * aviso ficou era ler o código.
+     */
+    filaDeAvisos,
     avisos,
     // Só os que ainda estão dentro da janela: mostrar um botão que vai recusar
     // é pior do que não mostrar botão nenhum.
