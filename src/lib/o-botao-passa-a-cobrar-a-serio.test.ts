@@ -46,15 +46,22 @@ describe("as duas casas do euPago são contas separadas", () => {
     expect(BASE_DO_EUPAGO.sandbox).not.toBe(BASE_DO_EUPAGO.producao);
   });
 
-  it("sem a variável escrita, vai para a sandbox — nunca ao contrário", () => {
+  it("sem a variável escrita, vai para produção — a sandbox só se for pedida", () => {
     /*
-     * A regra não muda por irmos para produção, e é a que impede um
-     * esquecimento de custar dinheiro: uma variável em falta tem de falhar do
-     * lado que não cobra ninguém. O pior que acontece é a chave não servir; ao
-     * contrário, o esquecimento cobrava a sério.
+     * ESCREVI O CONTRÁRIO HÁ UMA HORA, e ficou aqui: «uma variável em falta tem
+     * de falhar do lado que não cobra ninguém». Era a rede. A 21-09-2026 o dono
+     * disse, pela segunda vez, que a sandbox não se usa — e uma rede que ninguém
+     * quer não segura ninguém, só produz `-10` a quem se esqueceu da variável
+     * com uma chave que era de produção o tempo todo.
+     *
+     * O que segura o dinheiro agora está nos dois testes a seguir: o cliente
+     * continua fechado, e o backoffice é uma pessoa a carregar num botão que
+     * diz o que faz.
      */
     const semNada = configuracaoDoEupago({ EUPAGO_API_KEY: "k" });
-    expect(semNada.ok && semNada.config.ambiente).toBe("sandbox");
+    expect(semNada.ok && semNada.config.ambiente).toBe("producao");
+    const pedida = configuracaoDoEupago({ EUPAGO_API_KEY: "k", EUPAGO_AMBIENTE: "sandbox" });
+    expect(pedida.ok && pedida.config.ambiente).toBe("sandbox");
 
     const lixo = configuracaoDoEupago({ EUPAGO_API_KEY: "k", EUPAGO_AMBIENTE: "prod" });
     expect(lixo.ok).toBe(false);

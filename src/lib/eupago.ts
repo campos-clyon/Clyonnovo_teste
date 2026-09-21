@@ -137,14 +137,30 @@ export function configuracaoDoEupago(
     };
   }
   /*
-   * SEM AMBIENTE ESCRITO, SANDBOX — e nunca ao contrário.
+   * SEM AMBIENTE ESCRITO, PRODUÇÃO — desde 21-09-2026.
    *
-   * O valor por omissão de uma variável que mexe em dinheiro tem de ser o que
-   * não cobra a ninguém. Se um dia alguém esquecer a variável num deploy, o
-   * pior que acontece é as chamadas irem para a sandbox e falharem por chave
-   * errada. Ao contrário, o esquecimento cobrava a sério.
+   * "não vamos usar sandbox, vamos usar apenas produção"
+   *
+   * Era ao contrário, e por uma razão que ficou escrita aqui durante quatro
+   * dias: o valor por omissão de uma variável que mexe em dinheiro devia ser o
+   * que não cobra a ninguém, para um esquecimento num deploy custar uma chave
+   * recusada e não um cliente cobrado. A sandbox era essa rede.
+   *
+   * O dono decidiu — e repetiu — que a sandbox não se usa. Uma rede que ninguém
+   * quer não protege ninguém: só produz erros `-10` a quem se esquece da
+   * variável, com uma chave que era de produção o tempo todo. Foi exactamente o
+   * que aconteceu de manhã.
+   *
+   * O QUE CONTINUA A SEGURAR O DINHEIRO, e é o que importa:
+   *   · o cliente não paga sozinho enquanto `A_PLATAFORMA_COBRA` for falso —
+   *     essa porta é outra e não mudou;
+   *   · cobrar pelo backoffice é uma pessoa a carregar num botão, e o botão
+   *     diz «Isto é dinheiro a sério» quando o é.
+   *
+   * A sandbox fica como valor EXPLÍCITO, para quem a pedir por escrito. Não
+   * como o que acontece por esquecimento.
    */
-  const ambiente: Ambiente = bruto === "producao" ? "producao" : "sandbox";
+  const ambiente: Ambiente = bruto === "sandbox" ? "sandbox" : "producao";
 
   return {
     ok: true,

@@ -50,10 +50,19 @@ describe("configuração do euPago", () => {
    * Uma variável esquecida num deploy não pode cobrar ninguém a sério. Se
    * alguém inverter este valor por omissão, é aqui que rebenta.
    */
-  it("sem ambiente escrito, é sandbox — nunca produção", () => {
+  it("sem ambiente escrito, é produção — a sandbox só por escrito", () => {
+    /*
+     * DIZIA O CONTRÁRIO ATÉ 21-09-2026: «sem ambiente escrito, é sandbox —
+     * nunca produção», e o comentário acima explica porquê. O dono decidiu que
+     * a sandbox não se usa — «vamos usar apenas produção», dito duas vezes —
+     * e uma rede que ninguém quer só produz erros a quem se esquece da variável.
+     * Fica a história, porque a razão antiga era boa e pode voltar a ser.
+     */
     const c = configDe({ EUPAGO_API_KEY: "x" });
-    expect(c.ambiente).toBe("sandbox");
-    expect(c.base).toBe(BASE_DO_EUPAGO.sandbox);
+    expect(c.ambiente).toBe("producao");
+    expect(c.base).toBe(BASE_DO_EUPAGO.producao);
+    // E a sandbox continua a existir, mas só quando alguém a pede.
+    expect(configDe({ EUPAGO_API_KEY: "x", EUPAGO_AMBIENTE: "sandbox" }).ambiente).toBe("sandbox");
   });
 
   it("um ambiente mal escrito é recusado, e não cai para produção", () => {
