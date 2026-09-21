@@ -17,10 +17,39 @@ import type { MetadataRoute } from "next";
  * nada — é o comportamento por omissão — mas cria esta armadilha.
  */
 
+/**
+ * O QUE TEM DE FICAR ABERTO, mesmo estando dentro de uma pasta fechada.
+ *
+ * O Search Console reportou-o a 19-09-2026, em «Bloqueada pelo robots.txt»:
+ * um ficheiro `/_next/static/css/….css`. Não é um descuido do Google — é o
+ * `Disallow: /_next/` aqui de baixo a apanhar o CSS e o JavaScript de que a
+ * página precisa para se desenhar.
+ *
+ * E isso não é uma página a menos no índice: é o Googlebot a RENDERIZAR o
+ * site sem folha de estilos e sem os chunks do Next. O que ele avalia deixa
+ * de ser a página que as pessoas vêem — o texto desalinhado, o conteúdo que
+ * só aparece depois da hidratação em lado nenhum, e a versão para telemóvel
+ * impossível de julgar. Num site inteiro feito em Next, é o rastreio todo
+ * que fica a ver outra coisa.
+ *
+ * A Google escreve-o por palavras dela: «não bloqueie ficheiros CSS ou
+ * JavaScript de que a página precisa». A intenção do `Disallow` continua
+ * certa para o resto de `/_next/` — `/_next/image?url=…` e `/_next/data/…`
+ * não são páginas e não têm nada a indexar. Só os estáticos é que são peças
+ * da página e têm de estar ao alcance dele.
+ *
+ * Porque é que isto chega para o desbloquear: no robots.txt manda a regra
+ * MAIS LONGA que casa com o endereço, e não a ordem das linhas.
+ * `/_next/static/` tem catorze caracteres contra os sete de `/_next/` —
+ * ganha sempre, e nos dois motores.
+ */
+const ABERTO = ["/", "/_next/static/"];
+
 /** Caminhos que nenhum motor de busca deve rastrear. */
 const PRIVADO = [
   // Endpoints e artefactos de build: não são páginas e não têm nada a indexar
   "/api/",
+  // ⚠️ Não alargue esta linha: /_next/static/ está aberto de propósito, acima.
   "/_next/",
   // Backoffice e áreas autenticadas
   "/admin",
@@ -84,7 +113,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ABERTO,
         disallow: PRIVADO,
       },
     ],

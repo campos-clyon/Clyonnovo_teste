@@ -96,6 +96,23 @@ describe("o robots.txt", () => {
     }
   });
 
+  it("deixa passar o CSS e o JavaScript de que a página precisa", () => {
+    /*
+     * «Bloqueada pelo robots.txt», 19-09-2026, num /_next/static/css/….css.
+     * O Disallow: /_next/ apanhava as folhas de estilo e os chunks do Next, e
+     * o Googlebot renderizava o site inteiro sem eles — avaliando uma página
+     * que nenhuma pessoa vê.
+     *
+     * O desbloqueio depende de uma coisa só: no robots.txt manda a regra MAIS
+     * LONGA que casa com o endereço. /_next/static/ tem de continuar a ser
+     * mais comprida do que /_next/, ou o Disallow volta a ganhar em silêncio.
+     */
+    expect(ROBOTS).toContain('const ABERTO = ["/", "/_next/static/"]');
+    expect(ROBOTS).toContain("allow: ABERTO,");
+    expect(ROBOTS).toContain('"/_next/"');
+    expect("/_next/static/".length).toBeGreaterThan("/_next/".length);
+  });
+
   it("continua a ter UM só grupo de user-agent", () => {
     // Em robots.txt vence o grupo mais específico, e um robô só lê esse. Um
     // grupo Googlebot com Allow: / anulava a lista toda — já aconteceu aqui.
