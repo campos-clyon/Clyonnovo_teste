@@ -334,13 +334,34 @@ const CODIGOS: Record<string, { nos: string; cliente: string; sugereOutro: boole
 export function recusaDoEupago(
   codigo: string | number | null | undefined,
   texto: string | null | undefined,
+  /**
+   * Para onde é que a chamada foi. Só serve ao `-10`, e serve-lhe muito.
+   *
+   * "Chave de API inválida – a EUPAGO_API_KEY não serve para este ambiente."
+   * — foi o que o ecrã disse a 21-09-2026, e a pergunta seguinte era óbvia:
+   * QUAL ambiente? A resposta estava a dois cliques de distância, no
+   * diagnóstico, e quem está a tentar cobrar um cliente não vai lá.
+   *
+   * Uma mensagem de erro que obriga a ir procurar metade da resposta noutro
+   * lado é meia mensagem de erro.
+   */
+  ambiente?: { nome: string; base: string },
 ): Recusa {
   const c = codigo == null ? null : String(codigo).trim();
   const conhecido = c ? CODIGOS[c] : undefined;
   if (conhecido) {
+    /*
+     * A PISTA DO -10, e é a que poupa a tarde: a chave é de uma casa e o
+     * ambiente aponta para a outra. As duas casas do euPago têm contas
+     * separadas, com chaves separadas, e uma não funciona na outra.
+     */
+    const pista =
+      c === "-10" && ambiente
+        ? ` A chamada foi para ${ambiente.base} (${ambiente.nome}) — confirme se a chave é mesmo a de ${ambiente.nome}.`
+        : "";
     return {
       codigo: c,
-      paraNos: texto ? `${conhecido.nos} (${texto})` : conhecido.nos,
+      paraNos: `${texto ? `${conhecido.nos} (${texto})` : conhecido.nos}${pista}`,
       paraOCliente: conhecido.cliente,
       sugereOutroMetodo: conhecido.sugereOutro,
     };
@@ -549,7 +570,12 @@ function texto(v: unknown): string | null {
  * exige-se também a `reference`, porque um 201 sem referência não é um
  * pagamento, é uma resposta que não percebemos.
  */
-export function lerRespostaDoMbway(estadoHttp: number, json: unknown): RespostaDoEupago {
+export function lerRespostaDoMbway(
+  estadoHttp: number,
+  json: unknown,
+  /** Para onde foi a chamada. Só o `-10` a usa — ver `recusaDoEupago`. */
+  ambiente?: { nome: string; base: string },
+): RespostaDoEupago {
   const c = (json ?? {}) as Record<string, unknown>;
   if (estadoHttp === 201 || estadoHttp === 200) {
     const referencia = texto(c.reference);
@@ -561,12 +587,13 @@ export function lerRespostaDoMbway(estadoHttp: number, json: unknown): RespostaD
       recusa: recusaDoEupago(
         texto(c.code),
         texto(c.text) ?? `O euPago respondeu ${estadoHttp} sem referencia.`,
+        ambiente,
       ),
     };
   }
   return {
     ok: false,
-    recusa: recusaDoEupago(texto(c.code), texto(c.text) ?? `HTTP ${estadoHttp}`),
+    recusa: recusaDoEupago(texto(c.code), texto(c.text) ?? `HTTP ${estadoHttp}`, ambiente),
   };
 }
 
@@ -581,7 +608,12 @@ export function lerRespostaDoMbway(estadoHttp: number, json: unknown): RespostaD
  * E exige-se `referencia` E `entidade`: no Multibanco, uma sem a outra não se
  * pode pagar. Metade de uma referência não é meia referência — é nenhuma.
  */
-export function lerRespostaDoMultibanco(estadoHttp: number, json: unknown): RespostaDoEupago {
+export function lerRespostaDoMultibanco(
+  estadoHttp: number,
+  json: unknown,
+  /** Para onde foi a chamada. Só o `-10` a usa — ver `recusaDoEupago`. */
+  ambiente?: { nome: string; base: string },
+): RespostaDoEupago {
   const c = (json ?? {}) as Record<string, unknown>;
   const estado = texto(c.estado);
 
@@ -595,7 +627,7 @@ export function lerRespostaDoMultibanco(estadoHttp: number, json: unknown): Resp
     };
   }
   if (estado !== "0") {
-    return { ok: false, recusa: recusaDoEupago(estado, texto(c.resposta)) };
+    return { ok: false, recusa: recusaDoEupago(estado, texto(c.resposta), ambiente) };
   }
 
   const referencia = texto(c.referencia);

@@ -71,6 +71,18 @@ async function chamar(
  * Pede o pagamento — e as duas APIs são tão diferentes que nem o sítio da
  * chave é o mesmo. Ver o cabeçalho de `eupago.ts`.
  */
+/**
+ * Para onde é que a chamada foi — o que a recusa `-10` precisa de dizer.
+ *
+ * "Chave de API inválida – a EUPAGO_API_KEY não serve para este ambiente."
+ * — o ecrã disse isto a 21-09-2026, a meio de uma cobrança, e a pergunta
+ * seguinte era «qual ambiente?». O diagnóstico já o dizia; quem está a tentar
+ * cobrar um cliente não vai ao diagnóstico.
+ */
+function ondeFoi(config: ConfiguracaoDoEupago): { nome: string; base: string } {
+  return { nome: config.ambiente, base: config.base };
+}
+
 export async function pedirPagamento(
   config: ConfiguracaoDoEupago,
   metodo: MetodoDePagamento,
@@ -93,7 +105,7 @@ export async function pedirPagamento(
       Authorization: `ApiKey ${config.chave}`,
     });
     if ("erro" in r) return { ok: false, recusa: recusaDoEupago(null, r.erro) };
-    return lerRespostaDoMbway(r.estadoHttp, r.json);
+    return lerRespostaDoMbway(r.estadoHttp, r.json, ondeFoi(config));
   }
 
   /*
@@ -108,7 +120,7 @@ export async function pedirPagamento(
     { Authorization: `ApiKey ${config.chave}` },
   );
   if ("erro" in r) return { ok: false, recusa: recusaDoEupago(null, r.erro) };
-  return lerRespostaDoMultibanco(r.estadoHttp, r.json);
+  return lerRespostaDoMultibanco(r.estadoHttp, r.json, ondeFoi(config));
 }
 
 export type EstadoNoEupago =

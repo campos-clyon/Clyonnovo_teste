@@ -99,7 +99,10 @@ describe("a marca do backoffice não entra por um corpo de pedido", () => {
      */
     const publica = semComentarios(ler("src/app/api/pagamentos/route.ts"));
     expect(publica).toContain("token: corpo.token,");
-    expect(publica).not.toMatch(/trabalhoQueSePodePagar\([^)]*\.\.\.corpo/s);
+    // `[\s\S]` e não a flag `/s`: o alvo deste projecto é anterior a es2018 e
+    // o `tsc` chumba a flag — o vitest deixava passar, e foi assim que ela
+    // entrou num commit. Correr os testes não é correr o compilador.
+    expect(publica).not.toMatch(/trabalhoQueSePodePagar\([\s\S]*?\.\.\.corpo/);
     expect(publica).not.toContain("backoffice");
   });
 
