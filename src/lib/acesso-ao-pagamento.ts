@@ -60,10 +60,30 @@ const NAO_ENCONTRADO: Acesso = {
   erro: "Trabalho não encontrado.",
 };
 
+/**
+ * QUEM PERGUNTA, E COM QUE DIREITO.
+ *
+ * As duas primeiras são credenciais do CLIENTE: o token que lhe foi ao email,
+ * ou a sessão em que ele entrou. A terceira não é uma credencial — é a marca
+ * de que a porta já foi guardada por outra pessoa.
+ *
+ * ⚠️ `backoffice` NUNCA PODE VIR DE UM CORPO DE PEDIDO. Só o constrói
+ * `trabalhoVistoPeloBackoffice`, e essa só é chamada por rotas que já correram
+ * `requireAdmin`. Os dois caminhos públicos montam esta credencial campo a
+ * campo — `{ token, email }` — e nunca por espalhamento do corpo, que é o que
+ * impede um `"backoffice": true` de entrar por aí.
+ */
+export type CredencialDePagamento = {
+  token?: unknown;
+  email?: string | null;
+  /** O administrador já foi autenticado à porta da rota. Ver o aviso acima. */
+  backoffice?: boolean;
+};
+
 export async function trabalhoQueSePodePagar(
   pedidoId: number,
   negociacaoId: number,
-  credencial: { token?: unknown; email?: string | null },
+  credencial: CredencialDePagamento,
   agora: Date = new Date(),
 ): Promise<Acesso> {
   if (!Number.isInteger(pedidoId) || !Number.isInteger(negociacaoId)) {
@@ -84,7 +104,36 @@ export async function trabalhoQueSePodePagar(
       agora,
     ).valido;
 
-  if (!porSessao && !porToken) return NAO_ENCONTRADO;
+  /*
+   * ── O CLIENTE SEM EMAIL — corrigido a 21-09-2026 ────────────────────────
+   *
+   * "deu erro ao tentar gerar a entidade referencia"
+   *
+   * O #308 é do Manuel Pita, entrou pelo telefone, e no ecrã tem escrito «sem
+   * email». Carregar em «Referência Multibanco» dava:
+   *
+   *   GET /api/admin/pagamentos/criar?negociacaoId=280 → 404
+   *   "Trabalho não encontrado."
+   *
+   * E dava-o outra vez a cada pulso do painel, aos vinte segundos, para
+   * sempre.
+   *
+   * A CAUSA ERA UMA ESPERTEZA MINHA. `trabalhoVistoPeloBackoffice` reutilizava
+   * este caminho «com a credencial já dada por boa» — mas o que fazia era ir
+   * buscar o email do cliente e passá-lo como se fosse o de quem perguntava.
+   * Num pedido sem email, esse email é nulo: `porSessao` dava falso, `porToken`
+   * dava falso, e a verificação que era suposto estar a ser dispensada
+   * rejeitava o administrador.
+   *
+   * Ou seja: o backoffice não conseguia cobrar exactamente os clientes para
+   * quem o backoffice existe — os do telefone e do WhatsApp, que nunca deram
+   * email nenhum.
+   *
+   * Agora a autorização do backoffice DIZ O QUE É em vez de se disfarçar de
+   * cliente. Forjar uma credencial para passar na própria porta é sempre isto:
+   * funciona até ao dia em que o material com que se forja não existe.
+   */
+  if (credencial.backoffice !== true && !porSessao && !porToken) return NAO_ENCONTRADO;
 
   const linha = (await negociacoesDoPedido(pedidoId)).find((n) => n.id === negociacaoId);
   if (!linha) return NAO_ENCONTRADO;
@@ -136,6 +185,11 @@ export async function trabalhoQueSePodePagar(
  *
  * Partilha a mesma forma de saída que o caminho do cliente. Duas formas do
  * mesmo trabalho acabavam com duas contas do mesmo dinheiro.
+ *
+ * ⚠️ E PASSA `backoffice: true`, em vez de ir buscar o email do cliente e o
+ * fazer passar por credencial. Fazia isso até 21-09-2026, e partia em todos os
+ * pedidos «sem email» — que são os do telefone, ou seja, a razão de ser deste
+ * caminho. Ver a nota em `trabalhoQueSePodePagar`.
  */
 export async function trabalhoVistoPeloBackoffice(negociacaoId: number): Promise<Acesso> {
   if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
@@ -155,14 +209,12 @@ export async function trabalhoVistoPeloBackoffice(negociacaoId: number): Promise
   }
 
   /*
-   * Reaproveita o caminho do cliente com a credencial já dada por boa. É o que
-   * garante que as duas portas concordam sobre o que é um trabalho cobrável —
-   * e quando alguém mudar essa regra, muda-a num sítio só.
+   * Reaproveita o caminho do cliente, dispensando SÓ a pergunta «é seu?» — que
+   * é a única que não faz sentido aqui. As regras do trabalho continuam a ser
+   * as mesmas, e é isso que garante que as duas portas concordam sobre o que é
+   * um trabalho cobrável.
    */
-  const pedido = await getSimulatorOrderById(Number(pedidoId));
-  return trabalhoQueSePodePagar(Number(pedidoId), negociacaoId, {
-    email: (pedido?.contactEmail ?? "").trim() || null,
-  });
+  return trabalhoQueSePodePagar(Number(pedidoId), negociacaoId, { backoffice: true });
 }
 
 /** O hash do token, para quem precise dele sem repetir o import. */
