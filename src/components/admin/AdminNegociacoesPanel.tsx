@@ -4157,7 +4157,24 @@ function ConfirmarPelaClyon({
             total, uma por destinatário.
           */
           const conta = contaDoCliente(valorAcordado, regimeDeIva(regimeIva));
-          const aoProfissional = Math.round((conta.servico + conta.iva) * 100) / 100;
+          /*
+           * O IMPOSTO É POR VENDEDOR, E ESTA LINHA TINHA-O SOMADO — 21-09-2026.
+           *
+           * Dizia `conta.servico + conta.iva`, e `conta.iva` é o imposto TODO:
+           * o do serviço, que é do profissional, mais o da taxa, que é da
+           * CLYON. Num trabalho de 120 € com profissional isento, o ecrã mandava
+           * pagar-lhe 121,38 € e etiquetava «+ IVA 1,38 €, na factura dele» —
+           * a um homem do artigo 53.º, que não pode emitir imposto nenhum. E
+           * dizia «à CLYON 6,00 €» quando a CLYON tem de receber 7,38 €.
+           *
+           * As duas linhas somavam o total certo, e foi por isso que ninguém
+           * deu por isso. É o erro de 14-09-2026 ressuscitado — o dos 107,52 €
+           * contra a factura de 103,32 € — na definição que
+           * `as-duas-facturas.test.ts` já guardava: a factura do profissional é
+           * `servico + ivaDoServico`, a da CLYON é `taxa + ivaDaTaxa`.
+           */
+          const aoProfissional = Math.round((conta.servico + conta.ivaDoServico) * 100) / 100;
+          const aClyon = Math.round((conta.taxa + conta.ivaDaTaxa) * 100) / 100;
           return (
             <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
               <div className="flex items-center justify-between">
@@ -4169,15 +4186,22 @@ function ConfirmarPelaClyon({
               <div className="flex items-center justify-between pl-3">
                 <dt className="text-slate-500">
                   ao profissional — acordado{" "}
-                  {conta.temIva
-                    ? `+ IVA ${euros(conta.iva)}, na factura dele`
+                  {/*
+                    `ivaDoServico > 0` e não `temIva`: o `temIva` é sobre o
+                    imposto todo, e como a CLYON liquida sempre sobre a taxa,
+                    era sempre verdadeiro — o ramo «isento» nunca corria.
+                  */}
+                  {conta.ivaDoServico > 0
+                    ? `+ IVA ${euros(conta.ivaDoServico)}, na factura dele`
                     : "(isento de IVA)"}
                 </dt>
                 <dd className="tabular-nums text-slate-300">{euros(aoProfissional)}</dd>
               </div>
               <div className="flex items-center justify-between pl-3">
-                <dt className="text-slate-500">à CLYON — taxa de {pct(TAXA_CLIENTE)}</dt>
-                <dd className="tabular-nums text-slate-300">{euros(conta.taxa)}</dd>
+                <dt className="text-slate-500">
+                  à CLYON — taxa de {pct(TAXA_CLIENTE)} + IVA {euros(conta.ivaDaTaxa)}
+                </dt>
+                <dd className="tabular-nums text-slate-300">{euros(aClyon)}</dd>
               </div>
               <div className="flex items-center justify-between border-t border-slate-800 pt-1">
                 <dt className="text-slate-300">
