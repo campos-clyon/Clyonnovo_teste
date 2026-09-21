@@ -109,11 +109,18 @@ export const BOM_POR_KM = 12;
  * ser isso que o distintivo diz. Quem tem custos baixos continua a ver a
  * fronteira medida — que é um bocado do mercado, e não uma opinião.
  *
- * Fica por resolver, e é anterior a isto: o valor da CLYON nasce de
- * `estimatedPriceWithVat` (COM IVA, ver `valor-de-arranque.ts`) e a sugestão
- * nasce de um preço SEM IVA. Enquanto for assim, a comparação é 23 % permissiva
- * por construção. O `Math.max` protege o distintivo disso; não desfaz o
- * disparate de origem.
+ * RESOLVIDO A 22-09-2026, e vale a pena guardar o que era: o valor da CLYON
+ * nascia de `estimatedPriceWithVat` e a sugestão de um preço SEM IVA, logo a
+ * comparação era 23 % permissiva por construção. O `valor-de-arranque.ts`
+ * passou a escolher o preço sem IVA e os dois lados ficaram na mesma unidade.
+ *
+ * O `Math.max` não era por causa disso e continua a ser preciso: protegia o
+ * distintivo de uma fronteira demasiado baixa, e a fronteira continua baixa
+ * depois de o IVA sair — mais baixa, até.
+ *
+ * Fica uma sombra, nas linhas GRAVADAS ANTES dessa data: o
+ * `valorDesejadoCliente` delas ainda tem imposto lá dentro, e não há coluna
+ * que as distinga das outras. Elas saem da tabela ao fim do prazo de retenção.
  */
 export function limiarDeBomPago(t: TrabalhoParaAvaliar): number {
   const dele = t.bomPorKm;

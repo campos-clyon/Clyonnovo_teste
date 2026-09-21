@@ -219,7 +219,16 @@ export async function POST(req: NextRequest) {
       pedidoId,
       serviceType: pedido.serviceType ?? null,
       token: acesso.token,
-      valorDesejadoCliente: valor,
+      /*
+       * AQUI NÃO VAI NÚMERO NENHUM.
+       *
+       * O email diz «Disse que quer pagar a partir de X». Neste caminho o X
+       * nunca é dele: ou é o que o assistente escreveu, ou é a conta da
+       * CLYON. Punha na boca do cliente um número nosso, em todos os emails
+       * de promoção — que é justamente o caminho por onde a negociação
+       * começa a sério.
+       */
+      valorDesejadoCliente: null,
       baseUrl,
     });
 
