@@ -1,5 +1,6 @@
 import type { Proposta } from "@/lib/negociacao";
 import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
+import { kmPorExtenso } from "@/lib/sinais-do-trabalho";
 
 /** O que os ecrãs do painel do profissional partilham. */
 
@@ -324,7 +325,16 @@ export function emPortugues(
  * pessoa a diria.
  */
 export function distanciaPorExtenso(km: number): string {
-  return km < 1 ? "menos de 1 km" : `${Math.round(km)} km`;
+  /*
+   * COM A CASA DECIMAL, porque ao lado dela está o €/km.
+   *
+   * O cartão mostrava «15 km» e «21,4 €/km» sobre 329,00 €, e quem dividisse
+   * chegava a 21,9. A distância arredondava a inteiro; o €/km dividia pela
+   * verdadeira, 15,37. Ver `kmPorExtenso` — a decisão está lá.
+   *
+   * O «menos de 1 km» fica: abaixo do quilómetro o número não é o assunto.
+   */
+  return km < 1 ? "menos de 1 km" : `${kmPorExtenso(km)} km`;
 }
 
 /** A mesma distância, na linha do detalhe: desde a base que ele registou. */

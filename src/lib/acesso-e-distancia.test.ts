@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
+import { porKmPorExtenso } from "./sinais-do-trabalho";
 import {
   ELEVADOR,
   ESTACIONAMENTO,
@@ -103,16 +104,54 @@ describe("a distância até ao trabalho", () => {
   });
 
   it("vai limpa na lista — o til saiu, a pedido dele", () => {
-    // Um sinal de matemática no meio de uma morada lê-se como ruído, não
-    // como "por alto". A ressalva mudou de sítio, não desapareceu.
-    expect(distanciaPorExtenso(34.2)).toBe("34 km");
+    /*
+     * Um sinal de matemática no meio de uma morada lê-se como ruído, não
+     * como "por alto". A ressalva mudou de sítio, não desapareceu.
+     *
+     * A CASA DECIMAL ENTROU A 21-09-2026, e a razão é o vizinho do lado: o
+     * cartão mostra «329,00 € · 15 km · 21,4 €/km», e quem divide 329 por 15
+     * chega a 21,9. O €/km dividia pela distância verdadeira — 15,37 km — e
+     * ao lado dela estava a mesma distância arredondada a inteiro.
+     */
+    expect(distanciaPorExtenso(34.2)).toBe("34,2 km");
     expect(distanciaPorExtenso(0.4)).toBe("menos de 1 km");
+    // E só aparece quando diz alguma coisa: «34», e não «34,0».
+    expect(distanciaPorExtenso(34)).toBe("34 km");
+    expect(distanciaPorExtenso(34.04)).toBe("34 km");
   });
 
   it("e no detalhe a aproximação diz-se por palavras", () => {
-    expect(distanciaDaBase(38.7)).toBe("cerca de 39 km da sua base");
+    /*
+     * O «cerca de» fica, e a casa decimal também. São duas coisas diferentes:
+     * a casa decimal diz com que precisão se contou, o «cerca de» diz que a
+     * conta foi por linha recta com folga e não pela estrada.
+     *
+     * Um formatador só, e não dois: a lista e o detalhe mostram a MESMA
+     * distância, e dois arredondamentos diferentes para o mesmo facto fazem
+     * quem os vê duvidar dos dois.
+     */
+    expect(distanciaDaBase(38.7)).toBe("cerca de 38,7 km da sua base");
     // Abaixo de 1 km, "cerca de menos de 1 km" seria português a mais.
     expect(distanciaDaBase(0.3)).toBe("menos de 1 km da sua base");
+  });
+
+  it("a distância e o €/km fecham um com o outro", () => {
+    /*
+     * O TESTE QUE GUARDA A RAZÃO DE TUDO ISTO.
+     *
+     * O caso verdadeiro que ele apanhou: 329,00 € a 15,37 km. Quem lê o
+     * cartão divide os dois números impressos e tem de chegar ao terceiro.
+     */
+    const km = 15.37;
+    const valor = 329;
+    const escrito = distanciaPorExtenso(km); // "15,4 km"
+    const lido = Number(escrito.replace(" km", "").replace(",", "."));
+    const porKm = porKmPorExtenso({ recebeSeAceitar: valor, distanciaKm: km })!;
+
+    expect(escrito).toBe("15,4 km");
+    expect(porKm).toBe("21,4 €/km");
+    // A conta que ele faz de cabeça, com os números que VÊ, dá o que está lá.
+    expect((valor / lido).toFixed(1)).toBe("21.4");
   });
 });
 
