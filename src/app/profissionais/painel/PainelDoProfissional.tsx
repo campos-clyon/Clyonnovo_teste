@@ -36,6 +36,7 @@ import Agenda from "./Agenda";
 import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
 import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
+import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
 import { resumoDoPerfil, faltasDaSeccao, type SeccaoComFalta } from "@/lib/perfil-por-completar";
@@ -559,6 +560,39 @@ export default function PainelDoProfissional() {
         que ele ligar ou dispensar.
       */}
       <AvisosNoTelemovel />
+
+      {/*
+        E O MESMO PEDIDO, PARA O WHATSAPP — 20-09-2026.
+
+        Dois cartões seguidos a pedir permissões parece de mais, e é a
+        alternativa certa a um só: são canais diferentes, com donos diferentes.
+        O de cima é uma permissão do BROWSER, que ele dá ao telemóvel e que se
+        perde quando muda de aparelho. Este é um consentimento NOSSO, sobre um
+        número que já temos guardado — e que só vale enquanto ele quiser.
+
+        Só aparece com o perfil já carregado. Antes disso não se sabe se ele já
+        disse que sim, e um cartão a pedir uma coisa que ele já deu é a maneira
+        mais rápida de o ensinar a não ler os cartões.
+      */}
+      {perfil && (
+        <AvisosNoWhatsApp
+          ligado={perfil.avisosNoWhatsApp === true}
+          desde={perfil.avisosNoWhatsAppEm ?? null}
+          aoMudar={(ligado) =>
+            setPerfil((p) =>
+              p
+                ? {
+                    ...p,
+                    avisosNoWhatsApp: ligado,
+                    // A data certa vem da base na recarga seguinte; aqui basta
+                    // não mostrar a antiga depois de ele desligar.
+                    avisosNoWhatsAppEm: ligado ? p.avisosNoWhatsAppEm ?? null : null,
+                  }
+                : p,
+            )
+          }
+        />
+      )}
 
       {/*
         O QUE FALTA NO PERFIL, ANTES DOS TRABALHOS.

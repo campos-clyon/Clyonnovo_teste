@@ -2,8 +2,15 @@ import {
   profissionaisActivos,
   criarNegociacao,
   negociacoesDoPedido,
+  porNaFilaDeAvisosAoProfissional,
+  assistentePode,
   type ProfissionalNaBase,
 } from "./db";
+import { telemovelParaWhatsApp } from "./whatsapp-cloud";
+import { avisoDePedidoAoProfissional } from "./aviso-de-pedido-ao-profissional";
+import { TAXAS_DE_ORIGEM } from "./taxas-plataforma";
+import { type BaseDoPreco } from "./base-do-preco";
+import { urlDeAccao } from "./url-do-site";
 import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel";
 import { distanciaParaElegibilidade } from "./distancia-entre-pontos";
 import { distanciasRodoviarias } from "./distancia-rodoviaria";
@@ -42,6 +49,15 @@ export type PedidoParaDistribuicao = {
   lng: number | null;
   /** O endereço deste deployment, para os links do email. */
   baseUrl?: string;
+  /**
+   * O número é pelo trabalho todo ou por cada carga?
+   *
+   * OBRIGATÓRIO de propósito, e não opcional: opcional, os quatro chamadores
+   * continuavam a compilar sem lhe tocar e o valor caía silenciosamente em
+   * «total». Dizer «94,00 €» de um trabalho combinado por carga é mentir por
+   * três cargas, e é mentir a quem vai fazer a viagem.
+   */
+  baseDoPreco: BaseDoPreco;
 };
 
 export type ResultadoDaDistribuicao = {
@@ -467,6 +483,57 @@ export async function distribuirPedido(
         zona: pedido.city,
         token,
       });
+
+      /*
+       * E NO WHATSAPP — o terceiro, e o único que ele lê ao volante.
+       *
+       * "sempre que publicarmos um pedido / enviar aos profissionais o
+       *  assistente enviar mensagens no wpp para os pro" — 20-09-2026.
+       *
+       * NÃO ENVIA: ENFILEIRA. Um pedido chega a oito profissionais e este
+       * ciclo é um `Promise.all` — enviar aqui punha oito primeiros contactos
+       * a sair do mesmo número no mesmo segundo, que é o padrão que faz a Meta
+       * banir um número. O espaçamento está na passagem do assistente, que
+       * solta uma mão-cheia de cada vez. Ver `avisosAoProfissional` em `db.ts`.
+       *
+       * TRÊS FECHADURAS, E SÃO PRECISAS AS TRÊS:
+       *   1. o interruptor de quem manda (`avisar_profissional`, nasce em baixo);
+       *   2. a vontade de quem recebe (`avisaPorWhatsApp`, que só ele liga);
+       *   3. um número que seja mesmo um telemóvel — a inscrição aceita fixos,
+       *      e um primeiro contacto para um fixo sem indicativo chega a outra
+       *      pessoa qualquer, com o nome de um cliente e um valor dentro.
+       *
+       * Falha em silêncio de propósito: a negociação já está criada, o
+       * trabalho já chegou, e um aviso que não sai não pode desfazer isso.
+       */
+      const telemovel = c.profissional.avisaPorWhatsApp
+        ? telemovelParaWhatsApp(c.profissional.telefone)
+        : null;
+      if (telemovel && (await assistentePode("avisar_profissional").catch(() => false))) {
+        await porNaFilaDeAvisosAoProfissional({
+          pedidoId: pedido.id,
+          providerId: c.profissional.id,
+          telefone: telemovel,
+          texto: avisoDePedidoAoProfissional(
+            c.profissional.name,
+            {
+              pedidoId: pedido.id,
+              localidade: pedido.city,
+              servico: pedido.serviceType,
+              descricao: pedido.description,
+              urgencia: pedido.urgency,
+              valorDesejadoCliente: pedido.valorDesejadoCliente,
+              baseDoPreco: pedido.baseDoPreco,
+              // As taxas de origem: a negociação acabou de nascer e é com
+              // elas que ela ficou gravada.
+              taxas: TAXAS_DE_ORIGEM,
+              distanciaKm: c.distanciaKm,
+              link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,
+            },
+            new Date(),
+          ),
+        });
+      }
 
       return { recebeu: true, avisado };
     }),

@@ -54,6 +54,8 @@ type Estado = {
   interruptores: Record<string, boolean>;
   /** Segundos que o assistente espera antes de a resposta poder sair. */
   atraso: number;
+  /** Quantos profissionais já disseram que sim aos avisos no WhatsApp. */
+  queremAvisos?: { sim: number; total: number };
   /** O canal em uso passa pela fila? Pela API da Meta a resposta é imediata. */
   atrasoAplicaSe: boolean;
   canal: string;
@@ -293,6 +295,31 @@ export default function AdminAssistenteAutoPanel() {
                           <p className="text-xs leading-relaxed text-slate-500">
                             {ligado ? ficha.oQuePara : "Está parada."}
                           </p>
+                          {/*
+                            ⚠️ O QUE ESTE BOTÃO NÃO CHEGA A FAZER SOZINHO.
+
+                            Os avisos ao profissional têm duas fechaduras que
+                            não são nossas: o CANAL em uso, e o sim de cada um
+                            deles. Ligado aqui, com a Meta como canal e sem
+                            ninguém a ter dito que sim, não sai uma única
+                            mensagem — e o dono ficava a olhar para «Ligada»
+                            convencido de que a funcionalidade estava avariada.
+
+                            Um painel que diz «Ligada» sobre uma coisa que não
+                            pode acontecer é pior do que um painel sem nada.
+                          */}
+                          {c === "avisar_profissional" && (
+                            <p className="mt-1 text-[11px] leading-relaxed text-amber-400/80">
+                              {estado.canal === "meta"
+                                ? "O canal em uso é a API da Meta, que só deixa escrever a quem nos escreveu nas últimas 24 h. Estas mensagens não vão sair enquanto não houver um modelo aprovado por eles."
+                                : estado.canal === "ponte"
+                                  ? "Sai pela ponte, quatro de cada vez em cada passagem — oito mensagens no mesmo segundo é o que faz banir o número."
+                                  : "Não há canal automático ligado, por isso não sai nada. O caminho à mão não serve para isto."}
+                              {estado.queremAvisos
+                                ? ` ${estado.queremAvisos.sim} de ${estado.queremAvisos.total} profissionais activaram os avisos no painel deles.`
+                                : ""}
+                            </p>
+                          )}
                         </div>
                         <button
                           onClick={() =>

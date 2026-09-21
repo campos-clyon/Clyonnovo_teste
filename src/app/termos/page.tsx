@@ -355,6 +355,24 @@ export default function TermosPage() {
             terceiros. Contactar clientes da plataforma para trabalhos fora dela
             é motivo de encerramento da conta.
           </p>
+          {/*
+            OS AVISOS NO WHATSAPP — 20-09-2026.
+
+            Está escrito aqui porque o telemóvel dele foi recolhido na inscrição
+            como contacto de trabalho, e usá-lo para lhe mandar mensagens é uma
+            finalidade nova. O que torna isto defensável não é este parágrafo: é
+            o facto de nascer desligado e de ser ele a ligá-lo. O parágrafo só
+            diz, por escrito e antes de acontecer, o que ele vai poder ligar.
+          */}
+          <p>
+            Avisamo-lo por email quando um pedido lhe é enviado. Se quiser,
+            pode activar no seu painel o aviso por <strong>WhatsApp</strong> —
+            uma mensagem por pedido, com a localidade, o que o cliente descreveu
+            e quanto receberia. Não é publicidade e não lhe mandamos mais nada
+            por esse meio. Fica desligado até ser o próprio a ligá-lo, e desliga-o
+            no painel ou respondendo <strong>parar</strong> a qualquer uma dessas
+            mensagens.
+          </p>
         </S>
 
         <S id="regras" titulo="11. O que não é permitido">

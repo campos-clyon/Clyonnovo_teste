@@ -71,7 +71,7 @@ export async function distribuicaoDoPedido(pedidoId: number): Promise<{
   if (!pool) return null;
 
   const [rows] = (await pool.execute(
-    `SELECT id, name, email, isActive, estado, categorias, zonas, raioKm,
+    `SELECT id, name, email, phone, whatsappAvisos, isActive, estado, categorias, zonas, raioKm,
             emiteFatura, emiteGuiaTransporte, guiaVerificadaEm, baseLat, baseLng
        FROM providers
       WHERE isClyon = 0 AND (estado IS NULL OR estado <> 'apagado')`,
@@ -91,6 +91,8 @@ export async function distribuicaoDoPedido(pedidoId: number): Promise<{
     id: Number(r.id),
     name: String(r.name ?? ""),
     email: (r.email as string) ?? null,
+    telefone: (r.phone as string) ?? null,
+    avisaPorWhatsApp: Number(r.whatsappAvisos) === 1,
     isActive: Number(r.isActive) === 1,
     estado: (r.estado as string) ?? null,
     categorias: listaDeJson(r.categorias),

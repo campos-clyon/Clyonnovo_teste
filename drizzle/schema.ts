@@ -231,6 +231,15 @@ export interface SimulatorOrder {
   precisaFatura?: number | null;
   /** 0/1 no MySQL. Exige transportador licenciado (e-GAR). */
   precisaGuiaTransporte?: number | null;
+  /**
+   * O número é pelo trabalho todo ("total") ou por cada carga ("carga")?
+   *
+   * A coluna existe em MySQL desde que há preço por carga e era lida por
+   * consultas em cru (`o.baseDoPreco`), mas nunca tinha sido declarada aqui —
+   * quem a quisesse a partir de um `SimulatorOrder` levava com «Property
+   * 'baseDoPreco' does not exist». Ler com `lerBase()`, que trata do nulo.
+   */
+  baseDoPreco?: string | null;
   /** SHA-256 do token de acesso. O token em claro vive só no link. */
   acessoTokenHash?: string | null;
   acessoTokenExpiraEm?: Date | string | null;

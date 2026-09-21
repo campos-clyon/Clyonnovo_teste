@@ -798,8 +798,16 @@ describe("insistir tem limite, e o limite é dito", () => {
   });
 });
 
-describe("os seis interruptores", () => {
-  it("existem os sete, e cada um diz o que pára", () => {
+describe("os interruptores", () => {
+  /*
+   * O NOME DESTE BLOCO JÁ FOI «os seis interruptores», e o teste já se chamou
+   * «existem os sete». São oito desde 20-09-2026, e a lista continua escrita à
+   * mão de propósito: é a única coisa que obriga quem acrescenta uma
+   * capacidade a passar por aqui e a pensar no que ela faz. Uma contagem
+   * automática (`toHaveLength(CAPACIDADES.length)`) passava sempre e não
+   * guardava nada.
+   */
+  it("existem os oito, e cada um diz o que pára", () => {
     expect(CAPACIDADES).toEqual([
       "recolher",
       "propostas",
@@ -808,6 +816,10 @@ describe("os seis interruptores", () => {
       "insistir",
       "acompanhar",
       "agradecer",
+      // A primeira que não fala com o cliente: avisa o PROFISSIONAL de que lhe
+      // chegou um pedido. Nasce desligada, e tem uma segunda fechadura que não
+      // é nossa — o sim de cada um deles, no painel.
+      "avisar_profissional",
     ]);
     for (const c of CAPACIDADES) {
       expect(FICHA_DA_CAPACIDADE[c].titulo).toBeTruthy();

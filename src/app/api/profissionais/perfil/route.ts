@@ -134,6 +134,16 @@ export async function GET(req: NextRequest) {
         margemPercent: p.margemPercent != null ? Number(p.margemPercent) : null,
         horasPorTrabalho: p.horasPorTrabalho != null ? Number(p.horasPorTrabalho) : null,
         riscoPercent: p.riscoPercent != null ? Number(p.riscoPercent) : null,
+        /*
+         * Os avisos de pedido novo no WhatsApp — 20-09-2026.
+         *
+         * É ele quem liga e quem desliga, e mais ninguém: "Só ele, no painel".
+         * A data sai junto porque o cartão a mostra — «ligado desde 20 de
+         * Setembro» é o que responde à pergunta que ele faz quando estranha a
+         * primeira mensagem.
+         */
+        avisosNoWhatsApp: Number(p.whatsappAvisos) === 1,
+        avisosNoWhatsAppEm: (p.whatsappAvisosEm as Date | null) ?? null,
         emiteFatura: Number(p.emiteFatura) === 1,
         regimeIva: String(p.regimeIva ?? "isento"),
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,

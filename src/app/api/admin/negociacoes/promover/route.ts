@@ -1,3 +1,4 @@
+import { lerBase } from "@/lib/base-do-preco";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
@@ -231,6 +232,7 @@ export async function POST(req: NextRequest) {
       valorDesejadoCliente: valor,
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
+      baseDoPreco: lerBase(pedido.baseDoPreco),
       lat,
       lng,
       baseUrl,

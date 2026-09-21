@@ -176,10 +176,46 @@ describe("uma conversa entregue a uma pessoa continua a ficar escrita", () => {
 
   it("mas o cérebro NÃO lhe responde — a conversa é da pessoa", () => {
     const i = PONTE.indexOf("if (await numeroInterrompidoWhatsApp(telefone)) {");
-    const bloco = PONTE.slice(i, PONTE.indexOf("return NextResponse.json({ meu: true, paraEnviar: [] });", i));
+    const fim = PONTE.indexOf("return NextResponse.json({ meu: true, paraEnviar: [] });", i);
+    const bloco = PONTE.slice(i, fim);
     expect(bloco).not.toContain("tratarMensagemDoCliente");
-    // E a fila continua vazia: nada sai por este caminho.
-    expect(PONTE.slice(i, i + 900)).toContain("paraEnviar: []");
+    /*
+     * E a fila continua vazia: nada sai por este caminho.
+     *
+     * A FATIA ERA DE 900 CARACTERES e passou a ser medida até ao `return`.
+     * A 20-09-2026 entrou neste bloco o reconhecimento do «parar» — a única
+     * coisa que atravessa esta porta — e o `return` foi empurrado para
+     * adiante da janela fixa. O teste chumbou por a janela ser pequena, não
+     * por o comportamento ter mudado: continua a não sair nada daqui.
+     *
+     * Uma fatia contada até ao que se procura não volta a ter este problema.
+     */
+    expect(fim).toBeGreaterThan(i);
+    expect(PONTE.slice(i, fim + 60)).toContain("paraEnviar: []");
+  });
+
+  it("só o «parar» atravessa esta porta, e não é uma resposta", () => {
+    /*
+     * A DECISÃO DE 10-09-2026 CONTINUA DE PÉ — «se for eu a iniciar uma
+     * conversa, ele não pode continuar sem que eu passe a conversa para ele»,
+     * escrita depois de o assistente se ter atirado a uma transportadora e ter
+     * respondido três vezes à resposta automática dela.
+     *
+     * O que entrou a 20-09-2026 não é uma conversa: é um interruptor. Os
+     * avisos de pedido novo prometem por escrito «escreva parar», e ficam
+     * interrompidos justamente os números a que o dono escreveu à mão — os dos
+     * profissionais. Sem isto, a promessa falhava em silêncio para quem mais a
+     * ia usar.
+     *
+     * Desliga uma opção na base e volta para trás pelo mesmo caminho: não
+     * responde, não pergunta, não entrega a conversa a ninguém.
+     */
+    const i = PONTE.indexOf("if (await numeroInterrompidoWhatsApp(telefone)) {");
+    const bloco = PONTE.slice(i, PONTE.indexOf("return NextResponse.json({ meu: true, paraEnviar: [] });", i));
+    expect(bloco).toContain("ePedidoParaParar");
+    expect(bloco).toContain("desligarAvisosPeloTelefone");
+    expect(bloco).not.toContain("enviarTextoWhatsApp");
+    expect(bloco).not.toContain("paraEnviar: [{");
   });
 
   it("um bloqueado continua a não deixar rasto — esse foi mesmo o pedido", () => {

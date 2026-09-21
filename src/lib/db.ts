@@ -626,7 +626,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 3;
+const VERSAO_DOS_PROFISSIONAIS = 4;
 let versaoDosProfissionais = 0;
 
 /**
@@ -876,6 +876,31 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "tipoVeiculo",
         sql: "ALTER TABLE providers ADD COLUMN tipoVeiculo VARCHAR(60) NULL DEFAULT NULL",
       },
+
+      /*
+       * ── O SIM DELE AOS AVISOS NO WHATSAPP (20-09-2026) ─────────────────
+       *
+       * O telefone dele está gravado desde a inscrição, mas foi pedido como
+       * CONTACTO DE TRABALHO — para lhe ligarmos, ou para o cliente lhe ligar
+       * depois de contratado. Não foi pedido para lhe mandarmos mensagens, e
+       * a diferença entre as duas coisas é o RGPD inteiro.
+       *
+       * Por isso o consentimento é uma coluna e não um pressuposto, e vem com
+       * a DATA: «ele aceitou» sem dizer quando não prova nada a ninguém.
+       *
+       * NASCE A ZERO PARA TODA A GENTE, incluindo para quem já cá está. Liga
+       * cada um por si, no painel dele — "Só ele, no painel", 20-09-2026. Não
+       * há botão no backoffice de propósito: um consentimento que o dono pode
+       * dar por outra pessoa não é consentimento nenhum.
+       */
+      {
+        name: "whatsappAvisos",
+        sql: "ALTER TABLE providers ADD COLUMN whatsappAvisos TINYINT(1) NOT NULL DEFAULT 0",
+      },
+      {
+        name: "whatsappAvisosEm",
+        sql: "ALTER TABLE providers ADD COLUMN whatsappAvisosEm DATETIME NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -1012,6 +1037,10 @@ export type ProfissionalNaBase = {
   id: number;
   name: string;
   email: string | null;
+  /** O telemóvel, em cru como ele o escreveu. Quem o valida é `telemovelParaWhatsApp`. */
+  telefone: string | null;
+  /** Disse que sim aos avisos de pedido novo no WhatsApp? Ver `whatsappAvisos`. */
+  avisaPorWhatsApp: boolean;
   isActive: boolean;
   estado: string | null;
   categorias: string[];
@@ -1048,7 +1077,7 @@ export async function profissionaisActivos(): Promise<ProfissionalNaBase[]> {
   if (!pool) return [];
 
   const [rows] = await pool.execute(
-    `SELECT id, name, email, isActive, estado, categorias, zonas, raioKm,
+    `SELECT id, name, email, phone, whatsappAvisos, isActive, estado, categorias, zonas, raioKm,
             emiteFatura, emiteGuiaTransporte, guiaVerificadaEm, baseLat, baseLng
        FROM providers
       WHERE isActive = 1 AND estado = 'aprovado' AND isClyon = 0`,
@@ -1058,6 +1087,8 @@ export async function profissionaisActivos(): Promise<ProfissionalNaBase[]> {
     id: Number(r.id),
     name: String(r.name ?? ""),
     email: (r.email as string) ?? null,
+    telefone: (r.phone as string) ?? null,
+    avisaPorWhatsApp: Number(r.whatsappAvisos) === 1,
     isActive: Number(r.isActive) === 1,
     estado: (r.estado as string) ?? null,
     categorias: listaDeJson(r.categorias),
@@ -4141,7 +4172,8 @@ export async function perfilDoProfissional(
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt,
             custoKm, custoHoraPessoa, pessoasNaEquipa,
-            custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent
+            custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent,
+            whatsappAvisos, whatsappAvisosEm
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
   ) as any[];
@@ -5805,6 +5837,20 @@ export async function deleteSimulatorOrder(
 
     // Primeiro as filhas. Ao contrario, uma falha a meio deixava o pedido
     // apagado e as negociacoes penduradas — exactamente o estado a evitar.
+    /*
+     * Os avisos por enviar saem PRIMEIRO de todas, e por uma razão que não é
+     * de arrumação: cada linha guarda o telefone de um profissional e um
+     * token que abre este pedido. Deixá-las cá punha o assistente a mandar
+     * mensagens sobre um pedido apagado, com um link que já não vai dar a
+     * lado nenhum. O `try` é porque a tabela só nasce à primeira
+     * distribuição depois de 20-09-2026, e uma purga não pode cair por causa
+     * de uma tabela que ainda não existe.
+     */
+    try {
+      await conn.execute("DELETE FROM avisosAoProfissional WHERE pedidoId = ?", [id]);
+    } catch {
+      /* sem tabela não há nada para apagar */
+    }
     await conn.execute("DELETE FROM negociacoes WHERE pedidoId = ?", [id]);
     await conn.execute("DELETE FROM simulatorOrders WHERE id = ?", [id]);
     await conn.commit();
@@ -6087,6 +6133,293 @@ export async function filaWhatsAppPorEnviar(limite = 20): Promise<MensagemNaFila
       LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
   )) as [Array<{ id: number; telefone: string; texto: string }>, unknown];
   return rows.map((r) => ({ id: Number(r.id), telefone: r.telefone, texto: r.texto }));
+}
+
+// ── Os avisos de pedido novo aos profissionais ──────────────────────────────
+//
+// "sempre que publicarmos um pedido / enviar aos profissionais o assistente
+//  enviar mensagens no wpp para os pro falando sobre o pedido novo" — 20-09-2026.
+//
+// PORQUE É QUE ISTO É UMA FILA E NÃO UM ENVIO.
+//
+// Um pedido chega a sete, oito, nove profissionais de uma vez. Mandar ali
+// mesmo, dentro do ciclo da distribuição, punha oito primeiros contactos a
+// sair do mesmo número no mesmo segundo — que é o padrão de envio em massa
+// que faz a Meta banir um número. E não custa um cliente: custa o NÚMERO, e
+// um número banido cala a plataforma inteira, a recolha e as propostas com
+// ela.
+//
+// ⚠️ E NÃO BASTAVA PÔR NA `whatsappFila`: as linhas entram lá todas com o
+// mesmo `enviarApartirDe` (o atraso do assistente é um número global, não por
+// destinatário), tornam-se elegíveis no mesmo instante, e a ponte despacha-as
+// numa volta seguida. Enfileirar ali adiava a composição, não a transmissão.
+// O espaçamento a sério é esta tabela mais o tecto por passagem em
+// `avisosAoProfissionalPorSair` — uma mão-cheia de dez em dez minutos.
+//
+// UMA LINHA POR (PEDIDO, PROFISSIONAL), PARA SEMPRE. A chave única é o que
+// impede a redistribuição e a passagem horária do alcance de o avisarem outra
+// vez do mesmo trabalho. Um profissional que receba duas vezes o #310 não
+// volta a ler nenhuma.
+//
+// O TEXTO É GRAVADO JÁ ESCRITO, como na `whatsappFila`, porque leva lá dentro
+// o token do link dele — que só existe em claro no instante em que a
+// negociação nasce (na base fica um hash). Sem ele a mensagem não tem a única
+// coisa accionável que tem. Apaga-se no instante em que a linha sai, e de
+// qualquer maneira a linha morre às 24 horas.
+let avisosAoProfissionalReady = false;
+async function ensureAvisosAoProfissionalTable() {
+  if (avisosAoProfissionalReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS avisosAoProfissional (
+      id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      pedidoId    INT NOT NULL,
+      providerId  INT NOT NULL,
+      telefone    VARCHAR(32) NOT NULL,
+      texto       TEXT NULL,
+      criadoEm    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      validoAte   DATETIME NOT NULL,
+      enviadoEm   DATETIME NULL,
+      porqueNaoSaiu VARCHAR(40) NULL,
+      UNIQUE KEY uq_pedido_pro (pedidoId, providerId),
+      KEY idx_por_sair (enviadoEm, porqueNaoSaiu, criadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  avisosAoProfissionalReady = true;
+}
+
+/**
+ * Põe um aviso na fila. NUNCA lança.
+ *
+ * A distribuição é o sítio onde o trabalho CHEGA ao profissional — a
+ * negociação já está criada a este ponto. Um aviso que não se consegue
+ * enfileirar não pode desfazer isso, tal como o email não desfaz.
+ *
+ * Devolve `false` quando já lá estava, que é o caso normal numa
+ * redistribuição e não é erro nenhum.
+ */
+export async function porNaFilaDeAvisosAoProfissional(dados: {
+  pedidoId: number;
+  providerId: number;
+  telefone: string;
+  texto: string;
+  /** Horas até a linha deixar de valer. Um aviso de ontem não interessa a ninguém. */
+  validoPorHoras?: number;
+}): Promise<boolean> {
+  try {
+    await ensureAvisosAoProfissionalTable();
+    const pool = await getPool();
+    if (!pool) return false;
+    const horas = Math.max(1, Math.floor(dados.validoPorHoras ?? 24));
+    const [r] = (await pool.execute(
+      `INSERT IGNORE INTO avisosAoProfissional
+         (pedidoId, providerId, telefone, texto, validoAte)
+       VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR))`,
+      [
+        dados.pedidoId,
+        dados.providerId,
+        dados.telefone,
+        dados.texto.slice(0, 4096),
+        String(horas),
+      ],
+    )) as any[];
+    return Number((r as { affectedRows?: number }).affectedRows ?? 0) > 0;
+  } catch (e) {
+    console.error("[avisosAoProfissional] não enfileirou", e);
+    return false;
+  }
+}
+
+export type AvisoAoProfissionalPorSair = {
+  id: number;
+  pedidoId: number;
+  providerId: number;
+  telefone: string;
+  texto: string;
+};
+
+/**
+ * Os avisos que podem sair AGORA — poucos de cada vez, e é o ponto todo.
+ *
+ * O limite é o espaçamento. Com uma mão-cheia por passagem de dez minutos, os
+ * oito profissionais de um pedido são avisados ao longo de vinte minutos em
+ * vez de num segundo. É mais lento do que o ideal para ele — quem responde
+ * primeiro leva o trabalho — e é a troca aceite: o email e o push já saíram no
+ * instante, sem tecto nenhum.
+ *
+ * RE-CONFIRMA TUDO À SAÍDA, porque entre enfileirar e enviar passaram minutos:
+ * o profissional pode ter desligado os avisos, ter sido desactivado, ou ter
+ * respondido ao pedido pelo painel. E o pedido pode ter sido cancelado ou
+ * fechado com outro — avisar alguém de um trabalho que já não está à venda é
+ * a pior mensagem que a CLYON lhe pode mandar.
+ */
+export async function avisosAoProfissionalPorSair(
+  limite = 4,
+): Promise<AvisoAoProfissionalPorSair[]> {
+  try {
+    await ensureAvisosAoProfissionalTable();
+    const pool = await getPool();
+    if (!pool) return [];
+    const n = Math.max(1, Math.min(20, Math.floor(limite)));
+    const [rows] = (await pool.execute(
+      `SELECT a.id, a.pedidoId, a.providerId, a.telefone, a.texto
+         FROM avisosAoProfissional a
+         JOIN providers p ON p.id = a.providerId
+         JOIN negociacoes n ON n.pedidoId = a.pedidoId AND n.providerId = a.providerId
+         JOIN simulatorOrders o ON o.id = a.pedidoId
+        WHERE a.enviadoEm IS NULL
+          AND a.porqueNaoSaiu IS NULL
+          AND a.validoAte > NOW()
+          AND a.texto IS NOT NULL
+          AND p.isActive = 1 AND p.estado = 'aprovado' AND p.whatsappAvisos = 1
+          AND n.estado = 'aberta'
+          AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
+          AND NOT EXISTS (
+            SELECT 1 FROM negociacoes x
+             WHERE x.pedidoId = a.pedidoId AND x.estado = 'acordada'
+          )
+        ORDER BY a.criadoEm ASC, a.id ASC
+        LIMIT ${n}`,
+    )) as [Array<Record<string, unknown>>, unknown];
+    return rows.map((r) => ({
+      id: Number(r.id),
+      pedidoId: Number(r.pedidoId),
+      providerId: Number(r.providerId),
+      telefone: String(r.telefone),
+      texto: String(r.texto ?? ""),
+    }));
+  } catch (e) {
+    console.error("[avisosAoProfissional] não leu a fila", e);
+    return [];
+  }
+}
+
+/**
+ * Fecha uma linha — saiu, ou não vai sair.
+ *
+ * O TEXTO É APAGADO NOS DOIS CASOS. Ele leva lá o token do link, e o token é
+ * uma chave: quem o tiver abre o pedido sem passar por senha nenhuma. Depois
+ * de a mensagem estar no telemóvel dele, esta cópia não serve para mais nada.
+ */
+export async function fecharAvisoAoProfissional(
+  id: number,
+  porqueNaoSaiu: string | null = null,
+): Promise<void> {
+  try {
+    await ensureAvisosAoProfissionalTable();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `UPDATE avisosAoProfissional
+          SET texto = NULL,
+              enviadoEm = ${porqueNaoSaiu ? "NULL" : "NOW()"},
+              porqueNaoSaiu = ?
+        WHERE id = ?`,
+      [porqueNaoSaiu, id],
+    );
+  } catch (e) {
+    console.error("[avisosAoProfissional] não fechou", e);
+  }
+}
+
+/**
+ * As linhas que passaram da validade, limpas do texto.
+ *
+ * Corre à boleia da passagem e NÃO gasta do tecto de envios: descartar não é
+ * falar com ninguém. Sem isto, um aviso que nunca saiu — porque o interruptor
+ * esteve em baixo uma semana — guardava o token e o telefone para sempre.
+ */
+export async function limparAvisosAoProfissionalVencidos(): Promise<number> {
+  try {
+    await ensureAvisosAoProfissionalTable();
+    const pool = await getPool();
+    if (!pool) return 0;
+    const [r] = (await pool.execute(
+      `UPDATE avisosAoProfissional
+          SET texto = NULL, porqueNaoSaiu = 'fora de prazo'
+        WHERE enviadoEm IS NULL AND porqueNaoSaiu IS NULL AND validoAte <= NOW()`,
+    )) as any[];
+    return Number((r as { affectedRows?: number }).affectedRows ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Ele escreveu «parar». Desliga-lhe os avisos, pelo número.
+ *
+ * PELOS ÚLTIMOS NOVE DÍGITOS, como todo o resto do WhatsApp desta casa: o
+ * número chega do WhatsApp com indicativo (`351912345678`) e na ficha dele
+ * pode estar gravado de seis maneiras — com espaços, com `+351`, com `00351`,
+ * ou só os nove. Comparar em cru era ter um opt-out que falha para metade das
+ * pessoas, o que é o mesmo que não ter nenhum.
+ *
+ * Não devolve nada e não lança: quem chama isto está a meio de responder à
+ * ponte, e uma falha aqui não pode fazer cair a mensagem que a pessoa mandou.
+ */
+export async function desligarAvisosPeloTelefone(telefone: string): Promise<void> {
+  try {
+    await ensureProvidersSchema();
+    const pool = await getPool();
+    if (!pool) return;
+    const noves = telefone.replace(/\D/g, "").slice(-9);
+    if (noves.length !== 9) return;
+    await pool.execute(
+      `UPDATE providers
+          SET whatsappAvisos = 0, whatsappAvisosEm = NULL
+        WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', ''), 9) = ?`,
+      [noves],
+    );
+  } catch (e) {
+    console.error("[desligarAvisosPeloTelefone]", e);
+  }
+}
+
+/** Quantos profissionais activos já disseram que sim. Para o cartão do painel. */
+export async function quantosProfissionaisQueremAvisos(): Promise<{
+  sim: number;
+  total: number;
+}> {
+  try {
+    await ensureProvidersSchema();
+    const pool = await getPool();
+    if (!pool) return { sim: 0, total: 0 };
+    const [rows] = (await pool.execute(
+      `SELECT COUNT(*) AS total, SUM(whatsappAvisos = 1) AS sim
+         FROM providers
+        WHERE isActive = 1 AND estado = 'aprovado' AND isClyon = 0`,
+    )) as [Array<{ total: number; sim: number | null }>, unknown];
+    return {
+      sim: Number(rows[0]?.sim ?? 0),
+      total: Number(rows[0]?.total ?? 0),
+    };
+  } catch {
+    return { sim: 0, total: 0 };
+  }
+}
+
+/**
+ * Ele disse que sim, ou que não. É o próprio a decidir e mais ninguém.
+ *
+ * A DATA É A PROVA. Guardar só o «sim» deixava-nos sem resposta no dia em que
+ * alguém pergunta desde quando — e essa pergunta faz-se sempre depois de uma
+ * queixa. Ao desligar, a data é limpa: o consentimento acabou naquele momento
+ * e guardar a data de um sim revogado só serviria para o confundir com um vivo.
+ */
+export async function definirAvisosNoWhatsApp(
+  providerId: number,
+  quer: boolean,
+): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `UPDATE providers
+        SET whatsappAvisos = ?, whatsappAvisosEm = ${quer ? "NOW()" : "NULL"}
+      WHERE id = ?`,
+    [quer ? 1 : 0, providerId],
+  );
 }
 
 // ── Números bloqueados no WhatsApp da plataforma ────────────────────────────
@@ -8179,6 +8512,19 @@ export async function apagarProfissional(
     // de ninguém, e um convite por usar seria uma porta de entrada deixada
     // aberta para uma conta que já não existe.
     await conn.execute("DELETE FROM provider_coverage WHERE providerId = ?", [providerId]);
+    /*
+     * E OS AVISOS POR ENVIAR, que guardam o TELEFONE dele e um token de
+     * acesso. Uma conta apagada com uma linha destas por sair deixava o
+     * número numa tabela e, pior, punha o assistente a escrever a alguém
+     * que já cá não está. A tabela pode não existir ainda — nasce à
+     * primeira distribuição depois de 20-09-2026 — e por isso vai dentro
+     * de um `try`: não é ela que pode fazer cair o apagar de uma conta.
+     */
+    try {
+      await conn.execute("DELETE FROM avisosAoProfissional WHERE providerId = ?", [providerId]);
+    } catch {
+      /* sem tabela não há nada para apagar */
+    }
     await conn.execute("DELETE FROM convitesProfissionais WHERE providerId = ?", [providerId]);
     if (p.email) {
       await conn.execute("DELETE FROM convitesProfissionais WHERE email = ?", [p.email]);

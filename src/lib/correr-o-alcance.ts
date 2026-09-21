@@ -1,3 +1,4 @@
+import { lerBase } from "@/lib/base-do-preco";
 import {
   pedidosAbertosParaAlcancar,
   getSimulatorOrderById,
@@ -87,6 +88,7 @@ export async function correrOAlcance(opcoes: {
         valorDesejadoCliente: Number(pedido.valorDesejadoCliente),
         precisaFatura: Boolean(pedido.precisaFatura),
         precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
+        baseDoPreco: lerBase(pedido.baseDoPreco),
         lat: geo.lat,
         lng: geo.lng,
         baseUrl: opcoes.baseUrl,

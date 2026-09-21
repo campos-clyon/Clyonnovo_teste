@@ -51,7 +51,23 @@ export type Capacidade =
   /** A véspera do trabalho, a execução, a confirmação. */
   | "acompanhar"
   /** A mensagem de fecho, e o pedido de avaliação no dia seguinte. */
-  | "agradecer";
+  | "agradecer"
+  /**
+   * Avisar o PROFISSIONAL de que lhe chegou um pedido novo.
+   *
+   * A OITAVA, e a primeira que não fala com o cliente. As outras sete são
+   * todas sobre a mesma conversa: alguém escreveu à CLYON e a CLYON responde.
+   * Esta começa uma conversa nova, com quem não pediu nada, num número que
+   * nunca lhe escreveu. É outra coisa e por isso é outro botão — desligar os
+   * avisos ao cliente não pode calar o profissional, nem o contrário.
+   *
+   * NASCE DESLIGADA, pela regra escrita no topo deste ficheiro. E, ao
+   * contrário das outras, tem uma segunda fechadura por baixo: só chega a
+   * quem a tiver ligado no painel dele (`whatsappAvisos`). Este interruptor é
+   * o travão de quem manda; o outro é a vontade de quem recebe. São precisos
+   * os dois.
+   */
+  | "avisar_profissional";
 
 export const CAPACIDADES: Capacidade[] = [
   "recolher",
@@ -61,6 +77,7 @@ export const CAPACIDADES: Capacidade[] = [
   "insistir",
   "acompanhar",
   "agradecer",
+  "avisar_profissional",
 ];
 
 export type FichaDaCapacidade = {
@@ -125,6 +142,12 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
   agradecer: {
     titulo: "Agradecer",
     oQuePara: "Deixa de mandar a mensagem de fecho e o pedido de avaliação.",
+    porOmissao: false,
+  },
+  avisar_profissional: {
+    titulo: "Avisar o profissional",
+    oQuePara:
+      "Deixa de mandar WhatsApp aos profissionais quando um pedido novo lhes chega. O email e o aviso no telemóvel continuam a sair.",
     porOmissao: false,
   },
 };
@@ -219,6 +242,23 @@ export const ESCADA_DOS_LEMBRETES: Record<string, number[]> = {
 };
 
 export const TOQUES_NO_MAXIMO = 3;
+
+/**
+ * Quantos profissionais se avisam por passagem do assistente.
+ *
+ * ESTE NÚMERO É O TRAVÃO, e não está aqui por arrumação. Um pedido chega a
+ * sete, oito, nove profissionais de uma vez; a distribuição enfileira-os todos
+ * no mesmo instante. Se saíssem todos juntos, eram oito PRIMEIROS CONTACTOS do
+ * mesmo número no mesmo segundo — o padrão de envio em massa que faz a Meta
+ * banir um número. E não custa um cliente: custa o número, e com ele a
+ * recolha, as propostas e os fechos.
+ *
+ * Quatro de dez em dez minutos espalha os oito por vinte minutos. É mais lento
+ * do que o ideal para quem espera trabalho — e é a troca aceite, porque o
+ * email e o aviso no telemóvel já saíram no instante, sem tecto nenhum. Este é
+ * o terceiro toque, não o primeiro.
+ */
+export const AVISOS_AO_PROFISSIONAL_POR_PASSAGEM = 4;
 
 /** As horas em que o assistente não fala. Um lembrete às 3 da manhã perde tudo. */
 export const HORA_A_QUE_ACORDA = 9;

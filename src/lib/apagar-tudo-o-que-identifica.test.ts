@@ -102,6 +102,27 @@ const NAO_IDENTIFICAM = new Set([
   "ultimoAcesso",
   "ultimoLoginEm", "suspensoEm", "suspensoPor", "aprovadoEm", "aprovadoPor",
   "notasInternas", "origem", "convidadoPor",
+  /*
+   * O SIM DELE AOS AVISOS NO WHATSAPP — e porque é que NÃO se limpa.
+   *
+   * A pergunta parece fácil e não é: `whatsappAvisosEm` é uma data associada a
+   * uma pessoa, e a tentação é pô-la na lista de cima, com o telefone.
+   *
+   * Mas repare-se no que a anonimização faz: limpa o `phone`. Sem telefone,
+   * este par de colunas passa a dizer «alguém, um dia, disse que sim» — e não
+   * há como voltar a ligá-lo a pessoa nenhuma nem como mandar-lhe o que quer
+   * que seja. Deixa de identificar seja quem for.
+   *
+   * E PRECISA DE FICAR, porque é a PROVA. Uma conta anonimizada continua a ter
+   * história — trabalhos, movimentos, o registo permanente — e se um dia
+   * alguém perguntar com que direito é que a CLYON lhe mandou mensagens, a
+   * resposta é esta data. Apagá-la destruía exactamente aquilo para que a
+   * coluna foi criada.
+   *
+   * O que TEM mesmo de sair é a fila `avisosAoProfissional`, que guarda o
+   * número em claro. Sai, e sai por DELETE — ver `apagarProfissional`.
+   */
+  "whatsappAvisos", "whatsappAvisosEm",
 ]);
 
 /** As colunas que `ensureProvidersSchema` acrescenta a `providers`. */

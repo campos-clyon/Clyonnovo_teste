@@ -124,6 +124,32 @@ export function telefoneParaWhatsApp(telefone: string): string {
   return digitos;
 }
 
+/**
+ * O MESMO, MAS EXIGENTE: só telemóveis, ou nada.
+ *
+ * `telefoneParaWhatsApp` devolve o que lhe derem quando não reconhece —
+ * `219876543` sai tal e qual, sem indicativo — e faz bem: quem responde a
+ * alguém responde ao número por onde ele falou, seja ele qual for.
+ *
+ * AQUI É AO CONTRÁRIO, e a diferença é quem começa a conversa. Estes avisos
+ * são o PRIMEIRO contacto, para uma lista de números que foram recolhidos como
+ * «contacto de trabalho» e nunca como «WhatsApp»: a inscrição aceita fixos
+ * (`^[239]\d{8}$`) e a coluna é gravada em cru. Mandar um primeiro contacto
+ * para um fixo de Lisboa sem indicativo não falha em silêncio — chega a outra
+ * pessoa qualquer, com o nome de um cliente e um valor dentro.
+ *
+ * Na dúvida, não se envia. É por isso que devolve `null` e não uma tentativa.
+ */
+export function telemovelParaWhatsApp(telefone: string | null | undefined): string | null {
+  if (typeof telefone !== "string") return null;
+  const digitos = telefone.replace(/\D/g, "");
+  if (/^9\d{8}$/.test(digitos)) return `351${digitos}`;
+  if (/^3519\d{8}$/.test(digitos)) return digitos;
+  // 00351… é como muita gente guarda o número na agenda.
+  if (/^003519\d{8}$/.test(digitos)) return digitos.slice(2);
+  return null;
+}
+
 async function enviar(corpo: Record<string, unknown>): Promise<boolean> {
   if (!whatsappConfigurado()) return false;
   try {

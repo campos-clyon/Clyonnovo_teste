@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { registarMensagemWhatsApp } from "@/lib/db";
 import { assinaturaValida, whatsappConfigurado } from "@/lib/whatsapp-cloud";
 import { tratarFotoDoCliente, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
+import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
 
 export const runtime = "nodejs";
 
@@ -75,6 +76,20 @@ export async function POST(req: NextRequest) {
             });
           } else if (msg.type === "text" && msg.text?.body) {
             await registarMensagemWhatsApp(msg.from, "in", msg.text.body).catch(() => {});
+            /*
+             * O «PARAR» TAMBÉM POR AQUI — 20-09-2026.
+             *
+             * A mesma coisa que a rota da ponte faz, e pela mesma razão: os
+             * avisos de pedido novo prometem uma saída por escrito, e uma
+             * promessa que só funciona num dos dois canais não é promessa
+             * nenhuma. Qual dos canais está ligado depende de variáveis de
+             * ambiente que mudam sem ninguém tocar neste ficheiro — e no dia
+             * em que a Meta passar a mandar, ninguém se vai lembrar de vir cá.
+             */
+            if (ePedidoParaParar(msg.text.body)) {
+              const { desligarAvisosPeloTelefone } = await import("@/lib/db");
+              await desligarAvisosPeloTelefone(msg.from).catch(() => {});
+            }
             await tratarMensagemDoCliente(msg.from, { tipo: "texto", texto: msg.text.body });
           } else if (msg.type === "image" && msg.image?.id) {
             await registarMensagemWhatsApp(msg.from, "in", "[fotografia]").catch(() => {});

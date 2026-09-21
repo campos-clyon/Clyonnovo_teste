@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import {
   atrasoDeRespostaDoAssistente,
+  quantosProfissionaisQueremAvisos,
   avisosDoAssistente,
   definirConfiguracaoDoAssistente,
   definirInterruptorDoAssistente,
@@ -39,11 +40,12 @@ export async function GET(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  const [interruptores, avisos, desfaziveis, atraso] = await Promise.all([
+  const [interruptores, avisos, desfaziveis, atraso, queremAvisos] = await Promise.all([
     interruptoresDoAssistente(),
     avisosDoAssistente(60).catch(() => []),
     fechosDesfaziveis().catch(() => []),
     atrasoDeRespostaDoAssistente().catch(() => 0),
+    quantosProfissionaisQueremAvisos().catch(() => ({ sim: 0, total: 0 })),
   ]);
 
   const canal = canalWhatsApp();
@@ -58,6 +60,18 @@ export async function GET(req: NextRequest) {
      */
     atrasoAplicaSe: canalRespeitaOAtraso(canal),
     canal,
+    /*
+     * QUANTOS PROFISSIONAIS É QUE JÁ DISSERAM QUE SIM — 20-09-2026.
+     *
+     * O interruptor «Avisar o profissional» pode estar ligado e não sair
+     * mensagem nenhuma, porque a segunda fechadura é deles e não nossa: cada
+     * um liga no seu painel. Sem este número, o dono carregava em Ligada, não
+     * via acontecer nada, e concluía que a funcionalidade estava avariada.
+     *
+     * É por isto que o backoffice mostra a contagem e NÃO tem botão para
+     * ligar por eles. Ver `avisos-whatsapp/route.ts` para o porquê.
+     */
+    queremAvisos,
     avisos,
     // Só os que ainda estão dentro da janela: mostrar um botão que vai recusar
     // é pior do que não mostrar botão nenhum.

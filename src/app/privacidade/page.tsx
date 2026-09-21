@@ -161,6 +161,22 @@ export default function PrivacidadePage() {
                   <li>Guardar as avaliações, sem identificar quem as escreveu.</li>
                   <li>Melhorar o serviço através da análise agregada da utilização do site.</li>
                   <li>Responder a reclamações e ajudar a resolver desacordos.</li>
+                  {/*
+                    O PROFISSIONAL COMO TITULAR, e não só como destinatário.
+
+                    Esta lista falava dos dados do CLIENTE do princípio ao fim.
+                    Desde 20-09-2026 a CLYON manda mensagens para o telemóvel do
+                    PROFISSIONAL, e isso faz dele titular de dados aqui — com uma
+                    finalidade que tem de estar escrita antes de acontecer, e uma
+                    base legal que é o consentimento dele e mais nada.
+                  */}
+                  <li>
+                    Avisar o <strong>profissional</strong>, por email, de que lhe
+                    foi enviado um pedido — e, <strong>só se ele o activar no
+                    painel dele</strong>, também por WhatsApp. Esse aviso leva a
+                    localidade, a descrição do trabalho e o valor; desliga-se no
+                    painel ou respondendo «parar».
+                  </li>
                 </ul>
                 Não usamos os dados para publicidade a terceiros nem os vendemos.
               </>

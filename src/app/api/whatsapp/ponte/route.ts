@@ -10,6 +10,7 @@ import {
 } from "@/lib/db";
 import { ponteConfigurada } from "@/lib/whatsapp-cloud";
 import { pedidosDoTelefone, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
+import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
 
 export const runtime = "nodejs";
 
@@ -183,7 +184,56 @@ export async function POST(req: NextRequest) {
     if (texto.trim()) {
       await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
     }
+
+    /*
+     * ⚠️ O «PARAR» ATRAVESSA ESTA PORTA, E SÓ ELE — 20-09-2026.
+     *
+     * Esta é a única coisa que se faz a um número interrompido, e é por uma
+     * razão que não é de conveniência: os avisos de pedido novo prometem, por
+     * escrito e em cada mensagem, «para deixar de receber estes avisos,
+     * escreva parar». Sem isto, essa promessa falhava em silêncio
+     * EXACTAMENTE para quem mais a ia usar — ficam interrompidos os números a
+     * que o dono escreveu à mão, que são os dos profissionais.
+     *
+     * Uma promessa de saída que não funciona é pior do que não a fazer: é o
+     * que transforma um aviso numa mensagem não solicitada, e é assim que se
+     * perde um número.
+     *
+     * E NÃO É UMA CONVERSA. A decisão de 10-09-2026 — «se for eu a iniciar
+     * uma conversa, ele não pode continuar sem que eu passe a conversa para
+     * ele», escrita depois de o assistente se ter atirado a uma transportadora
+     * — continua de pé e não se lhe toca. Isto não responde, não pergunta, não
+     * entrega nada a ninguém: desliga uma opção na base e volta para trás pelo
+     * mesmo caminho. O dono continua dono da conversa.
+     */
+    if (ePedidoParaParar(texto)) {
+      const { desligarAvisosPeloTelefone } = await import("@/lib/db");
+      await desligarAvisosPeloTelefone(telefone).catch(() => {});
+    }
+
     return NextResponse.json({ meu: true, paraEnviar: [] });
+  }
+
+  /*
+   * O «PARAR» É A PRIMEIRA COISA, E VALE PARA TODA A GENTE — 20-09-2026.
+   *
+   * Está aqui em cima, e não dentro do tratamento da mensagem, por duas razões.
+   *
+   * A PRIMEIRA é que quem escreve «parar» não está a conversar: está a mandar
+   * fechar uma porta, e a porta fecha-se antes de mais nada acontecer. Enterrar
+   * isto no fim de um `tratarMensagemDoCliente` que tem quinze caminhos era
+   * deixá-lo dependente de nenhum deles se atravessar à frente.
+   *
+   * A SEGUNDA é o caso do profissional que TAMBÉM é cliente, com um pedido vivo
+   * em curso. Nesse caso a conversa dele é uma conversa de cliente e vai por
+   * outro caminho — e a promessa de saída que lhe foi feita por escrito falhava
+   * exactamente para ele, que é quem tem mais motivos para a usar. Desligar os
+   * avisos não lhe mexe no pedido: são duas coisas separadas e continuam a
+   * sê-lo, por isso a mensagem segue o seu caminho normal a seguir a isto.
+   */
+  if (ePedidoParaParar(texto)) {
+    const { desligarAvisosPeloTelefone } = await import("@/lib/db");
+    await desligarAvisosPeloTelefone(telefone).catch(() => {});
   }
 
   try {

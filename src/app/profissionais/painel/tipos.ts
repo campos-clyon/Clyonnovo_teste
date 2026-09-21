@@ -194,6 +194,9 @@ export type Perfil = {
   horasPorTrabalho?: number | null;
   /** Seguro de risco: % dos custos directos posta de lado em cada trabalho. */
   riscoPercent?: number | null;
+  /** Disse que sim aos avisos de pedido novo no WhatsApp — e quando. */
+  avisosNoWhatsApp?: boolean;
+  avisosNoWhatsAppEm?: string | null;
   emiteFatura: boolean;
   regimeIva: string;
   emiteGuiaTransporte: boolean;

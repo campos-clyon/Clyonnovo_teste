@@ -1,7 +1,13 @@
 import type { PedidoParaOAssistente } from "./db";
 import { estaExpirada, type Proposta } from "./negociacao";
 import type { Capacidade } from "./assistente-interruptores";
-import { ESCADA_DOS_LEMBRETES, deveTocar, esgotou, horaDeFalar } from "./assistente-interruptores";
+import {
+  ESCADA_DOS_LEMBRETES,
+  deveTocar,
+  esgotou,
+  horaDeFalar,
+  AVISOS_AO_PROFISSIONAL_POR_PASSAGEM,
+} from "./assistente-interruptores";
 import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
@@ -690,6 +696,54 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   // Quem respondeu deixou de precisar de lembrete. Primeiro isto, sempre:
   // insistir com quem já respondeu é o erro que mais depressa custa o número.
   resumo.fechados += await db.fecharAvisosComResposta().catch(() => 0);
+
+  /*
+   * ── OS AVISOS DE PEDIDO NOVO AOS PROFISSIONAIS ──────────────────────────
+   *
+   * "sempre que publicarmos um pedido / enviar aos profissionais o assistente
+   *  enviar mensagens no wpp para os pro" — 20-09-2026.
+   *
+   * PRIMEIRO DE TUDO, a seguir a fechar os que já responderam, e por uma razão
+   * de relógio: um pedido novo tem um profissional do outro lado a querer
+   * saber dele, e quem responde primeiro leva o trabalho. Ficar atrás da
+   * derivação de trezentos pedidos era pôr o aviso mais urgente que há no fim
+   * da fila.
+   *
+   * E É AQUI QUE ESTÁ O TRAVÃO. A distribuição não envia — enfileira — porque
+   * oito primeiros contactos do mesmo número no mesmo segundo são o padrão que
+   * faz a Meta banir um número, e um número banido cala a plataforma inteira.
+   * O tecto por passagem é o espaçamento: uma mão-cheia de dez em dez minutos,
+   * o que espalha os oito profissionais de um pedido por vinte minutos.
+   *
+   * O INTERRUPTOR É LIDO OUTRA VEZ AQUI, e não só ao enfileirar. Entre as duas
+   * coisas passaram minutos, e se o dono carregou em desligar nesse intervalo
+   * é porque quer que pare AGORA — um botão que só vale para o que ainda não
+   * foi pensado não é um botão. As linhas ficam e saem quando ele voltar a
+   * ligar, ou morrem às 24 horas, o que vier primeiro.
+   *
+   * E RESPEITA A HORA, como tudo o que fala com gente. Um pedido que entra às
+   * 23h espera pelas 9h — o profissional perde a madrugada de vantagem e
+   * ganha não ser acordado, que é a troca que qualquer um faria.
+   */
+  await db.limparAvisosAoProfissionalVencidos().catch(() => 0);
+  if (podeFazer("avisar_profissional") && horaDeFalar(agora)) {
+    const porSair = await db.avisosAoProfissionalPorSair(AVISOS_AO_PROFISSIONAL_POR_PASSAGEM);
+    for (const aviso of porSair) {
+      /*
+       * `enviarTextoWhatsApp` e não o envio directo: é a porta do cérebro, e é
+       * ela que respeita quem está bloqueado, quem mandou parar e a conversa
+       * que uma pessoa entregou a si própria. Devolver `false` quer dizer «não
+       * se pode falar com este número» — e isso não se repete de dez em dez
+       * minutos até a linha morrer, por isso fecha-se já.
+       */
+      const saiu = await enviarTextoWhatsApp(aviso.telefone, aviso.texto).catch(() => false);
+      await db.fecharAvisoAoProfissional(aviso.id, saiu ? null : "nao saiu");
+      if (saiu) {
+        resumo.novidades++;
+        resumo.linhas.push(`Avisado do pedido #${aviso.pedidoId}: ${aviso.telefone}.`);
+      }
+    }
+  }
 
   /*
    * COM TUDO EM BAIXO, NÃO SE LÊ A BASE À TOA.
