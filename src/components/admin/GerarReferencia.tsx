@@ -148,6 +148,13 @@ export default function GerarReferencia({
   const [aPedirOutra, setAPedirOutra] = useState(false);
   /** O histórico deste pedido. `null` enquanto não se leu. */
   const [historico, setHistorico] = useState<Pagamento[] | null>(null);
+  /**
+   * Sandbox ou produção — e não é detalhe técnico, é o aviso.
+   *
+   * `null` enquanto não se leu: na dúvida não se promete que é a sério nem se
+   * promete que não é. O aviso só aparece quando se sabe.
+   */
+  const [ambiente, setAmbiente] = useState<string | null>(null);
 
   /*
    * LÊ-SE SEMPRE, ABERTO OU FECHADO.
@@ -164,7 +171,10 @@ export default function GerarReferencia({
         headers: { Authorization: `Bearer ${token}` },
       });
       const d = await r.json();
-      if (r.ok) setHistorico(d.pagamentos ?? []);
+      if (r.ok) {
+        setHistorico(d.pagamentos ?? []);
+        setAmbiente(typeof d.ambiente === "string" ? d.ambiente : null);
+      }
     } catch {
       /* Sem rede fica o que estava. O botão de gerar diz o que falhar. */
     }
@@ -346,10 +356,34 @@ export default function GerarReferencia({
               Pedido MB WAY · {euros(valor)}
             </button>
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-            A referência é gerada no euPago e fica à espera. Quem diz que foi paga é o webhook
-            deles — nunca este ecrã.
-          </p>
+          {/*
+            ⚠️ O AVISO DE QUE ISTO É DINHEIRO A SÉRIO — 21-09-2026.
+
+            "mude tudo para usarmos PRODUÇÃO, vamos trabalhar com valores reais".
+
+            Até esse dia o botão era inofensivo: a sandbox não move um cêntimo,
+            e carregar por engano não fazia mal a ninguém. Com o ambiente em
+            produção, o MESMO botão, no MESMO sítio, com o MESMO aspecto, passa
+            a pedir dinheiro a uma pessoa verdadeira.
+
+            O aviso é a única coisa que muda de aspecto quando a consequência
+            muda. Sem ele, quem anda a experimentar no backoffice continua a
+            carregar como andava — e a primeira vez que se dá por isso é com um
+            cliente ao telefone a perguntar porque é que lhe pediram 127 €.
+          */}
+          {ambiente === "producao" ? (
+            <p className="mt-2 rounded-lg border border-amber-600/40 bg-amber-950/30 px-2.5 py-2 text-[11px] font-semibold leading-relaxed text-amber-300">
+              Isto é dinheiro a sério. A referência vai para o telemóvel ou para o
+              multibanco deste cliente e ele pode pagá-la já. Quem diz que foi paga é o
+              webhook do euPago — nunca este ecrã.
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+              {ambiente === "sandbox" ? "Sandbox: não move dinheiro nenhum. " : ""}
+              A referência é gerada no euPago e fica à espera. Quem diz que foi paga é o webhook
+              deles — nunca este ecrã.
+            </p>
+          )}
         </>
       ) : (
         <>

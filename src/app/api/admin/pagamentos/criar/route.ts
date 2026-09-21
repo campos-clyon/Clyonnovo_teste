@@ -88,6 +88,18 @@ export async function GET(req: NextRequest) {
        */
       configurado: conf.ok,
       falta: conf.ok ? null : conf.falta,
+      /*
+       * ONDE É QUE ESTE BOTÃO VAI BUSCAR O DINHEIRO — 21-09-2026.
+       *
+       * Até hoje era sempre a sandbox, e por isso o ecrã não precisava de o
+       * dizer: carregar não tirava um cêntimo a ninguém. A partir do momento
+       * em que `EUPAGO_AMBIENTE` diz `producao`, o mesmo botão no mesmo sítio
+       * passa a cobrar uma pessoa a sério — e nada no ecrã mudava.
+       *
+       * Um botão que muda de consequência sem mudar de aspecto é a definição
+       * de uma armadilha. O ambiente sai daqui para o ecrã o poder dizer.
+       */
+      ambiente: conf.ok ? conf.config.ambiente : null,
       pagamentos: linhas.map((l) => paraOEcra(l, acesso.trabalho, l.comFactura)),
     });
   } catch (e) {
