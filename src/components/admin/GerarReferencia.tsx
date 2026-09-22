@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { Check, Copy, CreditCard, Landmark, Loader2, Smartphone } from "lucide-react";
+import { Check, Copy, CreditCard, Landmark, Loader2, RefreshCw, Smartphone } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { linkDoWhatsApp } from "@/lib/mensagem-da-referencia";
 
@@ -157,6 +157,22 @@ export default function GerarReferencia({
   const [ambiente, setAmbiente] = useState<string | null>(null);
 
   /*
+   * «JÁ FOI PAGA?» — 22-09-2026.
+   *
+   * "A euPago não mostra se realmente foi feito", com o comprovativo da Caixa
+   * na mão: 42,00 €, referência paga às 09:49, e este ecrã a continuar a dizer
+   * «cobrar o cliente».
+   *
+   * Um pagamento chega por um aviso do euPago, e das três coisas que acontecem
+   * sempre a um webhook a pior é NÃO CHEGAR — porque é silenciosa. Não há
+   * nenhum aviso a avisar que um aviso não chegou. A sondagem automática corre
+   * de hora a hora; esperar cinquenta minutos com um comprovativo à frente e um
+   * cliente do outro lado não é resposta.
+   */
+  const [aConferir, setAConferir] = useState(false);
+  const [conferencia, setConferencia] = useState<{ texto: string; bruto?: unknown } | null>(null);
+
+  /*
    * LÊ-SE SEMPRE, ABERTO OU FECHADO.
    *
    * O resumo de uma linha — «Pago 105,00 € a 18/09» — tem de estar à vista
@@ -193,6 +209,59 @@ export default function GerarReferencia({
     historico?.find(
       (p) => p.estado === "pendente" && (!p.expiraEm || new Date(p.expiraEm).getTime() > Date.now()),
     ) ?? null;
+
+  /**
+   * Pergunta ao euPago pela referência, agora.
+   *
+   * ⚠️ SÓ APANHA PAGAMENTOS; NUNCA FECHA NENHUM — a regra é do servidor e está
+   * lá explicada. Um «ainda não» de hoje pode ser um «sim» amanhã.
+   */
+  async function conferir(pagamentoId: number) {
+    if (!token) return;
+    setAConferir(true);
+    setErro("");
+    setConferencia(null);
+    try {
+      const r = await fetch("/api/admin/pagamentos/conferir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pagamentoId }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setErro(d.error ?? "Não foi possível perguntar ao euPago.");
+        return;
+      }
+      if (d.aplicado) {
+        setConferencia({ texto: "O euPago confirmou. Está dado por pago." });
+      } else if (d.jaEstava) {
+        setConferencia({ texto: "Já cá estava dado por pago." });
+      } else if (d.pago) {
+        setConferencia({
+          texto: d.porque ?? "O euPago diz que está paga, mas não se creditou nada.",
+          bruto: d.bruto,
+        });
+      } else {
+        /*
+         * O «ainda não» vem com a resposta em bruto de propósito. A página do
+         * `multibanco/info` tem mais de dois anos e não diz o nome do campo do
+         * estado: se ele disser «não» sobre uma referência que temos por paga,
+         * é aqui que se vê porquê, sem ir ao registo do servidor.
+         */
+        setConferencia({
+          texto:
+            "O euPago diz que ainda não foi paga. Pode levar alguns minutos a chegar lá — " +
+            "se o cliente tem comprovativo, guarde-o e volte a perguntar.",
+          bruto: d.bruto,
+        });
+      }
+      await ler();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAConferir(false);
+    }
+  }
 
   async function gerar(metodo: "mbway" | "multibanco") {
     setAGerar(metodo);
@@ -446,6 +515,27 @@ export default function GerarReferencia({
                 Abrir no WhatsApp
               </a>
             )}
+            {/*
+              A PERGUNTA QUE O ECRÃ NÃO CONSEGUE RESPONDER SOZINHO.
+
+              Só no Multibanco: o `multibanco/info` pergunta por referência, e
+              uma operação MB WAY não tem referência que se consulte assim.
+            */}
+            {mostrar.metodo === "multibanco" && mostrar.referencia && (
+              <button
+                onClick={() => void conferir(mostrar.id)}
+                disabled={aConferir}
+                title="Pergunta ao euPago se esta referência já foi paga. Não cobra nada."
+                className="flex items-center gap-1.5 rounded-lg border border-cyan-700/60 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
+              >
+                {aConferir ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {aConferir ? "A perguntar…" : "Já foi paga?"}
+              </button>
+            )}
             <button
               onClick={() => {
                 setPagamento(null);
@@ -456,6 +546,22 @@ export default function GerarReferencia({
               gerar outra
             </button>
           </div>
+
+          {conferencia && (
+            <div className="mt-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2">
+              <p className="text-xs leading-relaxed text-slate-300">{conferencia.texto}</p>
+              {conferencia.bruto != null && (
+                <details className="mt-1.5">
+                  <summary className="cursor-pointer text-[11px] text-slate-500 hover:text-slate-300">
+                    o que o euPago respondeu
+                  </summary>
+                  <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-2 font-mono text-[10px] leading-relaxed text-slate-400">
+                    {JSON.stringify(conferencia.bruto, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
         </>
       )}
 
