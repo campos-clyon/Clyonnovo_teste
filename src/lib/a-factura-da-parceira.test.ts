@@ -1,13 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CLYON_LIQUIDA_IVA, TAXA_IVA, contaDoCliente } from "./taxas-plataforma";
+import { A_FACTURA_LEVA_IVA, TAXA_IVA, contaDoCliente } from "./taxas-plataforma";
+import { IDENTIFICACAO, ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
 
 /**
- * UMA FACTURA, DA CLYON, COM IVA SOBRE TUDO.
+ * UMA FACTURA, DA EMPRESA PARCEIRA, COM IVA SOBRE TUDO.
  *
  * "A CLYON vai emitir as facturas a partir de agora, então vamos ignorar os
- * pros: tudo deve ser a 23 % caso deseje factura." — 22-09-2026.
+ * pros: tudo deve ser a 23 % caso deseje factura." E, no mesmo dia: "esqueça
+ * isso, quem vai facturar será uma empresa parceira chamada Miragem."
+ *
+ * A correcção importa e não é de nomes: a CLYON está na isenção do artigo
+ * 53.º e NÃO pode liquidar os 23 % que o site anuncia. Quem os liquida é a
+ * `ENTIDADE_QUE_FACTURA` de `identificacao-legal.ts`.
  *
  * ESTE FICHEIRO SUBSTITUIU O `as-duas-facturas.test.ts`, e vale a pena saber
  * o que ele guardava, porque a razão dele continua de pé.
@@ -22,8 +28,8 @@ import { CLYON_LIQUIDA_IVA, TAXA_IVA, contaDoCliente } from "./taxas-plataforma"
  * serviço ao cliente, o imposto era do regime DELE, e um profissional na
  * isenção do artigo 53.º não podia liquidar nada: a conta fazia-se por
  * vendedor, e 350 € davam 371,53 € a um cliente e 452,03 € a outro, pelo mesmo
- * trabalho. Com a CLYON a facturar, há uma factura e um imposto — o de quem a
- * emite.
+ * trabalho. Com uma parceira no regime normal a facturar, há uma factura e um
+ * imposto — o de quem a emite.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -59,10 +65,66 @@ describe("o que o cliente paga cabe na factura", () => {
     expect(contaDoCliente(350).total).toBe(452.03);
   });
 
-  it("a CLYON liquida IVA — e é disso que tudo isto depende", () => {
-    expect(CLYON_LIQUIDA_IVA).toBe(true);
+  it("a factura leva IVA — e é disso que tudo isto depende", () => {
+    /*
+     * A constante chamava-se `CLYON_LIQUIDA_IVA` e o nome era falso: a CLYON
+     * está isenta. Quem liquida é a parceira.
+     */
+    expect(A_FACTURA_LEVA_IVA).toBe(true);
     expect(TAXA_IVA).toBe(0.23);
     expect(contaDoCliente(350).temIva).toBe(true);
+  });
+});
+
+describe("quem emite a factura não é quem presta o serviço nem quem gere o site", () => {
+  it("são duas entidades, com dois NIF e dois regimes", () => {
+    /*
+     * A CONTRADIÇÃO QUE ISTO FECHA.
+     *
+     * O site anuncia «com factura acrescem 23 % de IVA» e a CLYON está na
+     * isenção do artigo 53.º: não pode liquidar imposto nenhum. Enquanto as
+     * duas coisas coexistiram, uma delas era falsa — e a falsa era a que o
+     * cliente lia.
+     */
+    expect(IDENTIFICACAO.regimeIva).toContain("Isento");
+    expect(ENTIDADE_QUE_FACTURA.regimeIva).toContain("normal");
+    expect(ENTIDADE_QUE_FACTURA.nif).not.toBe(IDENTIFICACAO.nif);
+    expect(ENTIDADE_QUE_FACTURA.nomeLegal).not.toBe(IDENTIFICACAO.nomeLegal);
+  });
+
+  it("o NIF da parceira é o de uma pessoa colectiva e fecha no dígito de controlo", () => {
+    /*
+     * Um NIF errado numa factura é um documento que não serve para nada — e
+     * só se descobre quando o cliente o entrega à contabilidade dele.
+     *
+     * O primeiro dígito 5 identifica uma pessoa colectiva, coerente com a
+     * forma jurídica. O último é o dígito de controlo: os oito primeiros
+     * multiplicam-se por 9, 8, 7, 6, 5, 4, 3, 2, e o resto da soma por 11 dá
+     * o que ele tem de ser.
+     */
+    const nif = ENTIDADE_QUE_FACTURA.nif;
+    expect(nif).toMatch(/^\d{9}$/);
+    expect(nif[0]).toBe("5");
+
+    let soma = 0;
+    for (let i = 0; i < 8; i++) soma += Number(nif[i]) * (9 - i);
+    const resto = soma % 11;
+    expect(Number(nif[8])).toBe(resto < 2 ? 0 : 11 - resto);
+  });
+
+  it("e o cliente sabe o nome dela antes de pedir a factura", () => {
+    /*
+     * A factura chega com um nome que não é o do site. Se ele só o descobrir
+     * no documento, a primeira reacção é achar que foi enganado — e tem
+     * razão em achá-lo, porque ninguém lho disse.
+     */
+    for (const ecra of [
+      "src/app/plataforma/pedir/components/ValoresEFaturacao.tsx",
+      "src/app/simulador/SimulatorThreePhaseForm.tsx",
+    ]) {
+      expect(ler(ecra)).toContain("ENTIDADE_QUE_FACTURA.nomeCurto");
+    }
+    expect(ler("src/lib/seo-data.ts")).toContain("ENTIDADE_QUE_FACTURA.nomeCurto");
   });
 });
 

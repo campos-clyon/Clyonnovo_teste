@@ -1,3 +1,5 @@
+import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
 export interface RegionData {
@@ -514,8 +516,8 @@ export const NOTA_DE_PRECO = {
   /** Com a explicação de quem factura, para páginas de preços. */
   completa:
     "Valores orientativos e sem IVA. O preço a sério é a proposta que recebe, " +
-    "fechada antes de o trabalho começar. A factura é emitida pela CLYON: se " +
-    "a quiser, acrescem 23 % de IVA ao valor da proposta.",
+    "fechada antes de o trabalho começar. Se quiser factura, acrescem 23 % de " +
+    `IVA ao valor da proposta, e quem a emite é a ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.`,
 } as const;
 
 export const PRAZO_DE_RESPOSTA = {

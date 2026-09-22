@@ -103,16 +103,17 @@ export const IDENTIFICACAO = {
   caeSecundaria: "43110 — Demolição",
 
   /**
-   * Regime de IVA: isenção do artigo 53.º do CIVA.
+   * Regime de IVA da CLYON: isenção do artigo 53.º do CIVA.
    *
    * Não é um detalhe de contabilista — é o que o cliente vê no preço. Quem
    * está neste regime NÃO liquida IVA, e a factura tem de mencionar
    * "IVA — Regime de Isenção" (artigos 36.º e 40.º do CIVA).
    *
-   * O site dizia "+ IVA" e "IVA incluído" em três sítios diferentes, e as
-   * duas coisas eram falsas ao mesmo tempo. Prometer um imposto que não
-   * aparece na factura é das poucas contradições que o cliente descobre
-   * sozinho, no fim, quando já não há como explicar.
+   * ⚠️ NÃO É ESTE O REGIME DA FACTURA AO CLIENTE. A CLYON está isenta e por
+   * isso não pode liquidar os 23 % que o site anuncia — quem emite a factura
+   * é a `ENTIDADE_QUE_FACTURA`, aqui em baixo. Confundir os dois é prometer
+   * ao cliente um imposto que ninguém pode entregar ao Estado, que foi
+   * exactamente o erro que este ficheiro nasceu para impedir.
    */
   regimeIva: "Isento — artigo 53.º do CIVA",
 
@@ -125,6 +126,44 @@ export const IDENTIFICACAO = {
 
   /** A autoridade de controlo em matéria de dados pessoais. */
   cnpdSite: "https://www.cnpd.pt",
+} as const;
+
+/**
+ * QUEM EMITE A FACTURA AO CLIENTE — e não é a CLYON.
+ *
+ * "Esqueça isso: quem vai facturar será uma empresa parceira chamada
+ * Miragem." — 22-09-2026.
+ *
+ * A pergunta que isto responde estava em aberto e era bloqueante. O site
+ * anuncia «com factura acrescem 23 % de IVA», e a CLYON está na isenção do
+ * artigo 53.º: não pode liquidar imposto nenhum. Ou o site mentia, ou quem
+ * facturava era outra entidade. É a segunda.
+ *
+ * Por isso isto vive numa constante SEPARADA da `IDENTIFICACAO`, e não como
+ * mais um campo dela. São duas entidades com dois NIF e dois regimes: quem
+ * presta o serviço e responde pelo site é a CLYON; quem emite a factura e
+ * liquida o imposto é esta. Juntá-las num objecto só seria voltar a ter uma
+ * identificação que diz duas coisas ao mesmo tempo.
+ *
+ * O NIF fecha no dígito de controlo e começa por 5, que é o que distingue uma
+ * pessoa colectiva de uma singular — coerente com a forma jurídica.
+ */
+export const ENTIDADE_QUE_FACTURA = {
+  /** A denominação social, como tem de constar da factura. */
+  nomeLegal: "Miragem Dourada, Unipessoal Lda",
+  /** Como se lhe chama numa frase que o cliente lê. */
+  nomeCurto: "Miragem Dourada",
+  nif: "518301192",
+  morada: "Rua José Henriques Coelho, n.º 1, 4.º C, 2770-103 Paço de Arcos",
+  /**
+   * Regime normal — é o que lhe permite liquidar os 23 % que o site anuncia.
+   *
+   * ⚠️ POR CONFIRMAR COM O DONO. Uma sociedade unipessoal também pode estar
+   * na isenção do artigo 53.º, e nesse caso a conta do cliente está errada
+   * outra vez. O que se sabe é a instrução — «tudo deve ser a 23 % caso
+   * deseje factura» — e ela só faz sentido com o regime normal.
+   */
+  regimeIva: "Regime normal — liquida IVA à taxa de 23 %",
 } as const;
 
 /**

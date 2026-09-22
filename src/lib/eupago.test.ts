@@ -407,7 +407,7 @@ describe("o que se pede ao banco é o que o ecrã mostrou", () => {
    *
    * O que muda com factura é o imposto que a CLYON cobra e entrega ao Estado.
    * Até 22-09-2026 eram 1,15 € — 23 % só sobre a taxa — porque o serviço ia na
-   * factura do profissional. Com a CLYON a facturar tudo são 24,15 €, 23 %
+   * factura do profissional. Com a parceira a facturar tudo são 24,15 €, 23 %
    * sobre os 105. Não é receita nenhuma: os «11 %» continuam verdadeiros. Mas
    * SAI DA CONTA DO CLIENTE, e é este o número que o MB WAY lhe vai pedir.
    *

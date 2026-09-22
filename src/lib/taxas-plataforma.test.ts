@@ -66,7 +66,7 @@ describe("IVA — soma-se ao valor acordado, e não se decompõe dele", () => {
     /*
      * Havia aqui um `ivaSobre(base, regime)` que devolvia zero para um
      * profissional na isenção do artigo 53.º. Foi apagado com o modelo que
-     * servia: quem factura é a CLYON, e não há base nenhuma isenta.
+     * servia: quem factura é uma empresa parceira, e não há base nenhuma isenta.
      */
     expect(contaDoCliente(350).iva).toBe(84.53);
     expect(contaDoCliente(350).semIva).toBe(367.5);
@@ -113,7 +113,7 @@ describe("a conta do cliente", () => {
      * Era calculado por vendedor, e com um profissional na isenção do artigo
      * 53.º o imposto do serviço era zero: 350 € davam 4,03 € de IVA e um
      * total de 371,53 €. Enquanto era ELE a facturar o serviço, estava certo.
-     * Com uma factura só, emitida pela CLYON, o imposto é o de quem a emite.
+     * Com uma factura só, o imposto é o de quem a emite.
      */
     for (const v of [10, 84, 350, 1000]) {
       const c = contaDoCliente(v);

@@ -33,6 +33,7 @@ import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
 /** Os três passos do envio, pela ordem em que acontecem de facto. */
 const PASSOS_DO_ENVIO = [
@@ -1743,8 +1744,8 @@ function Phase3Contact({
       >
         <p className="text-sm font-semibold text-gray-900">Precisa de fatura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          A fatura é emitida por quem presta o serviço. Dizer-nos agora garante que só lhe
-          propomos quem a possa passar.
+          A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira, e acrescem
+          23 % de IVA. Dizer-nos agora evita a surpresa no fim.
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           {[

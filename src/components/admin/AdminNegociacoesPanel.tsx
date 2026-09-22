@@ -4283,7 +4283,7 @@ function ConfirmarPelaClyon({
   /**
    * AS TAXAS DESTA NEGOCIAÇÃO, e já não o regime do profissional.
    *
-   * O regime saiu porque deixou de contar: quem factura é a CLYON. As taxas
+   * O regime saiu porque deixou de contar: quem factura é a parceira. As taxas
    * entraram porque faltavam — esta caixa calculava com as de hoje enquanto a
    * linha de cima usava as congeladas na negociação, e as duas mostravam
    * números diferentes para o mesmo trabalho, uma por cima da outra.

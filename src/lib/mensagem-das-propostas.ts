@@ -200,7 +200,7 @@ const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
  *
  * UMA FRASE SÓ, desde 22-09-2026. Havia duas porque o imposto era do regime
  * de quem facturava, e um profissional na isenção do artigo 53.º não liquidava
- * nada sobre o serviço. Agora quem factura é a CLYON, e é 23 % sobre tudo.
+ * nada sobre o serviço. Agora quem factura é uma empresa parceira, e é 23 % sobre tudo.
  */
 function comFactura(p: PropostaParaOCliente): string {
   if (p.total <= p.semIva) return "";

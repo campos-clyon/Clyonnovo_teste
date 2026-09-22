@@ -69,7 +69,7 @@ export function totalEmPalavras(
  * acrescia apenas o IVA da nossa taxa, poucos euros, e dizer-lhe «23 %» seria
  * anunciar um imposto que ninguém entregaria ao Estado.
  *
- * Agora quem factura é a CLYON, o imposto é o dela, e é 23 % sobre tudo. Duas
+ * Agora quem factura é uma empresa parceira, o imposto é o dela, e é 23 % sobre tudo. Duas
  * frases para uma regra só seriam duas maneiras de o cliente desconfiar.
  *
  * O total com factura vai ao lado, para a frase não deixar uma conta por

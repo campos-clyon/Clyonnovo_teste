@@ -406,7 +406,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
   it("fala do imposto numa linha à parte, e diz sempre a mesma coisa", () => {
     /*
      * Dizia «acresce só o IVA da taxa» a quem contratasse um profissional na
-     * isenção do artigo 53.º. Desde 22-09-2026 quem factura é a CLYON, e a
+     * isenção do artigo 53.º. Desde 22-09-2026 quem factura é uma parceira, e a
      * frase é uma só.
      */
     const m = mensagemDasPropostas({

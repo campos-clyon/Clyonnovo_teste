@@ -4,6 +4,7 @@ import { FORMA_EM_PALAVRAS, formasDisponiveis, lerForma } from "@/lib/forma-de-p
 import { Banknote, CreditCard, FileText, Truck, Info } from "lucide-react";
 import type { ErroDeValor } from "@/lib/pedido-valores";
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
+import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
 /**
  * Quanto o cliente quer pagar, e o que precisa em papel.
@@ -172,7 +173,8 @@ export default function ValoresEFaturacao({
                 Preciso de fatura
               </span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
-                A fatura é emitida pela CLYON. Com fatura, acrescem 23 % de IVA.
+                A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.
+                Com fatura, acrescem 23 % de IVA.
               </span>
             </span>
           </label>
