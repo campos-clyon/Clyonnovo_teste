@@ -168,12 +168,24 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
     }
   });
 
-  it("e o que ficou é a soma, escrita com os sinais à vista", () => {
+  it("e o que ficou é uma ideia por linha", () => {
+    /*
+     * A PRIMEIRA CORRECÇÃO NÃO CHEGOU — «isso não faz o menor sentido,
+     * corrija esses resumos». Tinha tirado as duas facturas e deixado os
+     * seis números na mesma linha, com sinais de somar pelo meio. Lia-se
+     * como uma equação, e ninguém lê equações de relance.
+     *
+     * Três linhas, três perguntas: quanto transfere, quanto é com factura,
+     * e como é que o dinheiro se reparte.
+     */
     const limpo = semNotas(PAINEL);
-    expect(limpo).toContain("Trabalho ");
-    expect(limpo).toContain("{\" + taxa \"}");
-    expect(limpo).toContain("a pagar");
-    expect(limpo).toContain("{\" · com factura, + IVA \"}");
+    expect(limpo).toContain("O cliente paga");
+    expect(limpo).toContain("Se quiser factura, paga");
+    expect(limpo).toContain("O profissional recebe");
+    expect(limpo).toContain("a CLYON fica com");
+    // A conta de onde vem cada número fica ao lado, em letra fraca.
+    expect(limpo).toContain("trabalho {euros(conta.servico)} + taxa");
+    expect(limpo).toContain("mais IVA {pct(TAXA_IVA)}, {euros(conta.iva)}");
     // A tabela de confirmar, linha a linha e pela mesma ordem.
     for (const rotulo of [
       '"O trabalho"',

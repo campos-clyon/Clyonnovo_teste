@@ -2183,61 +2183,58 @@ export default function AdminNegociacoesPanel({
                 taxasDela,
               );
               /*
-                AS DUAS FACTURAS, com o número de cada uma — 14-09-2026.
+                UMA IDEIA POR LINHA — 22-09-2026, segunda passagem.
 
-                "O cliente pagou 107,52 mas a factura é de apenas 103,32." A
-                diferença eram os 4,20 € de taxa, que o cliente pagava e que
-                não apareciam em documento nenhum. A CLYON passou a assumir as
-                facturas, e esta linha passa a dizer QUEM FACTURA O QUÊ — que é
-                a pergunta que se faz aqui e para a qual era preciso ir buscar
-                uma calculadora.
+                "Isso não faz o menor sentido, corrija esses resumos: eles
+                devem ser simples e fáceis de entender."
+
+                A primeira correcção já tinha tirado as duas facturas, mas
+                deixou tudo na MESMA linha: trabalho, taxa, soma, IVA, total,
+                o que o profissional recebe e a comissão. Seis números
+                seguidos com sinais de somar pelo meio lêem-se como uma
+                equação, e ninguém lê equações de relance.
+
+                Agora são três linhas e cada uma responde a uma pergunta:
+                quanto é que o cliente transfere, quanto é com factura, e como
+                é que o dinheiro se reparte. A conta de onde vem cada número
+                fica em letra fraca, ao lado, para quem a quiser conferir.
               */
+              const recebe = quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela);
+              const fraca = "text-slate-500";
               return (
-                <p className="mt-1 text-slate-300">
-                  {/*
-                    A CONTA DITA PELA ORDEM EM QUE SE FAZ — 22-09-2026.
-
-                    "Essas telas estão muito confusas e erradas. Temos que ser
-                    simples e directo para mesmo um senhor de 80 anos
-                    entender: valor do trabalho mais taxa 5 % = X, mais IVA
-                    caso deseje 23 % = Y."
-
-                    Estava tudo numa linha só com nove números e duas
-                    facturas: «o cliente paga 47,77 €, em duas facturas —
-                    45,00 € do profissional (isento de IVA) e 2,77 € da CLYON
-                    (taxa 2,25 € + IVA 0,52 €)». Para saber quanto o cliente
-                    tinha de transferir era preciso uma calculadora.
-
-                    Agora são duas somas, escritas com os sinais à vista.
-                  */}
-                  Trabalho <strong>{euros(conta.servico)}</strong>
-                  {" + taxa "}{pct(taxasDela.cliente)}{" "}
-                  <strong>{euros(conta.taxa)}</strong>
-                  {" = "}
-                  <strong className="text-slate-100">{euros(conta.semIva)}</strong> a pagar
-                  {" · com factura, + IVA "}{pct(TAXA_IVA)}{" "}
-                  <strong>{euros(conta.iva)}</strong>
-                  {" = "}
-                  <strong className="text-slate-100">{euros(conta.total)}</strong>
-                  {" · "}o profissional recebe{" "}
-                  <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela))}</strong>
-                  {/*
-                    A COMISSÃO, SEM A REPARTIÇÃO — 22-09-2026.
-
-                    Dizia «comissão CLYON 4,95 € (2,25 € do cliente + 2,70 € a
-                    facturar ao profissional)». Os dois números estão certos e
-                    estavam a mais: a caixa de confirmar, logo por baixo, já
-                    diz de onde vem a comissão, e esta linha só precisa de
-                    dizer quanto é.
-
-                    Em dinheiro fica a ressalva, porque aí o caminho do
-                    dinheiro é outro: o profissional recebe em mão e a CLYON
-                    cobra ao cliente por referência.
-                  */}
-                  {emDinheiro
-                    ? ` · em dinheiro: ele recebe ${euros(Number(acordada.valorAcordado))} em mão e a CLYON cobra ${euros(conta.taxa)} ao cliente por referência`
-                    : ` · fica para a CLYON ${euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))}`}
-                </p>
+                <div className="mt-1 space-y-0.5 text-slate-300">
+                  <p>
+                    O cliente paga{" "}
+                    <strong className="text-slate-100">{euros(conta.semIva)}</strong>{" "}
+                    <span className={fraca}>
+                      trabalho {euros(conta.servico)} + taxa {pct(taxasDela.cliente)}{" "}
+                      {euros(conta.taxa)}
+                    </span>
+                  </p>
+                  <p>
+                    Se quiser factura, paga{" "}
+                    <strong className="text-slate-100">{euros(conta.total)}</strong>{" "}
+                    <span className={fraca}>
+                      mais IVA {pct(TAXA_IVA)}, {euros(conta.iva)}
+                    </span>
+                  </p>
+                  {emDinheiro ? (
+                    <p>
+                      Em dinheiro: ele recebe{" "}
+                      <strong>{euros(Number(acordada.valorAcordado))}</strong> em mão, e a
+                      CLYON cobra <strong>{euros(conta.taxa)}</strong> ao cliente por
+                      referência
+                    </p>
+                  ) : (
+                    <p>
+                      O profissional recebe <strong>{euros(recebe)}</strong>
+                      {" · "}a CLYON fica com{" "}
+                      <strong>
+                        {euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))}
+                      </strong>
+                    </p>
+                  )}
+                </div>
               );
             })()}
 
