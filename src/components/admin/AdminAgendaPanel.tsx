@@ -138,24 +138,18 @@ const GRUPOS: Array<{
   },
 ];
 
-/** Os que aparecem com «Só o que precisa de atenção» ligado. */
-const PRECISAM: EstadoNaAgenda[] = ["atrasado", "hoje", "sem_data"];
-
 export default function AdminAgendaPanel() {
   const { token } = useAdminAuth();
   const [trabalhos, setTrabalhos] = useState<Trabalho[]>([]);
   const [resumo, setResumo] = useState({ atrasados: 0, hoje: 0, semData: 0, porVir: 0, feitos: 0 });
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
-  /* Ver tudo, ou só o que precisa de alguém hoje. */
-  const [soOsQuePrecisam, setSoOsQuePrecisam] = useState(true);
   /*
    * UM BLOCO SÓ, quando se carrega no cartão de cima.
    *
    * Os cartões dos totais eram só números. Passam a ser filtros: carregar em
    * «Atrasados» deixa só os atrasados no ecrã, e carregar outra vez volta a
-   * mostrar todos. Não substitui a caixa de «só o que precisa de atenção» —
-   * afina-a.
+   * mostrar todos. É o ÚNICO filtro desta agenda, desde 22-09-2026.
    */
   const [soOBloco, setSoOBloco] = useState<EstadoNaAgenda | null>(null);
   /* Que blocos estão fechados. «Feitos» nasce fechado. */
@@ -219,14 +213,20 @@ export default function AdminAgendaPanel() {
   const agora = new Date();
 
   /*
-   * Que blocos se mostram: um só se estiver escolhido em cima; senão os que
-   * precisam de atenção, ou todos.
+   * Que blocos se mostram: um só, se estiver escolhido em cima; senão TODOS.
+   *
+   * Havia aqui uma caixa, «Só o que precisa de atenção», ligada por omissão:
+   * escondia os «Por vir» e os «Feitos» a quem abrisse a agenda. Decisão dele
+   * a 22-09-2026: «quero ver tudo sempre».
+   *
+   * Uma agenda que se abre já filtrada mente sobre o tamanho do dia — e o
+   * filtro que ela aplicava não era o que se pede a uma agenda, que é a lista
+   * inteira por ordem de urgência. Isso os blocos já fazem, e os cartões de
+   * cima continuam lá para quem quiser um deles sozinho.
    */
   const estadosVisiveis: EstadoNaAgenda[] = soOBloco
     ? [soOBloco]
-    : soOsQuePrecisam
-      ? PRECISAM
-      : GRUPOS.map((g) => g.estado);
+    : GRUPOS.map((g) => g.estado);
 
   /* Cada trabalho no seu bloco, e dentro do bloco o mais antigo primeiro: é o que espera há mais. */
   const porEstado = new Map<EstadoNaAgenda, Trabalho[]>();
@@ -306,16 +306,6 @@ export default function AdminAgendaPanel() {
             </button>
           );
         })}
-        <label className="ml-auto flex cursor-pointer items-center gap-2 text-sm text-slate-400">
-          <input
-            type="checkbox"
-            checked={soOsQuePrecisam}
-            disabled={soOBloco !== null}
-            onChange={(e) => setSoOsQuePrecisam(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-600 bg-slate-900 disabled:opacity-40"
-          />
-          Só o que precisa de atenção
-        </label>
       </div>
 
       {soOBloco && (
@@ -362,9 +352,7 @@ export default function AdminAgendaPanel() {
         <p className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-6 text-center text-sm text-slate-400">
           {soOBloco
             ? `Nenhum trabalho em «${GRUPOS.find((g) => g.estado === soOBloco)?.titulo}».`
-            : soOsQuePrecisam
-              ? "Nada atrasado, nada para hoje, nada por marcar. Está tudo em dia."
-              : "Nenhum trabalho contratado neste momento."}
+            : "Nenhum trabalho contratado neste momento."}
         </p>
       ) : (
         <div className="mt-6 space-y-6">
