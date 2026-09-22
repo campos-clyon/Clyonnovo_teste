@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import type { UserProfile } from "./types";
 import Nota from "@/components/Nota";
+import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
 interface Props {
   user: UserProfile;
@@ -159,11 +160,15 @@ export default function Faturacao({ user, onUpdate }: Props) {
       </div>
 
       <Nota titulo="Quem passa a fatura" className="mt-4" comecaAberta>
-        A fatura do serviço é emitida pelo profissional que faz o trabalho, e
-        não pela CLYON — é ele o prestador. Estes dados são os que lhe chegam
-        para a passar, por isso vale a pena estarem certos antes de fechar um
-        trabalho. Se precisa mesmo de fatura, diga-o no pedido: só lhe
-        propomos quem a possa passar.
+        {/*
+          MUDOU A 22-09-2026. Dizia que a fatura era emitida pelo profissional
+          que faz o trabalho. Deixou de ser verdade quando a facturação passou
+          para uma empresa parceira — ver `ENTIDADE_QUE_FACTURA`.
+        */}
+        A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa
+        parceira, e acrescem 23 % de IVA ao valor da proposta. Estes dados são
+        os que vão nela, por isso vale a pena estarem certos antes de fechar um
+        trabalho. Se precisa mesmo de fatura, diga-o no pedido.
       </Nota>
     </div>
   );
