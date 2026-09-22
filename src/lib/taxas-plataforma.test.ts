@@ -8,7 +8,6 @@ import {
   TAXA_PROFISSIONAL,
   TAXA_TOTAL,
   TAXA_IVA,
-  ivaSobre,
   regimeDeIva,
 } from "./taxas-plataforma";
 
@@ -63,14 +62,14 @@ describe("IVA — soma-se ao valor acordado, e não se decompõe dele", () => {
    * e foi pedida sabendo disso — por isso o número está escrito aqui, para
    * ninguém a desfazer por engano.
    */
-  it("350 € acordados com quem liquida IVA dão 80,50 € de imposto", () => {
-    expect(ivaSobre(350, "normal")).toBe(80.5);
-  });
-
-  it("quem está na isenção do artigo 53.º não acrescenta nada", () => {
-    // Mostrar 23% a quem contrata um isento é mostrar-lhe um imposto que não
-    // deve — e que ninguém pode entregar ao Estado.
-    expect(ivaSobre(350, "isento")).toBe(0);
+  it("350 € mais a taxa dão 84,53 € de imposto, a quem quiser factura", () => {
+    /*
+     * Havia aqui um `ivaSobre(base, regime)` que devolvia zero para um
+     * profissional na isenção do artigo 53.º. Foi apagado com o modelo que
+     * servia: quem factura é a CLYON, e não há base nenhuma isenta.
+     */
+    expect(contaDoCliente(350).iva).toBe(84.53);
+    expect(contaDoCliente(350).semIva).toBe(367.5);
   });
 
   it("a taxa é a normal portuguesa", () => {
@@ -88,76 +87,60 @@ describe("IVA — soma-se ao valor acordado, e não se decompõe dele", () => {
 });
 
 describe("a conta do cliente", () => {
-  it("350 € acordados no regime normal dão 452,03 € a pagar", () => {
+  it("valor do trabalho, mais taxa, mais IVA — por esta ordem", () => {
     /*
-     * MUDOU A 14-09-2026: "o cliente pagou 107,52 mas a factura é de apenas
-     * 103,32". A taxa da CLYON era somada a seco, sem imposto e sem documento.
-     * A CLYON passou a assumir as facturas, e a conta é valor + taxa + IVA.
+     * A CONTA INTEIRA, NA FORMA EM QUE O DONO A ESCREVEU — 22-09-2026.
      *
-     * Serviço 350 + taxa 17,50 + IVA 84,53 (80,50 do profissional + 4,03 da
-     * taxa) = 452,03.
+     * "Valor do trabalho mais taxa 5 % = X, mais IVA caso deseje 23 % = Y."
+     *
+     * 350 + 17,50 = 367,50 a pagar. Com factura, mais 84,53 de imposto:
+     * 452,03.
      */
-    const c = contaDoCliente(350, "normal");
+    const c = contaDoCliente(350);
     expect(c.servico).toBe(350);
     expect(c.taxa).toBe(17.5);
-    expect(c.ivaDoServico).toBe(80.5);
-    expect(c.ivaDaTaxa).toBe(4.03);
+    expect(c.semIva).toBe(367.5);
     expect(c.iva).toBe(84.53);
     expect(c.total).toBe(452.03);
     expect(c.temIva).toBe(true);
   });
 
-  it("com um ISENTO ainda há IVA — o da taxa, que é da CLYON", () => {
+  it("o imposto é 23 % de TUDO — do trabalho e da taxa", () => {
     /*
-     * A parte que não é óbvia. O profissional isento não liquida nada sobre o
-     * serviço dele; a CLYON liquida sobre a taxa DELA na mesma, porque é outra
-     * empresa e outra factura. Antes disto o isento não tinha imposto nenhum,
-     * e os 17,50 € ficavam sem documento.
-     */
-    const c = contaDoCliente(350, "isento");
-    expect(c.ivaDoServico).toBe(0);
-    expect(c.ivaDaTaxa).toBe(4.03);
-    expect(c.iva).toBe(4.03);
-    expect(c.total).toBe(371.53);
-    expect(c.temIva).toBe(true);
-  });
-
-  it("o IVA total é sempre a soma dos dois — nunca uma conta sobre a soma", () => {
-    /*
-     * Dá o mesmo número enquanto as duas partes estiverem à mesma taxa, e é
-     * por isso que a apresentação os pode juntar numa linha. O que NÃO pode é
-     * ser calculado assim: com o profissional isento, 23 % sobre (serviço +
-     * taxa) dava-lhe um imposto que ele não pode emitir.
+     * "A CLYON vai emitir as facturas a partir de agora, então vamos ignorar
+     * os pros: tudo deve ser a 23 % caso deseje factura." — 22-09-2026.
+     *
+     * Era calculado por vendedor, e com um profissional na isenção do artigo
+     * 53.º o imposto do serviço era zero: 350 € davam 4,03 € de IVA e um
+     * total de 371,53 €. Enquanto era ELE a facturar o serviço, estava certo.
+     * Com uma factura só, emitida pela CLYON, o imposto é o de quem a emite.
      */
     for (const v of [10, 84, 350, 1000]) {
-      for (const r of ["isento", "normal"] as const) {
-        const c = contaDoCliente(v, r);
-        expect(c.iva).toBe(Number((c.ivaDoServico + c.ivaDaTaxa).toFixed(2)));
-      }
+      const c = contaDoCliente(v);
+      expect(c.iva).toBe(Number((c.semIva * TAXA_IVA).toFixed(2)));
     }
-    expect(contaDoCliente(350, "isento").iva).toBeLessThan(
-      contaDoCliente(350, "normal").iva,
-    );
+    // O caso que mudou: o que antes dava 371,53 € dá agora o mesmo que o
+    // regime normal sempre deu.
+    expect(contaDoCliente(350).total).toBe(452.03);
   });
 
   it("as três parcelas somam sempre o total, sem cêntimos a sobrar", () => {
     for (const v of [5, 33.33, 99.99, 100, 237.5, 1000, 12345.67]) {
-      for (const r of ["isento", "normal"] as const) {
-        const c = contaDoCliente(v, r);
-        expect(Number((c.servico + c.taxa + c.iva).toFixed(2))).toBe(c.total);
-      }
+      const c = contaDoCliente(v);
+      expect(Number((c.servico + c.taxa + c.iva).toFixed(2))).toBe(c.total);
+      expect(Number((c.semIva + c.iva).toFixed(2))).toBe(c.total);
     }
   });
 
   it("o total é sempre MAIOR do que o valor acordado — nunca menor", () => {
     // É o sentido da mudança: o acordado é a base, e tudo o resto acresce.
     for (const v of [10, 350, 5000]) {
-      expect(contaDoCliente(v, "normal").total).toBeGreaterThan(v);
-      expect(contaDoCliente(v, "isento").total).toBeGreaterThan(v);
+      expect(contaDoCliente(v).total).toBeGreaterThan(v);
+      expect(contaDoCliente(v).semIva).toBeGreaterThan(v);
     }
   });
 
   it("zero continua zero", () => {
-    expect(contaDoCliente(0, "normal").total).toBe(0);
+    expect(contaDoCliente(0).total).toBe(0);
   });
 });

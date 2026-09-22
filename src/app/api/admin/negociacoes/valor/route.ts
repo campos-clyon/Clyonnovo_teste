@@ -7,7 +7,6 @@ import {
   quantoOProfissionalRecebe,
   contaDoCliente,
   taxasDaNegociacao,
-  regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -171,10 +170,9 @@ export async function POST(req: NextRequest) {
       negociacaoId,
     ]);
 
-    const regime = regimeDeIva(linha.regimeIva);
     const taxas = taxasDaNegociacao(linha);
     const recebe = quantoOProfissionalRecebe(novo, taxas);
-    const conta = contaDoCliente(novo, regime, taxas);
+    const conta = contaDoCliente(novo, taxas);
     const eur = (v: number) => v.toFixed(2).replace(".", ",") + " €";
 
     const porQuem = colab?.nome ?? "a CLYON";

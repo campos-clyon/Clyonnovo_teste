@@ -78,9 +78,9 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   {
     pergunta: "Que IVA devo cobrar?",
     resposta:
-      "O regime é seu, não nosso. Escolha-o em Faturação e IVA: isento pelo artigo 53.º, ou " +
-      "regime normal a 23 %. Se estiver no normal, o IVA vem incluído no valor acordado e " +
-      "aparece decomposto na confirmação do cliente — nunca é somado por cima.",
+      "Ao cliente, nenhum: quem lhe passa a factura é a CLYON, e é ela que liquida os 23 % " +
+      "quando ele a pede. O seu regime continua a contar entre si e nós — declare-o em " +
+      "Faturação e IVA — e é com ele que nos factura a si o que recebe.",
   },
 ];
 

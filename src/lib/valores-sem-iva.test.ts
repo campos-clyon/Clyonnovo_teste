@@ -19,10 +19,10 @@ import { contaDoCliente, servicoMaisTaxa } from "./taxas-plataforma";
  * profissional, porque era o único que ele reconhecia. Quatro linhas não são
  * mais transparência do que duas: são mais sítios onde se perder.
  *
- * A CONTA NÃO MUDOU. `contaDoCliente` continua a calcular o imposto por
- * vendedor, por causa da isenção do artigo 53.º — calculá-lo sobre a soma
- * daria 23 % a quem não os pode facturar. O que mudou foi qual dos números
- * dela é que se mostra.
+ * A CONTA MUDOU DEPOIS, a 22-09-2026: o imposto era calculado por vendedor,
+ * por causa da isenção do artigo 53.º, e passou a ser 23 % sobre tudo quando a
+ * CLYON assumiu as facturas. O que este ficheiro guarda é anterior a isso e
+ * sobreviveu-lhe: qual dos números da conta é que se MOSTRA.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
@@ -40,19 +40,21 @@ const soCodigo = (s: string) =>
 describe("o número que o cliente vê é serviço mais taxa, sem imposto", () => {
   it("o caso que deu origem a isto: 280 € do profissional são 294 € a pagar", () => {
     // Foi este o engano. Ele pagou 280 e ficaram 14 por pagar.
-    expect(contaDoCliente(280, "isento").semIva).toBe(294);
-    expect(contaDoCliente(280, "normal").semIva).toBe(294);
+    expect(contaDoCliente(280).semIva).toBe(294);
   });
 
-  it("não depende do regime de quem factura — e é por isso que serve", () => {
+  it("é serviço mais taxa, e mais nada", () => {
     /*
-     * O total com imposto muda com o regime do profissional; este não. É o
-     * único número que se pode dizer antes de se saber com quem ele vai
+     * É o único número que se pode dizer antes de se saber com quem ele vai
      * ficar, e o único que não muda debaixo dos pés de quem já o leu.
+     *
+     * Até 22-09-2026 havia aqui uma segunda razão: o TOTAL mudava com o
+     * regime do profissional e este não. Essa razão desapareceu — quem
+     * factura é a CLYON e o total é o mesmo para toda a gente — mas o número
+     * continua a ser o que se mostra.
      */
     for (const v of [0, 1, 33.33, 280, 1999.99]) {
-      expect(contaDoCliente(v, "isento").semIva).toBe(contaDoCliente(v, "normal").semIva);
-      expect(contaDoCliente(v, "isento").semIva).toBe(servicoMaisTaxa(v));
+      expect(contaDoCliente(v).semIva).toBe(servicoMaisTaxa(v));
     }
   });
 
@@ -62,11 +64,9 @@ describe("o número que o cliente vê é serviço mais taxa, sem imposto", () =>
      * fechar, alguém tratou o imposto como opcional na aritmética — e não é:
      * é opcional na APRESENTAÇÃO, e só isso.
      */
-    for (const regime of ["isento", "normal"] as const) {
-      for (const v of [84, 280, 300, 330]) {
-        const c = contaDoCliente(v, regime);
-        expect(Number((c.semIva + c.iva).toFixed(2))).toBe(c.total);
-      }
+    for (const v of [84, 280, 300, 330]) {
+      const c = contaDoCliente(v);
+      expect(Number((c.semIva + c.iva).toFixed(2))).toBe(c.total);
     }
   });
 });
@@ -100,20 +100,20 @@ describe("os ecrãs do cliente mostram esse número", () => {
     // A carteira a dizer 361,20 € sobre um trabalho anunciado a 294,00 € era
     // a terceira versão do mesmo preço — e a que ninguém tinha visto antes.
     const CARTEIRA = soCodigo(ler("src/lib/carteira-do-cliente.ts"));
-    expect(CARTEIRA).toContain("regimeDeIva(t.regimeIva)).semIva");
+    expect(CARTEIRA).toContain("contaDoCliente(acordado).semIva");
   });
 });
 
 describe("o backoffice continua a ver a conta inteira", () => {
   it("quem passa as facturas precisa do total, e continua a tê-lo", () => {
     /*
-     * Apresentar sem IVA é uma regra da FRENTE. O painel do administrador
-     * decompõe as duas facturas — a do profissional e a da CLYON — e é dali
-     * que sai o dinheiro que cada um recebe. Pôr-lhe o número do cliente ali
-     * era dar-lhe a mesma confusão, ao contrário.
+     * Apresentar sem IVA é uma regra da FRENTE. O painel do administrador vê
+     * a conta inteira — o que o cliente paga, o que o profissional recebe e o
+     * que fica para a casa — porque é dali que sai a factura e o dinheiro de
+     * cada um.
      */
     const PAINEL = soCodigo(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
-    expect(PAINEL).toContain("regimeDeIva(regimeIva)).total");
+    expect(PAINEL).toContain("contaDoCliente(valorAcordado, taxas)");
     const CARTEIRAS = soCodigo(ler("src/app/api/admin/carteiras/route.ts"));
     expect(CARTEIRAS).toContain("taxas).total");
   });

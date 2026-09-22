@@ -17,21 +17,21 @@
  * Como todos os ecrãs, emails e mensagens leem estas duas constantes, a troca
  * é aqui e só aqui; os testes em `taxas-plataforma.test.ts` têm os números.
  *
- * O IVA ENTRA, E SÃO DOIS — corrigido a 14-09-2026.
+ * O IVA ENTRA — e desde 22-09-2026 é UM SÓ.
  *
- * Dizia aqui que "o IVA não entra nisto", e era verdade a meias: o do serviço
- * é do profissional e vai na factura dele, isso não mudou. O que faltava era o
- * da TAXA. "O cliente pagou 107,52 mas a factura é de apenas 103,32" — os
- * 4,20 € de taxa eram somados a seco, sem imposto e sem documento nenhum, em
- * todos os trabalhos desde sempre.
+ * Dizia aqui que "o IVA não entra nisto", e era verdade a meias. "O cliente
+ * pagou 107,52 mas a factura é de apenas 103,32": os 4,20 € de taxa eram
+ * somados a seco, sem imposto e sem documento nenhum, em todos os trabalhos
+ * desde sempre.
  *
- * A CLYON passou a assumir as facturas. São duas, de duas empresas:
+ * Houve depois uma fase de DUAS facturas — a do profissional pelo serviço,
+ * com o imposto do regime dele, e a da CLYON pela taxa. Acabou quando a CLYON
+ * passou a facturar tudo:
  *
- *   profissional → cliente:  serviço + IVA do regime DELE
- *   CLYON        → cliente:  taxa + IVA da CLYON
- *   CLYON        → profissional: a comissão de `TAXA_PROFISSIONAL`
+ *   CLYON → cliente:      serviço + taxa, mais 23 % se ele quiser factura
+ *   CLYON → profissional: a comissão de `TAXA_PROFISSIONAL`
  *
- * Ver `ivaSobre` e `contaDoCliente` em baixo.
+ * Ver `contaDoCliente` em baixo.
  */
 
 /**
@@ -119,17 +119,16 @@ export const TAXA_TOTAL = TAXA_CLIENTE + TAXA_PROFISSIONAL;
 /**
  * IVA à taxa normal portuguesa.
  *
- * ⚠️ Aplica-se a TODOS os trabalhos, por decisão de 18-08-2026, e isso merece
- * ficar escrito com o alerta que lhe corresponde.
+ * Aplica-se a todos os trabalhos, e desde 22-09-2026 sem ressalva nenhuma.
  *
- * Quem presta o serviço é o profissional, e o IVA é do regime DELE: um
- * profissional em isenção (art. 53.º do CIVA) não liquida IVA nenhum. Mostrar
- * 23 % a um cliente que contrata um isento é mostrar-lhe um imposto que ele não
- * deve — e que ninguém pode entregar ao Estado. O risco foi levantado e a
- * decisão foi tomada na mesma.
+ * Houve aqui um aviso longo e havia razão para ele: enquanto era o profissional
+ * a facturar o serviço, o imposto era do regime DELE, e mostrar 23 % a quem
+ * contratava um isento do artigo 53.º era anunciar-lhe um imposto que ninguém
+ * podia entregar ao Estado. Chegou a corrigir-se por perfil, como o aviso
+ * sugeria.
  *
- * Se um dia se quiser corrigir, o caminho é perguntar o regime na inscrição do
- * profissional e decidir por perfil; a decomposição abaixo continua a servir.
+ * Deixou de se pôr quando a CLYON passou a emitir as facturas: o imposto de
+ * uma factura é o de quem a emite, e quem a emite é sempre a mesma empresa.
  */
 export const TAXA_IVA = 0.23;
 
@@ -160,18 +159,6 @@ export function regimeDeIva(v: unknown): RegimeIva {
 }
 
 /**
- * O IVA sobre uma base, segundo o regime de QUEM FACTURA.
- *
- * Quem presta o serviço é o profissional, e o imposto é do regime dele: um
- * profissional na isenção do artigo 53.º não liquida IVA nenhum, e mostrar
- * 23 % a quem o contrata seria mostrar-lhe um imposto que não deve — e que
- * ninguém pode entregar ao Estado.
- */
-export function ivaSobre(base: number, regime: RegimeIva): number {
-  return regime === "normal" ? aosCentimos(base * TAXA_IVA) : 0;
-}
-
-/**
  * A CLYON está no regime normal e liquida IVA na taxa que cobra ao cliente.
  *
  * "A CLYON vai assumir as facturas, então vamos fazer valor mais taxa mais
@@ -187,11 +174,10 @@ export type ContaDoCliente = {
   /** O valor acordado com o profissional, sem imposto. */
   servico: number;
   /**
-   * TODO o imposto da conta — o do serviço mais o da taxa.
+   * O IMPOSTO DA FACTURA: 23 % sobre o serviço mais a taxa.
    *
-   * É este que se mostra ao cliente, numa linha só: «IVA (23 %)». Somar os
-   * dois na apresentação é legítimo porque a taxa é a mesma; o que NÃO se pode
-   * é calculá-los juntos, e é por isso que os dois de baixo existem.
+   * Uma linha só, porque é uma factura só. Era calculado em duas parcelas, por
+   * vendedor, e a razão disso está na nota do `TAXA_IVA` aqui em cima.
    */
   iva: number;
   /** A taxa da CLYON ao cliente: `TAXA_CLIENTE` sobre o serviço. */
@@ -199,13 +185,15 @@ export type ContaDoCliente = {
   /** O acréscimo fixo da CLYON (o «pagar depois»), em euros e sem IVA. Zero quase sempre. */
   acrescimo: number;
   /**
-   * O IVA do SERVIÇO, que vai na factura do profissional. Zero se for isento.
+   * SÓ A PARTE DO IMPOSTO QUE CORRESPONDE À TAXA DA CLYON.
    *
-   * Separado do da taxa porque são duas facturas de duas empresas. Quem emite
-   * precisa de saber qual é o seu — e a soma na linha do ecrã não lho diz.
+   * Existe para o trabalho pago em dinheiro ao profissional, onde o serviço
+   * não passa pela CLYON e ela só pode facturar o que é dela. Em tudo o resto
+   * quem manda é o `iva`, que é o imposto da factura inteira.
+   *
+   * Não há `ivaDoServico`: essa separação servia duas facturas de duas
+   * empresas, e desde 22-09-2026 a factura é uma só, da CLYON.
    */
-  ivaDoServico: number;
-  /** O IVA da TAXA, que vai na factura da CLYON ao cliente. */
   ivaDaTaxa: number;
   /**
    * O SERVIÇO MAIS A TAXA, SEM IMPOSTO — e é ESTE o número que se lhe diz.
@@ -240,7 +228,21 @@ export type ContaDoCliente = {
  */
 export function contaDoCliente(
   acordado: number,
-  regime: RegimeIva,
+  /*
+   * O REGIME DO PROFISSIONAL SAIU DAQUI — 22-09-2026, e saiu em vez de ficar
+   * a ser ignorado.
+   *
+   * "A CLYON vai emitir as facturas a partir de agora, então vamos ignorar os
+   * pros." Um parâmetro que se recebe e não se usa é pior do que parâmetro
+   * nenhum: quem o passa acredita que ele conta, e mais cedo ou mais tarde
+   * alguém o volta a ligar por o ver ali. Tirado, o compilador aponta os
+   * vinte sítios que o passavam e obriga a olhar para cada um.
+   *
+   * A coluna `providers.regimeIva` FICA, e o profissional continua a
+   * declará-la: é a verdade fiscal dele, e é dela que depende a factura que
+   * ele passa à CLYON. O que deixou de haver é caminho dela até ao que o
+   * cliente paga.
+   */
   /*
    * As da negociação, quando quem chama as tem. Sem elas, as de origem — que
    * é o certo para uma linha anterior a haver taxas guardadas, e o que mantém
@@ -285,22 +287,48 @@ export function contaDoCliente(
    * — um imposto que não pode emitir e que ninguém pode entregar ao Estado.
    * Calcula-se por vendedor; só a APRESENTAÇÃO é que junta as duas linhas.
    */
-  const ivaDoServico = ivaSobre(servico, regime);
-  // O IVA da CLYON é sobre a parte TODA da CLYON: a taxa e o acréscimo. O nome
-  // `ivaDaTaxa` ficou — mudá-lo era churn em seis ficheiros sem mudar uma
-  // conta — mas lê-se «o IVA do que é da CLYON».
+  const semIva = aosCentimos(servico + taxa + extra);
+
+  /*
+   * UM IMPOSTO SÓ, SOBRE TUDO — 22-09-2026.
+   *
+   * "A CLYON vai emitir as facturas a partir de agora, então vamos ignorar os
+   * pros: tudo deve ser a 23 % caso deseje factura."
+   *
+   * Não é uma simplificação do ecrã, é o modelo a mudar de mãos. Quem factura
+   * ao cliente é a CLYON, em nome próprio, pelo serviço inteiro — e o imposto
+   * de uma factura é o de QUEM A EMITE. O regime do profissional passa a ser
+   * assunto entre ele e a CLYON, e deixa de tocar no que o cliente paga.
+   *
+   * Era por isso que esta conta se fazia por vendedor: enquanto o profissional
+   * facturava o serviço ao cliente, um profissional na isenção do artigo 53.º
+   * não podia liquidar imposto nenhum, e pôr-lhe 23 % era cobrar ao cliente um
+   * imposto que ninguém entregaria ao Estado. Com uma factura só, essa razão
+   * desaparece — e o seu contrário passa a ser verdade: isentar parte de uma
+   * factura da CLYON seria não liquidar imposto que É devido.
+   */
+  const iva = CLYON_LIQUIDA_IVA ? aosCentimos(semIva * TAXA_IVA) : 0;
+
+  /*
+   * A PARTE DO IMPOSTO QUE É DA TAXA, e não do serviço.
+   *
+   * Sobrevive para um caso só: o trabalho pago em dinheiro ao profissional. Aí
+   * o serviço não passa pela CLYON e ela não o pode facturar — cobra a sua
+   * taxa e o imposto dela. Ver `quantoACLYONCobra` em `eupago.ts`.
+   *
+   * Em tudo o resto quem manda é o `iva` de cima. Não há `ivaDoServico`: a
+   * separação existia para duas facturas de duas empresas, e agora é uma.
+   */
   const ivaDaTaxa = CLYON_LIQUIDA_IVA ? aosCentimos((taxa + extra) * TAXA_IVA) : 0;
-  const iva = aosCentimos(ivaDoServico + ivaDaTaxa);
 
   return {
     servico,
     iva,
     taxa,
     acrescimo: extra,
-    ivaDoServico,
     ivaDaTaxa,
-    semIva: aosCentimos(servico + taxa + extra),
-    total: aosCentimos(servico + taxa + extra + iva),
+    semIva,
+    total: aosCentimos(semIva + iva),
     temIva: iva > 0,
   };
 }

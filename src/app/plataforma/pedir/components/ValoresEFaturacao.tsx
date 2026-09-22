@@ -172,7 +172,7 @@ export default function ValoresEFaturacao({
                 Preciso de fatura
               </span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
-                A fatura é emitida pelo profissional, que é quem presta o serviço.
+                A fatura é emitida pela CLYON. Com fatura, acrescem 23 % de IVA.
               </span>
             </span>
           </label>

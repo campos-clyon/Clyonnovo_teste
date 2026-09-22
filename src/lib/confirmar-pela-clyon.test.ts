@@ -104,7 +104,7 @@ describe("o ecrã", () => {
     // O painel dizia "200,00 €" e mais nada — o valor acordado, que não é o que
     // nenhuma das partes vê. Quem está ao telefone precisa do número certo.
     // Cobrar ao cliente e o TOTAL: acordado + IVA de quem factura + taxa.
-    expect(PAINEL).toContain("contaDoCliente(valorAcordado, regimeDeIva(regimeIva)).total");
+    expect(PAINEL).toContain("contaDoCliente(valorAcordado, taxas)");
     expect(PAINEL).toContain("quantoOProfissionalRecebe");
     expect(PAINEL).toContain("comissaoDaClyon");
   });

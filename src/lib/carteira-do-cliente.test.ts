@@ -9,7 +9,7 @@ import { contaDoCliente } from "./taxas-plataforma";
  * dizer 361,20 € sobre um trabalho anunciado a 294,00 € era a terceira versão
  * do mesmo preço, e a que ninguém tinha visto antes.
  */
-const paga = (v: number) => contaDoCliente(v, "isento").semIva;
+const paga = (v: number) => contaDoCliente(v).semIva;
 
 const t = (p: Partial<TrabalhoDoCliente>): TrabalhoDoCliente => ({
   negociacaoId: 1,

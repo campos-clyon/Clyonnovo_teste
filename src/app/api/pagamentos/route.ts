@@ -116,7 +116,6 @@ export async function GET(req: NextRequest) {
         // quando ele escolher a factura.
         valor: quantoOClientePaga(
           acesso.trabalho.acordado,
-          acesso.trabalho.regime,
           acesso.trabalho.taxas,
           true,
         ),
@@ -137,13 +136,11 @@ export async function GET(req: NextRequest) {
       valores: {
         semFactura: quantoOClientePaga(
           acesso.trabalho.acordado,
-          acesso.trabalho.regime,
           acesso.trabalho.taxas,
           false,
         ),
         comFactura: quantoOClientePaga(
           acesso.trabalho.acordado,
-          acesso.trabalho.regime,
           acesso.trabalho.taxas,
           true,
         ),
@@ -200,7 +197,7 @@ export async function POST(req: NextRequest) {
   const t = acesso.trabalho;
 
   const comFactura = corpo.comFactura === true;
-  const valor = quantoOClientePaga(t.acordado, t.regime, t.taxas, comFactura);
+  const valor = quantoOClientePaga(t.acordado, t.taxas, comFactura);
 
   // ── A porta ──────────────────────────────────────────────────────────────
   const porta = podeCobrar(conf.config, A_PLATAFORMA_COBRA, {

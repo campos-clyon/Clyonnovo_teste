@@ -102,7 +102,7 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
   }
 
   if (d.comFactura) {
-    linhas.push("", "Este valor já inclui o IVA da taxa CLYON, para lhe podermos passar factura.");
+    linhas.push("", "Este valor já inclui os 23 % de IVA, para lhe podermos passar factura.");
   }
 
   linhas.push(

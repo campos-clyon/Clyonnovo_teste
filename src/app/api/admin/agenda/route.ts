@@ -6,7 +6,6 @@ import {
   quantoOProfissionalRecebe,
   contaDoCliente,
   taxasDaNegociacao,
-  regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -90,7 +89,7 @@ export async function GET(req: NextRequest) {
         recebe: l.valorAcordado != null ? quantoOProfissionalRecebe(Number(l.valorAcordado), taxasDaNegociacao(l)) : null,
         clientePaga:
           l.valorAcordado != null
-            ? contaDoCliente(Number(l.valorAcordado), regimeDeIva(l.regimeIva), taxasDaNegociacao(l)).total
+            ? contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)).total
             : null,
         /* A data ainda se corrige depois disto — mas não em silêncio. */
         jaConfirmado: Boolean(l.confirmadoEm),

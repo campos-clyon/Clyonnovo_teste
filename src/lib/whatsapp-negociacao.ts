@@ -17,7 +17,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { contaDoCliente, regimeDeIva, taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
+import { contaDoCliente, taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import {
   enviarBotoesWhatsApp,
@@ -443,7 +443,7 @@ async function fecharPeloCliente(
    * taxa acresce. Mandar-lhe o total com imposto era o oposto — um número que
    * ele não reconhece e que, se não quiser factura, também não vai pagar.
    */
-  const conta = contaDoCliente(valor, regimeDeIva(alvo.regimeIva), alvo.taxas);
+  const conta = contaDoCliente(valor, alvo.taxas);
   /*
    * SE ELE JÁ DISSE O DIA, NÃO SE LHE PERGUNTA SE TEM DATA PENSADA.
    *
@@ -725,7 +725,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
     // lêem-se daqui, das colunas gravadas.
     const taxasDela = taxasDaNegociacao(acordada);
     const formaDela = lerForma((acordada as { formaDePagamento?: unknown }).formaDePagamento);
-    const semIva = contaDoCliente(acordado, regimeDeIva(acordada.regimeIva), taxasDela).semIva;
+    const semIva = contaDoCliente(acordado, taxasDela).semIva;
     const comoPaga =
       formaDela === "dinheiro"
         ? ` ${totalEmPalavras(acordado, acordada.regimeIva ?? null, taxasDela, "dinheiro")}`

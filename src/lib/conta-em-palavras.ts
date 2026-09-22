@@ -1,4 +1,4 @@
-import { contaDoCliente, regimeDeIva, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
+import { contaDoCliente, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
 import type { FormaDePagamento } from "@/lib/forma-de-pagamento";
 
@@ -35,7 +35,7 @@ export function totalEmPalavras(
   /** Como o cliente paga. Em dinheiro, a frase diz quanto vai em notas. */
   forma: FormaDePagamento = "na_plataforma",
 ): string {
-  const conta = contaDoCliente(valor, regimeDeIva(regimeIva), taxas);
+  const conta = contaDoCliente(valor, taxas);
   const factura = comFacturaEmPalavras(valor, regimeIva, taxas);
   /*
    * EM DINHEIRO SÃO DUAS ENTREGAS, e a frase tem de as separar — 21-09-2026.
@@ -46,8 +46,14 @@ export function totalEmPalavras(
    */
   if (forma === "dinheiro") {
     return (
+      /*
+       * EM DINHEIRO A FACTURA É SÓ DA TAXA — e é por isso que esta frase
+       * escapa à regra dos 23 % sobre tudo.
+       *
+       * O serviço foi pago em notas ao profissional e nunca passou pela
+       * CLYON: ela não o pode facturar. O que factura é o que cobra.
+       */
       `Paga ${euros(conta.servico)} em dinheiro ao profissional, no local` +
-      `${conta.ivaDoServico > 0 ? ` (${euros(conta.servico + conta.ivaDoServico)} se pedir factura)` : ""}` +
       `, e ${euros(conta.taxa)} de taxa à CLYON por referência` +
       `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com factura)` : ""}.`
     );
@@ -58,23 +64,23 @@ export function totalEmPalavras(
 /**
  * A LINHA DA FACTURA — a única frase que fala de imposto, e só uma vez.
  *
- * Diz «23 %» a quem vai mesmo pagar 23 %, e não a toda a gente: o regime é do
- * profissional, e um isento pelo artigo 53.º não liquida nada sobre o serviço.
- * A quem o contrata, o que acresce com factura é só o imposto da nossa taxa —
- * poucos euros — e anunciar-lhe 23 % seria mostrar-lhe um imposto que ninguém
- * pode entregar ao Estado.
+ * UMA FRASE SÓ, desde 22-09-2026. Havia duas, porque o imposto dependia do
+ * regime do profissional: a quem contratasse um isento pelo artigo 53.º
+ * acrescia apenas o IVA da nossa taxa, poucos euros, e dizer-lhe «23 %» seria
+ * anunciar um imposto que ninguém entregaria ao Estado.
  *
- * Em ambos os casos vai o total com factura ao lado, para que a frase não
- * deixe uma conta por fazer a quem a lê no telemóvel.
+ * Agora quem factura é a CLYON, o imposto é o dela, e é 23 % sobre tudo. Duas
+ * frases para uma regra só seriam duas maneiras de o cliente desconfiar.
+ *
+ * O total com factura vai ao lado, para a frase não deixar uma conta por
+ * fazer a quem a lê no telemóvel.
  */
 export function comFacturaEmPalavras(
   valor: number,
   regimeIva: string | null,
   taxas?: Taxas,
 ): string {
-  const conta = contaDoCliente(valor, regimeDeIva(regimeIva), taxas);
+  const conta = contaDoCliente(valor, taxas);
   if (conta.iva <= 0) return "";
-  return conta.ivaDoServico > 0
-    ? `Com factura acrescem ${POR_CENTO} de IVA: ${euros(conta.total)}.`
-    : `Com factura acrescem ${euros(conta.iva)} de IVA da taxa CLYON: ${euros(conta.total)}.`;
+  return `Com factura acrescem ${POR_CENTO} de IVA: ${euros(conta.total)}.`;
 }

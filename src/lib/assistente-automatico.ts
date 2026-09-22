@@ -8,7 +8,7 @@ import {
   horaDeFalar,
   AVISOS_AO_PROFISSIONAL_POR_PASSAGEM,
 } from "./assistente-interruptores";
-import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
+import { contaDoCliente } from "./taxas-plataforma";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
 import { comoTratar, saudacao } from "./whatsapp-recolha";
@@ -278,7 +278,7 @@ export { comoTratar };
  * `comFacturaEmPalavras`, que o diz numa linha e uma vez só.
  */
 function semIvaDoCliente(valor: number, regimeIva: string | null): number {
-  return contaDoCliente(valor, regimeDeIva(regimeIva)).semIva;
+  return contaDoCliente(valor).semIva;
 }
 
 /**

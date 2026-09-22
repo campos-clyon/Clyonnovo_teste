@@ -95,14 +95,14 @@ describe("as contas usam a taxa que lhes dão", () => {
   const dela = { cliente: 0.1, profissional: 0.2 };
 
   it("o que o cliente paga", () => {
-    // 100 € a 10 %: 100 de serviço + 10 de taxa. Isento não leva IVA do
-    // serviço, mas a taxa da CLYON leva sempre.
-    const c = contaDoCliente(100, "isento", dela);
+    // 100 € a 10 %: 100 de serviço + 10 de taxa = 110 a pagar. Com factura,
+    // 23 % sobre os 110 = 25,30, e o total é 135,30.
+    const c = contaDoCliente(100, dela);
     expect(c.servico).toBe(100);
     expect(c.taxa).toBe(10);
-    expect(c.ivaDoServico).toBe(0);
     expect(c.ivaDaTaxa).toBe(2.3);
-    expect(c.total).toBe(112.3);
+    expect(c.iva).toBe(25.3);
+    expect(c.total).toBe(135.3);
   });
 
   it("o que o profissional recebe", () => {
@@ -117,7 +117,7 @@ describe("as contas usam a taxa que lhes dão", () => {
 
   it("sem taxas, continuam a ser as de origem — nada partiu", () => {
     expect(quantoOProfissionalRecebe(100)).toBe(94);
-    expect(contaDoCliente(100, "isento").taxa).toBe(5);
+    expect(contaDoCliente(100).taxa).toBe(5);
   });
 });
 
