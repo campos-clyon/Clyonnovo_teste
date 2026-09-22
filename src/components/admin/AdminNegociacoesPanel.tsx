@@ -1450,7 +1450,7 @@ export default function AdminNegociacoesPanel({
     nome: string;
   } | null>(null);
 
-  async function redistribuir(pedidoId: number, reabrir = false) {
+  async function redistribuir(pedidoId: number, reabrir = false, voltarAMandar?: number) {
     if (!token) return;
     setOcupado(`r${pedidoId}`);
     setErro("");
@@ -1459,7 +1459,11 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes/redistribuir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(reabrir ? { pedidoId, reabrir: true } : { pedidoId }),
+        body: JSON.stringify({
+          pedidoId,
+          ...(reabrir ? { reabrir: true } : {}),
+          ...(voltarAMandar ? { voltarAMandar } : {}),
+        }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -2749,6 +2753,37 @@ export default function AdminNegociacoesPanel({
                       {propostasDe(n.propostasJson).length === 1 ? "" : "s"}
                     </span>
                   </button>
+                  {/*
+                    VOLTAR A MANDAR A QUEM JÁ SAIU.
+
+                    "Ele foi para recusados mas devia voltar para a fila para
+                    todos." — 22-09-2026.
+
+                    «Reenviar» manda o link da negociação como ela está: a quem
+                    saiu, isso é um email para um ecrã que diz que já não é
+                    para ele. Isto põe-no outra vez na fila — e é a
+                    distribuição que decide se ele continua elegível.
+
+                    Vive na linha DELE e não no botão geral de propósito: a
+                    regra de que quem recusou fica em paz mantém-se para a
+                    distribuição automática. Isto é uma pessoa a decidir sobre
+                    um caso que está a ver.
+                  */}
+                  {(n.estado === "desistida" || n.estado === "morta") && (
+                    <button
+                      onClick={() => redistribuir(p.id, false, n.id)}
+                      disabled={ocupado === `r${p.id}`}
+                      title={`Põe o pedido outra vez na fila de ${n.profissionalNome}, com um link novo.`}
+                      className="flex items-center gap-1.5 rounded-lg border border-cyan-700/60 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
+                    >
+                      {ocupado === `r${p.id}` ? (
+                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                      )}
+                      Voltar a mandar
+                    </button>
+                  )}
                   <button
                     onClick={() =>
                       reenviar(chave, { pedidoId: p.id, negociacaoId: n.id })

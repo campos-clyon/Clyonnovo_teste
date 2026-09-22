@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; reabrir?: unknown };
+  let corpo: { pedidoId?: unknown; reabrir?: unknown; voltarAMandar?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -134,6 +134,53 @@ export async function POST(req: NextRequest) {
         `CLYON (${colab?.nome ?? "a CLYON"}) desfez o fecho com ${fechada.profissionalNome} ` +
         `(negociação #${fechada.id}, ${Number(fechada.valorAcordado ?? 0).toFixed(2)} €) em nome do cliente, ` +
         "para redistribuir. Ele volta à fila com os outros.",
+    });
+  }
+
+  /*
+   * VOLTAR A MANDAR A UM PROFISSIONAL EM PARTICULAR.
+   *
+   * «Quem disse que não fica em paz» é uma boa regra e mantém-se: mandar o
+   * mesmo trabalho a quem recusou é o que ensina a ignorar os avisos. Mas é
+   * uma regra sobre o que a distribuição faz SOZINHA, e não sobre o que uma
+   * pessoa pode decidir olhando para um caso.
+   *
+   * Existe por uma dívida concreta: os pedidos que já ficaram com uma linha
+   * «desistida» escrita por nós, ao reabrir um fecho, antes de isso passar a
+   * ser «morta». Para esses, corrigir a regra não chega — a linha errada já
+   * está gravada, e sem isto ficavam trancados para sempre.
+   *
+   * Passa por «morta» e deixa o resto ao caminho de sempre: é a distribuição
+   * que decide se ele continua elegível, que lhe dá um token novo e que manda
+   * o email. Nada aqui salta uma regra; só desfaz um «não» que ele não disse.
+   */
+  const voltarAMandar = Number(corpo.voltarAMandar ?? 0);
+  if (Number.isInteger(voltarAMandar) && voltarAMandar > 0) {
+    const alvo = (await negociacoesDoPedido(pedidoId)).find((n) => n.id === voltarAMandar);
+    if (!alvo) {
+      return NextResponse.json({ error: "Negociação não encontrada" }, { status: 404 });
+    }
+    if (alvo.estado !== "desistida" && alvo.estado !== "morta") {
+      return NextResponse.json(
+        {
+          error:
+            `A negociação com ${alvo.profissionalNome} está «${alvo.estado}» — ` +
+            "só se volta a mandar a quem já saiu.",
+        },
+        { status: 409 },
+      );
+    }
+    await gravarNegociacao(Number(alvo.id), {
+      estado: "morta",
+      valorAcordado: null,
+      propostasJson: alvo.propostasJson ?? "[]",
+    });
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message:
+        `CLYON (${colab?.nome ?? "a CLYON"}) voltou a pôr o pedido na fila de ` +
+        `${alvo.profissionalNome} (negociação #${alvo.id}).`,
     });
   }
 

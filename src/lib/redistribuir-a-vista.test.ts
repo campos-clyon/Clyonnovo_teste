@@ -148,3 +148,48 @@ describe("o ecrã conta os que já o tinham", () => {
     expect(PAINEL).toContain("Nenhum profissional NOVO para avisar");
   });
 });
+
+/**
+ * ⚠️ A DÍVIDA DOS QUE JÁ FICARAM PRESOS.
+ *
+ * Corrigir a regra não desprende o #330: a linha «desistida» já está gravada,
+ * e a distribuição — com razão — lê-a como «ele disse que não». Sem uma saída,
+ * os pedidos reabertos antes de 22-09-2026 ficavam trancados para sempre.
+ *
+ * «Quem disse que não fica em paz» continua a valer. É uma regra sobre o que a
+ * distribuição faz SOZINHA, e não sobre o que uma pessoa pode decidir a olhar
+ * para um caso concreto — por isso o botão vive na linha DELE, e não no botão
+ * geral de redistribuir.
+ */
+describe("voltar a mandar a um profissional que já saiu", () => {
+  it("só a quem saiu — e passa por «morta», que é o caminho de sempre", () => {
+    const i = ROTA.indexOf("const voltarAMandar");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = ROTA.slice(i, ROTA.indexOf("if (pedido.valorDesejadoCliente", i));
+    expect(bloco).toContain('alvo.estado !== "desistida" && alvo.estado !== "morta"');
+    expect(bloco).toContain('estado: "morta"');
+    expect(bloco).toContain("status: 409");
+  });
+
+  /*
+   * Não salta regra nenhuma: quem decide se ele continua elegível, lhe dá
+   * token novo e lhe manda o email é a distribuição, a seguir. Isto só desfaz
+   * um «não» que ele nunca disse.
+   */
+  it("acontece ANTES da distribuição, para ela o apanhar", () => {
+    const flip = ROTA.indexOf("const voltarAMandar");
+    const distribui = ROTA.indexOf("await distribuirPedido(");
+    expect(flip).toBeLessThan(distribui);
+  });
+
+  it("o botão aparece só nas linhas de quem saiu", () => {
+    expect(PAINEL).toContain('n.estado === "desistida" || n.estado === "morta"');
+    expect(PAINEL).toContain("redistribuir(p.id, false, n.id)");
+  });
+
+  it("fica escrito no histórico do pedido quem o fez", () => {
+    expect(ler("src/app/api/admin/negociacoes/redistribuir/route.ts")).toContain(
+      "voltou a pôr o pedido na fila de",
+    );
+  });
+});
