@@ -18,6 +18,7 @@ import {
   Power,
   RefreshCw,
   RotateCcw,
+  Search,
   Trash2,
   Undo2,
   X,
@@ -25,6 +26,7 @@ import {
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -321,6 +323,14 @@ export default function AdminWhatsAppPanel() {
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [separador, setSeparador] = useState<EstadoDaConversa>("assistente");
+  /*
+   * A PROCURA, e porque é que ela ignora o separador.
+   *
+   * Quem chega aqui com um número na mão não sabe em qual das quatro listas
+   * ele está — é essa a pergunta. A regra vive em `procurar-conversas.ts`,
+   * fora do painel, porque é a única coisa deste ecrã que se pode provar.
+   */
+  const [procura, setProcura] = useState("");
   const [aAdicionar, setAAdicionar] = useState(false);
   const [numeroNovo, setNumeroNovo] = useState("");
   const [notaNova, setNotaNova] = useState("");
@@ -686,7 +696,11 @@ export default function AdminWhatsAppPanel() {
     return c;
   }, [linhas]);
 
-  const visiveis = useMemo(() => linhas.filter((l) => l.estado === separador), [linhas, separador]);
+  const visiveis = useMemo(
+    () => conversasVisiveis(linhas, separador, procura),
+    [linhas, separador, procura],
+  );
+  const aProcurar = procuraActiva(procura);
 
   if (!estado) {
     return (
@@ -848,6 +862,28 @@ export default function AdminWhatsAppPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-bold text-white">Conversas</h3>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
+                aria-hidden="true"
+              />
+              <input
+                value={procura}
+                onChange={(e) => setProcura(e.target.value)}
+                placeholder="Procurar por número ou nome"
+                aria-label="Procurar uma conversa"
+                className="w-56 rounded-lg border border-slate-700 bg-slate-950 py-1.5 pl-8 pr-8 text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
+              />
+              {procura !== "" && (
+                <button
+                  onClick={() => setProcura("")}
+                  aria-label="Limpar a procura"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-300"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setAAdicionar((v) => !v)}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"
@@ -951,9 +987,23 @@ export default function AdminWhatsAppPanel() {
           ))}
         </div>
 
+        {/*
+          A LISTA TEM DE DIZER O QUE ESTÁ A MOSTRAR.
+          Com procura escrita aparecem linhas de separadores que não estão
+          abertos — sem esta frase, o ecrã contradizia-se a si próprio.
+        */}
+        {aProcurar && (
+          <p className="mt-3 text-xs text-slate-400">
+            A procurar <strong className="text-slate-200">em todos os separadores</strong>:{" "}
+            {visiveis.length === 1 ? "1 conversa" : `${visiveis.length} conversas`}.
+          </p>
+        )}
+
         {visiveis.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">
-            {SEPARADORES.find((s) => s.id === separador)?.vazio}
+            {aProcurar
+              ? "Nenhuma conversa com esse número ou nome."
+              : SEPARADORES.find((s) => s.id === separador)?.vazio}
           </p>
         ) : (
           <ul className="mt-1 divide-y divide-slate-800">
@@ -968,6 +1018,15 @@ export default function AdminWhatsAppPanel() {
                     >
                       <p className="flex flex-wrap items-center gap-2 font-mono text-sm text-white">
                         {formatarTelefone(l.telefone)}
+                        {/* De onde veio esta linha. Só faz falta quando a lista
+                            deixou de ser a do separador aberto. */}
+                        {aProcurar && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES[l.estado]}`}
+                          >
+                            {SEPARADORES.find((s) => s.id === l.estado)?.titulo ?? l.estado}
+                          </span>
+                        )}
                         {l.passo && l.estado === "assistente" && (
                           <span
                             className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES.assistente}`}
