@@ -305,7 +305,7 @@ describe("a distribuição do pedido", () => {
   it("os cartões deixam de listar a parede de profissionais", () => {
     // Fechada por omissão atrás da linha da mesa — e desde a decisão dele,
     // SEMPRE fechada até o admin abrir; o accionável aponta-se no cartão
-    // verde do topo e no botão "Responder (N)".
+    // verde do topo e no botão "Abrir Pedido (N)".
     expect(PAINEL).toContain("const aberto = negociacoesVisiveis.has(p.id);");
   });
 });
@@ -394,8 +394,16 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
   });
 
   it("a linha mostra o cliente e a contagem de propostas", () => {
+    /*
+     * O botão chamava-se "Responder", e o nome mentia sobre o que ele faz:
+     * abre a linha para se VER o pedido, e responder é só uma das coisas que
+     * lá se fazem. "Abrir Pedido" — decisão dele, 22-09-2026.
+     *
+     * O que este teste prende não é o nome: é a CONTAGEM ao lado dele. Saber
+     * que há propostas à espera sem ter de abrir nada era a dor toda.
+     */
     expect(PAINEL).toContain("totalPropostas");
-    expect(PAINEL).toMatch(/Responder \(\$\{aEsperarLista\.length\}\)/);
+    expect(PAINEL).toMatch(/Abrir Pedido \(\$\{aEsperarLista\.length\}\)/);
   });
 
   it("aberta, mostra quem fez cada proposta e o valor em cima da mesa", () => {

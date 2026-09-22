@@ -1786,7 +1786,7 @@ export default function AdminNegociacoesPanel({
      * FECHADO POR OMISSÃO, SEMPRE — decisão dele: "quando faço reset eles
      * ficam mostrando todas as propostas e não quero; tem que ser abertas
      * apenas pelo admin". O auto-abrir dos à-espera trabalhava contra quem
-     * lê: o cartão verde do topo já aponta o dedo, e o "Responder (N)" da
+     * lê: o cartão verde do topo já aponta o dedo, e o "Abrir Pedido (N)" da
      * linha abre num toque.
      */
     const aberto = negociacoesVisiveis.has(p.id);
@@ -2018,7 +2018,7 @@ export default function AdminNegociacoesPanel({
             }`}
           >
             {espera
-              ? `Responder (${aEsperarLista.length})`
+              ? `Abrir Pedido (${aEsperarLista.length})`
               : aberto
                 ? "Fechar"
                 : "Abrir"}
