@@ -63,7 +63,62 @@ type Estado = {
   };
   ultimos: Pagamento[];
   avisos: Aviso[];
+  webhook?: EstadoDoWebhook;
 };
+
+/**
+ * O QUE ANDA A ACONTECER À PORTA DOS AVISOS.
+ *
+ * *«Me ajude com passo a passo para corrigir isso.»* — 22-09-2026, sobre um
+ * pagamento de 42 € que entrou no euPago e nunca chegou aqui.
+ *
+ * Duas histórias apareciam como o mesmo silêncio: **o euPago não está a
+ * chamar** (endereço errado, ou configurado no canal errado) e **está a chamar
+ * e nós é que recusamos** (segredo em falta, ou um que já não é o dele). A
+ * primeira resolve-se no backoffice deles, a segunda no nosso — e quem procura
+ * sem saber qual é passa a tarde a mexer no sítio errado.
+ */
+type EstadoDoWebhook = {
+  ultimoAceite: string | null;
+  aceites: number;
+  ultimaRecusa: { quando: string; porque: string } | null;
+  recusas24h: number;
+};
+
+function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
+  const quando = (iso: string) => new Date(iso).toLocaleString("pt-PT");
+
+  /*
+   * A recusa manda sobre tudo. Se chegam avisos e são recusados, isso é o que
+   * está a acontecer AGORA — e é nosso, e tem conserto imediato.
+   */
+  if (w.recusas24h > 0) {
+    return (
+      <p className="text-amber-300">
+        O euPago <strong>está a chamar</strong> e nós estamos a recusar: {w.recusas24h} nas
+        últimas 24 h
+        {w.ultimaRecusa ? ` · a última às ${quando(w.ultimaRecusa.quando)} — ${w.ultimaRecusa.porque}` : ""}
+        . O endereço está certo; o que não bate é o segredo.
+      </p>
+    );
+  }
+
+  if (w.aceites > 0) {
+    return (
+      <p className="text-emerald-300">
+        Avisos recebidos: {w.aceites}
+        {w.ultimoAceite ? ` · o último a ${quando(w.ultimoAceite)}` : ""}.
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-amber-300">
+      <strong>Nunca chegou nenhum aviso</strong>, e nenhum foi recusado — o euPago não está a
+      chamar esta morada. Confirme os Webhooks 2.0 no canal de produção.
+    </p>
+  );
+}
 
 const euros = (n: number | null) => (n == null ? "—" : `${n.toFixed(2).replace(".", ",")} €`);
 
@@ -216,6 +271,7 @@ export default function AdminPagamentosPanel() {
                 </strong>
               )}
             </p>
+            {estado.webhook && <PortaDosAvisos w={estado.webhook} />}
             {!ligacao.aberta && (
               <p className="flex items-start gap-1.5 text-amber-300">
                 <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />

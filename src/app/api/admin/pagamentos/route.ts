@@ -4,6 +4,7 @@ import { configuracaoDoEupago, podeCobrar } from "@/lib/eupago";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
 import {
   avisosPorAplicar,
+  estadoDoWebhook,
   resumoDosPagamentos,
   ultimosPagamentos,
 } from "@/lib/pagamentos-na-base";
@@ -29,10 +30,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const conf = configuracaoDoEupago(process.env);
-    const [resumo, ultimos, avisos] = await Promise.all([
+    const [resumo, ultimos, avisos, webhook] = await Promise.all([
       resumoDosPagamentos(),
       ultimosPagamentos(25),
       avisosPorAplicar(25),
+      estadoDoWebhook(),
     ]);
 
     return NextResponse.json({
@@ -62,6 +64,14 @@ export async function GET(req: NextRequest) {
       resumo,
       ultimos,
       avisos,
+      /*
+       * O QUE ANDA A ACONTECER À PORTA DOS AVISOS — ver `estadoDoWebhook`.
+       *
+       * «Nunca chegou nenhum» e «chegam e são recusados» são dois problemas
+       * com dois consertos em sítios diferentes, e apareciam como o mesmo
+       * silêncio. Quem procura sem isto passa a tarde no sítio errado.
+       */
+      webhook,
     });
   } catch (error) {
     /*

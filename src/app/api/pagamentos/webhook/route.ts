@@ -9,6 +9,7 @@ import {
 } from "@/lib/webhook-do-eupago";
 import {
   anotarAviso,
+  anotarRecusa,
   darPorPago,
   darPorReembolsado,
   fecharSemPagar,
@@ -52,6 +53,17 @@ function euros(n: number | null): string {
 }
 
 export async function POST(req: NextRequest) {
+  /*
+   * ⚠️ QUEM BATEU E NÃO ENTROU FICA REGISTADO — e é o que separa duas
+   * histórias que apareciam como o mesmo silêncio: «o euPago não está a
+   * chamar» (endereço errado, ou no canal errado) e «está a chamar e nós é que
+   * recusamos» (segredo em falta, ou um segredo que já não é o dele). A
+   * primeira resolve-se no backoffice deles; a segunda no nosso.
+   *
+   * O CORPO NÃO SE GUARDA: quem chega aqui ainda não provou ser o euPago.
+   */
+  const tinhaAssinatura = Boolean(req.headers.get("x-signature"));
+
   const conf = configuracaoDoEupago(process.env);
   if (!conf.ok || !conf.config.segredoDoWebhook) {
     /*
@@ -65,6 +77,10 @@ export async function POST(req: NextRequest) {
       "[eupago webhook] sem segredo configurado:",
       conf.ok ? "falta EUPAGO_WEBHOOK_SEGREDO" : conf.falta,
     );
+    await anotarRecusa(conf.ok ? "sem segredo configurado" : "euPago por configurar", {
+      tinhaAssinatura,
+      tamanho: Number(req.headers.get("content-length") ?? 0),
+    });
     return VOLTA("A plataforma não está configurada para receber avisos.");
   }
 
@@ -77,6 +93,10 @@ export async function POST(req: NextRequest) {
      * é a janela para trocar o segredo se tiver sido isso.
      */
     console.warn("[eupago webhook] assinatura inválida");
+    await anotarRecusa(tinhaAssinatura ? "assinatura não confere" : "veio sem assinatura", {
+      tinhaAssinatura,
+      tamanho: corpoCru.length,
+    });
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

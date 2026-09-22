@@ -188,6 +188,37 @@ async function garantirTabelas() {
   `);
 
   /*
+   * ⚠️ AS BATIDAS À PORTA QUE NÃO ABRIMOS.
+   *
+   * *«Me ajude com passo a passo para corrigir isso.»* — 22-09-2026, sobre um
+   * aviso de pagamento que nunca chegou.
+   *
+   * Havia duas histórias muito diferentes e nenhuma maneira de as separar:
+   *
+   *   · o euPago NÃO ESTÁ A CHAMAR — endereço errado, ou no canal errado;
+   *   · o euPago ESTÁ A CHAMAR e nós é que recusamos — sem segredo
+   *     configurado, ou com um segredo que já não é o dele.
+   *
+   * A primeira resolve-se no backoffice deles, a segunda no nosso. Sem esta
+   * tabela, as duas apareciam como o mesmo silêncio — e quem procura passa a
+   * tarde a mexer no sítio errado.
+   *
+   * ⚠️ NÃO SE GUARDA O CORPO. Quem chega aqui não provou ser o euPago: guardar
+   * o que ele mandou era guardar texto de qualquer pessoa da internet. Fica o
+   * QUE, o QUANDO e o TAMANHO — que é o que responde à pergunta.
+   */
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS avisosRecusados (
+      id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      porque          VARCHAR(60) NOT NULL,
+      tinhaAssinatura TINYINT(1) NOT NULL DEFAULT 0,
+      tamanho         INT UNSIGNED NOT NULL DEFAULT 0,
+      recebidoEm      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_quando (recebidoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  /*
    * As colunas que nasceram depois da tabela.
    *
    * `CREATE TABLE IF NOT EXISTS` não acrescenta nada a uma tabela que já
@@ -711,6 +742,71 @@ export async function avisosPorAplicar(limite = 25): Promise<AvisoPorAplicar[]> 
     nota: (l.nota as string) ?? null,
     recebidoEm: l.recebidoEm as Date,
   }));
+}
+
+/**
+ * Fica registado que alguém bateu e não entrou. Nunca rebenta.
+ *
+ * É chamado do caminho do webhook, onde uma falha a escrever não pode fazer
+ * perder um pagamento: se isto falhar, o euPago volta na mesma.
+ */
+export async function anotarRecusa(
+  porque: string,
+  d: { tinhaAssinatura: boolean; tamanho: number },
+): Promise<void> {
+  try {
+    await garantirTabelas();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `INSERT INTO avisosRecusados (porque, tinhaAssinatura, tamanho) VALUES (?, ?, ?)`,
+      [porque.slice(0, 60), d.tinhaAssinatura ? 1 : 0, Math.max(0, Math.min(d.tamanho, 16777215))],
+    );
+  } catch (e) {
+    console.error("[pagamentos] não gravou a recusa do webhook:", e);
+  }
+}
+
+export type EstadoDoWebhook = {
+  /** Quando chegou o último aviso ACEITE. `null` se nunca chegou nenhum. */
+  ultimoAceite: Date | null;
+  /** Quantos avisos aceitámos, desde sempre. */
+  aceites: number;
+  /** Quando foi a última batida recusada, e porquê. */
+  ultimaRecusa: { quando: Date; porque: string } | null;
+  /** Recusas nas últimas 24 horas — o que interessa é se está a acontecer HOJE. */
+  recusas24h: number;
+};
+
+/**
+ * O QUE ANDA A ACONTECER À PORTA DOS AVISOS.
+ *
+ * Responde à única pergunta que importa quando um pagamento não entra: **o
+ * euPago está a chamar?** Se está e recusamos, o conserto é nosso — o segredo.
+ * Se não está a chamar, o conserto é no backoffice deles — o endereço.
+ */
+export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [[aceites], [recusa], [recentes]] = (await Promise.all([
+    pool.execute(`SELECT COUNT(*) AS n, MAX(recebidoEm) AS ultimo FROM avisosDoEupago`),
+    pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados ORDER BY id DESC LIMIT 1`),
+    pool.execute(
+      `SELECT COUNT(*) AS n FROM avisosRecusados WHERE recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
+    ),
+  ])) as any[];
+
+  const a = (aceites as Array<{ n: number; ultimo: Date | null }>)[0];
+  const r = (recusa as Array<{ porque: string; recebidoEm: Date }>)[0];
+
+  return {
+    ultimoAceite: a?.ultimo ?? null,
+    aceites: Number(a?.n ?? 0),
+    ultimaRecusa: r ? { quando: r.recebidoEm, porque: r.porque } : null,
+    recusas24h: Number((recentes as Array<{ n: number }>)[0]?.n ?? 0),
+  };
 }
 
 export type ResumoDosPagamentos = {
