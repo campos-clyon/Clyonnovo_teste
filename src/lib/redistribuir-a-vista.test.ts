@@ -82,3 +82,69 @@ describe("quem «já tem» o pedido — três casos, e não são iguais", () => 
     expect(DISTRIBUIR).not.toContain("const jaTemNegociacao = ");
   });
 });
+
+/**
+ * ⚠️ QUEM PERDE O TRABALHO POR DECISÃO NOSSA VOLTA À FILA COM OS OUTROS.
+ *
+ * *«Ele foi para recusados mas devia voltar para a fila para todos.»*
+ * — 22-09-2026, sobre o #330.
+ *
+ * Reabrir um pedido fechado marcava a negociação desfeita como «desistida», e
+ * a razão escrita aqui era: «quem falhou um trabalho fechado não é a primeira
+ * pessoa a quem se manda o mesmo trabalho outra vez». O raciocínio tinha um
+ * erro na primeira palavra — **ele não falhou nada**. Quem desfez o fecho
+ * fomos nós, e as razões são quase sempre outras: o cliente mudou de ideias,
+ * a data mexeu, o valor estava errado.
+ *
+ * E era pior do que uma etiqueta injusta. Na MESMA chamada, o passo seguinte
+ * lê os estados e trata «desistida» como «disse que não» — saltando-o. O
+ * único profissional garantidamente interessado, o que já tinha proposto e
+ * ganho, era o único que não voltava a ver o pedido.
+ *
+ * A Revolution propôs 180 € no #330, ficou com o trabalho, e depois de o
+ * pedido reabrir não o encontrava em lado nenhum senão em «Recusados».
+ */
+describe("reabrir devolve o pedido à fila de toda a gente", () => {
+  const i = ROTA.indexOf("const fechada");
+  const bloco = ROTA.slice(i, ROTA.indexOf("if (pedido.valorDesejadoCliente", i));
+
+  it("a negociação desfeita fica MORTA, e não desistida", () => {
+    expect(i).toBeGreaterThan(-1);
+    expect(bloco).toContain('estado: "morta"');
+    /*
+     * ⚠️ A palavra proibida é a que fazia a distribuição saltá-lo. «morta»
+     * quer dizer «o pedido voltou ao mercado e ele volta a recebê-lo»;
+     * «desistida» quer dizer «ele disse que não», e ele não disse nada.
+     */
+    expect(bloco).not.toContain('estado: "desistida"');
+  });
+
+  it("e a distribuição que corre a seguir reabre-lhe mesmo a linha", () => {
+    // Sem isto, mudar a palavra na rota não chegava: é `perdeuParaOutro` que
+    // transforma uma linha morta numa negociação nova, com token e email.
+    expect(DISTRIBUIR).toContain('n.estado === "morta"');
+    expect(DISTRIBUIR).toContain("reabrir: reabrir || perdeuParaOutro.has(c.profissional.id)");
+  });
+
+  it("o aviso diz que ele volta — porque antes dizia o contrário", () => {
+    const ecra = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+    expect(ecra).toContain("incluindo {reabrirPendente.nome}");
+    expect(ecra).not.toContain("não o volta a receber");
+  });
+});
+
+/**
+ * «NINGUÉM NOVO» NÃO É «NINGUÉM».
+ *
+ * O ecrã dizia «continua sem chegar a ninguém de 9 profissionais activos»
+ * quando o pedido estava nas mãos dos nove — só não havia mais nenhum para
+ * acrescentar. Lia-se como avaria, e mandava procurar um problema que não
+ * existia. O resumo do histórico já distinguia as duas coisas; era só este
+ * ecrã que deitava fora o número.
+ */
+describe("o ecrã conta os que já o tinham", () => {
+  it("usa o `jaTinham` que a rota já devolvia", () => {
+    expect(PAINEL).toContain("dados.jaTinham");
+    expect(PAINEL).toContain("Nenhum profissional NOVO para avisar");
+  });
+});

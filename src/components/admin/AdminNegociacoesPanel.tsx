@@ -1482,9 +1482,24 @@ export default function AdminNegociacoesPanel({
           .filter(([, n]) => Number(n) > 0)
           .map(([m, n]) => `${m.replace(/_/g, " ")}: ${n}`)
           .join(", ");
+        /*
+         * ⚠️ «NINGUÉM NOVO» NÃO É «NINGUÉM».
+         *
+         * Esta frase dizia «continua sem chegar a ninguém de 9 profissionais
+         * activos» quando o pedido estava nas mãos dos nove — só não havia
+         * mais nenhum para acrescentar. Lia-se como avaria, e mandava alguém
+         * procurar um problema que não existia.
+         *
+         * O resumo que vai para o histórico já distinguia as duas coisas há
+         * dias; era só este ecrã que deitava fora o número.
+         */
+        const jaTinham = Number(dados.jaTinham ?? 0);
         setErro(
-          `Continua sem chegar a ninguém de ${dados.candidatos} profissionais activos.` +
-            (motivos ? ` Motivos — ${motivos}.` : ""),
+          jaTinham > 0
+            ? `Nenhum profissional NOVO para avisar — ${jaTinham} já tinha(m) este pedido e não ` +
+              `foi(ram) tocado(s).` + (motivos ? ` Dos restantes: ${motivos}.` : "")
+            : `Continua sem chegar a ninguém de ${dados.candidatos} profissionais activos.` +
+              (motivos ? ` Motivos — ${motivos}.` : ""),
         );
       } else if (dados.avisados < dados.receberam) {
         setErro(
@@ -2412,9 +2427,10 @@ export default function AdminNegociacoesPanel({
             <div className="basis-full rounded-lg border border-amber-500/40 bg-amber-950/30 p-3">
               <p className="text-xs leading-relaxed text-amber-200">
                 Este pedido está fechado com <strong>{reabrirPendente.nome}</strong>. Reabrir
-                desfaz esse fecho em nome do cliente — fica no histórico com o seu nome — e
-                manda o pedido a todos os outros profissionais elegíveis. {reabrirPendente.nome}{" "}
-                não o volta a receber.
+                desfaz esse fecho em nome do cliente — fica no histórico com o seu nome — e põe o
+                pedido outra vez na fila de todos os profissionais elegíveis,{" "}
+                <strong>incluindo {reabrirPendente.nome}</strong>. A proposta dele desaparece: a
+                negociação recomeça do zero.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button

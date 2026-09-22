@@ -73,11 +73,32 @@ export async function POST(req: NextRequest) {
      * não uma acção do motor — e por isso vive aqui, com o nome de quem o fez
      * no histórico, e não numa nova entrada de `accoesDisponiveis`.
      *
-     * A NEGOCIAÇÃO DESFEITA FICA «DESISTIDA», e é a escolha certa entre as
-     * duas mortes: «morta» é «perdeu para outro» e voltaria a receber o pedido
-     * na redistribuição; «desistida» fica em paz. Quem falhou um trabalho
-     * fechado não é a primeira pessoa a quem se manda o mesmo trabalho outra
-     * vez.
+     * ⚠️ A NEGOCIAÇÃO DESFEITA VOLTA À FILA — corrigido a 22-09-2026.
+     *
+     * *«Ele foi para recusados mas devia voltar para a fila para todos.»*
+     *
+     * Estava «desistida», e eu tinha escrito aqui a razão: «quem falhou um
+     * trabalho fechado não é a primeira pessoa a quem se manda o mesmo
+     * trabalho outra vez». O raciocínio tinha um erro na primeira palavra —
+     * **ele não falhou nada**. Quem desfez o fecho fomos nós, e as razões são
+     * quase sempre outras: o cliente mudou de ideias, a data mexeu, o valor
+     * estava errado. Marcá-lo como quem disse «não estou interessado» é
+     * escrever-lhe uma recusa na ficha que ele nunca fez.
+     *
+     * E era pior do que uma etiqueta injusta: na MESMA chamada, o passo
+     * seguinte lê os estados e trata «desistida» como «disse que não» —
+     * saltando-o. O único profissional garantidamente interessado, o que já
+     * tinha proposto e ganho, era o único que não voltava a ver o pedido. Foi
+     * o que aconteceu ao #330: a Revolution propôs 180 €, ficou com o trabalho,
+     * e depois de reabrir o pedido não lhe aparecia em lado nenhum senão em
+     * «Recusados».
+     *
+     * «MORTA» é o estado certo: quer dizer «este pedido voltou ao mercado e
+     * ele volta a recebê-lo». A distribuição reabre-lhe a linha, com token
+     * novo e email — ver `perdeuParaOutro` em `distribuir-pedido.ts`.
+     *
+     * O fecho desfeito não se perde: fica escrito no histórico do pedido, com
+     * o nome de quem o desfez e o valor que lá estava.
      *
      * ⚠️ NÃO SE REABRE O QUE JÁ ACONTECEU. Trabalho enviado como feito,
      * confirmado ou pago tem dinheiro por trás — o do profissional na
@@ -93,7 +114,7 @@ export async function POST(req: NextRequest) {
             ? `Este trabalho está fechado com ${fechada.profissionalNome} e já foi dado como feito, ` +
               "confirmado ou pago. Não se reabre com um clique — corrija o valor ou trate do reembolso primeiro."
             : `Este pedido está fechado com ${fechada.profissionalNome}. Reabrir desfaz esse fecho ` +
-              "em nome do cliente e manda o pedido a todos os outros.",
+              "em nome do cliente e põe o pedido outra vez na fila — para todos, incluindo ele.",
           fechadaCom: fechada.profissionalNome,
           podeReabrir: !jaAconteceu,
         },
@@ -102,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     await gravarNegociacao(Number(fechada.id), {
-      estado: "desistida",
+      estado: "morta",
       valorAcordado: null,
       propostasJson: fechada.propostasJson ?? "[]",
     });
@@ -112,7 +133,7 @@ export async function POST(req: NextRequest) {
       message:
         `CLYON (${colab?.nome ?? "a CLYON"}) desfez o fecho com ${fechada.profissionalNome} ` +
         `(negociação #${fechada.id}, ${Number(fechada.valorAcordado ?? 0).toFixed(2)} €) em nome do cliente, ` +
-        "para redistribuir.",
+        "para redistribuir. Ele volta à fila com os outros.",
     });
   }
 
