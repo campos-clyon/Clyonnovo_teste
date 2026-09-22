@@ -3,6 +3,7 @@ import {
   corpoDoMultibanco,
   lerRespostaDoMbway,
   lerRespostaDoMultibanco,
+  lerSeFoiPaga,
   recusaDoEupago,
   type ConfiguracaoDoEupago,
   type DadosDoPagamento,
@@ -124,7 +125,7 @@ export async function pedirPagamento(
 }
 
 export type EstadoNoEupago =
-  | { ok: true; pago: boolean; valor: number | null; bruto: unknown }
+  | { ok: true; pago: boolean; valor: number | null; porque: string; bruto: unknown }
   | { ok: false; porque: string };
 
 /**
@@ -158,19 +159,19 @@ export async function estadoDaReferencia(
   }
 
   /*
-   * O QUE «PAGO» QUER DIZER AQUI, e é a parte frágil desta função.
+   * O QUE «PAGO» QUER DIZER AQUI mora em `eupago.ts`, que é puro e tem testes
+   * a sério — é a divisão deste ficheiro: aqui só a ida à rede.
    *
-   * A documentação de `multibanco/info` tem mais de dois anos e não diz o nome
-   * do campo que traz o estado do pagamento. Aceitam-se os três nomes
-   * plausíveis, e na dúvida diz-se que NÃO ESTÁ PAGO — que é o lado seguro:
-   * um pagamento por confirmar fica pendente e alguém olha para ele; um
-   * pagamento dado por pago à toa manda um profissional trabalhar de graça.
-   *
-   * Confirmar contra a sandbox antes de isto ser a única defesa de alguém.
+   * E é a parte frágil: a documentação tem mais de dois anos e não diz o nome
+   * do campo do estado. Ver `lerSeFoiPaga`.
    */
-  const dito = String(c.estado_pagamento ?? c.pago ?? c.status ?? "").toLowerCase();
-  const pago = dito === "pago" || dito === "paid" || dito === "1" || dito === "true";
-  const valor = Number(String(c.valor_pago ?? c.valor ?? "").replace(",", "."));
+  const leitura = lerSeFoiPaga(r.json);
 
-  return { ok: true, pago, valor: Number.isFinite(valor) ? valor : null, bruto: r.json };
+  return {
+    ok: true,
+    pago: leitura.pago,
+    valor: leitura.valor,
+    porque: leitura.porque,
+    bruto: r.json,
+  };
 }

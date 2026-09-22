@@ -98,7 +98,9 @@ export async function POST(req: NextRequest) {
     const bruto = r.bruto;
 
     if (!r.pago) {
-      return NextResponse.json({ ok: true, pago: false, aplicado: false, bruto });
+      // `porque` diz QUE CAMPO respondeu — ou que nenhum se reconheceu, que é
+      // a hipótese que interessa quando há um comprovativo a dizer o contrário.
+      return NextResponse.json({ ok: true, pago: false, aplicado: false, lido: r.porque, bruto });
     }
 
     if (r.valor != null && Math.abs(r.valor - p.valor) > 0.011) {

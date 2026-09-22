@@ -658,6 +658,99 @@ export function lerRespostaDoMultibanco(
 }
 
 /**
+ * «JÁ FOI PAGA?» — A LEITURA DA CONSULTA A UMA REFERÊNCIA.
+ *
+ * *«A euPago não mostra se realmente foi feito.»* — 22-09-2026. Mostrava: o
+ * Verificador Multibanco deles respondeu **Estado: Paga**, 42,00 €, sobre a
+ * referência 104295830 e o identificador `clyon-site-4`. Quem não mostrava era
+ * o nosso ecrã, porque o aviso do euPago nunca chegou.
+ *
+ * ⚠️ ESTA FUNÇÃO EXISTE PORQUE A DOCUMENTAÇÃO NÃO CHEGA.
+ *
+ * A página do `multibanco/info` tem mais de dois anos e não diz o nome do
+ * campo que traz o estado do pagamento. Durante quatro dias aceitámos três
+ * nomes e três valores — e nenhum deles era **«paga»**, que é a palavra que o
+ * ecrã deles usa. Uma referência paga podia ser lida como por pagar por causa
+ * de uma vogal.
+ *
+ * Por isso: procura-se em VÁRIOS nomes, aceita-se o feminino, e uma data de
+ * pagamento preenchida também conta — é o que o ecrã deles mostra ao lado do
+ * estado.
+ *
+ * ⚠️ E NA DÚVIDA DIZ-SE QUE NÃO ESTÁ PAGO. É o lado seguro, e a assimetria é
+ * de propósito: um pagamento por confirmar fica pendente e alguém olha para
+ * ele; um pagamento dado por pago à toa manda um profissional trabalhar de
+ * graça. Nada aqui adivinha a partir de um campo que não se reconhece.
+ */
+
+/** Onde o estado do pagamento pode vir. `estado` NÃO entra: é o código da API. */
+const CAMPOS_DO_ESTADO = [
+  "estado_pagamento",
+  "estadoPagamento",
+  "estado_referencia",
+  "estadoReferencia",
+  "pago",
+  "paga",
+  "status",
+  "situacao",
+] as const;
+
+/** Uma data de pagamento preenchida é, por si só, a resposta. */
+const CAMPOS_DA_DATA = [
+  "data_pagamento",
+  "dataPagamento",
+  "pago_em",
+  "paga_em",
+  "data_pago",
+] as const;
+
+/** O que conta como «sim». Tudo o resto é «não», incluindo o que não se lê. */
+const DIZ_QUE_SIM = new Set(["paga", "pago", "pagas", "pagos", "paid", "sim", "yes", "true", "1"]);
+
+/** Datas vazias que os sistemas antigos escrevem em vez de deixar nulo. */
+const DATA_QUE_NAO_E_DATA = new Set(["", "-", "0", "0000-00-00", "0000-00-00 00:00:00", "null"]);
+
+export type LeituraDaReferencia = {
+  pago: boolean;
+  valor: number | null;
+  /** Que campo respondeu — para se perceber uma discordância sem adivinhar. */
+  porque: string;
+};
+
+export function lerSeFoiPaga(json: unknown): LeituraDaReferencia {
+  const c = (json ?? {}) as Record<string, unknown>;
+
+  const bruto = texto(c.valor_pago) ?? texto(c.valor);
+  const n = bruto == null ? NaN : Number(bruto.replace(",", "."));
+  const valor = Number.isFinite(n) ? n : null;
+
+  for (const campo of CAMPOS_DO_ESTADO) {
+    const v = texto(c[campo]) ?? (c[campo] === true ? "true" : null);
+    if (v == null) continue;
+    if (DIZ_QUE_SIM.has(v.toLowerCase())) return { pago: true, valor, porque: `${campo}: ${v}` };
+    /*
+     * Um campo do estado que existe e diz outra coisa é uma RESPOSTA, e não
+     * uma dúvida: pára-se aqui em vez de continuar a procurar um «sim» noutro
+     * campo qualquer. Procurar até encontrar é como se inventa um pagamento.
+     */
+    return { pago: false, valor, porque: `${campo}: ${v}` };
+  }
+
+  for (const campo of CAMPOS_DA_DATA) {
+    const v = texto(c[campo]);
+    if (v == null) continue;
+    if (DATA_QUE_NAO_E_DATA.has(v.toLowerCase())) return { pago: false, valor, porque: `${campo} vazio` };
+    return { pago: true, valor, porque: `${campo}: ${v}` };
+  }
+
+  return {
+    pago: false,
+    valor,
+    porque: "não veio nenhum campo de estado que se reconheça",
+  };
+}
+
+/**
  * O QUE SE PEDE AO BANCO DELE — e há um só sítio a decidi-lo.
  *
  * ⚠️ HÁ DOIS NÚMEROS, E NÃO É UMA DÚVIDA MINHA: É O QUE O PRODUTO DIZ.

@@ -250,8 +250,10 @@ export default function GerarReferencia({
          */
         setConferencia({
           texto:
-            "O euPago diz que ainda não foi paga. Pode levar alguns minutos a chegar lá — " +
-            "se o cliente tem comprovativo, guarde-o e volte a perguntar.",
+            "O euPago diz que ainda não foi paga" +
+            (d.lido ? ` (${d.lido})` : "") +
+            ". Pode levar alguns minutos a chegar lá — se o cliente tem comprovativo, " +
+            "guarde-o e volte a perguntar.",
           bruto: d.bruto,
         });
       }
