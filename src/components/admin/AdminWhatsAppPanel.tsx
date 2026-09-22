@@ -27,6 +27,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
+import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -77,6 +78,13 @@ type Estado = {
    * o assistente volta às palavras-chave e ninguém dá por nada.
    */
   compreensao?: { quando: string; motivo: string } | null;
+  /**
+   * Quando a ponte cá veio pela última vez, em ISO. `null` = nunca.
+   *
+   * Quando ela morre, o site continua a parecer normal — o assistente
+   * escreve, a fila enche-se, e ninguém vê. Ver `ponte-viva.ts`.
+   */
+  ponteVistaEm?: string | null;
 };
 
 /** O passo da recolha, em palavras de painel. */
@@ -157,6 +165,14 @@ const CORES: Record<EstadoDaConversa, string> = {
   entregue: "bg-amber-500/15 text-amber-300",
   arquivada: "bg-slate-700/60 text-slate-300",
   bloqueada: "bg-red-500/15 text-red-300",
+};
+
+/** O sinal da ponte: o ponto, o texto e o fundo de cada estado. */
+const SINAL_DA_PONTE: Record<EstadoDaPonte, { ponto: string; texto: string }> = {
+  viva: { ponto: "bg-emerald-400", texto: "text-emerald-300" },
+  "a-demorar": { ponto: "bg-amber-400", texto: "text-amber-300" },
+  calada: { ponto: "bg-red-500", texto: "text-red-300" },
+  nunca: { ponto: "bg-red-500", texto: "text-red-300" },
 };
 
 /*
@@ -718,6 +734,18 @@ export default function AdminWhatsAppPanel() {
     nenhum: "sem canal configurado — nada sai nem entra",
   }[estado.canal];
   const aMao = estado.canal === "manual";
+  /*
+   * O SINAL DA PONTE — 22-09-2026.
+   *
+   * Só quando o canal é a ponte: com a API da Meta ou com o número à mão
+   * não há ponte nenhuma, e um alarme vermelho a respeito de uma coisa que
+   * não devia estar a correr ensina a ignorar alarmes.
+   *
+   * A hora é a de QUEM ESTÁ A OLHAR, e conta-se a cada desenho. A mesa
+   * recarrega de 20 em 20 segundos (`INTERVALO_DO_CICLO`), dentro da janela
+   * de um minuto do verde — não faz falta um relógio só para isto.
+   */
+  const ponte = estado.canal === "ponte" ? fichaDaPonte(estado.ponteVistaEm ?? null, new Date()) : null;
   const numeroDaClyon = formatarTelefone(estado.numeroManual ?? "351931632622");
 
   /**
@@ -823,6 +851,33 @@ export default function AdminWhatsAppPanel() {
                 ? `A falar ${CANAL}.`
                 : "As mensagens novas ficam na fila à espera de o voltar a ligar."}
             </p>
+
+            {/*
+              A PONTE ESTÁ VIVA? A pergunta que custou uma manhã.
+
+              Uma cliente escreveu às 12:58 e ninguém lhe respondeu, e para
+              saber porquê era preciso abrir o painel, procurar o número, ver
+              se a conversa lá estava e se a fila tinha coisas por sair — e
+              mesmo assim ficava a dúvida. Isto responde de relance.
+            */}
+            {ponte && (
+              <div className="mt-2">
+                <p className={`flex items-center gap-2 text-sm font-semibold ${SINAL_DA_PONTE[ponte.estado].texto}`}>
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${SINAL_DA_PONTE[ponte.estado].ponto} ${
+                      ponte.estado === "viva" ? "animate-pulse" : ""
+                    }`}
+                    aria-hidden="true"
+                  />
+                  {ponte.titulo}
+                </p>
+                {ponte.explicacao !== "" && (
+                  <p className="mt-1 max-w-prose text-xs leading-relaxed text-slate-400">
+                    {ponte.explicacao}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <button
             onClick={() => agir(estado.ligado ? "desligar" : "ligar")}

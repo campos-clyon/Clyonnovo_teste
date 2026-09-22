@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ mensagens: await mensagensDoNumeroWhatsApp(telefone) });
   }
 
-  const { saudeDaCompreensao } = await import("@/lib/db");
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao] =
+  const { saudeDaCompreensao, quandoAPonteVeio } = await import("@/lib/db");
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm] =
     await Promise.all([
       whatsappLigado(),
       listarNumerosInterrompidosWhatsApp(),
@@ -82,11 +82,21 @@ export async function GET(req: NextRequest) {
       listarConversasArquivadasWhatsApp().catch(() => []),
       // Quando a leitura das mensagens falhou pela última vez, e porquê.
       saudeDaCompreensao().catch(() => null),
+      // Quando a ponte cá veio pela última vez — ver `ponte-viva.ts`.
+      quandoAPonteVeio().catch(() => null),
     ]);
   return NextResponse.json({
     ligado,
     // "meta", "ponte", "manual" (o número da CLYON à mão, sem API) ou "nenhum".
     canal: canalWhatsApp(),
+    /*
+     * QUANDO A PONTE CÁ VEIO. `null` = nunca, ou não se conseguiu ler.
+     *
+     * Vai em ISO e a régua fica do lado de quem mostra: o relógio que conta é
+     * o de quem está a olhar para o ecrã, e não o do servidor que respondeu a
+     * este pedido há dois minutos.
+     */
+    ponteVistaEm: ponteVistaEm ? ponteVistaEm.toISOString() : null,
     numeroManual: numeroManualWhatsApp(),
     interrompidos,
     bloqueados,

@@ -4,6 +4,7 @@ import {
   filaWhatsAppPorEnviar,
   interromperNumeroWhatsApp,
   marcarFilaWhatsAppEnviadas,
+  carimbarPonte,
   numeroBloqueadoWhatsApp,
   numeroInterrompidoWhatsApp,
   whatsappLigado,
@@ -43,18 +44,35 @@ function autorizado(req: NextRequest): boolean {
   return dado.length === esperado.length && crypto.timingSafeEqual(dado, esperado);
 }
 
-function portao(req: NextRequest): NextResponse | null {
+/**
+ * O portão — e, desde 22-09-2026, o relógio ao lado dele.
+ *
+ * QUEM PASSA AQUI É A PONTE, e mais ninguém: traz o segredo. Por isso este é
+ * o sítio certo para carimbar a hora em que ela esteve cá, e não os três
+ * handlers — um carimbo esquecido num deles dava um painel a dizer que ela
+ * morreu quando ela estava a trabalhar.
+ *
+ * Carimba-se DEPOIS da autenticação de propósito: quem falha o segredo não é
+ * a ponte, e não pode manter o sinal verde.
+ *
+ * É esperado e não deixado a voar: no Vercel uma promessa solta pode morrer
+ * com a resposta, e um relógio que às vezes não anda é pior do que nenhum. O
+ * custo é um UPDATE por chave primária, ao lado das consultas que esta rota
+ * já faz. E `carimbarPonte` nunca atira — ver `db.ts`.
+ */
+async function portao(req: NextRequest): Promise<NextResponse | null> {
   if (!ponteConfigurada()) {
     return NextResponse.json({ error: "Ponte não configurada" }, { status: 503 });
   }
   if (!autorizado(req)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
+  await carimbarPonte();
   return null;
 }
 
 export async function GET(req: NextRequest) {
-  const erro = portao(req);
+  const erro = await portao(req);
   if (erro) return erro;
   // Desligado no painel = nada sai, nem o que já estava na fila. A fila
   // espera; ligar outra vez solta-a — e o painel mostra o que lá está.
@@ -63,7 +81,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const erro = portao(req);
+  const erro = await portao(req);
   if (erro) return erro;
 
   let corpo: {
@@ -265,7 +283,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const erro = portao(req);
+  const erro = await portao(req);
   if (erro) return erro;
 
   let corpo: { ids?: unknown };

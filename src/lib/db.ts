@@ -6654,6 +6654,15 @@ async function ensureWhatsappEstadoTables() {
      * responder. Ver `gemini-em-descanso.ts`.
      */
     `ALTER TABLE whatsappEstado ADD COLUMN modelosEmDescanso TEXT NULL DEFAULT NULL`,
+    /*
+     * QUANDO A PONTE VEIO CÁ PELA ÚLTIMA VEZ.
+     *
+     * Quando ela morre, o site continua a parecer normal: o assistente
+     * escreve, a fila enche-se, e ninguém vê. Uma cliente ficou sem resposta
+     * uma manhã inteira e a pergunta «porquê?» não tinha onde ser respondida.
+     * Ver `ponte-viva.ts`.
+     */
+    `ALTER TABLE whatsappEstado ADD COLUMN ponteVistaEm DATETIME NULL DEFAULT NULL`,
   ]) {
     await pool.execute(sql).catch(() => {});
   }
@@ -6683,6 +6692,46 @@ export async function anotarSaudeDaCompreensao(motivo: string | null): Promise<v
     );
   } catch {
     /* um termómetro não trava o doente */
+  }
+}
+
+/**
+ * A ponte esteve cá agora. Carimba-se a hora e mais nada.
+ *
+ * NUNCA ATIRA, e é por isso que quem chama não precisa de esperar por ela: é
+ * um relógio ao lado da porta, e um relógio avariado não pode fechar a porta.
+ * A ponte bate aqui de cinco em cinco segundos — se este `UPDATE` falhar, o
+ * seguinte corrige, e o pior que acontece é o painel dizer que ela demorou.
+ */
+export async function carimbarPonte(): Promise<void> {
+  try {
+    await ensureWhatsappEstadoTables();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `INSERT INTO whatsappEstado (id, ponteVistaEm) VALUES (1, NOW())
+       ON DUPLICATE KEY UPDATE ponteVistaEm = NOW()`,
+    );
+  } catch {
+    /* um relógio não tranca a porta */
+  }
+}
+
+/** Quando a ponte veio pela última vez. `null` = nunca, ou não se conseguiu ler. */
+export async function quandoAPonteVeio(): Promise<Date | null> {
+  try {
+    await ensureWhatsappEstadoTables();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      "SELECT ponteVistaEm FROM whatsappEstado WHERE id = 1",
+    )) as [Array<{ ponteVistaEm: Date | string | null }>, unknown];
+    const v = rows[0]?.ponteVistaEm ?? null;
+    if (!v) return null;
+    const d = v instanceof Date ? v : new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
   }
 }
 
