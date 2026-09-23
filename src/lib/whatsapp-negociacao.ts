@@ -482,32 +482,116 @@ async function fecharPeloCliente(
 }
 
 /** Recusar pelo cliente — o corpo do botão «Recusar» e da palavra NÃO. */
+/**
+ * A recusa na base, sem falar com ninguém.
+ *
+ * Separada da mensagem de propósito: recusar VÁRIAS de uma vez faz o mesmo
+ * trabalho quatro vezes e manda UMA mensagem. Quatro «a proposta de X foi
+ * recusada, as outras continuam de pé» seguidas, a última das quais já não
+ * tem outras nenhumas, é a definição de um robô a falar sozinho.
+ */
+async function recusarUmaNaBase(alvo: Alvo): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const r = desistir(alvo.estado, "cliente", new Date());
+  if (!r.ok) return { ok: false, erro: r.erro };
+  await gravarNegociacao(alvo.negociacaoId, {
+    estado: r.negociacao.estado,
+    valorAcordado: r.negociacao.valorAcordado ?? null,
+    propostasJson: JSON.stringify(r.negociacao.propostas),
+  });
+  /*
+   * A NOTA NÃO DESFAZ A RECUSA — e por isso não pode derrubá-la.
+   *
+   * É a mesma convenção que o `fecharPeloCliente` já segue: o negócio está
+   * decidido, e falhar o registo sobre ele não o torna por decidir. Sem este
+   * `catch`, um `appendOrderHistory` que rebente deixava a negociação
+   * desistida na base e fazia o chamador anunciar ao cliente que não tinha
+   * dado — sobre uma proposta que já estava morta.
+   */
+  try {
+    await registarAccao(
+      alvo.pedidoId,
+      alvo.negociacaoId,
+      `Cliente recusou a proposta de ${alvo.profissionalNome} por WhatsApp — negociação #${alvo.negociacaoId}.`,
+      "negociacao_desistida",
+      "assistente",
+    );
+  } catch (e) {
+    console.error("[assistente] recusa gravada, a nota não:", alvo.negociacaoId, e);
+  }
+  return { ok: true };
+}
+
 async function recusarPeloCliente(telefone: string, alvo: Alvo): Promise<void> {
   const { assistentePode } = await import("@/lib/db");
   if (!(await assistentePode("fechar"))) {
     await passarAUmaPessoa(telefone, "Fechar desligado - quis recusar");
     return;
   }
-  const r = desistir(alvo.estado, "cliente", new Date());
+  const r = await recusarUmaNaBase(alvo);
   if (!r.ok) {
     await enviarTextoWhatsApp(telefone, `Não deu para recusar: ${r.erro}`);
     return;
   }
-  await gravarNegociacao(alvo.negociacaoId, {
-    estado: r.negociacao.estado,
-    valorAcordado: r.negociacao.valorAcordado ?? null,
-    propostasJson: JSON.stringify(r.negociacao.propostas),
-  });
-  await registarAccao(
-    alvo.pedidoId,
-    alvo.negociacaoId,
-    `Cliente recusou a proposta de ${alvo.profissionalNome} por WhatsApp — negociação #${alvo.negociacaoId}.`,
-    "negociacao_desistida",
-    "assistente",
-  );
   await enviarTextoWhatsApp(
     telefone,
     `Certo — a proposta de ${alvo.profissionalNome} foi recusada. As outras continuam de pé.`,
+  );
+}
+
+/**
+ * RECUSAR VÁRIAS DE UMA VEZ — 23-09-2026.
+ *
+ * "recusar 267,00, recusar 300,00, recusar 250,00, recusar 283,42", escrito
+ * pelo cliente do pedido #357 às 11:54. Era a resposta que a nossa própria
+ * mensagem lhe ensinava a dar, quatro vezes seguidas, e o assistente
+ * devolveu-lhe a mesma lista de propostas que lhe tinha mandado um minuto
+ * antes. Ver `recusasEmSerie` em `ler-a-resposta.ts`.
+ *
+ * Uma mensagem só no fim, e a lista de quem ficou recusado. Se alguma falhar
+ * na base, diz-se quais correram e quais não — calar metade de uma operação
+ * de dinheiro é pior do que não a fazer.
+ */
+async function recusarVariasPeloCliente(telefone: string, alvos: Alvo[]): Promise<void> {
+  const { assistentePode } = await import("@/lib/db");
+  if (!(await assistentePode("fechar"))) {
+    await passarAUmaPessoa(telefone, "Fechar desligado - quis recusar várias");
+    return;
+  }
+  /*
+   * UMA ESCRITA QUE REBENTA NÃO PODE CALAR AS OUTRAS TRÊS.
+   *
+   * São quatro escritas independentes, sem transacção. Sem este `catch`, uma
+   * que rebente a meio — um `lock wait timeout`, uma ligação reposta — deixava
+   * duas negociações mortas, duas vivas, e o cliente SEM MENSAGEM NENHUMA: a
+   * excepção subia até à rota, que regista e devolve 200. No telemóvel dele
+   * continuava a lista das quatro propostas, sem um sinal de que metade já não
+   * existia.
+   *
+   * Os revisores reproduziram-no a correr, e mostraram que isto era PIOR do
+   * que o que havia antes: a recusa uma a uma falhava alto, esta falhava em
+   * silêncio. Uma operação de dinheiro meio feita tem de dizer qual metade.
+   */
+  const feitas: string[] = [];
+  const falhadas: string[] = [];
+  for (const alvo of alvos) {
+    try {
+      const r = await recusarUmaNaBase(alvo);
+      if (r.ok) feitas.push(alvo.profissionalNome);
+      else falhadas.push(`${alvo.profissionalNome} (${r.erro})`);
+    } catch (e) {
+      falhadas.push(`${alvo.profissionalNome} (não deu para gravar)`);
+      console.error("[assistente] recusa em série falhou:", alvo.negociacaoId, e);
+    }
+  }
+  if (feitas.length === 0) {
+    await enviarTextoWhatsApp(telefone, `Não deu para recusar: ${falhadas.join("; ")}`);
+    return;
+  }
+  await enviarTextoWhatsApp(
+    telefone,
+    `Certo — recusei ${feitas.length === 1 ? "a proposta" : "as propostas"} de ${feitas.join(", ")}.` +
+      (falhadas.length ? `\n\nNão deu para recusar: ${falhadas.join("; ")}` : "") +
+      `\n\nSe quiser, peço novos valores a outros profissionais.`,
   );
 }
 
@@ -906,6 +990,7 @@ export async function tratarMensagemDoCliente(
   const nomeEValor = lida?.tipo === "nome_e_valor" ? lida : null;
   const simNome = lida?.tipo === "sim_nome" ? lida : null;
   const naoNome = lida?.tipo === "nao_nome" ? lida : null;
+  const naoVarias = lida?.tipo === "nao_varias" ? lida : null;
   /** O nome que ele disse, seja em que forma for. Casa-se lá dentro. */
   const pistaDeNome = nomeEValor?.nome ?? simNome?.nome ?? naoNome?.nome ?? null;
 
@@ -916,7 +1001,8 @@ export async function tratarMensagemDoCliente(
     naoValor != null ||
     nomeEValor ||
     simNome ||
-    naoNome
+    naoNome ||
+    naoVarias
   ) {
     /*
      * SÓ QUEM PÔS UM NÚMERO NA MESA PODE SER ESCOLHIDO POR UM NÚMERO.
@@ -959,6 +1045,54 @@ export async function tratarMensagemDoCliente(
     const linhaDoAlvo = (a: AlvoComValor) =>
       `• ${variosPedidos ? `Pedido #${a.pedidoId} — ` : ""}${a.profissionalNome}: ${euros(a.valorNaMesa as number)}`;
     const listaDeAlvos = () => alvos.map(linhaDoAlvo).join("\n");
+
+    /*
+     * VÁRIAS RECUSAS NUMA FRASE — tudo ou nada.
+     *
+     * Cada valor tem de bater em UMA proposta e só uma. Se um deles não bater
+     * em nada, ou bater em duas, não se recusa nenhuma: recusar metade do que
+     * ele pediu é a pior das três respostas possíveis, porque é irreversível
+     * e ele fica sem saber onde é que aquilo ficou.
+     */
+    if (naoVarias) {
+      const casados = naoVarias.valores.map((v) => ({
+        valor: v,
+        quais: alvos.filter((a) => Math.abs((a.valorNaMesa as number) - v) < 0.005),
+      }));
+      const semNenhuma = casados.filter((c) => c.quais.length === 0);
+      const empatados = casados.filter((c) => c.quais.length > 1);
+      /*
+       * UM EMPATE NÃO SE DESEMPATA EM SILÊNCIO — nem se põe o cliente a
+       * repetir uma frase que não vai levar a lado nenhum.
+       *
+       * É a mesma regra que o ramo de baixo já segue para um valor sozinho.
+       * Dois pedidos com uma proposta de 300 € cada não se separam pelo
+       * valor, e «Diga qual pelo valor» é o único vocabulário que o
+       * assistente ensinou: mandá-lo tentar outra vez seria armar a
+       * armadilha, e à segunda a mensagem nem sequer sai — sai repetida e o
+       * `jaFoiDito` engole-a.
+       */
+      if (empatados.length > 0) {
+        await passarAUmaPessoa(
+          telefone,
+          `Quis recusar ${empatados.map((m) => euros(m.valor)).join(", ")} e esse valor está em mais do que uma proposta — não dá para saber qual`,
+        );
+        return;
+      }
+      if (semNenhuma.length > 0 || casados.length === 0) {
+        await enviarTextoWhatsApp(
+          telefone,
+          `Não encontrei nenhuma proposta de ${semNenhuma.map((m) => euros(m.valor)).join(", ")} em cima da mesa, por isso não recusei nenhuma.` +
+            (alvos.length > 0 ? `\n${listaDeAlvos()}` : ""),
+        );
+        return;
+      }
+      await recusarVariasPeloCliente(
+        telefone,
+        casados.map((c) => c.quais[0]),
+      );
+      return;
+    }
 
     /*
      * O NOME MANDA SOBRE O NÚMERO.

@@ -39,6 +39,7 @@
  */
 
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
@@ -62,13 +63,103 @@ if (!SEGREDO) {
 
 const log = (...a) => console.log(new Date().toISOString(), "[ponte]", ...a);
 
+/**
+ * UMA PORTA À ESCUTA — e o que ela resolve, que não é o que parece.
+ *
+ * A ponte nunca recebeu um pedido: só faz pedidos para fora. Isso deixa-a
+ * sem nenhuma forma de alguém lhe perguntar «estás viva?» a não ser ir ao
+ * painel do site ver a hora do último carimbo — que é precisamente o sinal
+ * que falha quando ela adormece. Quem quer saber tem de perguntar à vítima.
+ *
+ * ⚠️ ISTO NÃO IMPEDE O RAILWAY DE A ADORMECER, e é melhor não acreditar que
+ * impede. O *App Sleeping* adormece por falta de tráfego A ENTRAR, e ter uma
+ * porta aberta não faz entrar tráfego nenhum. Essa definição desliga-se no
+ * painel do Railway, em Settings, e não se resolve com código.
+ *
+ * O que isto dá é três coisas reais:
+ *   · perguntar-lhe o estado de fora, sem depender do site;
+ *   · um caminho para o Railway confirmar a saúde no arranque, se se quiser;
+ *   · um alvo para um ping de fora, que É tráfego a entrar — e esse mantém-na
+ *     acordada mesmo com o adormecer ligado.
+ *
+ * Abre-se ANTES do Chromium de propósito: o Chromium demora um minuto a
+ * levantar-se, e uma porta que só abre ao fim de um minuto é uma porta que o
+ * Railway já deu por fechada.
+ */
+const PORTA = Number(process.env.PORT ?? 8080);
+
+/** Preenchido pelo resto do ficheiro. É o que a porta conta a quem pergunta. */
+const saude = {
+  arrancouEm: new Date().toISOString(),
+  ligado: () => false,
+  ultimaRondaBoa: () => 0,
+  despachoPresoHa: () => 0,
+};
+
+http
+  .createServer((req, res) => {
+    const agora = Date.now();
+    const boa = saude.ultimaRondaBoa();
+    const preso = saude.despachoPresoHa();
+    const corpo = {
+      ok: saude.ligado() && boa > 0 && agora - boa < 60_000 && preso < 60_000,
+      ligadoAoWhatsApp: saude.ligado(),
+      arrancouEm: saude.arrancouEm,
+      segundosDesdeAUltimaRonda: boa > 0 ? Math.round((agora - boa) / 1000) : null,
+      despachoPresoHaSegundos: preso ? Math.round(preso / 1000) : null,
+    };
+    /*
+     * `/` RESPONDE SEMPRE 200, e `/pronto` é que julga.
+     *
+     * São duas perguntas diferentes e misturá-las custa caro: o Railway usa
+     * a raiz para saber se o contentor subiu, e durante o arranque — abrir o
+     * Chromium, emparelhar — esta ponte não está pronta e demora um minuto
+     * ou mais. Um 503 aí é um deploy dado por falhado a meio de um arranque
+     * que estava a correr bem.
+     *
+     * Quem quiser vigiar de fora se ela está MESMO a trabalhar pergunta ao
+     * `/pronto`, e esse diz que não quando não está.
+     */
+    const julga = (req.url ?? "/").startsWith("/pronto");
+    res.writeHead(julga && !corpo.ok ? 503 : 200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(corpo));
+  })
+  .on("error", (e) =>
+    /*
+     * A PORTA É UM LUXO, E A PONTE NÃO MORRE POR CAUSA DE UM LUXO.
+     *
+     * Sem isto, um `EADDRINUSE` — dois contentores a trocar de lugar, uma
+     * porta herdada — era um erro não apanhado, e o processo morria. Um
+     * servidor de diagnóstico que mata o que devia diagnosticar é a pior
+     * troca possível.
+     */
+    log("não consegui abrir a porta", PORTA, "-", e.message, "— sigo sem ela"),
+  )
+  .listen(PORTA, () => log("à escuta na porta", PORTA, "— /  responde com o estado"));
+
 // ── O site ─────────────────────────────────────────────────────────────────
+
+/**
+ * NENHUM PEDIDO AO SITE FICA PENDURADO PARA SEMPRE — 23-09-2026.
+ *
+ * O `fetch` não traz prazo nenhum. Um pedido que não responda deixa a ronda da
+ * fila a meio, e a ronda tem uma tranca (`aBuscar`) que só se levanta no fim:
+ * as rondas seguintes desistem em silêncio, a ponte deixa de carimbar a hora
+ * no site, e não escreve uma linha a dizer porquê. Fica de pé, muda, e o
+ * painel diz «a ponte não vem há 1 h» sem ninguém saber de quê.
+ *
+ * Trinta segundos é seis vezes o intervalo da ronda. Chega de sobra para um
+ * arranque a frio do Vercel, e não chega para esconder um site que não
+ * responde.
+ */
+const PRAZO_DO_PEDIDO_MS = 30_000;
 
 async function site(metodo, corpo) {
   const res = await fetch(`${SITE}/api/whatsapp/ponte`, {
     method: metodo,
     headers: { Authorization: `Bearer ${SEGREDO}`, "Content-Type": "application/json" },
     body: corpo ? JSON.stringify(corpo) : undefined,
+    signal: AbortSignal.timeout(PRAZO_DO_PEDIDO_MS),
   });
   if (!res.ok) {
     const texto = await res.text().catch(() => "");
@@ -148,6 +239,7 @@ function eraNossa(texto) {
   return true;
 }
 let ligado = false;
+saude.ligado = () => ligado;
 let client = null;
 
 function chatIdDe(telefone) {
@@ -325,19 +417,102 @@ async function despacharPorOrdem(paraEnviar) {
   }
 }
 
+/**
+ * A TRANCA DA RONDA, E PORQUE É QUE ELA PRECISA DE UMA SAÍDA — 23-09-2026.
+ *
+ * A tranca existe para não haver duas rondas ao mesmo tempo. Só que ela
+ * levanta-se no fim da ronda, e uma ronda que nunca acabe nunca a levanta:
+ * daí em diante todas desistem à primeira linha, sem erro e sem registo. A
+ * ponte fica de pé, o Railway continua a dizer `Active`, e o painel do site
+ * diz «a ponte não vem há 1 h» sem ninguém perceber de quê. Foi o que se viu
+ * a 23-09-2026, três vezes seguidas.
+ *
+ * O prazo do `fetch` já fecha a porta mais provável. Isto é o que fica para as
+ * outras: se a tranca estiver presa há mais do que dois prazos, quebra-se e
+ * segue-se. Duas rondas ao mesmo tempo não fazem mal nenhum — o despacho é
+ * uma fila só (`despachando`) e o `jaDespachadas` não deixa sair nada duas
+ * vezes. Uma ponte muda faz.
+ */
+const TRANCA_PRESA_MS = 2 * PRAZO_DO_PEDIDO_MS;
+
 let aBuscar = false;
+let aBuscarDesde = 0;
+/**
+ * Desde quando um despacho está a correr. Zero = nenhum.
+ *
+ * Existe porque quebrar a tranca apagou o sinal que deu o alarme a 23-09: um
+ * `sendMessage` pendurado no Chromium parava TUDO, e o painel do site
+ * denunciava-o. Com a tranca a quebrar-se, uma ronda nova faz um GET, o GET
+ * carimba a hora, e o painel fica verde enquanto nada sai. O relógio de
+ * guarda passa a olhar para os dois.
+ */
+let despachoDesde = 0;
+saude.despachoPresoHa = () => (despachoDesde ? Date.now() - despachoDesde : 0);
+
+/** A última vez que a ponte FALOU MESMO com o site. É o pulso dela. */
+let ultimaRondaBoa = 0;
+saude.ultimaRondaBoa = () => ultimaRondaBoa;
+
 async function rondaDaFila() {
-  if (!ligado || aBuscar) return;
+  if (!ligado) return;
+  if (aBuscar) {
+    const presaHa = Date.now() - aBuscarDesde;
+    if (presaHa < TRANCA_PRESA_MS) return;
+    log("a ronda anterior está presa há", Math.round(presaHa / 1000), "s — a soltar a tranca");
+  }
   aBuscar = true;
+  aBuscarDesde = Date.now();
   try {
     const { paraEnviar } = await site("GET");
-    if (paraEnviar?.length) await despachar(paraEnviar);
+    ultimaRondaBoa = Date.now();
+    if (paraEnviar?.length) {
+      despachoDesde = Date.now();
+      try {
+        await despachar(paraEnviar);
+      } finally {
+        despachoDesde = 0;
+      }
+    }
   } catch (e) {
     log("fila:", e.message);
   } finally {
     aBuscar = false;
   }
 }
+
+/**
+ * O RELÓGIO DE GUARDA: calar-se é uma avaria, e tem de se ouvir.
+ *
+ * Enquanto a ponte estiver ligada ao WhatsApp, uma ronda bem sucedida devia
+ * acontecer a cada cinco segundos. Se passarem dez minutos sem nenhuma, não é
+ * rede nem soluço: é uma avaria que não se anuncia sozinha.
+ *
+ * Dez minutos, e não dois, para uma paragem do site não pôr isto a reiniciar
+ * em ciclo — cada volta paga o arranque do Chromium outra vez, e o ficheiro já
+ * tem a cicatriz desse ciclo escrita mais abaixo. Quando o site está em baixo,
+ * a ronda falha ALTO de cinco em cinco segundos («fila: ...»), e quem olha
+ * para os registos vê-o. O que isto apanha é o outro caso: o silêncio.
+ *
+ * Sai com erro para o Railway a levantar de novo. Um processo que se cala é
+ * pior do que um processo que morre: o morto tem quem o substitua.
+ */
+const SEM_PULSO_MS = 10 * 60_000;
+
+setInterval(() => {
+  if (!ligado) return;
+  const calada = ultimaRondaBoa ? Date.now() - ultimaRondaBoa : 0;
+  const despachoPreso = despachoDesde ? Date.now() - despachoDesde : 0;
+  if (calada < SEM_PULSO_MS && despachoPreso < SEM_PULSO_MS) return;
+  log("=====================================================");
+  if (despachoPreso >= SEM_PULSO_MS) {
+    log("UM ENVIO ESTÁ PRESO HÁ", Math.round(despachoPreso / 1000), "s — o Chromium não responde.");
+  } else {
+    log("SEM FALAR COM O SITE HÁ", Math.round(calada / 1000), "s, e ligado ao WhatsApp.");
+  }
+  log("Isto não se resolve sozinho. A sair para o Railway levantar outra vez.");
+  log("=====================================================");
+  process.exit(1);
+}, 60_000).unref();
 
 /**
  * Apagar as trancas que o Chromium deixa no perfil.
@@ -450,6 +625,16 @@ async function arrancar() {
 
   client.on("ready", () => {
     ligado = true;
+    /*
+     * O PULSO COMEÇA AQUI, e não quando o ficheiro foi lido.
+     *
+     * O relógio de guarda conta desde a última ronda boa. Se esse contador
+     * nascesse no arranque do processo, um emparelhamento demorado — e este
+     * contentor já levou doze minutos a abrir o Chromium — deixava a ponte
+     * a nascer já com dez minutos de atraso: o guarda matava-a no primeiro
+     * tique depois de ela ligar, e outra vez, e outra vez.
+     */
+    ultimaRondaBoa = Date.now();
     log("LIGADO AO WHATSAPP. A ir buscar a fila a cada", INTERVALO, "ms.");
     void rondaDaFila();
   });

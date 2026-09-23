@@ -82,6 +82,126 @@ describe("o não, e o par que mais importa", () => {
   it("com valor: «recuso 300»", () => {
     expect(lerARespostaDirecta("recuso 300")).toEqual({ tipo: "nao", valor: 300 });
   });
+
+  it("recusar VÁRIAS numa frase — a que o cliente escreveu mesmo", () => {
+    /*
+     * 23-09-2026, pedido #357, às 11:54:33. Um minuto antes, o assistente
+     * tinha-lhe escrito «Tem 4 propostas em cima da mesa … Diga qual pelo
+     * valor — por exemplo: recusar 267,00». Ele fez exactamente isso, quatro
+     * vezes, e levou de volta a MESMA lista.
+     *
+     * O que acontecia: o «recusar» apanhava a frase toda e o resto — «267,00,
+     * recusar 300,00, …» — era lido como o NOME do profissional a recusar.
+     */
+    expect(lerARespostaDirecta("recusar 267,00, recusar 300,00, recusar 250,00, recusar 283,42")).toEqual(
+      { tipo: "nao_varias", valores: [267, 300, 250, 283.42] },
+    );
+  });
+
+  it("duas chegam, e o «e» entre elas também", () => {
+    expect(lerARespostaDirecta("recusar 100 e recusar 200")).toEqual({
+      tipo: "nao_varias",
+      valores: [100, 200],
+    });
+    expect(lerARespostaDirecta("nao 90 nao 120 €")).toEqual({
+      tipo: "nao_varias",
+      valores: [90, 120],
+    });
+  });
+
+  it("uma só continua a ser uma só — não se inventa uma lista", () => {
+    expect(lerARespostaDirecta("recusar 267,00")).toEqual({ tipo: "nao", valor: 267 });
+  });
+
+  it("valores repetidos contam uma vez", () => {
+    expect(lerARespostaDirecta("recusar 100, recusar 100")).toEqual({
+      tipo: "nao_varias",
+      valores: [100],
+    });
+  });
+
+  it("se sobrar texto que não é uma recusa, não se percebeu a frase", () => {
+    /*
+     * Meia frase percebida sobre dinheiro é pior do que nenhuma: o que sobra
+     * pode ser a parte que muda o sentido. Vai para o modelo, que a lê
+     * inteira.
+     */
+    /*
+     * O que importa aqui é que NÃO saia uma recusa múltipla. Uma frase com um
+     * pedido no meio — «mas ligue-me antes» — não pode recusar duas propostas
+     * de forma irreversível por conta própria.
+     */
+    for (const frase of [
+      "recusar 100, recusar 200, mas ligue-me antes",
+      "recusar 100 e aceito 200",
+    ]) {
+      expect(lerARespostaDirecta(frase)?.tipo).not.toBe("nao_varias");
+    }
+  });
+});
+
+describe("um nome tem letras", () => {
+  /*
+   * A REDE DE SEGURANÇA que faltava debaixo de tudo isto.
+   *
+   * Quando o resto de um «recusar …» não dava um valor, era tratado como o
+   * nome de quem ele quer recusar — fosse ele o que fosse. Uma frase com
+   * números e vírgulas virava uma empresa imaginária, o cérebro ia procurá-la,
+   * não a encontrava, e devolvia o ponto de situação. A conversa andava em
+   * círculo sem ninguém perceber porquê.
+   */
+  it("números e pontuação não são o nome de nenhum profissional", () => {
+    expect(lerARespostaDirecta("recusar 300,00 400,00")).toBeNull();
+    expect(lerARespostaDirecta("aceito 12 34 56")).toBeNull();
+  });
+
+  it("e o verbo no meio da frase não cala o nome que está ao lado", () => {
+    /*
+     * A PRIMEIRA VERSÃO DESTA GUARDA ERA BRUTA DE MAIS, e os revisores
+     * mediram-no: vetava a frase inteira ao encontrar um verbo lá dentro.
+     *
+     * «Não aceito a proposta da Revolution» tem «aceito» no meio e é a forma
+     * mais humana de recusar. Antes disto era lida e casada com a Revolution;
+     * com o veto bruto passou a devolver nada, e a cliente levava de volta a
+     * lista das propostas.
+     */
+    expect(lerARespostaDirecta("nao aceito a proposta da Revolution")).toEqual({
+      tipo: "nao_nome",
+      nome: "aceito a proposta da revolution",
+    });
+    // E um profissional que TENHA a palavra no nome continua alcançável.
+    expect(lerARespostaDirecta("recusar a Sim Transportes")).toEqual({
+      tipo: "nao_nome",
+      nome: "a sim transportes",
+    });
+  });
+
+  it("«euros» por extenso conta como «€» — e não deixa um «os» para trás", () => {
+    /*
+     * A alternância de uma expressão regular é ordenada. Com `eur|euros`, a
+     * palavra «euros» casava em «eur» e sobrava «os», a sobra deixava de
+     * estar vazia, e a frase mais escrita de todas era a única que falhava.
+     */
+    expect(lerARespostaDirecta("recusar 100 euros, recusar 200 euros")).toEqual({
+      tipo: "nao_varias",
+      valores: [100, 200],
+    });
+    expect(lerARespostaDirecta("recusar 100 eur, recusar 200 €")).toEqual({
+      tipo: "nao_varias",
+      valores: [100, 200],
+    });
+  });
+
+  it("mas um nome a sério continua a passar", () => {
+    expect(lerARespostaDirecta("aceito a proposta da Revolution")).toEqual({
+      tipo: "sim_nome",
+      nome: "a proposta da revolution",
+    });
+    expect(lerARespostaDirecta("recusar a Nova Recolha")).toEqual({
+      tipo: "nao_nome",
+      nome: "a nova recolha",
+    });
+  });
 });
 
 describe("na dúvida, não se lê nada", () => {

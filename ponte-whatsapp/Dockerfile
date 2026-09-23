@@ -23,4 +23,8 @@ COPY index.js ./
 # que recusa a instrução VOLUME aqui dentro ("use Railway Volumes"). Sem esse
 # volume, lê-se o código de emparelhamento a cada arranque.
 
+# A porta do estado. Ver o servidor http no index.js: a raiz responde sempre
+# 200 (o contentor subiu) e /pronto diz se ela esta mesmo a trabalhar.
+EXPOSE 8080
+
 CMD ["node", "index.js"]

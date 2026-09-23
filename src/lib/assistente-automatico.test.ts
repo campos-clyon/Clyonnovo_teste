@@ -1035,8 +1035,14 @@ describe("fica escrito que foi o assistente", () => {
      * a diferença entre "carregou no botão" e "escreveu uma frase que o
      * assistente leu como sim" é a história toda.
      */
-    expect(NEGOCIACAO).toContain('"negociacao_fechada",\n    "assistente",');
-    expect(NEGOCIACAO).toContain('"negociacao_desistida",\n    "assistente",');
+    /*
+     * Sem a indentação a fazer parte da prova. A 23-09-2026 a recusa passou a
+     * ter o `registarAccao` dentro de um `try` — a nota não pode derrubar uma
+     * recusa já gravada — e as duas linhas andaram dois espaços. O que este
+     * teste guarda é QUEM ficou escrito, não com que margem.
+     */
+    expect(NEGOCIACAO).toMatch(/"negociacao_fechada",\s*\n\s*"assistente",/);
+    expect(NEGOCIACAO).toMatch(/"negociacao_desistida",\s*\n\s*"assistente",/);
     expect(DB).toContain('| "assistente" | null;');
   });
 
