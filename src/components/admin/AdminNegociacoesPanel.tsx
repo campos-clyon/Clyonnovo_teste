@@ -461,6 +461,7 @@ type PorPromover = {
 type ChaveDoBloco =
   | "porConfirmar"
   | "n1"
+  | "aguardaCliente"
   | "porEnviar"
   | "n2"
   | "n3"
@@ -527,6 +528,40 @@ const BLOCOS: Array<{
     Icone: Clock,
     cor: "text-emerald-300 border-emerald-500/60",
     corDoNumero: "text-emerald-300",
+    visivelEm: () => true,
+  },
+  /*
+   * ── A BOLA ESTÁ COM O CLIENTE ──────────────────────────────────────
+   *
+   * "Vamos criar uma nova categoria que vai chamar-se «A aguardar
+   * Cliente». Os pedidos que estão à espera de o cliente responder, hoje
+   * estão em «Precisa de si», e vamos colocá-los aqui." — 23-09-2026.
+   *
+   * Tem toda a razão, e o próprio ecrã já o dizia por baixo do título:
+   * «4 pedidos estão à espera de si» por cima de uma lista de treze. Os
+   * outros nove não esperavam por ninguém de cá dentro — esperavam por
+   * um cliente que tem email, recebeu o link, e responde sozinho.
+   *
+   * Um bloco chamado «Precisa de si» com nove linhas em que ele não
+   * precisa de fazer nada ensina a ignorar o bloco. E o que se perde
+   * nesse desconto é o dos outros quatro, onde a demora custa dinheiro.
+   *
+   * O QUE OS SEPARA é `quemNegoceia` — a mesma regra que decide se a
+   * CLYON pode confirmar um trabalho em nome de alguém. Sem email, ou
+   * registado pela equipa, a CLYON responde; com email, responde ele.
+   *
+   * NÃO ESTÁ PARADO, e é por isso que fica logo a seguir: há um
+   * profissional do outro lado à espera. O que muda é o gesto — aqui
+   * lembra-se o cliente, ali responde-se por ele.
+   */
+  {
+    chave: "aguardaCliente",
+    titulo: "A aguardar cliente",
+    dica:
+      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu o link. Não se responde por ele: se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
+    Icone: UserRound,
+    cor: "text-cyan-300 border-cyan-500/60",
+    corDoNumero: "text-cyan-300",
     visivelEm: () => true,
   },
   /*
@@ -1571,12 +1606,6 @@ export default function AdminNegociacoesPanel({
   );
   const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;
 
-  const aEsperar =
-    mostrar === "clientes"
-      ? []
-      : pedidosNaMesa.filter(
-          (p) => quemNegoceia(p) === "clyon" && p.negociacoes.some(precisaDeSi),
-        );
   const ordenados = [...pedidosNaMesa].sort(
     (a, b) =>
       Number(b.negociacoes.some(precisaDeSi)) - Number(a.negociacoes.some(precisaDeSi)),
@@ -1652,7 +1681,21 @@ export default function AdminNegociacoesPanel({
      */
     const precisamDeSi = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porData);
     const porConfirmar = precisamDeSi.filter((p) => p.negociacoes.some(esperaConfirmacao));
-    const precisam = precisamDeSi.filter((p) => !p.negociacoes.some(esperaConfirmacao));
+    const semConfirmar = precisamDeSi.filter((p) => !p.negociacoes.some(esperaConfirmacao));
+    /*
+     * E AGORA PARTEM-SE OUTRA VEZ, por quem tem de responder.
+     *
+     * Ver a nota do bloco `aguardaCliente`: uma proposta em cima da mesa
+     * espera por alguém, e esse alguém nem sempre é a CLYON. Quando o cliente
+     * tem email, recebeu o link e responde sozinho — intrometermo-nos é
+     * tirar-lhe a negociação das mãos.
+     *
+     * Os FEITOS ficam de fora desta divisão de propósito. Ali há dinheiro de
+     * um profissional preso, e quem tem de o libertar é o cliente na mesma —
+     * mas é um bloco com urgência própria e não se lhe mexe.
+     */
+    const precisam = semConfirmar.filter((p) => quemNegoceia(p) === "clyon");
+    const aguardaCliente = semConfirmar.filter((p) => quemNegoceia(p) !== "clyon");
     const restantes = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi));
     /* Fechado com alguém é outra coisa: já não se espera proposta nenhuma. */
     const contratados = restantes
@@ -1662,7 +1705,9 @@ export default function AdminNegociacoesPanel({
       .filter((p) => !p.negociacoes.some((n) => n.estado === "acordada"))
       .sort(porData);
 
-    const comCoisas = [precisam, aoAr, contratados].filter((l) => l.length > 0).length;
+    const comCoisas = [precisam, aguardaCliente, aoAr, contratados].filter(
+      (l) => l.length > 0,
+    ).length;
 
     type Entrada = {
       chave: string;
@@ -1700,6 +1745,13 @@ export default function AdminNegociacoesPanel({
       porConfirmar,
     );
     bloco("n1", "Precisa de si", "nada avança sem si", "text-emerald-300", precisam);
+    bloco(
+      "aguardaCliente",
+      "A aguardar cliente",
+      "a bola está com o cliente — ele responde pelo link",
+      "text-cyan-300",
+      aguardaCliente,
+    );
     bloco("n2", "À espera de propostas", "a bola está com os profissionais", "text-sky-300", aoAr);
     bloco(
       "n3",
@@ -1721,18 +1773,23 @@ export default function AdminNegociacoesPanel({
    * três contagens na mesma. `nivelDe` usa as DUAS mesmas condições do memo,
    * pela mesma ordem, e tem de andar a par com ele.
    */
-  function nivelDe(p: Pedido): "porConfirmar" | "n1" | "n2" | "n3" {
+  function nivelDe(p: Pedido): "porConfirmar" | "n1" | "aguardaCliente" | "n2" | "n3" {
     // Os feitos primeiro, e na mesma ordem do memo acima — as duas listas têm
     // de andar a par, senão os cartões de cima contam uma coisa e os blocos
     // mostram outra.
     if (p.negociacoes.some(esperaConfirmacao)) return "porConfirmar";
-    if (p.negociacoes.some(precisaDeSi)) return "n1";
+    if (p.negociacoes.some(precisaDeSi)) {
+      // A mesma divisão do memo, pela mesma razão: a proposta espera por
+      // alguém, e esse alguém nem sempre somos nós.
+      return quemNegoceia(p) === "clyon" ? "n1" : "aguardaCliente";
+    }
     if (p.negociacoes.some((n) => n.estado === "acordada")) return "n3";
     return "n2";
   }
-  const porNivel: Record<"porConfirmar" | "n1" | "n2" | "n3", Pedido[]> = {
+  const porNivel: Record<"porConfirmar" | "n1" | "aguardaCliente" | "n2" | "n3", Pedido[]> = {
     porConfirmar: [],
     n1: [],
+    aguardaCliente: [],
     n2: [],
     n3: [],
   };
@@ -1741,6 +1798,20 @@ export default function AdminNegociacoesPanel({
     // entradas de separador continuam a ser produzidas e deixam de ser desenhadas.
     if (!e.separador && e.pedido) porNivel[nivelDe(e.pedido)].push(e.pedido);
   }
+
+  /*
+   * OS ATALHOS SÃO O PRÓPRIO BLOCO, e não uma segunda conta parecida.
+   *
+   * Era uma filtragem à parte, sobre `pedidosNaMesa`, com as condições
+   * escritas outra vez à mão. Duas contas para a mesma lista divergem sempre,
+   * e esta já divergia: o bloco sai de `visiveis`, que exclui os concluídos e
+   * os cancelados, e a dos chips não os excluía. Um pedido concluído com uma
+   * negociação ainda aberta aparecia como atalho para um cartão que não está
+   * ali — e o atalho aterrava no vazio.
+   *
+   * Assim não há divergência possível: são o mesmo array.
+   */
+  const aEsperar = mostrar === "clientes" ? [] : porNivel.n1;
   /*
    * Concluídos e Cancelados não filtram por `mostrar` — mostram os de todos
    * os modos, como já faziam. A arrumação não é de quem negoceia.
@@ -3396,18 +3467,27 @@ export default function AdminNegociacoesPanel({
                             negociação já lá está aberta. Era uma faixa inteira por
                             cima da mesa; a explicação das 48 horas passou para a
                             dica do bloco e ficou só a fila de chips — a única coisa
-                            que mais nada faz. "À espera de SI" só é verdade nas
-                            negociações da CLYON, por isso a conta dos chips pode ser
-                            menor do que a do bloco: o bloco também tem pedidos
-                            conduzidos pelo cliente com trabalho por confirmar. */}
+                            que mais nada faz.
+
+                            A NOTA QUE AQUI ESTAVA DIZIA O CONTRÁRIO, e a 23-09-2026
+                            deixou de ser verdade: explicava que a conta dos chips
+                            podia ser MENOR do que a do bloco, porque o bloco também
+                            levava pedidos conduzidos pelo cliente e trabalho por
+                            confirmar. Os primeiros foram para «A aguardar cliente» e
+                            os segundos já estavam nos «Feitos». Agora os chips são
+                            o próprio bloco — ver `aEsperar`. */}
                         {b.chave === "n1" && aEsperar.length > 0 && (
                           <div className="mb-3 flex flex-wrap items-center gap-2">
                             <Clock className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                            {/*
+                              A FRASE DEIXOU DE CONTAR — 23-09-2026.
+                              Dizia «4 pedidos estão à espera de si» por cima de um
+                              bloco chamado «Precisa de si» com o mesmo 4 ao lado do
+                              título. O número já estava dito duas vezes; o que só
+                              isto faz é abrir a negociação ao saltar.
+                            */}
                             <span className="text-xs text-emerald-200">
-                              {aEsperar.length === 1
-                                ? "Um pedido está à espera de si"
-                                : `${aEsperar.length} pedidos estão à espera de si`}{" "}
-                              — a CLYON responde pelo cliente; salte e a negociação abre.
+                              Salte para um e a negociação abre já:
                             </span>
                             {aEsperar.map((p) => {
                               const pendentes = p.negociacoes.filter(precisaDeSi);
