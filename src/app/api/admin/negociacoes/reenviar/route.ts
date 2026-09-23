@@ -113,8 +113,19 @@ export async function POST(req: NextRequest) {
         serviceType: pedido.serviceType ?? null,
         token: acesso.token,
         baseUrl,
-        valorDesejadoCliente:
-          pedido.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null,
+        /*
+         * TAMBÉM NÃO — e aqui por uma razão diferente: já não se sabe.
+         *
+         * A coluna `valorDesejadoCliente` guarda três coisas indistinguíveis:
+         * o que o cliente escreveu, a nossa estimativa, e a conta da CLYON de
+         * uma promoção. Quem reenvia o link não tem como saber qual delas
+         * tem à frente, e a frase «Disse que quer pagar a partir de X» só é
+         * verdade numa das três.
+         *
+         * Entre calar um número que era dele e afirmar-lhe um que não era,
+         * cala-se. Ver a mesma decisão em `promover`.
+         */
+        valorDesejadoCliente: null,
       });
 
       await appendOrderHistory(pedidoId, {

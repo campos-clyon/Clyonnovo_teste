@@ -22,7 +22,7 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
@@ -314,7 +314,6 @@ export default function PropostasRecebidas({
         {(() => {
           const conta = contaDoCliente(
             acordada.valorAcordado ?? 0,
-            regimeDeIva(acordada.regimeIva),
             taxasDaNegociacao(acordada),
           );
           return (
@@ -356,10 +355,14 @@ export default function PropostasRecebidas({
                 </div>
               )}
               <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
+                {/*
+                  UMA FRASE SÓ — 22-09-2026. A outra dizia «acresce o IVA da
+                  taxa CLYON» a quem tivesse contratado um profissional na
+                  isenção do artigo 53.º. Quem factura passou a ser a CLYON,
+                  e o imposto de uma factura é o de quem a emite.
+                */}
                 Valores sem IVA.{" "}
-                {conta.ivaDoServico > 0
-                  ? `Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`
-                  : `Se quiser factura, acresce o IVA da taxa CLYON: ${euros(conta.total)}.`}
+                {`Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
                 {" "}
                 {/*
                   E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.
@@ -773,7 +776,7 @@ export default function PropostasRecebidas({
                   */}
                   {emCima != null && (
                     <div className="text-xs font-semibold text-acao">
-                      {euros(contaDoCliente(emCima, regimeDeIva(n.regimeIva), taxasDaNegociacao(n)).semIva)} a pagar
+                      {euros(contaDoCliente(emCima, taxasDaNegociacao(n)).semIva)} a pagar
                     </div>
                   )}
                   <div className="text-xs text-tinta-fraca">
@@ -842,7 +845,7 @@ export default function PropostasRecebidas({
                           não ia pagar — e o sítio onde uma conta destas engana
                           mais é exactamente aqui, antes de ele decidir.
                         */
-                        const c = contaDoCliente(v, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
+                        const c = contaDoCliente(v, taxasDaNegociacao(n));
                         return `Se ele aceitar, paga ${euros(c.semIva)} com a taxa CLYON — sem IVA.`;
                       }}
                       onPropor={(valor) => agir(n.id, "propor", valor)}

@@ -127,7 +127,7 @@ describe("as novidades que ele tem para contar", () => {
     /*
      * O exemplo que o dono deu: «o senhor acaba de receber uma proposta do
      * Fred no valor de 150 s/IVA». Falta-lhe uma coisa, e é a que gera
-     * telefonemas: 150 não é o que ele paga. Com a taxa da CLYON são 159,23 €,
+     * telefonemas: 150 não é o que ele paga. Com a taxa da CLYON são 193,73 €,
      * e é esse o número que ele vai ver na factura.
      */
     const n = novidadesDoPedido(
@@ -137,7 +137,7 @@ describe("as novidades que ele tem para contar", () => {
     const p = n.find((x) => x.especie === "proposta_nova")!;
     expect(p).toBeTruthy();
     expect(p.texto).toContain("150,00 €");
-    expect(p.texto).toContain("159,23 €");
+    expect(p.texto).toContain("193,73 €");
     expect(p.texto).toContain("Fred");
     expect(p.capacidade).toBe("propostas");
   });
@@ -211,7 +211,7 @@ describe("as novidades que ele tem para contar", () => {
     );
     const a = n.find((x) => x.especie === "pro_aceitou")!;
     expect(a.texto).toContain("200,00 €");
-    expect(a.texto).toContain("212,30 €");
+    expect(a.texto).toContain("258,30 €");
     expect(a.chave).toBe(chaveDaAceitacao(77, 200));
   });
 
@@ -1309,7 +1309,7 @@ describe("fala como gente", () => {
     // Um preço inventado é uma promessa que o profissional não cumpre. Todos
     // os números destas mensagens vêm de `contaDoCliente` ou da proposta real.
     expect(CEREBRO).toContain('from "./taxas-plataforma"');
-    expect(CEREBRO).toContain("contaDoCliente(valor, regimeDeIva(regimeIva)).semIva");
+    expect(CEREBRO).toContain("contaDoCliente(valor).semIva");
   });
 
   it("as chaves são estáveis e distintas entre espécies", () => {

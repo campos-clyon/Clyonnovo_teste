@@ -7,7 +7,6 @@ import {
   comissaoDaClyon,
   contaDoCliente,
   taxasDaNegociacao,
-  regimeDeIva,
 } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -195,7 +194,7 @@ export async function GET(req: NextRequest) {
       // O que o cliente paga a serio: o valor acordado e SEM IVA, e o imposto
       // do regime de quem factura soma-se por cima. Sem isto, o "facturado aos
       // clientes" ficava 23% abaixo do que ha mesmo facturado.
-      const clientePaga = contaDoCliente(acordado, regimeDeIva(l.regimeIva), taxas).total;
+      const clientePaga = contaDoCliente(acordado, taxas).total;
 
       const trabalho: TrabalhoPorPagar = {
         negociacaoId: Number(l.negociacaoId),

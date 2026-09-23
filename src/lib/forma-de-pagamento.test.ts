@@ -108,10 +108,10 @@ describe("no dinheiro, a CLYON cobra os dois lados ao cliente", () => {
      * 120,00 € em notas ao profissional é cobrar o serviço duas vezes.
      */
     const t = { cliente: 0.11, profissional: 0 };
-    expect(quantoACLYONCobra(120, "isento", t, false)).toBe(13.2);
-    expect(quantoACLYONCobra(120, "isento", t, true)).toBe(16.24);
+    expect(quantoACLYONCobra(120, t, false)).toBe(13.2);
+    expect(quantoACLYONCobra(120, t, true)).toBe(16.24);
     // E o caminho electrónico continua a pedir o total do cliente.
-    expect(quantoOClientePaga(120, "isento", TAXAS_DE_ORIGEM, false)).toBe(126);
+    expect(quantoOClientePaga(120, TAXAS_DE_ORIGEM, false)).toBe(126);
   });
 });
 
@@ -119,31 +119,37 @@ describe("os 5 € do pós-recolha são da CLYON, com o IVA da CLYON por cima", 
   it("entram na base da CLYON e nunca no valor acordado", () => {
     expect(acrescimoDaForma("pos_recolha")).toBe(ACRESCIMO_POS_RECOLHA);
     expect(acrescimoDaForma("dinheiro")).toBe(0);
-    const c = contaDoCliente(120, "isento", TAXAS_DE_ORIGEM, 5);
+    const c = contaDoCliente(120, TAXAS_DE_ORIGEM, 5);
     expect(c.servico).toBe(120);
     expect(c.taxa).toBe(6);
     expect(c.acrescimo).toBe(5);
     expect(c.ivaDaTaxa).toBe(2.53);
     expect(c.semIva).toBe(131);
-    expect(c.total).toBe(133.53);
+    expect(c.iva).toBe(30.13);
+    expect(c.total).toBe(161.13);
     // O profissional não vê um cêntimo dos 5 €: o acordado continua a ser 120.
     expect(quantoOProfissionalRecebe(120, TAXAS_DE_ORIGEM)).toBe(112.8);
   });
 
-  it("com o profissional no regime normal, dá o mesmo dos dois modos", () => {
-    const c = contaDoCliente(120, "normal", TAXAS_DE_ORIGEM, 5);
+  it("o acréscimo leva imposto como tudo o resto", () => {
+    /*
+     * Este teste guardava a invariante das DUAS facturas — que a do
+     * profissional mais a da CLYON, com o acréscimo dentro dela, davam o
+     * total. Desde 22-09-2026 a factura é uma, e o que se guarda é que os
+     * 5 € não escapam à base do imposto.
+     */
+    const c = contaDoCliente(120, TAXAS_DE_ORIGEM, 5);
+    const semOsCinco = contaDoCliente(120, TAXAS_DE_ORIGEM);
+    expect(Number((c.semIva - semOsCinco.semIva).toFixed(2))).toBe(5);
+    expect(Number((c.iva - semOsCinco.iva).toFixed(2))).toBe(1.15);
     expect(c.total).toBe(161.13);
-    // A invariante das duas facturas sobrevive ao acréscimo.
-    const doPro = Math.round((c.servico + c.ivaDoServico) * 100) / 100;
-    const daClyon = Math.round((c.taxa + c.acrescimo + c.ivaDaTaxa) * 100) / 100;
-    expect(Number((doPro + daClyon).toFixed(2))).toBe(c.total);
   });
 
   it("sem acréscimo, nenhum número muda — é o que mantém os testes antigos certos", () => {
-    const antes = contaDoCliente(120, "isento");
+    const antes = contaDoCliente(120);
     expect(antes.acrescimo).toBe(0);
     expect(antes.semIva).toBe(126);
-    expect(antes.total).toBe(127.38);
+    expect(antes.total).toBe(154.98);
   });
 });
 

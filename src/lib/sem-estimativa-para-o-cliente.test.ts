@@ -93,6 +93,64 @@ describe("mas os valores que alguém decidiu continuam lá", () => {
     expect(LINK).not.toContain("valorDesejadoCliente");
   });
 
+  it("nem pelo email — que lhe punha na boca um número nosso", () => {
+    /*
+     * O FURO QUE FICOU DE FORA, fechado a 22-09-2026.
+     *
+     * A página do pedido perdeu a estimativa a 18-09-2026, mas o email que a
+     * acompanha continuava a dizer «Disse que quer pagar a partir de X». O
+     * campo do valor é opcional e quase ninguém o preenche: nesses casos o X
+     * era a NOSSA estimativa, e a frase atribuía-lhe uma coisa que ele nunca
+     * escreveu nem viu.
+     *
+     * A frase fica para quem escreveu mesmo um número — aí é verdade.
+     */
+    const ROTA = semComentarios(ler("src/app/api/simulador/pedido/route.ts"));
+    expect(ROTA).toContain("clienteIndicouValores && valoresParaGravar.valorDesejadoCliente");
+  });
+
+  it("e nos OUTROS dois emails também não — que era onde o furo ficava", () => {
+    /*
+     * `enviarLinkDoPedido` tem três chamadores, e o primeiro remendo só
+     * apanhou um. Os outros dois eram os piores:
+     *
+     *   · `promover` manda o email que acompanha o arranque da negociação a
+     *     sério, e o número que lá punha nunca era do cliente — era o que o
+     *     assistente escreveu, ou a conta da CLYON;
+     *   · `reenviar` lê a coluna `valorDesejadoCliente`, que guarda três
+     *     coisas indistinguíveis. Não há como saber se o número é dele.
+     *
+     * Este teste não chega para ver o comportamento, mas chega para não
+     * deixar o número voltar sem alguém escrever porquê.
+     */
+    for (const rota of [
+      "src/app/api/admin/negociacoes/promover/route.ts",
+      "src/app/api/admin/negociacoes/reenviar/route.ts",
+    ]) {
+      expect(semComentarios(ler(rota))).toContain("valorDesejadoCliente: null,");
+    }
+  });
+
+  it("e o valor de arranque nunca leva IVA lá dentro", () => {
+    /*
+     * "Nós sempre vamos mostrar o valor sem IVA; caso o cliente deseje
+     * factura será mais 23 %." — 22-09-2026.
+     *
+     * Este número é o que o profissional vê no cartão, por baixo da etiqueta
+     * «já com a taxa, sem IVA». Vinha com imposto, e se ele o aceitasse o
+     * imposto era somado outra vez pelo `contaDoCliente`.
+     *
+     * O `estimatedPriceWithVat` saiu da escolha — não ficou sequer como
+     * último recurso, porque um último recurso é onde os defeitos voltam sem
+     * ninguém dar por isso. A prova pelo VALOR está em
+     * `valor-de-arranque.test.ts`; o que se guarda aqui é o nome que não
+     * pode reaparecer no ficheiro.
+     */
+    const ARRANQUE = semComentarios(ler("src/lib/valor-de-arranque.ts"));
+    expect(ARRANQUE).toContain("numeroUtil(estimativa.estimatedPriceWithoutVat) ??");
+    expect(ARRANQUE).not.toContain("numeroUtil(estimativa.estimatedPriceWithVat)");
+  });
+
   it("mas continua a chegar a quem faz as propostas", () => {
     // Sem ele, o profissional propõe às cegas — e é assim que nascem as
     // propostas que depois não se aguentam à porta do cliente.

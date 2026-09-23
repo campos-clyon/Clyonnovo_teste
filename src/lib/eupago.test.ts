@@ -386,51 +386,44 @@ describe("o que se pede ao banco é o que o ecrã mostrou", () => {
    */
   it("sem factura, é o `semIva` — o número grande do ecrã", () => {
     for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
-      for (const regime of ["isento", "normal"] as const) {
-        expect(quantoOClientePaga(acordado, regime)).toBe(contaDoCliente(acordado, regime).semIva);
-      }
+      expect(quantoOClientePaga(acordado)).toBe(contaDoCliente(acordado).semIva);
     }
   });
 
   it("com factura, é o total com imposto — o número da linha de baixo", () => {
     for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
-      for (const regime of ["isento", "normal"] as const) {
-        expect(quantoOClientePaga(acordado, regime, undefined, true)).toBe(
-          contaDoCliente(acordado, regime).total,
-        );
-      }
+      expect(quantoOClientePaga(acordado, undefined, true)).toBe(
+        contaDoCliente(acordado).total,
+      );
     }
   });
 
-  it("os dois números do exemplo do dono: 105,00 sem factura e 106,15 com", () => {
-    expect(quantoOClientePaga(100, "isento")).toBe(105);
-    expect(quantoOClientePaga(100, "isento", undefined, true)).toBe(106.15);
-  });
-
   /*
-   * ⚠️ OS «105 €» DO DONO SÃO SEM O IVA DA TAXA. O banco do cliente vê 106,15.
+   * ⚠️ OS «105 €» DO DONO SÃO SEM IVA. Com factura, o banco pede 129,15.
    *
    * *«se o pro e o cliente fechar um acordo de 100 euros a clyon vai cobrar
    * com a taxa 105»* — 16-09-2026. E está certo no que conta: a CLYON fica com
    * 11 € (105 − 94), que são os 11 % dos dois lados.
    *
-   * Mas a decisão de 14-09-2026 — *«a CLYON vai assumir as facturas, então
-   * vamos fazer valor mais taxa mais IVA»* — obriga a liquidar 23 % sobre a
-   * taxa. São 1,15 € que a CLYON cobra e entrega ao Estado: não são receita,
-   * e por isso os «11 %» continuam verdadeiros. Mas SAEM DA CONTA DO CLIENTE,
-   * e é este o número que o MB WAY lhe vai pedir.
+   * O que muda com factura é o imposto que a CLYON cobra e entrega ao Estado.
+   * Até 22-09-2026 eram 1,15 € — 23 % só sobre a taxa — porque o serviço ia na
+   * factura do profissional. Com a parceira a facturar tudo são 24,15 €, 23 %
+   * sobre os 105. Não é receita nenhuma: os «11 %» continuam verdadeiros. Mas
+   * SAI DA CONTA DO CLIENTE, e é este o número que o MB WAY lhe vai pedir.
    *
    * Fica escrito num teste, e não num comentário, porque é a única forma de
    * alguém dar por isso antes de o ver no extracto.
    */
-  it("100 € acordados com um isento: 105 sem factura, 106,15 com", () => {
-    const c = contaDoCliente(100, "isento");
+  it("100 € acordados: 105 sem factura, 129,15 com", () => {
+    const c = contaDoCliente(100);
     expect(c.servico).toBe(100);
     expect(c.taxa).toBe(5);
-    expect(c.ivaDoServico).toBe(0); // isento: não liquida imposto nenhum
-    expect(c.ivaDaTaxa).toBe(1.15); // 23 % sobre os 5 € da CLYON
     expect(c.semIva).toBe(105);
-    expect(c.total).toBe(106.15);
+    expect(c.iva).toBe(24.15); // 23 % sobre os 105
+    expect(c.total).toBe(129.15);
+
+    expect(quantoOClientePaga(100)).toBe(105);
+    expect(quantoOClientePaga(100, undefined, true)).toBe(129.15);
 
     // E a parte da CLYON continua a ser 11 € — o IVA é do Estado, não nosso.
     expect(c.semIva - quantoOProfissionalRecebe(100)).toBe(11);

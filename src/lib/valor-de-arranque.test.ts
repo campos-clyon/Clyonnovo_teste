@@ -24,12 +24,34 @@ describe("valorDeArranqueDaEstimativa", () => {
     internalNotes: [],
   } as unknown as EstimateResult;
 
-  it("usa o preço com IVA — o número que o cliente viu", () => {
-    expect(valorDeArranqueDaEstimativa(base)).toBe(132.08);
+  it("usa o preço SEM IVA, mesmo com o outro ao lado", () => {
+    /*
+     * "Nós sempre vamos mostrar o valor sem IVA; caso o cliente deseje
+     * factura será mais 23 %." — 22-09-2026.
+     *
+     * Este teste dizia o contrário e exigia 132,08 — o preço com imposto.
+     * Era esse número que ia parar ao `valorDesejadoCliente`, e daí ao
+     * cartão do profissional por baixo da etiqueta «sem IVA». Se ele o
+     * aceitasse, o `contaDoCliente` somava os 23 % OUTRA VEZ.
+     */
+    expect(valorDeArranqueDaEstimativa(base)).toBe(107.38);
+    // E o de 132,08 continua lá na estimativa: o que mudou foi qual se escolhe.
+    expect(base.estimatedPriceWithVat).toBe(132.08);
   });
 
-  it("cai para o preço sem IVA quando não há com IVA", () => {
-    expect(valorDeArranqueDaEstimativa({ ...base, estimatedPriceWithVat: null })).toBe(107.38);
+  it("sem preço sem IVA não há arranque — o com IVA não serve de suplente", () => {
+    /*
+     * Um último recurso «melhor isto do que nada» seria reintroduzir o
+     * defeito em silêncio, no único caso em que ninguém está a olhar.
+     */
+    expect(
+      valorDeArranqueDaEstimativa({
+        estimatedPriceWithVat: 132.08,
+        estimatedPriceWithoutVat: null,
+        estimateMaxWithoutVat: null,
+        estimateMinWithoutVat: null,
+      }),
+    ).toBeNull();
   });
 
   it("cai para o máximo do intervalo quando não há preço fechado", () => {
@@ -67,15 +89,22 @@ describe("valorDeArranqueDaEstimativa", () => {
 });
 
 describe("valorDeArranque", () => {
+  /*
+   * As estimativas destes casos passaram a trazer o preço SEM IVA, que é o
+   * que a função escolhe. Antes traziam só o `estimatedPriceWithVat` e a
+   * conta saía com imposto lá dentro.
+   */
+  const estimativa = { estimatedPriceWithoutVat: 107.38, estimatedPriceWithVat: 132.08 };
+
   it("o que o cliente escreveu manda sobre a estimativa", () => {
-    expect(valorDeArranque(340, { estimatedPriceWithVat: 132.08 })).toBe(340);
-    expect(valorDeArranque("340", { estimatedPriceWithVat: 132.08 })).toBe(340);
+    expect(valorDeArranque(340, estimativa)).toBe(340);
+    expect(valorDeArranque("340", estimativa)).toBe(340);
   });
 
-  it("sem valor do cliente, vale a estimativa", () => {
-    expect(valorDeArranque(null, { estimatedPriceWithVat: 132.08 })).toBe(132.08);
-    expect(valorDeArranque("", { estimatedPriceWithVat: 132.08 })).toBe(132.08);
-    expect(valorDeArranque(undefined, { estimatedPriceWithVat: 132.08 })).toBe(132.08);
+  it("sem valor do cliente, vale a estimativa — e é a de sem IVA", () => {
+    for (const vazio of [null, "", undefined]) {
+      expect(valorDeArranque(vazio, estimativa)).toBe(107.38);
+    }
   });
 
   it("sem nada, não há arranque", () => {

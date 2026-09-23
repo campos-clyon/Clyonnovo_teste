@@ -6,6 +6,8 @@ import {
   pesoDoTrabalho,
   porQuilometro,
   porKmPorExtenso,
+  kmPorExtenso,
+  limiarDeBomPago,
   RAIO_QUENTE_KM,
   BOM_POR_KM,
 } from "./sinais-do-trabalho";
@@ -114,6 +116,137 @@ describe("os outros sinais", () => {
 
   it("o €/km escreve-se em português", () => {
     expect(porKmPorExtenso({ recebeSeAceitar: 123.5, distanciaKm: 6 })).toBe("20,6 €/km");
+  });
+});
+
+describe("os números do cartão fecham uns com os outros", () => {
+  it("a distância escreve-se com a casa decimal — e só quando ela diz algo", () => {
+    /*
+     * "329,00 € · 15 km · 21,4 €/km" — três números, e quem os divide não
+     * chega a nenhum: 329 ÷ 15 = 21,9. O €/km dividia pela distância
+     * verdadeira, 15,37 km, e ao lado dele estava ela arredondada a inteiro.
+     */
+    expect(kmPorExtenso(15.37)).toBe("15,4");
+    expect(kmPorExtenso(11.93)).toBe("11,9");
+    expect(kmPorExtenso(15)).toBe("15");
+    expect(kmPorExtenso(15.04)).toBe("15");
+    expect(kmPorExtenso(0.6)).toBe("0,6");
+  });
+
+  it("o foguinho diz a mesma distância que a linha de cima", () => {
+    // Estavam os dois no mesmo cartão, com arredondamentos diferentes.
+    expect(sinaisDoTrabalho({ distanciaKm: 6.4 })[0].texto).toBe("A 6,4 km");
+    expect(sinaisDoTrabalho({ distanciaKm: 6 })[0].texto).toBe("A 6 km");
+  });
+
+  it("e nunca diz «A 0 km» — isso mandava-o a lado nenhum", () => {
+    /*
+     * ISTO ERA UM DEFEITO A SÉRIO, e apareceu ao mudar o arredondamento.
+     *
+     * `Math.round(0,4)` é zero: qualquer trabalho a menos de 500 metros
+     * acendia o foguinho com a etiqueta «A 0 km». O teste do lado — "sem
+     * distância medida não inventa proximidade" — já avisava que «a 0 km» é
+     * a pior mentira possível, porque não é uma distância, é um erro.
+     *
+     * A casa decimal sozinha encolhia a janela para os 50 metros; não a
+     * fechava. Abaixo do quilómetro passam a ser as palavras — as mesmas que
+     * a linha de cima do cartão já usava.
+     */
+    for (const perto of [0.9, 0.4, 0.04, 0.001]) {
+      const texto = sinaisDoTrabalho({ distanciaKm: perto })[0].texto;
+      expect(texto).toBe("A menos de 1 km");
+      expect(texto).not.toContain("0 km");
+    }
+    // E a partir do quilómetro volta a haver número.
+    expect(sinaisDoTrabalho({ distanciaKm: 1 })[0].texto).toBe("A 1 km");
+  });
+});
+
+describe("a fronteira do «bem pago» é a dele, quando ele a escreveu", () => {
+  /*
+   * "Comparar o €/km com o custo por km dele em vez de com os 12 € de toda a
+   * gente." — 21-09-2026.
+   *
+   * O custo por km DELE não se compara com o €/km do cartão: 0,80 €/km é o
+   * que gasta por quilómetro andado, 21,4 €/km é o que recebe por quilómetro
+   * de ida. Mesma unidade, grandezas opostas. O que se compara é a conta
+   * inteira — a sugestão feita com os custos dele — pela mesma distância.
+   */
+  it("sem fronteira dele, vale a da casa", () => {
+    expect(limiarDeBomPago({})).toBe(BOM_POR_KM);
+    expect(limiarDeBomPago({ bomPorKm: null })).toBe(BOM_POR_KM);
+  });
+
+  it("a fronteira dele LEVANTA a barra, e nunca a baixa", () => {
+    /*
+     * Quem anda com três pessoas e uma carrinha cara precisa de mais do que
+     * os 12 €/km da casa para o trabalho lhe compensar. É este o sentido em
+     * que a personalização serve para alguma coisa.
+     */
+    const bom = { recebeSeAceitar: 140, distanciaKm: 10 }; // 14 €/km
+    expect(sinaisDoTrabalho(bom).map((s) => s.chave)).toContain("bem_pago");
+    expect(sinaisDoTrabalho({ ...bom, bomPorKm: 20 }).map((s) => s.chave)).not.toContain("bem_pago");
+    expect(limiarDeBomPago({ bomPorKm: 20 })).toBe(20);
+  });
+
+  it("uma fronteira dele ABAIXO da medida não acende nada de novo", () => {
+    /*
+     * O TESTE QUE IMPEDE O DISTINTIVO DE VOLTAR A SER PAPEL DE PAREDE.
+     *
+     * A primeira versão desta alteração deixava a fronteira dele mandar nos
+     * dois sentidos, e mediu-se o que isso fazia: «o que eu teria pedido»
+     * num trabalho a 25 km dá cerca de 3,6 €/km, dentro da família comum
+     * (1,9 … 9,3) que o BOM_POR_KM foi à base de dados medir para NÃO
+     * marcar. O distintivo passava a acender em toda a lista — e bastava
+     * tocar no cursor da margem no perfil para o activar, porque
+     * `comOsSeusCustos` é um OU sobre todos os campos.
+     */
+    const fraco = { recebeSeAceitar: 80, distanciaKm: 10 }; // 8 €/km
+    expect(sinaisDoTrabalho(fraco).map((s) => s.chave)).not.toContain("bem_pago");
+    for (const baixa of [6, 3.63, 0.8, 11.9]) {
+      expect(limiarDeBomPago({ bomPorKm: baixa })).toBe(BOM_POR_KM);
+      expect(sinaisDoTrabalho({ ...fraco, bomPorKm: baixa }).map((s) => s.chave))
+        .not.toContain("bem_pago");
+    }
+  });
+
+  it("uma fronteira impossível não acende o distintivo em tudo", () => {
+    // Zero, negativo ou NaN saem de uma divisão que correu mal. Aí manda a da
+    // casa: um limiar de zero punha «bem pago» em todos os cartões.
+    for (const mau of [0, -3, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(limiarDeBomPago({ bomPorKm: mau })).toBe(BOM_POR_KM);
+    }
+  });
+
+  it("quem calcula a fronteira vive onde um teste lhe pode chamar", () => {
+    /*
+     * ISTO SUBSTITUIU TRÊS ASSERÇÕES DE TEXTO, e a razão está medida.
+     *
+     * As três liam o corpo de `bomPorKmDe` dentro de `Trabalhos.tsx` à
+     * procura das palavras das guardas. De dez maneiras de partir essa
+     * função, nove passavam-lhes ao lado — inverter qualquer das guardas,
+     * dividir por ida e volta, devolver `custoKm`. O compilador também não
+     * apanhava nenhuma.
+     *
+     * A causa era estrutural: `Trabalhos.tsx` começa por "use client" e
+     * exporta só o componente, portanto nada ali dentro é chamável por um
+     * teste. As funções mudaram-se para um ficheiro sem "use client" e sem
+     * JSX, e o que as guarda agora é `sinais-do-cartao.test.ts`, que lhes
+     * chama e compara valores.
+     */
+    const CARTAO = readFileSync(
+      join(process.cwd(), "src/app/profissionais/painel/sinais-do-cartao.ts"),
+      "utf8",
+    );
+    // Sem os comentários — o cabeçalho do ficheiro EXPLICA o "use client" que
+    // ele não pode ter, e este teste chumbava por causa da própria explicação.
+    expect(semNotas(CARTAO)).not.toContain('"use client"');
+    for (const f of ["valorNoCartao", "bomPorKmDe", "paraOsSinaisDe"]) {
+      expect(CARTAO).toContain(`export function ${f}(`);
+      // E já não estão duplicadas no ecrã: uma cópia parada é pior do que
+      // nenhuma, porque quem a encontrar acredita nela.
+      expect(semNotas(TRABALHOS)).not.toContain(`function ${f}(`);
+    }
   });
 });
 
@@ -235,8 +368,17 @@ describe("o cartão no painel", () => {
       expect(TRABALHOS).toContain(opcao);
     }
     expect(TRABALHOS).toContain("setOrdem(o.id)");
-    // Os sinais continuam a existir — deixaram é de mandar sem ser pedido.
-    expect(TRABALHOS).toContain("pesoDoTrabalho({ ...b, quantasFotos: quantasFotosDe(b) })");
+    /*
+     * Os sinais continuam a existir — deixaram é de mandar sem ser pedido.
+     *
+     * E ordenam pelo MESMO trabalho que o cartão desenha: `paraOsSinaisDe`
+     * põe-lhe o número que está à vista e a fronteira de «bem pago» dele.
+     * Ordenar por uma coisa e imprimir outra dava uma lista que se
+     * contradizia a si própria.
+     */
+    expect(semNotas(TRABALHOS)).toMatch(
+      /pesoDoTrabalho\(\{ \.\.\.paraOsSinaisDe\(b, separador\), quantasFotos: quantasFotosDe\(b\) \}\)/,
+    );
   });
 
   it("só se ordena onde ele ainda decide", () => {

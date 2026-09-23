@@ -64,8 +64,7 @@ describe("a rota que corrige o valor", () => {
     // taxas daquela negociação) e o que isto guarda é a conta vir da função,
     // não a forma da chamada.
     expect(ROTA).toContain("quantoOProfissionalRecebe(novo");
-    expect(ROTA).toContain("contaDoCliente(novo, regime");
-    expect(ROTA).toContain("regimeDeIva(linha.regimeIva)");
+    expect(ROTA).toContain("contaDoCliente(novo, taxas)");
   });
 
   it("deixa rasto: o antes, o depois, quem mudou e porquê", () => {

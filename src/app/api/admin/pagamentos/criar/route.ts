@@ -158,8 +158,8 @@ export async function POST(req: NextRequest) {
    */
   const valor =
     t.formaDePagamento === "dinheiro"
-      ? quantoACLYONCobra(t.acordado, t.regime, t.taxas, comFactura, t.acrescimo)
-      : quantoOClientePaga(t.acordado, t.regime, t.taxas, comFactura, t.acrescimo);
+      ? quantoACLYONCobra(t.acordado, t.taxas, comFactura, t.acrescimo)
+      : quantoOClientePaga(t.acordado, t.taxas, comFactura, t.acrescimo);
   const recusa = porqueNaoPodeCobrar(metodo, valor);
   if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
 

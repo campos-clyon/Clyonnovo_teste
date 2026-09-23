@@ -35,6 +35,15 @@ export type TrabalhoParaAvaliar = {
   criadoEm?: string | Date | null;
   recebeSeAceitar?: number | null;
   quantasFotos?: number;
+  /**
+   * O limiar de «bem pago» DESTE profissional, em €/km.
+   *
+   * Sem isto vale `BOM_POR_KM`, que é o limiar da casa — a fronteira tirada
+   * dos trabalhos já fechados, igual para toda a gente. Quem escreveu os
+   * custos dele no perfil tem direito a uma fronteira que é a dele, e quem
+   * a calcula é o ecrã: ver `bomPorKmDe` em `Trabalhos.tsx`.
+   */
+  bomPorKm?: number | null;
 };
 
 /**
@@ -72,6 +81,53 @@ export const RAIO_QUENTE_KM = 10;
  */
 export const BOM_POR_KM = 12;
 
+/**
+ * A fronteira a que ESTE trabalho se compara, em €/km.
+ *
+ * "Comparar o €/km com o custo por km dele em vez de com os 12 € de toda a
+ * gente." — 21-09-2026.
+ *
+ * O limiar da casa saiu da mediana dos trabalhos fechados: é o que distingue
+ * um bom trabalho no mercado. Não é o que distingue um bom trabalho PARA ELE —
+ * quem tem uma equipa de três e uma carrinha a 0,80 €/km tem um chão diferente
+ * de quem trabalha sozinho, e os 12 € não sabem disso.
+ *
+ * A FRONTEIRA DELE SÓ LEVANTA A BARRA, NUNCA A BAIXA — e isso é o resultado de
+ * a ter medido em vez de a supor.
+ *
+ * A primeira versão deixava a dele mandar nos dois sentidos, e teria destruído
+ * o distintivo. As duas contas não estão à mesma escala: «o que eu teria
+ * pedido» num trabalho a 25 km dá cerca de 3,6 €/km, e os 12 €/km da casa
+ * exigiriam 300 € para o mesmo trabalho. Ou seja, a fronteira dele cai quase
+ * sempre DENTRO da família comum que o `BOM_POR_KM` aqui em cima foi à base de
+ * dados medir para não marcar — 1,9 a 9,3 €/km. O distintivo passava a acender
+ * em toda a lista, que é exactamente o «papel de parede» contra o qual esse
+ * número foi escolhido.
+ *
+ * Com o `Math.max` fica o que ele pediu no sentido que conta: quem tem custos
+ * altos precisa de MAIS do que os 12 para o trabalho lhe compensar, e passa a
+ * ser isso que o distintivo diz. Quem tem custos baixos continua a ver a
+ * fronteira medida — que é um bocado do mercado, e não uma opinião.
+ *
+ * RESOLVIDO A 22-09-2026, e vale a pena guardar o que era: o valor da CLYON
+ * nascia de `estimatedPriceWithVat` e a sugestão de um preço SEM IVA, logo a
+ * comparação era 23 % permissiva por construção. O `valor-de-arranque.ts`
+ * passou a escolher o preço sem IVA e os dois lados ficaram na mesma unidade.
+ *
+ * O `Math.max` não era por causa disso e continua a ser preciso: protegia o
+ * distintivo de uma fronteira demasiado baixa, e a fronteira continua baixa
+ * depois de o IVA sair — mais baixa, até.
+ *
+ * Fica uma sombra, nas linhas GRAVADAS ANTES dessa data: o
+ * `valorDesejadoCliente` delas ainda tem imposto lá dentro, e não há coluna
+ * que as distinga das outras. Elas saem da tabela ao fim do prazo de retenção.
+ */
+export function limiarDeBomPago(t: TrabalhoParaAvaliar): number {
+  const dele = t.bomPorKm;
+  if (dele != null && Number.isFinite(dele) && dele > 0) return Math.max(BOM_POR_KM, dele);
+  return BOM_POR_KM;
+}
+
 /** Quanto rende por quilómetro, ou `null` quando falta a distância ou o valor. */
 export function porQuilometro(t: TrabalhoParaAvaliar): number | null {
   const valor = t.recebeSeAceitar;
@@ -79,6 +135,25 @@ export function porQuilometro(t: TrabalhoParaAvaliar): number | null {
   if (valor == null || !Number.isFinite(valor)) return null;
   if (km == null || !Number.isFinite(km) || km <= 0) return null;
   return valor / km;
+}
+
+/**
+ * O NÚMERO DE QUILÓMETROS COMO O ECRÃ O ESCREVE — com a casa decimal.
+ *
+ * "329,00 € · 15 km · 21,4 €/km" — três números no mesmo cartão, e quem os
+ * divide não chega a nenhum deles: 329 a dividir por 15 dá 21,9. Nenhuma das
+ * contas estava errada. O €/km dividia pela distância verdadeira, 15,37 km, e
+ * ao lado dele estava essa mesma distância arredondada a inteiro.
+ *
+ * Quem lê faz a conta de cabeça — é para isso que o €/km ali está — e
+ * concluía que o cartão se enganou. Um número que não fecha com o do lado
+ * custa mais do que a casa decimal que o faz fechar.
+ *
+ * A casa decimal só aparece quando diz alguma coisa: `15` e não `15,0`.
+ */
+export function kmPorExtenso(km: number): string {
+  const n = Math.round(km * 10) / 10;
+  return (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace(".", ",");
 }
 
 /**
@@ -95,7 +170,20 @@ export function sinaisDoTrabalho(t: TrabalhoParaAvaliar): Sinal[] {
     sinais.push({
       chave: "perto",
       emoji: "🔥",
-      texto: `A ${Math.round(km)} km`,
+      /*
+       * ABAIXO DO QUILÓMETRO NÃO SE DIZ O NÚMERO — diz-se que é aqui ao lado.
+       *
+       * `Math.round(0,4)` é zero, e o distintivo dizia «A 0 km» a qualquer
+       * trabalho a menos de 500 metros. Zero não é uma distância, é um erro a
+       * fingir de distância — e o teste do foguinho já o escrevia sobre o
+       * outro caso: «"a 0 km" seria a pior mentira possível: manda-o lá».
+       *
+       * A casa decimal encolhia a janela para os 50 metros, não a fechava. As
+       * palavras fecham-na, e são as MESMAS que a linha de cima usa (ver
+       * `distanciaPorExtenso`): o cartão deixa de ter dois vocabulários para
+       * a mesma distância.
+       */
+      texto: km < 1 ? "A menos de 1 km" : `A ${kmPorExtenso(km)} km`,
       cls: "border-orange-200 bg-orange-50 text-orange-700",
     });
   }
@@ -120,7 +208,7 @@ export function sinaisDoTrabalho(t: TrabalhoParaAvaliar): Sinal[] {
   }
 
   const km2 = porQuilometro(t);
-  if (km2 != null && km2 >= BOM_POR_KM) {
+  if (km2 != null && km2 >= limiarDeBomPago(t)) {
     sinais.push({
       chave: "bem_pago",
       emoji: "💰",

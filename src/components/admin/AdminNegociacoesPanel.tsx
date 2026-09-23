@@ -59,12 +59,13 @@ import {
 } from "@/lib/assistente-categorias";
 import {
   contaDoCliente,
-  regimeDeIva,
   quantoOProfissionalRecebe,
   comissaoDaClyon,
   taxasDaNegociacao,
   TAXA_CLIENTE,
   TAXA_PROFISSIONAL,
+  TAXA_IVA,
+  type Taxas,
 } from "@/lib/taxas-plataforma";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -2250,50 +2251,61 @@ export default function AdminNegociacoesPanel({
               const taxasDela = taxasDaNegociacao(acordada);
               const conta = contaDoCliente(
                 Number(acordada.valorAcordado),
-                regimeDeIva(acordada.regimeIva),
                 taxasDela,
               );
               /*
-                AS DUAS FACTURAS, com o número de cada uma — 14-09-2026.
+                UMA IDEIA POR LINHA — 22-09-2026, segunda passagem.
 
-                "O cliente pagou 107,52 mas a factura é de apenas 103,32." A
-                diferença eram os 4,20 € de taxa, que o cliente pagava e que
-                não apareciam em documento nenhum. A CLYON passou a assumir as
-                facturas, e esta linha passa a dizer QUEM FACTURA O QUÊ — que é
-                a pergunta que se faz aqui e para a qual era preciso ir buscar
-                uma calculadora.
+                "Isso não faz o menor sentido, corrija esses resumos: eles
+                devem ser simples e fáceis de entender."
+
+                A primeira correcção já tinha tirado as duas facturas, mas
+                deixou tudo na MESMA linha: trabalho, taxa, soma, IVA, total,
+                o que o profissional recebe e a comissão. Seis números
+                seguidos com sinais de somar pelo meio lêem-se como uma
+                equação, e ninguém lê equações de relance.
+
+                Agora são três linhas e cada uma responde a uma pergunta:
+                quanto é que o cliente transfere, quanto é com factura, e como
+                é que o dinheiro se reparte. A conta de onde vem cada número
+                fica em letra fraca, ao lado, para quem a quiser conferir.
               */
-              const facturaDoPro = Math.round((conta.servico + conta.ivaDoServico) * 100) / 100;
-              const facturaDaClyon = Math.round((conta.taxa + conta.ivaDaTaxa) * 100) / 100;
+              const recebe = quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela);
+              const fraca = "text-slate-500";
               return (
-                <p className="mt-1 text-slate-300">
-                  Acordado: <strong>{euros(Number(acordada.valorAcordado))}</strong> sem IVA
-                  {" · "}o cliente paga <strong>{euros(conta.total)}</strong>, em duas facturas
-                  {" — "}
-                  <strong>{euros(facturaDoPro)}</strong> do profissional
-                  {conta.ivaDoServico > 0
-                    ? ` (${euros(conta.servico)} + IVA ${euros(conta.ivaDoServico)})`
-                    : " (isento de IVA)"}
-                  {" e "}
-                  <strong>{euros(facturaDaClyon)}</strong> da CLYON
-                  {conta.ivaDaTaxa > 0
-                    ? ` (taxa ${euros(conta.taxa)} + IVA ${euros(conta.ivaDaTaxa)})`
-                    : ` (taxa ${euros(conta.taxa)})`}
-                  {" · "}o profissional recebe, sem IVA,{" "}
-                  <strong>{euros(quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela))}</strong>
-                  {/*
-                    A COMISSÃO, DITA COMO É — 21-09-2026.
-
-                    Dizia «comissão CLYON 13,20 € (a facturar ao profissional)»
-                    — os 11 %, cliente e profissional somados — e mandava
-                    facturar tudo ao profissional. Só a parte dele é dele.
-                    Em dinheiro não se lhe factura nada: a CLYON cobra os dois
-                    lados ao cliente, por referência.
-                  */}
-                  {emDinheiro
-                    ? ` · em dinheiro: ele recebe ${euros(Number(acordada.valorAcordado))} em mão e a CLYON cobra ${euros(conta.taxa)} ao cliente por referência`
-                    : ` · comissão CLYON ${euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))} (${euros(conta.taxa)} do cliente + ${euros(Math.round((Number(acordada.valorAcordado) - quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela)) * 100) / 100)} a facturar ao profissional)`}
-                </p>
+                <div className="mt-1 space-y-0.5 text-slate-300">
+                  <p>
+                    O cliente paga{" "}
+                    <strong className="text-slate-100">{euros(conta.semIva)}</strong>{" "}
+                    <span className={fraca}>
+                      trabalho {euros(conta.servico)} + taxa {pct(taxasDela.cliente)}{" "}
+                      {euros(conta.taxa)}
+                    </span>
+                  </p>
+                  <p>
+                    Se quiser factura, paga{" "}
+                    <strong className="text-slate-100">{euros(conta.total)}</strong>{" "}
+                    <span className={fraca}>
+                      mais IVA {pct(TAXA_IVA)}, {euros(conta.iva)}
+                    </span>
+                  </p>
+                  {emDinheiro ? (
+                    <p>
+                      Em dinheiro: ele recebe{" "}
+                      <strong>{euros(Number(acordada.valorAcordado))}</strong> em mão, e a
+                      CLYON cobra <strong>{euros(conta.taxa)}</strong> ao cliente por
+                      referência
+                    </p>
+                  ) : (
+                    <p>
+                      O profissional recebe <strong>{euros(recebe)}</strong>
+                      {" · "}a CLYON fica com{" "}
+                      <strong>
+                        {euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))}
+                      </strong>
+                    </p>
+                  )}
+                </div>
               );
             })()}
 
@@ -2323,7 +2335,6 @@ export default function AdminNegociacoesPanel({
               const acrescimo = Number(acordada.acrescimoPagamento ?? 0) || 0;
               const conta = contaDoCliente(
                 Number(acordada.valorAcordado),
-                regimeDeIva(acordada.regimeIva),
                 taxasDela,
                 acrescimo,
               );
@@ -2435,7 +2446,7 @@ export default function AdminNegociacoesPanel({
                 negociacaoId={feito.id}
                 pedidoId={p.id}
                 valorAcordado={feito.valorAcordado != null ? Number(feito.valorAcordado) : null}
-                regimeIva={feito.regimeIva ?? null}
+                taxas={taxasDaNegociacao(feito)}
                 onMudou={() => carregar(true)}
               />
             ) : (
@@ -4340,14 +4351,21 @@ function ConfirmarPelaClyon({
   negociacaoId,
   pedidoId,
   valorAcordado,
-  regimeIva,
+  taxas,
   onMudou,
 }: {
   negociacaoId: number;
   pedidoId: number;
   valorAcordado: number | null;
-  /** Decide se o total a cobrar leva IVA por cima do valor acordado. */
-  regimeIva: string | null;
+  /**
+   * AS TAXAS DESTA NEGOCIAÇÃO, e já não o regime do profissional.
+   *
+   * O regime saiu porque deixou de contar: quem factura é a parceira. As taxas
+   * entraram porque faltavam — esta caixa calculava com as de hoje enquanto a
+   * linha de cima usava as congeladas na negociação, e as duas mostravam
+   * números diferentes para o mesmo trabalho, uma por cima da outra.
+   */
+  taxas: Taxas;
   onMudou: () => void;
 }) {
   const { token: authToken } = useAdminAuth();
@@ -4401,7 +4419,7 @@ function ConfirmarPelaClyon({
             transferências, e é assim que se mostra — duas linhas debaixo do
             total, uma por destinatário.
           */
-          const conta = contaDoCliente(valorAcordado, regimeDeIva(regimeIva));
+          const conta = contaDoCliente(valorAcordado, taxas);
           /*
            * O IMPOSTO É POR VENDEDOR, E ESTA LINHA TINHA-O SOMADO — 21-09-2026.
            *
@@ -4418,55 +4436,67 @@ function ConfirmarPelaClyon({
            * `as-duas-facturas.test.ts` já guardava: a factura do profissional é
            * `servico + ivaDoServico`, a da CLYON é `taxa + ivaDaTaxa`.
            */
-          const aoProfissional = Math.round((conta.servico + conta.ivaDoServico) * 100) / 100;
-          const aClyon = Math.round((conta.taxa + conta.ivaDaTaxa) * 100) / 100;
+          /*
+            A CONTA POR ORDEM, UMA PARCELA POR LINHA — 22-09-2026.
+
+            "Temos que ser simples e directo para mesmo um senhor de 80 anos
+            entender: valor do trabalho mais taxa 5 % = X, mais IVA caso
+            deseje 23 % = Y."
+
+            A tabela começava pelo fim — «O cliente paga, no total» — e só
+            depois dizia de onde vinha, repartido por duas facturas e com uma
+            nota sobre a isenção do profissional no meio. Quem a lia tinha de
+            a ler de baixo para cima.
+
+            Agora lê-se como se soma: as parcelas primeiro, o total a seguir,
+            e o imposto como a linha que se acrescenta só a quem pedir factura.
+          */
+          const linha = (
+            rotulo: React.ReactNode,
+            valor: number,
+            destaque = false,
+            borda = false,
+          ) => (
+            <div
+              className={`flex items-center justify-between${borda ? " border-t border-slate-800 pt-1" : ""}`}
+            >
+              <dt className={destaque ? "text-slate-200" : "text-slate-500"}>{rotulo}</dt>
+              <dd
+                className={`tabular-nums ${destaque ? "font-semibold text-slate-100" : "text-slate-300"}`}
+              >
+                {euros(valor)}
+              </dd>
+            </div>
+          );
           return (
             <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-300">O cliente paga, no total</dt>
-                <dd className="font-semibold tabular-nums text-slate-100">
-                  {euros(contaDoCliente(valorAcordado, regimeDeIva(regimeIva)).total)}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between pl-3">
-                <dt className="text-slate-500">
-                  ao profissional — acordado{" "}
-                  {/*
-                    `ivaDoServico > 0` e não `temIva`: o `temIva` é sobre o
-                    imposto todo, e como a CLYON liquida sempre sobre a taxa,
-                    era sempre verdadeiro — o ramo «isento» nunca corria.
-                  */}
-                  {conta.ivaDoServico > 0
-                    ? `+ IVA ${euros(conta.ivaDoServico)}, na factura dele`
-                    : "(isento de IVA)"}
-                </dt>
-                <dd className="tabular-nums text-slate-300">{euros(aoProfissional)}</dd>
-              </div>
-              <div className="flex items-center justify-between pl-3">
-                <dt className="text-slate-500">
-                  à CLYON — taxa de {pct(TAXA_CLIENTE)} + IVA {euros(conta.ivaDaTaxa)}
-                </dt>
-                <dd className="tabular-nums text-slate-300">{euros(aClyon)}</dd>
-              </div>
+              {linha("O trabalho", conta.servico)}
+              {linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}
+              {conta.acrescimo > 0 && linha("Pagamento após a recolha", conta.acrescimo)}
+              {linha("O cliente paga", conta.semIva, true, true)}
+              {linha(`Se quiser factura — IVA (${pct(TAXA_IVA)})`, conta.iva)}
+              {linha("Com factura, paga", conta.total, true)}
               <div className="flex items-center justify-between border-t border-slate-800 pt-1">
-                <dt className="text-slate-300">
-                  O profissional recebe, sem IVA
+                <dt className="text-slate-200">
+                  O profissional recebe
                   <span className="block text-[10px] text-slate-500">
-                    acordado − {pct(TAXA_PROFISSIONAL)}; o imposto, se o cobrar, é dele e entrega-o ele
+                    o trabalho menos {pct(taxas.profissional)}
                   </span>
                 </dt>
                 <dd className="font-semibold tabular-nums text-slate-100">
-                  {euros(quantoOProfissionalRecebe(valorAcordado))}
+                  {euros(quantoOProfissionalRecebe(valorAcordado, taxas))}
                 </dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-slate-500">
                   Fica para a CLYON
                   <span className="block text-[10px] text-slate-600">
-                    {pct(TAXA_CLIENTE)} do cliente + {pct(TAXA_PROFISSIONAL)} do profissional
+                    {pct(taxas.cliente)} do cliente + {pct(taxas.profissional)} do profissional
                   </span>
                 </dt>
-                <dd className="tabular-nums text-slate-400">{euros(comissaoDaClyon(valorAcordado))}</dd>
+                <dd className="tabular-nums text-slate-400">
+                  {euros(comissaoDaClyon(valorAcordado, taxas))}
+                </dd>
               </div>
             </dl>
           );
@@ -4623,7 +4653,7 @@ function TrocaDePropostas({
               valorAcordado={
                 negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null
               }
-              regimeIva={negociacao.regimeIva ?? null}
+              taxas={taxasDaNegociacao(negociacao)}
               onMudou={onMudou}
             />
           )}

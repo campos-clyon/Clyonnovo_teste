@@ -29,49 +29,37 @@ describe("a frase diz o mesmo que a conta", () => {
     expect(totalEmPalavras(300, "normal")).toContain("fica em 315,00 € sem IVA.");
   });
 
-  it("profissional isento: o imposto que resta é o da taxa, e é da CLYON", () => {
+  it("uma frase só, e são sempre 23 %", () => {
     /*
-     * MESMO COM UM PROFISSIONAL ISENTO há imposto na conta, porque o da taxa é
-     * da CLYON e não dele — 14-09-2026. São 3,45 €, e não 23 %: anunciar-lhe
-     * 23 % era mostrar-lhe um imposto que ninguém entrega ao Estado.
+     * MUDOU A 22-09-2026. Havia duas frases, porque o imposto era do regime de
+     * quem facturava: a quem contratasse um profissional na isenção do artigo
+     * 53.º dizia-se «Com factura acrescem 3,45 € de IVA da taxa CLYON:
+     * 318,45 €», e só aos outros se dizia 23 %.
+     *
+     * "A CLYON vai emitir as facturas a partir de agora, então vamos ignorar
+     * os pros: tudo deve ser a 23 % caso deseje factura."
+     *
+     * 300 + taxa 15,00 = 315,00 · IVA 72,45 = 387,45.
      */
-    expect(totalEmPalavras(300, "isento")).toBe(
-      "Com a taxa CLYON, fica em 315,00 € sem IVA. " +
-        "Com factura acrescem 3,45 € de IVA da taxa CLYON: 318,45 €.",
-    );
+    const frase =
+      "Com a taxa CLYON, fica em 315,00 € sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.";
+    for (const regime of ["isento", "normal", null, ""]) {
+      expect(totalEmPalavras(300, regime)).toBe(frase);
+    }
   });
 
-  it("profissional que liquida: aí sim, 23 %, e a conta fecha", () => {
-    // 300 + taxa 15,00 + IVA 72,45 (69,00 do serviço + 3,45 da taxa) = 387,45
-    expect(totalEmPalavras(300, "normal")).toBe(
-      "Com a taxa CLYON, fica em 315,00 € sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.",
-    );
-  });
-
-  it("regime por preencher conta como isento — e a frase acompanha", () => {
-    // É o que `regimeDeIva` faz: só «normal» é normal. A frase tem de dizer o
-    // mesmo que a conta, seja qual for o valor da coluna.
-    expect(totalEmPalavras(300, null)).toBe(totalEmPalavras(300, "isento"));
-    expect(totalEmPalavras(300, "")).toBe(totalEmPalavras(300, "isento"));
-  });
-
-  it("«23 %» só a quem vai mesmo pagar 23 %", () => {
-    expect(comFacturaEmPalavras(300, "normal")).toContain("23 %");
-    expect(comFacturaEmPalavras(300, "isento")).not.toContain("23 %");
-  });
-
-  it("o isento continua a pagar MENOS imposto do que o que liquida", () => {
-    // A distinção que interessa não desapareceu: mudou de «nenhum imposto»
-    // para «só o da taxa». Se um dia isto empatar, alguém aplicou 23 % sobre
-    // a soma em vez de por vendedor.
-    expect(contaDoCliente(300, "isento").iva).toBeLessThan(contaDoCliente(300, "normal").iva);
-  });
-
-  it("e o valor sem IVA é o MESMO nos dois regimes", () => {
-    // É a razão de ele servir para apresentar: não depende do regime de quem
-    // factura, e por isso é o único número que se pode dizer antes de saber
-    // com quem o cliente vai ficar.
-    expect(contaDoCliente(300, "isento").semIva).toBe(contaDoCliente(300, "normal").semIva);
+  it("o regime do profissional já não muda uma vírgula", () => {
+    /*
+     * O argumento ainda lá está na assinatura, porque muitos sítios o passam
+     * e tirá-lo era um commit por si. O que este teste guarda é que ele não
+     * pode voltar a decidir nada.
+     */
+    for (const v of [84, 300, 1000]) {
+      expect(comFacturaEmPalavras(v, "isento")).toBe(comFacturaEmPalavras(v, "normal"));
+      expect(comFacturaEmPalavras(v, "normal")).toContain("23 %");
+    }
+    expect(contaDoCliente(300).iva).toBe(72.45);
+    expect(contaDoCliente(300).semIva).toBe(315);
   });
 });
 

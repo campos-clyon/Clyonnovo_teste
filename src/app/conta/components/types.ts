@@ -1,4 +1,4 @@
-import { contaDoCliente, regimeDeIva, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
 export interface UserProfile {
   id: number;
@@ -248,7 +248,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
     // acresce a quem quiser factura, e não no número grande.
     const paga =
       acordado != null
-        ? contaDoCliente(acordado, regimeDeIva(fechada.regimeIva), taxasDaNegociacao(fechada))
+        ? contaDoCliente(acordado, taxasDaNegociacao(fechada))
             .semIva
         : null;
 

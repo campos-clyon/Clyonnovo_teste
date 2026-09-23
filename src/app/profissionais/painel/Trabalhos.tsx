@@ -51,6 +51,12 @@ import {
   pesoDoTrabalho,
   porQuilometro,
 } from "@/lib/sinais-do-trabalho";
+import {
+  valorNoCartao,
+  bomPorKmDe,
+  paraOsSinaisDe,
+  type Separador,
+} from "./sinais-do-cartao";
 import { concorrenciaDoPedido } from "@/lib/concorrencia";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
@@ -98,13 +104,8 @@ function servicoDe(p: Pedido): string {
  * "Novo" é o que ainda não tocou: chegou-lhe e ele não propôs nada. É o único
  * que tem prazo a correr contra si, e por isso é o que se destaca.
  */
-type Separador =
-  | "novos"
-  | "negociacao"
-  | "contratados"
-  | "terminados"
-  | "recusados"
-  | "arquivados";
+/* O tipo e os tres ajudantes do cartao vivem em `sinais-do-cartao.ts`:
+   um ficheiro sem "use client" e sem JSX, que os testes podem importar. */
 
 /**
  * "TERMINADOS" NÃO GUARDAVA TRABALHOS TERMINADOS.
@@ -390,17 +391,24 @@ export default function Trabalhos({
       });
     }
     if (ordem === "valor") {
+      /*
+       * PELO MESMO €/km QUE O CARTÃO MOSTRA.
+       *
+       * Ordenava por `recebeSeAceitar` — o que o cliente quer pagar — e o
+       * cartão mostra o valor da CLYON. «Melhor €/km» devolvia uma lista que
+       * contradizia os números impressos nela.
+       */
       return ordenada.sort((a, b) => {
-        const va = porQuilometro({ ...a }) ?? -1;
-        const vb = porQuilometro({ ...b }) ?? -1;
+        const va = porQuilometro(paraOsSinaisDe(a, separador)) ?? -1;
+        const vb = porQuilometro(paraOsSinaisDe(b, separador)) ?? -1;
         return vb - va || maisRecentePrimeiro(a, b);
       });
     }
     if (ordem === "sinais") {
       return ordenada.sort(
         (a, b) =>
-          pesoDoTrabalho({ ...b, quantasFotos: quantasFotosDe(b) }) -
-            pesoDoTrabalho({ ...a, quantasFotos: quantasFotosDe(a) }) ||
+          pesoDoTrabalho({ ...paraOsSinaisDe(b, separador), quantasFotos: quantasFotosDe(b) }) -
+            pesoDoTrabalho({ ...paraOsSinaisDe(a, separador), quantasFotos: quantasFotosDe(a) }) ||
           maisRecentePrimeiro(a, b),
       );
     }
@@ -603,12 +611,13 @@ export default function Trabalhos({
            * trabalho lhe compensa. Na falta do nosso valor, ela volta a ser o
            * número grande — mais vale a conta dele do que número nenhum.
            */
-          const valorEmCima =
-            separador === "novos"
-              ? (p.valorDaClyon ?? sugestaoAberta?.recebeSePropuser ?? null)
-              : null;
-          const paraOsSinais =
-            valorEmCima != null ? { ...p, recebeSeAceitar: valorEmCima } : p;
+          const valorEmCima = valorNoCartao(p, separador);
+          /*
+           * E A FRONTEIRA DO «BEM PAGO» É A DELE, quando ele a escreveu no
+           * perfil. Ver `bomPorKmDe`: os 12 €/km da casa só ficam para quem
+           * não tem custos definidos.
+           */
+          const paraOsSinais = paraOsSinaisDe(p, separador);
           const sinais = aDecidir ? sinaisDoTrabalho({ ...paraOsSinais, quantasFotos: fotos.length }) : [];
           const quente = sinais.some((x) => x.chave === "perto");
           const porKm = aDecidir ? porKmPorExtenso(paraOsSinais) : null;

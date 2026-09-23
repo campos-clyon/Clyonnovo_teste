@@ -1,5 +1,5 @@
 import type { Proposta } from "./negociacao";
-import { contaDoCliente, regimeDeIva, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
+import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
 
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
@@ -66,13 +66,6 @@ export type PropostaParaOCliente = {
   semIva: number;
   /** O que pagaria COM FACTURA: o de cima mais o imposto. Fica numa linha só. */
   total: number;
-  /**
-   * O imposto DO SERVIÇO desta proposta — zero se o profissional for isento.
-   *
-   * Existe para a frase da factura não anunciar 23 % a quem contrata um
-   * isento do artigo 53.º: aí o que acresce é só o imposto da nossa taxa.
-   */
-  ivaDoServico: number;
 };
 
 type NegociacaoParaLer = {
@@ -144,14 +137,13 @@ export function propostasParaOCliente(
     if (ultima.estado === "recusada" || ultima.estado === "expirada") continue;
 
     const valor = Number(ultima.valor);
-    const conta = contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
+    const conta = contaDoCliente(valor, taxasDaNegociacao(n));
     saida.push({
       profissional: n.profissionalNome,
       valor,
       taxaCliente: taxasDaNegociacao(n).cliente,
       semIva: conta.semIva,
       total: conta.total,
-      ivaDoServico: conta.ivaDoServico,
     });
   }
 
@@ -186,14 +178,13 @@ export function trabalhoFechado(
     const ultima = lerPropostas(n.propostasJson).at(-1);
     const valor = Number(ultima?.valor);
     if (!Number.isFinite(valor)) continue;
-    const conta = contaDoCliente(valor, regimeDeIva(n.regimeIva), taxasDaNegociacao(n));
+    const conta = contaDoCliente(valor, taxasDaNegociacao(n));
     return {
       profissional: n.profissionalNome,
       valor,
       taxaCliente: taxasDaNegociacao(n).cliente,
       semIva: conta.semIva,
       total: conta.total,
-      ivaDoServico: conta.ivaDoServico,
     };
   }
   return null;
@@ -207,16 +198,13 @@ const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
  * "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje factura
  * são mais 23 %, deixamos isso claro apenas." — 17-09-2026.
  *
- * «23 %» só a quem vai mesmo pagar 23 %: o regime é do profissional, e um
- * isento pelo artigo 53.º não liquida nada sobre o serviço. A quem o contrata,
- * o que acresce com factura é só o imposto da NOSSA taxa — poucos euros — e
- * anunciar-lhe 23 % era mostrar-lhe um imposto que ninguém entrega ao Estado.
+ * UMA FRASE SÓ, desde 22-09-2026. Havia duas porque o imposto era do regime
+ * de quem facturava, e um profissional na isenção do artigo 53.º não liquidava
+ * nada sobre o serviço. Agora quem factura é uma empresa parceira, e é 23 % sobre tudo.
  */
 function comFactura(p: PropostaParaOCliente): string {
   if (p.total <= p.semIva) return "";
-  return p.ivaDoServico > 0
-    ? `Com factura acrescem ${POR_CENTO} de IVA: ${euros(p.total)}.`
-    : `Com factura acresce o IVA da taxa CLYON: ${euros(p.total)}.`;
+  return `Com factura acrescem ${POR_CENTO} de IVA: ${euros(p.total)}.`;
 }
 
 /**
@@ -391,19 +379,20 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * Numa mensagem de WhatsApp, o que vem depois do link não se lê. Esta
      * frase fica onde a dúvida nasce — e é a ÚNICA que fala de imposto.
      *
-     * "23 %" só quando é verdade para todos os da lista: o imposto é do regime
-     * de quem factura, e um profissional na isenção do artigo 53.º não liquida
-     * nenhum. Numa lista com os dois casos não há uma percentagem para dizer,
-     * e diz-se o que é certo em vez de um número que engana metade dela.
+     * UMA FRASE, E JÁ NÃO TRÊS — 22-09-2026.
+     *
+     * Havia três porque o imposto era do regime de quem facturava: uma lista
+     * com um isento do artigo 53.º e um do regime normal não tinha uma
+     * percentagem que servisse para os dois, e a mensagem acabava a dizer
+     * «acresce o IVA de quem o liquida — nem todos os profissionais cobram».
+     * Era verdade e não ajudava ninguém a somar.
+     *
+     * Quem factura passou a ser a CLYON, e a factura é a mesma venha a
+     * proposta de quem vier: 23 % sobre tudo, a quem a pedir.
      */
-    const comImposto = d.propostas.filter((p) => p.ivaDoServico > 0).length;
     linhas.push(
       `Valores sem IVA, já com a taxa CLYON${taxaUnica != null ? ` de ${taxaEmTexto(taxaUnica)}` : ""}.` +
-        (comImposto === 0
-          ? " Com factura acresce só o IVA da taxa."
-          : comImposto === quantas
-            ? ` Com factura acrescem ${POR_CENTO} de IVA.`
-            : " Com factura acresce o IVA de quem o liquida — nem todos os profissionais cobram."),
+        ` Com factura acrescem ${POR_CENTO} de IVA.`,
     );
     /*
      * COMO É QUE ESTES NÚMEROS FORAM FEITOS, na linha a seguir aos números.

@@ -771,19 +771,20 @@ export function lerSeFoiPaga(json: unknown): LeituraDaReferencia {
  * antes de o valor sair daqui — e fica gravada na linha do pagamento, porque é
  * ela que decide o documento que se emite a seguir.
  *
- * (O IVA da taxa é devido à mesma, haja factura ou não. Isso é uma questão
- * fiscal da CLYON e não uma questão de software: ver a nota em
- * `taxas-plataforma.ts`, que já a levanta.)
+ * O REGIME DO PROFISSIONAL SAIU DAQUI a 22-09-2026: quem factura ao cliente é
+ * a CLYON, e o imposto de uma factura é o de quem a emite. Os números do
+ * exemplo acima mudaram com isso — os 100 € acordados dão agora 105,00 € a
+ * pagar e 129,15 € com factura, porque o imposto passou a ser sobre tudo e
+ * não só sobre a taxa. Ver `contaDoCliente`.
  */
 export function quantoOClientePaga(
   acordado: number,
-  regime: RegimeIva,
   taxas?: Taxas,
   comFactura = false,
   /** O acréscimo da forma de pagamento. Ver `contaDoCliente`. */
   acrescimo = 0,
 ): number {
-  const c = contaDoCliente(acordado, regime, taxas, acrescimo);
+  const c = contaDoCliente(acordado, taxas, acrescimo);
   return comFactura ? c.total : c.semIva;
 }
 
@@ -801,12 +802,11 @@ export function quantoOClientePaga(
  */
 export function quantoACLYONCobra(
   acordado: number,
-  regime: RegimeIva,
   taxas?: Taxas,
   comFactura = false,
   acrescimo = 0,
 ): number {
-  const c = contaDoCliente(acordado, regime, taxas, acrescimo);
+  const c = contaDoCliente(acordado, taxas, acrescimo);
   const base = Math.round((c.taxa + c.acrescimo) * 100) / 100;
   return comFactura ? Math.round((base + c.ivaDaTaxa) * 100) / 100 : base;
 }

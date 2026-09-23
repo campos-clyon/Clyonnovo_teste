@@ -313,7 +313,7 @@ describe("a comissão da casa", () => {
     expect(ROTA).toContain("comissaoDaClyon(acordado");
     // O valor acordado e SEM IVA desde 29-08-2026: o facturado ao cliente tem
     // de levar o imposto de quem factura, ou fica 23% abaixo do que ha mesmo.
-    expect(ROTA).toContain("contaDoCliente(acordado, regimeDeIva(l.regimeIva)");
+    expect(ROTA).toContain("contaDoCliente(acordado, taxas).total");
   });
 
   it("segue os mesmos três estados do dinheiro deles", () => {

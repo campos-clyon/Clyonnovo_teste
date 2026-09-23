@@ -24,6 +24,7 @@ const semNotas = (t: string) =>
   t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const ROTA = ler("src/app/api/profissionais/meus-pedidos/route.ts");
 const CARTAO = ler("src/app/profissionais/painel/Trabalhos.tsx");
+const SINAIS = ler("src/app/profissionais/painel/sinais-do-cartao.ts");
 const TIPOS = ler("src/app/profissionais/painel/tipos.ts");
 
 describe("a rota manda o valor da CLYON", () => {
@@ -60,14 +61,30 @@ describe("o cartão põe o nosso valor em cima", () => {
      * A ordem do `??` é a regra inteira: o nosso primeiro, a conta dele só na
      * falta dele. Invertida, voltava tudo ao que estava.
      */
-    expect(CARTAO).toContain("p.valorDaClyon ?? sugestaoAberta?.recebeSePropuser ?? null");
+    /*
+     * A ordem do `??` mudou de ficheiro a 21-09-2026 — está em
+     * `valorNoCartao`, e quem a guarda pelo VALOR é `sinais-do-cartao.test.ts`.
+     * O que fica aqui é o que só se vê no ecrã: qual dos números é impresso.
+     */
+    expect(SINAIS).toContain("p.valorDaClyon ?? p.sugestao?.recebeSePropuser ?? null");
     expect(CARTAO).toContain("euros(fechado ? p.recebeSeFechado : (valorEmCima ?? p.recebeSeAceitar))");
   });
 
   it("os sinais e o €/km seguem o número que está à vista", () => {
-    // Se o distintivo «bem pago» fosse calculado sobre um número que o cartão
-    // não mostra, dizia «bem pago» ao lado de um valor que não o era.
-    expect(CARTAO).toContain("valorEmCima != null ? { ...p, recebeSeAceitar: valorEmCima } : p");
+    /*
+     * Se o distintivo «bem pago» fosse calculado sobre um número que o cartão
+     * não mostra, dizia «bem pago» ao lado de um valor que não o era.
+     *
+     * A regra saiu de dentro do cartão a 21-09-2026 porque a ORDENAÇÃO
+     * precisa exactamente da mesma: enquanto esteve só lá dentro, «Melhor
+     * €/km» ordenava por um número diferente do impresso. O que este teste
+     * guarda é que o ecrã CHAMA a mesma função nos três sítios — o cartão e
+     * as duas ordenações — e não uma cópia sua.
+     */
+    expect(CARTAO).toContain("const valorEmCima = valorNoCartao(p, separador);");
+    expect(CARTAO).toContain("const paraOsSinais = paraOsSinaisDe(p, separador);");
+    expect(semNotas(CARTAO)).toContain("porQuilometro(paraOsSinaisDe(a, separador))");
+    expect(semNotas(CARTAO)).toContain("paraOsSinaisDe(b, separador), quantasFotos:");
   });
 
   it("cada número tem o seu nome", () => {

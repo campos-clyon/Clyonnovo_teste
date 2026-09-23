@@ -23,7 +23,7 @@
  * existe.
  */
 
-import { contaDoCliente, regimeDeIva } from "./taxas-plataforma";
+import { contaDoCliente } from "./taxas-plataforma";
 
 export type TrabalhoDoCliente = {
   negociacaoId: number;
@@ -35,11 +35,11 @@ export type TrabalhoDoCliente = {
   profissionalNome?: string | null;
   serviceType?: string | null;
   /**
-   * O regime de IVA de quem factura.
+   * O regime de IVA do profissional.
    *
-   * A partir de 29-08-2026 o valor acordado e SEM IVA. Sem esta informacao, a
-   * carteira mostrava ao cliente um retido 23% abaixo do que ele vai pagar --
-   * e a carteira e o sitio onde ele confere se a conta bate certo.
+   * JA NAO ENTRA EM CONTA NENHUMA desde 22-09-2026: quem factura ao cliente e
+   * a CLYON, e o imposto de uma factura e o de quem a emite. Fica no tipo
+   * porque a consulta o traz e porque continua a ser a verdade fiscal dele.
    */
   regimeIva?: string | null;
 };
@@ -94,7 +94,7 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     // SEM IVA — o mesmo número que lhe foi dito em todo o lado. A carteira a
     // dizer 361,20 € sobre um trabalho anunciado a 294,00 € era a terceira
     // versão do mesmo preço; o imposto, quando ele pedir factura, acresce.
-    const total = contaDoCliente(acordado, regimeDeIva(t.regimeIva)).semIva;
+    const total = contaDoCliente(acordado).semIva;
     const confirmado = quando(t.confirmadoEm) ?? quando(t.pagoEm);
 
     if (confirmado) pago += total;

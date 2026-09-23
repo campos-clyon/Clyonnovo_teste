@@ -448,9 +448,22 @@ export async function POST(req: NextRequest) {
           serviceType: row.serviceType ?? null,
           token: acesso.token,
           baseUrl,
-          valorDesejadoCliente: valoresParaGravar.valorDesejadoCliente
-            ? Number(valoresParaGravar.valorDesejadoCliente)
-            : null,
+          /*
+           * SÓ SE ELE O TIVER MESMO ESCRITO.
+           *
+           * O email diz «Disse que quer pagar a partir de X». Quando o
+           * cliente não escreve valor — o caso comum, o campo é opcional —
+           * o `valorDesejadoCliente` que ficou gravado é a NOSSA estimativa,
+           * e a frase passava a pôr na boca dele um número que ele nunca viu.
+           *
+           * É a mesma razão que tirou a estimativa da página do pedido a
+           * 18-09-2026 ("o valor que eu indiquei não deveria estar visível
+           * para os clientes"); o email é que tinha ficado de fora.
+           */
+          valorDesejadoCliente:
+            clienteIndicouValores && valoresParaGravar.valorDesejadoCliente
+              ? Number(valoresParaGravar.valorDesejadoCliente)
+              : null,
         });
         if (!linkEnviado) {
           // Fica no histórico porque é recuperável à mão: o pedido existe, o
