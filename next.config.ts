@@ -398,8 +398,14 @@ const nextConfig: NextConfig = {
             linha de política — e o painel do Vercel a parecer um site sem
             visitas. É de onde vêm os scripts; os dados continuam a ir para
             /_vercel, no nosso domínio.
+
+            E o GOOGLE MAPS, pela mesma razão: o `useGooglePlaces` injeta o
+            SDK de `maps.googleapis.com` (que depois puxa pedaços de
+            `maps.gstatic.com`) e a política recusava-o em cada página com
+            morada. Ninguém via, porque o hook cai para o proxy do servidor —
+            só a consola ficava vermelha e cada pesquisa pagava o caminho caro.
           */
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://va.vercel-scripts.com",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://va.vercel-scripts.com https://maps.googleapis.com https://maps.gstatic.com",
           // Estilos: self + inline (necessário para Tailwind/shadcn)
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           // Fontes
@@ -407,7 +413,7 @@ const nextConfig: NextConfig = {
           // Imagens: self + blobs Vercel + Google + Storage Supabase (fotos dos pedidos da app)
           // O www.google.com e o doubleclick são os pixéis de conversão do
           // Google Ads — ver a nota no connect-src.
-          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://*.supabase.co https://www.google.com https://*.doubleclick.net https://www.googleadservices.com",
+          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://*.supabase.co https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://maps.gstatic.com https://maps.googleapis.com",
           /*
             Ligações de rede: self + APIs externas.
 
@@ -442,7 +448,7 @@ const nextConfig: NextConfig = {
             rota assinava, o CORS respondia com `*`, e um `curl` passava. Um
             `curl` nao tem CSP.
           */
-          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io",
+          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io https://maps.googleapis.com",
           /*
             VIDEO E AUDIO — e esta linha nao existia de todo.
 

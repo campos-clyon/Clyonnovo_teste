@@ -127,6 +127,16 @@ describe("o GA4 no site", () => {
     expect(script).toContain("https://va.vercel-scripts.com");
   });
 
+  it("a CSP deixa entrar o SDK do Google Maps que o useGooglePlaces injeta", () => {
+    // Era recusado em cada página com morada; o hook caía para o proxy e só
+    // a consola ficava vermelha.
+    const script = CONFIG.slice(CONFIG.indexOf('"script-src'), CONFIG.indexOf('"style-src'));
+    const connect = CONFIG.slice(CONFIG.indexOf('"connect-src'), CONFIG.indexOf('"frame-src'));
+    expect(script).toContain("https://maps.googleapis.com");
+    expect(script).toContain("https://maps.gstatic.com");
+    expect(connect).toContain("https://maps.googleapis.com");
+  });
+
   it("a CSP deixa as conversões do Google Ads sair — nunca saíram até agora", () => {
     const connect = CONFIG.slice(CONFIG.indexOf('"connect-src'), CONFIG.indexOf('"frame-src'));
     const img = CONFIG.slice(CONFIG.indexOf('"img-src'), CONFIG.indexOf('"connect-src'));
