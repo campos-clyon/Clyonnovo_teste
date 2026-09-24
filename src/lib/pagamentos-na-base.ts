@@ -687,6 +687,86 @@ export async function negociacoesPagas(
 }
 
 /** Os últimos, para o painel da CLYON. */
+/**
+ * O DINHEIRO QUE ENTROU SEM PASSAR PELO euPAGO.
+ *
+ * *«Gerir quem pagou e como pagou.»* — 24-09-2026.
+ *
+ * Até aqui, «o cliente pagou» era uma pergunta que só o euPago sabia
+ * responder: `negociacoesPagas` lê a tabela `pagamentos`, e só o webhook
+ * escrevia lá. Um cliente que transferisse para a conta da CLYON, ou que
+ * pagasse em numerário, não tinha como ser registado — e o trabalho ficava
+ * para sempre «por cobrar», com o profissional à espera de um desbloqueio que
+ * nunca vinha.
+ *
+ * Isto é uma pessoa a dizer o que aconteceu, e fica com o nome dela em cima.
+ *
+ * ⚠️ O ÍNDICE ÚNICO `uq_uma_paga (negociacaoPaga)` É QUE MANDA, e não um `if`
+ * antes. Dois cliques no mesmo botão, ou um registo à mão em cima de um
+ * pagamento do euPago, batem na base e voltam com `duplicado` — não escrevem
+ * duas vezes. Um trabalho pagado a dobrar não se descobre por acaso.
+ */
+export async function registarRecebimentoAMao(d: {
+  negociacaoId: number;
+  pedidoId: number;
+  providerId: number;
+  /** `transferencia`, `numerario` ou `ao_profissional`. Ver `ComoEntrou`. */
+  metodo: string;
+  valor: number;
+  quando: Date;
+  ambiente: Ambiente;
+}): Promise<ResultadoDeAplicar & { pagamentoId?: number }> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  try {
+    const [r] = (await pool.execute(
+      `INSERT INTO pagamentos
+         (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,
+          estado, negociacaoPaga, valorPago, pagoEm)
+       VALUES (?, ?, ?, ?, ?, ?, 0, 'pago', ?, ?, ?)`,
+      [
+        d.negociacaoId,
+        d.pedidoId,
+        d.providerId,
+        d.metodo.slice(0, 20),
+        d.ambiente,
+        d.valor,
+        d.negociacaoId,
+        d.valor,
+        toMySQLDateTime(d.quando),
+      ],
+    )) as any[];
+
+    const pagamentoId = Number((r as { insertId?: number })?.insertId ?? 0);
+
+    /*
+     * As referências que ficaram por pagar deixam de fazer sentido: se o
+     * cliente já pagou por outro caminho, o ecrã dele não pode continuar a
+     * oferecer uma Multibanco viva. É a mesma limpeza que `darPorPago` faz.
+     */
+    await pool.execute(
+      `UPDATE pagamentos SET estado = 'substituido'
+        WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'`,
+      [d.negociacaoId, pagamentoId],
+    );
+
+    return { feito: true, pagamentoId };
+  } catch (e) {
+    if ((e as { code?: string })?.code === CHAVE_REPETIDA) {
+      return {
+        feito: false,
+        duplicado: true,
+        porque:
+          "Este trabalho já está dado por pago. Se o cliente pagou duas vezes, " +
+          "há um valor a devolver — e isso trata-se à parte.",
+      };
+    }
+    throw e;
+  }
+}
+
 export async function ultimosPagamentos(limite = 25): Promise<Pagamento[]> {
   await garantirTabelas();
   const pool = await getPool();

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { AlertTriangle, CheckCircle2, CreditCard, Loader2, Lock } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { nomeDoRecebimento } from "@/lib/dinheiro-do-trabalho";
 
 /**
  * O QUE ENTROU PELO euPAGO.
@@ -64,6 +65,36 @@ type Estado = {
   ultimos: Pagamento[];
   avisos: Aviso[];
   webhook?: EstadoDoWebhook;
+  trabalhos?: Trabalho[];
+};
+
+/**
+ * UM TRABALHO, AS DUAS PONTAS DO DINHEIRO.
+ *
+ * *«Estamos com problema para gerir os pagamentos (…) para podermos gerir quem
+ * pagou, como pagou, e se já pagámos os profissionais.»* — 24-09-2026.
+ *
+ * São três perguntas sobre a MESMA coisa, e viviam em quatro ecrãs: as
+ * Carteiras respondem por profissional, os Levantamentos por pedido de
+ * levantamento, o Livro por movimento, e este por pagamento do euPago.
+ * Nenhum respondia por TRABALHO — que é como a pergunta é feita quando se
+ * tem o extracto do banco aberto ao lado.
+ */
+type Trabalho = {
+  negociacaoId: number;
+  pedidoId: number;
+  cliente: string | null;
+  telefoneDoCliente: string | null;
+  cidade: string | null;
+  profissional: string;
+  clientePaga: number;
+  profissionalRecebe: number;
+  formaDePagamento: string | null;
+  comoEntrou: string | null;
+  clientePagouEm: string | null;
+  confirmadoEm: string | null;
+  pagoEm: string | null;
+  fase: string;
 };
 
 /**
@@ -121,6 +152,283 @@ function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
 }
 
 const euros = (n: number | null) => (n == null ? "—" : `${n.toFixed(2).replace(".", ",")} €`);
+
+const DIA = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" }) : "";
+
+/**
+ * O GESTOR: um trabalho por linha, e a atenção por ordem de urgência.
+ *
+ * Os montes não estão por ordem cronológica — estão por ordem da atenção que
+ * merecem. Primeiro o que pode ser PERDIDO (dinheiro que devíamos ter e não
+ * temos), depois o que DEVEMOS, depois o que só precisa de tempo, e por fim o
+ * que já não precisa de ninguém.
+ *
+ * «Fechado» começa fechado: é a maior das quatro listas e é a única que não
+ * tem nada a fazer. Estar aberta empurrava as outras três para fora do ecrã.
+ */
+function GestorDoDinheiro({
+  trabalhos,
+  token,
+  onMudou,
+}: {
+  trabalhos: Trabalho[];
+  token: string | null;
+  onMudou: () => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const [ocupado, setOcupado] = useState<number | null>(null);
+  const [aRegistar, setARegistar] = useState<number | null>(null);
+  const [erro, setErro] = useState("");
+  const [verFechados, setVerFechados] = useState(false);
+
+  const q = busca.trim().toLowerCase();
+  const filtrados = q
+    ? trabalhos.filter((t) =>
+        [t.cliente, t.telefoneDoCliente, t.profissional, t.cidade, `#${t.pedidoId}`]
+          .filter(Boolean)
+          .some((c) => String(c).toLowerCase().includes(q)),
+      )
+    : trabalhos;
+
+  const montes = FASES.map((f) => ({
+    fase: f,
+    linhas: filtrados.filter((t) => t.fase === f.id),
+  })).filter((m) => m.linhas.length > 0);
+
+  async function agir(t: Trabalho, url: string, corpo: Record<string, unknown>) {
+    if (!token) return;
+    setOcupado(t.negociacaoId);
+    setErro("");
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ negociacaoId: t.negociacaoId, ...corpo }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErro([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível.");
+        return;
+      }
+      setARegistar(null);
+      onMudou();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Trabalho a trabalho
+        </p>
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="cliente, telemóvel, profissional ou #pedido"
+          className="w-full max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600"
+        />
+      </div>
+
+      {erro && <p className="mt-2 text-xs text-red-300">{erro}</p>}
+
+      {montes.length === 0 && (
+        <p className="mt-3 text-xs text-slate-500">
+          {q ? "Nada encontrado." : "Ainda não há trabalhos fechados."}
+        </p>
+      )}
+
+      {montes.map(({ fase, linhas }) => {
+        const escondido = fase.id === "fechado" && !verFechados && !q;
+        const soma = linhas.reduce(
+          (s, t) => s + (fase.id === "a_pagar" ? t.profissionalRecebe : t.clientePaga),
+          0,
+        );
+        return (
+          <div key={fase.id} className="mt-4">
+            <button
+              onClick={() => fase.id === "fechado" && setVerFechados((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className={`text-xs font-semibold uppercase tracking-wide ${fase.cor}`}>
+                {fase.rotulo} · {linhas.length}
+              </span>
+              <span className="text-xs tabular-nums text-slate-400">
+                {euros(Math.round(soma * 100) / 100)}
+                {escondido ? " · mostrar" : ""}
+              </span>
+            </button>
+            {!escondido && (
+              <div className="mt-2 space-y-2">
+                {linhas.map((t) => (
+                  <Linha
+                    key={t.negociacaoId}
+                    t={t}
+                    ocupado={ocupado === t.negociacaoId}
+                    aRegistar={aRegistar === t.negociacaoId}
+                    onRegistar={() =>
+                      setARegistar((a) => (a === t.negociacaoId ? null : t.negociacaoId))
+                    }
+                    onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo })}
+                    onPaguei={() => void agir(t, "/api/admin/carteiras", {})}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const FASES: Array<{ id: string; rotulo: string; cor: string }> = [
+  { id: "a_receber", rotulo: "Por receber do cliente", cor: "text-amber-300" },
+  { id: "a_pagar", rotulo: "Por pagar ao profissional", cor: "text-cyan-300" },
+  { id: "a_decorrer", rotulo: "A decorrer", cor: "text-slate-400" },
+  { id: "fechado", rotulo: "Fechado", cor: "text-emerald-300" },
+];
+
+/** As três formas de dizer o que aconteceu quando não foi pelo euPago. */
+const A_MAO: Array<{ id: string; rotulo: string; ajuda: string }> = [
+  { id: "transferencia", rotulo: "Transferência", ajuda: "Entrou na conta da CLYON" },
+  { id: "numerario", rotulo: "Numerário", ajuda: "Entregue à CLYON em dinheiro" },
+  {
+    id: "ao_profissional",
+    rotulo: "Pagou ao profissional",
+    ajuda: "Em mão, no local. Não passou pela CLYON",
+  },
+];
+
+function Linha({
+  t,
+  ocupado,
+  aRegistar,
+  onRegistar,
+  onEntrou,
+  onPaguei,
+}: {
+  t: Trabalho;
+  ocupado: boolean;
+  aRegistar: boolean;
+  onRegistar: () => void;
+  onEntrou: (metodo: string) => void;
+  onPaguei: () => void;
+}) {
+  const emMao = t.formaDePagamento === "dinheiro" || t.comoEntrou === "ao_profissional";
+
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="text-sm font-semibold text-white">#{t.pedidoId}</span>
+        <span className="text-sm text-slate-200">{t.cliente ?? "—"}</span>
+        {t.telefoneDoCliente && (
+          <a
+            href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
+            className="font-mono text-xs tabular-nums text-cyan-400 hover:underline"
+          >
+            {t.telefoneDoCliente}
+          </a>
+        )}
+        {t.cidade && <span className="text-xs text-slate-500">{t.cidade}</span>}
+      </div>
+
+      {/*
+        AS DUAS PONTAS, uma por linha e sempre na mesma ordem: primeiro o que
+        entrou, depois o que saiu. É a ordem em que o dinheiro anda, e é a
+        ordem em que a pergunta se faz.
+      */}
+      <p className="mt-1.5 text-xs text-slate-300">
+        <span className="text-slate-500">Cliente:</span>{" "}
+        {emMao ? (
+          <span className="text-slate-300">
+            pagou {euros(t.clientePaga)} ao profissional, em mão
+          </span>
+        ) : t.clientePagouEm ? (
+          <span className="text-emerald-300">
+            pagou {euros(t.clientePaga)} · {nomeDoRecebimento(t.comoEntrou)}
+            {DIA(t.clientePagouEm) ? ` · ${DIA(t.clientePagouEm)}` : ""}
+          </span>
+        ) : (
+          <span className="text-amber-300">por receber {euros(t.clientePaga)}</span>
+        )}
+      </p>
+
+      <p className="mt-0.5 text-xs text-slate-300">
+        <span className="text-slate-500">{t.profissional}:</span>{" "}
+        {emMao ? (
+          <span className="text-slate-400">recebeu em mão — não há nada a transferir</span>
+        ) : t.pagoEm ? (
+          <span className="text-emerald-300">
+            pago {euros(t.profissionalRecebe)} · {DIA(t.pagoEm)}
+          </span>
+        ) : t.confirmadoEm ? (
+          <span className="text-cyan-300">a receber {euros(t.profissionalRecebe)}</span>
+        ) : (
+          <span className="text-slate-500">
+            {euros(t.profissionalRecebe)} — à espera da confirmação do cliente
+          </span>
+        )}
+      </p>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {/*
+          REGISTAR O QUE ENTROU FORA DO euPAGO.
+
+          ⚠️ Isto DESBLOQUEIA DINHEIRO: um registo aqui move o trabalho de «por
+          cobrar» para «disponível» na carteira do profissional. Por isso é um
+          segundo clique, e cada opção diz o que quer dizer.
+        */}
+        {!emMao && !t.clientePagouEm && (
+          <button
+            onClick={onRegistar}
+            disabled={ocupado}
+            className="rounded-lg border border-amber-600/60 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+          >
+            {aRegistar ? "Como entrou?" : "Já recebemos"}
+          </button>
+        )}
+
+        {!emMao && t.clientePagouEm && t.confirmadoEm && !t.pagoEm && (
+          <button
+            onClick={onPaguei}
+            disabled={ocupado}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+            Já paguei {euros(t.profissionalRecebe)}
+          </button>
+        )}
+      </div>
+
+      {aRegistar && (
+        <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
+          <p className="text-[11px] leading-relaxed text-amber-200/90">
+            Como é que entraram os {euros(t.clientePaga)}? Isto desbloqueia o dinheiro do
+            profissional — só se regista o que já aconteceu.
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {A_MAO.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => onEntrou(m.id)}
+                disabled={ocupado}
+                title={m.ajuda}
+                className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
+              >
+                {m.rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const CORES: Record<string, string> = {
   pago: "text-emerald-300",
@@ -332,6 +640,12 @@ export default function AdminPagamentosPanel() {
           </div>
         )}
       </div>
+
+      <GestorDoDinheiro
+        trabalhos={estado.trabalhos ?? []}
+        token={token}
+        onMudou={() => void carregar(true)}
+      />
 
       <div className="grid gap-3 sm:grid-cols-4">
         {[

@@ -83,6 +83,7 @@ import {
   BadgeCheck,
   HandCoins,
   Wallet,
+  CreditCard,
   CalendarClock,
   FlaskConical,
 } from "lucide-react";
@@ -116,6 +117,7 @@ type AdminSection =
   | "negociacoes"
   | "levantamentos"
   | "carteiras"
+  | "pagamentos"
   | "agenda"
   | "testadores"
   | "negociacoes_clyon"
@@ -248,6 +250,7 @@ const adminNavItems: Array<{
   { id: "profissionais", icon: BadgeCheck },
   { id: "negociacoes",   icon: HandCoins },
   { id: "carteiras", icon: Wallet },
+  { id: "pagamentos", icon: CreditCard },
   { id: "agenda", icon: CalendarClock },
   { id: "levantamentos", icon: Wallet },
   { id: "testadores",    icon: FlaskConical },
@@ -277,7 +280,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
   // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "agenda", "whatsapp", "carteiras", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["testadores", "equipa", "configs"] },
 ];
@@ -294,6 +297,7 @@ const sectionLabels: Record<AdminSection, string> = {
   profissionais: "Profissionais",
   negociacoes:   "Negociações",
   carteiras: "Carteiras",
+  pagamentos: "Pagamentos",
   agenda: "Agenda",
   levantamentos: "Levantamentos",
   testadores:    "Acesso aos testes",
@@ -3261,6 +3265,35 @@ export default function ColaboradorAdminClient({
           {activeSection === "carteiras" && <AdminCarteirasPanel />}
 
           {/*
+            PAGAMENTOS — o dinheiro trabalho a trabalho.
+
+            *«Cria uma ferramenta ou melhora uma para podermos gerir quem
+            pagou, como pagou, e se já pagámos os profissionais.»* — 24-09-2026.
+
+            Fica ao lado das Carteiras porque respondem a perguntas vizinhas e
+            NÃO à mesma: as Carteiras somam por profissional — «a quem tenho de
+            transferir» —, e isto segue um trabalho do princípio ao fim. Quem
+            tem o extracto do banco aberto ao lado procura por cliente, não por
+            profissional.
+          */}
+          {activeSection === "pagamentos" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Pagamentos</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Quem pagou, por onde, e se o profissional já recebeu — um trabalho por linha.
+                  O que entra por MB WAY e Multibanco marca-se sozinho pelo euPago; o resto —
+                  transferência, numerário, ou pago ao profissional em mão — regista-se aqui.
+                </p>
+              </div>
+              <AdminPagamentosPanel />
+            </section>
+          )}
+
+          {/*
             A AGENDA, entre as negociações e as carteiras.
 
             "Quero uma agenda para o admin acompanhar as datas e horários dos
@@ -3413,26 +3446,19 @@ export default function ColaboradorAdminClient({
               </div>
 
               {/*
-                O QUE ENTROU PELO euPAGO.
+                OS PAGAMENTOS SAÍRAM DAQUI — 24-09-2026.
 
-                Ao lado do livro porque sao as duas metades da mesma coisa: o
-                livro diz o que cada profissional tem a receber, e isto diz o
-                que o cliente ja pagou. Um dia encontram-se.
+                *«Estamos com problema para gerir os pagamentos.»* Estavam
+                dentro de Configurações, ao lado do livro, com o argumento de
+                que «são as duas metades da mesma coisa». E são — mas uma
+                metade abre-se uma vez por mês para conferir, e a outra é
+                trabalho de todos os dias: quem pagou, como, e se já pagámos ao
+                profissional.
 
-                O numero que interessa aqui nao e o total recebido -- e o dos
-                avisos por aplicar. Cada um e dinheiro que se moveu do lado do
-                euPago e nao se moveu do nosso, e nenhum da erro em lado nenhum.
+                Uma ferramenta de dinheiro a três cliques de distância, atrás
+                de um separador que se chama «Configs», não se usa. Passou a
+                secção própria, na Plataforma, ao lado das Carteiras.
               */}
-              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Pagamentos dos clientes
-                </p>
-                <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
-                  MB WAY e Multibanco, pelo euPago. Quem diz que um trabalho foi pago e o webhook
-                  deles — nunca o ecra do cliente.
-                </p>
-                <AdminPagamentosPanel />
-              </div>
 
               {/* Navegação por abas */}
               <div className="flex flex-wrap gap-2 rounded-[20px] border border-white/10 bg-white/[0.02] p-2">
