@@ -14,8 +14,14 @@ import { SERVICE_CATEGORIES } from "./service-categories";
 
 export const CATEGORIAS_VALIDAS = SERVICE_CATEGORIES.map((c) => c.id);
 
-/** Ninguém se desloca 500 km para levar um sofá. Acima disto é engano. */
-export const RAIO_MAXIMO_KM = 200;
+/**
+ * Até onde um profissional pode dizer que se desloca. Acima disto é engano.
+ *
+ * Era 200 km. Subiu para 500 a 25-09-2026, a pedido: «Aumente o raio máximo
+ * de 200 para 500 km.» Há quem faça mudanças de norte a sul, e com 200 um
+ * profissional do Porto nunca via um pedido de Lisboa.
+ */
+export const RAIO_MAXIMO_KM = 500;
 
 /**
  * Os ids dos veículos aceites.
