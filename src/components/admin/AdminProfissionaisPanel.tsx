@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { ESTADOS_DO_PROFISSIONAL, type EstadoDoProfissional } from "@/lib/edicao-profissional";
@@ -641,11 +642,62 @@ function Editor({
   const [regimeIva, setRegimeIva] = useState(p.regimeIva === "normal" ? "normal" : "isento");
   const [emiteGuia, setEmiteGuia] = useState(p.emiteGuiaTransporte === 1);
   const [numero, setNumero] = useState(p.numeroTransportador ?? "");
+  const [base, setBase] = useState<BaseEscolhida>({
+    morada: p.city ?? "",
+    lat: p.baseLat != null ? Number(p.baseLat) : null,
+    lng: p.baseLng != null ? Number(p.baseLng) : null,
+  });
+
+  /*
+   * A morada só vai no pedido se mudou. Mandá-la sempre voltava a localizar
+   * o texto a cada gravação, e um ponto escolhido à mão podia ser trocado
+   * por um palpite sem ninguém ter tocado no campo.
+   */
+  const baseMudou =
+    base.morada.trim() !== (p.city ?? "").trim() ||
+    base.lat !== (p.baseLat != null ? Number(p.baseLat) : null) ||
+    base.lng !== (p.baseLng != null ? Number(p.baseLng) : null);
 
   const numeroMudou = numero.trim() !== (p.numeroTransportador ?? "");
 
   return (
     <div className="mt-3 space-y-4 rounded-xl border border-slate-800 bg-slate-800/60 p-4">
+      {/*
+        A MORADA DA BASE — 25-09-2026.
+
+        É daqui que se mede o raio. O Jorge escreveu «Merce», o ponto foi
+        parar perto de Penafiel, e nenhum pedido de Lisboa lhe chegava — sem
+        sítio nenhum no backoffice para o corrigir.
+      */}
+      <div>
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Morada da base
+        </span>
+        <div className="mt-1.5">
+          <MoradaDaBase
+            className="w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
+            valor={base.morada}
+            lat={base.lat}
+            lng={base.lng}
+            onMudar={setBase}
+          />
+        </div>
+        {base.lat != null && base.lng != null ? (
+          <a
+            href={`https://www.google.com/maps?q=${base.lat},${base.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block text-xs text-cyan-400 hover:underline"
+          >
+            Ver o ponto no mapa ({base.lat.toFixed(4)}, {base.lng.toFixed(4)})
+          </a>
+        ) : (
+          <p className="mt-1 text-xs text-amber-300">
+            Sem ponto no mapa — escolha a morada da lista para as distâncias saírem certas.
+          </p>
+        )}
+      </div>
+
       <div>
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Categorias
@@ -787,9 +839,12 @@ function Editor({
             regimeIva,
             emiteGuiaTransporte: emiteGuia,
             numeroTransportador: emiteGuia ? numero : null,
+            ...(baseMudou
+              ? { cidade: base.morada, baseLat: base.lat, baseLng: base.lng }
+              : {}),
           })
         }
-        disabled={ocupado || categorias.length === 0}
+        disabled={ocupado || categorias.length === 0 || (baseMudou && !base.morada.trim())}
         className="w-full rounded-xl bg-cyan-600 py-2.5 text-sm font-bold text-white hover:bg-cyan-500 disabled:opacity-40"
       >
         Guardar alterações

@@ -112,6 +112,46 @@ export async function PATCH(
       avisoDeDistribuicao = true;
     }
 
+    // ── A morada da base ─────────────────────────────────────────────────────
+    //
+    // «Porque é que eu não consigo editar para corrigir o erro?» — 25-09-2026.
+    //
+    // O Jorge escreveu «Merce» na inscrição, e o geocodificador pôs-lhe a base
+    // perto de Penafiel. Com 200 km de raio medidos de lá, nenhum pedido de
+    // Lisboa lhe chegava — e o backoffice não tinha onde mudar a morada: o
+    // «re-geocodificar» voltava a procurar «Merce» e caía no mesmo sítio.
+    //
+    // As coordenadas escolhidas da lista do Google mandam; o texto só se
+    // localiza quando se escreveu à mão, e aí é uma aproximação.
+    if (corpo.cidade !== undefined) {
+      const cidade = typeof corpo.cidade === "string" ? corpo.cidade.trim().slice(0, 200) : "";
+      if (!cidade) {
+        return NextResponse.json({ error: "Indique a morada da base." }, { status: 400 });
+      }
+      const lat = Number(corpo.baseLat);
+      const lng = Number(corpo.baseLng);
+      const escolhidas =
+        corpo.baseLat != null &&
+        corpo.baseLng != null &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        Math.abs(lat) <= 90 &&
+        Math.abs(lng) <= 180
+          ? { lat, lng }
+          : null;
+      const base = escolhidas ?? (await geocodificarLocalidade(cidade));
+      const pool = await getPool();
+      if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+      await pool.execute("UPDATE providers SET city = ?, baseLat = ?, baseLng = ? WHERE id = ?", [
+        cidade,
+        base?.lat ?? null,
+        base?.lng ?? null,
+        providerId,
+      ]);
+      feito.push(base ? "morada da base actualizada" : "morada gravada, mas sem ponto no mapa");
+      avisoDeDistribuicao = true;
+    }
+
     // ── Perfil ───────────────────────────────────────────────────────────────
     const CAMPOS_DE_PERFIL = [
       "categorias",
