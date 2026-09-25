@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { AlertTriangle, CheckCircle2, CreditCard, Loader2, Lock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard, ChevronDown, Loader2, Lock, Pencil } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { nomeDoRecebimento } from "@/lib/dinheiro-do-trabalho";
+import {
+  ladoDoCliente,
+  ladoDoProfissional,
+  nomeDoRecebimento,
+  pagouAoProfissional,
+  prontoAPagar,
+} from "@/lib/dinheiro-do-trabalho";
+import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 
 /**
  * O QUE ENTROU PELO euPAGO.
@@ -87,6 +94,8 @@ type Trabalho = {
   telefoneDoCliente: string | null;
   cidade: string | null;
   profissional: string;
+  valorAcordado: number;
+  taxas: Taxas;
   clientePaga: number;
   profissionalRecebe: number;
   formaDePagamento: string | null;
@@ -157,16 +166,91 @@ const DIA = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" }) : "";
 
 /**
- * O GESTOR: um trabalho por linha, e a atenção por ordem de urgência.
+ * O GESTOR: um trabalho por linha, e uma pergunta de cada vez.
  *
- * Os montes não estão por ordem cronológica — estão por ordem da atenção que
- * merecem. Primeiro o que pode ser PERDIDO (dinheiro que devíamos ter e não
- * temos), depois o que DEVEMOS, depois o que só precisa de tempo, e por fim o
- * que já não precisa de ninguém.
+ * *«Temos que separar os pagamentos entre os já recebidos, por receber, pagos
+ * ao pro e por pagar aos pros.»* — 25-09-2026.
  *
- * «Fechado» começa fechado: é a maior das quatro listas e é a única que não
- * tem nada a fazer. Estar aberta empurrava as outras três para fora do ecrã.
+ * Eram quatro montes por FASE, e a fase junta as duas pontas numa resposta
+ * só: um trabalho «por receber» também está por pagar ao profissional, e não
+ * aparecia nessa lista. Agora são quatro separadores, dois de cada ponta, e
+ * cada trabalho aparece num de cada lado — é assim que se confere com o
+ * extracto do banco aberto ao lado: primeiro o que entrou, depois o que saiu.
+ *
+ * Abre em «Por receber»: é o único que representa dinheiro que se pode perder.
  */
+type Separador = "por_receber" | "recebidos" | "por_pagar" | "pagos";
+
+const SEPARADORES: Array<{
+  id: Separador;
+  rotulo: string;
+  cor: string;
+  vazio: string;
+}> = [
+  {
+    id: "por_receber",
+    rotulo: "Por receber",
+    cor: "text-amber-300",
+    vazio: "Nenhum cliente por pagar.",
+  },
+  {
+    id: "recebidos",
+    rotulo: "Recebidos",
+    cor: "text-emerald-300",
+    vazio: "Ainda não entrou nenhum pagamento.",
+  },
+  {
+    id: "por_pagar",
+    rotulo: "Por pagar aos pros",
+    cor: "text-cyan-300",
+    vazio: "Não se deve nada a nenhum profissional.",
+  },
+  {
+    id: "pagos",
+    rotulo: "Pagos aos pros",
+    cor: "text-emerald-300",
+    vazio: "Ainda não se pagou a nenhum profissional.",
+  },
+];
+
+function pertence(t: Trabalho, s: Separador): boolean {
+  switch (s) {
+    case "por_receber":
+      return ladoDoCliente(t) === "por_receber";
+    case "recebidos":
+      return ladoDoCliente(t) === "recebido";
+    case "por_pagar":
+      return ladoDoProfissional(t) === "por_pagar";
+    case "pagos":
+      return ladoDoProfissional(t) === "pago";
+  }
+}
+
+/**
+ * A SOMA É DO DINHEIRO QUE PASSA PELA CLYON.
+ *
+ * Do lado do cliente conta o que ele paga; do lado do profissional, o que ele
+ * recebe. O dinheiro em mão fica de fora das duas: está na lista, para se
+ * saber que existe, mas não entrou nem saiu da conta — e uma soma que não bate
+ * com o extracto é uma soma em que se deixa de confiar.
+ */
+function somaDe(linhas: Trabalho[], s: Separador): number {
+  const doCliente = s === "por_receber" || s === "recebidos";
+  const soma = linhas
+    .filter((t) => !pagouAoProfissional(t))
+    .reduce((n, t) => n + (doCliente ? t.clientePaga : t.profissionalRecebe), 0);
+  return Math.round(soma * 100) / 100;
+}
+
+/** Os feitos, do mais recente para trás; o dinheiro em mão, que não tem data, no fim. */
+function porData(s: Separador) {
+  const quando = (t: Trabalho) =>
+    (s === "recebidos" ? t.clientePagouEm : s === "pagos" ? t.pagoEm : null) ?? "";
+  return (a: Trabalho, b: Trabalho) => quando(b).localeCompare(quando(a));
+}
+
+const POR_PAGINA = 40;
+
 function GestorDoDinheiro({
   trabalhos,
   token,
@@ -177,10 +261,11 @@ function GestorDoDinheiro({
   onMudou: () => void;
 }) {
   const [busca, setBusca] = useState("");
+  const [separador, setSeparador] = useState<Separador>("por_receber");
   const [ocupado, setOcupado] = useState<number | null>(null);
-  const [aRegistar, setARegistar] = useState<number | null>(null);
+  const [aberto, setAberto] = useState<number | null>(null);
   const [erro, setErro] = useState("");
-  const [verFechados, setVerFechados] = useState(false);
+  const [quantos, setQuantos] = useState(POR_PAGINA);
 
   const q = busca.trim().toLowerCase();
   const filtrados = q
@@ -191,10 +276,44 @@ function GestorDoDinheiro({
       )
     : trabalhos;
 
-  const montes = FASES.map((f) => ({
-    fase: f,
-    linhas: filtrados.filter((t) => t.fase === f.id),
-  })).filter((m) => m.linhas.length > 0);
+  const contas = SEPARADORES.map((s) => {
+    const linhas = filtrados.filter((t) => pertence(t, s.id));
+    return { ...s, linhas, soma: somaDe(linhas, s.id) };
+  });
+  const actual = contas.find((c) => c.id === separador) ?? contas[0];
+
+  /*
+   * POR PAGAR: primeiro o que se pode pagar JÁ.
+   *
+   * Um trabalho por pagar nem sempre está pronto — pagar antes de o cliente
+   * pagar é adiantar dinheiro da CLYON. Por isso a lista parte-se em duas, e
+   * a de cima é a que tem botão.
+   */
+  const grupos =
+    separador === "por_pagar"
+      ? [
+          { titulo: "Prontos a pagar", linhas: actual.linhas.filter(prontoAPagar) },
+          {
+            titulo: "À espera do cliente — pagar ou confirmar",
+            linhas: actual.linhas.filter((t) => !prontoAPagar(t)),
+          },
+        ]
+      : [
+          {
+            titulo: "",
+            linhas:
+              separador === "recebidos" || separador === "pagos"
+                ? [...actual.linhas].sort(porData(separador))
+                : actual.linhas,
+          },
+        ];
+
+  function escolher(s: Separador) {
+    setSeparador(s);
+    setAberto(null);
+    setErro("");
+    setQuantos(POR_PAGINA);
+  }
 
   async function agir(t: Trabalho, url: string, corpo: Record<string, unknown>) {
     if (!token) return;
@@ -211,7 +330,7 @@ function GestorDoDinheiro({
         setErro([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível.");
         return;
       }
-      setARegistar(null);
+      setAberto(null);
       onMudou();
     } catch {
       setErro("Erro de rede.");
@@ -219,6 +338,8 @@ function GestorDoDinheiro({
       setOcupado(null);
     }
   }
+
+  let mostradas = 0;
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
@@ -228,70 +349,107 @@ function GestorDoDinheiro({
         </p>
         <input
           value={busca}
-          onChange={(e) => setBusca(e.target.value)}
+          onChange={(e) => {
+            setBusca(e.target.value);
+            setQuantos(POR_PAGINA);
+          }}
           placeholder="cliente, telemóvel, profissional ou #pedido"
           className="w-full max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600"
         />
       </div>
 
-      {erro && <p className="mt-2 text-xs text-red-300">{erro}</p>}
-
-      {montes.length === 0 && (
-        <p className="mt-3 text-xs text-slate-500">
-          {q ? "Nada encontrado." : "Ainda não há trabalhos fechados."}
-        </p>
-      )}
-
-      {montes.map(({ fase, linhas }) => {
-        const escondido = fase.id === "fechado" && !verFechados && !q;
-        const soma = linhas.reduce(
-          (s, t) => s + (fase.id === "a_pagar" ? t.profissionalRecebe : t.clientePaga),
-          0,
-        );
-        return (
-          <div key={fase.id} className="mt-4">
+      {/*
+        OS QUATRO SEPARADORES, as duas pontas lado a lado: o cliente à
+        esquerda, o profissional à direita. O número e o total estão no próprio
+        separador — é a pergunta que se faz antes de abrir qualquer um.
+      */}
+      <div role="tablist" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {contas.map((c) => {
+          const activo = c.id === separador;
+          return (
             <button
-              onClick={() => fase.id === "fechado" && setVerFechados((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 text-left"
+              key={c.id}
+              role="tab"
+              aria-selected={activo}
+              onClick={() => escolher(c.id)}
+              className={`rounded-lg border px-3 py-2 text-left transition ${
+                activo
+                  ? "border-cyan-500/60 bg-cyan-500/10"
+                  : "border-slate-800 bg-slate-900/60 hover:border-slate-600"
+              }`}
             >
-              <span className={`text-xs font-semibold uppercase tracking-wide ${fase.cor}`}>
-                {fase.rotulo} · {linhas.length}
+              <span className={`block text-[11px] font-semibold uppercase tracking-wide ${c.cor}`}>
+                {c.rotulo} · {c.linhas.length}
               </span>
-              <span className="text-xs tabular-nums text-slate-400">
-                {euros(Math.round(soma * 100) / 100)}
-                {escondido ? " · mostrar" : ""}
+              <span className="mt-0.5 block text-sm font-bold tabular-nums text-white">
+                {euros(c.soma)}
               </span>
             </button>
-            {!escondido && (
-              <div className="mt-2 space-y-2">
-                {linhas.map((t) => (
-                  <Linha
-                    key={t.negociacaoId}
-                    t={t}
-                    ocupado={ocupado === t.negociacaoId}
-                    aRegistar={aRegistar === t.negociacaoId}
-                    onRegistar={() =>
-                      setARegistar((a) => (a === t.negociacaoId ? null : t.negociacaoId))
-                    }
-                    onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo })}
-                    onPaguei={() => void agir(t, "/api/admin/carteiras", {})}
-                  />
-                ))}
-              </div>
+          );
+        })}
+      </div>
+
+      {erro && !aberto && <p className="mt-2 text-xs text-red-300">{erro}</p>}
+
+      {actual.linhas.length === 0 && (
+        <p className="mt-3 text-xs text-slate-500">{q ? "Nada encontrado." : actual.vazio}</p>
+      )}
+
+      {grupos.map((g) => {
+        if (g.linhas.length === 0) return null;
+        const resto = Math.max(0, quantos - mostradas);
+        const aMostrar = g.linhas.slice(0, resto);
+        mostradas += aMostrar.length;
+        return (
+          <div key={g.titulo || "todos"} className="mt-4">
+            {g.titulo && (
+              <p className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <span>
+                  {g.titulo} · {g.linhas.length}
+                </span>
+                <span className="tabular-nums">{euros(somaDe(g.linhas, separador))}</span>
+              </p>
             )}
+            <div className="mt-2 space-y-2">
+              {aMostrar.map((t) => (
+                <Linha
+                  key={t.negociacaoId}
+                  t={t}
+                  ocupado={ocupado === t.negociacaoId}
+                  aberto={aberto === t.negociacaoId}
+                  erro={aberto === t.negociacaoId ? erro : ""}
+                  onAbrir={() => {
+                    setErro("");
+                    setAberto((a) => (a === t.negociacaoId ? null : t.negociacaoId));
+                  }}
+                  onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo })}
+                  onPaguei={() =>
+                    void agir(t, "/api/admin/pagamentos/pago-ao-profissional", {})
+                  }
+                  onCorrigir={(valor, motivo) =>
+                    void agir(t, "/api/admin/negociacoes/valor", {
+                      valor,
+                      motivo: motivo || undefined,
+                    })
+                  }
+                />
+              ))}
+            </div>
           </div>
         );
       })}
+
+      {actual.linhas.length > quantos && (
+        <button
+          onClick={() => setQuantos((n) => n + POR_PAGINA)}
+          className="mt-3 w-full rounded-lg border border-slate-700 py-2 text-xs font-semibold text-slate-300 hover:border-slate-500"
+        >
+          Mostrar mais ({actual.linhas.length - quantos})
+        </button>
+      )}
     </div>
   );
 }
-
-const FASES: Array<{ id: string; rotulo: string; cor: string }> = [
-  { id: "a_receber", rotulo: "Por receber do cliente", cor: "text-amber-300" },
-  { id: "a_pagar", rotulo: "Por pagar ao profissional", cor: "text-cyan-300" },
-  { id: "a_decorrer", rotulo: "A decorrer", cor: "text-slate-400" },
-  { id: "fechado", rotulo: "Fechado", cor: "text-emerald-300" },
-];
 
 /** As três formas de dizer o que aconteceu quando não foi pelo euPago. */
 const A_MAO: Array<{ id: string; rotulo: string; ajuda: string }> = [
@@ -307,34 +465,60 @@ const A_MAO: Array<{ id: string; rotulo: string; ajuda: string }> = [
 function Linha({
   t,
   ocupado,
-  aRegistar,
-  onRegistar,
+  aberto,
+  erro,
+  onAbrir,
   onEntrou,
   onPaguei,
+  onCorrigir,
 }: {
   t: Trabalho;
   ocupado: boolean;
-  aRegistar: boolean;
-  onRegistar: () => void;
+  aberto: boolean;
+  erro: string;
+  onAbrir: () => void;
   onEntrou: (metodo: string) => void;
   onPaguei: () => void;
+  onCorrigir: (valor: number, motivo: string) => void;
 }) {
-  const emMao = t.formaDePagamento === "dinheiro" || t.comoEntrou === "ao_profissional";
+  const emMao = pagouAoProfissional(t);
+  const [comoEntrou, setComoEntrou] = useState(false);
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className="text-sm font-semibold text-white">#{t.pedidoId}</span>
-        <span className="text-sm text-slate-200">{t.cliente ?? "—"}</span>
-        {t.telefoneDoCliente && (
-          <a
-            href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
-            className="font-mono text-xs tabular-nums text-cyan-400 hover:underline"
-          >
-            {t.telefoneDoCliente}
-          </a>
-        )}
-        {t.cidade && <span className="text-xs text-slate-500">{t.cidade}</span>}
+    <div
+      className={`rounded-lg border bg-slate-900/60 p-3 ${
+        aberto ? "border-cyan-600/50" : "border-slate-800"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="text-sm font-semibold text-white">#{t.pedidoId}</span>
+          <span className="text-sm text-slate-200">{t.cliente ?? "—"}</span>
+          {t.telefoneDoCliente && (
+            <a
+              href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
+              className="font-mono text-xs tabular-nums text-cyan-400 hover:underline"
+            >
+              {t.telefoneDoCliente}
+            </a>
+          )}
+          {t.cidade && <span className="text-xs text-slate-500">{t.cidade}</span>}
+          <span className="text-xs text-slate-500">· trabalho {euros(t.valorAcordado)}</span>
+        </div>
+        <button
+          onClick={() => {
+            setComoEntrou(false);
+            onAbrir();
+          }}
+          aria-expanded={aberto}
+          className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-200"
+        >
+          {aberto ? "Fechar" : "Abrir"}
+          <ChevronDown
+            className={`h-3 w-3 transition ${aberto ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
+        </button>
       </div>
 
       {/*
@@ -366,8 +550,12 @@ function Linha({
           <span className="text-emerald-300">
             pago {euros(t.profissionalRecebe)} · {DIA(t.pagoEm)}
           </span>
-        ) : t.confirmadoEm ? (
+        ) : prontoAPagar(t) ? (
           <span className="text-cyan-300">a receber {euros(t.profissionalRecebe)}</span>
+        ) : !t.clientePagouEm ? (
+          <span className="text-slate-500">
+            {euros(t.profissionalRecebe)} — à espera que o cliente pague
+          </span>
         ) : (
           <span className="text-slate-500">
             {euros(t.profissionalRecebe)} — à espera da confirmação do cliente
@@ -375,58 +563,207 @@ function Linha({
         )}
       </p>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {/*
-          REGISTAR O QUE ENTROU FORA DO euPAGO.
+      {/*
+        O TRABALHO ABERTO: cada ponta anota-se por si — 25-09-2026.
 
-          ⚠️ Isto DESBLOQUEIA DINHEIRO: um registo aqui move o trabalho de «por
-          cobrar» para «disponível» na carteira do profissional. Por isso é um
-          segundo clique, e cada opção diz o que quer dizer.
-        */}
-        {!emMao && !t.clientePagouEm && (
-          <button
-            onClick={onRegistar}
-            disabled={ocupado}
-            className="rounded-lg border border-amber-600/60 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
-          >
-            {aRegistar ? "Como entrou?" : "Já recebemos"}
-          </button>
-        )}
+        *«Tem trabalhos que já recebemos mas ainda não pagámos os pros, e tem
+        pedidos que ainda não pagaram mas já pagámos os pros.»* As duas pontas
+        não andam por ordem, e o ecrã não as obriga a andar: o cliente anota-se
+        sem olhar ao profissional, e o profissional sem esperar pelo cliente.
+      */}
+      {aberto && (
+        <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
+          {erro && <p className="text-[11px] text-red-300">{erro}</p>}
 
-        {!emMao && t.clientePagouEm && t.confirmadoEm && !t.pagoEm && (
-          <button
-            onClick={onPaguei}
-            disabled={ocupado}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
-          >
-            {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
-            Já paguei {euros(t.profissionalRecebe)}
-          </button>
-        )}
-      </div>
-
-      {aRegistar && (
-        <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
-          <p className="text-[11px] leading-relaxed text-amber-200/90">
-            Como é que entraram os {euros(t.clientePaga)}? Isto desbloqueia o dinheiro do
-            profissional — só se regista o que já aconteceu.
-          </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {A_MAO.map((m) => (
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              O cliente pagou-nos?
+            </p>
+            {emMao ? (
+              <p className="mt-1 text-[11px] text-slate-400">
+                Pago em mão ao profissional — não passa pela CLYON.
+              </p>
+            ) : t.clientePagouEm ? (
+              <p className="mt-1 text-[11px] text-emerald-300">
+                Sim — {euros(t.clientePaga)} por {nomeDoRecebimento(t.comoEntrou)}
+                {DIA(t.clientePagouEm) ? `, a ${DIA(t.clientePagouEm)}` : ""}.
+              </p>
+            ) : !comoEntrou ? (
+              /*
+                ⚠️ Isto DESBLOQUEIA DINHEIRO: um registo aqui move o trabalho de
+                «por cobrar» para «disponível» na carteira do profissional. Por
+                isso é um segundo clique, e cada opção diz o que quer dizer.
+              */
               <button
-                key={m.id}
-                onClick={() => onEntrou(m.id)}
+                onClick={() => setComoEntrou(true)}
                 disabled={ocupado}
-                title={m.ajuda}
-                className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
+                className="mt-1 rounded-lg border border-amber-600/60 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
               >
-                {m.rotulo}
+                Já recebemos {euros(t.clientePaga)}
               </button>
-            ))}
-          </div>
+            ) : (
+              <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
+                <p className="text-[11px] leading-relaxed text-amber-200/90">
+                  Como é que entraram os {euros(t.clientePaga)}? Isto desbloqueia o dinheiro do
+                  profissional — só se regista o que já aconteceu.
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {A_MAO.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => onEntrou(m.id)}
+                      disabled={ocupado}
+                      title={m.ajuda}
+                      className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
+                    >
+                      {m.rotulo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Já pagámos a {t.profissional}?
+            </p>
+            {emMao ? (
+              <p className="mt-1 text-[11px] text-slate-400">
+                Recebeu do cliente, em mão — não há nada a transferir.
+              </p>
+            ) : t.pagoEm ? (
+              <p className="mt-1 text-[11px] text-emerald-300">
+                Sim — {euros(t.profissionalRecebe)} a {DIA(t.pagoEm)}.
+              </p>
+            ) : (
+              <>
+                {!prontoAPagar(t) && (
+                  <p className="mt-1 text-[11px] text-amber-300">
+                    {t.clientePagouEm
+                      ? "O cliente ainda não confirmou o trabalho."
+                      : "O cliente ainda não pagou."}{" "}
+                    Marque só se a transferência já saiu — fica no histórico como adiantado.
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Marcar como pago a ${t.profissional}?\n\n` +
+                          `${euros(t.profissionalRecebe)} pelo pedido #${t.pedidoId}.\n\n` +
+                          "Faça a transferência PRIMEIRO no banco. Isto só regista que ela saiu.",
+                      )
+                    )
+                      onPaguei();
+                  }}
+                  disabled={ocupado}
+                  className="mt-1 flex items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+                >
+                  {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+                  Já pagámos {euros(t.profissionalRecebe)}
+                </button>
+              </>
+            )}
+          </section>
+
+          <section>
+            <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <Pencil className="h-3 w-3" aria-hidden="true" />
+              Corrigir o valor
+            </p>
+            <CorrigirValor t={t} ocupado={ocupado} onGravar={onCorrigir} />
+          </section>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * CORRIGIR O VALOR FINAL, sem sair deste ecrã — 25-09-2026.
+ *
+ * Escreve-se o valor do TRABALHO, sem taxas, e a conta refaz-se à frente de
+ * quem escreve: o que o cliente paga e o que o profissional recebe. É a mesma
+ * rota das Carteiras e da Agenda, e é ela que decide — o que aqui se mostra é
+ * só a pré-visualização, com as taxas desta negociação.
+ *
+ * Um trabalho já pago ao profissional pede motivo: depois da transferência o
+ * número é um facto contabilístico, e muda-se, mas não em silêncio.
+ */
+function CorrigirValor({
+  t,
+  ocupado,
+  onGravar,
+}: {
+  t: Trabalho;
+  ocupado: boolean;
+  onGravar: (valor: number, motivo: string) => void;
+}) {
+  const [texto, setTexto] = useState(t.valorAcordado.toFixed(2).replace(".", ","));
+  const [motivo, setMotivo] = useState("");
+
+  const valor = Number(texto.replace(/\s/g, "").replace(",", "."));
+  const valido = Number.isFinite(valor) && valor > 0;
+  const igual = valido && Math.abs(valor - t.valorAcordado) < 0.005;
+  const faltaMotivo = Boolean(t.pagoEm) && !motivo.trim();
+  const emMao = pagouAoProfissional(t);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valido && !igual && !faltaMotivo) onGravar(Math.round(valor * 100) / 100, motivo.trim());
+      }}
+      className="mt-2 space-y-2 rounded-lg border border-slate-700 bg-slate-950/60 p-2.5"
+    >
+      <label className="block text-[11px] text-slate-400">
+        Valor do trabalho, sem taxas (era {euros(t.valorAcordado)})
+        <input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          inputMode="decimal"
+          className="mt-1 block w-36 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-sm tabular-nums text-white"
+        />
+      </label>
+
+      {valido && (
+        <p className="text-[11px] text-slate-300">
+          O cliente passa a pagar{" "}
+          <strong className="text-white">{euros(contaDoCliente(valor, t.taxas).total)}</strong>{" "}
+          (era {euros(t.clientePaga)}) · {t.profissional} passa a receber{" "}
+          <strong className="text-white">{euros(quantoOProfissionalRecebe(valor, t.taxas))}</strong>{" "}
+          (era {euros(t.profissionalRecebe)})
+        </p>
+      )}
+
+      {!emMao && t.clientePagouEm && (
+        <p className="text-[11px] text-amber-300">
+          O cliente já pagou {euros(t.clientePaga)}. Isto não mexe no que entrou — uma diferença
+          acerta-se com ele à parte.
+        </p>
+      )}
+
+      <label className="block text-[11px] text-slate-400">
+        Motivo {t.pagoEm ? "(obrigatório — o profissional já foi pago)" : "(opcional, fica no histórico)"}
+        <input
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          maxLength={300}
+          placeholder="ex.: orçamento fechado no local"
+          className="mt-1 block w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white placeholder:text-slate-600"
+        />
+      </label>
+
+      <button
+        type="submit"
+        disabled={ocupado || !valido || igual || faltaMotivo}
+        className="flex items-center gap-1.5 rounded-lg bg-cyan-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600 disabled:opacity-40"
+      >
+        {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+        Gravar {valido ? euros(Math.round(valor * 100) / 100) : ""}
+      </button>
+    </form>
   );
 }
 

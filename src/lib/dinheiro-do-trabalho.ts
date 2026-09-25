@@ -137,3 +137,42 @@ export const FASES_POR_ORDEM: FaseDoDinheiro[] = [
   "a_decorrer",
   "fechado",
 ];
+
+/**
+ * AS DUAS PONTAS, CADA UMA COM A SUA PERGUNTA — 25-09-2026.
+ *
+ * *«Temos que separar os pagamentos entre os já recebidos, por receber, pagos
+ * ao pro e por pagar aos pros.»*
+ *
+ * A fase junta as duas pontas numa só resposta, e isso esconde metade: um
+ * trabalho «por receber» também está por pagar ao profissional, e não aparecia
+ * nessa lista. Quem tem o extracto do banco aberto faz UMA pergunta de cada
+ * vez — «o que entrou?», ou «o que saiu?» —, e cada trabalho responde às duas.
+ *
+ * O DINHEIRO EM MÃO CONTA COMO FEITO dos dois lados, pela razão de sempre: o
+ * cliente pagou ao profissional, e nenhuma das pontas passa pela CLYON. Fica
+ * nas listas de feitos, dito como é, em vez de inchar as de pendentes com
+ * dinheiro que nunca devia ter passado por cá.
+ */
+export type LadoDoCliente = "por_receber" | "recebido";
+export type LadoDoProfissional = "por_pagar" | "pago";
+
+export function ladoDoCliente(t: TrabalhoParaGerir): LadoDoCliente {
+  if (pagouAoProfissional(t)) return "recebido";
+  return t.clientePagouEm != null ? "recebido" : "por_receber";
+}
+
+export function ladoDoProfissional(t: TrabalhoParaGerir): LadoDoProfissional {
+  if (pagouAoProfissional(t)) return "pago";
+  return t.pagoEm != null ? "pago" : "por_pagar";
+}
+
+/**
+ * Pode-se transferir JÁ? Recebemos, e o cliente confirmou o trabalho.
+ *
+ * Um trabalho por pagar nem sempre está pronto a pagar — e pagar antes de o
+ * dinheiro entrar é adiantar dinheiro da CLYON. É a mesma regra da fase.
+ */
+export function prontoAPagar(t: TrabalhoParaGerir): boolean {
+  return faseDoDinheiro(t) === "a_pagar";
+}

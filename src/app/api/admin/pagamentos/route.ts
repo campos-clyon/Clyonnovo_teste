@@ -4,7 +4,12 @@ import { configuracaoDoEupago, podeCobrar } from "@/lib/eupago";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
 import { getPool } from "@/lib/db";
 import { faseDoDinheiro } from "@/lib/dinheiro-do-trabalho";
-import { quantoOProfissionalRecebe, taxasDaNegociacao, contaDoCliente } from "@/lib/taxas-plataforma";
+import {
+  quantoOProfissionalRecebe,
+  taxasDaNegociacao,
+  contaDoCliente,
+  type Taxas,
+} from "@/lib/taxas-plataforma";
 import {
   avisosPorAplicar,
   estadoDoWebhook,
@@ -36,6 +41,10 @@ export type TrabalhoParaGerir = {
   cidade: string | null;
   servico: string | null;
   profissional: string;
+  /** O valor do trabalho, sem taxas — o número que se corrige. */
+  valorAcordado: number;
+  /** As taxas desta negociação, para o ecrã refazer a conta ao corrigir. */
+  taxas: Taxas;
   /** O que o cliente paga, já com a taxa e o imposto de quem factura. */
   clientePaga: number;
   /** O que o profissional recebe, líquido. */
@@ -96,6 +105,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       cidade: (l.city as string) ?? null,
       servico: (l.serviceType as string) ?? null,
       profissional: String(l.profissional ?? ""),
+      valorAcordado: acordado,
+      taxas,
       clientePaga: contaDoCliente(acordado, taxas).total,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       ...base,

@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const [linhas] = (await pool.execute(
-      `SELECT n.pedidoId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm,
+      `SELECT n.pedidoId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
               n.taxaCliente, n.taxaProfissional,
               p.name AS profissionalNome, p.regimeIva
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
         taxaProfissional: string | null;
         confirmadoEm: Date | null;
         pagoEm: Date | null;
+        formaDePagamento: string | null;
         profissionalNome: string;
         regimeIva: string | null;
       }>,
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
      * de pagamento primeiro.
      */
     if (
-      lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento) === "dinheiro" &&
+      lerForma(linha.formaDePagamento) === "dinheiro" &&
       excedeONumerario(novo)
     ) {
       return NextResponse.json(

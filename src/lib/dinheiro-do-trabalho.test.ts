@@ -5,8 +5,11 @@ import {
   RECEBIMENTOS_A_MAO,
   eRecebimentoAMao,
   faseDoDinheiro,
+  ladoDoCliente,
+  ladoDoProfissional,
   nomeDoRecebimento,
   pagouAoProfissional,
+  prontoAPagar,
 } from "./dinheiro-do-trabalho";
 
 /**
@@ -224,5 +227,82 @@ describe("os Pagamentos têm secção própria", () => {
   it("e só num sítio — dois painéis eram dois ciclos a bater na mesma rota", () => {
     const montagens = ECRA.match(/<AdminPagamentosPanel \/>/g) ?? [];
     expect(montagens.length).toBe(1);
+  });
+});
+
+describe("as duas pontas, cada uma com a sua lista", () => {
+  /*
+   * «Separar os pagamentos entre os já recebidos, por receber, pagos ao pro e
+   * por pagar aos pros.» — 25-09-2026. Cada trabalho responde às duas
+   * perguntas, e aparece numa lista de cada lado.
+   */
+  it("ninguém pagou: por receber, e também por pagar", () => {
+    expect(ladoDoCliente({})).toBe("por_receber");
+    expect(ladoDoProfissional({})).toBe("por_pagar");
+    expect(prontoAPagar({})).toBe(false);
+  });
+
+  it("recebido mas não confirmado: por pagar, e ainda não pronto", () => {
+    const t = { clientePagouEm: "2026-09-22" };
+    expect(ladoDoCliente(t)).toBe("recebido");
+    expect(ladoDoProfissional(t)).toBe("por_pagar");
+    expect(prontoAPagar(t)).toBe(false);
+  });
+
+  it("recebido e confirmado: pronto a pagar", () => {
+    const t = { clientePagouEm: "2026-09-22", confirmadoEm: "2026-09-23" };
+    expect(prontoAPagar(t)).toBe(true);
+    expect(ladoDoProfissional({ ...t, pagoEm: "2026-09-24" })).toBe("pago");
+  });
+
+  /*
+   * Pagar sem o dinheiro ter entrado é adiantar dinheiro da CLYON: um
+   * trabalho confirmado mas por receber não está pronto a pagar.
+   */
+  it("confirmado mas por receber não se paga", () => {
+    expect(prontoAPagar({ confirmadoEm: "2026-09-23" })).toBe(false);
+  });
+
+  it("em mão, os dois lados estão feitos — nada passou pela CLYON", () => {
+    const t = { formaDePagamento: "dinheiro" };
+    expect(ladoDoCliente(t)).toBe("recebido");
+    expect(ladoDoProfissional(t)).toBe("pago");
+    expect(prontoAPagar(t)).toBe(false);
+  });
+});
+
+/**
+ * «Tem pedidos que ainda não pagaram mas já pagámos os pros.» — 25-09-2026.
+ *
+ * O ecrã dos Pagamentos anota o que já aconteceu, e as duas pontas não andam
+ * por ordem. A rota que marca o profissional como pago não pode exigir que o
+ * cliente tenha pago nem confirmado — mas tem de o deixar escrito.
+ */
+describe("marcar o profissional como pago, sem esperar pelo cliente", () => {
+  const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+  const semComentarios = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const ROTA = semComentarios(ler("src/app/api/admin/pagamentos/pago-ao-profissional/route.ts"));
+  const PAINEL = semComentarios(ler("src/components/admin/AdminPagamentosPanel.tsx"));
+
+  it("é uma porta de administrador", () => {
+    expect(ROTA).toContain("requireAdmin(req)");
+  });
+
+  it("não exige confirmação — e não paga duas vezes", () => {
+    const update = ROTA.slice(ROTA.indexOf("UPDATE negociacoes SET pagoEm"));
+    expect(update).toContain("pagoEm IS NULL");
+    expect(update.slice(0, 200)).not.toContain("confirmadoEm IS NOT NULL");
+  });
+
+  it("recusa o dinheiro em mão, e deixa escrito quando foi adiantado", () => {
+    expect(ROTA).toContain('lerForma(l.formaDePagamento) === "dinheiro"');
+    expect(ROTA).toContain("ADIANTADO");
+    expect(ROTA).toContain("appendOrderHistory");
+  });
+
+  it("o painel usa esta rota, e pede confirmação antes", () => {
+    expect(PAINEL).toContain("/api/admin/pagamentos/pago-ao-profissional");
+    expect(PAINEL).toContain("window.confirm(");
   });
 });
