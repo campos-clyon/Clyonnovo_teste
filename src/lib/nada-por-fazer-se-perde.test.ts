@@ -62,7 +62,8 @@ describe("quem procura procura em tudo", () => {
   });
 
   it("e o painel pede-a assim que alguém escreve na caixa", () => {
-    expect(MESA).toContain("if (aProcurar && !temTudo && token) void carregar(true, true);");
+    // O filtro por colaborador também a pede — por isso o `(aProcurar ...)`.
+    expect(MESA).toMatch(/if \(\(?aProcurar[^)]*\)? && !temTudo && token\) void carregar\(true, true\);/);
   });
 
   it("uma vez por sessão, e não a cada tecla", () => {

@@ -1664,6 +1664,9 @@ export async function pedidosPorPromover(limite = 20): Promise<
     estimateTotal: string | null;
     valorDesejadoCliente: string | null;
     urgency: string | null;
+    /** O colaborador responsável — ver `assumirPedidoSeLivre`. Serve o filtro da mesa. */
+    assignedToId: number | null;
+    assignedToName: string | null;
     createdAt: Date;
   }>
 > {
@@ -1681,7 +1684,9 @@ export async function pedidosPorPromover(limite = 20): Promise<
             -- morada ou regiao". Este bloco e o maior da mesa, e era o unico
             -- com busca propria — que nao procurava por nenhuma destas.
             o.contactPhone, o.address, o.postalCode,
-            o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt
+            o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt,
+            -- O responsavel, para a mesa filtrar por colaborador.
+            o.assignedToId, o.assignedToName
        FROM simulatorOrders o
        LEFT JOIN negociacoes n ON n.pedidoId = o.id
       WHERE n.id IS NULL
@@ -1790,6 +1795,13 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
      * que fica por ler é sempre a que tinha a informação.
      */
     notasInternas: string | null;
+    /**
+     * O colaborador responsável — quem aceitou o pedido ou agiu nele primeiro
+     * (ver `assumirPedidoSeLivre`). É por aqui que a mesa filtra por
+     * colaborador. Null quando ninguém o assumiu: o admin nunca assume.
+     */
+    assignedToId: number | null;
+    assignedToName: string | null;
     /** Quando o admin abriu este pedido DEPOIS de concluído. Null = por ver. */
     concluidoVistoEm: Date | null;
     linkExpiraEm: Date | null;
@@ -1878,6 +1890,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- faltava era chegar aqui: uma nota que so se le abrindo o pedido
             -- um a um nao serve para decidir o que fazer a seguir.
             o.notasInternas,
+            -- O RESPONSAVEL, para a mesa filtrar por colaborador.
+            o.assignedToId, o.assignedToName,
             -- A validade do link do cliente serve de MARCA DE VERSAO.
             --
             -- Cada token novo poe uma data nova (agora + 30 dias), por isso
@@ -1950,6 +1964,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     origem: (p.origem as string) ?? null,
     status: (p.status as string) ?? null,
     notasInternas: (p.notasInternas as string) ?? null,
+    assignedToId: p.assignedToId ? Number(p.assignedToId) : null,
+    assignedToName: (p.assignedToName as string) ?? null,
     concluidoVistoEm: (p.concluidoVistoEm as Date) ?? null,
     /* A marca de versão do link do cliente — ver o comentário na consulta. */
     linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
