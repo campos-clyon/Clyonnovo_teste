@@ -360,9 +360,6 @@ type Pedido = {
    * fica por ler é sempre a que tinha a informação.
    */
   notasInternas?: string | null;
-  /** O colaborador responsável (quem assumiu o pedido). Null = ninguém. */
-  assignedToId?: number | null;
-  assignedToName?: string | null;
   /** Quando o admin abriu o pedido depois de concluído. Null = por ver. */
   concluidoVistoEm: string | null;
   /**
@@ -422,8 +419,6 @@ type PorPromover = {
   postalCode: string | null;
   estimateTotal: string | null;
   urgency: string | null;
-  assignedToId?: number | null;
-  assignedToName?: string | null;
   createdAt: string;
 };
 
@@ -776,15 +771,6 @@ export default function AdminNegociacoesPanel({
    * razão, um bloco fechado abre-se quando tem resultados.
    */
   const [busca, setBusca] = useState("");
-  /*
-   * O FILTRO POR COLABORADOR: "" é toda a gente, "nenhum" são os pedidos que
-   * ninguém assumiu, e um número é o id do responsável (`assignedToId`).
-   *
-   * Manda sobre a mesa como a busca manda — os cartões contam só o que ele
-   * deixa passar — e, como ela, traz a mesa inteira: os pedidos de um
-   * colaborador não são só os sessenta mais recentes.
-   */
-  const [colaborador, setColaborador] = useState("");
   /*
    * Já foi buscar a mesa inteira? Uma vez por sessão chega: procura-se várias
    * vezes seguidas, e ir buscar quinhentos pedidos a cada tecla era pôr o
@@ -1599,59 +1585,25 @@ export default function AdminNegociacoesPanel({
    * Uma vez por sessão, e não a cada tecla: quem procura escreve, apaga e
    * escreve outra vez, e cada uma dessas teclas seria uma viagem à base.
    */
-  const aFiltrarColaborador = colaborador !== "";
-
   useEffect(() => {
-    if ((aProcurar || aFiltrarColaborador) && !temTudo && token) void carregar(true, true);
-  }, [aProcurar, aFiltrarColaborador, temTudo, token, carregar]);
-
-  /*
-   * Os colaboradores que o seletor oferece: os que são responsáveis por algum
-   * pedido carregado. Tirados dos próprios pedidos e não da lista de contas —
-   * um colaborador desactivado continua dono dos trabalhos que fez, e é
-   * precisamente esses que se quer poder ver.
-   */
-  const colaboradoresNaMesa = useMemo(() => {
-    const nomes = new Map<number, string>();
-    for (const p of [...pedidos, ...porPromover]) {
-      if (p.assignedToId && !nomes.has(p.assignedToId)) {
-        nomes.set(p.assignedToId, p.assignedToName || `Colaborador #${p.assignedToId}`);
-      }
-    }
-    return [...nomes.entries()]
-      .map(([id, nome]) => ({ id, nome }))
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
-  }, [pedidos, porPromover]);
-
-  const doColaborador = useCallback(
-    (p: { assignedToId?: number | null }) =>
-      colaborador === ""
-        ? true
-        : colaborador === "nenhum"
-          ? !p.assignedToId
-          : p.assignedToId === Number(colaborador),
-    [colaborador],
-  );
+    if (aProcurar && !temTudo && token) void carregar(true, true);
+  }, [aProcurar, temTudo, token, carregar]);
 
   const pedidosNaMesa = useMemo(
     () =>
-      pedidos.filter(
-        (p) =>
-          doColaborador(p) &&
-          (!aProcurar ||
+      aProcurar
+        ? pedidos.filter((p) =>
             combinaComABusca(
               { ...p, profissionais: p.negociacoes.map((n) => n.profissionalNome) },
               busca,
-            )),
-      ),
-    [pedidos, busca, aProcurar, doColaborador],
+            ),
+          )
+        : pedidos,
+    [pedidos, busca, aProcurar],
   );
   const porPromoverNaMesa = useMemo(
-    () =>
-      porPromover.filter(
-        (p) => doColaborador(p) && (!aProcurar || combinaComABusca(p, busca)),
-      ),
-    [porPromover, busca, aProcurar, doColaborador],
+    () => (aProcurar ? porPromover.filter((p) => combinaComABusca(p, busca)) : porPromover),
+    [porPromover, busca, aProcurar],
   );
   const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;
 
@@ -2103,14 +2055,6 @@ export default function AdminNegociacoesPanel({
               <span className="shrink-0 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
                 {ORIGEM[p.origem ?? "simulador"] ?? "Simulador"}
               </span>
-              {p.assignedToName && (
-                <span
-                  className="shrink-0 rounded border border-violet-500/40 px-1.5 py-0.5 text-[10px] font-semibold text-violet-300"
-                  title="Colaborador responsável"
-                >
-                  {p.assignedToName}
-                </span>
-              )}
               <span className="truncate">
                 {p.city ?? "—"} · {p.serviceType ?? "—"}
                 {!p.contactEmail && " · sem email"}
@@ -3189,8 +3133,7 @@ export default function AdminNegociacoesPanel({
         uma lista que encolhe sem explicação lê-se como uma avaria.
       */}
       <div className="mb-4">
-        <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex-1">
+        <div className="relative">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
             aria-hidden="true"
@@ -3213,59 +3156,13 @@ export default function AdminNegociacoesPanel({
             </button>
           )}
         </div>
-          {/*
-            O FILTRO POR COLABORADOR, ao lado da busca e com o mesmo peso: os
-            dois dizem que pedidos entram na mesa, e os cartões contam o resto.
-          */}
-          <select
-            value={colaborador}
-            onChange={(e) => setColaborador(e.target.value)}
-            aria-label="Filtrar por colaborador"
-            className={`rounded-xl border bg-slate-950 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 sm:w-60 ${
-              aFiltrarColaborador ? "border-cyan-500 text-cyan-200" : "border-slate-700 text-slate-300"
-            }`}
-          >
-            <option value="">Todos os colaboradores</option>
-            <option value="nenhum">Sem responsável</option>
-            {colaboradoresNaMesa.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.nome}
-              </option>
-            ))}
-            {/* Um id escolhido que deixou de vir nos dados não some do seletor. */}
-            {aFiltrarColaborador &&
-              colaborador !== "nenhum" &&
-              !colaboradoresNaMesa.some((c) => String(c.id) === colaborador) && (
-                <option value={colaborador}>Colaborador #{colaborador}</option>
-              )}
-          </select>
-        </div>
-        {(aProcurar || aFiltrarColaborador) && (
+        {aProcurar && (
           <p className="mt-2 text-xs text-slate-400" aria-live="polite">
             {encontrados === 0
-              ? aProcurar
-                ? "Nenhum pedido com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
-                : "Nenhum pedido deste colaborador."
+              ? "Nenhum pedido com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
               : `${encontrados} pedido${encontrados === 1 ? "" : "s"} em toda a mesa` +
-                (aFiltrarColaborador
-                  ? colaborador === "nenhum"
-                    ? " sem responsável"
-                    : ` de ${colaboradoresNaMesa.find((c) => String(c.id) === colaborador)?.nome ?? "este colaborador"}`
-                  : "") +
-                (soOBloco && aProcurar ? ", incluindo os de fora do bloco escolhido" : "") +
+                (soOBloco ? ", incluindo os de fora do bloco escolhido" : "") +
                 "."}
-            {aFiltrarColaborador && (
-              <>
-                {" "}
-                <button
-                  type="button"
-                  onClick={() => setColaborador("")}
-                  className="font-semibold text-cyan-400 hover:underline"
-                >
-                  Ver todos
-                </button>
-              </>
-            )}
           </p>
         )}
       </div>
