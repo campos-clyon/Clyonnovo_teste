@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
   AlertTriangle,
@@ -15,11 +15,13 @@ import {
   MapPin,
   Phone,
   RefreshCw,
+  Search,
   Sun,
   User,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { combinaComABusca } from "@/lib/procurar-pedido";
 import FichaDaAgenda, { type TrabalhoDaAgenda } from "./FichaDaAgenda";
 import RegistarPedido from "./RegistarPedido";
 import {
@@ -149,7 +151,8 @@ export default function AdminAgendaPanel() {
    *
    * Os cartões dos totais eram só números. Passam a ser filtros: carregar em
    * «Atrasados» deixa só os atrasados no ecrã, e carregar outra vez volta a
-   * mostrar todos. É o ÚNICO filtro desta agenda, desde 22-09-2026.
+   * mostrar todos. Desde 28-09-2026 tem por cima a busca e o filtro por
+   * profissional, iguais aos das Negociações.
    */
   const [soOBloco, setSoOBloco] = useState<EstadoNaAgenda | null>(null);
   /* Que blocos estão fechados. «Feitos» nasce fechado. */
@@ -164,6 +167,16 @@ export default function AdminAgendaPanel() {
    * mostrar o número velho numa ficha que já o mudou.
    */
   const [aVer, setAVer] = useState<number | null>(null);
+  /*
+   * A BUSCA E O FILTRO POR PROFISSIONAL — os mesmos das Negociações.
+   *
+   * "Coloque a barra e o filtro na agenda também" — 28-09-2026. A agenda já
+   * tem os trabalhos todos em memória, por isso filtrar é só olhar para eles:
+   * não há mesa inteira para ir buscar. Os cartões passam a contar o que os
+   * dois deixam passar.
+   */
+  const [busca, setBusca] = useState("");
+  const [profissional, setProfissional] = useState("");
   const [aEditarPedido, setAEditarPedido] = useState<number | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
@@ -212,6 +225,47 @@ export default function AdminAgendaPanel() {
 
   const agora = new Date();
 
+  const aProcurar = busca.trim().length > 0;
+  const aFiltrarProfissional = profissional !== "";
+  const aFiltrar = aProcurar || aFiltrarProfissional;
+
+  /* Os profissionais com trabalhos na agenda, por ordem alfabética. */
+  const profissionaisNaAgenda = useMemo(() => {
+    const nomes = new Map<number, string>();
+    for (const t of trabalhos) {
+      if (!nomes.has(t.providerId)) {
+        nomes.set(t.providerId, t.profissionalNome || `Profissional #${t.providerId}`);
+      }
+    }
+    return [...nomes.entries()]
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  }, [trabalhos]);
+
+  const trabalhosVisiveis = useMemo(
+    () =>
+      trabalhos.filter(
+        (t) =>
+          (!aFiltrarProfissional || t.providerId === Number(profissional)) &&
+          (!aProcurar ||
+            combinaComABusca(
+              {
+                id: t.pedidoId,
+                contactName: t.clienteNome,
+                contactPhone: t.clienteTelefone,
+                contactEmail: t.clienteEmail,
+                address: t.morada,
+                city: t.cidade,
+                postalCode: t.codigoPostal,
+                serviceType: t.servico,
+                profissionais: [t.profissionalNome],
+              },
+              busca,
+            )),
+      ),
+    [trabalhos, busca, aProcurar, profissional, aFiltrarProfissional],
+  );
+
   /*
    * Que blocos se mostram: um só, se estiver escolhido em cima; senão TODOS.
    *
@@ -230,7 +284,7 @@ export default function AdminAgendaPanel() {
 
   /* Cada trabalho no seu bloco, e dentro do bloco o mais antigo primeiro: é o que espera há mais. */
   const porEstado = new Map<EstadoNaAgenda, Trabalho[]>();
-  for (const t of trabalhos) {
+  for (const t of trabalhosVisiveis) {
     const lista = porEstado.get(t.estado) ?? [];
     lista.push(t);
     porEstado.set(t.estado, lista);
@@ -278,10 +332,76 @@ export default function AdminAgendaPanel() {
         </button>
       </div>
 
+      {/* A busca e o profissional, antes dos cartões — como nas Negociações. */}
+      <div className="mt-5">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              aria-hidden="true"
+            />
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              type="search"
+              placeholder="Procurar por número, nome, telefone, morada ou região…"
+              aria-label="Procurar na agenda"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+            />
+            {aProcurar && (
+              <button
+                type="button"
+                onClick={() => setBusca("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+          <select
+            value={profissional}
+            onChange={(e) => setProfissional(e.target.value)}
+            aria-label="Filtrar por profissional"
+            className={`rounded-xl border bg-slate-950 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 sm:w-64 ${
+              aFiltrarProfissional ? "border-cyan-500 text-cyan-200" : "border-slate-700 text-slate-300"
+            }`}
+          >
+            <option value="">Todos os profissionais</option>
+            {profissionaisNaAgenda.map((pr) => (
+              <option key={pr.id} value={String(pr.id)}>
+                {pr.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        {aFiltrar && (
+          <p className="mt-2 text-xs text-slate-400" aria-live="polite">
+            {trabalhosVisiveis.length === 0
+              ? "Nenhum trabalho com isso."
+              : `${trabalhosVisiveis.length} trabalho${trabalhosVisiveis.length === 1 ? "" : "s"}` +
+                (aFiltrarProfissional
+                  ? ` de ${profissionaisNaAgenda.find((pr) => String(pr.id) === profissional)?.nome ?? "este profissional"}`
+                  : "") +
+                "."}{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setBusca("");
+                setProfissional("");
+              }}
+              className="font-semibold text-cyan-400 hover:underline"
+            >
+              Ver todos
+            </button>
+          </p>
+        )}
+      </div>
+
       {/* Os cartões dos totais — cada um é um filtro, e o dos atrasados puxa o olho. */}
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         {GRUPOS.map((g) => {
-          const n = resumo[g.chave];
+          /* A filtrar, o cartão conta o que o filtro deixou; senão, o resumo do servidor. */
+          const n = aFiltrar ? (porEstado.get(g.estado)?.length ?? 0) : resumo[g.chave];
           const escolhido = soOBloco === g.estado;
           const alarme = g.estado === "atrasado" && n > 0;
           return (
@@ -350,7 +470,9 @@ export default function AdminAgendaPanel() {
         </p>
       ) : totalVisivel === 0 ? (
         <p className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-6 text-center text-sm text-slate-400">
-          {soOBloco
+          {aFiltrar && trabalhos.length > 0
+            ? "Nenhum trabalho com este filtro."
+            : soOBloco
             ? `Nenhum trabalho em «${GRUPOS.find((g) => g.estado === soOBloco)?.titulo}».`
             : "Nenhum trabalho contratado neste momento."}
         </p>
