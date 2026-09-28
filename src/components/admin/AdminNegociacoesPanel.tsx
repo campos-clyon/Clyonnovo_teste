@@ -772,6 +772,16 @@ export default function AdminNegociacoesPanel({
    */
   const [busca, setBusca] = useState("");
   /*
+   * O FILTRO POR PROFISSIONAL: "" é toda a gente, e um número é o id do
+   * profissional. Um pedido passa se esse profissional tiver uma negociação
+   * nele — a proposta, a contratação, ou o trabalho feito.
+   *
+   * Manda sobre a mesa como a busca manda — os cartões contam só o que ele
+   * deixa passar — e, como ela, traz a mesa inteira: os trabalhos de um
+   * profissional não são só os dos sessenta pedidos mais recentes.
+   */
+  const [profissional, setProfissional] = useState("");
+  /*
    * Já foi buscar a mesa inteira? Uma vez por sessão chega: procura-se várias
    * vezes seguidas, e ir buscar quinhentos pedidos a cada tecla era pôr o
    * ecrã a trabalhar contra quem escreve.
@@ -1585,25 +1595,57 @@ export default function AdminNegociacoesPanel({
    * Uma vez por sessão, e não a cada tecla: quem procura escreve, apaga e
    * escreve outra vez, e cada uma dessas teclas seria uma viagem à base.
    */
+  const aFiltrarProfissional = profissional !== "";
+
   useEffect(() => {
-    if (aProcurar && !temTudo && token) void carregar(true, true);
-  }, [aProcurar, temTudo, token, carregar]);
+    if ((aProcurar || aFiltrarProfissional) && !temTudo && token) void carregar(true, true);
+  }, [aProcurar, aFiltrarProfissional, temTudo, token, carregar]);
+
+  /*
+   * Os profissionais que o seletor oferece: os que têm negociação em algum
+   * pedido carregado, por ordem alfabética. Tirados dos próprios pedidos e
+   * não da lista de profissionais — um nome sem pedidos só daria mesa vazia.
+   */
+  const profissionaisNaMesa = useMemo(() => {
+    const nomes = new Map<number, string>();
+    for (const p of pedidos) {
+      for (const n of p.negociacoes) {
+        if (!nomes.has(n.providerId)) {
+          nomes.set(n.providerId, n.profissionalNome || `Profissional #${n.providerId}`);
+        }
+      }
+    }
+    return [...nomes.entries()]
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  }, [pedidos]);
 
   const pedidosNaMesa = useMemo(
     () =>
-      aProcurar
-        ? pedidos.filter((p) =>
+      pedidos.filter(
+        (p) =>
+          (!aFiltrarProfissional ||
+            p.negociacoes.some((n) => n.providerId === Number(profissional))) &&
+          (!aProcurar ||
             combinaComABusca(
               { ...p, profissionais: p.negociacoes.map((n) => n.profissionalNome) },
               busca,
-            ),
-          )
-        : pedidos,
-    [pedidos, busca, aProcurar],
+            )),
+      ),
+    [pedidos, busca, aProcurar, profissional, aFiltrarProfissional],
   );
+  /*
+   * Os por enviar ainda não foram a profissional nenhum: com um profissional
+   * escolhido, nenhum deles é dele.
+   */
   const porPromoverNaMesa = useMemo(
-    () => (aProcurar ? porPromover.filter((p) => combinaComABusca(p, busca)) : porPromover),
-    [porPromover, busca, aProcurar],
+    () =>
+      aFiltrarProfissional
+        ? []
+        : aProcurar
+          ? porPromover.filter((p) => combinaComABusca(p, busca))
+          : porPromover,
+    [porPromover, busca, aProcurar, aFiltrarProfissional],
   );
   const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;
 
@@ -3133,7 +3175,8 @@ export default function AdminNegociacoesPanel({
         uma lista que encolhe sem explicação lê-se como uma avaria.
       */}
       <div className="mb-4">
-        <div className="relative">
+        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
             aria-hidden="true"
@@ -3156,13 +3199,50 @@ export default function AdminNegociacoesPanel({
             </button>
           )}
         </div>
-        {aProcurar && (
+          {/*
+            O FILTRO POR PROFISSIONAL, ao lado da busca e com o mesmo peso: os
+            dois dizem que pedidos entram na mesa, e os cartões contam o resto.
+          */}
+          <select
+            value={profissional}
+            onChange={(e) => setProfissional(e.target.value)}
+            aria-label="Filtrar por profissional"
+            className={`rounded-xl border bg-slate-950 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 sm:w-64 ${
+              aFiltrarProfissional ? "border-cyan-500 text-cyan-200" : "border-slate-700 text-slate-300"
+            }`}
+          >
+            <option value="">Todos os profissionais</option>
+            {profissionaisNaMesa.map((pr) => (
+              <option key={pr.id} value={String(pr.id)}>
+                {pr.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(aProcurar || aFiltrarProfissional) && (
           <p className="mt-2 text-xs text-slate-400" aria-live="polite">
             {encontrados === 0
-              ? "Nenhum pedido com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
+              ? aProcurar
+                ? "Nenhum pedido com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
+                : "Nenhum pedido deste profissional."
               : `${encontrados} pedido${encontrados === 1 ? "" : "s"} em toda a mesa` +
-                (soOBloco ? ", incluindo os de fora do bloco escolhido" : "") +
+                (aFiltrarProfissional
+                  ? ` com ${profissionaisNaMesa.find((pr) => String(pr.id) === profissional)?.nome ?? "este profissional"}`
+                  : "") +
+                (soOBloco && aProcurar ? ", incluindo os de fora do bloco escolhido" : "") +
                 "."}
+            {aFiltrarProfissional && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  onClick={() => setProfissional("")}
+                  className="font-semibold text-cyan-400 hover:underline"
+                >
+                  Ver todos
+                </button>
+              </>
+            )}
           </p>
         )}
       </div>
