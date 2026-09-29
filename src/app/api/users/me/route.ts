@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
+import type { ExecuteValues } from "mysql2";
 import { z } from "zod";
 import { authOptions } from "@/auth";
 import {
@@ -159,7 +160,7 @@ export async function PATCH(request: NextRequest) {
 
   // Construir SET clauses para o ON DUPLICATE KEY UPDATE
   const updateClauses: string[] = ["updatedAt = NOW()"];
-  const updateValues: unknown[] = [];
+  const updateValues: ExecuteValues[] = [];
 
   for (const f of strFields) {
     if (f in data) {
@@ -206,7 +207,7 @@ export async function PATCH(request: NextRequest) {
         ...extraStrFields,
         ...extraBoolFields,
       ];
-      const insertVals: unknown[] = [
+      const insertVals: ExecuteValues[] = [
         userEmail, displayName, null, "google", "user", new Date(), new Date(),
         ...extraStrFields.map(f => data[f] ?? null),
         ...extraBoolFields.map(f => data[f] ? 1 : 0),

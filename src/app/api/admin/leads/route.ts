@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const semanaStart = getPeriodStart("semana");
 
     const conditions: string[] = ["createdAt >= ?"];
-    const params: unknown[] = [startDate];
+    const params: string[] = [startDate];
     if (status) {
       conditions.push("status = ?");
       params.push(status);

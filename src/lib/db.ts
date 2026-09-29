@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+import type { ExecuteValues } from "mysql2";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -2076,7 +2077,7 @@ export async function actualizarProfissional(
   if (!pool) throw new Error("DB not available");
 
   const partes: string[] = [];
-  const valores: unknown[] = [];
+  const valores: ExecuteValues[] = [];
 
   if (alteracoes.categorias !== undefined) {
     partes.push("categorias = ?");
@@ -2870,7 +2871,7 @@ export async function contarNovidades(
   const pool = await getPool();
   if (!pool) return saida;
 
-  const um = async (seccao: string, sql: string, params: unknown[]) => {
+  const um = async (seccao: string, sql: string, params: ExecuteValues[]) => {
     try {
       const [linhas] = (await pool.execute(sql, params)) as any[];
       saida[seccao] = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
@@ -4372,7 +4373,7 @@ export async function actualizarPerfilDoProfissional(
 
   await pool.execute(
     `UPDATE providers SET ${colunas.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`,
-    [...colunas.map((c) => dados[c]), providerId],
+    [...colunas.map((c) => dados[c]), providerId] as ExecuteValues[],
   );
 }
 
@@ -5284,7 +5285,7 @@ export async function createSimulatorOrder(data: InsertSimulatorOrder): Promise<
   const vals = cols.map((k) => (data as Record<string, unknown>)[k]);
   const placeholders = cols.map(() => "?").join(", ");
   const sql = `INSERT INTO simulatorOrders (${cols.join(", ")}) VALUES (${placeholders})`;
-  const [result] = await pool.execute(sql, vals) as any[];
+  const [result] = await pool.execute(sql, vals as ExecuteValues[]) as any[];
   const insertId = result.insertId ?? 0;
   return insertId;
 }
@@ -5300,7 +5301,7 @@ export async function getAllSimulatorOrders(filters?: {
     return [];
   }
   const conditions: string[] = [];
-  const params: unknown[] = [];
+  const params: ExecuteValues[] = [];
   
   // Handle special filters
   if (filters?.status === "sem_assistente") {
@@ -8499,7 +8500,7 @@ export const COLUNAS_DO_REGISTO = [
   "visivelProfissional",
 ] as const;
 
-export function valoresDoRegisto(l: LinhaDoRegisto): unknown[] {
+export function valoresDoRegisto(l: LinhaDoRegisto): ExecuteValues[] {
   const corta = (s: string | null | undefined, n: number) =>
     s == null ? null : String(s).slice(0, n);
   return [
@@ -8625,7 +8626,7 @@ export async function anonimizarRegisto(
   if (!pool) throw new Error("DB not available");
 
   const onde: string[] = [];
-  const args: unknown[] = [];
+  const args: ExecuteValues[] = [];
   if (alvo.clienteEmail) {
     onde.push("clienteEmail = ?");
     args.push(alvo.clienteEmail.trim().toLowerCase());
@@ -8734,7 +8735,7 @@ export async function registoParaOBackoffice(filtros: {
   if (!pool) return [];
 
   const onde: string[] = [];
-  const args: unknown[] = [];
+  const args: ExecuteValues[] = [];
   if (filtros.pedidoId != null) {
     onde.push("pedidoId = ?");
     args.push(filtros.pedidoId);
@@ -9961,7 +9962,7 @@ export type ResumoDoBackoffice = {
 };
 
 /** Um número de uma consulta que pode falhar sem levar o painel atrás. */
-async function conta(sql: string, args: unknown[] = []): Promise<number | null> {
+async function conta(sql: string, args: ExecuteValues[] = []): Promise<number | null> {
   try {
     const pool = await getPool();
     if (!pool) return null;
@@ -10307,7 +10308,7 @@ export async function semearAvisosDoAssistente(
   const PORVEZ = 200;
   for (let i = 0; i < linhas.length; i += PORVEZ) {
     const lote = linhas.slice(i, i + PORVEZ);
-    const valores: unknown[] = [];
+    const valores: ExecuteValues[] = [];
     for (const l of lote) {
       valores.push(
         l.chave.slice(0, 160),

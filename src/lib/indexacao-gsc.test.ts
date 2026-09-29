@@ -49,15 +49,24 @@ describe("os redirects não perdem a cidade", () => {
     // têm página de mudanças. Sem o apanha-tudo a seguir, o redirect trocava
     // um 404 por outro.
     const i = CONFIG.indexOf('...paraAsCidades("/camiao-com-motorista-")');
+    expect(i).toBeGreaterThan(-1);
     const seguinte = CONFIG.slice(i, i + 400);
-    expect(seguinte).toContain('source: "/camiao-com-motorista-:city*"');
+    // `:city(.*)` desde o Next 15.5, que recusa `:city*` sem prefixo — é o
+    // mesmo apanha-tudo escrito de outra maneira.
+    expect(seguinte).toContain('source: "/camiao-com-motorista-:city(.*)"');
     expect(seguinte).toContain('destination: "/mudancas"');
   });
 
   it("o apanha-tudo vem DEPOIS das cidades — a ordem é a regra", () => {
-    expect(CONFIG.indexOf('...paraAsCidades("/mudan%C3%A7as-")')).toBeLessThan(
-      CONFIG.indexOf('source: "/mudan%C3%A7as-:city*"'),
-    );
+    const apanhaTudo = CONFIG.indexOf('source: "/mudan%C3%A7as-:city(.*)"');
+    expect(apanhaTudo).toBeGreaterThan(-1);
+    expect(CONFIG.indexOf('...paraAsCidades("/mudan%C3%A7as-")')).toBeLessThan(apanhaTudo);
+  });
+
+  it("nenhum parâmetro repetido sem prefixo — parava o build do Next 15.5", () => {
+    // «Can not repeat "city" without a prefix and suffix»: `-:city*` e
+    // `-:city+` só são aceites depois de uma "/". O `/:path*` continua válido.
+    expect(CONFIG).not.toMatch(/[^/]:[a-zA-Z]+[*+]"/);
   });
 
   it("as treze cidades de mudanças existem mesmo", () => {
