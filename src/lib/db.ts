@@ -4211,6 +4211,16 @@ export async function regimeDeIvaDoProfissional(providerId: number): Promise<str
  * fiscal para saber quantos quilómetros são.
  */
 export async function custosEBaseDoProfissional(providerId: number): Promise<{
+  /*
+   * A CARRINHA DELE, na mesma leitura que os custos -- 29-09-2026.
+   *
+   * Nao e um custo, mas e a mesma linha da mesma tabela e o mesmo pedido: o
+   * feed le isto UMA vez para a lista inteira, e passou a precisar dela para
+   * dizer o que uma carga vale na carrinha dele (ver `carga-da-carrinha.ts`).
+   * Uma segunda consulta por causa de uma coluna era mais um ida-e-volta em
+   * cada abertura do painel.
+   */
+  tipoVeiculo: string | null;
   baseLat: number | null;
   baseLng: number | null;
   custoKm: number | null;
@@ -4226,7 +4236,7 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = (await pool.execute(
-    `SELECT baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa,
+    `SELECT tipoVeiculo, baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa,
             custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
@@ -4235,6 +4245,7 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
   if (!r) return undefined;
   const n = (v: unknown) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
   return {
+    tipoVeiculo: typeof r.tipoVeiculo === "string" && r.tipoVeiculo.trim() ? r.tipoVeiculo : null,
     baseLat: n(r.baseLat),
     baseLng: n(r.baseLng),
     custoKm: n(r.custoKm),
