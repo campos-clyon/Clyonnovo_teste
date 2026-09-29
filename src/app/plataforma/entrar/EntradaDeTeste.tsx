@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, FlaskConical, Loader2 } from "lucide-react";
+import { destinoInterno } from "@/lib/destino-seguro";
 
 /**
  * A entrada do ambiente de testes.
@@ -42,7 +43,8 @@ export default function EntradaDeTeste() {
       }
       // replace e não push: o ecrã de entrada não deve ficar no histórico,
       // senão o botão "voltar" traz a pessoa de volta a ele já autenticada.
-      router.replace(proximo.startsWith("/") ? proximo : "/plataforma");
+      // Só para dentro do site: «//outro.com» começa por "/" e é outro site.
+      router.replace(destinoInterno(proximo, window.location.origin, "/plataforma"));
       router.refresh();
     } catch {
       setErro("Erro de rede.");
