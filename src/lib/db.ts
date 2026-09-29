@@ -6453,21 +6453,26 @@ export async function limparAvisosAoProfissionalVencidos(): Promise<number> {
  * Não devolve nada e não lança: quem chama isto está a meio de responder à
  * ponte, e uma falha aqui não pode fazer cair a mensagem que a pessoa mandou.
  */
-export async function desligarAvisosPeloTelefone(telefone: string): Promise<void> {
+export async function desligarAvisosPeloTelefone(telefone: string): Promise<boolean> {
   try {
     await ensureProvidersSchema();
     const pool = await getPool();
-    if (!pool) return;
+    if (!pool) return false;
     const noves = telefone.replace(/\D/g, "").slice(-9);
-    if (noves.length !== 9) return;
-    await pool.execute(
+    if (noves.length !== 9) return false;
+    // Devolve se desligou mesmo alguém: é isso que decide se se confirma. Um
+    // cliente que escreva «parar» não era de ninguém, e não leva resposta.
+    const [r] = (await pool.execute(
       `UPDATE providers
           SET whatsappAvisos = 0, whatsappAvisosEm = NULL
-        WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', ''), 9) = ?`,
+        WHERE whatsappAvisos = 1
+          AND RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', ''), 9) = ?`,
       [noves],
-    );
+    )) as [{ affectedRows?: number }, unknown];
+    return Number(r?.affectedRows ?? 0) > 0;
   } catch (e) {
     console.error("[desligarAvisosPeloTelefone]", e);
+    return false;
   }
 }
 
@@ -6507,6 +6512,195 @@ export async function comoEstaAFilaDeAvisos(): Promise<{
     };
   } catch {
     return vazio;
+  }
+}
+
+/**
+ * ⚠️ UM AVISO A QUEM O PEDIU NÃO É UMA CONVERSA — e não pára na mesma porta.
+ *
+ * *«Essa função não está funcionando: os pros que activaram não recebem
+ * nada.»* — 29-09-2026.
+ *
+ * O aviso saía por `enviarTextoWhatsApp`, que pergunta a
+ * `podeOWhatsAppFalarCom` — e essa recusa os números cuja conversa foi
+ * ENTREGUE A UMA PESSOA. A ponte faz essa entrega sozinha sempre que alguém
+ * da CLYON escreve à mão a um número. Ora a equipa fala com os profissionais
+ * pelo WhatsApp todos os dias: os números deles ficavam entregues, o aviso
+ * batia na porta, e era arquivado «não saiu» à primeira tentativa. Sem erro,
+ * sem ninguém saber.
+ *
+ * A entrega existe para o CÉREBRO se calar numa conversa que uma pessoa está
+ * a ter — não para impedir um aviso que o próprio profissional ligou no
+ * painel dele. Aqui só contam as duas coisas que valem para toda a gente: o
+ * WhatsApp ligado, e o número não estar bloqueado. A vontade dele já foi
+ * vista na fila (`whatsappAvisos = 1`), e «parar» continua a desligá-la.
+ */
+export async function podeAvisarONumeroWhatsApp(telefone: string): Promise<boolean> {
+  if (!(await whatsappLigado())) return false;
+  if (await numeroBloqueadoWhatsApp(telefone)) return false;
+  return true;
+}
+
+/**
+ * ESTE NÚMERO É DE UM PROFISSIONAL?
+ *
+ * Quando os avisos passam a chegar, os profissionais passam a responder — «ok»,
+ * «obrigado», «ainda está disponível?». Sem isto, o cérebro lia-os como um
+ * cliente novo e respondia «Diga-me o que precisa de levar». Já tinha
+ * acontecido uma vez com uma transportadora.
+ */
+export async function profissionalDoTelefone(
+  telefone: string,
+): Promise<{ id: number; nome: string; avisos: boolean } | null> {
+  try {
+    const noves = telefone.replace(/\D/g, "").slice(-9);
+    if (noves.length !== 9) return null;
+    await ensureProvidersSchema();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      `SELECT id, name, whatsappAvisos FROM providers
+        WHERE isClyon = 0 AND (estado IS NULL OR estado <> 'apagado')
+          AND RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', ''), 9) = ?
+        LIMIT 1`,
+      [noves],
+    )) as [Array<{ id: number; name: string; whatsappAvisos: number }>, unknown];
+    const p = rows[0];
+    return p ? { id: Number(p.id), nome: String(p.name ?? ""), avisos: Number(p.whatsappAvisos) === 1 } : null;
+  } catch (e) {
+    console.error("[profissionalDoTelefone]", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+// ─── Os lembretes do trabalho do dia ─────────────────────────────────────────
+
+let lembretesDeAgendaReady = false;
+async function ensureLembretesDeAgendaTable() {
+  if (lembretesDeAgendaReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  /*
+   * UM POR TRABALHO E POR DIA — o índice é que o garante.
+   *
+   * Por dia, e não por trabalho: se o dia for remarcado, o novo dia tem o seu
+   * lembrete. E a reserva é um INSERT IGNORE antes de enviar, para duas
+   * passagens do cron que se cruzem não mandarem o mesmo lembrete duas vezes.
+   */
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS lembretesDeAgenda (
+      id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      negociacaoId   INT NOT NULL,
+      dia            DATE NOT NULL,
+      criadoEm       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      enviadoEm      DATETIME NULL,
+      porqueNaoSaiu  VARCHAR(40) NULL,
+      UNIQUE KEY uq_negociacao_dia (negociacaoId, dia)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  lembretesDeAgendaReady = true;
+}
+
+export type TrabalhoParaLembrar = {
+  negociacaoId: number;
+  pedidoId: number;
+  providerId: number;
+  profissional: string;
+  telefoneDoProfissional: string | null;
+  dataCombinada: Date | null;
+  dataAgendada: Date | null;
+  servico: string | null;
+  localidade: string | null;
+  morada: string | null;
+  cliente: string | null;
+  telefoneDoCliente: string | null;
+};
+
+/**
+ * Os trabalhos fechados cujo dia está perto de hoje, de quem quer avisos.
+ *
+ * A janela na consulta é larga de propósito (de ontem a depois de amanhã): o
+ * «é hoje?» decide-se em Lisboa, em `naAgenda`, e não num `CURDATE()` de um
+ * servidor em UTC. `dia` é o dia de hoje em Lisboa, e deixa de fora quem já
+ * teve o lembrete.
+ */
+export async function trabalhosParaLembrar(dia: string, limite = 30): Promise<TrabalhoParaLembrar[]> {
+  try {
+    await ensureLembretesDeAgendaTable();
+    const pool = await getPool();
+    if (!pool) return [];
+    const [rows] = (await pool.execute(
+      `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.dataCombinada,
+              o.dataAgendada, o.serviceType, o.city, o.address, o.contactName, o.contactPhone,
+              p.name AS profissional, p.phone AS telefoneDoProfissional
+         FROM negociacoes n
+         JOIN providers p ON p.id = n.providerId
+         JOIN simulatorOrders o ON o.id = n.pedidoId
+        WHERE n.estado = 'acordada'
+          AND n.execucaoEnviadaEm IS NULL AND n.confirmadoEm IS NULL AND n.pagoEm IS NULL
+          AND p.isActive = 1 AND p.whatsappAvisos = 1
+          AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
+          AND COALESCE(n.dataCombinada, o.dataAgendada)
+              BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND DATE_ADD(NOW(), INTERVAL 2 DAY)
+          AND NOT EXISTS (
+            SELECT 1 FROM lembretesDeAgenda l WHERE l.negociacaoId = n.id AND l.dia = ?
+          )
+        LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
+      [dia],
+    )) as [Array<Record<string, unknown>>, unknown];
+    return rows.map((r) => ({
+      negociacaoId: Number(r.negociacaoId),
+      pedidoId: Number(r.pedidoId),
+      providerId: Number(r.providerId),
+      profissional: String(r.profissional ?? ""),
+      telefoneDoProfissional: (r.telefoneDoProfissional as string) ?? null,
+      dataCombinada: (r.dataCombinada as Date) ?? null,
+      dataAgendada: (r.dataAgendada as Date) ?? null,
+      servico: (r.serviceType as string) ?? null,
+      localidade: (r.city as string) ?? null,
+      morada: (r.address as string) ?? null,
+      cliente: (r.contactName as string) ?? null,
+      telefoneDoCliente: (r.contactPhone as string) ?? null,
+    }));
+  } catch (e) {
+    console.error("[trabalhosParaLembrar]", e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+/** Reserva o lembrete de hoje. `false` = outra passagem já o reservou. */
+export async function reservarLembrete(negociacaoId: number, dia: string): Promise<boolean> {
+  try {
+    await ensureLembretesDeAgendaTable();
+    const pool = await getPool();
+    if (!pool) return false;
+    const [r] = (await pool.execute(
+      "INSERT IGNORE INTO lembretesDeAgenda (negociacaoId, dia) VALUES (?, ?)",
+      [negociacaoId, dia],
+    )) as [{ affectedRows?: number }, unknown];
+    return Number(r?.affectedRows ?? 0) > 0;
+  } catch (e) {
+    console.error("[reservarLembrete]", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+export async function fecharLembrete(
+  negociacaoId: number,
+  dia: string,
+  porqueNaoSaiu: string | null,
+): Promise<void> {
+  try {
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `UPDATE lembretesDeAgenda
+          SET enviadoEm = ${porqueNaoSaiu ? "NULL" : "NOW()"}, porqueNaoSaiu = ?
+        WHERE negociacaoId = ? AND dia = ?`,
+      [porqueNaoSaiu, negociacaoId, dia],
+    );
+  } catch (e) {
+    console.error("[fecharLembrete]", e instanceof Error ? e.message : e);
   }
 }
 

@@ -303,7 +303,22 @@ export async function POST(req: NextRequest) {
    */
   if (ePedidoParaParar(texto)) {
     const { desligarAvisosPeloTelefone } = await import("@/lib/db");
-    await desligarAvisosPeloTelefone(telefone).catch(() => {});
+    const desligou = await desligarAvisosPeloTelefone(telefone).catch(() => false);
+    /*
+     * E DIZ-SE QUE FICOU DESLIGADO — só a quem tinha mesmo avisos ligados.
+     *
+     * Quem escreve «parar» e não ouve nada escreve outra vez, e depois
+     * bloqueia o número. Um cliente que escreva «parar» sem ser profissional
+     * não desligou nada, e não leva resposta nenhuma daqui.
+     */
+    if (desligou) {
+      const { enviarAvisoWhatsApp } = await import("@/lib/whatsapp-cloud");
+      await enviarAvisoWhatsApp(
+        telefone,
+        "Pronto — deixa de receber os avisos da CLYON por WhatsApp. " +
+          "Pode voltar a ligá-los quando quiser, no seu painel.",
+      ).catch(() => false);
+    }
   }
 
   try {

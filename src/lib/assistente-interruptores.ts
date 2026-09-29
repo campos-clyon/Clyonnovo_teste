@@ -147,7 +147,7 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
   avisar_profissional: {
     titulo: "Avisar o profissional",
     oQuePara:
-      "Deixa de mandar WhatsApp aos profissionais quando um pedido novo lhes chega. O email e o aviso no telemóvel continuam a sair.",
+      "Deixa de mandar WhatsApp aos profissionais quando um pedido novo lhes chega, e o lembrete de manhã dos trabalhos marcados para esse dia. O email e o aviso no telemóvel continuam a sair.",
     porOmissao: false,
   },
 };
@@ -259,6 +259,16 @@ export const TOQUES_NO_MAXIMO = 3;
  * o terceiro toque, não o primeiro.
  */
 export const AVISOS_AO_PROFISSIONAL_POR_PASSAGEM = 4;
+
+/**
+ * Lembretes do trabalho de hoje, por passagem.
+ *
+ * Mais do que os avisos de pedido novo, porque não são primeiros contactos:
+ * vão a profissionais com quem a CLYON já fala, sobre um trabalho que é deles.
+ * Mas continua a haver um tecto — uma manhã com vinte trabalhos não sai toda
+ * no mesmo segundo das 7h.
+ */
+export const LEMBRETES_POR_PASSAGEM = 8;
 
 /** As horas em que o assistente não fala. Um lembrete às 3 da manhã perde tudo. */
 export const HORA_A_QUE_ACORDA = 9;

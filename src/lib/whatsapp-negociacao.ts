@@ -978,6 +978,36 @@ export async function tratarMensagemDoCliente(
      * resposta automática para dizer que não há resposta automática era a
      * pior das duas hipóteses.
      */
+    /*
+     * ⚠️ UM PROFISSIONAL NÃO É UM CLIENTE NOVO.
+     *
+     * Com os avisos a chegar, os profissionais respondem — «ok», «obrigado»,
+     * «ainda está disponível?». Sem isto, o cérebro lia-os como alguém a
+     * querer um orçamento e respondia «Diga-me o que precisa de levar». Já
+     * tinha acontecido com uma transportadora.
+     *
+     * O que um profissional escreve para aqui é para a equipa: diz-se-lhe que
+     * passa a uma pessoa, e passa. O «parar» é tratado antes, na ponte — que
+     * desliga os avisos e confirma —, e por isso aqui não leva mais nada.
+     */
+    if (conteudo.tipo === "texto") {
+      const { profissionalDoTelefone } = await import("@/lib/db");
+      const pro = await profissionalDoTelefone(telefone);
+      if (pro) {
+        const { ePedidoParaParar } = await import("@/lib/aviso-de-pedido-ao-profissional");
+        if (ePedidoParaParar(conteudo.texto)) return;
+        const { primeiroNome } = await import("@/lib/mensagem-whatsapp");
+        const nome = primeiroNome(pro.nome);
+        await passarAUmaPessoa(
+          telefone,
+          "Profissional escreveu — responder",
+          `Obrigado${nome ? `, ${nome}` : ""}. Passo a sua mensagem a uma pessoa da CLYON, ` +
+            "que lhe responde por aqui. Para propor num pedido novo, use o link do aviso.",
+        );
+        return;
+      }
+    }
+
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
     if (conteudo.tipo === "texto") await recolherPedidoPorWhatsApp(telefone, conteudo.texto);

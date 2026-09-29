@@ -373,6 +373,45 @@ export async function enviarTextoManualWhatsApp(para: string, texto: string): Pr
 }
 
 /**
+ * UM AVISO QUE A PESSOA PEDIU — pedido novo, trabalho de hoje.
+ *
+ * *«Os pros que activaram não recebem nada.»* — 29-09-2026.
+ *
+ * Passava por `enviarTextoWhatsApp`, cujo portão recusa as conversas
+ * ENTREGUES A UMA PESSOA. A ponte entrega uma conversa sempre que alguém da
+ * CLYON escreve à mão a esse número — e a equipa fala com os profissionais
+ * pelo WhatsApp todos os dias. Os avisos morriam todos à porta.
+ *
+ * A entrega cala o CÉREBRO numa conversa que uma pessoa está a ter. Um aviso
+ * que o profissional ligou no painel dele não é cérebro a conversar: é a
+ * notícia que ele pediu. Aqui valem só o WhatsApp ligado e o número não estar
+ * bloqueado (`podeAvisarONumeroWhatsApp`); a vontade dele é vista antes, e
+ * «parar» continua a desligá-la.
+ *
+ * E a MESMA guarda contra repetições do resto: o mesmo texto no mesmo número
+ * em poucos minutos não sai duas vezes.
+ */
+export async function enviarAvisoWhatsApp(para: string, texto: string): Promise<boolean> {
+  try {
+    const { podeAvisarONumeroWhatsApp } = await import("@/lib/db");
+    if (!(await podeAvisarONumeroWhatsApp(telefoneParaWhatsApp(para)))) return false;
+  } catch {
+    return false;
+  }
+  try {
+    const { jaFoiDito, MINUTOS_SEM_REPETIR_A_MESMA } = await import("@/lib/nao-repetir");
+    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+    const recentes = await mensagensDoNumeroWhatsApp(para, 20);
+    if (jaFoiDito(paraTeclado(texto), recentes, new Date(), MINUTOS_SEM_REPETIR_A_MESMA / 60)) {
+      return true;
+    }
+  } catch {
+    // A guarda é uma cortesia; sem ela, o aviso sai na mesma.
+  }
+  return enviarTextoPorCanal(para, texto);
+}
+
+/**
  * Mensagem com botões de resposta — o "ecrã" da negociação.
  *
  * Três botões no máximo (limite da API), 20 caracteres por título. O id de

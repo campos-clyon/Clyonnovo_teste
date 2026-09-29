@@ -7,6 +7,7 @@ import {
   esgotou,
   horaDeFalar,
   AVISOS_AO_PROFISSIONAL_POR_PASSAGEM,
+  LEMBRETES_POR_PASSAGEM,
 } from "./assistente-interruptores";
 import { contaDoCliente } from "./taxas-plataforma";
 import { primeiroNome } from "./mensagem-whatsapp";
@@ -682,7 +683,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   };
 
   const db = await import("@/lib/db");
-  const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
+  const { enviarTextoWhatsApp, enviarAvisoWhatsApp } = await import("@/lib/whatsapp-cloud");
 
   if (!(await db.whatsappLigado())) {
     resumo.linhas.push("O WhatsApp está desligado. Nada a fazer.");
@@ -730,17 +731,83 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
     const porSair = await db.avisosAoProfissionalPorSair(AVISOS_AO_PROFISSIONAL_POR_PASSAGEM);
     for (const aviso of porSair) {
       /*
-       * `enviarTextoWhatsApp` e não o envio directo: é a porta do cérebro, e é
-       * ela que respeita quem está bloqueado, quem mandou parar e a conversa
-       * que uma pessoa entregou a si própria. Devolver `false` quer dizer «não
-       * se pode falar com este número» — e isso não se repete de dez em dez
-       * minutos até a linha morrer, por isso fecha-se já.
+       * ⚠️ `enviarAvisoWhatsApp`, e NÃO `enviarTextoWhatsApp` — 29-09-2026.
+       *
+       * *«Os pros que activaram não recebem nada.»* A porta do cérebro
+       * recusa as conversas entregues a uma pessoa, e a ponte entrega uma
+       * conversa sempre que alguém da CLYON escreve à mão a esse número — o
+       * que acontece com os profissionais todos os dias. Os avisos morriam
+       * todos à porta, arquivados «não saiu» à primeira.
+       *
+       * O aviso tem porta própria: WhatsApp ligado e número não bloqueado. A
+       * vontade dele já foi vista na fila (`whatsappAvisos = 1`), e «parar»
+       * continua a desligá-la. Um `false` aqui é mesmo «não se pode» — e não
+       * se repete de dez em dez minutos: fecha-se já.
        */
-      const saiu = await enviarTextoWhatsApp(aviso.telefone, aviso.texto).catch(() => false);
+      const saiu = await enviarAvisoWhatsApp(aviso.telefone, aviso.texto).catch(() => false);
       await db.fecharAvisoAoProfissional(aviso.id, saiu ? null : "nao saiu");
       if (saiu) {
         resumo.novidades++;
         resumo.linhas.push(`Avisado do pedido #${aviso.pedidoId}: ${aviso.telefone}.`);
+      }
+    }
+  }
+
+  /*
+   * ── O TRABALHO DE HOJE, LEMBRADO DE MANHÃ ───────────────────────────────
+   *
+   * *«…e pedidos agendados, por exemplo: aviso CLYON, você tem um trabalho
+   * agendado para hoje na Costa da Caparica para as 10h00.»* — 29-09-2026.
+   *
+   * O MESMO INTERRUPTOR dos avisos de pedido novo, e a mesma vontade do
+   * profissional: é o mesmo acto — a CLYON a avisar um profissional que o
+   * pediu. Dois botões para a mesma coisa acabavam com um ligado e outro não.
+   *
+   * A JANELA É DELE, e não a do cliente: das 7h às 21h. Um trabalho das 8h
+   * tem de ser lembrado antes das 8h, e quem trabalha com uma carrinha
+   * começa cedo. Ver `deveLembrar` — um trabalho cuja hora já passou não
+   * leva lembrete, porque nessa altura já não é lembrar.
+   *
+   * RESERVA-SE ANTES DE ENVIAR. Duas passagens do cron que se cruzem não
+   * podem mandar o mesmo lembrete duas vezes, e é o índice (trabalho, dia)
+   * que o garante — não um `if`.
+   */
+  if (podeFazer("avisar_profissional")) {
+    const {
+      deveLembrar,
+      diaEmLisboa,
+      lembreteDoTrabalhoDeHoje,
+    } = await import("@/lib/lembrete-do-trabalho-de-hoje");
+    const { telemovelParaWhatsApp } = await import("@/lib/whatsapp-cloud");
+    const dia = diaEmLisboa(agora);
+    const candidatos = await db.trabalhosParaLembrar(dia, LEMBRETES_POR_PASSAGEM * 4).catch(() => []);
+    let enviados = 0;
+    for (const t of candidatos) {
+      if (enviados >= LEMBRETES_POR_PASSAGEM) break;
+      const { lembrar, quando } = deveLembrar(t, agora);
+      if (!lembrar || !quando) continue;
+      const telefone = telemovelParaWhatsApp(t.telefoneDoProfissional);
+      if (!telefone) continue;
+      if (!(await db.reservarLembrete(t.negociacaoId, dia))) continue;
+      const texto = lembreteDoTrabalhoDeHoje(
+        {
+          pedidoId: t.pedidoId,
+          profissional: t.profissional,
+          servico: t.servico,
+          localidade: t.localidade,
+          morada: t.morada,
+          cliente: t.cliente,
+          telefoneDoCliente: t.telefoneDoCliente,
+          quando,
+        },
+        agora,
+      );
+      const saiu = await enviarAvisoWhatsApp(telefone, texto).catch(() => false);
+      await db.fecharLembrete(t.negociacaoId, dia, saiu ? null : "nao saiu");
+      if (saiu) {
+        enviados++;
+        resumo.novidades++;
+        resumo.linhas.push(`Lembrado do trabalho de hoje #${t.pedidoId}: ${t.profissional}.`);
       }
     }
   }
