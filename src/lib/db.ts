@@ -6981,19 +6981,44 @@ export async function carimbarPonte(): Promise<void> {
   }
 }
 
-/** Quando a ponte veio pela última vez. `null` = nunca, ou não se conseguiu ler. */
+/**
+ * Quando a ponte veio pela última vez. `null` = nunca, ou não se conseguiu ler.
+ *
+ * ⚠️ A IDADE CONTA-SE NA BASE, COM O RELÓGIO DA BASE DOS DOIS LADOS
+ * — 29-09-2026.
+ *
+ * O painel dizia «A ponte não vem há 1 h» com a ponte viva, a receber
+ * mensagens e a carimbar de cinco em cinco segundos. Uma tarde e uma noite à
+ * procura de uma avaria na ponte, no Railway e no Serverless — e a avaria era
+ * o relógio deste lado.
+ *
+ * O carimbo é escrito pelo MySQL com `NOW()`, que no Railway é UTC. E era lido
+ * pelo `mysql2`, que converte um DATETIME para `Date` no fuso DO PROCESSO — e o
+ * processo do site corre em `Europe/Lisbon`, porque `instrumentation.ts` o põe
+ * assim no arranque. «20:56» escrito em UTC era lido como «20:56 de Lisboa»,
+ * ou seja 19:56 UTC: uma hora no passado. No Verão, o painel dizia «há 1 h»
+ * SEMPRE, com a ponte morta ou viva. No Inverno Lisboa é UTC e o erro some —
+ * que é a pior espécie de avaria, a que volta com a mudança da hora.
+ *
+ * `TIMESTAMPDIFF(SECOND, ponteVistaEm, NOW())` faz a conta com o mesmo relógio
+ * nos dois termos, e o fuso de quem lê deixa de entrar. O resultado volta como
+ * um instante verdadeiro (agora menos a idade), para o painel continuar a
+ * receber uma HORA e a contar com o relógio de quem está a olhar.
+ */
 export async function quandoAPonteVeio(): Promise<Date | null> {
   try {
     await ensureWhatsappEstadoTables();
     const pool = await getPool();
     if (!pool) return null;
     const [rows] = (await pool.execute(
-      "SELECT ponteVistaEm FROM whatsappEstado WHERE id = 1",
-    )) as [Array<{ ponteVistaEm: Date | string | null }>, unknown];
-    const v = rows[0]?.ponteVistaEm ?? null;
-    if (!v) return null;
-    const d = v instanceof Date ? v : new Date(v);
-    return Number.isNaN(d.getTime()) ? null : d;
+      "SELECT TIMESTAMPDIFF(SECOND, ponteVistaEm, NOW()) AS haSegundos FROM whatsappEstado WHERE id = 1",
+    )) as [Array<{ haSegundos: number | string | null }>, unknown];
+    const bruto = rows[0]?.haSegundos;
+    if (bruto == null) return null;
+    const haSegundos = Number(bruto);
+    if (!Number.isFinite(haSegundos)) return null;
+    // Um carimbo «no futuro» é o relógio da base a acertar-se: conta como agora.
+    return new Date(Date.now() - Math.max(0, haSegundos) * 1000);
   } catch {
     return null;
   }
