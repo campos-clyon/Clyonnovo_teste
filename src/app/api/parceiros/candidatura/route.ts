@@ -4,6 +4,8 @@ import {
   CATEGORIAS_VALIDAS,
   emailValido,
   telefoneValido,
+  temSinaisDeHtml,
+  MENSAGEM_SEM_SINAIS,
 } from "@/lib/inscricao-profissional";
 import { guardarCandidatura } from "@/lib/candidaturas";
 
@@ -56,6 +58,9 @@ export async function POST(req: NextRequest) {
   const nome = texto(corpo.nome, 120);
   if (!nome || nome.length < 2) {
     erros.push({ campo: "nome", mensagem: "Indique o seu nome ou o da empresa." });
+  } else if (temSinaisDeHtml(nome)) {
+    // A aprovação transforma isto no nome da página pública dele.
+    erros.push({ campo: "nome", mensagem: MENSAGEM_SEM_SINAIS.nome });
   }
 
   const email = texto(corpo.email, 200)?.toLowerCase() ?? null;
@@ -71,6 +76,8 @@ export async function POST(req: NextRequest) {
   const cidade = texto(corpo.cidade, 120);
   if (!cidade) {
     erros.push({ campo: "cidade", mensagem: "Diga de onde trabalha — é o que decide que pedidos lhe chegam." });
+  } else if (temSinaisDeHtml(cidade)) {
+    erros.push({ campo: "cidade", mensagem: MENSAGEM_SEM_SINAIS.cidade });
   }
 
   const servicosBrutos = Array.isArray(corpo.servicos) ? corpo.servicos : [];

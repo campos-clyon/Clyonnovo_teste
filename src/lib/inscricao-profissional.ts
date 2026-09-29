@@ -198,7 +198,7 @@ export function telefoneValido(telefone: string): boolean {
  * Por isso as palavras inteiras levam `\b` e as abreviaturas levam o próprio
  * ponto, que já é o terminador delas.
  */
-const TIPOS_DE_VIA =
+export const TIPOS_DE_VIA =
   /^(?:(rua|avenida|travessa|largo|praceta|estrada|beco|alameda|praça|praca|rotunda|caminho|calçada|calcada|azinhaga|impasse|urbanização|urbanizacao|lote)\b|(r|av|tv|lg|estr|pct)\.)/i;
 
 const CODIGO_POSTAL = /\b\d{4}-\d{3}\b/;
@@ -210,6 +210,26 @@ export function pareceMorada(nome: string): boolean {
   return TIPOS_DE_VIA.test(limpo) && /\b\d{1,4}\b/.test(limpo);
 }
 
+/**
+ * Os sinais de menor e maior não têm lugar num nome nem numa terra.
+ *
+ * O nome, a cidade e as zonas vão para a página pública do profissional — o
+ * título, o corpo e os dados estruturados. Um `</script>` escrito no nome
+ * fechava a etiqueta dos dados estruturados e o resto passava a ser HTML da
+ * nossa página. Isso fecha-se em `json-ld.ts`; isto é a segunda tranca, à
+ * entrada: não há empresa nem terra com `<` no nome, e recusar aqui custa
+ * uma frase a quem se enganou e nada a quem não se enganou.
+ */
+export function temSinaisDeHtml(texto: string): boolean {
+  return /[<>]/.test(texto);
+}
+
+export const MENSAGEM_SEM_SINAIS = {
+  nome: "O nome não pode ter os sinais < nem >.",
+  cidade: "A cidade não pode ter os sinais < nem >.",
+  zonas: "As zonas não podem ter os sinais < nem >.",
+} as const;
+
 export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
   const erros: ErroDeInscricao[] = [];
   const c = (corpo ?? {}) as Record<string, unknown>;
@@ -217,6 +237,8 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
   const nome = texto(c.nome);
   if (nome.length < 3) {
     erros.push({ campo: "nome", mensagem: "Indique o nome ou a designação da empresa." });
+  } else if (temSinaisDeHtml(nome)) {
+    erros.push({ campo: "nome", mensagem: MENSAGEM_SEM_SINAIS.nome });
   } else if (pareceMorada(nome)) {
     erros.push({
       campo: "nome",
@@ -238,6 +260,13 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
   const cidade = texto(c.cidade);
   if (cidade.length < 2) {
     erros.push({ campo: "cidade", mensagem: "Indique a cidade onde tem base." });
+  } else if (temSinaisDeHtml(cidade)) {
+    erros.push({ campo: "cidade", mensagem: MENSAGEM_SEM_SINAIS.cidade });
+  }
+
+  // As zonas aparecem na página pública, em «Onde trabalha».
+  if (listaDeTextos(c.zonas).some(temSinaisDeHtml)) {
+    erros.push({ campo: "zonas", mensagem: MENSAGEM_SEM_SINAIS.zonas });
   }
 
   const categorias = listaDeTextos(c.categorias).filter((id) => CATEGORIAS_VALIDAS.includes(id));
