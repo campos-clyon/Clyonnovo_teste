@@ -257,3 +257,40 @@ describe("o selo das carteiras conta o que a carteira mostra", () => {
     expect(consulta).toContain("n.confirmadoEm > ?");
   });
 });
+
+/**
+ * ⚠️ O SELO DOS PEDIDOS CONTA O QUE A LISTA «NOVOS» MOSTRA.
+ *
+ * *«O "Pedidos" marca 1 notificação mas não tem pedidos novos — já foi tudo
+ * visualizado.»* — 29-09-2026. O cartão «Novos» dizia 0.
+ *
+ * O selo contava tudo o que ENTROU desde que se abriu a secção; o cartão conta
+ * o que ninguém ABRIU. Um pedido criado no backoffice, aberto na mesa, ou lido
+ * pelo WhatsApp tinha `viewedAt` — ficava fora de «Novos» e dentro do selo.
+ * É o erro das Carteiras outra vez, e a lição é a mesma.
+ */
+describe("o selo dos pedidos conta o que a lista «Novos» mostra", () => {
+  const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
+  // Recortado entre dois nomes de secção: o ficheiro é CRLF, e uma quebra de
+  // linha escrita à mão nunca lá acerta.
+  const inicio = DB.indexOf('"pedidos",', DB.indexOf("async function contarNovidades"));
+  const consulta = DB.slice(inicio, DB.indexOf('"profissionais",', inicio));
+
+  it("um pedido que alguém já abriu deixa de contar", () => {
+    expect(inicio).toBeGreaterThan(-1);
+    expect(consulta).toContain("viewedAt IS NULL");
+  });
+
+  it("e continua a apagar-se por se abrir a secção", () => {
+    // Os dois gestos têm de funcionar: abrir Pedidos, ou abrir o pedido.
+    expect(consulta).toContain("createdAt > ?");
+  });
+
+  it("com os mesmos estados excluídos que o cartão «Novos» — nunca é maior que ele", () => {
+    const i = DB.indexOf("as pendente_viewed");
+    const cartao = DB.slice(i - 400, i);
+    const excluidos = "status NOT IN ('arquivado','concluido','cancelado')";
+    expect(cartao).toContain(excluidos);
+    expect(consulta).toContain(excluidos);
+  });
+});

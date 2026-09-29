@@ -2851,10 +2851,29 @@ export async function contarNovidades(
     }
   };
 
+  /*
+   * ⚠️ O SELO DOS PEDIDOS SÓ CONTA O QUE ESTÁ NA LISTA «NOVOS».
+   *
+   * *«O "Pedidos" marca 1 notificação mas não tem pedidos novos — já foi tudo
+   * visualizado.»* — 29-09-2026. O cartão «Novos» dizia 0, e dizia bem.
+   *
+   * Contava-se `createdAt > ?` — tudo o que ENTROU desde que se abriu a secção
+   * Pedidos —, e não o que está POR VER. Um pedido criado à mão no backoffice,
+   * ou aberto directamente na mesa das Negociações, ou chegado pelo WhatsApp e
+   * já lido por lá, entrava no selo e não aparecia em «Novos»: já tinha
+   * `viewedAt`. O selo apontava para uma lista que não tinha nada.
+   *
+   * É o mesmo erro que o das Carteiras (18-09-2026), com a mesma lição: um
+   * selo que aponta para uma lista conta as linhas DESSA lista. Agora são as
+   * duas condições juntas — entrou desde que abriu Pedidos E ninguém o abriu
+   * ainda —, com os mesmos estados excluídos que o cartão «Novos» exclui em
+   * `countSimulatorOrdersByStatus`. O selo nunca pode ser maior que o cartão.
+   */
   await um(
     "pedidos",
     `SELECT COUNT(*) AS n FROM simulatorOrders
       WHERE createdAt > ?
+        AND viewedAt IS NULL
         AND (status IS NULL OR status NOT IN ('arquivado','concluido','cancelado'))`,
     [desde.pedidos],
   );
