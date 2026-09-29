@@ -5,7 +5,7 @@ import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
-import { quantoOProfissionalRecebe } from "./taxas-plataforma";
+import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 
 
 /**
@@ -84,7 +84,13 @@ export async function avisarClienteDaProposta(p: {
   nomeDoCliente: string | null;
   pedidoId: number;
   profissionalNome: string;
-  valor: number;
+  /**
+   * O PREÇO DELE — o que paga, já com a taxa CLYON, sem IVA. Ver
+   * `preco-do-cliente.ts`. Chama-se `preco`, e não `valor`, para ninguém lhe
+   * passar o valor do profissional sem dar por isso: era o que isto recebia
+   * até 29-09-2026.
+   */
+  preco: number;
   /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
   base?: BaseDoPreco;
   /**
@@ -103,7 +109,10 @@ export async function avisarClienteDaProposta(p: {
 
   return enviar(
     p.para,
-    `Tem uma proposta de ${precoComBase(`${p.valor.toFixed(0)} €`, p.base ?? "total")} — pedido #${p.pedidoId}`,
+    // O preço inteiro, com os cêntimos: com a taxa lá dentro, 367,50 € a
+    // arredondar para «368 €» no assunto era um número que não está em lado
+    // nenhum do ecrã.
+    `Tem uma proposta de ${precoComBase(euros(p.preco), p.base ?? "total")} — pedido #${p.pedidoId}`,
     moldura(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
       <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:#0B1929;">
@@ -111,8 +120,8 @@ export async function avisarClienteDaProposta(p: {
       </h1>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
         <strong>${e(p.profissionalNome)}</strong> propôs
-        <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> para o seu trabalho. Pode aceitar, propor
-        outro valor, ou esperar por mais propostas.
+        <strong>${precoComBase(euros(p.preco), p.base ?? "total")}</strong> para o seu trabalho,
+        sem IVA. Pode aceitar, propor outro valor, ou esperar por mais propostas.
       </p>
       ${
         notaDaCargaParaOCliente(p.base ?? "total")
@@ -136,6 +145,14 @@ export async function avisarProfissionalDaProposta(p: {
   valor: number;
   /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
   base?: BaseDoPreco;
+  /**
+   * As taxas DESTA negociação — obrigatórias de propósito.
+   *
+   * O líquido saía das de origem (6 %) escritas no código, e a 29-09-2026 a
+   * comissão passou a ser 11 % do que o cliente paga: 6,55 % ao profissional.
+   * O email prometia-lhe 1,92 € a mais por cada 350 € — por escrito.
+   */
+  taxas: Taxas;
   /** O token da negociação dele. */
   token: string;
   baseUrl?: string;
@@ -143,7 +160,7 @@ export async function avisarProfissionalDaProposta(p: {
   const base = p.baseUrl ?? urlDeAccao();
   const url = comChave(`${base}/profissionais/pedidos/${p.token}`);
   const nome = p.nomeDoProfissional?.trim().split(/\s+/)[0];
-  const liquido = quantoOProfissionalRecebe(p.valor);
+  const liquido = quantoOProfissionalRecebe(p.valor, p.taxas);
 
   return enviar(
     p.para,
@@ -183,12 +200,18 @@ export async function avisarTrabalhoConfirmado(p: {
   pedidoId: number;
   /** O valor ACORDADO — o líquido calcula-se aqui, como nos outros. */
   valorAcordado: number;
+  /**
+   * As taxas DESTA negociação — obrigatórias pela mesma razão do aviso da
+   * contraproposta. Em dinheiro, a comissão dele é zero: sem isto o email
+   * dizia-lhe que a carteira tinha 94 % do que ele recebeu em mão.
+   */
+  taxas: Taxas;
   baseUrl?: string;
 }): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const url = comChave(`${base}/profissionais/painel`);
   const nome = p.nomeDoProfissional?.trim().split(/\s+/)[0];
-  const liquido = quantoOProfissionalRecebe(p.valorAcordado);
+  const liquido = quantoOProfissionalRecebe(p.valorAcordado, p.taxas);
 
   return enviar(
     p.para,

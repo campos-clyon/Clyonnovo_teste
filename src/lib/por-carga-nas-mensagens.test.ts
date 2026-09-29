@@ -22,12 +22,16 @@ const semComentarios = (s: string) =>
 
 describe("a conta dita ao cliente, por carga", () => {
   it("cada número leva a unidade — e o total de sempre não muda", () => {
+    /*
+     * Desde 29-09-2026 a frase já não repete o preço: quem chama di-lo antes,
+     * já com a taxa (`preco-do-cliente.ts`). A unidade continua nos dois
+     * sítios onde há número ou a falta dele se nota.
+     */
     expect(totalEmPalavras(300, null, undefined, undefined, "carga")).toBe(
-      "Com a taxa CLYON, fica em 315,00 € por carga, sem IVA. " +
-        "Com factura acrescem 23 % de IVA: 387,45 € por carga.",
+      "Valor por carga, sem IVA. Com factura acrescem 23 % de IVA: 387,45 € por carga.",
     );
     expect(totalEmPalavras(300, null)).toBe(
-      "Com a taxa CLYON, fica em 315,00 € sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.",
+      "Valor sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.",
     );
     expect(comFacturaEmPalavras(300, null, undefined, "carga")).toBe(
       "Com factura acrescem 23 % de IVA: 387,45 € por carga.",
@@ -66,11 +70,16 @@ describe("as mensagens ao cliente passam a base", () => {
   const AVISAR = semComentarios(ler("src/lib/avisar-da-proposta.ts"));
 
   it("a proposta e a aceitação — a mensagem da Carolina", () => {
-    // Uma para a proposta, outra para a aceitação.
-    expect(WHATSAPP.match(/precoComBase\(euros\(dados\.valor\), dados\.base\)/g)?.length).toBe(3);
+    // Uma para a proposta, outra para a aceitação — com o PREÇO DELE, já com
+    // a taxa, desde 29-09-2026. O valor do profissional fica só no registo
+    // interno do aviso.
+    expect(WHATSAPP.match(/precoComBase\(euros\(preco\), dados\.base\)/g)?.length).toBe(2);
+    expect(WHATSAPP.match(/precoComBase\(euros\(dados\.valor\), dados\.base\)/g)?.length).toBe(1);
     expect(WHATSAPP.match(/comNotaDaCarga\(dados\.base\)/g)?.length).toBe(2);
-    expect(WHATSAPP.match(/tituloDeFechar\(dados\.valor, dados\.base\)/g)?.length).toBe(2);
-    expect(WHATSAPP).toContain("Fechar ${Math.round(valor)} €/carga");
+    expect(WHATSAPP.match(/tituloDeFechar\(preco, dados\.base\)/g)?.length).toBe(2);
+    // O botão diz a unidade, e cabe nos 20 caracteres do WhatsApp.
+    expect(WHATSAPP).toContain("€/carga");
+    expect(WHATSAPP).toContain("junto.length <= 20");
   });
 
   it("o «Fechado com…» e o ecrã do pedido", () => {
@@ -85,7 +94,8 @@ describe("as mensagens ao cliente passam a base", () => {
 
   it("e a passagem do assistente diz o mesmo que o caminho imediato", () => {
     expect(ASSISTENTE).toContain("const base = lerBase(p.baseDoPreco);");
-    expect(ASSISTENTE.match(/totalEmPalavras\([^)]*, base\)/g)?.length).toBe(2);
+    // A proposta, a aceitação e — desde 29-09-2026 — o «combinado» em dinheiro.
+    expect(ASSISTENTE.match(/totalEmPalavras\([^)]*, base\)/g)?.length).toBe(3);
     expect(semComentarios(ler("src/lib/db.ts"))).toContain("o.createdAt, o.dataAgendada, o.baseDoPreco");
   });
 });

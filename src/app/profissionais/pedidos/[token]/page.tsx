@@ -157,6 +157,7 @@ export default async function PaginaDoPedidoProfissional({
       distanciaKm,
       parametrosDoMapa(mapa),
       profissional ?? null,
+      taxasDaNegociacao(negociacao),
     );
   } catch (e) {
     console.error("[profissionais/pedidos/[token]] sugestão", e);

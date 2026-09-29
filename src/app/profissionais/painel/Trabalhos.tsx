@@ -1985,7 +1985,7 @@ function DetalheDoTrabalho({
           valorAcordado={pedido.valorAcordado}
           minimoDoCliente={pedido.querPagar}
           recebeSeAceitar={
-            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
+            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar, pedido.taxas) : null
           }
           sugestao={pedido.sugestao ?? null}
           onMudou={onRecarregar}

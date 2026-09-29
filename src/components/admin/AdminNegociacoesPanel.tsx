@@ -69,6 +69,7 @@ import {
   TAXA_IVA,
   type Taxas,
 } from "@/lib/taxas-plataforma";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
@@ -3918,6 +3919,23 @@ function RespostaDaClyon({
           inputMode="decimal"
           className="h-8 w-32 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white outline-none focus:border-cyan-600"
         />
+        {/*
+          O QUE O CLIENTE VÊ, ao lado do que se escreve — 29-09-2026.
+
+          A mesa conta em valores do profissional; o cliente, desde esta data,
+          vê tudo já com a taxa. Quem passa ao sistema um «pago 300» dito ao
+          telefone tem de escrever aqui o valor do profissional — e sem isto
+          escrevia 300, e o cliente acabava a ler 315 €.
+        */}
+        {(() => {
+          const v = Number(valor.replace(",", "."));
+          if (!valor.trim() || !Number.isFinite(v) || v <= 0) return null;
+          return (
+            <span className="text-xs text-slate-400">
+              o cliente vê {euros(precoParaOCliente(v, taxasDaNegociacao(negociacao)))}
+            </span>
+          );
+        })()}
         <button
           onClick={() => agir("propor", valor)}
           disabled={aEnviar !== "" || valor.trim() === ""}
@@ -4674,9 +4692,14 @@ function AvaliarPelaClyon({
   );
 }
 
-/** "5 %" — a taxa como se lê, a partir da constante. */
+/**
+ * "5 %" — a taxa como se lê. Com as casas que tiver: desde 29-09-2026 a do
+ * profissional é 6,55 %, e arredondada às unidades lia-se «7 %» ao lado de
+ * uma conta feita a 6,55.
+ */
 function pct(taxa: number): string {
-  return `${Math.round(taxa * 100)} %`;
+  const pontos = Math.round(taxa * 10000) / 100;
+  return `${String(pontos).replace(".", ",")} %`;
 }
 
 function ConfirmarPelaClyon({

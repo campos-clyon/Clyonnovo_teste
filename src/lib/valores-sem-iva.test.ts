@@ -85,9 +85,14 @@ describe("os ecrãs do cliente mostram esse número", () => {
   it("o cartão da proposta, antes de contratar, diz o mesmo número", () => {
     // É onde ele decide. Um número aqui e outro depois do clique é a definição
     // de má surpresa, e a lei portuguesa (DL 138/90) manda mostrar ao
-    // consumidor o preço final antes de ele se comprometer.
+    // consumidor o preço final antes de ele se comprometer. Desde 29-09-2026
+    // é o número grande do cartão: `precoParaOCliente` é `contaDoCliente(...)
+    // .semIva` — o mesmo número que o fecho mostra.
     const ECRA = soCodigo(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("taxasDaNegociacao(n)).semIva)} a pagar");
+    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela)");
+    expect(ECRA).toContain("{euros(precoEmCima)}");
+    const PRECO = soCodigo(ler("src/lib/preco-do-cliente.ts"));
+    expect(PRECO).toContain("contaDoCliente(valorDoProfissional, taxas ?? TAXAS_DE_ORIGEM).semIva");
   });
 
   it("a lista de pedidos da conta dele também", () => {

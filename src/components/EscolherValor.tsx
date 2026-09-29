@@ -50,15 +50,28 @@ export default function EscolherValor({
   passos,
   escreverPrimeiro = false,
   rotuloDosAtalhos,
+  ajustar,
 }: {
   /** O valor em cima da mesa, sobre o qual os atalhos são calculados. */
   referencia: number | null;
   direccao: DireccaoDaProposta;
   aEnviar: boolean;
   rotuloDoBotao?: string;
-  /** Uma linha por baixo do valor escolhido — o líquido, o total, o que fizer sentido. */
-  legendaDoValor?: (valor: number) => string;
+  /**
+   * Uma linha por baixo do valor escolhido — o líquido, o total, o que fizer
+   * sentido. `escrito` é o número tal como a pessoa o pôs, antes de `ajustar`.
+   */
+  legendaDoValor?: (valor: number, escrito: number | null) => string;
   onPropor: (valor: string) => void;
+  /**
+   * O VALOR QUE FICA, quando nem todo o cêntimo é possível — 29-09-2026.
+   *
+   * O cliente escreve o preço dele, já com a taxa, e há preços a que nenhum
+   * valor do profissional chega (ver `preco-do-cliente.ts`). O botão tem de
+   * dizer o número que vai mesmo para a mesa, e não o que foi escrito: é
+   * aplicado aos atalhos e ao campo, antes de se mostrar seja o que for.
+   */
+  ajustar?: (valor: number) => number | null;
   /** Os atalhos, quando não são os da direcção (ex.: 10, 20 e 40 % sobre a sugestão). */
   passos?: number[];
   /**
@@ -77,21 +90,29 @@ export default function EscolherValor({
   const [outro, setOutro] = useState("");
   const [aEscrever, setAEscrever] = useState(false);
 
+  const ajustado = (v: number): number => (ajustar ? (ajustar(v) ?? v) : v);
+
   const atalhos =
     referencia != null && referencia > 0
       ? (passos ?? PASSOS[direccao]).map((passo) => ({
           passo,
-          valor: aosCentimos(
-            direccao === "abaixo" ? referencia * (1 - passo) : referencia * (1 + passo),
+          valor: ajustado(
+            aosCentimos(
+              direccao === "abaixo" ? referencia * (1 - passo) : referencia * (1 + passo),
+            ),
           ),
         }))
       : [];
 
   const valorEscrito = Number(outro.replace(",", "."));
+  const escritoValido =
+    (aEscrever || escreverPrimeiro) && Number.isFinite(valorEscrito) && valorEscrito > 0
+      ? aosCentimos(valorEscrito)
+      : null;
   const valorFinal =
     aEscrever || escreverPrimeiro
-      ? Number.isFinite(valorEscrito) && valorEscrito > 0
-        ? aosCentimos(valorEscrito)
+      ? escritoValido != null
+        ? ajustado(escritoValido)
         : null
       : escolhido;
 
@@ -113,7 +134,7 @@ export default function EscolherValor({
           />
         </div>
         {valorFinal != null && legendaDoValor && (
-          <p className="mt-2 text-sm text-slate-600">{legendaDoValor(valorFinal)}</p>
+          <p className="mt-2 text-sm text-slate-600">{legendaDoValor(valorFinal, escritoValido)}</p>
         )}
         <button
           type="button"
@@ -236,7 +257,7 @@ export default function EscolherValor({
       )}
 
       {valorFinal != null && legendaDoValor && (
-        <p className="mt-2 text-sm text-slate-600">{legendaDoValor(valorFinal)}</p>
+        <p className="mt-2 text-sm text-slate-600">{legendaDoValor(valorFinal, escritoValido)}</p>
       )}
 
       <button

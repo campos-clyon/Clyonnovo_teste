@@ -122,10 +122,14 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[profissionais/meus-pedidos] parâmetros da sugestão", e);
     }
-    const sugestaoSegura = (pedido: PedidoParaSugestao, distanciaKm: number | null) => {
+    const sugestaoSegura = (
+      pedido: PedidoParaSugestao,
+      distanciaKm: number | null,
+      taxas: ReturnType<typeof taxasDaNegociacao>,
+    ) => {
       if (!parametros) return null;
       try {
-        return sugerirParaOProfissional(pedido, distanciaKm, parametros, custos);
+        return sugerirParaOProfissional(pedido, distanciaKm, parametros, custos, taxas);
       } catch (e) {
         console.error("[profissionais/meus-pedidos] sugestão", e);
         return null;
@@ -451,6 +455,7 @@ export async function GET(req: NextRequest) {
             baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
           },
           medidas[i]?.km ?? null,
+          taxasDela,
         ),
       };
     });

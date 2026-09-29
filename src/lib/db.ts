@@ -10608,6 +10608,14 @@ export type PedidoParaOAssistente = {
     profissionalNome: string;
     regimeIva: string | null;
     actualizadaEm: Date;
+    /*
+     * As taxas e a forma com que ESTA negociação nasceu. A consulta já as lia
+     * e deitava-as fora: o assistente dizia ao cliente um preço feito com as
+     * de origem. Opcionais só para os testes que montam pedidos à mão.
+     */
+    taxaCliente?: string | number | null;
+    taxaProfissional?: string | number | null;
+    formaDePagamento?: string | null;
   }>;
 };
 
@@ -10671,6 +10679,9 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       profissionalNome: String(n.profissionalNome ?? ""),
       regimeIva: n.regimeIva == null ? null : String(n.regimeIva),
       actualizadaEm: (n.actualizadaEm as Date) ?? new Date(0),
+      taxaCliente: (n.taxaCliente as string | number | null) ?? null,
+      taxaProfissional: (n.taxaProfissional as string | number | null) ?? null,
+      formaDePagamento: n.formaDePagamento == null ? null : String(n.formaDePagamento),
     });
   }
 

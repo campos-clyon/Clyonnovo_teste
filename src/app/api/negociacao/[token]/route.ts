@@ -32,6 +32,7 @@ import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
 import { tService } from "@/lib/translations";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -47,7 +48,11 @@ export const runtime = "nodejs";
  * credenciais diferentes para portas diferentes, e nenhuma serve na outra.
  */
 
-type Corpo = { accao?: string; valor?: unknown; motivo?: unknown };
+/**
+ * `valor` é o do profissional; `preco` é o do cliente, já com a taxa — ver
+ * `valorDaPropostaDoCliente`. Só o cliente manda `preco`.
+ */
+type Corpo = { accao?: string; valor?: unknown; preco?: unknown; motivo?: unknown };
 
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
@@ -83,7 +88,14 @@ export async function POST(
   let negociacaoId: number;
   let pedidoId: number;
   let providerId: number;
-  let linha: { estado: string; valorAcordado: string | null; propostasJson: string | null };
+  let linha: {
+    estado: string;
+    valorAcordado: string | null;
+    propostasJson: string | null;
+    /** As taxas com que ESTA negociação nasceu — ver `taxasDaNegociacao`. */
+    taxaCliente?: string | number | null;
+    taxaProfissional?: string | number | null;
+  };
 
   const doProfissional = await negociacaoPorTokenHash(hash);
 
@@ -286,8 +298,18 @@ export async function POST(
   let resultado;
   switch (corpo.accao) {
     case "propor": {
-      const valor = typeof corpo.valor === "string" ? Number(corpo.valor.replace(",", ".")) : corpo.valor;
-      resultado = propor(estadoActual, lado, Number(valor), agora);
+      /*
+       * O CLIENTE ESCREVE O QUE PAGA — 29-09-2026. Vira aqui o valor do
+       * profissional, com as taxas desta negociação. O profissional escreve
+       * o dele, como sempre.
+       */
+      const valor =
+        lado === "cliente"
+          ? valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha))
+          : typeof corpo.valor === "string"
+            ? Number(corpo.valor.replace(",", "."))
+            : Number(corpo.valor);
+      resultado = propor(estadoActual, lado, valor, agora);
       break;
     }
     case "aceitar":
@@ -354,9 +376,16 @@ export async function POST(
             morada: doPedido?.address ?? null,
             contactoNome: doPedido?.contactName ?? null,
             contactoTelefone: doPedido?.contactPhone ?? null,
+            /*
+             * As taxas DA LINHA, e não as de `doProfissional` — 29-09-2026.
+             *
+             * Quem contrata é o cliente, e com o token dele `doProfissional`
+             * é nulo: o email saía sempre com as taxas de origem, a dizer 6 %
+             * a quem a negociação gravou outra coisa (em dinheiro, zero).
+             */
             recebeLiquido:
               nova.valorAcordado != null
-                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(doProfissional))
+                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
                 : null,
             baseUrl: urlDeAccaoDoPedido(req.headers),
           });
@@ -371,7 +400,7 @@ export async function POST(
             servico: tService(doPedido?.serviceType) || "Trabalho",
             valorQueRecebe:
               nova.valorAcordado != null
-                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(doProfissional))
+                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
                 : 0,
             pedidoId,
           });

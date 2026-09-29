@@ -21,9 +21,16 @@ const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
  * que acresce com factura. É a convenção de toda a gente neste mercado, e é a
  * única que o cliente consegue repetir em voz alta.
  *
- * NÃO SE TOCOU NA CONTA. `contaDoCliente` continua a calcular o imposto por
- * vendedor, por causa da isenção do artigo 53.º; o que mudou foi qual dos
- * números dela é que se diz primeiro.
+ * ⚠️ E ESSE NÚMERO JÁ FOI DITO QUANDO ESTA FRASE CHEGA — 29-09-2026.
+ *
+ * "Invés de cobrar 5 % do cliente depois, vamos apresentar o valor proposto já
+ * com a taxa." A frase dizia «Com a taxa CLYON, fica em 367,50 € sem IVA»
+ * depois de «Fulano propõe 350 €»: dois números, e a taxa a ser somada à frente
+ * dele. Agora quem chama diz o preço dele primeiro — «Fulano propõe 367,50 €»,
+ * ver `preco-do-cliente.ts` — e aqui fica só o que ele ainda não sabe: que é
+ * sem IVA, e quanto fica com factura. Em dinheiro, quanto vai para cada lado.
+ *
+ * `valor` continua a ser o do PROFISSIONAL: é dele que a conta parte.
  */
 export function totalEmPalavras(
   valor: number,
@@ -64,10 +71,9 @@ export function totalEmPalavras(
       `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com factura)` : ""}.`
     );
   }
-  return (
-    `Com a taxa CLYON, fica em ${precoComBase(euros(conta.semIva), base)}${base === "carga" ? "," : ""} sem IVA.` +
-    `${factura ? ` ${factura}` : ""}`
-  );
+  // Por carga, a unidade vai também aqui: o preço dito antes já a levou, e a
+  // factura de baixo leva-a com o número dela.
+  return `${base === "carga" ? "Valor por carga, sem IVA." : "Valor sem IVA."}${factura ? ` ${factura}` : ""}`;
 }
 
 /**
