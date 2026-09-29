@@ -1,4 +1,5 @@
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -403,6 +404,26 @@ export function getAllCityServiceSlugs() {
 
 export function getCityServiceSlug(serviceSlug: string, citySlug: string) {
   return `${serviceSlug}-${citySlug}`;
+}
+
+/**
+ * O ENDEREÇO A QUE SE LIGA quando se quer um serviço numa cidade — 29-09-2026.
+ *
+ * `getCityServiceSlug` diz como a rota [...slug] se chama por dentro; isto
+ * diz para onde deve ir um link. Não são a mesma coisa para as mudanças:
+ * `/mudancas-almada` não existe como página, é um redirect — e levava a
+ * `/mudancas/almada`, que dá 404, porque só há página própria nas cidades de
+ * `mudancas-cidades.ts`. A página da região da Margem Sul ligava para lá no
+ * cartão «Mudanças», e a de Setúbal para `/mudancas/setubal`, outro 404.
+ *
+ * Nas cidades com página vai-se directo a ela (sem passar pelo redirect);
+ * nas outras, ao balcão geral de mudanças, que responde por todas.
+ */
+export function caminhoDoServicoNaCidade(serviceSlug: string, citySlug: string): string {
+  if (serviceSlug === "mudancas") {
+    return getAllCidadeSlugs().includes(citySlug) ? `/mudancas/${citySlug}` : "/mudancas";
+  }
+  return `/${getCityServiceSlug(serviceSlug, citySlug)}`;
 }
 
 export function parseCityServiceSlug(fullSlug: string[]) {

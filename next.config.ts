@@ -119,22 +119,17 @@ const nextConfig: NextConfig = {
         destination: "/recolha-moveis-lisboa",
         permanent: true,
       },
-      // Redirects de mudanças-cidade → páginas dedicadas em /mudancas/cidade
-      // (antes colapsavam todas em /mudancas — matava o SEO das long-tails)
-      { source: "/mudancas-alcochete",        destination: "/mudancas/alcochete",        permanent: true },
-      { source: "/mudancas-sintra",           destination: "/mudancas/sintra",           permanent: true },
-      { source: "/mudancas-montijo",          destination: "/mudancas/montijo",          permanent: true },
-      { source: "/mudancas-oeiras",           destination: "/mudancas/oeiras",           permanent: true },
-      { source: "/mudancas-barreiro",         destination: "/mudancas/barreiro",         permanent: true },
-      { source: "/mudancas-lisboa",           destination: "/mudancas/lisboa",           permanent: true },
-      // Todas as cidades agora têm página dedicada
-      { source: "/mudancas-carnaxide",        destination: "/mudancas/carnaxide",        permanent: true },
-      { source: "/mudancas-corroios",         destination: "/mudancas/corroios",         permanent: true },
-      { source: "/mudancas-palmela",          destination: "/mudancas/palmela",          permanent: true },
-      { source: "/mudancas-odivelas",         destination: "/mudancas/odivelas",         permanent: true },
-      { source: "/mudancas-lumiar",           destination: "/mudancas/lumiar",           permanent: true },
-      { source: "/mudancas-sesimbra",         destination: "/mudancas/sesimbra",         permanent: true },
-      { source: "/mudancas-costa-da-caparica",destination: "/mudancas/costa-da-caparica",permanent: true },
+      /*
+       * Redirects de mudanças-cidade → páginas dedicadas em /mudancas/cidade
+       * (antes colapsavam todas em /mudancas — matava o SEO das long-tails).
+       *
+       * Eram treze linhas escritas à mão, iguais hoje à fonte — e a mesma
+       * lista no middleware já tinha divergido para dezanove, com seis
+       * cidades a acabar em 404 (29-09-2026). Passam a sair da fonte como as
+       * outras famílias. As cidades SEM página não entram aqui: seguem para o
+       * middleware, que as manda para o balcão geral /mudancas.
+       */
+      ...paraAsCidades("/mudancas-"),
       // URLs 404 identificadas - redirecionar para páginas relevantes
       {
         source: "/recolha-de-moveis-usados",
