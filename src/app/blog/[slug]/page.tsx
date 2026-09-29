@@ -26,7 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = artigoPublicado(slug);
 
   if (!post) {
-    return { title: "Artigo não encontrado | CLYON" };
+    // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
+    return { title: "Artigo não encontrado" };
   }
 
   const canonical = `${SITE_URL}/blog/${post.slug}`;

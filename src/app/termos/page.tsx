@@ -22,7 +22,9 @@ import {
 } from "@/lib/identificacao-legal";
 
 export const metadata: Metadata = {
-  title: "Termos e Condições — CLYON",
+  // Sem « — CLYON»: o template do layout já a acrescenta, e saía
+  // «Termos e Condições — CLYON | CLYON» (29-09-2026).
+  title: "Termos e Condições",
   description:
     "Termos e condições de utilização da plataforma CLYON: o que a CLYON faz, o que não faz, como funcionam os pedidos e as propostas, taxas, responsabilidades e direitos do consumidor.",
   alternates: { canonical: `${SITE_URL}/termos` },

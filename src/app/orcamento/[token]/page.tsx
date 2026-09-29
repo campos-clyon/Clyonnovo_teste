@@ -9,9 +9,11 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { token } = await params;
   const order = await getOrderByToken(token);
-  if (!order) return { title: "Orçamento não encontrado | CLYON" };
+  // Sem « | CLYON» escrito à mão: o template do layout acrescenta-o, e o
+  // título com a marca no meio vai como `absolute` (29-09-2026).
+  if (!order) return { title: "Orçamento não encontrado" };
   return {
-    title: `Orçamento CLYON #${order.id}`,
+    title: { absolute: `Orçamento CLYON #${order.id}` },
     description: "Consulte e confirme o seu orçamento personalizado CLYON.",
     robots: { index: false, follow: false },
   };

@@ -272,7 +272,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const parsed = parseCityServiceSlug(slug);
 
   if (!parsed) {
-    return { title: "Página não encontrada | CLYON" };
+    // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
+    return { title: "Página não encontrada" };
   }
 
   const { city, service } = parsed;

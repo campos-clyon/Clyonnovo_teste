@@ -44,7 +44,8 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
   openGraph: {
-    title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
+    // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
+    title: "Esvaziamento de Casas e Apartamentos — Heranças",
     description:
       `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 6h.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,

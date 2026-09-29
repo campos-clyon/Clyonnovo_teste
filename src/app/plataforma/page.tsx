@@ -5,7 +5,8 @@ import { COOKIE_SESSAO_TESTE, verificarSessaoDeTeste } from "@/lib/acesso-mvp";
 import PainelDeTestes from "./PainelDeTestes";
 
 export const metadata: Metadata = {
-  title: "CLYON plataforma",
+  // `absolute`: sem ele, o template do layout dava «CLYON plataforma | CLYON».
+  title: { absolute: "CLYON plataforma" },
   robots: { index: false, follow: false, nocache: true },
 };
 

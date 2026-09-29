@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import ResetPasswordRedirect from "./ResetPasswordRedirect";
 
 export const metadata = {
-  title: "Redefinir palavra-passe — CLYON Pro",
+  // `absolute`: o título já diz a marca, e o template do layout
+  // acrescentava outra — «… CLYON Pro | CLYON» (29-09-2026).
+  title: { absolute: "Redefinir palavra-passe — CLYON Pro" },
   robots: { index: false, follow: false },
 };
 

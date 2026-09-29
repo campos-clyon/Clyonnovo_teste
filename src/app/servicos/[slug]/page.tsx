@@ -6,6 +6,7 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRECOS } from "@/lib/precos-publicos";
+import { cabeNoGoogle } from "@/lib/titulos-seo";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -114,10 +115,20 @@ export const revalidate = 86400;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const cat = categoriaDe(slug);
-  if (!cat) return { title: "Serviço não encontrado | CLYON" };
+  // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
+  if (!cat) return { title: "Serviço não encontrado" };
 
   const preco = PRECOS[cat.id];
-  const titulo = `${cat.label} em Lisboa, Margem Sul e Setúbal`;
+  /*
+   * O título que cabe no Google (29-09-2026). «Montagem e desmontagem de
+   * móveis em Lisboa, Margem Sul e Setúbal | CLYON» tinha 72 caracteres, e o
+   * Google corta aos 60 e reescreve o resto. Tenta-se a versão longa, depois
+   * a curta, e no limite só o serviço — nunca um título cortado a meio.
+   */
+  const titulo =
+    [`${cat.label} em Lisboa, Margem Sul e Setúbal`, `${cat.label} em Lisboa e Setúbal`].find(
+      cabeNoGoogle,
+    ) ?? cat.label;
   const descricao = `${cat.description} ${
     preco ? `${preco.etiqueta}, sem IVA.` : ""
   } ${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`.replace(/\s+/g, " ").trim();

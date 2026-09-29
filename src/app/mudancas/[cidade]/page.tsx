@@ -23,6 +23,7 @@ import {
   getAllCidadeSlugs,
   getCidadeMudancaBySlug,
 } from "@/lib/mudancas-cidades";
+import { comExtra } from "@/lib/titulos-seo";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -37,9 +38,15 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { cidade } = await params;
   const c = getCidadeMudancaBySlug(cidade);
-  if (!c) return { title: "Mudanças — CLYON" };
+  if (!c) return { title: "Mudanças" };
 
-  const title = `Mudanças em ${c.nome} — Orçamento em 6h | ${BUSINESS_NAME}`;
+  /*
+   * Sem « | CLYON» no fim (29-09-2026): o template do layout acrescenta-o, e
+   * as treze páginas saíam no Google como «Mudanças em Sintra — Orçamento em
+   * 6h | CLYON | CLYON». O `comExtra` deita fora o «Orçamento em 6h» numa
+   * terra de nome comprido em vez de deixar o Google cortar o título.
+   */
+  const title = comExtra(`Mudanças em ${c.nome}`, "Orçamento em 6h");
   // Sem número de preço, aqui e no resto da página. A meta description dizia
   // "Preços desde 150€" (o piso por cidade ia de 140 a 220 €) para um serviço
   // que o motor factura a partir de 490 € — sete horas a 70 €/h. Nos

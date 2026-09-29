@@ -66,7 +66,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const regionData = getRegion(region);
 
   if (!regionData) {
-    return { title: "Região não encontrada | CLYON" };
+    // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
+    return { title: "Região não encontrada" };
   }
 
   return {

@@ -41,7 +41,12 @@ import {
 const PRECO_ENTULHO = PRECOS.recolha_entulho;
 
 export const metadata: Metadata = {
-  title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
+  /*
+   * SEM «EM LISBOA» — 29-09-2026. O hub é o das três regiões; quem responde
+   * a «recolha de entulho em Lisboa» é /recolha-entulho-lisboa, e dois
+   * títulos a disputar a mesma pesquisa dividem os sinais entre as duas.
+   */
+  title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
   description:
     `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg carregados à mão. Sem contentores. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
   keywords: [
@@ -60,7 +65,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-entulho` },
   openGraph: {
-    title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
+    title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
     description:
       `Recolha de entulho de obras e remodelações em Lisboa e Setúbal, a saco e carregado à mão. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-entulho`,

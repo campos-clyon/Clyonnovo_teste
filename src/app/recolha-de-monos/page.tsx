@@ -32,7 +32,14 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MONOS = PRECOS.recolha_monos;
 
 export const metadata: Metadata = {
-  title: "Recolha de Monos em Lisboa — Sem Esperar a Câmara",
+  /*
+   * SEM «EM LISBOA» — 29-09-2026. Este título era IGUAL ao de
+   * /recolha-monos-lisboa, palavra por palavra, e o Google não indexa duas
+   * páginas com o mesmo título para a mesma pesquisa: escolhe uma e a outra
+   * perde. A de Lisboa é a que responde a «monos em Lisboa»; este hub é o
+   * das três regiões, e o título passa a dizê-lo.
+   */
+  title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
   description:
     `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 6h.`,
   keywords: [
@@ -49,7 +56,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
   openGraph: {
-    title: "Recolha de Monos em Lisboa — Sem Esperar a Câmara",
+    title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
     description:
       `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 6h.`,
     url: `${SITE_URL}/recolha-de-monos`,
