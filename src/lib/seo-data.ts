@@ -1,5 +1,6 @@
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
+import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -390,10 +391,18 @@ export function getService(slug: string) {
  */
 const SERVICOS_COM_PAGINA_PROPRIA = new Set(["mudancas"]);
 
+/*
+ * E, desde 29-09-2026, também ficam de fora as combinações que têm uma
+ * página estática a dizer o mesmo (`paginas-consolidadas.ts`): a gerada faz
+ * 301 para a estática, e gerá-la no build era voltar a pôr no ar o duplicado
+ * que o redirect veio tirar. Esta lista é a que alimenta o build da rota e o
+ * sitemap — sair daqui é sair dos dois.
+ */
 export function getAllCityServiceSlugs() {
   return CITIES.flatMap((city) =>
     SERVICES
       .filter((service) => !SERVICOS_COM_PAGINA_PROPRIA.has(service.slug))
+      .filter((service) => !(`${service.slug}-${city.slug}` in GERADAS_COM_PAGINA_ESTATICA))
       .map((service) => ({
         slug: [`${service.slug}-${city.slug}`],
         city,
@@ -418,12 +427,18 @@ export function getCityServiceSlug(serviceSlug: string, citySlug: string) {
  *
  * Nas cidades com página vai-se directo a ela (sem passar pelo redirect);
  * nas outras, ao balcão geral de mudanças, que responde por todas.
+ *
+ * O mesmo para as páginas geradas que se juntaram a uma estática
+ * (`paginas-consolidadas.ts`): o link vai directo à que fica. Um link interno
+ * para um endereço que responde 301 gasta rastreio e diz ao Google que nós
+ * próprios ainda usamos o endereço velho.
  */
 export function caminhoDoServicoNaCidade(serviceSlug: string, citySlug: string): string {
   if (serviceSlug === "mudancas") {
     return getAllCidadeSlugs().includes(citySlug) ? `/mudancas/${citySlug}` : "/mudancas";
   }
-  return `/${getCityServiceSlug(serviceSlug, citySlug)}`;
+  const slug = getCityServiceSlug(serviceSlug, citySlug);
+  return GERADAS_COM_PAGINA_ESTATICA[slug] ?? `/${slug}`;
 }
 
 export function parseCityServiceSlug(fullSlug: string[]) {

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { getAllCidadeSlugs } from "./src/lib/mudancas-cidades";
+import { redirectsDasConsolidacoes } from "./src/lib/paginas-consolidadas";
 
 /*
  * As cidades que TEM mesmo pagina de mudancas.
@@ -40,6 +41,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      /*
+       * As páginas que se juntaram a outras (29-09-2026): a gerada
+       * /esvaziamento-casas-amadora vai para a estática equivalente, o sofá
+       * de Lisboa para /recolha-de-sofas, o artigo da limpeza pós-obra para
+       * o entulho. A lista, e o porquê de cada uma, vivem em
+       * `paginas-consolidadas.ts` — que também as tira do sitemap e do build.
+       */
+      ...redirectsDasConsolidacoes(),
       // Páginas de orçamento da recolha
       {
         source: "/recolha/orcamento",

@@ -8,6 +8,7 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   SITE_URL,
+  caminhoDoServicoNaCidade,
 } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
@@ -156,7 +157,7 @@ export default function AreasDeAtuacaoPage() {
                 {region.cities.map((city) => (
                   <Link
                     key={city.slug}
-                    href={`/recolha-moveis-${city.slug}`}
+                    href={caminhoDoServicoNaCidade("recolha-moveis", city.slug)}
                     className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-cyan-100 hover:text-acao-hover"
                   >
                     {city.name}
@@ -246,8 +247,12 @@ export default function AreasDeAtuacaoPage() {
                     </td>
                     {services.map((service) => (
                       <td key={service.slug} className="px-4 py-3 text-center">
+                        {/* O endereço sai de `caminhoDoServicoNaCidade` e não
+                            de `/${serviço}-${cidade}` (29-09-2026): o
+                            esvaziamento na Amadora tem página própria, e a
+                            gerada faz 301 para ela. */}
                         <Link
-                          href={`/${service.slug}-${city.slug}`}
+                          href={caminhoDoServicoNaCidade(service.slug, city.slug)}
                           className="inline-flex items-center justify-center rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-acao transition-colors hover:bg-cyan-100"
                         >
                           Ver

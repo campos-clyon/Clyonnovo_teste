@@ -3,7 +3,13 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock3 } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { getAllBlogPosts, getBlogPost } from "@/lib/blog-data";
+/*
+ * Os artigos NO AR, e não todos os de blog-data (29-09-2026): um artigo
+ * retirado não se gera, não aparece nos relacionados e, se alguém lá chegar,
+ * o next.config já o mandou para a página que o substitui. Ver
+ * `artigos-do-blog.ts`.
+ */
+import { artigoPublicado, artigosPublicados } from "@/lib/artigos-do-blog";
 import { BUSINESS_NAME, CONTACT_PATH, SITE_URL } from "@/lib/seo-data";
 import { zonasDoArtigo } from "@/lib/blog-zonas";
 
@@ -12,12 +18,12 @@ type Props = {
 };
 
 export function generateStaticParams() {
-  return getAllBlogPosts().map((post) => ({ slug: post.slug }));
+  return artigosPublicados().map((post) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = artigoPublicado(slug);
 
   if (!post) {
     return { title: "Artigo não encontrado | CLYON" };
@@ -45,7 +51,7 @@ export const dynamicParams = false;
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = artigoPublicado(slug);
 
   if (!post) notFound();
 
@@ -90,7 +96,7 @@ export default async function BlogPostPage({ params }: Props) {
     mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
   };
 
-  const relatedPosts = getAllBlogPosts().filter((item) => item.slug !== post.slug).slice(0, 3);
+  const relatedPosts = artigosPublicados().filter((item) => item.slug !== post.slug).slice(0, 3);
   // Zonas onde este serviço se faz — só para artigos com serviço associado
   const { zonas } = zonasDoArtigo(post.slug);
 

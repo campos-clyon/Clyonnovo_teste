@@ -1,11 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
 
 import { middleware } from "@/middleware";
+import sitemap from "@/app/sitemap";
 import nextConfig from "../../next.config";
+import { artigosPublicados } from "./artigos-do-blog";
+import { zonasDoArtigo } from "./blog-zonas";
 import { getAllCidadeSlugs } from "./mudancas-cidades";
+import {
+  ARTIGOS_RETIRADOS,
+  GERADAS_COM_PAGINA_ESTATICA,
+  PAGINAS_FUNDIDAS,
+} from "./paginas-consolidadas";
 import {
   REGIONS,
   SERVICES,
@@ -123,5 +131,91 @@ describe("redirects coerentes", () => {
     expect(() => ler("src/app/contacto/page.tsx")).toThrow();
     const redirects = await nextConfig.redirects!();
     expect(redirects.find((x) => x.source === "/contacto")?.destination).toBe("/contactos");
+  });
+});
+
+/** Todos os .ts/.tsx de uma pasta, sem os testes. */
+function fontes(dir: string, encontrados: string[] = []): string[] {
+  for (const nome of readdirSync(dir)) {
+    const caminho = join(dir, nome);
+    if (statSync(caminho).isDirectory()) fontes(caminho, encontrados);
+    else if (/\.tsx?$/.test(nome) && !nome.endsWith(".test.ts")) encontrados.push(caminho);
+  }
+  return encontrados;
+}
+
+describe("páginas consolidadas: um endereço por pesquisa", () => {
+  /** O que saiu → o que fica, tal como o Search Console o reportou. */
+  const CONSOLIDADAS: Record<string, string> = {
+    "/esvaziamento-casas-amadora": "/esvaziamento-de-casas-amadora",
+    "/recolha-monos-amadora": "/recolha-de-monos-amadora",
+    "/recolha-de-sofa-lisboa": "/recolha-de-sofas",
+    "/blog/limpeza-pos-obra-e-retirada-de-residuos": "/recolha-de-entulho",
+  };
+  const QUE_SAIRAM = [
+    ...Object.keys(GERADAS_COM_PAGINA_ESTATICA).map((s) => `/${s}`),
+    ...Object.keys(PAGINAS_FUNDIDAS),
+    ...Object.keys(ARTIGOS_RETIRADOS).map((s) => `/blog/${s}`),
+  ];
+
+  it("cada uma faz 301 para a página que fica", async () => {
+    const redirects = await nextConfig.redirects!();
+    for (const [de, para] of Object.entries(CONSOLIDADAS)) {
+      const r = redirects.find((x) => x.source === de);
+      expect(r?.destination, de).toBe(para);
+      expect(r && "permanent" in r ? r.permanent : false, de).toBe(true);
+    }
+    expect(QUE_SAIRAM.sort()).toEqual(Object.keys(CONSOLIDADAS).sort());
+  });
+
+  it("e a página que fica existe mesmo", () => {
+    for (const destino of Object.values(CONSOLIDADAS)) {
+      expect(existsSync(join(process.cwd(), "src", "app", destino, "page.tsx")), destino).toBe(true);
+    }
+  });
+
+  it("nenhuma das que saíram fica no sitemap — e as que ficam estão lá", async () => {
+    const caminhos = (await sitemap()).map((e) => new URL(e.url).pathname);
+    for (const saiu of QUE_SAIRAM) expect(caminhos, saiu).not.toContain(saiu);
+    for (const fica of Object.values(CONSOLIDADAS)) expect(caminhos, fica).toContain(fica);
+  });
+
+  it("as geradas que saíram também não se geram no build", () => {
+    const slugs = getAllCityServiceSlugs().map((e) => e.slug.join("/"));
+    for (const s of Object.keys(GERADAS_COM_PAGINA_ESTATICA)) expect(slugs).not.toContain(s);
+  });
+
+  it("os links montados pela cidade vão direitos à que fica", () => {
+    expect(caminhoDoServicoNaCidade("esvaziamento-casas", "amadora")).toBe("/esvaziamento-de-casas-amadora");
+    expect(caminhoDoServicoNaCidade("recolha-monos", "amadora")).toBe("/recolha-de-monos-amadora");
+    expect(caminhoDoServicoNaCidade("recolha-moveis", "amadora")).toBe("/recolha-moveis-amadora");
+    const doBlog = zonasDoArtigo("esvaziamento-de-casas-com-recheio").zonas.map((z) => z.href);
+    expect(doBlog).toContain("/esvaziamento-de-casas-amadora");
+    expect(doBlog).not.toContain("/esvaziamento-casas-amadora");
+  });
+
+  it("e nenhum ficheiro do site escreve à mão o endereço que saiu", () => {
+    // Um link para um 301 gasta rastreio e diz ao Google que nós próprios
+    // ainda usamos o endereço velho. A única casa destes caminhos é a lista
+    // que os redirecciona.
+    const maus: string[] = [];
+    for (const f of [...fontes(join(process.cwd(), "src", "app")), ...fontes(join(process.cwd(), "src", "components")), ...fontes(join(process.cwd(), "src", "lib"))]) {
+      if (f.endsWith("paginas-consolidadas.ts")) continue;
+      const codigo = semComentarios(readFileSync(f, "utf8"));
+      for (const saiu of QUE_SAIRAM) {
+        if (new RegExp(`["'\`]${saiu}["'\`]`).test(codigo)) maus.push(`${f.replace(process.cwd(), "")} → ${saiu}`);
+      }
+    }
+    expect(maus).toEqual([]);
+  });
+
+  it("o artigo retirado sai da listagem, da página e dos relacionados", () => {
+    expect(artigosPublicados().map((a) => a.slug)).not.toContain("limpeza-pos-obra-e-retirada-de-residuos");
+    for (const f of ["src/app/blog/page.tsx", "src/app/blog/[slug]/page.tsx", "src/app/sitemap.ts"]) {
+      const codigo = semComentarios(ler(f));
+      expect(codigo, f).toContain("artigosPublicados()");
+      expect(codigo, f).not.toContain("getAllBlogPosts");
+      expect(codigo, f).not.toContain("getBlogPost(");
+    }
   });
 });

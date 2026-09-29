@@ -25,6 +25,7 @@ import {
   BUSINESS_PHONE,
   CONTACT_PATH,
   SITE_URL,
+  caminhoDoServicoNaCidade,
   getAllCityServiceSlugs,
   getCityServiceSlug,
   getRegion,
@@ -253,19 +254,17 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
   ];
 }
 
+/*
+ * As páginas que esta rota gera são exactamente as de `getAllCityServiceSlugs`
+ * — que já deixa de fora as mudanças (têm rota própria) e, desde 29-09-2026,
+ * as combinações que se juntaram a uma página estática. Com
+ * `dynamicParams = false`, o que não está aqui não existe.
+ *
+ * Havia aqui um filtro a mais para oito `mudancas-<cidade>` "fracas": nunca
+ * apanhava nada, porque nenhuma combinação de mudanças chega a esta lista.
+ */
 export function generateStaticParams() {
-  const weakMudancasUrls = ["alcochete", "sintra", "montijo", "carnaxide", "oeiras", "corroios", "barreiro", "palmela"];
-  
-  return getAllCityServiceSlugs()
-    .filter((item) => {
-      // Excluir URLs fracas de mudanças (não têm conteúdo prioritário)
-      const slugString = item.slug.join("/");
-      if (slugString.startsWith("mudancas-") && weakMudancasUrls.some((city) => slugString === `mudancas-${city}`)) {
-        return false;
-      }
-      return true;
-    })
-    .map((item) => ({ slug: item.slug }));
+  return getAllCityServiceSlugs().map((item) => ({ slug: item.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -454,7 +453,7 @@ export default async function ServiceCityPage({ params }: Props) {
   };
 
   const nearbyLinks = relatedCities.map((relatedCity) => ({
-    href: `/${getCityServiceSlug(service.slug, relatedCity.slug)}`,
+    href: caminhoDoServicoNaCidade(service.slug, relatedCity.slug),
     label: `${service.name} em ${relatedCity.name}`,
   }));
   const isLisbonFurniturePage = isFurnitureService(service.slug) && city.slug === "lisboa";
@@ -499,9 +498,9 @@ export default async function ServiceCityPage({ params }: Props) {
   const supportLinks = isFurnitureService(service.slug)
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: `/${getCityServiceSlug("recolha-monos", city.slug)}`, label: `Recolha de monos em ${city.name}` },
-        { href: `/${getCityServiceSlug("esvaziamento-casas", city.slug)}`, label: `Esvaziamento de casas em ${city.name}` },
-        { href: `/${getCityServiceSlug("recolha-entulho", city.slug)}`, label: `Recolha de entulho em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-monos", city.slug), label: `Recolha de monos em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-entulho", city.slug), label: `Recolha de entulho em ${city.name}` },
         ...(city.slug === "costa-da-caparica"
           ? [
               {
@@ -516,8 +515,8 @@ export default async function ServiceCityPage({ params }: Props) {
     : service.slug === "recolha-monos"
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: `/${getCityServiceSlug("recolha-moveis", city.slug)}`, label: `Recolha de móveis em ${city.name}` },
-        { href: `/${getCityServiceSlug("esvaziamento-casas", city.slug)}`, label: `Esvaziamento de casas em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
         { href: "/blog/recolha-de-monos-o-que-inclui", label: "Guia: o que inclui a recolha de monos" },
         { href: "/contactos", label: "Contactos" },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
@@ -525,8 +524,8 @@ export default async function ServiceCityPage({ params }: Props) {
     : service.slug === "recolha-entulho"
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: `/${getCityServiceSlug("esvaziamento-casas", city.slug)}`, label: `Esvaziamento de casas em ${city.name}` },
-        { href: `/${getCityServiceSlug("recolha-moveis", city.slug)}`, label: `Recolha de móveis em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
         { href: "/blog/recolha-de-entulho-legal-e-organizada", label: "Guia: recolha de entulho" },
         { href: "/contactos", label: "Contactos" },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
@@ -535,7 +534,7 @@ export default async function ServiceCityPage({ params }: Props) {
         ...(currentServiceHub ? [currentServiceHub] : []),
         { href: "/servicos", label: "Todos os serviços" },
         { href: "/simulador", label: "Pedir orçamento" },
-        { href: `/${getCityServiceSlug("recolha-moveis", city.slug)}`, label: `Recolha de móveis em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
       ];
 
@@ -835,7 +834,7 @@ export default async function ServiceCityPage({ params }: Props) {
               ].map((item) => (
                 <Link
                   key={item.slug}
-                  href={`/${getCityServiceSlug("recolha-moveis", item.slug)}`}
+                  href={caminhoDoServicoNaCidade("recolha-moveis", item.slug)}
                   className="rounded-[22px] border border-cyan-100 bg-white px-4 py-4 text-sm font-medium text-slate-800 transition hover:bg-cyan-50"
                 >
                   {item.label}
@@ -865,7 +864,7 @@ export default async function ServiceCityPage({ params }: Props) {
               ].map((item) => (
                 <Link
                   key={item.slug}
-                  href={`/${getCityServiceSlug("recolha-moveis", item.slug)}`}
+                  href={caminhoDoServicoNaCidade("recolha-moveis", item.slug)}
                   className="rounded-[22px] border border-cyan-100 bg-white px-4 py-4 text-sm font-medium text-slate-800 transition hover:bg-cyan-50"
                 >
                   {item.label}

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Clock3, Search } from "lucide-react";
 
-import { getAllBlogPosts } from "@/lib/blog-data";
+// Os artigos NO AR, e não todos os de blog-data: os retirados (29-09-2026)
+// saem da listagem aqui e em mais lado nenhum. Ver `artigos-do-blog.ts`.
+import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
@@ -31,7 +33,7 @@ export const metadata: Metadata = {
 export const revalidate = 86400;
 
 export default function BlogPage() {
-  const posts = getAllBlogPosts();
+  const posts = artigosPublicados();
 
   return (
     <div className="min-h-screen bg-white">

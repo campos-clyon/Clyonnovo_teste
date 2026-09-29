@@ -1,4 +1,4 @@
-import { CITIES, getCityServiceSlug } from "@/lib/seo-data";
+import { CITIES, caminhoDoServicoNaCidade } from "@/lib/seo-data";
 import { getCidadeLocal } from "@/lib/cidades-local";
 
 /**
@@ -53,7 +53,9 @@ export function zonasDoArtigo(slugArtigo: string, limite = 12): {
     const local = getCidadeLocal(city.slug);
     if (!local) continue;
     zonas.push({
-      href: `/${getCityServiceSlug(servico, city.slug)}`,
+      // Pelo `caminhoDoServicoNaCidade` (29-09-2026): os monos e o
+      // esvaziamento na Amadora têm página estática, e a gerada faz 301.
+      href: caminhoDoServicoNaCidade(servico, city.slug),
       cidade: city.name,
       nota: local.zonas.slice(0, 3).join(", "),
     });
