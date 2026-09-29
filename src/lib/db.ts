@@ -1665,6 +1665,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
     valorDesejadoCliente: string | null;
     urgency: string | null;
     createdAt: Date;
+    /** O slug de onde entrou — ver `origemPeloSlug` em `acesso.ts`. */
+    origem: string | null;
   }>
 > {
   await ensureSimulatorOrdersTable();
@@ -1681,7 +1683,15 @@ export async function pedidosPorPromover(limite = 20): Promise<
             -- morada ou regiao". Este bloco e o maior da mesa, e era o unico
             -- com busca propria — que nao procurava por nenhuma destas.
             o.contactPhone, o.address, o.postalCode,
-            o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt
+            o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt,
+            -- DE ONDE ENTROU. "Os pedidos novos deviam mostrar a origem: Wpp,
+            -- Formulario, contacto, Simulador" -- 29-09-2026. As mesmas tres
+            -- chaves, pela mesma ordem, que a lista de Pedidos ja le.
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN COALESCE(
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.source'))
+            ) ELSE NULL END AS origem
        FROM simulatorOrders o
        LEFT JOIN negociacoes n ON n.pedidoId = o.id
       WHERE n.id IS NULL
@@ -1889,7 +1899,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             o.acessoTokenExpiraEm,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
-              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source'))
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.source'))
             ) AS origem
        FROM simulatorOrders o
        LEFT JOIN concluidosVistos v ON v.pedidoId = o.id
