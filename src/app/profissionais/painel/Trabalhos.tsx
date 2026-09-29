@@ -1251,6 +1251,70 @@ function DetalheDoTrabalho({
             </p>
           </div>
         )}
+        {/*
+          O PEDIDO E O CLIENTE, LOGO ABAIXO DO QUE ELE PEDE.
+
+          *«Abaixo da descrição deve ter todos os dados do pedido/cliente —
+          deve mostrar o nome e o número do pedido.»* — 29-09-2026.
+
+          O nome e o telefone já existiam, mas lá em baixo, em «Onde e com
+          quem», depois do aviso de combinar, do mapa e dos botões. E o número
+          do pedido não aparecia em lado nenhum — que é justamente o que se diz
+          quando se liga à CLYON: «é o #487». Sem ele, a conversa começa por
+          descrever o trabalho até se perceber qual é.
+
+          O NÚMERO APARECE SEMPRE; O CLIENTE SÓ QUANDO O TRABALHO É DELE E ESTÁ
+          POR FAZER. É a mesma regra de «Onde e com quem» (16-09-2026): nome,
+          telefone e morada são dados que se recebem PARA FAZER o trabalho.
+          Antes de ser contratado não há motivo para os ter; depois de
+          confirmado, o motivo acabou.
+        */}
+        {(() => {
+          const verCliente =
+            fechado && pedido.fase !== "confirmado" && pedido.fase !== "pago";
+          return (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                O pedido
+              </p>
+              <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt className="text-slate-500">Número</dt>
+                <dd className="font-bold text-tinta">#{pedido.pedidoId}</dd>
+                {verCliente && pedido.contactoNome && (
+                  <>
+                    <dt className="text-slate-500">Cliente</dt>
+                    <dd className="font-semibold text-tinta">{pedido.contactoNome}</dd>
+                  </>
+                )}
+                {verCliente && pedido.contactoTelefone && (
+                  <>
+                    <dt className="text-slate-500">Telemóvel</dt>
+                    <dd>
+                      <a
+                        href={`tel:${pedido.contactoTelefone.replace(/\s/g, "")}`}
+                        className="font-semibold text-acao underline decoration-acao/30 underline-offset-2"
+                      >
+                        {pedido.contactoTelefone}
+                      </a>
+                    </dd>
+                  </>
+                )}
+                {verCliente && pedido.morada && (
+                  <>
+                    <dt className="text-slate-500">Morada</dt>
+                    <dd className="break-words font-medium text-tinta">{pedido.morada}</dd>
+                  </>
+                )}
+              </dl>
+              {!fechado && (
+                <p className="mt-1.5 text-xs text-slate-500">
+                  O nome, o telefone e a morada do cliente aparecem aqui quando o trabalho for seu.
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
           <li className="flex items-center gap-2">
             <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
