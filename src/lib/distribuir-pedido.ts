@@ -123,6 +123,18 @@ const MOTIVO_POR_EXTENSO: Record<string, string> = {
   sem_morada: "a morada do pedido não foi localizada",
   nao_emite_fatura: "não passam fatura",
   nao_emite_guia: "sem guia de transporte verificada",
+  nao_escolhido: "não foram escolhidos",
+};
+
+/** O mesmo, dito de UM profissional — para a lista de escolher à mão. */
+const MOTIVO_DE_UM: Record<string, string> = {
+  inactivo: "inactivo",
+  nao_aprovado: "por aprovar",
+  categoria_diferente: "não faz este serviço",
+  fora_de_alcance: "fora do raio dele",
+  sem_morada: "sem distância medida",
+  nao_emite_fatura: "não passa fatura",
+  nao_emite_guia: "sem guia verificada",
 };
 
 /**
@@ -236,6 +248,21 @@ export async function avaliarAlcance(pedido: {
   lng: number | null;
 }): Promise<{
   elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }>;
+  /**
+   * TODOS os activos, cada um com o porquê — para escolher à mão.
+   *
+   * «Quero que esse botão de enviar também dê a opção de escolher
+   * individualmente as empresas/pros.» — 29-09-2026. Escolher só entre os
+   * elegíveis não chegava: o caso que faz alguém querer escolher é quase
+   * sempre o do profissional que a regra deixou de fora e que se sabe que vai.
+   */
+  todos: Array<{
+    id: number;
+    nome: string;
+    distanciaKm: number | null;
+    elegivel: boolean;
+    motivos: string[];
+  }>;
   candidatos: number;
   motivos: Record<string, number>;
 }> {
@@ -275,6 +302,13 @@ export async function avaliarAlcance(pedido: {
   }));
 
   const elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }> = [];
+  const todos: Array<{
+    id: number;
+    nome: string;
+    distanciaKm: number | null;
+    elegivel: boolean;
+    motivos: string[];
+  }> = [];
   const foraDeAlcance: Array<{ profissional: ProfissionalNaBase; distanciaKm: number | null }> =
     [];
   for (const c of comDistancia) {
@@ -288,6 +322,13 @@ export async function avaliarAlcance(pedido: {
       },
       c.profissional,
     );
+    todos.push({
+      id: c.profissional.id,
+      nome: c.profissional.name,
+      distanciaKm: c.distanciaKm,
+      elegivel: r.elegivel,
+      motivos: r.motivos.map((m) => MOTIVO_DE_UM[m] ?? m.replace(/_/g, " ")),
+    });
     if (r.elegivel) {
       elegiveis.push({
         id: c.profissional.id,
@@ -311,7 +352,7 @@ export async function avaliarAlcance(pedido: {
     foraDeAlcance,
   );
 
-  return { elegiveis, candidatos: candidatos.length, motivos: motivos as unknown as Record<string, number> };
+  return { elegiveis, todos, candidatos: candidatos.length, motivos: motivos as unknown as Record<string, number> };
 }
 
 export async function distribuirPedido(
@@ -322,7 +363,22 @@ export async function distribuirPedido(
    * vez de a manter como estava. É o caminho de quem registou o pedido com o
    * valor errado e precisa que ele volte a circular como se fosse de hoje.
    */
-  { reabrir = false }: { reabrir?: boolean } = {},
+  {
+    reabrir = false,
+    soPara,
+  }: {
+    reabrir?: boolean;
+    /**
+     * ESCOLHIDOS À MÃO — 29-09-2026.
+     *
+     * Com a lista, o pedido vai SÓ a estes, e a regra do raio e das
+     * categorias não os filtra: quem escolhe um profissional pelo nome sabe
+     * uma coisa que a regra não sabe (que ele vai mesmo lá, que já fez aquele
+     * serviço). Continua a exigir que esteja activo e aprovado — isso vem de
+     * `profissionaisActivos`, e um suspenso não recebe nada de ninguém.
+     */
+    soPara?: number[];
+  } = {},
 ): Promise<ResultadoDaDistribuicao> {
   const candidatos = await profissionaisActivos();
 
@@ -375,7 +431,7 @@ export async function distribuirPedido(
       },
       c.profissional,
     );
-    if (r.elegivel) elegiveis.push(c);
+    if (soPara ? soPara.includes(c.profissional.id) : r.elegivel) elegiveis.push(c);
   }
 
   // Contado com a distância de cada um, não com uma distância única — senão o
@@ -587,6 +643,10 @@ export async function distribuirPedido(
     // nenhum. Contá-lo aqui punha o histórico a dizer que o aviso se perdeu.
     falhados: envios.length - avisados - jaTinham,
     candidatos: candidatos.length,
-    motivos: motivos as unknown as Record<string, number>,
+    // Escolhidos à mão, a regra não decidiu nada: dizer «fora do raio» a quem
+    // simplesmente não foi escolhido punha o histórico a mentir.
+    motivos: soPara
+      ? { nao_escolhido: candidatos.length - elegiveis.length }
+      : (motivos as unknown as Record<string, number>),
   };
 }
