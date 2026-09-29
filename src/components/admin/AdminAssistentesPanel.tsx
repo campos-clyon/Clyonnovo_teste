@@ -15,6 +15,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import TrabalhosDoAssistente from "./TrabalhosDoAssistente";
 import {
   ROTULO_DA_SECCAO,
   SECCOES_DO_ASSISTENTE,
@@ -551,6 +552,9 @@ export default function AdminAssistentesPanel() {
                       a receber ({percent(a.comissaoPercent)}) <strong className="text-emerald-300">{euros(e.comissaoAssistente)}</strong>
                     </p>
                   </div>
+
+                  {/* Os trabalhos por trás do número — ver TrabalhosDoAssistente. */}
+                  <TrabalhosDoAssistente id={a.id} token={token} />
 
                   {/* Conta */}
                   <div className="flex flex-wrap gap-2">

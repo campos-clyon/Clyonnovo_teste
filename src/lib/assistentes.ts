@@ -323,6 +323,177 @@ export async function estatisticasDosAssistentes(
   return resultado;
 }
 
+/**
+ * OS TRABALHOS POR TRÁS DO NÚMERO — um por linha.
+ *
+ * *«Quero mais detalhes dos trabalhos feitos para saber quais trabalhos o
+ * assistente fez, para justificar os valores.»* — 29-09-2026.
+ *
+ * O cartão dizia «4 concluídos · 22,88 €» e calava-se sobre quais. Para pagar
+ * uma comissão — e para a pessoa que a recebe a poder conferir — é preciso
+ * poder apontar para cada trabalho: qual pedido, de que cliente, feito por
+ * quem, sobre que valor, e quanto isso deu.
+ *
+ * ⚠️ TEM DE SOMAR EXACTAMENTE O MESMO QUE O CARTÃO, e não «quase». Um detalhe
+ * que dá 22,87 € ao lado de um total de 22,88 € é pior do que não ter detalhe:
+ * é a prova de que um dos dois está errado. Por isso o valor de cada linha usa
+ * a MESMA expressão de `estatisticasDosAssistentes`, e os totais calculam-se
+ * da mesma maneira — soma dos valores primeiro, percentagens depois. As
+ * comissões por linha são a parte de cada um, para se ler; o total não é a
+ * soma delas arredondadas.
+ */
+export type FonteDoValor = "acordado" | "preco_final" | "estimativa" | "sem_valor";
+
+export type TrabalhoDoAssistente = {
+  pedidoId: number;
+  estado: string;
+  /** Se entra na comissão — só os concluídos entram. */
+  conta: boolean;
+  cliente: string | null;
+  servico: string | null;
+  cidade: string | null;
+  profissional: string | null;
+  /** Quando ficou dela — e quando o pedido mexeu pela última vez. */
+  atribuidoEm: string | null;
+  actualizadoEm: string | null;
+  valor: number;
+  /** De onde veio o valor: é a primeira pergunta de quem confere. */
+  fonteDoValor: FonteDoValor;
+  comissaoClyon: number;
+  comissaoAssistente: number;
+};
+
+export type LinhaCruaDoTrabalho = {
+  id: number;
+  status: string | null;
+  contactName?: string | null;
+  serviceType?: string | null;
+  city?: string | null;
+  assignedAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  valorAcordado?: number | string | null;
+  precoFinal?: number | string | null;
+  estimateTotal?: number | string | null;
+  profissional?: string | null;
+};
+
+const centimos = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+
+function numeroOuNulo(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Puro: a mesma conta do cartão, linha a linha. Testado à parte. */
+export function detalheDaComissao(
+  linhas: LinhaCruaDoTrabalho[],
+  clyonPercent: number,
+  minhaPercent: number,
+): {
+  trabalhos: TrabalhoDoAssistente[];
+  totais: { valorConcluido: number; comissaoClyon: number; comissaoAssistente: number };
+} {
+  let soma = 0;
+  const trabalhos = linhas.map((l) => {
+    const conta = l.status === "concluido";
+    /*
+     * A MESMA ORDEM DO COALESCE de `estatisticasDosAssistentes`: o valor
+     * acordado com o profissional, senão o preço final que a CLYON fechou,
+     * senão a estimativa. Se esta ordem mudar lá e não aqui, o detalhe deixa
+     * de somar o total — e há um teste para isso.
+     */
+    const acordado = numeroOuNulo(l.valorAcordado);
+    const final = numeroOuNulo(l.precoFinal);
+    const estimativa = numeroOuNulo(l.estimateTotal);
+    const [valorBruto, fonte]: [number, FonteDoValor] =
+      acordado != null
+        ? [acordado, "acordado"]
+        : final != null
+          ? [final, "preco_final"]
+          : estimativa != null
+            ? [estimativa, "estimativa"]
+            : [0, "sem_valor"];
+
+    const valor = conta ? valorBruto : 0;
+    soma += valor;
+    const clyon = (valor * clyonPercent) / 100;
+    return {
+      pedidoId: Number(l.id),
+      estado: l.status ?? "",
+      conta,
+      cliente: (l.contactName ?? "").trim() || null,
+      servico: l.serviceType ?? null,
+      cidade: l.city ?? null,
+      profissional: (l.profissional ?? "").trim() || null,
+      atribuidoEm: l.assignedAt ? new Date(l.assignedAt).toISOString() : null,
+      actualizadoEm: l.updatedAt ? new Date(l.updatedAt).toISOString() : null,
+      valor: centimos(valorBruto),
+      fonteDoValor: fonte,
+      comissaoClyon: centimos(clyon),
+      comissaoAssistente: centimos((clyon * minhaPercent) / 100),
+    };
+  });
+
+  const valorConcluido = centimos(soma);
+  const comissaoClyon = centimos((valorConcluido * clyonPercent) / 100);
+  return {
+    trabalhos,
+    totais: {
+      valorConcluido,
+      comissaoClyon,
+      comissaoAssistente: centimos((comissaoClyon * minhaPercent) / 100),
+    },
+  };
+}
+
+export async function trabalhosDoAssistente(id: number): Promise<
+  | {
+      nome: string;
+      comissaoPercent: number;
+      comissaoClyonPercent: number;
+      trabalhos: TrabalhoDoAssistente[];
+      totais: { valorConcluido: number; comissaoClyon: number; comissaoAssistente: number };
+    }
+  | undefined
+> {
+  const a = await assistentePorId(id);
+  if (!a) return undefined;
+  await ensureNegociacoesTable();
+  const clyon = await comissaoClyonPercent();
+
+  const linhas = await withConnection(async (conn) => {
+    const [r] = (await conn.execute(
+      `SELECT o.id, o.status, o.contactName, o.serviceType, o.city,
+              o.assignedAt, o.updatedAt, o.precoFinal, o.estimateTotal,
+              n.valorAcordado, n.profissional
+         FROM simulatorOrders o
+         LEFT JOIN (
+           SELECT x.pedidoId, MAX(x.valorAcordado) AS valorAcordado,
+                  SUBSTRING_INDEX(
+                    GROUP_CONCAT(p.name ORDER BY x.valorAcordado DESC SEPARATOR '|'), '|', 1
+                  ) AS profissional
+             FROM negociacoes x
+             LEFT JOIN providers p ON p.id = x.providerId
+            WHERE x.confirmadoEm IS NOT NULL
+            GROUP BY x.pedidoId
+         ) n ON n.pedidoId = o.id
+        WHERE o.assignedToId = ?
+        ORDER BY (o.status = 'concluido') DESC, o.updatedAt DESC
+        LIMIT 500`,
+      [id],
+    )) as [LinhaCruaDoTrabalho[], unknown];
+    return r;
+  });
+
+  return {
+    nome: a.nome,
+    comissaoPercent: a.comissaoPercent,
+    comissaoClyonPercent: clyon,
+    ...detalheDaComissao(linhas, clyon, a.comissaoPercent),
+  };
+}
+
 export async function listarAssistentes(): Promise<{ assistentes: Assistente[]; comissaoClyonPercent: number }> {
   await ensureAssistentesSchema();
   const linhas = await withConnection(async (conn) => {

@@ -16,6 +16,7 @@ import {
   listarAssistentes,
   normalizarNomeDeAssistente,
   percentagemValida,
+  trabalhosDoAssistente,
 } from "@/lib/assistentes";
 import { normalizarSeccoes } from "@/lib/papel-do-painel";
 
@@ -40,6 +41,31 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const { err } = await requireAdminGeral(req);
   if (err) return err;
+
+  /*
+   * O DETALHE DE UMA CONTA: os trabalhos por trás do número.
+   *
+   * «Quero mais detalhes dos trabalhos feitos para saber quais trabalhos o
+   * assistente fez, para justificar os valores.» — 29-09-2026.
+   *
+   * Pedido à parte, e só quando se abre: a lista pode ter centenas de linhas
+   * por assistente, e o ecrã das contas carrega-se de vinte em vinte segundos.
+   */
+  const detalhe = req.nextUrl.searchParams.get("trabalhos");
+  if (detalhe != null) {
+    const id = Number(detalhe);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "Assistente inválido." }, { status: 400 });
+    }
+    try {
+      const r = await trabalhosDoAssistente(id);
+      if (!r) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
+      return NextResponse.json(r);
+    } catch (error) {
+      console.error("[admin/assistentes GET trabalhos]", error);
+      return NextResponse.json({ error: "Erro ao ler os trabalhos." }, { status: 500 });
+    }
+  }
 
   try {
     const { assistentes, comissaoClyonPercent } = await listarAssistentes();
