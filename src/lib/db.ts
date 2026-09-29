@@ -7992,7 +7992,7 @@ export async function getOrderByToken(token: string): Promise<SimulatorOrder | n
 export async function confirmarOrcamento(token: string): Promise<{ ok: boolean; error?: string }> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
-  if (!pool) return { ok: false, error: "Database not available" };
+  if (!pool) return { ok: false, error: "Serviço temporariamente indisponível. Tente mais tarde." };
   const order = await getOrderByToken(token);
   if (!order) return { ok: false, error: "Pedido não encontrado." };
   if ((order as any).canceladoPeloCliente) return { ok: false, error: "Este pedido já foi cancelado." };
@@ -8012,7 +8012,7 @@ export async function confirmarOrcamento(token: string): Promise<{ ok: boolean; 
 export async function cancelarOrcamentoPeloCliente(token: string): Promise<{ ok: boolean; error?: string }> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
-  if (!pool) return { ok: false, error: "Database not available" };
+  if (!pool) return { ok: false, error: "Serviço temporariamente indisponível. Tente mais tarde." };
   const order = await getOrderByToken(token);
   if (!order) return { ok: false, error: "Pedido não encontrado." };
   if ((order as any).canceladoPeloCliente) return { ok: true }; // idempotente

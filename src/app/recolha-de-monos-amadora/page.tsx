@@ -29,7 +29,7 @@ const faqs = [
     answer: "A recolha municipal tem horários fixos, volume limitado e não entra no imóvel. A CLYON oferece recolha rápida, retira de dentro de casa, faz desmontagem quando necessário e resolve tudo num só pedido.",
   },
   {
-    question: "Vocês retiram os monos de dentro de casa?",
+    question: "Os monos são retirados de dentro de casa?",
     answer: "Sim, o profissional entra no apartamento ou moradia, carrega os monos e transporta. Não precisa de colocar nada no exterior.",
   },
   {
@@ -303,7 +303,7 @@ export default function MonosAmadoraPage() {
         <section className="py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Outros serviços que pode precisar
+              Outros serviços de que pode precisar
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[

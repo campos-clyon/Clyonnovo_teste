@@ -7,8 +7,8 @@ import { AnimatedBackground } from "./AnimatedBackground";
 import { ErrorHandler } from "./ErrorHandler";
 
 export const metadata: Metadata = {
-  title: "Entrar na tua conta",
-  description: "Acede à tua conta CLYON para acompanhar os teus pedidos.",
+  title: "Entrar na sua conta",
+  description: "Aceda à sua conta CLYON para acompanhar os seus pedidos.",
   robots: { index: false, follow: false },
 };
 

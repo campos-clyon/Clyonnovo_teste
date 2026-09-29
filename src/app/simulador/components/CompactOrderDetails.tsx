@@ -78,7 +78,7 @@ export default function CompactOrderDetails({
         <textarea
           value={description || ""}
           onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="Ex: móveis desmontados, alguns sacos, acesso por garagem..."
+          placeholder="Ex.: móveis desmontados, alguns sacos, acesso por garagem..."
           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors resize-none"
           rows={3}
         />

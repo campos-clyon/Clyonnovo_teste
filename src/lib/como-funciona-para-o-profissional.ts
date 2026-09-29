@@ -110,7 +110,7 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
  * metade é de quem assumiu que sim. Dizer o que não somos poupa as duas.
  */
 export const O_QUE_A_CLYON_NAO_FAZ: string[] = [
-  "Não faz o trabalho nem manda equipas: quem desmonta, carrega e transporta é você.",
+  "Não faz o trabalho nem manda equipas: quem desmonta, carrega e transporta é o profissional.",
   "Não muda o valor que combinou. Se o trabalho mudar à porta, corrige-se na plataforma, com registo.",
   "Não cobra mensalidade, não vende contactos e não desconta nada por responder a um pedido.",
   "Não escolhe por si: aceita os pedidos que quiser e ignora os outros, sem penalização.",

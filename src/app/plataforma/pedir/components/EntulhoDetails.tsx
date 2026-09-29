@@ -102,7 +102,7 @@ export default function EntulhoDetails({
                 type="text"
                 value={quantidadeEnsacados || ""}
                 onChange={(e) => onQuantidadeEnsacadosChange?.(e.target.value)}
-                placeholder="Ex: 50"
+                placeholder="Ex.: 50"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
               />
             </div>
@@ -112,7 +112,7 @@ export default function EntulhoDetails({
                 type="text"
                 value={quantidadePorEnsacar || ""}
                 onChange={(e) => onQuantidadePorEnsacarChange?.(e.target.value)}
-                placeholder="Ex: 30"
+                placeholder="Ex.: 30"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
               />
             </div>
@@ -129,7 +129,7 @@ export default function EntulhoDetails({
                   inputMode="numeric"
                   value={quantity || ""}
                   onChange={(e) => onQuantityChange(e.target.value)}
-                  placeholder="Ex: 100 sacos"
+                  placeholder="Ex.: 100 sacos"
                   autoFocus
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
                 />

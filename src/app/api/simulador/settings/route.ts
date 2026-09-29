@@ -51,6 +51,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[Simulador Settings] Failed to load settings", error);
-    return NextResponse.json({ error: "Nao foi possivel carregar as configuracoes." }, { status: 500 });
+    return NextResponse.json({ error: "Não foi possível carregar as configurações." }, { status: 500 });
   }
 }

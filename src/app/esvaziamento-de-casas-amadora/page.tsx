@@ -32,7 +32,7 @@ const faqs = [
     answer: "Sim, fazemos esvaziamento completo de casas, apartamentos, garagens e arrecadações em toda a Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova.",
   },
   {
-    question: "Vocês retiram os móveis de dentro do apartamento?",
+    question: "Os móveis são retirados de dentro do apartamento?",
     answer: "Sim, o profissional entra no imóvel, desmonta o necessário, carrega tudo e transporta. Mesmo em prédios sem elevador ou com acessos difíceis.",
   },
   {
@@ -305,7 +305,7 @@ export default function EsvaziamentoAmadoraPage() {
         <section className="bg-slate-50/50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Outros serviços que pode precisar
+              Outros serviços de que pode precisar
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[

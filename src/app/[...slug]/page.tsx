@@ -218,7 +218,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
         a: `Quando existe disponibilidade operacional, sim. Em ${cityName} conseguimos muitas vezes responder no próprio dia ou no dia seguinte.`,
       },
       {
-        q: `Que outrás zonas próximas de ${cityName} também atendem?`,
+        q: `Que outras zonas próximas de ${cityName} também atendem?`,
         a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}.`,
       },
     ];
@@ -936,8 +936,8 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
             Diga-nos o que pretende retirar, quantos volumes tem e como é o acesso ao
-            imovel. Com essa informacao conseguimos responder mais depressa e marcar
-            a recolha com maior precisao.
+            imóvel. Com essa informação conseguimos responder mais depressa e marcar
+            a recolha com maior precisão.
           </p>
           <p className="mt-2 text-sm text-slate-500">
             {AVALIACOES_TOTAL} avaliações 5 estrelas no Google e na Fixando. Resposta em {PRAZO_DE_RESPOSTA.porExtenso}.

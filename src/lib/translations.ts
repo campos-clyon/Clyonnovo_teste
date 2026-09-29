@@ -9,7 +9,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     yes:     "Sim, funciona",
     small:   "Sim, mas é pequeno",
     no:      "Não tem",
-    unknown: "Não informado",
+    unknown: "Não indicado",
     // legado
     sim:     "Sim",
     nao:     "Não",
@@ -25,7 +25,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     normal:    "Acesso normal",
     dificil:   "Acesso difícil",
     acesso_dificil: "Acesso difícil",
-    unknown:   "Não informado",
+    unknown:   "Não indicado",
     // legado
     porta:   "À porta",
     proximo: "Próximo (até 50m)",
@@ -84,7 +84,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     // formulários e do registo manual, porque a CLYON não recolhe big bags.
     // Ver `sacos-de-entulho.ts`.
     bigbags:  "Big bags",
-    unknown:  "Não informado",
+    unknown:  "Não indicado",
   },
   priority: {
     baixa:   "Baixa",
@@ -97,20 +97,20 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     simple:  "Simples",
     medium:  "Média",
     complex: "Complexa",
-    unknown: "Não informado",
+    unknown: "Não indicado",
   },
 };
 
 /**
  * Traduz um valor interno para português.
  * Se o campo ou valor não existir no mapa, devolve o valor original.
- * Se o valor for null/undefined/"", devolve "Não informado".
+ * Se o valor for null/undefined/"", devolve "Não indicado".
  */
 export function translate(
   field: keyof typeof FIELD_TRANSLATIONS | string,
   value: string | null | undefined
 ): string {
-  if (!value) return "Não informado";
+  if (!value) return "Não indicado";
   return FIELD_TRANSLATIONS[field]?.[value] ?? value;
 }
 

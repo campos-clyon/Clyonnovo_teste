@@ -68,7 +68,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { err, colab } = await authenticate(req);
   if (err) return err;
   if (colab!.papel !== "admin") {
-    return NextResponse.json({ error: "Apenas administradores podem excluir pedidos." }, { status: 403 });
+    return NextResponse.json({ error: "Apenas administradores podem apagar pedidos." }, { status: 403 });
   }
   const { id } = await params;
 
@@ -86,5 +86,5 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
     throw e;
   }
-  return NextResponse.json({ ok: true, message: "Pedido excluído com sucesso." });
+  return NextResponse.json({ ok: true, message: "Pedido apagado." });
 }

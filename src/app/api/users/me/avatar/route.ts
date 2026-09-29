@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     {
       ok: false,
       error: "AVATAR_UPLOAD_DISABLED",
-      message: "Alteração de foto temporariamente indisponível. A foto da tua conta Google continuará a ser usada.",
+      message: "Alteração de foto temporariamente indisponível. A foto da sua conta Google continuará a ser usada.",
     },
     { status: 501 }
   );

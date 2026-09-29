@@ -66,7 +66,7 @@ export default function QueroSerParceiroPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
             Mudanças, recolhas de móveis e entulho, esvaziamentos. O cliente descreve o
-            trabalho com fotografias; você responde com o seu valor.
+            trabalho com fotografias; é só responder com o seu valor.
           </p>
           <p className="mt-5 text-sm text-slate-500">
             Já tem conta?{" "}

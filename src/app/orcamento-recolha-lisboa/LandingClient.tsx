@@ -577,7 +577,7 @@ function HowItWorks() {
     },
     {
       icon: MapPin,
-      title: "Informe a morada",
+      title: "Indique a morada",
       text: "Diga a localidade e o tipo de acesso ao local.",
     },
     {

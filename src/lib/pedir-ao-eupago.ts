@@ -96,7 +96,7 @@ export async function pedirPagamento(
         ok: false,
         recusa: {
           codigo: null,
-          paraNos: "Telemovel invalido para MB WAY.",
+          paraNos: "Telemóvel inválido para MB WAY.",
           paraOCliente: "Indique um telemóvel português com MB WAY (9 dígitos).",
           sugereOutroMetodo: true,
         },

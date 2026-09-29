@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       error: "UPLOAD_DISABLED",
-      message: "Upload de fotos temporariamente indisponível.",
+      message: "Envio de fotografias temporariamente indisponível.",
     },
     { status: 501 }
   );

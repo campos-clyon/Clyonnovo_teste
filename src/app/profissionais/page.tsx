@@ -63,8 +63,8 @@ export default function ProfissionaisPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
             Sem investir em publicidade e sem comprar contactos. O cliente descreve o
-            trabalho com fotografias e diz quanto quer pagar — você responde com um
-            valor.
+            trabalho com fotografias e diz quanto quer pagar — e é só responder com
+            um valor.
           </p>
           <p className="mt-5 text-sm text-slate-500">
             Já se inscreveu?{" "}

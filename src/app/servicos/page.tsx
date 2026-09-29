@@ -115,7 +115,7 @@ const services: Service[] = [
     accent: "from-indigo-400 to-purple-500",
     emoji: "🚚",
     messages: [
-      { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de guarda-roupa.", time: "11:08" },
+      { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de roupeiro.", time: "11:08" },
       { from: "clyon",   text: "Temos disponibilidade. Envio orçamento por email ainda hoje.", time: "11:10" },
     ],
   },
@@ -156,7 +156,7 @@ const steps = [
 const reviews = [
   { name: "Rita M.", initial: "R", text: "Rápido, profissional e sem confusão. Voltaria a contratar." },
   { name: "Carlos S.", initial: "C", text: "Recolha do sofá antigo no mesmo dia. Preço justo." },
-  { name: "Patricia C.", initial: "P", text: "Equipa educada, chegou à hora e deixou tudo limpo." },
+  { name: "Patrícia C.", initial: "P", text: "Equipa educada, chegou à hora e deixou tudo limpo." },
 ];
 
 const faqs = [

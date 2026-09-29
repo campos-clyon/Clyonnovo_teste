@@ -85,7 +85,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
    */
   const excluirConta = async (id: number, quem: string) => {
     const certeza = confirm(
-      `Excluir a conta de ${quem}?
+      `Apagar a conta de ${quem}?
 
 ` +
         `A conta é apagada e não se recupera. Os pedidos que fez continuam no ` +
@@ -101,11 +101,11 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
       });
       if (!res.ok) {
         const dados = await res.json().catch(() => ({}));
-        throw new Error(dados.error ?? "Não foi possível excluir.");
+        throw new Error(dados.error ?? "Não foi possível apagar.");
       }
       await fetchUsers();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao excluir");
+      alert(err instanceof Error ? err.message : "Erro ao apagar");
     } finally {
       setAExcluir(null);
     }
@@ -228,10 +228,10 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                   <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-600 hidden md:table-cell">Telefone</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-600 hidden lg:table-cell">Cidade</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600 hidden lg:table-cell">Login</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600 hidden lg:table-cell">Entra com</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-600">Criada</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-600 hidden md:table-cell">Último acesso</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Role</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Tipo</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-600">Ações</th>
                 </tr>
               </thead>
@@ -314,7 +314,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                         <button
                           onClick={() => excluirConta(u.id, u.name || u.email)}
                           disabled={aExcluir === u.id}
-                          title="Excluir conta"
+                          title="Apagar conta"
                           className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
                         >
                           {aExcluir === u.id ? (

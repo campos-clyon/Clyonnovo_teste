@@ -47,10 +47,10 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-moveis-lisboa": {
     citySlug: "lisboa",
     serviceSlug: "recolha-moveis",
-    metaTitle: "Recolha de Moveis em Lisboa — Sofas, Camas e Recheios Completos",
-    h1: "Recolha de Moveis Usados em Lisboa — Sofas, Camas, Armarios e Recheios",
+    metaTitle: "Recolha de Móveis em Lisboa — Sofás, Camas e Recheios Completos",
+    h1: "Recolha de Móveis Usados em Lisboa — Sofás, Camas, Armários e Recheios",
     localIntro:
-      "Precisa de retirar móveis em Lisboa? A CLYON retira sofás velhos, camas com colchão, armários, mesas, cadeiras, eletrodomésticos e recheios completos de apartamentos. Trabalhamos em toda Lisboa: desde os prédios antigos sem elevador em Alfama e Mouraria até aos condomínios do Parque das Nações. Se o sofá não passa na porta, desmontamos. Se há escadas estreitas, descemos peça a peça. Se o estacionamento é complicado, coordenamos horário para evitar problemas.",
+      "Precisa de retirar móveis em Lisboa? A CLYON retira sofás velhos, camas com colchão, armários, mesas, cadeiras, eletrodomésticos e recheios completos de apartamentos. Trabalhamos em toda a Lisboa: desde os prédios antigos sem elevador em Alfama e Mouraria até aos condomínios do Parque das Nações. Se o sofá não passa na porta, desmontamos. Se há escadas estreitas, descemos peça a peça. Se o estacionamento é complicado, coordenamos horário para evitar problemas.",
     accessNotes:
       "Nos bairros históricos (Alfama, Mouraria, Graça, Bairro Alto), os acessos são por escadas em caracol ou ruas empedradas onde a carrinha não entra. Avaliamos sempre antes de dar preço. Nas zonas mais modernas (Parque das Nações, Telheiras, Benfica), os acessos são normalmente fáceis.",
     neighborhoodHighlight:
@@ -94,7 +94,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
         a: "Sim. Benfica, Lumiar e Alvalade são das zonas onde mais trabalhamos em Lisboa. São bairros residenciais com bons acessos e muita procura de recolha de móveis.",
       },
     ],
-    ctaText: "Moveis para retirar em Lisboa? Envie fotos pelo WhatsApp e receba orcamento em 15 minutos.",
+    ctaText: "Móveis para retirar em Lisboa? Envie fotos pelo WhatsApp e receba orçamento em 15 minutos.",
   },
 
   // ---------------------------------------------------------------------------
@@ -141,10 +141,10 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-monos-lisboa": {
     citySlug: "lisboa",
     serviceSlug: "recolha-monos",
-    metaTitle: "Recolha de Monos em Lisboa — Alternativa Rapida a Camara",
-    h1: "Recolha de Monos em Lisboa — A Alternativa Rapida a Camara Municipal",
+    metaTitle: "Recolha de Monos em Lisboa — Alternativa Rápida à Câmara",
+    h1: "Recolha de Monos em Lisboa — A Alternativa Rápida à Câmara Municipal",
     localIntro:
-      "Tem monos em casa que precisa de retirar? A CLYON é a alternativa rápida à recolha municipal em Lisboa. Enquanto a Câmara de Lisboa tem lista de espera de semanas e não entra no imóvel, nós vamos buscar os monos onde estiverem — seja num 5º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. A diferença é simples: ligamos, combinamos, aparecemos no dia marcado e levam tudo.",
+      "Tem monos em casa que precisa de retirar? A CLYON é a alternativa rápida à recolha municipal em Lisboa. Enquanto a Câmara de Lisboa tem lista de espera de semanas e não entra no imóvel, nós vamos buscar os monos onde estiverem — seja num 5º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. A diferença é simples: ligamos, combinamos, e o profissional aparece no dia marcado e leva tudo.",
     accessNotes:
       "Em Lisboa, os acessos mais complicados são nos bairros históricos: Alfama, Mouraria, Graça e Castelo têm escadas estreitas, ruas empedradas e estacionamento impossível. Mesmo assim, trabalhamos lá todos os dias. Avaliamos sempre o acesso antes de dar preço para não haver surpresas.",
     neighborhoodHighlight:
@@ -185,7 +185,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Qual é a melhor empresa para retirar móveis usados em Lisboa?",
-        a: `A CLYON tem ${AVALIACOES.fixando} avaliações 5 estrelas na Fixando e ${AVALIACOES.google} no Google. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado desmonta, carrega e leva. Cobrimos toda Lisboa e Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.`,
+        a: `A CLYON tem ${AVALIACOES.fixando} avaliações 5 estrelas na Fixando e ${AVALIACOES.google} no Google. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado desmonta, carrega e leva. Cobrimos toda a Lisboa e a Margem Sul. Para comparar, peça orçamento gratuito e veja a rapidez da resposta.`,
       },
     ],
     ctaText: "Monos para retirar em Lisboa? Envie fotos pelo WhatsApp e receba orçamento em 15 minutos.",
@@ -197,8 +197,8 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-moveis-almada": {
     citySlug: "almada",
     serviceSlug: "recolha-moveis",
-    metaTitle: "Recolha de Moveis em Almada — Empresa Local, Resposta Rapida",
-    h1: "Recolha de Moveis em Almada — Cacilhas, Pragal, Laranjeiro e Costa",
+    metaTitle: "Recolha de Móveis em Almada — Empresa Local, Resposta Rápida",
+    h1: "Recolha de Móveis em Almada — Cacilhas, Pragal, Laranjeiro e Costa",
     localIntro:
       "Precisa de retirar móveis em Almada? A CLYON é a empresa local para recolha de móveis usados em todo o concelho: Cacilhas, Pragal, Laranjeiro, Feijó, Cova da Piedade, Almada Velha e Costa da Caparica. Estamos sediados no Seixal, a 10 minutos de qualquer ponto de Almada. Conhecemos bem as diferenças entre Cacilhas (prédios antigos com escadas), Pragal e Laranjeiro (urbanizações mais recentes com elevador), e a Costa da Caparica (apartamentos de férias). Por sermos locais, respondemos mais depressa e com melhor preço do que empresas de Lisboa.",
     accessNotes:
@@ -217,7 +217,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem móveis em Cacilhas com escadas?",
-        a: "Sim. Cacilhas tem muitos prédios antigos sem elevador. Temos experiência nesses acessos, desmontam móveis se necessário e ajustamos o preço ao esforço real.",
+        a: "Sim. Cacilhas tem muitos prédios antigos sem elevador. Temos experiência nesses acessos: os profissionais desmontam os móveis se for necessário, e o preço é ajustado ao esforço real.",
       },
       {
         q: "Fazem recolha de móveis no Pragal e Laranjeiro?",
@@ -296,7 +296,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     accessNotes:
       "No Seixal temos excelente conhecimento local: sabemos onde a carrinha encosta à porta (Corroios, Cruz de Pau), onde há escadas e ruas estreitas (zonas mais antigas) e onde há restrições de estacionamento. Isto permite-nos dar orçamentos precisos à primeira.",
     neighborhoodHighlight:
-      "Corroios e Amora são as zonas com mais obras de remodelação no Seixal. Muitos apartamentos dos anos 80-90 estão a ser modernizados, gerando entulho de demolição de WCs, cozinhas e divisórias.",
+      "Corroios e Amora são as zonas com mais obras de remodelação no Seixal. Muitos apartamentos dos anos 80-90 estão a ser modernizados, o que gera entulho de demolição de WCs, cozinhas e divisórias.",
     nearbyAreas: ["Almada", "Barreiro", "Lisboa", "Setúbal"],
     faqs: [
       {
@@ -381,7 +381,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis de uma moradia em Cascais?",
-        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, sem IVA — uma moradia com sala, quartos e garagem fica na parte alta da faixa, e o valor exato vem na proposta.`,
+        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, sem IVA — uma moradia com sala, quartos e garagem fica na parte alta do intervalo, e o valor exato vem na proposta.`,
       },
       {
         q: "Recolhem móveis antigos e peças grandes em Cascais?",
@@ -606,7 +606,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa esvaziar um apartamento T2 em Lisboa?",
-        a: `O esvaziamento de apartamento é ${PRECOS.esvaziamento_apartamento.etiqueta}, sem IVA. Um T2 fica a meio da faixa; depende do volume, do piso e do acesso.`,
+        a: `O esvaziamento de apartamento é ${PRECOS.esvaziamento_apartamento.etiqueta}, sem IVA. Um T2 fica a meio do intervalo; depende do volume, do piso e do acesso.`,
       },
       {
         q: "Fazem esvaziamento de casas de herança em Lisboa?",
@@ -940,7 +940,7 @@ export const CITY_BASE_CONTENT: Record<string, CityBaseContent> = {
     name: "Sesimbra",
     region: "setubal",
     localIntro: "Em Sesimbra, atuamos desde a vila piscatória até às praias e à Quinta do Conde.",
-    landmarks: ["Centro de Sesimbra", "Praia da California", "Lagoa de Albufeira", "Aldeia do Meco", "Quinta do Conde"],
+    landmarks: ["Centro de Sesimbra", "Praia da Califórnia", "Lagoa de Albufeira", "Aldeia do Meco", "Quinta do Conde"],
     accessNotes: "O centro de Sesimbra tem ruas estreitas. Quinta do Conde tem urbanizações com bons acessos.",
     nearbyAreas: ["Seixal", "Setúbal", "Almada", "Palmela"],
   },

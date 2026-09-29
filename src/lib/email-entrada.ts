@@ -54,7 +54,7 @@ export async function enviarEmailDeEntrada(params: {
           </table>
 
           <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-            Se não foi você a pedir, ignore este email — não há nada a fazer, e
+            Se não pediu este email, pode ignorá-lo — não há nada a fazer, e
             ninguém entra sem carregar neste botão.
           </p>
         </td></tr>

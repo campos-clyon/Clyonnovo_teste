@@ -74,7 +74,7 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json();
   const { id, ...fields } = body;
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "Falta o identificador do pedido." }, { status: 400 });
 
   const updateData: Record<string, unknown> = { ...fields };
   if (updateData.dataAgendada && typeof updateData.dataAgendada === "string") {
@@ -93,7 +93,7 @@ export async function DELETE(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "Falta o identificador do pedido." }, { status: 400 });
 
   try {
     await deleteSimulatorOrder(Number(id), {

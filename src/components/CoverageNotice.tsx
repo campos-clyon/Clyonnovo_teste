@@ -39,14 +39,14 @@ export default function CoverageNotice() {
 
   if (!showNotice) return null;
 
-  const areaLabel = location?.label || location?.city || location?.country || 'a tua área';
+  const areaLabel = location?.label || location?.city || location?.country || 'a sua área';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between">
           <h2 className="text-lg font-semibold text-slate-900 text-pretty">
-            Ainda não estamos na tua área… mas em breve!
+            Ainda não estamos na sua área… mas em breve!
           </h2>
           <button
             onClick={() => setShowNotice(false)}
@@ -58,9 +58,9 @@ export default function CoverageNotice() {
         </div>
 
         <p className="mb-6 text-sm leading-relaxed text-slate-600">
-          Detetámos que estás em <span className="font-medium text-slate-800">{areaLabel}</span>.
-          Estamos a crescer rapidamente e esperamos estar na tua área em breve. Enquanto isso,
-          experimenta procurar noutra localização.
+          Detetámos que está em <span className="font-medium text-slate-800">{areaLabel}</span>.
+          Estamos a crescer rapidamente e esperamos estar na sua área em breve. Entretanto,
+          experimente procurar noutra localização.
         </p>
 
         <div className="flex gap-3">
@@ -77,7 +77,7 @@ export default function CoverageNotice() {
             }}
             className="flex-1 rounded-lg bg-acao px-4 py-2.5 text-sm font-medium text-white transition hover:bg-acao-hover"
           >
-            Experimenta outra localização
+            Experimente outra localização
           </button>
         </div>
       </div>

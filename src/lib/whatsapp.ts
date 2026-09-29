@@ -93,8 +93,8 @@ export function notifyNewOrder(params: {
   };
 
   const servico   = servicoMap[params.serviceType ?? ""] ?? params.serviceType ?? "Não especificado";
-  const cliente   = params.contactName || "Não informado";
-  const local     = params.city || (params.address ? params.address.split(",")[0] : "Não informado");
+  const cliente   = params.contactName || "Não indicado";
+  const local     = params.city || (params.address ? params.address.split(",")[0] : "Não indicado");
   const preco     = params.estimateWithVat
     ? `≈ ${Number(params.estimateWithVat).toFixed(2)} € c/IVA`
     : "Em análise";

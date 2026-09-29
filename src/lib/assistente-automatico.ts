@@ -1131,7 +1131,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
         await db
           .interromperNumeroWhatsApp(
             a.telefone,
-            `Nao responde - ${quantos} lembrete(s) sem resposta`,
+            `Não responde — ${quantos} lembrete(s) sem resposta`,
           )
           .catch(() => {});
         resumo.entregues++;

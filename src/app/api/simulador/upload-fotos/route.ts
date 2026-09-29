@@ -165,6 +165,6 @@ export async function POST(request: NextRequest) {
     console.error("[upload-fotos] erro:", err);
     // Sem a mensagem crua: numa rota pública ela só serve para descrever a
     // nossa infraestrutura a quem estiver a sondá-la.
-    return NextResponse.json({ error: "Erro no upload." }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao enviar as fotografias." }, { status: 500 });
   }
 }

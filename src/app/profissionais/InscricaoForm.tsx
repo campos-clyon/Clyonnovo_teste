@@ -432,7 +432,7 @@ export default function InscricaoForm({
               </span>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
                 Determina o que o cliente vê na confirmação. Nós não cobramos IVA sobre o
-                seu serviço — quem o liquida, se for o caso, é você.
+                seu serviço — se for o caso, quem o liquida é o próprio profissional.
               </p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {[
@@ -580,7 +580,7 @@ export default function InscricaoForm({
               id="numeroTransportador"
               value={form.numeroTransportador}
               onChange={(e) => set("numeroTransportador", e.target.value)}
-              placeholder="Ex: APA-123456"
+              placeholder="Ex.: APA-123456"
               className={`mt-1.5 ${inputCls(erro("numeroTransportador"))}`}
             />
             {erro("numeroTransportador") && (

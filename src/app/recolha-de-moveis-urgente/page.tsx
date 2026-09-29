@@ -81,7 +81,7 @@ const howItWorks = [
   {
     step: "02",
     title: "Resposta rápida",
-    description: "Recebe orçamento claro com janela de execução disponível.",
+    description: "Receba um orçamento claro com janela de execução disponível.",
   },
   {
     step: "03",

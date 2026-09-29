@@ -71,7 +71,7 @@ function TrabalhoForm({ initial, onSave, onCancel }: TrabalhoFormProps) {
       files.forEach((f) => fd.append("fotos", f));
       const res = await fetch("/api/admin/trabalhos/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erro no upload");
+      if (!res.ok) throw new Error(data.error ?? "Erro ao enviar");
       set("fotos", [...form.fotos, ...data.urls]);
     } catch (err: any) {
       setError(err.message);
@@ -155,7 +155,7 @@ function TrabalhoForm({ initial, onSave, onCancel }: TrabalhoFormProps) {
           value={form.localidade}
           onChange={(e) => set("localidade", e.target.value)}
           className={inputCls}
-          placeholder="Ex: Seixal, Lisboa..."
+          placeholder="Ex.: Seixal, Lisboa..."
           maxLength={120}
         />
       </div>

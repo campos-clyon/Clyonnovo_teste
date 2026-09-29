@@ -47,7 +47,7 @@ export default async function OrcamentoPage(
         <div className="mx-auto max-w-lg flex items-center justify-between">
           <div>
             <span className="text-lg font-bold text-[#0077B6] tracking-tight">CLYON</span>
-            <span className="ml-2 text-xs text-tinta-fraca">Recolha &middot; Mudanca &middot; Esvaziamento</span>
+            <span className="ml-2 text-xs text-tinta-fraca">Recolha &middot; Mudança &middot; Esvaziamento</span>
           </div>
           <a
             href={`tel:${BUSINESS_PHONE}`}

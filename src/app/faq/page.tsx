@@ -44,7 +44,7 @@ const faqCategories = [
       },
       {
         q: "Como funciona a recolha de móveis — passo a passo?",
-        a: "1) Pede orçamento pelo simulador ou WhatsApp com foto e descrição. 2) Confirmamos preço e data por mensagem. 3) A equipa chega na hora marcada, retira os móveis do interior do imóvel e carrega na viatura. 4) O imóvel fica limpo e pronto a usar. Não tem de fazer nada além de abrir a porta.",
+        a: "1) Peça orçamento pelo simulador ou WhatsApp com foto e descrição. 2) Confirmamos preço e data por mensagem. 3) A equipa chega na hora marcada, retira os móveis do interior do imóvel e carrega na viatura. 4) O imóvel fica limpo e pronto a usar. Não tem de fazer nada além de abrir a porta.",
       },
       {
         q: "A recolha inclui subir ao apartamento para retirar os móveis?",

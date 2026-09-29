@@ -75,7 +75,7 @@ async function getExternalMarketEstimate(
   const searchQuery = buildSearchQuery(order);
   const serviceLabel = order.serviceType ?? "serviço não especificado";
 
-  const prompt = `Você é um analista interno da empresa CLYON em Portugal.
+  const prompt = `És um analista interno da empresa CLYON em Portugal.
 
 TAREFA: Pesquisa referências de mercado para o seguinte serviço, usando apenas termos genéricos sem dados pessoais.
 

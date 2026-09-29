@@ -95,7 +95,7 @@ export default function Faturacao({ user, onUpdate }: Props) {
       });
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Não foi possível guardar. Tenta novamente.";
+      const errorMsg = err instanceof Error ? err.message : "Não foi possível guardar. Tente novamente.";
       console.error("[v0] Faturacao: erro catch:", errorMsg);
       setError(errorMsg);
     } finally {
@@ -112,7 +112,7 @@ export default function Faturacao({ user, onUpdate }: Props) {
 
       <div className="flex items-start gap-3 rounded-2xl border border-[#00B4D8]/20 bg-[#00B4D8]/5 px-5 py-4 text-sm text-[#0077B6]">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        Estes dados são usados para emitir faturas dos teus pedidos. Se a morada de faturação for igual à pessoal, deixa em branco.
+        Estes dados são usados para emitir faturas dos seus pedidos. Se a morada de faturação for igual à pessoal, deixe em branco.
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">

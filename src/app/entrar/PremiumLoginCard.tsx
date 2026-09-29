@@ -85,12 +85,12 @@ export function PremiumLoginCard({ errorMsg }: Props) {
         {/* Heading */}
         <div className="text-center">
           <h1 className="text-xl font-bold text-slate-900">
-            {tab === "login" ? "Bem-vindo de volta" : "Cria a tua conta"}
+            {tab === "login" ? "Bem-vindo de volta" : "Crie a sua conta"}
           </h1>
           <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
             {tab === "login"
-              ? "Acede à tua conta para acompanhar os teus pedidos"
-              : "Regista-te para guardar o histórico dos teus pedidos"}
+              ? "Aceda à sua conta para acompanhar os seus pedidos"
+              : "Registe-se para guardar o histórico dos seus pedidos"}
           </p>
         </div>
 

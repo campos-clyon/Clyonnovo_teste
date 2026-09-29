@@ -550,7 +550,7 @@ export default function AdminConversasPanel() {
                       )}
                     </span>
                     <span className="mt-1 block truncate pr-7 text-xs text-slate-400">
-                      {ultima ? (ultima.de === "clyon" ? "Você: " : "") + ultima.texto : "—"}
+                      {ultima ? (ultima.de === "clyon" ? "CLYON: " : "") + ultima.texto : "—"}
                     </span>
                   </span>
                 </button>

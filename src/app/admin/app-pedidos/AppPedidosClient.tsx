@@ -500,7 +500,7 @@ function DetailModal({
             </div>
 
             <div>
-              <label className={LABEL}>Status</label>
+              <label className={LABEL}>Estado</label>
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value as AppStatus)}

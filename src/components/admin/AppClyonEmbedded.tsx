@@ -1148,7 +1148,7 @@ function PedidoInlinePanel({
                 <div>
                   <label className={IL}>Justificação para o cliente (obrigatória)</label>
                   <textarea value={proposalMessage} onChange={(e) => setProposalMessage(e.target.value)} rows={4}
-                    placeholder="Ex: Ajustámos para baixo — o acesso é fácil e não precisa de segundo operador."
+                    placeholder="Ex.: Ajustámos para baixo — o acesso é fácil e não precisa de segundo operador."
                     className={TA} />
                   <p className="mt-1 text-[10px] text-slate-500">
                     {proposalMessage.trim().length < PROPOSAL_MESSAGE_MIN_LENGTH
@@ -1628,7 +1628,7 @@ function PedidoInlinePanel({
                   <div className="sm:col-span-3">
                     <label className={IL}>Ajustes no local (opcional)</label>
                     <textarea value={execAjustes} onChange={(e) => setExecAjustes(e.target.value)}
-                      rows={2} placeholder="Ex: apareceu um sofá extra; escada mais estreita do que o previsto."
+                      rows={2} placeholder="Ex.: apareceu um sofá extra; escada mais estreita do que o previsto."
                       className={TA} />
                   </div>
                   <div className="sm:col-span-3">
@@ -2526,7 +2526,7 @@ function CreditosDoProfissional({
                         <input
                           value={notaConfirmacao}
                           onChange={(e) => setNotaConfirmacao(e.target.value)}
-                          placeholder="Nota (opcional) — ex: comprovativo no e-mail"
+                          placeholder="Nota (opcional) — ex.: comprovativo no e-mail"
                           className="h-8 w-full rounded-lg border border-white/[0.08] bg-[#0C1C2E] px-2 text-[11px] text-white outline-none focus:border-[#00BDEB]"
                         />
                         <div className="flex gap-1.5">
@@ -2590,7 +2590,7 @@ function CreditosDoProfissional({
                   />
                 </div>
                 <p className="text-[10px] text-slate-600">
-                  Valor em euros — ex: 25,50. Um valor negativo reverte. O motivo fica visível
+                  Valor em euros — ex.: 25,50. Um valor negativo reverte. O motivo fica visível
                   na carteira do profissional.
                 </p>
                 <div className="flex gap-1.5">
@@ -2772,7 +2772,7 @@ function ProfissionalPanel({
             )}
             <label className={IL2}>Descrição que o cliente vê</label>
             <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} className={TA2}
-              placeholder="Ex: Recolhas e mudanças na Margem Sul há 15 anos. Equipa própria e carrinha de 12 m³." />
+              placeholder="Ex.: Recolhas e mudanças na Margem Sul há 15 anos. Equipa própria e carrinha de 12 m³." />
             {typeof p.bio === "string" && p.bio.trim() && (
               <p className="mt-1.5 text-[10px] leading-relaxed text-slate-600">
                 Bio escrita pelo profissional (não visível ao cliente): &ldquo;{p.bio}&rdquo;
@@ -3999,7 +3999,7 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <form onSubmit={(e) => { e.preventDefault(); setQ(busca.trim()); }} className="flex min-w-0 flex-1 gap-2">
           <input value={busca} onChange={(e) => setBusca(e.target.value.toUpperCase())}
-            placeholder="Referência do extracto — ex: AAAAM01"
+            placeholder="Referência do extracto — ex.: AAAAM01"
             className="h-9 min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 font-mono text-sm uppercase tracking-wider text-white outline-none focus:border-cyan-400" />
           <button type="submit" className="rounded-xl bg-cyan-500/20 px-4 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/30">Procurar</button>
           {q && <button type="button" onClick={() => { setBusca(""); setQ(""); }} className="text-xs text-slate-500 hover:text-slate-300">Limpar</button>}
@@ -4099,7 +4099,7 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
                         <div>
                           <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Nota (opcional)</label>
                           <input value={nota} onChange={(e) => setNota(e.target.value)}
-                            placeholder="Ex: recebido no Revolut"
+                            placeholder="Ex.: recebido no Revolut"
                             className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#12263B] px-3 text-sm text-white outline-none focus:border-[#00BDEB]" />
                         </div>
                       </div>

@@ -588,7 +588,7 @@ export default function HeroQuoteForm() {
                     aria-describedby={errors.descricao ? idDoErro("descricao") : undefined}
                     maxLength={310}
                     rows={3}
-                    placeholder="Ex: 1 sofá de 3 lugares, 1 colchão de casal…"
+                    placeholder="Ex.: 1 sofá de 3 lugares, 1 colchão de casal…"
                     className="w-full resize-none rounded-lg bg-transparent px-3.5 pb-8 pt-3 text-base text-slate-800 placeholder-tinta-fraca outline-none"
                   />
                   <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between rounded-b-lg border-t border-slate-100 bg-slate-50 px-3 py-1.5">

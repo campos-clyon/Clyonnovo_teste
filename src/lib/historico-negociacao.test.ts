@@ -27,9 +27,9 @@ describe("historicoDaNegociacao", () => {
     expect(h[0].texto).toBe("O cliente propôs");
   });
 
-  it("cada um vê-se a si próprio como 'Você'", () => {
+  it("cada um vê a sua proposta como 'A sua proposta', sem 'Você'", () => {
     const props = [p("profissional", 400, "2026-08-20T11:00:00Z")];
-    expect(historicoDaNegociacao(props, {}, "profissional")[0].texto).toBe("Você propôs");
+    expect(historicoDaNegociacao(props, {}, "profissional")[0].texto).toBe("A sua proposta");
     expect(historicoDaNegociacao(props, {}, "cliente")[0].texto).toBe("O profissional propôs");
   });
 

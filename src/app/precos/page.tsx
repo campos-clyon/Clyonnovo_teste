@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Preços de Recolha de Monos, Entulho e Móveis",
     description:
-      "Faixas de preço de referência, fatores que influenciam o valor e a melhor forma de pedir orçamento com precisão.",
+      "Intervalos de preço de referência, fatores que influenciam o valor e a melhor forma de pedir orçamento com precisão.",
     url: `${SITE_URL}/precos`,
   },
 };
@@ -78,7 +78,7 @@ const priceExamples = [
   {
     title: "Recolha de entulho",
     price: etiquetaDe("recolha_entulho"),
-    includes: "Valor depende do tipo de residuo, peso, quantidade e facilidade de carga.",
+    includes: "O valor depende do tipo de resíduo, peso, quantidade e facilidade de carga.",
   },
   {
     /*
@@ -93,16 +93,16 @@ const priceExamples = [
      */
     title: "Limpeza pós-obra",
     price: "desde 160 €",
-    includes: "Preco varia com área, nível de sujidade, vidros, cozinha e casas de banho.",
+    includes: "O preço varia com a área, nível de sujidade, vidros, cozinha e casas de banho.",
   },
 ];
 
 const pricingFactors = [
   "Quantidade total e peso do material",
-  "Andar, elevador, escadas e distancia de carga",
+  "Andar, elevador, escadas e distância de carga",
   "Necessidade de desmontagem ou proteção adicional",
   "Mistura entre móveis, monos, entulho e eletrodomésticos",
-  "Urgencia do pedido e janela horaria pretendida",
+  "Urgência do pedido e janela horária pretendida",
   "Localização do serviço em Lisboa, Margem Sul ou Setúbal",
 ];
 
@@ -140,7 +140,7 @@ const faqs = [
   {
     question: "Pedidos no mesmo dia custam mais?",
     answer:
-      "Em alguns casos sim, especialmente quando exigem reorganização de agenda, equipa extra ou janela horaria mais curta.",
+      "Em alguns casos sim, especialmente quando exigem reorganização de agenda, equipa extra ou janela horária mais curta.",
   },
   {
     question: "Posso pedir preço por WhatsApp?",
@@ -159,7 +159,7 @@ export const revalidate = 86400;
 export default function PrecosPage() {
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-    "Olá! Gostava de pedir um orçamento a CLYON.",
+    "Olá! Gostava de pedir um orçamento à CLYON.",
   )}`;
 
   return (
@@ -176,10 +176,10 @@ export default function PrecosPage() {
                 Quanto pode custar o seu pedido.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-                Esta página ajuda a perceber faixas de valor para recolha de móveis,
+                Esta página ajuda a perceber intervalos de valores para recolha de móveis,
                 monos, entulho, limpeza pós-obra e esvaziamentos. Não substitui um
                 orçamento final, mas dá contexto rápido sobre o que influencia o preço
-                e como reduzir atrásos na marcação.
+                e como reduzir atrasos na marcação.
               </p>
             </div>
 
@@ -252,9 +252,9 @@ export default function PrecosPage() {
                 O preço não depende só do volume.
               </h2>
               <p className="mt-4 max-w-xl text-base leading-8 text-slate-600">
-                Dois pedidos com o mesmo numero de pecas podem ter valores diferentes.
+                Dois pedidos com o mesmo número de peças podem ter valores diferentes.
                 Acessos, peso, urgência, desmontagem e mistura de materiais mudam o
-                tempo de carga, a equipa e a logistica necessaria.
+                tempo de carga, a equipa e a logística necessária.
               </p>
             </div>
 
@@ -281,7 +281,7 @@ export default function PrecosPage() {
             <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
-                  Cenarios tipicos
+                  Cenários típicos
                 </p>
                 <h2 className="mt-4 text-3xl font-bold text-slate-950 sm:text-4xl">
                   Nem todos os pedidos precisam da mesma equipa.

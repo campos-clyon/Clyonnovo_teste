@@ -185,7 +185,7 @@ export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
       );
     }
     return (
-      `NAO chegou a nenhum profissional (${r.candidatos} activos)` +
+      `NÃO chegou a nenhum profissional (${r.candidatos} activos)` +
       (porque ? `. Porquê: ${porque}.` : ".")
     );
   }
@@ -197,8 +197,8 @@ export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
 
   if (r.avisados >= r.receberam) return `${base}. Todos avisados por email.${jaTinham}`;
   return (
-    `${base}. Mas so ${r.avisados} recebeu(ram) o email: ` +
-    `${r.receberam - r.avisados} tem o trabalho no painel e NAO foi avisado.${jaTinham}`
+    `${base}. Mas só ${r.avisados} recebeu(ram) o email: ` +
+    `${r.receberam - r.avisados} tem o trabalho no painel e NÃO foi avisado.${jaTinham}`
   );
 }
 

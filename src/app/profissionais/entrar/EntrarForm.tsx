@@ -125,8 +125,8 @@ export default function EntrarForm() {
               Manter-me ligado
               <span className="mt-0.5 block text-xs text-slate-500">
                 {lembrar
-                  ? `Nao pede a palavra-passe outra vez durante ${DIAS_A_LEMBRAR} dias — e enquanto for usando, nunca pede.`
-                  : "Termina quando fechar o browser. Escolha isto num computador que nao e seu."}
+                  ? `Não pede a palavra-passe outra vez durante ${DIAS_A_LEMBRAR} dias — e, enquanto o continuar a usar, nunca pede.`
+                  : "Termina quando fechar o browser. Num computador que não seja seu, deixe esta opção por marcar."}
               </span>
             </span>
           </label>

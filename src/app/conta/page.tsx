@@ -7,7 +7,7 @@ import { loadContaData } from "@/lib/conta-server";
 
 export const metadata: Metadata = {
   title: "A minha conta",
-  description: "Os teus pedidos e histórico de serviços CLYON.",
+  description: "Os seus pedidos e o histórico de serviços CLYON.",
   robots: { index: false, follow: false },
 };
 
