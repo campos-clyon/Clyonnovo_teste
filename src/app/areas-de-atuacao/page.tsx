@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { jsonLd } from "@/lib/json-ld";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 
@@ -283,7 +284,7 @@ export default function AreasDeAtuacaoPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(localBusinessSchema) }}
       />
     </div>
   );

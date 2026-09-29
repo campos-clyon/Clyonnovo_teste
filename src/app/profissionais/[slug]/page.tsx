@@ -9,6 +9,7 @@ import {
 } from "@/lib/perfil-publico-do-profissional";
 import { tService } from "@/lib/translations";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
+import { jsonLd } from "@/lib/json-ld";
 
 /**
  * A PÁGINA DE UM PROFISSIONAL — a única do site que se escreve sozinha.
@@ -201,9 +202,14 @@ export default async function PaginaDoProfissional({ params }: Props) {
 
   return (
     <>
+      {/*
+        `jsonLd` e não `JSON.stringify`: o nome e a cidade vêm do que o
+        profissional escreve no painel, e um `</script>` dentro deles fechava
+        esta etiqueta. Ver json-ld.ts.
+      */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosEstruturados(p, slug)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(dadosEstruturados(p, slug)) }}
       />
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { jsonLd } from "@/lib/json-ld";
 
 export interface FAQItem {
   question: string;
@@ -94,7 +95,7 @@ export default function FAQSection({
       {includeSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
         />
       )}
     </section>
