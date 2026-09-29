@@ -92,6 +92,9 @@ describe("o índice que faltava ao painel do profissional", () => {
   it("e a versão das migrações subiu, senão nunca corria", () => {
     // O guarda booleano sozinho só deixa as migrações novas passar em
     // arranques frios; um processo já quente nunca as via.
-    expect(DB).toContain("const VERSAO_DAS_NEGOCIACOES = 5;");
+    // "Pelo menos 5", e não "5": cada coluna nova depois desta sobe o número
+    // outra vez, e fixá-lo aqui fazia este teste chumbar a quem fez bem.
+    const versao = Number(DB.match(/const VERSAO_DAS_NEGOCIACOES = (\d+);/)?.[1]);
+    expect(versao).toBeGreaterThanOrEqual(5);
   });
 });

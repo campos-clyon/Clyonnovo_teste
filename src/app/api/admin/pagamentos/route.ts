@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { configuracaoDoEupago, podeCobrar } from "@/lib/eupago";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
-import { getPool } from "@/lib/db";
+import { ensureNegociacoesTable, getPool } from "@/lib/db";
 import { faseDoDinheiro } from "@/lib/dinheiro-do-trabalho";
+import {
+  lerComoPagou,
+  lerParaQue,
+  valorDoPagamento,
+  type ComoPagou,
+  type ParaQue,
+} from "@/lib/pagamento-declarado";
 import {
   quantoOProfissionalRecebe,
   taxasDaNegociacao,
@@ -45,8 +52,16 @@ export type TrabalhoParaGerir = {
   valorAcordado: number;
   /** As taxas desta negociação, para o ecrã refazer a conta ao corrigir. */
   taxas: Taxas;
-  /** O que o cliente paga, já com a taxa e o imposto de quem factura. */
+  /**
+   * O que o cliente paga. Com factura (o total com IVA) a não ser que a
+   * declaração diga «sem factura» — então é o trabalho mais a taxa.
+   */
   clientePaga: number;
+  /**
+   * O que ficou dito ao dar o trabalho por feito — ver `pagamento-declarado.ts`.
+   * `null` = confirmado antes de haver a pergunta, ou ainda não confirmado.
+   */
+  declarado: { paraQue: ParaQue; como: ComoPagou; em: string | null; por: string | null } | null;
   /** O que o profissional recebe, líquido. */
   profissionalRecebe: number;
   formaDePagamento: string | null;
@@ -65,6 +80,9 @@ export type TrabalhoParaGerir = {
  * tem índice único, por isso o join nunca duplica a linha.
  */
 async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
+  // As colunas da declaração são de 29-09-2026: este ecrã pode ser o primeiro
+  // a lê-las depois de um deploy, antes de qualquer outro caminho as criar.
+  await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return [];
 
@@ -72,6 +90,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
     `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.valorAcordado,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
             n.confirmadoEm, n.pagoEm,
+            n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
             o.contactName, o.contactPhone, o.city, o.serviceType,
             pr.name AS profissional,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
@@ -89,6 +108,17 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
   return linhas.map((l) => {
     const acordado = Number(l.valorAcordado);
     const taxas = taxasDaNegociacao(l);
+    const paraQue = lerParaQue(l.pagamentoParaQue);
+    const como = lerComoPagou(l.pagamentoComo);
+    const declarado =
+      paraQue && como
+        ? {
+            paraQue,
+            como,
+            em: l.pagamentoDeclaradoEm ? new Date(l.pagamentoDeclaradoEm as string).toISOString() : null,
+            por: ((l.pagamentoDeclaradoPor as string) ?? "").trim() || null,
+          }
+        : null;
     const base = {
       formaDePagamento: (l.formaDePagamento as string) ?? null,
       comoEntrou: (l.comoEntrou as string) ?? null,
@@ -107,7 +137,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       profissional: String(l.profissional ?? ""),
       valorAcordado: acordado,
       taxas,
-      clientePaga: contaDoCliente(acordado, taxas).total,
+      clientePaga: valorDoPagamento(contaDoCliente(acordado, taxas), paraQue),
+      declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       ...base,
       fase: faseDoDinheiro(base),

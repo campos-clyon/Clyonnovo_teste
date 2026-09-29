@@ -85,6 +85,13 @@ import GerarReferencia from "@/components/admin/GerarReferencia";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import {
+  COMO_PAGOU,
+  PARA_QUE,
+  valorDoPagamento,
+  type ComoPagou,
+  type ParaQue,
+} from "@/lib/pagamento-declarado";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -4487,16 +4494,19 @@ function ConfirmarPelaClyon({
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
   const [aConfirmar, setAConfirmar] = useState(false);
+  /* As duas respostas. Nenhuma vem escolhida: é o que se ouviu do cliente. */
+  const [paraQue, setParaQue] = useState<ParaQue | null>(null);
+  const [como, setComo] = useState<ComoPagou | null>(null);
 
   const confirmar = async () => {
-    if (!authToken) return;
+    if (!authToken || !paraQue || !como) return;
     setAEnviar(true);
     setErro("");
     try {
       const res = await fetch("/api/admin/negociacoes/agir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ pedidoId, negociacaoId, accao: "confirmar" }),
+        body: JSON.stringify({ pedidoId, negociacaoId, accao: "confirmar", paraQue, como }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -4518,7 +4528,7 @@ function ConfirmarPelaClyon({
       </p>
       <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
         Este cliente não tem como confirmar sozinho — chegou por WhatsApp ou telefone.
-        Confirme depois de falar com ele e de o trabalho estar pago.
+        Confirme depois de falar com ele.
       </p>
 
       {valorAcordado != null &&
@@ -4624,34 +4634,111 @@ function ConfirmarPelaClyon({
       )}
 
       {/*
-        Dois toques, e não um. Confirmar liberta o dinheiro do profissional e
-        não tem volta — e o botão vive ao lado de outros que se carregam sem
-        pensar.
+        «ESTÁ FEITO», E SÓ ISSO — 29-09-2026.
+
+        Dizia «Está feito — libertar o pagamento», e um clique afirmava duas
+        coisas: que o trabalho aconteceu, que se sabe ao telefone, e que o
+        dinheiro entrou, que só se sabe a olhar para o banco. Agora o botão diz
+        a primeira, e a seguir pergunta-se o que o cliente disse sobre a
+        segunda: para que foi o pagamento e como pagou. Fica escrito nos
+        registos e confirma-se depois nos Pagamentos, onde se vê a conta.
+
+        Continua a ser em dois passos: fechar o trabalho não tem volta.
       */}
       {!aConfirmar ? (
         <button
           onClick={() => setAConfirmar(true)}
           className="mt-2.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
         >
-          Está feito — libertar o pagamento
+          Está feito
         </button>
       ) : (
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-300">Confirma que o trabalho está feito e pago?</span>
-          <button
-            onClick={confirmar}
-            disabled={aEnviar}
-            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
-          >
-            {aEnviar ? "A confirmar…" : "Sim, libertar"}
-          </button>
-          <button
-            onClick={() => setAConfirmar(false)}
-            disabled={aEnviar}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
+        <div className="mt-2.5 space-y-3 rounded-lg border border-emerald-900/60 bg-slate-950/50 p-3">
+          <fieldset>
+            <legend className="text-xs font-semibold text-slate-200">
+              Para que foi o pagamento?
+            </legend>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {PARA_QUE.map((o) => {
+                const valor =
+                  valorAcordado != null
+                    ? valorDoPagamento(contaDoCliente(valorAcordado, taxas), o.id)
+                    : null;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setParaQue(o.id)}
+                    aria-pressed={paraQue === o.id}
+                    title={o.ajuda}
+                    className={`rounded-md border px-2.5 py-1.5 text-left text-xs transition ${
+                      paraQue === o.id
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-100"
+                        : "border-slate-700 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    <span className="font-semibold">{o.rotulo}</span>
+                    {valor != null && <span className="ml-1.5 tabular-nums">{euros(valor)}</span>}
+                    <span className="block text-[10px] text-slate-500">{o.ajuda}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="text-xs font-semibold text-slate-200">
+              Como é que o cliente pagou?
+            </legend>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {COMO_PAGOU.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setComo(o.id)}
+                  aria-pressed={como === o.id}
+                  title={o.ajuda}
+                  className={`rounded-md border px-2.5 py-1.5 text-left text-xs transition ${
+                    como === o.id
+                      ? "border-emerald-500 bg-emerald-500/15 text-emerald-100"
+                      : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  <span className="font-semibold">{o.rotulo}</span>
+                  <span className="block text-[10px] text-slate-500">{o.ajuda}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            Fica nos registos do pedido. O dinheiro confirma-se depois em{" "}
+            <strong className="text-slate-300">Pagamentos</strong>, quando estiver visto na conta.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={confirmar}
+              disabled={aEnviar || !paraQue || !como}
+              className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
+            >
+              {aEnviar ? "A confirmar…" : "Confirmar que está feito"}
+            </button>
+            <button
+              onClick={() => {
+                setAConfirmar(false);
+                setParaQue(null);
+                setComo(null);
+              }}
+              disabled={aEnviar}
+              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            {(!paraQue || !como) && (
+              <span className="text-[11px] text-slate-500">Responda às duas perguntas.</span>
+            )}
+          </div>
         </div>
       )}
     </div>

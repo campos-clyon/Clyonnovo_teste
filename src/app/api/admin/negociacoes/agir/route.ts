@@ -15,6 +15,13 @@ import { avaliarProfissional } from "@/lib/db";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import {
+  fraseDaDeclaracao,
+  lerComoPagou,
+  lerParaQue,
+  valorDoPagamento,
+} from "@/lib/pagamento-declarado";
 import {
   propor,
   aceitar,
@@ -77,6 +84,9 @@ export async function POST(req: NextRequest) {
     valor?: unknown;
     estrelas?: unknown;
     comentario?: unknown;
+    /** Só no `confirmar`: para que foi o pagamento, e como o cliente pagou. */
+    paraQue?: unknown;
+    como?: unknown;
   };
   try {
     corpo = await req.json();
@@ -250,9 +260,32 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: porqueNaoPodeConfirmar(alvo) }, { status: 403 });
       }
 
+      /*
+       * AS DUAS PERGUNTAS — 29-09-2026. Ver `pagamento-declarado.ts`.
+       *
+       * «Está feito» deixou de libertar o pagamento às cegas: quem confirma diz
+       * para que foi o pagamento e como o cliente pagou, e isso fica escrito
+       * para se confirmar depois nos Pagamentos. As duas são obrigatórias —
+       * uma confirmação sem elas é exactamente o que se veio acabar.
+       */
+      const paraQue = lerParaQue(corpo.paraQue);
+      const como = lerComoPagou(corpo.como);
+      if (!paraQue || !como) {
+        return NextResponse.json(
+          { error: "Diga para que foi o pagamento e como o cliente pagou." },
+          { status: 400 },
+        );
+      }
+      const porQuem = colab?.nome ?? "a CLYON";
+
       // Os restantes guardas vivem no SQL: só grava se estiver `acordada`, com
       // prova enviada e ainda por confirmar. Se não gravou, uma delas falhou.
-      const gravou = await confirmarExecucao(negociacaoId, pedidoId);
+      // A declaração vai no MESMO update — ou fica tudo, ou não fica nada.
+      const gravou = await confirmarExecucao(negociacaoId, pedidoId, {
+        paraQue,
+        como,
+        por: porQuem,
+      });
       if (!gravou) {
         return NextResponse.json(
           {
@@ -263,13 +296,43 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const porQuem = colab?.nome ?? "a CLYON";
+      /*
+       * O valor que corresponde à resposta, com as taxas GRAVADAS nesta
+       * negociação — as mesmas que o cliente viu, e as mesmas que os
+       * Pagamentos vão usar para dizer quanto falta receber.
+       */
+      const valor =
+        linha.valorAcordado != null
+          ? valorDoPagamento(
+              contaDoCliente(Number(linha.valorAcordado), taxasDaNegociacao(linha)),
+              paraQue,
+            )
+          : null;
+      const frase = fraseDaDeclaracao(paraQue, como, valor);
+
       await appendOrderHistory(pedidoId, {
         type: "created",
         by: null,
         message:
-          `CLYON (${porQuem}) confirmou a execução em nome do cliente — ` +
-          `negociação #${negociacaoId}. Pagamento libertado.`,
+          `CLYON (${porQuem}) confirmou que o trabalho está feito, em nome do cliente — ` +
+          `negociação #${negociacaoId}. Pagamento: ${frase} ` +
+          "Confirma-se nos Pagamentos quando o dinheiro estiver visto.",
+      });
+
+      /*
+       * DUAS LINHAS NO REGISTO, E NÃO UMA: o trabalho confirmado e o pagamento
+       * declarado são factos diferentes, com consequências diferentes. Juntá-los
+       * numa linha só era voltar a misturar o que o botão misturava.
+       */
+      await registarSemFalhar({
+        acontecimento: "pagamento_declarado",
+        pedidoId,
+        negociacaoId,
+        autorTipo: "clyon",
+        autorNome: porQuem,
+        valor,
+        resumo: `Pagamento declarado ao confirmar: ${frase}`,
+        detalhe: { paraQue, como, valor },
       });
 
       // No registo permanente fica escrito QUEM confirmou. Um trabalho fechado

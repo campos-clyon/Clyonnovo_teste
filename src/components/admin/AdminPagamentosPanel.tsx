@@ -12,6 +12,13 @@ import {
   prontoAPagar,
 } from "@/lib/dinheiro-do-trabalho";
 import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
+import {
+  fraseDaDeclaracao,
+  metodoDoRecebimento,
+  nomeDeComoPagou,
+  type ComoPagou,
+  type ParaQue,
+} from "@/lib/pagamento-declarado";
 
 /**
  * O QUE ENTROU PELO euPAGO.
@@ -98,6 +105,11 @@ type Trabalho = {
   taxas: Taxas;
   clientePaga: number;
   profissionalRecebe: number;
+  /**
+   * O que ficou dito ao dar o trabalho por feito — 29-09-2026. Ver
+   * `pagamento-declarado.ts`. É para CONFIRMAR aqui, e não um recebimento.
+   */
+  declarado?: { paraQue: ParaQue; como: ComoPagou; em: string | null; por: string | null } | null;
   formaDePagamento: string | null;
   comoEntrou: string | null;
   clientePagouEm: string | null;
@@ -537,6 +549,15 @@ function Linha({
             pagou {euros(t.clientePaga)} · {nomeDoRecebimento(t.comoEntrou)}
             {DIA(t.clientePagouEm) ? ` · ${DIA(t.clientePagouEm)}` : ""}
           </span>
+        ) : t.declarado && metodoDoRecebimento(t.declarado.como) ? (
+          /*
+            DISSE QUE PAGOU, e falta ver. Lê-se na lista sem abrir nada: é a
+            fila do que se vai conferir com o extracto do banco ao lado.
+          */
+          <span className="text-amber-300">
+            {euros(t.clientePaga)} · disse que pagou por {nomeDeComoPagou(t.declarado.como)} —{" "}
+            <strong className="font-semibold">confirmar</strong>
+          </span>
         ) : (
           <span className="text-amber-300">por receber {euros(t.clientePaga)}</span>
         )}
@@ -588,19 +609,76 @@ function Linha({
                 Sim — {euros(t.clientePaga)} por {nomeDoRecebimento(t.comoEntrou)}
                 {DIA(t.clientePagouEm) ? `, a ${DIA(t.clientePagouEm)}` : ""}.
               </p>
+            ) : t.declarado && metodoDoRecebimento(t.declarado.como) && !comoEntrou ? (
+              /*
+                A DECLARAÇÃO À FRENTE — 29-09-2026.
+
+                Quem deu o trabalho por feito já disse para que foi o pagamento e
+                como o cliente pagou. Aqui só falta a parte que se vê no banco:
+                entrou, ou não. Um toque grava-o com o método declarado e o
+                valor certo — com ou sem IVA, conforme a resposta.
+
+                Se entrou de outra forma, escolhe-se à mão, como antes.
+              */
+              <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
+                <p className="text-[11px] leading-relaxed text-amber-200/90">
+                  Declarado ao dar o trabalho por feito
+                  {t.declarado.por ? `, por ${t.declarado.por}` : ""}
+                  {DIA(t.declarado.em) ? `, a ${DIA(t.declarado.em)}` : ""}:
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-amber-100">
+                  {fraseDaDeclaracao(t.declarado.paraQue, t.declarado.como, t.clientePaga)}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const metodo = metodoDoRecebimento(t.declarado?.como ?? null);
+                      if (
+                        metodo &&
+                        window.confirm(
+                          `Confirmar que entraram ${euros(t.clientePaga)} do pedido #${t.pedidoId}?\n\n` +
+                            "Veja PRIMEIRO na conta. Isto desbloqueia o dinheiro do profissional.",
+                        )
+                      )
+                        onEntrou(metodo);
+                    }}
+                    disabled={ocupado}
+                    className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+                  >
+                    Confirmar que entrou
+                  </button>
+                  <button
+                    onClick={() => setComoEntrou(true)}
+                    disabled={ocupado}
+                    className="text-[11px] text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline disabled:opacity-50"
+                  >
+                    Entrou de outra forma
+                  </button>
+                </div>
+              </div>
             ) : !comoEntrou ? (
               /*
                 ⚠️ Isto DESBLOQUEIA DINHEIRO: um registo aqui move o trabalho de
                 «por cobrar» para «disponível» na carteira do profissional. Por
                 isso é um segundo clique, e cada opção diz o que quer dizer.
               */
-              <button
-                onClick={() => setComoEntrou(true)}
-                disabled={ocupado}
-                className="mt-1 rounded-lg border border-amber-600/60 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
-              >
-                Já recebemos {euros(t.clientePaga)}
-              </button>
+              <>
+                {t.declarado && t.declarado.como === "ainda_nao" && (
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Ao dar o trabalho por feito
+                    {t.declarado.por ? `, por ${t.declarado.por}` : ""}
+                    {DIA(t.declarado.em) ? `, a ${DIA(t.declarado.em)}` : ""}:{" "}
+                    {fraseDaDeclaracao(t.declarado.paraQue, t.declarado.como, t.clientePaga)}
+                  </p>
+                )}
+                <button
+                  onClick={() => setComoEntrou(true)}
+                  disabled={ocupado}
+                  className="mt-1 rounded-lg border border-amber-600/60 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+                >
+                  Já recebemos {euros(t.clientePaga)}
+                </button>
+              </>
             ) : (
               <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
                 <p className="text-[11px] leading-relaxed text-amber-200/90">

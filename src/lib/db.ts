@@ -1114,7 +1114,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 5;
+const VERSAO_DAS_NEGOCIACOES = 6;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1255,6 +1255,18 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN formaDePagamento VARCHAR(16) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN acrescimoPagamento DECIMAL(10,2) NULL DEFAULT NULL`,
+    /*
+     * O QUE FICOU DITO SOBRE O PAGAMENTO quando o trabalho se deu por feito —
+     * 29-09-2026. Ver `pagamento-declarado.ts`.
+     *
+     * É uma DECLARAÇÃO e não um recebimento: não desbloqueia dinheiro nenhum.
+     * Os Pagamentos mostram-na à frente do «Já recebemos», e é lá que se
+     * confirma. Nulo = confirmado antes de haver esta pergunta.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN pagamentoParaQue VARCHAR(16) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN pagamentoComo VARCHAR(20) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN pagamentoDeclaradoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN pagamentoDeclaradoPor VARCHAR(120) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -3583,17 +3595,40 @@ export async function registarExecucao(
 export async function confirmarExecucao(
   negociacaoId: number,
   pedidoId: number,
+  /*
+   * O que ficou dito sobre o pagamento — só a CLYON a traz, quando confirma
+   * em nome do cliente. Vai no MESMO update que a confirmação: gravada à
+   * parte, uma falha entre os dois deixava um trabalho confirmado sem a
+   * resposta que se deu para o confirmar.
+   */
+  declaracao?: { paraQue: string; como: string; por: string },
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  const [res] = await pool.execute(
-    `UPDATE negociacoes
-        SET confirmadoEm = NOW()
-      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
-        AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
-    [negociacaoId, pedidoId],
-  ) as any[];
+  const [res] = (declaracao
+    ? await pool.execute(
+        `UPDATE negociacoes
+            SET confirmadoEm = NOW(),
+                pagamentoParaQue = ?, pagamentoComo = ?,
+                pagamentoDeclaradoEm = NOW(), pagamentoDeclaradoPor = ?
+          WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+            AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
+        [
+          declaracao.paraQue,
+          declaracao.como,
+          declaracao.por.slice(0, 120),
+          negociacaoId,
+          pedidoId,
+        ],
+      )
+    : await pool.execute(
+        `UPDATE negociacoes
+            SET confirmadoEm = NOW()
+          WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+            AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
+        [negociacaoId, pedidoId],
+      )) as any[];
   const gravou = Number(res.affectedRows ?? 0) > 0;
 
   /*
@@ -8337,6 +8372,13 @@ export type Acontecimento =
   | "pagamento_recebido"
   | "pagamento_falhado"
   | "pagamento_em_duplicado"
+  /*
+   * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
+   * com ou sem factura, e por onde. Não é dinheiro que entrou: é o que fica
+   * escrito para se confirmar depois nos Pagamentos. Ver
+   * `pagamento-declarado.ts`.
+   */
+  | "pagamento_declarado"
   // As contas
   | "conta_apagada"
   /*

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
+import { getPool, appendOrderHistory, registarSemFalhar, ensureNegociacoesTable } from "@/lib/db";
 import { configuracaoDoEupago } from "@/lib/eupago";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import {
@@ -9,6 +9,7 @@ import {
   type ComoEntrou,
 } from "@/lib/dinheiro-do-trabalho";
 import { registarRecebimentoAMao } from "@/lib/pagamentos-na-base";
+import { lerParaQue, valorDoPagamento } from "@/lib/pagamento-declarado";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,13 +64,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Lê `pagamentoParaQue`, coluna de 29-09-2026.
+  await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
 
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              n.estado, pr.name AS profissional
+              n.estado, n.pagamentoParaQue, pr.name AS profissional
          FROM negociacoes n JOIN providers pr ON pr.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
@@ -93,7 +96,18 @@ export async function POST(req: NextRequest) {
      * são as mesmas que o cliente viu. Deixar escrever o valor era deixar a
      * carteira do profissional depender de quem tem pressa.
      */
-    const valor = contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)).total;
+    /*
+     * COM OU SEM FACTURA, segundo o que ficou declarado ao dar o trabalho por
+     * feito — 29-09-2026. Até aqui gravava-se sempre o total com IVA, mesmo a
+     * quem não pediu factura: um cliente que pagou 283,50 € ficava registado
+     * com 348,71 €, e a soma dos recebidos mentia por 23 % em cada um deles.
+     *
+     * Sem declaração fica o total, que é o que sempre foi.
+     */
+    const valor = valorDoPagamento(
+      contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),
+      lerParaQue(l.pagamentoParaQue),
+    );
     const conf = configuracaoDoEupago(process.env);
 
     const r = await registarRecebimentoAMao({

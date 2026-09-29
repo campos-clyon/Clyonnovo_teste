@@ -151,7 +151,10 @@ describe("registar um pagamento que não passou pelo euPago", () => {
    * quem tem pressa.
    */
   it("o valor sai da conta, e não do corpo do pedido", () => {
-    expect(ROTA).toContain("contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)).total");
+    // Desde 29-09-2026 é o total ou o sem-IVA, conforme a declaração feita ao
+    // dar o trabalho por feito — mas continua a sair da conta, nunca do corpo.
+    expect(ROTA).toContain("contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),");
+    expect(ROTA).toContain("lerParaQue(l.pagamentoParaQue)");
     expect(ROTA).not.toContain("corpo.valor");
   });
 
