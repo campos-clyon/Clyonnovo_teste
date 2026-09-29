@@ -37,7 +37,6 @@ import {
   type CategoriaDoPedido,
 } from "@/lib/assistente-categorias";
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
-import AdminTestadoresPanel from "@/components/admin/AdminTestadoresPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
 import AdminConversasPanel from "@/components/admin/AdminConversasPanel";
@@ -85,7 +84,6 @@ import {
   Wallet,
   CreditCard,
   CalendarClock,
-  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,7 +117,6 @@ type AdminSection =
   | "carteiras"
   | "pagamentos"
   | "agenda"
-  | "testadores"
   | "negociacoes_clyon"
   | "whatsapp"
   // As contas de assistente — só o administrador a vê.
@@ -253,7 +250,6 @@ const adminNavItems: Array<{
   { id: "pagamentos", icon: CreditCard },
   { id: "agenda", icon: CalendarClock },
   { id: "levantamentos", icon: Wallet },
-  { id: "testadores",    icon: FlaskConical },
   { id: "negociacoes_clyon", icon: Building2 },
   { id: "whatsapp", icon: MessageCircle },
   { id: "equipa", icon: Users },
@@ -272,9 +268,9 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
   /*
    * As negociações da CLYON têm lugar próprio: são o trabalho diário de quem
-   * opera — há propostas à espera de resposta NOSSA. O "Acesso aos testes"
-   * desceu para Gerir: cria-se uma credencial de longe em longe, e estava a
-   * ocupar um lugar nobre para mostrar zero contas.
+   * opera — há propostas à espera de resposta NOSSA. O ecrã das contas de
+   * teste desceu para Gerir, e a 29-09-2026 saiu de vez: «nunca usamos» —
+   * zero contas desde que existiu.
    */
   // "negociacoes" saiu do menu mas a secção continua a responder a links
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
@@ -282,7 +278,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // dois sítios é gerir mal".
   { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
-  { titulo: "Gerir", itens: ["testadores", "equipa", "configs"] },
+  { titulo: "Gerir", itens: ["equipa", "configs"] },
 ];
 
 const sectionLabels: Record<AdminSection, string> = {
@@ -300,7 +296,6 @@ const sectionLabels: Record<AdminSection, string> = {
   pagamentos: "Pagamentos",
   agenda: "Agenda",
   levantamentos: "Levantamentos",
-  testadores:    "Acesso aos testes",
   negociacoes_clyon: "Negociações",
   whatsapp: "WhatsApp",
   equipa: "Assistentes",
@@ -3338,23 +3333,6 @@ export default function ColaboradorAdminClient({
                 </p>
               </div>
               <AdminWhatsAppPanel />
-            </section>
-          )}
-
-          {activeSection === "testadores" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                  Plataforma
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">Acesso aos testes</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  A plataforma está fechada ao público: só entra quem tiver o link com a
-                  chave <em>e</em> credenciais próprias. Aqui criam-se e retiram-se essas
-                  credenciais — desactivar uma pessoa não expulsa as outras.
-                </p>
-              </div>
-              <AdminTestadoresPanel />
             </section>
           )}
 

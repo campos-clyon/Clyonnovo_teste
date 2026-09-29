@@ -22,22 +22,24 @@ describe("o menu", () => {
     expect(SHELL).toMatch(
       /Plataforma", itens: \[[^\]]*"negociacoes_clyon"[^\]]*\]/,
     );
-    /*
-     * A PERTENÇA, e não a lista inteira — a mesma lição do grupo "Plataforma".
-     *
-     * O que este teste guarda é que o "Acesso aos testes" desceu para "Gerir",
-     * e não a composição do grupo: "equipa" entrou depois e chumbava-o sem
-     * nada ter partido.
-     */
-    const gerir = SHELL.slice(SHELL.indexOf('titulo: "Gerir"'));
-    expect(gerir.slice(0, gerir.indexOf("]"))).toContain('"testadores"');
   });
 
-  it("o ecrã antigo continua acessível — nada foi apagado", () => {
-    // O portão do MVP depende das contas de teste: mudaram de sítio, não de
-    // existência.
-    expect(SHELL).toContain('activeSection === "testadores"');
-    expect(SHELL).toContain("AdminTestadoresPanel");
+  /*
+   * «ACESSO AOS TESTES» SAIU — 29-09-2026.
+   *
+   * *«Vamos remover isso, nunca usamos.»* Zero contas de teste criadas desde
+   * que o ecrã existe. Este teste guardava o contrário («nada foi apagado»),
+   * porque o portão do MVP dependia dessas contas — e continua a depender: as
+   * páginas `/plataforma` e a regra no middleware ficam como estão, fechadas a
+   * toda a gente, que é exactamente o que já eram com zero contas. O que saiu
+   * foi só o ecrã que as criava.
+   */
+  it("o ecrã de «Acesso aos testes» já não está no backoffice", () => {
+    // Só o código: um comentário que conte a história do ecrã não o traz de volta.
+    const codigo = SHELL.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(codigo).not.toContain('activeSection === "testadores"');
+    expect(codigo).not.toContain("AdminTestadoresPanel");
+    expect(codigo).not.toContain("Acesso aos testes");
   });
 });
 
