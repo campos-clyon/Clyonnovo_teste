@@ -85,6 +85,27 @@ export function avisoDaBaseParaOCliente(b: BaseDoPreco): string | null {
     : null;
 }
 
+/**
+ * O QUE FICA DITO AO CLIENTE DEPOIS DE UM VALOR POR CARGA — 30-09-2026.
+ *
+ * *«Porque a mensagem não é clara em relação ao valor de 300, que é por
+ * carga?»* A Carolina (#400) recebeu no WhatsApp «TRSul propõe 300,00 €» e
+ * «fica em 315,00 € sem IVA» — dois números sem unidade, num pedido marcado
+ * POR CARGA. O ecrã do profissional dizia-o, a página do pedido dizia-o, e a
+ * única mensagem que o cliente de telefone lê calava-o. É a discussão cara do
+ * princípio deste ficheiro, a nascer exactamente onde ninguém estava a olhar.
+ *
+ * Sem «antes de fechar» nem «antes de começar»: a mesma frase serve à
+ * proposta e ao «Fechado com…», e vai logo a seguir ao «confirma-se no local
+ * antes de começar» do orçamento à distância — dizê-lo duas vezes seguidas
+ * era a mensagem a falar sozinha.
+ */
+export function notaDaCargaParaOCliente(b: BaseDoPreco): string | null {
+  return b === "carga"
+    ? "É um preço POR CARGA: o total depende de quantas cargas forem — combine o número com o profissional."
+    : null;
+}
+
 /** "150,00 € por carga" ou "150,00 €" — o número e a unidade, juntos. */
 export function precoComBase(texto: string, b: BaseDoPreco): string {
   return b === "carga" ? `${texto} por carga` : texto;

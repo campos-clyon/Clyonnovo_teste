@@ -10592,6 +10592,8 @@ export type PedidoParaOAssistente = {
   status: string | null;
   createdAt: Date;
   dataAgendada: Date | null;
+  /** Pelo trabalho todo ou por carga. Opcional só para os testes antigos. */
+  baseDoPreco?: string | null;
   negociacoes: Array<{
     id: number;
     estado: string;
@@ -10627,7 +10629,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
 
   const [pedidos] = (await pool.execute(
     `SELECT o.id, o.contactName, o.contactPhone, o.serviceType, o.status,
-            o.createdAt, o.dataAgendada
+            o.createdAt, o.dataAgendada, o.baseDoPreco
        FROM simulatorOrders o
       WHERE o.contactPhone IS NOT NULL AND TRIM(o.contactPhone) <> ''
         AND o.createdAt > NOW() - INTERVAL 120 DAY
@@ -10679,6 +10681,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
     status: (p.status as string) ?? null,
     createdAt: p.createdAt as Date,
     dataAgendada: (p.dataAgendada as Date) ?? null,
+    baseDoPreco: (p.baseDoPreco as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
 }

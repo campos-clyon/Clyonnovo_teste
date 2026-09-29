@@ -114,8 +114,15 @@ export const NAO_EXACTO = new Set([
 /** Os verbos que podem vir antes de um valor: «aceito 300», «recuso 300». */
 const SIM_COM_VALOR = /^(?:sim|fechar|aceito|aceitar|pode fechar|fechamos)\s+(.+)$/;
 const NAO_COM_VALOR = /^(?:nao|recusar|recuso)\s+(.+)$/;
-/** «300», «300,50», «300 €», «300 euros». */
-const SO_UM_VALOR = /^(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?$/;
+/**
+ * «300», «300,50», «300 €», «300 euros» — e «300 por carga», «300 €/carga».
+ *
+ * A unidade entrou a 30-09-2026, quando as mensagens passaram a dizer «por
+ * carga» nos pedidos que o são. Quem lê «TRSul propõe 300,00 € por carga»
+ * responde «aceito 300 por carga» — e isso lia-se como uma empresa chamada
+ * «por carga».
+ */
+const SO_UM_VALOR = /^(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?(?:\s*(?:\/|por)\s*carga)?$/;
 
 /**
  * Palavras que acompanham um número sem serem o nome de ninguém.
@@ -136,6 +143,8 @@ const NAO_SAO_NOMES = new Set([
   "oferta",
   "fica",
   "por",
+  "carga",
+  "cargas",
   "e",
 ]);
 
@@ -218,7 +227,8 @@ function recusasEmSerie(t: string): number[] | null {
    * forma mais escrita de todas, «recusar 100 euros», era a única que não
    * funcionava.
    */
-  const UMA_RECUSA = "(?:nao|recusar|recuso)\\s+(\\d{1,4}(?:[.,]\\d{1,2})?)\\s*(?:€|euros|eur)?";
+  const UMA_RECUSA =
+    "(?:nao|recusar|recuso)\\s+(\\d{1,4}(?:[.,]\\d{1,2})?)\\s*(?:€|euros|eur)?(?:\\s*(?:/|por)\\s*carga)?";
   const achados = [...t.matchAll(new RegExp(UMA_RECUSA, "g"))];
   if (achados.length < 2) return null;
 

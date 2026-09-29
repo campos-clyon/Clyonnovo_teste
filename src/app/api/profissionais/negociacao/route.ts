@@ -213,6 +213,7 @@ export async function POST(req: NextRequest) {
         const aceite = [...nova.propostas].reverse().find((p) => p.estado === "aceite");
         if (pedido && !(pedido.contactEmail ?? "").trim() && pedido.contactPhone && aceite) {
           const { aceitacaoParaOWhatsApp } = await import("@/lib/whatsapp-negociacao");
+          const { lerBase } = await import("@/lib/base-do-preco");
           await aceitacaoParaOWhatsApp({
             telefone: pedido.contactPhone,
             pedidoId: linha.pedidoId,
@@ -223,6 +224,7 @@ export async function POST(req: NextRequest) {
             // cliente le leva IVA por cima do valor acordado. Vem da base e
             // nao da sessao -- um token dura dias, um regime muda hoje.
             regimeIva: await regimeDeIvaDoProfissional(sessao.providerId),
+            base: lerBase(pedido.baseDoPreco),
           });
         }
       } catch (e) {

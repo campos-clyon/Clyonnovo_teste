@@ -1,6 +1,7 @@
 import { contaDoCliente, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
 import type { FormaDePagamento } from "@/lib/forma-de-pagamento";
+import { precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
 
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
@@ -34,9 +35,14 @@ export function totalEmPalavras(
   taxas?: Taxas,
   /** Como o cliente paga. Em dinheiro, a frase diz quanto vai em notas. */
   forma: FormaDePagamento = "na_plataforma",
+  /**
+   * Pelo trabalho todo, ou por carga. Por carga, cada número leva a unidade
+   * agarrada — «315,00 € por carga» — em vez de um total que não o é.
+   */
+  base: BaseDoPreco = "total",
 ): string {
   const conta = contaDoCliente(valor, taxas);
-  const factura = comFacturaEmPalavras(valor, regimeIva, taxas);
+  const factura = comFacturaEmPalavras(valor, regimeIva, taxas, base);
   /*
    * EM DINHEIRO SÃO DUAS ENTREGAS, e a frase tem de as separar — 21-09-2026.
    *
@@ -53,12 +59,15 @@ export function totalEmPalavras(
        * O serviço foi pago em notas ao profissional e nunca passou pela
        * CLYON: ela não o pode facturar. O que factura é o que cobra.
        */
-      `Paga ${euros(conta.servico)} em dinheiro ao profissional, no local` +
-      `, e ${euros(conta.taxa)} de taxa à CLYON por referência` +
+      `Paga ${precoComBase(euros(conta.servico), base)} em dinheiro ao profissional, no local` +
+      `, e ${euros(conta.taxa)} de taxa à CLYON${base === "carga" ? " por cada carga," : ""} por referência` +
       `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com factura)` : ""}.`
     );
   }
-  return `Com a taxa CLYON, fica em ${euros(conta.semIva)} sem IVA.${factura ? ` ${factura}` : ""}`;
+  return (
+    `Com a taxa CLYON, fica em ${precoComBase(euros(conta.semIva), base)}${base === "carga" ? "," : ""} sem IVA.` +
+    `${factura ? ` ${factura}` : ""}`
+  );
 }
 
 /**
@@ -79,8 +88,9 @@ export function comFacturaEmPalavras(
   valor: number,
   regimeIva: string | null,
   taxas?: Taxas,
+  base: BaseDoPreco = "total",
 ): string {
   const conta = contaDoCliente(valor, taxas);
   if (conta.iva <= 0) return "";
-  return `Com factura acrescem ${POR_CENTO} de IVA: ${euros(conta.total)}.`;
+  return `Com factura acrescem ${POR_CENTO} de IVA: ${precoComBase(euros(conta.total), base)}.`;
 }
