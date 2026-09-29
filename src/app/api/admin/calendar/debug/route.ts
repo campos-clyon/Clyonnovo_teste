@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 
 export const runtime = "nodejs";
 
@@ -30,13 +30,9 @@ export async function GET(req: NextRequest) {
   // do calendário da empresa. Um motorista não tem nada a fazer aqui, e o
   // comentário antigo dizia "admins/colaboradores" enquanto o código aceitava
   // qualquer conta com token.
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  if (colab.isAdmin !== 1) {
-    return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
-  }
+  // Confirmado na base, e não só pela assinatura — ver `conta-do-painel.ts`.
+  const { err } = await requireAdminGeral(req);
+  if (err) return err;
 
   const configuredCalendarId = process.env.CLYON_GOOGLE_CALENDAR_ID ?? "(not set)";
   const serviceAccountEmail  = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "(not set)";

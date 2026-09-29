@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import {
   deleteGalleryItem,
   galleryPhases,
@@ -19,18 +19,13 @@ function jsonError(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
 
+// Pelo `requireAdminGeral`, que confirma a conta na base em cada chamada: a
+// assinatura do token sozinha deixava entrar uma conta já desactivada, ou um
+// token de antes de a palavra-passe mudar. Ver `conta-do-painel.ts`.
 async function requireAdmin(request: NextRequest) {
-  const colaborador = await verifyColaboradorAuthHeader(request.headers.get("authorization"));
-
-  if (!colaborador) {
-    return { error: jsonError("Não autorizado", 401) };
-  }
-
-  if (!colaborador.isAdmin) {
-    return { error: jsonError("Acesso negado", 403) };
-  }
-
-  return { colaborador };
+  const { err, colab } = await requireAdminGeral(request);
+  if (err) return { error: err };
+  return { colaborador: colab };
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {

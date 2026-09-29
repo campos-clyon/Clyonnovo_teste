@@ -4727,6 +4727,20 @@ export async function ensureColaboradoresSchema(): Promise<void> {
       name: "totalPaid",
       sql: `ALTER TABLE colaboradores ADD COLUMN totalPaid DECIMAL(10,2) DEFAULT '0.00'`,
     },
+    /*
+     * Quando a palavra-passe mudou pela última vez — 30-09-2026.
+     *
+     * As rotas do backoffice recusam os tokens emitidos antes disto: mudar a
+     * palavra-passe passa a fechar as sessões que já estavam abertas. Ver
+     * `conta-do-painel.ts`, que também a garante sozinho (uma vez por
+     * instância) antes de a ler. Fica FORA do schema do drizzle de propósito:
+     * lá, uma coluna que ainda não existisse na base partia todos os
+     * `select()` da tabela, incluindo o do login.
+     */
+    {
+      name: "senhaAlteradaEm",
+      sql: `ALTER TABLE colaboradores ADD COLUMN senhaAlteradaEm DATETIME NULL DEFAULT NULL`,
+    },
   ];
 
   // Verificar e adicionar cada coluna individualmente

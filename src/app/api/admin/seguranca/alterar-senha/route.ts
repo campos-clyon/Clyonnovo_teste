@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as bcrypt from "bcryptjs";
 
 import { ensureColaboradoresSchema, withConnection } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 
 export const runtime = "nodejs";
 
@@ -20,13 +20,10 @@ function passwordValidationError(password: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const colaborador = await verifyColaboradorAuthHeader(request.headers.get("authorization"));
-    if (!colaborador) {
-      return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-    }
-    if (Number(colaborador.isAdmin) !== 1) {
-      return NextResponse.json({ error: "Apenas administradores podem alterar esta palavra-passe." }, { status: 403 });
-    }
+    // Pelo `requireAdminGeral`, que confirma a conta na base: um token já
+    // recusado por uma troca anterior não pode fazer outra.
+    const { err, colab: colaborador } = await requireAdminGeral(request);
+    if (err) return err;
 
     const body = await request.json();
     const senhaAtual = typeof body.senhaAtual === "string" ? body.senhaAtual : "";
@@ -63,10 +60,34 @@ export async function POST(request: NextRequest) {
       if (!matches) return { status: 400, error: "A palavra-passe atual está incorreta." };
 
       const hash = await bcrypt.hash(novaSenha, 12);
-      await connection.execute(
-        "UPDATE colaboradores SET senha = ?, updatedAt = NOW() WHERE id = ?",
-        [hash, account.id],
-      );
+      /*
+       * A TROCA FECHA AS SESSÕES QUE JÁ ESTAVAM ABERTAS.
+       *
+       * Até aqui mudava a palavra-passe e mais nada: quem tivesse apanhado um
+       * token continuava lá dentro até ele caducar — trinta dias, com «manter
+       * sessão». `senhaAlteradaEm` é o que as rotas comparam com o `iat` de
+       * cada token (ver `conta-do-painel.ts`); os anteriores deixam de valer.
+       *
+       * A hora é a DESTE servidor e não o NOW() da base: é com o relógio da
+       * aplicação que o `iat` é escrito, e a base pode estar noutro fuso. E vai
+       * como Date, que o mysql2 escreve e lê da mesma maneira.
+       *
+       * Se a coluna ainda não existir (o ALTER falhou algures), a palavra-passe
+       * muda na mesma — isso nunca pode depender da coluna nova.
+       */
+      try {
+        await connection.execute(
+          "UPDATE colaboradores SET senha = ?, senhaAlteradaEm = ?, updatedAt = NOW() WHERE id = ?",
+          [hash, new Date(), account.id],
+        );
+      } catch (e) {
+        if ((e as { code?: string })?.code !== "ER_BAD_FIELD_ERROR") throw e;
+        console.error("[alterar-senha] sem a coluna senhaAlteradaEm — as sessões abertas ficam");
+        await connection.execute(
+          "UPDATE colaboradores SET senha = ?, updatedAt = NOW() WHERE id = ?",
+          [hash, account.id],
+        );
+      }
       return { status: 200 };
     });
 

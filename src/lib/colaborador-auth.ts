@@ -12,6 +12,11 @@ export type ColaboradorTokenPayload = {
    * como administrador, para ninguém ficar fechado fora.
    */
   papel?: PapelDoPainel;
+  /**
+   * Quando o token nasceu, em segundos. Ausente nos emitidos antes de o login
+   * o pôr — ver `tokenAnteriorATrocaDeSenha` em `conta-do-painel.ts`.
+   */
+  iat?: number;
 };
 
 /**

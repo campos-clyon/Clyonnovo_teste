@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Eye } from "lucide-react";
 import { COOKIE_SESSAO_ADMIN, sessaoDoPainel } from "@/lib/colaborador-auth";
+import { contaActiva, contaDoPainelPorId, motivoParaRecusarSessao } from "@/lib/conta-do-painel";
 import { getSimulatorOrderById } from "@/lib/db";
 import VistaDoPedido from "@/app/pedido/[token]/VistaDoPedido";
 
@@ -46,6 +47,15 @@ export default async function PedidoComoOCliente({
 
   const sessao = await sessaoDoPainel((await cookies()).get(COOKIE_SESSAO_ADMIN)?.value);
   if (!sessao) notFound();
+
+  /*
+   * A assinatura do cookie não chega: esta página mostra a morada e o nome do
+   * cliente. Uma conta desactivada, ou um token de antes de a palavra-passe
+   * mudar, fica à porta como nas rotas — ver `conta-do-painel.ts`.
+   */
+  const conta = await contaDoPainelPorId(sessao.colab.id).catch(() => undefined);
+  if (motivoParaRecusarSessao(conta, sessao.papel, sessao.colab.iat)) notFound();
+  if (sessao.papel === "assistente" && (!conta || !contaActiva(conta))) notFound();
 
   const numero = Number(id);
   if (!Number.isInteger(numero) || numero <= 0) notFound();

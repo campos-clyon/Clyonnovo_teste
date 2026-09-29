@@ -110,6 +110,29 @@ export async function verificarSessaoDoProfissional(
   }
 }
 
+/**
+ * QUEM PODE ESTAR DENTRO DO PAINEL — o critério da entrada, escrito uma vez.
+ *
+ * `aprovado` ou `pendente` (o pendente entra: é no painel que completa o
+ * perfil, ver /api/profissionais/entrar), e a conta activa. Suspenso,
+ * rejeitado, apagado ou desactivado ficam à porta.
+ *
+ * Vive aqui, e não na rota, porque são DOIS a perguntar o mesmo: a entrada,
+ * quando ele escreve a palavra-passe, e `sessaoActivaDoProfissional`, em cada
+ * chamada do painel. Se cada um tivesse a sua cópia, bastava uma mudar para a
+ * sessão deixar entrar quem a entrada já recusa — ou pôr fora quem ela deixa
+ * entrar.
+ *
+ * Puro de propósito: este ficheiro é lido pelo middleware, no edge.
+ */
+export function contaPodeEntrarNoPainel(
+  conta: { estado?: unknown; isActive?: unknown } | null | undefined,
+): boolean {
+  if (!conta) return false;
+  const podeEntrar = conta.estado === "aprovado" || conta.estado === "pendente";
+  return podeEntrar && Number(conta.isActive) === 1;
+}
+
 // ── Palavra-passe ───────────────────────────────────────────────────────────
 
 /** Mínimo aceitável. Curta demais não protege nada. */
