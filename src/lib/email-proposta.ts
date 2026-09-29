@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { notaDaCargaParaOCliente, precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
@@ -84,6 +85,8 @@ export async function avisarClienteDaProposta(p: {
   pedidoId: number;
   profissionalNome: string;
   valor: number;
+  /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
+  base?: BaseDoPreco;
   /**
    * O link do pedido, para quem não tem conta.
    *
@@ -100,7 +103,7 @@ export async function avisarClienteDaProposta(p: {
 
   return enviar(
     p.para,
-    `Tem uma proposta de ${p.valor.toFixed(0)} € — pedido #${p.pedidoId}`,
+    `Tem uma proposta de ${precoComBase(`${p.valor.toFixed(0)} €`, p.base ?? "total")} — pedido #${p.pedidoId}`,
     moldura(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
       <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:#0B1929;">
@@ -108,9 +111,14 @@ export async function avisarClienteDaProposta(p: {
       </h1>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
         <strong>${e(p.profissionalNome)}</strong> propôs
-        <strong>${euros(p.valor)}</strong> para o seu trabalho. Pode aceitar, propor
+        <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> para o seu trabalho. Pode aceitar, propor
         outro valor, ou esperar por mais propostas.
       </p>
+      ${
+        notaDaCargaParaOCliente(p.base ?? "total")
+          ? `<p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#92400e;">${e(notaDaCargaParaOCliente(p.base ?? "total") as string)}</p>`
+          : ""
+      }
       ${botao(url, "Ver a proposta")}
       <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
         A proposta fica de pé até lhe responder. Pode demorar o tempo que precisar
@@ -126,6 +134,8 @@ export async function avisarProfissionalDaProposta(p: {
   nomeDoProfissional: string;
   pedidoId: number;
   valor: number;
+  /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
+  base?: BaseDoPreco;
   /** O token da negociação dele. */
   token: string;
   baseUrl?: string;
@@ -137,15 +147,15 @@ export async function avisarProfissionalDaProposta(p: {
 
   return enviar(
     p.para,
-    `Contraproposta de ${p.valor.toFixed(0)} € — pedido #${p.pedidoId}`,
+    `Contraproposta de ${precoComBase(`${p.valor.toFixed(0)} €`, p.base ?? "total")} — pedido #${p.pedidoId}`,
     moldura(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
       <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:#0B1929;">
         ${nome ? `${e(nome)}, o` : "O"} cliente respondeu
       </h1>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
-        Está a propor <strong>${euros(p.valor)}</strong> — recebe
-        <strong>${euros(liquido)}</strong>, já com a taxa CLYON descontada.
+        Está a propor <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> — recebe
+        <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>, já com a taxa CLYON descontada.
       </p>
       ${botao(url, "Responder")}
       <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">

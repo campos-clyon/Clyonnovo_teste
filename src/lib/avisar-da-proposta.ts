@@ -9,6 +9,7 @@ import {
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { avisarClienteDaProposta, avisarProfissionalDaProposta } from "./email-proposta";
 import { avisarClientePorPush } from "./avisar-por-push";
+import { lerBase } from "./base-do-preco";
 
 /**
  * Avisar o outro lado de que há uma proposta à espera.
@@ -35,6 +36,9 @@ export async function avisarDaProposta(dados: {
   try {
     const pedido = await getSimulatorOrderById(dados.pedidoId);
     if (!pedido) return;
+
+    // Pelo trabalho todo ou por carga: vai agarrada ao valor em todos os avisos.
+    const base = lerBase(pedido.baseDoPreco);
 
     const negociacoes = await negociacoesDoPedido(dados.pedidoId);
     const negociacao = negociacoes.find((n) => n.id === dados.negociacaoId);
@@ -64,6 +68,7 @@ export async function avisarDaProposta(dados: {
             // O regime de quem factura decide se o total leva IVA por cima.
             regimeIva: negociacao.regimeIva ?? null,
             servico: pedido.serviceType ?? null,
+            base,
           });
         }
         return;
@@ -94,6 +99,7 @@ export async function avisarDaProposta(dados: {
         pedidoId: dados.pedidoId,
         profissionalNome: negociacao.profissionalNome,
         valor: dados.valor,
+        base,
         token,
         baseUrl: dados.baseUrl,
       });
@@ -110,6 +116,7 @@ export async function avisarDaProposta(dados: {
         email,
         profissionalNome: negociacao.profissionalNome,
         valor: dados.valor,
+        base,
         pedidoId: dados.pedidoId,
         token: token || null,
       });
@@ -132,6 +139,7 @@ export async function avisarDaProposta(dados: {
       nomeDoProfissional: String(perfil?.name ?? ""),
       pedidoId: dados.pedidoId,
       valor: dados.valor,
+      base,
       token: novo.token,
       baseUrl: dados.baseUrl,
     });

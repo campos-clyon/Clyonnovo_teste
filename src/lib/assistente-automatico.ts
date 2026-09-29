@@ -14,6 +14,7 @@ import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
 import { comoTratar, saudacao } from "./whatsapp-recolha";
 import { totalEmPalavras } from "./conta-em-palavras";
+import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
 import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { prazoAutomaticoPorExtenso } from "./pagamento-na-plataforma";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
@@ -309,6 +310,15 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
    */
   const servico = oSeuServico(p.serviceType);
   const servicoNu = servicoEmPalavras(p.serviceType);
+  /*
+   * POR CARGA, CADA VALOR DIZ-O — 30-09-2026. É a mesma mensagem que o caminho
+   * imediato manda, e as duas têm de dizer a mesma coisa: ver
+   * `notaDaCargaParaOCliente`.
+   */
+  const base = lerBase(p.baseDoPreco);
+  const comUnidade = (v: number) => precoComBase(euros(v), base);
+  const nota = notaDaCargaParaOCliente(base);
+  const eANota = nota ? ` ${nota}` : "";
   const novidades: Novidade[] = [];
 
   const acrescentar = (n: Omit<Novidade, "telefone" | "pedidoId" | "nome">) =>
@@ -386,8 +396,9 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             quando: criada,
             texto:
               `${ola} Acabou de receber uma proposta de ${pro} para ${servico}: ` +
-              `${euros(pendente.valor)}. ${totalEmPalavras(pendente.valor, n.regimeIva)} ` +
-              `${ORCAMENTO_A_DISTANCIA} ` +
+              `${comUnidade(pendente.valor)}. ` +
+              `${totalEmPalavras(pendente.valor, n.regimeIva, undefined, undefined, base)} ` +
+              `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
               `Só paga depois de o trabalho estar ` +
               `feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
           });
@@ -406,9 +417,9 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: n.id,
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
-          `${ola} Boas notícias: ${pro} aceitou os ${euros(acordado)} que propôs para ` +
-          `${servico}. ${totalEmPalavras(acordado, n.regimeIva)} ` +
-          `${ORCAMENTO_A_DISTANCIA} ` +
+          `${ola} Boas notícias: ${pro} aceitou os ${comUnidade(acordado)} que propôs para ` +
+          `${servico}. ${totalEmPalavras(acordado, n.regimeIva, undefined, undefined, base)} ` +
+          `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
           `Só paga depois de estar feito. Falta só a sua palavra para ficar combinado.`,
       });
     }
@@ -430,9 +441,10 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
       texto:
         `${ola} Está combinado com ${pro} para ${servico}` +
         (acordado != null
-          ? `, por ${euros(semIvaDoCliente(acordado, n.regimeIva))} (${euros(acordado)} para ele mais a taxa CLYON, sem IVA)`
+          ? `, por ${comUnidade(semIvaDoCliente(acordado, n.regimeIva))} ` +
+            `(${comUnidade(acordado)} para ele mais a taxa CLYON, sem IVA)`
           : "") +
-        `. Ele já tem a morada e o seu contacto.` +
+        `. Ele já tem a morada e o seu contacto.${eANota}` +
         (combinada ? "" : " Se já tem dia pensado, diga-me qual que eu deixo marcado."),
     });
 

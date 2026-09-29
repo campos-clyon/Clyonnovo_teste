@@ -20,6 +20,12 @@ import {
 import { contaDoCliente, taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import {
+  lerBase,
+  notaDaCargaParaOCliente,
+  precoComBase,
+  type BaseDoPreco,
+} from "@/lib/base-do-preco";
+import {
   enviarBotoesWhatsApp,
   enviarTextoWhatsApp,
   paraTeclado,
@@ -251,8 +257,30 @@ type Alvo = {
   formaDePagamento: FormaDePagamento;
   /** As taxas gravadas nesta negociação — em dinheiro não são as de origem. */
   taxas: Taxas;
+  /** Pelo trabalho todo, ou por carga — é do pedido, e vai com cada valor dito. */
+  base: BaseDoPreco;
   estado: Negociacao;
 };
+
+/** A base do preço de um pedido, lida da base de dados. Na dúvida, a de sempre. */
+async function baseDoPedido(pedidoId: number): Promise<BaseDoPreco> {
+  const pedido = await getSimulatorOrderById(pedidoId).catch(() => undefined);
+  return lerBase(pedido?.baseDoPreco);
+}
+
+/** Uma linha a mais no fim da mensagem, só quando o preço é por carga. */
+function comNotaDaCarga(base: BaseDoPreco): string {
+  const nota = notaDaCargaParaOCliente(base);
+  return nota ? `\n\n${nota}` : "";
+}
+
+/**
+ * O botão de fechar diz a unidade também — e tem de caber nos 20 caracteres.
+ * «Fechar 300 €/carga» são 18; só um valor de cinco algarismos lá chegaria.
+ */
+function tituloDeFechar(valor: number, base: BaseDoPreco): string {
+  return base === "carga" ? `Fechar ${Math.round(valor)} €/carga` : `Fechar ${Math.round(valor)} €`;
+}
 
 async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | null> {
   const linhas = await negociacoesDoPedido(pedidoId);
@@ -263,6 +291,7 @@ async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | nu
     regimeIva: n.regimeIva ?? null,
     formaDePagamento: lerForma((n as { formaDePagamento?: unknown }).formaDePagamento),
     taxas: taxasDaNegociacao(n),
+    base: await baseDoPedido(pedidoId),
     negociacaoId,
     profissionalNome: n.profissionalNome,
     estado: {
@@ -508,12 +537,13 @@ async function fecharPeloCliente(
    */
   const oQuePaga =
     alvo.formaDePagamento === "dinheiro"
-      ? `${totalEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas, "dinheiro")}`
-      : `${euros(conta.semIva)} a pagar (${euros(valor)} para ele mais a taxa CLYON). ` +
-        `${comFacturaEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas)}`;
+      ? `${totalEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas, "dinheiro", alvo.base)}`
+      : `${precoComBase(euros(conta.semIva), alvo.base)} a pagar ` +
+        `(${precoComBase(euros(valor), alvo.base)} para ele mais a taxa CLYON). ` +
+        `${comFacturaEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas, alvo.base)}`;
   await enviarTextoWhatsApp(
     telefone,
-    `Fechado com ${alvo.profissionalNome}: ${oQuePaga}\n\n` +
+    `Fechado com ${alvo.profissionalNome}: ${oQuePaga}${comNotaDaCarga(alvo.base)}\n\n` +
       `O profissional recebeu a morada e o seu contacto.${sobreODia}`,
   );
 }
@@ -766,6 +796,7 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
   const lista: AlvoComValor[] = [];
   for (const pedidoId of pedidos) {
     const linhas = await negociacoesDoPedido(pedidoId);
+    const base = await baseDoPedido(pedidoId);
     for (const n of linhas) {
       const propostas = propostasDe(n.propostasJson);
       const invertidas = [...propostas].reverse();
@@ -787,6 +818,7 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
         regimeIva: n.regimeIva ?? null,
         formaDePagamento: lerForma((n as { formaDePagamento?: unknown }).formaDePagamento),
         taxas: taxasDaNegociacao(n),
+        base,
         estado: {
           estado: n.estado as Negociacao["estado"],
           valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
@@ -841,6 +873,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
     const aviso = avisoDasRetiradas(linhas);
     return aviso ? `${aviso}\n\n${espera}` : espera;
   }
+  const base = lerBase(pedido?.baseDoPreco);
   const acordada = vivas.find((n) => n.estado === "acordada");
   if (acordada) {
     const acordado = Number(acordada.valorAcordado ?? 0);
@@ -851,10 +884,12 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
     const semIva = contaDoCliente(acordado, taxasDela).semIva;
     const comoPaga =
       formaDela === "dinheiro"
-        ? ` ${totalEmPalavras(acordado, acordada.regimeIva ?? null, taxasDela, "dinheiro")}`
-        : ` ${euros(semIva)} a pagar (${euros(acordado)} para ele mais a taxa CLYON, sem IVA).`;
+        ? ` ${totalEmPalavras(acordado, acordada.regimeIva ?? null, taxasDela, "dinheiro", base)}`
+        : ` ${precoComBase(euros(semIva), base)} a pagar ` +
+          `(${precoComBase(euros(acordado), base)} para ele mais a taxa CLYON, sem IVA).`;
     return (
       `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} —${comoPaga}` +
+      comNotaDaCarga(base) +
       (pedido?.dataAgendada
         ? ""
         : ` Se já tem data pensada, responda por exemplo: 27/08 14:30`)
@@ -905,7 +940,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
    * acusa ninguém: diz só que já não está disponível, que é verdade nos dois
    * casos.
    */
-  const mesa = textoDaMesa(pedidoId, propostas, aVer);
+  const mesa = textoDaMesa(pedidoId, propostas, aVer, base);
   const aviso = avisoDasRetiradas(linhas);
   return aviso ? `${aviso}\n\n${mesa}` : mesa;
 }
@@ -1163,7 +1198,8 @@ export async function tratarMensagemDoCliente(
     // podem repetir-se; o número do pedido não.
     const variosPedidos = new Set(alvos.map((a) => a.pedidoId)).size > 1;
     const linhaDoAlvo = (a: AlvoComValor) =>
-      `• ${variosPedidos ? `Pedido #${a.pedidoId} — ` : ""}${a.profissionalNome}: ${euros(a.valorNaMesa as number)}`;
+      `• ${variosPedidos ? `Pedido #${a.pedidoId} — ` : ""}${a.profissionalNome}: ` +
+      precoComBase(euros(a.valorNaMesa as number), a.base);
     const listaDeAlvos = () => alvos.map(linhaDoAlvo).join("\n");
 
     /*
@@ -1394,7 +1430,8 @@ export async function tratarMensagemDoCliente(
    * escrever.
    */
   const valorTexto = texto.match(
-    /^(?:aceito\s+|aceitar\s+|proponho\s+|contra\S*\s+|fechar\s+|sim\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?(?:\s+(?:contra\S*|propostas?))?\s*$/i,
+    // «250 por carga» e «250 €/carga» também: é como a mensagem lhe fala.
+    /^(?:aceito\s+|aceitar\s+|proponho\s+|contra\S*\s+|fechar\s+|sim\s+)?(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?(?:\s*(?:\/|por)\s*carga)?(?:\s+(?:contra\S*|propostas?))?\s*$/i,
   );
   if (valorTexto) {
     /*
@@ -1434,10 +1471,11 @@ export async function tratarMensagemDoCliente(
           valorAcordado: r.negociacao.valorAcordado ?? null,
           propostasJson: JSON.stringify(r.negociacao.propostas),
         });
+        const baseDele = await baseDoPedido(pedidoId);
         await registarAccao(
           pedidoId,
           Number(n.id),
-          `Cliente contrapropôs ${euros(valor)} a ${n.profissionalNome} por WhatsApp.`,
+          `Cliente contrapropôs ${precoComBase(euros(valor), baseDele)} a ${n.profissionalNome} por WhatsApp.`,
         );
         // O profissional é avisado pelo caminho de sempre — email e painel.
         await avisarDaProposta({
@@ -1448,7 +1486,8 @@ export async function tratarMensagemDoCliente(
         });
         await enviarTextoWhatsApp(
           telefone,
-          `Contraproposta de ${euros(valor)} enviada a ${n.profissionalNome}. Escrevo-lhe assim que ele responder.`,
+          `Contraproposta de ${precoComBase(euros(valor), baseDele)} enviada a ${n.profissionalNome}. ` +
+            `Escrevo-lhe assim que ele responder.`,
         );
         return;
       }
@@ -1708,6 +1747,8 @@ export async function aceitacaoParaOWhatsApp(dados: {
    * obrigatorio, o compilador nao deixa ninguem esquecer-se.
    */
   regimeIva: string | null;
+  /** Obrigatória pela mesma razão do regime: esquecê-la era dizer «300 €» a um preço por carga. */
+  base: BaseDoPreco;
 }): Promise<boolean> {
   // O profissional aceitou o valor DO CLIENTE — falta só o cliente fechar.
   // Sem este aviso, o "sim" do profissional morria no painel: o cliente de
@@ -1721,14 +1762,15 @@ export async function aceitacaoParaOWhatsApp(dados: {
   );
   if (!primeira.podeFalar) return false;
 
-  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva);
+  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva, undefined, undefined, dados.base);
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
-    `Boas notícias: ${dados.profissionalNome} aceitou os ${euros(dados.valor)} que propôs para o pedido #${dados.pedidoId}.\n\n` +
-      `${totalDito} ${ORCAMENTO_A_DISTANCIA}\n\n` +
+    `Boas notícias: ${dados.profissionalNome} aceitou os ${precoComBase(euros(dados.valor), dados.base)} ` +
+      `que propôs para o pedido #${dados.pedidoId}.\n\n` +
+      `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
       `Só paga depois de o trabalho estar feito e confirmado. Falta só a sua confirmação para ficar combinado.`,
     [
-      { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
+      { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(dados.valor, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
     ],
   );
@@ -1750,6 +1792,8 @@ export async function propostaParaOWhatsApp(dados: {
    * obrigatorio, o compilador nao deixa ninguem esquecer-se.
    */
   regimeIva: string | null;
+  /** Obrigatória pela mesma razão do regime: esquecê-la era dizer «300 €» a um preço por carga. */
+  base: BaseDoPreco;
 }): Promise<boolean> {
   /*
    * A chave conta QUANTAS propostas já houve nesta negociação, e não a hora a
@@ -1788,11 +1832,11 @@ export async function propostaParaOWhatsApp(dados: {
     chaveDaProposta(dados.negociacaoId, quantas),
     "proposta_nova",
     dados,
-    `${dados.profissionalNome} propôs ${euros(dados.valor)}.`,
+    `${dados.profissionalNome} propôs ${precoComBase(euros(dados.valor), dados.base)}.`,
   );
   if (!primeira.podeFalar) return false;
 
-  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva);
+  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva, undefined, undefined, dados.base);
   /*
    * O SERVIÇO EM PALAVRAS, e não o identificador da base.
    *
@@ -1808,11 +1852,12 @@ export async function propostaParaOWhatsApp(dados: {
   const servico = oSeuServico(dados.servico);
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
-    `${dados.profissionalNome} propõe ${euros(dados.valor)} para ${servico} (pedido #${dados.pedidoId}).\n\n` +
-      `${totalDito} ${ORCAMENTO_A_DISTANCIA}\n\n` +
+    `${dados.profissionalNome} propõe ${precoComBase(euros(dados.valor), dados.base)} ` +
+      `para ${servico} (pedido #${dados.pedidoId}).\n\n` +
+      `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
       `Só paga depois de o trabalho estar feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [
-      { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: `Fechar ${Math.round(dados.valor)} €` },
+      { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(dados.valor, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },
     ],
   );

@@ -74,9 +74,12 @@ describe("a frase está escrita uma vez só", () => {
   });
 
   it("os quatro sítios passam pelo mesmo sítio", () => {
-    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, dados.regimeIva)");
-    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, n.regimeIva)");
-    expect(AVISOS).toContain("totalEmPalavras(acordado, n.regimeIva)");
+    // Sem o parêntese de fecho: a 30-09-2026 as chamadas ganharam a base do
+    // preço (por carga). O que isto guarda é a frase vir da função, não a
+    // forma da chamada.
+    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, dados.regimeIva");
+    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, n.regimeIva");
+    expect(AVISOS).toContain("totalEmPalavras(acordado, n.regimeIva");
   });
 
   it("e a percentagem sai da constante, e não escrita à mão", () => {
