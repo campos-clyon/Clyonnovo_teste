@@ -46,9 +46,15 @@ const LEFT = [
   { href: "/servicos", label: "Serviços", icon: LayoutGrid },
 ];
 
-const RIGHT = [
+/*
+ * O «Conta» leva `rel="nofollow"` (29-09-2026). Esta barra vai em TODAS as
+ * páginas, e para quem não tem sessão — que é como o Google chega — /conta é
+ * um 307 para /entrar, uma página noindex. Era um link por página a mandar o
+ * robô para um redirect sem nada no fim.
+ */
+const RIGHT: Array<{ href: string; label: string; icon: typeof Star; rel?: string }> = [
   { href: "/avaliacoes", label: "Avaliações", icon: Star },
-  { href: "/conta", label: "Conta", icon: User },
+  { href: "/conta", label: "Conta", icon: User, rel: "nofollow" },
 ];
 
 export default function MobileBottomNav() {
@@ -92,10 +98,10 @@ export default function MobileBottomNav() {
           <span className="text-[10px] font-semibold text-acao">Simular</span>
         </Link>
 
-        {RIGHT.map(({ href, label, icon: Icon }) => {
+        {RIGHT.map(({ href, label, icon: Icon, rel }) => {
           const active = isActive(href);
           return (
-            <Link key={href} href={href} className={itemCls(active)}>
+            <Link key={href} href={href} rel={rel} className={itemCls(active)}>
               <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
               {label}
             </Link>

@@ -96,7 +96,8 @@ const internalLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Máquinas e frigoríficos" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Comparação" },
+  // Âncora: era «Gratuita vs Privada» (29-09-2026, ver FurnitureSeoLinks).
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", desc: "Comparação" },
 ];
 
 export default function RecolhaMoveisUrgentePage() {

@@ -272,8 +272,12 @@ export default function Header() {
                       {session.user.email}
                     </p>
                   </div>
+                  {/* nofollow: /conta é área privada e, para quem não tem
+                      sessão, é um 307 para /entrar. Não há nada ali que o
+                      Google deva seguir (29-09-2026). */}
                   <Link
                     href="/conta"
+                    rel="nofollow"
                     onClick={() => setContaOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-acao-hover"
                   >
@@ -309,6 +313,7 @@ export default function Header() {
           {naAreaDoProfissional ? null : session?.user ? (
             <Link
               href="/conta"
+              rel="nofollow"
               aria-label="A minha conta"
               className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition ${
                 isContaActive

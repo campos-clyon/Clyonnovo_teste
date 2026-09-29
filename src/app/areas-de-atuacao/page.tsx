@@ -24,10 +24,15 @@ export const metadata: Metadata = {
   },
 };
 
+/*
+ * `hub` é a página principal de cada serviço. Era deduzida do slug com um
+ * ternário que só conhecia móveis e entulho: o esvaziamento caía em
+ * /esvaziamento-casas, que faz 308 para /esvaziamento-de-casas (29-09-2026).
+ */
 const services = [
-  { name: "Recolha de Móveis", slug: "recolha-moveis", color: "cyan" },
-  { name: "Recolha de Entulho", slug: "recolha-entulho", color: "amber" },
-  { name: "Esvaziamento de Casas", slug: "esvaziamento-casas", color: "violet" },
+  { name: "Recolha de Móveis", slug: "recolha-moveis", hub: "/recolha-de-moveis", color: "cyan" },
+  { name: "Recolha de Entulho", slug: "recolha-entulho", hub: "/recolha-de-entulho", color: "amber" },
+  { name: "Esvaziamento de Casas", slug: "esvaziamento-casas", hub: "/esvaziamento-de-casas", color: "violet" },
 ];
 
 const regions = [
@@ -183,7 +188,7 @@ export default function AreasDeAtuacaoPage() {
             {services.map((service) => (
               <Link
                 key={service.slug}
-                href={`/${service.slug === "recolha-moveis" ? "recolha-de-moveis" : service.slug === "recolha-entulho" ? "recolha-de-entulho" : service.slug}`}
+                href={service.hub}
                 className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
               >
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-acao-hover">

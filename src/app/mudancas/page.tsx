@@ -417,7 +417,8 @@ export default function MudancasPage() {
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
               { href: "/recolha-de-moveis", label: "Recolha de Móveis", desc: "Retirar móveis que não vão para a nova casa" },
-              { href: "/esvaziamento-casas", label: "Esvaziamento de Casas", desc: "Libertar o imóvel completamente" },
+              // Era /esvaziamento-casas, que faz 308 para cá (29-09-2026).
+              { href: "/esvaziamento-de-casas", label: "Esvaziamento de Casas", desc: "Libertar o imóvel completamente" },
               { href: "/recolha-de-entulho", label: "Recolha de Entulho", desc: "Se houver obras na nova casa" },
             ].map((item) => (
               <Link

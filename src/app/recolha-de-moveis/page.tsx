@@ -475,7 +475,8 @@ export default function RecolhaDeMoveisPage() {
             { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas, estrados, colchões" },
             { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários, roupeiros, cómodas" },
             { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Frigoríficos, máquinas" },
-            { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Quando escolher" },
+            // Âncora: era «Gratuita vs Privada» (29-09-2026, ver FurnitureSeoLinks).
+            { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", desc: "Quando escolher" },
           ].map((item) => (
             <Link
               key={item.href}

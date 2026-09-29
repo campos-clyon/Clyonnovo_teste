@@ -461,11 +461,14 @@ export default async function ServiceCityPage({ params }: Props) {
   const isCostaFurniturePage =
     isFurnitureService(service.slug) && city.slug === "costa-da-caparica";
 
-  // Determinar link para hub de serviço
+  // Determinar link para hub de serviço.
+  // O do esvaziamento apontava para /esvaziamento-casas, que faz 308 para
+  // /esvaziamento-de-casas: todas as páginas de cidade ligavam ao hub pelo
+  // redirect. Vai directo desde 29-09-2026.
   const serviceHubMap: Record<string, { href: string; label: string }> = {
     "recolha-moveis": { href: "/recolha-de-moveis", label: "Ver todos os serviços de recolha de móveis" },
     "recolha-entulho": { href: "/recolha-de-entulho", label: "Ver todos os serviços de recolha de entulho" },
-    "esvaziamento-casas": { href: "/esvaziamento-casas", label: "Ver todos os serviços de esvaziamento" },
+    "esvaziamento-casas": { href: "/esvaziamento-de-casas", label: "Ver todos os serviços de esvaziamento" },
   };
   const currentServiceHub = serviceHubMap[service.slug];
 

@@ -88,7 +88,8 @@ export default function RegioesPage() {
             {[
               { name: "Recolha de Móveis", href: "/recolha-de-moveis", color: "cyan" },
               { name: "Recolha de Entulho", href: "/recolha-de-entulho", color: "amber" },
-              { name: "Esvaziamento de Casas", href: "/esvaziamento-casas", color: "violet" },
+              // Era /esvaziamento-casas, que faz 308 para cá (29-09-2026).
+              { name: "Esvaziamento de Casas", href: "/esvaziamento-de-casas", color: "violet" },
             ].map((hub) => (
               <Link
                 key={hub.href}

@@ -219,3 +219,65 @@ describe("páginas consolidadas: um endereço por pesquisa", () => {
     }
   });
 });
+
+describe("links internos: nenhum passa por um redirect", () => {
+  /** Os caminhos estáticos de todos os `href` do site, sem query string. */
+  function hrefsDoSite(): Array<{ ficheiro: string; caminho: string }> {
+    const encontrados: Array<{ ficheiro: string; caminho: string }> = [];
+    for (const f of [...fontes(join(process.cwd(), "src", "app")), ...fontes(join(process.cwd(), "src", "components"))]) {
+      if (f.includes(`${join("src", "app", "api")}`) || f.includes(`${join("src", "app", "admin")}`)) continue;
+      const codigo = semComentarios(readFileSync(f, "utf8"));
+      for (const m of codigo.matchAll(/href(?:=|:\s*)\{?\s*["'`](\/[^"'`${}]*)["'`]/g)) {
+        encontrados.push({ ficheiro: f.replace(process.cwd(), ""), caminho: m[1].split("?")[0].split("#")[0] });
+      }
+    }
+    return encontrados;
+  }
+
+  it("nenhum href aponta para a origem de um redirect", async () => {
+    // Cada um destes é um salto a mais para o Google e um sinal de que nós
+    // próprios ainda usamos o endereço velho. /esvaziamento-casas estava em
+    // quatro sítios, incluindo o hub de todas as páginas de cidade.
+    const redirects = await nextConfig.redirects!();
+    const exactos = new Set([
+      ...redirects.filter((r) => !r.source.includes(":")).map((r) => r.source),
+      // Redirects que vivem na própria página ou no middleware:
+      "/esvaziamento-casas",
+      "/auth",
+      "/profissionais/login",
+    ]);
+    const prefixos = redirects
+      .filter((r) => r.source.endsWith(":city*"))
+      .map((r) => r.source.slice(0, -":city*".length));
+
+    const hrefs = hrefsDoSite();
+    expect(hrefs.length).toBeGreaterThan(100);
+    const maus = hrefs.filter(
+      ({ caminho }) => exactos.has(caminho) || prefixos.some((p) => caminho.startsWith(p)),
+    );
+    expect(maus).toEqual([]);
+  });
+
+  it("o /conta leva nofollow onde aparece — para quem não tem sessão é um 307", () => {
+    const nav = semComentarios(ler("src/components/MobileBottomNav.tsx"));
+    expect(nav).toMatch(/href: "\/conta",[^}]*rel: "nofollow"/);
+    expect(nav).toContain("rel={rel}");
+    const header = semComentarios(ler("src/components/Header.tsx"));
+    const links = header.match(/href="\/conta"/g) ?? [];
+    const comNofollow = header.match(/href="\/conta"\s*\r?\n\s*rel="nofollow"/g) ?? [];
+    expect(links.length).toBeGreaterThan(0);
+    expect(comNofollow.length).toBe(links.length);
+  });
+
+  it("a âncora para a página da recolha gratuita diz o que lá está", () => {
+    const maus: string[] = [];
+    for (const f of [...fontes(join(process.cwd(), "src", "app")), ...fontes(join(process.cwd(), "src", "components"))]) {
+      const codigo = semComentarios(readFileSync(f, "utf8"));
+      for (const m of codigo.matchAll(/href: "\/recolha-gratuita-de-moveis-usados", label: "([^"]+)"/g)) {
+        if (m[1] !== "Doar ou recolher móveis usados") maus.push(`${f.replace(process.cwd(), "")}: ${m[1]}`);
+      }
+    }
+    expect(maus).toEqual([]);
+    expect(ler("src/components/FurnitureSeoLinks.tsx")).toContain('label: "Doar ou recolher móveis usados"');
+  });
+});
