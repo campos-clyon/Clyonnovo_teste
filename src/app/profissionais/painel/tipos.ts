@@ -74,6 +74,8 @@ export type Pedido = {
   /** Entulho: como está e quantos sacos são. */
   entulhoEstado?: string | null;
   entulhoQuantidade?: string | null;
+  /** O que o cliente escreveu quando não eram sacos — «4 m³». */
+  entulhoQuantidadeDita?: string | null;
   /** Km de carro, da base dele ao trabalho — pela estrada quando dá. */
   distanciaKm: number | null;
   /** Minutos de carro, quando a estrada foi consultada. */

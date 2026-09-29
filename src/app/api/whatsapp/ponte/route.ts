@@ -14,6 +14,58 @@ import { pedidosDoTelefone, tratarMensagemDoCliente } from "@/lib/whatsapp-negoc
 import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
 
 export const runtime = "nodejs";
+/*
+ * Cabe a espera da rajada (8 s), o modelo, a base e a vez na tranca.
+ *
+ * Mais do que os 30 s que a ponte espera por nós, DE PROPÓSITO: se a ponte
+ * desistir de esperar, a resposta não se perde — fica na fila de saída, e a
+ * ronda seguinte da ponte (de poucos em poucos segundos) vai buscá-la. O que
+ * não pode acontecer é a Vercel matar a função a meio de a escrever.
+ */
+export const maxDuration = 60;
+
+/**
+ * RESPONDER UMA VEZ POR RAJADA, e não uma vez por mensagem.
+ *
+ * *«Não repita pergunta, e saiba o contexto da conversa.»* — 29-09-2026.
+ * Ver `rajada-do-whatsapp.ts` para o porquê inteiro. Em resumo: a ponte
+ * entrega as mensagens de quem escreve em vários bocados TODAS AO MESMO TEMPO,
+ * e cada uma punha o assistente a correr sem ver as outras.
+ *
+ * Três passos:
+ *   1. ESPERA — deixa a pessoa acabar de escrever;
+ *   2. CEDE — se entretanto chegou outra mensagem, é essa que responde;
+ *   3. TRANCA — a que responde lê tudo o que entrou desde a nossa última
+ *      resposta como UMA mensagem, com o número trancado, para duas execuções
+ *      nunca responderem por cima uma da outra.
+ *
+ * Sem id (a base falhou a gravar), responde-se como antes, à mensagem sozinha:
+ * uma resposta menos esperta é melhor do que nenhuma.
+ */
+async function responderARajada(telefone: string, minhaId: number | null, texto: string) {
+  if (minhaId == null) {
+    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+    return;
+  }
+  const { mensagensComIdDoNumeroWhatsApp, comTrancaDoNumeroWhatsApp } = await import("@/lib/db");
+  const { JANELA_DA_RAJADA_MS, eAUltimaDaRajada, textoDaRajada } = await import(
+    "@/lib/rajada-do-whatsapp"
+  );
+
+  await new Promise((r) => setTimeout(r, JANELA_DA_RAJADA_MS));
+
+  const depoisDaEspera = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
+  if (depoisDaEspera.length > 0 && !eAUltimaDaRajada(minhaId, depoisDaEspera)) return;
+
+  await comTrancaDoNumeroWhatsApp(telefone, async () => {
+    // Relido DENTRO da tranca: quem a teve antes pode ter respondido a parte
+    // disto, e o que já teve resposta não se responde outra vez.
+    const agora = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
+    const junto = agora.length > 0 ? textoDaRajada(agora) : texto;
+    if (!junto.trim()) return;
+    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto });
+  });
+}
 
 /**
  * A ponte do Winapp — o WhatsApp emparelhado no PC a falar com o cérebro daqui.
@@ -267,12 +319,12 @@ export async function POST(req: NextRequest) {
       const { guardarFotoDoClienteNoPedido } = await import("@/lib/whatsapp-negociacao");
       await guardarFotoDoClienteNoPedido(telefone, Buffer.from(fotoBase64, "base64"), fotoMime);
       if (texto.trim()) {
-        await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
-        await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+        const id = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
+        await responderARajada(telefone, id, texto);
       }
     } else {
-      await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
-      await tratarMensagemDoCliente(telefone, { tipo: "texto", texto });
+      const id = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
+      await responderARajada(telefone, id, texto);
     }
   } catch (e) {
     // A conversa é nossa na mesma — um erro aqui não pode atirar o cliente

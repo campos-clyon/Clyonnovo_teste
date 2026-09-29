@@ -1,4 +1,5 @@
 import { geocodificarMoradaDetalhado } from "./geocodificar";
+import { lerQuantidadeDeEntulho } from "./sacos-de-entulho";
 import {
   distanciaEmLinhaRecta,
   pontoValido,
@@ -149,8 +150,19 @@ export async function camposDoServico(
 
   if (servico === "recolha_entulho") {
     const estado = texto(corpo.entulhoEstado, 40);
-    // Só os dígitos: quem escreve "30 sacos" quer dizer 30.
-    const quantidade = texto(corpo.entulhoQuantidade, 20)?.replace(/[^\d]/g, "") || null;
+    /*
+     * ⚠️ A UNIDADE CONTA — e isto tirava só os dígitos.
+     *
+     * «30 sacos» dava 30; «4m3» dava 43. Um volume de uns 160 sacos entrava
+     * no preço como 43, e a cliente recebia uma pergunta a perguntar se eram
+     * mesmo 43 (29-09-2026). Ver `lerQuantidadeDeEntulho`.
+     *
+     * O número guardado continua a ser SACOS, que é o que o motor de preço
+     * conta. O que a pessoa escreveu vai ao lado quando não eram sacos, para
+     * quem vai fazer o trabalho ver a conta e não só o resultado dela.
+     */
+    const lida = lerQuantidadeDeEntulho(texto(corpo.entulhoQuantidade, 40));
+    const quantidade = lida.sacos != null ? String(lida.sacos) : null;
 
     if (estado) {
       paraOJson.entulhoState = estado;
@@ -161,6 +173,7 @@ export async function camposDoServico(
     if (quantidade) {
       paraOJson.entulhoQuantidade = quantidade;
       paraOMotor.entulhoQuantidade = quantidade;
+      if (lida.emMetrosCubicos) paraOJson.entulhoQuantidadeDita = lida.dito;
     } else {
       emFalta.push("o número de sacos");
     }

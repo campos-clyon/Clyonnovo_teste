@@ -369,6 +369,7 @@ export async function GET(req: NextRequest) {
             : null,
         entulhoEstado: (vista.entulhoEstado as string | undefined) ?? null,
         entulhoQuantidade: (vista.entulhoQuantidade as string | undefined) ?? null,
+        entulhoQuantidadeDita: (vista.entulhoQuantidadeDita as string | undefined) ?? null,
         /*
          * A QUANTOS QUILOMETROS FICA O TRABALHO.
          *

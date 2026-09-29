@@ -2310,6 +2310,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     percursoKm: string | null;
     entulhoEstado: string | null;
     entulhoQuantidade: string | null;
+    entulhoQuantidadeDita?: string | null;
     parkingDistance: string | null;
     /* Para a distancia ate ao trabalho. Saem em texto do JSON; ver a nota. */
     pedidoLat: string | null;
@@ -2410,6 +2411,10 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             CASE WHEN JSON_VALID(o.rawOrderJson)
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidade'))
                  END AS entulhoQuantidade,
+            -- O que o cliente escreveu, quando nao eram sacos («4 m3»).
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidadeDita'))
+                 END AS entulhoQuantidadeDita,
             -- As coordenadas do trabalho, para lhe dizer a quantos km fica.
             -- Saem por JSON_UNQUOTE e nao por CAST: um CAST de um nulo de
             -- JSON rebenta a consulta inteira, e um pedido sem morada
@@ -6903,16 +6908,19 @@ export async function registarMensagemWhatsApp(
   telefone: string,
   direccao: "in" | "out",
   texto: string,
-): Promise<void> {
+): Promise<number | null> {
   const digitos = telefone.replace(/\D/g, "");
-  if (!digitos || !texto.trim()) return;
+  if (!digitos || !texto.trim()) return null;
   await ensureWhatsappMensagensTable();
   const pool = await getPool();
-  if (!pool) return;
-  await pool.execute(
+  if (!pool) return null;
+  // O id volta a quem chama: é por ele que se sabe se uma mensagem foi a
+  // última de uma rajada. Ver `rajada-do-whatsapp.ts`.
+  const [inserida] = (await pool.execute(
     "INSERT INTO whatsappMensagens (telefone, direccao, texto) VALUES (?, ?, ?)",
     [digitos, direccao, texto.slice(0, 4096)],
-  );
+  )) as [{ insertId?: number }, unknown];
+  const id = Number(inserida?.insertId ?? 0) || null;
 
   /*
    * A LÍNGUA APANHA-SE AQUI, e não no webhook.
@@ -6940,6 +6948,79 @@ export async function registarMensagemWhatsApp(
   await pool
     .execute("DELETE FROM whatsappMensagens WHERE criadoEm < NOW() - INTERVAL 60 DAY LIMIT 200")
     .catch(() => {});
+  return id;
+}
+
+/**
+ * AS MENSAGENS COM O NÚMERO DE ORDEM — para juntar uma rajada.
+ *
+ * Ver `rajada-do-whatsapp.ts`. `mensagensDoNumeroWhatsApp` não traz o id,
+ * e sem ele não se sabe qual foi a última a chegar nem onde acabou a última
+ * resposta nossa: duas mensagens no mesmo segundo têm o mesmo `criadoEm`.
+ */
+export async function mensagensComIdDoNumeroWhatsApp(
+  telefone: string,
+  limite = 40,
+): Promise<Array<{ id: number; direccao: string; texto: string }>> {
+  const digitos = telefone.replace(/\D/g, "");
+  if (digitos.length < 9) return [];
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, direccao, texto FROM whatsappMensagens
+      WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
+      ORDER BY id DESC
+      LIMIT ${Math.max(1, Math.min(200, Math.floor(limite)))}`,
+    [digitos],
+  )) as [Array<{ id: number; direccao: string; texto: string }>, unknown];
+  return rows.reverse().map((r) => ({ ...r, id: Number(r.id) }));
+}
+
+/**
+ * UM NÚMERO DE CADA VEZ — a tranca que impede duas respostas cruzadas.
+ *
+ * *«Com quem estou a falar?» … «Com quem estou a falar?»* — a mesma pergunta
+ * duas vezes no mesmo segundo, 29-09-2026. A guarda contra repetições lê o que
+ * já saiu; duas execuções ao mesmo tempo liam as duas «nada saiu ainda» e
+ * mandavam as duas.
+ *
+ * `GET_LOCK` do MySQL, na MESMA ligação do princípio ao fim — a tranca é da
+ * ligação, e devolver a ligação ao pool a meio largava-a sem ninguém saber.
+ * Espera até 25 s pela vez: a ponte tem 30 s de paciência, e uma resposta
+ * atrasada é melhor do que duas.
+ *
+ * Sem base, ou sem tranca a tempo, corre na mesma. Calar o assistente por
+ * causa de uma tranca é pior do que o problema que ela resolve.
+ */
+export async function comTrancaDoNumeroWhatsApp<T>(
+  telefone: string,
+  fazer: () => Promise<T>,
+): Promise<T> {
+  const pool = await getPool();
+  const nome = `clyon:wa:${telefone.replace(/\D/g, "").slice(-9)}`;
+  if (!pool) return fazer();
+  let ligacao: Awaited<ReturnType<typeof pool.getConnection>> | null = null;
+  let trancado = false;
+  try {
+    ligacao = await pool.getConnection();
+    const [r] = (await ligacao.query("SELECT GET_LOCK(?, 25) AS ok", [nome])) as [
+      Array<{ ok: number | null }>,
+      unknown,
+    ];
+    trancado = Number(r?.[0]?.ok) === 1;
+    if (!trancado) console.warn("[whatsapp] sem tranca a tempo para", nome, "— sigo sem ela");
+  } catch (e) {
+    console.error("[whatsapp] tranca:", e instanceof Error ? e.message : e);
+  }
+  try {
+    return await fazer();
+  } finally {
+    if (ligacao) {
+      if (trancado) await ligacao.query("SELECT RELEASE_LOCK(?)", [nome]).catch(() => {});
+      ligacao.release();
+    }
+  }
 }
 
 export interface ConversaWhatsApp {

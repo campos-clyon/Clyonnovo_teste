@@ -19,7 +19,39 @@ import {
  * dados do cliente para preencher o pedido e criá-lo automaticamente."
  */
 
-const T0 = new Date("2026-09-09T10:00:00"); // quarta-feira
+/*
+ * Dez da manhã EM LISBOA (Verão, +01:00), e não «dez da manhã onde quer que o
+ * teste corra». Com a hora da máquina, estes testes passavam em Paris, em
+ * Lisboa e na Vercel — cada um a dizer uma hora diferente — e não apanhavam
+ * que em produção «às 9» saía às 10.
+ */
+const T0 = new Date("2026-09-09T10:00:00+01:00"); // quarta-feira
+
+/** O que o relógio de Lisboa marca — o único que interessa ao cliente. */
+function emLisboa(d: Date | null | undefined) {
+  if (!d) return null;
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Lisbon",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      weekday: "short",
+      hourCycle: "h23",
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value]),
+  );
+  const dias: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    dia: Number(p.day),
+    hora: Number(p.hour),
+    minuto: Number(p.minute),
+    diaDaSemana: dias[p.weekday as string],
+  };
+}
 
 /** Leva a conversa pelo caminho feliz até ao resumo. */
 function conversa(respostas: string[], inicio: EstadoDaRecolha = recolhaNova()) {
@@ -153,19 +185,19 @@ describe("as pequenas leituras", () => {
 
   it("para quando: amanhã, um dia da semana com hora, uma data, sem pressa", () => {
     const amanha = interpretarQuando("amanhã de manhã", T0);
-    expect(amanha.data?.getDate()).toBe(10);
-    expect(amanha.data?.getHours()).toBe(9);
+    expect(emLisboa(amanha.data)?.dia).toBe(10);
+    expect(emLisboa(amanha.data)?.hora).toBe(9);
     expect(amanha.urgency).toBe("tomorrow");
 
     const sexta = interpretarQuando("sexta às 14h", T0);
-    expect(sexta.data?.getDay()).toBe(5);
-    expect(sexta.data?.getHours()).toBe(14);
+    expect(emLisboa(sexta.data)?.diaDaSemana).toBe(5);
+    expect(emLisboa(sexta.data)?.hora).toBe(14);
     expect(sexta.urgency).toBe("this_week");
 
     const data = interpretarQuando("14/09 11:30", T0);
-    expect(data.data?.getDate()).toBe(14);
-    expect(data.data?.getHours()).toBe(11);
-    expect(data.data?.getMinutes()).toBe(30);
+    expect(emLisboa(data.data)?.dia).toBe(14);
+    expect(emLisboa(data.data)?.hora).toBe(11);
+    expect(emLisboa(data.data)?.minuto).toBe(30);
 
     expect(interpretarQuando("sem pressa", T0)).toEqual({ data: null, urgency: "flexible" });
     expect(interpretarQuando("urgente", T0).urgency).toBe("today");

@@ -163,8 +163,19 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
       await enviarTextoWhatsApp(telefone, r.resposta);
       await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
     } else {
-      await guardarRecolhaWhatsApp(telefone, "servico", {});
-      await enviarTextoWhatsApp(telefone, perguntaDo("servico", {}, !compreensaoDisponivel()));
+      /*
+       * ⚠️ O QUE ELE JÁ DISSE NÃO SE DEITA FORA por ainda faltar o serviço.
+       *
+       * Gravava-se `{}`. A Ana escreveu «O meu nome é Ana Ferreira» na primeira
+       * mensagem, sem dizer o que precisava — o nome foi percebido, e depois
+       * apagado aqui, porque o serviço ainda não era conhecido. Duas mensagens
+       * depois: «Com quem estou a falar?» (29-09-2026).
+       *
+       * Fica tudo o que se percebeu; só se pergunta o que falta.
+       */
+      const sabido = r.desistir ? {} : r.estado.dados;
+      await guardarRecolhaWhatsApp(telefone, "servico", sabido);
+      await enviarTextoWhatsApp(telefone, perguntaDo("servico", sabido, !compreensaoDisponivel()));
     }
     return;
   }
@@ -306,12 +317,14 @@ async function registarAccao(
  * A mensagem sai ANTES de a conversa ser entregue, porque `enviarTextoWhatsApp`
  * pergunta ao portão e o portão fecha-se com a entrega.
  */
-async function passarAUmaPessoa(telefone: string, porque: string): Promise<void> {
+async function passarAUmaPessoa(
+  telefone: string,
+  porque: string,
+  /** O que se lhe diz. Por omissão, a frase de sempre. */
+  mensagem = "Percebi o que me disse. Vou passar isto a um colega para confirmar tudo consigo, e ele fala-lhe já de seguida.",
+): Promise<void> {
   const { interromperNumeroWhatsApp } = await import("@/lib/db");
-  await enviarTextoWhatsApp(
-    telefone,
-    "Percebi o que me disse. Vou passar isto a um colega para confirmar tudo consigo, e ele fala-lhe já de seguida.",
-  );
+  await enviarTextoWhatsApp(telefone, mensagem);
   await interromperNumeroWhatsApp(telefone, porque).catch(() => {});
 }
 
@@ -371,11 +384,35 @@ async function fecharPeloCliente(
     }
     estado = r.negociacao;
   }
-  const r2 = contratar(estado, agora);
-  if (!r2.ok) {
-    await enviarTextoWhatsApp(telefone, `Não deu para fechar: ${r2.erro}`);
-    return;
+  /*
+   * ⚠️ ACEITAR DO LADO DO CLIENTE JÁ FECHA — não se contrata por cima.
+   *
+   * *«Considerem adjudicada a proposta da TRSul.»* «Aceitar TRSul: 60€.»
+   * «Aceitar 60€.» «Aceitar 60.» «Aceitar 60,00.» — 29-09-2026, e a cada uma
+   * o assistente respondeu «Não deu para fechar: Não há nada para contratar.»
+   * A cliente acabou a escrever a mesma coisa cinco vezes a um robô que dizia
+   * que não havia nada — com a proposta de 60 € ali, de pé.
+   *
+   * No motor, `aceitar(…, "cliente")` passa a negociação DIRECTAMENTE a
+   * `acordada`: o cliente aceitar a proposta do profissional é o fecho. Isto
+   * chamava `contratar` a seguir, sempre — e `contratar` só existe para o
+   * outro caminho, `aguarda_contratacao` (o profissional aceitou o valor do
+   * cliente e falta o cliente confirmar). Sobre uma negociação já acordada não
+   * há acção nenhuma disponível, e a recusa saía para o cliente.
+   *
+   * Desde que os profissionais passaram a propor primeiro, este era o caso
+   * COMUM — e fechar pelo WhatsApp falhava em quase todos.
+   */
+  let fechada = estado;
+  if (estado.estado !== "acordada") {
+    const r2 = contratar(estado, agora);
+    if (!r2.ok) {
+      await enviarTextoWhatsApp(telefone, `Não deu para fechar: ${r2.erro}`);
+      return;
+    }
+    fechada = r2.negociacao;
   }
+  const r2 = { negociacao: fechada };
   await gravarNegociacao(alvo.negociacaoId, {
     estado: r2.negociacao.estado,
     valorAcordado: r2.negociacao.valorAcordado ?? null,
@@ -800,7 +837,9 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
   const linhas = await negociacoesDoPedido(pedidoId);
   const vivas = linhas.filter((n) => n.estado !== "morta" && n.estado !== "desistida");
   if (vivas.length === 0) {
-    return `Pedido #${pedidoId}: ainda à espera de propostas dos profissionais. Avisamos assim que chegarem.`;
+    const espera = `Pedido #${pedidoId}: ainda à espera de propostas dos profissionais. Avisamos assim que chegarem.`;
+    const aviso = avisoDasRetiradas(linhas);
+    return aviso ? `${aviso}\n\n${espera}` : espera;
   }
   const acordada = vivas.find((n) => n.estado === "acordada");
   if (acordada) {
@@ -851,7 +890,40 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
       aSuaEspera: ultima?.por === "profissional" && ultima.estado === "pendente",
     });
   }
-  return textoDaMesa(pedidoId, propostas, aVer);
+  /*
+   * ⚠️ O QUE LHE DISSEMOS E JÁ NÃO ESTÁ DE PÉ — diz-se, em vez de o calar.
+   *
+   * Às 20:30 a Lourdes recebeu «Nova Recolha propõe 288,00 €». Às 20:33
+   * respondeu, e às 20:34 o assistente disse-lhe «Pedido #384: ainda sem
+   * valores» — o profissional tinha retirado a proposta entretanto, e esta
+   * lista só olhava para as negociações vivas. Para ela, o assistente
+   * contradisse-se em quatro minutos sem explicação (29-09-2026).
+   *
+   * Uma proposta DO PROFISSIONAL numa negociação que terminou sem acordo é
+   * uma proposta que ele viu e que já não existe. Não se sabe aqui quem a
+   * fechou — pode ter sido ele próprio a recusá-la —, e por isso a frase não
+   * acusa ninguém: diz só que já não está disponível, que é verdade nos dois
+   * casos.
+   */
+  const mesa = textoDaMesa(pedidoId, propostas, aVer);
+  const aviso = avisoDasRetiradas(linhas);
+  return aviso ? `${aviso}\n\n${mesa}` : mesa;
+}
+
+/** As propostas que o cliente viu e que já não estão de pé — ver `ecraDoPedido`. */
+function avisoDasRetiradas(
+  linhas: Array<{ estado: string; profissionalNome: string; propostasJson: string | null }>,
+): string | null {
+  const retiradas = linhas
+    .filter((n) => n.estado === "desistida" || n.estado === "morta")
+    .map((n) => ({ n, ultima: propostasDe(n.propostasJson).at(-1) }))
+    .filter(({ ultima }) => ultima?.por === "profissional" && Number.isFinite(Number(ultima.valor)))
+    .slice(0, 3)
+    .map(({ n, ultima }) => `${n.profissionalNome} (${euros(Number(ultima!.valor))})`);
+  if (retiradas.length === 0) return null;
+  return retiradas.length === 1
+    ? `A proposta de ${retiradas[0]} já não está disponível.`
+    : `As propostas de ${retiradas.join(" e ")} já não estão disponíveis.`;
 }
 
 /**
@@ -866,6 +938,24 @@ export async function tratarMensagemDoCliente(
   // o cérebro não diz UMA palavra — nem sequer a de "não o conheço".
   const { podeOWhatsAppFalarCom } = await import("@/lib/db");
   if (!(await podeOWhatsAppFalarCom(telefone))) return;
+
+  /*
+   * QUEM JÁ ESTÁ A SAIR NÃO RECEBE UM FORMULÁRIO — recebe uma pessoa.
+   *
+   * «Tentei ligar várias vezes, se estiverem ocupados vou ter de avançar com
+   * outra empresa» levou de volta «Com quem estou a falar?» (29-09-2026). Ver
+   * `cliente-a-perder-a-paciencia.ts`. Vem antes de tudo o resto de propósito:
+   * seja qual for o pé em que a conversa está, esta frase manda sobre ele.
+   */
+  if (conteudo.tipo === "texto") {
+    const { estaAPerderAPaciencia, RESPOSTA_A_QUEM_ESPEROU, MOTIVO_NO_PAINEL } = await import(
+      "@/lib/cliente-a-perder-a-paciencia"
+    );
+    if (estaAPerderAPaciencia(conteudo.texto)) {
+      await passarAUmaPessoa(telefone, MOTIVO_NO_PAINEL, RESPOSTA_A_QUEM_ESPEROU);
+      return;
+    }
+  }
 
   const pedidos = await pedidosDoTelefone(telefone);
   if (pedidos.length === 0) {

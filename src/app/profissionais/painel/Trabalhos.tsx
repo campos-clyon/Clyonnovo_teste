@@ -1498,7 +1498,19 @@ function DetalheDoTrabalho({
                 <>
                   <dt className="text-slate-500">Quantidade</dt>
                   <dd className="font-semibold text-tinta">
+                    {pedido.entulhoQuantidadeDita ? "≈ " : ""}
                     {pedido.entulhoQuantidade} sacos
+                    {/*
+                      O cliente falou em metros cúbicos e a conta fê-la a CLYON
+                      (1 m³ ≈ 40 sacos). Diz-se as duas coisas: um número
+                      convertido sem a origem à vista é um número que ninguém
+                      sabe de onde veio.
+                    */}
+                    {pedido.entulhoQuantidadeDita && (
+                      <span className="block text-xs font-normal text-slate-500">
+                        o cliente disse «{pedido.entulhoQuantidadeDita}»
+                      </span>
+                    )}
                   </dd>
                 </>
               )}

@@ -71,3 +71,56 @@ export function sacosDeUmMetroCubico(metrosCubicos: number): number {
   const n = Math.round(metrosCubicos * SACOS_POR_METRO_CUBICO);
   return n > 0 ? n : 0;
 }
+
+/**
+ * QUANTOS SACOS, A PARTIR DO QUE A PESSOA ESCREVEU.
+ *
+ * *«A leitura indicou 43 sacos, será correcto?»* — a Miriam à Catarina, a
+ * 29-09-2026, sobre um entulho que ela tinha descrito como «diria que 4m3».
+ *
+ * Lia-se tirando tudo o que não fosse dígito: «4m3» ficava «43». Um volume de
+ * quatro metros cúbicos — uns 160 sacos — virava 43, e o preço de um
+ * profissional saía com um quarto do trabalho lá dentro. «30 sacos» dava 30
+ * por sorte, porque não havia outro número na frase.
+ *
+ * Agora lê-se a UNIDADE:
+ *   · metros cúbicos («4m3», «4 m³», «4,5 metros cúbicos») convertem-se pela
+ *     regra da casa, `SACOS_POR_METRO_CUBICO`;
+ *   · «30 sacos», ou um número sozinho, são sacos;
+ *   · um intervalo («20 a 30 sacos») conta pelo maior — quem avalia no local
+ *     prefere encontrar menos do que lhe disseram do que mais.
+ *
+ * Sem número nenhum («não sei», «uma carrinha cheia») devolve `null`: não se
+ * inventa uma quantidade. O que a pessoa escreveu volta sempre em `dito`, para
+ * ficar à vista de quem vai fazer o trabalho.
+ */
+export function lerQuantidadeDeEntulho(
+  texto: string | null | undefined,
+): { sacos: number | null; dito: string; emMetrosCubicos: boolean } {
+  const dito = (texto ?? "").trim();
+  const t = dito
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+  const numero = (s: string) => Number(s.replace(",", "."));
+
+  const cubico = t.match(/(\d+(?:[.,]\d+)?)\s*(?:m3|m³|mc\b|metros?\s*cubicos?|m\s*cubicos?)/);
+  if (cubico) {
+    const n = numero(cubico[1]);
+    return {
+      sacos: Number.isFinite(n) && n > 0 ? sacosDeUmMetroCubico(n) : null,
+      dito,
+      emMetrosCubicos: true,
+    };
+  }
+
+  const intervalo = t.match(/(\d+)\s*(?:a|-|ou|\/)\s*(\d+)/);
+  if (intervalo) {
+    const maior = Math.max(Number(intervalo[1]), Number(intervalo[2]));
+    return { sacos: maior > 0 ? maior : null, dito, emMetrosCubicos: false };
+  }
+
+  const um = t.match(/\d+/);
+  const n = um ? Number(um[0]) : NaN;
+  return { sacos: Number.isFinite(n) && n > 0 ? n : null, dito, emMetrosCubicos: false };
+}

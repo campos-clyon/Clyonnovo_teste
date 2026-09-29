@@ -28,6 +28,7 @@
 
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { primeiroNome } from "./mensagem-whatsapp";
+import { deslocamentoDeLisboa, instanteEmLisboa } from "./hora-de-lisboa";
 import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
 
 export type PassoDaRecolha =
@@ -218,32 +219,65 @@ export function interpretarQuando(
   texto: string,
   agora: Date,
 ): { data: Date | null; urgency: string } {
-  const t = semAcentos(texto);
+  /*
+   * ⚠️ «NÃO É URGENTE» NÃO É «URGENTE».
+   *
+   * *«preferencialmente esta semana — mas não é urgente»* — a Catarina, a
+   * 29-09-2026. O pedido saiu registado para «terça-feira, 29 de setembro às
+   * 12:00»: hoje, daqui a uma hora. A regra via a palavra «urgente», ignorava
+   * o «não» antes dela, e marcava para já. A Miriam teve de lhe escrever a
+   * perguntar se era mesmo ao meio-dia — e a resposta foi «eu não indiquei
+   * horas».
+   *
+   * Tira-se a urgência NEGADA antes de procurar a urgência — «não é
+   * urgente», «nada urgente», «sem urgência», «não há pressa». O resto da
+   * frase segue o caminho de sempre: «esta semana» ainda diz «esta semana».
+   */
+  const t = semAcentos(texto)
+    .replace(
+      /\b(?:nao|nada|sem)\s+(?:e\s+|eh\s+|ha\s+|tem\s+|esta\s+|tenho\s+)?(?:muito\s+|nada\s+|tao\s+)?(?:urgen\w*|pressa)\b/g,
+      " sem pressa ",
+    );
+  /*
+   * ⚠️ TUDO NA HORA DE LISBOA, e não na do servidor.
+   *
+   * A Vercel corre em UTC. Esta função fazia `new Date(…, 9, 0)` e
+   * `getHours()` — ou seja, «às 9» eram 9 em Londres, que no Verão são 10 em
+   * Lisboa, e «daqui a uma hora» contava a partir da hora errada. É o mesmo
+   * erro que já tinha empurrado a agenda dos profissionais uma hora para a
+   * frente (ver `hora-de-lisboa.ts`).
+   *
+   * As contas fazem-se num RELÓGIO DE PAREDE: o instante de agora deslocado
+   * para a hora de Lisboa, lido e escrito sempre pelos campos UTC — que aqui
+   * querem dizer «o que o relógio da parede em Lisboa marca». No fim, a hora
+   * de parede converte-se no instante verdadeiro por `instanteEmLisboa`, que
+   * sabe da mudança da hora.
+   */
+  const parede = new Date(agora.getTime() + deslocamentoDeLisboa(agora));
   let dia: Date | null = null;
 
   const numerica = t.match(/(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?/);
   if (numerica) {
     const ano = numerica[3]
       ? Number(numerica[3].length === 2 ? `20${numerica[3]}` : numerica[3])
-      : agora.getFullYear();
-    dia = new Date(ano, Number(numerica[2]) - 1, Number(numerica[1]), 9, 0, 0, 0);
-    if (!numerica[3] && dia.getTime() < agora.getTime() - 86_400_000) dia.setFullYear(ano + 1);
+      : parede.getUTCFullYear();
+    dia = new Date(Date.UTC(ano, Number(numerica[2]) - 1, Number(numerica[1]), 9, 0, 0, 0));
+    if (!numerica[3] && dia.getTime() < parede.getTime() - 86_400_000) dia.setUTCFullYear(ano + 1);
   } else if (/depois de amanha/.test(t)) {
-    dia = new Date(agora);
-    dia.setDate(dia.getDate() + 2);
+    dia = new Date(parede);
+    dia.setUTCDate(dia.getUTCDate() + 2);
   } else if (/\bamanha\b/.test(t)) {
-    dia = new Date(agora);
-    dia.setDate(dia.getDate() + 1);
+    dia = new Date(parede);
+    dia.setUTCDate(dia.getUTCDate() + 1);
   } else if (/\bhoje\b|\bagora\b|\burgente\b/.test(t)) {
-    dia = new Date(agora);
+    dia = new Date(parede);
   } else {
     for (let i = 0; i < DIAS_DA_SEMANA.length; i++) {
       if (new RegExp(`\\b${DIAS_DA_SEMANA[i]}(-feira)?\\b`).test(t)) {
-        dia = new Date(agora);
-        let salto = (i - agora.getDay() + 7) % 7;
+        dia = new Date(parede);
+        let salto = (i - parede.getUTCDay() + 7) % 7;
         if (salto === 0) salto = 7; // «sexta» dito numa sexta é a próxima
-        if (/proxima|que vem/.test(t) && salto < 7) salto += 0;
-        dia.setDate(dia.getDate() + salto);
+        dia.setUTCDate(dia.getUTCDate() + salto);
         break;
       }
     }
@@ -255,7 +289,11 @@ export function interpretarQuando(
     // «às 14h», «pelas 9», «11:30», «9h30». Os dígitos de uma data numérica
     // (14/09) não têm «:» nem «h» a seguir, por isso não se confundem.
     const horaDita = t.match(/(?:\bas\s+|\bpelas\s+|\b)(\d{1,2})(?::(\d{2})|h(\d{2})?)\b/);
-    const eHoje = dia.toDateString() === agora.toDateString();
+    const mesmoDia = (a: Date, b: Date) =>
+      a.getUTCFullYear() === b.getUTCFullYear() &&
+      a.getUTCMonth() === b.getUTCMonth() &&
+      a.getUTCDate() === b.getUTCDate();
+    const eHoje = mesmoDia(dia, parede);
     if (horaDita && Number(horaDita[1]) >= 0 && Number(horaDita[1]) <= 23) {
       hora = Number(horaDita[1]);
       minuto = Number(horaDita[2] ?? horaDita[3] ?? 0) || 0;
@@ -268,19 +306,25 @@ export function interpretarQuando(
       hora = 9;
     } else if (eHoje) {
       // «hoje», «urgente», sem hora: daqui a uma hora, não às nove de manhã já passadas.
-      hora = Math.min(20, agora.getHours() + 1);
+      hora = Math.min(20, parede.getUTCHours() + 1);
     }
-    dia.setHours(hora, minuto, 0, 0);
-    if (dia.getTime() < agora.getTime() - 3600_000) {
+    dia.setUTCHours(hora, minuto, 0, 0);
+    if (dia.getTime() < parede.getTime() - 3600_000) {
       // Já passou: uma hora de hoje que ficou para trás vira amanhã.
-      dia.setDate(dia.getDate() + 1);
+      dia.setUTCDate(dia.getUTCDate() + 1);
     }
     // A urgência conta DIAS DE CALENDÁRIO: «amanhã de manhã» dito às 10 h de
     // hoje são 23 horas, mas é amanhã — não é hoje.
-    const meiaNoite = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-    const dias = Math.round((meiaNoite(dia) - meiaNoite(agora)) / 86_400_000);
+    const meiaNoite = (x: Date) => Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate());
+    const dias = Math.round((meiaNoite(dia) - meiaNoite(parede)) / 86_400_000);
     const urgency = dias <= 0 ? "today" : dias === 1 ? "tomorrow" : dias < 7 ? "this_week" : "flexible";
-    return { data: dia, urgency };
+
+    // Da parede para o instante verdadeiro.
+    const dois = (n: number) => String(n).padStart(2, "0");
+    const deParede =
+      `${dia.getUTCFullYear()}-${dois(dia.getUTCMonth() + 1)}-${dois(dia.getUTCDate())}` +
+      `T${dois(dia.getUTCHours())}:${dois(dia.getUTCMinutes())}`;
+    return { data: instanteEmLisboa(deParede) ?? dia, urgency };
   }
 
   if (/esta semana|nos proximos dias|o mais rapido|quanto antes/.test(t)) return { data: null, urgency: "this_week" };
@@ -292,7 +336,10 @@ function dataPorExtenso(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return `${d.toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" })} às ${d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`;
+  // Na hora de Lisboa: o servidor está em UTC, e «às 10:00» escrito dele era
+  // uma hora antes da que o cliente disse.
+  const tz = { timeZone: "Europe/Lisbon" } as const;
+  return `${d.toLocaleDateString("pt-PT", { ...tz, weekday: "long", day: "numeric", month: "long" })} às ${d.toLocaleTimeString("pt-PT", { ...tz, hour: "2-digit", minute: "2-digit" })}`;
 }
 
 const URGENCIA_POR_EXTENSO: Record<string, string> = {
@@ -404,10 +451,21 @@ export function perguntaDo(
   agora: Date = new Date(),
 ): string {
   switch (passo) {
-    case "servico":
+    case "servico": {
+      /*
+       * COM O NOME, QUANDO JÁ O DISSE.
+       *
+       * *«Olá! Falámos agora mesmo. O meu nome é Ana Ferreira e aqui estão as
+       * fotos.»* — e a resposta foi «Boa tarde! Aqui é a CLYON. Diga-me o que
+       * precisa», e duas mensagens depois «Com quem estou a falar?». Ela tinha
+       * dito o nome na primeira frase.
+       */
+      const p = primeiroNome(dados.contactName);
+      const ola = p ? `${saudacao(agora)}, ${p}! Aqui é a CLYON.` : `${saudacao(agora)}! Aqui é a CLYON.`;
       return comLista
-        ? `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
-        : `${saudacao(agora)}! Aqui é a CLYON.\n\nDiga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.`;
+        ? `${ola}\n\nDiga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
+        : `${ola}\n\nDiga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.`;
+    }
     case "nome":
       return "Com quem estou a falar?";
     case "morada":
