@@ -107,3 +107,21 @@ describe("mudanças: nenhum redirect acaba num 404", () => {
     expect(regiao).toContain("caminhoDoServicoNaCidade(service.slug,");
   });
 });
+
+describe("redirects coerentes", () => {
+  it("quem escreve «monos» vai à página dos monos, e não à dos móveis", async () => {
+    const redirects = await nextConfig.redirects!();
+    for (const origem of ["/monos", "/recolha-monos"]) {
+      const r = redirects.find((x) => x.source === origem);
+      expect(r?.destination, origem).toBe("/recolha-de-monos");
+    }
+  });
+
+  it("/contacto é só o redirect do next.config — a página morta saiu", async () => {
+    // Uma page.tsx com redirect("/contactos") que nunca corria: o redirect do
+    // next.config vem primeiro. Era código a manter sem nada a fazer.
+    expect(() => ler("src/app/contacto/page.tsx")).toThrow();
+    const redirects = await nextConfig.redirects!();
+    expect(redirects.find((x) => x.source === "/contacto")?.destination).toBe("/contactos");
+  });
+});

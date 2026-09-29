@@ -176,14 +176,22 @@ const nextConfig: NextConfig = {
         destination: "/recolha-de-entulho",
         permanent: true,
       },
+      /*
+       * Os monos vão para os monos — 29-09-2026.
+       *
+       * Estes dois iam para /recolha-de-moveis, de quando não havia página de
+       * monos. Há: /recolha-de-monos existe, está no sitemap e é a que
+       * responde a quem escreveu «monos». Mandá-los para os móveis era dar ao
+       * Google a página errada como destino definitivo.
+       */
       {
         source: "/monos",
-        destination: "/recolha-de-moveis",
+        destination: "/recolha-de-monos",
         permanent: true,
       },
       {
         source: "/recolha-monos",
-        destination: "/recolha-de-moveis",
+        destination: "/recolha-de-monos",
         permanent: true,
       },
       // /recolha-de-monos tem página própria — não redirecionar
