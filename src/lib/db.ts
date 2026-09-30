@@ -437,6 +437,22 @@ export async function getGalleryMediaItems() {
   return db.select().from(galleryMedia);
 }
 
+/**
+ * Uma linha da galeria, e só essa.
+ *
+ * A rota que serve cada imagem lia a galeria INTEIRA — todas as imagens, cada
+ * uma com o seu base64 — para devolver uma. Aqui vem só a pedida. Uma falha da
+ * base propaga-se (não há `catch`): quem chama tem de distinguir "não existe"
+ * de "não consegui ler".
+ */
+export async function getGalleryMediaItemById(id: string) {
+  await ensureGalleryMediaTable();
+  const db = await getDb();
+  if (!db) return null;
+  const [linha] = await db.select().from(galleryMedia).where(eq(galleryMedia.id, id)).limit(1);
+  return linha ?? null;
+}
+
 export async function replaceGalleryMediaItems(
   items: Array<{
     id: string;

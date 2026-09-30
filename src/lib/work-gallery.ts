@@ -1,7 +1,12 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { getDb, getGalleryMediaItems, replaceGalleryMediaItems } from "@/lib/db";
+import {
+  getDb,
+  getGalleryMediaItems,
+  getGalleryMediaItemById,
+  replaceGalleryMediaItems,
+} from "@/lib/db";
 
 export const gallerySections = ["hero", "showcase"] as const;
 export const galleryPhases = ["before", "during", "after"] as const;
@@ -205,7 +210,33 @@ function normalizeItems(items: GalleryItem[]) {
   );
 }
 
-export async function readGalleryData() {
+type LinhaDaGaleria = Awaited<ReturnType<typeof getGalleryMediaItems>>[number];
+
+function itemDaLinha(item: LinhaDaGaleria): GalleryItem {
+  return {
+    id: item.id,
+    section: item.section as GallerySection,
+    title: item.title,
+    subtitle: item.subtitle || "",
+    description: item.description || "",
+    alt: item.alt,
+    imageUrl: item.imageUrl,
+    order: Number(item.order || 1),
+    isActive: Boolean(item.isActive),
+    projectKey: item.projectKey || "",
+    phase: (item.phase as GalleryPhase | null) || undefined,
+  };
+}
+
+/**
+ * A galeria inteira.
+ *
+ * Com a base em baixo, devolve a galeria de omissão — para MOSTRAR, é melhor
+ * do que um buraco na página inicial. Para ALTERAR não serve (`estrito`):
+ * gravar por cima dela apagava as imagens reais todas, porque
+ * `replaceGalleryMediaItems` remove o que não vem na lista.
+ */
+export async function readGalleryData(opcoes: { estrito?: boolean } = {}) {
   const db = await getDb();
 
   if (db) {
@@ -220,23 +251,10 @@ export async function readGalleryData() {
       }
 
       return {
-        items: normalizeItems(
-          items.map((item) => ({
-            id: item.id,
-            section: item.section as GallerySection,
-            title: item.title,
-            subtitle: item.subtitle || "",
-            description: item.description || "",
-            alt: item.alt,
-            imageUrl: item.imageUrl,
-            order: Number(item.order || 1),
-            isActive: Boolean(item.isActive),
-            projectKey: item.projectKey || "",
-            phase: (item.phase as GalleryPhase | null) || undefined,
-          })),
-        ),
+        items: normalizeItems(items.map(itemDaLinha)),
       };
-    } catch {
+    } catch (erro) {
+      if (opcoes.estrito) throw erro;
       return {
         items: normalizeItems(defaultGalleryData.items),
       };
@@ -307,8 +325,27 @@ export async function listPublicGalleryItems(section?: GallerySection) {
   return items.filter((item) => item.isActive);
 }
 
+/**
+ * Um item só, para a rota que serve a imagem.
+ *
+ * `null` quer dizer que não existe. Uma falha da base PROPAGA-SE: antes caía
+ * na galeria de omissão, os ids reais desapareciam e a imagem dava 404 de vez
+ * em quando — um buraco na página por causa de um soluço da base.
+ *
+ * E lê uma linha, em vez da galeria inteira com o base64 de todas as imagens.
+ */
+export async function lerItemDaGaleria(id: string): Promise<GalleryItem | null> {
+  const db = await getDb();
+  if (!db) {
+    // Sem base (desenvolvimento): o ficheiro local, como até aqui.
+    return (await listGalleryItems()).find((item) => item.id === id) ?? null;
+  }
+  const linha = await getGalleryMediaItemById(id);
+  return linha ? itemDaLinha(linha) : null;
+}
+
 export async function createGalleryItem(input: GalleryItemInput) {
-  const data = await readGalleryData();
+  const data = await readGalleryData({ estrito: true });
   const item = normalizeGalleryItem(input);
   data.items.push(item);
   await writeGalleryData(data);
@@ -316,7 +353,7 @@ export async function createGalleryItem(input: GalleryItemInput) {
 }
 
 export async function updateGalleryItem(id: string, input: Partial<GalleryItemInput>) {
-  const data = await readGalleryData();
+  const data = await readGalleryData({ estrito: true });
   const index = data.items.findIndex((item) => item.id === id);
 
   if (index < 0) {
@@ -336,7 +373,7 @@ export async function updateGalleryItem(id: string, input: Partial<GalleryItemIn
 }
 
 export async function deleteGalleryItem(id: string) {
-  const data = await readGalleryData();
+  const data = await readGalleryData({ estrito: true });
   const item = data.items.find((entry) => entry.id === id);
 
   if (!item) {

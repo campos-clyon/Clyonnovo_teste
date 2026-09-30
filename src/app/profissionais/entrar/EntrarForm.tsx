@@ -159,7 +159,9 @@ export default function EntrarForm() {
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Ainda não se inscreveu?{" "}
-          <Link href="/profissionais" className="font-semibold text-cyan-600 hover:underline">
+          {/* Era /profissionais — atrás do portão do MVP, dá 404 a quem não
+              tem a chave. A inscrição pública é esta. */}
+          <Link href="/quero-ser-parceiro" className="font-semibold text-cyan-600 hover:underline">
             Inscreva-se aqui
           </Link>
         </p>

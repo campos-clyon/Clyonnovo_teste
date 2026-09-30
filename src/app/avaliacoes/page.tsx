@@ -82,7 +82,9 @@ const STATS = [
 ];
 
 export default function AvaliacoesPage() {
-  const whatsappUrl = `https://wa.me/351${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Gostava de pedir um orçamento à CLYON.")}`;
+  // O BUSINESS_PHONE já traz o +351: com outro 351 à frente, o link abria o
+  // WhatsApp num número que não existe (wa.me/351351…).
+  const whatsappUrl = `https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Gostava de pedir um orçamento à CLYON.")}`;
 
   return (
     <div className="min-h-screen bg-white">

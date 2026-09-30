@@ -14,6 +14,7 @@ import {
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "@/lib/quota-da-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { precoParaOCliente } from "@/lib/preco-do-cliente";
@@ -91,6 +92,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import ImageManagerClient from "@/components/admin/ImageManagerClient";
+
+/*
+ * O número de um lead para o wa.me.
+ *
+ * Era `wa.me/351` + os dígitos — e os leads do formulário da página inicial
+ * são gravados já com o indicativo ("+351912…"), o que dava wa.me/351351…:
+ * uma conversa com um número que não existe. Os portugueses passam pela
+ * normalização de sempre; um número de fora segue com os dígitos dele.
+ */
+function whatsappDoLead(telefone: string): string {
+  return numeroParaWhatsApp(telefone) ?? telefone.replace(/\D/g, "").replace(/^00/, "");
+}
 
 type SimulatorSetting = {
   key: string;
@@ -2959,7 +2972,7 @@ export default function ColaboradorAdminClient({
                                       <Eye className="h-3.5 w-3.5" />
                                     </button>
                                     <a
-                                      href={`https://wa.me/351${lead.telefone.replace(/\D/g, "")}`}
+                                      href={`https://wa.me/${whatsappDoLead(lead.telefone)}`}
                                       target="_blank" rel="noreferrer"
                                       className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-200 hover:bg-emerald-400/[0.16]"
                                       title="WhatsApp"
@@ -3982,7 +3995,7 @@ export default function ColaboradorAdminClient({
             <div className="sticky bottom-0 border-t border-white/10 bg-[rgba(9,27,43,0.96)] p-4">
               <div className="grid grid-cols-3 gap-2">
                 <a
-                  href={`https://wa.me/351${selectedLead.telefone.replace(/\D/g, "")}`}
+                  href={`https://wa.me/${whatsappDoLead(selectedLead.telefone)}`}
                   target="_blank" rel="noreferrer"
                   className="flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.1] py-2.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-400/[0.2]"
                 >

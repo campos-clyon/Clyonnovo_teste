@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { listGalleryItems } from "@/lib/work-gallery";
+import { lerItemDaGaleria, type GalleryItem } from "@/lib/work-gallery";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -44,9 +44,31 @@ function decodeDataUrl(value: string) {
 
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const item = (await listGalleryItems()).find((entry) => entry.id === id && entry.isActive);
 
-  if (!item) {
+  /*
+   * 503 QUANDO A BASE FALHA, E NÃO 404.
+   *
+   * A leitura caía na galeria de omissão ao primeiro erro da base, os ids
+   * reais desapareciam, e a imagem respondia "Not found" — de vez em quando,
+   * sem padrão, com a imagem a existir. Um 404 diz ao browser (e ao Google)
+   * que não vale a pena voltar; um 503 com Retry-After diz que é passageiro.
+   */
+  let item: GalleryItem | null;
+  try {
+    item = await lerItemDaGaleria(id);
+  } catch (erro) {
+    console.error("[gallery/render] a base não respondeu:", erro);
+    return new NextResponse("Galeria temporariamente indisponível", {
+      status: 503,
+      headers: {
+        "Retry-After": "30",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": NOINDEX_HEADER,
+      },
+    });
+  }
+
+  if (!item || !item.isActive) {
     return new NextResponse("Not found", {
       status: 404,
       headers: {
