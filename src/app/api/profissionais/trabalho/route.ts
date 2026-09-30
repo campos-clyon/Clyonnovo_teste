@@ -116,6 +116,9 @@ export async function POST(req: NextRequest) {
           token: novo.token,
           quantasFotos: fotos.length,
           diasParaConfirmar: DIAS_ATE_LIBERTAR_SOZINHO,
+          // Quem paga em notas lê «confirme antes de lhe pagar»; quem pagou
+          // pela plataforma lê que é a confirmação que liberta o profissional.
+          formaDePagamento: trabalho.formaDePagamento ?? null,
           baseUrl: urlDeAccaoDoPedido(req.headers),
         });
         // E no telemóvel, se ele tiver os avisos ligados: o prazo começou a

@@ -724,11 +724,19 @@ export default function SimulatorThreePhaseForm() {
                 titulo: `Recebe propostas em ${PRAZO_DE_RESPOSTA.porExtenso}`,
                 texto: "Cada uma com preço fechado, sem IVA, antes de haver trabalho nenhum.",
               },
+              /*
+                «SÓ PAGA DEPOIS DE CONFIRMAR QUE FICOU FEITO» SAIU — 29-09-2026.
+                Os pedidos do simulador pagam-se pela plataforma: a referência
+                chega depois de aceitar, e é o PROFISSIONAL que só recebe depois
+                da confirmação. Ver `pagamento-na-plataforma.ts`.
+              */
               {
                 Icone: ShieldCheck,
                 cor: "text-acao",
                 titulo: "Escolhe uma — ou nenhuma",
-                texto: "Só paga depois de confirmar que ficou feito. Recusar não custa nada.",
+                texto:
+                  "Depois de aceitar, recebe a referência para pagar; o profissional só recebe " +
+                  "depois de confirmar que ficou feito. Recusar não custa nada.",
               },
             ].map(({ Icone, cor, titulo, texto }) => (
               <li key={titulo} className="flex items-start gap-3">

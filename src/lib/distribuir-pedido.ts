@@ -554,7 +554,7 @@ export async function distribuirPedido(
         valorDesejadoCliente: pedido.valorDesejadoCliente,
         recebeLiquido: recebe,
         distanciaKm: c.distanciaKm,
-        precisaFatura: pedido.precisaFatura,
+        // Sem a factura: desde 22-09-2026 é da parceira, não do profissional.
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
       });
 

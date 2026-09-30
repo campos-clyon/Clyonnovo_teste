@@ -126,11 +126,11 @@ describe("ninguém recebe dinheiro por o cliente ficar calado", () => {
    * O lembrete dizia: «se não me disser nada, o pedido fecha-se sozinho dentro
    * de poucos dias e o profissional recebe».
    *
-   * Não recebe. `A_PLATAFORMA_COBRA` é `false`, a CLYON não guarda dinheiro
-   * nenhum, e o que o prazo faz é escrever uma data e mandar um email. Depois
-   * do prazo quem deve o dinheiro ao profissional continua a ser o cliente —
-   * que acabou de ler o contrário. Era a frase da plataforma que COBRA, dita a
-   * quem vive na que não cobra.
+   * Não é o prazo que o paga. O que o prazo faz é escrever uma data e mandar
+   * um email: em dinheiro, quem deve o valor ao profissional continua a ser o
+   * cliente — que acabou de ler o contrário; pela plataforma, a CLYON só
+   * entrega o que o cliente pagou. (A razão escrita aqui até 29-09-2026 era o
+   * `A_PLATAFORMA_COBRA` a falso; a promessa continua falsa pelas duas.)
    */
   it("a promessa de pagamento automático saiu do lembrete", () => {
     expect(AVISOS).not.toContain("o pedido fecha-se sozinho dentro de poucos dias");

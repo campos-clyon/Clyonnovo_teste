@@ -6,8 +6,14 @@
 
 import { Resend } from "resend";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
-import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
+import { SITE_URL, BUSINESS_PHONE, BUSINESS_EMAIL } from "./seo-data";
 import { e } from "./escapar-html";
+import { telefoneLegivel } from "./telefone-legivel";
+import { precoParaOCliente } from "./preco-do-cliente";
+import { comFacturaEmPalavras } from "./conta-em-palavras";
+
+/** «+351 931 632 622», como se lê — o `tel:` continua com o número cru. 29-09-2026. */
+const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:            "Recolha de móveis",
@@ -25,7 +31,16 @@ export interface SendOrcamentoEmailParams {
   serviceType: string | null;
   address: string | null;
   description: string | null;
-  precoFinalIva: number;
+  /**
+   * O PREÇO APROVADO, SEM IVA E SEM A TAXA — o `precoFinal` da base.
+   *
+   * Recebia o `precoFinalIva` e mostrava-o como «Valor total (c/ IVA)»: o
+   * único email do produto a anunciar um preço com imposto, e com o imposto
+   * feito à mão (× 1,23) e sem a taxa da plataforma. Desde 29-09-2026 diz o
+   * mesmo que o resto: o preço já com a taxa, sem IVA, e a linha do que
+   * acresce com factura — os dois feitos pelas funções de toda a gente.
+   */
+  precoFinal: number;
   dataAgendada: string | null;   // ISO date string or null
   token: string;
   orderId: number;
@@ -45,7 +60,8 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
   const pageUrl      = `${SITE_URL}/orcamento/${p.token}`;
   const servico      = SERVICE_LABELS[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const data         = formatDate(p.dataAgendada);
-  const preco        = p.precoFinalIva.toFixed(2).replace(".", ",") + " €";
+  const preco        = precoParaOCliente(p.precoFinal).toFixed(2).replace(".", ",") + " €";
+  const comFactura   = comFacturaEmPalavras(p.precoFinal, null);
 
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -106,10 +122,13 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
                   <!-- Preço destaque -->
                   <div style="margin-top:20px;padding-top:16px;border-top:1px solid #cce7f5;">
                     <p style="margin:0;font-size:12px;color:#0077B6;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">
-                      Valor total (c/ IVA)
+                      Preço, sem IVA
                     </p>
                     <p style="margin:4px 0 0;font-size:30px;font-weight:700;color:#00B4D8;">
                       ${preco}
+                    </p>
+                    <p style="margin:6px 0 0;font-size:13px;color:#4a5568;line-height:1.5;">
+                      Já inclui a taxa da plataforma.${comFactura ? ` ${comFactura}` : ""}
                     </p>
                   </div>
                 </td>
@@ -148,10 +167,10 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
           <td style="background:#f4f7fa;padding:20px 36px;border-top:1px solid #e8ecf0;">
             <p style="margin:0;font-size:12px;color:#a0aec0;text-align:center;">
               CLYON &mdash; Seixal, Portugal &nbsp;|&nbsp;
-              <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${BUSINESS_PHONE}</a>
+              <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${TELEFONE_PARA_LER}</a>
             </p>
             <p style="margin:6px 0 0;font-size:11px;color:#cbd5e0;text-align:center;">
-              Este email foi enviado automaticamente. Por favor não responda diretamente.
+              Se tiver alguma dúvida, basta responder a este email.
             </p>
           </td>
         </tr>
@@ -186,6 +205,9 @@ export async function sendOrcamentoEmail(params: SendOrcamentoEmailParams): Prom
   try {
     const { error } = await resend.emails.send({
       from:    "CLYON <noreply@clyon.pt>",
+      // Dizia «por favor não responda diretamente» — e responder é o gesto
+      // natural de quem tem uma dúvida sobre um orçamento. Vai ter a alguém.
+      replyTo: BUSINESS_EMAIL,
       to:      [params.to],
       subject: `O seu orçamento CLYON — ${servico}`,
       html:    legivelNoResumo(buildHtml(params)),

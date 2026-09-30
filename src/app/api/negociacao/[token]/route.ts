@@ -95,6 +95,8 @@ export async function POST(
     /** As taxas com que ESTA negociação nasceu — ver `taxasDaNegociacao`. */
     taxaCliente?: string | number | null;
     taxaProfissional?: string | number | null;
+    /** Como o cliente paga. Nula = na plataforma. */
+    formaDePagamento?: string | null;
   };
 
   const doProfissional = await negociacaoPorTokenHash(hash);
@@ -381,12 +383,15 @@ export async function POST(
              *
              * Quem contrata é o cliente, e com o token dele `doProfissional`
              * é nulo: o email saía sempre com as taxas de origem, a dizer 6 %
-             * a quem a negociação gravou outra coisa (em dinheiro, zero).
+             * a quem a negociação gravou outra coisa (em dinheiro, zero). E a
+             * forma, também da linha: é ela que decide se o email lhe diz que
+             * recebe da CLYON depois da confirmação ou do cliente, em mão.
              */
             recebeLiquido:
               nova.valorAcordado != null
                 ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
                 : null,
+            formaDePagamento: linha.formaDePagamento ?? null,
             baseUrl: urlDeAccaoDoPedido(req.headers),
           });
 

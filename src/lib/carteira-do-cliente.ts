@@ -8,11 +8,16 @@
  *
  * É a mesma informação, do outro lado da mesa, e conta a mesma história:
  *
- *   • RETIDO — trabalhos fechados que ainda não confirmou. O dinheiro está
- *     prometido e ainda não chegou a ninguém. É o que ele controla: enquanto
- *     não confirmar, não sai.
+ *   • RETIDO — trabalhos fechados que ainda não confirmou. É o que ele
+ *     controla: enquanto não confirmar, o trabalho não fecha.
  *
- *   • PAGO — trabalhos que confirmou. Saiu, e não volta.
+ *   • PAGO — trabalhos que confirmou.
+ *
+ * ⚠️ OS DOIS NOMES SÃO DE DENTRO, e não se mostram — 29-09-2026. O ecrã diz
+ * «em curso» e «concluído». «Retido» só é verdade para quem pagou a referência
+ * à CLYON, e esta carteira não sabe quem já a pagou nem junta só esses: a quem
+ * vai pagar em notas ao profissional, «retido» dizia que a CLYON lhe guardava
+ * um dinheiro que nunca vai passar por ela. Ver `pagamento-na-plataforma.ts`.
  *
  * A taxa da plataforma entra nos dois. O que se mostra é sempre o que ele
  * paga de facto, nunca o valor seco combinado com o profissional: um número
@@ -23,13 +28,24 @@
  * existe.
  */
 
-import { contaDoCliente } from "./taxas-plataforma";
+import { taxasDaNegociacao } from "./taxas-plataforma";
+import { precoParaOCliente } from "./preco-do-cliente";
 
 export type TrabalhoDoCliente = {
   negociacaoId: number;
   pedidoId: number;
   estado: string;
   valorAcordado: number | string | null;
+  /*
+   * A COMISSÃO DESTE TRABALHO, e não a de hoje — 29-09-2026.
+   *
+   * A carteira fazia a conta com as taxas de origem. Em dinheiro a taxa do
+   * cliente é 11 % (leva a parte do profissional), e a carteira dizia-lhe 5 %:
+   * outro número para o mesmo trabalho que o ecrã do pedido. Nulas valem as
+   * de origem, como em todo o lado.
+   */
+  taxaCliente?: number | string | null;
+  taxaProfissional?: number | string | null;
   confirmadoEm?: Date | string | null;
   pagoEm?: Date | string | null;
   profissionalNome?: string | null;
@@ -94,7 +110,9 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     // SEM IVA — o mesmo número que lhe foi dito em todo o lado. A carteira a
     // dizer 361,20 € sobre um trabalho anunciado a 294,00 € era a terceira
     // versão do mesmo preço; o imposto, quando ele pedir factura, acresce.
-    const total = contaDoCliente(acordado).semIva;
+    // É o preço DELE, já com a taxa, feito pela mesma função que o diz nas
+    // propostas (`preco-do-cliente.ts`) e com as taxas deste trabalho.
+    const total = precoParaOCliente(acordado, taxasDaNegociacao(t));
     const confirmado = quando(t.confirmadoEm) ?? quando(t.pagoEm);
 
     if (confirmado) pago += total;

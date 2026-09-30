@@ -7,7 +7,6 @@ import {
   Camera,
   CheckCircle2,
   Clock,
-  FileText,
   HandCoins,
   Loader2,
   Phone,
@@ -30,7 +29,7 @@ import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import PagarTrabalho from "@/components/PagarTrabalho";
-import { PROMESSA, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
+import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
 
 
 /**
@@ -97,7 +96,6 @@ export type NegociacaoDoCliente = {
       cidade: string | null;
     }>;
   } | null;
-  emiteFatura: boolean;
   /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
   regimeIva: string;
   guiaVerificada: boolean;
@@ -297,6 +295,16 @@ export default function PropostasRecebidas({
 
   if (acordada) {
     const prova = provaDe(acordada.provaJson);
+    /*
+     * OS TEXTOS DO DINHEIRO SÃO OS DA FORMA DESTE TRABALHO — 29-09-2026.
+     *
+     * Vinham de um interruptor global, e o ecrã dizia «é a ele que o paga, no
+     * fim; a CLYON não recebe esse dinheiro» logo por baixo da caixa do
+     * `PagarTrabalho`, que diz «o valor fica connosco até confirmar». Quem paga
+     * pela plataforma e quem paga em notas lêem coisas diferentes, porque lhes
+     * acontecem coisas diferentes. Ver `pagamento-na-plataforma.ts`.
+     */
+    const promessa = promessaDaForma(acordada.formaDePagamento);
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
@@ -386,13 +394,14 @@ export default function PropostasRecebidas({
               precisaFatura={precisaFatura}
               telefoneSugerido={telefoneDoCliente}
               soParaVer={soParaVer}
+              formaDePagamento={acordada.formaDePagamento ?? null}
             />
           )}
         {/* ── O que falta acontecer ───────────────────────────────────────── */}
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
             <p className="text-xs leading-relaxed text-emerald-700">
-              {PROMESSA.clienteEmCurso.replaceAll("{PRO}", acordada.profissionalNome)}
+              {promessa.clienteEmCurso.replaceAll("{PRO}", acordada.profissionalNome)}
             </p>
             {acordada.profissionalTelefone && (
               <a
@@ -450,7 +459,7 @@ export default function PropostasRecebidas({
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
               )}
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-              {PROMESSA.botaoDeConfirmar}
+              {promessa.botaoDeConfirmar}
             </button>
 
             {acordada.diasAteLibertar != null && (
@@ -465,7 +474,7 @@ export default function PropostasRecebidas({
         {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
           <>
             <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
-              {PROMESSA.depoisDeConfirmar}
+              {promessa.depoisDeConfirmar}
             </p>
 
             {/* A avaliação, depois de confirmar e só depois.
@@ -652,18 +661,14 @@ export default function PropostasRecebidas({
                     </p>
                   )}
                   {/* O distintivo está sempre à vista, e não ao fim de cinco
-                      propostas — não pode ser uma descoberta tardia. */}
+                      propostas — não pode ser uma descoberta tardia.
+
+                      «EMITE FATURA / NÃO EMITE FATURA» SAIU — 29-09-2026.
+                      Desde 22-09-2026 a factura ao cliente é emitida pela
+                      Miragem Dourada, seja qual for o profissional: a etiqueta
+                      punha o cliente a escolher por uma coisa que já não
+                      depende de quem escolhe. */}
                   <div className="mt-1 flex flex-wrap gap-1.5">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        n.emiteFatura
-                          ? "bg-blue-50 text-blue-700"
-                          : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      <FileText className="mr-1 inline h-3 w-3" aria-hidden="true" />
-                      {n.emiteFatura ? "emite fatura" : "não emite fatura"}
-                    </span>
                     {n.guiaVerificada && (
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                         <BadgeCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />

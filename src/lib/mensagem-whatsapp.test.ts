@@ -80,7 +80,22 @@ describe("mensagemWhatsApp", () => {
 
   it("o preço só aparece quando existe", () => {
     expect(mensagemWhatsApp(base)).not.toContain("€");
-    expect(mensagemWhatsApp({ ...base, precoFinalIva: "167.99" })).toContain("167,99 €");
+    expect(mensagemWhatsApp({ ...base, precoFinal: "160" })).toContain("€");
+  });
+
+  /*
+   * SEM IVA, JÁ COM A TAXA — E O IVA À PARTE. 29-09-2026.
+   *
+   * Dizia «O orçamento é de 196,80 € com IVA»: o preço aprovado × 1,23, feito
+   * à mão, sem a taxa da plataforma, e o único sítio do produto a anunciar um
+   * valor com imposto. Agora diz o que o resto diz, com as contas de todos.
+   */
+  it("diz o preço sem IVA e já com a taxa, e o IVA numa frase à parte", () => {
+    const m = mensagemWhatsApp({ ...base, precoFinal: "160" });
+    // 160 + 5 % de taxa = 168,00; com factura, mais 23 % = 206,64.
+    expect(m).toContain("O orçamento é de 168,00 €, sem IVA e já com a taxa da plataforma.");
+    expect(m).toContain("Com factura acrescem 23 % de IVA: 206,64 €.");
+    expect(m).not.toContain("com IVA.");
   });
 
   /**

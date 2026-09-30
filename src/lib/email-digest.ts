@@ -6,7 +6,11 @@
 
 import { Resend } from "resend";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
-import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
+import { SITE_URL, BUSINESS_PHONE, BUSINESS_EMAIL } from "./seo-data";
+import { telefoneLegivel } from "./telefone-legivel";
+
+/** «+351 931 632 622», como se lê — o `tel:` continua com o número cru. 29-09-2026. */
+const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:           "Recolha de móveis",
@@ -87,7 +91,7 @@ function buildHtml(p: SendWeeklyDigestParams): string {
           <td style="background:#f4f7fa;padding:20px 36px;border-top:1px solid #e8ecf0;">
             <p style="margin:0;font-size:12px;color:#a0aec0;text-align:center;">
               CLYON &mdash; Seixal, Portugal &nbsp;|&nbsp;
-              <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${BUSINESS_PHONE}</a>
+              <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${TELEFONE_PARA_LER}</a>
             </p>
             <p style="margin:6px 0 0;font-size:11px;color:#cbd5e0;text-align:center;">
               Recebe este resumo porque tem o 'Resumo semanal' activo. Pode desligá-lo na sua conta.
@@ -114,6 +118,8 @@ export async function sendWeeklyDigestEmail(params: SendWeeklyDigestParams): Pro
   try {
     const { error } = await resend.emails.send({
       from:    "CLYON <noreply@clyon.pt>",
+      // Quem responde ao resumo fala com alguém, e não com o `noreply`.
+      replyTo: BUSINESS_EMAIL,
       to:      [params.to],
       subject: `O seu resumo semanal CLYON — ${params.orders.length} ${params.orders.length === 1 ? "pedido activo" : "pedidos activos"}`,
       html:    legivelNoResumo(buildHtml(params)),

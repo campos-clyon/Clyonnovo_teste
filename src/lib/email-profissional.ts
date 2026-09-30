@@ -59,11 +59,21 @@ export type AvisoDePedido = {
   /** Quanto ele recebe se fechar por esse valor, já líquido. */
   recebeLiquido: number | null;
   distanciaKm: number | null;
-  precisaFatura: boolean;
+  /*
+   * SEM `precisaFatura` — 29-09-2026. O email dizia «Precisa de: fatura», e a
+   * factura deixou de ser coisa do profissional a 22-09-2026: é a parceira da
+   * CLYON que a emite ao cliente. Pôr-lha como requisito era pedir-lhe um
+   * documento que ninguém lhe vai pedir.
+   */
   precisaGuiaTransporte: boolean;
   /** O endereço deste deployment, tirado do pedido HTTP. */
   baseUrl?: string;
 };
+
+/** O que o trabalho exige de quem o faz — hoje, só a guia de transporte. */
+function documentosExigidos(p: AvisoDePedido): string[] {
+  return p.precisaGuiaTransporte ? ["guia de transporte"] : [];
+}
 
 function euros(valor: number | null): string | null {
   if (valor == null || !Number.isFinite(valor)) return null;
@@ -109,10 +119,7 @@ function montarTexto(p: AvisoDePedido): string {
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const quer = euros(p.valorDesejadoCliente);
   const recebe = euros(p.recebeLiquido);
-  const documentos = [
-    p.precisaFatura ? "fatura" : null,
-    p.precisaGuiaTransporte ? "guia de transporte" : null,
-  ].filter(Boolean);
+  const documentos = documentosExigidos(p);
 
   const linhas = [
     "CLYON",
@@ -143,10 +150,7 @@ function montarHtml(p: AvisoDePedido): string {
   const quer = euros(p.valorDesejadoCliente);
   const recebe = euros(p.recebeLiquido);
 
-  const documentos = [
-    p.precisaFatura ? "fatura" : null,
-    p.precisaGuiaTransporte ? "guia de transporte" : null,
-  ].filter(Boolean);
+  const documentos = documentosExigidos(p);
 
   return `<!DOCTYPE html>
 <html lang="pt">

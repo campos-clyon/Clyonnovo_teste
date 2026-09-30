@@ -1,7 +1,9 @@
 import type { Proposta } from "./negociacao";
 import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
 
-import { PROMESSA } from "./pagamento-na-plataforma";
+import { promessaDaForma } from "./pagamento-na-plataforma";
+import { FORMA_EM_PALAVRAS, lerForma, type FormaDePagamento } from "./forma-de-pagamento";
+import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 
 /** «23 %», escrito uma vez a partir da constante. */
@@ -60,12 +62,23 @@ export type PropostaParaOCliente = {
   semIva: number;
   /** O que pagaria COM FACTURA: o de cima mais o imposto. Fica numa linha só. */
   total: number;
+  /**
+   * COMO O CLIENTE PAGA — 29-09-2026.
+   *
+   * Em dinheiro são duas entregas: o serviço em notas ao profissional e a
+   * taxa à CLYON por referência. Um número só lia-se como um pagamento só, e
+   * a linha que explica para que serve confirmar dizia-lhe o que acontece a
+   * um dinheiro que nunca passa por nós.
+   */
+  forma: FormaDePagamento;
 };
 
 type NegociacaoParaLer = {
   estado: string;
   profissionalNome: string;
   propostasJson: string | null;
+  /** Como o cliente paga esta negociação. Nula = na plataforma. */
+  formaDePagamento?: string | null;
   /** O regime de quem factura — decide se ao valor acresce IVA. */
   regimeIva?: string | null;
   /*
@@ -138,6 +151,7 @@ export function propostasParaOCliente(
       taxaCliente: taxasDaNegociacao(n).cliente,
       semIva: conta.semIva,
       total: conta.total,
+      forma: lerForma(n.formaDePagamento),
     });
   }
 
@@ -179,9 +193,22 @@ export function trabalhoFechado(
       taxaCliente: taxasDaNegociacao(n).cliente,
       semIva: conta.semIva,
       total: conta.total,
+      forma: lerForma(n.formaDePagamento),
     };
   }
   return null;
+}
+
+/**
+ * EM DINHEIRO, A FRASE DAS DUAS ENTREGAS — a mesma de todos os canais.
+ *
+ * É `totalEmPalavras`, e não uma terceira redacção: o WhatsApp do assistente
+ * e o ecrã do fecho já a dizem assim. A conta do cliente só lê a taxa DELE
+ * (`contaDoCliente`), e é essa que a proposta guarda — a do profissional,
+ * em dinheiro, é zero e não entra aqui.
+ */
+function emDinheiroEmPalavras(p: PropostaParaOCliente): string {
+  return totalEmPalavras(p.valor, null, { cliente: p.taxaCliente, profissional: 0 }, "dinheiro");
 }
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
@@ -313,8 +340,19 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
         ` ${euros(d.fechado.semIva)} a pagar.`,
     );
-    const facturaDoFechado = comFactura(d.fechado);
-    if (facturaDoFechado) linhas.push(facturaDoFechado);
+    if (d.fechado.forma === "dinheiro") {
+      /*
+        EM DINHEIRO SÃO DUAS ENTREGAS — 29-09-2026. O número de cima é o total
+        dele, mas não vai todo para o mesmo sítio: o serviço em notas ao
+        profissional e a taxa à CLYON por referência. É a frase que o assistente
+        diz no mesmo momento, e a factura, em dinheiro, é só da taxa — vem lá
+        dentro, em vez da linha dos 23 % sobre tudo.
+      */
+      linhas.push(emDinheiroEmPalavras(d.fechado));
+    } else {
+      const facturaDoFechado = comFactura(d.fechado);
+      if (facturaDoFechado) linhas.push(facturaDoFechado);
+    }
     /*
       E COMO É QUE ESTE NÚMERO FOI FEITO.
 
@@ -324,9 +362,8 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     */
     linhas.push(ORCAMENTO_A_DISTANCIA);
     linhas.push("");
-    linhas.push(
-      PROMESSA.whatsappConfirmar,
-    );
+    // Para que serve confirmar depende de por onde passa o dinheiro.
+    linhas.push(promessaDaForma(d.fechado.forma).whatsappConfirmar);
   } else if (quantas === 0) {
     /*
      * SEM PROPOSTAS TAMBÉM SE ESCREVE — e diz-se a verdade.
@@ -380,7 +417,21 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * percentagem era a única coisa na mensagem que o convidava a fazer uma
      * conta — e não havia conta nenhuma para fazer.
      */
-    linhas.push(`Valores sem IVA. Com factura acrescem ${POR_CENTO} de IVA.`);
+    /*
+     * EM DINHEIRO, QUEM RECEBE O QUÊ — e a factura é só da taxa. 29-09-2026.
+     *
+     * O serviço vai em notas ao profissional e não passa pela CLYON; o que se
+     * factura é o que ela cobra. «Com factura acrescem 23 % de IVA», dito a
+     * quem escolheu dinheiro, anunciava imposto sobre um valor que ninguém vai
+     * facturar. As negociações de um pedido nascem todas com a forma que o
+     * cliente escolheu, por isso a lista é de uma forma só.
+     */
+    const emDinheiro = d.propostas.every((p) => p.forma === "dinheiro");
+    linhas.push(
+      emDinheiro
+        ? `Valores sem IVA. ${FORMA_EM_PALAVRAS.dinheiro.cliente} Com factura, acrescem ${POR_CENTO} de IVA sobre a taxa da CLYON.`
+        : `Valores sem IVA. Com factura acrescem ${POR_CENTO} de IVA.`,
+    );
     /*
      * COMO É QUE ESTES NÚMEROS FORAM FEITOS, na linha a seguir aos números.
      *

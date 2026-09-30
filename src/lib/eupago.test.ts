@@ -91,9 +91,11 @@ describe("a porta: quem pode ser cobrado", () => {
   });
 
   /*
-   * O cliente leu, em todos os ecrãs, que paga ao profissional no fim.
-   * Cobrá-lo antes de o produto mudar de discurso é ficar-lhe com o dinheiro
-   * depois de lhe termos escrito o contrário.
+   * «Fica só o backoffice» — decisão do dono a 21-09-2026: em produção o
+   * cliente não paga sozinho pelo link; as referências geram-se no
+   * backoffice. (A razão escrita aqui até 29-09-2026 era que os ecrãs diziam
+   * ao cliente que pagava ao profissional no fim — deixaram de o dizer a quem
+   * paga pela plataforma, e a porta continua fechada pela decisão.)
    */
   it("em produção, com a plataforma a não cobrar, a porta está fechada", () => {
     const r = podeCobrar(configDe({ EUPAGO_API_KEY: "x", EUPAGO_AMBIENTE: "producao" }), false);

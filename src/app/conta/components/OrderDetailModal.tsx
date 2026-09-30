@@ -184,10 +184,21 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
         id: n.id,
         estado: n.estado,
         valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+        /*
+         * AS TAXAS E A FORMA DESTA NEGOCIAÇÃO — 29-09-2026.
+         *
+         * Vinham da base e morriam aqui: o ecrã fazia a conta com as taxas de
+         * origem e lia toda a gente como quem paga pela plataforma. A quem
+         * escolheu dinheiro dizia-se 5 % de taxa em vez de 11 %, e que o
+         * valor ficava com a CLYON — o mesmo trabalho com outro número e
+         * outra promessa do que no link do email.
+         */
+        taxaCliente: n.taxaCliente ?? null,
+        taxaProfissional: n.taxaProfissional ?? null,
+        formaDePagamento: n.formaDePagamento ?? null,
         propostas: parseHistoryLike(n.propostasJson),
         profissionalNome: n.profissionalNome,
         profissionalTelefone: n.profissionalTelefone,
-        emiteFatura: Number(n.emiteFatura) === 1,
         regimeIva: String(n.regimeIva ?? "isento"),
         guiaVerificada: n.guiaVerificadaEm != null,
         fase: faseDoTrabalho({

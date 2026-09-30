@@ -19,11 +19,17 @@ import type { AvisoAntesDeCotar } from "./profissional-elegivel";
  *      caixa. A frase tem de dizer onde se corrige, senão ele carrega em
  *      «continuar» todas as vezes e o campo fica errado para sempre.
  *
- * AS DUAS NÃO PESAM O MESMO, e o texto não finge que sim. A fatura é uma
- * preferência do cliente: continuar é assumir um compromisso comercial. A
+ * AS DUAS NÃO PESAVAM O MESMO, e o texto não fingia que sim. A fatura era uma
+ * preferência do cliente: continuar era assumir um compromisso comercial. A
  * guia de transporte de resíduos é uma exigência legal de quem transporta —
  * continuar sem ela não é um risco de negócio, é um risco de coima, e para o
  * cliente também.
+ *
+ * O AVISO DA FATURA SAIU — 29-09-2026. Desde 22-09-2026 a factura ao cliente
+ * é emitida pela Miragem Dourada, parceira da CLYON, seja qual for o
+ * profissional. A ficha dizia-lhe «o cliente vai esperar fatura no fim» e
+ * pedia-lhe «Emito fatura — continuar»: um compromisso que já não é dele.
+ * Ver `avisosDoTrabalho` em `profissional-elegivel.ts`.
  */
 
 export type FichaDoAviso = {
@@ -42,21 +48,6 @@ export type FichaDoAviso = {
 };
 
 export const FICHA_DO_AVISO: Record<AvisoAntesDeCotar, FichaDoAviso> = {
-  cliente_quer_fatura: {
-    curto: "O cliente pediu fatura",
-    titulo: "Este cliente pediu fatura — e no seu perfil diz que não emite",
-    corpo:
-      "Ao registar o pedido, o cliente marcou que precisa de fatura com NIF. " +
-      "No seu perfil, a emissão de fatura está por marcar. " +
-      "Pode avançar com a proposta na mesma, mas fica o compromisso: se fechar " +
-      "o trabalho, o cliente vai esperar fatura no fim. Não conseguir emiti-la " +
-      "nessa altura costuma acabar em trabalho feito e por pagar.",
-    ondeSeCorrige:
-      "Se emite fatura e só não marcou a caixa, corrija em Perfil › Faturação e IVA — " +
-      "leva menos de um minuto e este aviso deixa de aparecer.",
-    botao: "Emito fatura — continuar",
-    gravidade: "aviso",
-  },
   trabalho_exige_guia: {
     curto: "Exige guia de transporte",
     titulo: "Este trabalho exige guia de transporte de resíduos",

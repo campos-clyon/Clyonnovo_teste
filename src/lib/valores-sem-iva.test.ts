@@ -104,8 +104,14 @@ describe("os ecrãs do cliente mostram esse número", () => {
   it("e a carteira, que é o mesmo dinheiro contado outra vez", () => {
     // A carteira a dizer 361,20 € sobre um trabalho anunciado a 294,00 € era
     // a terceira versão do mesmo preço — e a que ninguém tinha visto antes.
+    //
+    // MUDOU A FORMA A 29-09-2026, e não a regra: continua a ser o número sem
+    // IVA, agora pela função do preço do cliente (`precoParaOCliente`, que é
+    // o `semIva` da conta) e com as taxas DO TRABALHO — em dinheiro a taxa do
+    // cliente é outra, e a carteira dizia-lhe a de origem.
     const CARTEIRA = soCodigo(ler("src/lib/carteira-do-cliente.ts"));
-    expect(CARTEIRA).toContain("contaDoCliente(acordado).semIva");
+    expect(CARTEIRA).toContain("precoParaOCliente(acordado, taxasDaNegociacao(t))");
+    expect(CARTEIRA).not.toContain(".total");
   });
 });
 

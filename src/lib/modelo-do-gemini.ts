@@ -18,10 +18,9 @@
  * dar por isso — e dar por isso levou dois dias e uma cliente perdida.
  *
  * QUEM USA ISTO é quem fala pelo `@google/generative-ai`, com nomes secos.
- * As rotas do chat do simulador falam pelo SDK `ai`, que exige o nome com
- * fornecedor à frente (`google/…`) — essas têm o `CHAT_MODEL` só delas, e de
- * propósito: partilhar a variável fazia com que arranjar o WhatsApp partisse
- * o simulador.
+ * Havia também duas rotas de chat do simulador, pelo SDK `ai`, com um
+ * `CHAT_MODEL` só delas; saíram a 29-09-2026 — nenhum ecrã as chamava, e uma
+ * rota pública de IA que ninguém usa só serve a quem a quiser abusar.
  */
 
 /** O que a Google mandou usar, na mensagem de erro dela própria. */

@@ -123,18 +123,19 @@ describe("avaliarElegibilidade", () => {
   });
 
   describe("fatura", () => {
-    it("JÁ NÃO esconde o pedido — avisa quem vai cotar", () => {
+    it("NÃO esconde o pedido — e já nem avisa quem vai cotar", () => {
       /*
-       * MUDOU A 14-09-2026. Era um filtro cego: quem não tinha a caixa da
-       * fatura marcada nunca via o pedido, e nem sabia que ele existira. A
-       * maioria emite fatura e simplesmente nunca passou por aquele campo do
-       * perfil — e o cliente ficava com menos propostas por causa disso.
+       * MUDOU DUAS VEZES. A 14-09-2026 deixou de ser um filtro cego (quem não
+       * tinha a caixa marcada nunca via o pedido) e passou a um aviso antes de
+       * cotar. A 29-09-2026 o aviso saiu também: desde 22-09-2026 a factura
+       * ao cliente é emitida pela Miragem Dourada, parceira da CLYON, seja
+       * qual for o profissional — já não há nada a combinar com ele sobre ela.
        */
       const p = pedido({ precisaFatura: true });
       const r = avaliarElegibilidade(p, pro({ emiteFatura: false }));
       expect(r.elegivel).toBe(true);
       expect(r.motivos).not.toContain("nao_emite_fatura");
-      expect(r.avisos).toContain("cliente_quer_fatura");
+      expect(r.avisos).toEqual([]);
       expect(avaliarElegibilidade(p, pro({ emiteFatura: true })).avisos).toEqual([]);
     });
 
@@ -212,11 +213,12 @@ describe("avaliarElegibilidade", () => {
       ]),
     );
     /*
-     * A fatura saiu desta lista a 14-09-2026: os MOTIVOS escondem o pedido, os
-     * AVISOS aparecem a quem o vai cotar. Ela mudou de lista, não desapareceu.
+     * A fatura saiu desta lista a 14-09-2026 (os MOTIVOS escondem o pedido, os
+     * AVISOS aparecem a quem o vai cotar) e da dos avisos a 29-09-2026: a
+     * factura ao cliente passou a ser da parceira da CLYON.
      */
     expect(r.motivos).not.toContain("nao_emite_fatura");
-    expect(r.avisos).toContain("cliente_quer_fatura");
+    expect(r.avisos).toEqual([]);
   });
 });
 

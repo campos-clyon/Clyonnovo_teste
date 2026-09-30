@@ -1,4 +1,6 @@
 import { NOME_DO_METODO, type MetodoDePagamento } from "./eupago";
+import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
  * A MENSAGEM QUE SE MANDA AO CLIENTE COM A REFERÊNCIA.
@@ -102,7 +104,16 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
   }
 
   if (d.comFactura) {
-    linhas.push("", "Este valor já inclui os 23 % de IVA, para lhe podermos passar factura.");
+    /*
+     * QUEM PASSA A FACTURA — 29-09-2026. Dizia «para lhe podermos passar
+     * factura», como se fosse a CLYON a emiti-la. Desde 22-09-2026 é a
+     * parceira, e a factura chega com o nome dela: diz-se antes, para ele não
+     * a estranhar.
+     */
+    linhas.push(
+      "",
+      `Este valor já inclui os ${Math.round(TAXA_IVA * 100)} % de IVA. ${QUEM_FACTURA_EM_PALAVRAS}`,
+    );
   }
 
   linhas.push(

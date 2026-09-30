@@ -29,18 +29,19 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
       `A comissão é de ${Math.round(TAXA_PROFISSIONAL * 100)} % sobre o valor acordado, e o ` +
       `cliente paga mais ${Math.round(TAXA_CLIENTE * 100)} % por cima. Nunca tem de fazer ` +
       "contas: os valores que vê na sua conta já são líquidos, com a comissão descontada. " +
-      "O que aparece é o que recebe.",
+      "O que aparece é o que recebe. Se o cliente pagar em dinheiro, no local, recebe o " +
+      "valor acordado por inteiro: a CLYON não lhe desconta nada e cobra a parte dela ao cliente.",
   },
   {
     pergunta: "Quando é que recebo o dinheiro?",
     /*
-     * ESTA RESPOSTA ESTAVA A PROMETER O QUE NÃO EXISTE.
+     * ESTA RESPOSTA JÁ PROMETEU O QUE NÃO EXISTIA, E DEPOIS O CONTRÁRIO.
      *
-     * Dizia que o cliente paga à CLYON no momento em que contrata e que o
-     * valor fica cativo. Não fica: não há hoje nenhuma forma de o cliente
-     * pagar à plataforma. Era a última frase do produto ainda a descrever a
-     * caução — e logo a que um profissional lê antes de decidir se vai ao
-     * trabalho. Passa a ler a fonte única, como as outras nove.
+     * Primeiro dizia que o cliente pagava à CLYON ao contratar e que o valor
+     * ficava cativo, quando não havia forma nenhuma de pagar à plataforma.
+     * Depois passou a dizer que quem pagava era sempre o cliente, no fim — e
+     * desde 17-09-2026 quem paga pela plataforma paga à CLYON. Lê a fonte
+     * única, que descreve as duas formas (29-09-2026).
      */
     resposta:
       PROMESSA.proComoRecebe +
@@ -49,25 +50,43 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   },
   {
     pergunta: "Como levanto o saldo?",
+    /*
+     * «UM A DOIS DIAS ÚTEIS» ERA UMA PROMESSA SOBRE O BANCO — 29-09-2026.
+     *
+     * O que é nosso é tratar do pedido em até 24 horas (decisão de
+     * 17-09-2026). O que vem a seguir é do banco, e diz-se como tal — é a
+     * mesma frase que o ecrã de transferir já diz.
+     */
     resposta:
       "Em A minha carteira › Transferir. Indique primeiro o IBAN em Conta bancária. O mínimo " +
-      `por transferência é de ${MINIMO_PARA_LEVANTAR} €, e costuma chegar em um a dois dias ` +
-      "úteis. Enquanto o pedido estiver a ser processado aparece como «a caminho».",
+      `por transferência é de ${MINIMO_PARA_LEVANTAR} €. Tratamos do pedido de levantamento em ` +
+      "até 24 horas; o banco pode demorar mais um dia útil a mostrar a transferência. Enquanto " +
+      "o pedido estiver a ser processado aparece como «a caminho».",
   },
   {
     pergunta: "Porque é que não recebo pedidos?",
+    /*
+     * A FATURA SAIU DAQUI — 29-09-2026. Desde 22-09-2026 quem factura ao
+     * cliente é a parceira da CLYON, e um pedido com factura chega a quem faz
+     * o serviço e cobre a zona, emita ele factura ou não.
+     */
     resposta:
       "Um pedido só lhe aparece se for de um serviço que faz e de uma zona onde trabalha. " +
       "Confirme em Serviços e zonas: apertar o raio ou tirar uma categoria faz o trabalho " +
-      "deixar de aparecer sem nada avisar. Pedidos que exigem guia de transporte só vão para " +
-      "quem tem a guia verificada, e pedidos com fatura só para quem emite.",
+      "deixar de aparecer sem nada avisar. Pedidos que exigem guia de transporte mostram um " +
+      "aviso a quem não tem a guia verificada, antes de propor.",
   },
   {
     pergunta: "Como funcionam as propostas?",
+    /*
+     * «O QUE MANTÉM O PAGAMENTO GARANTIDO» SAIU — 29-09-2026. Não há garantia
+     * de pagamento nenhuma a prometer: o que a regra dos valores sem mensagens
+     * mantém é o acordo escrito.
+     */
     resposta:
       `Cada lado tem ${MAX_PROPOSTAS_POR_LADO} propostas, e uma proposta fica de pé até ` +
       "alguém lhe responder. Só valores, sem mensagens — é isso que impede combinações " +
-      "por fora e o que mantém o pagamento garantido. Aceitar não fecha o trabalho: o " +
+      "por fora e o que mantém o acordo por escrito. Aceitar não fecha o trabalho: o " +
       "cliente ainda tem de o contratar.",
   },
   {

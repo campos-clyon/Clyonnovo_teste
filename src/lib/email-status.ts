@@ -6,8 +6,15 @@
 
 import { Resend } from "resend";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
-import { SITE_URL, BUSINESS_PHONE } from "./seo-data";
+import { SITE_URL, BUSINESS_PHONE, BUSINESS_EMAIL } from "./seo-data";
 import { e } from "./escapar-html";
+import { telefoneLegivel } from "./telefone-legivel";
+
+/**
+ * O telefone como se lê — «+351 931 632 622» — e não os doze dígitos colados
+ * que o `tel:` precisa. O link continua a levar o número cru. 29-09-2026.
+ */
+const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:           "Recolha de móveis",
@@ -24,13 +31,27 @@ const SERVICE_LABELS: Record<string, string> = {
 
 // Só estes estados geram email — os internos do backoffice (sem_assistente,
 // atribuido, pendente…) são ruído para o cliente e não disparam nada.
+/*
+ * QUEM FAZ O TRABALHO É O PROFISSIONAL — 29-09-2026.
+ *
+ * Quatro destas frases falavam como uma empresa que executa: «a nossa equipa
+ * está a tratar do seu serviço», «entraremos em contacto para os detalhes
+ * finais», «vamos avançar com o agendamento». A CLYON é a plataforma: a equipa
+ * dela confere o pedido, acompanha e resolve o que correr mal; quem vai lá e
+ * combina o dia é o profissional que o cliente escolheu.
+ *
+ * O que cada estado quer dizer, no backoffice: `em_analise` é o pedido a ser
+ * conferido antes de ir aos profissionais; `aprovado` é o orçamento do fluxo
+ * antigo, que segue por email com o link para o confirmar; `confirmado` é o
+ * pedido confirmado; `em_execucao`/`em_curso` é o trabalho a decorrer.
+ */
 const STATUS_MESSAGES: Record<string, { title: string; body: string; color: string }> = {
-  em_analise:  { title: "Pedido em análise",   body: "A nossa equipa está a analisar o seu pedido e confirma os detalhes consigo em breve.", color: "#d97706" },
-  aprovado:    { title: "Orçamento aprovado",  body: "O orçamento do seu pedido foi aprovado. Vamos avançar com o agendamento.",             color: "#0891b2" },
-  confirmado:  { title: "Serviço confirmado",  body: "O seu serviço está confirmado. Entraremos em contacto para os detalhes finais.",       color: "#059669" },
+  em_analise:  { title: "Pedido em análise",   body: "Estamos a conferir o seu pedido antes de o enviar aos profissionais da sua zona.",      color: "#d97706" },
+  aprovado:    { title: "Orçamento aprovado",  body: "O orçamento do seu pedido foi aprovado. Pode vê-lo e confirmá-lo pelo link que lhe enviámos por email.", color: "#0891b2" },
+  confirmado:  { title: "Serviço confirmado",  body: "O seu pedido está confirmado. O profissional combina os detalhes consigo.",            color: "#059669" },
   agendado:    { title: "Serviço agendado",    body: "O seu serviço foi agendado. Pode consultar a data na sua conta CLYON.",                color: "#7c3aed" },
-  em_execucao: { title: "Serviço em curso",    body: "A nossa equipa está a tratar do seu serviço.",                                          color: "#ea580c" },
-  em_curso:    { title: "Serviço em curso",    body: "A nossa equipa está a tratar do seu serviço.",                                          color: "#ea580c" },
+  em_execucao: { title: "Serviço em curso",    body: "O profissional que escolheu está a tratar do seu serviço.",                             color: "#ea580c" },
+  em_curso:    { title: "Serviço em curso",    body: "O profissional que escolheu está a tratar do seu serviço.",                             color: "#ea580c" },
   concluido:   { title: "Serviço concluído",   body: "O seu serviço foi concluído. Obrigado por escolher a CLYON! Pode avaliar na sua conta.", color: "#16a34a" },
   cancelado:   { title: "Pedido cancelado",    body: "O seu pedido foi cancelado. Se tiver dúvidas, fale connosco.",                          color: "#64748b" },
   rejeitado:   { title: "Pedido cancelado",    body: "O seu pedido foi cancelado. Se tiver dúvidas, fale connosco.",                          color: "#64748b" },
@@ -101,7 +122,7 @@ function buildHtml(p: SendStatusEmailParams): string {
           <td style="background:#f4f7fa;padding:20px 36px;border-top:1px solid #e8ecf0;">
             <p style="margin:0;font-size:12px;color:#a0aec0;text-align:center;">
               CLYON &mdash; Seixal, Portugal &nbsp;|&nbsp;
-              <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${BUSINESS_PHONE}</a>
+              <a href="tel:${BUSINESS_PHONE}" style="color:#a0aec0;">${TELEFONE_PARA_LER}</a>
             </p>
             <p style="margin:6px 0 0;font-size:11px;color:#cbd5e0;text-align:center;">
               Recebe este email porque tem as notificações de estado activas. Pode desligá-las na sua conta.
@@ -133,6 +154,8 @@ export async function sendOrderStatusEmail(params: SendStatusEmailParams): Promi
   try {
     const { error } = await resend.emails.send({
       from:    "CLYON <noreply@clyon.pt>",
+      // Quem responde a um aviso de estado fala com alguém, e não com o `noreply`.
+      replyTo: BUSINESS_EMAIL,
       to:      [params.to],
       subject: `${msg.title} — Pedido #${params.orderId} | CLYON`,
       html:    legivelNoResumo(buildHtml(params)),

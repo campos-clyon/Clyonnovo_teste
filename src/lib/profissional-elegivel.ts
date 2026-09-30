@@ -41,17 +41,28 @@ export type MotivoDeExclusao =
  * Agora QUEM ESCOLHE É QUEM PROPÕE, com o aviso à frente dos olhos. Só o raio
  * e as categorias escondem um pedido — as duas coisas que são mesmo sobre se
  * o trabalho lhe serve.
+ *
+ * ⚠️ E A FATURA JÁ NEM AVISA — 29-09-2026. Desde 22-09-2026 a factura ao
+ * cliente é emitida pela Miragem Dourada, a parceira da CLYON, seja qual for o
+ * profissional («vamos ignorar os pros»). Perguntar-lhe se emite fatura antes
+ * de propor era pedir-lhe um compromisso que já não é dele — e, pior, dizer-
+ * -lhe que «o cliente vai esperar fatura no fim» de alguém que não a passa.
+ * Fica a guia, que é lei de quem transporta, e o dinheiro no local.
  */
 import type { FormaDePagamento } from "./forma-de-pagamento";
 
 export type AvisoAntesDeCotar =
-  | "cliente_quer_fatura"
   | "trabalho_exige_guia"
   /** O cliente escolheu pagar em dinheiro, no local — ele recebe o acordado inteiro, em mão. */
   | "cliente_paga_em_dinheiro";
 
 export type PedidoParaDistribuir = {
   serviceType: string | null;
+  /**
+   * O cliente pediu factura. Já não decide nada aqui (ver a nota de cima): a
+   * factura é da parceira. Fica no tipo porque a distribuição o traz e o
+   * mostra no diagnóstico do pedido.
+   */
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
   /** Como o cliente paga. Em falta, na plataforma. Ver `forma-de-pagamento.ts`. */
@@ -73,6 +84,7 @@ export type ProfissionalParaAvaliar = {
   raioKm: number | null;
   /** Zonas que cobre, em minúsculas, para quando não há distância medida. */
   zonas: string[];
+  /** O que ele declara no perfil. Já não esconde nem avisa de nada — ver a nota de cima. */
   emiteFatura: boolean;
   emiteGuiaTransporte: boolean;
   /**
@@ -169,6 +181,8 @@ export function avaliarElegibilidade(
    *
    * Passam a ser AVISOS, mostrados a quem vai cotar, antes de cotar. Quem
    * decide é quem assume o trabalho — mas decide a ver, e não sem saber.
+   * (A fatura deixou depois de avisar também, a 29-09-2026: ver
+   * `avisosDoTrabalho`.)
    */
   return { elegivel: motivos.length === 0, motivos, avisos: avisosDoTrabalho(pedido, profissional) };
 }
@@ -183,17 +197,17 @@ export function avaliarElegibilidade(
  * outra — e a que ninguém está a ver é a que fica errada.
  */
 export function avisosDoTrabalho(
-  pedido: Pick<PedidoParaDistribuir, "precisaFatura" | "precisaGuiaTransporte" | "formaDePagamento">,
-  profissional: Pick<
-    ProfissionalParaAvaliar,
-    "emiteFatura" | "emiteGuiaTransporte" | "guiaVerificadaEm"
-  >,
+  pedido: Pick<PedidoParaDistribuir, "precisaGuiaTransporte" | "formaDePagamento">,
+  profissional: Pick<ProfissionalParaAvaliar, "emiteGuiaTransporte" | "guiaVerificadaEm">,
 ): AvisoAntesDeCotar[] {
   const avisos: AvisoAntesDeCotar[] = [];
 
-  if (pedido.precisaFatura && !profissional.emiteFatura) {
-    avisos.push("cliente_quer_fatura");
-  }
+  /*
+   * A FATURA SAIU DAQUI — 29-09-2026. Pedido com factura e profissional sem a
+   * caixa marcada dava «cliente_quer_fatura». Desde 22-09-2026 quem factura
+   * ao cliente é a parceira da CLYON: o pedido e o profissional deixaram de
+   * ter alguma coisa a combinar sobre isso.
+   */
 
   /*
    * O DINHEIRO É UM AVISO, NUNCA UM FILTRO — 21-09-2026.

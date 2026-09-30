@@ -998,10 +998,14 @@ export default function AdminPagamentosPanel() {
             {!ligacao.aberta && (
               <p className="flex items-start gap-1.5 text-amber-300">
                 <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {/*
+                  A RAZÃO MUDOU A 29-09-2026: dizia «os ecrãs dizem-lhe hoje que
+                  paga ao profissional no fim», e deixaram de o dizer a quem paga
+                  pela plataforma. O que está fechado é só a caixa do cliente.
+                */}
                 <span>
-                  A cobrança está fechada: em produção, o cliente só é cobrado com
-                  A_PLATAFORMA_COBRA ligado. Os ecrãs dizem-lhe hoje que paga ao profissional no
-                  fim.
+                  O cliente não paga sozinho pelo link: em produção, isso só abre com
+                  A_PLATAFORMA_COBRA ligado. As referências geram-se aqui, pedido a pedido.
                 </span>
               </p>
             )}

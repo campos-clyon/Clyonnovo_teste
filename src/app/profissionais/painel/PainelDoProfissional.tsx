@@ -40,6 +40,7 @@ import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
 import { resumoDoPerfil, faltasDaSeccao, type SeccaoComFalta } from "@/lib/perfil-por-completar";
+import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
 /**
  * O painel do profissional.
@@ -742,9 +743,15 @@ export default function PainelDoProfissional() {
         <LinhaDeMenu icone={LogOut} rotulo="Sair" tom="perigo" onClick={sair} />
       </GrupoDeLinhas>
 
+      {/*
+        A FACTURA AO CLIENTE É DA PARCEIRA — 22-09-2026. Dizia «quem executa o
+        trabalho e emite a fatura é o profissional»; a segunda metade deixou de
+        ser verdade (29-09-2026).
+      */}
       <p className="mt-6 text-center text-xs leading-relaxed text-slate-400 lg:text-left">
-        A CLYON liga clientes a profissionais independentes. Quem executa o trabalho e
-        emite a fatura é o profissional.
+        A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o
+        profissional. A factura ao cliente é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto},
+        empresa parceira da CLYON.
       </p>
     </>
   );

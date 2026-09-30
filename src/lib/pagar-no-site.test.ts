@@ -144,9 +144,10 @@ describe("a porta: ninguém é cobrado antes de a plataforma o assumir", () => {
   /*
    * ⚠️ ISTO NÃO É UMA VERIFICAÇÃO DE ESTILO.
    *
-   * Enquanto for falso, todos os ecrãs dizem ao cliente que paga ao
-   * profissional no fim do trabalho. Ligá-lo antes de as fases estarem feitas
-   * põe a plataforma a prometer uma caução que ninguém segura.
+   * Enquanto for falso, o cliente não paga sozinho pelo link: «fica só o
+   * backoffice», decisão do dono a 21-09-2026. (Até 29-09-2026 o interruptor
+   * decidia também o que os ecrãs diziam sobre o dinheiro; deixou de decidir —
+   * ver `pagamento-na-plataforma.ts`.)
    *
    * Quando for a sério, este teste muda com o interruptor — e é suposto que
    * mudar exija tocar aqui, para alguém ler isto nesse dia.

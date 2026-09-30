@@ -30,6 +30,19 @@ import { SERVICE_CATEGORIES } from "./service-categories";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { deslocamentoDeLisboa, instanteEmLisboa } from "./hora-de-lisboa";
 import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
+import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
+import { TAXA_IVA } from "./taxas-plataforma";
+
+/*
+ * QUEM FACTURA E QUANTO ACRESCE, na pergunta da factura — 29-09-2026.
+ *
+ * «Precisa de factura com NIF?» sozinha deixava a pessoa responder sem saber
+ * que a factura vem de uma empresa com outro nome e que o valor sobe 23 %.
+ * Dito na pergunta, não há surpresa no fim.
+ */
+const SE_PEDIR_FACTURA =
+  `Se sim, é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira, e acrescem ` +
+  `${Math.round(TAXA_IVA * 100)} % de IVA.`;
 
 export type PassoDaRecolha =
   | "servico"
@@ -491,7 +504,7 @@ export function perguntaDo(
     case "descricao":
       return "Conte-me o que há para levar ou fazer: quantas peças, o tamanho, e o que houver de especial.";
     case "fatura":
-      return "Precisa de factura com NIF?";
+      return `Precisa de factura com NIF? ${SE_PEDIR_FACTURA}`;
     case "confirmar":
       return resumo(dados);
   }
@@ -873,7 +886,7 @@ export function responderNaRecolha(
     }
     case "fatura": {
       const r = simOuNao(t);
-      if (!r) return { estado, resposta: "Precisa de factura? Responda sim ou não." };
+      if (!r) return { estado, resposta: `Precisa de factura? Responda sim ou não. ${SE_PEDIR_FACTURA}` };
       d.precisaFatura = r === "sim";
       break;
     }

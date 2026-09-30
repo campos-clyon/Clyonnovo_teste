@@ -2,6 +2,7 @@ import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { PROMESSA } from "./pagamento-na-plataforma";
+import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
 import type { SeccaoComFalta } from "./perfil-por-completar";
 
 /**
@@ -25,9 +26,9 @@ import type { SeccaoComFalta } from "./perfil-por-completar";
  * O prazo das propostas esteve nesta lista até 20-09-2026, e saiu porque deixou
  * de existir — ver `AS_PROPOSTAS_EXPIRAM`.
  *
- * E O DINHEIRO VEM DA `PROMESSA`. Enquanto a CLYON não cobrar o cliente, o que
- * aqui se diz é o que acontece mesmo — não uma garantia que não existe. Ver
- * `pagamento-na-plataforma.ts`.
+ * E O DINHEIRO VEM DA `PROMESSA`, que descreve as duas formas de o cliente
+ * pagar — pela plataforma e em dinheiro —, porque quem lê isto ainda não sabe
+ * qual lhe vai calhar. Ver `pagamento-na-plataforma.ts`.
  */
 
 export type PassoDoProfissional = {
@@ -89,15 +90,24 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
       `Se não disser nada, o trabalho fecha sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} ` +
       "dias — o silêncio dele não o deixa pendurado.",
   },
+  /*
+   * «RECEBE DO CLIENTE» E «A FATURA DO SERVIÇO É SUA» SAÍRAM — 29-09-2026.
+   *
+   * Desde 17-09-2026, quem paga pela plataforma paga à CLYON, e é a CLYON que
+   * lhe paga depois da confirmação; só em dinheiro é o cliente que lhe paga. E
+   * desde 22-09-2026 a factura ao cliente é da parceira. O passo dizia as duas
+   * coisas ao contrário a quem estava a decidir inscrever-se.
+   */
   {
     chave: "recebe",
-    titulo: "Recebe do cliente, e a comissão só existe se fechar",
+    titulo: "Recebe depois do trabalho feito, e a comissão só existe se fechar",
     texto:
       PROMESSA.proComoRecebe +
-      ` A comissão da CLYON é de ${percent(TAXA_PROFISSIONAL)} do valor acordado e já vem ` +
-      "descontada em todos os números que lhe mostramos: o que aparece é o que fica para si. " +
-      "Responder a pedidos não custa nada, e um orçamento que não dá em nada não lhe custa " +
-      "um cêntimo. A fatura do serviço é sua.",
+      ` Nos trabalhos pagos pela plataforma, a comissão da CLYON é de ${percent(TAXA_PROFISSIONAL)} ` +
+      "do valor acordado e já vem descontada em todos os números que lhe mostramos: o que " +
+      "aparece é o que fica para si. Responder a pedidos não custa nada, e um orçamento que " +
+      "não dá em nada não lhe custa um cêntimo. A factura ao cliente, quando ele a pede, é " +
+      `emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`,
     seccao: "banco",
   },
 ];

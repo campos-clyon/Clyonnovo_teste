@@ -20,6 +20,7 @@ import {
 import { contaDoCliente, taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
 import { baseDoPrecoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
+import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import {
   lerBase,
   notaDaCargaParaOCliente,
@@ -1867,7 +1868,13 @@ export async function aceitacaoParaOWhatsApp(dados: {
     `Boas notícias: ${dados.profissionalNome} aceitou os ${precoComBase(euros(preco), dados.base)} ` +
       `que propôs para o pedido #${dados.pedidoId}.\n\n` +
       `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
-      `Só paga depois de o trabalho estar feito e confirmado. Falta só a sua confirmação para ficar combinado.`,
+      /*
+       * COMO E QUANDO PAGA, conforme a forma que escolheu — 29-09-2026. Dizia
+       * a toda a gente «Só paga depois de o trabalho estar feito e
+       * confirmado», e a quem paga pela plataforma chega a referência logo a
+       * seguir a fechar. Ver `pagamento-na-plataforma.ts`.
+       */
+      `${promessaDaForma(forma).whatsappAntesDeAceitar} Falta só a sua confirmação para ficar combinado.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
@@ -1963,7 +1970,8 @@ export async function propostaParaOWhatsApp(dados: {
     `${dados.profissionalNome} propõe ${precoComBase(euros(preco), dados.base)} ` +
       `para ${servico} (pedido #${dados.pedidoId}).\n\n` +
       `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
-      `Só paga depois de o trabalho estar feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
+      // Como e quando paga, conforme a forma que escolheu. Ver `pagamento-na-plataforma.ts`.
+      `${promessaDaForma(forma).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },

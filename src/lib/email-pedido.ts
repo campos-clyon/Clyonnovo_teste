@@ -18,6 +18,8 @@ import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
+import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { BUSINESS_EMAIL } from "./seo-data";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -121,7 +123,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
         <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
             A CLYON liga clientes a profissionais independentes. Quem executa o
-            trabalho e emite a fatura é o profissional que escolher.
+            trabalho é o profissional que escolher. ${QUEM_FACTURA_EM_PALAVRAS}
           </p>
         </td></tr>
 
@@ -157,6 +159,8 @@ export async function enviarLinkDoPedido(p: LinkDoPedidoParams): Promise<boolean
     const resend = new Resend(chave);
     const { error } = await resend.emails.send({
       from: "CLYON <noreply@clyon.pt>",
+      // Quem responde ao email do pedido fala com alguém, e não com o `noreply`.
+      replyTo: BUSINESS_EMAIL,
       to: p.para,
       subject: `O seu pedido #${p.pedidoId} está criado`,
       html: legivelNoResumo(montarHtml(p)),

@@ -21,6 +21,8 @@
  */
 
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { comFacturaEmPalavras } from "@/lib/conta-em-palavras";
 
 const QUANDO: Record<string, string> = {
   today:     "para hoje",
@@ -68,7 +70,15 @@ export type DadosMensagem = {
   fotosNaoEnviadas?: number;
   /** Quantas fotos temos mesmo. Sem nenhuma, vale a pena pedir. */
   fotosRecebidas?: number;
-  precoFinalIva?: string | number | null;
+  /**
+   * O preço aprovado, SEM IVA e sem a taxa — o `precoFinal` da base.
+   *
+   * Era o `precoFinalIva`, e a mensagem dizia «O orçamento é de X € com IVA»:
+   * o único sítio a anunciar um preço com imposto, feito à mão e sem a taxa.
+   * Desde 29-09-2026 diz o preço como em todo o lado — sem IVA, já com a taxa
+   * — e o que acresce com factura, numa linha à parte.
+   */
+  precoFinal?: string | number | null;
 };
 
 /**
@@ -110,9 +120,14 @@ export function mensagemWhatsApp(d: DadosMensagem): string {
   }
 
   // Valor, só quando já está fechado
-  const preco = Number(d.precoFinalIva ?? 0);
-  if (preco > 0) {
-    linhas.push(`O orçamento é de ${preco.toFixed(2).replace(".", ",")} € com IVA.`);
+  const aprovado = Number(d.precoFinal ?? 0);
+  if (aprovado > 0) {
+    const preco = precoParaOCliente(aprovado).toFixed(2).replace(".", ",");
+    const factura = comFacturaEmPalavras(aprovado, null);
+    linhas.push(
+      `O orçamento é de ${preco} €, sem IVA e já com a taxa da plataforma.` +
+        (factura ? ` ${factura}` : ""),
+    );
   }
 
   return linhas.join("\n\n");

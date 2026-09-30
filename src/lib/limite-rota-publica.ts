@@ -8,7 +8,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
  * O simulador precisa de falar com o Google Maps e com o Gemini antes de a
  * pessoa ter conta — não há como exigir autenticação. Só que sem limite
  * nenhum, essas rotas são uma fatura aberta: quem descobrir /api/maps/route
- * ou /api/simulator/chat manda pedidos em ciclo e a conta é nossa. Também
+ * ou /api/simulator/analyze manda pedidos em ciclo e a conta é nossa. Também
  * dão para usar o nosso servidor e a nossa quota como proxy de graça.
  *
  * Os números são generosos para quem está mesmo a preencher um orçamento e

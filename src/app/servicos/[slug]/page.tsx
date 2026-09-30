@@ -201,7 +201,10 @@ export default async function ServicoGerado({ params }: Props) {
             {[
               "Descreve o que precisa, com fotografias se ajudarem.",
               `Recebe propostas de profissionais da sua zona em ${PRAZO_DE_RESPOSTA.porExtenso}.`,
-              "Escolhe a que quiser — ou nenhuma. Só paga depois de confirmar.",
+              // Dizia «Só paga depois de confirmar», que se lia como «depois do
+              // trabalho feito» — e quem paga pela plataforma paga a referência
+              // logo a seguir a aceitar (29-09-2026).
+              "Escolhe a que quiser — ou nenhuma. Só paga se contratar alguém.",
             ].map((passo) => (
               <li
                 key={passo}

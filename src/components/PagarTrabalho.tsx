@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, Loader2, Smartphone, Landmark } from "lucide-react";
+import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 
 /**
  * ONDE O CLIENTE PAGA — MB WAY e Multibanco.
@@ -52,9 +53,19 @@ export default function PagarTrabalho({
   telefoneSugerido,
   precisaFatura = false,
   soParaVer = false,
+  formaDePagamento = null,
 }: {
   pedidoId: number;
   negociacaoId: number;
+  /**
+   * COMO O CLIENTE PAGA ESTE TRABALHO — 29-09-2026. Nulo = na plataforma.
+   *
+   * Decide a frase de depois de pago. Em dinheiro, a referência que o
+   * backoffice lhe manda é só a comissão da CLYON, e «o valor fica connosco
+   * até confirmar» dizia-lhe que guardávamos um serviço que ele vai pagar em
+   * notas ao profissional.
+   */
+  formaDePagamento?: string | null;
   /** O token do link do email. Sem ele, vale a sessão. */
   token?: string | null;
   telefoneSugerido?: string | null;
@@ -170,8 +181,8 @@ export default function PagarTrabalho({
         </p>
         <p className="mt-1 text-xs leading-relaxed text-slate-600">
           Recebemos {pago ? euros(pago.valor) : "o pagamento"}
-          {pago?.metodo === "mbway" ? " por MB WAY" : " por Multibanco"}. O valor fica connosco até
-          confirmar que o trabalho está feito.
+          {pago?.metodo === "mbway" ? " por MB WAY" : " por Multibanco"}.{" "}
+          {promessaDaForma(formaDePagamento).clienteDepoisDePagar}
         </p>
       </div>
     );

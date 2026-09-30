@@ -14,6 +14,7 @@ import {
   type FormaDePagamento,
 } from "@/lib/forma-de-pagamento";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
+import { oQueReabrir } from "@/lib/cancelamento";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
   TAXAS_DE_ORIGEM,
@@ -1131,7 +1132,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 6;
+const VERSAO_DAS_NEGOCIACOES = 7;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1284,6 +1285,16 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN pagamentoComo VARCHAR(20) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN pagamentoDeclaradoEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN pagamentoDeclaradoPor VARCHAR(120) NULL DEFAULT NULL`,
+    /*
+     * O ESTADO QUE O CANCELAMENTO APAGOU — 30-09-2026.
+     *
+     * «Esse pedido está nos cancelados por engano, como restauro ele?» — o
+     * #320. Cancelar punha TODAS as negociações em «morta» sem deixar escrito
+     * em que estado estava cada uma, e por isso não havia como voltar atrás.
+     * Nulo = nunca foi encerrada por um cancelamento (ou já foi reposta).
+     * Ver `reabrirPedidoCancelado`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN estadoAntesDeCancelar VARCHAR(30) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1307,6 +1318,13 @@ export type NegociacaoNaBase = {
   /** A comissão com que ESTA negociação nasceu. Nulas = as de origem. */
   taxaCliente?: string | number | null;
   taxaProfissional?: string | number | null;
+  /**
+   * Como o cliente paga — vem no `SELECT n.*` e faltava no tipo, e por isso
+   * havia ecrãs que nunca o passavam adiante: o do pedido mostrava a conta de
+   * quem paga pela plataforma a quem ia pagar em notas. Nula = na plataforma.
+   */
+  formaDePagamento?: string | null;
+  acrescimoPagamento?: string | number | null;
 };
 
 /**
@@ -1339,6 +1357,7 @@ export type NegociacaoNaBase = {
 export async function cancelarPedido(
   pedidoId: number,
 ): Promise<{ encerradas: number } | null> {
+  await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return null;
@@ -1352,13 +1371,189 @@ export async function cancelarPedido(
   // Mortas, e não "desistidas": desistir é um acto de uma das partes, com
   // consequências entre elas. Aqui não desistiu ninguém — o trabalho deixou
   // de existir, e as negociações vão com ele.
-  const encerradas = await matarNegociacoesDoPedido(pedidoId);
+  //
+  // COM MEMÓRIA, desde 30-09-2026: cada uma guarda o estado em que estava, e
+  // o pedido guarda o dele. Um cancelamento por engano passa a ter volta —
+  // ver `reabrirPedidoCancelado`.
+  const encerradas = await matarNegociacoesDoPedido(pedidoId, { lembrarOEstado: true });
 
+  try {
+    await pool.execute(
+      "UPDATE simulatorOrders SET statusAntesDeCancelar = status WHERE id = ? AND status <> 'cancelado'",
+      [pedidoId],
+    );
+  } catch (e) {
+    // Mesmo princípio: sem a memória, cancela-se na mesma.
+    console.error("[cancelarPedido] sem memória do estado do pedido:", e);
+  }
   await pool.execute(
     "UPDATE simulatorOrders SET status = 'cancelado', updatedAt = NOW() WHERE id = ?",
     [pedidoId],
   );
   return { encerradas };
+}
+
+/**
+ * DESFAZER UM CANCELAMENTO — 30-09-2026.
+ *
+ * «Esse pedido está nos cancelados por engano, como restauro ele?» — o #320,
+ * com nove profissionais e três propostas. Cancelar era a única acção do
+ * backoffice sem volta: o pedido mudava de estado e TODAS as negociações iam
+ * para «morta», sem ficar escrito em que estado estava cada uma.
+ *
+ * Desde hoje o cancelamento guarda essa memória (`estadoAntesDeCancelar`,
+ * `statusAntesDeCancelar`) e isto repõe-na tal e qual. Os cancelados antes
+ * disso não a têm, e reconstroem-se a partir do que ficou gravado: a hora do
+ * cancelamento e as recusas no registo permanente, e as propostas de cada
+ * negociação. A regra está em `oQueReabrir`, em `cancelamento.ts`, com
+ * testes.
+ *
+ * AS PROPOSTAS NUNCA SAÍRAM DE LÁ — o cancelamento só mudou a palavra do
+ * estado —, por isso reabrir devolve-as como estavam, pendentes incluídas.
+ *
+ * NÃO AVISA NINGUÉM, como cancelar também não avisa: um engano desfeito em
+ * silêncio é o melhor desfecho para quem nem chegou a dar por ele.
+ */
+export async function reabrirPedidoCancelado(pedidoId: number): Promise<
+  | {
+      ok: true;
+      reabertas: Array<{ negociacaoId: number; profissionalNome: string; estado: string }>;
+      statusDeVolta: string;
+      /** Verdadeiro quando o cancelamento é anterior à memória, e o estado foi deduzido. */
+      reconstruido: boolean;
+    }
+  | { ok: false; porque: "nao_existe" | "nao_esta_cancelado" }
+> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [pedidos] = (await pool.execute(
+    "SELECT status, statusAntesDeCancelar, assignedToId FROM simulatorOrders WHERE id = ? LIMIT 1",
+    [pedidoId],
+  )) as [
+    Array<{ status: string | null; statusAntesDeCancelar: string | null; assignedToId: number | null }>,
+    unknown,
+  ];
+  const pedido = pedidos[0];
+  if (!pedido) return { ok: false, porque: "nao_existe" };
+  if (pedido.status !== "cancelado") return { ok: false, porque: "nao_esta_cancelado" };
+
+  const [mortas] = (await pool.execute(
+    `SELECT n.id, n.estadoAntesDeCancelar, n.valorAcordado, n.propostasJson,
+            n.execucaoEnviadaEm, n.confirmadoEm, n.dataCombinada, n.updatedAt,
+            pr.name AS profissionalNome
+       FROM negociacoes n
+       LEFT JOIN providers pr ON pr.id = n.providerId
+      WHERE n.pedidoId = ? AND n.estado = 'morta'`,
+    [pedidoId],
+  )) as [Array<Record<string, unknown>>, unknown];
+
+  const gravadas = mortas.filter(
+    (n) => typeof n.estadoAntesDeCancelar === "string" && n.estadoAntesDeCancelar !== "",
+  );
+  const reconstruido = gravadas.length === 0;
+
+  let alvo: Array<{ id: number; estado: string }>;
+  if (!reconstruido) {
+    alvo = gravadas.map((n) => ({
+      id: Number(n.id),
+      estado: estadoRepostoValido(String(n.estadoAntesDeCancelar)),
+    }));
+  } else {
+    /*
+     * CANCELADO ANTES DE HAVER MEMÓRIA — reconstrói-se.
+     *
+     * QUAIS: as que o cancelamento encerrou. Uma negociação que já estava
+     * morta antes (perdeu para outro profissional) não pode voltar; o sinal é
+     * a hora — o cancelamento mexeu nelas, e `updatedAt` mudou nesse
+     * instante. A hora do cancelamento está no registo permanente. Sem ela,
+     * vão todas, e a lista que se devolve diz quais foram.
+     *
+     * COMO: as recusas que ficaram no registo voltam a recusas; o resto
+     * decide-se pelas propostas. Ver `oQueReabrir`.
+     */
+    let quando: Date | null = null;
+    const desistiram = new Set<number>();
+    try {
+      const [r] = (await pool.execute(
+        `SELECT MAX(ocorridoEm) AS quando FROM registoPermanente
+          WHERE pedidoId = ? AND acontecimento = 'pedido_cancelado'`,
+        [pedidoId],
+      )) as [Array<{ quando: Date | string | null }>, unknown];
+      quando = r[0]?.quando ? new Date(r[0].quando) : null;
+      const [d] = (await pool.execute(
+        `SELECT DISTINCT negociacaoId FROM registoPermanente
+          WHERE pedidoId = ? AND acontecimento = 'negociacao_desistida' AND negociacaoId IS NOT NULL`,
+        [pedidoId],
+      )) as [Array<{ negociacaoId: number }>, unknown];
+      for (const x of d) desistiram.add(Number(x.negociacaoId));
+    } catch (e) {
+      console.error("[reabrirPedidoCancelado] registo ilegível, vão todas:", e);
+    }
+    // Cinco minutos de folga: o registo escreve-se DEPOIS de as negociações
+    // mudarem, e o relógio das duas tabelas é o mesmo servidor.
+    const candidatas = mortas.filter(
+      (n) =>
+        !quando ||
+        (n.updatedAt != null && new Date(n.updatedAt as string).getTime() >= quando.getTime() - 5 * 60_000),
+    );
+    alvo = oQueReabrir(
+      candidatas.map((n) => ({
+        id: Number(n.id),
+        valorAcordado: n.valorAcordado,
+        propostasJson: (n.propostasJson as string | null) ?? null,
+        execucaoEnviadaEm: n.execucaoEnviadaEm,
+        confirmadoEm: n.confirmadoEm,
+        dataCombinada: n.dataCombinada,
+        desistiu: desistiram.has(Number(n.id)),
+      })),
+    );
+  }
+
+  for (const a of alvo) {
+    await pool.execute(
+      "UPDATE negociacoes SET estado = ?, estadoAntesDeCancelar = NULL WHERE id = ? AND estado = 'morta'",
+      [a.estado, a.id],
+    );
+  }
+
+  /*
+   * O PEDIDO VOLTA AO ESTADO EM QUE ESTAVA — ou, sem memória, ao de quem o
+   * tem: «atribuído» se alguém o assumiu, «por atribuir» se não. Nenhum dos
+   * dois muda o bloco da mesa: esse lê-se das negociações.
+   */
+  const statusDeVolta =
+    pedido.statusAntesDeCancelar && pedido.statusAntesDeCancelar !== "cancelado"
+      ? pedido.statusAntesDeCancelar
+      : Number(pedido.assignedToId) > 0
+        ? "atribuido"
+        : "sem_assistente";
+  await pool.execute(
+    `UPDATE simulatorOrders SET status = ?, statusAntesDeCancelar = NULL, updatedAt = NOW()
+      WHERE id = ? AND status = 'cancelado'`,
+    [statusDeVolta, pedidoId],
+  );
+
+  const nomes = new Map(mortas.map((n) => [Number(n.id), String(n.profissionalNome ?? "")]));
+  return {
+    ok: true,
+    reabertas: alvo.map((a) => ({
+      negociacaoId: a.id,
+      profissionalNome: nomes.get(a.id) ?? "",
+      estado: a.estado,
+    })),
+    statusDeVolta,
+    reconstruido,
+  };
+}
+
+/** Só estados a que uma negociação viva pode voltar. Outra coisa qualquer lê-se como «aberta». */
+function estadoRepostoValido(estado: string): string {
+  return ["aberta", "aguarda_contratacao", "acordada", "desistida"].includes(estado)
+    ? estado
+    : "aberta";
 }
 
 /**
@@ -1386,14 +1581,35 @@ export async function marcarTrabalhoComoAberto(
   return Number(r?.affectedRows ?? 0) > 0;
 }
 
-export async function matarNegociacoesDoPedido(pedidoId: number): Promise<number> {
+export async function matarNegociacoesDoPedido(
+  pedidoId: number,
+  /**
+   * Guardar em `estadoAntesDeCancelar` o estado de cada uma antes de a matar.
+   * Só o cancelamento o pede: é o único encerramento que se pode querer
+   * desfazer. O «recomeçar do zero» mata para logo a seguir repor.
+   */
+  opcoes: { lembrarOEstado?: boolean } = {},
+): Promise<number> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return 0;
-  const [r] = (await pool.execute(
-    "UPDATE negociacoes SET estado = 'morta' WHERE pedidoId = ? AND estado <> 'morta'",
-    [pedidoId],
-  )) as [{ affectedRows?: number }, unknown];
+  const semMemoria = "UPDATE negociacoes SET estado = 'morta' WHERE pedidoId = ? AND estado <> 'morta'";
+  if (opcoes.lembrarOEstado) {
+    try {
+      const [r] = (await pool.execute(
+        // O estado de antes lê-se ANTES de se escrever «morta»: o MySQL aplica
+        // as atribuições da esquerda para a direita.
+        "UPDATE negociacoes SET estadoAntesDeCancelar = estado, estado = 'morta' WHERE pedidoId = ? AND estado <> 'morta'",
+        [pedidoId],
+      )) as [{ affectedRows?: number }, unknown];
+      return Number(r?.affectedRows ?? 0);
+    } catch (e) {
+      // A memória é um extra. Uma coluna que ainda não chegou à base não pode
+      // impedir ninguém de cancelar: cancela-se como antes, sem ela.
+      console.error("[matarNegociacoesDoPedido] sem memória do estado:", e);
+    }
+  }
+  const [r] = (await pool.execute(semMemoria, [pedidoId])) as [{ affectedRows?: number }, unknown];
   return Number(r?.affectedRows ?? 0);
 }
 
@@ -5182,7 +5398,7 @@ let _simulatorOrdersEnsured = false;
 // guarda reinicia a cada arranque frio, elas acabaram por correr na mesma — mas
 // num processo que ficasse quente nunca teriam corrido. Agora acompanha a
 // última migração da lista.
-const MIGRATION_VERSION = 13;
+const MIGRATION_VERSION = 14;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -5308,6 +5524,9 @@ export async function ensureSimulatorOrdersTable() {
     // A escolha do cliente ao pedir. Copia-se para cada negociação ao
     // distribuir; é lá que fica congelada. Ver `forma-de-pagamento.ts`.
     `ALTER TABLE simulatorOrders ADD COLUMN formaDePagamento VARCHAR(16) NULL DEFAULT NULL`,
+    // O estado em que o pedido estava quando foi cancelado — para o poder
+    // repor se tiver sido por engano. Ver `reabrirPedidoCancelado`.
+    `ALTER TABLE simulatorOrders ADD COLUMN statusAntesDeCancelar VARCHAR(40) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -8385,6 +8604,8 @@ export type Acontecimento =
   | "pedido_editado"
   | "pedido_distribuido"
   | "pedido_cancelado"
+  /* O cancelamento foi desfeito — era engano. Ver `reabrirPedidoCancelado`. */
+  | "pedido_reaberto"
   | "pedido_apagado"
   | "pedido_expurgado"
   // A negociação

@@ -3,6 +3,7 @@ import { approveSimulatorOrder, getSimulatorOrderById, setOrcamentoToken } from 
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { sendOrcamentoEmail } from "@/lib/email-orcamento";
+import { contaDoCliente } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
 
@@ -12,14 +13,16 @@ export async function POST(req: NextRequest) {
   if (err) return err;
 
   const body = await req.json();
-  const { id, precoFinal, precoFinalIva, mensagemCliente, notasInternas } = body;
+  const { id, precoFinal, mensagemCliente, notasInternas } = body;
   if (!id || !precoFinal) return NextResponse.json({ error: "id e precoFinal obrigatórios" }, { status: 400 });
   // Um assistente que aprova um pedido sem responsável passa a ser o responsável.
   await assumirPedidoSeLivre(Number(id), colab);
 
   await approveSimulatorOrder(Number(id), {
     precoFinal: Number(precoFinal),
-    precoFinalIva: Number(precoFinalIva ?? precoFinal * 1.23),
+    // Com factura, pela conta de todos — e não × 1,23 à mão. Ver a rota
+    // `pedidos/[id]/approve`, que é a que o ecrã usa (29-09-2026).
+    precoFinalIva: contaDoCliente(Number(precoFinal)).total,
     mensagemCliente: mensagemCliente ?? "",
     notasInternas: notasInternas ?? undefined,
     reviewedBy: { id: colab!.id, nome: colab!.nome, role: colab!.papel },
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
       serviceType:     order.serviceType ?? null,
       address:         order.address ?? null,
       description:     order.description ?? null,
-      precoFinalIva:   Number((order as any).precoFinalIva ?? precoFinalIva),
+      precoFinal:      Number((order as any).precoFinal ?? precoFinal),
       dataAgendada:    (order as any).scheduledDate ?? (order as any).dataAgendada ?? null,
       token,
       orderId:         Number(id),

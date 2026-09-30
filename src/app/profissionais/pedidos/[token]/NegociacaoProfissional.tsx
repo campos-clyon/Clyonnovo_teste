@@ -35,7 +35,7 @@ import {
 import { quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
-import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 
 /**
  * A negociação, do lado do profissional.
@@ -180,17 +180,28 @@ export default function NegociacaoProfissional({
   }
 
   // ── Estados terminais ────────────────────────────────────────────────────
+  /*
+   * O QUE ACONTECE AO DINHEIRO É O DA FORMA DESTE TRABALHO — 29-09-2026.
+   *
+   * Dizia a toda a gente «é o cliente que lho paga, no fim do trabalho», e a
+   * quem o cliente paga pela plataforma é a CLYON que paga, depois da
+   * confirmação. E o valor saía com as taxas de hoje: num trabalho em
+   * dinheiro, «Fechado em 112,80 €, já com a taxa descontada» a quem vai
+   * receber 120,00 € em mão.
+   */
+  const promessa = promessaDaForma(formaDePagamento);
+
   if (negociacao.estado === "acordada") {
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">O trabalho é seu</h2>
         <p className="mt-1 text-sm text-emerald-800">
-          Fechado em {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))}, já com a
-          taxa CLYON descontada.
+          Fechado em {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))},{" "}
+          {promessa.proLegendaDoValor}.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-emerald-700">
-          {PROMESSA.proAoFechar}
+          {promessa.proAoFechar}
         </p>
       </section>
     );
@@ -605,9 +616,14 @@ export default function NegociacaoProfissional({
         )}
       </div>
 
+      {/*
+        «O PAGAMENTO GARANTIDO» SAIU — 29-09-2026. Não há garantia de pagamento
+        a prometer; o que a regra dos valores sem conversa mantém é o acordo
+        escrito, que nenhum dos lados muda sozinho.
+      */}
       <Nota titulo="Porque é que não há mensagens" className="mt-4">
         A negociação é só de valores. Sem conversa não há combinação por fora — e
-        é isso que mantém o pagamento garantido de ambos os lados. Tem cinco
+        é isso que mantém o acordo por escrito, dos dois lados. Tem cinco
         propostas, e a sua fica de pé até o cliente lhe responder.
       </Nota>
     </section>
