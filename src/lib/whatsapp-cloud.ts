@@ -346,8 +346,16 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
 
   try {
     const { jaFoiDito, MINUTOS_SEM_REPETIR_A_MESMA } = await import("@/lib/nao-repetir");
-    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
-    const recentes = await mensagensDoNumeroWhatsApp(para, 20);
+    const { saidasDoNumeroWhatsApp } = await import("@/lib/db");
+    /*
+     * SO AS SAIDAS — as fotografias dele nao podem empurrar o que eu disse.
+     *
+     * Lia-se a conversa toda, vinte linhas nos dois sentidos. A Carla mandou
+     * dezasseis fotografias de uma vez (30-09-2026): as vinte encheram-se com
+     * as fotos dela, a pergunta de ha um minuto caiu para fora da janela, e a
+     * guarda deixou passar a repeticao que estava mesmo ali.
+     */
+    const recentes = await saidasDoNumeroWhatsApp(para, 20);
     // O que fica gravado é a forma `paraTeclado` — comparar a de origem nunca
     // bate, e foi assim que a primeira versão desta guarda não disparou uma
     // única vez.
@@ -400,8 +408,9 @@ export async function enviarAvisoWhatsApp(para: string, texto: string): Promise<
   }
   try {
     const { jaFoiDito, MINUTOS_SEM_REPETIR_A_MESMA } = await import("@/lib/nao-repetir");
-    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
-    const recentes = await mensagensDoNumeroWhatsApp(para, 20);
+    const { saidasDoNumeroWhatsApp } = await import("@/lib/db");
+    // So as saidas, pela razao escrita em `enviarTextoWhatsApp`.
+    const recentes = await saidasDoNumeroWhatsApp(para, 20);
     if (jaFoiDito(paraTeclado(texto), recentes, new Date(), MINUTOS_SEM_REPETIR_A_MESMA / 60)) {
       return true;
     }

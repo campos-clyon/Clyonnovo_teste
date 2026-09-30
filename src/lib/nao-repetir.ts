@@ -51,6 +51,22 @@ export type SaidaGravada = {
   direccao: string;
   texto: string;
   criadoEm: string;
+  /**
+   * ⚠️ HA QUANTOS SEGUNDOS, CONTADO PELA BASE. E isto que manda.
+   *
+   * O `criadoEm` e um DATETIME escrito pelo relogio do MySQL e lido pelo
+   * mysql2 no fuso do processo — no Verao, um instante uma hora no passado.
+   * Comparado com `Date.now()`, TODA a mensagem da ultima hora parecia
+   * antiga, e esta guarda nunca disparou uma unica vez: a janela que ela
+   * vigia sao dez minutos, e o erro do relogio sessenta.
+   *
+   * A conta passou a fazer-se dentro da base, onde os dois lados da
+   * subtraccao vem do mesmo relogio (`mensagensDoNumeroWhatsApp`).
+   *
+   * Opcional porque ha chamadores — e testes — que so tem o carimbo. Esses
+   * continuam a cair no caminho antigo, que e melhor do que nenhum.
+   */
+  haSegundos?: number | null;
 };
 
 /** Espaços a mais, maiúsculas e pontuação não fazem de duas mensagens uma nova. */
@@ -74,11 +90,21 @@ export function jaFoiDito(
   if (!alvo) return false;
   const limite = agora.getTime() - horas * 3600_000;
 
+  const segundos = horas * 3600;
   return gravadas.some((m) => {
     if (m.direccao !== "out") return false;
+    if (assinatura(m.texto) !== alvo) return false;
+    /*
+     * A IDADE CONTADA PELA BASE MANDA SOBRE O CARIMBO — ver `SaidaGravada`.
+     * Um numero negativo e um relogio a andar para tras entre duas linhas;
+     * conta como agora mesmo, que e o lado seguro: o texto acabou de sair.
+     */
+    if (typeof m.haSegundos === "number" && Number.isFinite(m.haSegundos)) {
+      return m.haSegundos <= segundos;
+    }
     const quando = new Date(m.criadoEm).getTime();
     // Uma data ilegível não pode fazer calar o assistente: na dúvida, fala.
     if (Number.isNaN(quando) || quando < limite) return false;
-    return assinatura(m.texto) === alvo;
+    return true;
   });
 }

@@ -31,6 +31,20 @@ const SINAIS: RegExp[] = [
   /\bningu[eé]m\s+(?:me\s+)?(?:atende|responde|diz\s+nada)/,
   /\bn[aã]o\s+(?:me\s+)?(?:atendem|respondem)\b/,
   /\bsem\s+resposta\s+(?:h[aá]|desde)/,
+  /*
+   * DIZ QUE NAO LHE RESPONDERAM — 30-09-2026.
+   *
+   * *«Ainda nao me respondeu se o pagamento e feito na hora»* — a Carla, ao
+   * fim de tres perguntas por responder. A frase e literalmente a queixa que
+   * este ficheiro existe para apanhar, e passava ao lado: as regras pediam a
+   * terceira pessoa do plural («nao respondem», «ninguem responde») e ela
+   * escreveu na terceira do singular, sobre a conversa em curso.
+   *
+   * E o sinal mais barato de todos: quem escreve isto ja contou as vezes.
+   */
+  /\b(?:ainda\s+)?n[aã]o\s+(?:me\s+)?(?:respondeu|responderam|disse|disseram)\b/,
+  /\bcontinuo\s+(?:a\s+espera|sem\s+resposta)\b/,
+  /\b(?:j[aá]\s+)?perguntei\s+(?:isto\s+)?(?:v[aá]rias|duas|tr[eê]s|muitas)\s+vezes/,
   // Vai à concorrência.
   /\boutra\s+empresa\b/,
   /\b(?:vou|vamos)\s+(?:ter\s+de\s+|ter\s+que\s+)?(?:avan[cç]ar|ir|seguir)\s+com\s+outr[ao]s?\b/,

@@ -176,8 +176,49 @@ describe("as horas são as de Lisboa, e não as do servidor", () => {
     expect(emLisboa(r.data)).toEqual({ dia: 30, hora: 9, minuto: 0 });
   });
 
-  it("«hoje», sem hora, é daqui a uma hora EM LISBOA", () => {
-    expect(emLisboa(interpretarQuando("hoje", AGORA).data)?.hora).toBe(13);
+  it("«hoje», sem hora, NÃO marca hora nenhuma", () => {
+    /*
+     * ESTE TESTE AFIRMAVA O CONTRÁRIO, e estava errado.
+     *
+     * Dizia «é daqui a uma hora EM LISBOA» e exigia as 13:00. A regra era
+     * `parede.getUTCHours() + 1`, e o que ela fazia na prática era transformar
+     * uma palavra — «hoje», «urgente» — num compromisso horário que o cliente
+     * nunca deu, para depois lho mostrar no resumo como se fosse dele.
+     *
+     * A Carla, a 30-09-2026, escreveu «Tenho urgência estou de mudanças» e
+     * levou de volta «Quando: quarta-feira, 30 de setembro às 12:00». Respondeu
+     * «Mas 30 de setembro é hoje» e «E já são quase 12h». Tinha razão nas duas,
+     * e ninguém lhe respondeu.
+     *
+     * A urgência fica na urgência. A hora combina-se com uma pessoa.
+     */
+    const r = interpretarQuando("hoje", AGORA);
+    expect(r.data).toBeNull();
+    expect(r.urgency).toBe("today");
+  });
+
+  it("mas «hoje às 16h» é às 16 — o que ele DIZ continua a valer", () => {
+    /*
+     * A correcção acima não pode ter emudecido quem marca a hora. Só se deixou
+     * de inventar a que ninguém disse.
+     */
+    expect(emLisboa(interpretarQuando("hoje às 16h", AGORA).data)).toEqual({
+      dia: 29,
+      hora: 16,
+      minuto: 0,
+    });
+  });
+
+  it("e «amanhã» sem hora continua às 9 — um dia que ainda não começou", () => {
+    /*
+     * A diferença entre isto e o caso de cima é que as nove de amanhã nunca
+     * ficam para trás. O mal era marcar uma hora JÁ PASSADA.
+     */
+    expect(emLisboa(interpretarQuando("amanhã", AGORA).data)).toEqual({
+      dia: 30,
+      hora: 9,
+      minuto: 0,
+    });
   });
 
   it("e no Inverno também — a mudança da hora é de Lisboa, não nossa", () => {
