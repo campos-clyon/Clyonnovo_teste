@@ -60,7 +60,7 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
           <td style="padding:36px;">
             <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Olá, <strong>${e(params.clienteName.split(" ")[0])}</strong>!</p>
             <p style="color:#475569;font-size:14px;margin:0 0 24px;line-height:1.6;">
-              O teu serviço de <strong>${e(servico)}</strong> foi concluído. Adorávamos saber a tua opinião — a tua avaliação ajuda-nos a manter a qualidade e a escolher os melhores parceiros.
+              O seu serviço de <strong>${e(servico)}</strong> foi concluído. Adorávamos saber a sua opinião — a sua avaliação ajuda-nos a manter a qualidade e a escolher os melhores parceiros.
             </p>
             <p style="text-align:center;margin:0 0 24px;">
               <a href="${contaUrl}"
@@ -83,7 +83,7 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
     const { error } = await resend.emails.send({
       from:    "CLYON <noreply@clyon.pt>",
       to:      [params.to],
-      subject: `Como correu o teu ${servico}? Deixa uma avaliação ★`,
+      subject: `${servico}: como correu? Deixe uma avaliação ★`,
       html: legivelNoResumo(html),
     });
     if (error) console.error("[email-parceiro] Resend erro (avaliação):", error);

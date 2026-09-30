@@ -22,7 +22,7 @@ export async function GET(
     return NextResponse.json({ trabalho });
   } catch (error) {
     console.error("[api/admin/trabalhos/[id] GET]", error);
-    return NextResponse.json({ error: "Erro ao buscar trabalho" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao carregar o trabalho" }, { status: 500 });
   }
 }
 

@@ -211,7 +211,7 @@ export default function ImageManagerClient({ embutido = false }: { embutido?: bo
     try {
       const optimizedFile = await optimizeImageFile(file, newItem.section);
       setNewFile(optimizedFile);
-      setMessage(optimizedFile === file ? "Imagem pronta para upload." : "Imagem otimizada antes do upload.");
+      setMessage(optimizedFile === file ? "Imagem pronta para enviar." : "Imagem otimizada antes de enviar.");
     } catch (err) {
       setNewFile(file);
       setError(err instanceof Error ? err.message : "Não foi possível otimizar a imagem.");
@@ -451,7 +451,7 @@ export default function ImageManagerClient({ embutido = false }: { embutido?: bo
           </div>
         )}
         <div className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] px-4 py-3 text-sm text-amber-100">
-          Em produção no Vercel, ficheiros guardados apenas no disco local podem ser perdidos. Use o upload ou indique um URL público estável.
+          Em produção no Vercel, ficheiros guardados apenas no disco local podem ser perdidos. Envie a imagem por aqui ou indique um URL público estável.
         </div>
 
         {/* Formulário nova imagem */}
@@ -495,7 +495,7 @@ export default function ImageManagerClient({ embutido = false }: { embutido?: bo
                   <input type="text" value={newItem.subtitle} onChange={(e) => updateNewItem("subtitle", e.target.value)} className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300" />
                 </DField>
                 <DField label="Grupo do trabalho">
-                  <input type="text" placeholder="ex: recolha-monos" value={newItem.projectKey} onChange={(e) => updateNewItem("projectKey", e.target.value)} className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300" />
+                  <input type="text" placeholder="ex.: recolha-monos" value={newItem.projectKey} onChange={(e) => updateNewItem("projectKey", e.target.value)} className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300" />
                 </DField>
                 <DField label="Fase">
                   <select value={newItem.phase} onChange={(e) => updateNewItem("phase", e.target.value as GalleryPhase)} className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300">

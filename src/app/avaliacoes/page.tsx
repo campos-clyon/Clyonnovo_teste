@@ -6,19 +6,31 @@ import { Star, Quote, MessageCircle } from "lucide-react";
 import HeroBackground from "@/components/HeroBackground";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 import { reviews } from "@/lib/reviews-data";
-import { BUSINESS_PHONE, SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/seo-data";
+import {
+  BUSINESS_PHONE,
+  SITE_URL,
+  AVALIACOES,
+  AVALIACOES_TOTAL,
+  CITIES,
+  PRAZO_DE_RESPOSTA,
+} from "@/lib/seo-data";
 
+/*
+ * Os números da descrição estavam escritos à mão ("37", "118", "155") e
+ * "verificadas" prometia uma verificação que ninguém faz — passam a vir de
+ * AVALIACOES, com o sítio onde se confirmam (30-09-2026).
+ */
 export const metadata: Metadata = {
   title: "Avaliações de Clientes — Lisboa e Setúbal",
   description:
-    "37 avaliações no Google e 118 na Fixando, todas a 5 estrelas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.",
+    `${AVALIACOES.google} avaliações no Google e ${AVALIACOES.fixando} na Fixando, com média de ${AVALIACOES.media} ★. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final dos profissionais da CLYON.`,
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
   openGraph: {
     title: "Avaliações Reais de Clientes — CLYON",
     description:
-      "5,0 ★ em 155 avaliações verificadas no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.",
+      `${AVALIACOES.media} ★ em ${AVALIACOES_TOTAL} avaliações no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.`,
     url: "https://clyon.pt/avaliacoes",
   },
 };
@@ -72,14 +84,15 @@ const STATS = [
   { value: AVALIACOES.media, label: "Classificação média", sub: "Google e Fixando" },
   {
     value: String(AVALIACOES_TOTAL),
-    label: "Avaliações verificadas",
+    label: "Avaliações no Google e na Fixando",
     sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
   },
   // O cartão "188+ trabalhos realizados" saiu: o número não tinha origem, e o
   // "+" é uma afirmação de "pelo menos" sem nada por trás. O que se mostra
   // aqui passa a ser só o que se pode abrir e contar.
   { value: String(AVALIACOES.contratacoes), label: "Contratações", sub: "registadas na Fixando" },
-  { value: "100%", label: "Recomendariam", sub: "com base nas respostas" },
+  // "100% — Recomendariam, com base nas respostas" saiu a 30-09-2026 pela
+  // mesma razão: não há resposta nenhuma a um inquérito de recomendação.
 ];
 
 export default function AvaliacoesPage() {
@@ -137,7 +150,7 @@ export default function AvaliacoesPage() {
                   <span>{AVALIACOES.media} · {AVALIACOES_TOTAL} avaliações</span>
                 </span>
                 <span className="text-slate-300">·</span>
-                <span className="text-xs text-slate-500 sm:text-sm">100% recomendariam</span>
+                <span className="text-xs text-slate-500 sm:text-sm">no Google e na Fixando</span>
                 <span className="hidden text-slate-300 sm:inline">·</span>
                 <span className="hidden text-xs text-slate-500 sm:inline sm:text-sm">Lisboa · Margem Sul · Setúbal</span>
               </div>
@@ -155,7 +168,7 @@ export default function AvaliacoesPage() {
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-                      {AVALIACOES_TOTAL} avaliações verificadas · {AVALIACOES.google} no Google e{" "}
+                      {AVALIACOES_TOTAL} avaliações: {AVALIACOES.google} no Google e{" "}
                       {AVALIACOES.fixando} na Fixando
                     </p>
                   </div>
@@ -165,8 +178,15 @@ export default function AvaliacoesPage() {
                   orçamento — serviço após serviço.
                 </p>
                 <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
-                  {STATS.map((s) => (
-                    <div key={s.label} className="rounded-2xl bg-[#F4F8FB] p-3 sm:p-4">
+                  {/* Com três cartões, o último ocupa a linha inteira em vez
+                      de deixar um buraco na grelha de dois. */}
+                  {STATS.map((s, i) => (
+                    <div
+                      key={s.label}
+                      className={`rounded-2xl bg-[#F4F8FB] p-3 sm:p-4 ${
+                        STATS.length % 2 === 1 && i === STATS.length - 1 ? "col-span-2" : ""
+                      }`}
+                    >
                       <div className="text-xl font-black text-acao sm:text-2xl">{s.value}</div>
                       <div className="mt-0.5 text-[11px] font-semibold text-tinta sm:text-xs">{s.label}</div>
                       <div className="text-[10px] text-tinta-fraca sm:text-xs">{s.sub}</div>
@@ -231,21 +251,29 @@ export default function AvaliacoesPage() {
             Porque é que os clientes recomendam a CLYON?
           </h2>
           <div className="mt-6 space-y-5 text-base leading-8 text-slate-600">
+            {/*
+              "A CLYON presta serviços de…", "confirma o preço final", "sem
+              adicionais no dia", "acompanhamento em tempo real", "mais de 24
+              localidades". Reescrito a 30-09-2026 na voz da plataforma e com
+              a regra do valor que está na página inicial; o número de
+              localidades é o da lista com página.
+            */}
             <p>
-              A CLYON presta serviços de <strong>recolha de móveis</strong>, <strong>recolha de entulho</strong>,{" "}
-              <strong>esvaziamento de casas</strong> e <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal.
-              As avaliações dos nossos clientes são consistentes: rapidez de resposta, pontualidade, equipa
-              simpática e preço confirmado antes do serviço começar.
+              A CLYON é uma plataforma que liga quem precisa de <strong>recolha de móveis</strong>,{" "}
+              <strong>recolha de entulho</strong>, <strong>esvaziamento de casas</strong> e{" "}
+              <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal a profissionais independentes e
+              verificados da zona. As avaliações são consistentes: rapidez de resposta, pontualidade,
+              simpatia e preço combinado antes de o serviço começar.
             </p>
             <p>
-              Ao contrário de muitos fornecedores, a CLYON confirma o preço final antes de avançar —
-              sem adicionais no dia da recolha. Os clientes recebem confirmação de data por mensagem e
-              acompanhamento em tempo real.
+              O preço de cada proposta já inclui a taxa da plataforma e fica combinado por escrito antes
+              de o trabalho começar. Se no local houver mais do que foi descrito, o novo valor combina-se
+              antes de começar — depois do trabalho feito, não acresce nada.
             </p>
             <p>
-              Com cobertura em mais de 24 localidades — incluindo Lisboa, Almada, Setúbal, Seixal,
-              Barreiro, Amadora, Sintra e Cascais — a CLYON é a escolha de quem quer um serviço rápido,
-              profissional e sem surpresas no preço.
+              São {CITIES.length} localidades com página própria — incluindo Lisboa, Almada, Setúbal,
+              Seixal, Barreiro, Amadora, Sintra e Cascais. Fora destas zonas, depende de haver
+              profissional disponível.
             </p>
           </div>
         </div>
@@ -273,15 +301,15 @@ export default function AvaliacoesPage() {
               Quer a mesma experiência no seu pedido?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-tinta-fraca">
-              Simule o orçamento em 2 minutos ou fale connosco pelo WhatsApp para receber
-              uma resposta rápida e clara.
+              Descreva o que precisa e receba propostas de profissionais da sua zona em até{" "}
+              {PRAZO_DE_RESPOSTA.porExtenso} — ou fale connosco pelo WhatsApp.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/simulador"
                 className="inline-flex h-12 items-center rounded-xl bg-acao px-8 text-base font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:-translate-y-0.5 hover:bg-acao-hover"
               >
-                Simular Orçamento
+                Pedir Orçamento
               </Link>
               <a
                 href={whatsappUrl}

@@ -42,15 +42,15 @@ export type SimulatorSettingDefinition = {
 export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "moveis_item_pequeno",
-    label: "Movel pequeno",
-    description: "Valor por unidade para peca pequena.",
+    label: "Móvel pequeno",
+    description: "Valor por unidade para peça pequena.",
     category: "moveis",
     unit: "eur",
     value: 5,
   },
   {
     key: "moveis_item_medio",
-    label: "Movel medio",
+    label: "Móvel médio",
     description: "Valor por unidade para peça média.",
     category: "moveis",
     unit: "eur",
@@ -58,8 +58,8 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   },
   {
     key: "moveis_item_grande",
-    label: "Movel grande",
-    description: "Valor por unidade para peca grande.",
+    label: "Móvel grande",
+    description: "Valor por unidade para peça grande.",
     category: "moveis",
     unit: "eur",
     value: 13,
@@ -123,7 +123,7 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "apartamento_com_elevador_por_andar",
     label: "Apartamento com elevador",
-    description: "Acrescimo por andar com elevador.",
+    description: "Acréscimo por andar com elevador.",
     category: "acessos",
     unit: "eur",
     value: 3,
@@ -131,15 +131,15 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "apartamento_sem_elevador_por_andar",
     label: "Apartamento sem elevador",
-    description: "Acrescimo por andar sem elevador.",
+    description: "Acréscimo por andar sem elevador.",
     category: "acessos",
     unit: "eur",
     value: 6,
   },
   {
     key: "acesso_dificil_extra",
-    label: "Extra por acesso dificil",
-    description: "Acrescimo fixo para acessos complexos.",
+    label: "Extra por acesso difícil",
+    description: "Acréscimo fixo para acessos complexos.",
     category: "acessos",
     unit: "eur",
     value: 30,
@@ -155,7 +155,7 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "entulho_multiplicador",
     label: "Multiplicador entulho",
-    description: "Margem final do calculo de entulho.",
+    description: "Margem final do cálculo de entulho.",
     category: "entulho",
     unit: "multiplier",
     value: 1.3,
@@ -228,7 +228,7 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "pagamento_assistente_por_trabalho",
     label: "Pagamento por trabalho (€/assistente)",
-    description: "Valor fixo pago a cada assistente por trabalho agendado/atribuído. Cada assistente recebe este valor individualmente (ex: 2 assistentes = 2 × valor).",
+    description: "Valor fixo pago a cada assistente por trabalho agendado/atribuído. Cada assistente recebe este valor individualmente (ex.: 2 assistentes = 2 × valor).",
     category: "geral",
     unit: "eur",
     value: 7.00,

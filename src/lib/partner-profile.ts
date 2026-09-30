@@ -237,7 +237,7 @@ export function validateProfilePatch(
     if (!Number.isFinite(n) || n <= 0 || n > 1) {
       return {
         ok: false,
-        error: "A quota do profissional tem de ser uma fracção entre 0 e 1 (ex: 0.65 = 65%).",
+        error: "A quota do profissional tem de ser uma fracção entre 0 e 1 (ex.: 0.65 = 65%).",
         allowed: {},
       };
     }

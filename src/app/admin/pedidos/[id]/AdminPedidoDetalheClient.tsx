@@ -415,7 +415,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
         headers: authHeader,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao excluir");
+      if (!res.ok) throw new Error(data.error || "Erro ao apagar");
       router.push("/admin/pedidos");
     } catch (e: any) {
       setError(e.message);
@@ -670,7 +670,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Excluir pedido
+                Apagar pedido
               </button>
             )}
           </div>
@@ -791,7 +791,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                       onClick={() => setShowDelete(true)}
                       className="flex items-center gap-1.5 rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-400/20 transition"
                     >
-                      Excluir pedido
+                      Apagar pedido
                     </button>
                   )}
                 </div>
@@ -893,11 +893,11 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                   <input type="text" value={editPostalCode} onChange={(e) => setEditPostalCode(e.target.value)} className={inputCls} placeholder="1234-567" />
                 </Field>
                 <Field label="Andar">
-                  <input type="text" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className={inputCls} placeholder="Ex: 3º andar" />
+                  <input type="text" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className={inputCls} placeholder="Ex.: 3º andar" />
                 </Field>
                 <Field label="Elevador">
                   <select value={editHasElevator} onChange={(e) => setEditHasElevator(e.target.value)} className={selectCls}>
-                    <option value="" className={optionCls}>Não informado</option>
+                    <option value="" className={optionCls}>Não indicado</option>
                     {ELEVATOR_VALUES.map((v) => (
                       <option key={v} value={v} className={optionCls}>{tElevator(v)}</option>
                     ))}
@@ -908,7 +908,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 </Field>
                 <Field label="Estacionamento">
                   <select value={editParkingDistance} onChange={(e) => setEditParkingDistance(e.target.value)} className={selectCls}>
-                    <option value="" className={optionCls}>Não informado</option>
+                    <option value="" className={optionCls}>Não indicado</option>
                     {PARKING_VALUES.map((v) => (
                       <option key={v} value={v} className={optionCls}>{tParking(v)}</option>
                     ))}
@@ -1319,18 +1319,18 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-white">Excluir pedido #{order.id}?</h2>
+            <h2 className="text-lg font-bold text-white">Apagar pedido #{order.id}?</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              Tem a certeza que deseja excluir este pedido? Esta ação irá remover o pedido da base de dados e{" "}
+              Tem a certeza de que quer apagar este pedido? Esta ação irá remover o pedido da base de dados e{" "}
               <span className="font-semibold text-red-300">não poderá ser desfeita</span>.
             </p>
-            <p className="mt-4 text-sm text-slate-400">Para confirmar, escreva <span className="font-mono font-bold text-red-400">EXCLUIR</span>:</p>
+            <p className="mt-4 text-sm text-slate-400">Para confirmar, escreva <span className="font-mono font-bold text-red-400">APAGAR</span>:</p>
             <input
               type="text"
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value)}
               className={`mt-2 ${inputCls}`}
-              placeholder="EXCLUIR"
+              placeholder="APAGAR"
               autoFocus
             />
             {error && (
@@ -1347,7 +1347,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={deleting || deleteConfirm !== "EXCLUIR"}
+                disabled={deleting || deleteConfirm !== "APAGAR"}
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-400 disabled:opacity-40 transition"
               >
                 {deleting ? (
@@ -1360,7 +1360,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 )}
-                {deleting ? "A excluir..." : "Excluir definitivamente"}
+                {deleting ? "A apagar…" : "Apagar definitivamente"}
               </button>
             </div>
           </div>

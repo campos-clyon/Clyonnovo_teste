@@ -71,7 +71,7 @@ export default function Notificacoes({ user, onUpdate }: Props) {
         setPushEnabled(ok);
         if (!ok) {
           // Permissão negada ou falha — reverter visualmente.
-          alert("Não foi possível ativar as notificações. Verifica se autorizaste as notificações no navegador.");
+          alert("Não foi possível ativar as notificações. Verifique se autorizou as notificações no navegador.");
         }
       } else {
         await disablePush();
@@ -100,14 +100,14 @@ export default function Notificacoes({ user, onUpdate }: Props) {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Notificações</h2>
-        <p className="mt-0.5 text-sm text-slate-500">Gere como queres ser notificado sobre os teus pedidos.</p>
+        <p className="mt-0.5 text-sm text-slate-500">Escolha como quer ser notificado sobre os seus pedidos.</p>
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white px-6 shadow-sm divide-y divide-slate-100">
         <Toggle
           id="notif-order"
           label="Estado do pedido"
-          description="Recebe um email quando o estado do teu pedido mudar."
+          description="Receba um email quando o estado do seu pedido mudar."
           checked={notifOrderStatus}
           saving={saving}
           onChange={(v) => {
@@ -118,7 +118,7 @@ export default function Notificacoes({ user, onUpdate }: Props) {
         <Toggle
           id="notif-weekly"
           label="Resumo semanal"
-          description="Um email semanal com o resumo dos teus pedidos activos."
+          description="Um email semanal com o resumo dos seus pedidos activos."
           checked={notifWeeklyDigest}
           saving={saving}
           onChange={(v) => {
@@ -131,7 +131,7 @@ export default function Notificacoes({ user, onUpdate }: Props) {
           label="Notificações no navegador"
           description={
             pushSupported
-              ? "Recebe um aviso no browser/telemóvel quando o estado mudar, mesmo com o site fechado."
+              ? "Receba um aviso no browser/telemóvel quando o estado mudar, mesmo com o site fechado."
               : "Este navegador não suporta notificações push."
           }
           checked={pushEnabled}

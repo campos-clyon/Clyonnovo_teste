@@ -4,7 +4,8 @@ import Image from "next/image";
 import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
 import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
 import { listTrabalhos } from "@/lib/db";
-import { SITE_URL, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { reviews } from "@/lib/reviews-data";
 import TrabalhosGallery from "./TrabalhosGallery";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
@@ -32,41 +33,28 @@ export const metadata: Metadata = {
   },
 };
 
-const testimonials = [
-  {
-    service: "Recolha de Entulho",
-    name: "Inês A.",
-    date: "20 Nov 2025",
-    rating: "5★",
-    text: "Excelente serviço, rápido e com uma ótima relação qualidade-preço. Trabalho impecável e equipa muito simpática.",
-  },
-  {
-    service: "Recolha de Móveis",
-    name: "Adalberto F.",
-    date: "6 Nov 2025",
-    rating: "5★",
-    text: "Retiraram os móveis antigos com cuidado e sem complicações. Processo simples, rápido e bem organizado.",
-  },
-  {
-    service: "Mudanças Completas",
-    name: "Maria T.",
-    date: "27 Nov 2025",
-    rating: "5★",
-    text: "Muito eficientes, com boa relação qualidade-preço. Fiquei extremamente satisfeita com o serviço prestado.",
-  },
-  {
-    service: "Limpeza Pós-Obra",
-    name: "Christian M.",
-    date: "12 Dez 2025",
-    rating: "5★",
-    text: "A casa ficou pronta a usar no mesmo dia. Boa comunicação, bom ritmo de trabalho e acabamento muito cuidado.",
-  },
-];
+/*
+ * OS TESTEMUNHOS DESTA PÁGINA ERAM OUTROS — e agora são os mesmos — 30-09-2026.
+ *
+ * Havia aqui uma lista escrita à mão com quatro clientes. Três existem em
+ * reviews-data.ts, mas com outro texto e outra data (a Inês A. dizia uma coisa
+ * aqui e outra em /avaliacoes); o quarto, "Adalberto F.", não existe em lado
+ * nenhum; e o "Christian M." aparecia a elogiar uma limpeza pós-obra, que não
+ * é um serviço. Por baixo de cada um, "Avaliação verificada".
+ *
+ * Passam a ser as da fonte única, palavra por palavra, com a data que lá
+ * está, e a fonte dita por cima: Google e Fixando, com as ligações para
+ * confirmar. Não se atribui serviço nenhum a nenhuma — a fonte não o diz.
+ */
+const testimonials = reviews.slice(0, 4);
 
 const stats = [
-  { value: "163", label: "avaliações 5★" },
+  // Era "163", escrito à mão — o total antigo que o prova-social.test.ts
+  // procura, e que aqui escapava por estar em dois campos separados.
+  { value: String(AVALIACOES_TOTAL), label: "avaliações no Google e na Fixando" },
   { value: PRAZO_DE_RESPOSTA.curto, label: "para receber propostas" },
-  { value: "Mesmo dia", label: "em muitos pedidos" },
+  // "Mesmo dia em muitos pedidos" era uma estatística que ninguém tira.
+  { value: `${AVALIACOES.media} ★`, label: "média das avaliações" },
 ];
 
 export default async function TrabalhosPage() {
@@ -88,11 +76,13 @@ export default async function TrabalhosPage() {
               <h1 className="mt-4 max-w-[17ch] text-[2.4rem] font-bold leading-[1.04] tracking-tight text-tinta sm:text-[4rem]">
                 Recolhas, esvaziamentos e mudanças — casos reais em Lisboa.
               </h1>
+              {/* "Cliente identificado e avaliação verificada" saiu: as
+                  fotografias não levam cliente nem avaliação, e ninguém
+                  verifica nada que se possa prometer aqui (30-09-2026). */}
               <p className="mt-5 max-w-2xl text-[1.02rem] leading-8 text-slate-600">
                 Fotos reais de trabalhos concluídos: recolha de móveis, esvaziamento
                 de casa e apartamento, recolha de entulho e mudanças em Lisboa,
-                Margem Sul e Setúbal. Cada intervenção com antes e depois, cliente
-                identificado e avaliação verificada.
+                Margem Sul e Setúbal — muitos com o antes e o depois.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
@@ -150,13 +140,17 @@ export default async function TrabalhosPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
+              {/* Dizia "Casos reais geridos no painel" e, ao lado, uma nota
+                  para quem administra o site ("Esta galeria passa a ser
+                  alimentada pelo painel interno…") — visível a todos os
+                  clientes. Passa a falar com quem lê (30-09-2026). */}
               <h2 className="mt-3 text-4xl font-bold text-slate-950">
-                Casos reais geridos no painel.
+                Antes e depois, trabalho a trabalho.
               </h2>
             </div>
             <p className="max-w-2xl text-base leading-8 text-slate-600">
-              Esta galeria passa a ser alimentada pelo painel interno. Pode agrupar
-              imagens por trabalho e marcar cada uma como antes, durante ou depois.
+              As fotografias de cada trabalho ficam juntas, marcadas como antes,
+              durante ou depois.
             </p>
           </div>
 
@@ -221,12 +215,33 @@ export default async function TrabalhosPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="mt-3 text-4xl font-bold text-slate-950">
-                Casos reais com resultado visível.
+                O que dizem os clientes.
               </h2>
             </div>
             <p className="max-w-xl text-base leading-8 text-slate-600">
-              Mensagens reais de clientes, com nota, data e contexto do serviço
-              prestado pela CLYON.
+              Avaliações deixadas no{" "}
+              <a
+                href={AVALIACOES.googleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-slate-300 underline-offset-2 hover:text-acao"
+              >
+                Google
+              </a>{" "}
+              e na{" "}
+              <a
+                href={AVALIACOES.fixandoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-slate-300 underline-offset-2 hover:text-acao"
+              >
+                Fixando
+              </a>{" "}
+              — as mesmas da{" "}
+              <Link href="/avaliacoes" className="font-semibold text-acao hover:underline">
+                página de avaliações
+              </Link>
+              .
             </p>
           </div>
 
@@ -237,14 +252,7 @@ export default async function TrabalhosPage() {
                 className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-[0_22px_55px_-34px_rgba(14,116,144,0.18)]"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-acao">
-                      {item.rating}
-                    </p>
-                    <h3 className="mt-3 text-[1.45rem] font-bold leading-tight text-slate-950">
-                      {item.service}
-                    </h3>
-                  </div>
+                  <p className="text-sm font-semibold text-acao">5★</p>
                   <div className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-acao">
                     {item.date}
                   </div>
@@ -259,7 +267,6 @@ export default async function TrabalhosPage() {
 
                 <div className="mt-5 border-t border-cyan-100 pt-4">
                   <p className="text-sm font-semibold text-slate-950">{item.name}</p>
-                  <p className="mt-1 text-sm text-slate-500">Avaliação verificada</p>
                 </div>
               </article>
             ))}
@@ -277,10 +284,12 @@ export default async function TrabalhosPage() {
                 </h2>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
+                {/* Na voz da plataforma desde 30-09-2026: quem executa é o
+                    profissional; o que a CLYON faz é conferir e registar. */}
                 {[
-                  "Pedido claro com triagem rápida",
-                  "Confirmação do serviço sem surpresas",
-                  "Execução no local com foco em limpeza",
+                  "Pedido conferido por uma pessoa da CLYON",
+                  "Preço combinado por escrito antes de começar",
+                  "Trabalho feito por profissionais verificados",
                 ].map((item, index) => (
                   <div
                     key={item}
@@ -324,8 +333,9 @@ export default async function TrabalhosPage() {
                   Quer ver o seu pedido resolvido assim também?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-                  Fale connosco e receba uma proposta rápida para recolha, limpeza ou
-                  mudança com execução profissional.
+                  Descreva o pedido e receba propostas de profissionais verificados da sua
+                  zona em até {PRAZO_DE_RESPOSTA.porExtenso} — para recolhas, esvaziamentos
+                  ou mudanças.
                 </p>
               </div>
               <Link

@@ -42,7 +42,7 @@ export default function ComoFunciona({
       <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         <p className="text-sm leading-relaxed text-slate-600">
           A CLYON não é uma empresa de mudanças com carrinhas: é o sítio onde um cliente
-          descreve o trabalho e onde você lhe responde com o seu valor. Em seis passos, o
+          descreve o trabalho e onde lhe responde com o seu valor. Em seis passos, o
           que acontece do princípio ao fim.
         </p>
 

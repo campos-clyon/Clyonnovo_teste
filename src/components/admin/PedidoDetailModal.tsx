@@ -915,7 +915,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
         headers: authHeader,
       });
       const data = await safeJson(res);
-      if (!res.ok) throw new Error(data?.error || "Erro ao excluir");
+      if (!res.ok) throw new Error(data?.error || "Erro ao apagar");
       onDeleted?.(order.id);
       onClose();
     } catch (e: any) {
@@ -1398,7 +1398,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                      Excluir
+                      Apagar
                     </button>}
                     {/* Fechar */}
                     <button
@@ -2121,13 +2121,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             })()}
                           </Field>
                           <Field label="Andar">
-                            <input type="text" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className={inputCls} placeholder="Ex: 3º andar" />
+                            <input type="text" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} className={inputCls} placeholder="Ex.: 3º andar" />
                           </Field>
                           <Field label="Elevador">
                             {/* Vocabulário partilhado: o que aqui se grava é
                                 lido pelo motor de preços e pelo simulador */}
                             <select value={editHasElevator} onChange={(e) => setEditHasElevator(e.target.value)} className={selectCls}>
-                              <option value="" className={optionCls}>Não informado</option>
+                              <option value="" className={optionCls}>Não indicado</option>
                               {ELEVATOR_VALUES.map((v) => (
                                 <option key={v} value={v} className={optionCls}>{tElevator(v)}</option>
                               ))}
@@ -2138,7 +2138,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           </Field>
                           <Field label="Distância de estacionamento">
                             <select value={editParkingDistance} onChange={(e) => setEditParkingDistance(e.target.value)} className={selectCls}>
-                              <option value="" className={optionCls}>Não informado</option>
+                              <option value="" className={optionCls}>Não indicado</option>
                               {PARKING_VALUES.map((v) => (
                                 <option key={v} value={v} className={optionCls}>{tParking(v)}</option>
                               ))}
@@ -2502,7 +2502,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             <input
                               type="number" step="0.1" min="0" value={editDistanceKm}
                               onChange={(e) => setEditDistanceKm(e.target.value)}
-                              className={`${inputCls} w-32`} placeholder="Ex: 26.8"
+                              className={`${inputCls} w-32`} placeholder="Ex.: 26.8"
                             />
                             <button
                               type="button" onClick={handleCalcularDistancia} disabled={distanceCalculating}
@@ -2788,7 +2788,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             value={schedNotes}
                             onChange={(e) => setSchedNotes(e.target.value)}
                             className={inputCls}
-                            placeholder="Ex: Levar embalagens extra, acesso pelo lado esquerdo..."
+                            placeholder="Ex.: Levar embalagens extra, acesso pelo lado esquerdo..."
                           />
                         </Field>
 
@@ -2955,7 +2955,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               <div className="flex-shrink-0 border-b border-slate-100 px-6 py-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">Agendar servico no Google Calendar</h2>
+                    <h2 className="text-base font-bold text-slate-900">Agendar serviço no Google Calendar</h2>
                     <p className="mt-1 text-xs text-slate-500">Confirme os dados antes de enviar para a agenda.</p>
                   </div>
                   <button
@@ -2976,16 +2976,16 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                 <section className="space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Dados do evento</p>
                   <div>
-                    <label className={lbCls}>Titulo do evento</label>
-                    <input type="text" value={cmTitle} onChange={(e) => setCmTitle(e.target.value)} className={calCls} placeholder="Ex: Maria Silva - Mudanca" />
+                    <label className={lbCls}>Título do evento</label>
+                    <input type="text" value={cmTitle} onChange={(e) => setCmTitle(e.target.value)} className={calCls} placeholder="Ex.: Maria Silva - Mudança" />
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className={lbCls}>Data do servico</label>
+                      <label className={lbCls}>Data do serviço</label>
                       <input type="date" value={cmDate} onChange={(e) => setCmDate(e.target.value)} className={calCls} />
                     </div>
                     <div>
-                      <label className={lbCls}>Hora de inicio</label>
+                      <label className={lbCls}>Hora de início</label>
                       <input type="time" value={cmStart} onChange={(e) => setCmStart(e.target.value)} className={calCls} />
                     </div>
                     <div>
@@ -3014,7 +3014,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             <p className="mt-0.5 truncate text-sm font-semibold text-violet-200">{targetName}</p>
                           ) : (
                             <p className="mt-0.5 text-xs text-amber-400">
-                              Nenhuma agenda configurada. O Google Calendar pedira para escolher ao guardar.
+                              Nenhuma agenda configurada. O Google Calendar pedirá para escolher ao guardar.
                             </p>
                           )}
                         </div>
@@ -3049,20 +3049,20 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Servico */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Servico</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Serviço</p>
                   <div>
-                    <label className={lbCls}>Tipo de servico</label>
+                    <label className={lbCls}>Tipo de serviço</label>
                     <input type="text" value={cmServiceType} onChange={(e) => setCmServiceType(e.target.value)} className={calCls} />
                   </div>
                   <div>
-                    <label className={lbCls}>Descricao do trabalho</label>
+                    <label className={lbCls}>Descrição do trabalho</label>
                     <textarea rows={3} value={cmDescription} onChange={(e) => setCmDescription(e.target.value)} className={calCls} placeholder="Descreva o trabalho a realizar..." />
                   </div>
                 </section>
 
                 {/* Localizacao */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Localizacao</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Localização</p>
                   {isMov ? (
                     <>
                       <div>
@@ -3075,12 +3075,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       </div>
                       <div>
                         <label className={lbCls}>Percurso (opcional)</label>
-                        <input type="text" value={cmRoute} onChange={(e) => setCmRoute(e.target.value)} className={calCls} placeholder="Ex: 12 km" />
+                        <input type="text" value={cmRoute} onChange={(e) => setCmRoute(e.target.value)} className={calCls} placeholder="Ex.: 12 km" />
                       </div>
                     </>
                   ) : (
                     <div>
-                      <label className={lbCls}>Morada do servico</label>
+                      <label className={lbCls}>Morada do serviço</label>
                       <input type="text" value={cmAddress} onChange={(e) => setCmAddress(e.target.value)} className={calCls} />
                     </div>
                   )}
@@ -3088,10 +3088,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Observacoes */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Observacoes</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Observações</p>
                   <div>
-                    <label className={lbCls}>Observacoes para a agenda (opcional)</label>
-                    <textarea rows={2} value={cmNotes} onChange={(e) => setCmNotes(e.target.value)} className={calCls} placeholder="Ex: Levar embalagens extra, acesso pelo lado esquerdo..." />
+                    <label className={lbCls}>Observações para a agenda (opcional)</label>
+                    <textarea rows={2} value={cmNotes} onChange={(e) => setCmNotes(e.target.value)} className={calCls} placeholder="Ex.: Levar embalagens extra, acesso pelo lado esquerdo..." />
                   </div>
                 </section>
 
@@ -3320,7 +3320,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               rows={5}
               value={pedirInfoText}
               onChange={(e) => setPedirInfoText(e.target.value)}
-              placeholder="Ex: Pode confirmar quantos volumes tem ao todo? Precisamos de fotos das peças maiores para a estimativa final."
+              placeholder="Ex.: Pode confirmar quantos volumes tem ao todo? Precisamos de fotos das peças maiores para a estimativa final."
               className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
               autoFocus
             />
@@ -3377,20 +3377,20 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">Excluir pedido #{order.id}?</h2>
+            <h2 className="text-lg font-bold text-slate-900">Apagar pedido #{order.id}?</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
               Esta ação irá remover o pedido definitivamente da base de dados e{" "}
               <span className="font-semibold text-red-300">não poderá ser desfeita</span>.
             </p>
             <p className="mt-4 text-sm text-slate-400">
-              Para confirmar, escreva <span className="font-mono font-bold text-red-400">EXCLUIR</span>:
+              Para confirmar, escreva <span className="font-mono font-bold text-red-400">APAGAR</span>:
             </p>
             <input
               type="text"
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value)}
               className={`mt-2 ${inputCls}`}
-              placeholder="EXCLUIR"
+              placeholder="APAGAR"
               autoFocus
             />
             {error && (
@@ -3405,7 +3405,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={deleting || deleteConfirm !== "EXCLUIR"}
+                disabled={deleting || deleteConfirm !== "APAGAR"}
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-slate-900 hover:bg-red-400 disabled:opacity-40 transition"
               >
                 {deleting ? (
@@ -3418,7 +3418,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 )}
-                {deleting ? "A excluir..." : "Excluir definitivamente"}
+                {deleting ? "A apagar…" : "Apagar definitivamente"}
               </button>
             </div>
           </div>

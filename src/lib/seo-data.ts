@@ -1,4 +1,4 @@
-import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { ENTIDADE_QUE_FACTURA, TAXA_IVA } from "@/lib/identificacao-legal";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -47,7 +47,7 @@ export const REGIONS: RegionData[] = [
       "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     metaDescription:
-      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e propostas em até 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -60,7 +60,7 @@ export const REGIONS: RegionData[] = [
     name: "Margem Sul",
     shortLabel: "Margem Sul",
     intro:
-      "Profissionais na Margem Sul para entulho, móveis, monos, limpezas pós-obra e mudanças, de Almada ao Montijo.",
+      "Profissionais na Margem Sul para entulho, móveis, monos, esvaziamentos e mudanças, de Almada ao Montijo.",
     metaTitle: "Recolha de Entulho, Móveis e Monos na Margem Sul",
     metaDescription:
       "Recolha de entulho, móveis, monos e mudanças na Margem Sul. Atendimento rápido em Almada, Seixal, Barreiro, Moita, Montijo e arredores.",
@@ -76,10 +76,10 @@ export const REGIONS: RegionData[] = [
     name: "Setúbal",
     shortLabel: "Setúbal",
     intro:
-      "Profissionais em Setúbal, Palmela e Sesimbra para recolha, limpeza pós-obra, esvaziamentos e mudanças.",
+      "Profissionais em Setúbal, Palmela e Sesimbra para recolhas, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
     metaDescription:
-      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Profissionais verificados, orçamento gratuito e propostas em até 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",
@@ -300,7 +300,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha de monos, sucata e objetos volumosos com resposta rápida e processo responsável.",
     longDescription:
-      "A CLYON recolhe monos, equipamentos antigos, sucata e objetos que ocupam espaço com triagem simples, resposta rápida e execução organizada no local. Ideal para garagens, arrecadações, caves e quintais.",
+      "Os profissionais da CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
     primaryKeyword: "recolha de monos",
     keywords: [
       "recolha de monos",
@@ -317,7 +317,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha rápida e organizada de entulho para obras, remodelações e limpezas pesadas.",
     longDescription:
-      "A CLYON trata da recolha de entulho com equipas rápidas, transporte responsável e triagem simples. Os profissionais recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação em contexto residencial e comercial.",
+      "Na CLYON, a recolha de entulho é feita por profissionais verificados da zona, com transporte responsável e triagem simples. Recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação, em casas e em espaços comerciais.",
     primaryKeyword: "recolha de entulho",
     keywords: [
       "recolha de entulho",
@@ -334,7 +334,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Serviço de mudanças residenciais e comerciais com transporte, apoio e organização.",
     longDescription:
-      "A CLYON apoia mudanças com transporte, carga, descarga, organização e equipas ajustadas ao tipo de imóvel. Trabalhamos com foco em rapidez, clareza no orçamento e cuidado no manuseamento.",
+      "Na CLYON, as mudanças são feitas por profissionais verificados: transporte, carga, descarga e organização, com a equipa ajustada ao tipo de imóvel. O preço de cada proposta fica escrito antes de começar.",
     primaryKeyword: "mudanças",
     keywords: [
       "mudanças",
@@ -351,7 +351,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Esvaziamento completo de casas, apartamentos, lojas e imóveis com apoio profissional.",
     longDescription:
-      "Fazemos esvaziamento de casas com remoção de móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
+      "Os profissionais da CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
     primaryKeyword: "esvaziamento de casas",
     keywords: [
       "esvaziamento de casas",
@@ -468,6 +468,76 @@ export const AVALIACOES = {
 /** O total verificável, somado e não arredondado. */
 export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
 
+/** «23 %», tirado da constante — o imposto não se escreve à mão num texto. */
+const IVA_EM_PALAVRAS = `${Math.round(TAXA_IVA * 100)} %`;
+
+/**
+ * A nota que acompanha qualquer preço mostrado ao público.
+ *
+ * OS VALORES SÃO SEM IVA, E ISSO DIZ-SE
+ *
+ * Em Portugal o preço mostrado ao consumidor tem de incluir os impostos. O que
+ * torna isto legítimo aqui é a natureza do número: o que está na grelha é uma
+ * ESTIMATIVA, não um preço de venda. O preço a sério é a proposta que o
+ * profissional faz.
+ *
+ * REESCRITA A 30-09-2026, porque a razão que aqui estava deixou de ser verdade
+ * duas vezes. Dizia que o site não podia falar de IVA por cada profissional
+ * facturar no seu regime; desde 22-09-2026 a factura é uma só, da
+ * `ENTIDADE_QUE_FACTURA`, sempre a 23 %. E desde 29-09-2026 o preço de cada
+ * proposta já vem com a taxa da plataforma (ver `preco-do-cliente.ts`): a nota
+ * antiga deixava o cliente a perguntar se a taxa ainda acrescia. Não acresce,
+ * e diz-se.
+ *
+ * Escrita uma vez para não divergir. Já foi por não estar.
+ */
+export const NOTA_DE_PRECO = {
+  /** Uma linha, para pôr junto de uma grelha. */
+  curta: "Valores orientativos, sem IVA. O preço de cada proposta já inclui a taxa da plataforma.",
+  /** Com a explicação de quem factura, para páginas de preços. */
+  completa:
+    "Valores orientativos, sem IVA. O preço a sério é a proposta que recebe, fechada " +
+    "antes de o trabalho começar, e já inclui a taxa da plataforma. Se quiser factura, " +
+    `acrescem ${IVA_EM_PALAVRAS} de IVA; a factura é emitida pela ` +
+    `${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.`,
+} as const;
+
+/**
+ * QUEM PASSA A FACTURA, dito ao público — 30-09-2026.
+ *
+ * O site dizia três coisas diferentes: «emitimos fatura sempre» (/servicos),
+ * «a fatura é emitida pelo profissional que escolher» (/faq) e «nem todos os
+ * profissionais emitem fatura» (/contactos). Nenhuma é verdade desde
+ * 22-09-2026: quem factura ao cliente é a parceira, e o imposto soma-se ao
+ * preço da proposta. Uma frase, para as páginas deixarem de discordar.
+ */
+export const FACTURA_EM_PALAVRAS =
+  `Os valores são apresentados sem IVA. Se pedir factura, acrescem ${IVA_EM_PALAVRAS} de IVA ` +
+  "sobre o preço da proposta (que já inclui a taxa da plataforma). A factura é emitida " +
+  `pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`;
+
+/**
+ * COMO SE PAGA, quando ainda não se sabe a forma que o cliente vai escolher.
+ *
+ * As páginas públicas diziam «MB Way, Revolut e Novo Banco, após o serviço»
+ * (/faq) e «MB WAY, transferência ou numerário» (/servicos) — nenhuma das duas
+ * é o que a plataforma faz. As formas são as de `forma-de-pagamento.ts`, e é
+ * lá que se escolhe; isto é só a explicação de antes da escolha.
+ *
+ * Sem percentagem de propósito: em dinheiro a comissão da CLYON é toda cobrada
+ * ao cliente (`taxasParaAForma`), e o valor aparece-lhe no pedido. Escrevê-la
+ * aqui era mais um número à mão a divergir das taxas do backoffice.
+ *
+ * ⚠️ SÃO DUAS FORMAS porque `PAGAR_DEPOIS_LIGADO` está desligado. No dia em que
+ * o pós-recolha abrir, esta frase tem de ganhar a terceira.
+ */
+export const COMO_SE_PAGA =
+  "No pedido escolhe como prefere pagar: pela plataforma — depois de aceitar a proposta " +
+  "recebe uma referência MB WAY ou Multibanco, e o valor fica com a CLYON até confirmar " +
+  "que o trabalho está feito; só então é entregue ao profissional — ou em dinheiro, ao " +
+  "profissional, no fim do trabalho; nesse caso paga à parte, por referência, a comissão " +
+  "da CLYON, que nessa forma é toda paga por si.";
+
 /**
  * O prazo de resposta, num sítio só.
  *
@@ -482,44 +552,10 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
  * pedido.
  *
  * Todo o resto do site já dizia 6 horas; o 48 era o caso isolado. Fica aqui
- * para a próxima mudança ser uma linha e não uma caça.
+ * para a próxima mudança ser uma linha e não uma caça. (O comentário estava
+ * por cima da `NOTA_DE_PRECO`, a descrever a constante errada; desceu para
+ * aqui a 30-09-2026.)
  */
-/**
- * A nota que acompanha qualquer preço mostrado ao público.
- *
- * OS VALORES SÃO SEM IVA, E ISSO DIZ-SE
- *
- * Em Portugal o preço mostrado ao consumidor tem de incluir os impostos. O que
- * torna isto legítimo aqui é a natureza do número: o que está na grelha é uma
- * ESTIMATIVA, não um preço de venda. O preço a sério é a proposta que o
- * profissional faz, e essa já traz a linha de imposto quando ele está no
- * regime normal.
- *
- * PORQUE É QUE O SITE NÃO PODE DIZER SE O IVA ESTÁ INCLUÍDO
- *
- * Porque deixou de ser a CLYON a executar. Numa plataforma, quem faz o
- * trabalho é quem emite a factura — e cada profissional tem o seu regime: uns
- * na isenção do artigo 53.º do CIVA, que não acrescentam nada, outros a
- * liquidar 23%. O mesmo trabalho, feito por dois profissionais diferentes,
- * pode ter facturas diferentes. No momento em que a grelha é mostrada, ainda
- * não se sabe quem vai ficar com ele.
- *
- * "Com IVA" e "sem IVA incluído" seriam ambas afirmações que o site não pode
- * garantir. O site chegou a dizer "+ IVA" e "IVA incluído" em sítios
- * diferentes — as duas erradas ao mesmo tempo.
- *
- * Escrita uma vez para não divergir. Já foi por não estar.
- */
-export const NOTA_DE_PRECO = {
-  /** Uma linha, para pôr junto de uma grelha. */
-  curta: "Valores orientativos, sem IVA. A proposta traz o valor final.",
-  /** Com a explicação de quem factura, para páginas de preços. */
-  completa:
-    "Valores orientativos e sem IVA. O preço a sério é a proposta que recebe, " +
-    "fechada antes de o trabalho começar. Se quiser factura, acrescem 23 % de " +
-    `IVA ao valor da proposta, e quem a emite é a ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.`,
-} as const;
-
 export const PRAZO_DE_RESPOSTA = {
   /** Para texto corrido: "Orçamento gratuito em 6 horas." */
   porExtenso: "6 horas",

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     const { order, estimate, chatHistory } = await req.json();
     if (!order) {
-      return NextResponse.json({ error: "order required" }, { status: 400 });
+      return NextResponse.json({ error: "Pedido em falta." }, { status: 400 });
     }
 
     /*

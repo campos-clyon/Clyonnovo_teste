@@ -113,7 +113,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/users DELETE]", err);
-    return NextResponse.json({ error: "Erro ao excluir conta" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao apagar a conta" }, { status: 500 });
   }
 }
 

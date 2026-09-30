@@ -364,7 +364,7 @@ describe("ler a resposta do Multibanco", () => {
 describe("um código que não conhecemos nunca é sucesso", () => {
   it("recusa, e diz-nos que não o reconheceu", () => {
     const r = recusaDoEupago("-99", "Coisa nova");
-    expect(r.paraNos).toContain("nao reconhecida");
+    expect(r.paraNos).toContain("não reconhecida");
     expect(r.paraOCliente).toBeTruthy();
   });
 

@@ -1349,7 +1349,7 @@ export default function AdminWhatsAppPanel() {
                       <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
                         {aMao
                           ? `Enviar abre o ${porOnde === "web" ? "WhatsApp Web" : "WhatsApp do telemóvel"} da CLYON com o texto pronto — carregue em enviar lá. Fica registado aqui como saída.`
-                          : "Sai pelo número da plataforma, e passa por cima do interruptor e das entregas — aqui quem fala é você. O WhatsApp só recusa texto livre se ele não escrever há mais de 24 horas."}
+                          : "Sai pelo número da plataforma, e passa por cima do interruptor e das entregas — aqui quem fala é a equipa. O WhatsApp só recusa texto livre se ele não escrever há mais de 24 horas."}
                       </p>
 
                       {/*

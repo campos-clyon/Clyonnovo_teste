@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import type { UserProfile } from "./types";
 import Nota from "@/components/Nota";
-import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { ENTIDADE_QUE_FACTURA, TAXA_IVA } from "@/lib/identificacao-legal";
 
 interface Props {
   user: UserProfile;
@@ -95,7 +95,7 @@ export default function Faturacao({ user, onUpdate }: Props) {
       });
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Não foi possível guardar. Tenta novamente.";
+      const errorMsg = err instanceof Error ? err.message : "Não foi possível guardar. Tente novamente.";
       console.error("[v0] Faturacao: erro catch:", errorMsg);
       setError(errorMsg);
     } finally {
@@ -112,7 +112,7 @@ export default function Faturacao({ user, onUpdate }: Props) {
 
       <div className="flex items-start gap-3 rounded-2xl border border-[#00B4D8]/20 bg-[#00B4D8]/5 px-5 py-4 text-sm text-[#0077B6]">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        Estes dados são usados para emitir faturas dos teus pedidos. Se a morada de faturação for igual à pessoal, deixa em branco.
+        Estes dados são usados para emitir faturas dos seus pedidos. Se a morada de faturação for igual à pessoal, deixe em branco.
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -165,8 +165,12 @@ export default function Faturacao({ user, onUpdate }: Props) {
           que faz o trabalho. Deixou de ser verdade quando a facturação passou
           para uma empresa parceira — ver `ENTIDADE_QUE_FACTURA`.
         */}
+        {/* "Ao valor da proposta" deixava a dúvida de se a taxa ainda
+            acrescia. Não acresce: desde 29-09-2026 o preço da proposta já a
+            traz, e o IVA soma-se a esse preço (30-09-2026). */}
         A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa
-        parceira, e acrescem 23 % de IVA ao valor da proposta. Estes dados são
+        parceira, e acrescem {Math.round(TAXA_IVA * 100)} % de IVA ao preço da
+        proposta (que já inclui a taxa da plataforma). Estes dados são
         os que vão nela, por isso vale a pena estarem certos antes de fechar um
         trabalho. Se precisa mesmo de fatura, diga-o no pedido.
       </Nota>

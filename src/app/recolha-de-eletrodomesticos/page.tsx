@@ -290,8 +290,8 @@ export default function RecolhaDeEletrodomesticosPage() {
           </h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { step: "01", title: "Envia fotos ou descrição", desc: "Envia fotos do eletrodoméstico, morada e indica o andar e acessos." },
-              { step: "02", title: "Recebe orçamento", desc: "Recebe uma resposta rápida com valor fechado e janela de recolha disponível." },
+              { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do eletrodoméstico, a morada e indique o andar e os acessos." },
+              { step: "02", title: "Receba o orçamento", desc: "Receba uma resposta rápida com valor fechado e janela de recolha disponível." },
               { step: "03", title: "Agendamos a recolha", desc: "Confirmamos o dia e a hora. Muitos pedidos são atendidos em 24-48 horas." },
               { step: "04", title: "Fazemos a recolha", desc: "A equipa entra no imóvel, carrega o eletrodoméstico e encaminha para reciclagem." },
             ].map((item) => (

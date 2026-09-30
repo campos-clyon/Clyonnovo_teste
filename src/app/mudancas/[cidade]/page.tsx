@@ -158,7 +158,7 @@ export default async function MudancasCidadePage({ params }: Props) {
       />
 
       {/* ── Breadcrumb ── */}
-      <nav aria-label="Breadcrumb" className="mx-auto max-w-6xl px-4 pt-6 text-xs text-slate-500 sm:px-6">
+      <nav aria-label="Caminho de navegação" className="mx-auto max-w-6xl px-4 pt-6 text-xs text-slate-500 sm:px-6">
         <ol className="flex items-center gap-1.5">
           <li><Link href="/" className="hover:text-emerald-600">Início</Link></li>
           <li>›</li>

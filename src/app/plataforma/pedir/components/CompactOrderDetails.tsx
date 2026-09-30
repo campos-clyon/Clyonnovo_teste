@@ -277,7 +277,7 @@ export default function CompactOrderDetails({
               id="descricao-pedido"
               value={description || ""}
               onChange={(e) => onDescriptionChange(e.target.value)}
-              placeholder="Ex: um sofá de 3 lugares e um colchão, 4.º andar com elevador, dá para encostar a carrinha à porta."
+              placeholder="Ex.: um sofá de 3 lugares e um colchão, 4.º andar com elevador, dá para encostar a carrinha à porta."
               className="mt-2.5 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm transition-colors focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
               rows={3}
             />

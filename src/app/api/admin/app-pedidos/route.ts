@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error("[app-pedidos] supabase error:", error);
-      return NextResponse.json({ error: `Erro ao buscar pedidos: ${error.message}` }, { status: 500 });
+      return NextResponse.json({ error: `Erro ao carregar pedidos: ${error.message}` }, { status: 500 });
     }
 
     const rows = data ?? [];

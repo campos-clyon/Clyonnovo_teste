@@ -144,7 +144,7 @@ export const BLOG_POSTS: BlogPost[] = [
         ],
       },
       {
-        title: "Como acelerar o pedido e evitar atrásos",
+        title: "Como acelerar o pedido e evitar atrasos",
         paragraphs: [
           "O melhor ponto de partida é enviar morada, lista básica de peças, fotos quando possível, tipo de acesso ao imóvel e urgência do serviço. Se existir desmontagem prévia ou rua de acesso difícil, isso também deve ser referido.",
           "No caso da CLYON, o simulador ajuda a criar uma primeira referência de valor. Depois, o contacto direto por WhatsApp ou telefone serve para confirmar condições, disponibilidade e hora de recolha.",
@@ -213,7 +213,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando vale a pena doar",
         paragraphs: [
           "Peças estruturais em bom estado, sem danos graves, com portas, gavetas e estofos utilizáveis, podem ainda ter valor social ou funcional. Nestes casos, a doação é uma alternativa forte e mais sustentável.",
-          "Isto acontece muito em mudanças, trocas de mobília, venda de casa e esvaziamentos parciais em que o objetivo é reduzir desperdício sem atrásar a libertação do espaço.",
+          "Isto acontece muito em mudanças, trocas de mobília, venda de casa e esvaziamentos parciais em que o objetivo é reduzir desperdício sem atrasar a libertação do espaço.",
         ],
       },
       {
@@ -226,7 +226,7 @@ export const BLOG_POSTS: BlogPost[] = [
           "Peças com danos estruturais",
           "Móveis com bolor, humidade ou sujidade pesada",
           "Itens sem valor de reutilização",
-          "Objetos que atrásam a libertação do espaço",
+          "Objetos que atrasam a libertação do espaço",
         ],
       },
       {
@@ -253,7 +253,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Posso misturar doação e despejo no mesmo serviço?",
         answer:
-          "Sim. Muitos pedidos incluem peças para reaproveitamento e outrás para remoção definitiva, no mesmo agendamento.",
+          "Sim. Muitos pedidos incluem peças para reaproveitamento e outras para remoção definitiva, no mesmo agendamento.",
       },
       {
         question: "Vale a pena tentar OLX antes da recolha?",
@@ -266,7 +266,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "onde-doar-vender-ou-anunciar-moveis-usados",
     title: "Onde doar, vender ou anunciar móveis usados antes de pedir recolha",
     description:
-      "Guia SEO sobre OLX, IKEA, REMAR, Fixando e outrás alternativas para doar, vender, reaproveitar ou encaminhar móveis usados antes do despejo.",
+      "Guia SEO sobre OLX, IKEA, REMAR, Fixando e outras alternativas para doar, vender, reaproveitar ou encaminhar móveis usados antes do despejo.",
     category: "Alternativas",
     keywords: [
       "onde doar móveis usados",
@@ -320,7 +320,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Posso doar umas peças e pedir recolha do resto?",
         answer:
-          "Sim. Essa combinação é muito comum e ajuda a reduzir desperdício sem atrásar a libertação do espaço.",
+          "Sim. Essa combinação é muito comum e ajuda a reduzir desperdício sem atrasar a libertação do espaço.",
       },
     ],
   },
@@ -341,7 +341,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Entulho",
     intro:
-      "Depois de uma obra, remodelação ou limpeza pesada, o entulho transforma-se num problema de espaço, segurança e logística. A recolha profissional evita acumulação, atrásos de obra e risco desnecessário para quem tenta resolver tudo sem meios adequados.",
+      "Depois de uma obra, remodelação ou limpeza pesada, o entulho transforma-se num problema de espaço, segurança e logística. A recolha profissional evita acumulação, atrasos de obra e risco desnecessário para quem tenta resolver tudo sem meios adequados.",
     sections: [
       {
         title: "Que tipos de entulho aparecem com mais frequência",
@@ -452,7 +452,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Acabamento",
     intro:
-      "A limpeza pós-obra é a fase que transforma um espaço intervencionado num espaço pronto a usar. O problema é que essa fase junta pó, restos de material, embalagens, sobras de montagem e pontos de difícil acesso que atrásam a entrega do imóvel.",
+      "A limpeza pós-obra é a fase que transforma um espaço intervencionado num espaço pronto a usar. O problema é que essa fase junta pó, restos de material, embalagens, sobras de montagem e pontos de difícil acesso que atrasam a entrega do imóvel.",
     sections: [
       {
         title: "O que costuma ficar por fazer depois da obra",
@@ -509,7 +509,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como organizar o esvaziamento por fases",
         paragraphs: [
-          "Separar doação, retenção, lixo e despejo antes do dia da recolha reduz erros e acelera a operação. Quando isso não é possível, a triagem no local deve ser pensada com critério para não atrásar a saída.",
+          "Separar doação, retenção, lixo e despejo antes do dia da recolha reduz erros e acelera a operação. Quando isso não é possível, a triagem no local deve ser pensada com critério para não atrasar a saída.",
         ],
       },
       {
@@ -665,7 +665,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "1 semana antes: embalar e preparar",
         paragraphs: [
-          "Comece a embalar divisão a divisão, etiquetando as caixas com o conteúdo e o destino (ex: 'Cozinha - Loiça'). Proteja objetos frágeis com papel ou plástico bolha.",
+          "Comece a embalar divisão a divisão, etiquetando as caixas com o conteúdo e o destino (ex.: 'Cozinha - Loiça'). Proteja objetos frágeis com papel ou plástico bolha.",
           "Confirme os detalhes com a empresa de mudanças: horário, moradas exatas, andar, elevador e contacto para o dia.",
         ],
         bullets: [

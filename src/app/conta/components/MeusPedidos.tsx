@@ -227,7 +227,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
           <p className="mb-1 text-sm font-semibold text-slate-700">Sem pedidos nesta categoria.</p>
           {filter === "todos" && (
             <>
-              <p className="mb-4 text-sm text-tinta-fraca">Ainda não fizeste nenhum pedido.</p>
+              <p className="mb-4 text-sm text-tinta-fraca">Ainda não fez nenhum pedido.</p>
               <Link
                 href="/simulador"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#0077B6] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#005f96]"

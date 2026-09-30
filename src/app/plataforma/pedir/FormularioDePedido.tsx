@@ -965,8 +965,8 @@ function Phase1Service({
           exactLabel="Sei a quantidade exata"
           exactPlaceholder={
             formData.serviceType === "esvaziamento_casa" || formData.serviceType === "esvaziamento_apartamento"
-              ? "Ex: 3 divisões"
-              : "Ex: 5 móveis"
+              ? "Ex.: 3 divisões"
+              : "Ex.: 5 móveis"
           }
           onVolumeChange={(vol) => {
             updateField("volumeTier", vol);
@@ -1568,7 +1568,7 @@ function Phase3Contact({
             type="text"
             value={formData.receiver?.name || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, name: e.target.value })}
-            placeholder="Ex: Eugênia Almeida"
+            placeholder="Ex.: Eugénia Almeida"
             className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
           />
         </div>
@@ -1579,7 +1579,7 @@ function Phase3Contact({
             type="tel"
             value={formData.receiver?.phone || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
-            placeholder="Ex: 911 128 863"
+            placeholder="Ex.: 911 128 863"
             className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
           />
         </div>
@@ -1593,7 +1593,7 @@ function Phase3Contact({
           type="email"
           value={formData.receiver?.email || ""}
           onChange={(e) => updateField("receiver", { ...formData.receiver, email: e.target.value })}
-          placeholder="Ex: exemplo@email.com"
+          placeholder="Ex.: exemplo@email.com"
           autoComplete="email"
           className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
         />
@@ -1620,7 +1620,8 @@ function Phase3Contact({
       {(formData.serviceType === "jardinagem" || formData.serviceType === "manutencao_casa") && (
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-900">
-            Frequência do serviço <span className="text-gray-500 font-normal">(opcional — poupe com marcação recorrente)</span>
+            {/* Sem desconto prometido: ninguém o aplica à proposta (30-09-2026). */}
+            Frequência do serviço <span className="text-gray-500 font-normal">(opcional — diga-nos se o serviço é para repetir)</span>
           </label>
           <select
             value={formData.recurrenceFrequency || ""}
@@ -1628,8 +1629,8 @@ function Phase3Contact({
             className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
           >
             <option value="">Pontual (serviço único)</option>
-            <option value="semanal">Semanal — poupe 15%</option>
-            <option value="quinzenal">Quinzenal — poupe 10%</option>
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">Quinzenal</option>
           </select>
         </div>
       )}

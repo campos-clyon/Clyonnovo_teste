@@ -3464,8 +3464,8 @@ export default function ColaboradorAdminClient({
                 </p>
                 <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
                   A caminho de a CLYON segurar o dinheiro entre o cliente e o profissional. Aqui
-                  compara-se a carteira de hoje com a que sai do livro de movimentos — e so se
-                  avanca quando derem exactamente o mesmo numero.
+                  compara-se a carteira de hoje com a que sai do livro de movimentos — e só se
+                  avança quando derem exactamente o mesmo número.
                 </p>
                 <AdminLivroPanel />
               </div>
@@ -3731,7 +3731,7 @@ export default function ColaboradorAdminClient({
               {settingsTab === "seguranca" && (
                 <ActionCard
                   title="Segurança da sua conta"
-                  description={`Altere a palavra-passe da conta autenticada (${adminNome || "administrador"}). Para sua proteção, será necessário iniciar sessão novamente.`}
+                  description={`Altere a palavra-passe da conta autenticada (${adminNome || "administrador"}). Para a sua proteção, será necessário iniciar sessão novamente.`}
                 >
                   <div className="grid gap-4 md:grid-cols-3">
                     <Field label="Palavra-passe atual">

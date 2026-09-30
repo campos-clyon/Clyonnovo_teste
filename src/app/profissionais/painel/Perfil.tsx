@@ -1296,7 +1296,7 @@ function FotoDaViatura({
       const res = await fetch("/api/profissionais/foto-viatura", { method: "POST", body: fd });
       const d = await res.json();
       if (!res.ok || !Array.isArray(d.fotos)) {
-        setErro(d.error ?? "Nao foi possivel guardar a fotografia.");
+        setErro(d.error ?? "Não foi possível guardar a fotografia.");
         return;
       }
       onMudou(d.fotos as string[]);
@@ -1318,7 +1318,7 @@ function FotoDaViatura({
       });
       const d = await res.json();
       if (!res.ok || !Array.isArray(d.fotos)) {
-        setErro(d.error ?? "Nao foi possivel apagar.");
+        setErro(d.error ?? "Não foi possível apagar.");
         return;
       }
       onMudou(d.fotos as string[]);
@@ -1332,7 +1332,7 @@ function FotoDaViatura({
   return (
     <Campo
       etiqueta="As suas viaturas"
-      ajuda="Fotografias das carrinhas ou camioes — por fora e por dentro. E assim que sabemos o que cabe, e o cliente ve quem lhe chega a porta. A primeira e a que o representa."
+      ajuda="Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe, e o cliente vê quem lhe chega à porta. A primeira é a que o representa."
     >
       {/*
         VARIAS, E NAO UMA — 19-09-2026.
@@ -1388,7 +1388,7 @@ function FotoDaViatura({
 
       {cheio && (
         <p className="mt-1.5 text-xs text-slate-500">
-          Ja tem {MAXIMO_DE_VIATURAS} fotografias. Apague uma para acrescentar outra.
+          Já tem {MAXIMO_DE_VIATURAS} fotografias. Apague uma para acrescentar outra.
         </p>
       )}
       {erro && <p className="mt-1.5 text-xs text-red-600">{erro}</p>}

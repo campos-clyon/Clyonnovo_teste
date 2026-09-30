@@ -329,7 +329,7 @@ export default async function RegionPage({ params }: Props) {
             <strong className="font-semibold text-slate-950">
               Operador de resíduos registado na Agência Portuguesa do Ambiente
             </strong>{" "}
-            — {IDENTIFICACAO.codigoAPA}. O que sai de sua casa vai para destino
+            — {IDENTIFICACAO.codigoAPA}. O que sai da sua casa vai para destino
             licenciado, e há registo disso.
           </p>
         </div>

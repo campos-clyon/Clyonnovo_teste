@@ -69,7 +69,7 @@ describe("o histórico do envio passa a dizer porquê", () => {
       candidatos: 4,
       motivos: { fora_de_alcance: 4 },
     } as never);
-    expect(texto).toContain("NAO chegou");
+    expect(texto).toContain("NÃO chegou");
     expect(texto).toContain("fora do raio deles");
   });
 
@@ -160,7 +160,7 @@ describe("redistribuir para alcançar quem entrou depois", () => {
     } as never);
     expect(texto).toContain("Nenhum profissional NOVO");
     expect(texto).toContain("7 já o tinha(m)");
-    expect(texto).not.toContain("NAO chegou");
+    expect(texto).not.toContain("NÃO chegou");
   });
 
   it("sem o campo, a conta não vai a NaN", () => {

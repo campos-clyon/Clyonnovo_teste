@@ -513,7 +513,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                       className={`rounded-lg p-2.5 shadow-sm ${isClient ? "ml-6 bg-blue-50" : "mr-6 bg-white"}`}
                     >
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-tinta-fraca">
-                        {isClient ? "Tu" : (e.by?.nome ?? "Equipa CLYON")}
+                        {isClient ? "Eu" : (e.by?.nome ?? "Equipa CLYON")}
                         <span className="ml-1 text-slate-300 normal-case tracking-normal">· {formatDateTime(e.createdAt)}</span>
                       </p>
                       <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{e.message}</p>
@@ -527,7 +527,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               <textarea
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
-                placeholder="Escreve uma resposta ou pergunta à equipa..."
+                placeholder="Escreva uma resposta ou pergunta à equipa…"
                 rows={2}
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-tinta-fraca focus:border-[#0077B6] focus:outline-none focus:ring-2 focus:ring-[#0077B6]/20"
               />

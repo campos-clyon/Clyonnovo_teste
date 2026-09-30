@@ -15,51 +15,66 @@ import {
   BUSINESS_ADDRESS,
   BUSINESS_EMAIL,
   BUSINESS_PHONE,
+  PRAZO_DE_RESPOSTA,
   REGIONS,
   SITE_URL,
 } from "@/lib/seo-data";
+import { IDENTIFICACAO } from "@/lib/identificacao-legal";
+
+/*
+ * A PÁGINA QUE DIZ O QUE A CLYON É — e nunca dizia que era uma plataforma.
+ *
+ * Reescrita a 30-09-2026. Falava de "a equipa por trás dos serviços", "a
+ * equipa vai ao local, protege acessos, recolhe", "mais execução no terreno" e
+ * de limpeza pós-obra, que não é um serviço. Quem faz o trabalho é o
+ * profissional que o cliente escolher; a CLYON confere os pedidos, guarda o
+ * que se combina e atende quando alguma coisa corre mal.
+ *
+ * A identidade vem de `IDENTIFICACAO` — a mesma dos Termos e da Privacidade —
+ * e não se lhe acrescenta nem história nem números que não existam.
+ */
 
 export const metadata: Metadata = {
-  title: "Sobre a CLYON — Recolha, Limpeza e Mudanças",
+  title: "Sobre a CLYON — Recolhas, Esvaziamentos e Mudanças",
   description:
-    "Conheça a CLYON, a equipa por trás dos serviços de recolha, limpeza, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "A CLYON é uma plataforma que liga quem precisa de retirar móveis, entulho ou recheios, ou de fazer uma mudança, a profissionais independentes e verificados em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: `${SITE_URL}/sobre-nos`,
   },
   openGraph: {
-    title: "Sobre a CLYON — Recolha, Limpeza e Mudanças",
+    title: "Sobre a CLYON — Recolhas, Esvaziamentos e Mudanças",
     description:
-      "Uma equipa focada em resposta rápida, orçamento claro e destino licenciado para o que sai de casa.",
+      "Uma plataforma: recebe as propostas de profissionais verificados da sua zona, escolhe, e só confirma o trabalho quando estiver feito.",
     url: `${SITE_URL}/sobre-nos`,
   },
 };
 
 const values = [
-  "Resposta rápida e humana desde o primeiro contacto",
-  "Orçamento claro antes da marcação",
-  "Execução profissional no local com foco em cuidado",
-  "Cobertura forte em Lisboa, Margem Sul e Setúbal",
+  "Cada pedido é lido por uma pessoa da CLYON antes de seguir para os profissionais",
+  `Propostas em até ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma`,
+  "Quem faz o trabalho é o profissional que escolher — vê o nome e a nota dele antes",
+  "Lisboa, Margem Sul e Setúbal; fora disso, depende de haver profissional disponível",
 ];
 
 const clientTypes = [
   "Particulares que precisam de libertar espaço em casa",
   "Senhorios e gestores de património em trocas de inquilino",
-  "Empresas e escritórios com necessidade de recolha ou limpeza",
+  "Empresas e escritórios com necessidade de recolha ou esvaziamento",
   "Condomínios, obras e equipas técnicas com pedidos pontuais",
 ];
 
 const processSteps = [
-  "Recebemos o pedido com fotos, morada, volume e acessos.",
-  "Damos orientação rápida sobre o serviço certo e o valor esperado.",
-  "A equipa vai ao local, protege acessos, recolhe e organiza a saída do material.",
-  "Sempre que faz sentido, os materiais seguem para triagem, reaproveitamento ou destino responsável.",
+  "Descreve o que precisa: fotografias, morada, volume e acessos.",
+  `Recebe em até ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de profissionais verificados da sua zona, já com a taxa da plataforma, e escolhe.`,
+  "O profissional que escolher vai ao local, retira e trata do destino do material.",
+  "Confirma na plataforma que ficou feito — e é à CLYON que recorre se alguma coisa correr mal.",
 ];
 
 const trustSignals = [
-  "Atendimento em várias zonas com operação local",
-  "Apoio em móveis, entulho, monos, esvaziamentos e limpeza pós-obra",
-  "Prova social em avaliações reais e trabalhos publicados",
-  "Contacto direto por telefone, WhatsApp e formulário",
+  "Profissionais verificados: cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta",
+  "Recolha de móveis, entulho e monos, esvaziamentos e mudanças",
+  "Avaliações no Google e na Fixando, e trabalhos publicados",
+  "Contacto direto por telefone, WhatsApp e formulário, de segunda a sábado, das 08:00 às 20:00",
 ];
 
 export const revalidate = 86400;
@@ -73,13 +88,17 @@ export default function SobreNosPage() {
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">
             <div>
               <h1 className="mt-5 max-w-[12ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
-                Menos complicação, mais execução no terreno.
+                Menos complicação para libertar espaço.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-                A CLYON nasceu para simplificar pedidos que costumam dar trabalho:
-                retirar móveis velhos, recolher entulho, limpar no fim de uma obra,
-                libertar espaço ou apoiar uma mudança. O foco da equipa é responder
-                rápido, explicar sem ruido e executar com cuidado.
+                A CLYON é uma plataforma: liga quem precisa de retirar móveis, entulho
+                ou recheios a profissionais independentes e verificados da sua zona.
+                Recebe as propostas deles, já com a taxa da plataforma, escolhe, e só
+                confirma o trabalho quando estiver feito.
+              </p>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
+                {IDENTIFICACAO.nomeComercial} é o nome comercial de {IDENTIFICACAO.nomeLegal},{" "}
+                {IDENTIFICACAO.formaJuridica.toLowerCase()}, NIF {IDENTIFICACAO.nif}.
               </p>
             </div>
 
@@ -89,8 +108,8 @@ export default function SobreNosPage() {
                   <div key={region.slug} className="flex items-start gap-3">
                     <MapPin className="mt-1 h-4 w-4 text-acao" />
                     <p className="text-sm leading-7 text-slate-600">
-                      Operação ativa em {region.name} com resposta para recolhas,
-                      limpezas e pedidos urgentes.
+                      {region.name}: profissionais verificados para recolhas,
+                      esvaziamentos e mudanças.
                     </p>
                   </div>
                 ))}
@@ -144,11 +163,12 @@ export default function SobreNosPage() {
                 Compromisso com destino responsável
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                Nem tudo o que sai de um imóvel deve seguir o mesmo destino. Sempre
-                que o estado dos materiais o permite, a equipa faz separação e triagem
-                para reaproveitamento, doação ou centro de tratamento. Esse cuidado
-                reduz desperdício e melhora a qualidade do serviço para quem pede uma
-                solução completa.
+                Nem tudo o que sai de um imóvel deve seguir o mesmo destino. O que
+                ainda serve pode ir para reaproveitamento ou doação; o resto tem de ir
+                para um operador licenciado. Quem transporta é o profissional, e as
+                regras da plataforma obrigam-no a ter as autorizações que a lei exige.
+                A CLYON está registada como operador de resíduos na Agência Portuguesa
+                do Ambiente, com o número {IDENTIFICACAO.codigoAPA}.
               </p>
             </div>
           </div>
@@ -163,9 +183,8 @@ export default function SobreNosPage() {
                 Um processo simples do pedido até ao espaço livre.
               </h2>
               <p className="mt-4 max-w-xl text-base leading-8 text-slate-600">
-                A operação foi desenhada para reduzir dúvidas e acelerar a marcação.
-                Quanto mais claro for o pedido, mais rápido a CLYON consegue validar
-                disponibilidade, prever acessos e fechar o serviço certo.
+                Quanto mais claro for o pedido — fotografias, andar, elevador,
+                quantidade —, mais certas são as propostas que recebe.
               </p>
             </div>
 
@@ -192,8 +211,10 @@ export default function SobreNosPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.98fr_1.02fr]">
             <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">
+              {/* Dizia "Porque tantos pedidos chegam por recomendação" — uma
+                  estatística que ninguém conta (30-09-2026). */}
               <h2 className="mt-4 text-3xl font-bold text-slate-950">
-                Porque tantos pedidos chegam por recomendação.
+                Porque pode confiar.
               </h2>
               <div className="mt-6 space-y-3">
                 {trustSignals.map((item) => (
@@ -257,18 +278,18 @@ export default function SobreNosPage() {
                   </span>
                 </div>
                 <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
-                  Quer trabalhar connosco no seu próximo pedido?
+                  Tem alguma coisa para tirar de casa?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-                  Pode começar pelo simulador, consultar preços orientativos ou falar
-                  diretamente com a equipa para validar disponibilidade.
+                  Descreva o pedido e receba propostas em até {PRAZO_DE_RESPOSTA.porExtenso},
+                  consulte os preços de referência, ou fale com a equipa da CLYON.
                 </p>
               </div>
               <Link
                 href="/simulador"
                 className="inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
               >
-                Simular orçamento
+                Pedir orçamento
               </Link>
             </div>
           </div>

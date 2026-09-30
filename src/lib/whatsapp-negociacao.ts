@@ -388,7 +388,7 @@ async function fecharPeloCliente(
   } = await import("@/lib/db");
 
   if (!(await assistentePode("fechar"))) {
-    await passarAUmaPessoa(telefone, "Fechar desligado - quis avancar");
+    await passarAUmaPessoa(telefone, "Fechar desligado - quis avançar");
     return;
   }
 
@@ -1324,7 +1324,7 @@ export async function tratarMensagemDoCliente(
     if (!alvo && valorPedido == null && porPista.length > 1) {
       await passarAUmaPessoa(
         telefone,
-        `Disse «${pistaDeNome}» e isso bate em ${porPista.length} profissionais — nao dá para saber qual`,
+        `Disse «${pistaDeNome}» e isso bate em ${porPista.length} profissionais — não dá para saber qual`,
       );
       return;
     }
@@ -1365,7 +1365,7 @@ export async function tratarMensagemDoCliente(
           telefone,
           `${casam.length} propostas de ${euros(valorPedido)} em pedidos diferentes (${casam
             .map((a) => `#${a.pedidoId}`)
-            .join(", ")}) — nao dá para saber qual quer fechar`,
+            .join(", ")}) — não dá para saber qual quer fechar`,
         );
         return;
       }
@@ -1495,7 +1495,7 @@ export async function tratarMensagemDoCliente(
      */
     const { assistentePode: podeMexerNoValor } = await import("@/lib/db");
     if (!(await podeMexerNoValor("fechar"))) {
-      await passarAUmaPessoa(telefone, "Fechar desligado - propos um valor");
+      await passarAUmaPessoa(telefone, "Fechar desligado - propôs um valor");
       return;
     }
     /*

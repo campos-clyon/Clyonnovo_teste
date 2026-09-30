@@ -4,10 +4,10 @@ import { useSearchParams } from "next/navigation";
 import { PremiumLoginCard } from "./PremiumLoginCard";
 
 const errorMessages: Record<string, string> = {
-  OAuthSignin: "Erro ao iniciar sessão com Google. Tenta de novo.",
-  OAuthCallback: "Erro na resposta do Google. Tenta de novo.",
-  OAuthCreateAccount: "Não foi possível criar a conta. Contacta o suporte.",
-  Default: "Ocorreu um erro. Tenta de novo.",
+  OAuthSignin: "Erro ao iniciar sessão com Google. Tente de novo.",
+  OAuthCallback: "Erro na resposta do Google. Tente de novo.",
+  OAuthCreateAccount: "Não foi possível criar a conta. Contacte o suporte.",
+  Default: "Ocorreu um erro. Tente de novo.",
 };
 
 export function ErrorHandler() {

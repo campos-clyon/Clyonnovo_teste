@@ -56,12 +56,12 @@ async function handleRequest(req: NextRequest, path: string[]) {
     const body = await req.json();
     const definition = defaultSimulatorSettings.find((item) => item.key === body.key);
     if (!definition) {
-      return NextResponse.json({ error: "Configuracao invalida." }, { status: 400 });
+      return NextResponse.json({ error: "Configuração inválida." }, { status: 400 });
     }
 
     const parsedValue = Number(body.value);
     if (!Number.isFinite(parsedValue)) {
-      return NextResponse.json({ error: "Valor invalido." }, { status: 400 });
+      return NextResponse.json({ error: "Valor inválido." }, { status: 400 });
     }
 
     await upsertSimulatorSetting({
@@ -76,7 +76,7 @@ async function handleRequest(req: NextRequest, path: string[]) {
     return NextResponse.json({ success: true });
   }
 
-  return NextResponse.json({ error: "Rota nao encontrada." }, { status: 404 });
+  return NextResponse.json({ error: "Rota não encontrada." }, { status: 404 });
 }
 
 export async function GET(req: NextRequest, context: RouteContext) {

@@ -57,7 +57,9 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Para onde vai o que sai de casa?",
-      a: "O que ainda serve vai para reutilização ou doação. O resto vai para centros de tratamento licenciados — a CLYON é operador de resíduos registado na Agência Portuguesa do Ambiente.",
+      // Igual à da página inicial desde 30-09-2026: quem transporta é o
+      // profissional, e é a ele que as regras da plataforma obrigam.
+      a: "O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o profissional, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente.",
     },
   ],
   "montagem-moveis": [
@@ -180,7 +182,7 @@ export default async function ServicoGerado({ params }: Props) {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/simulador" className="site-btn-primary px-6 py-3.5 text-base">
-              Ver quanto custa o meu caso
+              Pedir propostas para o meu caso
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </Link>
             <a
@@ -198,13 +200,19 @@ export default async function ServicoGerado({ params }: Props) {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-tinta sm:text-3xl">Como funciona</h2>
           <ul className="mt-6 grid list-none gap-4 p-0 sm:grid-cols-3">
+            {/*
+              "Só paga depois de confirmar" deixou de ser verdade com o
+              pagamento pela plataforma: paga-se a referência depois de
+              aceitar, e é a entrega ao profissional que espera pela
+              confirmação (30-09-2026).
+            */}
             {[
               "Descreve o que precisa, com fotografias se ajudarem.",
-              `Recebe propostas de profissionais da sua zona em ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+              `Recebe propostas de profissionais da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`,
               // Dizia «Só paga depois de confirmar», que se lia como «depois do
               // trabalho feito» — e quem paga pela plataforma paga a referência
               // logo a seguir a aceitar (29-09-2026).
-              "Escolhe a que quiser — ou nenhuma. Só paga se contratar alguém.",
+              "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao profissional depois de confirmar que ficou feito.",
             ].map((passo) => (
               <li
                 key={passo}

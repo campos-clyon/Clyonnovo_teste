@@ -3,7 +3,7 @@ import { jsonLd } from "@/lib/json-ld";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL , NOTA_DE_PRECO} from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES } from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
@@ -101,7 +101,9 @@ const PLATFORM_STATS = [
     // base, não era contado em lado nenhum — não tinha origem. Um número de
     // prova social que ninguém consegue confirmar é pior do que não ter número.
     value: String(AVALIACOES_TOTAL),
-    label: "Avaliações verificadas",
+    // "Avaliações verificadas" prometia uma verificação que ninguém faz. O
+    // que é verdade, e se confere, é onde elas estão — 30-09-2026.
+    label: "Avaliações no Google e na Fixando",
     sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
     accent: "text-acao",
   },
@@ -116,14 +118,19 @@ const PLATFORM_STATS = [
   {
     value: PRAZO_DE_RESPOSTA.curto,
     label: "Para receber propostas",
-    sub: "Muitos no próprio dia",
+    // Dizia "Muitos no próprio dia": um número que ninguém mede, e a data do
+    // trabalho é combinada com o profissional, não prometida aqui.
+    sub: "De profissionais da sua zona",
     accent: "text-emerald-600",
   },
   {
-    value: "24+",
-    // "Localidades cobertas" é como se descreve uma área de operação por
-    // dentro. Quem lê quer saber uma coisa só: chegam aqui?
-    label: "Cidades com profissionais",
+    /*
+     * Era "24+", escrito à mão, e a secção "Onde estamos" dizia "mais de 24"
+     * com dezasseis nomes ao lado — um deles sem página. Passa a ser a lista
+     * das localidades com página própria, contada — 30-09-2026.
+     */
+    value: String(CITIES.length),
+    label: "Localidades na zona coberta",
     sub: "Lisboa · Margem Sul · Setúbal",
     accent: "text-blue-600",
   },
@@ -138,22 +145,27 @@ const HOW_IT_WORKS = [
     // fotos." — "simulador" é o nome que o produto tem cá dentro, e "tipo de
     // serviço" e "acesso" são rótulos de campos de formulário a viver dentro
     // de uma frase. Ninguém pensa "vou indicar o acesso": pensa "há elevador?".
-    "Diga o que tem para levar, onde é e se há elevador. Duas fotos e o preço fica mais certo.",
+    "Diga o que tem para levar, onde é e se há elevador. Duas fotos e as propostas ficam mais certas.",
   },
   {
     icon: CheckCircle2,
-    title: "Confirmamos preço e data",
+    title: "Recebe propostas e escolhe",
     description:
-      // "Um assistente" é um papel do organograma da CLYON. Para quem lê, é uma
-    // pessoa desconhecida com um cargo estranho. E "aprovação explícita" é
-    // linguagem de contrato onde bastava dizer o que acontece.
-    "Ligamos-lhe a confirmar o preço e a combinar o dia. Só avançamos depois de dizer que sim.",
+      /*
+       * Dizia "Confirmamos preço e data — Ligamos-lhe a confirmar o preço e a
+       * combinar o dia". É o modelo de quando a CLYON fazia os trabalhos: um
+       * preço dela, dito ao telefone. Hoje o preço é de cada profissional e
+       * chega por escrito — 30-09-2026.
+       */
+      `Profissionais verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e sem IVA, em até ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
   },
   {
     icon: Truck,
     title: "Profissional na sua porta",
     description:
-      "Um profissional verificado executa o trabalho na data acordada. O espaço fica limpo e pronto a usar.",
+      // "O espaço fica limpo e pronto a usar" era uma promessa sobre o trabalho
+      // de outra pessoa. O que a plataforma garante é o passo seguinte.
+      "O profissional que escolheu faz o trabalho no dia que combinarem e envia fotografias do resultado. Só confirma quando estiver feito.",
   },
 ];
 
@@ -174,7 +186,14 @@ const GUARANTEES = [
       // para dentro. "Operacionais" é palavra que nenhum cliente usa, e a
       // frase falava sobre quem se admite, não sobre o que ele ganha com
       // isso. Passa a dizer o que lhe interessa: quem lhe bate à porta.
-      "Vê o nome, a nota e os trabalhos do profissional antes de aceitar. Todos passam por verificação de identidade — e quem não tem historial não recebe pedidos.",
+      //
+      // 30-09-2026: saiu "verificação de identidade" e "quem não tem
+      // historial não recebe pedidos". Nenhuma das duas existe no código — a
+      // elegibilidade (profissional-elegivel.ts) olha para a aprovação, o
+      // raio e as categorias. O que existe é a candidatura lida por uma
+      // pessoa antes de haver conta (candidaturas.ts), e o perfil com nota e
+      // trabalhos no cartão de cada proposta.
+      "Vê o nome, a nota e os trabalhos do profissional antes de aceitar. Cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta.",
     gradient: "from-cyan-400 to-cyan-500",
     glow: "shadow-cyan-500/40",
     iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
@@ -185,10 +204,18 @@ const GUARANTEES = [
     // Era `stat: "€0"` em 48 px. Um zero em destaque, ao lado de dois cartões
     // com números que crescem, lê-se como erro de cálculo antes de se ler
     // como garantia — o olho procura a quantidade e encontra nada.
-    stat: "Preço fechado",
+    stat: "Por escrito",
     statLabel: "antes de começar",
     description:
-      "O valor fica fechado antes de o trabalho começar. Não há adicionais no fim, nem negociação à porta no dia da recolha.",
+      /*
+       * Dizia "Não há adicionais no fim, nem negociação à porta". Metade era
+       * falsa: o valor é dado à distância e confirma-se no local
+       * (orcamento-a-distancia.ts), e um item a mais tem preço
+       * (itens-a-mais.ts). A regra verdadeira é a de agora — o acréscimo
+       * combina-se antes de começar, fica registado, e depois de feito não
+       * sobe (docs/plano-ajuste-no-local.md) — 30-09-2026.
+       */
+      "O valor fica combinado por escrito antes de começar. Se no local houver mais do que descreveu, o profissional diz-lhe o novo valor antes de começar, e só avança se aceitar — a correcção fica registada na plataforma. Depois do trabalho feito, não acresce nada.",
     gradient: "from-emerald-400 to-emerald-500",
     glow: "shadow-emerald-500/40",
     iconBg: "bg-gradient-to-br from-emerald-400 to-emerald-600",
@@ -208,43 +235,56 @@ const GUARANTEES = [
     stat: PRAZO_DE_RESPOSTA.curto,
     statLabel: "para receber propostas",
     description:
-      `Descreva o que tem para levar e as propostas chegam em ${PRAZO_DE_RESPOSTA.porExtenso}. Em Lisboa e Margem Sul, a maioria recebe confirmação de data no próprio dia.`,
+      // "A maioria recebe confirmação de data no próprio dia" era uma
+      // estatística que ninguém tira. A data é do profissional que escolher.
+      `Descreva o que tem para levar e as propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}. A data do trabalho combina-se depois com o profissional que escolher.`,
     gradient: "from-violet-400 to-violet-500",
     glow: "shadow-violet-500/40",
     iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
   },
 ];
 
+/*
+ * As respostas foram reescritas a 30-09-2026 na voz da plataforma. Diziam "a
+ * equipa desmonta", "trabalhamos com", "o simulador dá um valor exacto em 2
+ * minutos" — e a CLYON não desmonta, e o simulador não mostra valor nenhum ao
+ * cliente desde 18-09-2026 (sem-estimativa-para-o-cliente.test.ts). O schema
+ * lê esta mesma lista, por isso o que o Google vê muda com o que se lê.
+ */
 const homeFaqs = [
   {
     question: "Quanto custa a recolha de monos ou móveis?",
     answer:
-      "O valor depende do volume, acessos, tipo de material, urgência e necessidade de desmontagem. A forma mais rápida de obter um valor exato é usar o simulador — leva 2 minutos.",
+      `O valor depende do volume, dos acessos, do tipo de material, da urgência e de ser preciso desmontar. Descreva o pedido com fotografias e recebe em até ${PRAZO_DE_RESPOSTA.porExtenso} as propostas dos profissionais da sua zona, cada uma com o preço já com a taxa da plataforma.`,
   },
   {
     question: "Recolhem no mesmo dia?",
     answer:
-      "Quando há um profissional livre na sua zona, sim. Muitos pedidos em Lisboa, Grande Lisboa, Margem Sul e Setúbal conseguem resposta no próprio dia ou no dia seguinte.",
+      `Depende de haver profissional disponível na sua zona. As propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}, e a data do trabalho combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
   },
   {
     question: "Retiram sofás, colchões e eletrodomésticos?",
     answer:
-      "Sim. Sofás, camas, colchões, armários, eletrodomésticos e outros volumes grandes — desde que nos diga que os tem, para o preço já contar com eles.",
+      "Sim. Sofás, camas, colchões, armários, eletrodomésticos e outros volumes grandes — desde que os indique no pedido, para a proposta já contar com eles.",
   },
   {
     question: "Fazem desmontagem de móveis?",
     answer:
-      "Sim. Quando necessário, a equipa desmonta móveis e trata da retirada a partir do interior do imóvel.",
+      "Sim, quando é preciso. Indique-o no pedido: o profissional desmonta e retira os móveis a partir do interior do imóvel, e a desmontagem entra na proposta.",
   },
   {
     question: "Atendem empresas e condomínios?",
     answer:
-      "Sim. Trabalhamos com particulares, senhorios, empresas, equipas de obra e condomínios com necessidade de recolha, limpeza ou esvaziamento.",
+      "Sim. A CLYON recebe pedidos de particulares, senhorios, empresas, equipas de obra e condomínios que precisam de recolha ou esvaziamento.",
   },
   {
     question: "O destino dos resíduos é responsável?",
     answer:
-      `O que ainda serve vai para reutilização ou doação. O resto vai para centros de tratamento licenciados — a CLYON é operador de resíduos registado na Agência Portuguesa do Ambiente, com o número ${IDENTIFICACAO.codigoAPA}.`,
+      // Quem transporta é o profissional (Termos, §2), e a plataforma
+      // obriga-o às autorizações da lei (Termos, §10 e §11). "O resto vai
+      // para centros licenciados" era uma garantia da CLYON sobre o camião de
+      // outra pessoa; agora diz-se de quem é a obrigação.
+      `O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o profissional, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige para transportar resíduos. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente, com o número ${IDENTIFICACAO.codigoAPA}.`,
   },
 ];
 
@@ -278,8 +318,9 @@ export default function HomePage() {
 
               O subtítulo dizia "Os profissionais retiram sofás, armários, colchões...". É a
               voz de quem executa, e a CLYON deixou de executar: é plataforma.
-              Quem vai a casa, desmonta e carrega é o profissional, e é ele
-              quem emite a factura.
+              Quem vai a casa, desmonta e carrega é o profissional. (A factura,
+              quando o cliente a pede, é da parceira — ver
+              `ENTIDADE_QUE_FACTURA`; corrigido a 30-09-2026.)
 
               O problema não é de estilo. Estava escrito na segunda linha mais
               visível do site, e a linha de baixo — nas garantias — já dizia o
@@ -468,11 +509,15 @@ export default function HomePage() {
             pudesse associar a uma intenção de pesquisa.
           */}
           <div className="mb-8 text-center sm:mb-12">
+            {/* "O que podemos levar" — a CLYON não leva nada; quem pede escolhe
+                quem leva (30-09-2026). E os números da grelha são de
+                referência: o preço a sério é o da proposta. */}
             <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">
-              O que podemos levar
+              O que pode pedir
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-tinta-fraca sm:text-base">
-              Nove serviços, preços à vista. Sem ter de pedir para saber quanto custa.
+              Nove serviços, com valores de referência à vista. O preço a sério é a
+              proposta que recebe.
             </p>
           </div>
 
@@ -507,16 +552,12 @@ export default function HomePage() {
           </div>
 
           {/*
-            A nota do IVA, e porque é que ela não diz se o IVA está incluído.
+            A nota do IVA e da taxa, escrita uma vez em seo-data.ts.
 
-            Numa plataforma, quem faz o trabalho é quem emite a factura — e
-            cada profissional tem o seu regime: uns na isenção do artigo 53.º
-            do CIVA, outros a liquidar 23%. "Com IVA" e "sem IVA" são as duas
-            afirmações que o site não pode garantir, e o site chegou a dizer as
-            duas em sítios diferentes.
-
-            O que se garante é o que interessa a quem está a decidir: o valor é
-            fechado antes de começar e não acresce nada depois.
+            Dizia aqui que cada profissional facturava no seu regime. Deixou de
+            ser assim a 22-09-2026 — a factura é da parceira, sempre a 23 % —,
+            e desde 29-09-2026 o preço de cada proposta já traz a taxa da
+            plataforma. A nota diz as duas coisas (30-09-2026).
           */}
           <p className="mx-auto mt-6 max-w-2xl text-center text-[13px] leading-relaxed text-tinta-fraca">
             {NOTA_DE_PRECO.completa}
@@ -610,21 +651,24 @@ export default function HomePage() {
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div>
               <h2 className="text-2xl font-bold text-tinta sm:text-3xl lg:text-4xl">Onde estamos</h2>
+              {/*
+                "Já cobrimos mais de 24 localidades", com dezasseis nomes
+                escritos à mão ao lado — e um deles, Azeitão, sem página. Passa
+                a ser a lista das localidades com página, e o número é o
+                tamanho dela (30-09-2026). Fora destas zonas não se promete nem
+                se recusa: depende de haver profissional.
+              */}
               <p className="mt-3 max-w-md text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
-                Já cobrimos mais de 24 localidades em Lisboa, Margem Sul e Setúbal —
-                e continuamos a crescer.
+                Lisboa, Margem Sul e Setúbal — {CITIES.length} localidades com página própria.
+                Fora destas zonas, depende de haver profissional disponível.
               </p>
               <div className="mt-8 flex flex-wrap gap-2">
-                {[
-                  "Lisboa", "Amadora", "Loures", "Odivelas", "Sintra", "Cascais",
-                  "Oeiras", "Almada", "Seixal", "Barreiro", "Moita", "Montijo",
-                  "Setúbal", "Palmela", "Sesimbra", "Azeitão",
-                ].map((city) => (
+                {CITIES.map((city) => (
                   <span
-                    key={city}
+                    key={city.slug}
                     className="rounded-xl border border-[#E2EEF3] bg-white px-3.5 py-1.5 text-sm font-medium text-tinta shadow-sm"
                   >
-                    {city}
+                    {city.name}
                   </span>
                 ))}
               </div>
@@ -660,9 +704,13 @@ export default function HomePage() {
                 gastar em publicidade e sem ligar a quem não atende.
               </p>
               <div className="mt-7 flex flex-wrap gap-6">
+                {/* "Clientes verificados" e "Sem leads falhados" prometiam o que
+                    ninguém verifica. O que é verdade: cada pedido é conferido
+                    pela CLYON antes de lhe chegar (portao-da-analise.test.ts),
+                    e não se paga por contacto — 30-09-2026. */}
                 {[
-                  { icon: Users, label: "Clientes verificados" },
-                  { icon: Shield, label: "Sem leads falhados" },
+                  { icon: Users, label: "Pedidos revistos pela CLYON" },
+                  { icon: Shield, label: "Sem pagar por contactos" },
                   { icon: BadgeCheck, label: PROMESSA.seloDaPaginaInicial },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-slate-200">
@@ -739,8 +787,10 @@ export default function HomePage() {
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
               {/* "Confirme os detalhes e receba uma resposta clara" pede uma
-                  acção e promete um adjectivo. Isto diz o que se recebe. */}
-              Diga-nos o que tem para levar. Respondemos com um preço, não com um telefonema.
+                  acção e promete um adjectivo. Isto diz o que se recebe — e
+                  desde 30-09-2026 diz de quem: "respondemos com um preço" era
+                  a CLYON a pôr preço num trabalho que não faz. */}
+              Diga o que tem para levar e receba propostas por escrito, não telefonemas.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center">
               <Link

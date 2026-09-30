@@ -274,7 +274,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
       
       // Status 501 significa endpoint desativado (temporariamente)
       if (res.status === 501) {
-        const msg = data.message || "Alteração de foto temporariamente indisponível. A foto da tua conta Google continuará a ser usada.";
+        const msg = data.message || "Alteração de foto temporariamente indisponível. A foto da sua conta Google continuará a ser usada.";
         throw new Error(msg);
       }
       
@@ -349,7 +349,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
       });
       setTimeout(() => setSuccess(false), 4000);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Não foi possível guardar. Tenta novamente.";
+      const errorMsg = err instanceof Error ? err.message : "Não foi possível guardar. Tente novamente.";
       console.error("[v0] DadosPessoais: erro catch:", errorMsg);
       setErrorGlobal(errorMsg);
     } finally {
@@ -382,7 +382,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
       <div className="space-y-5">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Dados pessoais</h2>
-          <p className="mt-0.5 text-sm text-slate-500">Informações da tua conta CLYON.</p>
+          <p className="mt-0.5 text-sm text-slate-500">Informações da sua conta CLYON.</p>
         </div>
 
         {/* Cartão de avatar */}
@@ -399,7 +399,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
             <p className="mt-0.5 text-xs text-tinta-fraca">
-              {user.avatarUrl ? "Foto personalizada" : "Foto sincronizada com a tua conta Google"}
+              {user.avatarUrl ? "Foto personalizada" : "Foto sincronizada com a sua conta Google"}
             </p>
           </div>
 
@@ -425,7 +425,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
                 id="name"
                 value={name}
                 onChange={(v) => { setName(v); setFieldErrors((p) => ({ ...p, name: "" })); }}
-                placeholder="O teu nome completo"
+                placeholder="O seu nome completo"
                 error={fieldErrors.name}
               />
             </div>
@@ -445,7 +445,7 @@ export default function DadosPessoais({ user, googleAvatar, onUpdate }: Props) {
                 <LockKeyhole className="absolute right-3 h-3.5 w-3.5 shrink-0 text-slate-300" />
               </div>
               <p className="mt-1 text-xs text-tinta-fraca">
-                Gerido pela tua conta Google — não pode ser alterado aqui.
+                Gerido pela sua conta Google — não pode ser alterado aqui.
               </p>
             </div>
 

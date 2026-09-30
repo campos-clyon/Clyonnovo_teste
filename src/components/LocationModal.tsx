@@ -171,8 +171,8 @@ export default function LocationModal({ onClose }: LocationModalProps) {
             err.message.toLowerCase().includes('permissions policy');
           setError(
             blockedByPolicy
-              ? 'A localização está bloqueada neste contexto. Abre o site diretamente em clyon.pt e tenta de novo, ou escreve a tua morada acima.'
-              : 'Permissão de localização negada. Ativa a localização nas definições do navegador ou escreve a tua morada acima.',
+              ? 'A localização está bloqueada neste contexto. Abra o site diretamente em clyon.pt e tente de novo, ou escreva a sua morada acima.'
+              : 'Permissão de localização negada. Ative a localização nas definições do navegador ou escreva a sua morada acima.',
           );
         } else if (err.code === err.TIMEOUT) {
           setError('Tempo esgotado ao obter localização');
@@ -205,7 +205,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
   // ── Guardar ────────────────────────────────────────────────────────────
   const handleSave = () => {
     if (!selectedLocation) {
-      setError('Escolhe uma sugestão ou usa a tua localização atual.');
+      setError('Escolha uma sugestão ou use a sua localização atual.');
       return;
     }
     setLocation(selectedLocation);
@@ -231,9 +231,9 @@ export default function LocationModal({ onClose }: LocationModalProps) {
           <div className="flex items-center gap-2.5">
             <MapPin className="h-5 w-5 text-acao" />
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">A tua localização</h2>
+              <h2 className="text-lg font-semibold text-slate-900">A sua localização</h2>
               <p className="mt-0.5 text-sm text-slate-500">
-                Insere o teu endereço para veres serviços e preços na tua área.
+                Indique a sua morada para ver serviços e preços na sua área.
               </p>
             </div>
           </div>
@@ -330,7 +330,7 @@ export default function LocationModal({ onClose }: LocationModalProps) {
                   </p>
                   {selectedLocation?.isApproximate && (
                     <p className="mt-1 text-xs text-tinta-fraca">
-                      Localização aproximada — escolhe uma morada exata para um orçamento preciso.
+                      Localização aproximada — escolha uma morada exata para um orçamento preciso.
                     </p>
                   )}
                 </div>
@@ -373,10 +373,10 @@ export default function LocationModal({ onClose }: LocationModalProps) {
           {showOutOfArea && (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="text-sm font-semibold text-amber-900">
-                Ainda não estamos na tua área… mas em breve!
+                Ainda não estamos na sua área… mas em breve!
               </p>
               <p className="mt-1.5 text-sm text-amber-800">
-                Estamos a crescer rapidamente. Enquanto isso, experimenta procurar noutra
+                Estamos a crescer rapidamente. Entretanto, experimente procurar noutra
                 localização acima.
               </p>
             </div>

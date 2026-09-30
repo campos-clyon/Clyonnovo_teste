@@ -289,8 +289,8 @@ export default function RecolhaDeCamasPage() {
           </h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { step: "01", title: "Envia fotos ou descrição", desc: "Envia fotos da cama, morada e indica se precisa de desmontagem." },
-              { step: "02", title: "Recebe orçamento", desc: "Recebe uma resposta rápida com valor fechado e janela de recolha disponível." },
+              { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos da cama, a morada e indique se precisa de desmontagem." },
+              { step: "02", title: "Receba o orçamento", desc: "Receba uma resposta rápida com valor fechado e janela de recolha disponível." },
               { step: "03", title: "Agendamos a recolha", desc: "Confirmamos o dia e a hora. Muitos pedidos são atendidos em 24-48 horas." },
               { step: "04", title: "Fazemos a recolha", desc: "A equipa desmonta, carrega, transporta e encaminha para destino responsável." },
             ].map((item) => (

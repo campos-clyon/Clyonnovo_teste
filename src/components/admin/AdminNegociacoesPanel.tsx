@@ -1492,7 +1492,7 @@ export default function AdminNegociacoesPanel({
       });
       if (!res.ok) {
         const dados = await res.json().catch(() => ({}));
-        setErro(dados.error ?? "Nao foi possivel arquivar.");
+        setErro(dados.error ?? "Não foi possível arquivar.");
         return;
       }
       await carregar(true);
@@ -1554,7 +1554,7 @@ export default function AdminNegociacoesPanel({
       });
       const dados = await res.json();
       if (!res.ok) {
-        setErro(dados.error ?? "Nao foi possivel apagar.");
+        setErro(dados.error ?? "Não foi possível apagar.");
         setRecusados(dados.recusados ?? []);
         return;
       }
@@ -3191,7 +3191,7 @@ export default function AdminNegociacoesPanel({
         `Apagar ${quantos} pedido${quantos === 1 ? "" : "s"}?
 
 ` +
-          `As negociacoes, propostas e valores acordados vao junto. ` +
+          `As negociações, propostas e valores acordados vão junto. ` +
           `Fica registo permanente do que foi apagado, sem as fotos.`,
       )
     ) {
@@ -3208,7 +3208,7 @@ export default function AdminNegociacoesPanel({
       });
       const dados = await res.json();
       if (!res.ok) {
-        setErro(dados.error ?? "Nao foi possivel apagar.");
+        setErro(dados.error ?? "Não foi possível apagar.");
         setRecusados(dados.recusados ?? []);
         return;
       }
@@ -3248,7 +3248,7 @@ export default function AdminNegociacoesPanel({
               ? `${dosClientes.length} negociação(ões) de clientes.`
               : temTudo
                 ? `${pedidos.length} pedidos na plataforma.`
-                : `${pedidos.length} pedidos na mesa — os mais recentes. Escreva na busca para procurar em todos.`}{" "}
+                : `${pedidos.length} pedidos na mesa — os mais recentes. Escreva na caixa de pesquisa para procurar em todos.`}{" "}
           Carregue num cartão para ver só esse bloco; o título de cada bloco abre e fecha.
         </p>
         {/*

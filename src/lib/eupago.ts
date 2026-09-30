@@ -316,12 +316,12 @@ export type Recusa = {
  */
 const CODIGOS: Record<string, { nos: string; cliente: string; sugereOutro: boolean }> = {
   "-7": {
-    nos: "Servico inactivo - a conta do euPago nao tem este meio de pagamento ligado.",
+    nos: "Serviço inactivo — a conta do euPago não tem este meio de pagamento ligado.",
     cliente: "Este meio de pagamento está indisponível de momento.",
     sugereOutro: true,
   },
   "-8": {
-    nos: "Referencia invalida.",
+    nos: "Referência inválida.",
     cliente: "Não foi possível gerar a referência. Tente outra vez.",
     sugereOutro: true,
   },
@@ -331,17 +331,17 @@ const CODIGOS: Record<string, { nos: string; cliente: string; sugereOutro: boole
     sugereOutro: true,
   },
   "-10": {
-    nos: "Chave de API invalida - a EUPAGO_API_KEY nao serve para este ambiente.",
+    nos: "Chave de API inválida — a EUPAGO_API_KEY não serve para este ambiente.",
     cliente: "Não foi possível iniciar o pagamento. Já estamos a ver o que se passa.",
     sugereOutro: false,
   },
   "-11": {
-    nos: "Pagamento nao encontrado.",
+    nos: "Pagamento não encontrado.",
     cliente: "Não encontrámos este pagamento.",
     sugereOutro: false,
   },
   "-12": {
-    nos: "Alias invalido - o numero indicado nao tem MB WAY associado.",
+    nos: "Alias inválido — o número indicado não tem MB WAY associado.",
     cliente:
       "Esse número não tem MB WAY associado. Confirme o número, ou pague por referência Multibanco.",
     sugereOutro: true,
@@ -393,7 +393,7 @@ export function recusaDoEupago(
    */
   return {
     codigo: c,
-    paraNos: `Resposta nao reconhecida do euPago${c ? ` (codigo ${c})` : ""}${
+    paraNos: `Resposta não reconhecida do euPago${c ? ` (código ${c})` : ""}${
       texto ? `: ${texto}` : ""
     }.`,
     paraOCliente: "Não foi possível iniciar o pagamento. Tente outra vez dentro de momentos.",
@@ -603,7 +603,7 @@ export function lerRespostaDoMbway(
       ok: false,
       recusa: recusaDoEupago(
         texto(c.code),
-        texto(c.text) ?? `O euPago respondeu ${estadoHttp} sem referencia.`,
+        texto(c.text) ?? `O euPago respondeu ${estadoHttp} sem referência.`,
         ambiente,
       ),
     };
@@ -652,7 +652,7 @@ export function lerRespostaDoMultibanco(
   if (!referencia || !entidade) {
     return {
       ok: false,
-      recusa: recusaDoEupago(null, "O euPago devolveu sucesso sem referencia ou sem entidade."),
+      recusa: recusaDoEupago(null, "O euPago devolveu sucesso sem referência ou sem entidade."),
     };
   }
   return { ok: true, referencia, entidade, trid: texto(c.trid) };

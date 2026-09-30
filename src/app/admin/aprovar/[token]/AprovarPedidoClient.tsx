@@ -318,7 +318,7 @@ export default function AprovarPedidoClient() {
               value={mensagemCliente}
               onChange={(e) => setMensagemCliente(e.target.value)}
               rows={3}
-              placeholder="Ex: O orçamento inclui transporte e mão de obra. Pagamento no dia do serviço."
+              placeholder="Ex.: O orçamento inclui transporte e mão de obra. Pagamento no dia do serviço."
               className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-white/30"
             />
           </div>
@@ -329,7 +329,7 @@ export default function AprovarPedidoClient() {
               value={notasInternas}
               onChange={(e) => setNotasInternas(e.target.value)}
               rows={2}
-              placeholder="Ex: Confirmar disponibilidade de equipa. Possível acesso difícil."
+              placeholder="Ex.: Confirmar disponibilidade de equipa. Possível acesso difícil."
               className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-white/30"
             />
           </div>

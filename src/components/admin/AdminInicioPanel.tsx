@@ -218,7 +218,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           chave: "entregues",
           n: r.conversasEntregues,
           titulo: "conversas suas",
-          porque: "O assistente está calado nestas — é você a responder.",
+          porque: "O assistente está calado nestas — é a equipa a responder.",
           seccao: "whatsapp",
           icone: MessageCircle,
         },

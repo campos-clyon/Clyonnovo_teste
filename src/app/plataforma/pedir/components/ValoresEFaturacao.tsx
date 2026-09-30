@@ -204,7 +204,7 @@ export default function ValoresEFaturacao({
                 </span>
                 <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
                   Transportar resíduos exige transportador registado. Quem responde
-                  pelo destino do resíduo é quem o produz — ou seja, você.
+                  pelo destino do resíduo é quem o produz — ou seja, o próprio cliente.
                 </span>
               </span>
             </label>

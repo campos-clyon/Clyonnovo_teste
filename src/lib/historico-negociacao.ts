@@ -69,7 +69,7 @@ const SUFIXO: Record<Proposta["estado"], string> = {
  * A lista de eventos, do mais antigo para o mais recente.
  *
  * `euDigo` é como o leitor se vê a si próprio: no painel do profissional as
- * propostas dele são "Você propôs", no ecrã do cliente são "O profissional
+ * propostas dele são "A sua proposta", no ecrã do cliente são "O profissional
  * propôs". A mesma função serve os dois, e é por isso que a diferença é um
  * argumento e não uma segunda cópia disto.
  */
@@ -85,12 +85,17 @@ export function historicoDaNegociacao(
     if (!quando) continue; // uma proposta sem data não se pode pôr numa linha do tempo
 
     const quem: QuemFalou = p.por === "cliente" ? "cliente" : "profissional";
-    const nome = quem === euSou ? "Você" : quem === "cliente" ? "O cliente" : "O profissional";
+    const frase =
+      quem === euSou
+        ? "A sua proposta"
+        : quem === "cliente"
+          ? "O cliente propôs"
+          : "O profissional propôs";
 
     eventos.push({
       quando: quando.toISOString(),
       quem,
-      texto: `${nome} propôs${SUFIXO[p.estado] ?? ""}`,
+      texto: `${frase}${SUFIXO[p.estado] ?? ""}`,
       valor: numero(p.valor),
       estado: p.estado,
     });

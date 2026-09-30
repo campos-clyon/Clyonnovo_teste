@@ -193,7 +193,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Base Aérea de Montijo — acessos condicionados em datas militares",
     ],
     desafio:
-      "Montijo tem uma mistura de centro urbano com moradias em zonas rurais (Sarilhos, Canha). Para moradias temos que ajustar horários — em algumas zonas o acesso de carrinha requer confirmação prévia.",
+      "Montijo tem uma mistura de centro urbano com moradias em zonas rurais (Sarilhos, Canha). Para moradias temos de ajustar horários — em algumas zonas o acesso de carrinha requer confirmação prévia.",
     faqs: [
       {
         pergunta: "Quanto custa mudança no Montijo?",

@@ -10,8 +10,18 @@ import {
   Star,
 } from "lucide-react";
 
-import { BUSINESS_NAME, BUSINESS_PHONE, NOTA_DE_PRECO, SITE_URL } from "@/lib/seo-data";
+import {
+  AVALIACOES,
+  BUSINESS_NAME,
+  BUSINESS_PHONE,
+  COMO_SE_PAGA,
+  FACTURA_EM_PALAVRAS,
+  NOTA_DE_PRECO,
+  PRAZO_DE_RESPOSTA,
+  SITE_URL,
+} from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, precoDe } from "@/lib/precos-publicos";
+import { reviews as avaliacoes } from "@/lib/reviews-data";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -39,6 +49,20 @@ const WA_HREF = `https://wa.me/351931632622?text=${encodeURIComponent(
   "Olá CLYON, quero pedir orçamento para um serviço.",
 )}`;
 
+/*
+ * AS CONVERSAS DE EXEMPLO FALAVAM PELA EMPRESA DE ANTES — 30-09-2026.
+ *
+ * "Fica marcado para amanhã — 75 € tudo incluído", "hoje entre as 17h e 19h",
+ * "passamos amanhã para avaliar", "mando preço em 15 minutos". Eram a CLYON a
+ * marcar, a pôr preço e a ir a casa. Hoje a CLYON responde o que faz: diz o
+ * valor de referência, pede as fotografias e o pedido segue para os
+ * profissionais, que respondem no prazo de PRAZO_DE_RESPOSTA. E a legenda
+ * deixou de dizer "exemplos reais": são exemplos.
+ *
+ * O cartão da limpeza pós-obra saiu com elas: não é um serviço da plataforma
+ * (não está em SERVICE_CATEGORIES), e levava a /limpeza-de-quintais com um
+ * preço escrito à mão que /precos contradizia.
+ */
 type Message = { from: "cliente" | "clyon"; text: string; time: string };
 
 type Service = {
@@ -61,7 +85,7 @@ const services: Service[] = [
     emoji: "🛋️",
     messages: [
       { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
-      { from: "clyon",   text: "Bom dia! Fica marcado para amanhã de manhã — 75 € tudo incluído. Confirma?", time: "09:14" },
+      { from: "clyon",   text: `Bom dia! Como referência, desde 75 €, sem IVA. Mande duas fotos e a morada: recebe propostas de profissionais da zona em até ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
     ],
   },
   {
@@ -81,7 +105,7 @@ const services: Service[] = [
        * do que o badge diz. Se o volume desta frase mudar, o valor tem de
        * mudar com ele.
        */
-      { from: "clyon",   text: "Hoje entre as 17h e 19h. Fica em 220 € com transporte incluído.", time: "14:05" },
+      { from: "clyon",   text: "Com 2 m³, a referência é 220 €, sem IVA. Se é para hoje, diga-o no pedido — depende de haver profissional disponível.", time: "14:05" },
     ],
   },
   {
@@ -93,7 +117,7 @@ const services: Service[] = [
     emoji: "🏠",
     messages: [
       { from: "cliente", text: "Herdei um T2 cheio e preciso de esvaziar para vender. Ajudam?", time: "10:40" },
-      { from: "clyon",   text: "Passamos amanhã para avaliar — tratamos de tudo, incluindo entrega da chave.", time: "10:42" },
+      { from: "clyon",   text: "Sim. Mande fotos de cada divisão e a morada: profissionais da sua zona respondem com propostas, e o acesso combina-se com quem escolher.", time: "10:42" },
     ],
   },
   {
@@ -105,7 +129,7 @@ const services: Service[] = [
     emoji: "📦",
     messages: [
       { from: "cliente", text: "Tenho garagem cheia de tralha antiga, quero libertar espaço.", time: "16:20" },
-      { from: "clyon",   text: "Envie 2 ou 3 fotos por WhatsApp e mando preço em 15 minutos.", time: "16:21" },
+      { from: "clyon",   text: `Envie 2 ou 3 fotos por WhatsApp: recebe propostas de profissionais da zona em até ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "16:21" },
     ],
   },
   {
@@ -116,58 +140,41 @@ const services: Service[] = [
     accent: "from-indigo-400 to-purple-500",
     emoji: "🚚",
     messages: [
-      { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de guarda-roupa.", time: "11:08" },
-      { from: "clyon",   text: "Temos disponibilidade. Envio orçamento por email ainda hoje.", time: "11:10" },
-    ],
-  },
-  {
-    title: "Limpeza pós-obra",
-    /*
-     * ESTE É O ÚNICO PREÇO DESTA PÁGINA ESCRITO À MÃO, E É UM PROBLEMA POR
-     * RESOLVER — não um esquecimento.
-     *
-     * A limpeza pós-obra não existe em SERVICE_CATEGORIES nem na tabela de
-     * preços oficiais, por isso não há nada em precos-publicos.ts de onde a
-     * importar. Enquanto assim for, este número diverge sozinho: esta página
-     * diz 150 € e /precos diz 160 € para o mesmo trabalho.
-     *
-     * Só há duas saídas, e ambas são decisão do dono: ou a limpeza pós-obra
-     * entra na tabela oficial com um valor, ou perde o número e passa a
-     * "orçamento personalizado" como as mudanças. Até lá ficam os 150 € que
-     * já cá estavam — com o formato corrigido, sem inventar valor novo.
-     */
-    tagline: "Pronto a habitar depois de obra",
-    price: "desde 150 €",
-    href: "/limpeza-de-quintais",
-    accent: "from-sky-400 to-cyan-500",
-    emoji: "✨",
-    messages: [
-      { from: "cliente", text: "Acabei remodelação, quero entregar a casa a brilhar.", time: "18:47" },
-      { from: "clyon",   text: "Equipa disponível na quarta às 09h — 180 € com produtos incluídos.", time: "18:49" },
+      { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de roupeiro.", time: "11:08" },
+      { from: "clyon",   text: `Mande as duas moradas e fotos das divisões: as propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`, time: "11:10" },
     ],
   },
 ];
 
 const steps = [
-  { n: "1", title: "Envie fotos", text: "Por WhatsApp ou simulador. Basta a morada e algumas fotos." },
-  { n: "2", title: "Receba o preço", text: "Orçamento claro em minutos, sem visitas nem surpresas." },
-  { n: "3", title: "Marcamos e recolhemos", text: "Muitas vezes no próprio dia em Lisboa e Setúbal." },
+  { n: "1", title: "Envie fotos", text: "Por WhatsApp ou pelo formulário. Basta a morada e algumas fotos." },
+  {
+    n: "2",
+    title: "Receba propostas",
+    text: `Profissionais verificados da sua zona respondem em até ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
+  },
+  { n: "3", title: "Escolha e combine", text: "Aceita a proposta que quiser e combina o dia com o profissional." },
 ];
 
-const reviews = [
-  { name: "Rita M.", initial: "R", text: "Rápido, profissional e sem confusão. Voltaria a contratar." },
-  { name: "Carlos S.", initial: "C", text: "Recolha do sofá antigo no mesmo dia. Preço justo." },
-  { name: "Patricia C.", initial: "P", text: "Equipa educada, chegou à hora e deixou tudo limpo." },
-];
+/*
+ * OS TESTEMUNHOS SÃO OS DE reviews-data, PALAVRA POR PALAVRA — 30-09-2026.
+ *
+ * Estavam aqui três escritos à mão — "Rita M.", "Carlos S.", "Patrícia C." —
+ * que não existem na lista das avaliações reais, e uma nota de "4,9 / 5" que
+ * não era a de lado nenhum. Um testemunho que não se encontra em lado nenhum
+ * é pior do que nenhum. Ficam os três primeiros da fonte única, com a data, e
+ * a nota da constante.
+ */
+const reviews = avaliacoes.slice(0, 3);
 
 const faqs = [
   {
     q: "Que tipo de pedidos a CLYON aceita?",
-    a: "Recolha de entulho, móveis, monos, recheios, limpeza pós-obra, esvaziamento de casas e mudanças — para particulares e empresas.",
+    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas e mudanças — de particulares e empresas. Quem faz o trabalho é o profissional que escolher.",
   },
   {
     q: "Recolhem no mesmo dia?",
-    a: "Sempre que há disponibilidade, sim. Em Lisboa, Grande Lisboa, Margem Sul e Setúbal muitos pedidos ficam feitos no próprio dia ou no seguinte.",
+    a: `Depende de haver profissional disponível na sua zona. As propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}, e a data combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
   },
   {
     q: "Fazem desmontagem dentro de casa?",
@@ -175,7 +182,9 @@ const faqs = [
   },
   {
     q: "Como pagar?",
-    a: "MB WAY, transferência ou numerário na altura do serviço. Emitimos fatura sempre.",
+    // Dizia "MB WAY, transferência ou numerário. Emitimos fatura sempre." —
+    // nem as formas eram estas, nem é a CLYON que factura (30-09-2026).
+    a: `${COMO_SE_PAGA} ${FACTURA_EM_PALAVRAS}`,
   },
   {
     q: "Trabalham com empresas e condomínios?",
@@ -275,11 +284,12 @@ export default function ServicosPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_40%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 md:pb-12 md:pt-16 lg:px-8">
           <h1 className="max-w-[16ch] text-[2rem] font-bold leading-[1.08] tracking-tight text-tinta sm:text-5xl md:text-6xl">
-            Recolhas, limpezas e mudanças <span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">sem complicar.</span>
+            Recolhas, esvaziamentos e mudanças <span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">sem complicar.</span>
           </h1>
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            Envie fotos, recebemos o pedido e damos preço claro. Lisboa, Margem Sul e Setúbal — muitas vezes no mesmo dia.
+            Envie fotos e a morada: o pedido chega a profissionais verificados da sua zona, e
+            recebe propostas em até {PRAZO_DE_RESPOSTA.porExtenso}. Lisboa, Margem Sul e Setúbal.
           </p>
 
           {/* CTAs primárias */}
@@ -291,13 +301,13 @@ export default function ServicosPage() {
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 sm:text-base"
             >
               <MessageCircle className="h-4 w-4" />
-              WhatsApp — orçamento agora
+              WhatsApp — pedir orçamento
             </a>
             <Link
               href="/simulador"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:brightness-110 sm:text-base"
             >
-              Simular preço
+              Pedir propostas
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
@@ -311,10 +321,12 @@ export default function ServicosPage() {
 
           {/* Reassurance strip */}
           <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600 sm:grid-cols-4 sm:text-sm">
+            {/* "Fatura sempre" saiu: a factura é da parceira, e só quando o
+                cliente a pede (30-09-2026). */}
             {[
               "Orçamento grátis",
               "Sem visita prévia",
-              "Fatura sempre",
+              "Profissionais verificados",
               "Destino responsável",
             ].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
@@ -332,9 +344,9 @@ export default function ServicosPage() {
           <div className="mb-6 flex items-end justify-between gap-3 md:mb-8">
             <div>
               <h2 className="text-2xl font-bold leading-tight text-tinta sm:text-3xl md:text-4xl">
-                O que fazemos
+                O que pode pedir
               </h2>
-              <p className="mt-1 text-sm text-slate-500 sm:text-base">Exemplos reais do que respondemos por dia.</p>
+              <p className="mt-1 text-sm text-slate-500 sm:text-base">Exemplos do que nos perguntam, e do que respondemos.</p>
             </div>
             <Link
               href="/precos"
@@ -368,7 +380,7 @@ export default function ServicosPage() {
             Como pedir — 3 passos
           </h2>
           <p className="mt-2 max-w-lg text-sm text-slate-600 sm:text-base">
-            Sem visita prévia, sem burocracia. Foto + morada = preço.
+            Sem visita prévia, sem burocracia. Fotos + morada = propostas.
           </p>
 
           <ol className="mt-6 grid gap-3 md:grid-cols-3 md:gap-5">
@@ -394,9 +406,9 @@ export default function ServicosPage() {
                 {[0, 1, 2, 3, 4].map((i) => (
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
-                <span className="ml-1 text-sm font-semibold text-slate-900">4,9 / 5</span>
+                <span className="ml-1 text-sm font-semibold text-slate-900">{AVALIACOES.media} / 5</span>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">Baseado em clientes reais em Lisboa e Setúbal.</p>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">Avaliações no Google e na Fixando.</p>
             </div>
             <Link
               href="/avaliacoes"
@@ -417,9 +429,10 @@ export default function ServicosPage() {
                 <blockquote className="mt-2 text-sm leading-6 text-slate-700">&ldquo;{r.text}&rdquo;</blockquote>
                 <figcaption className="mt-3 flex items-center gap-2.5">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-bold text-white">
-                    {r.initial}
+                    {r.name.charAt(0)}
                   </span>
                   <span className="text-sm font-semibold text-slate-900">{r.name}</span>
+                  <span className="text-xs text-slate-500">{r.date}</span>
                 </figcaption>
               </figure>
             ))}
@@ -460,7 +473,8 @@ export default function ServicosPage() {
                   Já sabe o serviço? Peça agora.
                 </h2>
                 <p className="mt-2 max-w-lg text-sm text-cyan-50 sm:text-base">
-                  Envie o pedido pelo WhatsApp ou simulador — resposta em minutos.
+                  Envie o pedido pelo WhatsApp ou pelo formulário — propostas em até{" "}
+                  {PRAZO_DE_RESPOSTA.porExtenso}.
                 </p>
               </div>
               <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
@@ -477,7 +491,7 @@ export default function ServicosPage() {
                   href="/simulador"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950/25 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/25 transition hover:bg-slate-950/40"
                 >
-                  Simular preço
+                  Pedir propostas
                 </Link>
               </div>
             </div>

@@ -89,7 +89,7 @@ describe("quem procura procura em tudo", () => {
 
   it("o ecrã diz que está a mostrar os recentes, em vez de o deixar adivinhar", () => {
     // Dizia «30 pedidos na plataforma», que se lê como «são só estes».
-    expect(MESA).toContain("os mais recentes. Escreva na busca para procurar em todos");
+    expect(MESA).toContain("os mais recentes. Escreva na caixa de pesquisa para procurar em todos");
   });
 });
 
