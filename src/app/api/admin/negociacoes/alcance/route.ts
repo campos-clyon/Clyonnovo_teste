@@ -56,6 +56,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       candidatos: r.candidatos,
       elegiveis: r.elegiveis,
+      // Todos os activos, com o porquê de cada um: é a lista de escolher à mão.
+      todos: r.todos,
       porque: porqueFicaramDeFora(r.motivos),
       motivos: r.motivos,
     });

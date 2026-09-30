@@ -28,10 +28,20 @@ export default function HistoricoDaNegociacao({
   propostas,
   marcos,
   euSou = "profissional",
+  valorVisto,
 }: {
   propostas: Proposta[];
   marcos?: MarcosDaNegociacao;
   euSou?: "cliente" | "profissional";
+  /**
+   * COMO CADA LADO LÊ O MESMO NÚMERO — 29-09-2026.
+   *
+   * O registo é um só e guarda o valor do profissional. O cliente vê-o já com
+   * a taxa, que é como o viu em todo o lado (`preco-do-cliente.ts`). Os
+   * acontecimentos são os mesmos para os dois; só a moeda em que se contam é
+   * que é a de quem está a ler.
+   */
+  valorVisto?: (valor: number) => number;
 }) {
   const agora = new Date();
   const historico = historicoDaNegociacao(propostas, marcos ?? {}, euSou);
@@ -83,7 +93,7 @@ export default function HistoricoDaNegociacao({
                         : "text-sm text-tinta-fraca line-through"
                     }
                   >
-                    {euros(e.valor)}
+                    {euros(valorVisto ? valorVisto(e.valor) : e.valor)}
                   </span>
                 )}
               </div>

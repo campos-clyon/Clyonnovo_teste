@@ -1,6 +1,6 @@
 import { estimateLaborHours, type FastEstimateInput } from "@/lib/pricing-helper";
 import type { SimulatorSettingsMap } from "@/lib/simulator-settings";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import {
   custosFixosPorTrabalhoDe,
   totalDosCustosFixosAnuais,
@@ -159,6 +159,16 @@ export type SugestaoParaOProfissional = {
   precoSugerido: number;
   /** O que lhe fica desse preço, já com a taxa CLYON descontada. */
   recebeSePropuser: number;
+  /**
+   * AS TAXAS COM QUE O «RECEBE» FOI FEITO — as da negociação dele.
+   *
+   * Fazia-se com as de origem (6 %), escritas no código. A 29-09-2026 a
+   * comissão passou a sair dos 11 % do que o cliente paga — 6,55 % ao
+   * profissional —, e o ecrã ia prometer-lhe 329 € de um trabalho de 350 €
+   * que lhe deixa 327,08 €. Ficam aqui para a conta refeita
+   * (`sugestaoComOutroTempo`) usar as mesmas.
+   */
+  taxas?: Taxas;
   /** recebeSePropuser − custoMinimo. */
   lucroEstimado: number;
   /** O pedido é pago por carga: a conta é de UMA carga. */
@@ -229,6 +239,8 @@ export function sugerirParaOProfissional(
   distanciaKm: number | null,
   parametros: ParametrosDeCusto,
   custos?: CustosDoProfissional | null,
+  /** As da negociação. Sem elas, as de origem — ver `taxasDaNegociacao`. */
+  taxas?: Taxas,
 ): SugestaoParaOProfissional {
   const custoKm = numero(custos?.custoKm) ?? parametros.custoKm;
   const custoHoraPessoa = numero(custos?.custoHoraPessoa) ?? parametros.custoHoraPessoa;
@@ -288,7 +300,7 @@ export function sugerirParaOProfissional(
   const seguroDeRisco = aosCentimos((custoCombustivel + custoPessoal) * (riscoPercent / 100));
   const custoMinimo = aosCentimos(custoCombustivel + custoPessoal + custosFixos + seguroDeRisco);
   const precoSugerido = aosCentimos(custoMinimo * (1 + margem));
-  const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido);
+  const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido, taxas);
   const lucroEstimado = aosCentimos(recebeSePropuser - custoMinimo);
 
   const anual = totalDosCustosFixosAnuais(custos?.custosFixosAnuais);
@@ -325,6 +337,7 @@ export function sugerirParaOProfissional(
     margem,
     precoSugerido,
     recebeSePropuser,
+    ...(taxas ? { taxas } : {}),
     lucroEstimado,
     porCarga: pedido.baseDoPreco === "carga",
     comOsSeusCustos,

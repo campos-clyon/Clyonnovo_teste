@@ -21,6 +21,7 @@ import {
   Send,
   Trash2,
   UserRound,
+  Users,
   XCircle,
   Link as LinkIcon,
   Check,
@@ -68,6 +69,7 @@ import {
   TAXA_IVA,
   type Taxas,
 } from "@/lib/taxas-plataforma";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
@@ -1373,7 +1375,7 @@ export default function AdminNegociacoesPanel({
    * pela sessão de administrador. Ver deixou de custar o acesso de ninguém.
    */
 
-  async function promover(pedidoId: number, valor?: string) {
+  async function promover(pedidoId: number, valor?: string, profissionais?: number[]) {
     if (!token) return;
     setOcupado(`p${pedidoId}`);
     setErro("");
@@ -1383,7 +1385,7 @@ export default function AdminNegociacoesPanel({
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         // Sem valor, a partida é a conta da CLYON, feita na rota; com valor,
         // é o que a mesa escreveu.
-        body: JSON.stringify({ pedidoId, valor }),
+        body: JSON.stringify({ pedidoId, valor, profissionais }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -3551,6 +3553,7 @@ export default function AdminNegociacoesPanel({
                     pedidos={porPromoverNaMesa}
                     ocupado={ocupado}
                     onPromover={promover}
+                    token={token}
                     onArquivar={arquivarPedido}
                     onArquivarVarios={arquivarPedidos}
                     onApagar={apagarPedidos}
@@ -3916,6 +3919,23 @@ function RespostaDaClyon({
           inputMode="decimal"
           className="h-8 w-32 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white outline-none focus:border-cyan-600"
         />
+        {/*
+          O QUE O CLIENTE VÊ, ao lado do que se escreve — 29-09-2026.
+
+          A mesa conta em valores do profissional; o cliente, desde esta data,
+          vê tudo já com a taxa. Quem passa ao sistema um «pago 300» dito ao
+          telefone tem de escrever aqui o valor do profissional — e sem isto
+          escrevia 300, e o cliente acabava a ler 315 €.
+        */}
+        {(() => {
+          const v = Number(valor.replace(",", "."));
+          if (!valor.trim() || !Number.isFinite(v) || v <= 0) return null;
+          return (
+            <span className="text-xs text-slate-400">
+              o cliente vê {euros(precoParaOCliente(v, taxasDaNegociacao(negociacao)))}
+            </span>
+          );
+        })()}
         <button
           onClick={() => agir("propor", valor)}
           disabled={aEnviar !== "" || valor.trim() === ""}
@@ -3981,6 +4001,181 @@ function RespostaDaClyon({
  */
 
 
+type ProfissionalParaEscolher = {
+  id: number;
+  nome: string;
+  distanciaKm: number | null;
+  elegivel: boolean;
+  motivos: string[];
+};
+
+/**
+ * ESCOLHER A QUEM VAI O PEDIDO, UM A UM — 29-09-2026.
+ *
+ * «Quero que esse botão de enviar também dê a opção de escolher
+ * individualmente as empresas/pros.»
+ *
+ * A lista é a de TODOS os activos, e não só a dos que a regra deixaria
+ * passar: o caso que faz alguém querer escolher é quase sempre o do
+ * profissional que ficou de fora e que se sabe que vai. Os da regra vêm
+ * marcados e em cima; os outros vêm desmarcados, com o porquê à frente — quem
+ * marca um deles sabe que está a passar por cima do raio ou da categoria.
+ */
+function EscolherProfissionais({
+  pedidoId,
+  token,
+  ocupado,
+  onEnviar,
+  onFechar,
+}: {
+  pedidoId: number;
+  token: string | null;
+  ocupado: boolean;
+  onEnviar: (ids: number[]) => void;
+  onFechar: () => void;
+}) {
+  const [todos, setTodos] = useState<ProfissionalParaEscolher[] | null>(null);
+  const [erro, setErro] = useState("");
+  const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  const [busca, setBusca] = useState("");
+
+  useEffect(() => {
+    if (!token) return;
+    let vivo = true;
+    fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!vivo) return;
+        if (!r.ok) {
+          setErro(d.error ?? "Não foi possível ler os profissionais.");
+          return;
+        }
+        const lista = ((d.todos ?? []) as ProfissionalParaEscolher[]).sort(
+          (a, b) =>
+            Number(b.elegivel) - Number(a.elegivel) ||
+            (a.distanciaKm ?? Infinity) - (b.distanciaKm ?? Infinity) ||
+            a.nome.localeCompare(b.nome),
+        );
+        setTodos(lista);
+        setMarcados(new Set(lista.filter((p) => p.elegivel).map((p) => p.id)));
+      })
+      .catch(() => {
+        if (vivo) setErro("Erro de rede.");
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [pedidoId, token]);
+
+  const q = busca.trim().toLowerCase();
+  const visiveis = (todos ?? []).filter((p) => !q || p.nome.toLowerCase().includes(q));
+
+  const alternar = (id: number) =>
+    setMarcados((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
+  return (
+    <div className="basis-full rounded-xl border border-amber-600/40 bg-slate-950/60 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">
+          A quem enviar · {marcados.size} marcado(s)
+        </p>
+        {todos && (
+          <>
+            <button
+              type="button"
+              onClick={() => setMarcados(new Set(todos.filter((p) => p.elegivel).map((p) => p.id)))}
+              className="rounded border border-slate-700 px-2 py-0.5 text-[11px] text-slate-300 hover:border-slate-500"
+            >
+              Só os do raio
+            </button>
+            <button
+              type="button"
+              onClick={() => setMarcados(new Set())}
+              className="rounded border border-slate-700 px-2 py-0.5 text-[11px] text-slate-300 hover:border-slate-500"
+            >
+              Nenhum
+            </button>
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="procurar pelo nome"
+              className="ml-auto w-44 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200 placeholder:text-slate-600"
+            />
+          </>
+        )}
+      </div>
+
+      {erro && <p className="mt-2 text-xs text-red-300">{erro}</p>}
+      {!todos && !erro && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />A medir as
+          distâncias…
+        </p>
+      )}
+
+      {todos && (
+        <div className="mt-2 max-h-72 space-y-1 overflow-auto pr-1">
+          {visiveis.length === 0 && (
+            <p className="text-xs text-slate-500">
+              {q ? "Ninguém com esse nome." : "Não há profissionais activos."}
+            </p>
+          )}
+          {visiveis.map((p) => (
+            <label
+              key={p.id}
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-900"
+            >
+              <input
+                type="checkbox"
+                checked={marcados.has(p.id)}
+                onChange={() => alternar(p.id)}
+                className="h-4 w-4 shrink-0 accent-amber-500"
+              />
+              <span className="font-medium text-slate-100">{p.nome}</span>
+              {p.distanciaKm != null && (
+                <span className="tabular-nums text-slate-500">{Math.round(p.distanciaKm)} km</span>
+              )}
+              {!p.elegivel && p.motivos.length > 0 && (
+                <span className="text-amber-300/90">· {p.motivos.join(", ")}</span>
+              )}
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onEnviar([...marcados])}
+          disabled={ocupado || marcados.size === 0}
+          className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+        >
+          {ocupado ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Send className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          Enviar a {marcados.size}
+        </button>
+        <button
+          type="button"
+          onClick={onFechar}
+          className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PedidosPorPromover({
   aberto,
   pedidos,
@@ -3992,12 +4187,15 @@ function PedidosPorPromover({
   podeApagar = true,
   aApagar,
   onEditar,
+  token,
 }: {
   /** O bloco está aberto no pai; fechado, o componente fica montado e não desenha nada. */
   aberto: boolean;
   pedidos: PorPromover[];
   ocupado: string | null;
-  onPromover: (id: number, valor?: string) => void;
+  onPromover: (id: number, valor?: string, profissionais?: number[]) => void;
+  /** Para a lista de escolher à mão, que pergunta o alcance ao servidor. */
+  token: string | null;
   onArquivar: (id: number) => void;
   onArquivarVarios: (ids: number[]) => void;
   onApagar: (ids: number[]) => void;
@@ -4022,6 +4220,8 @@ function PedidosPorPromover({
    * só partilhado: escrever num pedido não pode encher a caixa do de baixo.
    */
   const [valorDe, setValorDe] = useState<Record<number, string>>({});
+  /** O pedido cuja lista de «escolher a quem» está aberta. Um de cada vez. */
+  const [aEscolher, setAEscolher] = useState<number | null>(null);
 
   const agora = new Date();
 
@@ -4167,6 +4367,21 @@ function PedidosPorPromover({
       </button>
 
       {/*
+        ESCOLHER A QUEM — ao lado do enviar, e não dentro dele: o enviar de
+        sempre continua a ser um clique, e escolher é o caminho de excepção.
+      */}
+      <button
+        onClick={() => setAEscolher((a) => (a === p.id ? null : p.id))}
+        disabled={ocupado === `p${p.id}`}
+        title="Escolher um a um a que profissionais enviar"
+        aria-expanded={aEscolher === p.id}
+        className="flex items-center gap-1.5 rounded-lg border border-amber-600/60 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/10 disabled:opacity-50"
+      >
+        <Users className="h-3.5 w-3.5" aria-hidden="true" />
+        Escolher
+      </button>
+
+      {/*
         Arquivar e não apagar, como acção normal.
         Um pedido arquivado sai desta lista e continua a existir: o histórico
         do cliente não muda, e daqui a três meses ainda se sabe que houve um
@@ -4185,6 +4400,19 @@ function PedidosPorPromover({
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
         )}
       </button>
+
+      {aEscolher === p.id && (
+        <EscolherProfissionais
+          pedidoId={p.id}
+          token={token}
+          ocupado={ocupado === `p${p.id}`}
+          onEnviar={(ids) => {
+            setAEscolher(null);
+            onPromover(p.id, valorDe[p.id]?.trim() || undefined, ids);
+          }}
+          onFechar={() => setAEscolher(null)}
+        />
+      )}
     </div>
   );
 
@@ -4464,9 +4692,14 @@ function AvaliarPelaClyon({
   );
 }
 
-/** "5 %" — a taxa como se lê, a partir da constante. */
+/**
+ * "5 %" — a taxa como se lê. Com as casas que tiver: desde 29-09-2026 a do
+ * profissional é 6,55 %, e arredondada às unidades lia-se «7 %» ao lado de
+ * uma conta feita a 6,55.
+ */
 function pct(taxa: number): string {
-  return `${Math.round(taxa * 100)} %`;
+  const pontos = Math.round(taxa * 10000) / 100;
+  return `${String(pontos).replace(".", ",")} %`;
 }
 
 function ConfirmarPelaClyon({

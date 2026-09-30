@@ -15,6 +15,8 @@ import {
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { lerForma } from "@/lib/forma-de-pagamento";
+import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
+import { lerBase } from "@/lib/base-do-preco";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
@@ -112,6 +114,15 @@ export async function GET(req: NextRequest) {
      */
     let parametros: ParametrosDeCusto | null = null;
     let custos: CustosDoProfissional | null = null;
+    /*
+     * A CARRINHA DELE -- variavel propria, e nao um campo de `custos`.
+     *
+     * Vem na mesma leitura, mas `CustosDoProfissional` e o contrato da conta
+     * de custos e a carrinha nao entra nela. Meter la um campo que so serve
+     * para um rotulo obrigava a sugestao a conhecer uma coisa de que nao
+     * precisa.
+     */
+    let carrinhaDele: string | null = null;
     try {
       const [mapa, perfil] = await Promise.all([
         getActivePricingMap(),
@@ -119,13 +130,40 @@ export async function GET(req: NextRequest) {
       ]);
       parametros = parametrosDoMapa(mapa);
       custos = perfil ?? null;
+      carrinhaDele = perfil?.tipoVeiculo ?? null;
     } catch (e) {
       console.error("[profissionais/meus-pedidos] parâmetros da sugestão", e);
     }
-    const sugestaoSegura = (pedido: PedidoParaSugestao, distanciaKm: number | null) => {
+    /*
+     * ⚠️ O QUE ISTO NAO FAZ: nao mexe no `querPagar` nem no `recebeSeAceitar`.
+     *
+     * Nenhum sitio do sistema multiplica o valor pelo numero de cargas -- o
+     * `baseDoPreco: "carga"` e uma etiqueta, e a plataforma cobra o valor
+     * acordado tal e qual. Descontar aqui o valor que ele aceita fazia um
+     * profissional de carrinha pequena aceitar 150 EUR e fazer duas viagens e
+     * meia por 150 EUR, que e o contrario exacto do que isto serve.
+     *
+     * Isto informa a DECISAO: o que uma carga vale na carrinha dele, e
+     * quantas viagens o trabalho lhe leva. Ver `carga-da-carrinha.ts`.
+     */
+    const cargaSegura = (baseDoPreco: unknown, valorEscrito: number | null) => {
+      if (lerBase(baseDoPreco) !== "carga") return null;
+      try {
+        return fraseDaCarga(cargaParaEste(valorEscrito, carrinhaDele));
+      } catch (e) {
+        console.error("[profissionais/meus-pedidos] carga da carrinha", e);
+        return null;
+      }
+    };
+
+    const sugestaoSegura = (
+      pedido: PedidoParaSugestao,
+      distanciaKm: number | null,
+      taxas: ReturnType<typeof taxasDaNegociacao>,
+    ) => {
       if (!parametros) return null;
       try {
-        return sugerirParaOProfissional(pedido, distanciaKm, parametros, custos);
+        return sugerirParaOProfissional(pedido, distanciaKm, parametros, custos, taxas);
       } catch (e) {
         console.error("[profissionais/meus-pedidos] sugestão", e);
         return null;
@@ -339,6 +377,39 @@ export async function GET(req: NextRequest) {
         // propunha sobre uma unidade e o cliente lia outra -- e a conta so
         // batia mal no fim, com o trabalho ja feito.
         baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
+        /*
+         * O QUE UMA CARGA VALE NA CARRINHA DELE -- e quantas viagens leva.
+         *
+         * "Se colocarmos 350 por carga, o sistema deve entender que me refiro
+         * a carga grande: logo os que tem carrinha pequena deve aparecer 150
+         * por carga, mais ou menos 2 cargas e meia para recolher tudo."
+         *
+         * `null` -- e o cartao cala-se -- em qualquer destes casos: o pedido
+         * nao e por carga, ele nao declarou a carrinha, ou tem a grande, que e
+         * a referencia e para quem nao ha nada a dizer.
+         */
+        cargaNaSuaCarrinha: cargaSegura(
+          (l as unknown as { baseDoPreco?: string | null }).baseDoPreco,
+          /*
+           * SOBRE O LIQUIDO, e nao sobre o bruto -- e sobre EXACTAMENTE o
+           * numero grande do cartao.
+           *
+           * O cartao mostra sempre o liquido dele. Calcular a carga sobre o
+           * bruto punha «150,00 EUR por carga» ao lado de um «332,50 EUR», e a
+           * proporcao entre os dois numeros na mesma linha deixava de bater --
+           * que e a maneira mais rapida de ele deixar de confiar nos dois.
+           *
+           * A ordem e a do cartao: o acordado manda, depois o que a CLYON pos,
+           * e no fim o minimo do cliente.
+           */
+          acordado != null
+            ? quantoOProfissionalRecebe(acordado, taxasDela)
+            : l.valorDesejadoCliente != null
+              ? quantoOProfissionalRecebe(Number(l.valorDesejadoCliente), taxasDela)
+              : minimo != null
+                ? quantoOProfissionalRecebe(minimo, taxasDela)
+                : null,
+        ),
         // O dia que ELE combinou com o cliente, depois de ser contratado. Nao
         // escreve por cima do que o cliente pediu -- ver `agenda-dos-trabalhos`.
         dataCombinada:
@@ -451,6 +522,7 @@ export async function GET(req: NextRequest) {
             baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
           },
           medidas[i]?.km ?? null,
+          taxasDela,
         ),
       };
     });

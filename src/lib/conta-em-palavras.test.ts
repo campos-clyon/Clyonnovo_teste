@@ -23,10 +23,19 @@ import { totalEmPalavras, comFacturaEmPalavras } from "./conta-em-palavras";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
 describe("a frase diz o mesmo que a conta", () => {
-  it("o número grande é serviço mais taxa, sem imposto", () => {
-    // 300 + taxa 15,00 = 315,00. É este o número que ele tem de reconhecer.
-    expect(totalEmPalavras(300, "isento")).toContain("fica em 315,00 € sem IVA.");
-    expect(totalEmPalavras(300, "normal")).toContain("fica em 315,00 € sem IVA.");
+  it("o preço já foi dito antes dela — a frase não o repete nem soma a taxa", () => {
+    /*
+     * MUDOU A 29-09-2026. Dizia «Com a taxa CLYON, fica em 315,00 € sem IVA»
+     * depois de «Fulano propõe 300 €»: dois números, e a taxa somada à frente
+     * do cliente. Agora quem chama diz o preço dele primeiro («propõe
+     * 315,00 €»), e aqui fica só o que ele ainda não sabe.
+     */
+    for (const regime of ["isento", "normal"]) {
+      const frase = totalEmPalavras(300, regime);
+      expect(frase.startsWith("Valor sem IVA.")).toBe(true);
+      expect(frase).not.toContain("taxa CLYON");
+      expect(frase).not.toContain("315,00 €");
+    }
   });
 
   it("uma frase só, e são sempre 23 %", () => {
@@ -41,11 +50,24 @@ describe("a frase diz o mesmo que a conta", () => {
      *
      * 300 + taxa 15,00 = 315,00 · IVA 72,45 = 387,45.
      */
-    const frase =
-      "Com a taxa CLYON, fica em 315,00 € sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.";
+    const frase = "Valor sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.";
     for (const regime of ["isento", "normal", null, ""]) {
       expect(totalEmPalavras(300, regime)).toBe(frase);
     }
+  });
+
+  it("com as taxas da negociação, o total com factura é o dela", () => {
+    // O exemplo do dono: 350 € → 367,50 € sem IVA → 452,03 € com factura.
+    expect(totalEmPalavras(350, null, { cliente: 0.05, profissional: 0.0655 })).toBe(
+      "Valor sem IVA. Com factura acrescem 23 % de IVA: 452,03 €.",
+    );
+  });
+
+  it("em dinheiro continua a dizer as duas entregas", () => {
+    // A CLYON leva as duas taxas ao cliente: 5 + 6,55 = 11,55 % de 350.
+    const frase = totalEmPalavras(350, null, { cliente: 0.1155, profissional: 0 }, "dinheiro");
+    expect(frase).toContain("Paga 350,00 € em dinheiro ao profissional, no local");
+    expect(frase).toContain("40,43 € de taxa à CLYON por referência");
   });
 
   it("o regime do profissional já não muda uma vírgula", () => {
@@ -73,10 +95,20 @@ describe("a frase está escrita uma vez só", () => {
     expect(AVISOS).not.toContain("Com o imposto e a taxa fica em");
   });
 
-  it("os quatro sítios passam pelo mesmo sítio", () => {
-    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, dados.regimeIva)");
-    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, n.regimeIva)");
-    expect(AVISOS).toContain("totalEmPalavras(acordado, n.regimeIva)");
+  it("os quatro sítios passam pelo mesmo sítio — com as taxas e a forma DELA", () => {
+    /*
+     * Sem o parêntese de fecho: a 30-09-2026 as chamadas ganharam a base do
+     * preço (por carga). O que isto guarda é a frase vir da função — e, desde
+     * 29-09-2026, com as taxas e a forma da negociação. Sem elas a frase fazia
+     * a conta com as taxas de origem e como se todos pagassem pela
+     * plataforma: a quem escolheu dinheiro dizia-se o total de quem paga por
+     * referência.
+     */
+    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, dados.regimeIva, taxas, forma");
+    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, n.regimeIva, taxas, forma");
+    expect(AVISOS).toContain("totalEmPalavras(acordado, n.regimeIva, taxas, forma");
+    expect(CEREBRO).not.toContain("totalEmPalavras(dados.valor, dados.regimeIva)");
+    expect(CEREBRO).not.toContain("totalEmPalavras(dados.valor, dados.regimeIva, undefined");
   });
 
   it("e a percentagem sai da constante, e não escrita à mão", () => {

@@ -4,24 +4,18 @@ import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma"
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 
-/**
- * «5%» — a taxa DAQUELA negociação, escrita para uma pessoa ler.
- *
- * Era lido da constante, e isso passou a ser uma mentira no dia em que a taxa
- * ficou editável: o total já vinha calculado com a taxa que a negociação
- * guardou, e a frase ao lado continuava a dizer 5 %. Uma frase e um número a
- * discordar sobre dinheiro, na mesma linha.
- *
- * Sem decimais quando é redonda — «5%» e não «5,0%» — e com vírgula quando
- * não é, que é como se escreve em português.
- */
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
 
-function taxaEmTexto(fraccao: number): string {
-  const pontos = Math.round(fraccao * 10000) / 100;
-  return `${(Number.isInteger(pontos) ? String(pontos) : pontos.toFixed(2)).replace(".", ",")}%`;
-}
+/*
+ * A PERCENTAGEM DA TAXA SAIU DA MENSAGEM — 29-09-2026.
+ *
+ * Havia aqui um `taxaEmTexto` que escrevia «5%» ao lado de cada proposta:
+ * «283,50 € (270,00 € para ele mais a taxa CLYON de 5%)». Desde que o preço
+ * se diz já com a taxa (`preco-do-cliente.ts`), não há conta nenhuma para o
+ * cliente refazer — e uma percentagem sem conta para fazer é só uma pergunta
+ * à espera de ser feita.
+ */
 
 /**
  * A MENSAGEM PRONTA A MANDAR AO CLIENTE, com as propostas que recebeu.
@@ -310,10 +304,14 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
       leu isto, não percebeu qual era o dele, e pagou ao profissional os 280 €
       sem os 14 € da nossa taxa.
     */
+    /*
+      E DESDE 29-09-2026 UM NÚMERO SÓ: o preço dele, já com a taxa. Dizia
+      «(270,00 € para ele mais a taxa CLYON de 5%)» — a conta a ser feita à
+      frente de quem já escolheu.
+    */
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
-        ` ${euros(d.fechado.semIva)} a pagar` +
-        ` (${euros(d.fechado.valor)} para ele mais a taxa CLYON de ${taxaEmTexto(d.fechado.taxaCliente)}).`,
+        ` ${euros(d.fechado.semIva)} a pagar.`,
     );
     const facturaDoFechado = comFactura(d.fechado);
     if (facturaDoFechado) linhas.push(facturaDoFechado);
@@ -352,27 +350,14 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         UM NÚMERO POR PROFISSIONAL — o que ele paga se não pedir factura.
 
         Dizia «280,00 € — total a pagar 361,20 €», e com três propostas eram
-        seis números numa mensagem de telemóvel. O valor dele fica entre
-        parênteses porque é sobre ele que se negoceia; o número à frente do
-        nome é o único que o cliente tem de comparar.
+        seis números numa mensagem de telemóvel. Depois ficou o valor do
+        profissional entre parênteses, «porque é sobre ele que se negoceia».
+        Desde 29-09-2026 negoceia-se sobre o preço do cliente — é esse que ele
+        escreve quando contrapropõe —, e o parêntese saiu com a razão dele.
       */
-      linhas.push(
-        `${p.profissional}: ${euros(p.semIva)} (${euros(p.valor)} para ele mais a taxa CLYON)`,
-      );
+      linhas.push(`${p.profissional}: ${euros(p.semIva)}`);
     }
     linhas.push("");
-    /*
-     * A TAXA, quando é a mesma em todas as propostas.
-     *
-     * Na prática é sempre: as negociações de um pedido nascem todas no mesmo
-     * instante e guardam a mesma taxa. Mas um pedido reaberto depois de a taxa
-     * mudar pode ter negociações de duas gerações — e aí a frase não pode dizer
-     * um número, porque não há UM número. Cala-se sobre a percentagem e diz só
-     * que a taxa entra no total, que é a parte que interessa e continua a ser
-     * verdade. Cada linha acima já tem o seu total certo.
-     */
-    const taxas = new Set(d.propostas.map((p) => p.taxaCliente));
-    const taxaUnica = taxas.size === 1 ? [...taxas][0] : null;
     /*
      * O IVA ENCOSTADO AOS NÚMEROS, e não num rodapé.
      *
@@ -389,11 +374,13 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      *
      * Quem factura passou a ser a CLYON, e a factura é a mesma venha a
      * proposta de quem vier: 23 % sobre tudo, a quem a pedir.
+     *
+     * E SEM A TAXA CLYON — 29-09-2026. Dizia «Valores sem IVA, já com a taxa
+     * CLYON de 5%». Com os preços a chegarem-lhe já com ela lá dentro, a
+     * percentagem era a única coisa na mensagem que o convidava a fazer uma
+     * conta — e não havia conta nenhuma para fazer.
      */
-    linhas.push(
-      `Valores sem IVA, já com a taxa CLYON${taxaUnica != null ? ` de ${taxaEmTexto(taxaUnica)}` : ""}.` +
-        ` Com factura acrescem ${POR_CENTO} de IVA.`,
-    );
+    linhas.push(`Valores sem IVA. Com factura acrescem ${POR_CENTO} de IVA.`);
     /*
      * COMO É QUE ESTES NÚMEROS FORAM FEITOS, na linha a seguir aos números.
      *

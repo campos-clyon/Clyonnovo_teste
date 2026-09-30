@@ -190,8 +190,11 @@ describe("o cérebro entende as palavras", () => {
   });
 
   it("«fechar 300» encontra a proposta de 300 € pelo valor em cima da mesa", () => {
-    expect(CEREBRO).toContain("valorNaMesa");
-    expect(CEREBRO).toContain("Math.abs((a.valorNaMesa as number) - valorPedido)");
+    // Pelo PREÇO que ele viu, já com a taxa — 29-09-2026. É nessa moeda que
+    // a proposta lhe chegou, e é nela que ele responde.
+    expect(CEREBRO).toContain("precoNaMesa");
+    expect(CEREBRO).toContain("Math.abs((a.precoNaMesa as number) - valorPedido)");
+    expect(CEREBRO).not.toContain("Math.abs((a.valorNaMesa as number) - valorPedido)");
   });
 
   /*

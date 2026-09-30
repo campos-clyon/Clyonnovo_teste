@@ -14,7 +14,9 @@ import {
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
-// Só para MOSTRAR. As taxas não se editam neste ecrã — ver o bloco que o diz.
+import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "@/lib/quota-da-clyon";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import {
   ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
   type EstadoTicket,
@@ -431,6 +433,29 @@ const decimal = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 
+/** 0,0655 → «6,55» — uma taxa em pontos percentuais, como se escreve. */
+const emPontos = (fraccao: number) =>
+  String(Math.round(fraccao * 1000000) / 10000).replace(".", ",");
+
+/** «6,55», «6.55 %» → 0,0655. Vazio ou lixo → null. */
+const dePontos = (texto: string): number | null => {
+  const limpo = texto.trim().replace("%", "").replace(",", ".");
+  if (limpo === "") return null;
+  const n = Number(limpo);
+  return Number.isFinite(n) ? n / 100 : null;
+};
+
+/**
+ * A taxa do profissional que se guarda, escrita, a partir dos dois campos que
+ * se editam: o acréscimo ao cliente e a quota da CLYON. Vazia enquanto um dos
+ * dois não for um número — e a rota recusa o vazio com uma frase que se lê.
+ */
+const profissionalDosCampos = (cliente: string, quota: string): string => {
+  const c = dePontos(cliente);
+  const q = dePontos(quota);
+  return c == null || q == null ? "" : emPontos(taxaDoProfissionalParaAQuota(c, q));
+};
+
 const formatDate = (value?: string) => {
   if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-PT", {
@@ -604,6 +629,14 @@ export default function ColaboradorAdminClient({
     cliente: "",
     profissional: "",
   });
+  /*
+   * «A CLYON FICA COM 11 % DO QUE O CLIENTE PAGA» — 29-09-2026.
+   *
+   * É assim que o dono pensa a comissão desde que o cliente passou a ver o
+   * preço já com a taxa. O campo que se escreve é este; a taxa do
+   * profissional (a que se guarda) sai dele — ver `quota-da-clyon.ts`.
+   */
+  const [quotaRascunho, setQuotaRascunho] = useState("");
   const [taxasAGravar, setTaxasAGravar] = useState(false);
   const [taxasErro, setTaxasErro] = useState("");
   const [taxasGuardadas, setTaxasGuardadas] = useState("");
@@ -912,9 +945,10 @@ export default function ColaboradorAdminClient({
       setTaxas({ cliente: d.cliente, profissional: d.profissional, origem: d.origem });
       // Em pontos percentuais, que é como uma pessoa as escreve: 5 e não 0,05.
       setTaxasRascunho({
-        cliente: String(Math.round(d.cliente * 10000) / 100).replace(".", ","),
-        profissional: String(Math.round(d.profissional * 10000) / 100).replace(".", ","),
+        cliente: emPontos(d.cliente),
+        profissional: emPontos(d.profissional),
       });
+      setQuotaRascunho(emPontos(quotaDaClyon({ cliente: d.cliente, profissional: d.profissional })));
     } catch {
       // Falhar a ler as taxas não pode partir o ecrã das configurações: a
       // caixa fica a dizer que não as conseguiu ler, e o resto funciona.
@@ -3488,15 +3522,15 @@ export default function ColaboradorAdminClient({
                 description="A comissão da CLYON sobre cada trabalho. Reembolsos e disputas tratam-se na App CLYON; as contas e as percentagens dos assistentes, na secção Assistentes."
               >
                 {/*
-                  AS TAXAS DA PLATAFORMA NÃO SE EDITAM AQUI — e o ecrã tem de o
-                  dizer, em vez de as calar.
+                  AS TAXAS DA PLATAFORMA — editáveis desde 15-09-2026, e
+                  pensadas como o dono as pensa desde 29-09-2026.
 
-                  "Trava as configurações reais, inclusive taxas de pros e
-                  CLYON." Estas duas não vivem na base: são constantes em
-                  `taxas-plataforma.ts`, porque mexer nelas muda o que já foi
-                  prometido a negociações abertas. Escondê-las fazia este ecrã
-                  parecer o sítio de todas as configurações, e ele não é — quem
-                  as procurasse dava uma volta inteira para não encontrar nada.
+                  "O pro propôs 350, para o cliente vai aparecer 367,5, para o
+                  pro 327,08 — assim a CLYON mantém-se a ganhar os 11 %." Os
+                  dois campos passaram a ser o acréscimo que o cliente vê e a
+                  parte da CLYON NO QUE ELE PAGA. A taxa do profissional — a
+                  que se guarda, ao lado da do cliente — sai das duas, e
+                  mostra-se feita, com um trabalho de 350 € como exemplo.
                 */}
                 <div className="mb-4 rounded-[20px] border border-amber-400/20 bg-amber-500/[0.06] p-4">
                   <div>
@@ -3517,36 +3551,73 @@ export default function ColaboradorAdminClient({
                       <div className="mt-3 flex flex-wrap items-end gap-4">
                         {(
                           [
-                            ["cliente", "Cliente", "somada ao que ele paga"],
-                            ["profissional", "Profissional", "descontada ao que ele recebe"],
+                            {
+                              chave: "cliente",
+                              etiqueta: "Cliente",
+                              ajuda: "já dentro do preço que ele vê",
+                              valor: taxasRascunho.cliente,
+                              mudar: (v: string) =>
+                                setTaxasRascunho({
+                                  cliente: v,
+                                  profissional: profissionalDosCampos(v, quotaRascunho),
+                                }),
+                            },
+                            {
+                              chave: "quota",
+                              etiqueta: "CLYON",
+                              ajuda: "do que o cliente paga",
+                              valor: quotaRascunho,
+                              mudar: (v: string) => {
+                                setQuotaRascunho(v);
+                                setTaxasRascunho((t) => ({
+                                  ...t,
+                                  profissional: profissionalDosCampos(t.cliente, v),
+                                }));
+                              },
+                            },
                           ] as const
-                        ).map(([campo, etiqueta, ajuda]) => (
-                          <label key={campo} className="block">
+                        ).map((campo) => (
+                          <label key={campo.chave} className="block">
                             <span className="block text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                              {etiqueta}
+                              {campo.etiqueta}
                             </span>
                             <span className="mt-1 flex items-center gap-1.5 rounded-[14px] border border-white/10 bg-slate-950/40 px-3 py-2">
                               <input
-                                value={taxasRascunho[campo]}
+                                value={campo.valor}
                                 onChange={(e) => {
-                                  setTaxasRascunho((t) => ({ ...t, [campo]: e.target.value }));
+                                  campo.mudar(e.target.value);
                                   setTaxasGuardadas("");
                                   setTaxasErro("");
                                 }}
                                 inputMode="decimal"
                                 className="w-16 bg-transparent text-lg font-semibold text-white outline-none"
-                                aria-label={`Taxa ao ${etiqueta.toLowerCase()}, em por cento`}
+                                aria-label={`${campo.etiqueta}, ${campo.ajuda}, em por cento`}
                               />
                               <span className="text-lg font-semibold text-slate-400">%</span>
                             </span>
-                            <span className="mt-1 block text-[10px] text-slate-500">{ajuda}</span>
+                            <span className="mt-1 block text-[10px] text-slate-500">{campo.ajuda}</span>
                           </label>
                         ))}
+
+                        <div className="block">
+                          <span className="block text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                            Profissional
+                          </span>
+                          <span className="mt-1 flex items-center gap-1.5 rounded-[14px] border border-dashed border-white/10 px-3 py-2">
+                            <span className="w-16 text-lg font-semibold text-slate-300">
+                              {taxasRascunho.profissional || "—"}
+                            </span>
+                            <span className="text-lg font-semibold text-slate-500">%</span>
+                          </span>
+                          <span className="mt-1 block text-[10px] text-slate-500">
+                            descontada ao valor dele — sai das duas
+                          </span>
+                        </div>
 
                         <button
                           type="button"
                           onClick={() => void gravarTaxas()}
-                          disabled={taxasAGravar}
+                          disabled={taxasAGravar || taxasRascunho.profissional === ""}
                           className="rounded-[14px] bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-60"
                         >
                           {taxasAGravar ? "A guardar…" : "Guardar taxas"}
@@ -3554,21 +3625,55 @@ export default function ColaboradorAdminClient({
                       </div>
 
                       {/*
-                        O TOTAL, porque é o número que decide.
-                        Ninguém pensa "5 e 6": pensa "a CLYON fica com 11".
+                        O EXEMPLO, FEITO COM O QUE ESTÁ ESCRITO — antes de guardar.
+
+                        Uma percentagem derivada de outras duas não se confere de
+                        cabeça. Um trabalho de 350 € contado até ao cêntimo, com
+                        as mesmas funções que contam a sério, confere-se: é o
+                        exemplo do dono, e tem de dar 367,50 → 327,08 → 40,42.
                       */}
-                      <p className="mt-3 text-xs text-slate-400">
-                        A CLYON fica com{" "}
-                        <strong className="text-white">
-                          {Math.round((taxas.cliente + taxas.profissional) * 10000) / 100} %
-                        </strong>{" "}
-                        de cada trabalho, das duas pontas.
+                      {(() => {
+                        const c = dePontos(taxasRascunho.cliente);
+                        const p = dePontos(taxasRascunho.profissional);
+                        if (c == null || p == null) return null;
+                        if (p < 0) {
+                          return (
+                            <p className="mt-3 text-xs text-red-300">
+                              Com estes dois números a parte do profissional sai negativa: a CLYON
+                              ficaria com menos do que o acréscimo que o cliente paga.
+                            </p>
+                          );
+                        }
+                        const t = { cliente: c, profissional: p };
+                        const doCliente = precoParaOCliente(350, t);
+                        const doProfissional = quantoOProfissionalRecebe(350, t);
+                        return (
+                          <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                            Exemplo: o profissional propõe <strong className="text-white">350,00 €</strong> →
+                            o cliente vê <strong className="text-white">{decimal(doCliente)} €</strong> →
+                            o profissional recebe <strong className="text-white">{decimal(doProfissional)} €</strong> →
+                            a CLYON fica com{" "}
+                            <strong className="text-white">{decimal(doCliente - doProfissional)} €</strong>.
+                          </p>
+                        );
+                      })()}
+
+                      {/*
+                        O QUE ESTÁ GUARDADO, contado como o dono conta: sobre o
+                        que o cliente paga. «11 % das duas pontas» somava duas
+                        percentagens de bases diferentes.
+                      */}
+                      <p className="mt-2 text-xs text-slate-400">
+                        Guardado: a CLYON fica com{" "}
+                        <strong className="text-white">{emPontos(quotaDaClyon(taxas))} %</strong>{" "}
+                        do que o cliente paga — {emPontos(taxas.cliente)} % ao cliente,{" "}
+                        {emPontos(taxas.profissional)} % ao profissional.
                         {(taxas.cliente !== taxas.origem.cliente ||
                           taxas.profissional !== taxas.origem.profissional) && (
                           <>
                             {" "}
-                            Antes eram {Math.round(taxas.origem.cliente * 10000) / 100} % e{" "}
-                            {Math.round(taxas.origem.profissional * 10000) / 100} %.
+                            Antes eram {emPontos(taxas.origem.cliente)} % e{" "}
+                            {emPontos(taxas.origem.profissional)} %.
                           </>
                         )}
                       </p>

@@ -94,9 +94,19 @@ export default function ValoresEFaturacao({
 
         <div className="mt-3 flex items-start gap-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-600" aria-hidden="true" />
+          {/*
+            AS PROPOSTAS CHEGAM COM A TAXA DENTRO — 29-09-2026.
+
+            O valor escrito aqui é o que os profissionais vêem, e é sem a
+            taxa. As propostas que eles fizerem chegam ao cliente já com ela
+            (`preco-do-cliente.ts`): quem escreve 300 € e recebe uma proposta
+            de 300 € lê-a como 315 €. Dito aqui, antes, é informação; dito só
+            depois, seria uma surpresa.
+          */}
           <p className="text-xs leading-relaxed text-cyan-900">
-            Os profissionais podem aceitar este valor ou propor outro. Só paga se
-            contratar alguém — e o total, com a taxa CLYON, aparece antes de confirmar.
+            Os profissionais podem aceitar este valor ou propor outro. As propostas
+            chegam-lhe já com a taxa CLYON incluída, sem IVA — e só paga se contratar
+            alguém.
           </p>
         </div>
       </div>

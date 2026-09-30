@@ -11,7 +11,7 @@ import {
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { avisarProfissional } from "@/lib/email-profissional";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -177,7 +177,9 @@ export async function POST(req: NextRequest) {
       descricao: pedido.description ?? null,
       quantidadeDeFotos: 0,
       valorDesejadoCliente: minimo,
-      recebeLiquido: minimo != null ? quantoOProfissionalRecebe(minimo) : null,
+      // Com as taxas DESTA negociação: com a comissão mudada no backoffice, as
+      // de origem prometiam-lhe por email um líquido que não é o dele.
+      recebeLiquido: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDaNegociacao(alvo)) : null,
       distanciaKm: null,
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),

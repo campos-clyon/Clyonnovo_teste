@@ -11,6 +11,7 @@ import {
   type Falta,
 } from "@/lib/perfil-por-completar";
 import Nota from "@/components/Nota";
+import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/profissional-auth";
@@ -469,6 +470,41 @@ export default function Perfil({
               dentroDoPerfil
             />
 
+            {/*
+              A MEDIDA DA CARRINHA — 29-09-2026.
+
+              "Os profissionais devem responder se a carrinha deles é pequena,
+              média ou grande, e vamos usar essa informação para dizer o valor
+              por carga exclusivo para a conta dele."
+
+              O campo já existia na base e vinha da candidatura; o que não
+              havia era forma de ele o corrigir. E passou a valer dinheiro: é
+              ele que decide o valor por carga que este profissional vê num
+              pedido pago à viagem. Quem comprou uma carrinha maior tem de
+              poder dizê-lo sem telefonar para cá.
+
+              A explicação fica ao lado do campo, e não numa nota escondida:
+              um campo que muda preços e não diz que os muda é um campo que
+              ninguém preenche com atenção.
+            */}
+            <Campo
+              etiqueta="A sua viatura"
+              ajuda="Decide o valor por carga que vê nos pedidos pagos à viagem: o valor escrito pela CLYON é o de uma carrinha grande."
+            >
+              <select
+                className={CAIXA}
+                value={dados.tipoVeiculo ?? ""}
+                onChange={(e) => mudar("tipoVeiculo", e.target.value)}
+              >
+                <option value="">Por indicar</option>
+                {TIPOS_DE_VEICULO.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+
             <FotoDaViatura
               fotos={dados.fotosViatura ?? (dados.fotoViaturaUrl ? [dados.fotoViaturaUrl] : [])}
               onMudou={(urls) =>
@@ -484,6 +520,7 @@ export default function Perfil({
                   cidade: dados.cidade,
                   baseLat: dados.baseLat,
                   baseLng: dados.baseLng,
+                  tipoVeiculo: dados.tipoVeiculo ?? "",
                 })
               }
             />

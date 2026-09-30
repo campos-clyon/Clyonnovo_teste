@@ -23,6 +23,7 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { precoParaOCliente, precoPossivel } from "@/lib/preco-do-cliente";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
@@ -40,16 +41,20 @@ import { PROMESSA, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-platafor
  * entra em casa — e é esse o segundo passo do aperto de mão duplo: um
  * profissional aceitar não fecha nada.
  *
- * Os valores da negociação são CRUS — o que foi proposto, sem taxa. É como a
- * Vinted faz: na conversa vêem-se as propostas tal como foram feitas, e a taxa
- * aparece onde se compra.
+ * UM NÚMERO SÓ, JÁ COM A TAXA — 29-09-2026.
  *
- * Somá-la em cada proposta fazia o número dançar a cada contraproposta por uma
- * razão que não é a negociação, e o cliente deixava de saber sobre que valor
- * estava a discutir com o profissional.
+ * "Invés de cobrar 5 % do cliente depois, vamos apresentar o valor proposto já
+ * com a taxa: o pro propôs 350, para o cliente vai aparecer 367,5."
  *
- * No fecho é ao contrário: aí é o momento de pagar, e mostra-se a conta toda —
- * acordado, taxa e total.
+ * Até aqui os valores deste ecrã eram CRUS — o do profissional, com «X a
+ * pagar» por baixo e a taxa numa linha própria no fecho. Eram dois números
+ * para a mesma proposta, e o cliente tinha de escolher com qual discutia.
+ * Agora há um: o que ele paga, sem IVA. É esse o grande, é esse o do
+ * histórico, e é esse o que ele escreve quando contrapropõe — a volta para o
+ * valor do profissional faz-se no servidor (`preco-do-cliente.ts`).
+ *
+ * O número continua a não dançar: a taxa de cada negociação fica gravada
+ * quando ela nasce, e todas as propostas dela passam pela mesma conta.
  */
 
 export type NegociacaoDoCliente = {
@@ -238,7 +243,8 @@ export default function PropostasRecebidas({
     }
   }
 
-  async function agir(id: number, accao: string, valor?: string) {
+  /** `preco` é o que o cliente escreveu — o que ele paga, já com a taxa. */
+  async function agir(id: number, accao: string, preco?: string) {
     setAEnviar(id);
     setErro("");
     try {
@@ -249,7 +255,9 @@ export default function PropostasRecebidas({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             accao,
-            valor,
+            // `preco`, e não `valor`: o servidor faz a volta para o valor do
+            // profissional com as taxas desta negociação.
+            preco,
             negociacaoId: id,
             pedidoId,
             ...(accao === "avaliar" ? { estrelas, comentario } : {}),
@@ -296,20 +304,18 @@ export default function PropostasRecebidas({
           Contratou {acordada.profissionalNome}
         </h2>
         {/*
-          DUAS LINHAS E UM TOTAL — SEM IVA.
+          UM TOTAL, SEM IVA — E SEM A TAXA À PARTE. 29-09-2026.
 
           "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje
           factura sao mais 23%, deixamos isso claro apenas." -- 17-09-2026.
 
-          Tinha quatro linhas -- servico, IVA, taxa, total -- e um cliente que
-          nao queria factura leu-as todas e acabou a pagar ao profissional os
-          280 EUR dele, sem os 14 EUR da nossa taxa. Quatro linhas nao sao mais
-          transparencia do que duas: sao mais sitios onde se perder.
+          E desde 29-09-2026 a taxa CLYON vem dentro do preço: o cliente
+          negociou 367,50 EUR, e é 367,50 EUR que lê aqui. As linhas «Serviço»
+          e «Taxa CLYON» por cima eram a conta a ser feita à frente dele com
+          um número (o do profissional) que ele nunca viu em lado nenhum.
 
           O imposto nao desapareceu da conta, so deixou de ser uma linha da
-          tabela. Fica em baixo, a dizer o que acresce A QUEM QUISER FACTURA --
-          e com a percentagem so quando ela e verdade, porque o regime e do
-          profissional e um isento pelo art. 53.o nao liquida nada.
+          tabela. Fica em baixo, a dizer o que acresce A QUEM QUISER FACTURA.
         */}
         {(() => {
           const conta = contaDoCliente(
@@ -318,40 +324,28 @@ export default function PropostasRecebidas({
           );
           return (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
-              <div className="flex items-baseline justify-between gap-4 text-sm">
-                <span className="text-slate-600">
-                  Serviço
-                  <span className="block text-xs text-tinta-fraca">
-                    valor acordado, sem IVA
-                  </span>
-                </span>
-                <span className="text-slate-900">{euros(conta.servico)}</span>
-              </div>
-              <div className="mt-1 flex items-baseline justify-between gap-4 text-sm">
-                <span className="text-slate-600">Taxa CLYON</span>
-                <span className="text-slate-900">{euros(conta.taxa)}</span>
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+                <span className="text-lg font-bold text-emerald-700">{euros(conta.semIva)}</span>
               </div>
               {/*
-                EM DINHEIRO SÃO DUAS ENTREGAS — 21-09-2026. Um total só, a
-                quem vai dar notas ao profissional e pagar a taxa por
-                referência, é um número que ele não consegue repetir em voz
-                alta. Diz-se o que vai para cada lado.
+                EM DINHEIRO SÃO DUAS ENTREGAS — 21-09-2026, e continuam a ser.
+                Um total só, a quem vai dar notas ao profissional e pagar a
+                taxa por referência, é um número que ele não consegue repetir
+                em voz alta. Diz-se o que vai para cada lado — e é o único
+                sítio onde a parte da CLYON aparece sozinha, porque é o único
+                onde ele a paga sozinha.
               */}
-              {lerForma(acordada.formaDePagamento) === "dinheiro" ? (
+              {lerForma(acordada.formaDePagamento) === "dinheiro" && (
                 <div className="mt-2 space-y-1 border-t border-slate-200 pt-2 text-sm">
                   <div className="flex items-baseline justify-between gap-4">
-                    <span className="font-semibold text-slate-900">Em dinheiro, ao profissional</span>
-                    <span className="text-lg font-bold text-emerald-700">{euros(conta.servico)}</span>
+                    <span className="text-slate-600">Em dinheiro, ao profissional</span>
+                    <span className="font-semibold text-slate-900">{euros(conta.servico)}</span>
                   </div>
                   <div className="flex items-baseline justify-between gap-4">
                     <span className="text-slate-600">À CLYON, por referência</span>
                     <span className="font-semibold text-slate-900">{euros(conta.taxa)}</span>
                   </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
-                  <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
-                  <span className="text-lg font-bold text-emerald-700">{euros(conta.semIva)}</span>
                 </div>
               )}
               <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
@@ -615,6 +609,9 @@ export default function PropostasRecebidas({
           const pendente = propostaPendente(estado, agora);
           const restantes = propostasRestantes(estado, "cliente", agora);
           const emCima = pendente?.valor ?? n.valorAcordado;
+          // O que ele paga pelo que está em cima da mesa — ver o cabeçalho.
+          const taxasDela = taxasDaNegociacao(n);
+          const precoEmCima = emCima != null ? precoParaOCliente(emCima, taxasDela) : null;
           const aguarda = n.estado === "aguarda_contratacao";
 
           return (
@@ -749,35 +746,19 @@ export default function PropostasRecebidas({
                 </div>
 
                 {/*
-                  O valor CRU do que está em cima da mesa, sem taxa.
-                  É como a Vinted faz: na conversa vêem-se os valores das
-                  propostas, e a taxa aparece onde se compra. Somá-la aqui
-                  fazia o número dançar a cada contraproposta por uma razão
-                  que não é a negociação — e o cliente deixava de saber sobre
-                  que valor estava a discutir.
+                  O PREÇO DELE, E SÓ ESSE — 29-09-2026.
+
+                  Eram dois números: o do profissional em grande, e «X a
+                  pagar» em pequeno por baixo. O segundo nasceu por uma boa
+                  razão — a lei (DL 138/90) manda mostrar o preço final ANTES
+                  de o consumidor se comprometer — e a boa razão continua de
+                  pé: o número grande passou a ser esse mesmo preço. Um número
+                  por proposta, e é o que sai da carteira dele, sem IVA.
                 */}
                 <div className="text-right">
-                  <div className="text-xl font-bold text-tinta">{euros(emCima)}</div>
-                  {/*
-                    O TOTAL, ANTES DE CARREGAR NO BOTÃO.
-
-                    O cartão mostrava só o valor cru, e a conta inteira — com
-                    IVA e taxa — só aparecia DEPOIS de "Contratar". Enquanto o
-                    imposto vinha decomposto de dentro do valor isso passava;
-                    desde 29-08-2026 o IVA ACRESCE, e 270 € passaram a 348,30 €
-                    descobertos a seguir ao clique. Um salto de 29% encontrado
-                    depois de decidir é a definição de má surpresa — e a lei
-                    portuguesa (DL 138/90) manda mostrar ao consumidor o preço
-                    final antes de ele se comprometer.
-
-                    O número grande continua a ser o da negociação, que é sobre
-                    o que os dois estão a discutir. O total vem por baixo, mais
-                    pequeno, a dizer o que sai da carteira.
-                  */}
-                  {emCima != null && (
-                    <div className="text-xs font-semibold text-acao">
-                      {euros(contaDoCliente(emCima, taxasDaNegociacao(n)).semIva)} a pagar
-                    </div>
+                  <div className="text-xl font-bold text-tinta">{euros(precoEmCima)}</div>
+                  {precoEmCima != null && (
+                    <div className="text-xs text-tinta-fraca">sem IVA</div>
                   )}
                   <div className="text-xs text-tinta-fraca">
                     {/*
@@ -831,24 +812,26 @@ export default function PropostasRecebidas({
                         ? "Ou proponha outro valor"
                         : "Proponha um valor"}
                     </p>
+                    {/*
+                      ELE ESCREVE O QUE PAGA — 29-09-2026.
+
+                      Os atalhos partem do preço dele, e o número escrito é um
+                      preço dele: vai para o servidor como `preco`, e é lá que
+                      vira o valor do profissional. `ajustar` põe no botão o
+                      número que fica mesmo — um cêntimo abaixo, em um preço
+                      redondo de cada vinte e um (ver `preco-do-cliente.ts`).
+                    */}
                     <EscolherValor
-                      referencia={emCima}
+                      referencia={precoEmCima}
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
-                      legendaDoValor={(v) => {
-                        /*
-                          O TOTAL, e não a base.
-
-                          Dizia "paga X com a taxa CLYON" e X era o valor mais
-                          6 %, sem imposto nenhum. A partir do momento em que o
-                          IVA acresce, isso era anunciar-lhe um número que ele
-                          não ia pagar — e o sítio onde uma conta destas engana
-                          mais é exactamente aqui, antes de ele decidir.
-                        */
-                        const c = contaDoCliente(v, taxasDaNegociacao(n));
-                        return `Se ele aceitar, paga ${euros(c.semIva)} com a taxa CLYON — sem IVA.`;
-                      }}
-                      onPropor={(valor) => agir(n.id, "propor", valor)}
+                      ajustar={(v) => precoPossivel(v, taxasDela)}
+                      legendaDoValor={(v, escrito) =>
+                        escrito != null && Math.abs(escrito - v) >= 0.005
+                          ? `Fica ${euros(v)} — o valor possível mais perto do que escreveu. Sem IVA.`
+                          : "É o que paga se ele aceitar, sem IVA."
+                      }
+                      onPropor={(preco) => agir(n.id, "propor", preco)}
                     />
                     <p className="mt-2 text-xs text-slate-500">
                       {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
@@ -871,6 +854,8 @@ export default function PropostasRecebidas({
                   valorAcordado: n.valorAcordado,
                 }}
                 euSou="cliente"
+                // O mesmo registo, com os números que ele conhece: os dele.
+                valorVisto={(v) => precoParaOCliente(v, taxasDela)}
               />
             </article>
           );

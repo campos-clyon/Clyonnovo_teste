@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; valor?: unknown };
+  let corpo: { pedidoId?: unknown; valor?: unknown; profissionais?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -89,6 +89,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
   // Um assistente que envia um pedido sem responsável aos profissionais fica com ele.
+
+  /*
+   * ESCOLHIDOS À MÃO — 29-09-2026.
+   *
+   * «Quero que esse botão de enviar também dê a opção de escolher
+   * individualmente as empresas/pros.» Sem lista, é a regra que decide (raio
+   * e categorias). Com lista, vai só a esses — e uma lista vazia é um engano,
+   * não «ninguém»: recusa-se em vez de promover um pedido que não chega a
+   * lado nenhum.
+   */
+  let soPara: number[] | undefined;
+  if (corpo.profissionais !== undefined && corpo.profissionais !== null) {
+    const ids = Array.isArray(corpo.profissionais)
+      ? [...new Set(corpo.profissionais.map(Number))].filter((n) => Number.isInteger(n) && n > 0)
+      : [];
+    if (ids.length === 0 || ids.length > 200) {
+      return NextResponse.json({ error: "Escolha pelo menos um profissional." }, { status: 400 });
+    }
+    soPara = ids;
+  }
   await assumirPedidoSeLivre(pedidoId, colab);
 
   const pedido = await getSimulatorOrderById(pedidoId);
@@ -247,7 +267,7 @@ export async function POST(req: NextRequest) {
       lat,
       lng,
       baseUrl,
-    });
+    }, { soPara });
 
     await appendOrderHistory(pedidoId, {
       type: "created",
@@ -263,6 +283,7 @@ export async function POST(req: NextRequest) {
               ? "estimativa sem IVA, sem distância da base"
               : `${conta.kmDeCarro} km ida e volta, ${conta.horas} h, margem ${Math.round(conta.margem * 100)} %`) +
             "). ") +
+        (soPara ? `Enviado só a ${soPara.length} profissional(is) escolhido(s) à mão. ` : "") +
         resumoDaDistribuicao(r) +
         (emailSaiu ? "" : " O email do link ao cliente NÃO saiu."),
     });
