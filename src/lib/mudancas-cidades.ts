@@ -1,8 +1,7 @@
 /**
  * Dados por cidade para as páginas /mudancas/[cidade].
  *
- * Cada cidade tem conteúdo genuinamente diferente — distância real à base
- * CLYON, rotas comuns, pontos de referência locais, FAQ específico e
+ * Cada cidade tem conteúdo genuinamente diferente — rotas comuns, pontos de referência locais, FAQ específico e
  * schema.org LocalBusiness com areaServed. É o padrão do pSEO que o
  * Fixando/Habitissimo usam para ranquear em long-tails ("mudanças
  * alcochete", "mudanças barreiro").
@@ -32,10 +31,15 @@ export interface CidadeMudanca {
   nome: string;
   /** Distrito, ex.: "Setúbal" */
   distrito: string;
-  /** Distância à base CLYON (Fernão Ferro) em km */
-  distanceKm: number;
-  /** Tempo médio de viagem à base */
-  tempoMedio: string;
+  // 30-09-2026: aqui estavam `distanceKm` e `tempoMedio`, a distância à
+  // «base CLYON» em Fernão Ferro. A CLYON é uma plataforma: quem faz a
+  // mudança é um profissional da zona, a partir da base dele. Os números
+  // eram internos e nem batiam com os de cidades-local.ts (Montijo a 6 km
+  // aqui e a 16 km lá, Sesimbra a 25 e a 12).
+  //
+  // ESTE FICHEIRO NÃO IMPORTA NADA, de propósito: o next.config.ts importa-o
+  // (getAllCidadeSlugs) e não resolve os caminhos «@/…» que seo-data usa.
+  // Por isso o prazo «6 horas» está escrito à mão aqui, e só aqui.
   /** Coordenadas para schema.org */
   geo: { lat: number; lng: number };
   // Aqui estavam `precoMin`/`precoMax`. Ver a nota no topo do ficheiro: o
@@ -59,8 +63,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "lisboa",
     nome: "Lisboa",
     distrito: "Lisboa",
-    distanceKm: 28,
-    tempoMedio: "30 minutos",
     geo: { lat: 38.7223, lng: -9.1393 },
     rotasComuns: [
       "Lisboa → Cascais",
@@ -75,38 +77,34 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Alvalade, Areeiro — prédios antigos, muitos sem elevador",
     ],
     desafio:
-      "Lisboa central tem ruas apertadas em Alfama, Graça e Bairro Alto — usamos carrinhas de dimensão adequada e cordas de descida quando o acesso pela escada não é viável. Zonas ZER (Zona de Emissões Reduzidas) exigem veículos compatíveis.",
+      "Lisboa central tem ruas apertadas em Alfama, Graça e Bairro Alto — pedem carrinha de dimensão adequada e, às vezes, cordas de descida quando o acesso pela escada não é viável — diga-o no pedido. Zonas ZER (Zona de Emissões Reduzidas) exigem veículos compatíveis.",
     faqs: [
       {
         pergunta: "Fazem mudanças na Baixa e Chiado com restrições de acesso?",
         resposta:
-          "Sim. Coordenamos a mudança com a EMEL para autorização temporária de estacionamento em zonas de acesso condicionado como Chiado, Baixa e Bairro Alto. Cobrimos a taxa no orçamento.",
+          "Sim. O profissional pode tratar da licença de estacionamento (EMEL ou câmara) em zonas de acesso condicionado como Chiado, Baixa e Bairro Alto; o custo vem discriminado na proposta.",
       },
       {
         pergunta: "Quanto custa uma mudança dentro de Lisboa?",
         resposta:
-          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — não há tabela que sirva a todos os casos. Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo de equipa, e isso pesa. Diga-nos a tipologia e as duas moradas: o orçamento é personalizado e grátis em 6 horas.",
+          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — não há tabela que sirva a todos os casos. Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo, e isso pesa. Diga a tipologia e as duas moradas: recebe propostas grátis em até 6 horas.",
       },
       {
         pergunta: "Precisam de licença EMEL para estacionar no dia da mudança?",
         resposta:
-          "Em várias zonas de Lisboa sim — Chiado, Baixa, Bairro Alto, Alfama. Nós tratamos do pedido à EMEL com 48 horas de antecedência para reservar o lugar em frente à sua porta.",
+          "Em várias zonas de Lisboa sim — Chiado, Baixa, Bairro Alto, Alfama. O profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
     ],
-    testemunho: {
-      autor: "Mariana R., Chiado",
-      texto:
-        "Mudança de um T2 no Chiado — a equipa trouxe o pedido de licença EMEL já feito, chegaram à hora e nada foi partido. Impecáveis.",
-      rating: 5,
-    },
+    // 30-09-2026: estava aqui um testemunho de «Mariana R., Chiado» que não
+    // existe em reviews-data.ts. Testemunho que não se pode mostrar de onde
+    // veio não entra.
+    testemunho: null,
     cidadesVizinhas: ["oeiras", "cascais", "sintra", "almada"],
   },
   {
     slug: "alcochete",
     nome: "Alcochete",
     distrito: "Setúbal",
-    distanceKm: 8,
-    tempoMedio: "12 minutos",
     geo: { lat: 38.7548, lng: -8.9694 },
     rotasComuns: [
       "Alcochete → Lisboa (ponte Vasco da Gama)",
@@ -121,7 +119,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Freeport Outlet e áreas comerciais — acessos rápidos pela A12",
     ],
     desafio:
-      "Alcochete é uma das cidades mais próximas da nossa base — mudanças aqui são rápidas e o custo de deslocação é mínimo. Cuidado com ruas do centro histórico junto ao rio, onde a largura das carrinhas conta.",
+      "Alcochete tem, no centro histórico junto ao rio, ruas onde a largura da carrinha conta — diga a rua no pedido, para o profissional vir com a viatura certa.",
     faqs: [
       {
         pergunta: "Quanto tempo demora uma mudança de Alcochete para Lisboa?",
@@ -131,7 +129,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças a partir de Alcochete para o Alentejo?",
         resposta:
-          "Sim, cobrimos rotas para Évora, Elvas e outras cidades do Alentejo com orçamento à parte pela distância. Confirme no orçamento gratuito.",
+          "Depende do profissional: alguns fazem rotas para fora da região, com o custo da distância na proposta. Indique o destino no pedido.",
       },
     ],
     testemunho: null,
@@ -141,8 +139,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "barreiro",
     nome: "Barreiro",
     distrito: "Setúbal",
-    distanceKm: 12,
-    tempoMedio: "15 minutos",
     geo: { lat: 38.6656, lng: -9.0722 },
     rotasComuns: [
       "Barreiro → Lisboa (ponte 25 de Abril)",
@@ -157,17 +153,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Zona ribeirinha — estacionamento condicionado no verão",
     ],
     desafio:
-      "O Barreiro Velho tem prédios sem elevador em ruas estreitas — costumamos alocar equipa reforçada nestes casos. As zonas novas do Alto do Seixalinho e Santo André têm boas condições de acesso.",
+      "O Barreiro Velho tem prédios sem elevador em ruas estreitas — nestes casos, o profissional pode precisar de mais uma pessoa, e isso vem na proposta. As zonas novas do Alto do Seixalinho e Santo André têm boas condições de acesso.",
     faqs: [
       {
         pergunta: "Quanto custa uma mudança de Barreiro para Lisboa?",
         resposta:
-          "Depende do volume, do andar e do bairro de destino em Lisboa. Passamos pela ponte 25 de Abril — a portagem entra no orçamento, sem surpresas. Fazemos um orçamento personalizado e grátis em 6 horas.",
+          "Depende do volume, do andar e do bairro de destino em Lisboa. A portagem da ponte entra na proposta, sem surpresas. Recebe propostas grátis em até 6 horas.",
       },
       {
         pergunta: "Fazem mudanças no Barreiro Velho, onde as ruas são estreitas?",
         resposta:
-          "Sim, usamos carrinhas de 3.5t que passam nas ruas do centro histórico. Quando não conseguem passar, temos protocolos com a Junta para pedir supressão de trânsito por algumas horas.",
+          "Sim. Diga a rua no pedido, para o profissional vir com a carrinha certa para o centro histórico. O profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
     ],
     testemunho: null,
@@ -177,8 +173,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "montijo",
     nome: "Montijo",
     distrito: "Setúbal",
-    distanceKm: 6,
-    tempoMedio: "10 minutos",
     geo: { lat: 38.7062, lng: -8.9741 },
     rotasComuns: [
       "Montijo → Lisboa (ponte Vasco da Gama)",
@@ -193,17 +187,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Base Aérea de Montijo — acessos condicionados em datas militares",
     ],
     desafio:
-      "Montijo tem uma mistura de centro urbano com moradias em zonas rurais (Sarilhos, Canha). Para moradias temos de ajustar horários — em algumas zonas o acesso de carrinha requer confirmação prévia.",
+      "Montijo tem uma mistura de centro urbano com moradias em zonas rurais (Sarilhos, Canha). Nas moradias das zonas rurais, o acesso de carrinha deve ser confirmado antes — diga-o no pedido.",
     faqs: [
       {
         pergunta: "Quanto custa mudança no Montijo?",
         resposta:
-          "É uma das nossas cidades mais próximas da base, por isso o custo de deslocação é mínimo — o resto do valor depende do volume, do andar e dos acessos. Diga-nos a tipologia e as moradas e recebe um orçamento personalizado e grátis em 6 horas.",
+          "Depende do volume, do andar e dos acessos. Diga a tipologia e as moradas e recebe propostas grátis em até 6 horas.",
       },
       {
         pergunta: "Fazem mudanças de/para o Aeroporto do Montijo?",
         resposta:
-          "Sim, servimos toda a zona incluindo áreas próximas da futura infraestrutura aeroportuária. Consulte-nos para orçamento.",
+          "Sim. O pedido chega aos profissionais que trabalham na zona, incluindo as áreas próximas da futura infraestrutura aeroportuária. Descreva a mudança para receber propostas.",
       },
     ],
     testemunho: null,
@@ -213,8 +207,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "sintra",
     nome: "Sintra",
     distrito: "Lisboa",
-    distanceKm: 50,
-    tempoMedio: "55 minutos",
     geo: { lat: 38.8029, lng: -9.3817 },
     rotasComuns: [
       "Sintra → Lisboa",
@@ -229,17 +221,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Colares e Cabo da Roca — rotas litorais, acessos rurais",
     ],
     desafio:
-      "Sintra vai desde vilas históricas com ruas medievais até bairros urbanos densos como Massamá e Queluz. Para o centro histórico coordenamos com a autarquia — o acesso de veículos maiores é restrito.",
+      "Sintra vai desde vilas históricas com ruas medievais até bairros urbanos densos como Massamá e Queluz. No centro histórico, o acesso de veículos maiores é restrito e pede autorização da autarquia.",
     faqs: [
       {
         pergunta: "Fazem mudanças no centro histórico de Sintra?",
         resposta:
-          "Sim, mas o centro histórico UNESCO tem restrições rigorosas de acesso. Usamos carrinhas mais pequenas e obtemos a autorização municipal com antecedência. Há um acréscimo pela logística especial.",
+          "Sim, mas o centro histórico UNESCO tem restrições rigorosas de acesso e pede carrinhas mais pequenas. O profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
         resposta:
-          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Não publicamos tabela para esta rota: fazemos um orçamento personalizado e grátis em 6 horas.",
+          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Não há tabela para esta rota: recebe propostas grátis em até 6 horas.",
       },
     ],
     testemunho: null,
@@ -249,8 +241,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "oeiras",
     nome: "Oeiras",
     distrito: "Lisboa",
-    distanceKm: 38,
-    tempoMedio: "40 minutos",
     geo: { lat: 38.6979, lng: -9.3086 },
     rotasComuns: [
       "Oeiras → Lisboa",
@@ -265,17 +255,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Taguspark e zonas empresariais — mudanças de escritório comuns",
     ],
     desafio:
-      "Oeiras tem muito prédio dos anos 60/70 com elevadores pequenos que só levam 2-3 caixas de cada vez — reforçamos equipa quando o edifício é conhecido pelo problema. Zonas empresariais (Taguspark) requerem agendamento fora de horas.",
+      "Oeiras tem muito prédio dos anos 60/70 com elevadores pequenos que só levam 2-3 caixas de cada vez — vale a pena dizer no pedido se o elevador é pequeno. Zonas empresariais (Taguspark) costumam pedir mudanças fora de horas.",
     faqs: [
       {
         pergunta: "Fazem mudanças de escritório em Oeiras?",
         resposta:
-          "Sim, especialmente na zona do Taguspark e Lagoas Park. Trabalhamos fora de horas laborais e ao fim-de-semana para não interromper a actividade do cliente.",
+          "Sim, especialmente na zona do Taguspark e Lagoas Park. Se precisar fora do horário laboral ou ao fim de semana, para não interromper a actividade, diga-o no pedido — as propostas dizem quem o pode fazer.",
       },
       {
         pergunta: "Quanto custa mudança Oeiras → Lisboa?",
         resposta:
-          "A distância é curta (~15 km), mas o trânsito na A5 em horas de ponta pode alongar o serviço — agendamos preferencialmente antes das 8h ou depois das 20h. O valor depende do volume e dos acessos; o orçamento é personalizado e grátis em 6 horas.",
+          "A distância é curta (~15 km), mas o trânsito na A5 em horas de ponta pode alongar o serviço — por isso muitas mudanças se fazem cedo ou ao fim do dia. O valor depende do volume e dos acessos; recebe propostas grátis em até 6 horas.",
       },
     ],
     testemunho: null,
@@ -285,8 +275,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "carnaxide",
     nome: "Carnaxide",
     distrito: "Lisboa",
-    distanceKm: 32,
-    tempoMedio: "35 minutos",
     geo: { lat: 38.7145, lng: -9.2376 },
     rotasComuns: [
       "Carnaxide → Lisboa (A5)",
@@ -301,17 +289,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Zona Industrial de Carnaxide — mudanças de escritório e armazém",
     ],
     desafio:
-      "Carnaxide tem uma mistura de prédios de anos 80 com elevadores de dimensão reduzida e moradias com acesso direto pela A5. O trânsito na IC19 e A5 em horas de ponta é o principal factor de tempo — agendamos sempre fora dos picos.",
+      "Carnaxide tem uma mistura de prédios de anos 80 com elevadores de dimensão reduzida e moradias com acesso direto pela A5. O trânsito na IC19 e A5 em horas de ponta é o principal factor de tempo — convém marcar fora dos picos.",
     faqs: [
       {
         pergunta: "Fazem mudanças de Carnaxide para Lisboa?",
         resposta:
-          "Sim, é uma das rotas mais rápidas — pela A5 chegamos a Lisboa em 15 a 25 minutos fora das horas de ponta. O preço depende do volume e dos acessos nas duas moradas, e o orçamento é personalizado e grátis em 6 horas.",
+          "Sim, é uma das rotas mais rápidas — pela A5 chega-se a Lisboa em 15 a 25 minutos fora das horas de ponta. O preço depende do volume e dos acessos nas duas moradas; recebe propostas grátis em até 6 horas.",
       },
       {
         pergunta: "Conseguem entrar na Zona Industrial de Carnaxide com camião?",
         resposta:
-          "Sim, a Zona Industrial tem boas vias de acesso para veículos de grande porte. Trabalhamos ao fim-de-semana para não interferir com a operação dos negócios.",
+          "Sim, a Zona Industrial tem boas vias de acesso para veículos de grande porte. Se a mudança tiver de ser ao fim de semana, para não interferir com os negócios, diga-o no pedido.",
       },
     ],
     testemunho: null,
@@ -321,8 +309,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "corroios",
     nome: "Corroios",
     distrito: "Setúbal",
-    distanceKm: 10,
-    tempoMedio: "13 minutos",
     geo: { lat: 38.6336, lng: -9.1559 },
     rotasComuns: [
       "Corroios → Seixal",
@@ -337,17 +323,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Zona próxima do Metro Sul do Tejo — acesso condicionado em horas de pico",
     ],
     desafio:
-      "Corroios é muito próximo da nossa base em Fernão Ferro — uma das cidades onde o custo de deslocação é mais baixo. Os prédios dos anos 80 têm frequentemente elevadores pequenos que requerem mais viagens; garantimos equipa suficiente.",
+      "Os prédios dos anos 80 em Corroios têm frequentemente elevadores pequenos, que obrigam a mais viagens — diga-o no pedido para vir contado na proposta.",
     faqs: [
       {
         pergunta: "Quanto custa uma mudança em Corroios?",
         resposta:
-          "Por ser muito próximo da nossa base, o custo de deslocação é dos mais baixos da margem sul — o resto do valor depende do volume, do andar e do elevador. Orçamento personalizado e grátis em 6 horas.",
+          "Depende do volume, do andar e do elevador. Recebe propostas grátis em até 6 horas.",
       },
       {
         pergunta: "Fazem mudanças Corroios → Lisboa?",
         resposta:
-          "Sim, pela ponte 25 de Abril o trajecto é rápido e a portagem entra no orçamento. O valor depende do volume e dos acessos nas duas moradas — diga-nos os dados e respondemos em 6 horas.",
+          "Sim, pela ponte 25 de Abril o trajecto é rápido e a portagem entra na proposta. O valor depende do volume e dos acessos nas duas moradas — diga os dados e recebe propostas em até 6 horas.",
       },
     ],
     testemunho: null,
@@ -357,8 +343,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "palmela",
     nome: "Palmela",
     distrito: "Setúbal",
-    distanceKm: 15,
-    tempoMedio: "18 minutos",
     geo: { lat: 38.5676, lng: -8.9025 },
     rotasComuns: [
       "Palmela → Setúbal",
@@ -373,17 +357,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Área vitivinícola — Quinta da Bacalhoa e arredores rurais",
     ],
     desafio:
-      "Palmela tem um centro histórico medieval com ruas muito estreitas que exigem carrinha pequena. As zonas periféricas (Quinta do Anjo, Pinhal Novo) têm excelentes acessos pela A2/A12. Para o castelo e centro antigo, validamos sempre a rota antes.",
+      "Palmela tem um centro histórico medieval com ruas muito estreitas que exigem carrinha pequena. As zonas periféricas (Quinta do Anjo, Pinhal Novo) têm excelentes acessos pela A2/A12. Para o castelo e o centro antigo, a rota deve ser confirmada antes — diga a rua no pedido.",
     faqs: [
       {
         pergunta: "Conseguem fazer mudança no centro histórico de Palmela?",
         resposta:
-          "Sim, usamos viaturas mais pequenas para o centro histórico. Para ruas medievais junto ao castelo coordenamos com a câmara quando necessário.",
+          "Sim, com viaturas mais pequenas. Para as ruas junto ao castelo, o profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
       {
         pergunta: "Fazem mudanças de Palmela para Lisboa?",
         resposta:
-          "Sim, pela A2 chegamos a Lisboa em 35 a 50 minutos. O orçamento é personalizado — depende do volume, da tipologia e dos acessos — e chega-lhe grátis em 6 horas.",
+          "Sim. Pela A2 chega-se a Lisboa em 35 a 50 minutos. O preço depende do volume, da tipologia e dos acessos, e as propostas chegam-lhe grátis em até 6 horas.",
       },
     ],
     testemunho: null,
@@ -393,8 +377,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "odivelas",
     nome: "Odivelas",
     distrito: "Lisboa",
-    distanceKm: 37,
-    tempoMedio: "42 minutos",
     geo: { lat: 38.7952, lng: -9.1853 },
     rotasComuns: [
       "Odivelas → Lisboa",
@@ -409,12 +391,12 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Póvoa de Santo Adrião — bairro misto, elevadores na maioria dos prédios",
     ],
     desafio:
-      "Odivelas é uma das zonas mais densamente habitadas da Grande Lisboa — o trânsito nas horas de ponta (IC17, CRIL) pode atrasar significativamente. Agendamos preferentemente de manhã cedo ou ao fim-de-semana. Prédios dos anos 80 têm elevadores de tamanho variável.",
+      "Odivelas é uma das zonas mais densamente habitadas da Grande Lisboa — o trânsito nas horas de ponta (IC17, CRIL) pode atrasar significativamente. Convém marcar de manhã cedo ou ao fim de semana. Prédios dos anos 80 têm elevadores de tamanho variável.",
     faqs: [
       {
         pergunta: "Quanto custa mudança em Odivelas?",
         resposta:
-          "A distância é média, mas o trânsito na IC17 e na CRIL pode alongar o serviço — por isso preferimos início às 7h. O valor depende do volume, do andar e do elevador; o orçamento é personalizado e grátis em 6 horas.",
+          "A distância é média, mas o trânsito na IC17 e na CRIL pode alongar o serviço — por isso compensa começar cedo. O valor depende do volume, do andar e do elevador; recebe propostas grátis em até 6 horas.",
       },
       {
         pergunta: "Fazem mudanças de Odivelas para Sintra ou Cascais?",
@@ -429,8 +411,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "lumiar",
     nome: "Lumiar",
     distrito: "Lisboa",
-    distanceKm: 30,
-    tempoMedio: "33 minutos",
     geo: { lat: 38.7700, lng: -9.1570 },
     rotasComuns: [
       "Lumiar → Lisboa Centro",
@@ -450,12 +430,12 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças em Telheiras e Alta de Lisboa?",
         resposta:
-          "Sim, cobrimos toda a freguesia de Lumiar. Alta de Lisboa tem acessos modernos e amplos. Telheiras é uma zona residencial tranquila com bom estacionamento de apoio.",
+          "Sim, o pedido chega aos profissionais que trabalham em toda a freguesia do Lumiar. Alta de Lisboa tem acessos modernos e amplos. Telheiras é uma zona residencial tranquila com bom estacionamento de apoio.",
       },
       {
         pergunta: "Quanto custa mudança no Lumiar?",
         resposta:
-          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Fazemos um orçamento personalizado e grátis em 6 horas.",
+          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Recebe propostas grátis em até 6 horas.",
       },
     ],
     testemunho: null,
@@ -465,8 +445,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "sesimbra",
     nome: "Sesimbra",
     distrito: "Setúbal",
-    distanceKm: 25,
-    tempoMedio: "28 minutos",
     geo: { lat: 38.4439, lng: -9.1014 },
     rotasComuns: [
       "Sesimbra → Almada",
@@ -481,17 +459,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Zona balnear — estacionamento muito condicionado em julho/agosto",
     ],
     desafio:
-      "A vila de Sesimbra tem acesso condicionado em época estival — de junho a setembro o centro histórico tem trânsito proibido a veículos pesados em determinadas horas. Planeamos sempre as mudanças para manhã cedo ou fora de época.",
+      "A vila de Sesimbra tem acesso condicionado em época estival — de junho a setembro o centro histórico tem trânsito proibido a veículos pesados em determinadas horas. Por isso as mudanças na vila fazem-se de manhã cedo ou fora de época.",
     faqs: [
       {
         pergunta: "Fazem mudanças no centro de Sesimbra no verão?",
         resposta:
-          "Sim, mas programamos a carga/descarga para antes das 9h durante os meses de verão, quando as restrições de acesso ainda não estão em vigor. Contacte-nos para confirmar a janela horária.",
+          "Sim, mas no verão a carga e descarga na vila faz-se cedo, antes de as restrições de acesso apertarem. Indique a data no pedido e combine a hora com o profissional.",
       },
       {
         pergunta: "Quanto custa mudança em Sesimbra?",
         resposta:
-          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra no orçamento. Orçamento personalizado e grátis em 6 horas.",
+          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra na proposta. Recebe propostas grátis em até 6 horas.",
       },
     ],
     testemunho: null,
@@ -501,8 +479,6 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     slug: "costa-da-caparica",
     nome: "Costa da Caparica",
     distrito: "Setúbal",
-    distanceKm: 20,
-    tempoMedio: "23 minutos",
     geo: { lat: 38.6412, lng: -9.2353 },
     rotasComuns: [
       "Costa da Caparica → Almada",
@@ -517,17 +493,17 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Trafaria — porta fluvial, zona histórica com ruas estreitas",
     ],
     desafio:
-      "Costa da Caparica é popular no verão — entre junho e setembro o estacionamento de suporte à mudança na frente de mar é quase impossível. Recomendamos mudanças fora de época ou muito cedo de manhã. No inverno as condições são excelentes.",
+      "Costa da Caparica é popular no verão — entre junho e setembro o estacionamento de suporte à mudança na frente de mar é quase impossível. Recomenda-se mudar fora de época ou muito cedo de manhã. No inverno as condições são excelentes.",
     faqs: [
       {
         pergunta: "É difícil fazer mudança na Costa da Caparica no verão?",
         resposta:
-          "Na zona de praia, sim — o estacionamento é totalmente tomado. Programamos as mudanças de verão para antes das 8h quando há acesso temporário às zonas de carga/descarga. Fora de época é muito simples.",
+          "Na zona de praia, sim — o estacionamento é totalmente tomado. No verão, as mudanças fazem-se de manhã cedo — combine a hora com o profissional. Fora de época é muito simples.",
       },
       {
         pergunta: "Quanto custa mudança Costa da Caparica → Lisboa?",
         resposta:
-          "Pela ponte 25 de Abril o trajecto demora 20 a 35 minutos e a portagem entra no orçamento. O valor depende do volume e dos acessos — o orçamento é personalizado e grátis em 6 horas.",
+          "Pela ponte 25 de Abril o trajecto demora 20 a 35 minutos e a portagem entra na proposta. O valor depende do volume e dos acessos; recebe propostas grátis em até 6 horas.",
       },
     ],
     testemunho: null,
