@@ -153,6 +153,12 @@ export default function AdminProfissionaisPanel() {
         setLinkDaSenha(dados.linkDaSenha);
       } else if (dados.conviteEnviado) {
         setAviso("Aprovado. O convite para criar a palavra-passe seguiu por email.");
+      } else if (dados.conviteEnviado === false) {
+        // O link em claro só vai para o administrador (é a chave da conta).
+        // Ao assistente diz-se o que falhou e a quem pedir.
+        setAviso(
+          "Aprovado, mas o email com o link para criar a palavra-passe não saiu. Peça ao administrador para voltar a aprovar — é ele quem recebe o link para enviar à mão.",
+        );
       }
       if (dados.avisoDeDistribuicao) {
         setAviso(

@@ -138,7 +138,8 @@ export async function sendOrderStatusEmail(params: SendStatusEmailParams): Promi
       html:    legivelNoResumo(buildHtml(params)),
     });
     if (error) console.error("[email-status] Resend devolveu erro:", error);
-    else console.log("[email-status] Email enviado para", params.to, "pedido#", params.orderId, "estado:", params.status);
+    // Só o pedido e o estado: o email do cliente não fica nos registos.
+    else console.log("[email-status] Email enviado — pedido#", params.orderId, "estado:", params.status);
   } catch (err: any) {
     console.error("[email-status] Excepção ao enviar:", err?.message ?? err);
   }

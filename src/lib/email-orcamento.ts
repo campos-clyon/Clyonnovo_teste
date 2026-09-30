@@ -174,7 +174,9 @@ export async function sendOrcamentoEmail(params: SendOrcamentoEmailParams): Prom
     return;
   }
   if (!params.to || !params.to.includes("@")) {
-    console.warn("[email-orcamento] Email do cliente inválido ou em falta:", params.to);
+    // Só o número do pedido: o email do cliente não tem nada que ficar nos
+    // registos do servidor, que muita gente lê e ninguém apaga.
+    console.warn("[email-orcamento] pedido#", params.orderId, "sem email válido — não enviado.");
     return;
   }
 
@@ -191,7 +193,7 @@ export async function sendOrcamentoEmail(params: SendOrcamentoEmailParams): Prom
     if (error) {
       console.error("[email-orcamento] Resend devolveu erro:", error);
     } else {
-      console.log("[email-orcamento] Email enviado para", params.to, "pedido#", params.orderId);
+      console.log("[email-orcamento] Email enviado — pedido#", params.orderId);
     }
   } catch (err: any) {
     console.error("[email-orcamento] Excepção ao enviar:", err?.message ?? err);

@@ -127,6 +127,13 @@ const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/negociacoes",
   "/api/admin/agenda",
   "/api/admin/whatsapp",
+  /*
+   * O suporte entrou nas SECÇÕES a 21-09-2026 (e em `SECCOES_QUE_ABREM`), mas
+   * não aqui — e é esta lista que decide se a chamada passa. O assistente via
+   * o separador «Suporte» e cada pedido dele levava 403. As mesmas travas
+   * valem aqui: só com a secção dada, e nunca DELETE.
+   */
+  "/api/admin/suporte",
   "/api/admin/fotos",
   "/api/admin/sessao",
 ] as const;

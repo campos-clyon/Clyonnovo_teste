@@ -26,7 +26,8 @@ import {
  *    próprio assistente, concluía que o dono tinha respondido à mão, e calava
  *    o assistente naquele número PARA SEMPRE.
  *
- *    Ficou provado no painel: o 33780582689 tinha como última mensagem uma
+ *    Ficou provado no painel: o número de um cliente (fictício aqui:
+ *    351912345678) tinha como última mensagem uma
  *    SAÍDA às 14:17 e estava entregue a uma pessoa "desde 14:17".
  */
 

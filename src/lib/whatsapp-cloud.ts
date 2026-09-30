@@ -352,7 +352,11 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
     // bate, e foi assim que a primeira versão desta guarda não disparou uma
     // única vez.
     if (jaFoiDito(paraTeclado(texto), recentes, new Date(), MINUTOS_SEM_REPETIR_A_MESMA / 60)) {
-      console.warn(`[whatsapp] engoli uma repetição para ${para}: ${texto.slice(0, 80)}`);
+      // Nem o número inteiro nem o texto: a mensagem fala do pedido de alguém
+      // (nome, morada), e os registos não são sítio para isso.
+      console.warn(
+        `[whatsapp] engoli uma repetição para …${para.slice(-3)} (${texto.length} caracteres)`,
+      );
       return true;
     }
   } catch {

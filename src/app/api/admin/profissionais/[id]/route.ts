@@ -217,7 +217,16 @@ export async function PATCH(
           diasDeValidade: DIAS_DO_LINK_DE_SENHA,
         });
         feito.push(conviteEnviado ? "convite enviado" : "convite NÃO enviado");
-        if (!conviteEnviado) {
+        /*
+         * O LINK EM CLARO SÓ VAI PARA O ADMINISTRADOR — 30-09-2026.
+         *
+         * É a chave da conta do profissional: quem o abre escolhe a
+         * palavra-passe e fica com ela. O assistente aprova, mas não precisa
+         * de ter na mão a chave da conta de outra pessoa — se o email não
+         * sair, o painel diz-lhe para pedir ao administrador, que volta a
+         * aprovar e recebe o link (um novo, que substitui este).
+         */
+        if (!conviteEnviado && colab.papel === "admin") {
           linkDaSenha = `${urlDeAccaoDoPedido(req.headers)}/profissionais/definir-senha/${acesso.token}`;
         }
       }
