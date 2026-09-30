@@ -37,7 +37,8 @@ import {
 import { PRECOS } from "@/lib/precos-publicos";
 import { tituloDaCidade } from "@/lib/titulos-seo";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
-import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
+import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
+import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
@@ -66,10 +67,13 @@ function buildDescription(
 ) {
   if (isFurnitureService(serviceSlug)) {
     if (citySlug === "lisboa") {
-      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
+      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Carga porta a porta e transporte; desmontagem a pedido. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
     }
     if (citySlug === "setubal") {
-      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 6h. Orçamento grátis pelo WhatsApp.`;
+      // 30-09-2026: dizia «preços mais competitivos — somos vizinhos». Quem
+      // fixa o preço é o profissional, na proposta; a CLYON não é vizinha de
+      // ninguém nem pode prometer que uma zona sai mais barata do que outra.
+      return `Recolha de móveis em Setúbal e Azeitão por profissionais da zona. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 6h. Orçamento grátis pelo WhatsApp.`;
     }
     if (citySlug === "almada") {
       return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta rápida em 6h. Orçamento grátis!`;
@@ -114,17 +118,20 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
   const cityContent = getCityBaseContent(citySlug);
   if (cityContent?.localIntro) {
     if (isFurnitureService(serviceSlug)) {
-      return `${cityContent.localIntro} Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária.`;
+      return `${cityContent.localIntro} Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos — e desmontam, se o pedir.`;
     }
-    return `${cityContent.localIntro} ${serviceName} com resposta rápida e orçamento claro.`;
+    return `${cityContent.localIntro} ${serviceName} com propostas de profissionais da zona e preço fechado antes de começar.`;
   }
 
   // Fallback genérico
   if (isFurnitureService(serviceSlug)) {
-    return `A CLYON liga o seu pedido de recolha de móveis em ${cityName} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com desmontagem quando necessária, carregamento porta a porta e destino licenciado em ${regionLabel}.`;
+    return `A CLYON liga o seu pedido de recolha de móveis em ${cityName} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado em ${regionLabel}.`;
   }
 
-  return `${serviceName} em ${cityName} com resposta rápida, orçamento claro e execução cuidada. Trabalhamos em contexto residencial e comercial, com apoio local em ${regionLabel}.`;
+  // 30-09-2026: dizia «Trabalhamos em contexto residencial e comercial». A
+  // CLYON não vai a casa de ninguém — quem vai é o profissional que o cliente
+  // escolher, e é isso que a frase tem de dizer.
+  return `${serviceName} em ${cityName}: descreve o que precisa e recebe propostas de profissionais verificados da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios em ${regionLabel}.`;
 }
 
 function getIncludedItems(serviceName: string, cityName: string, serviceSlug: string) {
@@ -139,13 +146,16 @@ function getIncludedItems(serviceName: string, cityName: string, serviceSlug: st
     ];
   }
 
+  // 30-09-2026: «Equipa preparada», «Agendamento rápido» — promessas de quem
+  // executa. O que a plataforma garante é o que está aqui: quem vai, como se
+  // combina e quem atende quando alguma coisa corre mal.
   return [
-    `${serviceName} com triagem e planeamento prévio`,
-    "Carga e transporte profissional",
-    "Equipa preparada para acessos difíceis",
-    "Apoio por telefone e contacto direto",
-    "Cobertura local e regional",
-    "Agendamento rápido conforme disponibilidade",
+    `${serviceName} feito por profissionais verificados`,
+    "Carga e transporte pelo profissional que escolher",
+    "Acessos difíceis indicados no pedido entram na proposta",
+    "Apoio da CLYON por telefone e WhatsApp",
+    "Profissionais da sua zona",
+    "Data do trabalho combinada com o profissional",
   ];
 }
 
@@ -186,8 +196,8 @@ function getPricingCopy(serviceName: string, cityName: string, serviceSlug: stri
 
   return [
     `O valor de ${serviceName.toLowerCase()} em ${cityName} depende do volume e dos acessos.`,
-    "Pedidos com escadas, pouca manobra ou urgência podem alterar o valor final.",
-    "Quanto mais claro for o pedido, mais preciso será o orçamento.",
+    "Escadas, pouca manobra ou urgência contam no valor — diga-o no pedido para vir na proposta.",
+    "Quanto mais claro for o pedido, mais certas são as propostas.",
   ];
 }
 
@@ -198,12 +208,20 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
     return priorityContent.faqs;
   }
   
-  // Fallback para FAQs genéricas
+  /*
+   * Fallback para FAQs genéricas — 30-09-2026.
+   *
+   * Estas respostas repetem-se em dezenas de páginas e vão também para o
+   * FAQPage que o Google lê. Diziam «orçamento imediato» e «conseguimos
+   * responder no próprio dia»: o prazo que a plataforma cumpre é o das
+   * propostas (PRAZO_DE_RESPOSTA), e a data do trabalho combina-se com o
+   * profissional — a CLYON não a pode prometer por ele.
+   */
   if (isFurnitureService(serviceSlug)) {
     const baseFaqs = [
       {
         q: `Quanto custa a recolha de móveis em ${cityName}?`,
-        a: `O preço depende da quantidade de móveis, acessos, desmontagem e distância. Em ${cityName}, o mais rápido é enviar fotos e morada para receber um orçamento imediato e ajustado ao pedido.`,
+        a: `O preço depende da quantidade de móveis, acessos, desmontagem e distância. Em ${cityName}, o mais rápido é descrever o pedido com fotos e morada: recebe propostas de profissionais da zona em até ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço fechado.`,
       },
       {
         q: `Recolhem sofás, camas e armários em ${cityName}?`,
@@ -214,19 +232,22 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
         a: `Sim. Frigoríficos, máquinas de lavar, fogões, micro-ondas e equipamentos semelhantes podem ser recolhidos e encaminhados de forma responsável.`,
       },
       {
-        q: `A CLYON faz recolha de móveis no mesmo dia em ${cityName}?`,
-        a: `Quando existe disponibilidade operacional, sim. Em ${cityName} conseguimos muitas vezes responder no próprio dia ou no dia seguinte.`,
+        q: `Dá para recolher móveis no mesmo dia em ${cityName}?`,
+        a: NO_MESMO_DIA,
       },
       {
         q: `Que outras zonas próximas de ${cityName} também atendem?`,
-        a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}.`,
+        a: `Além de ${cityName}, pode pedir em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}: o pedido chega aos profissionais que trabalham nessa zona.`,
       },
     ];
 
     if (cityName === "Costa da Caparica") {
       baseFaqs.splice(1, 0, {
         q: "Existe recolha gratuita de móveis na Costa da Caparica?",
-        a: "Existem cenários em que doação, reaproveitamento ou recolha municipal podem fazer sentido para móveis usados em bom estado. A CLYON opera como serviço privado: entra quando o cliente precisa de rapidez, desmontagem, carregamento no local e solução completa para o que não consegue resolver por vias gratuitas.",
+        // 30-09-2026: a resposta passa a apontar para quem recebe doações —
+        // a página /recolha-gratuita-de-moveis-usados — e diz sem rodeios que
+        // a CLYON é paga. Antes falava de «cenários» sem dizer nenhum.
+        a: "Há duas vias sem custo: a recolha de monos da câmara, marcada com antecedência e com os móveis deixados à porta, e a doação de peças em bom estado a instituições que as recebem. A CLYON não faz recolha gratuita: é um serviço pago, para quando é preciso desmontar, carregar de dentro de casa ou libertar o espaço sem esperar.",
       });
     }
 
@@ -236,19 +257,19 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
   return [
     {
       q: `Quanto custa ${serviceName.toLowerCase()} em ${cityName}?`,
-      a: `O valor depende do volume, acessibilidade, tipologia do serviço e recursos necessários. A CLYON responde com orçamento rápido para ${serviceName.toLowerCase()} em ${cityName}.`,
+      a: `O valor depende do volume, acessibilidade, tipologia do serviço e recursos necessários. Descreva o pedido e recebe propostas de profissionais da zona para ${serviceName.toLowerCase()} em ${cityName} em até ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     },
     {
-      q: `A CLYON faz ${serviceName.toLowerCase()} no mesmo dia em ${cityName}?`,
-      a: `Em muitos pedidos conseguimos responder e agendar no mesmo dia em ${cityName}, especialmente quando o acesso e o volume são claros desde o primeiro contacto.`,
+      q: `Dá para fazer ${serviceName.toLowerCase()} no mesmo dia em ${cityName}?`,
+      a: NO_MESMO_DIA,
     },
     {
       q: `Que zonas próximas de ${cityName} também atendem?`,
-      a: `Além de ${cityName}, a CLYON trabalha regularmente em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}.`,
+      a: `Além de ${cityName}, pode pedir em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}: o pedido chega aos profissionais que trabalham nessa zona.`,
     },
     {
       q: `Como pedir ${serviceName.toLowerCase()} em ${cityName}?`,
-      a: `Basta enviar fotos, morada, detalhes de acesso e objetivo do serviço. Quanto mais informação recebermos, mais rápido conseguimos fechar orçamento e disponibilidade.`,
+      a: `Basta descrever o pedido no simulador, com fotos, morada, detalhes de acesso e o que pretende. Quanto mais informação der, mais certas são as propostas que recebe.`,
     },
   ];
 }
@@ -360,7 +381,6 @@ export default async function ServiceCityPage({ params }: Props) {
   // O que só é verdade nesta zona: freguesias, acessos, estacionamento e
   // destino dos resíduos. É isto que distingue esta página das outras 72.
   const local = getCidadeLocal(city.slug);
-  const tempo = local ? tempoAproximado(local.distanciaKm) : "";
   const notaServico = local?.porServico?.[service.slug as ServicoSlug] ?? null;
 
   const includedItems = getIncludedItems(service.name, city.name, service.slug);
@@ -572,10 +592,10 @@ export default async function ServiceCityPage({ params }: Props) {
 
             <div className="overflow-hidden rounded-[32px] border border-cyan-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
-                Resposta reforçada em {city.name}
+                O que saber sobre {city.name}
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `Trabalhamos em ${city.name} e zonas próximas com resposta rápida, orçamento claro e recolha cuidada. Os profissionais retiram os volumes combinados, protegem os acessos e deixam o espaço pronto para o passo seguinte.`}
+                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `Em ${city.name} e zonas próximas, o pedido chega a profissionais da zona, que respondem com propostas de preço fechado. O profissional que escolher retira os volumes combinados e protege os acessos.`}
               </p>
               {/* Highlight local se for página prioritária */}
               {priorityContent?.neighborhoodHighlight && (
@@ -596,7 +616,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 <div className="rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-4">
                   {/* "Tempo médio" admite, sem querer, que metade dos casos é pior do
                       que o número anunciado. Diz-se o que se promete. */}
-                  <p className="text-sm font-semibold text-slate-950">Resposta em</p>
+                  <p className="text-sm font-semibold text-slate-950">Propostas em até</p>
                   <p className="mt-2 text-sm leading-7 text-slate-600">{PRAZO_DE_RESPOSTA.porExtenso}</p>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">
@@ -613,21 +633,25 @@ export default async function ServiceCityPage({ params }: Props) {
 
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
+          {/* 30-09-2026: os três cartões falavam por uma equipa da CLYON
+              («A equipa trata de carregar», «Confirmamos volume»). Quem
+              carrega é o profissional; o que a plataforma faz é pôr tudo
+              combinado por escrito antes de ele sair de casa. */}
           {[
             {
               icon: Clock3,
-              title: "Orçamento rápido",
-              desc: `Triagem rápida para ${service.shortName} em ${city.name} com resposta prática e comercial.`,
+              title: `Propostas em até ${PRAZO_DE_RESPOSTA.porExtenso}`,
+              desc: `Descreve o pedido de ${service.shortName} em ${city.name} e os profissionais da zona respondem com o preço fechado.`,
             },
             {
               icon: Truck,
-              title: "Execução completa",
-              desc: "A equipa trata de carregar, transportar e fechar o serviço com clareza.",
+              title: "Quem faz é o profissional",
+              desc: "O profissional que escolher carrega, transporta e leva o que sai para destino licenciado.",
             },
             {
               icon: ShieldCheck,
-              title: "Processo seguro",
-              desc: "Confirmamos volume, acessos, horários e destino antes da marcação.",
+              title: "Tudo combinado antes",
+              desc: "Volume, acessos, data e preço ficam acordados na plataforma antes de o trabalho começar.",
             },
           ].map((item) => (
             <div
@@ -646,7 +670,7 @@ export default async function ServiceCityPage({ params }: Props) {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Serviço completo para recolha em {city.name}
+              O que pode pedir em {city.name}
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {includedItems.map((item) => (
@@ -661,7 +685,7 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
 
           <div className="rounded-[30px] border border-slate-200 bg-[#F4F8FB] p-7">
-            <h2 className="mt-3 text-3xl font-bold text-tinta">Evita ruído no orçamento</h2>
+            <h2 className="mt-3 text-3xl font-bold text-tinta">O que não entra neste serviço</h2>
             <div className="mt-6 space-y-3">
               {excludedItems.map((item) => (
                 <div
@@ -685,14 +709,18 @@ export default async function ServiceCityPage({ params }: Props) {
             </h2>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              {/* 30-09-2026: dizia «Da nossa base em Fernão Ferro são cerca de
+                  X km». A CLYON não parte de base nenhuma para ir a casa do
+                  cliente — quem vai é um profissional da zona, a partir da
+                  base DELE — e as distâncias nem batiam certo entre páginas
+                  (Montijo a 6 e a 16 km). Ver a-base-nao-e-da-clyon.test.ts. */}
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
-                  Onde chegamos
+                  Onde há profissionais
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Cobrimos {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
-                  Da nossa base em Fernão Ferro são cerca de {local.distanciaKm} km — {tempo} de
-                  viagem, sem trânsito.
+                  Pode pedir em {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
+                  O pedido chega aos profissionais da sua zona, e quem vai é o que escolher.
                 </p>
               </div>
 
@@ -714,11 +742,16 @@ export default async function ServiceCityPage({ params }: Props) {
                 <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
                   Para onde vai
                 </h3>
+                {/* 30-09-2026: «Entregamos o comprovativo de destino sempre que o
+                    pedir» era uma promessa sem nada por trás — não há campo nem
+                    passo nenhum na plataforma que o garanta. Quem o pode emitir
+                    é o profissional, e isso diz-se na proposta. */}
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  O que recolhemos em {city.name} é encaminhado para o{" "}
+                  O que sai em {city.name} vai para o{" "}
                   <span className="font-semibold text-slate-800">{local.destinoResiduos.nome}</span>{" "}
                   ({local.destinoResiduos.entidade}) ou para operador licenciado, conforme o tipo de
-                  resíduo. Entregamos o comprovativo de destino sempre que o pedir.
+                  resíduo. Se precisar de comprovativo de destino — numa obra, por exemplo —, indique-o
+                  no pedido: o profissional diz na proposta se o emite.
                 </p>
               </div>
             </div>
@@ -753,11 +786,14 @@ export default async function ServiceCityPage({ params }: Props) {
               Da marcação à retirada final, sem complicações
             </h2>
             <div className="mt-6 space-y-5">
+              {/* 30-09-2026: «A equipa chega» e «segue para triagem, doação»
+                  — a CLYON não tem equipa, nem nenhum circuito de doação que
+                  se possa prometer. Ficam os passos que a plataforma cumpre. */}
               {[
-                "Envie fotos, morada e detalhes de acesso.",
-                "Receba um orçamento rápido e confirme a melhor janela disponível.",
-                "A equipa chega, protege o acesso, carrega e trata do transporte.",
-                "O material segue para triagem, doação ou descarte responsável.",
+                "Descreva o pedido com fotos, morada e detalhes de acesso.",
+                `Receba propostas de profissionais da zona em até ${PRAZO_DE_RESPOSTA.porExtenso} e escolha a que preferir.`,
+                "O profissional chega na data combinada, protege o acesso, carrega e transporta.",
+                "O que sai vai para ecocentro ou operador licenciado.",
               ].map((step, index) => (
                 <div key={step} className="flex gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-acao text-sm font-bold text-white">
@@ -781,14 +817,27 @@ export default async function ServiceCityPage({ params }: Props) {
               simples. O profissional organiza a recolha, trata do acesso e dá o
               destino licenciado para o que sai do imóvel.
             </p>
+            {/* 30-09-2026: falava do «cliente» na terceira pessoa, como uma
+                nota interna. Passa a dizer ao leitor as alternativas que
+                existem — incluindo a de não pagar nada, quando os móveis
+                ainda servem a alguém. */}
             {isFurnitureService(service.slug) && (
               <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-5">
                 <div className="flex items-start gap-3">
                   <Recycle className="mt-1 h-5 w-5 text-acao" />
                   <p className="text-sm leading-7 text-slate-700">
-                    Se o cliente em {city.name} estiver a comparar com recolha
-                    municipal, a vantagem da CLYON está na rapidez, desmontagem,
-                    carregamento completo e resolução total dentro do imóvel.
+                    A recolha de monos da câmara é marcada com antecedência e os
+                    móveis ficam à porta no dia combinado. Pela CLYON, o
+                    profissional vai buscá-los dentro de casa, desmonta se o pedir
+                    e leva tudo — é um serviço pago. Se os móveis ainda estão em
+                    bom estado,{" "}
+                    <Link
+                      href="/recolha-gratuita-de-moveis-usados"
+                      className="font-semibold text-acao underline-offset-2 hover:underline"
+                    >
+                      veja quem os recebe de graça
+                    </Link>
+                    .
                   </p>
                 </div>
               </div>
@@ -817,14 +866,17 @@ export default async function ServiceCityPage({ params }: Props) {
 
         {isLisbonFurniturePage && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
+            {/* 30-09-2026: o texto era uma nota de SEO publicada («esta
+                pesquisa mistura…», «a parte comercial da intenção»). Fica o
+                que o leitor precisa de saber para escolher. */}
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Recolha de móveis em Lisboa para quem precisa de uma solução privada, rápida e completa
+              Recolha de móveis em Lisboa, bairro a bairro
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
-              Em Lisboa, esta pesquisa mistura recolha municipal, doação e serviços privados.
-              A CLYON responde à parte comercial da intenção: desmontagem, carregamento dentro do
-              imóvel, retirada de sofás, camas, colchões, armários e eletrodomésticos, com
-              agendamento rápido e execução completa no local.
+              Em Lisboa há três caminhos para móveis usados: a recolha de monos da Câmara, a
+              doação de peças em bom estado e a recolha paga. Pela CLYON, um profissional
+              verificado retira sofás, camas, colchões, armários e eletrodomésticos de dentro de
+              casa, desmonta se o pedir e leva tudo, com o preço fechado antes de começar.
             </p>
             <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {[
@@ -847,14 +899,17 @@ export default async function ServiceCityPage({ params }: Props) {
 
         {isCascaisFurniturePage && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
+            {/* 30-09-2026: «Esta página precisa de deixar clara a intenção
+                comercial» era uma instrução de SEO publicada tal e qual.
+                Passa a descrever o que é diferente em Cascais. */}
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Recolha de móveis em Cascais para quem procura uma recolha privada e completa
+              Recolha de móveis em Cascais e na linha
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
-              Em Cascais, o Google mostra muitos resultados informativos, municipais e de doação.
-              Esta página precisa de deixar clara a intenção comercial: recolha privada de sofás,
-              camas, colchões, armários, eletrodomésticos e recheios, com carregamento no local,
-              transporte e resposta rápida.
+              Em Cascais há muitas moradias com escadas exteriores e jardim, e condomínios onde
+              a entrada se combina com a portaria. Pela CLYON, o profissional retira sofás, camas,
+              colchões, armários, eletrodomésticos e recheios, carrega e transporta — e o preço
+              fica fechado na proposta antes de começar.
             </p>
             <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {[
@@ -877,22 +932,25 @@ export default async function ServiceCityPage({ params }: Props) {
 
         {isCostaFurniturePage && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
+            {/* 30-09-2026: falava do «utilizador» e de como a CLYON «se
+                posiciona» — linguagem de plano de marketing. O leitor quer
+                saber se há forma de não pagar, e a resposta honesta é que há:
+                a página de doação diz quem recebe os móveis. */}
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Na Costa da Caparica, a pesquisa por "recolha gratuita de móveis" mistura doação, câmara e serviço privado
+              Recolha gratuita de móveis na Costa da Caparica: o que existe
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
-              Quando o utilizador escreve "gratuita", muitas vezes ainda está a tentar perceber
-              se os móveis usados podem ser doados, reaproveitados ou recolhidos por via municipal.
-              A CLYON não se posiciona como recolha gratuita: posiciona-se como solução privada para
-              os casos em que é preciso desmontar, carregar, retirar de dentro do imóvel e libertar
-              o espaço com rapidez.
+              Móveis em bom estado podem ser doados a quem os aproveite, e a câmara tem recolha de
+              monos marcada com antecedência. A CLYON não faz recolha gratuita: é um serviço pago,
+              para quando é preciso desmontar, carregar de dentro de casa ou libertar o espaço sem
+              esperar.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/blog/recolha-gratuita-de-moveis-usados-costa-da-caparica"
+                href="/recolha-gratuita-de-moveis-usados"
                 className="site-btn-secondary min-w-[260px] border-slate-300 text-slate-900 hover:bg-white"
               >
-                Ler guia sobre recolha gratuita
+                Onde doar móveis usados
               </Link>
               <Link
                 href="/simulador"
@@ -935,12 +993,12 @@ export default async function ServiceCityPage({ params }: Props) {
             </div>
           </div>
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-            Diga-nos o que pretende retirar, quantos volumes tem e como é o acesso ao
-            imóvel. Com essa informação conseguimos responder mais depressa e marcar
-            a recolha com maior precisão.
+            Diga o que pretende retirar, quantos volumes tem e como é o acesso ao
+            imóvel. Com essa informação, os profissionais da zona respondem com
+            propostas mais certas — e a data combina-se com quem escolher.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            {AVALIACOES_TOTAL} avaliações 5 estrelas no Google e na Fixando. Resposta em {PRAZO_DE_RESPOSTA.porExtenso}.
+            {AVALIACOES_TOTAL} avaliações 5 estrelas no Google e na Fixando. Propostas em até {PRAZO_DE_RESPOSTA.porExtenso}.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
