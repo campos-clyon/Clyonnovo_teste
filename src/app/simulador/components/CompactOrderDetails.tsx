@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { X, Plus } from "lucide-react";
 import type { UploadedFile } from "../types";
 
@@ -25,6 +25,9 @@ export default function CompactOrderDetails({
 }: CompactOrderDetailsProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // O rótulo não estava ligado à caixa: tocar nele não a focava, e um leitor
+  // de ecrã anunciava "caixa de texto" sem dizer de quê.
+  const idDaDescricao = useId();
 
   const processFiles = (raw: FileList | null) => {
     if (!raw) return;
@@ -69,13 +72,15 @@ export default function CompactOrderDetails({
 
       {/* Description textarea */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-slate-900">
+        <label htmlFor={idDaDescricao} className="block text-xs font-medium text-slate-900">
           Descrição adicional
         </label>
-        <p className="text-xs text-slate-600">
+        <p id={`${idDaDescricao}-ajuda`} className="text-xs text-slate-600">
           Opcional — ajude a equipa CLYON com detalhes
         </p>
         <textarea
+          id={idDaDescricao}
+          aria-describedby={`${idDaDescricao}-ajuda`}
           value={description || ""}
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="Ex: móveis desmontados, alguns sacos, acesso por garagem..."
@@ -155,13 +160,22 @@ export default function CompactOrderDetails({
                   )}
                 </div>
 
-                {/* Remove button */}
+                {/*
+                  Remove button.
+
+                  Era `opacity-0 group-hover:opacity-100`, com 14 px: num
+                  telemóvel não há hover, e o botão nunca aparecia — quem
+                  escolhia a foto errada não a conseguia tirar. Fica sempre à
+                  vista em ecrãs de toque (`pointer-fine` é só rato), com 32 px
+                  de alvo, e aparece também a quem chega pelo teclado.
+                */}
                 <button
                   type="button"
                   onClick={() => onFileRemove(file.id)}
-                  className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700 shadow-sm"
+                  aria-label={file.type === "video" ? "Remover vídeo" : "Remover fotografia"}
+                  className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white shadow-sm transition-opacity hover:bg-red-700 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100"
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             ))}

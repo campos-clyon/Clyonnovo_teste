@@ -7,6 +7,7 @@ import StatusBadge from "./StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { guardarFotografia, lerFotografia } from "@/lib/ultima-fotografia";
+import { formatarEuros } from "@/lib/formatar-euros";
 import {
   SERVICE_LABELS,
   estadoNaPlataforma,
@@ -303,7 +304,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-right">
                         {preco != null && (
-                          <p className="text-sm font-bold text-slate-900">{Number(preco).toFixed(2)} €</p>
+                          <p className="text-sm font-bold text-slate-900">{formatarEuros(preco)}</p>
                         )}
                         <p className="text-xs text-tinta-fraca">
                           {plataforma.legenda === "acordado" ? "a pagar" : formatDate(o.createdAt)}
@@ -330,9 +331,10 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
+                aria-label="Página anterior"
                 className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 disabled:opacity-40"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
               <span className="text-sm text-slate-600">
                 Página {page} de {pages}
@@ -341,9 +343,10 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                 type="button"
                 disabled={page === pages}
                 onClick={() => setPage((p) => p + 1)}
+                aria-label="Página seguinte"
                 className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 disabled:opacity-40"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           )}

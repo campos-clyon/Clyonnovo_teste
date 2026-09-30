@@ -240,16 +240,22 @@ function PreferenceCard({
           <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
           <p className="mt-2 text-xs leading-6 text-slate-600">{description}</p>
         </div>
+        {/* Um interruptor sem nome era anunciado como "botão, premido" — sem
+            dizer de quê. `role="switch"` com `aria-checked` diz ligado ou
+            desligado, e o nome é o título do cartão. */}
         <button
           type="button"
+          role="switch"
           onClick={onToggle}
           disabled={locked}
-          className={`relative h-7 w-12 rounded-full transition ${
+          className={`relative h-7 w-12 shrink-0 rounded-full transition ${
             enabled ? "bg-emerald-500" : "bg-slate-300"
           } ${locked ? "cursor-not-allowed opacity-80" : ""}`}
-          aria-pressed={enabled}
+          aria-checked={enabled}
+          aria-label={title}
         >
           <span
+            aria-hidden="true"
             className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${
               enabled ? "left-6" : "left-1"
             }`}

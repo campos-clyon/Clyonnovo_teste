@@ -13,6 +13,7 @@ import PropostasRecebidas, {
   type NegociacaoDoCliente,
 } from "@/app/pedido/[token]/PropostasRecebidas";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { oClienteVeEsta } from "@/lib/negociacao";
@@ -325,7 +326,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           {preco != null ? (
             <div className="text-right">
               <div className="text-xl font-bold leading-none text-slate-900">
-                {Number(preco).toFixed(2)} €
+                {formatarEuros(preco)}
               </div>
               <div className="mt-1 text-[11px] text-tinta-fraca">
                 {precoEAcordado ? "a pagar, sem IVA" : "sem IVA"}
@@ -574,9 +575,12 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                     type="button"
                     disabled={ratingSaving || rating != null}
                     onClick={() => handleRate(star)}
+                    aria-label={`Avaliar com ${star} ${star === 1 ? "estrela" : "estrelas"}`}
+                    aria-pressed={rating != null ? star <= rating : undefined}
                     className="disabled:cursor-default"
                   >
                     <Star
+                      aria-hidden="true"
                       className={`h-5 w-5 ${
                         rating != null && star <= rating
                           ? "fill-[#00B4CC] text-[#00B4CC]"
@@ -626,7 +630,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             <span className="text-xs text-tinta-fraca">Criado a {formatDate(order.createdAt)}</span>
             {preco != null && (
               <span className="text-base font-bold text-slate-900">
-                {Number(preco).toFixed(2)} € {precoEAcordado ? "a pagar, s/IVA" : "s/IVA"}
+                {formatarEuros(preco)} {precoEAcordado ? "a pagar, s/IVA" : "s/IVA"}
               </span>
             )}
           </div>

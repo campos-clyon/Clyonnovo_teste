@@ -41,10 +41,14 @@ function CounterInput({
   value,
   max,
   onChange,
+  nome,
 }: {
   value: number;
   max: number;
   onChange: (n: number) => void;
+  /** De que é a quantidade — «itens pequenos». Sem isto, um leitor de ecrã
+      anunciava três pares de "botão" sem dizer de quê. */
+  nome: string;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -52,18 +56,20 @@ function CounterInput({
         type="button"
         onClick={() => onChange(Math.max(0, value - 1))}
         disabled={value <= 0}
+        aria-label={`Diminuir quantidade de ${nome}`}
         className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
       >
-        <Minus className="h-3.5 w-3.5" />
+        <Minus className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
-      <span className="w-6 text-center text-sm font-semibold text-slate-900">{value}</span>
+      <span aria-live="polite" className="w-6 text-center text-sm font-semibold text-slate-900">{value}</span>
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
+        aria-label={`Aumentar quantidade de ${nome}`}
         className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   );
@@ -144,6 +150,7 @@ export default function MovelItemSelector({
                 value={valueMap[tier.key]}
                 max={tier.max}
                 onChange={onChangeMap[tier.key]}
+                nome={`itens ${tier.label.toLowerCase()}s`}
               />
             </div>
           ))}

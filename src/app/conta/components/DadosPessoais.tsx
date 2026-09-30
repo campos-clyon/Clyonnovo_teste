@@ -133,8 +133,8 @@ function AvatarCropModal({
       <div className="w-full max-w-sm rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">Ajustar foto</h3>
-          <button type="button" onClick={onCancel} className="rounded-lg p-1 text-tinta-fraca hover:text-slate-600">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onCancel} aria-label="Fechar" className="rounded-lg p-1 text-tinta-fraca hover:text-slate-600">
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -158,23 +158,26 @@ function AvatarCropModal({
           <button
             type="button"
             onClick={() => setZoom((z) => Math.max(1, z - 0.1))}
+            aria-label="Diminuir o zoom"
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-[#0077B6]"
           >
-            <ZoomOut className="h-4 w-4" />
+            <ZoomOut className="h-4 w-4" aria-hidden="true" />
           </button>
           <input
             type="range"
             min={1} max={3} step={0.05}
             value={zoom}
+            aria-label="Zoom da fotografia"
             onChange={(e) => setZoom(Number(e.target.value))}
             className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#00B4D8]"
           />
           <button
             type="button"
             onClick={() => setZoom((z) => Math.min(3, z + 0.1))}
+            aria-label="Aumentar o zoom"
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-[#0077B6]"
           >
-            <ZoomIn className="h-4 w-4" />
+            <ZoomIn className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
