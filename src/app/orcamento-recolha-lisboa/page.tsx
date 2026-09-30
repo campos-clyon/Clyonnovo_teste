@@ -5,14 +5,14 @@ import LandingClient from "./LandingClient";
 export const metadata: Metadata = {
   title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
   description:
-    "Peça orçamento para recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+    "Peça orçamento para recolha de entulho, móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Propostas de profissionais em até 6 horas.",
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
   openGraph: {
     title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
     description:
-      "Orçamento rápido por WhatsApp para recolha de entulho, móveis, monos, esvaziamento de casas e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+      "Orçamento por WhatsApp para recolha de entulho, móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt/orcamento-recolha-lisboa",
     type: "website",
     locale: "pt_PT",

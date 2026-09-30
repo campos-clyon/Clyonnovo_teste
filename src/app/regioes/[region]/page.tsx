@@ -19,6 +19,7 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
+import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 
 /**
  * A página de uma região.
@@ -114,7 +115,9 @@ export default async function RegionPage({ params }: Props) {
         name: `Que serviços posso pedir em ${regionData.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças, esvaziamento de casas e limpeza pós-obra em ${regionData.name}. Descreve o que tem e recebe propostas de profissionais verificados.`,
+          // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
+          // plataforma (não está em service-categories.ts).
+          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas em ${regionData.name}. Descreve o que tem e recebe propostas de profissionais verificados.`,
         },
       },
       {
@@ -122,7 +125,7 @@ export default async function RegionPage({ params }: Props) {
         name: `Quanto tempo demora a receber resposta em ${regionData.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `${PRAZO_DE_RESPOSTA.frase}. Em ${regionData.name}, muitos pedidos recebem confirmação de data no próprio dia — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
+          text: `${PRAZO_DE_RESPOSTA.frase}. Em ${regionData.name}, a data do trabalho combina-se com o profissional que escolher — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
         },
       },
       {
@@ -130,7 +133,9 @@ export default async function RegionPage({ params }: Props) {
         name: `Quanto custa uma recolha de móveis em ${regionData.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `${PRECOS.recolha_moveis.etiqueta}, sem IVA, conforme o volume e o acesso. O preço fica fechado antes de o trabalho começar e não acresce nada no fim.`,
+          // 30-09-2026: dizia «não acresce nada no fim» — falso para quem pede
+          // factura. A frase vem de promessas-publicas, igual à do cartão.
+          text: `${PRECOS.recolha_moveis.etiqueta}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
         },
       },
     ],
@@ -151,8 +156,7 @@ export default async function RegionPage({ params }: Props) {
     {
       icon: ShieldCheck,
       titulo: "Escolhe, ou não",
-      texto:
-        "Aceita a proposta que quiser — ou nenhuma. O valor fica fechado antes de começar e não acresce nada no fim.",
+      texto: `Aceita a proposta que quiser — ou nenhuma. ${PRECO_FECHADO}`,
     },
   ];
 
@@ -219,7 +223,7 @@ export default async function RegionPage({ params }: Props) {
                     Tempo até ter propostas
                   </dt>
                   <dd className="mt-1 text-sm leading-7 text-slate-600">
-                    {PRAZO_DE_RESPOSTA.porExtenso} — muitos no próprio dia
+                    Em até {PRAZO_DE_RESPOSTA.porExtenso}
                   </dd>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">

@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -16,44 +17,46 @@ const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 
 export const metadata: Metadata = {
   title: "Esvaziamento de Casas na Amadora — Apartamentos",
   description:
-    "Esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos, eletrodomésticos e limpeza associada. Atendemos Reboleira, Damaia, Alfragide, Venteira e mais zonas.",
+    "Esvaziamento de casas e apartamentos na Amadora por profissionais verificados: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide e Venteira.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
   openGraph: {
     title: "Esvaziamento de Casas na Amadora — Apartamentos",
     description:
-      "Esvaziamento completo na Amadora com remoção de móveis e limpeza. Reboleira, Damaia, Alfragide, Venteira.",
+      "Esvaziamento completo na Amadora por profissionais da zona. Reboleira, Damaia, Alfragide, Venteira.",
     url: `${SITE_URL}/esvaziamento-de-casas-amadora`,
   },
 };
 
 const faqs = [
   {
-    question: "A CLYON faz esvaziamento de casas na Amadora?",
-    answer: "Sim, fazemos esvaziamento completo de casas, apartamentos, garagens e arrecadações em toda a Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova.",
+    question: "Há esvaziamento de casas na Amadora?",
+    answer: "Sim. Pela CLYON pode pedir o esvaziamento completo de casas, apartamentos, garagens e arrecadações em toda a Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova.",
   },
   {
     question: "Os móveis são retirados de dentro do apartamento?",
-    answer: "Sim, o profissional entra no imóvel, desmonta o necessário, carrega tudo e transporta. Mesmo em prédios sem elevador ou com acessos difíceis.",
+    answer: `Sim, o profissional entra no imóvel, carrega tudo e transporta, mesmo em prédios sem elevador ou com acessos difíceis. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Quanto custa esvaziar um apartamento na Amadora?",
-    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em 260 – 350 €, um T2/T3 em 320 – 450 €. Envie fotos para orçamento rápido. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em 260 – 350 €, um T2/T3 em 320 – 450 €. Descreva-o com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança na Amadora?",
-    answer: "Sim, é um dos pedidos mais frequentes. Tratamos do esvaziamento completo incluindo móveis antigos, eletrodomésticos, monos e limpeza quando necessário.",
+    answer: "Sim, é dos pedidos mais frequentes. O profissional faz o esvaziamento completo: móveis antigos, eletrodomésticos e monos. Se quiser guardar alguma coisa, indique-a no pedido.",
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
-    answer: "Sim, oferecemos limpeza básica ou completa após a remoção. O valor é combinado no orçamento dependendo do estado do imóvel.",
+    // 30-09-2026: prometia «limpeza básica ou completa». A limpeza não é um
+    // serviço da plataforma (service-categories.ts).
+    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o profissional diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
   },
   {
     question: "Fazem esvaziamento de garagens e arrecadações na Amadora?",
-    answer: "Sim, esvaziamos garagens, arrecadações, caves e armazéns. Removemos móveis guardados, monos, sucata e objetos acumulados.",
+    answer: "Sim. Os profissionais esvaziam garagens, arrecadações, caves e armazéns: móveis guardados, monos, sucata e objetos acumulados.",
   },
   {
     question: "Qual o prazo para fazer o esvaziamento?",
-    answer: "Conseguimos agendar normalmente em 1-3 dias úteis. Para pedidos urgentes, podemos avaliar disponibilidade no mesmo dia ou dia seguinte.",
+    answer: NO_MESMO_DIA,
   },
 ];
 
@@ -82,7 +85,7 @@ const serviceSchema = {
   "@context": "https://schema.org",
   "@type": "Service",
   name: "Esvaziamento de Casas na Amadora",
-  description: "Serviço de esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos e limpeza.",
+  description: "Serviço de esvaziamento de casas e apartamentos na Amadora com remoção de móveis e monos.",
   provider: {
     "@type": "LocalBusiness",
     name: "CLYON",
@@ -149,9 +152,9 @@ export default function EsvaziamentoAmadoraPage() {
                   Esvaziamento de casas e apartamentos na Amadora
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  A CLYON faz esvaziamento completo de casas e apartamentos na Amadora. Os profissionais retiram móveis, 
-                  eletrodomésticos, monos e recheios com carregamento, transporte e limpeza associada. 
-                  Atendemos Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e todas as freguesias.
+                  Pela CLYON, pede o esvaziamento completo de casas e apartamentos na Amadora a profissionais
+                  verificados da zona: retiram móveis, eletrodomésticos, monos e recheios, com carregamento e
+                  transporte. Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e restantes freguesias.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -192,7 +195,7 @@ export default function EsvaziamentoAmadoraPage() {
                   ))}
                 </div>
                 <p className="mt-4 text-xs leading-5 text-slate-500">
-                  {NOTA_DE_PRECO.curta} Depende do volume, andar, elevador e limpeza.
+                  {NOTA_DE_PRECO.curta} Depende do volume, andar e elevador.
                 </p>
               </div>
             </div>
@@ -212,7 +215,7 @@ export default function EsvaziamentoAmadoraPage() {
                 { icon: Sparkles, title: "Remodelação", desc: "Esvaziar divisões ou imóvel completo antes de obras na Amadora." },
                 { icon: Trash2, title: "Acumulação", desc: "Remoção de objetos e móveis em casas com excesso de coisas." },
                 { icon: Truck, title: "Mudança incompleta", desc: "Retirar o que ficou para trás após uma mudança." },
-                { icon: MapPin, title: "Fim de arrendamento", desc: "Devolver imóvel vazio e limpo ao senhorio." },
+                { icon: MapPin, title: "Fim de arrendamento", desc: "Devolver o imóvel vazio ao senhorio." },
               ].map((item) => (
                 <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-5">
                   <item.icon className="h-6 w-6 text-emerald-600" />
@@ -228,7 +231,7 @@ export default function EsvaziamentoAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              O que a equipa remove na Amadora
+              O que o profissional remove na Amadora
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {whatWeRemove.map((item) => (
@@ -246,28 +249,33 @@ export default function EsvaziamentoAmadoraPage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-2">
               <div>
+                {/* 30-09-2026: esta secção vendia «Esvaziamento com limpeza» —
+                    limpeza básica e «mais completa». A limpeza não é um serviço
+                    da plataforma. Fica o que ajuda a receber propostas certas. */}
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                  Esvaziamento com limpeza na Amadora
+                  Antes de pedir o esvaziamento na Amadora
                 </h2>
                 <p className="mt-4 text-slate-600">
-                  Além do esvaziamento, oferecemos limpeza associada. A equipa retira todos os móveis 
-                  e objetos, e depois faz limpeza básica (varrer, remover restos) ou limpeza mais 
-                  completa dependendo do estado do imóvel.
+                  Na Amadora há muitos prédios dos anos 70 e 80 com elevadores pequenos e escadas
+                  estreitas. Quanto mais o pedido disser sobre o imóvel, mais certas são as propostas.
                 </p>
                 <p className="mt-4 text-slate-600">
-                  Este serviço é ideal para quem precisa de entregar o imóvel pronto — seja para 
-                  escritura, arrendamento, visitas ou simplesmente para usar novamente.
+                  Tem peças em bom estado?{" "}
+                  <Link href="/recolha-gratuita-de-moveis-usados" className="font-semibold text-emerald-700 hover:underline">
+                    Veja quem as recebe de graça
+                  </Link>{" "}
+                  antes de esvaziar.
                 </p>
               </div>
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6">
-                <h3 className="font-semibold text-slate-900">O que inclui a limpeza</h3>
+                <h3 className="font-semibold text-slate-900">O que dizer no pedido</h3>
                 <ul className="mt-4 space-y-2">
                   {[
-                    "Remoção de pó e detritos após a recolha",
-                    "Varrer e limpar o chão",
-                    "Retirar restos de embalagens e papéis",
-                    "Limpeza de superfícies (opcional)",
-                    "Deixar o espaço apresentável",
+                    "O andar e se há elevador",
+                    "O que fica e o que sai",
+                    "Objetos a guardar, se os houver",
+                    "Se precisa de desmontagem",
+                    "A data em que o imóvel tem de estar vazio",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
@@ -284,11 +292,11 @@ export default function EsvaziamentoAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Zonas da Amadora onde fazemos esvaziamento
+              Zonas da Amadora com profissionais de esvaziamento
             </h2>
             <p className="mt-2 text-slate-600">
-              Atendemos todas as freguesias e zonas da Amadora, incluindo áreas com prédios antigos, 
-              escadas sem elevador e acessos mais difíceis.
+              O pedido chega aos profissionais que trabalham nas freguesias da Amadora, incluindo zonas
+              com prédios antigos, escadas sem elevador e acessos mais difíceis.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {amadoraZones.map((zone) => (
@@ -314,7 +322,7 @@ export default function EsvaziamentoAmadoraPage() {
                 { href: "/esvaziamento-de-casas", label: "Esvaziamento de casas", desc: "Página geral do serviço" },
                 { href: "/recolha-de-moveis", label: "Recolha de móveis", desc: "Serviço em toda a área" },
                 { href: "/recolha-de-sofas", label: "Recolha de sofás", desc: "Sofás e cadeirões" },
-                { href: "/retirar-moveis-velhos", label: "Retirar móveis velhos", desc: "Desmontagem incluída" },
+                { href: "/retirar-moveis-velhos", label: "Retirar móveis velhos", desc: "Desmontagem a pedido" },
                 { href: "/simulador", label: "Simular orçamento", desc: "Cálculo online" },
               ].map((link) => (
                 <Link
@@ -356,7 +364,7 @@ export default function EsvaziamentoAmadoraPage() {
             <CTABlock
               variant="centered"
               title="Precisa de esvaziar uma casa na Amadora?"
-              description="Peça um orçamento grátis. Atendemos Reboleira, Damaia, Alfragide, Venteira e todas as zonas."
+              description={`Peça um orçamento grátis e receba propostas ${PROPOSTAS_EM_ATE}. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.`}
               whatsappMessage="Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?"
             />
           </div>
