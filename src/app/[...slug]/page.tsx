@@ -247,7 +247,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
         // 30-09-2026: a resposta passa a apontar para quem recebe doações —
         // a página /recolha-gratuita-de-moveis-usados — e diz sem rodeios que
         // a CLYON é paga. Antes falava de «cenários» sem dizer nenhum.
-        a: "Há duas vias sem custo: a recolha de monos da câmara, marcada com antecedência e com os móveis deixados à porta, e a doação de peças em bom estado a instituições que as recebem. A CLYON não faz recolha gratuita: é um serviço pago, para quando é preciso desmontar, carregar de dentro de casa ou libertar o espaço sem esperar.",
+        a: "Há duas vias sem custo: a recolha de monos da Câmara de Almada, gratuita, que se agenda com a junta de freguesia e é feita à porta; e a doação de peças em bom estado a instituições que as recebem. A CLYON não faz recolha gratuita: é um serviço pago, para quando é preciso desmontar, carregar de dentro de casa ou libertar o espaço sem esperar.",
       });
     }
 
@@ -826,10 +826,11 @@ export default async function ServiceCityPage({ params }: Props) {
                 <div className="flex items-start gap-3">
                   <Recycle className="mt-1 h-5 w-5 text-acao" />
                   <p className="text-sm leading-7 text-slate-700">
-                    A recolha de monos da câmara é marcada com antecedência e os
-                    móveis ficam à porta no dia combinado. Pela CLYON, o
-                    profissional vai buscá-los dentro de casa, desmonta se o pedir
-                    e leva tudo — é um serviço pago. Se os móveis ainda estão em
+                    A recolha de monos da câmara ou da junta de freguesia é gratuita
+                    em muitos concelhos, mas marca-se com antecedência e os móveis
+                    ficam à porta ou no local combinado. Pela CLYON, o profissional
+                    vai buscá-los dentro de casa, desmonta se o pedir e leva tudo —
+                    é um serviço pago. Se os móveis ainda estão em
                     bom estado,{" "}
                     <Link
                       href="/recolha-gratuita-de-moveis-usados"
@@ -940,8 +941,8 @@ export default async function ServiceCityPage({ params }: Props) {
               Recolha gratuita de móveis na Costa da Caparica: o que existe
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
-              Móveis em bom estado podem ser doados a quem os aproveite, e a câmara tem recolha de
-              monos marcada com antecedência. A CLYON não faz recolha gratuita: é um serviço pago,
+              Móveis em bom estado podem ser doados a quem os aproveite, e a Câmara de Almada recolhe
+              monos gratuitamente à porta, com marcação na junta de freguesia. A CLYON não faz recolha gratuita: é um serviço pago,
               para quando é preciso desmontar, carregar de dentro de casa ou libertar o espaço sem
               esperar.
             </p>
