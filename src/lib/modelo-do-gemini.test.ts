@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MODELO_ACTUAL, RETIRADOS, escadaLimpa, modeloDoGemini } from "./modelo-do-gemini";
 
@@ -65,14 +65,18 @@ describe("ninguém volta a escrever o nome do modelo à mão", () => {
     }
   });
 
-  it("o chat do simulador não partilha a variável do WhatsApp", () => {
+  it("as rotas de chat do simulador, que ninguém chamava, não voltam", () => {
     /*
-     * Ele fala pelo SDK `ai`, que exige o nome com fornecedor à frente
-     * («google/gemini-…»). Lia GEMINI_MODEL, portanto arranjar o WhatsApp
-     * nessa variável punha-lhe lá um nome seco e partia-o.
+     * SAÍRAM A 29-09-2026. `/api/simulator/chat` e `/api/chat-simulador` eram
+     * duas rotas públicas de IA — a segunda uma cópia da primeira — que nenhum
+     * ecrã, nem o backoffice, nem a ponte do WhatsApp chamava, e com um
+     * «prompt» que falava como uma empresa que faz as recolhas. Só custavam
+     * dinheiro a quem as descobrisse. Este teste guardava que a segunda não
+     * partilhava a variável do modelo com o WhatsApp; guarda agora que não
+     * voltam sem alguém decidir que voltam.
      */
-    const chat = ler("src/app/api/chat-simulador/route.ts");
-    expect(chat).not.toContain("process.env.GEMINI_MODEL");
-    expect(chat).toContain("process.env.CHAT_MODEL");
+    for (const f of ["src/app/api/simulator/chat/route.ts", "src/app/api/chat-simulador/route.ts"]) {
+      expect(existsSync(join(process.cwd(), f)), f).toBe(false);
+    }
   });
 });
