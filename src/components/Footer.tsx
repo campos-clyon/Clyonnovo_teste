@@ -257,6 +257,22 @@ export default function Footer() {
               Política de Cookies
             </Link>
             {/*
+              O LIVRO DE RECLAMAÇÕES, ao lado dos outros documentos — 30-09-2026.
+
+              É obrigatório para quem presta serviços e tem sítio na internet
+              (DL 156/2005, art. 5.º-B): a ligação ao Livro de Reclamações
+              Electrónico tem de estar visível e destacada. Só estava dentro
+              dos Termos. O endereço vem de `IDENTIFICACAO`, o mesmo de lá.
+            */}
+            <a
+              href={IDENTIFICACAO.livroDeReclamacoes}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[44px] py-3 text-sm text-white/50 transition-colors hover:text-white"
+            >
+              Livro de Reclamações
+            </a>
+            {/*
               Era um <button> com `padding: 0` — ≈20 px de altura, o alvo de
               toque mais pequeno do site inteiro. E é o controlo que a lei
               obriga a manter acessível.
