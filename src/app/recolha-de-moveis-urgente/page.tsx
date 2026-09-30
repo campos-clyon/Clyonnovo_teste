@@ -9,6 +9,7 @@ import {
   Truck,
   Zap,
 } from "lucide-react";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Recolha de Móveis Urgente em Lisboa — Hoje",
@@ -109,16 +110,9 @@ export default function RecolhaMoveisUrgentePage() {
         name: "Recolha de Móveis Urgente",
         description:
           "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal com resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+        // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+        provider: PRESTADOR,
         areaServed: ["Lisboa", "Margem Sul", "Setúbal"],
         serviceType: "Recolha de Móveis Urgente",
       },

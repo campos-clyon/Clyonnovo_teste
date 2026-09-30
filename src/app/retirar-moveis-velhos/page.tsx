@@ -13,6 +13,7 @@ import {
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 // A faixa publicada para recolha de móveis. A página abria numa faixa de
 // trinta e poucos euros — abaixo do piso de 40 € que o resto do site anuncia.
@@ -137,16 +138,9 @@ export default function RetirarMoveisVelhosPage() {
         name: "Retirar Móveis Velhos",
         description:
           "Serviço de retirada de móveis velhos em Lisboa, Margem Sul e Setúbal com desmontagem, carregamento e transporte incluídos.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+        // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+        provider: PRESTADOR,
         areaServed: ["Lisboa", "Margem Sul", "Setúbal"],
         serviceType: "Retirada de Móveis Velhos",
       },

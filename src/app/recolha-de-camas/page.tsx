@@ -22,6 +22,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
 /*
  * A recolha de camas é recolha de móveis: mesma faixa, mesma fonte.
@@ -144,19 +145,17 @@ const serviceSchema = {
   serviceType: "Recolha de camas e colchões usados",
   url: `${SITE_URL}/recolha-de-camas`,
   description: "Serviço de recolha de camas usadas com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   offers: {
     "@type": "AggregateOffer",
     priceCurrency: "EUR",
     lowPrice: PRECO_MOVEIS.minimo,
     highPrice: PRECO_MOVEIS.maximo,
-    priceValidUntil: "2026-12-31",
+    // Calculado: a data escrita à mão caducava a 31-12-2026 (29-09-2026).
+    priceValidUntil: validadeDoPreco(),
     availability: "https://schema.org/InStock",
   },
 };

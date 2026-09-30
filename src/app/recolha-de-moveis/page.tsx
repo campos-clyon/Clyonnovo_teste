@@ -19,8 +19,6 @@ import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
-  BUSINESS_EMAIL,
-  BUSINESS_ADDRESS,
   CITIES,
   SITE_URL,
   getCityServiceSlug,
@@ -29,6 +27,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
 /*
  * O preço desta página vem de src/lib/precos-publicos.ts.
@@ -192,40 +191,18 @@ const faqSchema = {
   })),
 };
 
-const localBusinessSchema = {
-  "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  "@id": `${SITE_URL}/#organization`,
-  name: BUSINESS_NAME,
-  description: "Recolha de móveis, entulho, monos, esvaziamento de casas, mudanças e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
-  url: SITE_URL,
-  telephone: BUSINESS_PHONE,
-  email: BUSINESS_EMAIL,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "Belverde",
-    addressLocality: "Amora",
-    addressRegion: "Setúbal",
-    postalCode: "2845-513",
-    addressCountry: "PT",
-  },
-  geo: {
-    "@type": "GeoCoordinates",
-    latitude: 38.6266,
-    longitude: -9.1092,
-  },
-  areaServed: areaServedCities.map((city) => ({
-    "@type": "City",
-    name: city,
-  })),
-  openingHoursSpecification: {
-    "@type": "OpeningHoursSpecification",
-    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    opens: "08:00",
-    closes: "19:00",
-  },
-  priceRange: "€€",
-};
+/*
+ * O SEGUNDO LocalBusiness DESTA PÁGINA SAIU — 29-09-2026.
+ *
+ * Havia aqui um `LocalBusiness` da CLYON inteiro, repetido do layout — que
+ * já vai em todas as páginas —, com três diferenças e nenhuma a favor: o
+ * horário fechava às 19:00 (o do layout, e o de /contactos, às 20:00), a
+ * descrição ainda vendia limpeza pós-obra, e o `@id` era o `#organization`
+ * da entidade Organization, o que fundia as duas no mesmo nó. O Google via
+ * duas empresas CLYON com horários diferentes no mesmo HTML.
+ *
+ * Fica o `Service`, abaixo, com o prestador por `@id`.
+ */
 
 const serviceSchema = {
   "@context": "https://schema.org",
@@ -235,12 +212,9 @@ const serviceSchema = {
   url: `${SITE_URL}/recolha-de-moveis`,
   description:
     "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta, transporte  e destino licenciado em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: areaServedCities.map((city) => ({
     "@type": "City",
     name: city,
@@ -262,7 +236,8 @@ const serviceSchema = {
     priceCurrency: "EUR",
     lowPrice: PRECO_MOVEIS.minimo,
     highPrice: PRECO_MOVEIS.maximo,
-    priceValidUntil: "2026-12-31",
+    // Calculado: a data escrita à mão caducava a 31-12-2026 (29-09-2026).
+    priceValidUntil: validadeDoPreco(),
     availability: "https://schema.org/InStock",
   },
 };
@@ -583,10 +558,6 @@ export default function RecolhaDeMoveisPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
       />
       <script
         type="application/ld+json"

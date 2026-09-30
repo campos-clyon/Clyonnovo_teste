@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -83,19 +84,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Esvaziamento de Casas na Amadora",
   description: "Serviço de esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos e limpeza.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: "Amadora",
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: {
     "@type": "City",
     name: "Amadora",

@@ -14,6 +14,7 @@ import {
   REGIONS,
   SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
+import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
 
 /**
  * O preço da recolha de móveis, para a meta description global.
@@ -132,14 +133,21 @@ export const metadata: Metadata = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
-  "@id": `${SITE_URL}/#localbusiness`,
+  // O `@id` a que todos os `Service` do site se referem como prestador
+  // (`PRESTADOR`, em dados-estruturados.ts). Muda lá, muda em todo o lado.
+  "@id": ID_DO_NEGOCIO,
   name: BUSINESS_NAME,
   url: SITE_URL,
   telephone: BUSINESS_PHONE,
   email: BUSINESS_EMAIL,
   image: `${SITE_URL}/og-image.jpg`,
+  /*
+   * Dizia «Empresa especializada em … limpeza pós-obra e mudanças». A CLYON
+   * é a plataforma, quem faz o trabalho são profissionais independentes — e
+   * a limpeza pós-obra já não é um serviço activo (29-09-2026).
+   */
   description:
-    "Empresa especializada em recolha de entulho, móveis, monos, esvaziamento de casas, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Belverde",
@@ -148,26 +156,9 @@ const localBusinessSchema = {
     postalCode: "2845-513",
     addressCountry: "PT",
   },
-  areaServed: [
-    { "@type": "City", name: "Lisboa" },
-    { "@type": "City", name: "Almada" },
-    { "@type": "City", name: "Seixal" },
-    { "@type": "City", name: "Barreiro" },
-    { "@type": "City", name: "Setúbal" },
-    { "@type": "City", name: "Cascais" },
-    { "@type": "City", name: "Oeiras" },
-    { "@type": "City", name: "Sintra" },
-    { "@type": "City", name: "Amadora" },
-    { "@type": "City", name: "Loures" },
-    { "@type": "City", name: "Odivelas" },
-    { "@type": "City", name: "Montijo" },
-    { "@type": "City", name: "Moita" },
-    { "@type": "City", name: "Palmela" },
-    { "@type": "City", name: "Sesimbra" },
-    { "@type": "City", name: "Carnaxide" },
-    { "@type": "City", name: "Monte Abraão" },
-    { "@type": "City", name: "Queluz" },
-  ],
+  // As localidades com página, e não uma lista escrita à mão — faltavam a
+  // Costa da Caparica, a Amora, Corroios e Alcochete (29-09-2026).
+  areaServed: LOCALIDADES_SERVIDAS.map((name) => ({ "@type": "City", name })),
   /*
    * NÃO há aggregateRating aqui, e é deliberado.
    *
@@ -183,6 +174,11 @@ const localBusinessSchema = {
    * entidades LocalBusiness diferentes com a mesma morada.
    *
    * A nota vive onde as avaliações vivem: em /avaliacoes, e só lá.
+   *
+   * (29-09-2026: nem lá. As de /avaliacoes vêm do Google e da Fixando e são
+   * do próprio negócio — duas coisas que as regras da Google não aceitam em
+   * dados estruturados. Ficou o texto visível; as únicas estrelas declaradas
+   * no site são as das páginas dos profissionais.)
    */
   /*
    * A faixa é qualitativa, e é de propósito.

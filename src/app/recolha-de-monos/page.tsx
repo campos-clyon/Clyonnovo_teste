@@ -20,6 +20,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 /*
  * Esta página tinha quatro preços diferentes para o mesmo serviço.
@@ -115,11 +116,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Monos",
   description: "Serviço de recolha de monos e volumes grandes em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
    * O que se declara ao Google é a mesma faixa que a página mostra.

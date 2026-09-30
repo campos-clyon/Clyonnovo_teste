@@ -36,6 +36,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 import { tituloDaCidade } from "@/lib/titulos-seo";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
@@ -428,15 +429,14 @@ export default async function ServiceCityPage({ params }: Props) {
     serviceType: service.name,
     name: title,
     description,
-    provider: {
-      "@type": "LocalBusiness",
-      name: BUSINESS_NAME,
-      telephone: BUSINESS_PHONE,
-      areaServed: {
-        "@type": "City",
-        name: city.name,
-      },
-    },
+    /*
+     * O prestador é o `LocalBusiness` do layout, por `@id` (29-09-2026). Era
+     * um `LocalBusiness` «CLYON» sem morada em cada uma das mais de cem
+     * páginas de cidade — outras tantas empresas a meio de declarar, todas
+     * com o mesmo telefone.
+     * A cidade diz-se no `areaServed` do serviço, logo abaixo.
+     */
+    provider: PRESTADOR,
     areaServed: [
       {
         "@type": "City",

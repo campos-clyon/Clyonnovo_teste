@@ -7,6 +7,7 @@ import { middleware } from "@/middleware";
 import sitemap from "@/app/sitemap";
 import nextConfig from "../../next.config";
 import { artigosPublicados } from "./artigos-do-blog";
+import { LOCALIDADES_SERVIDAS, PRESTADOR, validadeDoPreco } from "./dados-estruturados";
 import { zonasDoArtigo } from "./blog-zonas";
 import { getAllCidadeSlugs } from "./mudancas-cidades";
 import {
@@ -282,5 +283,85 @@ describe("links internos: nenhum passa por um redirect", () => {
     }
     expect(maus).toEqual([]);
     expect(ler("src/components/FurnitureSeoLinks.tsx")).toContain('label: "Doar ou recolher móveis usados"');
+  });
+});
+
+describe("dados estruturados: uma CLYON só, com o prestador por @id", () => {
+  /** As páginas do site (sem API nem backoffice), sem comentários. */
+  const paginasDoSite = () =>
+    fontes(join(process.cwd(), "src", "app"))
+      .filter((f) => !f.includes(join("src", "app", "api")) && !f.includes(join("src", "app", "admin")))
+      .map((f) => ({ f: f.replace(process.cwd(), "").split("\\").join("/"), codigo: semComentarios(readFileSync(f, "utf8")) }));
+
+  it("só o layout declara o LocalBusiness da CLYON", () => {
+    /*
+     * Havia um por página de mudanças por cidade («CLYON — Mudanças em
+     * Sintra», com morada em Sintra), um duplicado em /recolha-de-moveis com
+     * horário das 19:00, e outros sem morada. O perfil de um profissional
+     * declara o negócio DELE, e fica.
+     */
+    const comNegocio = paginasDoSite()
+      .filter(({ codigo }) => /"@type":\s*(\[\s*)?"(LocalBusiness|HomeAndConstructionBusiness)"/.test(codigo))
+      .map(({ f }) => f);
+    expect(comNegocio.sort()).toEqual(["/src/app/layout.tsx", "/src/app/profissionais/[slug]/page.tsx"]);
+  });
+
+  it("todo o `provider` é a referência ao negócio do layout", () => {
+    const maus: string[] = [];
+    let vistos = 0;
+    for (const { f, codigo } of paginasDoSite()) {
+      if (f.endsWith("profissionais/[slug]/page.tsx")) continue;
+      // Só onde há dados estruturados: a tabela de /cookies também tem um
+      // campo `provider`, e é o fornecedor de cada cookie.
+      if (!codigo.includes("https://schema.org")) continue;
+      for (const m of codigo.matchAll(/provider:\s*([^,\r\n]+)/g)) {
+        vistos++;
+        if (m[1].trim() !== "PRESTADOR") maus.push(`${f}: provider: ${m[1].trim()}`);
+      }
+    }
+    expect(vistos).toBeGreaterThan(15);
+    expect(maus).toEqual([]);
+    expect(PRESTADOR).toEqual({ "@id": "https://clyon.pt/#localbusiness" });
+    expect(semComentarios(ler("src/app/layout.tsx"))).toContain('"@id": ID_DO_NEGOCIO');
+  });
+
+  it("o negócio descreve-se como plataforma, sem a limpeza pós-obra", () => {
+    const layout = semComentarios(ler("src/app/layout.tsx"));
+    expect(layout).toContain(
+      "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
+    );
+    const bloco = layout.slice(layout.indexOf("const localBusinessSchema"), layout.indexOf("const organizationSchema"));
+    expect(bloco.length).toBeGreaterThan(100);
+    expect(bloco).not.toMatch(/limpeza pós-obra/i);
+  });
+
+  it("a área servida inclui as localidades com página — e não as freguesias de Lisboa", () => {
+    for (const terra of ["Lisboa", "Costa da Caparica", "Amora", "Corroios", "Alcochete", "Setúbal"]) {
+      expect(LOCALIDADES_SERVIDAS, terra).toContain(terra);
+    }
+    for (const freguesia of ["Benfica", "Lumiar", "Alvalade", "Olivais"]) {
+      expect(LOCALIDADES_SERVIDAS, freguesia).not.toContain(freguesia);
+    }
+    expect(semComentarios(ler("src/app/layout.tsx"))).toContain("areaServed: LOCALIDADES_SERVIDAS.map(");
+  });
+
+  it("o horário é o mesmo em todo o lado: 08:00–20:00", () => {
+    const horarios = paginasDoSite().flatMap(({ f, codigo }) =>
+      [...codigo.matchAll(/closes:\s*"([^"]+)"/g)].map((m) => `${f}: ${m[1]}`),
+    );
+    expect(horarios.length).toBeGreaterThan(0);
+    expect(horarios.filter((h) => !h.endsWith(": 20:00"))).toEqual([]);
+  });
+
+  it("nenhum preço declarado caduca: a validade é calculada", () => {
+    const aMao = paginasDoSite().filter(({ codigo }) => /priceValidUntil:\s*["'`]/.test(codigo));
+    expect(aMao.map(({ f }) => f)).toEqual([]);
+    expect(validadeDoPreco(new Date("2026-09-29T12:00:00Z"))).toBe("2027-12-31");
+  });
+
+  it("/avaliacoes não declara nota nem avaliações", () => {
+    const pagina = semComentarios(ler("src/app/avaliacoes/page.tsx"));
+    expect(pagina).not.toContain("aggregateRating");
+    expect(pagina).not.toMatch(/"@type":\s*"Review"/);
   });
 });

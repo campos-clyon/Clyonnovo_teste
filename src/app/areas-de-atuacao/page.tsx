@@ -5,11 +5,11 @@ import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { getCitiesByRegion, getAllCities } from "@/lib/city-content";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
   SITE_URL,
   caminhoDoServicoNaCidade,
 } from "@/lib/seo-data";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Áreas de Atuação | Lisboa, Margem Sul e Setúbal",
@@ -56,12 +56,19 @@ const regions = [
   },
 ];
 
-const localBusinessSchema = {
+/*
+ * Um `Service` com a área servida, e não outro `LocalBusiness` — 29-09-2026.
+ *
+ * Estava aqui um `LocalBusiness` «CLYON» sem `@id` e sem morada, ao lado do
+ * do layout, que é a entidade a sério: duas empresas CLYON no mesmo HTML, uma
+ * delas incompleta. O que esta página diz de próprio é ONDE se trabalha — e
+ * isso é o `areaServed` de um serviço, com o prestador por `@id`.
+ */
+const servicoSchema = {
   "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  name: BUSINESS_NAME,
-  telephone: BUSINESS_PHONE,
-  url: SITE_URL,
+  "@type": "Service",
+  name: "Recolha de móveis, monos e entulho, esvaziamentos e mudanças",
+  provider: PRESTADOR,
   areaServed: getAllCities().map((city) => ({
     "@type": "City",
     name: city.name,
@@ -293,7 +300,7 @@ export default function AreasDeAtuacaoPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(servicoSchema) }}
       />
     </div>
   );

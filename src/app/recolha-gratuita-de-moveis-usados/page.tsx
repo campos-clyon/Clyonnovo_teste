@@ -21,6 +21,7 @@ import {
   SITE_URL,
   AVALIACOES_TOTAL,
 } from "@/lib/seo-data";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Recolha Gratuita de Móveis Usados — Como Funciona",
@@ -142,12 +143,9 @@ const serviceSchema = {
   serviceType: "Recolha de móveis usados",
   url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   description: "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal. Serviço pago, rápido e completo.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   /*
    * Esta página NÃO declara preço ao Google, de propósito.

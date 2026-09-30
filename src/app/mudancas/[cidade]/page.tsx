@@ -15,9 +15,9 @@ import {
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
   SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   CIDADES_MUDANCAS,
   getAllCidadeSlugs,
@@ -77,48 +77,33 @@ export default async function MudancasCidadePage({ params }: Props) {
   const c = getCidadeMudancaBySlug(cidade);
   if (!c) notFound();
 
-  // ── Schema.org: LocalBusiness + Service + FAQPage + BreadcrumbList ────────
+  // ── Schema.org: Service + FAQPage + BreadcrumbList ─────────────────────────
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      {
-        "@type": "LocalBusiness",
-        "@id": `${SITE_URL}/mudancas/${c.slug}#business`,
-        name: `${BUSINESS_NAME} — Mudanças em ${c.nome}`,
-        image: `${SITE_URL}/logo-clyon.png`,
-        telephone: BUSINESS_PHONE,
-        // Sem `priceRange`: era `€${precoMin}–€${precoMax}` por cidade, um
-        // preço que a página deixou de mostrar. Ver a nota no `offers` abaixo.
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: c.nome,
-          addressRegion: c.distrito,
-          addressCountry: "PT",
-        },
-        geo: {
-          "@type": "GeoCoordinates",
-          latitude: c.geo.lat,
-          longitude: c.geo.lng,
-        },
-        areaServed: {
-          "@type": "City",
-          name: c.nome,
-        },
-        openingHoursSpecification: [
-          {
-            "@type": "OpeningHoursSpecification",
-            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            opens: "08:00",
-            closes: "20:00",
-          },
-        ],
-      },
+      /*
+       * SEM O `LocalBusiness` DA CIDADE — 29-09-2026.
+       *
+       * Havia aqui um «CLYON — Mudanças em Sintra» com morada em Sintra, e o
+       * mesmo nas treze cidades: treze empresas com o mesmo nome e telefone,
+       * cada uma a declarar uma morada onde a CLYON não tem porta. É o padrão
+       * das fichas locais falsas, e não é o que a CLYON é — é uma plataforma
+       * com sede em Amora, e quem faz as mudanças são os profissionais.
+       *
+       * Fica o serviço, com o prestador verdadeiro (o `LocalBusiness` do
+       * layout, por `@id`) e a cidade onde se presta em `areaServed`. As
+       * coordenadas passam para a cidade, que é o que elas sempre foram.
+       */
       {
         "@type": "Service",
         "@id": `${SITE_URL}/mudancas/${c.slug}#service`,
         serviceType: "Mudanças residenciais e comerciais",
-        provider: { "@id": `${SITE_URL}/mudancas/${c.slug}#business` },
-        areaServed: { "@type": "City", name: c.nome },
+        provider: PRESTADOR,
+        areaServed: {
+          "@type": "City",
+          name: c.nome,
+          geo: { "@type": "GeoCoordinates", latitude: c.geo.lat, longitude: c.geo.lng },
+        },
         /*
          * Sem bloco `offers` — e sem outro número no lugar dele.
          *

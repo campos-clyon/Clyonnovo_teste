@@ -11,6 +11,7 @@ import {
 
 import { BUSINESS_NAME, BUSINESS_PHONE, NOTA_DE_PRECO, SITE_URL } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, precoDe } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -193,7 +194,9 @@ const serviceListSchema = {
     position: i + 1,
     name: s.title,
     description: s.tagline,
-    provider: { "@type": "LocalBusiness", name: BUSINESS_NAME, telephone: BUSINESS_PHONE },
+    // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+    // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+    provider: PRESTADOR,
     areaServed: ["Lisboa", "Setúbal", "Almada", "Seixal"],
   })),
 };

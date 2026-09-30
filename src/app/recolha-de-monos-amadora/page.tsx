@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -71,19 +72,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Monos na Amadora",
   description: "Serviço de recolha de monos, móveis velhos e objetos volumosos na Amadora com carregamento e transporte.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: "Amadora",
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: {
     "@type": "City",
     name: "Amadora",

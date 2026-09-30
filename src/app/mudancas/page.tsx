@@ -19,6 +19,7 @@ import {
   SITE_URL,
   getCityServiceSlug, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Sem Stress",
@@ -130,11 +131,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Serviço de Mudanças",
   description: "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal com carga, transporte, descarga e montagem.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
    * Sem bloco `offers` — e sem outro número no lugar dele.
