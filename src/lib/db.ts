@@ -8004,7 +8004,15 @@ export async function setOrcamentoToken(orderId: number): Promise<string> {
   return token;
 }
 
+/*
+ * A forma dos tokens de orçamento: os 64 caracteres hexadecimais que o
+ * `setOrcamentoToken` sempre gerou (desde 03-07-2026, quando a coluna nasceu).
+ * Um texto com outra forma não é um token nosso, e não custa uma consulta.
+ */
+const FORMA_DO_TOKEN_DE_ORCAMENTO = /^[a-f0-9]{64}$/;
+
 export async function getOrderByToken(token: string): Promise<SimulatorOrder | null> {
+  if (typeof token !== "string" || !FORMA_DO_TOKEN_DE_ORCAMENTO.test(token)) return null;
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return null;
