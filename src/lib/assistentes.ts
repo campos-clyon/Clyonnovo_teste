@@ -575,7 +575,7 @@ export async function criarAssistente(dados: {
   });
 }
 
-async function actualizarAssistente(id: number, sql: string, params: unknown[]): Promise<boolean> {
+async function actualizarAssistente(id: number, sql: string, params: Array<string | number>): Promise<boolean> {
   await ensureAssistentesSchema();
   return withConnection(async (conn) => {
     const [r] = (await conn.execute(

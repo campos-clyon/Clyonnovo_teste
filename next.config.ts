@@ -95,7 +95,11 @@ const nextConfig: NextConfig = {
       ...paraAsCidades("/mudan%C3%A7as-"),
       {
         // Uma cidade sem pagina propria vai ao balcao geral, e nao a um 404.
-        source: "/mudan%C3%A7as-:city*",
+        //
+        // `:city(.*)` e nao `:city*`: desde o Next 15.5 o path-to-regexp
+        // recusa repetir um parametro sem "/" antes («Can not repeat "city"
+        // without a prefix and suffix») e o build parava. Casa com o mesmo.
+        source: "/mudan%C3%A7as-:city(.*)",
         destination: "/mudancas",
         permanent: true,
       },
@@ -213,7 +217,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: "/limpeza-pos-obra-:city*",
+        source: "/limpeza-pos-obra-:city(.*)",
         destination: "/recolha-de-entulho",
         permanent: true,
       },
@@ -225,7 +229,7 @@ const nextConfig: NextConfig = {
       },
       ...paraAsCidades("/camiao-com-motorista-"),
       {
-        source: "/camiao-com-motorista-:city*",
+        source: "/camiao-com-motorista-:city(.*)",
         destination: "/mudancas",
         permanent: true,
       },

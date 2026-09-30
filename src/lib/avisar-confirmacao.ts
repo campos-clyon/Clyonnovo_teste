@@ -1,5 +1,6 @@
 import { negociacoesDoPedido, perfilDoProfissional } from "@/lib/db";
 import { avisarTrabalhoConfirmado } from "@/lib/email-proposta";
+import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
 /**
  * Avisa o profissional de que o trabalho dele foi confirmado.
@@ -36,6 +37,7 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
       nomeDoProfissional: String(perfil?.name ?? ""),
       pedidoId: dados.pedidoId,
       valorAcordado: valor,
+      taxas: taxasDaNegociacao(n),
       baseUrl: dados.baseUrl,
     });
   } catch (err) {

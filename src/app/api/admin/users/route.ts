@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { ExecuteValues } from "mysql2";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { withConnection, ensureUsersSchema } from "@/lib/db";
 
@@ -172,7 +173,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         const updates: string[] = [];
-        const params: unknown[] = [];
+        const params: ExecuteValues[] = [];
 
         if (role !== undefined) {
           updates.push("role = ?");

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const hoje = new Date().toISOString().slice(0, 10);
 
     const conditions: string[] = ["createdAt >= ?"];
-    const params: unknown[] = [startDate];
+    const params: string[] = [startDate];
     if (eventType) {
       conditions.push("eventType = ?");
       params.push(eventType);

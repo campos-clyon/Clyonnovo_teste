@@ -125,8 +125,9 @@ describe("as duas listas do WhatsApp saem do mesmo princípio", () => {
   const CEREBRO = ler("src/lib/whatsapp-negociacao.ts");
 
   it("a lista de desempate também só mostra quem pôs um número na mesa", () => {
+    // `precoNaMesa` é o mesmo valor, já com a taxa: nulo quando ele é nulo.
     expect(CEREBRO).toContain(
-      "(await alvosAccionaveis(pedidos)).filter((a) => a.valorNaMesa != null)",
+      "(await alvosAccionaveis(pedidos)).filter((a) => a.precoNaMesa != null)",
     );
   });
 
@@ -145,7 +146,10 @@ describe("as duas listas do WhatsApp saem do mesmo princípio", () => {
   it("o exemplo que ensina a responder é um valor que existe mesmo na mesa", () => {
     // Era `Math.round(...)`: sobre 148,57 € sugeria «fechar 149», e 149 não
     // está na mesa — quem seguisse a sugestão fazia uma contraproposta.
+    // E é o preço DELE, já com a taxa (29-09-2026): o número que lhe foi dito
+    // e o único que o `fechar` reconhece.
     expect(CEREBRO).not.toContain("Math.round(alvos[0].valorNaMesa)");
-    expect(CEREBRO).toContain('euros(alvos[0].valorNaMesa as number).replace(" €", "")');
+    expect(CEREBRO).not.toContain("Math.round(alvos[0].precoNaMesa)");
+    expect(CEREBRO).toContain('euros(alvos[0].precoNaMesa as number).replace(" €", "")');
   });
 });

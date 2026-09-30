@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import {
   CATEGORIAS_VALIDAS,
@@ -27,13 +28,15 @@ export const dynamic = "force-dynamic";
  * campo.
  */
 
-const VEICULOS = [
-  "carrinha_pequena",
-  "carrinha_media",
-  "carrinha_grande",
-  "camiao",
-  "sem_veiculo",
-];
+/*
+ * A LISTA E A DE `convite-profissional.ts`, desde 29-09-2026.
+ *
+ * Havia aqui uma copia com cinco entradas, e a canonica tem sete. O campo
+ * deixou de ser uma etiqueta -- e ele que decide o valor por carga que o
+ * profissional ve (`carga-da-carrinha.ts`) -- e duas listas a decidir
+ * dinheiro nao dao erro no dia em que divergem: dao um preco.
+ */
+const VEICULOS: readonly string[] = TIPOS_DE_VEICULO.map((v) => v.id);
 
 function texto(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null;

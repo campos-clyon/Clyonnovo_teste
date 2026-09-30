@@ -9,6 +9,9 @@ import {
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { avisarClienteDaProposta, avisarProfissionalDaProposta } from "./email-proposta";
 import { avisarClientePorPush } from "./avisar-por-push";
+import { lerBase } from "./base-do-preco";
+import { taxasDaNegociacao } from "./taxas-plataforma";
+import { precoParaOCliente } from "./preco-do-cliente";
 
 /**
  * Avisar o outro lado de que há uma proposta à espera.
@@ -29,6 +32,7 @@ export async function avisarDaProposta(dados: {
   negociacaoId: number;
   /** Quem fez a proposta. Avisa-se o outro. */
   quemPropos: Lado;
+  /** O valor DO PROFISSIONAL, como ficou gravado — nunca o preço do cliente. */
   valor: number;
   baseUrl?: string;
 }): Promise<void> {
@@ -36,11 +40,24 @@ export async function avisarDaProposta(dados: {
     const pedido = await getSimulatorOrderById(dados.pedidoId);
     if (!pedido) return;
 
+    // Pelo trabalho todo ou por carga: vai agarrada ao valor em todos os avisos.
+    const base = lerBase(pedido.baseDoPreco);
+
     const negociacoes = await negociacoesDoPedido(dados.pedidoId);
     const negociacao = negociacoes.find((n) => n.id === dados.negociacaoId);
     if (!negociacao) return;
+    const taxas = taxasDaNegociacao(negociacao);
 
     if (dados.quemPropos === "profissional") {
+      /*
+       * AO CLIENTE DIZ-SE O PREÇO DELE, já com a taxa — 29-09-2026.
+       *
+       * O email e o aviso no telemóvel diziam o valor do profissional, e a
+       * taxa aparecia depois, no ecrã. Agora o número que lhe chega é o que
+       * ele paga, sem IVA. O WhatsApp faz a mesma conta lá dentro, porque
+       * guarda o valor do profissional para as chaves dos avisos.
+       */
+      const preco = precoParaOCliente(dados.valor, taxas);
       const email = pedido.contactEmail;
       /*
        * SEM EMAIL, A PROPOSTA SEGUE PARA O WHATSAPP — com botões.
@@ -64,6 +81,7 @@ export async function avisarDaProposta(dados: {
             // O regime de quem factura decide se o total leva IVA por cima.
             regimeIva: negociacao.regimeIva ?? null,
             servico: pedido.serviceType ?? null,
+            base,
           });
         }
         return;
@@ -93,7 +111,8 @@ export async function avisarDaProposta(dados: {
         nomeDoCliente: pedido.contactName ?? null,
         pedidoId: dados.pedidoId,
         profissionalNome: negociacao.profissionalNome,
-        valor: dados.valor,
+        preco,
+        base,
         token,
         baseUrl: dados.baseUrl,
       });
@@ -109,7 +128,8 @@ export async function avisarDaProposta(dados: {
       await avisarClientePorPush({
         email,
         profissionalNome: negociacao.profissionalNome,
-        valor: dados.valor,
+        valor: preco,
+        base,
         pedidoId: dados.pedidoId,
         token: token || null,
       });
@@ -132,6 +152,8 @@ export async function avisarDaProposta(dados: {
       nomeDoProfissional: String(perfil?.name ?? ""),
       pedidoId: dados.pedidoId,
       valor: dados.valor,
+      base,
+      taxas,
       token: novo.token,
       baseUrl: dados.baseUrl,
     });

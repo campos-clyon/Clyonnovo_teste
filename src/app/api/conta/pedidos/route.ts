@@ -18,7 +18,7 @@ export async function GET() {
 
     // Ligação por email (normalizado) — fallback por telefone desactivado até que a coluna exista
     const where = `LOWER(TRIM(contactEmail)) = ?`;
-    const params: unknown[] = [emailNorm];
+    const params: string[] = [emailNorm];
 
     const [rows] = await pool.execute(
       `SELECT

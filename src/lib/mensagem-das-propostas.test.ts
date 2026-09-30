@@ -264,9 +264,10 @@ describe("a mensagem", () => {
       ...base,
       propostas: [umaProposta("TRSul", 270)],
     });
-    // O número à frente do nome é o que ele paga; o valor do profissional
-    // fica ao lado, entre parênteses, porque é sobre esse que se negoceia.
-    expect(m).toContain("TRSul: 283,50 € (270,00 € para ele mais a taxa CLYON)");
+    // O número à frente do nome é o que ele paga — e desde 29-09-2026 é o
+    // único: o valor do profissional deixou de ir entre parênteses.
+    expect(m).toContain("TRSul: 283,50 €\n");
+    expect(m).not.toContain("270,00 €");
   });
 });
 
@@ -327,16 +328,23 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
    * Foi a mudança do IVA que abriu esse buraco. A mensagem tapa-o antes de ele
    * abrir seja o que for, e o ecrã foi corrigido a par.
    */
-  it("cada linha traz o que ele paga, e o valor do profissional ao lado", () => {
+  it("cada linha traz o que ele paga — um número, já com a taxa", () => {
+    /*
+     * "Vamos apresentar o valor proposto já com a taxa" — 29-09-2026. Até aí
+     * ia o valor do profissional entre parênteses, «(270,00 € para ele mais a
+     * taxa CLYON)»: a conta a ser feita à frente do cliente.
+     */
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
       propostas: [umaProposta("TRSul", 270)],
       link: "https://clyon.pt/pedido/abc",
     });
-    expect(m).toContain("TRSul: 283,50 € (270,00 € para ele mais a taxa CLYON)");
+    expect(m).toContain("TRSul: 283,50 €\n");
+    expect(m).not.toContain("para ele mais a taxa CLYON");
+    expect(m).not.toContain("taxa CLYON");
     // E o imposto, para quem o liquida, numa linha à parte — não no meio dos
     // valores, que é onde ninguém o consegue ler.
-    expect(m).toContain("Com factura acrescem 23 % de IVA.");
+    expect(m).toContain("Valores sem IVA. Com factura acrescem 23 % de IVA.");
   });
 
   it("o total é o mesmo venha a proposta de quem vier", () => {
@@ -468,17 +476,17 @@ describe("a marca de versão do link sobrevive à base de dados", () => {
 describe("o cliente vê o total ANTES de carregar no botão", () => {
   it("o cartão da proposta mostra o que sai da carteira", () => {
     /*
-     * O número grande continua a ser o da negociação — é sobre esse que os
-     * dois estão a discutir. O total vem por baixo, mais pequeno, a dizer o
-     * que ele paga. A lei portuguesa (DL 138/90) manda mostrar ao consumidor o
-     * preço final antes de se comprometer.
+     * A lei portuguesa (DL 138/90) manda mostrar ao consumidor o preço final
+     * antes de se comprometer. Até 29-09-2026 o número grande era o da
+     * negociação e o total vinha por baixo, mais pequeno; desde então o
+     * número grande É o total — um só, já com a taxa, sem IVA.
      */
     const ECRA = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    // A conta vem da função, e não de um número escrito à mão no ecrã. A forma
-    // exacta da chamada não é o que isto guarda — ganhou um argumento com as
-    // taxas daquela negociação e continua a ser a mesma promessa.
-    expect(ECRA).toContain("contaDoCliente(emCima, taxasDaNegociacao(n)).semIva");
-    expect(ECRA).toContain("a pagar");
+    // A conta vem da função, e não de um número escrito à mão no ecrã — com as
+    // taxas daquela negociação.
+    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela)");
+    expect(ECRA).toContain("{euros(precoEmCima)}");
+    expect(ECRA).not.toContain("{euros(emCima)}");
   });
 });
 

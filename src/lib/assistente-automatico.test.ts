@@ -123,12 +123,15 @@ const tudoParado = () => false;
 /* ────────────────────────────────────────────────────────────────────────── */
 
 describe("as novidades que ele tem para contar", () => {
-  it("a proposta nova, com o valor do profissional E o que o cliente paga", () => {
+  it("a proposta nova, com o preço que o cliente paga — e só esse", () => {
     /*
      * O exemplo que o dono deu: «o senhor acaba de receber uma proposta do
      * Fred no valor de 150 s/IVA». Falta-lhe uma coisa, e é a que gera
-     * telefonemas: 150 não é o que ele paga. Com a taxa da CLYON são 193,73 €,
-     * e é esse o número que ele vai ver na factura.
+     * telefonemas: 150 não é o que ele paga. Com a taxa da CLYON são 157,50 €
+     * sem IVA, e 193,73 € com factura.
+     *
+     * Desde 29-09-2026 os 150 € do profissional já não aparecem: «vamos
+     * apresentar o valor proposto já com a taxa». Um número, o dele.
      */
     const n = novidadesDoPedido(
       pedido({ negociacoes: [negociacao({ propostasJson: propostaDoPro(150) })] }),
@@ -136,10 +139,49 @@ describe("as novidades que ele tem para contar", () => {
     );
     const p = n.find((x) => x.especie === "proposta_nova")!;
     expect(p).toBeTruthy();
-    expect(p.texto).toContain("150,00 €");
+    expect(p.texto).toContain("Fred para a sua recolha de móveis: 157,50 €.");
     expect(p.texto).toContain("193,73 €");
+    expect(p.texto).not.toContain("150,00 €");
     expect(p.texto).toContain("Fred");
     expect(p.capacidade).toBe("propostas");
+  });
+
+  it("com as taxas DA NEGOCIAÇÃO, e não as de origem", () => {
+    // 350 € do profissional, 5 % ao cliente — o exemplo do dono, 29-09-2026.
+    const n = novidadesDoPedido(
+      pedido({
+        negociacoes: [
+          negociacao({
+            propostasJson: propostaDoPro(350),
+            taxaCliente: "0.0500",
+            taxaProfissional: "0.0655",
+          }),
+        ],
+      }),
+      TARDE,
+    );
+    expect(n.find((x) => x.especie === "proposta_nova")!.texto).toContain(": 367,50 €.");
+  });
+
+  it("em dinheiro, diz quanto vai para cada lado", () => {
+    // Em dinheiro a CLYON leva as duas taxas ao cliente: 350 + 40,43 = 390,43.
+    const n = novidadesDoPedido(
+      pedido({
+        negociacoes: [
+          negociacao({
+            propostasJson: propostaDoPro(350),
+            taxaCliente: "0.1155",
+            taxaProfissional: "0.0000",
+            formaDePagamento: "dinheiro",
+          }),
+        ],
+      }),
+      TARDE,
+    );
+    const t = n.find((x) => x.especie === "proposta_nova")!.texto;
+    expect(t).toContain(": 390,43 €.");
+    expect(t).toContain("Paga 350,00 € em dinheiro ao profissional");
+    expect(t).toContain("40,43 € de taxa à CLYON por referência");
   });
 
   it("o serviço vai em palavras, e nunca o identificador da base", () => {
@@ -210,8 +252,11 @@ describe("as novidades que ele tem para contar", () => {
       TARDE,
     );
     const a = n.find((x) => x.especie === "pro_aceitou")!;
-    expect(a.texto).toContain("200,00 €");
+    // O preço dele (200 + 5 %), e não o valor do profissional — 29-09-2026.
+    expect(a.texto).toContain("aceitou os 210,00 €");
     expect(a.texto).toContain("258,30 €");
+    // A chave continua a ser feita com o valor do profissional: é a mesma que
+    // o caminho imediato faz, e as duas têm de casar.
     expect(a.chave).toBe(chaveDaAceitacao(77, 200));
   });
 
@@ -1307,9 +1352,13 @@ describe("fala como gente", () => {
 
   it("nenhum valor sai sem vir das contas da casa", () => {
     // Um preço inventado é uma promessa que o profissional não cumpre. Todos
-    // os números destas mensagens vêm de `contaDoCliente` ou da proposta real.
+    // os números destas mensagens vêm da proposta real, passada pela conta
+    // da casa com as taxas DAQUELA negociação (`preco-do-cliente.ts`).
     expect(CEREBRO).toContain('from "./taxas-plataforma"');
-    expect(CEREBRO).toContain("contaDoCliente(valor).semIva");
+    expect(CEREBRO).toContain('from "./preco-do-cliente"');
+    expect(CEREBRO).toContain("comUnidade(precoParaOCliente(valor, taxas))");
+    expect(CEREBRO).toContain("const taxas = taxasDaNegociacao(n);");
+    expect(CEREBRO).not.toContain("para ele mais a taxa CLYON");
   });
 
   it("as chaves são estáveis e distintas entre espécies", () => {

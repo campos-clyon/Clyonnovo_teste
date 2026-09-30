@@ -160,9 +160,16 @@ describe("«sem IVA» está escrito onde há um número", () => {
   });
 
   it("na conta que o cliente paga, cada linha diz o que é", () => {
+    /*
+     * A linha «Serviço — valor acordado, sem IVA» saiu a 29-09-2026, com a
+     * da «Taxa CLYON»: o cliente passou a ver um número só, já com a taxa
+     * (`preco-do-cliente.ts`). O «sem IVA» continua — no número grande de
+     * cada proposta e na frase por baixo do total.
+     */
     const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    expect(PROPOSTAS).toContain("valor acordado, sem IVA");
     expect(PROPOSTAS).toContain("Total a pagar");
+    expect(PROPOSTAS).toContain("Valores sem IVA.");
+    expect(PROPOSTAS).toContain('<div className="text-xs text-tinta-fraca">sem IVA</div>');
     // O total vem de contaDoCliente, e não de uma soma escrita à mão.
     expect(PROPOSTAS).toContain("contaDoCliente(");
     expect(PROPOSTAS).not.toContain("decomporIva");
