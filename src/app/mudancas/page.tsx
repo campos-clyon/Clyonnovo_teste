@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -28,14 +29,14 @@ export const metadata: Metadata = {
   description:
     "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal: embalagem, carga, transporte e montagem, com propostas de profissionais verificados.",
   alternates: { canonical: `${SITE_URL}/mudancas` },
-  openGraph: {
+  openGraph: og({
     title: "Mudanças em Lisboa e Setúbal — Profissional e Sem Stress",
     // Dizia "Preços desde 150€". Nos metadados vale a mesma regra do texto
     // visível: a página deixou de anunciar número, os metadados também.
     description:
       "Mudanças rápidas com equipa profissional. Carga, transporte, descarga e montagem. Orçamento personalizado e grátis em 6 horas!",
     url: `${SITE_URL}/mudancas`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]

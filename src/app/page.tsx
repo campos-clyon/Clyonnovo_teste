@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,12 +40,12 @@ export const metadata: Metadata = {
   description:
     `Recolha de móveis, monos e entulho e esvaziamento de casas em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   alternates: { canonical: "https://clyon.pt" },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
     description:
       "Descreva o que tem para levar e receba propostas de profissionais verificados em Lisboa, Margem Sul e Setúbal. Orçamento gratuito em 6 horas.",
     url: "https://clyon.pt",
-  },
+  }),
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {

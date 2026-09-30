@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -47,14 +48,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha Gratuita de Móveis Usados — Como Funciona",
     description:
       "Guia sobre recolha gratuita de móveis usados em Lisboa, Almada e Setúbal. Câmara, doação ou serviço profissional — quando cada opção faz sentido.",
     url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const areaServedCities = [

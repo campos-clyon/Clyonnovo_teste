@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
@@ -14,12 +15,12 @@ export const metadata: Metadata = {
   description:
     "Recolha de monos na Amadora: móveis velhos, sofás, colchões, eletrodomésticos e volumosos, com carga e transporte. Reboleira, Damaia e Alfragide.",
   alternates: { canonical: `${SITE_URL}/recolha-de-monos-amadora` },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",
     description:
       "Recolha de monos na Amadora com carregamento e transporte. Móveis velhos, sofás, colchões e volumosos.",
     url: `${SITE_URL}/recolha-de-monos-amadora`,
-  },
+  }),
 };
 
 const faqs = [

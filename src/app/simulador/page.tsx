@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import SimulatorPage from "./SimulatorPage";
 
 export const metadata: Metadata = {
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/simulador",
   },
-  openGraph: {
+  openGraph: og({
     title: "Simulador de Preços — Estimativa Instantânea CLYON",
     description:
       "Estimativa de preço instantânea para recolha, esvaziamento e mudanças em Lisboa e Setúbal.",
     url: "https://clyon.pt/simulador",
-  },
+  }),
 };
 
 export default function SimuladorPage() {

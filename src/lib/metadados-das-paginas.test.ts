@@ -7,6 +7,7 @@ import sitemap from "@/app/sitemap";
 import { artigosPublicados } from "./artigos-do-blog";
 import { LIMITE_DA_DESCRICAO, descricaoQueCabe, tamanho } from "./descricoes-seo";
 import { getAllCityServiceSlugs } from "./seo-data";
+import { IMAGEM_DE_PARTILHA, og } from "./open-graph";
 
 /**
  * OS METADADOS DE TODAS AS PÁGINAS PÚBLICAS, LIDOS COMO O NEXT OS LÊ.
@@ -277,5 +278,61 @@ describe("descricaoQueCabe", () => {
 
   it("conta caracteres como o Google, e não bytes", () => {
     expect(tamanho("é€")).toBe(2);
+  });
+});
+
+describe("a partilha (Open Graph e Twitter)", () => {
+  it("cada página com openGraph próprio leva a língua, o nome e a imagem", () => {
+    /*
+     * O Next junta os metadados por campo: um `openGraph` na página substitui
+     * o do layout INTEIRO. As páginas davam título, descrição e endereço, e
+     * perdiam o pt_PT, o siteName e a imagem sem ninguém dar por isso.
+     */
+    const maus: string[] = [];
+    for (const { rota, meta } of PAGINAS) {
+      const o = meta.openGraph as Record<string, unknown> | undefined;
+      if (!o) continue;
+      const imagens = o.images;
+      if (o.locale !== "pt_PT") maus.push(`${rota}: locale ${String(o.locale)}`);
+      if (o.siteName !== "CLYON") maus.push(`${rota}: siteName ${String(o.siteName)}`);
+      if (!imagens || (Array.isArray(imagens) && imagens.length === 0)) maus.push(`${rota}: sem imagem`);
+      if (typeof o.url !== "string" || new URL(o.url, "https://clyon.pt").pathname !== rota) {
+        maus.push(`${rota}: og:url ${String(o.url)}`);
+      }
+    }
+    expect(maus).toEqual([]);
+    // E são praticamente todas: o helper não é opcional.
+    expect(PAGINAS.filter((p) => p.meta.openGraph).length).toBeGreaterThan(140);
+  });
+
+  it("nenhuma página define um twitter próprio — o do layout chega", () => {
+    // Um `twitter` na página substitui o do layout e perde a imagem; sem ele,
+    // o Next preenche o título e a descrição com os do Open Graph.
+    expect(PAGINAS.filter((p) => p.meta.twitter).map((p) => p.rota)).toEqual([]);
+  });
+
+  it("o layout não dá a ninguém o título, a descrição ou o endereço da homepage", () => {
+    const layout = readFileSync(join(APP, "layout.tsx"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    const bloco = (nome: string) => {
+      const i = layout.indexOf(`${nome}: {`);
+      expect(i, nome).toBeGreaterThan(-1);
+      return layout.slice(i, layout.indexOf("},", i));
+    };
+    for (const nome of ["openGraph", "twitter"]) {
+      const b = bloco(nome);
+      expect(b, nome).not.toMatch(/\btitle:|\bdescription:|\burl: SITE_URL/);
+      expect(b, nome).toContain("IMAGEM_DE_PARTILHA");
+    }
+  });
+
+  it("og() completa o bloco com o que o site todo partilha", () => {
+    const o = og({ title: "T", description: "D", url: "/x" }) as Record<string, unknown>;
+    expect(o).toMatchObject({ title: "T", description: "D", url: "/x", locale: "pt_PT", siteName: "CLYON", type: "website" });
+    expect(o.images).toEqual([IMAGEM_DE_PARTILHA]);
+    expect(IMAGEM_DE_PARTILHA).toMatchObject({ url: "/og-image.jpg", width: 1200, height: 630 });
+    const artigo = og({ title: "A", url: "/blog/a", type: "article", publishedTime: "2026-03-16" }) as Record<string, unknown>;
+    expect(artigo).toMatchObject({ type: "article", publishedTime: "2026-03-16" });
   });
 });

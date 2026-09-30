@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -26,12 +27,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/precos`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Preços de Recolha de Monos, Entulho e Móveis",
     description:
       "Faixas de preço de referência, fatores que influenciam o valor e a melhor forma de pedir orçamento com precisão.",
     url: `${SITE_URL}/precos`,
-  },
+  }),
 };
 
 /*

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -18,12 +19,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Como Funciona — Preço Fixo, Conferido por Uma Pessoa",
     description:
       "O modelo único da CLYON: velocidade da IA, a confiança de uma revisão humana, execução por um profissional verificado.",
     url: `${SITE_URL}/como-funciona`,
-  },
+  }),
 };
 
 const stages = [

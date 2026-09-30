@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { MapPin, MessageSquare, Phone, ShieldCheck, Truck } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -77,11 +78,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: `${SITE_URL}/regioes/${regionData.slug}`,
     },
     keywords: regionData.keywords,
-    openGraph: {
+    openGraph: og({
       title: regionData.metaTitle,
       description: regionData.metaDescription,
       url: `${SITE_URL}/regioes/${regionData.slug}`,
-    },
+    }),
   };
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock3 } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -37,13 +38,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: post.description,
     keywords: [...post.keywords, BUSINESS_NAME, "blog recolha", "blog entulho", "blog monos"],
     alternates: { canonical },
-    openGraph: {
+    openGraph: og({
       title: post.title,
       description: post.description,
       url: canonical,
       type: "article",
-      locale: "pt_PT",
-    },
+      // As mesmas datas do schema do artigo, para quem o partilha.
+      publishedTime: post.publishDate,
+      modifiedTime: post.updatedDate ?? post.publishDate,
+    }),
   };
 }
 

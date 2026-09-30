@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -26,15 +27,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/recolha-de-moveis-urgente",
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Móveis Urgente em Lisboa — Hoje",
     description:
       "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
     url: "https://clyon.pt/recolha-de-moveis-urgente",
-    siteName: "CLYON",
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const faqs = [

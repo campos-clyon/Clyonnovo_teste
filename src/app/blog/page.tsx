@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, Clock3, Search } from "lucide-react";
 
@@ -24,12 +25,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/blog`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Blog — Guias de Recolha, Esvaziamento e Doações em Lisboa",
     description:
       "Guias práticos sobre recolha de móveis, esvaziamento de casas, doação de recheio e mudanças em Lisboa, Margem Sul e Setúbal.",
     url: `${SITE_URL}/blog`,
-  },
+  }),
 };
 
 export const revalidate = 86400;

@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -58,12 +59,12 @@ export const metadata: Metadata = {
     "remoção de volumosos",
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
     description:
       `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 6h.`,
     url: `${SITE_URL}/recolha-de-monos`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]

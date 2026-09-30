@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 
 import FAQClient from "./FAQClient";
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
   description:
     "Perguntas frequentes sobre recolha de móveis e esvaziamento de casas em Lisboa, Margem Sul e Setúbal: quanto custa, prazos, zonas e como funciona.",
   alternates: { canonical: "https://clyon.pt/faq" },
-  openGraph: {
+  openGraph: og({
     title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
     description:
       "Tudo sobre recolha de móveis, esvaziamento de casas e apartamentos em Lisboa, Margem Sul e Setúbal. Preços, prazos e funcionamento.",
     url: "https://clyon.pt/faq",
-  },
+  }),
 };
 
 const faqCategories = [

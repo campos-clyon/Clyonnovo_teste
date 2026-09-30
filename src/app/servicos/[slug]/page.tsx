@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CheckCircle2, Phone } from "lucide-react";
@@ -137,7 +138,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: titulo,
     description: descricao,
     alternates: { canonical: `${SITE_URL}/servicos/${slug}` },
-    openGraph: { title: titulo, description: descricao, url: `${SITE_URL}/servicos/${slug}` },
+    openGraph: og({ title: titulo, description: descricao, url: `${SITE_URL}/servicos/${slug}` }),
   };
 }
 

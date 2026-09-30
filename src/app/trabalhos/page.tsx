@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
@@ -26,12 +27,12 @@ export const metadata: Metadata = {
     "casos reais recolha",
   ],
   alternates: { canonical: `${SITE_URL}/trabalhos` },
-  openGraph: {
+  openGraph: og({
     title: "Trabalhos Realizados — Recolha e Esvaziamento",
     description:
       `Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★.`,
     url: `${SITE_URL}/trabalhos`,
-  },
+  }),
 };
 
 const testimonials = [

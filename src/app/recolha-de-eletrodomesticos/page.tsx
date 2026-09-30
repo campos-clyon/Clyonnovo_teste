@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -53,14 +54,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/recolha-de-eletrodomesticos`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Eletrodomésticos Usados em Lisboa, Margem Sul e Setúbal",
     description:
       "Recolha de eletrodomésticos usados com carregamento porta a porta e destino licenciado.",
     url: `${SITE_URL}/recolha-de-eletrodomesticos`,
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const areaServedCities = [

@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
@@ -21,12 +22,12 @@ export const metadata: Metadata = {
   description:
     "Esvaziamento de casas e apartamentos na Amadora: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
-  openGraph: {
+  openGraph: og({
     title: "Esvaziamento de Casas na Amadora — Apartamentos",
     description:
       "Esvaziamento completo na Amadora com remoção de móveis e limpeza. Reboleira, Damaia, Alfragide, Venteira.",
     url: `${SITE_URL}/esvaziamento-de-casas-amadora`,
-  },
+  }),
 };
 
 const faqs = [

@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -67,12 +68,12 @@ export const metadata: Metadata = {
     "recolha de resíduos de construção",
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-entulho` },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
     description:
       `Recolha de entulho de obras e remodelações em Lisboa e Setúbal, a saco e carregado à mão. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-entulho`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]

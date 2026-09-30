@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import LandingClient from "./LandingClient";
@@ -11,14 +12,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
-  openGraph: {
+  openGraph: og({
     title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
     description:
       "Orçamento rápido por WhatsApp para recolha de entulho, móveis e monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt/orcamento-recolha-lisboa",
-    type: "website",
-    locale: "pt_PT",
-  },
+  }),
 };
 
 /*

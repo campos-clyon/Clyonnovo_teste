@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
@@ -46,13 +47,13 @@ export const metadata: Metadata = {
     "quem esvazia casas",
   ],
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
-  openGraph: {
+  openGraph: og({
     // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
     title: "Esvaziamento de Casas e Apartamentos — Heranças",
     description:
       `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 6h.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
-  },
+  }),
 };
 
 const faqs = [

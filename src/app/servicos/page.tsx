@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -28,12 +29,12 @@ export const metadata: Metadata = {
   description:
     `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 6h.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
-  openGraph: {
+  openGraph: og({
     title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
     description:
       `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €.`,
     url: `${SITE_URL}/servicos`,
-  },
+  }),
 };
 
 const WA_HREF = `https://wa.me/351931632622?text=${encodeURIComponent(

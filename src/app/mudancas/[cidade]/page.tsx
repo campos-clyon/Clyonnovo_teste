@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -68,14 +69,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: `${SITE_URL}/mudancas/${c.slug}` },
-    openGraph: {
+    openGraph: og({
       title,
       description,
       url: `${SITE_URL}/mudancas/${c.slug}`,
-      type: "website",
-      locale: "pt_PT",
-    },
-    twitter: { card: "summary_large_image", title, description },
+    }),
+    // Sem `twitter` próprio (29-09-2026): o do layout já tem o cartão e a
+    // imagem, e o Next preenche o título e a descrição com os do Open Graph.
+    // Definido aqui, substituía o do layout e perdia a imagem.
   };
 }
 

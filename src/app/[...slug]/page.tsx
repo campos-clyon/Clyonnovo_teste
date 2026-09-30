@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -262,13 +263,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical,
       languages: { "pt-PT": canonical },
     },
-    openGraph: {
+    openGraph: og({
       title,
       description,
       url: canonical,
-      locale: "pt_PT",
-      type: "article",
-    },
+    }),
   };
 }
 

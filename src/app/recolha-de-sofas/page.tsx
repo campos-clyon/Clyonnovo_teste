@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -53,14 +54,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/recolha-de-sofas`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Sofás em Lisboa, Margem Sul e Setúbal",
     description:
       "Recolha de sofás usados com carregamento porta a porta, transporte e destino licenciado.",
     url: `${SITE_URL}/recolha-de-sofas`,
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const areaServedCities = [

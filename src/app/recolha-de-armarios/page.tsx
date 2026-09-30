@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -53,14 +54,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/recolha-de-armarios`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Armários Usados em Lisboa, Margem Sul e Setúbal",
     description:
       "Recolha de armários usados com desmontagem, carregamento porta a porta e destino licenciado.",
     url: `${SITE_URL}/recolha-de-armarios`,
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const areaServedCities = [

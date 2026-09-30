@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -26,12 +27,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/sobre-nos`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Sobre a CLYON — Recolha, Limpeza e Mudanças",
     description:
       "Uma equipa focada em resposta rápida, orçamento claro e destino licenciado para o que sai de casa.",
     url: `${SITE_URL}/sobre-nos`,
-  },
+  }),
 };
 
 const values = [

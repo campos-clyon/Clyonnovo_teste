@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { Star, Quote, MessageCircle } from "lucide-react";
 
@@ -16,12 +17,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
-  openGraph: {
+  openGraph: og({
     title: "Avaliações Reais de Clientes — CLYON",
     description:
-      "5,0 ★ em 155 avaliações verificadas no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.",
+      `${AVALIACOES.media} ★ em ${AVALIACOES_TOTAL} avaliações verificadas no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.`,
     url: "https://clyon.pt/avaliacoes",
-  },
+  }),
 };
 
 export const revalidate = 86400;

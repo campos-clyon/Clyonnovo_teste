@@ -15,6 +15,7 @@ import {
   SITE_URL,
 } from "@/lib/seo-data";
 import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
+import { IMAGEM_DE_PARTILHA } from "@/lib/open-graph";
 
 /*
  * A meta description global deixou de levar o preço da recolha de móveis
@@ -94,29 +95,30 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   manifest: "/site.webmanifest",
+  /*
+   * SÓ O QUE É IGUAL EM TODAS AS PÁGINAS — 29-09-2026.
+   *
+   * Tinha título, descrição e `url: SITE_URL`. Uma página sem `openGraph`
+   * próprio herdava-os: /termos, /regioes ou /quero-ser-parceiro saíam
+   * partilhadas com o título da homepage e o endereço da homepage. Sem
+   * eles aqui, o Next preenche o título e a descrição do Open Graph com os
+   * da própria página. As páginas que definem o seu usam `og()`
+   * (open-graph.ts), que junta o que está aqui — o Next não junta sozinho.
+   */
   openGraph: {
     type: "website",
     locale: "pt_PT",
-    url: SITE_URL,
     siteName: BUSINESS_NAME,
-    title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
-    description:
-      "Serviço rápido para recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "CLYON - Recolha de Entulho, Móveis e Monos",
-      },
-    ],
+    images: [IMAGEM_DE_PARTILHA],
   },
+  /*
+   * O mesmo para o Twitter/X: sem título nem descrição, o Next usa os do
+   * Open Graph de cada página. Com eles, TODAS as páginas partilhavam o
+   * título genérico do layout — até as que tinham o seu.
+   */
   twitter: {
     card: "summary_large_image",
-    title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
-    description:
-      "Orçamento rápido para recolha de entulho, móveis, monos, mudanças e limpeza pós-obra.",
-    images: ["/og-image.jpg"],
+    images: [IMAGEM_DE_PARTILHA.url],
   },
   other: {
     "geo.region": "PT-11",

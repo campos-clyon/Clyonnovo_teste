@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { MapPin, Clock3, Camera, Ruler, DoorOpen, FileText } from "lucide-react";
 import ContactosClient from "./ContactosClient";
@@ -65,13 +66,12 @@ export const metadata: Metadata = {
     "recolha de monos Almada contacto",
   ],
   alternates: { canonical: `${SITE_URL}/contactos` },
-  openGraph: {
+  openGraph: og({
     title: "Contactos CLYON — Orçamento grátis em 6 horas",
     description:
       "Telefone, WhatsApp, email ou formulário. Pedir orçamento não custa nada e não obriga a nada.",
     url: `${SITE_URL}/contactos`,
-    type: "website",
-  },
+  }),
 };
 
 export const revalidate = 86400;

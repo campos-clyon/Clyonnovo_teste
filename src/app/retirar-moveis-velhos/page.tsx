@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -44,15 +45,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/retirar-moveis-velhos",
   },
-  openGraph: {
+  openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
       `Empresa profissional para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem e carregamento incluídos. Preços ${PRECO_MOVEIS}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
-    siteName: "CLYON",
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const faqs = [

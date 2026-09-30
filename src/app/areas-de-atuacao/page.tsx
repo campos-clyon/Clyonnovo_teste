@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 
@@ -18,12 +19,12 @@ export const metadata: Metadata = {
   description:
     "Mais de 24 localidades em Lisboa, Margem Sul e Setúbal: Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro e mais. Recolha de móveis e entulho.",
   alternates: { canonical: `${SITE_URL}/areas-de-atuacao` },
-  openGraph: {
+  openGraph: og({
     title: "Áreas de Atuação da CLYON | Cobertura Completa",
     description:
       "Cobertura em Lisboa, Margem Sul e Setúbal. Recolha de móveis, entulho, esvaziamentos e limpezas.",
     url: `${SITE_URL}/areas-de-atuacao`,
-  },
+  }),
 };
 
 /*
