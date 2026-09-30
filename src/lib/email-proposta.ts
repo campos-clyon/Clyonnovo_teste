@@ -6,6 +6,8 @@ import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
+import type { DestinoDoValor } from "./carteira";
+import { BUSINESS_EMAIL } from "./seo-data";
 
 
 /**
@@ -62,6 +64,8 @@ async function enviar(para: string, assunto: string, html: string): Promise<bool
     const resend = new Resend(chave);
     const { error } = await resend.emails.send({
       from: "CLYON <noreply@clyon.pt>",
+      // Quem responde a um aviso fala com alguém, e não com o `noreply`.
+      replyTo: BUSINESS_EMAIL,
       to: para,
       subject: assunto,
       html: legivelNoResumo(html),
@@ -183,13 +187,65 @@ export async function avisarProfissionalDaProposta(p: {
 }
 
 /**
- * O trabalho foi confirmado — o dinheiro dele ficou disponível.
+ * O QUE O EMAIL DO TRABALHO CONFIRMADO DIZ, conforme o dinheiro — 29-09-2026.
  *
- * É o email mais fácil de justificar do sistema inteiro: é a notícia de que
- * ele recebeu. Sem isto, a confirmação acontecia em silêncio — o painel só
- * actualiza quando ele lá volta, e voltava sem saber que tinha dinheiro à
- * espera. Foi exactamente o que aconteceu no primeiro trabalho fechado pela
- * plataforma: confirmado no backoffice, e o profissional sem nenhum sinal.
+ * Dizia sempre «ficaram disponíveis na sua carteira — pode pedir a
+ * transferência quando quiser». Em três casos, só um é esse:
+ *
+ *   · DISPONÍVEL — pago pela plataforma e confirmado: aí sim, está na
+ *     carteira e pode pedir o levantamento;
+ *   · POR COBRAR — confirmado, mas o cliente ainda não pagou: prometer-lhe
+ *     uma transferência era a CLYON a oferecer dinheiro que não recebeu;
+ *   · EM MÃO — pago em dinheiro, no local: não há nada a transferir, e
+ *     mandá-lo à carteira era mandá-lo procurar o que já tem no bolso.
+ *
+ * Quem decide qual dos três é `destinoDoValorConcluido`, em `carteira.ts` —
+ * a mesma regra da carteira, para o email nunca dizer outra coisa do que o
+ * painel. Função pura, para os três casos se poderem provar sem mandar nada.
+ */
+export function textoDoTrabalhoConfirmado(p: {
+  pedidoId: number;
+  /** O que lhe fica deste trabalho — já com as taxas DA negociação. */
+  liquido: number;
+  destino: DestinoDoValor;
+}): { assunto: string; corpo: string; botao: string } {
+  const valor = `<strong>${euros(p.liquido)}</strong>`;
+  if (p.destino === "em_mao") {
+    return {
+      assunto: `Trabalho #${p.pedidoId} confirmado — pago em dinheiro, no local`,
+      corpo:
+        `Este trabalho foi pago em dinheiro no local: os ${valor} já estão consigo, ` +
+        "e não há nada a transferir.",
+      botao: "Abrir o painel",
+    };
+  }
+  if (p.destino === "por_cobrar") {
+    return {
+      assunto: `Trabalho #${p.pedidoId} confirmado — à espera do pagamento do cliente`,
+      corpo:
+        `Os ${valor} — o acordado, já com a taxa CLYON descontada — passam para a sua ` +
+        "carteira assim que o pagamento do cliente entrar.",
+      botao: "Abrir a carteira",
+    };
+  }
+  return {
+    assunto: `Trabalho #${p.pedidoId} confirmado — ${euros(p.liquido)} na sua carteira`,
+    corpo:
+      `${valor} ficaram disponíveis na sua carteira — o acordado, já com a taxa CLYON ` +
+      "descontada. Pode pedir a transferência quando quiser: o pedido de levantamento é " +
+      "tratado em até 24 horas.",
+    botao: "Abrir a carteira",
+  };
+}
+
+/**
+ * O trabalho foi confirmado — e o que isso quer dizer ao dinheiro dele.
+ *
+ * É o email mais fácil de justificar do sistema inteiro: é a notícia do fim
+ * do trabalho. Sem isto, a confirmação acontecia em silêncio — o painel só
+ * actualiza quando ele lá volta, e voltava sem saber o que tinha mudado. Foi
+ * exactamente o que aconteceu no primeiro trabalho fechado pela plataforma:
+ * confirmado no backoffice, e o profissional sem nenhum sinal.
  *
  * Sem token e sem link mágico: a carteira exige entrar com a palavra-passe,
  * e um email sobre dinheiro não deve carregar credenciais.
@@ -206,26 +262,31 @@ export async function avisarTrabalhoConfirmado(p: {
    * dizia-lhe que a carteira tinha 94 % do que ele recebeu em mão.
    */
   taxas: Taxas;
+  /**
+   * Onde fica o valor — obrigatório de propósito. Ver
+   * `textoDoTrabalhoConfirmado`: esquecê-lo era voltar a prometer a todos uma
+   * transferência.
+   */
+  destino: DestinoDoValor;
   baseUrl?: string;
 }): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const url = comChave(`${base}/profissionais/painel`);
   const nome = p.nomeDoProfissional?.trim().split(/\s+/)[0];
   const liquido = quantoOProfissionalRecebe(p.valorAcordado, p.taxas);
+  const t = textoDoTrabalhoConfirmado({ pedidoId: p.pedidoId, liquido, destino: p.destino });
 
   return enviar(
     p.para,
-    `Trabalho #${p.pedidoId} confirmado — ${euros(liquido)} na sua carteira`,
+    t.assunto,
     moldura(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
       <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:#0B1929;">
         ${nome ? `${e(nome)}, o` : "O"} trabalho foi confirmado
       </h1>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
-        <strong>${euros(liquido)}</strong> ficaram disponíveis na sua carteira —
-        o acordado, já com a taxa CLYON descontada. Pode pedir a transferência
-        quando quiser.
+        ${t.corpo}
       </p>
-      ${botao(url, "Abrir a carteira")}`),
+      ${botao(url, t.botao)}`),
   );
 }

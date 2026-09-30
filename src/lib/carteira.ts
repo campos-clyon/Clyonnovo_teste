@@ -183,6 +183,35 @@ export function oClientePagou(
 }
 
 /**
+ * PARA ONDE VAI O VALOR DE UM TRABALHO QUE ACABOU DE SER DADO POR CONCLUÍDO.
+ *
+ * Existe para o email do «trabalho confirmado» — 29-09-2026. Dizia sempre
+ * «ficaram disponíveis na sua carteira, pode pedir a transferência», e há
+ * três respostas diferentes, que são exactamente as três que `carteiraDe` já
+ * dá, pela mesma ordem:
+ *
+ *   · EM MÃO — foi pago em dinheiro, no local: está com ele e não se
+ *     transfere nada (`foiPagoEmMao`, decidido antes de tudo);
+ *   · POR COBRAR — o cliente ainda não pagou: o valor não existe do lado de
+ *     cá, e só passa para a carteira quando o pagamento entrar
+ *     (`oClientePagou`);
+ *   · DISPONÍVEL — pago e dado por concluído.
+ *
+ * Não é uma regra nova: são os mesmos dois predicados, na mesma ordem. Se a
+ * carteira mudar de ideias sobre um deles, o email muda com ela.
+ */
+export type DestinoDoValor = "disponivel" | "por_cobrar" | "em_mao";
+
+export function destinoDoValorConcluido(
+  t: TrabalhoNaCarteira,
+  opcoes: ComoLerACarteira = {},
+): DestinoDoValor {
+  if (foiPagoEmMao(t)) return "em_mao";
+  if (!oClientePagou(t, opcoes)) return "por_cobrar";
+  return "disponivel";
+}
+
+/**
  * Quanto é que este profissional tem em trabalho feito e por pagar.
  *
  * Existe como função própria — e exportada — porque é usada de dois sítios: da
