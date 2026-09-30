@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Pencil,
   RefreshCw,
+  RotateCcw,
   Search,
   Send,
   Trash2,
@@ -719,6 +720,8 @@ export default function AdminNegociacoesPanel({
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState("");
+  /** O que correu bem e merece ser dito — hoje, só o pedido que se reabriu. */
+  const [aviso, setAviso] = useState("");
   /*
    * A FOTOGRAFIA ABRE POR CIMA, e não noutro separador.
    *
@@ -1419,6 +1422,47 @@ export default function AdminNegociacoesPanel({
         setLinksEmClaro((l) => ({ ...l, [`c${pedidoId}`]: dados.link.split("/pedido/")[1] }));
       }
       await carregar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  /**
+   * DESFAZER O CANCELAMENTO — 30-09-2026.
+   *
+   * «Esse pedido está nos cancelados por engano, como restauro ele?» Não
+   * havia forma: cancelar era a única acção desta mesa sem volta. As
+   * negociações voltam ao estado em que estavam, com as propostas, e ninguém
+   * é avisado — como no cancelar. A regra está em `reabrirPedidoCancelado`.
+   */
+  async function desfazerCancelamento(p: Pedido) {
+    if (!token) return;
+    if (
+      !window.confirm(
+        `Reabrir o pedido #${p.id}?\n\n` +
+          "As negociações que o cancelamento encerrou voltam ao estado em que estavam, " +
+          "com as propostas. Ninguém é avisado.",
+      )
+    )
+      return;
+    setOcupado(`reabrir${p.id}`);
+    setErro("");
+    setAviso("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/desfazer-cancelamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: p.id }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível reabrir o pedido.");
+        return;
+      }
+      setAviso(`Pedido #${p.id} reaberto. ${dados.resumo ?? ""}`.trim());
+      await carregar(true);
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -2702,6 +2746,26 @@ export default function AdminNegociacoesPanel({
             Discreto de propósito: não é um passo do trabalho, é a saída. E não
             aparece em concluídos nem em já-cancelados, onde não faz nada.
           */}
+          {/*
+            REABRIR — o outro lado do cancelar, no mesmo sítio. Só nos
+            cancelados, e com o mesmo tom discreto: é a correcção de um engano,
+            não um passo do trabalho.
+          */}
+          {cancelado && (
+            <button
+              onClick={() => void desfazerCancelamento(p)}
+              disabled={ocupado === `reabrir${p.id}`}
+              title="Foi cancelado por engano — as negociações voltam ao estado em que estavam, com as propostas"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-50"
+            >
+              {ocupado === `reabrir${p.id}` ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Reabrir pedido
+            </button>
+          )}
           {!concluido && !cancelado && (
             <button
               onClick={() => setACancelar(p)}
@@ -3344,6 +3408,18 @@ export default function AdminNegociacoesPanel({
         <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {erro}
         </p>
+      )}
+
+      {aviso && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <p>{aviso}</p>
+          <button
+            onClick={() => setAviso("")}
+            className="shrink-0 text-xs text-emerald-300/80 hover:text-emerald-100"
+          >
+            Fechar
+          </button>
+        </div>
       )}
 
       {/* Os que a base se recusou a apagar, com o motivo de cada um.
