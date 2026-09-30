@@ -80,10 +80,19 @@ const indexavel = (m: Metadata) => {
 
 let PAGINAS: Entrada[] = [];
 
+/*
+ * Importar quarenta páginas custa: sozinho, este ficheiro corre em 2 a 4 s;
+ * no meio da suite inteira, com os outros ficheiros a transformar código ao
+ * mesmo tempo, chegou aos 105 s. Os imports vão em paralelo e o prazo do
+ * `beforeAll` é largo de propósito — um teste que chumba por lentidão da
+ * máquina não diz nada sobre os metadados.
+ */
 beforeAll(async () => {
   const entradas: Entrada[] = [];
-  for (const ficheiro of paginasPublicas()) {
-    const mod = await import(/* @vite-ignore */ join(APP, ficheiro));
+  const ficheiros = paginasPublicas();
+  const modulos = await Promise.all(ficheiros.map((f) => import(/* @vite-ignore */ join(APP, f))));
+  for (const [i, ficheiro] of ficheiros.entries()) {
+    const mod = modulos[i];
     const temMeta = typeof mod.generateMetadata === "function" || mod.metadata;
     if (!temMeta) continue; // páginas que só redireccionam
     const dinamica = ficheiro.includes("[");
@@ -101,7 +110,7 @@ beforeAll(async () => {
     }
   }
   PAGINAS = entradas;
-}, 120_000);
+}, 600_000);
 
 describe("os títulos", () => {
   it("encontra as páginas todas — as fixas e as geradas", () => {
