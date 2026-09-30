@@ -26,7 +26,9 @@ describe("cancelar na base", () => {
     const i = DB.indexOf("export async function cancelarPedido(");
     expect(i).toBeGreaterThan(-1);
     const corpo = DB.slice(i, DB.indexOf("\nexport ", i + 10));
-    expect(corpo).toContain("matarNegociacoesDoPedido(pedidoId)");
+    // Sem o parêntese de fecho: desde 30-09-2026 a chamada pede também que se
+    // guarde o estado de cada uma, para o cancelamento poder ser desfeito.
+    expect(corpo).toContain("matarNegociacoesDoPedido(pedidoId");
     expect(corpo).toContain("SET status = 'cancelado'");
     // O pedido fica. Cancelar não é apagar: daqui a um mês a pergunta "o que
     // aconteceu ao #225?" tem de ter resposta.
