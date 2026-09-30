@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BUSINESS_EMAIL, BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
-import { linhaDeIdentificacao } from "@/lib/identificacao-legal";
+import { ENTIDADE_QUE_FACTURA, linhaDeIdentificacao } from "@/lib/identificacao-legal";
+import {
+  DIAS_DE_RETENCAO_DOS_PEDIDOS,
+  DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
+  DIAS_PARA_OS_ABANDONADOS,
+} from "@/lib/retencao";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -32,7 +37,7 @@ export default function PrivacidadePage() {
             direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD).
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 21 de agosto de 2026.
+            Última atualização: 30 de setembro de 2026.
           </p>
         </div>
       </section>
@@ -78,12 +83,20 @@ export default function PrivacidadePage() {
                 <strong>{linhaDeIdentificacao()}</strong>.
                 <br />
                 <br />
+                {/*
+                  Dizia "quem executa o trabalho e emite a fatura é o
+                  profissional". A metade da factura deixou de ser verdade a
+                  22-09-2026, e faltava dizer que os pagamentos pela plataforma
+                  passam pela CLYON (30-09-2026).
+                */}
                 A CLYON opera uma plataforma que <strong>liga clientes a
                 profissionais independentes</strong> — recolha de móveis,
                 esvaziamento de casas e apartamentos, recolha de entulho,
                 recolha de monos e mudanças em Lisboa, Margem Sul e Setúbal.
-                Quem executa o trabalho e emite a fatura é o profissional que o
-                cliente escolher, e não a CLYON.
+                Quem executa o trabalho é o profissional que o cliente
+                escolher; os pagamentos feitos pela plataforma são recebidos
+                pela CLYON; e, quando o cliente pede factura, quem a emite é a{" "}
+                {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa parceira.
                 <br />
                 <br />
                 Isto tem uma consequência que interessa: quando contrata um
@@ -157,7 +170,15 @@ export default function PrivacidadePage() {
                     Passar ao profissional que contratar a morada e o contacto, para
                     ele poder lá chegar e falar consigo.
                   </li>
-                  <li>Faturar a taxa de plataforma e cumprir as obrigações contabilísticas dela.</li>
+                  <li>
+                    Gerar as referências de pagamento (MB WAY ou Multibanco), confirmar os
+                    pagamentos feitos pela plataforma e entregar ao profissional o valor que
+                    lhe cabe.
+                  </li>
+                  <li>
+                    Emitir, através da {ENTIDADE_QUE_FACTURA.nomeCurto}, a factura que o
+                    cliente pedir, e cumprir as obrigações contabilísticas.
+                  </li>
                   <li>Guardar as avaliações, sem identificar quem as escreveu.</li>
                   <li>Melhorar o serviço através da análise agregada da utilização do site.</li>
                   <li>Responder a reclamações e ajudar a resolver desacordos.</li>
@@ -239,6 +260,35 @@ export default function PrivacidadePage() {
                     <strong>Mapas e moradas</strong> — Google Maps e OpenStreetMap/Nominatim, para
                     sugerir a morada e calcular distâncias.
                   </li>
+                  {/*
+                    OS TRÊS QUE FALTAVAM — 30-09-2026, conferidos no código.
+
+                    · euPago: o corpo do MB WAY leva o valor e o telemóvel, e
+                      o do Multibanco só o valor (eupago.ts, corpoDoMbway e
+                      corpoDoMultibanco); nenhum leva nome nem email.
+                    · a parceira que factura: recebe o que vai na factura —
+                      os dados de facturação da conta (Faturacao.tsx).
+                    · Google (Gemini): a análise do pedido manda as
+                      fotografias, a descrição, a morada e os acessos
+                      (api/simulator/analyze), e a compreensão do WhatsApp
+                      manda o texto das mensagens (whatsapp-compreensao.ts).
+                  */}
+                  <li>
+                    <strong>Pagamentos</strong> — euPago, para gerar as referências MB WAY e
+                    Multibanco e confirmar os pagamentos. Recebe o valor a pagar e, no MB WAY, o
+                    número de telemóvel para onde vai o pedido de pagamento.
+                  </li>
+                  <li>
+                    <strong>Facturação</strong> — {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa
+                    parceira que emite a factura quando o cliente a pede. Recebe os dados de
+                    facturação — nome, NIF e morada — e os valores do trabalho.
+                  </li>
+                  <li>
+                    <strong>Análise dos pedidos</strong> — Google (Gemini), para ler as fotografias
+                    e a descrição de um pedido e para perceber as mensagens escritas no WhatsApp.
+                    Recebe as fotografias e os dados do pedido — descrição, morada, andar e
+                    acessos — e o texto dessas mensagens.
+                  </li>
                   <li>
                     <strong>Medição e publicidade</strong> — Google Analytics, Google Ads e Vercel
                     Analytics. <strong>Só carregam se aceitar</strong> os cookies de analítica ou de
@@ -260,14 +310,47 @@ export default function PrivacidadePage() {
             title="6. Prazo de conservação"
             body={
               <>
+                {/*
+                  OS PRAZOS SÃO OS DO CÓDIGO — 30-09-2026.
+
+                  Dizia "12 meses" para os pedidos não convertidos, e nenhum
+                  código fazia isso. O que corre todos os dias é a purga de
+                  retencao.ts e db.ts (purgarPedidosTerminados): 60 dias para
+                  os terminados, 90 para os abandonados, nunca um pedido com
+                  dinheiro combinado, feito ou pago, nem um com data marcada
+                  ainda por chegar. O que ela apaga deixa uma cópia em
+                  `arquivoDePedidos`, e isso também se diz — sem prazo
+                  inventado, porque o código não lhe dá nenhum.
+                */}
                 Os dados são conservados apenas pelo tempo necessário:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>
-                    <strong>Pedidos de orçamento não convertidos:</strong> 12 meses.
+                    <strong>Pedidos que não chegaram a trabalho combinado:</strong> apagados{" "}
+                    {DIAS_DE_RETENCAO_DOS_PEDIDOS} dias depois de terminados (concluídos,
+                    cancelados ou arquivados), ou {DIAS_PARA_OS_ABANDONADOS} dias depois da última
+                    actividade quando ficaram a meio — com a morada, a descrição e as fotografias.
+                    Um pedido com data marcada não é apagado antes dessa data.
                   </li>
                   <li>
-                    <strong>Clientes com serviço executado:</strong> até 10 anos (obrigação fiscal
-                    portuguesa).
+                    <strong>Pedidos com trabalho combinado, feito ou pago:</strong> não são apagados
+                    automaticamente, porque guardam o registo do dinheiro — valores, taxa e
+                    pagamentos —, que a lei fiscal obriga a conservar durante 10 anos.
+                  </li>
+                  <li>
+                    <strong>Cópia dos pedidos apagados:</strong> quando um pedido é apagado, fica uma
+                    cópia num arquivo interno, só acessível à administração da CLYON, para responder
+                    a reclamações ou litígios. É conservada enquanto puder ser necessária para esse
+                    fim.
+                  </li>
+                  <li>
+                    <strong>Registo do que aconteceu em cada pedido</strong> (datas, valores,
+                    serviço, zona e nomes): conservado como prova e para as obrigações fiscais.
+                    Quando apaga a sua conta, o seu nome e o seu contacto são retirados dele.
+                  </li>
+                  <li>
+                    <strong>Mensagens de WhatsApp:</strong> {DIAS_DE_RETENCAO_DOS_PEDIDOS} dias. As
+                    conversas com o assistente do WhatsApp que não chegaram a pedido:{" "}
+                    {DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP} dias.
                   </li>
                   <li>
                     <strong>Dados de facturação:</strong> 10 anos, conforme legislação em vigor.
@@ -330,10 +413,18 @@ export default function PrivacidadePage() {
             title="8. Segurança dos dados"
             body={
               <>
-                Adoptamos medidas técnicas e organizativas para proteger os dados: comunicações
-                encriptadas (HTTPS), acesso restrito às bases de dados, cópias de segurança
-                periódicas e formação das equipas em proteção de dados. Ainda assim, nenhum sistema
-                é 100% imune — recomendamos que não envie dados sensíveis por canais não seguros.
+                {/*
+                  "Cópias de segurança periódicas e formação das equipas" saiu
+                  a 30-09-2026: não há cópias automáticas da base, e nenhuma
+                  formação está feita. Fica o que o código faz — HTTPS, acesso
+                  com sessão, as chaves dos pedidos guardadas só em hash
+                  (acessoTokenHash) e fora das medições (endereco-sem-segredos.ts).
+                */}
+                Adoptamos medidas técnicas para proteger os dados: comunicações encriptadas
+                (HTTPS), acesso restrito às bases de dados e ao painel de administração, e as
+                chaves de acesso aos pedidos guardadas só como resumo criptográfico (hash) e nunca
+                enviadas às ferramentas de medição. Ainda assim, nenhum sistema é 100% imune —
+                recomendamos que não envie dados sensíveis por canais não seguros.
               </>
             }
           />
