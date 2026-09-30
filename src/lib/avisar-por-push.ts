@@ -1,4 +1,5 @@
 import { sendPushToUser } from "./webpush";
+import { precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { urlDeAccao } from "./url-do-site";
 
 /**
@@ -57,13 +58,15 @@ export async function avisarClientePorPush(dados: {
   email: string | null | undefined;
   profissionalNome: string;
   valor: number;
+  /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
+  base?: BaseDoPreco;
   pedidoId: number;
   token?: string | null;
 }): Promise<void> {
   if (!dados.email) return;
   await sendPushToUser(dados.email, {
     title: `Proposta de ${dados.profissionalNome.split(" ")[0]}`,
-    body: `${euros(dados.valor)} para o pedido #${dados.pedidoId}. Toque para ver e responder.`,
+    body: `${precoComBase(euros(dados.valor), dados.base ?? "total")} para o pedido #${dados.pedidoId}. Toque para ver e responder.`,
     url: ligacao(dados.token ? `/pedido/${dados.token}` : "/conta"),
     /*
      * A ETIQUETA AGRUPA POR PEDIDO, e é de propósito.

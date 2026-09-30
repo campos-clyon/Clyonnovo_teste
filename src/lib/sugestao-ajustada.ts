@@ -81,7 +81,8 @@ export function sugestaoComOutroTempo(
     base.custoCombustivel + custoPessoal + base.custosFixos + seguroDeRisco,
   );
   const precoSugerido = aosCentimos(custoMinimo * (1 + base.margem));
-  const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido);
+  // Com as taxas com que a sugestão foi feita — as da negociação dele.
+  const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido, base.taxas);
 
   /*
    * As parcelas reescrevem-se NO SÍTIO, e não se acrescentam ao fim.

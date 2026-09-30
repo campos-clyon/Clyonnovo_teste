@@ -12,6 +12,9 @@
  * com três comportamentos. Aqui só se escreve o texto.
  */
 
+// Pura, como este ficheiro: não traz base de dados nenhuma atrás.
+import { notaDaCargaParaOCliente, precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
+
 /** "148,57 €" — vírgula decimal, que é como se escreve dinheiro em Portugal. */
 export function euros(v: number): string {
   return v.toFixed(2).replace(".", ",") + " €";
@@ -51,6 +54,8 @@ export function textoDaMesa(
   pedidoId: number,
   propostas: LinhaDaMesa[],
   aVer: number,
+  /** Por carga, cada valor leva a unidade e a lista acaba com a nota. */
+  base: BaseDoPreco = "total",
 ): string {
   if (propostas.length === 0) {
     return (
@@ -63,7 +68,8 @@ export function textoDaMesa(
   }
 
   const escritas = propostas.map(
-    (l) => `• ${l.profissionalNome}: ${euros(l.valor)}${l.aSuaEspera ? " (à sua espera)" : ""}`,
+    (l) =>
+      `• ${l.profissionalNome}: ${precoComBase(euros(l.valor), base)}${l.aSuaEspera ? " (à sua espera)" : ""}`,
   );
   const aindaAVer =
     aVer <= 0
@@ -74,6 +80,7 @@ export function textoDaMesa(
 
   return (
     `Pedido #${pedidoId} — o que já recebeu:\n${escritas.join("\n")}${aindaAVer}\n\n` +
+    (notaDaCargaParaOCliente(base) ? `${notaDaCargaParaOCliente(base)}\n\n` : "") +
     `Use os botões da proposta para fechar ou recusar, ou responda com um valor (ex.: 300) para contrapropor.`
   );
 }

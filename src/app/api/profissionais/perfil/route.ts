@@ -12,6 +12,7 @@ import {
   trabalhosConcluidosDoProfissional,
 } from "@/lib/db";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
+import { TIPOS_DE_VEICULO, tipoDeVeiculoValido } from "@/lib/convite-profissional";
 import {
   verificarSessaoDoProfissional,
   COOKIE_SESSAO_PROFISSIONAL,
@@ -346,7 +347,30 @@ export async function PUT(req: NextRequest) {
   }
 
   if ("tipoVeiculo" in corpo) {
-    mudancas.tipoVeiculo = texto(corpo.tipoVeiculo).slice(0, 60) || null;
+    /*
+     * SÓ OS NOMES QUE A CONTA SABE LER — 29-09-2026.
+     *
+     * Este campo deixou de ser uma etiqueta: é ele que decide o valor por
+     * carga que o profissional vê («carrinha_pequena» → 3/7 do que a CLYON
+     * escreveu, ver `carga-da-carrinha.ts`). Um «carrinha media» sem
+     * sublinhado, ou um «Carrinha Média» com maiúsculas, não é lido por
+     * nenhuma delas — e o efeito não é um erro, é o profissional a ver o
+     * valor da carrinha grande em silêncio.
+     *
+     * Guardava-se o que viesse, cortado aos 60 caracteres. Agora o que não
+     * está na lista não se grava, e quem envia fica a saber.
+     */
+    const bruto = texto(corpo.tipoVeiculo).trim().toLowerCase();
+    if (bruto === "") {
+      mudancas.tipoVeiculo = null;
+    } else if (tipoDeVeiculoValido(bruto)) {
+      mudancas.tipoVeiculo = bruto;
+    } else {
+      erros.push({
+        campo: "tipoVeiculo",
+        mensagem: `Veículo desconhecido. Escolha um de: ${TIPOS_DE_VEICULO.map((v) => v.id).join(", ")}.`,
+      });
+    }
   }
 
   /*

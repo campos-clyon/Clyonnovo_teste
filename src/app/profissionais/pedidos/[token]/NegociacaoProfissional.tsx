@@ -186,7 +186,7 @@ export default function NegociacaoProfissional({
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">O trabalho é seu</h2>
         <p className="mt-1 text-sm text-emerald-800">
-          Fechado em {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0))}, já com a
+          Fechado em {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))}, já com a
           taxa CLYON descontada.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-emerald-700">
@@ -202,7 +202,7 @@ export default function NegociacaoProfissional({
         <Clock className="mx-auto h-8 w-8 text-blue-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-blue-900">À espera do cliente</h2>
         <p className="mt-1 text-sm leading-relaxed text-blue-800">
-          Aceitou {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0))}. Falta o
+          Aceitou {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))}. Falta o
           cliente confirmar que o contrata — pode estar a falar com mais profissionais.
         </p>
       </section>
@@ -390,7 +390,7 @@ export default function NegociacaoProfissional({
             escreverPrimeiro
             rotuloDosAtalhos="Ou um passo acima da sugestão CLYON"
             aEnviar={aEnviar}
-            legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}
+            legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v, taxas))}`}
             onPropor={(v) => agir("propor", v)}
           />
           <p className="mt-2 text-xs text-slate-500">
@@ -571,7 +571,7 @@ export default function NegociacaoProfissional({
               referencia={referenciaDaProposta}
               direccao="acima"
               aEnviar={aEnviar}
-              legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v))}`}
+              legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v, taxas))}`}
               onPropor={(v) => agir("propor", v)}
             />
             <p className="mt-2 text-xs text-slate-500">

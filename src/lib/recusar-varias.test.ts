@@ -81,7 +81,8 @@ describe("tudo ou nada — a regra que evita meter metade das propostas abaixo",
   });
 
   it("só se recusa quando cada valor bate em UMA e só uma", () => {
-    expect(CODIGO).toContain("quais: alvos.filter((a) => Math.abs((a.valorNaMesa as number) - v) < 0.005)");
+    // Pelo preço que ele viu, já com a taxa — é o que ele escreve (29-09-2026).
+    expect(CODIGO).toContain("quais: alvos.filter((a) => Math.abs((a.precoNaMesa as number) - v) < 0.005)");
     expect(CODIGO).toContain("casados.map((c) => c.quais[0])");
   });
 });

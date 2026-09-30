@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+import type { ExecuteValues } from "mysql2";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -2076,7 +2077,7 @@ export async function actualizarProfissional(
   if (!pool) throw new Error("DB not available");
 
   const partes: string[] = [];
-  const valores: unknown[] = [];
+  const valores: ExecuteValues[] = [];
 
   if (alteracoes.categorias !== undefined) {
     partes.push("categorias = ?");
@@ -2870,7 +2871,7 @@ export async function contarNovidades(
   const pool = await getPool();
   if (!pool) return saida;
 
-  const um = async (seccao: string, sql: string, params: unknown[]) => {
+  const um = async (seccao: string, sql: string, params: ExecuteValues[]) => {
     try {
       const [linhas] = (await pool.execute(sql, params)) as any[];
       saida[seccao] = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
@@ -4210,6 +4211,16 @@ export async function regimeDeIvaDoProfissional(providerId: number): Promise<str
  * fiscal para saber quantos quilómetros são.
  */
 export async function custosEBaseDoProfissional(providerId: number): Promise<{
+  /*
+   * A CARRINHA DELE, na mesma leitura que os custos -- 29-09-2026.
+   *
+   * Nao e um custo, mas e a mesma linha da mesma tabela e o mesmo pedido: o
+   * feed le isto UMA vez para a lista inteira, e passou a precisar dela para
+   * dizer o que uma carga vale na carrinha dele (ver `carga-da-carrinha.ts`).
+   * Uma segunda consulta por causa de uma coluna era mais um ida-e-volta em
+   * cada abertura do painel.
+   */
+  tipoVeiculo: string | null;
   baseLat: number | null;
   baseLng: number | null;
   custoKm: number | null;
@@ -4225,7 +4236,7 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
   const pool = await getPool();
   if (!pool) return undefined;
   const [rows] = (await pool.execute(
-    `SELECT baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa,
+    `SELECT tipoVeiculo, baseLat, baseLng, custoKm, custoHoraPessoa, pessoasNaEquipa,
             custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent
        FROM providers WHERE id = ? LIMIT 1`,
     [providerId],
@@ -4234,6 +4245,7 @@ export async function custosEBaseDoProfissional(providerId: number): Promise<{
   if (!r) return undefined;
   const n = (v: unknown) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
   return {
+    tipoVeiculo: typeof r.tipoVeiculo === "string" && r.tipoVeiculo.trim() ? r.tipoVeiculo : null,
     baseLat: n(r.baseLat),
     baseLng: n(r.baseLng),
     custoKm: n(r.custoKm),
@@ -4372,7 +4384,7 @@ export async function actualizarPerfilDoProfissional(
 
   await pool.execute(
     `UPDATE providers SET ${colunas.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`,
-    [...colunas.map((c) => dados[c]), providerId],
+    [...colunas.map((c) => dados[c]), providerId] as ExecuteValues[],
   );
 }
 
@@ -5284,7 +5296,7 @@ export async function createSimulatorOrder(data: InsertSimulatorOrder): Promise<
   const vals = cols.map((k) => (data as Record<string, unknown>)[k]);
   const placeholders = cols.map(() => "?").join(", ");
   const sql = `INSERT INTO simulatorOrders (${cols.join(", ")}) VALUES (${placeholders})`;
-  const [result] = await pool.execute(sql, vals) as any[];
+  const [result] = await pool.execute(sql, vals as ExecuteValues[]) as any[];
   const insertId = result.insertId ?? 0;
   return insertId;
 }
@@ -5300,7 +5312,7 @@ export async function getAllSimulatorOrders(filters?: {
     return [];
   }
   const conditions: string[] = [];
-  const params: unknown[] = [];
+  const params: ExecuteValues[] = [];
   
   // Handle special filters
   if (filters?.status === "sem_assistente") {
@@ -8499,7 +8511,7 @@ export const COLUNAS_DO_REGISTO = [
   "visivelProfissional",
 ] as const;
 
-export function valoresDoRegisto(l: LinhaDoRegisto): unknown[] {
+export function valoresDoRegisto(l: LinhaDoRegisto): ExecuteValues[] {
   const corta = (s: string | null | undefined, n: number) =>
     s == null ? null : String(s).slice(0, n);
   return [
@@ -8625,7 +8637,7 @@ export async function anonimizarRegisto(
   if (!pool) throw new Error("DB not available");
 
   const onde: string[] = [];
-  const args: unknown[] = [];
+  const args: ExecuteValues[] = [];
   if (alvo.clienteEmail) {
     onde.push("clienteEmail = ?");
     args.push(alvo.clienteEmail.trim().toLowerCase());
@@ -8734,7 +8746,7 @@ export async function registoParaOBackoffice(filtros: {
   if (!pool) return [];
 
   const onde: string[] = [];
-  const args: unknown[] = [];
+  const args: ExecuteValues[] = [];
   if (filtros.pedidoId != null) {
     onde.push("pedidoId = ?");
     args.push(filtros.pedidoId);
@@ -9961,7 +9973,7 @@ export type ResumoDoBackoffice = {
 };
 
 /** Um número de uma consulta que pode falhar sem levar o painel atrás. */
-async function conta(sql: string, args: unknown[] = []): Promise<number | null> {
+async function conta(sql: string, args: ExecuteValues[] = []): Promise<number | null> {
   try {
     const pool = await getPool();
     if (!pool) return null;
@@ -10307,7 +10319,7 @@ export async function semearAvisosDoAssistente(
   const PORVEZ = 200;
   for (let i = 0; i < linhas.length; i += PORVEZ) {
     const lote = linhas.slice(i, i + PORVEZ);
-    const valores: unknown[] = [];
+    const valores: ExecuteValues[] = [];
     for (const l of lote) {
       valores.push(
         l.chave.slice(0, 160),
@@ -10592,6 +10604,8 @@ export type PedidoParaOAssistente = {
   status: string | null;
   createdAt: Date;
   dataAgendada: Date | null;
+  /** Pelo trabalho todo ou por carga. Opcional só para os testes antigos. */
+  baseDoPreco?: string | null;
   negociacoes: Array<{
     id: number;
     estado: string;
@@ -10605,6 +10619,14 @@ export type PedidoParaOAssistente = {
     profissionalNome: string;
     regimeIva: string | null;
     actualizadaEm: Date;
+    /*
+     * As taxas e a forma com que ESTA negociação nasceu. A consulta já as lia
+     * e deitava-as fora: o assistente dizia ao cliente um preço feito com as
+     * de origem. Opcionais só para os testes que montam pedidos à mão.
+     */
+    taxaCliente?: string | number | null;
+    taxaProfissional?: string | number | null;
+    formaDePagamento?: string | null;
   }>;
 };
 
@@ -10627,7 +10649,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
 
   const [pedidos] = (await pool.execute(
     `SELECT o.id, o.contactName, o.contactPhone, o.serviceType, o.status,
-            o.createdAt, o.dataAgendada
+            o.createdAt, o.dataAgendada, o.baseDoPreco
        FROM simulatorOrders o
       WHERE o.contactPhone IS NOT NULL AND TRIM(o.contactPhone) <> ''
         AND o.createdAt > NOW() - INTERVAL 120 DAY
@@ -10668,6 +10690,9 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       profissionalNome: String(n.profissionalNome ?? ""),
       regimeIva: n.regimeIva == null ? null : String(n.regimeIva),
       actualizadaEm: (n.actualizadaEm as Date) ?? new Date(0),
+      taxaCliente: (n.taxaCliente as string | number | null) ?? null,
+      taxaProfissional: (n.taxaProfissional as string | number | null) ?? null,
+      formaDePagamento: n.formaDePagamento == null ? null : String(n.formaDePagamento),
     });
   }
 
@@ -10679,6 +10704,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
     status: (p.status as string) ?? null,
     createdAt: p.createdAt as Date,
     dataAgendada: (p.dataAgendada as Date) ?? null,
+    baseDoPreco: (p.baseDoPreco as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
 }

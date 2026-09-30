@@ -940,6 +940,28 @@ export default function Trabalhos({
                         por carga
                       </span>
                     )}
+                    {/*
+                      E O QUE UMA CARGA VALE NA CARRINHA DELE.
+
+                      «por carga» diz a unidade, mas nao diz de quem: o valor
+                      escrito e o de uma carrinha grande, e quem tem a pequena
+                      faz o mesmo trabalho em duas viagens e meia. Um «~150,00 €/
+                      carga · 2 cargas e meia» ao lado do numero grande e a
+                      diferenca entre decidir com a conta feita e decidir de
+                      cabeca — e e de cabeca que ela sai errada.
+
+                      O til nao e enfeite: o numero de viagens e uma estimativa,
+                      e prometer «2,5 cargas» exactas seria prometer o que
+                      ninguem sabe antes de carregar. Ver `carga-da-carrinha.ts`.
+                    */}
+                    {p.cargaNaSuaCarrinha && (
+                      <span
+                        className="whitespace-nowrap rounded-md border border-amber-300 bg-white px-1.5 py-0.5 text-[11px] font-bold text-amber-900"
+                        title={p.cargaNaSuaCarrinha.texto}
+                      >
+                        {p.cargaNaSuaCarrinha.curto}
+                      </span>
+                    )}
                     <span className="whitespace-nowrap text-[11px] text-slate-400">
                       já com a taxa, sem IVA
                     </span>
@@ -1847,6 +1869,28 @@ function DetalheDoTrabalho({
             {avisoDaBase(lerBase(pedido.baseDoPreco))}
           </p>
         )}
+        {/*
+          A CONTA DA CARRINHA DELE, por extenso — onde ha espaco para ela.
+
+          Vem LOGO DEPOIS do aviso «combine quantas cargas antes de fechar»,
+          e e de proposito: o aviso diz-lhe para combinar um numero, e este
+          bloco diz-lhe qual e o numero. Separados, o aviso era um conselho
+          sem resposta — o tipo de frase que se le uma vez e nunca mais.
+
+          Nao aparece a quem tem a carrinha grande: para ele o valor escrito
+          ja e o dele, e uma linha a explicar que nada muda e ruido em cima
+          do numero mais importante do ecra.
+        */}
+        {pedido.cargaNaSuaCarrinha && (
+          <div className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-2">
+            <p className="text-sm font-bold text-amber-900">
+              {pedido.cargaNaSuaCarrinha.titulo}
+            </p>
+            <p className="mt-0.5 text-sm leading-relaxed text-slate-700">
+              {pedido.cargaNaSuaCarrinha.texto}
+            </p>
+          </div>
+        )}
 
         {/*
           E O CASO CONTRÁRIO: o que vale o que aparecer a mais.
@@ -1985,7 +2029,7 @@ function DetalheDoTrabalho({
           valorAcordado={pedido.valorAcordado}
           minimoDoCliente={pedido.querPagar}
           recebeSeAceitar={
-            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar) : null
+            pedido.querPagar != null ? quantoOProfissionalRecebe(pedido.querPagar, pedido.taxas) : null
           }
           sugestao={pedido.sugestao ?? null}
           onMudou={onRecarregar}

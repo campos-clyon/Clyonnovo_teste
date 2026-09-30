@@ -14,6 +14,8 @@ import {
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
 import {
   propor,
   aceitar,
@@ -52,7 +54,14 @@ export async function POST(req: NextRequest) {
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  let corpo: { accao?: unknown; valor?: unknown; negociacaoId?: unknown; pedidoId?: unknown };
+  // `preco` é o que o cliente escreve, já com a taxa — ver `valorDaPropostaDoCliente`.
+  let corpo: {
+    accao?: unknown;
+    valor?: unknown;
+    preco?: unknown;
+    negociacaoId?: unknown;
+    pedidoId?: unknown;
+  };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -134,9 +143,9 @@ export async function POST(req: NextRequest) {
     let resultado;
     switch (corpo.accao) {
       case "propor": {
-        const valor =
-          typeof corpo.valor === "string" ? Number(corpo.valor.replace(",", ".")) : corpo.valor;
-        resultado = propor(estadoActual, "cliente", Number(valor), agora);
+        // O que ele escreveu é o que paga — vira aqui o valor do profissional.
+        const valor = valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha));
+        resultado = propor(estadoActual, "cliente", valor, agora);
         break;
       }
       case "aceitar":

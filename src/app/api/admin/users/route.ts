@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { ExecuteValues } from "mysql2";
 import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
 import { withConnection, ensureUsersSchema } from "@/lib/db";
 
@@ -170,7 +171,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         const updates: string[] = [];
-        const params: unknown[] = [];
+        const params: ExecuteValues[] = [];
 
         if (role !== undefined) {
           updates.push("role = ?");

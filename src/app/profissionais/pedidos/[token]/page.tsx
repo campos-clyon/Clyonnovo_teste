@@ -20,6 +20,8 @@ import {
 } from "@/lib/sugestao-para-o-profissional";
 import type { Proposta } from "@/lib/negociacao";
 import Nota from "@/components/Nota";
+import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
+import { lerBase } from "@/lib/base-do-preco";
 import NegociacaoProfissional from "./NegociacaoProfissional";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 
@@ -115,11 +117,21 @@ export default async function PaginaDoPedidoProfissional({
    * sem base, sem coordenadas ou sem parâmetros, sai sem sugestão.
    */
   let sugestao: SugestaoParaOProfissional | null = null;
+  /*
+   * A CARRINHA DELE — fora do `try`, e de propósito.
+   *
+   * Vem da mesma leitura que os custos. Fica aqui porque o bloco da carga é
+   * renderizado abaixo e não pode depender de a sugestão ter corrido bem: uma
+   * chamada ao Maps que falhe não tem nada a ver com o que uma carga vale na
+   * carrinha dele.
+   */
+  let carrinhaDele: string | null = null;
   try {
     const [mapa, profissional] = await Promise.all([
       getActivePricingMap(),
       custosEBaseDoProfissional(Number(negociacao.providerId)),
     ]);
+    carrinhaDele = profissional?.tipoVeiculo ?? null;
     const bruto = linha as unknown as Record<string, unknown>;
     let destino: { lat: number; lng: number } | null = null;
     try {
@@ -157,6 +169,7 @@ export default async function PaginaDoPedidoProfissional({
       distanciaKm,
       parametrosDoMapa(mapa),
       profissional ?? null,
+      taxasDaNegociacao(negociacao),
     );
   } catch (e) {
     console.error("[profissionais/pedidos/[token]] sugestão", e);
@@ -213,6 +226,37 @@ export default async function PaginaDoPedidoProfissional({
           contactos.
         </Nota>
       </section>
+
+      {/*
+        O QUE UMA CARGA VALE NA CARRINHA DELE — também pelo link do email.
+
+        É por aqui que ele vê um pedido novo pela primeira vez, e é aqui que
+        decide se responde. Ter a conta só no painel era tê-la depois da
+        decisão. O painel e o link são a mesma negociação e têm de dizer o
+        mesmo — ver `carga-da-carrinha.ts`.
+
+        Sobre o LÍQUIDO, como o número que ele vê ao lado. E não mexe no valor
+        que ele aceita: nada no sistema multiplica cargas.
+      */}
+      {(() => {
+        if (lerBase((linha as unknown as Record<string, unknown>).baseDoPreco) !== "carga") {
+          return null;
+        }
+        const liquido =
+          negociacao.valorAcordado != null
+            ? quantoOProfissionalRecebe(Number(negociacao.valorAcordado), taxasDaNegociacao(negociacao))
+            : minimo != null
+              ? quantoOProfissionalRecebe(minimo, taxasDaNegociacao(negociacao))
+              : null;
+        const f = fraseDaCarga(cargaParaEste(liquido, carrinhaDele));
+        if (!f) return null;
+        return (
+          <section className="mt-4 rounded-2xl border border-amber-300 bg-white p-4">
+            <h2 className="text-sm font-bold text-amber-900">{f.titulo}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-slate-700">{f.texto}</p>
+          </section>
+        );
+      })()}
 
       <NegociacaoProfissional
         token={token}

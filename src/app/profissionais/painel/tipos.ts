@@ -51,6 +51,22 @@ export type Pedido = {
    * «150 €» sem unidade tanto é o trabalho todo como cada viagem ao aterro.
    */
   baseDoPreco?: string | null;
+  /*
+   * O QUE UMA CARGA VALE NA CARRINHA DELE, quando o pedido e por carga.
+   *
+   * Vem pronto do servidor -- frase feita e tudo -- porque a conta depende
+   * da carrinha que ele declarou no perfil, e o cartao nao a conhece. Vem
+   * `null` quando nao ha nada a dizer: pedido por valor total, carrinha por
+   * declarar, ou a carrinha grande, que e a referencia.
+   *
+   * ⚠️ E informacao para DECIDIR, nao o valor que ele aceita. Ver
+   * `carga-da-carrinha.ts`.
+   */
+  cargaNaSuaCarrinha?: {
+    titulo: string;
+    texto: string;
+    curto: string;
+  } | null;
   /**
    * O dia que ele combinou com o cliente, depois de ser contratado.
    *
