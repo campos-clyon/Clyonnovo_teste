@@ -7,7 +7,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { BUSINESS_PHONE, NOTA_DE_PRECO, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_PHONE, NOTA_DE_PRECO, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
 
 /**
@@ -21,7 +21,7 @@ const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personal
 export const metadata: Metadata = {
   title: "Preços de Recolha de Monos, Entulho e Móveis",
   description:
-    "Veja preços orientativos para recolha de monos, entulho, móveis, esvaziamentos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+    "Veja preços orientativos para recolha de monos, entulho, móveis, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: `${SITE_URL}/precos`,
   },
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
  * elevador. Inventar quatro faixas diferentes para o mesmo serviço era
  * exatamente o problema que se acabou de corrigir no resto do site.
  *
- * O que fica por decidir é o conjunto de cartões, não os números: seis
+ * O que fica por decidir é o conjunto de cartões, não os números: cinco
  * exemplos onde quatro são o mesmo serviço dá menos informação do que a
  * grelha da homepage, que mostra os nove serviços com preço próprio. Isso é
  * escolha do dono, não deste alinhamento.
@@ -80,21 +80,13 @@ const priceExamples = [
     price: etiquetaDe("recolha_entulho"),
     includes: "O valor depende do tipo de resíduo, peso, quantidade e facilidade de carga.",
   },
-  {
-    /*
-     * O ÚNICO PREÇO DESTA PÁGINA ESCRITO À MÃO — porque não há de onde o
-     * importar. A limpeza pós-obra não existe em SERVICE_CATEGORIES nem na
-     * tabela oficial, e por isso continua a divergir sozinha: aqui diz
-     * 160 €, em /servicos diz 150 € para o mesmo trabalho.
-     *
-     * Resolve-se de uma de duas maneiras, e ambas são decisão do dono: ou
-     * entra na tabela oficial com um valor, ou perde o número e passa a
-     * "orçamento personalizado" como as mudanças. Não se escolhe por ele.
-     */
-    title: "Limpeza pós-obra",
-    price: "desde 160 €",
-    includes: "O preço varia com a área, nível de sujidade, vidros, cozinha e casas de banho.",
-  },
+  /*
+   * O cartão da limpeza pós-obra saiu a 30-09-2026. Era o único preço desta
+   * página escrito à mão, e não havia de onde o importar porque o serviço não
+   * existe: não está em SERVICE_CATEGORIES, e nenhum profissional o recebe.
+   * Mostrar um preço de um serviço que não se pode pedir é pior do que as
+   * duas divergências que ele tinha (160 € aqui, 150 € em /servicos).
+   */
 ];
 
 const pricingFactors = [
@@ -121,36 +113,40 @@ const scenarios = [
   },
 ];
 
+/*
+ * Na voz da plataforma desde 30-09-2026: o valor a sério é a proposta de
+ * cada profissional, e quem responde "sobre custo e disponibilidade" são
+ * eles, não "a equipa".
+ */
 const faqs = [
   {
     question: "Os preços desta página são fixos?",
     answer:
-      "Não. São valores orientativos para ajudar a enquadrar o pedido. O valor final depende sempre do volume, acessos, urgência e localização.",
+      "Não. São valores orientativos para ajudar a enquadrar o pedido. O preço a sério é a proposta que recebe — já com a taxa da plataforma — e depende do volume, dos acessos, da urgência e da localização.",
   },
   {
     question: "Como receber um orçamento mais preciso?",
     answer:
-      "Envie fotos, morada, piso, informação sobre elevador e descreva o que precisa de retirar. Quanto mais claro for o pedido, mais preciso será o orçamento.",
+      "Envie fotos, morada, piso, informação sobre elevador e descreva o que precisa de retirar. Quanto mais claro for o pedido, mais certas serão as propostas.",
   },
   {
     question: "A desmontagem está incluída?",
     answer:
-      "Depende do caso. Em muitos pedidos a desmontagem faz parte do serviço, mas o tempo necessário influencia o valor final.",
+      "Depende da proposta. Diga no pedido o que é preciso desmontar: o tempo que leva entra no valor.",
   },
   {
     question: "Pedidos no mesmo dia custam mais?",
     answer:
-      "Em alguns casos sim, especialmente quando exigem reorganização de agenda, equipa extra ou janela horária mais curta.",
+      "Podem custar. A urgência entra na proposta de cada profissional — reorganizar a agenda ou juntar mais uma pessoa tem custo.",
   },
   {
     question: "Posso pedir preço por WhatsApp?",
-    answer:
-      "Sim. Pode usar o simulador, falar por WhatsApp ou ligar diretamente para validar disponibilidade e valor aproximado.",
+    answer: `Sim. Pode fazer o pedido no simulador ou por WhatsApp, e as propostas dos profissionais chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   },
   {
     question: "Fazem serviços para empresas e condomínios?",
     answer:
-      "Sim. A CLYON atende particulares, empresas, senhorios, equipas de obra e condomínios com pedidos pontuais ou recorrentes.",
+      "Sim. A CLYON recebe pedidos de particulares, empresas, senhorios, equipas de obra e condomínios, pontuais ou recorrentes.",
   },
 ];
 
@@ -177,9 +173,8 @@ export default function PrecosPage() {
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
                 Esta página ajuda a perceber intervalos de valores para recolha de móveis,
-                monos, entulho, limpeza pós-obra e esvaziamentos. Não substitui um
-                orçamento final, mas dá contexto rápido sobre o que influencia o preço
-                e como reduzir atrasos na marcação.
+                monos, entulho e esvaziamentos. Não substitui as propostas dos
+                profissionais, mas dá contexto rápido sobre o que influencia o preço.
               </p>
             </div>
 
@@ -192,15 +187,14 @@ export default function PrecosPage() {
                   </p>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
                     Envie fotos, morada, piso, informação sobre elevador e diga se há
-                    desmontagem. Esse conjunto reduz margem de erro e permite responder
-                    mais rápido.
+                    desmontagem. Esse conjunto reduz a margem de erro das propostas.
                   </p>
                 </div>
               </div>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link href="/simulador" className="site-btn-primary px-6">
-                  Simular orçamento
+                  Pedir orçamento
                 </Link>
                 <a href={whatsappUrl} className="site-btn-secondary px-6">
                   <MessageCircle className="mr-2 h-4 w-4" />
@@ -233,7 +227,8 @@ export default function PrecosPage() {
             A versão completa da nota, e não a curta, porque esta é A página de
             preços: é aqui que quem está a comparar valores vem parar, e é aqui
             que a pergunta "isto leva IVA?" tem de ter resposta sem sair do
-            ecrã. Quem factura é o profissional, e o regime dele decide.
+            ecrã. Dizia que quem factura é o profissional; desde 22-09-2026 é
+            a parceira, sempre a 23 % — e a nota diz isso (30-09-2026).
           */}
           <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-7 text-slate-500">
             {NOTA_DE_PRECO.completa}
@@ -349,14 +344,14 @@ export default function PrecosPage() {
                   Quer fechar o valor com mais precisão?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-                  Envie fotos, diga a morada e indique acessos. A partir daí a equipa
-                  consegue responder com mais segurança sobre custo e disponibilidade.
+                  Envie fotos, diga a morada e indique acessos. A partir daí os
+                  profissionais da sua zona conseguem propor um valor mais certo.
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link href="/simulador" className="site-btn-primary px-7 py-4 text-base">
-                  Simular orçamento
+                  Pedir orçamento
                 </Link>
                 <a
                   href={`tel:${BUSINESS_PHONE}`}

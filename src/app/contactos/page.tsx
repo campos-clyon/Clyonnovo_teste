@@ -11,6 +11,7 @@ import {
   CITIES,
   AVALIACOES,
   AVALIACOES_TOTAL,
+  FACTURA_EM_PALAVRAS,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
@@ -86,11 +87,18 @@ export const revalidate = 86400;
 const PERGUNTAS = [
   {
     q: "Quanto tempo demora a resposta?",
-    a: `${PRAZO_DE_RESPOSTA.frase}, em dias úteis e ao sábado. Pelo WhatsApp e por telefone costuma ser mais rápido — o formulário e o email seguem o mesmo prazo. Se o pedido entrar ao domingo, a resposta sai na manhã seguinte.`,
+    /*
+     * Separa as duas respostas que se confundiam — 30-09-2026. As propostas
+     * são dos profissionais e chegam no prazo de PRAZO_DE_RESPOSTA; quem
+     * atende no telefone e no WhatsApp é a equipa da CLYON, no horário dela.
+     * Um pedido de domingo só é conferido na segunda (a revisão é humana, ver
+     * a rota do simulador), e por isso o domingo continua dito.
+     */
+    a: `As propostas dos profissionais chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}. A equipa da CLYON atende de segunda a sábado, das 08:00 às 20:00 — pelo WhatsApp e por telefone costuma ser mais rápido. Um pedido feito ao domingo segue na segunda de manhã.`,
   },
   {
     q: "Pedir um orçamento custa alguma coisa?",
-    a: "Não custa nada e não obriga a nada. Recebe uma ou mais propostas de profissionais da sua zona e decide se aceita alguma. Se não aceitar nenhuma, o pedido expira sozinho e não paga.",
+    a: "Não custa nada e não obriga a nada. Recebe uma ou mais propostas de profissionais da sua zona e decide se aceita alguma. Se não aceitar nenhuma, não paga nada.",
   },
   {
     q: "Preciso de estar em casa para receberem o pedido?",
@@ -162,8 +170,10 @@ const TER_A_MAO = [
   {
     Icone: FileText,
     titulo: "Se precisa de fatura",
-    texto:
-      "Diga-o logo. Nem todos os profissionais emitem fatura, e saber isso à partida evita fechar negócio com quem não a passa.",
+    // Dizia "nem todos os profissionais emitem fatura". Desde 22-09-2026 a
+    // factura ao cliente é sempre da parceira, e não depende de quem faz o
+    // trabalho — a frase certa vive em seo-data.ts (30-09-2026).
+    texto: `Diga-o no pedido. ${FACTURA_EM_PALAVRAS}`,
   },
 ] as const;
 
@@ -299,10 +309,18 @@ export default function ContactosPage() {
               passos e nenhum deles o compromete.
             </p>
             <ol className="mt-6 grid gap-4 sm:grid-cols-2">
+              {/*
+                O primeiro passo é VERDADE e fica — conferido a 30-09-2026: a
+                rota do simulador não distribui; o pedido espera no «portão da
+                análise» até alguém da CLYON carregar em «Enviar aos
+                profissionais» (portao-da-analise.test.ts). O terceiro deixou
+                de prometer "normalmente mais do que uma": é o que ninguém
+                conta, e o prazo é "em até".
+              */}
               {[
                 [
                   "O pedido é lido por uma pessoa",
-                  "Ninguém responde a um formulário com um formulário. Se faltar alguma coisa para o preço fazer sentido — o andar, uma fotografia, o número de sacos — perguntamos antes de o enviar seja a quem for.",
+                  "Ninguém responde a um formulário com um formulário. Se faltar alguma coisa para os profissionais darem um valor a sério — o andar, uma fotografia, o número de sacos — perguntamos antes de o enviar seja a quem for.",
                 ],
                 [
                   "Chega aos profissionais da sua zona",
@@ -310,7 +328,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Recebe propostas com valores",
-                  `Normalmente mais do que uma, ${PRAZO_DE_RESPOSTA.porExtenso} depois. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
+                  `Em até ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma, sem IVA. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [
                   "Escolhe, e só depois se paga",
@@ -371,7 +389,8 @@ export default function ContactosPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
               Valores de partida, sem IVA, para saber se vale a pena a conversa. O preço a
-              sério é a proposta que o profissional faz depois de ver o seu caso.
+              sério é a proposta que o profissional faz depois de ver o seu caso — e já
+              inclui a taxa da plataforma.
             </p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {REFERENCIAS.map(({ rotulo, chave, href }) => (
@@ -392,12 +411,14 @@ export default function ContactosPage() {
               A tabela completa está em{" "}
               <Link href="/precos" className="font-semibold text-acao hover:underline">
                 preços
-              </Link>{" "}
-              e há uma estimativa imediata no{" "}
+              </Link>
+              ; no{" "}
+              {/* Dizia "há uma estimativa imediata no simulador" — o cliente
+                  não vê estimativa nenhuma desde 18-09-2026 (30-09-2026). */}
               <Link href="/simulador" className="font-semibold text-acao hover:underline">
                 simulador
-              </Link>
-              .
+              </Link>{" "}
+              pede propostas para o seu caso, e chegam em até {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
           </section>
 

@@ -3,25 +3,43 @@ import Link from "next/link";
 import {
   CheckCircle2,
   ClipboardList,
+  HandCoins,
   MessageCircle,
-  Sparkles,
   Truck,
   UserCheck,
 } from "lucide-react";
 
-import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_PHONE, COMO_SE_PAGA, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
+import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+
+/*
+ * ESTA PÁGINA DESCREVIA O MODELO ANTIGO — reescrita a 30-09-2026.
+ *
+ * "Preço fixo por IA em segundos", "atribuído a um profissional", "sem
+ * negociação", "normalmente em menos de 2 horas". Nada disso acontece: o
+ * cliente não vê estimativa nenhuma desde 18-09-2026
+ * (sem-estimativa-para-o-cliente.test.ts), o preço é o da proposta de cada
+ * profissional, e é o cliente quem escolhe — pode aceitar, contrapropor ou
+ * não responder.
+ *
+ * O QUE CONTINUA VERDADE, e por isso ficou: nenhum pedido chega aos
+ * profissionais sem uma pessoa da CLYON o conferir. A rota do cliente não
+ * distribui; o pedido fica no «portão da análise» até alguém carregar em
+ * «Enviar aos profissionais» no backoffice (portao-da-analise.test.ts), e o
+ * cron do alcance só trata pedidos que já foram enviados.
+ */
 
 export const metadata: Metadata = {
-  title: "Como Funciona — Preço Fixo, Conferido por Uma Pessoa",
+  title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
   description:
-    "Descreva o serviço, receba um preço fixo calculado por IA em segundos e alguém da CLYON confirma tudo consigo antes de avançar. Sem negociação, sem surpresas.",
+    "Descreva o que precisa e receba em até 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser e só confirma o trabalho quando estiver feito.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
   openGraph: {
-    title: "Como Funciona — Preço Fixo, Conferido por Uma Pessoa",
+    title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
     description:
-      "O modelo único da CLYON: velocidade da IA, a confiança de uma revisão humana, execução por um profissional verificado.",
+      "Descreva o que precisa e receba em até 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser e só confirma o trabalho quando estiver feito.",
     url: `${SITE_URL}/como-funciona`,
   },
 };
@@ -29,43 +47,59 @@ export const metadata: Metadata = {
 const stages = [
   {
     step: "01",
-    title: "Captação estruturada",
+    title: "Descreve o que precisa",
     icon: ClipboardList,
     accent: "cyan" as const,
     description:
-      "No simulador, descreve o serviço que precisa, envia fotos (opcional) e indica a morada e as condições de acesso — andar, elevador, estacionamento.",
+      "No formulário ou por WhatsApp: o que é para levar ou fazer, fotografias, a morada e as condições de acesso — andar, elevador, estacionamento. E escolhe como prefere pagar: pela plataforma ou em dinheiro, ao profissional.",
   },
   {
     step: "02",
-    title: "Orçamento instantâneo por IA",
-    icon: Sparkles,
+    title: "Recebe propostas",
+    icon: HandCoins,
     accent: "premium" as const,
     description:
-      "A IA analisa a descrição e as fotos, e calcula um preço fixo em segundos com base no preçário oficial — distância, volume, acessos e urgência. Vê o valor sem fórmulas nem margens à mistura. O preço a sério é a proposta que recebe, e é ela que traz o IVA quando o profissional o liquida.",
+      /*
+       * A morada exacta e o contacto só passam depois de contratar: os campos
+       * que o profissional vê antes disso são uma lista fechada
+       * (CAMPOS_VISIVEIS_AO_PROFISSIONAL, em pedido-valores.ts), com a zona e
+       * sem morada nem telefone.
+       */
+      `O pedido chega a profissionais verificados que fazem esse serviço e cuja zona alcança a sua morada — sem a morada exacta nem o seu contacto, que só passam depois de escolher. Cada proposta mostra o preço já com a taxa da plataforma, sem IVA, e chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}. Pode aceitar, contrapropor ou simplesmente não responder.`,
   },
   {
     step: "03",
-    title: "Revisão humana",
+    title: "Escolhe",
     icon: UserCheck,
     accent: "cyan" as const,
-    description:
-      "Alguém da CLYON revê o pedido: confirma se a descrição é coerente com o preço calculado, ajusta se necessário e contacta-o para validar morada exata, data, hora e orçamento final. Normalmente em menos de 2 horas.",
+    description: `Aceita a que quiser — ou nenhuma, sem custo. ${COMO_SE_PAGA}`,
   },
   {
     step: "04",
-    title: "Execução verificada",
+    title: "Confirma que ficou feito",
     icon: Truck,
     accent: "cyan" as const,
     description:
-      "Depois de aprovado, o pedido é atribuído a um profissional verificado. Recebe uma notificação com os detalhes e acompanha o serviço até à conclusão.",
+      /*
+       * O prazo do silêncio é o de trabalho.ts: sem resposta do cliente, o
+       * trabalho fecha sozinho ao fim desses dias a contar da prova. Dizer só
+       * «quando confirmar» esconderia metade da regra.
+       */
+      `O profissional faz o trabalho no dia combinado e envia fotografias do resultado. Confirma na plataforma que está tudo bem — no pagamento pela plataforma, só então o valor é entregue ao profissional. Se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois das fotografias.`,
   },
 ];
 
+/*
+ * O que a pessoa da CLYON faz mesmo antes de enviar o pedido — o que está na
+ * rota (`À espera da análise da CLYON`) e no bloco «Por enviar» do
+ * backoffice: conferir e completar a informação, e só então enviar. Não põe
+ * preço: o preço é de cada profissional.
+ */
 const assistantRules = [
-  "Verifica se a descrição e as fotos são coerentes com o preço calculado pela IA.",
-  "Ajusta o preço final se a IA subestimou o volume ou a dificuldade de acesso.",
-  "Confirma consigo os 5 dados essenciais: nome, morada exata, data/hora, descrição e orçamento.",
-  "Só depois de aprovar é que o pedido fica visível para os profissionais da zona.",
+  "Confere se a descrição, as fotografias e a morada chegam para um profissional dar um valor a sério.",
+  "Completa o que faltar — o andar, uma fotografia, a quantidade —, perguntando-lhe se for preciso.",
+  "Só então envia o pedido aos profissionais que fazem esse serviço e cuja zona alcança a sua morada.",
+  "Acompanha o pedido até ao fim, e é a quem recorre se alguma coisa correr mal.",
 ];
 
 export const revalidate = 86400;
@@ -85,17 +119,17 @@ export default function ComoFuncionaPage() {
             Como funciona
           </div>
           <h1 className="mt-5 max-w-[18ch] text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.4rem]">
-            Preço fixo por IA. Confirmado por uma pessoa.
+            Pede, recebe propostas, escolhe.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            A CLYON combina a velocidade de um motor de preços com IA com o
-            o controlo de qualidade de uma pessoa. O preço nunca sobe
-            depois de confirmado, e nenhum pedido chega a um profissional sem
-            ser validado primeiro.
+            A CLYON é uma plataforma: liga-o a profissionais independentes e
+            verificados da sua zona. Quem faz o trabalho é o profissional que
+            escolher — a CLYON confere o pedido antes de o enviar, guarda o que
+            ficou combinado e acompanha até ao fim.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/simulador" className="site-btn-primary px-6">
-              Simular orçamento grátis
+              Pedir orçamento grátis
             </Link>
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="site-btn-secondary px-6">
               <MessageCircle className="mr-2 h-4 w-4" />
@@ -138,7 +172,8 @@ export default function ComoFuncionaPage() {
               Nenhum pedido avança sem revisão humana
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-              Quem revê não recalcula o preço do zero — a sua função é garantir que o que a IA propôs faz sentido.
+              O preço não é da CLYON: é de cada profissional. O que uma pessoa da CLYON
+              confere é que o pedido tem o que é preciso para lhe darem um valor a sério.
             </p>
           </div>
 
@@ -158,11 +193,12 @@ export default function ComoFuncionaPage() {
           <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 text-center sm:p-12 lg:p-16">
             <h2 className="text-3xl font-bold text-white sm:text-4xl">Pronto para experimentar?</h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
-              Descreva o serviço no simulador e receba um preço fixo em segundos.
+              Descreva o que precisa e receba propostas de profissionais da sua zona em
+              até {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link href="/simulador" className="site-btn-primary px-8">
-                Simular orçamento grátis
+                Pedir orçamento grátis
               </Link>
             </div>
           </div>

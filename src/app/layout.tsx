@@ -12,7 +12,7 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   REGIONS,
-  SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
+  SITE_URL, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
 
 /**
@@ -46,15 +46,19 @@ export const metadata: Metadata = {
     default: "CLYON - Recolha de Móveis, Entulho, Monos e Esvaziamento de Casas em Lisboa e Setúbal",
     template: "%s | CLYON",
   },
+  /*
+   * Anunciava "limpeza pós-obra", que não é um serviço da plataforma, e não
+   * dizia quem faz o trabalho. Passa a dizer — profissionais verificados — e
+   * o prazo é o de PRAZO_DE_RESPOSTA (30-09-2026).
+   */
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 6h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal, por profissionais verificados. Propostas em até ${PRAZO_DE_RESPOSTA.porExtenso}, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
     "recolha de entulho lisboa",
     "mudanças margem sul",
     "esvaziamento de casas lisboa",
-    "limpeza pós-obra lisboa",
   ],
   authors: [{ name: BUSINESS_NAME }],
   creator: BUSINESS_NAME,
@@ -107,7 +111,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
     description:
-      "Orçamento rápido para recolha de entulho, móveis, monos, mudanças e limpeza pós-obra.",
+      "Propostas de profissionais verificados para recolha de entulho, móveis e monos, esvaziamentos e mudanças.",
     images: ["/og-image.jpg"],
   },
   other: {
