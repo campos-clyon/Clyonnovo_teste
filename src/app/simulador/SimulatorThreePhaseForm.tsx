@@ -1939,7 +1939,10 @@ function Phase3Contact({
       {(formData.serviceType === "jardinagem" || formData.serviceType === "manutencao_casa") && (
         <div className="space-y-2">
           <label htmlFor="sim-recorrencia" className="block text-sm font-medium text-gray-900">
-            Frequência do serviço <span className="text-gray-500 font-normal">(opcional — poupe com marcação recorrente)</span>
+            {/* "Poupe 15 %" / "poupe 10 %" prometiam um desconto que ninguém
+                aplica: o preço é o da proposta de cada profissional. Fica a
+                pergunta, que serve a quem propõe (30-09-2026). */}
+            Frequência do serviço <span className="text-gray-500 font-normal">(opcional — diga-nos se o serviço é para repetir)</span>
           </label>
           <select id="sim-recorrencia"
             value={formData.recurrenceFrequency || ""}
@@ -1947,8 +1950,8 @@ function Phase3Contact({
             className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
           >
             <option value="">Pontual (serviço único)</option>
-            <option value="semanal">Semanal — poupe 15%</option>
-            <option value="quinzenal">Quinzenal — poupe 10%</option>
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">Quinzenal</option>
           </select>
         </div>
       )}
