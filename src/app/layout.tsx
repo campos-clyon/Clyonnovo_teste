@@ -71,12 +71,22 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: SITE_URL,
-    languages: {
-      "pt-PT": SITE_URL,
-    },
-  },
+  /*
+   * SEM `alternates` AQUI — 29-09-2026.
+   *
+   * Estava `canonical: SITE_URL` (e o hreflang a apontar para o mesmo), e o
+   * layout vale para TODAS as páginas: a que não declarasse o seu próprio
+   * canónico herdava o da homepage. Era o caso do 404, do /entrar e do
+   * /admin/login — três páginas a dizer ao Google «a versão a sério de mim
+   * é a homepage». Num 404 isso é pior do que não dizer nada: é pedir-lhe
+   * que junte o erro à página principal.
+   *
+   * Cada página pública declara o seu canónico (há um teste que o confirma
+   * em `metadados-das-paginas.test.ts`); as outras ficam sem nenhum, que é o
+   * certo para uma página noindex. O hreflang saiu com ele: o site só tem
+   * uma língua, e um hreflang que aponta para a homepage a partir de todas
+   * as páginas era outro sinal errado.
+   */
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

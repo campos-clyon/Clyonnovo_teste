@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 
@@ -131,5 +131,42 @@ describe("os títulos", () => {
       ({ t }) => /CLYON\s*(\|\s*CLYON)$/.test(t) || /(—|-|\|)\s*CLYON\s*\|\s*CLYON$/.test(t),
     );
     expect(dobrados).toEqual([]);
+  });
+});
+
+describe("o canónico", () => {
+  /** O caminho para onde o canónico de uma página aponta ("" se não tiver). */
+  const canonicoDe = (m: Metadata): string => {
+    const c = m.alternates?.canonical;
+    const url = typeof c === "string" ? c : c instanceof URL ? c.href : c?.url ? String(c.url) : "";
+    return url;
+  };
+
+  it("cada página pública declara o seu, absoluto e a apontar para si própria", () => {
+    // O layout dava `canonical: SITE_URL` a quem não declarasse o seu. Saiu
+    // de lá (29-09-2026), e por isso cada página pública tem de o ter.
+    const maus = PAGINAS.map(({ rota, meta }) => ({ rota, canonico: canonicoDe(meta) })).filter(
+      ({ rota, canonico }) => !canonico.startsWith("https://clyon.pt") || new URL(canonico).pathname !== rota,
+    );
+    expect(maus).toEqual([]);
+  });
+
+  it("o layout não dá canónico a ninguém", () => {
+    /*
+     * Com `alternates.canonical` no layout, o 404, o /entrar e o
+     * /admin/login diziam ao Google que a versão a sério deles era a
+     * homepage. Lê-se o ficheiro e não o módulo: o layout carrega as fontes
+     * do next/font, que só existem dentro do build.
+     */
+    const layout = readFileSync(join(APP, "layout.tsx"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(layout).not.toMatch(/alternates\s*:/);
+  });
+
+  it("o 404 não tem canónico nenhum", async () => {
+    const naoEncontrada = await import("@/app/not-found");
+    expect(naoEncontrada.metadata.alternates).toBeUndefined();
+    expect(naoEncontrada.metadata.robots).toMatchObject({ index: false });
   });
 });
