@@ -238,10 +238,13 @@ describe("o envio direto passa a funcionar SEM token de escrita", () => {
   });
 
   it("a autorização é fechada aqui, e não por quem chama", () => {
-    // Um só caminho, os tipos da lista, um tamanho máximo, uma hora.
+    // Um só caminho, um tipo, um tamanho máximo, uma hora. Desde 30-09-2026 o
+    // tipo é o que ESTA rota apurou (e não a lista toda) e o tecto é o desse
+    // tipo — ver `tamanhoMaximoDoTipo` em tipo-ficheiro.ts.
     expect(ROTA).toContain('operations: ["put"]');
-    expect(ROTA).toContain("allowedContentTypes: [...TIPOS_ACEITES]");
-    expect(ROTA).toContain("maximumSizeInBytes: TAMANHO_MAXIMO");
+    expect(ROTA).toContain("allowedContentTypes: [veredicto.tipo]");
+    expect(ROTA).toContain("const maximo = tamanhoMaximoDoTipo(veredicto.tipo)");
+    expect(ROTA).toContain("maximumSizeInBytes: maximo");
     expect(ROTA).toContain("validUntil: Date.now() + VALIDADE_MS");
   });
 

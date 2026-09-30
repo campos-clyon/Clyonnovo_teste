@@ -121,3 +121,46 @@ export function tipoDoFicheiro(nome: string, tipoDeclarado: string | undefined |
 
 /** Só para mostrar na lista de permitidos, quando é preciso explicar. */
 export const EXTENSOES_ACEITES = Object.keys(POR_EXTENSAO);
+
+/*
+ * QUANTO PODE TER CADA ESPÉCIE DE FICHEIRO — 30-09-2026.
+ *
+ * Era um tecto só, 300 MB, para tudo, numa rota que qualquer pessoa chama sem
+ * conta. Trezentos megas por fotografia é armazenamento pago a quem o quiser
+ * usar como disco.
+ *
+ * Os números seguem o que os ecrãs já deixam escolher, para o servidor nunca
+ * recusar o que o formulário aceitou:
+ *
+ *   · IMAGEM, 50 MB — o simulador e o formulário da plataforma aceitam até 50
+ *     MB por ficheiro. As fotografias passam pela redução antes de subir e
+ *     chegam quase sempre com menos de 1 MB; os 50 são para quando a redução
+ *     não consegue (HEIC fora do Safari, por exemplo);
+ *   · PDF, 25 MB — os relatórios e as reportagens que o backoffice anexa;
+ *   · VÍDEO, 150 MB — um vídeo de telemóvel de alguns minutos. O simulador
+ *     trava nos 50; a prova do trabalho e o backoffice não têm tecto no ecrã.
+ */
+const MB = 1024 * 1024;
+export const TAMANHO_MAXIMO_POR_ESPECIE: Record<EspecieDoAnexo, number> = {
+  imagem: 50 * MB,
+  pdf: 25 * MB,
+  video: 150 * MB,
+};
+
+/** A espécie de um tipo MIME já aceite. */
+export function especieDoTipo(tipo: string): EspecieDoAnexo {
+  if (tipo.startsWith("video/")) return "video";
+  if (tipo === "application/pdf") return "pdf";
+  return "imagem";
+}
+
+/** O tamanho máximo para este tipo MIME. */
+export function tamanhoMaximoDoTipo(tipo: string): number {
+  return TAMANHO_MAXIMO_POR_ESPECIE[especieDoTipo(tipo)];
+}
+
+/** Os tipos aceites da mesma espécie — todas as imagens, todos os vídeos, ou o PDF. */
+export function tiposDaMesmaEspecie(tipo: string): string[] {
+  const especie = especieDoTipo(tipo);
+  return TIPOS_ACEITES.filter((t) => especieDoTipo(t) === especie);
+}

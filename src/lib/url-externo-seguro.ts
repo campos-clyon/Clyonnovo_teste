@@ -41,6 +41,40 @@ export function urlDeImagemPermitido(valor: string): URL | null {
 }
 
 /**
+ * O endereço de um ANEXO de pedido, se for do armazenamento público onde os
+ * nossos envios ficam; senão null.
+ *
+ * As rotas públicas do pedido gravavam o `url` que o browser mandasse, sem
+ * olhar para ele. Esse endereço vai parar ao backoffice, ao email e ao
+ * painel do profissional, que o abrem e o mostram como «a fotografia do
+ * cliente»: um `javascript:` num link, uma imagem de um servidor de outra
+ * pessoa (que vê quem a abre e a troca depois), ou uma página falsa com o ar
+ * de anexo nosso.
+ *
+ * Todos os caminhos de envio do site (a função, a URL assinada, o envio
+ * directo) devolvem um endereço https do Vercel Blob PÚBLICO. É só isso que
+ * passa; o resto deita-se fora. O store exacto não se confirma: o nome do
+ * anfitrião sai do id do store por uma transformação que não é nossa, e
+ * adivinhá-la mal deitava fora as fotografias todas.
+ */
+export function urlDeAnexoPermitido(valor: unknown): string | null {
+  if (typeof valor !== "string") return null;
+  const texto = valor.trim();
+  if (!texto || texto.length > 1000) return null;
+  let url: URL;
+  try {
+    url = new URL(texto);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  if (url.port && url.port !== "443") return null;
+  if (url.username || url.password) return null;
+  if (!url.hostname.toLowerCase().endsWith(".public.blob.vercel-storage.com")) return null;
+  return url.href;
+}
+
+/**
  * Vai buscar a imagem com todas as travas: lista branca de host, sem seguir
  * redirects (um 302 para 127.0.0.1 anularia a lista branca), com abortar a
  * sério, e só aceita content-type de imagem dentro do tamanho.
