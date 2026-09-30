@@ -13,11 +13,8 @@ import {
 } from "@/lib/db";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import { TIPOS_DE_VEICULO, tipoDeVeiculoValido } from "@/lib/convite-profissional";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-  renovarSessaoSePreciso,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL, renovarSessaoSePreciso } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   nifValido,
   telefoneValido,
@@ -28,6 +25,8 @@ import {
   RAIO_MAXIMO_KM,
   RAIO_MINIMO_KM,
   pareceMorada,
+  temSinaisDeHtml,
+  MENSAGEM_SEM_SINAIS,
 } from "@/lib/inscricao-profissional";
 import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
 import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
@@ -78,7 +77,7 @@ function listaGravada(v: unknown): string[] {
 }
 
 export async function GET(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -196,7 +195,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -217,6 +216,10 @@ export async function PUT(req: NextRequest) {
     const nome = texto(corpo.nome);
     if (nome.length < 2) {
       erros.push({ campo: "nome", mensagem: "Indique o nome." });
+    } else if (temSinaisDeHtml(nome)) {
+      // Vai para a página pública e para os dados estruturados dela — ver
+      // `temSinaisDeHtml`. A mesma regra da inscrição.
+      erros.push({ campo: "nome", mensagem: MENSAGEM_SEM_SINAIS.nome });
     } else if (pareceMorada(nome)) {
       /*
        * A mesma regra da inscrição, e pela mesma razão.
@@ -254,6 +257,7 @@ export async function PUT(req: NextRequest) {
   if ("cidade" in corpo) {
     const c = texto(corpo.cidade);
     if (!c) erros.push({ campo: "cidade", mensagem: "Indique a cidade." });
+    else if (temSinaisDeHtml(c)) erros.push({ campo: "cidade", mensagem: MENSAGEM_SEM_SINAIS.cidade });
     else {
       mudancas.city = c;
       /*
@@ -304,7 +308,9 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  if ("zonas" in corpo) {
+  if ("zonas" in corpo && lista(corpo.zonas).some(temSinaisDeHtml)) {
+    erros.push({ campo: "zonas", mensagem: MENSAGEM_SEM_SINAIS.zonas });
+  } else if ("zonas" in corpo) {
     const zonas = lista(corpo.zonas);
     const cidade = texto(corpo.cidade) || texto(mudancas.city);
     // A cidade de base entra sempre. Quem apagasse as zonas todas deixava de

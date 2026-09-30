@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { contaPodeEntrarNoPainel } from "./profissional-auth";
 
 /**
  * A candidatura de quem se quer tornar parceiro.
@@ -181,10 +182,21 @@ describe("aprovar cria a conta, e não um segundo formulário", () => {
      * errados» até alguém o aprovar. Passava dias convencido de que se tinha
      * enganado a escrever.
      */
+    /*
+     * O critério saiu da rota para `contaPodeEntrarNoPainel` (30-09-2026),
+     * porque passou a ter dois a perguntar: a entrada e cada chamada do painel.
+     * O que se guarda é o mesmo — agora pelo comportamento.
+     */
     const ENTRAR = ler("src/app/api/profissionais/entrar/route.ts");
-    expect(ENTRAR).toContain('p?.estado === "aprovado" || p?.estado === "pendente"');
+    expect(ENTRAR).toContain("contaPodeEntrarNoPainel(p)");
+    expect(contaPodeEntrarNoPainel({ estado: "aprovado", isActive: 1 })).toBe(true);
+    expect(contaPodeEntrarNoPainel({ estado: "pendente", isActive: 1 })).toBe(true);
     // E continua a barrar quem está suspenso, rejeitado ou desactivado.
-    expect(ENTRAR).toContain("p.isActive !== 1");
+    for (const estado of ["suspenso", "rejeitado", "apagado", null]) {
+      expect(contaPodeEntrarNoPainel({ estado, isActive: 1 }), String(estado)).toBe(false);
+    }
+    expect(contaPodeEntrarNoPainel({ estado: "aprovado", isActive: 0 })).toBe(false);
+    expect(contaPodeEntrarNoPainel(undefined)).toBe(false);
   });
 
   it("sem email, devolve o link para se mandar à mão", () => {

@@ -1,4 +1,5 @@
 import { getPool, ensureProvidersSchema } from "@/lib/db";
+import { cidadePublica, zonasPublicas } from "@/lib/localidade-publica";
 
 /**
  * O perfil do profissional como o CLIENTE o vê — só o que é verdade.
@@ -29,7 +30,13 @@ export type PerfilPublico = {
   nome: string;
   /** O endereço da página dele. Só existe depois de aprovado. */
   slug: string | null;
-  /** A base dele, para a página dizer de onde parte. Nunca a morada. */
+  /**
+   * A base dele, para a página dizer de onde parte. Nunca a morada.
+   *
+   * A coluna `city` guarda a MORADA da base (é o que mede as distâncias), por
+   * isso isto não é a coluna: é a terra conhecida que ela nomeia, ou nada.
+   * Ver `localidade-publica.ts`.
+   */
   cidade: string | null;
   naClyonDesde: Date | null;
   categorias: string[];
@@ -65,6 +72,23 @@ function lista(v: unknown): string[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * UMA CONTA DE TESTE NÃO É UM PROFISSIONAL.
+ *
+ * Havia uma no Google: «Fred Teste», aprovada para se experimentar o fluxo,
+ * com página própria, entrada no sitemap e cartão nas páginas de cidade — e
+ * com a morada de quem a criou. Um cliente que a encontrasse via um
+ * profissional que não existe.
+ *
+ * A tabela não tem coluna que as marque; o que as distingue é o nome, e é
+ * por ele que se reconhecem: «teste» ou «test» como palavra inteira.
+ * «Testemunho» ou «Contest» não são. Fica de fora das listas públicas e a
+ * página responde 404; a conta continua a funcionar para o que foi criada.
+ */
+export function eContaDeTeste(nome: string | null | undefined): boolean {
+  return typeof nome === "string" && /\bteste?\b/i.test(nome);
 }
 
 export async function perfilPublicoDoProfissional(
@@ -116,13 +140,16 @@ export async function perfilPublicoDoProfissional(
       ? Math.max(0, Math.floor((Date.now() - visto.getTime()) / 86_400_000))
       : null;
 
+  const zonas = lista(p.zonas);
+
   return {
     nome: String(p.name ?? ""),
     slug: typeof p.slug === "string" && p.slug ? p.slug : null,
-    cidade: typeof p.city === "string" && p.city ? p.city : null,
+    // A terra, e nunca o texto da coluna — que é a morada da base.
+    cidade: cidadePublica(typeof p.city === "string" ? p.city : null, zonas),
     naClyonDesde: (p.createdAt as Date | null) ?? null,
     categorias: lista(p.categorias),
-    zonas: lista(p.zonas),
+    zonas: zonasPublicas(zonas),
     raioKm: p.raioKm == null ? null : Number(p.raioKm),
     emiteFatura: Number(p.emiteFatura) === 1,
     guiaVerificada: p.guiaVerificadaEm != null,
@@ -158,14 +185,15 @@ export async function perfilPublicoPorSlug(slug: string): Promise<PerfilPublico 
   if (!pool) return null;
 
   const [linhas] = (await pool.execute(
-    `SELECT id FROM providers
+    `SELECT id, name FROM providers
       WHERE slug = ? AND estado = 'aprovado' AND isActive = 1 AND isClyon = 0
       LIMIT 1`,
     [slug],
   )) as any[];
-  const id = (linhas as Array<{ id: number }>)[0]?.id;
-  if (!id) return null;
-  return perfilPublicoDoProfissional(Number(id));
+  const linha = (linhas as Array<{ id: number; name: string | null }>)[0];
+  // Uma conta de teste não tem página: 404, como um slug que não existe.
+  if (!linha?.id || eContaDeTeste(linha.name)) return null;
+  return perfilPublicoDoProfissional(Number(linha.id));
 }
 
 /**
@@ -256,16 +284,24 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
         GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias
         ORDER BY avaliados DESC, concluidos DESC, p.name ASC`,
     )) as any[];
-    const saida = (linhas as Array<Record<string, unknown>>).map((l) => ({
-      slug: String(l.slug),
-      nome: String(l.name ?? ""),
-      cidade: typeof l.city === "string" && l.city ? l.city : null,
-      zonas: lista(l.zonas),
-      categorias: lista(l.categorias),
-      notaMedia: l.media != null ? Math.round(Number(l.media) * 10) / 10 : null,
-      quantasAvaliacoes: Number(l.avaliados ?? 0),
-      trabalhosConcluidos: Number(l.concluidos ?? 0),
-    }));
+    const saida = (linhas as Array<Record<string, unknown>>)
+      // As contas de teste ficam de fora de tudo o que sai daqui: sitemap,
+      // blocos das páginas de cidade, avaliações, trabalhos.
+      .filter((l) => !eContaDeTeste(typeof l.name === "string" ? l.name : null))
+      .map((l) => {
+        const zonas = lista(l.zonas);
+        return {
+          slug: String(l.slug),
+          nome: String(l.name ?? ""),
+          // A terra, e nunca a morada da base — ver `localidade-publica.ts`.
+          cidade: cidadePublica(typeof l.city === "string" ? l.city : null, zonas),
+          zonas: zonasPublicas(zonas),
+          categorias: lista(l.categorias),
+          notaMedia: l.media != null ? Math.round(Number(l.media) * 10) / 10 : null,
+          quantasAvaliacoes: Number(l.avaliados ?? 0),
+          trabalhosConcluidos: Number(l.concluidos ?? 0),
+        };
+      });
     emCache = { quando: Date.now(), lista: saida };
     return saida;
   } catch {

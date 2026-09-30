@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { jsonLd } from "@/lib/json-ld";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import RastreioConsentido from "@/components/RastreioConsentido";
 import PageViewTracker from "@/components/PageViewTracker";
@@ -260,15 +261,15 @@ export default function RootLayout({
         <meta name="address" content={BUSINESS_ADDRESS} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(localBusinessSchema) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(organizationSchema) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(websiteSchema) }}
         />
       </head>
       <body className="site-aqua-shell min-h-screen bg-white text-slate-900 antialiased overflow-x-hidden">

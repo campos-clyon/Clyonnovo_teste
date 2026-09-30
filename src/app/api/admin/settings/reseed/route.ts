@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { resetSimulatorTableEnsuredFlag, ensureSimulatorSettingsTable, getSimulatorSettings } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -14,10 +14,9 @@ export const runtime = "nodejs";
  * Protegido por token de admin.
  */
 export async function POST(req: NextRequest) {
-  const auth = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!auth || !auth.isAdmin) {
-    return NextResponse.json({ error: "Acesso negado." }, { status: 401 });
-  }
+  // Confirmado na base, e não só pela assinatura — ver `conta-do-painel.ts`.
+  const { err } = await requireAdminGeral(req);
+  if (err) return err;
 
   try {
     // Reset do flag para forçar re-execução do upsert de defaults

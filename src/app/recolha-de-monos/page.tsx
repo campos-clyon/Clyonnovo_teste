@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { jsonLd } from "@/lib/json-ld";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -290,8 +291,8 @@ export default function RecolhaMonosPage() {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
     </div>
   );
 }

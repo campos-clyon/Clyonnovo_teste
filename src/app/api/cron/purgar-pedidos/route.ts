@@ -11,6 +11,7 @@ import {
   DIAS_PARA_OS_ABANDONADOS,
   purgaArmada,
 } from "@/lib/retencao";
+import { bearerConfere } from "@/lib/segredo-igual";
 
 export const runtime = "nodejs";
 
@@ -61,7 +62,8 @@ export async function GET(req: NextRequest) {
     console.error("[cron/purgar-pedidos] CRON_SECRET não definido — recusado");
     return NextResponse.json({ error: "Não configurado" }, { status: 503 });
   }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  // Em tempo constante — ver segredo-igual.ts.
+  if (!bearerConfere(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

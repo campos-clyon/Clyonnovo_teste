@@ -21,6 +21,8 @@
  * código.
  */
 
+import { jsonLd } from "./json-ld";
+
 const SUBSTITUICOES: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -46,18 +48,11 @@ export const e = escaparHtml;
 /**
  * JSON para dentro de <script type="application/ld+json">.
  *
- * `JSON.stringify` não escapa `<`, por isso um valor que contenha
- * `</script>` fecha a etiqueta e o resto passa a ser HTML — a partir daí
- * escreve-se o que se quiser na página.
- *
- * Hoje todos os nossos schemas usam conteúdo local e as rotas dinâmicas
- * respondem 404 a slugs desconhecidos, por isso não há por onde entrar. Isto
- * é para o dia em que alguém acrescentar ali uma avaliação vinda da base de
- * dados e não se lembrar deste detalhe.
+ * Passou a viver em `json-ld.ts`, que é o que as páginas importam. Este nome
+ * fica para quem já o chamava: duas implementações da mesma defesa eram duas
+ * defesas a divergir — e o dia chegou, com o nome e a cidade do profissional
+ * a irem da base para o JSON-LD da página dele.
  */
 export function jsonParaScript(dados: unknown): string {
-  return JSON.stringify(dados)
-    .replace(/</g, "\\u003c")
-    .replace(/>/g, "\\u003e")
-    .replace(/&/g, "\\u0026");
+  return jsonLd(dados);
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { obterTokenDoBlob } from "@/lib/blob-token";
-import { TIPOS_ACEITES } from "@/lib/tipo-ficheiro";
+import { tamanhoMaximoDoTipo, tipoDoFicheiro, tiposDaMesmaEspecie } from "@/lib/tipo-ficheiro";
 
 export const runtime = "nodejs";
 
@@ -24,19 +24,40 @@ export const runtime = "nodejs";
  * o servidor que o decide, não quem chama.
  */
 
-/** 300 MB. Um vídeo de telemóvel de alguns minutos cabe; um filme não. */
-const TAMANHO_MAXIMO = 300 * 1024 * 1024;
+/*
+ * O tamanho máximo é o do tipo (imagem 50, PDF 25, vídeo 150 MB) — ver
+ * `tipo-ficheiro.ts`. Era 300 MB para tudo.
+ */
+
+/** Trinta autorizações por hora e por IP — ver a mesma conta em /api/blob/presign. */
+const ENVIOS_POR_HORA = 30;
+const JANELA_SEGUNDOS = 60 * 60;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // Generoso de propósito: um pedido com oito ficheiros faz oito pedidos de
-  // autorização e outras tantas confirmações. Isto trava quem tente usar o
-  // nosso armazenamento como disco, não quem esteja a pedir um orçamento.
-  const rl = await checkRateLimit(`blob-token:${getClientIp(req)}`, 60, 600);
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Demasiados envios. Aguarde um momento." },
-      { status: 429, headers: { "Retry-After": "600" } },
+  let corpo: HandleUploadBody;
+  try {
+    corpo = (await req.json()) as HandleUploadBody;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  /*
+   * Só os pedidos de AUTORIZAÇÃO contam para o limite. O aviso de «acabou de
+   * subir» vem dos servidores da Vercel, assinado, e todos do mesmo punhado
+   * de IPs: contá-lo punha os envios de toda a gente no mesmo balde.
+   */
+  if (corpo?.type === "blob.generate-client-token") {
+    const rl = await checkRateLimit(
+      `blob-token:${getClientIp(req)}`,
+      ENVIOS_POR_HORA,
+      JANELA_SEGUNDOS,
     );
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Demasiados envios. Aguarde um pouco e tente novamente." },
+        { status: 429, headers: { "Retry-After": String(JANELA_SEGUNDOS) } },
+      );
+    }
   }
 
   // Assinar uma autorização de cliente exige um token de escrita a sério: o
@@ -61,15 +82,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const resposta = await handleUpload({
       request: req,
-      body: (await req.json()) as HandleUploadBody,
+      body: corpo,
       token: credencial.token,
-      onBeforeGenerateToken: async () => ({
-        // A lista é a mesma do envio pelo servidor. Duas listas diferentes para
-        // a mesma decisão acabam sempre por divergir.
-        allowedContentTypes: [...TIPOS_ACEITES],
-        maximumSizeInBytes: TAMANHO_MAXIMO,
-        addRandomSuffix: true,
-      }),
+      onBeforeGenerateToken: async (caminho) => {
+        /*
+         * O tipo sai da extensão do caminho, pela mesma função dos outros
+         * dois caminhos. O tecto é o dessa espécie, e só os tipos dessa
+         * espécie passam: quem chamasse «x.pdf» para ter 25 MB não mandava
+         * um vídeo por aqui.
+         */
+        const veredicto = tipoDoFicheiro(caminho, "");
+        if (!veredicto.ok) throw new Error(veredicto.motivo);
+        return {
+          allowedContentTypes: tiposDaMesmaEspecie(veredicto.tipo),
+          maximumSizeInBytes: tamanhoMaximoDoTipo(veredicto.tipo),
+          // O sufixo aleatório é o que torna o endereço público impossível de
+          // adivinhar — o caminho que o browser escolhe não é.
+          addRandomSuffix: true,
+        };
+      },
       // Não há nada a fazer quando acaba: o browser recebe o URL e mete-o no
       // pedido, que é gravado a seguir. Um callback que grave o ficheiro numa
       // tabela antes de o pedido existir só criaria linhas órfãs.

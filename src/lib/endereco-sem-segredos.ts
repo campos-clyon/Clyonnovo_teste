@@ -39,8 +39,14 @@ export const ROTAS_COM_SEGREDO = [
   "/profissionais/inscricao/",
 ] as const;
 
-/** Parâmetros que nunca devem viajar para fora, tenham o valor que tiverem. */
-const PARAMETROS_SECRETOS = ["chave", "token"] as const;
+/**
+ * Parâmetros que nunca devem viajar para fora, tenham o valor que tiverem.
+ *
+ * O `t` é o do link de entrada por email (/entrar/link?t=…): vale uma sessão
+ * na conta do cliente. A página tira-o do endereço à primeira oportunidade,
+ * mas até lá ele está no `location` — e no `referrer` de quem vier de lá.
+ */
+const PARAMETROS_SECRETOS = ["chave", "token", "t"] as const;
 
 /**
  * Esta página TEM um segredo no endereço?

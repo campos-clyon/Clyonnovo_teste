@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrderByToken } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
-  if (!colab) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!colab.isAdmin) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  // Confirmado na base, e não só pela assinatura — ver `conta-do-painel.ts`.
+  const { err } = await requireAdminGeral(req);
+  if (err) return err;
 
   const { token } = await params;
   const order = await getOrderByToken(token);

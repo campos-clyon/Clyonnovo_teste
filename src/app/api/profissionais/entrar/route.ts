@@ -6,9 +6,10 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
   porSessaoNaResposta,
   DURACAO_SESSAO_SEGUNDOS,
+  contaPodeEntrarNoPainel,
 } from "@/lib/profissional-auth";
 import { lerLembrar } from "@/lib/manter-sessao";
-import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: GENERICO }, { status: 401 });
   }
 
+  /*
+   * E POR EMAIL, além de por IP.
+   *
+   * O limite por IP não trava quem tenta a palavra-passe de UMA conta a partir
+   * de muitas máquinas. Este trava — e vale para qualquer email, exista ou
+   * não, por isso não diz a ninguém quais estão inscritos.
+   */
+  const porEmail = await limitarPorConta("profissional-entrar-email", email, 5, 900);
+  if (porEmail.erro) return porEmail.erro;
+
   if (!process.env.JWT_SECRET) {
     console.error("[profissionais/entrar] JWT_SECRET não está definido neste ambiente");
     return NextResponse.json(
@@ -69,10 +80,13 @@ export async function POST(req: NextRequest) {
      * Entrar não é receber trabalho. Quem distribui pedidos continua a exigir
      * `aprovado` (ver `avaliarElegibilidade`), e o painel mostra-lhe o estado
      * da conta à cabeça.
+     *
+     * O critério vive em `contaPodeEntrarNoPainel`, porque desde 30-09-2026 há
+     * outro a perguntar o mesmo: cada chamada do painel volta a confirmá-lo
+     * (`sessaoActivaDoProfissional`), e duas cópias acabavam por divergir.
      */
     const p = await profissionalParaEntrar(email);
-    const podeEntrar = p?.estado === "aprovado" || p?.estado === "pendente";
-    if (!p || !podeEntrar || p.isActive !== 1) {
+    if (!p || !contaPodeEntrarNoPainel(p)) {
       return NextResponse.json({ error: GENERICO }, { status: 401 });
     }
 

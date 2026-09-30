@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { palavraPasseGuardada, definirPalavraPasseDoProfissional } from "@/lib/db";
 import {
-  verificarSessaoDoProfissional,
   validarPalavraPasse,
   hashDaPalavraPasse,
   palavraPasseConfere,
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export const runtime = "nodejs";
  * perdia o acesso ao saldo dele.
  */
 export async function POST(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

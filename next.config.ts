@@ -452,7 +452,17 @@ const nextConfig: NextConfig = {
             rota assinava, o CORS respondia com `*`, e um `curl` passava. Um
             `curl` nao tem CSP.
           */
-          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://generativelanguage.googleapis.com https://api.resend.com https://*.upstash.io https://maps.googleapis.com",
+          /*
+            SÓ O QUE O BROWSER CHAMA — 30-09-2026.
+
+            Estavam aqui o Gemini, a Resend e a Upstash. São chamados pelo
+            SERVIDOR (a CSP não se aplica a ele) e nenhum código do browser
+            lhes fala — conferido ficheiro a ficheiro. Na lista, só serviam
+            para um script injectado na página poder mandar dados para lá.
+            O `vercel.com` e o `blob.vercel-storage.com` ficam: são os do envio
+            directo de ficheiros, que corre no browser.
+          */
+          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://maps.googleapis.com",
           /*
             VIDEO E AUDIO — e esta linha nao existia de todo.
 
@@ -464,6 +474,10 @@ const nextConfig: NextConfig = {
           "media-src 'self' blob: https://*.public.blob.vercel-storage.com",
           // Frames: nenhum (embeds externos não usados)
           "frame-src 'none'",
+          // Quem pode pôr ESTE site dentro de uma moldura: só ele próprio. É o
+          // X-Frame-Options de cima, dito na língua que os browsers de hoje
+          // preferem — contra o clique enganado numa página alheia.
+          "frame-ancestors 'self'",
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",

@@ -4,10 +4,8 @@ import {
   levantamentosDoProfissional,
   perfilDoProfissional,
 } from "@/lib/db";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { carteiraDe, type TrabalhoNaCarteira } from "@/lib/carteira";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
@@ -29,7 +27,7 @@ export const runtime = "nodejs";
  * esta resposta abre-se em qualquer sítio onde ele deixe a sessão iniciada.
  */
 export async function GET(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) {

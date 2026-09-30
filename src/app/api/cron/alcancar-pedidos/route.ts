@@ -3,6 +3,7 @@ import { registarSemFalhar } from "@/lib/db";
 import { correrOAlcance } from "@/lib/correr-o-alcance";
 import { resumoDoAlcance } from "@/lib/alcancar-pedidos";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { bearerConfere } from "@/lib/segredo-igual";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,8 @@ export async function GET(req: NextRequest) {
     console.error("[cron/alcancar-pedidos] CRON_SECRET não definido — recusado");
     return NextResponse.json({ error: "Não configurado" }, { status: 503 });
   }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  // Em tempo constante — ver segredo-igual.ts.
+  if (!bearerConfere(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

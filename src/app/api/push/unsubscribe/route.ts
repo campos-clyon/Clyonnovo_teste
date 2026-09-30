@@ -23,6 +23,11 @@ async function emailDeQuemPede(req: NextRequest): Promise<string | null> {
   const sessaoDoCliente = await getServerSession(authOptions);
   if (sessaoDoCliente?.user?.email) return sessaoDoCliente.user.email;
 
+  /*
+   * Aqui basta a assinatura, e é a única rota do profissional onde basta.
+   * Cancelar avisos só apaga: uma conta entretanto suspensa tem de continuar
+   * a poder dizer «não me mandem mais nada» a partir do telemóvel dela.
+   */
   const sessaoDoPro = await verificarSessaoDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );

@@ -1,8 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { issueSignedToken, presignUrl } from "@vercel/blob";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { obterTokenDoBlob } from "@/lib/blob-token";
-import { TIPOS_ACEITES, tipoDoFicheiro } from "@/lib/tipo-ficheiro";
+import { tamanhoMaximoDoTipo, tipoDoFicheiro } from "@/lib/tipo-ficheiro";
 
 export const runtime = "nodejs";
 
@@ -39,11 +40,26 @@ export const runtime = "nodejs";
  * coisa.
  */
 
-/** 300 MB. Um vídeo de telemóvel de alguns minutos cabe; um filme não. */
-const TAMANHO_MAXIMO = 300 * 1024 * 1024;
+/*
+ * O TAMANHO MÁXIMO É O DO TIPO — 30-09-2026.
+ *
+ * Era 300 MB para tudo. Passou a ser por espécie (imagem 50, PDF 25, vídeo
+ * 150 MB), com os números em `tipo-ficheiro.ts` e alinhados com o que os
+ * formulários já deixam escolher. E a assinatura só aceita o TIPO que aqui se
+ * apurou: quem dissesse «é um PDF» para ter 25 MB não pode mandar outra coisa.
+ */
 
 /** Uma hora chega para qualquer envio, e não deixa a assinatura a arrastar. */
 const VALIDADE_MS = 60 * 60 * 1000;
+
+/*
+ * Trinta autorizações por hora, por IP. Só os ficheiros acima de 4 MB passam
+ * por aqui — as fotografias reduzidas vão pelo caminho pequeno — e um pedido
+ * de orçamento tem dez anexos no máximo. Eram sessenta a cada dez minutos:
+ * trezentas e sessenta por hora, um disco à borla.
+ */
+const ENVIOS_POR_HORA = 30;
+const JANELA_SEGUNDOS = 60 * 60;
 
 /**
  * O nome, limpo, mas ainda reconhecível.
@@ -64,11 +80,15 @@ function nomeSeguro(nome: string): string {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const rl = await checkRateLimit(`blob-presign:${getClientIp(req)}`, 60, 600);
+  const rl = await checkRateLimit(
+    `blob-presign:${getClientIp(req)}`,
+    ENVIOS_POR_HORA,
+    JANELA_SEGUNDOS,
+  );
   if (!rl.allowed) {
     return NextResponse.json(
-      { error: "Demasiados envios. Aguarde um momento." },
-      { status: 429, headers: { "Retry-After": "600" } },
+      { error: "Demasiados envios. Aguarde um pouco e tente novamente." },
+      { status: 429, headers: { "Retry-After": String(JANELA_SEGUNDOS) } },
     );
   }
 
@@ -85,14 +105,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!Number.isFinite(tamanho) || tamanho <= 0) {
     return NextResponse.json({ error: "Falta o tamanho do ficheiro." }, { status: 400 });
   }
-  if (tamanho > TAMANHO_MAXIMO) {
-    return NextResponse.json(
-      {
-        error: `O ficheiro tem ${Math.round(tamanho / 1024 / 1024)} MB e o máximo são ${TAMANHO_MAXIMO / 1024 / 1024} MB.`,
-      },
-      { status: 413 },
-    );
-  }
 
   /*
    * O TIPO DECIDE-SE AQUI, com a mesma função dos outros dois caminhos.
@@ -106,6 +118,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: veredicto.motivo }, { status: 415 });
   }
 
+  // O tecto é o do tipo, e decide-se depois de o tipo estar decidido.
+  const maximo = tamanhoMaximoDoTipo(veredicto.tipo);
+  if (tamanho > maximo) {
+    return NextResponse.json(
+      {
+        error: `O ficheiro tem ${Math.round(tamanho / 1024 / 1024)} MB e o máximo para este tipo são ${maximo / 1024 / 1024} MB.`,
+      },
+      { status: 413 },
+    );
+  }
+
   const credencial = obterTokenDoBlob();
   if (!credencial.ok) {
     return NextResponse.json(
@@ -115,7 +138,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const caminho = `simulador/${Date.now()}-${nomeSeguro(nome)}`;
+    /*
+     * UM CAMINHO QUE NINGUÉM ADIVINHA.
+     *
+     * Era `simulador/<hora em ms>-<nome>`, num armazenamento PÚBLICO: com a
+     * hora aproximada e um nome comum («image.jpg», «video.mp4»), as
+     * fotografias da casa de um cliente estavam a umas centenas de tentativas
+     * de distância. Um UUID à frente torna isso impraticável; o nome fica,
+     * porque é o que distingue uma reportagem de um orçamento na lista.
+     */
+    const caminho = `simulador/${randomUUID()}-${nomeSeguro(nome)}`;
 
     /*
      * A identidade do deployment, quando não há token — e o token, quando há.
@@ -128,8 +160,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const assinado = await issueSignedToken({
       pathname: caminho,
       operations: ["put"],
-      allowedContentTypes: [...TIPOS_ACEITES],
-      maximumSizeInBytes: TAMANHO_MAXIMO,
+      allowedContentTypes: [veredicto.tipo],
+      maximumSizeInBytes: maximo,
       validUntil: Date.now() + VALIDADE_MS,
       ...(credencial.modo === "token"
         ? { token: credencial.token }
@@ -140,13 +172,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       operation: "put",
       pathname: caminho,
       access: "public",
-      allowedContentTypes: [...TIPOS_ACEITES],
-      maximumSizeInBytes: TAMANHO_MAXIMO,
+      allowedContentTypes: [veredicto.tipo],
+      maximumSizeInBytes: maximo,
       /*
-       * Sem sufixo aleatório: o caminho já leva a hora à frente, e é o que
-       * permite reconhecer o ficheiro na listagem do armazenamento. Dois
-       * envios do mesmo nome no mesmo milissegundo é um problema que ainda
-       * não temos.
+       * Sem sufixo aleatório do SDK: o caminho já leva um UUID à frente, e é o
+       * caminho assinado que o browser usa no PUT — com o sufixo, o endereço
+       * final deixava de ser o que se assinou.
        */
       addRandomSuffix: false,
     });

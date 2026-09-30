@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
 import { problemaDoTelefone, juntarIndicativo, MENSAGENS_DO_TELEFONE } from "@/lib/telefone-do-cliente";
+import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 
 export const runtime = "nodejs";
 
@@ -197,21 +198,28 @@ export async function POST(req: NextRequest) {
       description: descricao || null,
       // Só entradas COM url. Uma linha sem url não é uma foto: é uma linha que
       // faz o painel dizer que há fotos quando não há nenhuma.
-      filesJson:
-        fotos && fotos.length > 0
+      //
+      // E só url NOSSO — um https do armazenamento público para onde o site
+      // envia (`urlDeAnexoPermitido`). O `z.string().url()` aceitava qualquer
+      // endereço, e este é aberto no backoffice como «a foto do cliente».
+      filesJson: (() => {
+        const aceites = (fotos ?? []).flatMap((f) => {
+          const url = urlDeAnexoPermitido(f.url);
+          return url ? [{ ...f, url }] : [];
+        });
+        return aceites.length > 0
           ? JSON.stringify(
-              fotos
-                .filter((f) => f.url)
-                .map((f, i) => ({
-                  id: String(i),
-                  url: f.url,
-                  name: f.name ?? `foto-${i + 1}`,
-                  size: f.size ?? 0,
-                  type: f.type ?? "image/jpeg",
-                  mimeType: f.type ?? "image/jpeg",
-                })),
+              aceites.map((f, i) => ({
+                id: String(i),
+                url: f.url,
+                name: f.name ?? `foto-${i + 1}`,
+                size: f.size ?? 0,
+                type: f.type ?? "image/jpeg",
+                mimeType: f.type ?? "image/jpeg",
+              })),
             )
-          : null,
+          : null;
+      })(),
       address: morada || null,
       city: codigoPostal || null,   // será refinado pelo admin; usamos CP como referência
       postalCode: codigoPostal || null,

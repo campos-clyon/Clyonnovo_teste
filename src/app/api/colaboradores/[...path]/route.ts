@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as jose from "jose";
 
 import { getSimulatorSettings, upsertSimulatorSetting } from "@/lib/db";
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
-import { getColaboradorSecretKey } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 
 /**
  * O que resta deste catch-all: os valores do simulador.
@@ -23,31 +22,21 @@ import { getColaboradorSecretKey } from "@/lib/colaborador-auth";
  * o que o painel chama.
  */
 
-type JwtPayload = { id: number; nome: string; isAdmin: number };
 type RouteContext = { params: Promise<{ path: string[] }> };
-
-async function verifyToken(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!token) return null;
-
-  try {
-    const { payload } = await jose.jwtVerify(token, getColaboradorSecretKey());
-    return payload as unknown as JwtPayload;
-  } catch {
-    return null;
-  }
-}
 
 async function handleRequest(req: NextRequest, path: string[]) {
   const route = path.join("/");
 
-  const auth = await verifyToken(req);
-  if (!auth) {
-    return NextResponse.json({ error: "Nao autorizado." }, { status: 401 });
-  }
-  if (!auth.isAdmin) {
-    return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
-  }
+  /*
+   * Pelo `requireAdminGeral`, e não por um `jwtVerify` escrito aqui.
+   *
+   * O de cá só conferia a assinatura e o `isAdmin` do payload: não recusava
+   * tokens de outros domínios assinados com a mesma chave (a verificação do
+   * `type` vive em `verifyColaboradorToken`) nem perguntava à base se a conta
+   * ainda existia, estava activa, ou tinha mudado de palavra-passe.
+   */
+  const { err } = await requireAdminGeral(req);
+  if (err) return err;
 
   if (route === "admin/settings/simulador" && req.method === "GET") {
     const settings = await getSimulatorSettings();

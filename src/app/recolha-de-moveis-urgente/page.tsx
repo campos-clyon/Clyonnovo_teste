@@ -1,4 +1,6 @@
 ﻿import type { Metadata } from "next";
+// Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
+import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -147,7 +149,7 @@ export default function RecolhaMoveisUrgentePage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: paraScriptJsonLd(jsonLd) }}
       />
 
       <main className="min-h-screen bg-white">

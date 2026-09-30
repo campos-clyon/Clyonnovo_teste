@@ -378,7 +378,9 @@ describe("o consentimento é dele, e só dele", () => {
      * falsificado que isto existe para impedir.
      */
     const r = semComentarios(ler("src/app/api/profissionais/avisos-whatsapp/route.ts"));
-    expect(r).toContain("verificarSessaoDoProfissional");
+    // A sessão confirmada na base (30-09-2026): uma conta suspensa não liga
+    // avisos com um cookie que ainda não caducou.
+    expect(r).toContain("sessaoActivaDoProfissional");
     expect(r).toContain("definirAvisosNoWhatsApp(sessao.providerId");
     expect(r).not.toMatch(/corpo\.providerId|body\.providerId/);
   });

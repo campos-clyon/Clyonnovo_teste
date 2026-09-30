@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { jsonLd } from "@/lib/json-ld";
 import Link from "next/link";
 import { Star, Quote, MessageCircle } from "lucide-react";
 
@@ -298,7 +299,7 @@ export default function AvaliacoesPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateRatingSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(aggregateRatingSchema) }}
       />
     </div>
   );

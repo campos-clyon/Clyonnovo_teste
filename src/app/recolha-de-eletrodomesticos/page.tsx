@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { jsonLd } from "@/lib/json-ld";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -168,15 +169,15 @@ export default function RecolhaDeEletrodomesticosPage() {
     <div className="min-h-screen bg-slate-50">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }}
       />
 
       {/* Hero Section */}

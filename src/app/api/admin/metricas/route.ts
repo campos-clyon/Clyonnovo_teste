@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { ensureSimulatorOrdersTable, withConnection } from "@/lib/db";
-import { verifyColaboradorAuthHeader } from "@/lib/colaborador-auth";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +38,9 @@ function isValidDateInput(value?: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    const colaborador = await verifyColaboradorAuthHeader(request.headers.get("authorization"));
-    if (!colaborador) {
-      return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-    }
-    if (Number(colaborador.isAdmin) !== 1) {
-      return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
-    }
+    // Confirmado na base, e não só pela assinatura — ver `conta-do-painel.ts`.
+    const { err } = await requireAdminGeral(request);
+    if (err) return err;
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") ?? "mes";

@@ -26,6 +26,7 @@ import { registarCliente } from "@/lib/conta-server";
 import { consumirLigacaoDeEntrada } from "@/lib/db";
 import { pareceUmToken } from "@/lib/entrada-por-link";
 import { hashDaLigacao } from "@/lib/entrada-por-link-segredo";
+import { redireccionamentoDepoisDeEntrar } from "@/lib/destino-seguro";
 // getPool não é necessário aqui — verificação de colaborador movida para /api/colaboradores/verify-email
 
 export const authOptions: NextAuthOptions = {
@@ -102,10 +103,13 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
 
+    /*
+     * Para onde vai depois de entrar. Comparava-se o TEXTO do endereço com o
+     * nosso, e «https://clyon.pt.outro.com» começa por «https://clyon.pt».
+     * Agora compara-se a origem — ver `destino-seguro.ts`.
+     */
     async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url;
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      return `${baseUrl}/conta`;
+      return redireccionamentoDepoisDeEntrar(url, baseUrl);
     },
   },
 

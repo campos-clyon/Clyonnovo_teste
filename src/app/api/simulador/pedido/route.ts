@@ -22,6 +22,7 @@ import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arra
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
+import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 
 export const runtime = "nodejs";
 
@@ -240,25 +241,41 @@ export async function POST(req: NextRequest) {
     // O token que vai no link. Aqui fica só o hash — ver pedido-acesso.ts.
     const acesso = gerarTokenDeAcesso();
 
+    /*
+     * OS ANEXOS, SÓ SE FOREM NOSSOS.
+     *
+     * Gravava-se o `url` que viesse, sem olhar — e esse endereço é aberto no
+     * backoffice, no email e no painel do profissional como «a fotografia do
+     * cliente». Só passa um https do armazenamento público onde os envios do
+     * site ficam (`urlDeAnexoPermitido`); o resto deita-se fora, e uma linha
+     * sem endereço não fica a fingir que há um anexo.
+     */
+    const anexos: Array<Record<string, unknown>> = Array.isArray(order.files)
+      ? (order.files as unknown[]).flatMap((f) => {
+          if (typeof f === "string") {
+            const url = urlDeAnexoPermitido(f);
+            return url ? [{ url }] : [];
+          }
+          const rec = (f ?? {}) as Record<string, unknown>;
+          const url = urlDeAnexoPermitido(rec.url ?? rec.path);
+          if (!url) return [];
+          return [
+            {
+              id: rec.id,
+              name: rec.name,
+              size: rec.size,
+              type: rec.type,
+              mimeType: rec.mimeType,
+              url,
+            },
+          ];
+        })
+      : [];
+
     const row: InsertSimulatorOrder = {
       serviceType: order.serviceType || null,
       description: order.description || null,
-      filesJson: order.files?.length
-        ? JSON.stringify(
-            order.files.map((f: unknown) => {
-              if (typeof f === "string") return { url: f };
-              const rec = f as Record<string, unknown>;
-              return {
-                id: rec.id,
-                name: rec.name,
-                size: rec.size,
-                type: rec.type,
-                mimeType: rec.mimeType,
-                url: rec.url ?? rec.path ?? null,
-              };
-            })
-          )
-        : null,
+      filesJson: anexos.length > 0 ? JSON.stringify(anexos) : null,
       // Morada principal: para mudança guardamos a origem; para outros o endereço único
       /*
        * O número de porta entra aqui.

@@ -62,6 +62,15 @@ describe("o token nunca vai no endereço", () => {
     );
   });
 
+  it("nem o ?t= do link de entrada por email, que vale uma sessão", () => {
+    expect(enderecoSemSegredos("https://clyon.pt/entrar/link?t=a1b2c3d4e5f6")).toBe(
+      "https://clyon.pt/entrar/link",
+    );
+    expect(enderecoSemSegredos("https://clyon.pt/entrar/link?t=abc&utm_source=email")).toBe(
+      "https://clyon.pt/entrar/link?utm_source=email",
+    );
+  });
+
   it("um endereço ilegível devolve vazio — nunca o original", () => {
     // Se não se percebe o endereço, também não se percebe o que nele é
     // segredo. Perder um número de estatística é melhor do que revelar uma

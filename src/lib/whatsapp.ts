@@ -55,7 +55,9 @@ export async function sendWhatsAppMessage(message: WhatsAppTextMessage): Promise
       const body = await res.text().catch(() => "");
       console.error("[whatsapp] Erro ao enviar mensagem:", res.status, body);
     } else {
-      console.log("[whatsapp] Mensagem enviada para", message.to);
+      // Só os três últimos algarismos: o número de alguém não fica inteiro
+      // nos registos, e três chegam para o reconhecer quando é preciso.
+      console.log("[whatsapp] Mensagem enviada para …", String(message.to).slice(-3));
     }
   } catch (err: any) {
     console.error("[whatsapp] Excepção ao enviar mensagem:", err?.message ?? err);

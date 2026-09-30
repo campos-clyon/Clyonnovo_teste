@@ -92,10 +92,23 @@ describe("chamadas de API", () => {
       ["GET", "/api/admin/fotos"],
       ["POST", "/api/admin/sessao/sair"],
       ["GET", "/api/admin/sessao/eu"],
+      // O suporte, desde 21-09-2026 — a secção existia e as rotas davam 403.
+      ["GET", "/api/admin/suporte"],
+      ["GET", "/api/admin/suporte/conversas"],
+      ["POST", "/api/admin/suporte/conversas"],
+      ["PATCH", "/api/admin/suporte/7"],
+      ["POST", "/api/admin/suporte/7/mensagens"],
     ];
     for (const [m, p] of permitidas) {
       expect(assistentePodeChamar(p, m), `${m} ${p}`).toBe(true);
     }
+  });
+
+  it("a secção do suporte abre as rotas do suporte, e só a quem a tem", () => {
+    expect(assistenteComSeccoesPodeChamar(["suporte"], "/api/admin/suporte/conversas", "GET")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["pedidos"], "/api/admin/suporte/conversas", "GET")).toBe(false);
+    // E apagar conversas continua a ser do administrador.
+    expect(assistenteComSeccoesPodeChamar(["suporte"], "/api/admin/suporte/conversas", "DELETE")).toBe(false);
   });
 
   it("recusa o que é do administrador", () => {
@@ -103,7 +116,6 @@ describe("chamadas de API", () => {
       ["GET", "/api/admin/leads"],
       ["GET", "/api/admin/lead-events"],
       ["GET", "/api/admin/users"],
-      ["GET", "/api/admin/suporte"],
       ["GET", "/api/admin/carteiras"],
       ["GET", "/api/admin/levantamentos"],
       ["GET", "/api/admin/testadores"],

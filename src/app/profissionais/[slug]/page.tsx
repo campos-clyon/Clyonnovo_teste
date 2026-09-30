@@ -9,6 +9,7 @@ import {
 } from "@/lib/perfil-publico-do-profissional";
 import { tService } from "@/lib/translations";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
+import { jsonLd } from "@/lib/json-ld";
 
 /**
  * A PÁGINA DE UM PROFISSIONAL — a única do site que se escreve sozinha.
@@ -47,10 +48,18 @@ function estrelasPorExtenso(n: number | null): string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await perfilPublicoPorSlug(slug);
-  if (!p) return { title: "Profissional não encontrado | CLYON", robots: { index: false } };
+  // Sem « | CLYON»: o template do layout já o acrescenta, e escrito aqui
+  // saía «… | CLYON | CLYON» no separador e no Google.
+  if (!p) return { title: "Profissional não encontrado", robots: { index: false } };
 
   const servicos = p.categorias.map((c) => tService(c) || c).filter(Boolean);
-  const onde = p.cidade ?? p.zonas[0] ?? null;
+  /*
+   * Só a terra que a CIDADE pública já apurou — que tenta as zonas quando a
+   * base não nomeia nenhuma. Ir buscar a primeira zona à mão trazia de volta
+   * o que a cidade pública existe para não mostrar: a cidade de base entra
+   * sempre nas zonas, e a cidade de base é a morada.
+   */
+  const onde = p.cidade;
 
   /*
    * A DESCRIÇÃO É FEITA DO QUE EXISTE, e nunca de um molde com buracos.
@@ -93,7 +102,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const paraOGoogle = temAlgoParaMostrar(p);
 
   return {
-    title: `${p.nome} — ${servicos[0] ?? "Profissional"} ${onde ? `em ${onde} ` : ""}| CLYON`,
+    // O « | CLYON» põe-no o template do layout.
+    title: `${p.nome} — ${servicos[0] ?? "Profissional"}${onde ? ` em ${onde}` : ""}`,
     description: `${p.nome}: ${pedacos.join(" · ")}. Peça um orçamento sem compromisso.`,
     ...(paraOGoogle ? {} : { robots: { index: false, follow: true } }),
     alternates: { canonical: `${SITE_URL}/profissionais/${slug}` },
@@ -201,9 +211,14 @@ export default async function PaginaDoProfissional({ params }: Props) {
 
   return (
     <>
+      {/*
+        `jsonLd` e não `JSON.stringify`: o nome e a cidade vêm do que o
+        profissional escreve no painel, e um `</script>` dentro deles fechava
+        esta etiqueta. Ver json-ld.ts.
+      */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosEstruturados(p, slug)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(dadosEstruturados(p, slug)) }}
       />
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">

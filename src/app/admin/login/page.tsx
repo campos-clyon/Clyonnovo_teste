@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import { paginaInicialDoPapel, type PapelDoPainel } from "@/lib/papel-do-painel";
+import { destinoInterno } from "@/lib/destino-seguro";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -16,11 +17,9 @@ export default function AdminLoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setPasswordChanged(params.get("passwordChanged") === "1");
-    // Só caminhos internos — um "proximo" com http:// levava daqui para fora
-    const destino = params.get("proximo");
-    if (destino && destino.startsWith("/") && !destino.startsWith("//")) {
-      setProximo(destino);
-    }
+    // Só caminhos internos — um "proximo" com http:// levava daqui para fora,
+    // e «/\outro.com» também: o browser lê a barra invertida como barra.
+    setProximo(destinoInterno(params.get("proximo"), window.location.origin, "/admin"));
   }, []);
   const [senha, setSenha] = useState("");
   const [senhaVisivel, setSenhaVisivel] = useState(false);

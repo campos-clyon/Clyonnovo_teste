@@ -3,6 +3,7 @@ import { registarSemFalhar } from "@/lib/db";
 import { configuracaoDoEupago, NOME_DO_METODO } from "@/lib/eupago";
 import { estadoDaReferencia } from "@/lib/pedir-ao-eupago";
 import { darPorPago, pendentesParaSondar } from "@/lib/pagamentos-na-base";
+import { bearerConfere } from "@/lib/segredo-igual";
 
 export const runtime = "nodejs";
 /** Uma chamada ao euPago por pagamento. Trinta referências não são instantâneas. */
@@ -47,7 +48,8 @@ export async function GET(req: NextRequest) {
     console.error("[cron/conferir-pagamentos] CRON_SECRET não definido — recusado");
     return NextResponse.json({ error: "Não configurado" }, { status: 503 });
   }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  // Em tempo constante — ver segredo-igual.ts.
+  if (!bearerConfere(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

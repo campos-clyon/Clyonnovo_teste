@@ -84,6 +84,28 @@ describe("urlDeAccaoDoPedido", () => {
     definir("NODE_ENV", "production");
     expect(urlDeAccaoDoPedido(new Headers())).toBe(SITE_URL);
   });
+
+  /*
+   * Em PRODUÇÃO os cabeçalhos nem se lêem. Estes links vão em emails para
+   * outras pessoas — o link de entrada, a proposta, a aprovação — e um Host
+   * forjado punha lá o domínio de quem o forjou, com um token dentro.
+   */
+  it("em produção é sempre clyon.pt, diga o Host o que disser", () => {
+    process.env.VERCEL_ENV = "production";
+    const forjado = new Headers({
+      host: "clyon.pt.outro.com",
+      "x-forwarded-host": "outro.com",
+      "x-forwarded-proto": "http",
+    });
+    expect(urlDeAccaoDoPedido(forjado)).toBe(SITE_URL);
+    expect(urlDeAccaoDoPedido(new Headers({ host: "clyon.pt" }))).toBe(SITE_URL);
+  });
+
+  it("num preview continua a seguir o anfitrião do pedido", () => {
+    process.env.VERCEL_ENV = "preview";
+    const h = new Headers({ host: "clyon-site-git-seguranca.vercel.app" });
+    expect(urlDeAccaoDoPedido(h)).toBe("https://clyon-site-git-seguranca.vercel.app");
+  });
 });
 
 describe("urlDeAccao", () => {

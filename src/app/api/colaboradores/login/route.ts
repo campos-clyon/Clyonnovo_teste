@@ -5,56 +5,45 @@ import * as jose from "jose";
 import { getColaboradorByNome, getDb } from "@/lib/db";
 import { COOKIE_SESSAO_ADMIN, DURACAO_SESSAO_ADMIN_SEGUNDOS, getColaboradorSecretKey } from "@/lib/colaborador-auth";
 import { paginaInicialDoPapel, type PapelDoPainel } from "@/lib/papel-do-painel";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { limitarPorConta } from "@/lib/limite-rota-publica";
+import { contaActiva } from "@/lib/conta-do-painel";
 
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
 // Mensagem genérica para não revelar se o nome existe na base de dados.
 const CREDENCIAIS_INVALIDAS = "Nome ou palavra-passe incorretos.";
 
-// Rate limiting simples em memória (por IP). Limita tentativas de força bruta.
-const MAX_TENTATIVAS = 5;
-const JANELA_MS = 15 * 60 * 1000; // 15 minutos
-const tentativas = new Map<string, { count: number; reset: number }>();
+/*
+ * FORÇA BRUTA — DUAS CHAVES, E NUM SÍTIO PARTILHADO.
+ *
+ * Era um Map em memória, só por IP. Em serverless cada instância tem a sua
+ * memória: dez instâncias quentes eram dez contadores, e cada instância nova
+ * começava do zero. E só por IP não trava quem tenta a MESMA conta a partir
+ * de muitas máquinas, que é exactamente como se ataca a conta de alguém.
+ *
+ * Agora é o `checkRateLimit` (Redis da Upstash, igual para todas as
+ * instâncias), com duas chaves: por máquina, e por conta. Contam-se todas as
+ * tentativas, certas ou erradas — quem entra à primeira gasta uma.
+ */
+const JANELA_SEGUNDOS = 15 * 60;
+const TENTATIVAS_POR_IP = 10;
+const TENTATIVAS_POR_CONTA = 5;
 
-function obterIp(req: NextRequest) {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip") ?? "desconhecido";
-}
-
-function registarTentativa(ip: string) {
-  const agora = Date.now();
-  const registo = tentativas.get(ip);
-  if (!registo || agora > registo.reset) {
-    tentativas.set(ip, { count: 1, reset: agora + JANELA_MS });
-    return;
-  }
-  registo.count += 1;
-}
-
-function estaBloqueado(ip: string) {
-  const registo = tentativas.get(ip);
-  if (!registo) return false;
-  if (Date.now() > registo.reset) {
-    tentativas.delete(ip);
-    return false;
-  }
-  return registo.count >= MAX_TENTATIVAS;
-}
-
-function limparTentativas(ip: string) {
-  tentativas.delete(ip);
+function demasiadasTentativas() {
+  return NextResponse.json(
+    { error: "Demasiadas tentativas. Tente novamente dentro de alguns minutos." },
+    { status: 429, headers: { "Retry-After": String(JANELA_SEGUNDOS) } },
+  );
 }
 
 export async function POST(req: NextRequest) {
-  const ip = obterIp(req);
-
-  if (estaBloqueado(ip)) {
-    return NextResponse.json(
-      { error: "Demasiadas tentativas. Tente novamente dentro de alguns minutos." },
-      { status: 429 },
-    );
-  }
+  const porIp = await checkRateLimit(
+    `colaborador-login-ip:${getClientIp(req)}`,
+    TENTATIVAS_POR_IP,
+    JANELA_SEGUNDOS,
+  );
+  if (!porIp.allowed) return demasiadasTentativas();
 
   try {
     const { nome, senha, rememberMe } = await req.json();
@@ -65,6 +54,16 @@ export async function POST(req: NextRequest) {
     if (!nomeNormalizado || !senhaNormalizada) {
       return NextResponse.json({ error: "Nome e senha são obrigatórios" }, { status: 400 });
     }
+
+    // Por conta: vale para nomes que existem e para os que não existem, e por
+    // isso não diz a ninguém quais são os verdadeiros.
+    const porConta = await limitarPorConta(
+      "colaborador-login-conta",
+      nomeNormalizado,
+      TENTATIVAS_POR_CONTA,
+      JANELA_SEGUNDOS,
+    );
+    if (porConta.erro) return demasiadasTentativas();
 
     const db = await getDb();
     if (!db) {
@@ -97,7 +96,6 @@ export async function POST(req: NextRequest) {
 
     const colaborador = await getColaboradorByNome(nomeNormalizado);
     if (!colaborador) {
-      registarTentativa(ip);
       return NextResponse.json({ error: CREDENCIAIS_INVALIDAS }, { status: 401 });
     }
 
@@ -125,12 +123,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!senhaValida) {
-      registarTentativa(ip);
       return NextResponse.json({ error: CREDENCIAIS_INVALIDAS }, { status: 401 });
     }
-
-    // Login bem-sucedido: limpa o contador de tentativas deste IP.
-    limparTentativas(ip);
 
     // Dois papéis entram: o administrador e o assistente.
     //
@@ -158,10 +152,27 @@ export async function POST(req: NextRequest) {
         { status: 403 },
       );
     }
+    /*
+     * O administrador desactivado também fica à porta. As rotas passaram a
+     * confirmá-lo na base em cada chamada (`conta-do-painel.ts`); deixá-lo
+     * entrar aqui era dar-lhe um painel onde todos os botões respondem 401.
+     * Só um `active = 0` escrito conta — é o mesmo critério das rotas.
+     */
+    if (eAdministrador && !contaActiva(colaborador)) {
+      return NextResponse.json(
+        { error: "Esta conta de administrador está desactivada." },
+        { status: 403 },
+      );
+    }
 
     const papel: PapelDoPainel = eAdministrador ? "admin" : "assistente";
     const isAdmin = eAdministrador ? 1 : 0;
 
+    /*
+     * `setIssuedAt`: a hora a que o token nasceu vai lá dentro. É o que deixa
+     * as rotas recusarem os tokens emitidos ANTES de uma troca de
+     * palavra-passe — ver `tokenAnteriorATrocaDeSenha`.
+     */
     const token = await new jose.SignJWT({
       id: colaborador.id,
       nome: colaborador.nome,
@@ -169,6 +180,7 @@ export async function POST(req: NextRequest) {
       papel,
     })
       .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
       .setExpirationTime(manterSessao ? "30d" : "8h")
       .sign(getColaboradorSecretKey());
 

@@ -208,7 +208,8 @@ const enviadasPorMim = new Set();
  * à mão" e entregava a conversa: o assistente respondia uma vez e ficava mudo
  * para sempre naquele número, sem nada nos registos a dizer porquê.
  *
- * Foi o que se viu a 10-09-2026: o 33780582689 tinha como última mensagem uma
+ * Foi o que se viu a 10-09-2026: o número de um cliente (aqui, um fictício:
+ * 351912345678 — o verdadeiro não fica escrito no código) tinha como última mensagem uma
  * SAÍDA às 14:17 e estava entregue a uma pessoa "desde 14:17" — calou-se com
  * a própria mensagem. Uma corrida, por isso às vezes passava e às vezes não;
  * do lado de fora parecia o assistente a "travar".

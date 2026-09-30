@@ -3,7 +3,7 @@ import { criarLigacaoDeEntrada } from "@/lib/db";
 import { gerarLigacaoDeEntrada } from "@/lib/entrada-por-link-segredo";
 import { emailValido } from "@/lib/inscricao-profissional";
 import { enviarEmailDeEntrada } from "@/lib/email-entrada";
-import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -55,7 +55,11 @@ export async function POST(req: NextRequest) {
   // O limite por endereço vem depois de saber que o email é válido, senão
   // enche-se de lixo. Não devolve o erro do limitador — devolveria a mesma
   // informação por outra porta.
-  const porEmail = await limitarRotaPublica(req, `entrada-link-email:${email}`, 4, 900);
+  //
+  // Por endereço E SÓ por endereço. Estava no `limitarRotaPublica`, que junta
+  // sempre o IP à chave: cada máquina nova começava do zero, e quem quisesse
+  // encher a caixa de outra pessoa só tinha de mudar de máquina.
+  const porEmail = await limitarPorConta("entrada-link-email", email, 4, 900);
   if (porEmail.erro) return sempreOMesmo;
 
   try {

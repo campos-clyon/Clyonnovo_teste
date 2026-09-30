@@ -10,10 +10,16 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
  * site — e o upload aceitava ficheiros sem autenticação, o que é
  * armazenamento aberto a quem o descobrisse.
  *
- * O GET fica público porque a galeria do site o consome; a escrita não.
+ * O GET ficava público "porque a galeria do site o consome" — e não consome:
+ * a página /trabalhos lê `listTrabalhos({ publicadoOnly: true })` directamente
+ * e há /api/trabalhos para o resto. Este devolvia TODOS, incluindo os ainda
+ * não publicados (fotografias de casas por rever). Fechado a 30-09-2026.
  */
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const trabalhos = await listTrabalhos();
     return NextResponse.json({ trabalhos });
