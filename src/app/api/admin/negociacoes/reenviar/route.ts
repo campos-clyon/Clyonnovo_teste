@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
       // de origem prometiam-lhe por email um líquido que não é o dele.
       recebeLiquido: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDaNegociacao(alvo)) : null,
       distanciaKm: null,
-      precisaFatura: Boolean(pedido.precisaFatura),
+      // Sem a factura: desde 22-09-2026 é da parceira, não do profissional.
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
     });
 

@@ -167,6 +167,18 @@ export const ENTIDADE_QUE_FACTURA = {
 } as const;
 
 /**
+ * QUEM EMITE A FACTURA, NUMA FRASE — a que vai para rodapés, emails e
+ * mensagens. 29-09-2026.
+ *
+ * Havia sete sítios a dizer ao cliente que «quem emite a fatura é o
+ * profissional», e um a dizer «para lhe podermos passar factura», como se
+ * fosse a CLYON. Nenhum era verdade desde 22-09-2026. Escrita uma vez, a
+ * frase muda num sítio só no dia em que a parceira mudar.
+ */
+export const QUEM_FACTURA_EM_PALAVRAS =
+  `A factura é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`;
+
+/**
  * Falta alguma coisa para cumprir o artigo 10.º do DL 7/2004?
  *
  * Verificava se o nome e o NIF ainda eram marcadores. Deixou de servir quando

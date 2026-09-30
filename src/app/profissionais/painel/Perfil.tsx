@@ -23,6 +23,7 @@ import {
 import type { Perfil as PerfilTipo } from "./tipos";
 import MoradaDaBase from "./MoradaDaBase";
 import Avaliacoes from "./Avaliacoes";
+import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
 /**
  * O perfil, em secções pequenas.
@@ -904,11 +905,17 @@ export default function Perfil({
         {/* ── Faturação ────────────────────────────────────────────────────── */}
         {seccao === "faturacao" && (
           <div className="space-y-4">
+            {/*
+              «HÁ CLIENTES QUE SÓ CONTRATAM QUEM PASSA FATURA» SAIU — 29-09-2026.
+              Desde 22-09-2026 a factura ao cliente é emitida pela parceira da
+              CLYON, seja quem for o profissional: marcar ou não esta caixa já
+              não muda os pedidos que lhe chegam nem os avisos que vê.
+            */}
             <Interruptor
               ligado={dados.emiteFatura}
               onMudar={(v) => mudar("emiteFatura", v)}
               etiqueta="Emito fatura"
-              descricao="Há clientes que só contratam quem passa fatura."
+              descricao={`Não muda os pedidos que lhe chegam: a factura ao cliente é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, parceira da CLYON.`}
             />
 
             {/*

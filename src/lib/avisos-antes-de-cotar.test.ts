@@ -22,48 +22,49 @@ import { avisosDoTrabalho } from "./profissional-elegivel";
  * sabia que ele existira. A maioria emite fatura e simplesmente nunca passou
  * por aquele campo do perfil — e o cliente ficava com menos propostas, às
  * vezes com nenhuma, por causa de uma caixa por marcar.
+ *
+ * E A FATURA DEIXOU DEPOIS DE AVISAR — 29-09-2026. Desde 22-09-2026 a factura
+ * ao cliente é emitida pela Miragem Dourada, parceira da CLYON, seja qual for
+ * o profissional. O aviso amarelo dizia-lhe «o cliente vai esperar fatura no
+ * fim» e pedia-lhe «Emito fatura — continuar»: um compromisso que deixou de
+ * ser dele. Os testes que guardavam essa ficha passaram a guardar que ela não
+ * volta; a guia, que é lei de quem transporta, e o dinheiro no local ficam.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const ROTA = ler("src/app/api/profissionais/negociacao/route.ts");
 const ECRA = ler("src/app/profissionais/pedidos/[token]/NegociacaoProfissional.tsx");
 const ELEGIVEL = ler("src/lib/profissional-elegivel.ts");
+const semComentarios = (t: string) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const pro = (x: Partial<Parameters<typeof avisosDoTrabalho>[1]> = {}) => ({
-  emiteFatura: true,
   emiteGuiaTransporte: true,
   guiaVerificadaEm: new Date("2026-08-01"),
   ...x,
 });
 
 describe("quando é que se avisa", () => {
-  it("o cliente pediu fatura e ele não a marcou", () => {
-    expect(
-      avisosDoTrabalho({ precisaFatura: true, precisaGuiaTransporte: false }, pro({ emiteFatura: false })),
-    ).toEqual(["cliente_quer_fatura"]);
-  });
-
-  it("quem a emite não leva aviso nenhum", () => {
-    expect(
-      avisosDoTrabalho({ precisaFatura: true, precisaGuiaTransporte: false }, pro()),
-    ).toEqual([]);
+  it("a factura já não avisa — é da parceira, e não de quem faz o trabalho", () => {
+    // O pedido nem precisa de a dizer: não há nada a combinar sobre ela entre
+    // o cliente e o profissional.
+    expect(avisosDoTrabalho({ precisaGuiaTransporte: false }, pro())).toEqual([]);
+    expect(Object.keys(FICHA_DO_AVISO)).not.toContain("cliente_quer_fatura");
+    expect(semComentarios(ELEGIVEL)).not.toContain("cliente_quer_fatura");
   });
 
   it("a guia declarada mas POR VERIFICAR conta como em falta", () => {
     // A declaração sozinha não vale nada — e é pior do que não existir,
     // porque o cliente confia nela.
     expect(
-      avisosDoTrabalho(
-        { precisaFatura: false, precisaGuiaTransporte: true },
-        pro({ guiaVerificadaEm: null }),
-      ),
+      avisosDoTrabalho({ precisaGuiaTransporte: true }, pro({ guiaVerificadaEm: null })),
     ).toEqual(["trabalho_exige_guia"]);
   });
 
-  it("os dois ao mesmo tempo, com o mais sério em cima", () => {
+  it("a guia e o dinheiro ao mesmo tempo, com o mais sério em cima", () => {
     const avisos = avisosDoTrabalho(
-      { precisaFatura: true, precisaGuiaTransporte: true },
-      pro({ emiteFatura: false, emiteGuiaTransporte: false }),
+      { precisaGuiaTransporte: true, formaDePagamento: "dinheiro" },
+      pro({ emiteGuiaTransporte: false }),
     );
     expect(avisos).toHaveLength(2);
     expect(porGravidade(avisos)[0]).toBe("trabalho_exige_guia");
@@ -72,8 +73,8 @@ describe("quando é que se avisa", () => {
   it("um pedido que não pede nada não avisa nada", () => {
     expect(
       avisosDoTrabalho(
-        { precisaFatura: false, precisaGuiaTransporte: false },
-        pro({ emiteFatura: false, emiteGuiaTransporte: false, guiaVerificadaEm: null }),
+        { precisaGuiaTransporte: false },
+        pro({ emiteGuiaTransporte: false, guiaVerificadaEm: null }),
       ),
     ).toEqual([]);
     expect(precisaDeConfirmacao([])).toBe(false);
@@ -87,44 +88,39 @@ describe("a frase — o que ela tem de responder", () => {
    * aqui não é escrever mais bonito: é responder às três perguntas que a frase
    * curta deixa em aberto, e que ele ia ter de responder ao telefone.
    */
-  const fatura = FICHA_DO_AVISO.cliente_quer_fatura;
   const guia = FICHA_DO_AVISO.trabalho_exige_guia;
 
-  it("1. diz o que o cliente pediu", () => {
-    expect(fatura.corpo).toContain("fatura com NIF");
+  it("1. diz o que o trabalho exige", () => {
     expect(guia.corpo).toContain("guia de acompanhamento");
   });
 
   it("2. diz o que acontece se continuar", () => {
     // Não basta perguntar «deseja continuar?»: continuar tem consequências,
     // e quem decide tem de as saber antes e não depois.
-    expect(fatura.corpo).toContain("o cliente vai esperar fatura no fim");
     expect(guia.corpo).toContain("a coima é sua");
   });
 
-  it("3. diz ONDE se corrige — porque quase sempre é só a caixa por marcar", () => {
+  it("3. diz ONDE se corrige — porque quase sempre é só o número por pôr", () => {
     /*
      * Sem isto ele carrega em «continuar» todas as vezes e o campo do perfil
      * fica errado para sempre — e o aviso passa a ser ruído que se despacha
      * sem ler, que é o pior fim de um aviso.
      */
-    expect(fatura.ondeSeCorrige).toContain("Faturação e IVA");
     expect(guia.ondeSeCorrige).toContain("Guia de transporte");
   });
 
   it("o botão diz o que faz, e não «OK»", () => {
-    expect(fatura.botao).toBe("Emito fatura — continuar");
     expect(guia.botao).toBe("Sou transportador registado — continuar");
   });
 
-  it("as duas NÃO pesam o mesmo, e o texto não finge que sim", () => {
+  it("a guia pesa a sério, e o dinheiro é só aviso", () => {
     /*
-     * A fatura é uma preferência comercial do cliente. A guia é uma exigência
-     * legal de quem transporta resíduos — continuar sem ela não é um risco de
-     * negócio, é um risco de coima, e para o cliente também.
+     * A guia é uma exigência legal de quem transporta resíduos — continuar sem
+     * ela não é um risco de negócio, é um risco de coima, e para o cliente
+     * também. O dinheiro no local é uma escolha do cliente.
      */
-    expect(fatura.gravidade).toBe("aviso");
     expect(guia.gravidade).toBe("serio");
+    expect(FICHA_DO_AVISO.cliente_paga_em_dinheiro.gravidade).toBe("aviso");
     expect(guia.corpo).toContain("fica registado no pedido");
   });
 });
@@ -133,10 +129,10 @@ describe("o rasto de quem foi avisado", () => {
   it("escreve quem, de quê, e que avançou", () => {
     // É por isto que o aviso da guia pode prometer que fica registado. Sem
     // rasto, a frase era só uma frase.
-    const linha = comoFicaRegistado(["cliente_quer_fatura", "trabalho_exige_guia"], "Revolution");
+    const linha = comoFicaRegistado(["cliente_paga_em_dinheiro", "trabalho_exige_guia"], "Revolution");
     expect(linha).toContain("Revolution");
     expect(linha).toContain("exige guia de transporte");
-    expect(linha).toContain("o cliente pediu fatura");
+    expect(linha).toContain("paga em dinheiro");
     expect(linha).toContain("avançou com a proposta");
   });
 });

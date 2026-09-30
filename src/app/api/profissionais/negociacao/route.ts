@@ -106,13 +106,13 @@ export async function POST(req: NextRequest) {
       const perfil = await perfilDoProfissional(sessao.providerId).catch(() => undefined);
       const avisos = perfil
         ? avisosDoTrabalho(
+            // A fatura já não entra: desde 22-09-2026 é a parceira da CLYON
+            // que a emite, seja quem for o profissional (29-09-2026).
             {
-              precisaFatura: Number(linha.precisaFatura) === 1,
               precisaGuiaTransporte: Number(linha.precisaGuiaTransporte) === 1,
               formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
             },
             {
-              emiteFatura: Number(perfil.emiteFatura) === 1,
               emiteGuiaTransporte: Number(perfil.emiteGuiaTransporte) === 1,
               guiaVerificadaEm: (perfil.guiaVerificadaEm as Date | string | null) ?? null,
             },
