@@ -3,6 +3,9 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 
+import sitemap from "@/app/sitemap";
+import { artigosPublicados } from "./artigos-do-blog";
+
 /**
  * OS METADADOS DE TODAS AS PÁGINAS PÚBLICAS, LIDOS COMO O NEXT OS LÊ.
  *
@@ -168,5 +171,52 @@ describe("o canónico", () => {
     const naoEncontrada = await import("@/app/not-found");
     expect(naoEncontrada.metadata.alternates).toBeUndefined();
     expect(naoEncontrada.metadata.robots).toMatchObject({ index: false });
+  });
+});
+
+describe("o sitemap e as páginas dizem o mesmo", () => {
+  /**
+   * Páginas públicas e indexáveis que ficam de fora do sitemap de propósito:
+   * as políticas legais. Estão abertas ao Google (e ligadas do rodapé), mas
+   * não são páginas que se peça para rastrear.
+   */
+  const FORA_DE_PROPOSITO = ["/privacidade", "/cookies"];
+
+  let urls: Awaited<ReturnType<typeof sitemap>> = [];
+  beforeAll(async () => {
+    urls = await sitemap();
+  });
+
+  it("cada endereço do sitemap é uma página pública, indexável e canónica", () => {
+    // Um redirect, um 404 ou uma página noindex no sitemap ensinam o Google a
+    // desconfiar dele todo. Os perfis dos profissionais vêm da base e têm os
+    // seus próprios testes.
+    const rotas = new Set(PAGINAS.map((p) => p.rota));
+    const estranhos = urls
+      .map((e) => new URL(e.url).pathname)
+      .filter((c) => !c.startsWith("/profissionais/"))
+      .filter((c) => !rotas.has(c));
+    expect(estranhos).toEqual([]);
+  });
+
+  it("cada página pública e indexável está no sitemap", () => {
+    // /como-funciona, /limpeza-de-quintais, /orcamento-recolha-lisboa e as
+    // três de /servicos respondiam 200, com canónico próprio, e não estavam
+    // lá (29-09-2026).
+    const noSitemap = new Set(urls.map((e) => new URL(e.url).pathname));
+    const esquecidas = PAGINAS.map((p) => p.rota).filter(
+      (r) => !noSitemap.has(r) && !FORA_DE_PROPOSITO.includes(r),
+    );
+    expect(esquecidas).toEqual([]);
+  });
+
+  it("os artigos levam a data do último retoque, quando o houve", () => {
+    for (const artigo of artigosPublicados()) {
+      const entrada = urls.find((e) => e.url.endsWith(`/blog/${artigo.slug}`));
+      expect(entrada, artigo.slug).toBeDefined();
+      expect(new Date(String(entrada!.lastModified)).toISOString(), artigo.slug).toBe(
+        new Date(artigo.updatedDate ?? artigo.publishDate).toISOString(),
+      );
+    }
   });
 });

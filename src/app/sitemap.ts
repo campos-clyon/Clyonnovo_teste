@@ -52,6 +52,24 @@ const staticPages = [
   // de propósito: essa secção está atrás do portão do MVP, e uma página que o
   // Google não pode ler não recruta ninguém.
   { url: `${SITE_URL}/quero-ser-parceiro`, priority: 0.85, changeFrequency: "monthly" as const },
+  /*
+   * SEIS PÁGINAS QUE EXISTEM E NÃO ESTAVAM AQUI — 29-09-2026.
+   *
+   * Confirmadas uma a uma no site ao vivo: respondem 200, têm canónico
+   * próprio e não são noindex. O menu e os cartões de serviço da homepage
+   * já lhes ligavam; o Google chegava lá pelos links e não por declaração
+   * nossa, o que as punha no fim da fila de rastreio.
+   *
+   * As três de /servicos são as de `GERADAS` em servicos/[slug]/page.tsx —
+   * um page.tsx não pode exportar a lista, por isso o teste do sitemap
+   * confere que cada uma que a rota gera está aqui.
+   */
+  { url: `${SITE_URL}/como-funciona`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/limpeza-de-quintais`, priority: 0.85, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/orcamento-recolha-lisboa`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/esvaziamento-apartamento`, priority: 0.85, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/manutencao-casa`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/montagem-moveis`, priority: 0.8, changeFrequency: "monthly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -135,9 +153,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   // Só os artigos no ar: o retirado faz 301 (ver `artigos-do-blog.ts`).
+  //
+  // A data é a do último retoque quando o houve, e a da publicação quando não
+  // (29-09-2026) — a mesma regra do `dateModified` no schema do artigo. Com a
+  // da publicação sempre, um artigo reescrito continuava a dizer ao Google que
+  // não mudava desde Março.
   const blogPages = artigosPublicados().map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
-    lastModified: new Date(post.publishDate),
+    lastModified: new Date(post.updatedDate ?? post.publishDate),
     changeFrequency: "monthly" as const,
     priority: 0.72,
   }));
