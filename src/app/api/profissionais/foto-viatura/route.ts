@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { obterTokenDoBlob } from "@/lib/blob-token";
 import { tipoDoFicheiro } from "@/lib/tipo-ficheiro";
-import {
-  COOKIE_SESSAO_PROFISSIONAL,
-  verificarSessaoDoProfissional,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   apagarFotosDoBlob,
   fotosDaViatura,
@@ -51,7 +49,7 @@ const TAMANHO_MAXIMO = 2 * 1024 * 1024;
  * que existe é o pior dos dois mundos.
  */
 export async function DELETE(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -94,7 +92,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

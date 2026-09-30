@@ -6,10 +6,8 @@ import {
   getSimulatorOrderById,
   substituirTokenDoPedido,
 } from "@/lib/db";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
@@ -34,7 +32,7 @@ export const runtime = "nodejs";
 const MAX_FOTOS = 8;
 
 export async function POST(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

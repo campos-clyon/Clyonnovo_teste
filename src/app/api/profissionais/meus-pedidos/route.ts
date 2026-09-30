@@ -8,10 +8,8 @@ import {
   type CustosDoProfissional,
   type PedidoParaSugestao,
 } from "@/lib/sugestao-para-o-profissional";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { lerForma } from "@/lib/forma-de-pagamento";
@@ -78,7 +76,7 @@ function ponto(
 }
 
 export async function GET(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) {

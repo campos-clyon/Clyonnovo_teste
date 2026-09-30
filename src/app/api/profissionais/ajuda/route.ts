@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { criarPedidoDeAjuda, ajudasDoProfissional, perfilDoProfissional } from "@/lib/db";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { validarPedidoDeAjuda } from "@/lib/ajuda-plataforma";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
@@ -17,7 +15,7 @@ export const runtime = "nodejs";
  * email errado no momento em que precisa de resposta.
  */
 export async function GET(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -50,7 +48,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

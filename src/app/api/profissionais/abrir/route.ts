@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { marcarTrabalhoComoAberto } from "@/lib/db";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 
 export const runtime = "nodejs";
 
@@ -27,7 +25,7 @@ export const runtime = "nodejs";
  * para o trabalho não abrir.
  */
 export async function POST(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

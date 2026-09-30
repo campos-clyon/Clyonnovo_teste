@@ -100,13 +100,16 @@ describe("as notificações não se empilham no ecrã de bloqueio", () => {
 
 describe("o profissional passou a poder activá-los", () => {
   it("as rotas de push conhecem as duas sessões, e não só a do cliente", () => {
-    for (const [nome, f] of [
-      ["subscrever", SUBSCREVER],
-      ["cancelar", CANCELAR],
+    /*
+     * Subscrever pede a sessão CONFIRMADA NA BASE (30-09-2026): uma conta
+     * suspensa não activa avisos novos. Cancelar basta-lhe a assinatura —
+     * só apaga, e quem foi suspenso tem de poder calar o telemóvel.
+     */
+    for (const [nome, f, sessao] of [
+      ["subscrever", SUBSCREVER, "sessaoActivaDoProfissional"],
+      ["cancelar", CANCELAR, "verificarSessaoDoProfissional"],
     ] as const) {
-      expect(f, `${nome} não conhece a sessão do profissional`).toContain(
-        "verificarSessaoDoProfissional",
-      );
+      expect(f, `${nome} não conhece a sessão do profissional`).toContain(sessao);
       expect(f).toContain("emailDeQuemPede");
     }
   });

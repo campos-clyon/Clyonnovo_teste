@@ -5,10 +5,8 @@ import {
   perfilDoProfissional,
   criarLevantamento,
 } from "@/lib/db";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   carteiraDe,
   recusaDoLevantamento,
@@ -31,7 +29,7 @@ export const runtime = "nodejs";
  * há uma pessoa do outro lado, em vez de ver um botão que promete instantâneo.
  */
 export async function POST(req: NextRequest) {
-  const sessao = await verificarSessaoDoProfissional(
+  const sessao = await sessaoActivaDoProfissional(
     req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
   );
   if (!sessao) {

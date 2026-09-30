@@ -55,7 +55,8 @@ describe("saber que ele abriu", () => {
   });
 
   it("a rota exige sessão e falha em silêncio", () => {
-    expect(ROTA).toContain("verificarSessaoDoProfissional");
+    // A sessão confirmada na base — ver sessao-activa-do-profissional.ts.
+    expect(ROTA).toContain("sessaoActivaDoProfissional");
     expect(ROTA).toContain("sessao.providerId");
     // Abrir o trabalho nunca pode ficar à espera de um registo de leitura.
     expect(ROTA).toMatch(/catch[\s\S]*?ok: true, marcou: false/);
