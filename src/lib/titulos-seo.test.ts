@@ -44,7 +44,12 @@ describe("nenhum título repete a marca", () => {
     const repetidos: string[] = [];
     for (const ficheiro of TODAS) {
       for (const t of titulosDe(ficheiro)) {
-        if (t.trimEnd().endsWith(SUFIXO.trim()) || t.includes("| CLYON")) {
+        // Acabar em «CLYON» de qualquer forma — «— CLYON», «Admin CLYON»,
+        // «Instantânea CLYON» — também dá a marca duas vezes: o template põe
+        // « | CLYON» a seguir. A 29-09-2026 eram mais onze assim, que este
+        // teste deixava passar por só procurar o «|». Quem precisa da marca
+        // no título usa `title: { absolute: "…" }`.
+        if (t.trimEnd().endsWith(SUFIXO.trim()) || t.includes("| CLYON") || /CLYON\s*$/.test(t)) {
           repetidos.push(`${t}  (${ficheiro.split("src")[1]})`);
         }
       }

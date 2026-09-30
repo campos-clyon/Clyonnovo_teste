@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -37,16 +38,16 @@ import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 export const metadata: Metadata = {
   title: "Sobre a CLYON — Recolhas, Esvaziamentos e Mudanças",
   description:
-    "A CLYON é uma plataforma que liga quem precisa de retirar móveis, entulho ou recheios, ou de fazer uma mudança, a profissionais independentes e verificados em Lisboa, Margem Sul e Setúbal.",
+    "A CLYON é uma plataforma que liga quem precisa de retirar móveis, entulho ou recheios, ou de mudar de casa, a profissionais verificados da sua zona.",
   alternates: {
     canonical: `${SITE_URL}/sobre-nos`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Sobre a CLYON — Recolhas, Esvaziamentos e Mudanças",
     description:
       "Uma plataforma: recebe as propostas de profissionais verificados da sua zona, escolhe, e só confirma o trabalho quando estiver feito.",
     url: `${SITE_URL}/sobre-nos`,
-  },
+  }),
 };
 
 const values = [

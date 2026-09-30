@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { MapPin, MessageSquare, Phone, ShieldCheck, Truck } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -14,10 +15,10 @@ import {
   AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
-  getCityServiceSlug,
   getRegion,
   getRegionCities,
 } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 
@@ -67,7 +68,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const regionData = getRegion(region);
 
   if (!regionData) {
-    return { title: "Região não encontrada | CLYON" };
+    // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
+    return { title: "Região não encontrada" };
   }
 
   return {
@@ -77,11 +79,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: `${SITE_URL}/regioes/${regionData.slug}`,
     },
     keywords: regionData.keywords,
-    openGraph: {
+    openGraph: og({
       title: regionData.metaTitle,
       description: regionData.metaDescription,
       url: `${SITE_URL}/regioes/${regionData.slug}`,
-    },
+    }),
   };
 }
 
@@ -281,7 +283,7 @@ export default async function RegionPage({ params }: Props) {
               {cities.map((city) => (
                 <Link
                   key={city.slug}
-                  href={`/${getCityServiceSlug("recolha-moveis", city.slug)}`}
+                  href={caminhoDoServicoNaCidade("recolha-moveis", city.slug)}
                   className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-acao shadow-sm transition-all hover:border-cyan-400 hover:shadow-md"
                 >
                   {city.name}
@@ -302,11 +304,18 @@ export default async function RegionPage({ params }: Props) {
             <p className="mt-3 text-sm leading-7 text-slate-300">
               De uma peça só a uma casa inteira. Não há mínimo de volume.
             </p>
+            {/*
+              O link de cada serviço sai de `caminhoDoServicoNaCidade`, e não
+              de `/${serviço}-${cidade}` escrito aqui (29-09-2026). Montado à
+              mão, o cartão «Mudanças» da Margem Sul ia a /mudancas-almada →
+              /mudancas/almada, e o de Setúbal a /mudancas/setubal: dois 404
+              com um redirect à frente, em páginas que o Google visita.
+            */}
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {SERVICES.map((service) => (
                 <Link
                   key={service.slug}
-                  href={`/${service.slug}-${cities[0]?.slug ?? "lisboa"}`}
+                  href={caminhoDoServicoNaCidade(service.slug, cities[0]?.slug ?? "lisboa")}
                   className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-slate-100 transition hover:border-cyan-300/40 hover:bg-white/10"
                 >
                   {service.name}

@@ -18,33 +18,27 @@ import {
   chaveConfere,
   verificarSessaoDeTeste,
 } from "@/lib/acesso-mvp";
+import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 
 const CANONICAL_HOST = "clyon.pt";
 
-// Cidades onde temos página dedicada em /mudancas/[cidade].
-// URLs antigas /mudancas-cidade fazem 301 para /mudancas/cidade — preserva
-// o SEO acumulado sem manter o formato antigo.
-const MUDANCAS_CITIES_WITH_PAGE = [
-  "lisboa",
-  "alcochete",
-  "sintra",
-  "montijo",
-  "carnaxide",
-  "oeiras",
-  "corroios",
-  "barreiro",
-  "palmela",
-  "odivelas",
-  "lumiar",
-  "sesimbra",
-  "costa-da-caparica",
-  "almada",
-  "cascais",
-  "amadora",
-  "seixal",
-  "moita",
-  "setubal",
-];
+/*
+ * Cidades onde há mesmo página dedicada em /mudancas/[cidade].
+ *
+ * URLs antigas /mudancas-cidade fazem 301 para /mudancas/cidade — preserva o
+ * SEO acumulado sem manter o formato antigo.
+ *
+ * LIDAS DA FONTE, E NÃO ESCRITAS À MÃO — 29-09-2026. Esta lista tinha 19
+ * cidades escritas aqui e só existem as de `mudancas-cidades.ts` (13 hoje).
+ * As seis a mais — almada, cascais, amadora, seixal, moita e setubal — faziam
+ * 301 para uma página que não existe: /mudancas-almada acabava num 404, com o
+ * redirect a garantir ao Google que o 404 era o endereço novo e definitivo.
+ * O `next.config.ts` já lia a mesma fonte; agora os dois dizem o mesmo.
+ *
+ * `mudancas-cidades.ts` não importa nada, e por isso corre no Edge sem
+ * arrastar o resto do site para o middleware.
+ */
+const MUDANCAS_CITIES_WITH_PAGE = getAllCidadeSlugs();
 
 /**
  * O backoffice é servido a quem tiver sessão — verificada aqui, no servidor.

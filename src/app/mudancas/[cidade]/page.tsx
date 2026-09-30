@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -17,14 +18,17 @@ import {
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
+  PRAZO_DE_RESPOSTA,
   SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { PRESTADOR } from "@/lib/dados-estruturados";
+import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import {
   CIDADES_MUDANCAS,
   getAllCidadeSlugs,
   getCidadeMudancaBySlug,
 } from "@/lib/mudancas-cidades";
+import { comExtra } from "@/lib/titulos-seo";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -39,31 +43,42 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { cidade } = await params;
   const c = getCidadeMudancaBySlug(cidade);
-  if (!c) return { title: "Mudanças — CLYON" };
+  if (!c) return { title: "Mudanças" };
 
-  const title = `Mudanças em ${c.nome} — Orçamento em 6h | ${BUSINESS_NAME}`;
+  /*
+   * Sem « | CLYON» no fim (29-09-2026): o template do layout acrescenta-o, e
+   * as treze páginas saíam no Google como «Mudanças em Sintra — Orçamento em
+   * 6h | CLYON | CLYON». O `comExtra` deita fora o «Orçamento em 6h» numa
+   * terra de nome comprido em vez de deixar o Google cortar o título.
+   */
+  const title = comExtra(`Mudanças em ${c.nome}`, "Orçamento em 6h");
   // Sem número de preço, aqui e no resto da página. A meta description dizia
   // "Preços desde 150€" (o piso por cidade ia de 140 a 220 €) para um serviço
   // que o motor factura a partir de 490 € — sete horas a 70 €/h. Nos
   // metadados vale a mesma regra do texto visível: o que não se mostra na
   // página não se declara ao Google.
-  const description =
-    `Mudanças residenciais e comerciais em ${c.nome} (${c.distrito}). ` +
-    `Equipa profissional, embalagem, carga, transporte e montagem. ` +
-    `Orçamento personalizado e grátis em 6 horas.`;
+  //
+  // E até 155 caracteres (29-09-2026): tinha 161 a 173, e o Google cortava o
+  // prazo, que é o que a pessoa quer saber. O essencial primeiro; o resto só
+  // se couber inteiro (ver descricoes-seo.ts).
+  const description = descricaoQueCabe([
+    `Mudanças em ${c.nome}: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    "Residenciais e comerciais, com embalagem, carga, transporte e montagem.",
+    "Orçamento grátis.",
+  ]);
 
   return {
     title,
     description,
     alternates: { canonical: `${SITE_URL}/mudancas/${c.slug}` },
-    openGraph: {
+    openGraph: og({
       title,
       description,
       url: `${SITE_URL}/mudancas/${c.slug}`,
-      type: "website",
-      locale: "pt_PT",
-    },
-    twitter: { card: "summary_large_image", title, description },
+    }),
+    // Sem `twitter` próprio (29-09-2026): o do layout já tem o cartão e a
+    // imagem, e o Next preenche o título e a descrição com os do Open Graph.
+    // Definido aqui, substituía o do layout e perdia a imagem.
   };
 }
 
@@ -72,48 +87,33 @@ export default async function MudancasCidadePage({ params }: Props) {
   const c = getCidadeMudancaBySlug(cidade);
   if (!c) notFound();
 
-  // ── Schema.org: LocalBusiness + Service + FAQPage + BreadcrumbList ────────
+  // ── Schema.org: Service + FAQPage + BreadcrumbList ─────────────────────────
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      {
-        "@type": "LocalBusiness",
-        "@id": `${SITE_URL}/mudancas/${c.slug}#business`,
-        name: `${BUSINESS_NAME} — Mudanças em ${c.nome}`,
-        image: `${SITE_URL}/logo-clyon.png`,
-        telephone: BUSINESS_PHONE,
-        // Sem `priceRange`: era `€${precoMin}–€${precoMax}` por cidade, um
-        // preço que a página deixou de mostrar. Ver a nota no `offers` abaixo.
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: c.nome,
-          addressRegion: c.distrito,
-          addressCountry: "PT",
-        },
-        geo: {
-          "@type": "GeoCoordinates",
-          latitude: c.geo.lat,
-          longitude: c.geo.lng,
-        },
-        areaServed: {
-          "@type": "City",
-          name: c.nome,
-        },
-        openingHoursSpecification: [
-          {
-            "@type": "OpeningHoursSpecification",
-            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            opens: "08:00",
-            closes: "20:00",
-          },
-        ],
-      },
+      /*
+       * SEM O `LocalBusiness` DA CIDADE — 29-09-2026.
+       *
+       * Havia aqui um «CLYON — Mudanças em Sintra» com morada em Sintra, e o
+       * mesmo nas treze cidades: treze empresas com o mesmo nome e telefone,
+       * cada uma a declarar uma morada onde a CLYON não tem porta. É o padrão
+       * das fichas locais falsas, e não é o que a CLYON é — é uma plataforma
+       * com sede em Amora, e quem faz as mudanças são os profissionais.
+       *
+       * Fica o serviço, com o prestador verdadeiro (o `LocalBusiness` do
+       * layout, por `@id`) e a cidade onde se presta em `areaServed`. As
+       * coordenadas passam para a cidade, que é o que elas sempre foram.
+       */
       {
         "@type": "Service",
         "@id": `${SITE_URL}/mudancas/${c.slug}#service`,
         serviceType: "Mudanças residenciais e comerciais",
-        provider: { "@id": `${SITE_URL}/mudancas/${c.slug}#business` },
-        areaServed: { "@type": "City", name: c.nome },
+        provider: PRESTADOR,
+        areaServed: {
+          "@type": "City",
+          name: c.nome,
+          geo: { "@type": "GeoCoordinates", latitude: c.geo.lat, longitude: c.geo.lng },
+        },
         /*
          * Sem bloco `offers` — e sem outro número no lugar dele.
          *

@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, Clock3, Search } from "lucide-react";
 
-import { getAllBlogPosts } from "@/lib/blog-data";
+// Os artigos NO AR, e não todos os de blog-data: os retirados (29-09-2026)
+// saem da listagem aqui e em mais lado nenhum. Ver `artigos-do-blog.ts`.
+import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Blog — Recolher Móveis, Esvaziar Casa e Doar",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Guias práticos: como esvaziar uma casa herdada, doar móveis usados em Lisboa, recolha de monos pela câmara vs empresa, preços de recolha de entulho, como preparar uma mudança. Escrito por quem faz o serviço no terreno.",
+    "Guias práticos para esvaziar uma casa herdada, doar móveis usados, comparar a recolha da câmara com a de uma empresa e preparar uma mudança.",
   keywords: [
     "como esvaziar casa herança",
     "como doar móveis usados Lisboa",
@@ -20,18 +25,18 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/blog`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Blog — Guias de Recolha, Esvaziamento e Doações em Lisboa",
     description:
       "Guias práticos sobre recolha de móveis, esvaziamento de casas, doação de recheio e mudanças em Lisboa, Margem Sul e Setúbal.",
     url: `${SITE_URL}/blog`,
-  },
+  }),
 };
 
 export const revalidate = 86400;
 
 export default function BlogPage() {
-  const posts = getAllBlogPosts();
+  const posts = artigosPublicados();
 
   return (
     <div className="min-h-screen bg-white">

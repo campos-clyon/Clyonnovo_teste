@@ -23,7 +23,8 @@ import VistaDoPedido from "./VistaDoPedido";
  */
 
 export const metadata: Metadata = {
-  title: "O seu pedido — CLYON",
+  // Sem « — CLYON»: o template do layout já a acrescenta (29-09-2026).
+  title: "O seu pedido",
   robots: { index: false, follow: false },
 };
 

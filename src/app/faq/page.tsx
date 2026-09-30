@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 
 import FAQClient from "./FAQClient";
@@ -16,15 +17,17 @@ import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 
 export const metadata: Metadata = {
   title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Perguntas frequentes sobre recolha de móveis, esvaziamento de casa e apartamento em Lisboa: quanto custa, que móveis se levam, em que zonas há profissionais e como funciona a CLYON.",
+    "Perguntas frequentes sobre recolha de móveis e esvaziamento de casas em Lisboa, Margem Sul e Setúbal: quanto custa, prazos, zonas e como funciona.",
   alternates: { canonical: "https://clyon.pt/faq" },
-  openGraph: {
+  openGraph: og({
     title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
     description:
       "Tudo sobre recolha de móveis, esvaziamento de casas e apartamentos em Lisboa, Margem Sul e Setúbal. Preços, prazos e funcionamento.",
     url: "https://clyon.pt/faq",
-  },
+  }),
 };
 
 /*

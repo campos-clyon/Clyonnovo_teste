@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -32,16 +33,16 @@ import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 export const metadata: Metadata = {
   title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
   description:
-    "Descreva o que precisa e receba em até 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser e só confirma o trabalho quando estiver feito.",
+    "Descreva o que precisa e receba em menos de 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
     description:
-      "Descreva o que precisa e receba em até 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser e só confirma o trabalho quando estiver feito.",
+      "Descreva o que precisa e receba em menos de 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
     url: `${SITE_URL}/como-funciona`,
-  },
+  }),
 };
 
 const stages = [

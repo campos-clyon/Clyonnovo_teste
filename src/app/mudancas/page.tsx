@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -20,20 +21,23 @@ import {
   SITE_URL,
   getCityServiceSlug, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Sem Stress",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Mudanças residenciais e comerciais em Lisboa e Setúbal. Embalagem, carga, transporte e montagem por profissionais verificados. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal: embalagem, carga, transporte e montagem, com propostas de profissionais verificados.",
   alternates: { canonical: `${SITE_URL}/mudancas` },
-  openGraph: {
+  openGraph: og({
     title: "Mudanças em Lisboa e Setúbal — Profissional e Sem Stress",
     // Dizia "Preços desde 150€". Nos metadados vale a mesma regra do texto
     // visível: a página deixou de anunciar número, os metadados também.
     description:
       "Mudanças rápidas com equipa profissional. Carga, transporte, descarga e montagem. Orçamento personalizado e grátis em 6 horas!",
     url: `${SITE_URL}/mudancas`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]
@@ -131,11 +135,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Serviço de Mudanças",
   description: "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal com carga, transporte, descarga e montagem.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
    * Sem bloco `offers` — e sem outro número no lugar dele.
@@ -418,7 +420,8 @@ export default function MudancasPage() {
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
               { href: "/recolha-de-moveis", label: "Recolha de Móveis", desc: "Retirar móveis que não vão para a nova casa" },
-              { href: "/esvaziamento-casas", label: "Esvaziamento de Casas", desc: "Libertar o imóvel completamente" },
+              // Era /esvaziamento-casas, que faz 308 para cá (29-09-2026).
+              { href: "/esvaziamento-de-casas", label: "Esvaziamento de Casas", desc: "Libertar o imóvel completamente" },
               { href: "/recolha-de-entulho", label: "Recolha de Entulho", desc: "Se houver obras na nova casa" },
             ].map((item) => (
               <Link

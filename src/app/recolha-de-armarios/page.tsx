@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -23,6 +24,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
 /*
  * A recolha de armários é recolha de móveis: mesma faixa, mesma fonte.
@@ -36,8 +38,10 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Armários e Roupeiros em Lisboa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de armários usados, roupeiros, cómodas e aparadores em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento porta a porta e destino responsável. Peça orçamento.",
+    "Recolha de armários, roupeiros, cómodas e aparadores em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento porta a porta e destino responsável.",
   keywords: [
     "recolha de armários usados",
     "recolha de armários",
@@ -51,14 +55,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/recolha-de-armarios`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Armários Usados em Lisboa, Margem Sul e Setúbal",
     description:
       "Recolha de armários usados com desmontagem, carregamento porta a porta e destino licenciado.",
     url: `${SITE_URL}/recolha-de-armarios`,
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const areaServedCities = [
@@ -145,19 +147,17 @@ const serviceSchema = {
   serviceType: "Recolha de armários e roupeiros usados",
   url: `${SITE_URL}/recolha-de-armarios`,
   description: "Serviço de recolha de armários usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   offers: {
     "@type": "AggregateOffer",
     priceCurrency: "EUR",
     lowPrice: PRECO_MOVEIS.minimo,
     highPrice: PRECO_MOVEIS.maximo,
-    priceValidUntil: "2026-12-31",
+    // Calculado: a data escrita à mão caducava a 31-12-2026 (29-09-2026).
+    priceValidUntil: validadeDoPreco(),
     availability: "https://schema.org/InStock",
   },
 };

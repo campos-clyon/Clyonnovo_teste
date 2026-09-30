@@ -1,18 +1,20 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 
 import CTABlock from "@/components/CTABlock";
 import { getAllCities } from "@/lib/city-content";
 import {
-  BUSINESS_NAME,
   BUSINESS_PHONE,
   CITIES,
   PRAZO_DE_RESPOSTA,
   SITE_URL,
   getRegionCities,
 } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 /*
  * "MAIS DE 24 LOCALIDADES", COM DEZANOVE NA PÁGINA — 30-09-2026.
@@ -29,21 +31,28 @@ import {
  */
 export const metadata: Metadata = {
   title: "Áreas de Atuação | Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `A CLYON liga-o a profissionais verificados em ${CITIES.length} localidades: Lisboa, Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro, Setúbal e mais. Recolha de móveis, entulho, esvaziamentos e mudanças.`,
+    `${CITIES.length} localidades em Lisboa, Margem Sul e Setúbal: Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro e mais. Recolha de móveis e entulho.`,
   alternates: { canonical: `${SITE_URL}/areas-de-atuacao` },
-  openGraph: {
+  openGraph: og({
     title: "Áreas de Atuação da CLYON | Cobertura Completa",
     description:
       "Profissionais verificados em Lisboa, Margem Sul e Setúbal. Recolha de móveis, entulho, esvaziamentos e mudanças.",
     url: `${SITE_URL}/areas-de-atuacao`,
-  },
+  }),
 };
 
+/*
+ * `hub` é a página principal de cada serviço. Era deduzida do slug com um
+ * ternário que só conhecia móveis e entulho: o esvaziamento caía em
+ * /esvaziamento-casas, que faz 308 para /esvaziamento-de-casas (29-09-2026).
+ */
 const services = [
-  { name: "Recolha de Móveis", slug: "recolha-moveis", color: "cyan" },
-  { name: "Recolha de Entulho", slug: "recolha-entulho", color: "amber" },
-  { name: "Esvaziamento de Casas", slug: "esvaziamento-casas", color: "violet" },
+  { name: "Recolha de Móveis", slug: "recolha-moveis", hub: "/recolha-de-moveis", color: "cyan" },
+  { name: "Recolha de Entulho", slug: "recolha-entulho", hub: "/recolha-de-entulho", color: "amber" },
+  { name: "Esvaziamento de Casas", slug: "esvaziamento-casas", hub: "/esvaziamento-de-casas", color: "violet" },
 ];
 
 const regions = [
@@ -67,12 +76,19 @@ const regions = [
   },
 ];
 
-const localBusinessSchema = {
+/*
+ * Um `Service` com a área servida, e não outro `LocalBusiness` — 29-09-2026.
+ *
+ * Estava aqui um `LocalBusiness` «CLYON» sem `@id` e sem morada, ao lado do
+ * do layout, que é a entidade a sério: duas empresas CLYON no mesmo HTML, uma
+ * delas incompleta. O que esta página diz de próprio é ONDE se trabalha — e
+ * isso é o `areaServed` de um serviço, com o prestador por `@id`.
+ */
+const servicoSchema = {
   "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  name: BUSINESS_NAME,
-  telephone: BUSINESS_PHONE,
-  url: SITE_URL,
+  "@type": "Service",
+  name: "Recolha de móveis, monos e entulho, esvaziamentos e mudanças",
+  provider: PRESTADOR,
   areaServed: getAllCities().map((city) => ({
     "@type": "City",
     name: city.name,
@@ -174,7 +190,7 @@ export default function AreasDeAtuacaoPage() {
                 {region.cities.map((city) => (
                   <Link
                     key={city.slug}
-                    href={`/recolha-moveis-${city.slug}`}
+                    href={caminhoDoServicoNaCidade("recolha-moveis", city.slug)}
                     className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-cyan-100 hover:text-acao-hover"
                   >
                     {city.name}
@@ -200,7 +216,7 @@ export default function AreasDeAtuacaoPage() {
             {services.map((service) => (
               <Link
                 key={service.slug}
-                href={`/${service.slug === "recolha-moveis" ? "recolha-de-moveis" : service.slug === "recolha-entulho" ? "recolha-de-entulho" : service.slug}`}
+                href={service.hub}
                 className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
               >
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-acao-hover">
@@ -264,8 +280,12 @@ export default function AreasDeAtuacaoPage() {
                     </td>
                     {services.map((service) => (
                       <td key={service.slug} className="px-4 py-3 text-center">
+                        {/* O endereço sai de `caminhoDoServicoNaCidade` e não
+                            de `/${serviço}-${cidade}` (29-09-2026): o
+                            esvaziamento na Amadora tem página própria, e a
+                            gerada faz 301 para ela. */}
                         <Link
-                          href={`/${service.slug}-${city.slug}`}
+                          href={caminhoDoServicoNaCidade(service.slug, city.slug)}
                           className="inline-flex items-center justify-center rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-acao transition-colors hover:bg-cyan-100"
                         >
                           Ver
@@ -301,7 +321,7 @@ export default function AreasDeAtuacaoPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd(localBusinessSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(servicoSchema) }}
       />
     </div>
   );

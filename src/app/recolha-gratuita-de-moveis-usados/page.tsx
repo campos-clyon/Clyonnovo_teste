@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,11 +23,14 @@ import {
   SITE_URL,
   AVALIACOES_TOTAL,
 } from "@/lib/seo-data";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Recolha Gratuita de Móveis Usados — Como Funciona",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha gratuita de móveis usados em Lisboa, Almada, Setúbal e arredores: quando é possível pela câmara ou doação, e quando faz sentido pagar um serviço profissional que retira, desmonta e entra em casa. Guia completo com contactos e alternativas.",
+    "Recolha gratuita de móveis usados em Lisboa, Almada e Setúbal: quando dá pela câmara ou por doação, e quando compensa pedir uma recolha paga.",
   keywords: [
     "recolha gratuita de móveis usados",
     "recolha gratuita de móveis usados Lisboa",
@@ -45,14 +49,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha Gratuita de Móveis Usados — Como Funciona",
     description:
       "Guia sobre recolha gratuita de móveis usados em Lisboa, Almada e Setúbal. Câmara, doação ou serviço profissional — quando cada opção faz sentido.",
     url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const areaServedCities = [
@@ -143,12 +145,9 @@ const serviceSchema = {
   serviceType: "Recolha de móveis usados",
   url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`,
   description: "Serviço de recolha de móveis usados com desmontagem, carregamento porta a porta e destino licenciado em Lisboa, Margem Sul e Setúbal. Serviço pago, rápido e completo.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-    url: SITE_URL,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: areaServedCities.map((city) => ({ "@type": "City", name: city })),
   /*
    * Esta página NÃO declara preço ao Google, de propósito.

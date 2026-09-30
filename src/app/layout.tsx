@@ -13,18 +13,20 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   REGIONS,
-  SITE_URL, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+  SITE_URL,
+  AVALIACOES_TOTAL,
+  PRAZO_DE_RESPOSTA,
+} from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
+import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
+import { IMAGEM_DE_PARTILHA } from "@/lib/open-graph";
 
-/**
- * O preço da recolha de móveis, para a meta description global.
- *
- * Estava escrito à mão, dizia "desde 70 €", e a tabela oficial diz
- * 40 – 120 € — ou seja, o snippet que o Google mostra em todas as páginas
- * do site anunciava um piso 30 € acima do que se pratica. Passa a vir da
- * fonte única; se o valor mudar lá, muda aqui.
+/*
+ * A meta description global deixou de levar o preço da recolha de móveis
+ * (29-09-2026). Levava-o da fonte única, e bem, mas era uma frase de 190
+ * caracteres — o Google mostra uns 155 — a vender também a limpeza pós-obra,
+ * que deixou de ser serviço. Só a vêem as páginas sem description própria.
  */
-const PRECO_MOVEIS = precoDe("recolha_moveis") ?? "orçamento personalizado";
 
 import "./globals.css";
 
@@ -53,7 +55,7 @@ export const metadata: Metadata = {
    * o prazo é o de PRAZO_DE_RESPOSTA (30-09-2026).
    */
   description:
-    `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal, por profissionais verificados. Propostas em até ${PRAZO_DE_RESPOSTA.porExtenso}, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
+    "Recolha de móveis, monos e entulho, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de 6 horas.",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
@@ -76,12 +78,22 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: SITE_URL,
-    languages: {
-      "pt-PT": SITE_URL,
-    },
-  },
+  /*
+   * SEM `alternates` AQUI — 29-09-2026.
+   *
+   * Estava `canonical: SITE_URL` (e o hreflang a apontar para o mesmo), e o
+   * layout vale para TODAS as páginas: a que não declarasse o seu próprio
+   * canónico herdava o da homepage. Era o caso do 404, do /entrar e do
+   * /admin/login — três páginas a dizer ao Google «a versão a sério de mim
+   * é a homepage». Num 404 isso é pior do que não dizer nada: é pedir-lhe
+   * que junte o erro à página principal.
+   *
+   * Cada página pública declara o seu canónico (há um teste que o confirma
+   * em `metadados-das-paginas.test.ts`); as outras ficam sem nenhum, que é o
+   * certo para uma página noindex. O hreflang saiu com ele: o site só tem
+   * uma língua, e um hreflang que aponta para a homepage a partir de todas
+   * as páginas era outro sinal errado.
+   */
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -91,29 +103,30 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   manifest: "/site.webmanifest",
+  /*
+   * SÓ O QUE É IGUAL EM TODAS AS PÁGINAS — 29-09-2026.
+   *
+   * Tinha título, descrição e `url: SITE_URL`. Uma página sem `openGraph`
+   * próprio herdava-os: /termos, /regioes ou /quero-ser-parceiro saíam
+   * partilhadas com o título da homepage e o endereço da homepage. Sem
+   * eles aqui, o Next preenche o título e a descrição do Open Graph com os
+   * da própria página. As páginas que definem o seu usam `og()`
+   * (open-graph.ts), que junta o que está aqui — o Next não junta sozinho.
+   */
   openGraph: {
     type: "website",
     locale: "pt_PT",
-    url: SITE_URL,
     siteName: BUSINESS_NAME,
-    title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
-    description:
-      "Serviço rápido para recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "CLYON - Recolha de Entulho, Móveis e Monos",
-      },
-    ],
+    images: [IMAGEM_DE_PARTILHA],
   },
+  /*
+   * O mesmo para o Twitter/X: sem título nem descrição, o Next usa os do
+   * Open Graph de cada página. Com eles, TODAS as páginas partilhavam o
+   * título genérico do layout — até as que tinham o seu.
+   */
   twitter: {
     card: "summary_large_image",
-    title: "Recolha de Entulho, Móveis e Monos em Lisboa e Margem Sul | CLYON",
-    description:
-      "Propostas de profissionais verificados para recolha de entulho, móveis e monos, esvaziamentos e mudanças.",
-    images: ["/og-image.jpg"],
+    images: [IMAGEM_DE_PARTILHA.url],
   },
   other: {
     "geo.region": "PT-11",
@@ -127,14 +140,21 @@ export const metadata: Metadata = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
-  "@id": `${SITE_URL}/#localbusiness`,
+  // O `@id` a que todos os `Service` do site se referem como prestador
+  // (`PRESTADOR`, em dados-estruturados.ts). Muda lá, muda em todo o lado.
+  "@id": ID_DO_NEGOCIO,
   name: BUSINESS_NAME,
   url: SITE_URL,
   telephone: BUSINESS_PHONE,
   email: BUSINESS_EMAIL,
   image: `${SITE_URL}/og-image.jpg`,
+  /*
+   * Dizia «Empresa especializada em … limpeza pós-obra e mudanças». A CLYON
+   * é a plataforma, quem faz o trabalho são profissionais independentes — e
+   * a limpeza pós-obra já não é um serviço activo (29-09-2026).
+   */
   description:
-    "Empresa especializada em recolha de entulho, móveis, monos, esvaziamento de casas, limpeza pós-obra e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Belverde",
@@ -143,26 +163,9 @@ const localBusinessSchema = {
     postalCode: "2845-513",
     addressCountry: "PT",
   },
-  areaServed: [
-    { "@type": "City", name: "Lisboa" },
-    { "@type": "City", name: "Almada" },
-    { "@type": "City", name: "Seixal" },
-    { "@type": "City", name: "Barreiro" },
-    { "@type": "City", name: "Setúbal" },
-    { "@type": "City", name: "Cascais" },
-    { "@type": "City", name: "Oeiras" },
-    { "@type": "City", name: "Sintra" },
-    { "@type": "City", name: "Amadora" },
-    { "@type": "City", name: "Loures" },
-    { "@type": "City", name: "Odivelas" },
-    { "@type": "City", name: "Montijo" },
-    { "@type": "City", name: "Moita" },
-    { "@type": "City", name: "Palmela" },
-    { "@type": "City", name: "Sesimbra" },
-    { "@type": "City", name: "Carnaxide" },
-    { "@type": "City", name: "Monte Abraão" },
-    { "@type": "City", name: "Queluz" },
-  ],
+  // As localidades com página, e não uma lista escrita à mão — faltavam a
+  // Costa da Caparica, a Amora, Corroios e Alcochete (29-09-2026).
+  areaServed: LOCALIDADES_SERVIDAS.map((name) => ({ "@type": "City", name })),
   /*
    * NÃO há aggregateRating aqui, e é deliberado.
    *
@@ -178,6 +181,11 @@ const localBusinessSchema = {
    * entidades LocalBusiness diferentes com a mesma morada.
    *
    * A nota vive onde as avaliações vivem: em /avaliacoes, e só lá.
+   *
+   * (29-09-2026: nem lá. As de /avaliacoes vêm do Google e da Fixando e são
+   * do próprio negócio — duas coisas que as regras da Google não aceitam em
+   * dados estruturados. Ficou o texto visível; as únicas estrelas declaradas
+   * no site são as das páginas dos profissionais.)
    */
   /*
    * A faixa é qualitativa, e é de propósito.

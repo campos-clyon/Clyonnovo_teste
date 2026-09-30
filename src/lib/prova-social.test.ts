@@ -55,22 +55,26 @@ describe("a nota agregada", () => {
    * A regra tem uma razão simples: a nota agregada tem de contar avaliações
    * que a própria página mostra. /avaliacoes mostra-as; mais nenhuma mostra.
    */
-  it("só existe nas páginas que mostram as avaliações que contam", () => {
+  it("só existe na página do profissional — a única com avaliações feitas aqui", () => {
     /*
-     * SÃO DUAS, E A REGRA É A MESMA.
+     * ERAM DUAS, E PASSOU A SER UMA — 29-09-2026.
      *
-     * `/avaliacoes` agrega as avaliações da CLYON e reproduz-nas. A página de
-     * um profissional agrega as DELE e reproduz as dele — cada uma conta o que
-     * mostra, que é a única coisa que um revisor humano do Google verifica.
+     * `/avaliacoes` agregava as avaliações da CLYON e reproduzia-as. Contava o
+     * que mostrava, mas o que mostrava eram avaliações deixadas no Google e na
+     * Fixando, copiadas para cá — e era o negócio a avaliar-se a si próprio.
+     * As duas coisas estão fora das regras da Google para dados estruturados,
+     * com as datas em texto por cima. O texto visível ficou; a declaração
+     * saiu (ver o comentário em src/app/avaliacoes/page.tsx).
+     *
+     * A página de um profissional agrega as avaliações que os clientes lhe
+     * deixaram NA plataforma e reproduz as dele: é o caso que as regras
+     * permitem, e fica.
      */
     const comRating = PAGINAS.filter((f) =>
       semComentarios(readFileSync(f, "utf8")).includes("aggregateRating"),
     ).map((f) => f.replace(RAIZ, "").replace(/\\/g, "/"));
 
-    expect(comRating.sort()).toEqual([
-      "/src/app/avaliacoes/page.tsx",
-      "/src/app/profissionais/[slug]/page.tsx",
-    ]);
+    expect(comRating.sort()).toEqual(["/src/app/profissionais/[slug]/page.tsx"]);
   });
 
   it("a do profissional não declara nota nenhuma sem avaliações", () => {
@@ -99,13 +103,19 @@ describe("a nota agregada", () => {
     expect(perfil).toContain("O que dizem os clientes");
   });
 
-  it("declara exactamente as avaliações que a página reproduz", () => {
-    const pagina = readFileSync(join(RAIZ, "src/app/avaliacoes/page.tsx"), "utf8");
-    // `String(reviews.length)` e não AVALIACOES_TOTAL. Declarar 155 sobre 29
-    // provas visíveis é exactamente o que fazia o antigo 163 — e é a
-    // discrepância que um revisor humano do Google confirma em dez segundos.
-    expect(pagina).toContain("reviewCount: String(reviews.length)");
-    expect(pagina).not.toContain("reviewCount: String(AVALIACOES_TOTAL)");
+  it("/avaliacoes mostra as avaliações mas não as declara ao Google", () => {
+    /*
+     * Este teste exigia `reviewCount: String(reviews.length)` em /avaliacoes —
+     * a nota agregada a contar só o que a página mostrava. A nota saiu de lá
+     * a 29-09-2026 (avaliações de outros sites e autoavaliação do negócio),
+     * e o que fica guardado é o contrário: nem nota, nem `review`, nem
+     * `reviewCount` — e as avaliações continuam no ecrã.
+     */
+    const pagina = semComentarios(readFileSync(join(RAIZ, "src/app/avaliacoes/page.tsx"), "utf8"));
+    expect(pagina).not.toContain("aggregateRating");
+    expect(pagina).not.toContain("reviewCount");
+    expect(pagina).not.toContain('"@type": "Review"');
+    expect(pagina).toContain("reviews.map(");
   });
 
   it("o número de avaliações reproduzidas é menor do que o total declarado em texto", () => {

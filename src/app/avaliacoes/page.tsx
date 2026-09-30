@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { Star, Quote, MessageCircle } from "lucide-react";
 
@@ -22,63 +23,48 @@ import {
  */
 export const metadata: Metadata = {
   title: "Avaliações de Clientes — Lisboa e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `${AVALIACOES.google} avaliações no Google e ${AVALIACOES.fixando} na Fixando, com média de ${AVALIACOES.media} ★. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final dos profissionais da CLYON.`,
+    `${AVALIACOES.google} avaliações no Google e ${AVALIACOES.fixando} na Fixando, todas a 5 estrelas: o que dizem os clientes da CLYON em Lisboa, Margem Sul e Setúbal.`,
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
-  openGraph: {
+  openGraph: og({
     title: "Avaliações Reais de Clientes — CLYON",
     description:
       `${AVALIACOES.media} ★ em ${AVALIACOES_TOTAL} avaliações no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.`,
     url: "https://clyon.pt/avaliacoes",
-  },
+  }),
 };
 
 export const revalidate = 86400;
 
 /*
- * A nota agregada conta o que está NESTA página, e nada mais.
+ * SEM NOTA AGREGADA NEM `review` NOS DADOS ESTRUTURADOS — 29-09-2026.
  *
- * Dizia 163 sobre dez avaliações no schema e trinta no ecrã. As directrizes do
- * Google são explícitas: a nota agregada tem de reflectir avaliações visíveis
- * na própria página. Um número que ninguém consegue contar é o que faz perder
- * as estrelas em todo o domínio — e a CLYON tem avaliações reais que chegam
- * bem para as merecer.
+ * Estava aqui um `aggregateRating` com as avaliações desta página, e um
+ * `review` por cada uma. O texto visível fica todo, porque é verdade e ajuda
+ * quem lê; o que sai é a declaração ao Google, e por três razões, cada uma
+ * suficiente sozinha:
  *
- * As de fora — Google e Fixando — continuam a valer e a somar muito mais.
- * Mas o sítio delas é uma ligação que o cliente pode abrir e confirmar, não
- * uma linha de schema que só o Google lê e que ninguém consegue verificar.
+ *   · as avaliações foram deixadas no Google e na Fixando, e copiadas para
+ *     aqui. A Google não aceita em dados estruturados avaliações recolhidas
+ *     noutros sites — o sítio delas é a ficha de onde vieram;
+ *   · é o negócio a avaliar-se a si próprio na sua página
+ *     («self-serving reviews»): desde 2019 a Google deixou de mostrar estrelas
+ *     para `LocalBusiness`/`Organization` declaradas pelo próprio, e o que
+ *     insiste nelas arrisca uma acção manual que tira as estrelas ao domínio
+ *     inteiro — incluindo às páginas dos profissionais, que são as que as
+ *     merecem;
+ *   · as datas iam como estão escritas em reviews-data («10 de jun. de
+ *     2026»), e não em ISO 8601 — o `datePublished` de cada `review` era
+ *     inválido.
  *
- * O "@id" é o mesmo do schema global em layout.tsx de propósito: sem ele o
- * Google via duas empresas chamadas CLYON, com a mesma morada e notas
- * diferentes, na mesma página.
+ * As estrelas que ficam são as das páginas dos profissionais: avaliações
+ * feitas NA plataforma, por clientes, sobre o profissional — que é o caso
+ * que as regras permitem.
  */
-const aggregateRatingSchema = {
-  "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  "@id": `${SITE_URL}/#localbusiness`,
-  name: "CLYON",
-  url: SITE_URL,
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "5.0",
-    reviewCount: String(reviews.length),
-    bestRating: "5",
-    worstRating: "1",
-  },
-  review: reviews.map((r) => ({
-    "@type": "Review",
-    author: { "@type": "Person", name: r.name },
-    datePublished: r.date,
-    reviewBody: r.text,
-    reviewRating: {
-      "@type": "Rating",
-      ratingValue: "5",
-      bestRating: "5",
-    },
-  })),
-};
 
 const STATS = [
   { value: AVALIACOES.media, label: "Classificação média", sub: "Google e Fixando" },
@@ -324,11 +310,6 @@ export default function AvaliacoesPage() {
           </div>
         </div>
       </section>
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd(aggregateRatingSchema) }}
-      />
     </div>
   );
 }

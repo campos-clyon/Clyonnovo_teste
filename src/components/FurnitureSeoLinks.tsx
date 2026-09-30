@@ -14,9 +14,13 @@ const seoLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", description: "Camas, estrados e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", description: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Recolha de Eletrodomésticos", description: "Frigoríficos e máquinas" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Recolha Gratuita vs Privada", description: "Quando escolher" },
+  // A âncora dizia «Recolha Gratuita vs Privada» (29-09-2026): a página
+  // explica onde doar ou quem recolhe, e o texto do link é o que o Google lê
+  // como resumo do destino. A CLYON não faz recolha gratuita.
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", description: "Quando escolher" },
   { href: "/recolha-de-moveis-urgente", label: "Recolha Urgente", description: "Resposta no próprio dia" },
-  { href: "/recolha-de-sofa-lisboa", label: "Sofá em Lisboa", description: "Carregamento e transporte" },
+  // «Sofá em Lisboa» (/recolha-de-sofa-lisboa) saiu a 29-09-2026: a página
+  // juntou-se a /recolha-de-sofas, que já está nesta lista, e faz 301 para ela.
   { href: "/retirar-moveis-velhos", label: "Retirar Móveis Velhos", description: "Desmontagem incluída" },
   { href: "/recolha-moveis-lisboa", label: "Recolha de móveis em Lisboa", description: "Lisboa e bairros" },
   { href: "/recolha-moveis-almada", label: "Recolha de móveis em Almada", description: "Almada e Caparica" },

@@ -14,8 +14,10 @@ const simulatorCategoryMap: Record<string, string> = {
 
 export const metadata: Metadata = {
   title: "Regiões de Atuação em Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Onde a CLYON tem profissionais: Lisboa, Margem Sul e Setúbal. Recolha de entulho, móveis, monos, mudanças e esvaziamento de casas, com orçamento gratuito em 6 horas.",
+    "Onde a CLYON tem profissionais: Lisboa, Margem Sul e Setúbal. Recolha de entulho, móveis e monos, mudanças e esvaziamentos, com resposta em 6 horas.",
   alternates: {
     canonical: `${SITE_URL}/regioes`,
   },
@@ -88,7 +90,8 @@ export default function RegioesPage() {
             {[
               { name: "Recolha de Móveis", href: "/recolha-de-moveis", color: "cyan" },
               { name: "Recolha de Entulho", href: "/recolha-de-entulho", color: "amber" },
-              { name: "Esvaziamento de Casas", href: "/esvaziamento-casas", color: "violet" },
+              // Era /esvaziamento-casas, que faz 308 para cá (29-09-2026).
+              { name: "Esvaziamento de Casas", href: "/esvaziamento-de-casas", color: "violet" },
             ].map((hub) => (
               <Link
                 key={hub.href}

@@ -1,10 +1,12 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -16,15 +18,17 @@ const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 
 
 export const metadata: Metadata = {
   title: "Esvaziamento de Casas na Amadora — Apartamentos",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos, eletrodomésticos e limpeza associada. Atendemos Reboleira, Damaia, Alfragide, Venteira e mais zonas.",
+    "Esvaziamento de casas e apartamentos na Amadora: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
-  openGraph: {
+  openGraph: og({
     title: "Esvaziamento de Casas na Amadora — Apartamentos",
     description:
       "Esvaziamento completo na Amadora com remoção de móveis e limpeza. Reboleira, Damaia, Alfragide, Venteira.",
     url: `${SITE_URL}/esvaziamento-de-casas-amadora`,
-  },
+  }),
 };
 
 const faqs = [
@@ -84,19 +88,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Esvaziamento de Casas na Amadora",
   description: "Serviço de esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos e limpeza.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: "Amadora",
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: {
     "@type": "City",
     name: "Amadora",

@@ -1,10 +1,12 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -21,8 +23,10 @@ const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 
 
 export const metadata: Metadata = {
   title: "Esvaziamento de Casas e Apartamentos — Heranças",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços ${PRECO_CASA}. Orçamento grátis em 6h.`,
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: móveis, eletrodomésticos e recheio, para heranças e vendas. Preços ${PRECO_CASA}, sem IVA.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -44,12 +48,13 @@ export const metadata: Metadata = {
     "quem esvazia casas",
   ],
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
-  openGraph: {
-    title: "Esvaziamento de Casas e Apartamentos em Lisboa — Heranças e Recheios",
+  openGraph: og({
+    // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
+    title: "Esvaziamento de Casas e Apartamentos — Heranças",
     description:
       `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 6h.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
-  },
+  }),
 };
 
 const faqs = [
@@ -108,19 +113,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Esvaziamento de Casas",
   description: "Serviço de esvaziamento de casas, apartamentos, garagens e arrecadações em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: ["Lisboa", "Amadora", "Almada", "Setúbal", "Sintra", "Oeiras", "Cascais"],
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: {
     "@type": "GeoCircle",
     geoMidpoint: { "@type": "GeoCoordinates", latitude: 38.7223, longitude: -9.1393 },

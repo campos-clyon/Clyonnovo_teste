@@ -100,9 +100,22 @@ describe("o robots.txt", () => {
   });
 
   it("bloqueia as áreas de quem está de dentro", () => {
-    for (const area of ["/colaboradores", "/plataforma", "/profissionais/painel"]) {
+    for (const area of ["/plataforma", "/profissionais/painel"]) {
       expect(ROBOTS).toContain(`"${area}"`);
     }
+  });
+
+  it("deixa o /colaboradores aberto, para o Google ver o 404 e o esquecer", () => {
+    /*
+     * Este teste exigia `"/colaboradores"` no robots.txt. As páginas de lá
+     * foram removidas e tudo o que está debaixo responde 404 (confirmado a
+     * 29-09-2026): bloqueado, o Google nunca via o 404 e deixava os endereços
+     * em «Bloqueada pelo robots.txt» indefinidamente. Sem comentários, porque
+     * o comentário do robots.ts explica o caminho pelo nome.
+     */
+    const codigo = ROBOTS.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(codigo).not.toContain('"/colaboradores"');
+    expect(codigo).not.toContain('"/colaboradores/"');
   });
 
   it("deixa passar o CSS e o JavaScript de que a página precisa", () => {

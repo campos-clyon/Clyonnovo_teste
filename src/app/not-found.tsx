@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Página não encontrada — CLYON",
+  // Sem « — CLYON»: o template do layout já a acrescenta, e o 404 saía como
+  // «Página não encontrada — CLYON | CLYON» (29-09-2026).
+  title: "Página não encontrada",
   robots: { index: false, follow: false },
 };
 

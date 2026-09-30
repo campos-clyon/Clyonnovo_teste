@@ -11,8 +11,10 @@ import {
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Política de privacidade da CLYON: como tratamos os dados dos clientes que pedem recolha de móveis, esvaziamento de casa, recolha de entulho ou mudanças em Lisboa, Margem Sul e Setúbal. Direitos ao abrigo do RGPD.",
+    "Como a CLYON trata os dados de quem pede recolhas, esvaziamentos ou mudanças em Lisboa, Margem Sul e Setúbal, e os seus direitos ao abrigo do RGPD.",
   alternates: { canonical: `${SITE_URL}/privacidade` },
   robots: { index: true, follow: true },
 };

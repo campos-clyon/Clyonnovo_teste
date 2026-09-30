@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -20,17 +21,18 @@ const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personal
 
 export const metadata: Metadata = {
   title: "Preços de Recolha de Monos, Entulho e Móveis",
+  // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
     "Veja preços orientativos para recolha de monos, entulho, móveis, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: `${SITE_URL}/precos`,
   },
-  openGraph: {
+  openGraph: og({
     title: "Preços de Recolha de Monos, Entulho e Móveis",
     description:
       "Intervalos de preço de referência, fatores que influenciam o valor e a melhor forma de pedir orçamento com precisão.",
     url: `${SITE_URL}/precos`,
-  },
+  }),
 };
 
 /*

@@ -6,7 +6,8 @@ import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import InscricaoForm from "../../InscricaoForm";
 
 export const metadata: Metadata = {
-  title: "Complete o seu registo — CLYON",
+  // Sem « — CLYON»: o template do layout já a acrescenta (29-09-2026).
+  title: "Complete o seu registo",
   robots: { index: false, follow: false, nocache: true },
 };
 

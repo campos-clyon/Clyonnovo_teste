@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -11,6 +12,7 @@ import {
   Truck,
   Zap,
 } from "lucide-react";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Recolha de Móveis Urgente em Lisboa — Hoje",
@@ -27,15 +29,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/recolha-de-moveis-urgente",
   },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Móveis Urgente em Lisboa — Hoje",
     description:
       "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
     url: "https://clyon.pt/recolha-de-moveis-urgente",
-    siteName: "CLYON",
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const faqs = [
@@ -98,7 +97,8 @@ const internalLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Máquinas e frigoríficos" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Comparação" },
+  // Âncora: era «Gratuita vs Privada» (29-09-2026, ver FurnitureSeoLinks).
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", desc: "Comparação" },
 ];
 
 export default function RecolhaMoveisUrgentePage() {
@@ -110,16 +110,9 @@ export default function RecolhaMoveisUrgentePage() {
         name: "Recolha de Móveis Urgente",
         description:
           "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal com resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+        // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+        provider: PRESTADOR,
         areaServed: ["Lisboa", "Margem Sul", "Setúbal"],
         serviceType: "Recolha de Móveis Urgente",
       },

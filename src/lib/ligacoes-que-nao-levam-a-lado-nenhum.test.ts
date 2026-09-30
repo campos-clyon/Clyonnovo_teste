@@ -78,9 +78,13 @@ describe("a imagem de partilha", () => {
     expect(existsSync(caminho)).toBe(true);
     expect(tamanhoDoJpeg(readFileSync(caminho))).toEqual({ largura: 1200, altura: 630 });
     const LAYOUT = ler("src/app/layout.tsx");
-    expect(LAYOUT).toContain('url: "/og-image.jpg"');
-    expect(LAYOUT).toContain("width: 1200");
-    expect(LAYOUT).toContain("height: 630");
+    // O endereço passou do layout para `IMAGEM_DE_PARTILHA` (open-graph.ts),
+    // que o layout e todas as páginas usam — 30-09-2026.
+    expect(readFileSync(join(RAIZ, "src", "lib", "open-graph.ts"), "utf8")).toContain('url: "/og-image.jpg"');
+    expect(LAYOUT).toContain("IMAGEM_DE_PARTILHA");
+    const OG = readFileSync(join(RAIZ, "src", "lib", "open-graph.ts"), "utf8");
+    expect(OG).toContain("width: 1200");
+    expect(OG).toContain("height: 630");
   });
 });
 

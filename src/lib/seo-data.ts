@@ -1,4 +1,5 @@
 import { ENTIDADE_QUE_FACTURA, TAXA_IVA } from "@/lib/identificacao-legal";
+import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -46,8 +47,9 @@ export const REGIONS: RegionData[] = [
     intro:
       "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
+    // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e propostas em até 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -78,8 +80,9 @@ export const REGIONS: RegionData[] = [
     intro:
       "Profissionais em Setúbal, Palmela e Sesimbra para recolhas, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
+    // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Profissionais verificados, orçamento gratuito e propostas em até 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Profissionais verificados, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",
@@ -389,10 +392,18 @@ export function getService(slug: string) {
  */
 const SERVICOS_COM_PAGINA_PROPRIA = new Set(["mudancas"]);
 
+/*
+ * E, desde 29-09-2026, também ficam de fora as combinações que têm uma
+ * página estática a dizer o mesmo (`paginas-consolidadas.ts`): a gerada faz
+ * 301 para a estática, e gerá-la no build era voltar a pôr no ar o duplicado
+ * que o redirect veio tirar. Esta lista é a que alimenta o build da rota e o
+ * sitemap — sair daqui é sair dos dois.
+ */
 export function getAllCityServiceSlugs() {
   return CITIES.flatMap((city) =>
     SERVICES
       .filter((service) => !SERVICOS_COM_PAGINA_PROPRIA.has(service.slug))
+      .filter((service) => !(`${service.slug}-${city.slug}` in GERADAS_COM_PAGINA_ESTATICA))
       .map((service) => ({
         slug: [`${service.slug}-${city.slug}`],
         city,
@@ -404,6 +415,9 @@ export function getAllCityServiceSlugs() {
 export function getCityServiceSlug(serviceSlug: string, citySlug: string) {
   return `${serviceSlug}-${citySlug}`;
 }
+
+// Para onde deve ir um LINK para um serviço numa cidade não é isto — é
+// `caminhoDoServicoNaCidade`, em caminho-da-cidade.ts (29-09-2026).
 
 export function parseCityServiceSlug(fullSlug: string[]) {
   const slug = fullSlug.join("/");

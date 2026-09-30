@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { getAllCidadeSlugs } from "./src/lib/mudancas-cidades";
+import { redirectsDasConsolidacoes } from "./src/lib/paginas-consolidadas";
 
 /*
  * As cidades que TEM mesmo pagina de mudancas.
@@ -40,6 +41,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      /*
+       * As páginas que se juntaram a outras (29-09-2026): a gerada
+       * /esvaziamento-casas-amadora vai para a estática equivalente, o sofá
+       * de Lisboa para /recolha-de-sofas, o artigo da limpeza pós-obra para
+       * o entulho. A lista, e o porquê de cada uma, vivem em
+       * `paginas-consolidadas.ts` — que também as tira do sitemap e do build.
+       */
+      ...redirectsDasConsolidacoes(),
       // Páginas de orçamento da recolha
       {
         source: "/recolha/orcamento",
@@ -123,22 +132,17 @@ const nextConfig: NextConfig = {
         destination: "/recolha-moveis-lisboa",
         permanent: true,
       },
-      // Redirects de mudanças-cidade → páginas dedicadas em /mudancas/cidade
-      // (antes colapsavam todas em /mudancas — matava o SEO das long-tails)
-      { source: "/mudancas-alcochete",        destination: "/mudancas/alcochete",        permanent: true },
-      { source: "/mudancas-sintra",           destination: "/mudancas/sintra",           permanent: true },
-      { source: "/mudancas-montijo",          destination: "/mudancas/montijo",          permanent: true },
-      { source: "/mudancas-oeiras",           destination: "/mudancas/oeiras",           permanent: true },
-      { source: "/mudancas-barreiro",         destination: "/mudancas/barreiro",         permanent: true },
-      { source: "/mudancas-lisboa",           destination: "/mudancas/lisboa",           permanent: true },
-      // Todas as cidades agora têm página dedicada
-      { source: "/mudancas-carnaxide",        destination: "/mudancas/carnaxide",        permanent: true },
-      { source: "/mudancas-corroios",         destination: "/mudancas/corroios",         permanent: true },
-      { source: "/mudancas-palmela",          destination: "/mudancas/palmela",          permanent: true },
-      { source: "/mudancas-odivelas",         destination: "/mudancas/odivelas",         permanent: true },
-      { source: "/mudancas-lumiar",           destination: "/mudancas/lumiar",           permanent: true },
-      { source: "/mudancas-sesimbra",         destination: "/mudancas/sesimbra",         permanent: true },
-      { source: "/mudancas-costa-da-caparica",destination: "/mudancas/costa-da-caparica",permanent: true },
+      /*
+       * Redirects de mudanças-cidade → páginas dedicadas em /mudancas/cidade
+       * (antes colapsavam todas em /mudancas — matava o SEO das long-tails).
+       *
+       * Eram treze linhas escritas à mão, iguais hoje à fonte — e a mesma
+       * lista no middleware já tinha divergido para dezanove, com seis
+       * cidades a acabar em 404 (29-09-2026). Passam a sair da fonte como as
+       * outras famílias. As cidades SEM página não entram aqui: seguem para o
+       * middleware, que as manda para o balcão geral /mudancas.
+       */
+      ...paraAsCidades("/mudancas-"),
       // URLs 404 identificadas - redirecionar para páginas relevantes
       {
         source: "/recolha-de-moveis-usados",
@@ -185,14 +189,22 @@ const nextConfig: NextConfig = {
         destination: "/recolha-de-entulho",
         permanent: true,
       },
+      /*
+       * Os monos vão para os monos — 29-09-2026.
+       *
+       * Estes dois iam para /recolha-de-moveis, de quando não havia página de
+       * monos. Há: /recolha-de-monos existe, está no sitemap e é a que
+       * responde a quem escreveu «monos». Mandá-los para os móveis era dar ao
+       * Google a página errada como destino definitivo.
+       */
       {
         source: "/monos",
-        destination: "/recolha-de-moveis",
+        destination: "/recolha-de-monos",
         permanent: true,
       },
       {
         source: "/recolha-monos",
-        destination: "/recolha-de-moveis",
+        destination: "/recolha-de-monos",
         permanent: true,
       },
       // /recolha-de-monos tem página própria — não redirecionar

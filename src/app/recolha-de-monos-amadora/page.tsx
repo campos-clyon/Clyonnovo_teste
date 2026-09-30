@@ -1,23 +1,27 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 const SITE_URL = "https://clyon.pt";
 
 export const metadata: Metadata = {
   title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de monos na Amadora com carregamento, transporte e remoção de móveis velhos, sofás, colchões, eletrodomésticos e objetos volumosos. Reboleira, Damaia, Alfragide.",
+    "Recolha de monos na Amadora: móveis velhos, sofás, colchões, eletrodomésticos e volumosos, com carga e transporte. Reboleira, Damaia e Alfragide.",
   alternates: { canonical: `${SITE_URL}/recolha-de-monos-amadora` },
-  openGraph: {
+  openGraph: og({
     title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",
     description:
       "Recolha de monos na Amadora com carregamento e transporte. Móveis velhos, sofás, colchões e volumosos.",
     url: `${SITE_URL}/recolha-de-monos-amadora`,
-  },
+  }),
 };
 
 const faqs = [
@@ -72,19 +76,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Monos na Amadora",
   description: "Serviço de recolha de monos, móveis velhos e objetos volumosos na Amadora com carregamento e transporte.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: "CLYON",
-    telephone: "+351931632622",
-    url: SITE_URL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lisboa",
-      addressRegion: "Lisboa",
-      addressCountry: "PT",
-    },
-    areaServed: "Amadora",
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: {
     "@type": "City",
     name: "Amadora",
@@ -107,7 +101,9 @@ const breadcrumbSchema = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Início", item: SITE_URL },
-    { "@type": "ListItem", position: 2, name: "Recolha de Monos", item: `${SITE_URL}/recolha-monos-lisboa` },
+    // O passo «Recolha de Monos» é o hub, e não a página de Lisboa — a
+    // Amadora não fica dentro de Lisboa (29-09-2026).
+    { "@type": "ListItem", position: 2, name: "Recolha de Monos", item: `${SITE_URL}/recolha-de-monos` },
     { "@type": "ListItem", position: 3, name: "Amadora", item: `${SITE_URL}/recolha-de-monos-amadora` },
   ],
 };

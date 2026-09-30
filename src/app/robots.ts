@@ -98,12 +98,17 @@ const PRIVADO = [
   "/profissionais/definir-senha/",
   "/profissionais/inscricao/",
   /*
-   * Áreas de trabalho de quem está de dentro. O Google já andou a gastar
-   * orçamento de rastreio em /colaboradores/dashboard e /colaboradores/
-   * alterar-senha — páginas que nunca vão ser um resultado de pesquisa.
+   * Áreas de trabalho de quem está de dentro.
+   *
+   * O /colaboradores SAIU DAQUI a 29-09-2026, e de propósito. O Google andou
+   * a gastar rastreio em /colaboradores/dashboard e /colaboradores/alterar-
+   * senha quando essas páginas existiam; hoje não existem — tudo o que está
+   * debaixo de /colaboradores responde 404. Bloqueado, o Google não o pode
+   * pedir, não vê o 404, e guarda os endereços velhos para sempre em
+   * «Bloqueada pelo robots.txt». Aberto, vê o 404 e esquece-os.
+   *
+   * Se um dia voltar a haver uma área em /colaboradores, volta para aqui.
    */
-  "/colaboradores",
-  "/colaboradores/",
   "/plataforma",
   "/profissionais/painel",
 ];

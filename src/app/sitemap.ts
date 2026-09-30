@@ -1,13 +1,11 @@
 import type { MetadataRoute } from "next";
 
 import {
-  CITIES,
   REGIONS,
-  SERVICES,
   SITE_URL,
-  getCityServiceSlug,
+  getAllCityServiceSlugs,
 } from "@/lib/seo-data";
-import { getAllBlogPosts } from "@/lib/blog-data";
+import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 import { dataDoConteudo } from "@/lib/conteudo-datas.generated";
 import { slugsDosProfissionais } from "@/lib/perfil-publico-do-profissional";
@@ -25,7 +23,8 @@ const staticPages = [
   { url: `${SITE_URL}/recolha-de-eletrodomesticos`, priority: 0.92, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/recolha-gratuita-de-moveis-usados`, priority: 0.90, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/recolha-de-moveis-urgente`, priority: 0.91, changeFrequency: "weekly" as const },
-  { url: `${SITE_URL}/recolha-de-sofa-lisboa`, priority: 0.91, changeFrequency: "weekly" as const },
+  // /recolha-de-sofa-lisboa saiu a 29-09-2026: juntou-se a /recolha-de-sofas
+  // (301 no next.config, ver `paginas-consolidadas.ts`).
   { url: `${SITE_URL}/retirar-moveis-velhos`, priority: 0.91, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/esvaziamento-de-casas`, priority: 0.96, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/esvaziamento-de-casas-amadora`, priority: 0.93, changeFrequency: "weekly" as const },
@@ -53,6 +52,24 @@ const staticPages = [
   // de propósito: essa secção está atrás do portão do MVP, e uma página que o
   // Google não pode ler não recruta ninguém.
   { url: `${SITE_URL}/quero-ser-parceiro`, priority: 0.85, changeFrequency: "monthly" as const },
+  /*
+   * SEIS PÁGINAS QUE EXISTEM E NÃO ESTAVAM AQUI — 29-09-2026.
+   *
+   * Confirmadas uma a uma no site ao vivo: respondem 200, têm canónico
+   * próprio e não são noindex. O menu e os cartões de serviço da homepage
+   * já lhes ligavam; o Google chegava lá pelos links e não por declaração
+   * nossa, o que as punha no fim da fila de rastreio.
+   *
+   * As três de /servicos são as de `GERADAS` em servicos/[slug]/page.tsx —
+   * um page.tsx não pode exportar a lista, por isso o teste do sitemap
+   * confere que cada uma que a rota gera está aqui.
+   */
+  { url: `${SITE_URL}/como-funciona`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/limpeza-de-quintais`, priority: 0.85, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/orcamento-recolha-lisboa`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/esvaziamento-apartamento`, priority: 0.85, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/manutencao-casa`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/montagem-moveis`, priority: 0.8, changeFrequency: "monthly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -93,53 +110,57 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "esvaziamento-casas-lisboa",
   ];
 
-  const localPages = CITIES.flatMap((city) =>
-    SERVICES.filter((service) => {
-      // Nenhuma combinação de mudanças entra por aqui.
-      //
-      // Estas geram URLs com hífen (/mudancas-lisboa) que hoje redirecionam
-      // para /mudancas/lisboa. Um sitemap com um redirect ensina o Google a
-      // desconfiar do sitemap todo — e as páginas a sério já entram mais
-      // abaixo, em mudancasCidadePages, com o caminho canónico.
-      if (service.slug === "mudancas") {
-        return false;
-      }
-      // Incluir todas as outras combinações
-      return true;
-    }).map((service) => {
-      const slug = getCityServiceSlug(service.slug, city.slug);
-      const isPriority = priorityPages.includes(slug);
-      
-      return {
-        url: `${SITE_URL}/${slug}`,
-        lastModified: dataCidadeServico,
-        changeFrequency: isPriority ? "weekly" as const : "monthly" as const,
-        priority:
-          // Páginas prioritárias do Search Console
-          slug === "recolha-monos-lisboa" ? 0.98
-          : slug === "recolha-moveis-lisboa" ? 0.97
-          : slug === "recolha-moveis-setubal" ? 0.95
-          : slug === "recolha-moveis-almada" ? 0.95
-          : slug === "recolha-moveis-amadora" ? 0.93
-          : slug === "recolha-moveis-sintra" ? 0.93
-          : slug === "recolha-moveis-oeiras" ? 0.93
-          : slug === "recolha-moveis-cascais" ? 0.93
-          : slug === "recolha-entulho-setubal" ? 0.94
-          : slug === "recolha-entulho-lisboa" ? 0.94
-          : slug === "esvaziamento-casas-lisboa" ? 0.92
-          // Outras páginas de recolha de móveis
-          : service.slug === "recolha-moveis" ? 0.9
-          // Mudanças Lisboa
-          : service.slug === "mudancas" && city.slug === "lisboa" ? 0.92
-          // Default
-          : 0.85,
-      };
-    }),
-  );
+  /*
+   * As páginas cidade × serviço saem da MESMA lista que o build da rota
+   * [...slug] — `getAllCityServiceSlugs` (29-09-2026).
+   *
+   * Isto cruzava aqui CITIES × SERVICES à mão e tirava as mudanças com um
+   * `if` próprio (as /mudancas-lisboa com hífen redireccionam para
+   * /mudancas/lisboa, que entram mais abaixo). Duas listas que dizem o mesmo
+   * divergem: as páginas que se juntaram a uma estática — a gerada
+   * /esvaziamento-casas-amadora faz 301 para /esvaziamento-de-casas-amadora —
+   * continuavam a ser pedidas ao Google aqui. Um sitemap com um redirect
+   * ensina-o a desconfiar do sitemap todo.
+   */
+  const localPages = getAllCityServiceSlugs().map(({ slug: partes, service }) => {
+    const slug = partes.join("/");
+    const isPriority = priorityPages.includes(slug);
 
-  const blogPages = getAllBlogPosts().map((post) => ({
+    return {
+      url: `${SITE_URL}/${slug}`,
+      lastModified: dataCidadeServico,
+      changeFrequency: isPriority ? "weekly" as const : "monthly" as const,
+      priority:
+        // Páginas prioritárias do Search Console
+        slug === "recolha-monos-lisboa" ? 0.98
+        : slug === "recolha-moveis-lisboa" ? 0.97
+        : slug === "recolha-moveis-setubal" ? 0.95
+        : slug === "recolha-moveis-almada" ? 0.95
+        : slug === "recolha-moveis-amadora" ? 0.93
+        : slug === "recolha-moveis-sintra" ? 0.93
+        : slug === "recolha-moveis-oeiras" ? 0.93
+        : slug === "recolha-moveis-cascais" ? 0.93
+        : slug === "recolha-entulho-setubal" ? 0.94
+        : slug === "recolha-entulho-lisboa" ? 0.94
+        : slug === "esvaziamento-casas-lisboa" ? 0.92
+        // Outras páginas de recolha de móveis
+        : service.slug === "recolha-moveis" ? 0.9
+        // (Havia aqui um ramo para "mudanças em Lisboa" que nunca corria: as
+        // mudanças não entram nesta lista.)
+        // Default
+        : 0.85,
+    };
+  });
+
+  // Só os artigos no ar: o retirado faz 301 (ver `artigos-do-blog.ts`).
+  //
+  // A data é a do último retoque quando o houve, e a da publicação quando não
+  // (29-09-2026) — a mesma regra do `dateModified` no schema do artigo. Com a
+  // da publicação sempre, um artigo reescrito continuava a dizer ao Google que
+  // não mudava desde Março.
+  const blogPages = artigosPublicados().map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
-    lastModified: new Date(post.publishDate),
+    lastModified: new Date(post.updatedDate ?? post.publishDate),
     changeFrequency: "monthly" as const,
     priority: 0.72,
   }));

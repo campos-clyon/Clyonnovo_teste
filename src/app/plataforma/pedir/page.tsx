@@ -5,7 +5,9 @@ import { COOKIE_SESSAO_TESTE, verificarSessaoDeTeste } from "@/lib/acesso-mvp";
 import FormularioDePedido from "./FormularioDePedido";
 
 export const metadata: Metadata = {
-  title: "Fazer um pedido — CLYON plataforma",
+  // `absolute`: o título já diz a marca, e o template do layout
+  // acrescentava outra — «… CLYON plataforma | CLYON» (29-09-2026).
+  title: { absolute: "Fazer um pedido — CLYON plataforma" },
   robots: { index: false, follow: false, nocache: true },
 };
 

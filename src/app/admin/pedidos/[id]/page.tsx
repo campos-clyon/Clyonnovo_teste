@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import AdminPedidoDetalheClient from "./AdminPedidoDetalheClient";
 
 export const metadata: Metadata = {
-  title: "Detalhe do Pedido — Painel Admin CLYON",
+  // `absolute`: o título já diz a marca, e o template do layout
+  // acrescentava outra — «… Admin CLYON | CLYON» (29-09-2026).
+  title: { absolute: "Detalhe do Pedido — Painel Admin CLYON" },
   robots: "noindex,nofollow",
 };
 

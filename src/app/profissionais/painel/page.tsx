@@ -3,7 +3,9 @@ import { Suspense } from "react";
 import PainelDoProfissional from "./PainelDoProfissional";
 
 export const metadata: Metadata = {
-  title: "A minha conta — CLYON profissionais",
+  // `absolute`: o título já diz a marca, e o template do layout
+  // acrescentava outra — «… CLYON profissionais | CLYON» (29-09-2026).
+  title: { absolute: "A minha conta — CLYON profissionais" },
   robots: { index: false, follow: false },
 };
 

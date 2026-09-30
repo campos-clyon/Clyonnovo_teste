@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, precoDe } from "@/lib/precos-publicos";
 import { reviews as avaliacoes } from "@/lib/reviews-data";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -34,15 +36,16 @@ const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personal
 
 export const metadata: Metadata = {
   title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
+  // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 6h!`,
+    `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 6h.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
-  openGraph: {
+  openGraph: og({
     title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
     description:
-      `Recolha de entulho, móveis, limpeza pós-obra e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €!`,
+      `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €.`,
     url: `${SITE_URL}/servicos`,
-  },
+  }),
 };
 
 const WA_HREF = `https://wa.me/351931632622?text=${encodeURIComponent(
@@ -203,7 +206,9 @@ const serviceListSchema = {
     position: i + 1,
     name: s.title,
     description: s.tagline,
-    provider: { "@type": "LocalBusiness", name: BUSINESS_NAME, telephone: BUSINESS_PHONE },
+    // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+    // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+    provider: PRESTADOR,
     areaServed: ["Lisboa", "Setúbal", "Almada", "Seixal"],
   })),
 };

@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,6 +16,7 @@ import {
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 // A faixa publicada para recolha de móveis. A página abria numa faixa de
 // trinta e poucos euros — abaixo do piso de 40 € que o resto do site anuncia.
@@ -22,8 +24,10 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
 
 export const metadata: Metadata = {
   title: "Empresas que Retiram Móveis Velhos em Lisboa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços ${PRECO_MOVEIS}, resposta em 6h por WhatsApp.`,
+    `Retirar móveis velhos em Lisboa: sofás, camas, armários, colchões e eletrodomésticos, com desmontagem e carregamento. Preços de ${PRECO_MOVEIS}, sem IVA.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -43,15 +47,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://clyon.pt/retirar-moveis-velhos",
   },
-  openGraph: {
+  openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
       `Empresa profissional para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem e carregamento incluídos. Preços ${PRECO_MOVEIS}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
-    siteName: "CLYON",
-    locale: "pt_PT",
-    type: "website",
-  },
+  }),
 };
 
 const faqs = [
@@ -126,7 +127,8 @@ const internalLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Máquinas e frigoríficos" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Comparação" },
+  // Âncora: era «Gratuita vs Privada» (29-09-2026, ver FurnitureSeoLinks).
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", desc: "Comparação" },
 ];
 
 export default function RetirarMoveisVelhosPage() {
@@ -138,16 +140,9 @@ export default function RetirarMoveisVelhosPage() {
         name: "Retirar Móveis Velhos",
         description:
           "Serviço de retirada de móveis velhos em Lisboa, Margem Sul e Setúbal com desmontagem, carregamento e transporte incluídos.",
-        provider: {
-          "@type": "LocalBusiness",
-          name: "CLYON",
-          telephone: "+351931632622",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Lisboa",
-            addressCountry: "PT",
-          },
-        },
+        // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+        // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+        provider: PRESTADOR,
         areaServed: ["Lisboa", "Margem Sul", "Setúbal"],
         serviceType: "Retirada de Móveis Velhos",
       },

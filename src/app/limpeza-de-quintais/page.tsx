@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,6 +23,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 /** Este ecrã é jardinagem: o piso publicado dela, e não um número próprio. */
 const PRECO_JARDINAGEM = PRECOS.jardinagem;
@@ -31,12 +33,12 @@ export const metadata: Metadata = {
   description:
     "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 6h!",
   alternates: { canonical: `${SITE_URL}/limpeza-de-quintais` },
-  openGraph: {
+  openGraph: og({
     title: "Limpeza de Quintais em Lisboa e Setúbal — 6h",
     description:
       "Limpeza de quintais e jardins. Recolha de lixo verde e resíduos exteriores em Lisboa e Setúbal.",
     url: `${SITE_URL}/limpeza-de-quintais`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]
@@ -91,11 +93,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Limpeza de Quintais",
   description: "Serviço de limpeza de quintais e recolha de lixo verde em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   offers: {
     "@type": "Offer",

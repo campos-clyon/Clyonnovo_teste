@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -21,6 +22,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 
 /*
  * Esta página tinha quatro preços diferentes para o mesmo serviço.
@@ -33,9 +35,18 @@ import { PRECOS } from "@/lib/precos-publicos";
 const PRECO_MONOS = PRECOS.recolha_monos;
 
 export const metadata: Metadata = {
-  title: "Recolha de Monos em Lisboa — Sem Esperar a Câmara",
+  /*
+   * SEM «EM LISBOA» — 29-09-2026. Este título era IGUAL ao de
+   * /recolha-monos-lisboa, palavra por palavra, e o Google não indexa duas
+   * páginas com o mesmo título para a mesma pesquisa: escolhe uma e a outra
+   * perde. A de Lisboa é a que responde a «monos em Lisboa»; este hub é o
+   * das três regiões, e o título passa a dizê-lo.
+   */
+  title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 6h.`,
+    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões e volumosos, sem esperar pela câmara. Preços de ${PRECO_MONOS.etiqueta}, sem IVA.`,
   keywords: [
     "recolha de monos",
     "recolha de monos Lisboa",
@@ -49,12 +60,12 @@ export const metadata: Metadata = {
     "remoção de volumosos",
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
-  openGraph: {
-    title: "Recolha de Monos em Lisboa — Sem Esperar a Câmara",
+  openGraph: og({
+    title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
     description:
       `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 6h.`,
     url: `${SITE_URL}/recolha-de-monos`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]
@@ -109,11 +120,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Monos",
   description: "Serviço de recolha de monos e volumes grandes em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
    * O que se declara ao Google é a mesma faixa que a página mostra.

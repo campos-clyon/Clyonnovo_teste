@@ -3,7 +3,8 @@ import { Suspense } from "react";
 import EntradaDeTeste from "./EntradaDeTeste";
 
 export const metadata: Metadata = {
-  title: "CLYON plataforma",
+  // `absolute`: sem ele, o template do layout dava «CLYON plataforma | CLYON».
+  title: { absolute: "CLYON plataforma" },
   robots: { index: false, follow: false, nocache: true },
 };
 

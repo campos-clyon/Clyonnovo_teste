@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -24,6 +25,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   COMO_SE_RECOLHE_ENTULHO,
   NAO_HA_CONTENTORES,
@@ -42,9 +44,16 @@ import {
 const PRECO_ENTULHO = PRECOS.recolha_entulho;
 
 export const metadata: Metadata = {
-  title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
+  /*
+   * SEM «EM LISBOA» — 29-09-2026. O hub é o das três regiões; quem responde
+   * a «recolha de entulho em Lisboa» é /recolha-entulho-lisboa, e dois
+   * títulos a disputar a mesma pesquisa dividem os sinais entre as duas.
+   */
+  title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg carregados à mão. Sem contentores. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
+    `Recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg e sem contentores. Preços ${PRECO_ENTULHO.etiqueta}, sem IVA.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",
@@ -60,12 +69,12 @@ export const metadata: Metadata = {
     "recolha de resíduos de construção",
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-entulho` },
-  openGraph: {
-    title: "Recolha de Entulho em Lisboa — Obras e Remodelações",
+  openGraph: og({
+    title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
     description:
       `Recolha de entulho de obras e remodelações em Lisboa e Setúbal, a saco e carregado à mão. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
     url: `${SITE_URL}/recolha-de-entulho`,
-  },
+  }),
 };
 
 const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]
@@ -146,11 +155,9 @@ const serviceSchema = {
   "@type": "Service",
   name: "Recolha de Entulho",
   description: "Serviço de recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal.",
-  provider: {
-    "@type": "LocalBusiness",
-    name: BUSINESS_NAME,
-    telephone: BUSINESS_PHONE,
-  },
+  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
+  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
+  provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   offers: {
     "@type": "Offer",

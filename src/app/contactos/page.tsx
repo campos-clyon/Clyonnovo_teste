@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { MapPin, Clock3, Camera, Ruler, DoorOpen, FileText } from "lucide-react";
 import ContactosClient from "./ContactosClient";
@@ -54,8 +55,10 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 export const metadata: Metadata = {
   title: "Contactos — Telefone, WhatsApp e Orçamento em 6h",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Fale connosco por telefone, WhatsApp, email ou formulário. Orçamento gratuito e sem compromisso em 6 horas para recolha de móveis, entulho, monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
+    `Telefone, WhatsApp, email ou formulário: orçamento gratuito e sem compromisso em ${PRAZO_DE_RESPOSTA.porExtenso}, para recolhas, esvaziamentos e mudanças em Lisboa e Setúbal.`,
   keywords: [
     "contactos CLYON",
     "telefone recolha de móveis Lisboa",
@@ -65,13 +68,12 @@ export const metadata: Metadata = {
     "recolha de monos Almada contacto",
   ],
   alternates: { canonical: `${SITE_URL}/contactos` },
-  openGraph: {
+  openGraph: og({
     title: "Contactos CLYON — Orçamento grátis em 6 horas",
     description:
       "Telefone, WhatsApp, email ou formulário. Pedir orçamento não custa nada e não obriga a nada.",
     url: `${SITE_URL}/contactos`,
-    type: "website",
-  },
+  }),
 };
 
 export const revalidate = 86400;
