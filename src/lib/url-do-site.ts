@@ -31,6 +31,20 @@ import { SITE_URL } from "./seo-data";
  * acabado de criar não existe. Isto deixa de depender dessa definição.
  */
 export function urlDeAccaoDoPedido(cabecalhos: Headers): string {
+  /*
+   * EM PRODUÇÃO, SEMPRE clyon.pt — e os cabeçalhos nem se lêem.
+   *
+   * Estes links vão em emails para OUTRAS pessoas: o link de entrada vai para
+   * a caixa de quem o pediu... ou de quem alguém disse que o pediu; a proposta
+   * vai para o profissional; a aprovação vai para o candidato. Um Host ou um
+   * X-Forwarded-Host forjado punha o domínio de outra pessoa num email nosso,
+   * com um token dentro — e quem clicasse entregava-lho.
+   *
+   * O que o cabeçalho resolvia é o problema do preview (abaixo), que não existe
+   * em produção: lá o sítio certo é um só, e está escrito em `SITE_URL`.
+   */
+  if (process.env.VERCEL_ENV === "production") return SITE_URL;
+
   // O anfitrião do pedido vem PRIMEIRO, e o NEXT_PUBLIC_SITE_URL só depois.
   //
   // Tinha-os pela ordem inversa, a tratar a variável como escotilha de
@@ -46,10 +60,9 @@ export function urlDeAccaoDoPedido(cabecalhos: Headers): string {
     cabecalhos.get("x-forwarded-host")?.trim() || cabecalhos.get("host")?.trim();
 
   if (anfitriao) {
-    // Confia-se no cabeçalho porque estas rotas correm atrás do proxy da Vercel,
-    // que o reescreve. Fora daí um Host forjado só afectaria o link enviado a
-    // quem fez o pedido — e nunca um destino externo, porque o caminho é sempre
-    // nosso.
+    // Confia-se no cabeçalho porque, fora de produção, estas rotas correm atrás
+    // do proxy da Vercel, que o reescreve — e o que se arrisca num preview é
+    // muito menos do que o que se ganha em poder testar o fluxo inteiro.
     const protocolo =
       cabecalhos.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
       (anfitriao.startsWith("localhost") || anfitriao.startsWith("127.") ? "http" : "https");
