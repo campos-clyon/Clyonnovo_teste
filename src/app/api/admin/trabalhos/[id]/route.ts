@@ -4,11 +4,17 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 
 // Alterar e apagar exigem administrador. Sem isto, qualquer pessoa podia
 // apagar a galeria de trabalhos do site com um pedido DELETE.
+//
+// Ler também, desde 30-09-2026: devolvia qualquer trabalho pelo número,
+// publicado ou não. O site público não passa por aqui.
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { err } = await requireAdmin(request);
+  if (err) return err;
+
   try {
     const { id } = await params;
     const trabalho = await getTrabalho(Number(id));

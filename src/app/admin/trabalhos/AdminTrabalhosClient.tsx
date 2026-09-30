@@ -4,6 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { tService } from "@/lib/translations";
 import type { TrabalhoRealizadoData } from "@/lib/db";
+import { getColaboradorItem } from "@/lib/colaborador-storage";
+
+/**
+ * O cabeçalho da sessão do backoffice, lido na hora de cada chamada.
+ *
+ * As rotas /api/admin/trabalhos pedem o token no Authorization, como as de
+ * todos os outros painéis — e este não o mandava. A escrita respondia 401 sem
+ * ninguém ver porquê, e a lista só aparecia por a rota de leitura estar aberta
+ * a toda a gente (e com os trabalhos por publicar lá dentro). A leitura
+ * fechou-se; o painel passa a identificar-se.
+ */
+function comSessao(extra: Record<string, string> = {}): Record<string, string> {
+  const token = getColaboradorItem("token");
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +84,11 @@ function TrabalhoForm({ initial, onSave, onCancel }: TrabalhoFormProps) {
     try {
       const fd = new FormData();
       files.forEach((f) => fd.append("fotos", f));
-      const res = await fetch("/api/admin/trabalhos/upload", { method: "POST", body: fd });
+      const res = await fetch("/api/admin/trabalhos/upload", {
+        method: "POST",
+        body: fd,
+        headers: comSessao(),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro no upload");
       set("fotos", [...form.fotos, ...data.urls]);
@@ -301,7 +320,7 @@ export default function AdminTrabalhosClient() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/trabalhos");
+      const res = await fetch("/api/admin/trabalhos", { headers: comSessao() });
       const data = await res.json();
       setTrabalhos(data.trabalhos ?? []);
     } catch {}
@@ -313,7 +332,7 @@ export default function AdminTrabalhosClient() {
   async function handleCreate(form: FormState) {
     const res = await fetch("/api/admin/trabalhos", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: comSessao({ "Content-Type": "application/json" }),
       body: JSON.stringify(form),
     });
     const data = await res.json();
@@ -325,7 +344,7 @@ export default function AdminTrabalhosClient() {
   async function handleUpdate(id: number, form: FormState) {
     const res = await fetch(`/api/admin/trabalhos/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: comSessao({ "Content-Type": "application/json" }),
       body: JSON.stringify(form),
     });
     const data = await res.json();
@@ -335,14 +354,14 @@ export default function AdminTrabalhosClient() {
   }
 
   async function handleDelete(id: number) {
-    await fetch(`/api/admin/trabalhos/${id}`, { method: "DELETE" });
+    await fetch(`/api/admin/trabalhos/${id}`, { method: "DELETE", headers: comSessao() });
     await load();
   }
 
   async function handleTogglePublish(t: TrabalhoRealizadoData) {
     await fetch(`/api/admin/trabalhos/${t.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: comSessao({ "Content-Type": "application/json" }),
       body: JSON.stringify({ publicado: !t.publicado }),
     });
     await load();
