@@ -337,7 +337,7 @@ export default async function TrabalhosPage() {
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
                   Descreva o pedido e receba propostas de profissionais verificados da sua
-                  zona em até {PRAZO_DE_RESPOSTA.porExtenso} — para recolhas, esvaziamentos
+                  zona em menos de {PRAZO_DE_RESPOSTA.porExtenso} — para recolhas, esvaziamentos
                   ou mudanças.
                 </p>
               </div>

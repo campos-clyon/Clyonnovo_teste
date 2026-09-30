@@ -233,7 +233,7 @@ export function textoDoTrabalhoConfirmado(p: {
     corpo:
       `${valor} ficaram disponíveis na sua carteira — o acordado, já com a taxa CLYON ` +
       "descontada. Pode pedir a transferência quando quiser: o pedido de levantamento é " +
-      "tratado em até 24 horas.",
+      "tratado em menos de 24 horas.",
     botao: "Abrir a carteira",
   };
 }

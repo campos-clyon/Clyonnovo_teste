@@ -32,6 +32,13 @@ import {
   trackWhatsAppClick, trackPhoneCall, trackEmailClick, trackCTAClick,
 } from "@/lib/analytics";
 import { AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { reviews as AVALIACOES_REAIS } from "@/lib/reviews-data";
+import {
+  ACRESCIMO_POR_URGENCIA,
+  PRECO_FECHADO,
+  PROPOSTAS_EM_ATE,
+  RECEBE_PROPOSTAS,
+} from "@/lib/promessas-publicas";
 
 const PHONE_DISPLAY = "+351 931 632 622";
 const PHONE_TEL = "+351931632622";
@@ -161,7 +168,7 @@ const AREAS = [
 const FAQ_ITEMS = [
   {
     q: "Como peço orçamento?",
-    a: "É simples: envie fotos do material pelo WhatsApp, indique a morada ou localidade e diga se há escadas, elevador ou acesso difícil. Com essas informações a CLYON avalia o volume e envia-lhe uma estimativa.",
+    a: `É simples: envie fotos do material pelo WhatsApp, indique a morada ou localidade e diga se há escadas, elevador ou acesso difícil. A equipa da CLYON regista o pedido e envia-o a profissionais da sua zona: recebe propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "O orçamento é gratuito?",
@@ -169,11 +176,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "O serviço de recolha é pago?",
-    a: "Sim. A recolha é um serviço privado e pago. O valor é definido conforme o volume, o peso, a localização, o acesso e o tipo de material a recolher.",
+    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do profissional que escolher, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PRECO_FECHADO}`,
   },
   {
-    q: "A equipa carrega os materiais?",
-    a: "Sim. A equipa trata de todo o carregamento e transporte. Não precisa de descer nem preparar nada — fazemos o trabalho pesado por si.",
+    q: "O profissional carrega os materiais?",
+    a: "Sim. O profissional trata do carregamento e do transporte. Não precisa de descer nem preparar nada.",
   },
   {
     q: "Posso enviar fotos pelo WhatsApp?",
@@ -181,7 +188,10 @@ const FAQ_ITEMS = [
   },
   {
     q: "Fazem recolha urgente?",
-    a: "Sim, mediante disponibilidade da equipa. Serviços urgentes ou no próprio dia podem ter um custo adicional. Indique a urgência no pedido.",
+    // 30-09-2026: a página de recolha urgente dizia que a urgência «não
+    // implica custo adicional» e esta que «pode ter». Quem decide é o
+    // profissional, e isso diz-se nas duas da mesma maneira.
+    a: `Indique a urgência no pedido: recebe propostas ${PROPOSTAS_EM_ATE}, e a data combina-se com o profissional que escolher. ${ACRESCIMO_POR_URGENCIA}`,
   },
   {
     q: "Recolhem entulho de obra?",
@@ -189,11 +199,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "Que materiais não recolhem?",
-    a: "Não recolhemos amianto, químicos, resíduos perigosos ou contaminados, nem fazemos demolição pesada. Em caso de dúvida, envie foto para confirmarmos.",
+    a: "Amianto, químicos, resíduos perigosos ou contaminados e demolição pesada não entram. Em caso de dúvida, envie foto e a equipa da CLYON confirma.",
   },
   {
     q: "Quais zonas atendem?",
-    a: "Atendemos Lisboa, Grande Lisboa, Margem Sul e Setúbal. Se a sua localidade não constar da lista, envie mensagem para confirmarmos a disponibilidade.",
+    a: "Há profissionais em Lisboa, na Grande Lisboa, na Margem Sul e em Setúbal. Se a sua localidade não constar da lista, envie mensagem e a equipa da CLYON confirma.",
   },
 ];
 
@@ -278,9 +288,9 @@ function TopBar() {
 /* ------------------------------ Hero ------------------------------ */
 function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) {
   const bullets = [
-    { icon: Truck, label: "Carregamento feito pela equipa" },
+    { icon: Truck, label: "Carregamento feito pelo profissional" },
     { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
-    { icon: ShieldCheck, label: "Serviço privado, rápido e profissional" },
+    { icon: ShieldCheck, label: "Profissionais verificados da sua zona" },
   ];
 
   return (
@@ -305,8 +315,8 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
             Recolha de Entulho, Móveis e Monos em Lisboa
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
-            Envie fotos, indique a morada e receba uma estimativa para recolha
-            com carregamento e transporte incluídos.
+            Envie fotos, indique a morada e receba propostas de profissionais da
+            sua zona {PROPOSTAS_EM_ATE} — com carregamento e transporte.
           </p>
 
           <ul className="mt-6 space-y-3">
@@ -493,7 +503,7 @@ function TrustBar() {
       highlight: true,
     },
     { icon: BadgeCheck, title: "Orçamento gratuito" },
-    { icon: Clock, title: "Resposta rápida" },
+    { icon: Clock, title: `Propostas ${PROPOSTAS_EM_ATE}` },
     { icon: Truck, title: "Carregamento incluído" },
     { icon: MapPin, title: "Lisboa, Margem Sul e Setúbal" },
   ];
@@ -583,12 +593,12 @@ function HowItWorks() {
     {
       icon: BadgeCheck,
       title: "Receba o orçamento",
-      text: "A CLYON avalia o serviço e envia uma estimativa clara.",
+      text: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o preço fechado.`,
     },
     {
       icon: Truck,
-      title: "Agende a recolha",
-      text: "A equipa vai ao local, carrega e transporta tudo.",
+      title: "Escolha e combine",
+      text: "O profissional que escolher vai ao local, carrega e transporta tudo.",
     },
   ];
 
@@ -650,7 +660,7 @@ function SendForQuote() {
       <div className="mx-auto max-w-6xl px-4">
         <SectionTitle
           title="Para receber um orçamento mais certo, envie:"
-          subtitle="Com estas informações, a CLYON consegue avaliar volume, acesso e logística com mais precisão."
+          subtitle="Com estas informações, os profissionais conseguem propor um valor mais certo."
         />
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map((card) => (
@@ -715,15 +725,11 @@ function ServicesSection() {
     {
       icon: Home,
       title: "Esvaziamento de Casas",
-      text: "Limpeza completa de imóveis e espaços.",
+      text: "Retirada de todo o recheio de imóveis e espaços.",
       examples: ["Heranças", "Mudanças", "Imóveis para venda"],
     },
-    {
-      icon: Sparkles,
-      title: "Limpeza Pós-Obra",
-      text: "Remoção de resíduos e limpeza após obras.",
-      examples: ["Restos de obra", "Pó e detritos", "Espaços remodelados"],
-    },
+    // 30-09-2026: saiu o cartão «Limpeza Pós-Obra» — não é um serviço da
+    // plataforma (não está em service-categories.ts).
   ];
 
   function handleCardCta(service: string) {
@@ -737,7 +743,7 @@ function ServicesSection() {
         title="Serviços de recolha e esvaziamento"
         subtitle="Soluções para particulares e empresas em toda a região de Lisboa, Margem Sul e Setúbal."
       />
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {services.map((service) => (
           <div
             key={service.title}
@@ -797,11 +803,6 @@ function PricingGuide() {
       text: "Avaliado conforme número de divisões e volume.",
       icon: Home,
     },
-    {
-      title: "Pós-obra",
-      text: "Avaliado conforme área, resíduos e limpeza necessária.",
-      icon: Sparkles,
-    },
   ];
 
   return (
@@ -811,7 +812,7 @@ function PricingGuide() {
           title="Quanto custa a recolha?"
           subtitle="O valor depende do volume, peso, localização, acesso, distância até à carrinha, necessidade de desmontagem e urgência."
         />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-5 sm:grid-cols-3">
           {cards.map((card) => (
             <div
               key={card.title}
@@ -842,8 +843,7 @@ function PricingGuide() {
           </a>
         </div>
         <p className="mx-auto mt-5 max-w-2xl text-center text-xs text-slate-500">
-          O pedido de orçamento é gratuito. O serviço de recolha é pago mediante
-          avaliação. Valores podem não incluir IVA, quando aplicável.
+          O pedido de orçamento é gratuito; o serviço de recolha é pago. {PRECO_FECHADO}
         </p>
       </div>
     </section>
@@ -853,8 +853,8 @@ function PricingGuide() {
 /* --------------------------- Why Choose --------------------------- */
 function WhyChooseSection() {
   const items = [
-    { icon: MapPin, label: "Empresa local" },
-    { icon: Users, label: "Equipa preparada para carregar" },
+    { icon: MapPin, label: "Profissionais da sua zona" },
+    { icon: Users, label: "Profissionais verificados, que carregam por si" },
     { icon: MessageCircle, label: "Atendimento por WhatsApp" },
     { icon: Building2, label: "Serviço para particulares e empresas" },
     { icon: ShieldCheck, label: "Cobertura em Lisboa, Margem Sul e Setúbal" },
@@ -865,7 +865,7 @@ function WhyChooseSection() {
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
       <SectionTitle
         title="Porque escolher a CLYON?"
-        subtitle="Ajudamos particulares e empresas a libertar espaço com recolha profissional e orçamento simples."
+        subtitle="Ligamos particulares e empresas a profissionais verificados que libertam o espaço — com propostas claras e o preço fechado antes de começar."
       />
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
@@ -887,24 +887,21 @@ function WhyChooseSection() {
 }
 
 /* --------------------------- Reviews --------------------------- */
+/*
+ * AS TRÊS CITAÇÕES SÃO REAIS, E VÊM DE ONDE ESTÃO AS OUTRAS — 30-09-2026.
+ *
+ * Estavam aqui três frases assinadas «Cliente CLYON», duas delas com a
+ * etiqueta «Avaliação real do Google», e nenhuma existe em reviews-data.ts
+ * (a fonte única das avaliações). Uma prometia ainda «resposta no próprio
+ * dia». Passam a ser citações palavra por palavra de lá, com o nome e a data
+ * que lá estão — sem dizer a plataforma, que reviews-data não regista.
+ */
+const CITADAS = ["Ricardo C.", "Paula O.", "Inês A."];
+
 function ReviewsSection() {
-  const reviews = [
-    {
-      text: "Serviço de recolha rápido e a equipa tratou de todo o carregamento. Recomendo.",
-      name: "Cliente CLYON",
-      detail: "Avaliação real do Google",
-    },
-    {
-      text: "Pedi orçamento por WhatsApp com fotos e tive resposta no próprio dia. Muito prático.",
-      name: "Cliente CLYON",
-      detail: "Serviço de recolha em Lisboa",
-    },
-    {
-      text: "Esvaziamento de casa feito com profissionalismo e sem complicações. Bom atendimento.",
-      name: "Cliente CLYON",
-      detail: "Avaliação real do Google",
-    },
-  ];
+  const reviews = CITADAS.map((nome) => AVALIACOES_REAIS.find((r) => r.name === nome))
+    .filter((r): r is (typeof AVALIACOES_REAIS)[number] => Boolean(r))
+    .map((r) => ({ text: r.text, name: r.name, detail: r.date }));
 
   return (
     <section className="bg-slate-50 py-14 sm:py-16">
@@ -1051,8 +1048,8 @@ function FinalCTA() {
           Precisa libertar espaço?
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-slate-300">
-          Envie fotos agora e receba uma estimativa para recolha de entulho,
-          móveis, monos ou limpeza pós-obra.
+          Envie fotos agora e receba propostas para recolha de entulho, móveis,
+          monos ou esvaziamento de casas. {RECEBE_PROPOSTAS}
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a

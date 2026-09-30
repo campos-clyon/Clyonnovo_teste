@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck 
 import CTABlock from "@/components/CTABlock";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { DESMONTAGEM_A_PEDIDO, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -26,12 +27,16 @@ export const metadata: Metadata = {
 
 const faqs = [
   {
-    question: "A CLYON faz recolha de monos na Amadora?",
-    answer: "Sim, fazemos recolha de monos em toda a Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova. A equipa vai ao local, carrega e transporta.",
+    question: "Há recolha de monos na Amadora?",
+    answer: "Sim. O pedido chega aos profissionais que trabalham na Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova. O profissional vai ao local, carrega e transporta.",
   },
   {
     question: "Qual a diferença entre a recolha municipal e a CLYON?",
-    answer: "A recolha municipal tem horários fixos, volume limitado e não entra no imóvel. A CLYON oferece recolha rápida, retira de dentro de casa, faz desmontagem quando necessário e resolve tudo num só pedido.",
+    // 30-09-2026: segundo o site da Câmara da Amadora, a recolha de monos
+    // marca-se com a junta de freguesia (data, hora e local), e cabe ao
+    // munícipe levar os objetos até esse local. É isso que se diz — e não
+    // «volume limitado», que a página oficial não diz.
+    answer: "Na Amadora, a recolha de monos marca-se com a junta de freguesia, e cabe a quem pede levar os objetos até ao local combinado. Pela CLYON, o profissional retira-os de dentro de casa, desmonta se o pedir e leva tudo — é um serviço pago.",
   },
   {
     question: "Os monos são retirados de dentro de casa?",
@@ -43,15 +48,15 @@ const faqs = [
   },
   {
     question: "Recolhem móveis pesados e volumosos?",
-    answer: "Sim, os profissionais retiram sofás, camas, armários, colchões, eletrodomésticos grandes e outros volumes pesados. A equipa está preparada para carregamento.",
+    answer: "Sim, os profissionais retiram sofás, camas, armários, colchões, eletrodomésticos grandes e outros volumes pesados.",
   },
   {
     question: "Fazem desmontagem de móveis?",
-    answer: "Sim, quando necessário desmontamos armários, camas e outros móveis para facilitar a retirada, especialmente em acessos difíceis.",
+    answer: `Sim, se o pedir — o que ajuda sobretudo em acessos difíceis. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Atendem Reboleira, Damaia e Alfragide?",
-    answer: "Sim, atendemos todas as freguesias da Amadora incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Águas Livres, Buraca e Falagueira-Venda Nova.",
+    answer: "Sim. O pedido chega aos profissionais que trabalham em todas as freguesias da Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Águas Livres, Buraca e Falagueira-Venda Nova.",
   },
 ];
 
@@ -134,9 +139,9 @@ export default function MonosAmadoraPage() {
                   Recolha de monos na Amadora com carregamento e transporte
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  A CLYON faz recolha de monos, móveis velhos, sofás, colchões e objetos volumosos na Amadora. 
-                  Ao contrário da recolha municipal, o profissional entra no imóvel, carrega tudo e 
-                  transporta. Atendemos Reboleira, Damaia, Alfragide, Venteira e todas as freguesias.
+                  Pela CLYON, profissionais da zona recolhem monos, móveis velhos, sofás, colchões e objetos
+                  volumosos na Amadora. O profissional entra no imóvel, carrega tudo e transporta — em
+                  Reboleira, Damaia, Alfragide, Venteira e nas restantes freguesias.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -191,19 +196,18 @@ export default function MonosAmadoraPage() {
               Recolha municipal gratuita ou serviço privado?
             </h2>
             <p className="mt-2 max-w-3xl text-slate-600">
-              A recolha municipal pode ser útil quando há disponibilidade e o cliente consegue 
-              seguir as regras de agendamento. A CLYON é indicada quando precisa de:
+              A recolha municipal pode ser útil quando há disponibilidade e consegue seguir as regras de
+              agendamento da junta de freguesia. A CLYON é indicada quando precisa de:
             </p>
             <div className="mt-8 grid gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-slate-200 bg-white p-6">
                 <h3 className="font-semibold text-slate-900">Recolha municipal</h3>
                 <ul className="mt-4 space-y-2">
                   {[
-                    "Gratuita mas com horários fixos",
-                    "Volume máximo limitado",
-                    "Necessário colocar os monos no exterior",
-                    "Agendamento pode demorar dias",
-                    "Não faz desmontagem nem carregamento",
+                    "Marca-se com a junta de freguesia",
+                    "Data, hora e local combinados com a junta",
+                    "É quem pede que leva os monos até ao local",
+                    "Sem desmontagem nem carregamento dentro de casa",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
                       <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
@@ -216,11 +220,11 @@ export default function MonosAmadoraPage() {
                 <h3 className="font-semibold text-slate-900">CLYON (serviço privado)</h3>
                 <ul className="mt-4 space-y-2">
                   {[
-                    "Resposta rápida (24-48h na maioria dos casos)",
+                    `Propostas ${PROPOSTAS_EM_ATE}`,
                     "Sem limite de volume por pedido",
                     "Os profissionais retiram de dentro de casa",
-                    "Desmontagem e carregamento incluídos",
-                    "Solução completa num só pedido",
+                    "Carregamento pelo profissional; desmontagem a pedido",
+                    "Serviço pago, com o preço fechado antes de começar",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
@@ -237,7 +241,7 @@ export default function MonosAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              O que recolhemos na Amadora
+              O que se recolhe na Amadora
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {whatWeCollect.map((item) => (
@@ -261,7 +265,7 @@ export default function MonosAmadoraPage() {
                 { icon: Clock, title: "Precisa de resposta rápida", desc: "Quando não pode esperar pelo agendamento municipal." },
                 { icon: Package, title: "Monos dentro de casa", desc: "Quando não consegue ou não quer levar os monos ao exterior." },
                 { icon: Trash2, title: "Volume grande", desc: "Quando tem muitos monos e o limite municipal não é suficiente." },
-                { icon: Truck, title: "Móveis pesados", desc: "Sofás, armários, camas e eletrodomésticos que precisam de equipa." },
+                { icon: Truck, title: "Móveis pesados", desc: "Sofás, armários, camas e eletrodomésticos que precisam de mais do que uma pessoa." },
                 { icon: MapPin, title: "Acessos difíceis", desc: "Prédios sem elevador, escadas estreitas ou andares altos." },
               ].map((item) => (
                 <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-5">
@@ -278,10 +282,10 @@ export default function MonosAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Zonas da Amadora onde atuamos
+              Zonas da Amadora com profissionais
             </h2>
             <p className="mt-2 text-slate-600">
-              Atendemos todas as freguesias e zonas da Amadora para recolha de monos.
+              O pedido chega aos profissionais que trabalham nas freguesias e zonas da Amadora.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {amadoraZones.map((zone) => (
@@ -309,7 +313,7 @@ export default function MonosAmadoraPage() {
                 { href: "/recolha-de-moveis", label: "Recolha de móveis", desc: "Serviço em toda a área" },
                 { href: "/recolha-de-sofas", label: "Recolha de sofás", desc: "Sofás e cadeirões" },
                 { href: "/recolha-de-camas", label: "Recolha de camas", desc: "Camas e colchões" },
-                { href: "/retirar-moveis-velhos", label: "Retirar móveis velhos", desc: "Desmontagem incluída" },
+                { href: "/retirar-moveis-velhos", label: "Retirar móveis velhos", desc: "Desmontagem a pedido" },
                 { href: "/simulador", label: "Simular orçamento", desc: "Cálculo online" },
               ].map((link) => (
                 <Link
@@ -348,7 +352,7 @@ export default function MonosAmadoraPage() {
             <CTABlock
               variant="centered"
               title="Precisa de recolha de monos na Amadora?"
-              description="Peça um orçamento grátis. Atendemos Reboleira, Damaia, Alfragide, Venteira e todas as zonas."
+              description={`Peça um orçamento grátis e receba propostas ${PROPOSTAS_EM_ATE}. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.`}
               whatsappMessage="Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?"
             />
           </div>

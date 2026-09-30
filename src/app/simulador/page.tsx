@@ -11,7 +11,7 @@ import SimulatorPage from "./SimulatorPage";
 export const metadata: Metadata = {
   title: "Pedir Orçamento — Propostas de Profissionais",
   description:
-    "Descreva o serviço, envie fotos e indique a morada. O pedido chega a profissionais verificados da sua zona e recebe propostas em até 6 horas.",
+    "Descreva o serviço, envie fotos e indique a morada. O pedido chega a profissionais verificados da sua zona e recebe propostas em menos de 6 horas.",
   alternates: {
     canonical: "https://clyon.pt/simulador",
   },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     // O openGraph não passa pelo template do layout: a marca vai escrita.
     title: "Pedir Orçamento — Propostas de Profissionais | CLYON",
     description:
-      "Descreva o serviço, envie fotos e indique a morada. O pedido chega a profissionais verificados da sua zona e recebe propostas em até 6 horas.",
+      "Descreva o serviço, envie fotos e indique a morada. O pedido chega a profissionais verificados da sua zona e recebe propostas em menos de 6 horas.",
     url: "https://clyon.pt/simulador",
   }),
 };

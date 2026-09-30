@@ -278,11 +278,12 @@ describe("links internos: nenhum passa por um redirect", () => {
     for (const f of [...fontes(join(process.cwd(), "src", "app")), ...fontes(join(process.cwd(), "src", "components"))]) {
       const codigo = semComentarios(readFileSync(f, "utf8"));
       for (const m of codigo.matchAll(/href: "\/recolha-gratuita-de-moveis-usados", label: "([^"]+)"/g)) {
-        if (m[1] !== "Doar ou recolher móveis usados") maus.push(`${f.replace(process.cwd(), "")}: ${m[1]}`);
+        // Desde 30-09-2026 a página responde a quem quer doar: a âncora diz isso.
+        if (m[1] !== "Doar móveis usados") maus.push(`${f.replace(process.cwd(), "")}: ${m[1]}`);
       }
     }
     expect(maus).toEqual([]);
-    expect(ler("src/components/FurnitureSeoLinks.tsx")).toContain('label: "Doar ou recolher móveis usados"');
+    expect(ler("src/components/FurnitureSeoLinks.tsx")).toContain('label: "Doar móveis usados"');
   });
 });
 

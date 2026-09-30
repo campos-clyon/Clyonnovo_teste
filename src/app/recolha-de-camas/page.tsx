@@ -23,6 +23,12 @@ import {
   AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import {
+  DESMONTAGEM_A_PEDIDO,
+  NO_MESMO_DIA,
+  PROPOSTAS_EM_ATE,
+  RECEBE_PROPOSTAS,
+} from "@/lib/promessas-publicas";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
@@ -68,10 +74,10 @@ const areaServedCities = [
 ];
 
 const benefits = [
-  { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
-  { icon: Users, title: "Desmontagem incluída", desc: "A equipa desmonta camas, estrados e beliches" },
+  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: "A data da recolha combina-se com o profissional que escolher" },
+  { icon: Users, title: "Desmontagem a pedido", desc: DESMONTAGEM_A_PEDIDO },
   { icon: Truck, title: "Carregamento completo", desc: "Retirada a partir do interior do quarto" },
-  { icon: Recycle, title: "Destino responsável", desc: "Doação, reciclagem ou centro de tratamento" },
+  { icon: Recycle, title: "Destino responsável", desc: "Ecocentro ou operador de resíduos licenciado" },
 ];
 
 const includedItems = [
@@ -95,15 +101,15 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de uma cama usada?",
-    a: `A recolha de uma cama custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos da cama e a morada para receber um orçamento imediato.`,
+    a: `A recolha de uma cama custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos da cama e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem camas no mesmo dia?",
-    a: "Sim. Quando há disponibilidade operacional, a recolha de camas pode ser feita no próprio dia ou no dia seguinte, especialmente em Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada e Setúbal.",
+    a: NO_MESMO_DIA,
   },
   {
-    q: "A equipa faz desmontagem da cama?",
-    a: "Sim. Quando necessário, a equipa da CLYON desmonta camas, estrados e beliches antes do carregamento. Indique essa necessidade no pedido para o orçamento refletir o trabalho.",
+    q: "Os profissionais desmontam a cama?",
+    a: `Sim, se o pedir. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     q: "Recolhem colchões também?",
@@ -111,11 +117,14 @@ const faqs = [
   },
   {
     q: "Recolhem beliches e camas articuladas?",
-    a: "Sim. Os profissionais recolhem beliches, camas treliche, camas articuladas e camas hospitalares. A equipa trata da desmontagem quando necessário.",
+    a: "Sim. Os profissionais recolhem beliches, camas treliche, camas articuladas e camas hospitalares. A desmontagem pode ser pedida e vem incluída na proposta.",
   },
   {
     q: "O que acontece às camas recolhidas?",
-    a: "Sempre que o estado da cama permite, fazemos triagem para doação ou reaproveitamento. Camas danificadas ou sem condições seguem para destino licenciado.",
+    // 30-09-2026: prometia «triagem para doação» — não há nada na
+    // plataforma que encaminhe peças para doação. Quem as recebe está na
+    // página própria, e é para lá que se aponta.
+    a: "O profissional leva-a para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e a quiser doar, a página «Doar móveis usados em Lisboa» diz quem a recebe.",
   },
 ];
 
@@ -189,10 +198,10 @@ export default function RecolhaDeCamasPage() {
                 Recolha de camas usadas em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar uma cama velha, um estrado ou um colchão? A CLYON faz a <strong>recolha de camas usadas</strong> com desmontagem quando necessário, carregamento do interior do imóvel e destino responsável. Atendemos pedidos em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar uma cama velha, um estrado ou um colchão? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de camas usadas</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                A recolha de camas é um dos serviços mais pedidos por quem está a renovar o quarto, a fazer uma mudança ou a preparar um imóvel para venda ou arrendamento. A equipa CLYON trata de tudo: desmonta a cama, retira do quarto, carrega e transporta.
+                A recolha de camas é um dos serviços mais pedidos por quem está a renovar o quarto, a fazer uma mudança ou a preparar um imóvel para venda ou arrendamento. O profissional que escolher retira a cama do quarto, carrega e transporta — e desmonta-a, se o pedir.
               </p>
 
               {/* CTA Buttons */}
@@ -265,10 +274,10 @@ export default function RecolhaDeCamasPage() {
       <section className="bg-white py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Que tipos de camas recolhemos?
+            Que tipos de camas se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A CLYON recolhe qualquer tipo de cama, incluindo estrados, colchões e mesinhas de cabeceira. Se precisa de libertar o quarto, tratamos de tudo.
+            Os profissionais recolhem qualquer tipo de cama, incluindo estrados, colchões e mesinhas de cabeceira. Se precisa de libertar o quarto, o profissional trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -290,9 +299,9 @@ export default function RecolhaDeCamasPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos da cama, a morada e indique se precisa de desmontagem." },
-              { step: "02", title: "Receba o orçamento", desc: "Receba uma resposta rápida com valor fechado e janela de recolha disponível." },
-              { step: "03", title: "Agendamos a recolha", desc: "Confirmamos o dia e a hora. Muitos pedidos são atendidos em 24-48 horas." },
-              { step: "04", title: "Fazemos a recolha", desc: "A equipa desmonta, carrega, transporta e encaminha para destino responsável." },
+              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
+              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>
@@ -367,7 +376,7 @@ export default function RecolhaDeCamasPage() {
             Precisa de recolha de cama?
           </h2>
           <p className="mt-4 text-lg text-cyan-100">
-            Envie fotos e morada para receber um orçamento rápido. A equipa CLYON desmonta, carrega e transporta.
+            Envie fotos e morada. {RECEBE_PROPOSTAS}
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link

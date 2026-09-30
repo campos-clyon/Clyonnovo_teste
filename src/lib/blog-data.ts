@@ -1,6 +1,30 @@
+import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "./promessas-publicas";
+
+/*
+ * O QUE ESTE FICHEIRO DEIXOU DE PUBLICAR — 30-09-2026.
+ *
+ * Vários artigos tinham, no corpo, notas de estratégia escritas para quem
+ * gere o site («Uma boa estratégia SEO…», «Do lado do conteúdo SEO…», «Em
+ * SEO, este tipo de conteúdo…», «a CLYON se posiciona bem nas pesquisas»),
+ * e duas meta descriptions começavam por «Guia SEO» e «Artigo SEO». Era
+ * isso que o Google mostrava a quem pesquisava. Passam a falar com o leitor.
+ *
+ * As respostas sobre prazos e desmontagem vêm de promessas-publicas.ts, e a
+ * limpeza pós-obra deixa de aparecer como serviço da CLYON (não é categoria
+ * de serviço em service-categories.ts).
+ */
+
 export type BlogPost = {
   slug: string;
   title: string;
+  /**
+   * O título para o <title> e o Google, quando o `title` não cabe.
+   *
+   * O layout acrescenta « | CLYON» e o Google corta por volta dos 60
+   * caracteres; os títulos dos artigos iam até 113. O `title` fica inteiro
+   * no H1 e no schema — é o que o leitor vê depois de clicar.
+   */
+  metaTitle?: string;
   description: string;
   category: string;
   keywords: string[];
@@ -33,8 +57,9 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "recolha-gratuita-de-moveis-usados-costa-da-caparica",
     title:
       "Recolha gratuita de móveis usados na Costa da Caparica: quando faz sentido e quando pedir recolha privada",
+    metaTitle: "Recolha Gratuita de Móveis na Costa da Caparica",
     description:
-      "Guia local sobre recolha gratuita de móveis usados na Costa da Caparica, doação, reaproveitamento, recolha municipal e quando a recolha privada compensa mais.",
+      "Recolha gratuita de móveis usados na Costa da Caparica: doação, recolha de monos pela junta de freguesia e quando compensa a recolha paga.",
     category: "Costa da Caparica",
     keywords: [
       "recolha gratuita de móveis costa da caparica",
@@ -48,13 +73,13 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-04-27",
     heroLabel: "Guia local",
     intro:
-      "Na Costa da Caparica, a pesquisa por recolha gratuita de móveis costuma misturar várias intenções: doação, reaproveitamento, recolha municipal e necessidade de retirar móveis usados de forma rápida. Este guia ajuda a separar esses cenários e a perceber quando faz sentido tentar uma via gratuita e quando a recolha privada é a opção mais eficaz.",
+      "Na Costa da Caparica, quem quer desfazer-se de móveis usados tem três caminhos: doá-los, marcar a recolha de monos com a junta de freguesia, ou pagar a um profissional que os retire. Este guia ajuda a perceber quando faz sentido tentar uma via gratuita e quando a recolha paga é a opção mais eficaz.",
     sections: [
       {
-        title: "Quando a palavra gratuita aparece na pesquisa",
+        title: "Recolha gratuita: o que existe na Costa da Caparica",
         paragraphs: [
-          "Quem procura recolha gratuita de móveis na Costa da Caparica nem sempre está pronto para contratar um serviço. Muitas vezes está primeiro a perceber se os móveis usados ainda podem ser doados, reaproveitados ou recolhidos por uma solução pública.",
-          "Isso explica porque o Google mostra juntas, câmara, monos, ecopontos, doação e algumas páginas privadas na mesma pesquisa.",
+          "Nem sempre é preciso pagar. Se os móveis ainda servem, podem ser doados — há quem os vá buscar a casa. Se já não servem, a Câmara de Almada encaminha os monos gratuitamente: a recolha agenda-se com a junta de freguesia e é feita à porta, e os volumes também podem ser entregues no Ecocentro de Almada.",
+          "Quem recebe doações, e em que condições, está confirmado nos sites oficiais e reunido numa página: [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
         ],
       },
       {
@@ -74,14 +99,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
           "Se o objetivo é tirar os móveis rapidamente, desmontar no local, descer escadas, carregar volumes pesados e libertar o espaço sem depender de várias entidades, a recolha privada passa a ser muito mais eficaz.",
-          "É aqui que a CLYON entra na Costa da Caparica: como serviço privado para recolha de sofás, camas, armários, colchões, eletrodomésticos e recheios quando a via gratuita não resolve o problema prático.",
-        ],
-      },
-      {
-        title: "Como usar este guia sem perder a pesquisa que já funciona",
-        paragraphs: [
-          "A versão da pesquisa com 'móveis usados' já está a levar tráfego para o ecossistema da CLYON, por isso o objetivo não é mudar essa rota. É expandi-la para a variante sem 'usados', mantendo o conteúdo alinhado com a intenção informativa que o Google está a detectar.",
-          "Por isso este artigo funciona como ponte: responde à dúvida sobre gratuitidade, mas conduz o utilizador para a página local de recolha quando precisa de uma solução privada.",
+          "É aqui que a CLYON pode ajudar na Costa da Caparica: liga-o a profissionais da zona que recolhem sofás, camas, armários, colchões, eletrodomésticos e recheios quando a via gratuita não resolve o problema prático. É um serviço pago, com propostas em menos de 6 horas.",
         ],
       },
     ],
@@ -89,12 +107,12 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Existe recolha gratuita de móveis usados na Costa da Caparica?",
         answer:
-          "Pode existir em alguns cenários de doação, reaproveitamento ou recolha municipal, dependendo do tipo de peça e da logística disponível. Nem todos os pedidos entram nessa lógica.",
+          "Sim: a recolha de monos, gratuita, que se agenda com a junta de freguesia e é feita à porta, e a doação de peças em bom estado a instituições que as recebem.",
       },
       {
         question: "A CLYON faz recolha gratuita de móveis?",
         answer:
-          "A CLYON opera como serviço privado. O foco é resolver pedidos com desmontagem, carregamento, transporte e retirada completa quando a via gratuita não é suficiente.",
+          "Não. A CLYON é um serviço pago: liga-o a profissionais que carregam, transportam e retiram tudo — e desmontam, se o pedir — quando a via gratuita não chega.",
       },
       {
         question: "Quando devo pedir recolha privada na Costa da Caparica?",
@@ -106,6 +124,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "recolha-de-moveis-como-funciona",
     title: "Recolha de móveis: como funciona, quanto custa e quando pedir apoio",
+    metaTitle: "Recolha de Móveis: Como Funciona e Quanto Custa",
     description:
       "Guia completo sobre recolha de móveis usados, móveis velhos, sofás, camas, armários, recheios e despejos em Lisboa, Margem Sul e Setúbal.",
     category: "Móveis",
@@ -121,7 +140,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Guia prático",
     intro:
-      "A recolha de móveis é um dos pedidos mais frequentes na operação da CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objetivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou Margem Sul? Veja o serviço da CLYON em /recolha-de-moveis ou simule um orçamento em /simulador. Se precisa de esvaziar uma casa ou apartamento completo, veja o serviço de esvaziamento de casas em /esvaziamento-de-casas.",
+      "A recolha de móveis é dos pedidos mais frequentes na CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objetivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou na Margem Sul? Veja a [recolha de móveis](/recolha-de-moveis) ou [simule um orçamento](/simulador). Para esvaziar uma casa ou apartamento completo, veja o [esvaziamento de casas](/esvaziamento-de-casas).",
     sections: [
       {
         title: "Quando faz sentido pedir recolha de móveis",
@@ -140,29 +159,29 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "O que influencia o preço da recolha de móveis",
         paragraphs: [
           "O valor final depende do volume, distância, acessibilidade, número de andares, existência de elevador, necessidade de mais pessoas e tempo de desmontagem. Dois pedidos com o mesmo número de peças podem ter preços muito diferentes se um estiver num rés-do-chão e o outro num terceiro andar sem elevador.",
-          "Quanto mais claro for o pedido inicial, mais rápido o orçamento e menor a margem para imprevistos no local. É por isso que uma boa descrição do serviço faz diferença real na conversão e na satisfação do cliente.",
+          "Quanto mais claro for o pedido inicial, mais rápido o orçamento e menor a margem para imprevistos no local. É por isso que uma boa descrição faz diferença: as propostas vêm mais certas.",
         ],
       },
       {
         title: "Como acelerar o pedido e evitar atrasos",
         paragraphs: [
           "O melhor ponto de partida é enviar morada, lista básica de peças, fotos quando possível, tipo de acesso ao imóvel e urgência do serviço. Se existir desmontagem prévia ou rua de acesso difícil, isso também deve ser referido.",
-          "No caso da CLYON, o simulador ajuda a criar uma primeira referência de valor. Depois, o contacto direto por WhatsApp ou telefone serve para confirmar condições, disponibilidade e hora de recolha.",
+          `Na CLYON, o simulador dá uma primeira referência de valor e envia o pedido a profissionais da zona, que respondem com propostas ${PROPOSTAS_EM_ATE}. A data e a hora combinam-se com o profissional que escolher.`,
         ],
       },
       {
         title: "Quando doar e quando despejar",
         paragraphs: [
           "Nem todo o móvel precisa de ir para despejo. Peças em bom estado podem seguir para doação, reaproveitamento ou venda. Peças partidas, húmidas, sem ferragens ou sem viabilidade de uso tendem a justificar despejo direto.",
-          "Uma boa estratégia SEO para este tema não é falar apenas de recolha. É responder à dúvida real do utilizador: doar, vender, reaproveitar ou despejar? É aí que o conteúdo ganha intenção e relevância nas pesquisas.",
+          "Antes de pagar uma recolha, vale a pena perguntar: doar, vender, reaproveitar ou despejar? Para peças em bom estado, veja onde [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
         ],
       },
       {
         title: "Quando a recolha gratuita não resolve",
         paragraphs: [
           "A pesquisa por recolha gratuita de móveis usados é muito comum, mas nem sempre a via gratuita resolve o problema. A recolha municipal tem limitações: horários restritos, agendamento demorado, volume máximo e nenhum apoio para desmontagem ou retirada do interior do imóvel.",
-          "Se o objetivo é libertar o espaço rapidamente, com desmontagem incluída, carregamento porta a porta e retirada completa, a recolha privada é a opção mais eficaz. A CLYON oferece resposta rápida, equipa preparada para acessos difíceis  e destino licenciado dos móveis usados.",
-          "A diferença principal: na recolha gratuita ou municipal, o cliente tem de colocar os móveis no exterior e aguardar. Na recolha privada, a equipa entra no imóvel, desmonta o necessário e resolve tudo num só pedido.",
+          `Se o objetivo é libertar o espaço rapidamente, com carregamento porta a porta, desmontagem e retirada completa, a recolha paga é a opção mais eficaz. Pela CLYON, recebe propostas ${PROPOSTAS_EM_ATE} de profissionais da zona, que carregam dentro de casa e levam os móveis para destino licenciado.`,
+          "A diferença principal: na recolha municipal, é muitas vezes quem pede que leva os móveis até à porta ou ao local combinado, e espera pela data marcada. Na recolha paga, o profissional entra no imóvel, desmonta se o pedir e resolve tudo num só pedido.",
         ],
         bullets: [
           "Recolha municipal: gratuita, mas limitada em volume, horários e sem desmontagem",
@@ -180,18 +199,19 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "É possível recolher móveis no mesmo dia?",
         answer:
-          "Em muitos casos sim. Isso depende da zona, da carga operacional do dia e da clareza da informação enviada no pedido.",
+          NO_MESMO_DIA,
       },
       {
         question: "Tenho de desmontar os móveis antes?",
         answer:
-          "Nem sempre. Em alguns pedidos a desmontagem pode ser feita pela equipa, mas convém indicar isso logo no contacto para o orçamento reflectir o trabalho real.",
+          `Não. ${DESMONTAGEM_A_PEDIDO}`,
       },
     ],
   },
   {
     slug: "doacao-de-moveis-ou-despejo",
     title: "Doação de móveis ou despejo: como decidir o melhor destino para cada peça",
+    metaTitle: "Doação de Móveis ou Despejo: Como Decidir",
     description:
       "Artigo completo sobre doação de móveis usados, reaproveitamento, reciclagem, venda e despejo responsável de peças sem utilidade.",
     category: "Doações",
@@ -233,14 +253,14 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Doação, venda e plataformas digitais",
         paragraphs: [
           "Em pesquisas relacionadas com móveis usados, muitas pessoas procuram alternativas antes de avançar para a recolha. Plataformas como a OLX podem ser úteis para tentar venda local ou oferta direta a particulares. Isso faz sentido quando a peça ainda tem valor e existe tempo para gerir mensagens, marcações e levantamento.",
-          "Em alguns cenários, o utilizador também procura serviços, montagens ou apoio por plataformas como a Fixando. Ainda assim, quando o problema principal é tirar volume depressa, com equipa e transporte incluídos, a decisão costuma voltar para um operador de recolha.",
+          `Quando o problema principal é tirar volume depressa, com transporte, faz mais sentido uma recolha: pela CLYON, profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
         ],
       },
       {
         title: "Doação com entidades e reaproveitamento",
         paragraphs: [
-          "Outra pesquisa muito comum é por instituições ou organizações que possam receber peças em condições de uso. É por isso que referências como a REMAR aparecem frequentemente nas intenções de pesquisa ligadas a doação de móveis e reaproveitamento.",
-          "Do lado do conteúdo SEO, isto é importante porque o utilizador nem sempre quer ‘despejo’. Muitas vezes quer primeiro perceber se o móvel ainda pode ter utilidade social, ser reaproveitado ou encaminhado de forma responsável.",
+          "Há instituições que recebem móveis em condições de uso, e algumas vão buscá-los a casa. A REMAR, por exemplo, diz no site que recolhe móveis e eletrodomésticos em condições de reutilização, depois de avaliar cada pedido pelo tipo de bens, estado e localização.",
+          "As que confirmámos nos sites oficiais, com as condições de cada uma, estão na página [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
         ],
       },
     ],
@@ -248,12 +268,12 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "A CLYON faz recolha para doação?",
         answer:
-          "Pode apoiar na retirada e na organização do processo, dependendo do tipo de mobiliário, do destino e das condições do pedido.",
+          "Não. A CLYON liga-o a profissionais que retiram móveis — é um serviço pago, e o que sai vai para destino licenciado. Para doar, fale com as instituições que recebem móveis.",
       },
       {
         question: "Posso misturar doação e despejo no mesmo serviço?",
         answer:
-          "Sim. Muitos pedidos incluem peças para reaproveitamento e outras para remoção definitiva, no mesmo agendamento.",
+          "Sim: doe primeiro o que ainda serve e peça a recolha do resto — o pedido fica mais pequeno, e a proposta também.",
       },
       {
         question: "Vale a pena tentar OLX antes da recolha?",
@@ -265,22 +285,22 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "onde-doar-vender-ou-anunciar-moveis-usados",
     title: "Onde doar, vender ou anunciar móveis usados antes de pedir recolha",
+    metaTitle: "Onde Doar, Vender ou Anunciar Móveis Usados",
     description:
-      "Guia SEO sobre OLX, IKEA, REMAR, Fixando e outras alternativas para doar, vender, reaproveitar ou encaminhar móveis usados antes do despejo.",
+      "Onde doar, vender ou dar móveis usados: OLX, Marketplace, instituições como a REMAR — e quando compensa pedir a recolha.",
     category: "Alternativas",
     keywords: [
       "onde doar móveis usados",
       "vender móveis usados",
       "olx móveis usados",
-      "ikea móveis usados",
+      "dar móveis usados",
       "remar móveis",
-      "fixando mudanças",
     ],
     readingTime: "9 min",
     publishDate: "2026-03-16",
     heroLabel: "Alternativas",
     intro:
-      "Antes de pedir recolha, muita gente pesquisa soluções alternativas para móveis usados: doação, venda, reaproveitamento, entrega a instituições ou plataformas com procura local. Este artigo responde precisamente a essa intenção de pesquisa e ajuda a decidir quando vale a pena tentar essas vias e quando a recolha direta é o caminho mais eficaz.",
+      "Antes de pedir recolha, vale a pena ver se os móveis ainda servem a alguém: doação, venda, entrega a instituições ou anúncio com procura local. Este guia ajuda a decidir quando compensa cada via e quando a recolha é o caminho mais prático.",
     sections: [
       {
         title: "Quando vender em vez de despejar",
@@ -292,22 +312,22 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quando a doação é mais útil",
         paragraphs: [
-          "Se o objetivo não é recuperar dinheiro, mas sim dar um destino útil ao mobiliário, a doação pode ser a melhor saída. É aqui que pesquisas por entidades sociais e organizações de apoio, como a REMAR, fazem parte do caminho do utilizador.",
-          "Em SEO, este tipo de conteúdo ajuda a captar pesquisas informativas muito fortes: quem procura doar também pode vir a precisar de recolha para o que não for aproveitado.",
+          "Se o objetivo não é recuperar dinheiro, mas dar um destino útil ao mobiliário, a doação pode ser a melhor saída. Há instituições que recebem móveis em bom estado — a REMAR, por exemplo, avalia cada pedido de recolha. A lista confirmada, com as condições de cada uma, está em [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
+          "O que não for aproveitado pode seguir para a recolha de monos da câmara ou para uma recolha paga.",
         ],
       },
       {
-        title: "IKEA, retomas e reaproveitamento",
+        title: "Retomas na compra de móveis novos",
         paragraphs: [
-          "Em muitos casos, o utilizador também associa a pesquisa a marcas fortes do sector mobiliário, como a IKEA, especialmente quando está a renovar a casa e precisa de retirar o antigo para instalar o novo.",
-          "Mesmo quando o cliente consulta programas, soluções ou referências de reaproveitamento, continua a existir uma necessidade operacional: alguém tem de retirar as peças velhas do local com rapidez e sem complicações.",
+          "Quem está a renovar a casa pergunta muitas vezes à loja onde compra os móveis novos se retoma os antigos. Confirme diretamente com a loja o que aceita e em que condições.",
+          "Mesmo com retoma, alguém tem de tirar as peças velhas de casa — e é aí que uma recolha pode fazer falta.",
         ],
       },
       {
-        title: "Quando plataformas de serviços entram na decisão",
+        title: "Dar de graça, online",
         paragraphs: [
-          "Há também quem procure profissionais por plataformas como a Fixando. Isso mostra que a pesquisa não é apenas sobre descarte, mas também sobre encontrar ajuda prática, comparar prestadores e perceber custos.",
-          "Para a CLYON, o melhor posicionamento é claro: enquanto o utilizador compara opções, o site deve mostrar autoridade, conteúdo útil e um caminho rápido para pedir orçamento.",
+          "No OLX, os termos de utilização preveem que um artigo seja anunciado como disponibilizado gratuitamente. No Marketplace do Facebook, marca-se um artigo como gratuito pondo 0 no preço. Em ambos, o levantamento combina-se com quem fica com a peça.",
+          `Se ninguém aceita os móveis, ou não pode esperar, a CLYON liga-o a profissionais da sua zona que os recolhem — é um serviço pago, e recebe propostas ${PROPOSTAS_EM_ATE}.`,
         ],
       },
     ],
@@ -327,6 +347,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "recolha-de-entulho-legal-e-organizada",
     title: "Recolha de entulho: como fazer de forma legal, rápida e organizada",
+    metaTitle: "Recolha de Entulho Legal, Rápida e Organizada",
     description:
       "Guia completo sobre recolha de entulho, resíduos de obra, sacos, restos de remodelação e boas práticas para remoção segura.",
     category: "Entulho",
@@ -354,19 +375,19 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Ensacado ou no chão: porque faz diferença",
         paragraphs: [
           "Entulho no chão exige mais tempo de carga, mais organização e, muitas vezes, mais mão de obra. Quando o material já está ensacado, a operação fica mais linear e previsível.",
-          "Essa distinção altera o esforço real da equipa e deve aparecer logo no pedido para o orçamento ficar mais próximo da execução final.",
+          "Essa distinção altera o esforço real do profissional e deve aparecer logo no pedido, para a proposta ficar certa.",
         ],
       },
       {
         title: "Entulho, limpeza e libertação de espaço",
         paragraphs: [
-          "Muitas pesquisas não são apenas por entulho. São por limpar o espaço, continuar a obra, entregar o apartamento ou preparar uma loja para abrir. Por isso, recolha de entulho e limpeza final aparecem muitas vezes juntas na mesma intenção de pesquisa.",
+          "Quem pede recolha de entulho quer, quase sempre, continuar a obra, entregar o apartamento ou abrir uma loja. A recolha tira o entulho; a limpeza final, se for precisa, é outro trabalho — combina-se à parte, com uma empresa de limpezas.",
         ],
       },
     ],
     faq: [
       {
-        question: "A CLYON recolhe entulho ensacado e também no chão?",
+        question: "Recolhe-se entulho ensacado e também no chão?",
         answer:
           "Sim. Os dois cenários são possíveis, mas devem ser indicados no pedido porque alteram o tempo e o esforço da operação.",
       },
@@ -380,6 +401,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "recolha-de-monos-o-que-inclui",
     title: "Recolha de monos: o que inclui, quando pedir e como acelerar o serviço",
+    metaTitle: "Recolha de Monos: o Que Inclui e Como Pedir",
     description:
       "Artigo completo sobre recolha de monos, volumosos, objetos sem uso, despejo rápido e libertação de espaço em casas, lojas e arrecadações.",
     category: "Monos",
@@ -411,14 +433,14 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como acelerar a recolha de monos",
         paragraphs: [
-          "O mais eficaz é concentrar os itens, confirmar acesso e enviar uma lista ou fotos antes do agendamento. Isso reduz imprevistos, melhora o orçamento e facilita o planeamento da equipa.",
+          "O mais eficaz é concentrar os itens, confirmar acesso e enviar uma lista ou fotos antes do agendamento. Isso reduz imprevistos, deixa as propostas mais certas e facilita o planeamento do profissional.",
           "Quando o cliente consegue separar o que vai sair do que vai ficar, o serviço torna-se mais rápido e limpo.",
         ],
       },
       {
         title: "Monos, lixo e limpeza do espaço",
         paragraphs: [
-          "Em muitos pedidos, a recolha de monos aparece associada a acumulação, desorganização e lixo leve. Isso significa que a intenção de pesquisa não é só ‘levar objetos’, mas deixar a divisão utilizável de novo.",
+          "Em muitos pedidos, a recolha de monos aparece associada a acumulação, desorganização e lixo leve. O objetivo não é só levar objetos: é deixar a divisão utilizável de novo.",
         ],
       },
     ],
@@ -429,7 +451,7 @@ export const BLOG_POSTS: BlogPost[] = [
           "Nem sempre. Alguns pedidos são só mobiliário. Outros incluem mistura de peças, tralha acumulada e volumosos diversos, o que entra mais na lógica de monos.",
       },
       {
-        question: "A CLYON faz recolha de monos em arrecadações e caves?",
+        question: "Há recolha de monos em arrecadações e caves?",
         answer:
           "Sim, desde que as condições de acesso, volume e segurança sejam validadas no pedido.",
       },
@@ -438,8 +460,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "limpeza-pos-obra-e-retirada-de-residuos",
     title: "Limpeza pós-obra e retirada de resíduos: como deixar o espaço pronto",
+    metaTitle: "Limpeza Pós-Obra e Retirada de Resíduos",
     description:
-      "Conteúdo completo sobre limpeza pós-obra, remoção de resíduos, restos de materiais e preparação do espaço para uso, venda ou arrendamento.",
+      "Depois da obra: como retirar o entulho e os resíduos e quando contratar a limpeza final, para vender, arrendar ou entregar o espaço.",
     category: "Pós-obra",
     keywords: [
       "limpeza pós-obra",
@@ -461,29 +484,30 @@ export const BLOG_POSTS: BlogPost[] = [
         ],
       },
       {
-        title: "Porque limpeza e remoção devem andar juntas",
+        title: "Primeiro os resíduos, depois a limpeza",
         paragraphs: [
-          "Quando a mesma operação resolve resíduos, entulho final e limpeza de acabamento, a entrega do espaço torna-se mais simples. Isso é útil em apartamentos, lojas, escritórios e imóveis para arrendamento.",
+          "A ordem certa é tirar primeiro o entulho e os resíduos e só depois fazer a limpeza de acabamento. Na CLYON pode pedir a primeira parte — a [recolha de entulho](/recolha-de-entulho), em sacos de obra; a limpeza não é um serviço da plataforma e combina-se à parte.",
         ],
       },
       {
         title: "A importância da limpeza para venda, aluguer e entrega",
         paragraphs: [
-          "Muitas pesquisas ligadas a limpeza pós-obra escondem uma intenção comercial por trás: vender, arrendar, reabrir um espaço ou concluir uma entrega. Não se trata apenas de limpar; trata-se de preparar o espaço para a próxima fase.",
+          "Por trás da limpeza pós-obra há quase sempre um prazo: vender, arrendar, reabrir um espaço ou concluir uma entrega. Não se trata apenas de limpar; trata-se de preparar o espaço para a próxima fase.",
         ],
       },
     ],
     faq: [
       {
-        question: "A CLYON faz só limpeza pós-obra ou também retira resíduos?",
+        question: "A CLYON faz limpeza pós-obra?",
         answer:
-          "Pode fazer ambos, dependendo do pedido. Isso é precisamente o que torna o serviço mais prático para o cliente.",
+          "Não. A limpeza não é um serviço da CLYON. Pela plataforma pode pedir a recolha do entulho e dos resíduos de obra, em sacos; a limpeza final contrata-se à parte, a uma empresa de limpezas.",
       },
     ],
   },
   {
     slug: "esvaziamento-de-casas-com-recheio",
     title: "Esvaziamento de casas com recheio: heranças, mudanças e imóveis para venda",
+    metaTitle: "Esvaziamento de Casas com Recheio: Heranças",
     description:
       "Guia completo sobre esvaziamento de casas, recheios completos, heranças, imóveis para venda e retirada de móveis, monos e objetos acumulados.",
     category: "Esvaziamentos",
@@ -510,6 +534,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Como organizar o esvaziamento por fases",
         paragraphs: [
           "Separar doação, retenção, lixo e despejo antes do dia da recolha reduz erros e acelera a operação. Quando isso não é possível, a triagem no local deve ser pensada com critério para não atrasar a saída.",
+          "Para o que ainda serve, veja antes onde [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
         ],
       },
       {
@@ -521,7 +546,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
-        question: "A CLYON faz esvaziamentos completos?",
+        question: "Há esvaziamentos completos?",
         answer:
           "Sim, desde pedidos parciais até recheios completos, conforme o volume, o tipo de objetos e as condições de acesso.",
       },
@@ -530,8 +555,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "amarsul-ecocentros-e-destino-de-residuos",
     title: "Amarsul, ecocentros e destino de resíduos: quando usar solução pública e quando pedir recolha",
+    metaTitle: "Amarsul e Ecocentros: Onde Levar Monos e Resíduos",
     description:
-      "Artigo SEO sobre Amarsul, ecocentros, resíduos, reciclagem, monos, entulho leve e quando a recolha privada compensa mais.",
+      "Ecocentros e recolha de monos na Margem Sul: quando levar monos, entulho leve e recicláveis por conta própria e quando compensa pedir a recolha.",
     category: "Resíduos",
     keywords: [
       "amarsul monos",
@@ -544,7 +570,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-03-16",
     heroLabel: "Resíduos",
     intro:
-      "Uma parte importante das pesquisas nesta área não procura apenas empresas de recolha. Procura também ecocentros, operadores regionais de resíduos e soluções públicas para encaminhar materiais. Na Margem Sul, a Amarsul entra muitas vezes nessa jornada de pesquisa.",
+      "Nem todo o volume precisa de recolha paga. Na Margem Sul há ecocentros para onde se podem levar resíduos que não cabem no contentor, e as câmaras e juntas recolhem monos com marcação. Este guia ajuda a perceber quando compensa cada via.",
     sections: [
       {
         title: "Quando faz sentido procurar ecocentro ou solução pública",
@@ -557,13 +583,13 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
           "Quando o volume é grande, o acesso é difícil, existem vários pisos, faltam meios de transporte ou o espaço precisa de ficar livre rapidamente, a recolha privada passa a ser muito mais eficiente.",
-          "É aqui que a CLYON se posiciona bem nas pesquisas: o utilizador deixa de procurar apenas ‘onde levar’ e passa a procurar ‘quem resolve’.",
+          `É aí que a CLYON pode ajudar: descreve o pedido e recebe propostas de profissionais da zona ${PROPOSTAS_EM_ATE}.`,
         ],
       },
       {
-        title: "Reciclagem, limpeza e remoção de lixo",
+        title: "Separar antes de decidir",
         paragraphs: [
-          "Conteúdo sobre remoção de lixo, monos, resíduos e triagem é importante para o Google porque responde a múltiplas intenções de pesquisa num só cluster temático: reciclar, descartar, encaminhar, limpar e libertar espaço.",
+          "Separar ajuda em qualquer caminho: recicláveis no ecoponto, volumosos no ecocentro ou na recolha de monos da câmara, e o resto na recolha paga. Em Almada, por exemplo, sofás, colchões e móveis podem ser entregues no Ecocentro de Almada.",
         ],
       },
     ],
@@ -578,6 +604,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "quanto-custa-uma-mudanca-em-lisboa",
     title: "Quanto custa uma mudança em Lisboa em 2026? Guia completo de preços",
+    metaTitle: "Quanto Custa uma Mudança em Lisboa em 2026?",
     description:
       "Preços de mudanças em Lisboa para T1, T2 e T3. Fatores que influenciam o custo: volume, distância, andar, elevador e serviços extra.",
     category: "Mudanças",
@@ -613,7 +640,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Como pedir orçamento",
         paragraphs: [
           "O ideal é enviar fotos de todos os móveis e caixas que vão na mudança, indicar os dois endereços com andar e tipo de acesso (elevador, escadas, rua estreita) e definir a data pretendida.",
-          "Com esta informação, a equipa consegue dar um orçamento mais preciso e evitar ajustes no dia da mudança.",
+          "Com esta informação, os profissionais conseguem propor um valor mais certo e evitar ajustes no dia da mudança.",
         ],
       },
     ],
@@ -633,6 +660,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-organizar-uma-mudanca-de-casa",
     title: "Como organizar uma mudança de casa sem stress: checklist completa",
+    metaTitle: "Como Organizar uma Mudança de Casa: Checklist",
     description:
       "Guia prático para organizar uma mudança de apartamento: o que fazer antes, durante e depois. Checklist, dicas e erros a evitar.",
     category: "Mudanças",
@@ -699,6 +727,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "pequenas-mudancas-em-lisboa-quando-compensa",
     title: "Pequenas mudanças em Lisboa: quando compensa contratar uma equipa",
+    metaTitle: "Pequenas Mudanças em Lisboa: Quando Compensa",
     description:
       "Guia sobre pequenas mudanças em Lisboa: transporte de 1-3 móveis, quando vale a pena contratar, preços e alternativas.",
     category: "Mudanças",
@@ -733,7 +762,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir orçamento",
         paragraphs: [
-          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais preciso será o orçamento. A maioria das empresas responde em poucas horas.",
+          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, recebe propostas de profissionais da zona em menos de 6 horas.",
         ],
       },
     ],
@@ -746,11 +775,37 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "E se o móvel não couber no elevador?",
         answer:
-          "A equipa sobe pelas escadas. Isso pode aumentar ligeiramente o preço, mas é uma situação muito comum e faz parte do serviço.",
+          "Sobe-se pelas escadas. É uma situação muito comum, mas pode aumentar o preço — diga-o no pedido para vir na proposta.",
       },
     ],
   },
 ];
+
+/** Um pedaço de parágrafo: texto corrido, ou uma ligação interna. */
+export type ParteDoTexto = { texto: string } | { texto: string; href: string };
+
+/**
+ * Parte um parágrafo em texto e ligações `[rótulo](/caminho)`.
+ *
+ * Os parágrafos são texto simples, e o artigo «como funciona» escrevia os
+ * caminhos à mão («veja em /recolha-de-moveis») sem ligação nenhuma. Só se
+ * aceitam caminhos internos (a começar por «/»): um endereço de fora não se
+ * mete no meio de um artigo sem ninguém reparar.
+ */
+export function partesDoTexto(paragrafo: string): ParteDoTexto[] {
+  const partes: ParteDoTexto[] = [];
+  const re = /\[([^\]]+)\]\((\/[^)\s]*)\)/g;
+  let desde = 0;
+  for (const m of paragrafo.matchAll(re)) {
+    const i = m.index ?? 0;
+    if (i > desde) partes.push({ texto: paragrafo.slice(desde, i) });
+    partes.push({ texto: m[1], href: m[2] });
+    desde = i + m[0].length;
+  }
+  if (desde < paragrafo.length) partes.push({ texto: paragrafo.slice(desde) });
+  return partes;
+}
+
 
 export function getAllBlogPosts() {
   return BLOG_POSTS;

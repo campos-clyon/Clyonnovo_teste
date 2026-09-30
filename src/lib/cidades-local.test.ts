@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CIDADES_LOCAIS, getCidadeLocal, tempoAproximado } from "./cidades-local";
+import { CIDADES_LOCAIS, getCidadeLocal } from "./cidades-local";
 import { CITIES } from "./seo-data";
 
 describe("dados locais — cada página tem de ter algo que só existe ali", () => {
@@ -54,24 +54,24 @@ describe("dados locais — cada página tem de ter algo que só existe ali", () 
   });
 });
 
-describe("tempoAproximado — estimativa honesta, não promessa", () => {
-  it("nunca promete menos de 10 minutos", () => {
-    expect(tempoAproximado(1)).toBe("cerca de 10 minutos");
+/*
+ * 30-09-2026: aqui estavam os testes de `tempoAproximado`, que convertia a
+ * distância à base da CLYON em minutos de viagem. A função e o campo
+ * `distanciaKm` saíram — a CLYON não vai a casa de ninguém, vai o
+ * profissional, a partir da base dele. O que fica a guardar é que não voltam.
+ */
+describe("nenhuma zona mede a distância à CLYON", () => {
+  it("os dados locais não têm distância à base", () => {
+    for (const c of CIDADES_LOCAIS) {
+      expect(c, c.slug).not.toHaveProperty("distanciaKm");
+    }
   });
 
-  it("arredonda a cinco minutos", () => {
-    expect(tempoAproximado(20)).toBe("cerca de 25 minutos");
-  });
-
-  it("passa a horas quando passa dos 60 minutos", () => {
-    expect(tempoAproximado(60)).toBe("cerca de 1h20");
-  });
-
-  // "cerca de" não é decoração: a ponte 25 de Abril não permite prometer
-  // minutos exactos, e dizer que permite seria mentir.
-  it("todas as respostas dizem que são aproximadas", () => {
-    for (const km of [5, 15, 30, 48, 70]) {
-      expect(tempoAproximado(km)).toMatch(/^cerca de /);
+  it("e as notas por serviço não falam da base da CLYON", () => {
+    for (const c of CIDADES_LOCAIS) {
+      for (const nota of Object.values(c.porServico ?? {})) {
+        expect(nota, c.slug).not.toMatch(/base da CLYON|nossa base|Fern[ãa]o Ferro/i);
+      }
     }
   });
 });

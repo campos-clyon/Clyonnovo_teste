@@ -287,7 +287,7 @@ export default function AvaliacoesPage() {
               Quer a mesma experiência no seu pedido?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-tinta-fraca">
-              Descreva o que precisa e receba propostas de profissionais da sua zona em até{" "}
+              Descreva o que precisa e receba propostas de profissionais da sua zona em menos de{" "}
               {PRAZO_DE_RESPOSTA.porExtenso} — ou fale connosco pelo WhatsApp.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

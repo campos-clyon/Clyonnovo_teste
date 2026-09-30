@@ -22,6 +22,12 @@ import {
   getCityServiceSlug, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import {
+  ACRESCIMO_POR_URGENCIA,
+  AO_FIM_DE_SEMANA,
+  PRECO_FECHADO,
+  PROPOSTAS_EM_ATE,
+} from "@/lib/promessas-publicas";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Sem Stress",
@@ -35,7 +41,7 @@ export const metadata: Metadata = {
     // Dizia "Preços desde 150€". Nos metadados vale a mesma regra do texto
     // visível: a página deixou de anunciar número, os metadados também.
     description:
-      "Mudanças rápidas com equipa profissional. Carga, transporte, descarga e montagem. Orçamento personalizado e grátis em 6 horas!",
+      "Mudanças por profissionais verificados da zona. Carga, transporte, descarga e montagem. Propostas grátis em menos de 6 horas!",
     url: `${SITE_URL}/mudancas`,
   }),
 };
@@ -79,33 +85,39 @@ const faqs = [
     // Respondia "entre 150EUR e 280EUR em média" — e esta resposta vai para o
     // FAQPage do JSON-LD, por isso o número aparecia também no Google. O motor
     // factura a partir de 490 €. Fica a explicação do que faz variar o preço.
-    answer: "O preço depende do volume (tamanho do apartamento), da distância entre moradas, da necessidade de desmontagem e montagem e do andar (com ou sem elevador). Por isso não trabalhamos com tabela: fazemos um orçamento personalizado e grátis em 6 horas, fechado antes de o trabalho começar.",
+    answer: `O preço depende do volume (tamanho do apartamento), da distância entre moradas, da necessidade de desmontagem e montagem e do andar (com ou sem elevador). Por isso não há tabela: descreve a mudança e recebe propostas de profissionais ${PROPOSTAS_EM_ATE}. ${PRECO_FECHADO}`,
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",
-    answer: "Sim, o profissional faz desmontagem na origem e montagem no destino. O serviço pode ser incluído no orçamento ou pedido separadamente conforme a complexidade dos móveis.",
+    answer: "Se o pedir, sim: o profissional desmonta na origem e monta no destino. Indique-o no pedido para vir incluído na proposta.",
   },
   {
     question: "Com quantos dias de antecedência devo marcar?",
-    answer: "Recomendamos marcar com pelo menos 3 a 5 dias de antecedência, especialmente em fins de semana e fim de mês. Para datas urgentes, contacte-nos para verificar disponibilidade.",
+    answer: `Convém pedir com 3 a 5 dias de antecedência, sobretudo para fins de semana e fim de mês. Para datas urgentes, indique a data no pedido: as propostas dizem quem a consegue cumprir. ${ACRESCIMO_POR_URGENCIA}`,
   },
   {
-    question: "Fornecem material de embalagem?",
-    answer: "Sim, disponibilizamos caixas, plástico bolha, fita adesiva e cobertores de proteção. Pode incluir o material no orçamento ou comprar separadamente.",
+    question: "Há material de embalagem?",
+    answer: "Depende do profissional: muitos levam caixas, plástico bolha, fita adesiva e cobertores de proteção. Se precisar, diga-o no pedido — o material vem discriminado na proposta. Também o pode comprar à parte.",
   },
   {
     question: "Fazem mudanças ao fim de semana?",
-    answer: "Sim, trabalhamos aos sábados e, mediante disponibilidade, aos domingos. Os preços podem ter um acréscimo de 10-20% dependendo do dia e horário.",
+    // 30-09-2026: prometia «acréscimo de 10-20 %» ao domingo, enquanto as
+    // páginas de cidade diziam «domingos não trabalhamos». A regra é uma só.
+    answer: AO_FIM_DE_SEMANA,
   },
 ];
 
+/*
+ * 30-09-2026: é o que se PODE pedir numa mudança — cada proposta diz o que
+ * inclui. A lista dizia «Equipa de 2 a 4 pessoas» como se fosse da CLYON.
+ */
 const includedItems = [
   "Carga e descarga de todos os volumes",
   "Transporte em veículo adequado ao volume",
   "Proteção de móveis com cobertores",
-  "Desmontagem e montagem básica",
+  "Desmontagem e montagem, se as pedir",
   "Subida e descida de escadas",
-  "Equipa de 2 a 4 pessoas conforme necessidade",
+  "Número de pessoas conforme o volume",
 ];
 
 /*
@@ -127,7 +139,7 @@ const differentiators = [
   "Proteção de paredes, elevadores e acessos",
   "O valor fica acordado por escrito antes de sair de casa",
   "Orçamento detalhado sem surpresas",
-  "Flexibilidade de horário (manhã, tarde, fim de semana)",
+  "Horário combinado com o profissional",
 ];
 
 const serviceSchema = {
@@ -218,14 +230,14 @@ export default function MudancasPage() {
                 mais nenhuma página usava. Sai o valor, fica o prazo.
               */}
               <p className="mt-4 text-sm text-slate-500">
-                <span className="font-semibold text-emerald-600">Orçamento personalizado</span>, grátis e em 6 horas
+                <span className="font-semibold text-emerald-600">Propostas grátis</span> em menos de 6 horas
               </p>
             </div>
 
             <div className="overflow-hidden rounded-[32px] border border-emerald-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(5,150,105,0.14)]">
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[22px] border border-emerald-100 bg-emerald-50/80 p-4">
-                  <p className="text-sm font-semibold text-slate-950">Orçamento em</p>
+                  <p className="text-sm font-semibold text-slate-950">Propostas em menos de</p>
                   <p className="mt-2 text-2xl font-bold text-emerald-600">6 horas</p>
                 </div>
                 <div className="rounded-[22px] border border-emerald-100 bg-white p-4">
@@ -264,7 +276,8 @@ export default function MudancasPage() {
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-[30px] border border-emerald-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(5,150,105,0.1)]">
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">Serviço de mudança completo</h2>
+            <h2 className="mt-3 text-2xl font-bold text-slate-950">O que pode pedir numa mudança</h2>
+            <p className="mt-2 text-sm text-slate-600">Cada proposta diz o que inclui — e o preço fica fechado antes de começar.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {includedItems.map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4 text-sm text-slate-700">
@@ -294,10 +307,10 @@ export default function MudancasPage() {
           <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-[0_20px_50px_-20px_rgba(5,150,105,0.12)] sm:p-8">
             <h2 className="text-2xl font-bold text-slate-900">Quanto custa uma mudança</h2>
             <p className="mt-2 text-slate-600">
-              Não publicamos tabela de preços para mudanças, e é uma decisão: duas
-              mudanças da mesma tipologia podem ter custos muito diferentes conforme
-              o volume real e os acessos. O orçamento é personalizado, grátis e
-              chega-lhe em 6 horas — fechado antes de o trabalho começar.
+              Não há tabela de preços para mudanças, e é uma decisão: duas mudanças
+              da mesma tipologia podem ter custos muito diferentes conforme o volume
+              real e os acessos. Recebe propostas grátis {PROPOSTAS_EM_ATE}, cada
+              uma com o preço fechado antes de o trabalho começar.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -343,7 +356,7 @@ export default function MudancasPage() {
             Mudanças por Zona
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
-            Fazemos mudanças dentro de Lisboa, entre Lisboa e Margem Sul, e para Setúbal.
+            Há profissionais para mudanças dentro de Lisboa, entre Lisboa e a Margem Sul, e para Setúbal.
             {/* Dizia "Ver preços de mudanças em Lisboa" — a página de destino
                 deixou de mostrar preços, o link deixa de os prometer. */}
             <Link href="/mudancas/lisboa" className="ml-1 font-medium text-emerald-600 hover:underline">
@@ -372,7 +385,6 @@ export default function MudancasPage() {
             <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
               <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900">
                 Margem Sul
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Base CLYON</span>
               </h3>
               <div className="flex flex-wrap gap-2">
                 {margemSulCities.map((city) => (
@@ -449,7 +461,7 @@ export default function MudancasPage() {
           <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-600">
             {/* Prometia "faixa de preço" nos dados locais — as páginas de
                 cidade deixaram de a mostrar. */}
-            Para cada cidade principal temos uma página com dados locais — distância à base, rotas mais pedidas, particularidades de acesso e FAQ específico.
+            Para cada cidade principal há uma página com dados locais — rotas mais pedidas, particularidades de acesso e perguntas frequentes.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {CIDADES_MUDANCAS.map((cidade) => (
@@ -468,8 +480,11 @@ export default function MudancasPage() {
                     490 € a que o motor factura. Fica a distância, que é um
                     facto verificável, e o prazo de resposta.
                   */}
+                  {/* 30-09-2026: dizia «X km da base · orçamento em 24 h» — uma
+                      distância à CLYON, que não vai a lado nenhum, e um prazo
+                      que não é o da plataforma. */}
                   <p className="mt-0.5 text-xs text-slate-500">
-                    {cidade.distanceKm} km da base · orçamento em 24 h
+                    Propostas em menos de 6 horas
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-tinta-fraca group-hover:translate-x-0.5 group-hover:text-emerald-600" />
@@ -490,7 +505,7 @@ export default function MudancasPage() {
           <CTABlock
             variant="centered"
             title="Precisa de fazer uma mudança?"
-            description="Peça um orçamento grátis. Respondemos em 6 horas com um valor detalhado para a sua mudança."
+            description="Descreva a mudança e recebe propostas de profissionais da sua zona em menos de 6 horas, com o valor detalhado."
             whatsappMessage="Olá! Preciso de fazer uma mudança. Podem dar-me um orçamento?"
           />
         </div>

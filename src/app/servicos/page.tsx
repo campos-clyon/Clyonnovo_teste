@@ -88,7 +88,7 @@ const services: Service[] = [
     emoji: "🛋️",
     messages: [
       { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
-      { from: "clyon",   text: `Bom dia! Como referência, desde 75 €, sem IVA. Mande duas fotos e a morada: recebe propostas de profissionais da zona em até ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
+      { from: "clyon",   text: `Bom dia! Como referência, desde 75 €, sem IVA. Mande duas fotos e a morada: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
     ],
   },
   {
@@ -132,7 +132,7 @@ const services: Service[] = [
     emoji: "📦",
     messages: [
       { from: "cliente", text: "Tenho garagem cheia de tralha antiga, quero libertar espaço.", time: "16:20" },
-      { from: "clyon",   text: `Envie 2 ou 3 fotos por WhatsApp: recebe propostas de profissionais da zona em até ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "16:21" },
+      { from: "clyon",   text: `Envie 2 ou 3 fotos por WhatsApp: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "16:21" },
     ],
   },
   {
@@ -144,7 +144,7 @@ const services: Service[] = [
     emoji: "🚚",
     messages: [
       { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de roupeiro.", time: "11:08" },
-      { from: "clyon",   text: `Mande as duas moradas e fotos das divisões: as propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`, time: "11:10" },
+      { from: "clyon",   text: `Mande as duas moradas e fotos das divisões: as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`, time: "11:10" },
     ],
   },
 ];
@@ -154,7 +154,7 @@ const steps = [
   {
     n: "2",
     title: "Receba propostas",
-    text: `Profissionais verificados da sua zona respondem em até ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
+    text: `Profissionais verificados da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
   },
   { n: "3", title: "Escolha e combine", text: "Aceita a proposta que quiser e combina o dia com o profissional." },
 ];
@@ -177,7 +177,7 @@ const faqs = [
   },
   {
     q: "Recolhem no mesmo dia?",
-    a: `Depende de haver profissional disponível na sua zona. As propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}, e a data combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
+    a: `Depende de haver profissional disponível na sua zona. As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, e a data combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
   },
   {
     q: "Fazem desmontagem dentro de casa?",
@@ -294,7 +294,7 @@ export default function ServicosPage() {
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
             Envie fotos e a morada: o pedido chega a profissionais verificados da sua zona, e
-            recebe propostas em até {PRAZO_DE_RESPOSTA.porExtenso}. Lisboa, Margem Sul e Setúbal.
+            recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}. Lisboa, Margem Sul e Setúbal.
           </p>
 
           {/* CTAs primárias */}
@@ -478,7 +478,7 @@ export default function ServicosPage() {
                   Já sabe o serviço? Peça agora.
                 </h2>
                 <p className="mt-2 max-w-lg text-sm text-cyan-50 sm:text-base">
-                  Envie o pedido pelo WhatsApp ou pelo formulário — propostas em até{" "}
+                  Envie o pedido pelo WhatsApp ou pelo formulário — propostas em menos de{" "}
                   {PRAZO_DE_RESPOSTA.porExtenso}.
                 </p>
               </div>

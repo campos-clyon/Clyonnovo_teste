@@ -162,7 +162,7 @@ export const PROMESSA: Promessa = {
     "com a taxa da CLYON descontada — o que tem a receber, e não dinheiro que já possa " +
     "levantar. Passa a disponível depois de o cliente confirmar que o trabalho está feito e " +
     "de o pagamento dele ter entrado; aí pede a transferência, e o pedido de levantamento é " +
-    "tratado em até 24 horas. Em dinheiro, o cliente paga-lhe no local o valor acordado por " +
+    "tratado em menos de 24 horas. Em dinheiro, o cliente paga-lhe no local o valor acordado por " +
     "inteiro: aparece em «Recebido em mão», e não há nada a transferir.",
   proRotuloDoCativo: "Por receber",
   /*
@@ -184,7 +184,7 @@ export const PROMESSA: Promessa = {
     "Depende de como o cliente escolheu pagar. Pela plataforma, ele paga à CLYON por " +
     "referência MB WAY ou Multibanco, e o valor — já sem a comissão — fica disponível na sua " +
     "carteira depois de ele confirmar que o trabalho está feito e de o pagamento ter entrado; " +
-    "o pedido de levantamento é tratado em até 24 horas. Em dinheiro, recebe dele no local o " +
+    "o pedido de levantamento é tratado em menos de 24 horas. Em dinheiro, recebe dele no local o " +
     "valor acordado por inteiro, e a CLYON cobra a taxa dela ao cliente.",
   recrutamentoTitulo: "Valor combinado por escrito",
   recrutamentoCorpo:

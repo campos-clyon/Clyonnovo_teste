@@ -61,8 +61,13 @@ export function tituloDaCidade(
 ): string {
   if (serviceSlug === "recolha-moveis") {
     const base = `Recolha de Móveis em ${cityName}`;
-    if (citySlug === "lisboa") return comExtra(base, `Hoje, ${PRECO_MOVEIS}`);
-    if (citySlug === "almada") return comExtra(base, `Hoje, ${PRECO_MOVEIS}`);
+    /*
+     * 30-09-2026: Lisboa e Almada diziam «— Hoje, 40 – 120 €». A CLYON não
+     * pode prometer a recolha hoje: o que cumpre é o prazo das propostas, e a
+     * data combina-se com o profissional. «Propostas em 6h» com o preço não
+     * cabe nos 60 caracteres (daria 65), e o preço pesa mais no clique —
+     * ficam como as outras cidades.
+     */
     if (citySlug === "setubal") return comExtra(base, `${PRECO_MOVEIS}, em 6h`);
     return comExtra(base, PRECO_MOVEIS);
   }

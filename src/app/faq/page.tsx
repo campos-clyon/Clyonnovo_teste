@@ -51,7 +51,7 @@ const faqCategories = [
     questions: [
       {
         q: "Quanto custa a recolha de móveis em Lisboa?",
-        a: `O preço depende do volume, do tipo de móvel e dos acessos. Para peças soltas como sofá, armário ou cama, a referência é ${PRECOS.recolha_moveis.etiqueta}; volumes maiores ou andares sem elevador ficam mais caros. Descreva o pedido em clyon.pt/simulador e recebe as propostas dos profissionais da sua zona em até ${PRAZO_DE_RESPOSTA.porExtenso}. ${NOTA_DE_PRECO.curta}`,
+        a: `O preço depende do volume, do tipo de móvel e dos acessos. Para peças soltas como sofá, armário ou cama, a referência é ${PRECOS.recolha_moveis.etiqueta}; volumes maiores ou andares sem elevador ficam mais caros. Descreva o pedido em clyon.pt/simulador e recebe as propostas dos profissionais da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. ${NOTA_DE_PRECO.curta}`,
       },
       {
         q: "Que móveis recolhem?",
@@ -59,7 +59,7 @@ const faqCategories = [
       },
       {
         q: "Fazem recolha de sofás em Lisboa no mesmo dia?",
-        a: `Depende de haver profissional disponível. As propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso} e a data combina-se com o profissional que escolher — se precisar para o próprio dia, diga-o no pedido, pelo simulador ou por WhatsApp.`,
+        a: `Depende de haver profissional disponível. As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e a data combina-se com o profissional que escolher — se precisar para o próprio dia, diga-o no pedido, pelo simulador ou por WhatsApp.`,
       },
       {
         q: "Recolhem sofás, colchões e camas com ou sem desmontagem?",
@@ -83,7 +83,10 @@ const faqCategories = [
       },
       {
         q: "Para onde vão os móveis recolhidos?",
-        a: "Sempre que possível, seguem para reutilização, doação ou revenda — móveis em bom estado podem ir para instituições de solidariedade social ou para particulares. O resto tem de ir para um destino legal: quem transporta é o profissional, e as regras da plataforma proíbem o transporte de resíduos sem as autorizações que a lei exige.",
+        // 30-09-2026: dizia que os móveis em bom estado «podem ir para
+        // instituições de solidariedade» — a plataforma não tem circuito de
+        // doação nenhum, e o destino é decisão do profissional.
+        a: "Quem transporta é o profissional, e é ele que decide o destino: o que ainda serve pode ser reaproveitado; o resto tem de ir para um destino legal, e as regras da plataforma proíbem o transporte de resíduos sem as autorizações que a lei exige. Se quer doar peças em bom estado, veja /recolha-gratuita-de-moveis-usados.",
       },
       {
         q: "Existe recolha gratuita de móveis em Lisboa?",
@@ -147,7 +150,7 @@ const faqCategories = [
       },
       {
         q: "Consigo fazer esvaziamento do apartamento em 6 horas?",
-        a: `As propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}; o trabalho em si depende do volume e da disponibilidade do profissional que escolher. Se for urgente, diga-o no pedido e mande fotografias do imóvel pelo WhatsApp — quanto mais claro o pedido, mais depressa se combina a data.`,
+        a: `As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}; o trabalho em si depende do volume e da disponibilidade do profissional que escolher. Se for urgente, diga-o no pedido e mande fotografias do imóvel pelo WhatsApp — quanto mais claro o pedido, mais depressa se combina a data.`,
       },
       {
         q: "Recolhem os eletrodomésticos do apartamento?",
@@ -164,7 +167,7 @@ const faqCategories = [
     questions: [
       {
         q: "Como peço orçamento para recolha de móveis?",
-        a: `Há três formas: (1) No simulador, em clyon.pt/simulador — indica o tipo de serviço, a morada e o volume, com fotografias. (2) Por WhatsApp — envie fotografias e a descrição. (3) Pelo formulário de contacto, em clyon.pt/contactos. Em qualquer delas, uma pessoa da CLYON confere o pedido e envia-o aos profissionais da sua zona, e as propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+        a: `Há três formas: (1) No simulador, em clyon.pt/simulador — indica o tipo de serviço, a morada e o volume, com fotografias. (2) Por WhatsApp — envie fotografias e a descrição. (3) Pelo formulário de contacto, em clyon.pt/contactos. Em qualquer delas, uma pessoa da CLYON confere o pedido e envia-o aos profissionais da sua zona, e as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
       },
       {
         q: "O orçamento é gratuito e sem compromisso?",
@@ -259,7 +262,7 @@ const faqCategories = [
          * T1 a partir de 180 €, quando o motor factura uma mudança a partir
          * de 490 €. Qualquer número aqui volta a criar a mesma divergência.
          */
-        a: `Uma mudança é sempre orçamento personalizado. O valor depende do volume, da distância entre as duas moradas, do andar e do acesso de cada uma — e um preço fixo publicado aqui estaria sempre errado numa delas. Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em até ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma.`,
+        a: `Uma mudança é sempre orçamento personalizado. O valor depende do volume, da distância entre as duas moradas, do andar e do acesso de cada uma — e um preço fixo publicado aqui estaria sempre errado numa delas. Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma.`,
       },
       {
         q: "Fazem mudanças para outras cidades como Porto ou Coimbra?",

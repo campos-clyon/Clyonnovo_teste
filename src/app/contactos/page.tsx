@@ -97,7 +97,7 @@ const PERGUNTAS = [
      * Um pedido de domingo só é conferido na segunda (a revisão é humana, ver
      * a rota do simulador), e por isso o domingo continua dito.
      */
-    a: `As propostas dos profissionais chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}. A equipa da CLYON atende de segunda a sábado, das 08:00 às 20:00 — pelo WhatsApp e por telefone costuma ser mais rápido. Um pedido feito ao domingo segue na segunda de manhã.`,
+    a: `As propostas dos profissionais chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. A equipa da CLYON atende de segunda a sábado, das 08:00 às 20:00 — pelo WhatsApp e por telefone costuma ser mais rápido. Um pedido feito ao domingo segue na segunda de manhã.`,
   },
   {
     q: "Pedir um orçamento custa alguma coisa?",
@@ -318,7 +318,7 @@ export default function ContactosPage() {
                 análise» até alguém da CLYON carregar em «Enviar aos
                 profissionais» (portao-da-analise.test.ts). O terceiro deixou
                 de prometer "normalmente mais do que uma": é o que ninguém
-                conta, e o prazo é "em até".
+                conta, e o prazo é "em menos de".
               */}
               {[
                 [
@@ -331,7 +331,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Recebe propostas com valores",
-                  `Em até ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma, sem IVA. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
+                  `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma, sem IVA. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [
                   "Escolhe, e só depois se paga",
@@ -421,7 +421,7 @@ export default function ContactosPage() {
               <Link href="/simulador" className="font-semibold text-acao hover:underline">
                 simulador
               </Link>{" "}
-              pede propostas para o seu caso, e chegam em até {PRAZO_DE_RESPOSTA.porExtenso}.
+              pede propostas para o seu caso, e chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
           </section>
 

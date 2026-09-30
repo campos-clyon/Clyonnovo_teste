@@ -184,7 +184,7 @@ export const COMO_RECEBE: Array<{ forma: string; texto: string }> = [
     texto:
       "O valor fica com a CLYON até o cliente confirmar que o trabalho está feito, ou até " +
       `passarem ${DIAS_ATE_LIBERTAR_SOZINHO} dias sem resposta dele. Depois passa para a sua ` +
-      "carteira, já com a taxa descontada, e o pedido de levantamento é tratado em até 24 horas.",
+      "carteira, já com a taxa descontada, e o pedido de levantamento é tratado em menos de 24 horas.",
   },
   {
     forma: FORMA_EM_PALAVRAS.dinheiro.curta,

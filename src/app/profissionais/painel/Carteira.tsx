@@ -303,7 +303,7 @@ function PedirTransferencia({
             banco, e não depende de nós. Juntá-las numa frase só fazia da
             segunda uma promessa que não podemos cumprir.
           */}
-          O mínimo por transferência é de {MINIMO_PARA_LEVANTAR} €. Tratamos do pedido em até
+          O mínimo por transferência é de {MINIMO_PARA_LEVANTAR} €. Tratamos do pedido em menos de
           24 horas e transferimos para o IBAN indicado; depois disso, o banco costuma demorar
           mais um dia útil.
         </p>

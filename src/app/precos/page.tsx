@@ -143,7 +143,7 @@ const faqs = [
   },
   {
     question: "Posso pedir preço por WhatsApp?",
-    answer: `Sim. Pode fazer o pedido no simulador ou por WhatsApp, e as propostas dos profissionais chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    answer: `Sim. Pode fazer o pedido no simulador ou por WhatsApp, e as propostas dos profissionais chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   },
   {
     question: "Fazem serviços para empresas e condomínios?",

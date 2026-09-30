@@ -23,6 +23,12 @@ import {
   AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import {
+  DESMONTAGEM_A_PEDIDO,
+  NO_MESMO_DIA,
+  PROPOSTAS_EM_ATE,
+  RECEBE_PROPOSTAS,
+} from "@/lib/promessas-publicas";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
@@ -68,9 +74,9 @@ const areaServedCities = [
 ];
 
 const benefits = [
-  { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
-  { icon: Users, title: "Carregamento completo", desc: "A equipa retira o eletrodoméstico do interior do imóvel" },
-  { icon: Truck, title: "Transporte incluído", desc: "Levam o equipamento até ao destino adequado" },
+  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: "A data da recolha combina-se com o profissional que escolher" },
+  { icon: Users, title: "Carregamento completo", desc: "O profissional retira o eletrodoméstico do interior do imóvel" },
+  { icon: Truck, title: "Transporte incluído", desc: "O profissional leva-o ao destino adequado" },
   { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem ou reutilização" },
 ];
 
@@ -95,7 +101,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um eletrodoméstico?",
-    a: `A recolha de um eletrodoméstico custa ${PRECO_MOVEIS.etiqueta}, consoante o tipo, o peso, os acessos e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do equipamento e a morada para receber um orçamento imediato.`,
+    a: `A recolha de um eletrodoméstico custa ${PRECO_MOVEIS.etiqueta}, consoante o tipo, o peso, os acessos e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do equipamento e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem frigoríficos e máquinas de lavar?",
@@ -103,19 +109,19 @@ const faqs = [
   },
   {
     q: "Recolhem eletrodomésticos no mesmo dia?",
-    a: "Sim. Quando há disponibilidade operacional, a recolha pode ser feita no próprio dia ou no dia seguinte, especialmente em Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada e Setúbal.",
+    a: NO_MESMO_DIA,
   },
   {
-    q: "A equipa retira o eletrodoméstico de dentro de casa?",
-    a: "Sim. A equipa da CLYON retira o eletrodoméstico do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
+    q: "O profissional retira o eletrodoméstico de dentro de casa?",
+    a: "Sim. O profissional retira o eletrodoméstico do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
   },
   {
     q: "Qual o destino dos eletrodomésticos recolhidos?",
-    a: "Os eletrodomésticos recolhidos são encaminhados para reciclagem ou reutilização, conforme o estado e tipo de equipamento. Cumprimos a legislação de resíduos elétricos e eletrónicos.",
+    a: "Os eletrodomésticos recolhidos são encaminhados para reciclagem ou reutilização, conforme o estado e tipo de equipamento. Os resíduos elétricos e eletrónicos têm circuitos próprios de tratamento, e é para lá que devem ir.",
   },
   {
     q: "Recolhem pequenos eletrodomésticos também?",
-    a: "A CLYON foca-se principalmente em grandes eletrodomésticos. Pequenos equipamentos podem ser incluídos quando combinados com uma recolha maior de móveis ou eletrodomésticos grandes.",
+    a: "Os pedidos são sobretudo de grandes eletrodomésticos. Pequenos equipamentos podem ir no mesmo pedido, junto com uma recolha maior de móveis ou eletrodomésticos.",
   },
 ];
 
@@ -190,10 +196,10 @@ export default function RecolhaDeEletrodomesticosPage() {
                 Recolha de eletrodomésticos usados em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? A CLYON faz a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino responsável. Atendemos pedidos em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem destino licenciado por serem resíduos elétricos e eletrónicos. A equipa CLYON trata de tudo: retira do imóvel, carrega, transporta e encaminha para reciclagem ou reutilização.
+                Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem destino licenciado por serem resíduos elétricos e eletrónicos. O profissional que escolher retira-os do imóvel, carrega, transporta e leva-os para esse destino.
               </p>
 
               {/* CTA Buttons */}
@@ -266,10 +272,10 @@ export default function RecolhaDeEletrodomesticosPage() {
       <section className="bg-white py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Que eletrodomésticos recolhemos?
+            Que eletrodomésticos se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A CLYON recolhe eletrodomésticos de grande porte, incluindo frigoríficos, máquinas de lavar, fogões e outros equipamentos pesados. Se precisa de libertar espaço, tratamos de tudo.
+            Os profissionais recolhem eletrodomésticos de grande porte, incluindo frigoríficos, máquinas de lavar, fogões e outros equipamentos pesados. Se precisa de libertar espaço, o profissional trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -291,9 +297,9 @@ export default function RecolhaDeEletrodomesticosPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do eletrodoméstico, a morada e indique o andar e os acessos." },
-              { step: "02", title: "Receba o orçamento", desc: "Receba uma resposta rápida com valor fechado e janela de recolha disponível." },
-              { step: "03", title: "Agendamos a recolha", desc: "Confirmamos o dia e a hora. Muitos pedidos são atendidos em 24-48 horas." },
-              { step: "04", title: "Fazemos a recolha", desc: "A equipa entra no imóvel, carrega o eletrodoméstico e encaminha para reciclagem." },
+              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
+              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>
@@ -368,7 +374,7 @@ export default function RecolhaDeEletrodomesticosPage() {
             Precisa de recolha de eletrodoméstico?
           </h2>
           <p className="mt-4 text-lg text-cyan-100">
-            Envie fotos e morada para receber um orçamento rápido. A equipa CLYON carrega e encaminha.
+            Envie fotos e morada. {RECEBE_PROPOSTAS}
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link

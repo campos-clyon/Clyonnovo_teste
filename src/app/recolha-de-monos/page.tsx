@@ -23,6 +23,7 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 /*
  * Esta página tinha quatro preços diferentes para o mesmo serviço.
@@ -87,11 +88,11 @@ const faqs = [
   },
   {
     question: "Fazem recolha de monos no mesmo dia?",
-    answer: "Sempre que possível, sim. Na maioria das zonas de Lisboa e Setúbal conseguimos fazer a recolha em 24 a 48 horas. Em situações urgentes, podemos ir no mesmo dia.",
+    answer: NO_MESMO_DIA,
   },
   {
     question: "Que tipo de monos não recolhem?",
-    answer: "Não recolhemos materiais perigosos, produtos químicos, amianto, resíduos hospitalares ou lixo doméstico comum. Para estes casos, contacte os serviços municipais.",
+    answer: "Materiais perigosos, produtos químicos, amianto, resíduos hospitalares e lixo doméstico comum não entram. Para estes casos, contacte os serviços municipais.",
   },
 ];
 
@@ -107,11 +108,11 @@ const includedItems = [
 ];
 
 const differentiators = [
-  "Recolha de monos em 24 a 48 horas na maioria das zonas",
+  `Propostas ${PROPOSTAS_EM_ATE}; a data combina-se com o profissional`,
   "Carregamento direto pelo profissional",
   "Sem necessidade de descer os objetos à rua",
   "Vai para reciclagem sempre que der",
-  "Equipa preparada para acessos difíceis",
+  "Acessos difíceis indicados no pedido entram na proposta",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];
 
@@ -210,7 +211,7 @@ export default function RecolhaMonosPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
+            { icon: Clock3, title: "Propostas em menos de 6 horas", desc: "A data da recolha combina-se com o profissional que escolher." },
             { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega os monos — não precisa de os descer à rua." },
             { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem sempre que der." },
           ].map((item) => (
@@ -260,7 +261,7 @@ export default function RecolhaMonosPage() {
             Recolha de Monos por Zona
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
-            Cobrimos Lisboa, Margem Sul e Setúbal com resposta rápida.
+            Há profissionais em Lisboa, na Margem Sul e em Setúbal.
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
@@ -294,7 +295,7 @@ export default function RecolhaMonosPage() {
           <CTABlock
             variant="centered"
             title="Precisa de recolher monos?"
-            description="Envie fotos e morada para receber um orçamento rápido. A equipa chega em 6h e trata de tudo."
+            description={`Envie fotos e morada. ${RECEBE_PROPOSTAS} A data da recolha combina-se com o profissional que escolher.`}
             whatsappMessage="Olá! Preciso de recolha de monos. Podem dar-me um orçamento?"
           />
         </div>

@@ -405,7 +405,7 @@ export default function PrivacidadePage() {
                   </li>
                 </ul>
                 Para exercer estes direitos envie um email para <strong>{BUSINESS_EMAIL}</strong>. Respondemos
-                em até 30 dias.
+                no prazo de 30 dias.
               </>
             }
           />

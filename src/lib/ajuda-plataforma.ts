@@ -53,14 +53,14 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
     /*
      * «UM A DOIS DIAS ÚTEIS» ERA UMA PROMESSA SOBRE O BANCO — 29-09-2026.
      *
-     * O que é nosso é tratar do pedido em até 24 horas (decisão de
+     * O que é nosso é tratar do pedido em menos de 24 horas (decisão de
      * 17-09-2026). O que vem a seguir é do banco, e diz-se como tal — é a
      * mesma frase que o ecrã de transferir já diz.
      */
     resposta:
       "Em A minha carteira › Transferir. Indique primeiro o IBAN em Conta bancária. O mínimo " +
       `por transferência é de ${MINIMO_PARA_LEVANTAR} €. Tratamos do pedido de levantamento em ` +
-      "até 24 horas; o banco pode demorar mais um dia útil a mostrar a transferência. Enquanto " +
+      "menos de 24 horas; o banco pode demorar mais um dia útil a mostrar a transferência. Enquanto " +
       "o pedido estiver a ser processado aparece como «a caminho».",
   },
   {

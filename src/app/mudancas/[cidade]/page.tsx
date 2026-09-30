@@ -29,6 +29,7 @@ import {
   getCidadeMudancaBySlug,
 } from "@/lib/mudancas-cidades";
 import { comExtra } from "@/lib/titulos-seo";
+import { RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -179,9 +180,9 @@ export default async function MudancasCidadePage({ params }: Props) {
               Mudanças em {c.nome}
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-              Serviço completo de mudanças residenciais e comerciais em {c.nome} —
-              embalagem, carga, transporte, descarga e montagem. Equipa profissional,
-              orçamento em 6 horas e sem surpresas.
+              Mudanças residenciais e comerciais em {c.nome} por profissionais
+              verificados da zona — embalagem, carga, transporte, descarga e
+              montagem, conforme o que pedir. {RECEBE_PROPOSTAS}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -205,21 +206,25 @@ export default async function MudancasCidadePage({ params }: Props) {
               menos de metade. Sai o valor, fica o prazo, que é verdade.
             */}
             <p className="mt-3 text-xs text-slate-500">
-              <strong className="text-emerald-600">Orçamento personalizado</strong>, grátis e em 6 horas para {c.nome}
+              <strong className="text-emerald-600">Propostas grátis</strong> em menos de 6 horas para {c.nome}
             </p>
           </div>
 
           {/* Info cards à direita */}
           <div className="grid gap-3 sm:grid-cols-2">
+            {/* 30-09-2026: o primeiro cartão era «Distância à base — X km, ~Y de
+                viagem», medida a partir de Fernão Ferro. Quem faz a mudança é
+                um profissional da zona, a partir da base dele; a distância à
+                CLYON não diz nada a quem contrata. */}
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500">Distância à base</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-600">{c.distanceKm} km</p>
-              <p className="text-xs text-tinta-fraca">~{c.tempoMedio} de viagem</p>
+              <p className="text-xs font-medium text-slate-500">Quem faz</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600">Profissionais da sua zona</p>
+              <p className="text-xs text-tinta-fraca">Independentes e verificados</p>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500">Orçamento em</p>
+              <p className="text-xs font-medium text-slate-500">Propostas em menos de</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">6 horas</p>
-              <p className="text-xs text-tinta-fraca">Resposta rápida</p>
+              <p className="text-xs text-tinta-fraca">A data combina-se com o profissional</p>
             </div>
             {/*
               Este cartão mostrava a faixa "{precoMin}€ – {precoMax}€" da
@@ -245,7 +250,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           Rotas mais pedidas a partir de {c.nome}
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Cobrimos todas as rotas na região. Algumas das mais comuns:
+          O pedido pode ir para qualquer destino da região. Algumas das rotas mais comuns:
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {c.rotasComuns.map((rota) => (
@@ -263,10 +268,10 @@ export default async function MudancasCidadePage({ params }: Props) {
       {/* ── Landmarks / Zonas ── */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Zonas de {c.nome} onde atuamos
+          Zonas de {c.nome} e o que cada uma pede
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Conhecemos as particularidades logísticas das principais zonas da cidade — cada bairro tem os seus desafios.
+          Cada bairro tem os seus desafios logísticos — dizê-los no pedido é o que deixa as propostas certas.
         </p>
         <ul className="mt-5 grid gap-3 sm:grid-cols-2">
           {c.landmarks.map((l) => (
@@ -316,7 +321,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           <CTABlock
             variant="centered"
             title={`Precisa de mudança em ${c.nome}?`}
-            description="Orçamento grátis em 6 horas, sem compromisso."
+            description="Propostas grátis em menos de 6 horas, sem compromisso."
             primaryText="Pedir orçamento"
             primaryHref="/simulador"
             showWhatsApp
@@ -330,7 +335,7 @@ export default async function MudancasCidadePage({ params }: Props) {
       {vizinhas.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <h2 className="text-xl font-bold text-slate-900">
-            Também operamos nestas cidades próximas
+            Mudanças nas cidades próximas
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {vizinhas.map((v) => (
@@ -358,12 +363,14 @@ export default async function MudancasCidadePage({ params }: Props) {
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Shield className="mx-auto h-6 w-6 text-emerald-500" />
             <p className="mt-2 text-sm font-bold text-slate-800">Sem stress</p>
-            <p className="text-xs text-slate-500">Equipa profissional, seguros incluídos</p>
+            {/* 30-09-2026: dizia «Equipa profissional, seguros incluídos» — não
+                há seguro nenhum (ver sem-seguro.test.ts), nem equipa da CLYON. */}
+            <p className="text-xs text-slate-500">Profissionais verificados</p>
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Clock3 className="mx-auto h-6 w-6 text-emerald-500" />
-            <p className="mt-2 text-sm font-bold text-slate-800">Resposta em 6h</p>
-            <p className="text-xs text-slate-500">Orçamento personalizado por telefone ou email</p>
+            <p className="mt-2 text-sm font-bold text-slate-800">Propostas em menos de 6h</p>
+            <p className="text-xs text-slate-500">Com o preço fechado antes de começar</p>
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Star className="mx-auto h-6 w-6 text-emerald-500" />

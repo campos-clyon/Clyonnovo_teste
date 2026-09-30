@@ -2126,7 +2126,7 @@ function Phase3Contact({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
           <strong>Depois de enviar:</strong> a CLYON confere o pedido e envia-o aos profissionais
-          da sua zona. As propostas chegam em até {PRAZO_DE_RESPOSTA.porExtenso} — por email, com
+          da sua zona. As propostas chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso} — por email, com
           o link do pedido, ou, se não deixar email, por WhatsApp ou telefone, no número que
           indicou.
         </p>

@@ -17,11 +17,11 @@ const seoLinks = [
   // A âncora dizia «Recolha Gratuita vs Privada» (29-09-2026): a página
   // explica onde doar ou quem recolhe, e o texto do link é o que o Google lê
   // como resumo do destino. A CLYON não faz recolha gratuita.
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", description: "Quando escolher" },
-  { href: "/recolha-de-moveis-urgente", label: "Recolha Urgente", description: "Resposta no próprio dia" },
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar móveis usados", description: "Quem recolhe de graça" },
+  { href: "/recolha-de-moveis-urgente", label: "Recolha Urgente", description: "Propostas em menos de 6 horas" },
   // «Sofá em Lisboa» (/recolha-de-sofa-lisboa) saiu a 29-09-2026: a página
   // juntou-se a /recolha-de-sofas, que já está nesta lista, e faz 301 para ela.
-  { href: "/retirar-moveis-velhos", label: "Retirar Móveis Velhos", description: "Desmontagem incluída" },
+  { href: "/retirar-moveis-velhos", label: "Retirar Móveis Velhos", description: "Desmontagem a pedido" },
   { href: "/recolha-moveis-lisboa", label: "Recolha de móveis em Lisboa", description: "Lisboa e bairros" },
   { href: "/recolha-moveis-almada", label: "Recolha de móveis em Almada", description: "Almada e Caparica" },
   { href: "/recolha-moveis-setubal", label: "Recolha de móveis em Setúbal", description: "Setúbal e Palmela" },
@@ -37,7 +37,7 @@ const seoLinks = [
 
 const blogLinks = [
   { href: "/blog/recolha-de-moveis-como-funciona", label: "Como funciona a recolha de móveis" },
-  { href: "/blog/recolha-gratuita-de-moveis-usados-costa-da-caparica", label: "Recolha gratuita vs privada" },
+  { href: "/blog/recolha-gratuita-de-moveis-usados-costa-da-caparica", label: "Recolha gratuita na Costa da Caparica" },
 ];
 
 export default function FurnitureSeoLinks({
@@ -101,7 +101,7 @@ export default function FurnitureSeoLinks({
       {showHeading && (
         <>
           <p className="text-sm font-semibold uppercase tracking-wide text-acao">
-            Links internos
+            Ver também
           </p>
           <h3 className="mt-2 text-xl font-bold text-slate-900">
             Recolha de móveis por zona

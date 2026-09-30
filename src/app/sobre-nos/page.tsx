@@ -52,7 +52,7 @@ export const metadata: Metadata = {
 
 const values = [
   "Cada pedido é lido por uma pessoa da CLYON antes de seguir para os profissionais",
-  `Propostas em até ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma`,
+  `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma`,
   "Quem faz o trabalho é o profissional que escolher — vê o nome e a nota dele antes",
   "Lisboa, Margem Sul e Setúbal; fora disso, depende de haver profissional disponível",
 ];
@@ -66,7 +66,7 @@ const clientTypes = [
 
 const processSteps = [
   "Descreve o que precisa: fotografias, morada, volume e acessos.",
-  `Recebe em até ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de profissionais verificados da sua zona, já com a taxa da plataforma, e escolhe.`,
+  `Recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de profissionais verificados da sua zona, já com a taxa da plataforma, e escolhe.`,
   "O profissional que escolher vai ao local, retira e trata do destino do material.",
   "Confirma na plataforma que ficou feito — e é à CLYON que recorre se alguma coisa correr mal.",
 ];
@@ -282,7 +282,7 @@ export default function SobreNosPage() {
                   Tem alguma coisa para tirar de casa?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-                  Descreva o pedido e receba propostas em até {PRAZO_DE_RESPOSTA.porExtenso},
+                  Descreva o pedido e receba propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso},
                   consulte os preços de referência, ou fale com a equipa da CLYON.
                 </p>
               </div>

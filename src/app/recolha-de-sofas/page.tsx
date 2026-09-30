@@ -23,6 +23,12 @@ import {
   AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import {
+  DESMONTAGEM_A_PEDIDO,
+  NO_MESMO_DIA,
+  PROPOSTAS_EM_ATE,
+  RECEBE_PROPOSTAS,
+} from "@/lib/promessas-publicas";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
@@ -68,10 +74,10 @@ const areaServedCities = [
 ];
 
 const benefits = [
-  { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
-  { icon: Users, title: "Carregamento completo", desc: "A equipa retira o sofá do interior do imóvel" },
+  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: "A data da recolha combina-se com o profissional que escolher" },
+  { icon: Users, title: "Carregamento completo", desc: "O profissional retira o sofá do interior do imóvel" },
   { icon: Truck, title: "Transporte incluído", desc: "Levam o sofá até ao destino adequado" },
-  { icon: Recycle, title: "Destino responsável", desc: "Doação, reciclagem ou centro de tratamento" },
+  { icon: Recycle, title: "Destino responsável", desc: "Ecocentro ou operador de resíduos licenciado" },
 ];
 
 const includedItems = [
@@ -95,15 +101,15 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um sofá?",
-    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber um orçamento imediato.`,
+    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem sofás no mesmo dia?",
-    a: "Sim. Quando há disponibilidade operacional, a recolha de sofás pode ser feita no próprio dia ou no dia seguinte, especialmente em Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada e Setúbal.",
+    a: NO_MESMO_DIA,
   },
   {
     q: "Recolhem o sofá de dentro do apartamento?",
-    a: "Sim. A equipa da CLYON retira o sofá do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
+    a: "Sim. O profissional retira o sofá do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
   },
   {
     q: "Recolhem chaise longues e sofás de canto?",
@@ -111,11 +117,14 @@ const faqs = [
   },
   {
     q: "O que acontece ao sofá depois da recolha?",
-    a: "Sempre que o estado do sofá permite, fazemos triagem para doação ou reaproveitamento. Sofás danificados ou sem condições seguem para destino licenciado.",
+    // 30-09-2026: prometia «triagem para doação» — não há nada na
+    // plataforma que encaminhe peças para doação. Quem as recebe está na
+    // página própria, e é para lá que se aponta.
+    a: "O profissional leva-o para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e o quiser doar, a página «Doar móveis usados em Lisboa» diz quem o recebe.",
   },
   {
     q: "Qual a diferença entre a CLYON e deixar o sofá na rua?",
-    a: "Deixar o sofá na rua pode resultar em multa e demora na recolha municipal. A CLYON oferece recolha imediata, carregamento do interior do imóvel e destino legal garantido.",
+    a: "Deixar o sofá na rua pode resultar em multa e demora na recolha municipal. Pela CLYON, o profissional retira o sofá de dentro de casa e leva-o para destino licenciado, na data que combinar consigo.",
   },
 ];
 
@@ -189,10 +198,10 @@ export default function RecolhaDeSofasPage() {
                 Recolha de sofás em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um sofá velho, uma chaise longue ou um cadeirão? A CLYON faz a <strong>recolha de sofás usados</strong> com carregamento do interior do imóvel, transporte e destino responsável. Atendemos pedidos em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um sofá velho, uma chaise longue ou um cadeirão? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de sofás usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                A recolha de sofá Lisboa é um dos serviços mais pedidos à CLYON. Muitos clientes precisam de libertar espaço rapidamente por mudança, renovação ou venda de casa. Nós tratamos de tudo: entramos no imóvel, carregam o sofá e levam para destino adequado.
+                A recolha de sofá em Lisboa é dos pedidos mais frequentes na CLYON — por mudança, renovação ou venda de casa. O profissional que escolher entra no imóvel, carrega o sofá e leva-o para destino licenciado.
               </p>
 
               {/* CTA Buttons */}
@@ -265,10 +274,10 @@ export default function RecolhaDeSofasPage() {
       <section className="bg-white py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Que tipos de sofás recolhemos?
+            Que tipos de sofás se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A CLYON recolhe qualquer tipo de sofá, independentemente do tamanho, formato ou estado de conservação. Se está a pensar em como se livrar de um sofá velho, nós tratamos de tudo.
+            Os profissionais recolhem qualquer tipo de sofá, independentemente do tamanho, formato ou estado de conservação. Se está a pensar em como se livrar de um sofá velho, o profissional trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -290,9 +299,9 @@ export default function RecolhaDeSofasPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do sofá, a morada e indique o andar, se há elevador e o tipo de acesso." },
-              { step: "02", title: "Receba o orçamento", desc: "Receba uma resposta rápida com valor fechado e janela de recolha disponível." },
-              { step: "03", title: "Agendamos a recolha", desc: "Confirmamos o dia e a hora. Muitos pedidos são atendidos em 24-48 horas." },
-              { step: "04", title: "Fazemos a recolha", desc: "A equipa entra no imóvel, carrega o sofá, transporta e encaminha para destino responsável." },
+              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
+              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>
@@ -367,7 +376,7 @@ export default function RecolhaDeSofasPage() {
             Precisa de recolha de sofá?
           </h2>
           <p className="mt-4 text-lg text-cyan-100">
-            Envie fotos e morada para receber um orçamento rápido. A equipa CLYON trata de tudo.
+            Envie fotos e morada. {RECEBE_PROPOSTAS}
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link

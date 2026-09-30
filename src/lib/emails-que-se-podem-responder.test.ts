@@ -76,7 +76,7 @@ describe("a ajuda do profissional promete o que é nosso", () => {
 
   it("o levantamento: 24 horas nossas, e o banco à parte", () => {
     const r = resposta("Como levanto o saldo?");
-    expect(r).toContain("Tratamos do pedido de levantamento em até 24 horas");
+    expect(r).toContain("Tratamos do pedido de levantamento em menos de 24 horas");
     expect(r).toContain("o banco pode demorar mais um dia útil a mostrar a transferência");
     expect(r).not.toContain("um a dois dias úteis");
   });

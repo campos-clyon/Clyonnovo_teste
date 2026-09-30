@@ -11,7 +11,7 @@ import { quantoOProfissionalRecebe } from "./taxas-plataforma";
  * Dizia sempre «ficaram disponíveis na sua carteira — pode pedir a
  * transferência quando quiser». Há três casos, e só um é esse:
  *
- *   · pago pela plataforma → disponível, e o levantamento é tratado em até
+ *   · pago pela plataforma → disponível, e o levantamento é tratado em menos de
  *     24 horas;
  *   · confirmado mas o cliente ainda não pagou → passa para a carteira
  *     quando o pagamento entrar; prometer-lhe a transferência era a CLYON a
@@ -94,11 +94,11 @@ describe("para onde vai o valor de um trabalho dado por concluído", () => {
 describe("o email diz o que é verdade em cada caso", () => {
   const liquido = quantoOProfissionalRecebe(200);
 
-  it("disponível: na carteira, e o levantamento tratado em até 24 horas", () => {
+  it("disponível: na carteira, e o levantamento tratado em menos de 24 horas", () => {
     const t = textoDoTrabalhoConfirmado({ pedidoId: 7, liquido, destino: "disponivel" });
     expect(t.assunto).toBe("Trabalho #7 confirmado — 188,00 € na sua carteira");
     expect(t.corpo).toContain("ficaram disponíveis na sua carteira");
-    expect(t.corpo).toContain("o pedido de levantamento é tratado em até 24 horas");
+    expect(t.corpo).toContain("o pedido de levantamento é tratado em menos de 24 horas");
   });
 
   it("por cobrar: passa para a carteira quando o pagamento do cliente entrar", () => {

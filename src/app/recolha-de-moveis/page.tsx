@@ -30,6 +30,11 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
+import {
+  DESMONTAGEM_A_PEDIDO,
+  NO_MESMO_DIA,
+  PROPOSTAS_EM_ATE,
+} from "@/lib/promessas-publicas";
 
 /*
  * O preço desta página vem de src/lib/precos-publicos.ts.
@@ -105,10 +110,10 @@ const areaServedCities = [
 ];
 
 const benefits = [
-  { icon: Clock3, title: "Resposta rápida", desc: "Orçamento em minutos, recolha em 24-48h quando disponível" },
-  { icon: Users, title: "Desmontagem quando necessário", desc: "A equipa desmonta armários, camas e móveis grandes" },
+  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: "A data da recolha combina-se com o profissional que escolher" },
+  { icon: Users, title: "Desmontagem a pedido", desc: DESMONTAGEM_A_PEDIDO },
   { icon: Truck, title: "Carregamento porta a porta", desc: "Retirada a partir do interior do imóvel" },
-  { icon: Recycle, title: "Destino responsável", desc: "Doação, reciclagem ou centro de tratamento" },
+  { icon: Recycle, title: "Destino responsável", desc: "Ecocentro ou operador de resíduos licenciado" },
 ];
 
 const includedItems = [
@@ -131,11 +136,11 @@ const pricingTable = [
 const faqs = [
   {
     q: "Quanto custa a recolha de móveis?",
-    a: "O preço depende do volume, peso, acessos, necessidade de desmontagem e distância. A forma mais rápida de fechar o valor certo é enviar fotos e a morada para receber um orçamento imediato.",
+    a: `O preço depende do volume, peso, acessos, necessidade de desmontagem e distância. A forma mais rápida de saber o valor é descrever o pedido com fotos e morada: recebe propostas de profissionais da zona ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem móveis usados no mesmo dia?",
-    a: "Sim. Quando há disponibilidade operacional, a recolha pode ser feita no próprio dia ou no dia seguinte, sobretudo em Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada e Setúbal.",
+    a: NO_MESMO_DIA,
   },
   {
     q: "Também recolhem eletrodomésticos?",
@@ -143,15 +148,16 @@ const faqs = [
   },
   {
     q: "O que acontece aos móveis recolhidos?",
-    a: "Sempre que o estado dos móveis permita, fazemos triagem para doação ou reaproveitamento. O resto vai para centros de tratamento licenciados.",
+    // 30-09-2026: prometia «triagem para doação» — não existe na plataforma.
+    a: "O profissional leva-os para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiverem em bom estado e os quiser doar, a página «Doar móveis usados em Lisboa» diz quem os recebe.",
   },
   {
     q: "Fazem desmontagem de armários e camas?",
-    a: "Sim. Quando necessário, a equipa desmonta móveis e trata da retirada a partir do interior do imóvel. Indique essa necessidade no pedido para o orçamento refletir o trabalho.",
+    a: `Sim, se o pedir: o profissional desmonta e retira a partir do interior do imóvel. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     q: "Qual é a diferença entre a CLYON e a recolha municipal?",
-    a: "A recolha municipal funciona bem para alguns pedidos gratuitos e agendados, mas costuma ser mais limitada em horários, volume, desmontagem e apoio dentro do imóvel. A CLYON entra quando o cliente precisa de rapidez, carregamento completo e resolução total.",
+    a: "A recolha municipal funciona bem para alguns pedidos gratuitos e agendados, mas costuma ser mais limitada em horários, volume, desmontagem e apoio dentro do imóvel. Pela CLYON, o profissional vai buscar os móveis dentro de casa, carrega-os e leva-os, na data que combinar consigo — é um serviço pago.",
   },
 ];
 
@@ -268,12 +274,14 @@ export default function RecolhaDeMoveisPage() {
             
             {/* Subtitle */}
             <p className="mt-3 text-base font-medium text-acao">
-              Sem contentores, sem espera: recolha rápida diretamente no local.
+              Sem contentores: o profissional recolhe diretamente no local.
             </p>
             
             {/* Description */}
             <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
-              Recolha rápida de móveis, entulho, monos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal. Orçamento grátis em 6h.
+              {/* 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
+                  plataforma (não está em service-categories.ts). */}
+              Recolha de móveis, entulho, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal, por profissionais verificados. Propostas grátis {PROPOSTAS_EM_ATE}.
             </p>
 
             {/* CTAs */}
@@ -323,7 +331,7 @@ export default function RecolhaDeMoveisPage() {
                 <ShieldCheck className="h-4 w-4 text-acao" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-900">Equipa Profissional</p>
+                <p className="text-xs font-semibold text-slate-900">Profissionais verificados</p>
                 <p className="text-[10px] text-slate-500">Lisboa e Setúbal</p>
               </div>
             </div>
@@ -403,7 +411,7 @@ export default function RecolhaDeMoveisPage() {
                 Recolha gratuita, doação ou recolha privada: qual escolher?
               </h2>
               <p className="mt-3 text-base leading-7 text-slate-600">
-                Muitas pesquisas por &quot;recolha de móveis usados&quot; ou &quot;recolha gratuita de móveis&quot; incluem intenções diferentes: doação, recolha municipal, reaproveitamento ou serviço profissional. É importante perceber quando cada opção faz sentido.
+                Há três caminhos para móveis usados — a recolha de monos da câmara, a doação e a recolha paga — e servem casos diferentes.
               </p>
             </div>
           </div>
@@ -420,11 +428,17 @@ export default function RecolhaDeMoveisPage() {
               <p className="mt-2 text-sm text-slate-600">
                 Ideal se os móveis estão em bom estado e há tempo para contactar instituições ou publicar anúncios. Requer que a peça seja funcional e que o interessado vá buscar.
               </p>
+              <Link
+                href="/recolha-gratuita-de-moveis-usados"
+                className="mt-3 inline-flex text-sm font-semibold text-acao hover:underline"
+              >
+                Doar móveis usados em Lisboa
+              </Link>
             </div>
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-5">
-              <h3 className="font-semibold text-cyan-800">Recolha privada (CLYON)</h3>
+              <h3 className="font-semibold text-cyan-800">Recolha paga (CLYON)</h3>
               <p className="mt-2 text-sm text-acao">
-                A escolha certa quando precisa de rapidez, desmontagem, carregamento a partir do interior do imóvel, transporte e retirada completa. Resolve tudo num só pedido, sem depender de terceiros.
+                Quando precisa de rapidez, desmontagem, carregamento a partir do interior do imóvel e transporte. Descreve o pedido uma vez e recebe propostas de profissionais da sua zona.
               </p>
             </div>
           </div>
@@ -458,7 +472,7 @@ export default function RecolhaDeMoveisPage() {
             { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários, roupeiros, cómodas" },
             { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Frigoríficos, máquinas" },
             // Âncora: era «Gratuita vs Privada» (29-09-2026, ver FurnitureSeoLinks).
-            { href: "/recolha-gratuita-de-moveis-usados", label: "Doar ou recolher móveis usados", desc: "Quando escolher" },
+            { href: "/recolha-gratuita-de-moveis-usados", label: "Doar móveis usados", desc: "Quem recolhe de graça" },
           ].map((item) => (
             <Link
               key={item.href}
@@ -480,7 +494,7 @@ export default function RecolhaDeMoveisPage() {
           Recolha de móveis nas principais zonas
         </h2>
         <p className="mt-2 max-w-3xl text-base text-slate-600">
-          Atendemos pedidos em Lisboa, Grande Lisboa, Margem Sul e Setúbal. Clique na sua zona para ver mais detalhes e pedir orçamento.
+          Há profissionais em Lisboa, na Grande Lisboa, na Margem Sul e em Setúbal. Escolha a sua zona para ver mais detalhes e pedir orçamento.
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -529,10 +543,10 @@ export default function RecolhaDeMoveisPage() {
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-6 lg:px-8">
         <div className="rounded-2xl bg-[#F4F8FB] p-8 text-center lg:p-12">
           <h2 className="text-2xl font-bold text-tinta lg:text-3xl">
-            Precisa de recolha de móveis hoje?
+            Precisa de retirar móveis?
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-            Envie fotos e morada para receber orçamento rápido. Quanto mais informação nos der, mais preciso será o valor.
+            Descreva o pedido com fotos e morada e recebe propostas de profissionais da sua zona {PROPOSTAS_EM_ATE}. Quanto mais informação der, mais certas são as propostas.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link

@@ -160,7 +160,7 @@ const HOW_IT_WORKS = [
        * preço dela, dito ao telefone. Hoje o preço é de cada profissional e
        * chega por escrito — 30-09-2026.
        */
-      `Profissionais verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e sem IVA, em até ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
+      `Profissionais verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e sem IVA, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
   },
   {
     icon: Truck,
@@ -240,7 +240,7 @@ const GUARANTEES = [
     description:
       // "A maioria recebe confirmação de data no próprio dia" era uma
       // estatística que ninguém tira. A data é do profissional que escolher.
-      `Descreva o que tem para levar e as propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}. A data do trabalho combina-se depois com o profissional que escolher.`,
+      `Descreva o que tem para levar e as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. A data do trabalho combina-se depois com o profissional que escolher.`,
     gradient: "from-violet-400 to-violet-500",
     glow: "shadow-violet-500/40",
     iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
@@ -258,12 +258,12 @@ const homeFaqs = [
   {
     question: "Quanto custa a recolha de monos ou móveis?",
     answer:
-      `O valor depende do volume, dos acessos, do tipo de material, da urgência e de ser preciso desmontar. Descreva o pedido com fotografias e recebe em até ${PRAZO_DE_RESPOSTA.porExtenso} as propostas dos profissionais da sua zona, cada uma com o preço já com a taxa da plataforma.`,
+      `O valor depende do volume, dos acessos, do tipo de material, da urgência e de ser preciso desmontar. Descreva o pedido com fotografias e recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas dos profissionais da sua zona, cada uma com o preço já com a taxa da plataforma.`,
   },
   {
     question: "Recolhem no mesmo dia?",
     answer:
-      `Depende de haver profissional disponível na sua zona. As propostas chegam em até ${PRAZO_DE_RESPOSTA.porExtenso}, e a data do trabalho combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
+      `Depende de haver profissional disponível na sua zona. As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, e a data do trabalho combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
   },
   {
     question: "Retiram sofás, colchões e eletrodomésticos?",
