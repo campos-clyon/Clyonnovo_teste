@@ -29,6 +29,7 @@ import {
   PESO_MAXIMO_DO_SACO_KG,
   RESPOSTA_SOBRE_CONTENTORES,
 } from "@/lib/sacos-de-entulho";
+import { ACRESCIMO_POR_URGENCIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 /*
  * Esta página contradizia-se a si própria.
@@ -90,7 +91,7 @@ const pricingRows = [
 const faqs = [
   {
     question: "Quanto tempo demora a recolha de entulho?",
-    answer: "Na maioria das zonas de Lisboa, Margem Sul e Setúbal conseguimos fazer a recolha em 24 a 48 horas. Em situações urgentes, podemos ir no mesmo dia mediante disponibilidade.",
+    answer: `Recebe propostas de profissionais da zona ${PROPOSTAS_EM_ATE}, e a data da recolha combina-se com o profissional que escolher. Se for urgente, diga-o no pedido. ${ACRESCIMO_POR_URGENCIA}`,
   },
   {
     question: "Que tipo de entulho recolhem?",
@@ -117,7 +118,7 @@ const faqs = [
   },
   {
     question: "Recolhem entulho em apartamentos?",
-    answer: "Sim, os profissionais recolhem entulho em apartamentos, moradias, lojas e escritórios. A equipa trata do carregamento mesmo em andares altos ou com acessos difíceis.",
+    answer: "Sim, os profissionais recolhem entulho em apartamentos, moradias, lojas e escritórios. O profissional trata do carregamento mesmo em andares altos ou com acessos difíceis — diga-os no pedido.",
   },
 ];
 
@@ -131,10 +132,10 @@ const includedItems = [
 ];
 
 const differentiators = [
-  "Recolha de entulho em 24 a 48 horas na maioria das zonas",
+  `Propostas ${PROPOSTAS_EM_ATE}; a data combina-se com o profissional`,
   "Carregamento direto pelo profissional",
   "Recolha pontual, com destino licenciado",
-  "Sem espera: chegamos, carregam e levamos",
+  "O profissional chega, carrega e leva — não fica nada à porta",
   `Sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg — descem por qualquer escada`,
   NAO_HA_CONTENTORES,
   "Cobertura em Lisboa, Margem Sul e Setúbal",
@@ -195,7 +196,7 @@ export default function RecolhaEntulhoPage() {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 Os profissionais recolhem entulho de obras, remodelações e limpezas com carregamento direto. 
-                Sem espera: a equipa chega, carrega e encaminha para destino responsável.
+                O profissional que escolher carrega e leva para destino licenciado.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -229,7 +230,7 @@ export default function RecolhaEntulhoPage() {
                 </div>
                 <div className="rounded-[22px] border border-amber-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Carregamento</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">Direto pela equipa</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">Feito pelo profissional</p>
                 </div>
               </div>
             </div>
@@ -241,9 +242,9 @@ export default function RecolhaEntulhoPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
+            { icon: Clock3, title: "Propostas em até 6 horas", desc: "A data da recolha combina-se com o profissional que escolher." },
             { icon: Truck, title: "Carregamento direto", desc: "O profissional carrega o entulho — sem espera nem trabalho para si." },
-            { icon: Recycle, title: "Destino legal", desc: "Vai para reciclagem, com guia de transporte e destino final." },
+            { icon: Recycle, title: "Destino legal", desc: "Vai para operador licenciado. Se precisar de guia de resíduos, peça-a no pedido." },
           ].map((item) => (
             <div key={item.title} className="rounded-[28px] border border-amber-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(180,83,9,0.12)]">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
@@ -327,7 +328,6 @@ export default function RecolhaEntulhoPage() {
             <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
               <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900">
                 Margem Sul
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Base CLYON</span>
               </h3>
               <div className="flex flex-wrap gap-2">
                 {margemSulCities.map((city) => (
@@ -402,7 +402,7 @@ export default function RecolhaEntulhoPage() {
           <CTABlock
             variant="centered"
             title="Precisa de recolher entulho?"
-            description="Peça um orçamento grátis. A equipa chega em 6h, carrega o entulho e encaminha para destino responsável."
+            description={`Peça um orçamento grátis. ${RECEBE_PROPOSTAS} O profissional que escolher carrega o entulho e leva-o para destino licenciado.`}
             whatsappMessage="Olá! Preciso de recolha de entulho. Podem dar-me um orçamento?"
           />
         </div>

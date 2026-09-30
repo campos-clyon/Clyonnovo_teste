@@ -21,6 +21,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 /** Este ecrã é jardinagem: o piso publicado dela, e não um número próprio. */
 const PRECO_JARDINAGEM = PRECOS.jardinagem;
@@ -53,15 +54,19 @@ const faqs = [
   },
   {
     question: "Fazem poda de árvores?",
-    answer: "Não fazemos serviços de jardinagem ou poda. O nosso foco é a recolha e remoção dos resíduos já existentes. Se precisar de poda, recomendamos contratar um jardineiro e depois chamar-nos para recolher os resíduos.",
+    // 30-09-2026: dizia «Não fazemos serviços de jardinagem ou poda», numa
+    // página que é o destino da categoria «Jardinagem e limpeza de
+    // quintais» — e essa categoria (service-categories.ts) é «corte de
+    // relva, poda e limpeza de jardins e espaços exteriores».
+    answer: "Pode pedir: a jardinagem inclui corte de relva, poda e limpeza de jardins e espaços exteriores. Descreva o trabalho — em árvores altas, diga a altura — e recebe propostas de profissionais da zona que o fazem.",
   },
   {
     question: "Recolhem lixo verde de grandes dimensões?",
-    answer: "Sim, os profissionais recolhem troncos, ramos grandes, sebes cortadas e outros resíduos verdes volumosos. A nossa carrinha e equipa estão preparadas para cargas de grande volume.",
+    answer: "Sim, os profissionais recolhem troncos, ramos grandes, sebes cortadas e outros resíduos verdes volumosos. Se o volume for grande, diga-o no pedido — e fotografias ajudam.",
   },
   {
     question: "Em quanto tempo fazem a limpeza?",
-    answer: "Na maioria das zonas de Lisboa e Setúbal conseguimos fazer a recolha em 24 a 48 horas. O tempo no local depende da quantidade de material a recolher.",
+    answer: `${NO_MESMO_DIA} O tempo no local depende da quantidade de material.`,
   },
 ];
 
@@ -77,11 +82,11 @@ const includedItems = [
 ];
 
 const differentiators = [
-  "Recolha em 24 a 48 horas na maioria das zonas",
+  `Propostas ${PROPOSTAS_EM_ATE}; a data combina-se com o profissional`,
   "Carregamento direto pelo profissional",
   "Limpeza de quintais, pátios e varandas grandes",
   "Vai para reciclagem sempre que der",
-  "Equipa preparada para acessos difíceis",
+  "Acessos difíceis indicados no pedido entram na proposta",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];
 
@@ -168,7 +173,7 @@ export default function LimpezaQuintaisPage() {
                 </div>
                 <div className="rounded-2xl border border-green-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">Carregamento</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">Incluído no serviço</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">Feito pelo profissional</p>
                 </div>
               </div>
             </div>
@@ -180,7 +185,7 @@ export default function LimpezaQuintaisPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Clock3, title: "Resposta rápida", desc: "Recolha em 24 a 48 horas na maioria das zonas de Lisboa e Setúbal." },
+            { icon: Clock3, title: "Propostas em até 6 horas", desc: "A data do trabalho combina-se com o profissional que escolher." },
             { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega todos os resíduos — não precisa de os preparar." },
             { icon: Leaf, title: "Lixo verde aceite", desc: "Ramos, folhas, relva, troncos e outros resíduos de jardim." },
           ].map((item) => (
@@ -230,7 +235,7 @@ export default function LimpezaQuintaisPage() {
             Limpeza de Quintais por Zona
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
-            Cobrimos Lisboa, Margem Sul e Setúbal com resposta rápida.
+            Há profissionais em Lisboa, na Margem Sul e em Setúbal.
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
@@ -264,7 +269,7 @@ export default function LimpezaQuintaisPage() {
           <CTABlock
             variant="centered"
             title="Precisa de limpar o quintal?"
-            description="Envie fotos e morada para receber um orçamento rápido. A equipa chega em 6h e trata de tudo."
+            description={`Envie fotos e morada. ${RECEBE_PROPOSTAS} A data do trabalho combina-se com o profissional que escolher.`}
             whatsappMessage="Olá! Preciso de limpeza de quintal. Podem dar-me um orçamento?"
           />
         </div>

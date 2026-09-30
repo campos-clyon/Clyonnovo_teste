@@ -13,6 +13,7 @@ import {
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 // A faixa publicada para recolha de móveis. A página abria numa faixa de
 // trinta e poucos euros — abaixo do piso de 40 € que o resto do site anuncia.
@@ -21,7 +22,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
 export const metadata: Metadata = {
   title: "Empresas que Retiram Móveis Velhos em Lisboa",
   description:
-    `Procura empresas que retiram móveis velhos em Lisboa? A CLYON retira sofás, camas, armários, colchões e eletrodomésticos antigos com desmontagem e carregamento porta a porta. Preços ${PRECO_MOVEIS}, resposta em 6h por WhatsApp.`,
+    `Quem retira móveis velhos em Lisboa? Pela CLYON, profissionais verificados levam sofás, camas e armários. Preços ${PRECO_MOVEIS}, propostas em 6h.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
-      `Empresa profissional para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem e carregamento incluídos. Preços ${PRECO_MOVEIS}.`,
+      `Profissionais verificados para retirar móveis velhos: sofás, camas, armários, colchões e eletrodomésticos. Carregamento porta a porta, desmontagem a pedido. Preços ${PRECO_MOVEIS}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
     siteName: "CLYON",
     locale: "pt_PT",
@@ -61,7 +62,7 @@ const faqs = [
   {
     question: "Retiram móveis de dentro de casa?",
     answer:
-      "Sim. A equipa entra no imóvel, desmonta o que for necessário, carrega e transporta. Não precisa de colocar os móveis no exterior.",
+      `Sim. O profissional entra no imóvel, carrega e transporta — não precisa de colocar os móveis no exterior. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Quanto custa retirar móveis velhos?",
@@ -71,12 +72,12 @@ const faqs = [
   {
     question: "Retiram no mesmo dia?",
     answer:
-      "Quando há disponibilidade operacional, sim. Muitos pedidos em Lisboa, Margem Sul e Setúbal são tratados no próprio dia ou no dia seguinte.",
+      NO_MESMO_DIA,
   },
   {
     question: "Qual é o destino dos móveis velhos?",
     answer:
-      "Móveis em condições são encaminhados para reaproveitamento ou doação. Móveis danificados vão para reciclagem ou destino adequado conforme o tipo de material.",
+      "O profissional leva-os para destino licenciado — ecocentro ou operador de resíduos, conforme o material. Se ainda estiverem em bom estado e os quiser doar, a página «Doar móveis usados em Lisboa» diz quem os recebe.",
   },
 ];
 
@@ -97,13 +98,13 @@ const howItWorks = [
   },
   {
     step: "02",
-    title: "Receba orçamento",
-    description: "Resposta rápida com valor claro e janela de execução disponível.",
+    title: "Receba propostas",
+    description: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o valor fechado.`,
   },
   {
     step: "03",
     title: "Retirada no local",
-    description: "Equipa chega, desmonta, carrega e transporta para destino adequado.",
+    description: "O profissional que escolher chega, desmonta se o pedir, carrega e transporta.",
   },
 ];
 
@@ -124,7 +125,7 @@ const internalLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Máquinas e frigoríficos" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Comparação" },
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar móveis usados", desc: "Quem recolhe de graça" },
 ];
 
 export default function RetirarMoveisVelhosPage() {
@@ -135,7 +136,7 @@ export default function RetirarMoveisVelhosPage() {
         "@type": "Service",
         name: "Retirar Móveis Velhos",
         description:
-          "Serviço de retirada de móveis velhos em Lisboa, Margem Sul e Setúbal com desmontagem, carregamento e transporte incluídos.",
+          "Serviço de retirada de móveis velhos em Lisboa, Margem Sul e Setúbal com carregamento e transporte, e desmontagem a pedido.",
         provider: {
           "@type": "LocalBusiness",
           name: "CLYON",
@@ -183,7 +184,7 @@ export default function RetirarMoveisVelhosPage() {
         <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
           <div className="flex items-center gap-2 text-sm font-medium text-acao">
             <Recycle className="h-4 w-4" />
-            Desmontagem e carregamento incluídos
+            Carregamento porta a porta, desmontagem a pedido
           </div>
 
           <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
@@ -191,9 +192,9 @@ export default function RetirarMoveisVelhosPage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
-            Precisa de retirar móveis velhos? A CLYON faz a retirada completa: entra no imóvel,
-            desmonta o necessário, carrega e transporta para destino adequado. Sem complicações
-            e sem precisar de colocar nada no exterior.
+            Precisa de retirar móveis velhos? Pela CLYON, um profissional verificado da sua zona faz a
+            retirada completa: entra no imóvel, carrega e transporta para destino licenciado — e desmonta,
+            se o pedir. Sem precisar de colocar nada no exterior.
           </p>
 
           {/* CTAs acima da dobra */}
@@ -268,7 +269,7 @@ export default function RetirarMoveisVelhosPage() {
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Que móveis velhos retiramos
+              Que móveis velhos se retiram
             </h2>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -294,7 +295,7 @@ export default function RetirarMoveisVelhosPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { icon: Home, title: "Retirada de dentro de casa", desc: "Não precisa de colocar nada no exterior" },
-              { icon: Truck, title: "Desmontagem incluída", desc: "Equipa desmonta armários, camas e outros" },
+              { icon: Truck, title: "Desmontagem a pedido", desc: "Indique-a no pedido para vir incluída na proposta" },
               { icon: Recycle, title: "Destino responsável", desc: "Reaproveitamento ou reciclagem adequada" },
             ].map((item) => (
               <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-5">
@@ -363,7 +364,7 @@ export default function RetirarMoveisVelhosPage() {
           <div className="rounded-2xl bg-acao px-8 py-10 text-center text-white">
             <h2 className="text-2xl font-bold">Precisa de retirar móveis velhos?</h2>
             <p className="mt-2 text-cyan-100">
-              Envie fotos e morada para orçamento rápido e sem compromisso.
+              Envie fotos e morada, sem compromisso. {RECEBE_PROPOSTAS}
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a

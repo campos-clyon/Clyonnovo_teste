@@ -10,10 +10,25 @@ import {
   Zap,
 } from "lucide-react";
 
+import {
+  ACRESCIMO_POR_URGENCIA,
+  AO_FIM_DE_SEMANA,
+  DESMONTAGEM_A_PEDIDO,
+  NO_MESMO_DIA,
+  PROPOSTAS_EM_ATE,
+  RECEBE_PROPOSTAS,
+} from "@/lib/promessas-publicas";
+
+/*
+ * 30-09-2026: o título dizia «— Hoje», a FAQ «resposta em menos de 1 hora» e
+ * «a urgência não implica custo adicional», e a landing do lado dizia que
+ * podia ter. O que a CLYON cumpre é o prazo das propostas; a data e o
+ * acréscimo por urgência são do profissional, e vêm na proposta dele.
+ */
 export const metadata: Metadata = {
-  title: "Recolha de Móveis Urgente em Lisboa — Hoje",
+  title: "Recolha de Móveis Urgente em Lisboa: Propostas em 6h",
   description:
-    "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Resposta no próprio dia, desmontagem incluída e carregamento porta a porta. Ligue agora: 931 632 622.",
+    "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de profissionais da zona em até 6 horas.",
   keywords: [
     "recolha de móveis urgente",
     "recolha de móveis urgente Lisboa",
@@ -26,9 +41,9 @@ export const metadata: Metadata = {
     canonical: "https://clyon.pt/recolha-de-moveis-urgente",
   },
   openGraph: {
-    title: "Recolha de Móveis Urgente em Lisboa — Hoje",
+    title: "Recolha de Móveis Urgente em Lisboa: Propostas em 6h",
     description:
-      "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
+      "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de profissionais da zona em até 6 horas.",
     url: "https://clyon.pt/recolha-de-moveis-urgente",
     siteName: "CLYON",
     locale: "pt_PT",
@@ -39,28 +54,23 @@ export const metadata: Metadata = {
 const faqs = [
   {
     question: "Conseguem recolher móveis hoje?",
-    answer:
-      "Sim, quando existe disponibilidade operacional conseguimos responder no próprio dia. A forma mais rápida de confirmar é ligar para o 931 632 622 ou enviar mensagem no WhatsApp com fotos e morada.",
+    answer: NO_MESMO_DIA,
   },
   {
     question: "Quanto tempo demora a receber resposta?",
-    answer:
-      "Em pedidos urgentes, a resposta comercial costuma ser dada em menos de 1 hora. A execução depende da agenda e localização, mas muitos pedidos em Lisboa e Margem Sul são tratados no próprio dia ou no dia seguinte.",
+    answer: `${RECEBE_PROPOSTAS} A data do trabalho combina-se com o profissional que escolher — diga no pedido para quando precisa.`,
   },
   {
     question: "A recolha urgente tem custo extra?",
-    answer:
-      "O orçamento depende do volume, tipo de móveis, acessos e necessidade de desmontagem. A urgência por si só não implica custo adicional, mas disponibilidade imediata pode influenciar a priorização.",
+    answer: `O preço depende do volume, do tipo de móveis, dos acessos e da necessidade de desmontagem. ${ACRESCIMO_POR_URGENCIA}`,
   },
   {
     question: "Fazem desmontagem em pedidos urgentes?",
-    answer:
-      "Sim. A equipa desmonta armários, camas e outros móveis quando necessário, mesmo em recolhas urgentes. Basta indicar no pedido o que precisa de desmontagem.",
+    answer: `Sim, mesmo em recolhas urgentes. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Recolhem ao fim de semana?",
-    answer:
-      "A operação funciona maioritariamente em dias úteis, mas em casos urgentes pode haver disponibilidade ao sábado. Contacte-nos para verificar.",
+    answer: AO_FIM_DE_SEMANA,
   },
 ];
 
@@ -80,13 +90,13 @@ const howItWorks = [
   },
   {
     step: "02",
-    title: "Resposta rápida",
-    description: "Receba um orçamento claro com janela de execução disponível.",
+    title: "Receba propostas",
+    description: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o preço e a data que propõem.`,
   },
   {
     step: "03",
-    title: "Execução no local",
-    description: "Equipa chega, desmonta se necessário, carrega e transporta tudo.",
+    title: "Recolha no local",
+    description: "O profissional que escolher chega, desmonta se o pedir, carrega e transporta tudo.",
   },
 ];
 
@@ -96,7 +106,7 @@ const internalLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Máquinas e frigoríficos" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Comparação" },
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar móveis usados", desc: "Quem recolhe de graça" },
 ];
 
 export default function RecolhaMoveisUrgentePage() {
@@ -107,7 +117,7 @@ export default function RecolhaMoveisUrgentePage() {
         "@type": "Service",
         name: "Recolha de Móveis Urgente",
         description:
-          "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal com resposta no próprio dia, desmontagem incluída e carregamento porta a porta.",
+          "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal por profissionais da zona, com carregamento porta a porta e propostas em até 6 horas.",
         provider: {
           "@type": "LocalBusiness",
           name: "CLYON",
@@ -155,7 +165,7 @@ export default function RecolhaMoveisUrgentePage() {
         <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
           <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
             <Clock className="h-4 w-4" />
-            Resposta no próprio dia
+            Propostas em até 6 horas
           </div>
 
           <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
@@ -163,8 +173,9 @@ export default function RecolhaMoveisUrgentePage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
-            Precisa de retirar móveis com urgência? A CLYON responde no próprio dia quando há disponibilidade.
-            Desmontagem, carregamento e transporte incluídos. Contacte agora para verificar disponibilidade imediata.
+            Precisa de retirar móveis com urgência? Diga a data no pedido e recebe propostas de profissionais
+            da zona {PROPOSTAS_EM_ATE}; a data do trabalho combina-se com quem escolher. Carregamento e transporte
+            fazem parte da recolha, e a desmontagem pode ser pedida.
           </p>
 
           {/* CTAs acima da dobra */}
@@ -239,7 +250,7 @@ export default function RecolhaMoveisUrgentePage() {
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              O que recolhemos com urgência
+              O que se recolhe com urgência
             </h2>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -322,7 +333,7 @@ export default function RecolhaMoveisUrgentePage() {
           <div className="rounded-2xl bg-acao px-8 py-10 text-center text-white">
             <h2 className="text-2xl font-bold">Precisa de recolha urgente?</h2>
             <p className="mt-2 text-cyan-100">
-              Contacte agora para verificar disponibilidade imediata.
+              {RECEBE_PROPOSTAS} A data combina-se com o profissional.
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a

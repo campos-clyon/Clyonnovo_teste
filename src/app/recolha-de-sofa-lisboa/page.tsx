@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
+import { DESMONTAGEM_A_PEDIDO, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 import { PRECOS } from "@/lib/precos-publicos";
 
 // Esta página abria em "a partir de 35 €" — cinco euros abaixo do piso
@@ -52,22 +53,22 @@ const faqs = [
   {
     question: "Recolhem sofás de qualquer tamanho?",
     answer:
-      "Sim. Os profissionais recolhem sofás de 2 lugares, 3 lugares, chaise longues, sofás-cama, cadeirões e conjuntos completos. A equipa está preparada para volumes grandes.",
+      "Sim. Os profissionais recolhem sofás de 2 lugares, 3 lugares, chaise longues, sofás-cama, cadeirões e conjuntos completos. Se for um volume grande, diga-o no pedido.",
   },
   {
     question: "O sofá precisa de estar desmontado?",
     answer:
-      "Não. A equipa trata da desmontagem se for necessário para retirar o sofá do imóvel. Basta indicar no pedido que é preciso desmontar.",
+      `Não. Se for preciso desmontá-lo para sair do imóvel, o profissional trata disso. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Recolhem o sofá de dentro de casa?",
     answer:
-      "Sim. A recolha é feita porta a porta. A equipa entra no imóvel, retira o sofá do local onde está e carrega para o veículo.",
+      "Sim. A recolha é feita porta a porta: o profissional entra no imóvel, retira o sofá do local onde está e carrega-o para a carrinha.",
   },
   {
     question: "Qual é o destino do sofá?",
     answer:
-      "Sempre que possível, sofás em bom estado são encaminhados para reaproveitamento ou doação. Sofás danificados seguem para reciclagem ou destino adequado.",
+      "O profissional leva-o para destino licenciado — ecocentro ou operador de resíduos. Se o sofá ainda estiver em bom estado e o quiser doar, a página «Doar móveis usados em Lisboa» diz quem o recebe.",
   },
 ];
 
@@ -87,13 +88,13 @@ const howItWorks = [
   },
   {
     step: "02",
-    title: "Receba orçamento",
-    description: "Resposta rápida com valor claro e janela de execução.",
+    title: "Receba propostas",
+    description: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o valor fechado.`,
   },
   {
     step: "03",
     title: "Recolha no local",
-    description: "Equipa chega, desmonta se necessário, carrega e transporta.",
+    description: "O profissional que escolher chega, desmonta se o pedir, carrega e transporta.",
   },
 ];
 
@@ -114,7 +115,7 @@ const internalLinks = [
   { href: "/recolha-de-camas", label: "Recolha de Camas", desc: "Camas e colchões" },
   { href: "/recolha-de-armarios", label: "Recolha de Armários", desc: "Armários e roupeiros" },
   { href: "/recolha-de-eletrodomesticos", label: "Eletrodomésticos", desc: "Máquinas e frigoríficos" },
-  { href: "/recolha-gratuita-de-moveis-usados", label: "Gratuita vs Privada", desc: "Comparação" },
+  { href: "/recolha-gratuita-de-moveis-usados", label: "Doar móveis usados", desc: "Quem recolhe de graça" },
 ];
 
 export default function RecolhaSofaLisboaPage() {
@@ -184,8 +185,8 @@ export default function RecolhaSofaLisboaPage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
-            Precisa de retirar um sofá em Lisboa? A CLYON faz a recolha porta a porta com carregamento,
-            desmontagem quando necessário e transporte incluído. Os profissionais retiram sofás de qualquer tamanho,
+            Precisa de retirar um sofá em Lisboa? Pela CLYON, um profissional da sua zona faz a recolha porta a
+            porta: carrega, transporta e, se o pedir, desmonta. Os profissionais retiram sofás de qualquer tamanho,
             de qualquer andar, com ou sem elevador.
           </p>
 
@@ -261,7 +262,7 @@ export default function RecolhaSofaLisboaPage() {
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              O que recolhemos em Lisboa
+              Que sofás se recolhem em Lisboa
             </h2>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -335,7 +336,7 @@ export default function RecolhaSofaLisboaPage() {
           <div className="rounded-2xl bg-acao px-8 py-10 text-center text-white">
             <h2 className="text-2xl font-bold">Precisa de retirar um sofá em Lisboa?</h2>
             <p className="mt-2 text-cyan-100">
-              Envie fotos e morada para orçamento rápido e sem compromisso.
+              Envie fotos e morada, sem compromisso. {RECEBE_PROPOSTAS}
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a
