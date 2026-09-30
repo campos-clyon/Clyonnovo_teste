@@ -3,13 +3,36 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock3 } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { getAllBlogPosts, getBlogPost } from "@/lib/blog-data";
+import { getAllBlogPosts, getBlogPost, partesDoTexto } from "@/lib/blog-data";
+import { RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 import { BUSINESS_NAME, CONTACT_PATH, SITE_URL } from "@/lib/seo-data";
 import { zonasDoArtigo } from "@/lib/blog-zonas";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
+
+/**
+ * Um parágrafo com as ligações internas que traz — `[rótulo](/caminho)`.
+ * 30-09-2026: os artigos escreviam os caminhos em texto («veja em
+ * /recolha-de-moveis»), sem ligação; e os de doação têm de ligar à página
+ * /recolha-gratuita-de-moveis-usados.
+ */
+function Paragrafo({ texto }: { texto: string }) {
+  return (
+    <>
+      {partesDoTexto(texto).map((parte, i) =>
+        "href" in parte ? (
+          <Link key={i} href={parte.href} className="font-semibold text-acao underline-offset-2 hover:underline">
+            {parte.texto}
+          </Link>
+        ) : (
+          <span key={i}>{parte.texto}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 export function generateStaticParams() {
   return getAllBlogPosts().map((post) => ({ slug: post.slug }));
@@ -26,7 +49,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonical = `${SITE_URL}/blog/${post.slug}`;
 
   return {
-    title: post.title,
+    // 30-09-2026: o título do artigo chegava aos 113 caracteres, e o Google
+    // corta aos 60 (marca incluída). O `metaTitle` é o que cabe; o `title`
+    // inteiro continua no H1 e no Open Graph.
+    title: post.metaTitle ?? post.title,
     description: post.description,
     keywords: [...post.keywords, BUSINESS_NAME, "blog recolha", "blog entulho", "blog monos"],
     alternates: { canonical },
@@ -116,7 +142,9 @@ export default async function BlogPostPage({ params }: Props) {
               {post.readingTime}
             </span>
           </div>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">{post.intro}</p>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+            <Paragrafo texto={post.intro} />
+          </p>
         </div>
       </section>
 
@@ -131,7 +159,9 @@ export default async function BlogPostPage({ params }: Props) {
                 <h2 className="text-2xl font-bold text-slate-950">{section.title}</h2>
                 <div className="mt-4 space-y-4 text-base leading-8 text-slate-600">
                   {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
+                    <p key={paragraph}>
+                      <Paragrafo texto={paragraph} />
+                    </p>
                   ))}
                 </div>
                 {section.bullets?.length ? (
@@ -150,8 +180,8 @@ export default async function BlogPostPage({ params }: Props) {
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200">Próximo passo</p>
               <h2 className="mt-3 text-3xl font-bold leading-tight">Quer resolver este pedido sem perder tempo?</h2>
               <p className="mt-4 text-base leading-8 text-slate-300">
-                Use o simulador para ter uma referência de valor e depois confirme com a equipa da CLYON por
-                contacto direto.
+                Descreva o pedido no simulador e receba propostas de profissionais da sua zona, com o preço
+                fechado antes de começar. {RECEBE_PROPOSTAS}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -208,7 +238,7 @@ export default async function BlogPostPage({ params }: Props) {
       {zonas.length > 0 && (
         <section className="border-t border-cyan-100 bg-white py-16">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-slate-950">Onde fazemos este serviço</h2>
+            <h2 className="text-3xl font-bold text-slate-950">Onde pode pedir este serviço</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
               Cada zona tem os seus acessos, o seu estacionamento e o seu ecocentro.
               Abra a da sua e veja o que muda por ser aí.

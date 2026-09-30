@@ -5,13 +5,23 @@ import { ArrowRight, Clock3, Search } from "lucide-react";
 import { getAllBlogPosts } from "@/lib/blog-data";
 import { SITE_URL } from "@/lib/seo-data";
 
+/*
+ * 30-09-2026 — O BLOG DEIXA DE DISPUTAR AS PESQUISAS DE DOAÇÃO.
+ *
+ * O título («… Esvaziar Casa e Doar»), a descrição e as palavras-chave
+ * puxavam para o /blog pesquisas como «doar móveis usados» e «recolha
+ * gratuita de móveis usados lisboa» — o Search Console mostrava-o com
+ * impressões e CTR de ~1 %, porque um índice de artigos não responde a quem
+ * quer doar. Quem responde é /recolha-gratuita-de-moveis-usados, e é para lá
+ * que este índice passa a apontar. A descrição dizia ainda «escrito por quem
+ * faz o serviço no terreno»: a CLYON é uma plataforma.
+ */
 export const metadata: Metadata = {
-  title: "Blog — Recolher Móveis, Esvaziar Casa e Doar",
+  title: "Blog — Guias de Recolha, Entulho e Mudanças",
   description:
-    "Guias práticos: como esvaziar uma casa herdada, doar móveis usados em Lisboa, recolha de monos pela câmara vs empresa, preços de recolha de entulho, como preparar uma mudança. Escrito por quem faz o serviço no terreno.",
+    "Guias práticos: esvaziar uma casa herdada, recolha de monos pela câmara ou por profissionais, preços de recolha de entulho e como preparar uma mudança.",
   keywords: [
     "como esvaziar casa herança",
-    "como doar móveis usados Lisboa",
     "como recolher entulho de obra",
     "recolha municipal vs empresa",
     "preços recolha de móveis",
@@ -21,9 +31,9 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/blog`,
   },
   openGraph: {
-    title: "Blog — Guias de Recolha, Esvaziamento e Doações em Lisboa",
+    title: "Blog — Guias de Recolha, Esvaziamento e Mudanças",
     description:
-      "Guias práticos sobre recolha de móveis, esvaziamento de casas, doação de recheio e mudanças em Lisboa, Margem Sul e Setúbal.",
+      "Guias práticos sobre recolha de móveis, entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
     url: `${SITE_URL}/blog`,
   },
 };
@@ -40,12 +50,12 @@ export default function BlogPage() {
           <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div>
               <h1 className="mt-5 max-w-[17ch] text-[2.45rem] font-bold leading-[1.04] tracking-tight text-slate-950 sm:text-[3.8rem]">
-                Guias sobre recolha de móveis, esvaziamento e doações em Lisboa.
+                Guias sobre recolha de móveis, entulho, esvaziamento e mudanças.
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
-                Guias práticos sobre recolha, doações, despejo de móveis, entulho,
-                monos, pós-obra e esvaziamentos. O foco é captar procura qualificada
-                e ajudar o cliente a perceber rapidamente qual é o serviço certo.
+                Guias práticos sobre recolha de móveis e monos, entulho de obra,
+                esvaziamento de casas e mudanças — para perceber o que cada serviço
+                inclui, quanto custa e quando compensa.
               </p>
             </div>
 
@@ -56,9 +66,14 @@ export default function BlogPage() {
                 </div>
                 <div>
                   <p className="mt-2 text-sm leading-8 text-slate-600">
-                    Estes artigos foram pensados para captar termos com intenção
-                    real de contacto, como recolha de móveis, doação, despejo de
-                    monos, entulho de obra e esvaziamentos.
+                    Quer doar móveis que ainda servem?{" "}
+                    <Link
+                      href="/recolha-gratuita-de-moveis-usados"
+                      className="font-semibold text-acao underline-offset-2 hover:underline"
+                    >
+                      Veja quem os recebe de graça em Lisboa
+                    </Link>
+                    .
                   </p>
                 </div>
               </div>
