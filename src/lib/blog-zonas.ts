@@ -1,4 +1,5 @@
-import { CITIES, caminhoDoServicoNaCidade } from "@/lib/seo-data";
+import { CITIES } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { getCidadeLocal } from "@/lib/cidades-local";
 
 /**

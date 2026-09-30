@@ -18,10 +18,10 @@ import {
 import {
   REGIONS,
   SERVICES,
-  caminhoDoServicoNaCidade,
   getAllCityServiceSlugs,
   getRegionCities,
 } from "./seo-data";
+import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
 
 /**
  * SEO TÉCNICO — o que a revisão de 29-09-2026 corrigiu, e aqui fica preso.
@@ -363,5 +363,19 @@ describe("dados estruturados: uma CLYON só, com o prestador por @id", () => {
     const pagina = semComentarios(ler("src/app/avaliacoes/page.tsx"));
     expect(pagina).not.toContain("aggregateRating");
     expect(pagina).not.toMatch(/"@type":\s*"Review"/);
+  });
+});
+
+describe("o que vai para o browser", () => {
+  it("seo-data.ts não arrasta as cidades de mudanças para os componentes de cliente", () => {
+    // O Header, o rodapé e o CTABlock importam seo-data; `caminhoDoServicoNaCidade`
+    // precisa das cidades de mudanças (com os textos todos) e por isso vive
+    // em caminho-da-cidade.ts, que só as páginas do servidor importam.
+    const seoData = semComentarios(ler("src/lib/seo-data.ts"));
+    expect(seoData).not.toContain("mudancas-cidades");
+    expect(seoData).not.toContain("export function caminhoDoServicoNaCidade");
+    for (const cliente of ["src/components/Header.tsx", "src/components/Footer.tsx", "src/components/CTABlock.tsx"]) {
+      expect(semComentarios(ler(cliente)), cliente).not.toContain("caminho-da-cidade");
+    }
   });
 });

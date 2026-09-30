@@ -14,10 +14,10 @@ import {
   AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
-  caminhoDoServicoNaCidade,
   getRegion,
   getRegionCities,
 } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 

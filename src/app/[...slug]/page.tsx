@@ -26,7 +26,6 @@ import {
   BUSINESS_PHONE,
   CONTACT_PATH,
   SITE_URL,
-  caminhoDoServicoNaCidade,
   getAllCityServiceSlugs,
   getCityServiceSlug,
   getRegion,
@@ -36,6 +35,7 @@ import {
   PRAZO_DE_RESPOSTA,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoDaCidade } from "@/lib/descricoes-seo";

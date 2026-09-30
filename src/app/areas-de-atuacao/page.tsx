@@ -8,8 +8,8 @@ import { getCitiesByRegion, getAllCities } from "@/lib/city-content";
 import {
   BUSINESS_PHONE,
   SITE_URL,
-  caminhoDoServicoNaCidade,
 } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
