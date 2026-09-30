@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { comFacturaEmPalavras } from "@/lib/conta-em-palavras";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:            "Recolha de móveis",
@@ -27,7 +29,8 @@ interface OrderData {
   address: string | null;
   city: string | null;
   description: string | null;
-  precoFinalIva: number | null;
+  /** Sem IVA e sem a taxa — o preço que o backoffice aprovou. */
+  precoFinal: number | null;
   dataAgendada: string | null;
   mensagemCliente: string | null;
   status: string;
@@ -48,9 +51,12 @@ export default function OrcamentoClient({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const servico = SERVICE_LABELS[order.serviceType ?? ""] ?? order.serviceType ?? "Serviço";
-  const preco   = order.precoFinalIva != null
-    ? order.precoFinalIva.toFixed(2).replace(".", ",") + " €"
+  // O preço dele, sem IVA e já com a taxa — pelas contas de todos, a partir do
+  // `precoFinal`. Ver a nota junto do número, mais abaixo.
+  const preco   = order.precoFinal != null
+    ? precoParaOCliente(order.precoFinal).toFixed(2).replace(".", ",") + " €"
     : "Em análise";
+  const comFactura = order.precoFinal != null ? comFacturaEmPalavras(order.precoFinal, null) : "";
 
   async function doAction(action: "confirmar" | "cancelar") {
     setLoading(action);
@@ -173,23 +179,29 @@ export default function OrcamentoClient({
         </div>
 
         {/* Preço destaque */}
-        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 flex items-center justify-between">
-          <div>
-            {/*
-              Dizia "(c/ IVA)" e "IVA incluído". A CLYON está em isenção do
-              artigo 53.º do CIVA e não liquida IVA — dizer que está incluído
-              é afirmar que há um imposto dentro do preço que não existe, e
-              que a factura vai contradizer.
+        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              {/*
+                Dizia "(c/ IVA)" e "IVA incluído". A CLYON está em isenção do
+                artigo 53.º do CIVA e não liquida IVA — dizer que está incluído
+                é afirmar que há um imposto dentro do preço que não existe, e
+                que a factura vai contradizer.
 
-              O que interessa ao cliente é o mesmo em qualquer dos casos: este
-              é o valor final, e não lhe acresce nada.
-            */}
-            <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Total aprovado</p>
-            <p className="text-3xl font-bold text-acao mt-1">{preco}</p>
+                E DESDE 29-09-2026 É O PREÇO SEM IVA, JÁ COM A TAXA — como em
+                todo o lado. Mostrava o `precoFinalIva`, feito à mão (× 1,23) e
+                sem a taxa, com a etiqueta «valor final». O email do orçamento
+                passou a dizer o preço sem IVA e, à parte, o que acresce com
+                factura; esta página, que é para onde o email manda, diz o mesmo.
+              */}
+              <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Preço aprovado, sem IVA</p>
+              <p className="text-3xl font-bold text-acao mt-1">{preco}</p>
+            </div>
+            <div className="rounded-full bg-[#00B4D8]/10 px-3 py-1">
+              <p className="text-xs font-semibold text-[#0077B6]">Já com a taxa</p>
+            </div>
           </div>
-          <div className="rounded-full bg-[#00B4D8]/10 px-3 py-1">
-            <p className="text-xs font-semibold text-[#0077B6]">Valor final</p>
-          </div>
+          {comFactura && <p className="mt-2 text-xs text-tinta-fraca">{comFactura}</p>}
         </div>
       </div>
 

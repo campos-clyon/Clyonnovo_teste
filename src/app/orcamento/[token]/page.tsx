@@ -32,7 +32,7 @@ export default async function OrcamentoPage(
     address:               order.address ?? null,
     city:                  order.city ?? null,
     description:           order.description ?? null,
-    precoFinalIva:         o.precoFinalIva ? Number(o.precoFinalIva) : null,
+    precoFinal:            o.precoFinal ? Number(o.precoFinal) : null,
     dataAgendada:          o.scheduledDate ?? o.dataAgendada ?? null,
     mensagemCliente:       o.mensagemCliente ?? null,
     status:                order.status ?? "aprovado",

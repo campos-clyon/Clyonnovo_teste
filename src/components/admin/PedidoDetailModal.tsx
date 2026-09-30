@@ -1228,7 +1228,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               fotosNaoEnviadas: Number(
                 (parseRawOrder(order.rawOrderJson) as Record<string, unknown>)?.fotosNaoEnviadas ?? 0,
               ),
-              precoFinalIva: order.precoFinalIva,
+              // Sem IVA e sem a taxa: a mensagem diz o preço como em todo o lado.
+              precoFinal: order.precoFinal,
             }),
           );
 

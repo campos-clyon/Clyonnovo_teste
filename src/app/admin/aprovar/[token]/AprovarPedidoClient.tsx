@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { contaDoCliente } from "@/lib/taxas-plataforma";
 
 type Order = {
   id: number;
@@ -63,11 +64,17 @@ export default function AprovarPedidoClient() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  // Auto-fill IVA when precoFinal changes
+  /*
+   * O PREÇO COM FACTURA, PELA CONTA DE TODOS — 29-09-2026.
+   *
+   * Era `× 1,23`, à mão e sem a taxa da plataforma. O servidor passou a
+   * gravá-lo com `contaDoCliente` (é o número que o cliente lê no email e na
+   * página do orçamento), e este campo mostra o mesmo — já não o decide.
+   */
   useEffect(() => {
     const val = parseFloat(precoFinal.replace(",", "."));
     if (!isNaN(val)) {
-      setPrecoFinalIva((val * 1.23).toFixed(2));
+      setPrecoFinalIva(contaDoCliente(val).total.toFixed(2));
     } else {
       setPrecoFinalIva("");
     }
@@ -286,7 +293,7 @@ export default function AprovarPedidoClient() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/50">Preço final (c/IVA 23%)</label>
+              <label className="mb-1 block text-xs text-white/50">Com factura (taxa + IVA 23%)</label>
               <div className="flex items-center rounded-lg border border-white/10 bg-white/5 px-3">
                 <input
                   type="number"
