@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import type { AddressData } from '@/app/simulador/types';
 import { checkCoverage, type CoverageResult } from '@/lib/coverage';
 
@@ -72,8 +73,21 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocationState] = useState<CustomerLocation | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('loading');
   const [isLoading, setIsLoading] = useState(true);
+  /*
+   * A SESSÃO ANTES DE PERGUNTAR PELA CONTA.
+   *
+   * O passo 2 chamava GET /api/users/me a TODOS os visitantes — e a quem não
+   * tem sessão a rota responde 401, que o browser escreve a vermelho na
+   * consola em todas as páginas do site. Só se pergunta pela conta a quem a
+   * tem. Enquanto a sessão está a ser lida ("loading") não se decide nada:
+   * decidir já era cair no IP de quem afinal tinha conta.
+   *
+   * Exige o SessionProvider por fora deste — ver layout.tsx.
+   */
+  const { status: estadoDaSessao } = useSession();
 
   useEffect(() => {
+    if (estadoDaSessao === 'loading') return;
     let cancelled = false;
 
     async function initializeLocation() {
@@ -96,10 +110,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // 2. Conta do utilizador (best-effort, só se logado)
+        // 2. Conta do utilizador (best-effort, só com sessão iniciada)
         try {
-          const meRes = await fetch('/api/users/me', { cache: 'no-store' });
-          if (meRes.ok) {
+          const meRes =
+            estadoDaSessao === 'authenticated'
+              ? await fetch('/api/users/me', { cache: 'no-store' })
+              : null;
+          if (meRes?.ok) {
             const me = await meRes.json();
             const addr = me?.user?.address || me?.address;
             if (addr && (addr.formattedAddress || addr.city)) {
@@ -169,7 +186,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [estadoDaSessao]);
 
   // Guardar no localStorage quando mudar (via ação do utilizador)
   const setLocation = (newLocation: CustomerLocation | null) => {

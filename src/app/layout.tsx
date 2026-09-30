@@ -276,11 +276,13 @@ export default function RootLayout({
             carregam depois de a pessoa consentir. Estavam soltos neste ficheiro
             a carregar sempre, com um banner ao lado a prometer o contrário. */}
         <RastreioConsentido />
-        <LocationProvider>
-          <AuthClientProvider>
+        {/* A sessão por fora da localização: o LocationProvider usa
+            useSession() para só perguntar pela conta a quem tem sessão. */}
+        <AuthClientProvider>
+          <LocationProvider>
             <SiteChrome>{children}</SiteChrome>
-          </AuthClientProvider>
-        </LocationProvider>
+          </LocationProvider>
+        </AuthClientProvider>
         {/* Vistas de página na nossa base — o painel deixa de depender de uma
             conta externa para saber de que páginas vêm os pedidos */}
         <PageViewTracker />
