@@ -7576,23 +7576,91 @@ export async function conversasWhatsApp(limite = 30): Promise<ConversaWhatsApp[]
   }));
 }
 
+/**
+ * ⚠️ A IDADE VEM CONTADA DA BASE, E NAO DO CARIMBO.
+ *
+ * `criadoEm` e um DATETIME escrito pelo relogio do MySQL (UTC no Railway) e
+ * lido pelo mysql2 no fuso do PROCESSO, que e `Europe/Lisbon`
+ * (`src/instrumentation.ts`). No Verao isso da um instante UMA HORA NO
+ * PASSADO — e quem o comparar com `Date.now()` acha que toda a mensagem
+ * dos ultimos sessenta minutos e antiga.
+ *
+ * Nao e teorico. A guarda contra repeticoes (`jaFoiDito`, janela de dez
+ * minutos) NUNCA disparou por causa disto: o erro do relogio e seis vezes
+ * maior do que a janela que ela vigia. A 30-09-2026, na conversa da Carla,
+ * a mesma pergunta saiu duas vezes no mesmo minuto, tres vezes na mesma
+ * conversa, com o guarda vivo e bem colocado.
+ *
+ * E o mesmo erro que ja tinha feito o painel dizer «a ponte nao vem ha 1 h»
+ * com a ponte viva (commit 8a36f0a), e cura-se da mesma maneira: a conta
+ * faz-se DENTRO da base, onde os dois lados da subtraccao vem do mesmo
+ * relogio, seja ele qual for.
+ *
+ * O `criadoEm` continua a sair, para quem so o quer mostrar.
+ */
 export async function mensagensDoNumeroWhatsApp(
   telefone: string,
   limite = 100,
-): Promise<Array<{ direccao: string; texto: string; criadoEm: string }>> {
+): Promise<Array<{ direccao: string; texto: string; criadoEm: string; haSegundos: number | null }>> {
   const digitos = telefone.replace(/\D/g, "");
   if (digitos.length < 9) return [];
   await ensureWhatsappMensagensTable();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = (await pool.execute(
-    `SELECT direccao, texto, criadoEm FROM whatsappMensagens
+    `SELECT direccao, texto, criadoEm,
+            TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS haSegundos
+       FROM whatsappMensagens
       WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
       ORDER BY id DESC
       LIMIT ${Math.max(1, Math.min(300, Math.floor(limite)))}`,
     [digitos],
-  )) as [Array<{ direccao: string; texto: string; criadoEm: string }>, unknown];
-  return rows.reverse().map((r) => ({ ...r, criadoEm: String(r.criadoEm) }));
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.reverse().map((r) => ({
+    direccao: String(r.direccao),
+    texto: String(r.texto),
+    criadoEm: String(r.criadoEm),
+    haSegundos: Number.isFinite(Number(r.haSegundos)) ? Number(r.haSegundos) : null,
+  }));
+}
+
+/**
+ * SO O QUE O ASSISTENTE DISSE — e por isso as fotografias nao o empurram.
+ *
+ * A guarda contra repeticoes lia as 20 ultimas mensagens da conversa, nos
+ * dois sentidos. A Carla mandou DEZASSEIS fotografias de uma vez, e cada
+ * uma fica gravada como uma linha: as vinte enchiam-se so com as fotos dela,
+ * e a pergunta que o assistente tinha feito um minuto antes caia para fora
+ * da janela. A guarda olhava e nao via a repeticao que estava ali.
+ *
+ * Vinte SAIDAS sao vinte respostas do assistente — o que ele disse nesta
+ * conversa, e nada do que entrou. E a lista que a pergunta «ja disse isto?»
+ * precisa, e a unica que o que entra nao dilui.
+ */
+export async function saidasDoNumeroWhatsApp(
+  telefone: string,
+  limite = 20,
+): Promise<Array<{ direccao: string; texto: string; criadoEm: string; haSegundos: number | null }>> {
+  const digitos = telefone.replace(/\D/g, "");
+  if (digitos.length < 9) return [];
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT direccao, texto, criadoEm,
+            TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS haSegundos
+       FROM whatsappMensagens
+      WHERE RIGHT(telefone, 9) = RIGHT(?, 9) AND direccao = 'out'
+      ORDER BY id DESC
+      LIMIT ${Math.max(1, Math.min(300, Math.floor(limite)))}`,
+    [digitos],
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.reverse().map((r) => ({
+    direccao: String(r.direccao),
+    texto: String(r.texto),
+    criadoEm: String(r.criadoEm),
+    haSegundos: Number.isFinite(Number(r.haSegundos)) ? Number(r.haSegundos) : null,
+  }));
 }
 
 /*
@@ -7824,11 +7892,42 @@ export async function guardarRecolhaWhatsApp(
   const pool = await getPool();
   if (!pool) return;
   await pool.execute(
+    /*
+     * ⚠️ O `pedidoId` NAO SE TOCA AQUI — 30-09-2026.
+     *
+     * Escrevia-se `pedidoId = NULL` em cada gravacao. Quer dizer: o numero do
+     * pedido que esta conversa acabou de criar era apagado pela gravacao
+     * seguinte, e a partir dai o assistente deixava de saber que ja tinha
+     * registado alguma coisa para aquela pessoa.
+     *
+     * Na conversa da Carla isso fechou o circulo: registado o #402, a
+     * mensagem seguinte comecou uma recolha nova, essa recolha gravou-se, e
+     * a gravacao apagou o #402 da linha. Ficou a poder registar-lhe um
+     * segundo pedido pelo mesmo trabalho.
+     *
+     * Uma recolha NOVA marca-se com `recomecarRecolhaWhatsApp`, que e
+     * explicito e faz-se num sitio so. Gravar um passo e gravar um passo.
+     */
     `INSERT INTO whatsappRecolhas (telefone, passo, dadosJson, pedidoId)
      VALUES (?, ?, ?, NULL)
-     ON DUPLICATE KEY UPDATE passo = VALUES(passo), dadosJson = VALUES(dadosJson), pedidoId = NULL`,
+     ON DUPLICATE KEY UPDATE passo = VALUES(passo), dadosJson = VALUES(dadosJson)`,
     [digitos, passo, JSON.stringify(dados)],
   );
+}
+
+/**
+ * COMECAR UMA RECOLHA NOVA NUM NUMERO QUE JA TEVE UMA.
+ *
+ * O unico sitio que desliga o `pedidoId`, e e preciso que seja unico: era
+ * `guardarRecolhaWhatsApp` a faze-lo em toda a gravacao, sem ninguem o ter
+ * pedido, e o efeito era o assistente esquecer-se do pedido que tinha
+ * acabado de registar.
+ *
+ * Aqui e ao contrario: quem chama isto esta mesmo a dizer «este pedido
+ * fechou-se, o que vier a seguir e outro».
+ */
+export async function recomecarRecolhaWhatsApp(telefone: string): Promise<void> {
+  await apagarRecolhaWhatsApp(telefone);
 }
 
 export async function apagarRecolhaWhatsApp(telefone: string): Promise<void> {

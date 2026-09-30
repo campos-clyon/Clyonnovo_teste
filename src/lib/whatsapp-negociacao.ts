@@ -87,6 +87,8 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   const {
     responderNaRecolha,
     responderComCompreensao,
+    jaCumprimentouNesteFio,
+    jaDisseQueNaoCompra,
     perguntaPendente,
     recolhaNova,
     perguntaDo,
@@ -97,9 +99,45 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   const guardada = await recolhaWhatsApp(telefone);
   const paradaHaMuito =
     guardada != null && Date.now() - new Date(guardada.actualizadoEm).getTime() > 24 * 3600_000;
-  // Já tem pedido registado por aqui mas o pedido deixou de estar activo
-  // (concluído, cancelado): começa-se outro. Uma recolha velha também.
   type Estado = Parameters<typeof responderNaRecolha>[0];
+
+  /*
+   * ⚠️ UM PEDIDO JA REGISTADO NESTA CONVERSA NAO FAZ DELA UM CLIENTE NOVO.
+   *
+   * 30-09-2026, a Carla. As 12:48 saiu «Pedido #402 registado» e, na linha
+   * seguinte, «Bom dia! Aqui e a CLYON. Diga-me o que precisa de levar ou
+   * fazer». Ela tinha acabado de dizer que o pedido estava marcado para uma
+   * hora ja passada, e a correccao caiu no chao; as duas perguntas que fez a
+   * seguir levaram duas vezes a mesma frase de acolhimento.
+   *
+   * O comentario que aqui estava dizia a intencao certa — recomecar so
+   * quando o pedido «deixou de estar activo» — e o codigo nunca chegou a
+   * perguntar se ele estava. Bastava `pedidoId` preenchido para a recolha
+   * ACABADA ser lida como recolha INEXISTENTE.
+   *
+   * O pedido le-se PELO NUMERO DELE e nao pelo telefone: e a unica leitura
+   * que nao depende do formato com que o numero entrou. E na duvida — a base
+   * a falhar — considera-se vivo, porque saudar de novo quem ja tem pedido e
+   * o pior dos dois erros.
+   */
+  const pedidoDaConversa = guardada?.pedidoId ?? null;
+  if (pedidoDaConversa != null) {
+    const dele = await getSimulatorOrderById(pedidoDaConversa).catch(() => undefined);
+    const encerrado =
+      dele != null && ["cancelado", "concluido", "arquivado"].includes(String(dele.status ?? ""));
+    if (!encerrado) {
+      await responderAQuemJaTemPedido(telefone, pedidoDaConversa);
+      return;
+    }
+    /*
+     * O pedido fechou-se. Agora sim, o que vier a seguir e outro — e
+     * diz-se a serio, num sitio so, em vez de sair de lado numa gravacao.
+     */
+    const { recomecarRecolhaWhatsApp } = await import("@/lib/db");
+    await recomecarRecolhaWhatsApp(telefone);
+  }
+
+  // Uma recolha parada ha mais de um dia recomeca-se: ver `paradaHaMuito`.
   const estado: Estado | null =
     guardada && guardada.pedidoId == null && !paradaHaMuito
       ? { passo: guardada.passo as Estado["passo"], dados: guardada.dados as Estado["dados"] }
@@ -146,9 +184,25 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
      */
     const pendente = perguntaPendente(e.passo, e.dados as never);
     const c = await compreender(texto, e.dados as Record<string, unknown>, agora, pendente, fio);
+    /*
+     * O CUMPRIMENTO SAI UMA VEZ POR CONVERSA, e quem sabe isso e o fio.
+     *
+     * O fio ja esta lido — vai para o modelo desde 16-09-2026 — e nele esta
+     * escrito se alguma mensagem que saiu daqui ja disse «Aqui e a CLYON».
+     * Sem isto sairam dois bons-dias com dois minutos de intervalo, vindos de
+     * dois sitios diferentes do codigo (ver `aberturaDaResposta`).
+     */
+    const cumprimentado = jaCumprimentouNesteFio(fio);
+    // E se ja se lhe disse que a CLYON nao compra — pela mesma razao e da
+    // mesma fonte. Ver `NAO_COMPRAMOS` em `whatsapp-recolha.ts`.
+    const avisado = jaDisseQueNaoCompra(fio);
     return c
-      ? responderComCompreensao(e, c, agora, { texto })
-      : responderNaRecolha(e, texto, agora);
+      ? responderComCompreensao(e, c, agora, {
+          texto,
+          jaCumprimentou: cumprimentado,
+          jaDisseQueNaoCompra: avisado,
+        })
+      : responderNaRecolha(e, texto, agora, cumprimentado, avisado);
   };
 
   if (!estado) {
@@ -874,8 +928,9 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
  */
 async function mandarOEcra(telefone: string, pedidoId: number): Promise<void> {
   const texto = await ecraDoPedido(pedidoId);
-  const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
-  const gravadas = await mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []);
+  const { saidasDoNumeroWhatsApp } = await import("@/lib/db");
+  // So as saidas, e com a idade contada pela base — ver `nao-repetir.ts`.
+  const gravadas = await saidasDoNumeroWhatsApp(telefone, 20).catch(() => []);
   /*
    * COMPARA-SE O QUE FICA GRAVADO, E NÃO O QUE SE ESCREVEU.
    *
@@ -894,6 +949,49 @@ async function mandarOEcra(telefone: string, pedidoId: number): Promise<void> {
     return;
   }
   await enviarTextoWhatsApp(telefone, texto);
+}
+
+/**
+ * O QUE SE DIZ A QUEM JA TEM PEDIDO REGISTADO E VOLTA A ESCREVER.
+ *
+ * Nao e um formulario novo, e nao e o ecra das propostas: um pedido acabado
+ * de registar ainda nao foi aos profissionais e nao tem proposta nenhuma para
+ * mostrar. E o ponto de situacao honesto — esta registado, esta a ser
+ * conferido, as propostas chegam por aqui — e a porta aberta para ele
+ * acrescentar o que quiser.
+ *
+ * ⚠️ E CALA-SE A SEGUNDA VEZ, EM VEZ DE PASSAR A CONVERSA A UMA PESSOA.
+ *
+ * Passar a conversa chama `interromperNumeroWhatsApp`, e essa marca NAO
+ * caduca: so um clique de uma pessoa no backoffice a levanta. Ate la
+ * `podeOWhatsAppFalarCom` devolve falso e as propostas dos profissionais
+ * nunca lhe chegam — ou seja, para lhe responder mais depressa tirava-se-lhe
+ * o pedido. Nao compensa por uma pessoa escrever duas vezes.
+ *
+ * O silencio aqui nao e abandono: a mensagem dele JA ficou registada pelo
+ * webhook e a conversa esta na mesa do painel com a bola do nosso lado
+ * (`conversas-de-suporte.ts`). E a regra que `nao-repetir.ts` ja escreve:
+ * sem nada de novo a dizer, e melhor nao dizer nada.
+ *
+ * Quem tem MESMO de ser atendido por uma pessoa — quem diz que ninguem lhe
+ * respondeu — e apanhado antes disto, em `estaAPerderAPaciencia`.
+ */
+async function responderAQuemJaTemPedido(telefone: string, pedidoId: number): Promise<void> {
+  const aviso =
+    `O seu pedido #${pedidoId} está registado e a equipa da CLYON está a conferi-lo — ` +
+    `as propostas dos profissionais chegam-lhe por aqui.
+
+` +
+    `Se houver mais alguma coisa a acrescentar, diga-me.`;
+  /*
+   * `enviarTextoWhatsApp` ja traz esta guarda dentro. Ela esta aqui na mesma
+   * porque o que interessa nao e so nao repetir: e nao gravar nada nem
+   * arrancar conversa nenhuma quando nao ha novidade — e isso decide-se aqui.
+   */
+  const { saidasDoNumeroWhatsApp } = await import("@/lib/db");
+  const ditas = await saidasDoNumeroWhatsApp(telefone, 20).catch(() => []);
+  if (jaFoiDito(paraTeclado(aviso), ditas, new Date())) return;
+  await enviarTextoWhatsApp(telefone, aviso);
 }
 
 /** O "ecrã" — o estado das negociações dele, reescrito em texto. */

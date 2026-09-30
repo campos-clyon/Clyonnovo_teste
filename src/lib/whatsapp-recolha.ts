@@ -149,6 +149,92 @@ export function servicoDoTexto(texto: string): string | null {
   return null;
 }
 
+/**
+ * ⚠️ A CLYON NAO COMPRA NADA — e quem quer vender tem de o saber ao minuto.
+ *
+ * 12:21  CLIENTE: «Bom dia tenho alguns artigos para venda.»
+ * 12:23  CLIENTE: «Quero vender estes artigos semi-novos e preciso de recolha»
+ * 12:49  CLIENTE: «E qual o valor para compra para os artigos que eu enviei»
+ *
+ * — a Carla, 30-09-2026. Disse-o tres vezes. O assistente registou-lhe uma
+ * «Recolha de moveis» sem uma palavra, e ela ia receber propostas de
+ * profissionais a COBRAR-LHE para levar as coisas que ela julgava estar a
+ * vender. Vinte e cinco minutos de formulario para acabar num desencontro.
+ *
+ * O que a CLYON faz esta escrito na propria pagina «recolha gratuita de
+ * moveis usados»: vender no OLX ou no Facebook aparece la como ALTERNATIVA
+ * ao nosso servico. Nos levamos, e e o cliente que paga.
+ *
+ * ⚠️ O QUE ISTO NAO PODE FAZER, EM CASO NENHUM, e disparar em «venda de
+ * casa». Metade dos pedidos da CLYON sao exactamente isso — esvaziar para
+ * vender o imovel, heranca, mudanca — e ate o exemplo da pagina de servicos
+ * e «Herdei um T2 cheio e preciso de esvaziar para vender». Dizer a essa
+ * pessoa que nao compramos e responder a uma pergunta que ela nao fez.
+ *
+ * Por isso a regra tem duas metades, e a segunda manda: reconhece-se a venda
+ * de BENS e veta-se assim que apareca um IMOVEL na frase. Nao apanhar quem
+ * queria vender custa uma conversa; mandar este aviso a quem esta a esvaziar
+ * a casa da mae custa o cliente.
+ */
+const QUER_VENDER_BENS: RegExp[] = [
+  /\bquero\s+vender\b/,
+  /\bgostava\s+de\s+vender\b/,
+  /\bpara\s+venda\b/,
+  /\bvender\s+(estes|estas|uns|umas|alguns|algumas|os|as|meus|minhas|tudo)\b/,
+  /\bquanto\s+(dao|dariam|pagam|pagariam|me\s+dao|me\s+pagam)\b/,
+  /\b(compram|comprais)\b/,
+  /\bvalor\s+(para|de)\s+compra\b/,
+];
+
+/**
+ * As palavras que dizem que o que esta a ser vendido e o IMOVEL, e nao as
+ * coisas la dentro. Uma so chega para vetar — ver a nota acima.
+ */
+const O_QUE_SE_VENDE_E_O_IMOVEL =
+  /\b(casa|casas|apartamento|apartamentos|imovel|imoveis|moradia|vivenda|predio|terreno|loja|escritorio|armazem|arrecadacao|heranca|herdei|andar|t[0-5]\b)/;
+
+export function querVenderBens(texto: string): boolean {
+  const t = semAcentos(texto);
+  if (O_QUE_SE_VENDE_E_O_IMOVEL.test(t)) return false;
+  return QUER_VENDER_BENS.some((r) => r.test(t));
+}
+
+/**
+ * O que se lhe diz, uma vez e sem rodeios.
+ *
+ * Curto de proposito: tem de ser percebido a primeira por uma senhora de
+ * oitenta anos, e tem de vir ANTES de mais perguntas do formulario, porque e
+ * a informacao que muda tudo o que ela decidir a seguir.
+ *
+ * E nao interrompe a conversa: a pergunta que se seguia sai logo a baixo, e
+ * ela responde se quiser. Fecha-lhe a porta seria inventar uma decisao que e
+ * dela.
+ */
+export const NAO_COMPRAMOS =
+  "Só para não haver enganos: a CLYON não compra artigos. " +
+  "O que fazemos é a recolha — vamos buscar e levamos, e é um serviço que o cliente paga.\n\n" +
+  "Se ainda assim quiser a recolha, seguimos. Se o que quer mesmo é vender, " +
+  "diga «falar com alguém» e passo a conversa a uma pessoa da CLYON.\n\n";
+
+/**
+ * Ja se lhe disse isto nesta conversa? Le-se do fio, como o cumprimento.
+ *
+ * A frase muda de comprimento conforme o que vem a seguir, por isso a guarda
+ * do envio (`jaFoiDito`) nao a apanharia: compara textos inteiros, e este sai
+ * sempre colado a uma pergunta diferente.
+ */
+export function jaDisseQueNaoCompra(
+  fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
+): boolean {
+  if (!Array.isArray(fio)) return false;
+  return fio.some(
+    (m) =>
+      m?.direccao === "out" &&
+      typeof m.texto === "string" &&
+      /a clyon nao compra artigos/.test(semAcentos(m.texto)),
+  );
+}
+
 /** "sim"/"não" em todas as formas que um teclado escreve; null se não é nenhuma. */
 export function simOuNao(texto: string): "sim" | "nao" | null {
   const t = semAcentos(texto).replace(/[.!,]+$/, "");
@@ -183,6 +269,44 @@ export function simOuNao(texto: string): "sim" | "nao" | null {
    * como «nao» antes de chegar a esta linha.
    */
   if (/^(da|pode|consegue|tem|ha|existe|cabe|e possivel|sem problema|sem problemas)\b/.test(t)) {
+    return "sim";
+  }
+  return null;
+}
+
+/**
+ * O SIM E O NAO DA PERGUNTA DA FACTURA, que tem palavras so dela.
+ *
+ *   CLYON:   Precisa de factura com NIF?
+ *   CLIENTE: Podemos evitar isso
+ *   CLYON:   Desculpe, nao apanhei. Precisa de factura com NIF?
+ *
+ * — a Carla, 30-09-2026. «Podemos evitar isso» e um nao sem sombra de
+ * duvida, e `simOuNao` nao tinha como o ler: nao ha ali palavra nenhuma de
+ * negacao.
+ *
+ * ⚠️ PORQUE E QUE ISTO NAO VAI PARA DENTRO DE `simOuNao`. Porque «evitar»,
+ * «dispensar» e «nao e preciso» so querem dizer NAO quando a pergunta e se
+ * ele PRECISA de alguma coisa. A mesma `simOuNao` responde a «Ha elevador?»
+ * e a «Da para estacionar a porta?», onde «podemos evitar» nao e resposta
+ * nenhuma — e a `simOuNao` tem um ramo permissivo no fim (`^(da|pode|tem…)`)
+ * que, alargado, transformaria leituras certas em erradas.
+ *
+ * Uma pergunta com vocabulario proprio le-se com um leitor proprio.
+ */
+export function simOuNaoNaFactura(texto: string): "sim" | "nao" | null {
+  const directo = simOuNao(texto);
+  if (directo) return directo;
+  const t = semAcentos(texto).replace(/[.!,]+$/, "");
+  // Dispensar a factura. O «evitar» exige o objecto para nao apanhar
+  // «queria evitar escadas», que e conversa sobre o acesso.
+  if (/\b(dispenso|dispensa|nao (e |eh )?(preciso|necessario)|sem factura|sem fatura|nao quero factura|nao quero fatura)\b/.test(t)) {
+    return "nao";
+  }
+  if (/\b(podemos|pode|da para|prefiro|preferia|queria|quero)\s+(evitar|dispensar|passar sem|ficar sem)\b/.test(t)) {
+    return "nao";
+  }
+  if (/\b(com factura|com fatura|preciso de factura|preciso de fatura|quero factura|quero fatura|passe factura|passe fatura)\b/.test(t)) {
     return "sim";
   }
   return null;
@@ -282,7 +406,18 @@ export function interpretarQuando(
   } else if (/\bamanha\b/.test(t)) {
     dia = new Date(parede);
     dia.setUTCDate(dia.getUTCDate() + 1);
-  } else if (/\bhoje\b|\bagora\b|\burgente\b/.test(t)) {
+  } else if (/\bhoje\b|\bagora\b|\burgen\w*/.test(t)) {
+    /*
+     * «URGENCIA» TAMBEM E URGENTE — a palavra dela nao era a que aqui estava.
+     *
+     * *«Tenho urgencia estou de mudancas»* — a Carla, 30-09-2026. O
+     * `\burgente\b` nao apanha «urgencia», e por isso o pedido de quem tinha
+     * acabado de dizer que tinha pressa saia como «sem pressa».
+     *
+     * O apagador da urgencia NEGADA, vinte linhas acima, ja escrevia
+     * `urgen\w*`: eram duas leituras da mesma palavra a discordar uma da
+     * outra no mesmo ficheiro.
+     */
     dia = new Date(parede);
   } else {
     for (let i = 0; i < DIAS_DA_SEMANA.length; i++) {
@@ -318,8 +453,27 @@ export function interpretarQuando(
     } else if (/manha/.test(t)) {
       hora = 9;
     } else if (eHoje) {
-      // «hoje», «urgente», sem hora: daqui a uma hora, não às nove de manhã já passadas.
-      hora = Math.min(20, parede.getUTCHours() + 1);
+      /*
+       * ⚠️ «HOJE» E «URGENTE» SEM HORA NAO MARCAM HORA NENHUMA — 30-09-2026.
+       *
+       * *«Tenho urgencia estou de mudancas»* — a Carla. O resumo devolveu-lhe
+       * «Quando: quarta-feira, 30 de setembro as 12:00», uma hora que ela nunca
+       * disse e que ja tinha passado quando ela o leu. Ela escreveu «Mas 30 de
+       * setembro e hoje» e «E ja sao quase 12h», e tinha razao nas duas.
+       *
+       * A regra era `parede.getUTCHours() + 1`: uma palavra de urgencia virava
+       * um compromisso horario, e o resumo apresentava-o como sendo dela — que
+       * e a parte que a fez desconfiar de tudo o resto.
+       *
+       * Urgencia e urgencia, nao e uma marcacao. Sem hora dita, fica a urgencia
+       * «hoje»: a equipa ve «hoje», ve as palavras dela em `quandoTexto`, e
+       * liga-lhe a combinar a hora — que e o que ja fazia.
+       *
+       * ⚠️ E SO PARA HOJE. «Amanha» sem hora continua a dar as nove da manha: e
+       * um valor por omissao razoavel para um dia que ainda nao comecou, e nunca
+       * fica para tras. O mal aqui era marcar uma hora que ja passou.
+       */
+      return { data: null, urgency: "today" };
     }
     dia.setUTCHours(hora, minuto, 0, 0);
     if (dia.getTime() < parede.getTime() - 3600_000) {
@@ -431,15 +585,58 @@ export function comoTratar(nome: string | null | undefined, agora: Date): string
  * dia! Aqui é a CLYON» dentro dela, e dois bons-dias seguidos são piores do
  * que nenhum.
  */
+/**
+ * ⚠️ `passoDeEntrada === "servico"` DEIXOU DE QUERER DIZER «primeira resposta».
+ *
+ * 12:22  Bom dia! Aqui e a CLYON. Diga-me o que precisa de levar ou fazer.
+ * 12:23  [a cliente responde]
+ * 12:24  Bom dia. Aqui e a CLYON. Com quem estou a falar?
+ *
+ * — a Carla, 30-09-2026. Dois cumprimentos com dois minutos de intervalo,
+ * vindos de dois sitios diferentes: o primeiro de `perguntaDo("servico")`, o
+ * segundo daqui.
+ *
+ * Quando a primeira mensagem nao diz o servico, o estado fica GRAVADO no passo
+ * «servico» — ja cumprimentado — e a mensagem seguinte volta a entrar em
+ * «servico». A equivalencia entre «entrou em servico» e «e a primeira» caiu
+ * nesse dia e ninguem deu por isso.
+ *
+ * QUEM SABE MESMO E O FIO DA CONVERSA, e nao uma bandeira nos dados: uma
+ * bandeira viajava com o pedido e era mais uma coisa a ficar dessincronizada,
+ * que e o reparo que o comentario abaixo ja fazia e continua de pe. O chamador
+ * ja le as ultimas mensagens para as dar ao modelo; ver se alguma ja disse
+ * «Aqui e a CLYON» nao custa uma consulta a mais.
+ */
 export function aberturaDaResposta(
   dados: DadosDaRecolha,
   passoDeEntrada: PassoDaRecolha,
   passoDeSaida: PassoDaRecolha,
   agora: Date = new Date(),
+  jaCumprimentou = false,
 ): string {
+  if (jaCumprimentou) return "";
   if (passoDeEntrada !== "servico") return "";
   if (passoDeSaida === "servico") return "";
   return `${comoTratar(dados.contactName, agora)} Aqui é a CLYON.\n\n`;
+}
+
+/**
+ * JA SE DISSE «AQUI E A CLYON» A ESTA PESSOA NESTA CONVERSA?
+ *
+ * Le-se das mensagens que SAIRAM, que e o unico sitio onde isso esta escrito
+ * sem sombra de duvida. Sem acentos porque o que fica gravado passou por
+ * `paraTeclado`, que lhes mexe.
+ */
+export function jaCumprimentouNesteFio(
+  fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
+): boolean {
+  if (!Array.isArray(fio)) return false;
+  return fio.some(
+    (m) =>
+      m?.direccao === "out" &&
+      typeof m.texto === "string" &&
+      /aqui e a clyon/.test(semAcentos(m.texto)),
+  );
 }
 
 /**
@@ -620,6 +817,28 @@ const PALAVRAS_DE_MORADA =
  * Aqui um número sozinho chega, porque a pergunta acabou de ser feita: quem
  * responde «91» a «qual é a morada?» está a dar a morada.
  */
+/**
+ * ISTO E UMA MORADIA — e, por isso, nao ha elevador para perguntar.
+ *
+ *   CLYON:   Em que andar e?
+ *   CLIENTE: E uma moradia, / Esta tudo no piso zero
+ *   CLYON:   Ha elevador no predio? Se houver, diga-me se la cabe o que e
+ *            para levar.
+ *
+ * — a Carla, 30-09-2026. Ela tinha acabado de dizer que e uma casa terrea, e
+ * a pergunta seguinte foi sobre o predio dela. E o assistente a parecer um
+ * formulario que nao ouve.
+ *
+ * ⚠️ SO A MORADIA, E NUNCA O ANDAR ZERO. `andarDoTexto` devolve "0" tanto
+ * para «moradia» como para «r/c» — e um r/c pode ser a loja do res-do-chao de
+ * um predio de seis andares, que tem elevador e pode ate ser preciso para
+ * descer alguma coisa de uma arrecadacao. Deduzir dai que nao ha elevador era
+ * trocar uma pergunta a mais por um dado errado, que e pior.
+ */
+export function eUmaMoradia(texto: string): boolean {
+  return /\b(moradia|vivenda|casa\s+t[eé]rrea|terrea)\b/.test(semAcentos(texto));
+}
+
 export function pareceMorada(texto: string): boolean {
   const t = texto.trim();
   if (t.length < 6) return false;
@@ -702,6 +921,10 @@ export function responderNaRecolha(
   estado: EstadoDaRecolha,
   texto: string,
   agora: Date = new Date(),
+  /** Ja se disse «Aqui e a CLYON» nesta conversa? Ver `aberturaDaResposta`. */
+  jaCumprimentou = false,
+  /** Ja se disse que a CLYON nao compra? Ver `NAO_COMPRAMOS`. */
+  jaDisseQueNaoCompra = false,
 ): RespostaDaRecolha {
   const t = texto.trim();
   const chave = semAcentos(t).replace(/[.!,]+$/, "");
@@ -754,7 +977,7 @@ export function responderNaRecolha(
     const dito = corrigir(estado.dados, t, agora);
     if (dito) {
       const passo = primeiroPassoEmFalta(dito);
-      const abertura = aberturaDaResposta(dito, estado.passo, passo, agora);
+      const abertura = aberturaDaResposta(dito, estado.passo, passo, agora, jaCumprimentou);
       return {
         estado: { passo, dados: dito },
         resposta: abertura + perguntaDo(passo, dito, false),
@@ -848,6 +1071,8 @@ export function responderNaRecolha(
       // «2º sem elevador» responde às duas de uma vez.
       if (/sem elevador/.test(chave)) d.hasElevator = "no";
       else if (/com elevador/.test(chave)) d.hasElevator = "yes";
+      // E uma moradia responde sozinha — ver `eUmaMoradia`.
+      else if (eUmaMoradia(t)) d.hasElevator = "no";
       break;
     }
     case "elevador": {
@@ -885,7 +1110,7 @@ export function responderNaRecolha(
       break;
     }
     case "fatura": {
-      const r = simOuNao(t);
+      const r = simOuNaoNaFactura(t);
       if (!r) return { estado, resposta: `Precisa de factura? Responda sim ou não. ${SE_PEDIR_FACTURA}` };
       d.precisaFatura = r === "sim";
       break;
@@ -925,10 +1150,12 @@ export function responderNaRecolha(
       : "";
   // O cumprimento também por aqui: este é o caminho de quando o Gemini está em
   // baixo, e uma pessoa que apanhe esse dia merece os mesmos modos.
-  const abertura = aberturaDaResposta(d, estado.passo, proximo, agora);
+  const abertura = aberturaDaResposta(d, estado.passo, proximo, agora, jaCumprimentou);
+  // A verdade primeiro, e a pergunta logo a baixo — ver o caminho do Gemini.
+  const naoCompramos = !jaDisseQueNaoCompra && querVenderBens(t) ? NAO_COMPRAMOS : "";
   return {
     estado: { passo: proximo, dados: d },
-    resposta: abertura + confirmacao + perguntaDo(proximo, d),
+    resposta: abertura + naoCompramos + confirmacao + perguntaDo(proximo, d),
   };
 }
 
@@ -1028,7 +1255,7 @@ export function fundirCampos(
     d.description = k.descricao.trim().slice(0, 4000);
   }
   if (k.fatura) {
-    const r = simOuNao(k.fatura);
+    const r = simOuNaoNaFactura(k.fatura);
     if (r) d.precisaFatura = r === "sim";
   }
   return d;
@@ -1094,7 +1321,7 @@ export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus
       return r ? { estacionamento: r } : null;
     }
     case "fatura": {
-      const r = simOuNao(t);
+      const r = simOuNaoNaFactura(t);
       return r ? { fatura: r } : null;
     }
     case "codigoPostal": {
@@ -1138,7 +1365,7 @@ export function responderComCompreensao(
   estado: EstadoDaRecolha,
   compreensao: { intencao: Intencao; campos: CamposCrus },
   agora: Date = new Date(),
-  contexto: { texto?: string } = {},
+  contexto: { texto?: string; jaCumprimentou?: boolean; jaDisseQueNaoCompra?: boolean } = {},
 ): RespostaDaRecolha {
   const { intencao, campos: k } = compreensao;
   const cru = (contexto.texto ?? "").trim();
@@ -1234,6 +1461,18 @@ export function responderComCompreensao(
 
   const d = fundirCampos(estado.dados, kk, agora);
 
+  /*
+   * A MORADIA, LIDA DO TEXTO CRU — e nao dos campos.
+   *
+   * O modelo normaliza «e uma moradia» para um andar «0» e a palavra
+   * perde-se pelo caminho: `fundirCampos` so ve o andar. Aqui ainda ha a
+   * frase dela, e e nela que esta a resposta a pergunta seguinte.
+   *
+   * So preenche o que esta por responder: se ele ja disse que tem elevador,
+   * e ele que sabe da casa dele.
+   */
+  if (cru && d.hasElevator == null && eUmaMoradia(cru)) d.hasElevator = "no";
+
   const passo = primeiroPassoEmFalta(d);
 
   // O SIM só vale com tudo preenchido. Com um campo por responder, o «sim» é
@@ -1261,8 +1500,23 @@ export function responderComCompreensao(
    * Sai UMA vez porque só sai quando a mensagem chegou com o estado por
    * estrear — não é preciso guardar nada nos dados para isso.
    */
-  const abertura = aberturaDaResposta(d, estado.passo, passo, agora);
-  return { estado: { passo, dados: d }, resposta: abertura + perguntaDo(passo, d, false) };
+  const abertura = aberturaDaResposta(d, estado.passo, passo, agora, contexto.jaCumprimentou === true);
+  /*
+   * ⚠️ A VERDADE PRIMEIRO, E A PERGUNTA LOGO A BAIXO.
+   *
+   * Quem escreve «tenho artigos para venda» tem de saber que a CLYON nao
+   * compra ANTES de responder a mais alguma coisa — ver `NAO_COMPRAMOS`. Sai
+   * colado a pergunta que se seguia, e nao em lugar dela: o formulario nao se
+   * interrompe, e a decisao de continuar ou nao continua a ser dela.
+   *
+   * Uma vez por conversa. A segunda copia desta frase era o defeito de ontem.
+   */
+  const naoCompramos =
+    cru && !contexto.jaDisseQueNaoCompra && querVenderBens(cru) ? NAO_COMPRAMOS : "";
+  return {
+    estado: { passo, dados: d },
+    resposta: abertura + naoCompramos + perguntaDo(passo, d, false),
+  };
 }
 
 /** A mensagem quando o pedido ficou registado. */
