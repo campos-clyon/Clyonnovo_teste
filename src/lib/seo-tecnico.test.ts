@@ -246,9 +246,12 @@ describe("links internos: nenhum passa por um redirect", () => {
       "/auth",
       "/profissionais/login",
     ]);
+    // Os apanha-tudo (`/camiao-com-motorista-:city(.*)`, e `:city*` antes do
+    // Next 15.5) valem como prefixo: tudo o que comece assim redirecciona.
     const prefixos = redirects
-      .filter((r) => r.source.endsWith(":city*"))
-      .map((r) => r.source.slice(0, -":city*".length));
+      .map((r) => r.source.match(/^(.*?):[a-zA-Z]+(?:\(\.\*\)|\*)$/)?.[1])
+      .filter((p): p is string => Boolean(p) && !p!.endsWith("/"));
+    expect(prefixos).toContain("/camiao-com-motorista-");
 
     const hrefs = hrefsDoSite();
     expect(hrefs.length).toBeGreaterThan(100);
