@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool, ensureSimulatorOrdersTable } from "@/lib/db";
 import { sendWeeklyDigestEmail, type DigestOrder } from "@/lib/email-digest";
+import { bearerConfere } from "@/lib/segredo-igual";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export async function GET(req: NextRequest) {
     console.error("[cron/weekly-digest] CRON_SECRET não definido — recusado");
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  // Em tempo constante — ver segredo-igual.ts.
+  if (!bearerConfere(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
