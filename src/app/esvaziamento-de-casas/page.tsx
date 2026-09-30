@@ -21,8 +21,10 @@ const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 
 
 export const metadata: Metadata = {
   title: "Esvaziamento de Casas e Apartamentos — Heranças",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: retiramos móveis, eletrodomésticos, roupas e recheio completo. Heranças, mudanças, venda de imóvel e doação de móveis em bom estado para instituições. Preços ${PRECO_CASA}. Orçamento grátis em 6h.`,
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: móveis, eletrodomésticos e recheio, para heranças e vendas. Preços ${PRECO_CASA}, sem IVA.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",

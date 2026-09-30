@@ -13,8 +13,10 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Áreas de Atuação | Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "A CLYON atua em mais de 24 localidades: Lisboa, Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro, Setúbal e mais. Recolha de móveis, entulho e limpezas.",
+    "Mais de 24 localidades em Lisboa, Margem Sul e Setúbal: Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro e mais. Recolha de móveis e entulho.",
   alternates: { canonical: `${SITE_URL}/areas-de-atuacao` },
   openGraph: {
     title: "Áreas de Atuação da CLYON | Cobertura Completa",

@@ -36,8 +36,10 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Sofás — Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de sofás usados, sofás velhos, chaise longues e cadeirões em Lisboa, Margem Sul e Setúbal. Carregamento porta a porta, transporte e destino responsável. Peça orçamento.",
+    "Recolha de sofás usados, chaise longues e cadeirões em Lisboa, Margem Sul e Setúbal, com carregamento porta a porta e destino responsável.",
   keywords: [
     "recolha de sofá lisboa",
     "recolha de sofás",

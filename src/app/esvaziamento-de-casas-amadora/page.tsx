@@ -16,8 +16,10 @@ const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 
 
 export const metadata: Metadata = {
   title: "Esvaziamento de Casas na Amadora — Apartamentos",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Esvaziamento de casas e apartamentos na Amadora com remoção de móveis, monos, eletrodomésticos e limpeza associada. Atendemos Reboleira, Damaia, Alfragide, Venteira e mais zonas.",
+    "Esvaziamento de casas e apartamentos na Amadora: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
   openGraph: {
     title: "Esvaziamento de Casas na Amadora — Apartamentos",

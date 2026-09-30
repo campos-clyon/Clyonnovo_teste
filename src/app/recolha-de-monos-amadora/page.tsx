@@ -9,8 +9,10 @@ const SITE_URL = "https://clyon.pt";
 
 export const metadata: Metadata = {
   title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de monos na Amadora com carregamento, transporte e remoção de móveis velhos, sofás, colchões, eletrodomésticos e objetos volumosos. Reboleira, Damaia, Alfragide.",
+    "Recolha de monos na Amadora: móveis velhos, sofás, colchões, eletrodomésticos e volumosos, com carga e transporte. Reboleira, Damaia e Alfragide.",
   alternates: { canonical: `${SITE_URL}/recolha-de-monos-amadora` },
   openGraph: {
     title: "Recolha de Monos na Amadora — Sem Esperar a Câmara",

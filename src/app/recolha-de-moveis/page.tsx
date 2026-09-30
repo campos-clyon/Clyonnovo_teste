@@ -45,8 +45,10 @@ export const metadata: Metadata = {
    * a disputar a mesma pesquisa dividem os sinais entre as duas páginas.
    */
   title: "Recolha de Móveis — Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, colchões, armários, cómodas, mesas, cadeiras e eletrodomésticos. Desmontagem, carregamento porta a porta e destino responsável. Preços de ${PRECO_MOVEIS.etiqueta}. Orçamento grátis em 6h.`,
+    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, armários e eletrodomésticos, com desmontagem. Preços de ${PRECO_MOVEIS.etiqueta}, sem IVA.`,
   keywords: [
     "recolha de móveis",
     "recolha de móveis Lisboa",

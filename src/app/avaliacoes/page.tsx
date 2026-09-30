@@ -9,8 +9,10 @@ import { BUSINESS_PHONE, SITE_URL, AVALIACOES, AVALIACOES_TOTAL } from "@/lib/se
 
 export const metadata: Metadata = {
   title: "Avaliações de Clientes — Lisboa e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "37 avaliações no Google e 118 na Fixando, todas a 5 estrelas. Clientes em Lisboa, Margem Sul e Setúbal destacam rapidez, simpatia, preço transparente e limpeza final da equipa CLYON.",
+    `${AVALIACOES.google} avaliações no Google e ${AVALIACOES.fixando} na Fixando, todas a 5 estrelas: o que dizem os clientes da CLYON em Lisboa, Margem Sul e Setúbal.`,
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },

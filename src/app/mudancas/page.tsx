@@ -23,8 +23,10 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Sem Stress",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Mudanças residenciais e comerciais em Lisboa e Setúbal. Embalagem, carga, transporte e montagem por profissionais verificados. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal: embalagem, carga, transporte e montagem, com propostas de profissionais verificados.",
   alternates: { canonical: `${SITE_URL}/mudancas` },
   openGraph: {
     title: "Mudanças em Lisboa e Setúbal — Profissional e Sem Stress",

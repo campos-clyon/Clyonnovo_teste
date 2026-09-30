@@ -16,8 +16,10 @@ import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import {
   BUSINESS_PHONE,
+  PRAZO_DE_RESPOSTA,
   SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import {
   CIDADES_MUDANCAS,
   getAllCidadeSlugs,
@@ -52,10 +54,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // que o motor factura a partir de 490 € — sete horas a 70 €/h. Nos
   // metadados vale a mesma regra do texto visível: o que não se mostra na
   // página não se declara ao Google.
-  const description =
-    `Mudanças residenciais e comerciais em ${c.nome} (${c.distrito}). ` +
-    `Equipa profissional, embalagem, carga, transporte e montagem. ` +
-    `Orçamento personalizado e grátis em 6 horas.`;
+  //
+  // E até 155 caracteres (29-09-2026): tinha 161 a 173, e o Google cortava o
+  // prazo, que é o que a pessoa quer saber. O essencial primeiro; o resto só
+  // se couber inteiro (ver descricoes-seo.ts).
+  const description = descricaoQueCabe([
+    `Mudanças em ${c.nome}: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    "Residenciais e comerciais, com embalagem, carga, transporte e montagem.",
+    "Orçamento grátis.",
+  ]);
 
   return {
     title,

@@ -41,8 +41,10 @@ export const metadata: Metadata = {
    * das três regiões, e o título passa a dizê-lo.
    */
   title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões, eletrodomésticos, móveis danificados e volumes grandes. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Orçamento grátis em 6h.`,
+    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões e volumosos, sem esperar pela câmara. Preços de ${PRECO_MONOS.etiqueta}, sem IVA.`,
   keywords: [
     "recolha de monos",
     "recolha de monos Lisboa",

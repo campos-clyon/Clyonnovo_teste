@@ -20,8 +20,9 @@ const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personal
 
 export const metadata: Metadata = {
   title: "Preços de Recolha de Monos, Entulho e Móveis",
+  // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    "Veja preços orientativos para recolha de monos, entulho, móveis, esvaziamentos e limpeza pós-obra em Lisboa, Margem Sul e Setúbal.",
+    "Preços orientativos para recolha de monos, entulho e móveis e para esvaziamentos em Lisboa, Margem Sul e Setúbal.",
   alternates: {
     canonical: `${SITE_URL}/precos`,
   },

@@ -12,8 +12,10 @@ export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Trabalhos Realizados — Recolha e Esvaziamento",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Portfólio de recolhas de móveis, esvaziamentos de casa, recolhas de entulho e mudanças em Lisboa, Margem Sul e Setúbal. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★, ${PRAZO_DE_RESPOSTA.frase.toLowerCase()}.`,
+    `Recolhas de móveis e entulho, esvaziamentos e mudanças feitos em Lisboa, Margem Sul e Setúbal, em fotos reais, e ${AVALIACOES_TOTAL} avaliações de 5 estrelas.`,
   keywords: [
     "trabalhos CLYON",
     "portefólio recolha de móveis",

@@ -48,8 +48,10 @@ export const metadata: Metadata = {
    * títulos a disputar a mesma pesquisa dividem os sinais entre as duas.
    */
   title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de entulho de obras, demolições e remodelações em Lisboa, Margem Sul e Setúbal, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg carregados à mão. Sem contentores. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}. Orçamento grátis.`,
+    `Recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg e sem contentores. Preços ${PRECO_ENTULHO.etiqueta}, sem IVA.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",

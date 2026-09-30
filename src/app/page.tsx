@@ -34,13 +34,15 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 export const metadata: Metadata = {
   title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Sofás, armários, colchões e eletrodomésticos, por profissionais verificados. Orçamento gratuito em 6h. ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando.`,
+    `Recolha de móveis, monos e entulho e esvaziamento de casas em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: {
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
     description:
-      "Descreva o que tem para levar e receba propostas de profissionais verificados. Sofás, armários, colchões, monos e esvaziamentos. Orçamento gratuito em 6h. Lisboa, Margem Sul e Setúbal.",
+      "Descreva o que tem para levar e receba propostas de profissionais verificados em Lisboa, Margem Sul e Setúbal. Orçamento gratuito em 6 horas.",
     url: "https://clyon.pt",
   },
 };

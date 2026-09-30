@@ -36,8 +36,10 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Armários e Roupeiros em Lisboa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de armários usados, roupeiros, cómodas e aparadores em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento porta a porta e destino responsável. Peça orçamento.",
+    "Recolha de armários, roupeiros, cómodas e aparadores em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento porta a porta e destino responsável.",
   keywords: [
     "recolha de armários usados",
     "recolha de armários",

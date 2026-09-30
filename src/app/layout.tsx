@@ -12,19 +12,16 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   REGIONS,
-  SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
-import { precoDe } from "@/lib/precos-publicos";
+  SITE_URL,
+} from "@/lib/seo-data";
 import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
 
-/**
- * O preço da recolha de móveis, para a meta description global.
- *
- * Estava escrito à mão, dizia "desde 70 €", e a tabela oficial diz
- * 40 – 120 € — ou seja, o snippet que o Google mostra em todas as páginas
- * do site anunciava um piso 30 € acima do que se pratica. Passa a vir da
- * fonte única; se o valor mudar lá, muda aqui.
+/*
+ * A meta description global deixou de levar o preço da recolha de móveis
+ * (29-09-2026). Levava-o da fonte única, e bem, mas era uma frase de 190
+ * caracteres — o Google mostra uns 155 — a vender também a limpeza pós-obra,
+ * que deixou de ser serviço. Só a vêem as páginas sem description própria.
  */
-const PRECO_MOVEIS = precoDe("recolha_moveis") ?? "orçamento personalizado";
 
 import "./globals.css";
 
@@ -48,7 +45,7 @@ export const metadata: Metadata = {
     template: "%s | CLYON",
   },
   description:
-    `Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa e Setúbal. Resposta em 6h, recolha de móveis ${PRECO_MOVEIS} e ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis!`,
+    "Recolha de móveis, monos e entulho, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de 6 horas.",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",

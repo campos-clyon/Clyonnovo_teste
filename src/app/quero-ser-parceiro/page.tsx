@@ -11,8 +11,10 @@ import FormularioDeCandidatura from "./FormularioDeCandidatura";
 
 export const metadata: Metadata = {
   title: "Trabalhar com a CLYON — receba pedidos na sua zona",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Empresas e profissionais de mudanças, recolhas e esvaziamentos: receba pedidos de clientes na sua zona. Responder não custa nada e só há comissão quando fecha um trabalho.",
+    "Profissionais de mudanças, recolhas e esvaziamentos: receba pedidos de clientes na sua zona. Responder é grátis; só há comissão quando fecha um trabalho.",
   alternates: { canonical: `${SITE_URL}/quero-ser-parceiro` },
 };
 

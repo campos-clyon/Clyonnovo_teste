@@ -5,8 +5,10 @@ import { BUSINESS_EMAIL, BUSINESS_NAME, SITE_URL } from "@/lib/seo-data";
 
 export const metadata: Metadata = {
   title: "Política de Cookies — Recolha de Móveis em Lisboa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Política de cookies do site CLYON: tipos utilizados, finalidades e como gerir preferências. Aplica-se a pedidos de recolha de móveis, esvaziamento de casa, recolha de entulho e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Política de cookies do site da CLYON: que cookies usa, para que servem e como gerir as suas preferências.",
   alternates: { canonical: `${SITE_URL}/cookies` },
   robots: { index: true, follow: true },
 };

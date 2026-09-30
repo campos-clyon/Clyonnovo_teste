@@ -5,8 +5,10 @@ export const metadata: Metadata = {
   // Acabava em «… Instantânea CLYON», e o template do layout acrescentava
   // « | CLYON»: a marca duas vezes no Google (29-09-2026).
   title: "Simulador de Preços — Estimativa Instantânea",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Descreva o serviço, envie fotos e indique a morada. A CLYON calcula uma estimativa com base no preçário e nas condições de acesso. Recolha de móveis, entulho, monos, esvaziamentos e mudanças em Lisboa e Setúbal.",
+    "Descreva o serviço, envie fotos e a morada, e veja uma estimativa do preço. Recolha de móveis, entulho e monos, esvaziamentos e mudanças.",
   alternates: {
     canonical: "https://clyon.pt/simulador",
   },

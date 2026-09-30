@@ -48,8 +48,9 @@ export const REGIONS: RegionData[] = [
     intro:
       "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
+    // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis, monos, limpeza pós-obra e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
+      "Recolha de entulho, móveis, monos e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -80,8 +81,9 @@ export const REGIONS: RegionData[] = [
     intro:
       "Profissionais em Setúbal, Palmela e Sesimbra para recolha, limpeza pós-obra, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
+    // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis, monos, mudanças e limpeza pós-obra em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
+      "Recolha de entulho, móveis, monos e mudanças em Setúbal. Profissionais verificados, orçamento gratuito e resposta em 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",

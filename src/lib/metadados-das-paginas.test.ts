@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 
 import sitemap from "@/app/sitemap";
 import { artigosPublicados } from "./artigos-do-blog";
+import { LIMITE_DA_DESCRICAO, descricaoQueCabe, tamanho } from "./descricoes-seo";
+import { getAllCityServiceSlugs } from "./seo-data";
 
 /**
  * OS METADADOS DE TODAS AS PÁGINAS PÚBLICAS, LIDOS COMO O NEXT OS LÊ.
@@ -218,5 +220,62 @@ describe("o sitemap e as páginas dizem o mesmo", () => {
         new Date(artigo.updatedDate ?? artigo.publishDate).toISOString(),
       );
     }
+  });
+});
+
+describe("as descriptions", () => {
+  const descricaoDe = (m: Metadata) => (typeof m.description === "string" ? m.description : "");
+  const ogDe = (m: Metadata) => {
+    const d = m.openGraph?.description;
+    return typeof d === "string" ? d : "";
+  };
+
+  it("cada página pública tem a sua", () => {
+    const sem = PAGINAS.filter(({ meta }) => descricaoDe(meta).length === 0).map((p) => p.rota);
+    expect(sem).toEqual([]);
+  });
+
+  it("nenhuma passa do que o Google mostra — e as geradas ficam nos 155", () => {
+    /*
+     * A 29-09-2026 eram 144 acima dos 160. As das páginas de cidade juntavam
+     * as freguesias à frase e cortavam o conjunto aos 320: o Google mostrava
+     * meia frase, e das mais importantes. As páginas fixas cabem em 160; as
+     * que saem de `descricaoDaCidade` e das mudanças por cidade, em 155.
+     */
+    const DE_CIDADE = new Set(getAllCityServiceSlugs().map((e) => `/${e.slug.join("/")}`));
+    const geradas = (rota: string) => rota.startsWith("/mudancas/") || DE_CIDADE.has(rota);
+    const compridas = PAGINAS.map(({ rota, meta }) => ({ rota, n: tamanho(descricaoDe(meta)), og: tamanho(ogDe(meta)) }))
+      .filter(({ rota, n, og }) => n > (geradas(rota) ? LIMITE_DA_DESCRICAO : 160) || og > 160);
+    expect(compridas).toEqual([]);
+  });
+
+  it("nenhuma é cortada a meio — acabam todas numa frase inteira", () => {
+    const cortadas = PAGINAS.map(({ rota, meta }) => ({ rota, d: descricaoDe(meta) })).filter(
+      ({ d }) => !/[.!?]$/.test(d.trim()),
+    );
+    expect(cortadas).toEqual([]);
+  });
+
+  it("não vendem o que a CLYON já não faz, nem falam da taxa", () => {
+    // A limpeza pós-obra deixou de ser serviço; e desde 29-09-2026 o cliente
+    // vê um preço por proposta já com a taxa — «+ 5 %» nos metadados seria
+    // um segundo preço que a página já não mostra.
+    const maus = PAGINAS.filter(({ meta }) => /pós-obra|taxa de \d/i.test(`${descricaoDe(meta)} ${ogDe(meta)}`)).map(
+      (p) => p.rota,
+    );
+    expect(maus).toEqual([]);
+  });
+});
+
+describe("descricaoQueCabe", () => {
+  it("põe a primeira sempre, e as outras só inteiras", () => {
+    expect(descricaoQueCabe(["Um.", "Dois.", "Três."], 10)).toBe("Um. Dois.");
+    // A que não cabe fica de fora, e a seguinte, mais curta, ainda entra.
+    expect(descricaoQueCabe(["Um.", "Uma frase comprida.", "Dois."], 10)).toBe("Um. Dois.");
+    expect(descricaoQueCabe(["Só esta.", null, undefined], 5)).toBe("Só esta.");
+  });
+
+  it("conta caracteres como o Google, e não bytes", () => {
+    expect(tamanho("é€")).toBe(2);
   });
 });

@@ -25,8 +25,10 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 
 export const metadata: Metadata = {
   title: "Recolha Gratuita de Móveis Usados — Como Funciona",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha gratuita de móveis usados em Lisboa, Almada, Setúbal e arredores: quando é possível pela câmara ou doação, e quando faz sentido pagar um serviço profissional que retira, desmonta e entra em casa. Guia completo com contactos e alternativas.",
+    "Recolha gratuita de móveis usados em Lisboa, Almada e Setúbal: quando dá pela câmara ou por doação, e quando compensa pedir uma recolha paga.",
   keywords: [
     "recolha gratuita de móveis usados",
     "recolha gratuita de móveis usados Lisboa",

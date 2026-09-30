@@ -37,18 +37,17 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
-import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, tempoAproximado, type ServicoSlug } from "@/lib/cidades-local";
 
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
  * deste ficheiro: um número escrito à mão aqui multiplica-se por setenta e
- * nunca mais bate certo com a grelha.
+ * nunca mais bate certo com a grelha. (Os dos monos e do entulho só eram
+ * usados na description, que passou para `descricoes-seo.ts`.)
  */
 const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
-const PRECO_MONOS = PRECOS.recolha_monos.etiqueta; // "30 – 100 €"
-const PRECO_ENTULHO = PRECOS.recolha_entulho.etiqueta; // "desde 110 €/m³"
 
 type Props = {
   params: Promise<{ slug: string[] }>;
@@ -59,51 +58,13 @@ function isFurnitureService(serviceSlug: string) {
 }
 
 
-function buildDescription(
-  serviceName: string,
-  cityName: string,
-  regionLabel: string,
-  serviceSlug: string,
-  citySlug: string,
-) {
-  if (isFurnitureService(serviceSlug)) {
-    if (citySlug === "lisboa") {
-      return `Recolha de móveis em Lisboa: sofás, camas, armários, colchões e eletrodomésticos. Desmontagem, carga porta a porta e transporte incluídos. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
-    }
-    if (citySlug === "setubal") {
-      return `Recolha de móveis em Setúbal com preços mais competitivos — somos vizinhos. Sofás, camas, armários e eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta em 6h. Orçamento grátis pelo WhatsApp.`;
-    }
-    if (citySlug === "almada") {
-      return `Recolha de móveis em Almada e Costa da Caparica: sofás, camas, armários, colchões, eletrodomésticos. Preços ${PRECO_MOVEIS}, resposta rápida em 6h. Orçamento grátis!`;
-    }
-    return `Recolha de móveis em ${cityName}, ${regionLabel}. Sofás, camas, armários e eletrodomésticos. Desmontagem e transporte. Preços ${PRECO_MOVEIS}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis.`;
-  }
-
-  if (serviceSlug === "recolha-monos") {
-    if (citySlug === "lisboa") {
-      return `Recolha de monos em Lisboa sem esperar pela recolha municipal. Os profissionais retiram sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à câmara. Preços ${PRECO_MONOS}, resposta em 6h. Orçamento grátis por WhatsApp.`;
-    }
-    if (citySlug === "almada") {
-      return `Recolha de monos em Almada: sofás, colchões, eletrodomésticos e volumosos. Alternativa rápida à recolha municipal — sem marcações longas. Preços ${PRECO_MONOS}. Resposta em 6h por WhatsApp.`;
-    }
-    if (citySlug === "cascais") {
-      return `Recolha de monos em Cascais e Estoril: contactos rápidos por WhatsApp. Sofás velhos, colchões, eletrodomésticos, volumes grandes. Preços ${PRECO_MONOS}, resposta em 6h. Orçamento grátis.`;
-    }
-    return `Recolha de monos em ${cityName}: sofás velhos, colchões, eletrodomésticos e volumes grandes. Alternativa rápida à recolha municipal. Preços ${PRECO_MONOS}, resposta em 6h.`;
-  }
-
-  if (serviceSlug === "recolha-entulho") {
-    if (citySlug === "lisboa") {
-      return `Recolha de entulho em Lisboa, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg carregados à mão. Obras, remodelações e demolições. Sem contentores. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis por WhatsApp.`;
-    }
-    if (citySlug === "setubal") {
-      return `Recolha de entulho em Setúbal, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg. Carregamento à mão e transporte no mesmo dia, sem contentores. Resposta em 6h. Preços ${PRECO_ENTULHO}. Orçamento grátis!`;
-    }
-    return `Recolha de entulho em ${cityName}, ${regionLabel}, em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg. Sem contentores e sem aluguer. Preços ${PRECO_ENTULHO}, resposta em 6h. Orçamento grátis!`;
-  }
-
-  return `${serviceName} em ${cityName}, ${regionLabel}. Resposta em 6h, ${AVALIACOES_TOTAL} avaliações 5★ no Google e na Fixando. Orçamento grátis por WhatsApp.`;
-}
+/*
+ * A description destas páginas sai de `descricaoDaCidade` (descricoes-seo.ts)
+ * desde 29-09-2026. Aqui havia uma função com uma frase por serviço — e casos
+ * à parte para Lisboa, Setúbal, Almada e Cascais — que dava 190 a 300
+ * caracteres, e a meta juntava-lhe ainda as freguesias, cortando o conjunto
+ * aos 320. O Google mostra uns 155: o que ficava à vista era meia frase.
+ */
 
 function getServiceIntro(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string) {
   // Primeiro, tentar conteúdo prioritário cidade+serviço
@@ -279,27 +240,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { city, service } = parsed;
   const title = tituloDaCidade(service.name, city.name, service.slug, city.slug);
-  const description = buildDescription(
-    service.name,
-    city.name,
-    city.regionLabel,
-    service.slug,
-    city.slug,
-  );
+  // Até 155 caracteres, o essencial primeiro e sem cortar palavras: o
+  // serviço, a terra, as propostas e o prazo; depois o preço, o que inclui e
+  // as freguesias da zona, se couberem (29-09-2026, ver descricoes-seo.ts).
+  const description = descricaoDaCidade(service.slug, service.name, city.name, city.slug);
   const canonical = `${SITE_URL}/${getCityServiceSlug(service.slug, city.slug)}`;
-
-  // A descrição base é a mesma frase para toda a gente, com o nome da terra
-  // trocado — o Google vê 73 iguais. Nomear as freguesias reais dá-lhe algo
-  // que só existe nesta página, e ao cliente a confirmação de que cobrimos
-  // a rua dele.
-  const zonas = getCidadeLocal(city.slug)?.zonas ?? [];
-  const descricaoLocal = zonas.length >= 2
-    ? `${description} Servimos ${zonas.slice(0, 3).join(", ")} e restantes zonas de ${city.name}.`.slice(0, 320)
-    : description;
 
   return {
     title,
-    description: descricaoLocal,
+    description,
     keywords: [
       ...service.keywords,
       `${service.primaryKeyword} ${city.name.toLowerCase()}`,
@@ -344,13 +293,7 @@ export default async function ServiceCityPage({ params }: Props) {
 
   const pageUrl = `${SITE_URL}/${getCityServiceSlug(service.slug, city.slug)}`;
   const title = tituloDaCidade(service.name, city.name, service.slug, city.slug);
-  const description = buildDescription(
-    service.name,
-    city.name,
-    city.regionLabel,
-    service.slug,
-    city.slug,
-  );
+  const description = descricaoDaCidade(service.slug, service.name, city.name, city.slug);
   const intro = getServiceIntro(service.name, city.name, city.regionLabel, service.slug, city.slug);
   
   // Obter conteúdo prioritário e base

@@ -36,8 +36,10 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Eletrodomésticos em Lisboa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de eletrodomésticos usados: frigoríficos, máquinas de lavar, fogões, micro-ondas e outros equipamentos em Lisboa, Margem Sul e Setúbal. Carregamento e destino responsável.",
+    "Recolha de frigoríficos, máquinas de lavar, fogões e outros eletrodomésticos usados em Lisboa, Margem Sul e Setúbal, com destino responsável.",
   keywords: [
     "recolha de eletrodomésticos usados",
     "recolha de eletrodomésticos",

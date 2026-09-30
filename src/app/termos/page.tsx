@@ -25,8 +25,10 @@ export const metadata: Metadata = {
   // Sem « — CLYON»: o template do layout já a acrescenta, e saía
   // «Termos e Condições — CLYON | CLYON» (29-09-2026).
   title: "Termos e Condições",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Termos e condições de utilização da plataforma CLYON: o que a CLYON faz, o que não faz, como funcionam os pedidos e as propostas, taxas, responsabilidades e direitos do consumidor.",
+    "Termos e condições da plataforma CLYON: o que a CLYON faz e não faz, pedidos e propostas, taxas, responsabilidades e direitos do consumidor.",
   alternates: { canonical: `${SITE_URL}/termos` },
   robots: { index: true, follow: true },
 };

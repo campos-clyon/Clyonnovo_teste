@@ -36,8 +36,10 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
   title: "Recolha de Camas e Colchões em Lisboa",
+  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Recolha de camas usadas, estrados, colchões, beliches e mesinhas de cabeceira em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento e transporte incluídos. Peça orçamento.",
+    "Recolha de camas, estrados, colchões e beliches em Lisboa, Margem Sul e Setúbal. Desmontagem, carregamento e transporte incluídos.",
   keywords: [
     "recolha de camas usadas",
     "recolha de camas",
