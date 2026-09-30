@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, HandCoins, MapPin, MinusCircle, ShieldCheck } from "lucide-react";
-import { TAXA_PROFISSIONAL, quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { taxasActuais } from "@/lib/db";
 import { SITE_URL } from "@/lib/seo-data";
 import {
   PASSOS_DO_PROFISSIONAL,
   O_QUE_A_CLYON_NAO_FAZ,
+  COMO_RECEBE,
+  comissaoEmPalavras,
 } from "@/lib/como-funciona-para-o-profissional";
 import FormularioDeCandidatura from "./FormularioDeCandidatura";
 
@@ -56,7 +58,15 @@ const PORQUE = [
   },
 ];
 
-export default function QueroSerParceiroPage() {
+/*
+ * A comissão lê as taxas da base (`taxasActuais`), que mudam no backoffice:
+ * sem isto, a página ficava com as do dia do build até ao deploy seguinte.
+ */
+export const revalidate = 3600;
+
+export default async function QueroSerParceiroPage() {
+  const exemplo = comissaoEmPalavras(await taxasActuais());
+
   return (
     <div className="min-h-screen bg-white">
       <section className="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-12 sm:py-16">
@@ -102,16 +112,26 @@ export default function QueroSerParceiroPage() {
 
             Quem descobre a percentagem já dentro sente-se enganado, e um
             profissional que se sente enganado não volta — conta aos outros. O
-            número vem da constante: quando as taxas mudaram, um número escrito
-            à mão nesta página teria ficado a mentir.
+            número vem das taxas em vigor: quando as taxas mudaram, um número
+            escrito à mão nesta página teria ficado a mentir.
+
+            30-09-2026: dizia «6 % do valor acordado; num trabalho de 300 €
+            ficam-lhe 282 €; a fatura do serviço é sua». Eram as taxas de
+            origem, e não as de hoje (11 % do que o cliente paga), e uma
+            factura que deixou de ser dele. Passa a ser o exemplo do dono, e
+            as duas formas de receber.
           */}
-          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 text-center">
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 text-left sm:text-center">
             <p className="text-sm leading-relaxed text-slate-700">
-              A comissão é de <strong>{Math.round(TAXA_PROFISSIONAL * 100)} %</strong> do valor
-              acordado, e só existe quando fecha um trabalho. Num trabalho de 300 € ficam-lhe{" "}
-              <strong>{Math.round(quantoOProfissionalRecebe(300))} €</strong>. Quem lhe paga é o
-              cliente, no fim; a fatura do serviço é sua.
+              {exemplo.frase} A comissão só existe quando fecha um trabalho.
             </p>
+            <ul className="mx-auto mt-3 max-w-xl space-y-1.5 text-left">
+              {COMO_RECEBE.map((c) => (
+                <li key={c.forma} className="text-sm leading-relaxed text-slate-600">
+                  <strong className="font-semibold text-slate-800">{c.forma}:</strong> {c.texto}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

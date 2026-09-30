@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
-import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { taxasActuais } from "@/lib/db";
+import { COMO_RECEBE, comissaoEmPalavras } from "@/lib/como-funciona-para-o-profissional";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const metadata: Metadata = {
@@ -52,7 +53,15 @@ const O_QUE_RECEBE = [
   },
 ];
 
-export default function ProfissionaisPage() {
+export default async function ProfissionaisPage() {
+  /*
+   * As taxas EM VIGOR, e não as de origem — 30-09-2026. O quadro dizia
+   * «combina 200 €, recebe 188 €», com os 6 % de antes; desde 29-09-2026 a
+   * CLYON fica com 11 % do que o cliente paga, e só as taxas gravadas no
+   * backoffice o sabem. Sem base, `taxasActuais` devolve as de origem.
+   */
+  const exemplo = comissaoEmPalavras(await taxasActuais());
+
   return (
     <div className="min-h-screen bg-white">
       {/* ── Hero ──────────────────────────────────────────────────────── */}
@@ -112,33 +121,50 @@ export default function ProfissionaisPage() {
           </p>
 
           <div className="mt-6 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white">
-            <div className="grid gap-px bg-[#E2EEF3] sm:grid-cols-2">
+            {/*
+              Três números, e não dois: desde 29-09-2026 o cliente vê a
+              proposta já com a taxa, e é bom o profissional saber que número
+              o cliente tem à frente. Calculados das taxas em vigor, e não
+              escritos à mão: quando as taxas mudaram (07-09-2026) este quadro
+              ficou a dizer 190 € a quem ia receber 188 €.
+            */}
+            <div className="grid gap-px bg-[#E2EEF3] sm:grid-cols-3">
               <div className="bg-white px-6 py-6 text-center">
                 <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  Combina com o cliente
+                  Propõe
                 </div>
-                <div className="mt-1.5 text-3xl font-bold text-[#0B1929]">200 €</div>
+                <div className="mt-1.5 text-3xl font-bold text-[#0B1929]">{exemplo.proposta}</div>
+              </div>
+              <div className="bg-white px-6 py-6 text-center">
+                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  O cliente vê
+                </div>
+                <div className="mt-1.5 text-3xl font-bold text-[#0B1929]">{exemplo.cliente}</div>
+                <p className="mt-1 text-xs text-slate-500">Já com a taxa da plataforma</p>
               </div>
               <div className="bg-white px-6 py-6 text-center">
                 <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                   Recebe
                 </div>
-                {/*
-                  Calculado da constante, e não escrito à mão: quando as taxas
-                  mudaram (07-09-2026) este número estava a dizer 190 € a quem
-                  ia receber 188 €.
-                */}
-                <div className="mt-1.5 text-3xl font-bold text-emerald-600">
-                  {Math.round(quantoOProfissionalRecebe(200))} €
-                </div>
-                <p className="mt-1 text-xs text-slate-500">Já inclui a taxa CLYON</p>
+                <div className="mt-1.5 text-3xl font-bold text-emerald-600">{exemplo.recebe}</div>
+                <p className="mt-1 text-xs text-slate-500">Já com a taxa CLYON descontada</p>
               </div>
             </div>
-            <div className="border-t border-[#E2EEF3] bg-[#F4F8FB] px-6 py-4 text-center">
-              <p className="text-xs leading-relaxed text-slate-500">
-                A fatura do serviço é sua, e o IVA depende do seu regime — a CLYON não
-                se mete nisso e fatura apenas a comissão dela.
-              </p>
+            {/*
+              Dizia "a fatura do serviço é sua, e o IVA depende do seu regime —
+              a CLYON fatura apenas a comissão dela". A factura ao cliente é da
+              parceira desde 22-09-2026; e o documento que o profissional passa
+              à CLYON não se diz aqui, porque não está decidido (30-09-2026).
+            */}
+            <div className="border-t border-[#E2EEF3] bg-[#F4F8FB] px-6 py-4 text-left">
+              <p className="text-xs leading-relaxed text-slate-600">{exemplo.frase}</p>
+              <ul className="mt-3 space-y-1.5">
+                {COMO_RECEBE.map((c) => (
+                  <li key={c.forma} className="text-xs leading-relaxed text-slate-500">
+                    <strong className="font-semibold text-slate-700">{c.forma}:</strong> {c.texto}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>

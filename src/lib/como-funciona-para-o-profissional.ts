@@ -1,6 +1,9 @@
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
-import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
+import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
+import { precoParaOCliente } from "./preco-do-cliente";
+import { quotaDaClyon } from "./quota-da-clyon";
+import { FORMA_EM_PALAVRAS } from "./forma-de-pagamento";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import type { SeccaoComFalta } from "./perfil-por-completar";
 
@@ -38,8 +41,6 @@ export type PassoDoProfissional = {
   /** A secção do perfil que este passo depende, quando depende de alguma. */
   seccao?: SeccaoComFalta;
 };
-
-const percent = (v: number) => `${Math.round(v * 100)} %`;
 
 export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
   {
@@ -92,13 +93,92 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
   {
     chave: "recebe",
     titulo: "Recebe do cliente, e a comissão só existe se fechar",
+    /*
+     * SAÍRAM DUAS FRASES A 30-09-2026.
+     *
+     * «A comissão da CLYON é de 6 % do valor acordado» — lida de
+     * `TAXA_PROFISSIONAL`, que é a taxa DE ORIGEM e não a de hoje: desde
+     * 29-09-2026 a CLYON fica com 11 % do que o cliente paga, o que dá 6,55 %
+     * ao profissional (quota-da-clyon.ts). A conta com o exemplo passou para
+     * `comissaoEmPalavras`, que recebe as taxas em vigor.
+     *
+     * «A fatura do serviço é sua» — a factura ao cliente é da parceira desde
+     * 22-09-2026, e o documento que o profissional passa à CLYON não se diz
+     * aqui: não está decidido por escrito.
+     */
     texto:
       PROMESSA.proComoRecebe +
-      ` A comissão da CLYON é de ${percent(TAXA_PROFISSIONAL)} do valor acordado e já vem ` +
-      "descontada em todos os números que lhe mostramos: o que aparece é o que fica para si. " +
-      "Responder a pedidos não custa nada, e um orçamento que não dá em nada não lhe custa " +
-      "um cêntimo. A fatura do serviço é sua.",
+      " Propõe o seu valor, e o cliente vê-o já com a taxa da plataforma. A comissão da " +
+      "CLYON já vem descontada em todos os números que lhe mostramos: o que aparece é o que " +
+      "fica para si. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
+      "não lhe custa um cêntimo.",
     seccao: "banco",
+  },
+];
+
+/**
+ * O EXEMPLO DO DONO, com as taxas que estiverem em vigor — 30-09-2026.
+ *
+ * "O pro propôs 350, para o cliente vai aparecer 367,5, para o pro 327,08 —
+ * assim a CLYON mantém-se a ganhar os 11 %." — 29-09-2026.
+ *
+ * Os 350 € são o exemplo dele; o resto sai das contas de sempre
+ * (`precoParaOCliente`, `quantoOProfissionalRecebe`, `quotaDaClyon`). Recebe as
+ * taxas por parâmetro porque as de hoje vivem na base (`taxasActuais`) e mudam
+ * no backoffice: com as de origem (5 % e 6 %) a página diria 329,00 € e
+ * 10,48 %, que é o que ainda vale para quem não gravou as novas.
+ */
+export const VALOR_DO_EXEMPLO = 350;
+
+function euros(v: number): string {
+  return Number.isInteger(v) ? `${v} €` : `${v.toFixed(2).replace(".", ",")} €`;
+}
+
+function pontos(fraccao: number): string {
+  return `${String(Math.round(fraccao * 10000) / 100).replace(".", ",")} %`;
+}
+
+export function comissaoEmPalavras(taxas: Taxas): {
+  proposta: string;
+  cliente: string;
+  recebe: string;
+  quota: string;
+  frase: string;
+} {
+  const proposta = euros(VALOR_DO_EXEMPLO);
+  const cliente = euros(precoParaOCliente(VALOR_DO_EXEMPLO, taxas));
+  const recebe = euros(quantoOProfissionalRecebe(VALOR_DO_EXEMPLO, taxas));
+  const quota = pontos(quotaDaClyon(taxas));
+  return {
+    proposta,
+    cliente,
+    recebe,
+    quota,
+    frase:
+      `Propõe o seu valor; o cliente vê-o já com a taxa da plataforma. A CLYON fica com ` +
+      `${quota} do que o cliente paga — ex.: propõe ${proposta}, o cliente vê ${cliente} ` +
+      `e recebe ${recebe}.`,
+  };
+}
+
+/**
+ * COMO RECEBE, nas duas formas que o cliente pode escolher — 30-09-2026.
+ *
+ * O dinheiro é a frase do dono (`FORMA_EM_PALAVRAS`). A plataforma diz o que
+ * acontece ao valor até à confirmação e o prazo do levantamento, que é o que
+ * ele pergunta antes de se inscrever.
+ */
+export const COMO_RECEBE: Array<{ forma: string; texto: string }> = [
+  {
+    forma: FORMA_EM_PALAVRAS.na_plataforma.curta,
+    texto:
+      "O valor fica com a CLYON até o cliente confirmar que o trabalho está feito, ou até " +
+      `passarem ${DIAS_ATE_LIBERTAR_SOZINHO} dias sem resposta dele. Depois passa para a sua ` +
+      "carteira, já com a taxa descontada, e o pedido de levantamento é tratado em até 24 horas.",
+  },
+  {
+    forma: FORMA_EM_PALAVRAS.dinheiro.curta,
+    texto: FORMA_EM_PALAVRAS.dinheiro.profissional,
   },
 ];
 
