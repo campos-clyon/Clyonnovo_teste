@@ -3,22 +3,38 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, Phone } from "lucide-react";
 
 import CTABlock from "@/components/CTABlock";
-import { getCitiesByRegion, getAllCities } from "@/lib/city-content";
+import { getAllCities } from "@/lib/city-content";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
+  CITIES,
+  PRAZO_DE_RESPOSTA,
   SITE_URL,
+  getRegionCities,
 } from "@/lib/seo-data";
 
+/*
+ * "MAIS DE 24 LOCALIDADES", COM DEZANOVE NA PÁGINA — 30-09-2026.
+ *
+ * O número era escrito à mão e a lista vinha de city-content.ts, que tem
+ * dezanove. As localidades com página são as de `CITIES` (seo-data.ts): é essa
+ * a lista que os blocos das regiões passam a mostrar, e o número é o tamanho
+ * dela. A tabela de ligações lá em baixo continua a ler city-content — são
+ * ligações, não uma contagem — e o JSON-LD fica como está, que é da equipa do
+ * SEO técnico.
+ *
+ * E saíram as "limpezas" (a limpeza pós-obra não é serviço), os "tempos de
+ * resposta imbatíveis" e o "mais procurado", que ninguém mediu.
+ */
 export const metadata: Metadata = {
   title: "Áreas de Atuação | Lisboa, Margem Sul e Setúbal",
   description:
-    "A CLYON atua em mais de 24 localidades: Lisboa, Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro, Setúbal e mais. Recolha de móveis, entulho e limpezas.",
+    `A CLYON liga-o a profissionais verificados em ${CITIES.length} localidades: Lisboa, Amadora, Sintra, Cascais, Oeiras, Almada, Seixal, Barreiro, Setúbal e mais. Recolha de móveis, entulho, esvaziamentos e mudanças.`,
   alternates: { canonical: `${SITE_URL}/areas-de-atuacao` },
   openGraph: {
     title: "Áreas de Atuação da CLYON | Cobertura Completa",
     description:
-      "Cobertura em Lisboa, Margem Sul e Setúbal. Recolha de móveis, entulho, esvaziamentos e limpezas.",
+      "Profissionais verificados em Lisboa, Margem Sul e Setúbal. Recolha de móveis, entulho, esvaziamentos e mudanças.",
     url: `${SITE_URL}/areas-de-atuacao`,
   },
 };
@@ -33,19 +49,19 @@ const regions = [
   {
     name: "Grande Lisboa",
     slug: "lisboa",
-    description: "Lisboa e concelhos limítrofes com resposta rápida",
-    highlight: "Mais procurado",
+    description: "Lisboa e os concelhos à volta",
+    highlight: null,
   },
   {
     name: "Margem Sul",
     slug: "margem-sul",
-    description: "Base da CLYON - tempos de resposta imbatíveis",
-    highlight: "Base CLYON",
+    description: "De Almada ao Montijo — é aqui que fica a sede da CLYON",
+    highlight: "Sede da CLYON",
   },
   {
     name: "Setúbal",
     slug: "setubal",
-    description: "Cobertura completa na região de Setúbal",
+    description: "Setúbal, Palmela e Sesimbra",
     highlight: null,
   },
 ];
@@ -65,9 +81,9 @@ const localBusinessSchema = {
 export const revalidate = 86400;
 
 export default function AreasDeAtuacaoPage() {
-  const lisboaCities = getCitiesByRegion("lisboa");
-  const margemSulCities = getCitiesByRegion("margem-sul");
-  const setubalCities = getCitiesByRegion("setubal");
+  const lisboaCities = getRegionCities("lisboa");
+  const margemSulCities = getRegionCities("margem-sul");
+  const setubalCities = getRegionCities("setubal");
 
   const allRegions = [
     { ...regions[0], cities: lisboaCities },
@@ -87,9 +103,10 @@ export default function AreasDeAtuacaoPage() {
                 Áreas de Atuação da CLYON
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Atuamos em mais de <strong>24 localidades</strong> na região de Lisboa,
-                Margem Sul e Setúbal. Recolha de móveis, entulho, esvaziamentos e
-                limpezas com resposta rápida e preços competitivos.
+                A CLYON liga-o a profissionais verificados em{" "}
+                <strong>{CITIES.length} localidades</strong> de Lisboa, Margem Sul e
+                Setúbal — recolha de móveis, entulho e monos, esvaziamentos e mudanças.
+                Fora destas zonas, depende de haver profissional disponível.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -116,7 +133,7 @@ export default function AreasDeAtuacaoPage() {
       {/* Regiões */}
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <h2 className="mb-10 text-center text-2xl font-bold text-slate-900 sm:text-3xl">
-          3 Regiões, Mais de 24 Localidades
+          3 Regiões, {CITIES.length} Localidades
         </h2>
 
         <div className="space-y-8">
@@ -172,7 +189,7 @@ export default function AreasDeAtuacaoPage() {
       <section className="bg-slate-50 py-16">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <h2 className="mb-4 text-center text-2xl font-bold text-slate-900 sm:text-3xl">
-            Serviços Disponíveis em Todas as Zonas
+            Serviços em Todas Estas Zonas
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
             Clique num serviço para ver as páginas específicas por cidade.
@@ -189,7 +206,7 @@ export default function AreasDeAtuacaoPage() {
                   {service.name}
                 </h3>
                 <p className="mt-2 text-sm text-slate-500">
-                  Disponível em todas as zonas
+                  Lisboa, Margem Sul e Setúbal
                 </p>
                 <div className="mt-4 flex items-center gap-1 text-sm font-medium text-acao">
                   Ver página hub
@@ -276,7 +293,7 @@ export default function AreasDeAtuacaoPage() {
           <CTABlock
             variant="centered"
             title="Precisa de ajuda na sua zona?"
-            description="Peça um orçamento grátis. Respondemos em 6 horas para qualquer localidade."
+            description={`Peça um orçamento grátis e receba propostas de profissionais da sua zona em até ${PRAZO_DE_RESPOSTA.porExtenso}.`}
           />
         </div>
       </section>

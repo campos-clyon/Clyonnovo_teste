@@ -1,5 +1,20 @@
-// Zonas cobertas pela CLYON (região de Lisboa e Península de Setúbal)
-export const COVERED_ZONES = [
+import { CITIES } from "@/lib/seo-data";
+
+/**
+ * As zonas cobertas — a lista escrita à mão, e a que o site já publica.
+ *
+ * ERA SÓ A LISTA À MÃO, e esquecia metade das terras que têm página: quem
+ * abria /recolha-moveis-odivelas, com a localização em Odivelas, levava com
+ * «Ainda não estamos na sua área» por cima de uma página que dizia o
+ * contrário. O mesmo em Montijo, Alcochete, Queluz, Monte Abraão, Carnaxide,
+ * Corroios, Costa da Caparica e Azeitão — 30-09-2026.
+ *
+ * Passa a juntar três fontes, sem repetir: as que já cá estavam (Belverde e
+ * Fernão Ferro não têm página e continuam cobertas), todas as `CITIES` de
+ * seo-data.ts, e as terras vizinhas que cada uma nomeia. Uma cidade nova com
+ * página entra aqui sozinha — é essa a razão de não ser outra lista à mão.
+ */
+const ESCRITAS_A_MAO = [
   "Lisboa",
   "Almada",
   "Seixal",
@@ -16,7 +31,15 @@ export const COVERED_ZONES = [
   "Sintra",
   "Loures",
   "Amadora",
-] as const;
+];
+
+export const COVERED_ZONES: readonly string[] = [
+  ...new Set([
+    ...ESCRITAS_A_MAO,
+    ...CITIES.map((c) => c.name),
+    ...CITIES.flatMap((c) => c.nearby),
+  ]),
+];
 
 /** Normaliza texto: remove acentos, minúsculas, trim */
 export function normalize(value: string): string {
