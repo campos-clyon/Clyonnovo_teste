@@ -150,7 +150,10 @@ describe("as ligações", () => {
      * quisesse — e o painel passava a carregar imagens de um servidor de outra
      * pessoa, que vê quem as abre e pode trocá-las depois de aprovadas.
      */
-    const ROTA = ler("src/app/api/profissionais/perfil/route.ts");
+    // As regras de cada campo saíram da rota para `mudancas-do-perfil.ts` a 30-09-2026,
+    // quando o backoffice passou a gravar os mesmos campos. Lêem-se as duas.
+    const ROTA =
+      ler("src/app/api/profissionais/perfil/route.ts") + ler("src/lib/mudancas-do-perfil.ts");
     expect(ROTA).toContain(".public.blob.vercel-storage.com/");
   });
 });

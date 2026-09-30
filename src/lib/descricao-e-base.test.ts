@@ -50,7 +50,10 @@ const META = (() => {
   return SEM_COMENTARIOS.slice(i, SEM_COMENTARIOS.indexOf("</ul>", i));
 })();
 const FORM = ler("src/app/plataforma/pedir/components/CompactOrderDetails.tsx");
-const PERFIL = ler("src/app/api/profissionais/perfil/route.ts");
+// As regras de cada campo saíram da rota para `mudancas-do-perfil.ts` a 30-09-2026,
+// quando o backoffice passou a gravar os mesmos campos. Lêem-se as duas.
+const PERFIL =
+  ler("src/app/api/profissionais/perfil/route.ts") + ler("src/lib/mudancas-do-perfil.ts");
 const DB = ler("src/lib/db.ts");
 
 describe("a descrição do lado do profissional", () => {

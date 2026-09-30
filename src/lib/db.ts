@@ -2463,6 +2463,40 @@ export async function definirPalavraPasseDoProfissional(
   );
 }
 
+/**
+ * MUDAR O EMAIL COM QUE ELE ENTRA — só pelo backoffice. 30-09-2026.
+ *
+ * O painel dele diz «para o mudar, fale connosco», e falar connosco não levava
+ * a lado nenhum: não havia onde o mudar. *«Tem muitos clientes que não
+ * conseguem ou não sabem usar emails.»* Quem criou a conta com um email que
+ * já não abre ficava trancado por fora.
+ *
+ * É o identificador da entrada (`profissionalParaEntrar` procura por ele,
+ * exacto e em minúsculas), por isso dois profissionais com o mesmo seria
+ * uma palavra-passe a abrir a conta errada. Recusa-se em vez de escolher.
+ */
+export async function mudarEmailDoProfissional(
+  providerId: number,
+  email: string,
+): Promise<"ok" | "em_uso"> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [outros] = (await pool.execute(
+    "SELECT id FROM providers WHERE LOWER(email) = ? AND id <> ? LIMIT 1",
+    [email, providerId],
+  )) as [Array<{ id: number }>, unknown];
+  if (outros.length > 0) return "em_uso";
+  try {
+    await pool.execute("UPDATE providers SET email = ? WHERE id = ?", [email, providerId]);
+  } catch (e: any) {
+    // Um índice único que exista apanha a corrida entre dois cliques.
+    if (e?.code === "ER_DUP_ENTRY") return "em_uso";
+    throw e;
+  }
+  return "ok";
+}
+
 export type ProfissionalParaEntrar = {
   id: number;
   name: string;
@@ -8632,6 +8666,13 @@ export type Acontecimento =
   | "pagamento_declarado"
   // As contas
   | "conta_apagada"
+  /*
+   * A CLYON MEXEU NA CONTA DE UM PROFISSIONAL — dados, email de entrada,
+   * palavra-passe ou link para a criar. 30-09-2026: é quem trata das contas
+   * de quem não usa email, e um email de entrada que muda sem nome nem data
+   * é a primeira pergunta de qualquer queixa de acesso.
+   */
+  | "conta_do_profissional_editada"
   /*
    * ALGUÉM MUDOU A COMISSÃO DA CLYON.
    *

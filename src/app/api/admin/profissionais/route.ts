@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, ensureProvidersSchema, actividadeDosProfissionais } from "@/lib/db";
+import { ibanEncurtado } from "@/lib/iban";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,10 @@ export async function GET(req: NextRequest) {
       `SELECT id, name, email, phone, nif, city, categorias, zonas, raioKm,
               emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
-              baseLat, baseLng, createdAt
+              baseLat, baseLng, createdAt,
+              moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
+              iban, ibanTitular, mbway, ultimoAcesso,
+              (passwordHash IS NOT NULL AND passwordHash <> '') AS temPalavraPasse
          FROM providers
         -- 'apagado' é a linha vazia que fica quando uma conta com história é
         -- apagada: as negociações antigas precisam dela, o painel não. Sem
@@ -47,6 +51,17 @@ export async function GET(req: NextRequest) {
 
     const profissionais = (rows as Array<Record<string, unknown>>).map((p) => ({
       ...p,
+      /*
+       * A CONTA INTEIRA, PARA A PODER EDITAR DAQUI — 30-09-2026.
+       *
+       * «Tem muitos clientes que não conseguem ou não sabem usar emails.» O
+       * IBAN sai encurtado, como sai no painel dele: esta lista abre-se em
+       * qualquer computador do escritório. Da palavra-passe só se diz se
+       * existe — o hash nunca sai da base.
+       */
+      iban: typeof p.iban === "string" && p.iban ? ibanEncurtado(p.iban) : "",
+      temIban: typeof p.iban === "string" && p.iban !== "",
+      temPalavraPasse: Number(p.temPalavraPasse) === 1,
       actividade:
         actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
     }));

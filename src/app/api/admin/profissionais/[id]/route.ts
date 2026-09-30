@@ -9,7 +9,14 @@ import {
   getPool,
   apagarProfissional,
   ContaComPendencias,
+  actualizarPerfilDoProfissional,
+  definirPalavraPasseDoProfissional,
+  mudarEmailDoProfissional,
+  registarSemFalhar,
 } from "@/lib/db";
+import { mudancasDoPerfil } from "@/lib/mudancas-do-perfil";
+import { emailValido } from "@/lib/inscricao-profissional";
+import { validarPalavraPasse, hashDaPalavraPasse } from "@/lib/profissional-auth";
 import { validarEdicao, estadoValido, afectaDistribuicao } from "@/lib/edicao-profissional";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
@@ -22,6 +29,25 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { DIAS_DO_LINK_DE_SENHA } from "@/lib/convite-profissional";
 
 export const runtime = "nodejs";
+
+/**
+ * Os campos da conta que o backoffice grava com as regras do painel dele.
+ *
+ * O regime de IVA fica de fora porque já entra por `validarEdicao`, com o
+ * resto do que decide os pedidos.
+ */
+const CAMPOS_DA_CONTA = [
+  "nome",
+  "telefone",
+  "nif",
+  "moradaFiscal",
+  "codigoPostalFiscal",
+  "localidadeFiscal",
+  "tipoVeiculo",
+  "mbway",
+  "iban",
+  "ibanTitular",
+] as const;
 
 /**
  * Gerir um profissional: estado, perfil, verificação da guia, coordenadas.
@@ -58,6 +84,102 @@ export async function PATCH(
   try {
     const feito: string[] = [];
     let avisoDeDistribuicao = false;
+
+    // ── A conta: os dados, o email de entrada e a palavra-passe ──────────────
+    //
+    // «Tem muitos clientes que não conseguem ou não sabem usar emails, vamos
+    // trazer toda a edição e configuração da conta para mim, até reset de
+    // senha pelo admin.» — 30-09-2026.
+    //
+    // PRIMEIRO, e valida tudo antes de gravar seja o que for: um NIF mal
+    // escrito não pode deixar para trás um estado já mudado.
+    //
+    // O email e a palavra-passe são a chave da conta dele: só um
+    // administrador lhes toca, nunca um assistente.
+    const daConta: Record<string, unknown> = {};
+    for (const k of CAMPOS_DA_CONTA) if (k in corpo) daConta[k] = corpo[k];
+    const mexeNaEntrada =
+      corpo.email !== undefined ||
+      corpo.novaPalavraPasse !== undefined ||
+      corpo.linkDePalavraPasse === true;
+    if (mexeNaEntrada && colab.papel !== "admin") {
+      return NextResponse.json(
+        { error: "Só um administrador muda o email de entrada ou a palavra-passe." },
+        { status: 403 },
+      );
+    }
+    const conta = Object.keys(daConta).length > 0 ? await mudancasDoPerfil(daConta) : null;
+    if (conta && conta.erros.length > 0) {
+      return NextResponse.json({ error: conta.erros[0].mensagem, erros: conta.erros }, { status: 400 });
+    }
+    let emailNovo: string | null = null;
+    if (corpo.email !== undefined) {
+      emailNovo = typeof corpo.email === "string" ? corpo.email.trim().toLowerCase() : "";
+      if (!emailValido(emailNovo)) {
+        return NextResponse.json({ error: "Email inválido." }, { status: 400 });
+      }
+    }
+    if (corpo.novaPalavraPasse !== undefined) {
+      const erro = validarPalavraPasse(corpo.novaPalavraPasse);
+      if (erro) return NextResponse.json({ error: erro.mensagem }, { status: 400 });
+    }
+
+    const porQuem = colab?.nome ?? "a CLYON";
+    const mexido: string[] = [];
+    if (conta) {
+      await actualizarPerfilDoProfissional(providerId, conta.mudancas);
+      feito.push("dados da conta");
+      mexido.push(...Object.keys(daConta));
+    }
+    if (emailNovo !== null) {
+      if ((await mudarEmailDoProfissional(providerId, emailNovo)) === "em_uso") {
+        return NextResponse.json(
+          { error: "Esse email já é o de outra conta de profissional." },
+          { status: 409 },
+        );
+      }
+      feito.push("email de entrada");
+      mexido.push(`email de entrada (agora ${emailNovo})`);
+    }
+    /*
+     * A PALAVRA-PASSE DEFINIDA DAQUI — para quem não recebe o email do link.
+     *
+     * Quem a escolhe diz-lha por telefone ou WhatsApp. Grava-se só o hash,
+     * como na dele, e o link que estivesse pendente deixa de valer. Nunca vai
+     * para o registo nem para o histórico: aí fica escrito QUE mudou, e quem.
+     */
+    let palavraPasseDefinida = false;
+    if (typeof corpo.novaPalavraPasse === "string") {
+      await definirPalavraPasseDoProfissional(
+        providerId,
+        await hashDaPalavraPasse(corpo.novaPalavraPasse),
+      );
+      palavraPasseDefinida = true;
+      feito.push("palavra-passe");
+      mexido.push("palavra-passe definida");
+    }
+    // O mesmo link do convite, para mandar por WhatsApp — ele escolhe a dele.
+    let linkPedidoAqui: string | undefined;
+    if (corpo.linkDePalavraPasse === true) {
+      const acesso = gerarTokenDeAcesso();
+      await guardarTokenDePalavraPasse(
+        providerId,
+        acesso.hash,
+        new Date(Date.now() + DIAS_DO_LINK_DE_SENHA * 24 * 3600_000),
+      );
+      linkPedidoAqui = `${urlDeAccaoDoPedido(req.headers)}/profissionais/definir-senha/${acesso.token}`;
+      feito.push("link de palavra-passe");
+      mexido.push("link para criar palavra-passe gerado");
+    }
+    if (mexido.length > 0) {
+      await registarSemFalhar({
+        acontecimento: "conta_do_profissional_editada",
+        providerId,
+        autorTipo: "clyon",
+        autorNome: porQuem,
+        resumo: `Conta editada pela CLYON (${porQuem}): ${mexido.join(", ")}.`.slice(0, 500),
+      });
+    }
 
     // ── Estado ───────────────────────────────────────────────────────────────
     let convitePorEnviar = false;
@@ -227,7 +349,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Nada para alterar" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao, conviteEnviado, linkDaSenha });
+    return NextResponse.json({
+      ok: true,
+      feito,
+      avisoDeDistribuicao,
+      conviteEnviado,
+      linkDaSenha: linkDaSenha ?? linkPedidoAqui,
+      palavraPasseDefinida,
+    });
   } catch (error) {
     console.error("[api/admin/profissionais PATCH]", error);
     return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });

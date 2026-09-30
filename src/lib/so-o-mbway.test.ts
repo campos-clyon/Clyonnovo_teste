@@ -19,7 +19,10 @@ import { join } from "node:path";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const PERFIL = ler("src/app/profissionais/painel/Perfil.tsx");
-const ROTA = ler("src/app/api/profissionais/perfil/route.ts");
+// As regras de cada campo saíram da rota para `mudancas-do-perfil.ts` a 30-09-2026,
+// quando o backoffice passou a gravar os mesmos campos. Lêem-se as duas.
+const ROTA =
+  ler("src/app/api/profissionais/perfil/route.ts") + ler("src/lib/mudancas-do-perfil.ts");
 
 describe("o IBAN por tocar não viaja", () => {
   it("o ecrã não envia a chave quando o campo está como veio", () => {

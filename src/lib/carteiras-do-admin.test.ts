@@ -26,7 +26,10 @@ const ROTA = ler("src/app/api/admin/carteiras/route.ts");
 const PAINEL = ler("src/components/admin/AdminCarteirasPanel.tsx");
 const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
 const DB = ler("src/lib/db.ts");
-const PERFIL = ler("src/app/api/profissionais/perfil/route.ts");
+// As regras de cada campo saíram da rota para `mudancas-do-perfil.ts` a 30-09-2026,
+// quando o backoffice passou a gravar os mesmos campos. Lêem-se as duas.
+const PERFIL =
+  ler("src/app/api/profissionais/perfil/route.ts") + ler("src/lib/mudancas-do-perfil.ts");
 
 describe("a pergunta certa", () => {
   it("olha para quem TEM A RECEBER, e não para quem pediu", () => {

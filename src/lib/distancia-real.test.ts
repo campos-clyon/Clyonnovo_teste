@@ -28,7 +28,10 @@ const LIB = ler("src/lib/distancia-rodoviaria.ts");
 const LIB_LIMPA = semComentarios(LIB);
 const PAINEL = ler("src/app/api/profissionais/meus-pedidos/route.ts");
 const DISTRIBUIR = ler("src/lib/distribuir-pedido.ts");
-const PERFIL = ler("src/app/api/profissionais/perfil/route.ts");
+// As regras de cada campo saíram da rota para `mudancas-do-perfil.ts` a 30-09-2026,
+// quando o backoffice passou a gravar os mesmos campos. Lêem-se as duas.
+const PERFIL =
+  ler("src/app/api/profissionais/perfil/route.ts") + ler("src/lib/mudancas-do-perfil.ts");
 const CAMPO = ler("src/app/profissionais/painel/MoradaDaBase.tsx");
 
 describe("a medição", () => {

@@ -28,10 +28,11 @@ import { join } from "node:path";
  */
 
 const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
-const ROTA = readFileSync(
-  join(process.cwd(), "src/app/api/profissionais/perfil/route.ts"),
-  "utf8",
-);
+// As regras de cada campo saíram da rota para `mudancas-do-perfil.ts` a 30-09-2026,
+// quando o backoffice passou a gravar os mesmos campos. Lêem-se as duas.
+const ROTA =
+  readFileSync(join(process.cwd(), "src/app/api/profissionais/perfil/route.ts"), "utf8") +
+  readFileSync(join(process.cwd(), "src/lib/mudancas-do-perfil.ts"), "utf8");
 
 /** As colunas que `actualizarPerfilDoProfissional` deixa mesmo gravar. */
 function permitidas(): string[] {
