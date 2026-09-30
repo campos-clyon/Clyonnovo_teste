@@ -5,6 +5,8 @@ import { BUSINESS_EMAIL } from "@/lib/seo-data";
 import { createLead } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { e } from "@/lib/escapar-html";
+import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 
 /**
  * O assunto vem de campos do formulário. Quebras de linha num cabeçalho de
@@ -64,6 +66,26 @@ export async function POST(request: NextRequest) {
     }
     const { nome, telemovel, endereco, servico, mensagem,
             pagePath, pageUrl, utmSource, utmMedium, utmCampaign, gclid } = parsed.data;
+
+    // A mesma regra dos outros formulários públicos (telefone-do-cliente.ts).
+    const erroDoTelefone = problemaDoTelefone(telemovel);
+    if (erroDoTelefone) {
+      return NextResponse.json(
+        { error: erroDoTelefone, details: { telemovel: [erroDoTelefone] } },
+        { status: 400 },
+      );
+    }
+
+    /*
+     * O número para o botão "Responder via WhatsApp" do email.
+     *
+     * Era `351` + o que sobrava depois de tirar um "+351" à frente — um
+     * "00351…" dava wa.me/35100351…, e um número de fora ficava com 351
+     * colado ao indicativo dele. Os portugueses passam pela normalização de
+     * sempre; os de fora (já validados acima) seguem só com os dígitos.
+     */
+    const numeroDoWhatsApp =
+      numeroParaWhatsApp(telemovel) ?? telemovel.replace(/\D/g, "").replace(/^00/, "");
 
     const plainText = `
 Novo pedido de orçamento recebido através do site CLYON.
@@ -189,7 +211,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <a href="https://wa.me/351${telemovel.replace(/\s/g, '').replace(/^\+?351/, '')}?text=${encodeURIComponent(`Olá ${nome}! Recebemos o seu pedido de ${servico}. `)}" style="display: inline-block; background-color: #22c55e; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600;">
+                    <a href="https://wa.me/${numeroDoWhatsApp}?text=${encodeURIComponent(`Olá ${nome}! Recebemos o seu pedido de ${servico}. `)}" style="display: inline-block; background-color: #22c55e; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600;">
                       Responder via WhatsApp
                     </a>
                   </td>

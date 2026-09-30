@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useLocation } from "@/contexts/LocationContext";
 import type {
@@ -31,7 +31,8 @@ import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
-import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
@@ -39,9 +40,12 @@ import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 const PASSOS_DO_ENVIO = [
   { id: "analise", texto: "A preparar o pedido" },
   { id: "fotos", texto: "A enviar as fotografias" },
-  { id: "guardar", texto: "A registar e a avisar profissionais" },
+  // "e a avisar profissionais" não era verdade: neste passo só se grava o
+  // pedido e se avisa a CLYON; os profissionais recebem-no depois de
+  // conferido (ver o portão da análise em api/simulador/pedido).
+  { id: "guardar", texto: "A registar o pedido" },
 ] as const;
-import { enviarFicheiro } from "@/lib/enviar-ficheiro";
+import { enviarFicheiro, type FicheiroEnviado } from "@/lib/enviar-ficheiro";
 import { emailValido } from "@/lib/inscricao-profissional";
 import {
   trackSimulatorStart,
@@ -52,6 +56,9 @@ import {
 
 const DRAFT_KEY = "clyon_simulator_draft";
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
+
+/** O número da CLYON para o `wa.me` — o BUSINESS_PHONE já traz o 351. */
+const WHATSAPP_CLYON = `https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}`;
 
 interface FormState extends OrderData {
   distanceFromBase?: DistanceFromBase;
@@ -102,6 +109,19 @@ export default function SimulatorThreePhaseForm() {
   const [passo, setPasso] = useState<"analise" | "fotos" | "guardar">("analise");
   const [fotosFeitas, setFotosFeitas] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
+  /** Para onde o servidor manda o email com o link — `null` se não manda nenhum. */
+  const [emailDoLink, setEmailDoLink] = useState<string | null>(null);
+  /** A razão por que o pedido não ficou gravado, enquanto a pessoa decide o que fazer. */
+  const [falhaNoEnvio, setFalhaNoEnvio] = useState<string | null>(null);
+  const caixaDaFalha = useRef<HTMLDivElement>(null);
+  /*
+   * As fotografias que já subiram, por ficheiro.
+   *
+   * Se a gravação falha e a pessoa tenta outra vez, as que já estão no
+   * armazenamento não voltam a subir uma a uma. As falhas acontecem em dados
+   * móveis, e é aí que repetir o passo mais lento por causa de outro custa.
+   */
+  const fotosJaEnviadas = useRef(new Map<File, FicheiroEnviado>());
   // Fotos que o cliente escolheu mas que não chegaram a subir
   const [fotosNaoEnviadas, setFotosNaoEnviadas] = useState(0);
   const [addressValue, setAddressValue] = useState("");
@@ -217,6 +237,12 @@ export default function SimulatorThreePhaseForm() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
   }, [formData]);
 
+  // A falha aparece por baixo de um formulário comprido: sem isto, no
+  // telemóvel, ficava fora do ecrã e parecia que o botão não tinha feito nada.
+  useEffect(() => {
+    if (falhaNoEnvio) caixaDaFalha.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [falhaNoEnvio]);
+
   const updateField = (field: string, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
@@ -327,7 +353,9 @@ export default function SimulatorThreePhaseForm() {
   const isPhase3Valid = () => {
     return (
       formData.receiver?.name &&
-      formData.receiver?.phone &&
+      // Um telefone a sério, e não só um campo preenchido: sem email, é por
+      // ele que as propostas lhe chegam. A regra é a mesma da rota.
+      telefoneDoClienteValido(formData.receiver?.phone) &&
       /*
        * O EMAIL É RECOMENDADO, E JÁ NÃO OBRIGATÓRIO.
        *
@@ -358,6 +386,13 @@ export default function SimulatorThreePhaseForm() {
   const canAnalyze = isPhase3Valid();
 
   const emailDoPedido = formData.receiver?.email?.trim() || null;
+  /*
+   * Para onde irá o link quando a CLYON enviar o pedido aos profissionais, se
+   * não seguiu já. A rota usa o email da sessão antes do escrito — e um
+   * endereço mal escrito não recebe nada, por isso não se promete.
+   */
+  const emailParaMaisTarde =
+    session?.user?.email?.trim() || (emailDoPedido && emailValido(emailDoPedido) ? emailDoPedido : null);
   const totalDeFotos = (formData.files ?? []).filter((f) => f?.file instanceof File).length;
   /** Sem fotografias, o passo delas nem entra na lista. */
   const passosVisiveis = PASSOS_DO_ENVIO.filter((p) => p.id !== "fotos" || totalDeFotos > 0);
@@ -367,6 +402,7 @@ export default function SimulatorThreePhaseForm() {
   if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se precisa de fatura");
   if (!formData.receiver?.name) faltaNaFase3.push("o nome");
   if (!formData.receiver?.phone) faltaNaFase3.push("o telefone");
+  else if (!telefoneDoClienteValido(formData.receiver.phone)) faltaNaFase3.push("um telefone válido");
   if (!formData.urgency) faltaNaFase3.push("quando precisa");
 
   /*
@@ -390,6 +426,7 @@ export default function SimulatorThreePhaseForm() {
 
     setIsAnalyzing(true);
     setError(null);
+    setFalhaNoEnvio(null);
     setPasso("analise");
     setFotosFeitas(0);
 
@@ -403,7 +440,10 @@ export default function SimulatorThreePhaseForm() {
      */
     const chao = new Promise<void>((resolve) => setTimeout(resolve, 2200));
 
-    const work = (async () => {
+    // Ou o pedido ficou gravado, com número, ou não ficou — e diz-se porquê.
+    const work = (async (): Promise<
+      { id: number; emailDoLink: string | null } | { erro: string | null }
+    > => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
       let apiResult: EstimateResult | null = null;
       try {
@@ -462,8 +502,15 @@ export default function SimulatorThreePhaseForm() {
 
         for (const f of rawFiles) {
           const original = f.file as File;
+          const jaEnviada = fotosJaEnviadas.current.get(original);
+          if (jaEnviada) {
+            uploadedFiles.push(jaEnviada);
+            setFotosFeitas(uploadedFiles.length);
+            continue;
+          }
           const r = await enviarFicheiro(original);
           if (r.ok) {
+            fotosJaEnviadas.current.set(original, r.ficheiro);
             uploadedFiles.push(r.ficheiro);
             setFotosFeitas(uploadedFiles.length);
           } else {
@@ -520,37 +567,60 @@ export default function SimulatorThreePhaseForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ order: orderPayload, estimate }),
         });
-        if (saveRes.ok) {
-          const saved = await saveRes.json();
-          return (saved.id as number) ?? null;
+        // Um 413 ou um 504 chegam em HTML: sem o catch, a resposta do servidor
+        // passava por falta de rede.
+        const saved = (await saveRes.json().catch(() => ({}))) as {
+          id?: unknown;
+          emailDoLink?: unknown;
+          error?: unknown;
+        };
+        const id = Number(saved.id);
+        if (saveRes.ok && Number.isInteger(id) && id > 0) {
+          return { id, emailDoLink: typeof saved.emailDoLink === "string" ? saved.emailDoLink : null };
         }
+        return { erro: typeof saved.error === "string" && saved.error ? saved.error : null };
       } catch {
-        /* gravação falhou — mostramos sucesso na mesma */
+        return { erro: "A ligação à internet falhou a meio do envio." };
       }
-      return null;
     })();
 
-    const [savedId] = await Promise.all([work, chao]);
+    const [resultado] = await Promise.all([work, chao]);
+    setIsAnalyzing(false);
 
-    if (savedId) {
-      trackSimulatorOrderConfirmed({
-        service: formData.serviceType ?? undefined,
-        name: formData.receiver?.name ?? undefined,
-        phone: formData.receiver?.phone ?? undefined,
-        email: formData.receiver?.email ?? undefined,
-        city: formData.address?.city ?? formData.originAddress?.city,
-        simulatorData: { orderId: savedId, serviceType: formData.serviceType },
-      });
+    /*
+     * A GRAVAÇÃO FALHOU, E ISSO DIZ-SE.
+     *
+     * Ia para o ecrã de sucesso na mesma — "Guarde o número #-1" e a promessa
+     * de um email com o link, de um pedido que não existia. A pessoa ficava à
+     * espera de propostas que não podiam chegar, e nós sem saber dela.
+     *
+     * Fica no passo 3, com tudo o que escreveu, e com duas saídas: tentar
+     * outra vez, ou mandar o pedido por WhatsApp.
+     */
+    if (!("id" in resultado)) {
+      setFalhaNoEnvio(resultado.erro ?? "O servidor não conseguiu registar o pedido.");
+      return;
     }
 
-    // Ir sempre para o ecrã de sucesso (savedId -1 = gravação falhou, sucesso mesmo assim).
-    setSuccessOrderId(savedId ?? -1);
-    setIsAnalyzing(false);
+    trackSimulatorOrderConfirmed({
+      service: formData.serviceType ?? undefined,
+      name: formData.receiver?.name ?? undefined,
+      phone: formData.receiver?.phone ?? undefined,
+      email: formData.receiver?.email ?? undefined,
+      city: formData.address?.city ?? formData.originAddress?.city,
+      simulatorData: { orderId: resultado.id, serviceType: formData.serviceType },
+    });
+
+    setEmailDoLink(resultado.emailDoLink);
+    setSuccessOrderId(resultado.id);
   };
 
   const handleReset = () => {
     setFormData({});
     setSuccessOrderId(null);
+    setEmailDoLink(null);
+    setFalhaNoEnvio(null);
+    fotosJaEnviadas.current.clear();
     setPasso("analise");
     setFotosFeitas(0);
     setPhase(1);
@@ -633,13 +703,19 @@ export default function SimulatorThreePhaseForm() {
             CLYON não avalia nem executa, quem responde são os profissionais; o
             contacto não é um telefonema da CLYON, são propostas; e "em breve"
             não é prazo nenhum.
+
+            E também não "Profissionais da sua zona receberam o pedido": neste
+            instante ainda não receberam. O pedido espera que a CLYON confira a
+            informação e carregue em "Enviar aos profissionais" (ver o portão
+            da análise em api/simulador/pedido). Conferir não é orçamentar —
+            o preço continua a ser dos profissionais.
           */}
           <ol className="mb-5 list-none space-y-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
             {[
               {
                 Icone: CheckCircle,
                 cor: "text-green-600",
-                titulo: "Profissionais da sua zona receberam o pedido",
+                titulo: "A CLYON confere o pedido e envia-o aos profissionais da sua zona",
                 texto: "Verificados, com nota dada por quem já os contratou.",
               },
               {
@@ -702,13 +778,36 @@ export default function SimulatorThreePhaseForm() {
             </div>
           )}
 
-          {/* O caminho de quem não quer conta nenhuma — e continua a ser válido. */}
+          {/*
+            O caminho de quem não quer conta nenhuma — e continua a ser válido.
+
+            O email só se promete quando o servidor diz que o vai mandar
+            (`emailDoLink` na resposta). Prometia-se a toda a gente, com email
+            ou sem ele. Sem email, as propostas chegam pelo telefone: é a
+            CLYON que lhas manda por WhatsApp, a partir do backoffice.
+          */}
           <p className="mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-tinta-fraca">
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
             <span>
-              Sem conta também funciona: vai a caminho um email
-              {emailDoPedido ? <> para <span className="font-semibold text-tinta">{emailDoPedido}</span></> : null}{" "}
-              com o link deste pedido. Guarde o número{" "}
+              {emailDoLink ? (
+                <>
+                  Sem conta também funciona: vai a caminho um email para{" "}
+                  <span className="font-semibold text-tinta">{emailDoLink}</span> com o link deste
+                  pedido.
+                </>
+              ) : emailParaMaisTarde ? (
+                <>
+                  O link deste pedido segue por email para{" "}
+                  <span className="font-semibold text-tinta">{emailParaMaisTarde}</span> quando o
+                  pedido for enviado aos profissionais.
+                </>
+              ) : (
+                <>
+                  Sem email, as propostas chegam-lhe por WhatsApp ou por telefone, no número que
+                  indicou.
+                </>
+              )}{" "}
+              Guarde o número{" "}
               <span className="font-mono font-semibold text-tinta">#{successOrderId}</span>.
             </span>
           </p>
@@ -892,6 +991,41 @@ export default function SimulatorThreePhaseForm() {
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-sm text-red-800">{error}</p>
+                </div>
+              )}
+
+              {/* O pedido não ficou gravado. Tudo o que foi escrito continua
+                  no formulário por cima; daqui sai-se de duas maneiras. */}
+              {phase === 3 && !isAnalyzing && falhaNoEnvio && (
+                <div
+                  ref={caixaDaFalha}
+                  role="alert"
+                  className="rounded-xl border border-red-200 bg-red-50 p-4"
+                >
+                  <p className="text-sm font-semibold text-red-900">Não foi possível enviar o pedido.</p>
+                  <p className="mt-1 text-sm text-red-800">{falhaNoEnvio}</p>
+                  <p className="mt-1 text-xs text-red-800">
+                    O que preencheu não se perdeu. Tente outra vez, ou envie-nos o pedido por WhatsApp.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAnalyze}
+                      className="min-h-[44px] rounded-xl bg-acao px-5 text-sm font-semibold text-white transition-colors hover:bg-acao-hover"
+                    >
+                      Tentar outra vez
+                    </button>
+                    <a
+                      href={`${WHATSAPP_CLYON}?text=${encodeURIComponent(
+                        "Olá! Tentei enviar um pedido pelo simulador do site e não consegui.",
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#25D366] px-5 text-sm font-semibold text-whatsapp-tinta"
+                    >
+                      Enviar por WhatsApp
+                    </a>
+                  </div>
                 </div>
               )}
 
@@ -1701,6 +1835,11 @@ function Phase3Contact({
   const isLoggedIn = !!session?.user?.email;
   const emailEscrito = (formData.receiver?.email ?? "").trim().length > 0;
   const emailEstaBem = emailValido(formData.receiver?.email ?? "");
+  /* Um número escrito e errado diz-se ao sair do campo — enquanto se escreve
+     o primeiro dígito, "número inválido" é ruído. */
+  const [telefoneTocado, setTelefoneTocado] = useState(false);
+  const telefoneEscrito = (formData.receiver?.phone ?? "").trim();
+  const erroDoTelefone = telefoneEscrito ? problemaDoTelefone(telefoneEscrito) : null;
 
   /*
    * DUAS CORES, DUAS COISAS DIFERENTES.
@@ -1722,7 +1861,8 @@ function Phase3Contact({
   const NORMAL = "border-gray-400 focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600";
 
   const semNome = emFalta(!formData.receiver?.name);
-  const semTelefone = emFalta(!formData.receiver?.phone);
+  const semTelefone =
+    emFalta(!telefoneEscrito) || (!!erroDoTelefone && (telefoneTocado || !!showValidationErrors));
   const semUrgencia = emFalta(!formData.urgency);
   const semFatura = emFalta(typeof formData.precisaFatura !== "boolean");
   /* Dourado: falta ou está errado, mas não impede. */
@@ -1863,13 +2003,22 @@ function Phase3Contact({
           <label htmlFor="sim-telefone" className="block text-sm font-medium text-gray-900">Telefone *</label>
           <input id="sim-telefone"
             type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={30}
             value={formData.receiver?.phone || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
+            onBlur={() => setTelefoneTocado(true)}
             placeholder="Ex: 911 128 863"
             aria-invalid={semTelefone || undefined}
+            aria-describedby={semTelefone ? "sim-telefone-erro" : undefined}
             className={`${CAIXA} ${semTelefone ? VERMELHO : NORMAL}`}
           />
-          {semTelefone && <p className="text-xs font-medium text-red-600">Falta o telefone.</p>}
+          {semTelefone && (
+            <p id="sim-telefone-erro" className="text-xs font-medium text-red-600">
+              {erroDoTelefone ?? "Falta o telefone."}
+            </p>
+          )}
         </div>
       </div>
 
@@ -1953,9 +2102,22 @@ function Phase3Contact({
         </div>
       )}
 
+      {/*
+        O QUE ACONTECE DEPOIS DE ENVIAR, dito como o código o faz.
+
+        Dizia que "a equipa CLYON irá analisar os dados e entrar em contacto
+        através do telefone ou email" — o mesmo erro que o ecrã de sucesso já
+        tinha corrigido. O pedido espera que a CLYON o confira e o envie aos
+        profissionais (o portão da análise); as propostas são deles, e chegam
+        pelo link do email ou, sem email, pelo WhatsApp que a CLYON manda a
+        partir do backoffice.
+      */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
-          <strong>Nota:</strong> Após enviar o pedido, a equipa CLYON irá analisar os dados e entrar em contacto através do telefone ou email fornecido.
+          <strong>Depois de enviar:</strong> a CLYON confere o pedido e envia-o aos profissionais
+          da sua zona. As propostas chegam em até {PRAZO_DE_RESPOSTA.porExtenso} — por email, com
+          o link do pedido, ou, se não deixar email, por WhatsApp ou telefone, no número que
+          indicou.
         </p>
       </div>
     </div>

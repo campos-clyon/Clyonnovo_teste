@@ -5,6 +5,8 @@ import { Clock3, Mail, MapPin, MessageCircle, Phone, CheckCircle2 } from "lucide
 import {
   trackLeadFormSubmit, trackWhatsAppClick, trackPhoneCall, trackEmailClick,
 } from "@/lib/analytics";
+import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 
 export default function ContactosClient() {
   // O tipo de serviço entra aqui porque sem ele TODOS os pedidos deste
@@ -13,11 +15,24 @@ export default function ContactosClient() {
   const [form, setForm] = useState({ nome: "", telemovel: "", email: "", morada: "", servico: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  /** O que está errado no telemóvel — dito por baixo do próprio campo. */
+  const [erroTelemovel, setErroTelemovel] = useState("");
+  /** O que o servidor devolveu ao gravar: o número do pedido e para onde vai o link. */
+  const [enviado, setEnviado] = useState<{ id: number | null; emailDoLink: string | null } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("loading");
     setErrorMsg("");
+
+    // A mesma regra da rota, antes de enviar: "abc" passava como telemóvel.
+    const problema = problemaDoTelefone(form.telemovel);
+    setErroTelemovel(problema ?? "");
+    if (problema) {
+      document.getElementById("telemovel")?.focus();
+      return;
+    }
+
+    setStatus("loading");
 
     try {
       const res = await fetch("/api/simulador/pedido", {
@@ -40,14 +55,23 @@ export default function ContactosClient() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Erro ao enviar pedido.");
+        if (data?.campo === "telefone" && data?.error) {
+          setErroTelemovel(data.error);
+          setStatus("idle");
+          return;
+        }
+        throw new Error(data?.error || "Não foi possível enviar o pedido. Tente novamente.");
       }
 
       // Sem isto, o pedido entra mas o canal não fica registado: o painel
       // mostrava "Forms 0" com formulários a chegar todos os dias.
       trackLeadFormSubmit("contactos", form.servico || "outro");
+      setEnviado({
+        id: Number(data?.id) > 0 ? Number(data.id) : null,
+        emailDoLink: typeof data?.emailDoLink === "string" ? data.emailDoLink : null,
+      });
       setStatus("success");
       setForm({ nome: "", telemovel: "", email: "", morada: "", servico: "" });
     } catch (err) {
@@ -60,7 +84,8 @@ export default function ContactosClient() {
     id: keyof typeof form,
     label: string,
     type = "text",
-    placeholder = ""
+    placeholder = "",
+    erro = "",
   ) => (
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-semibold text-slate-700">
@@ -71,10 +96,22 @@ export default function ContactosClient() {
         type={type}
         required
         value={form[id]}
-        onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))}
+        onChange={(e) => {
+          setForm((f) => ({ ...f, [id]: e.target.value }));
+          if (id === "telemovel" && erroTelemovel) setErroTelemovel("");
+        }}
         placeholder={placeholder}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+        aria-invalid={erro ? true : undefined}
+        aria-describedby={erro ? `${id}-erro` : undefined}
+        className={`h-10 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 ${
+          erro ? "border-red-400" : "border-slate-200"
+        }`}
       />
+      {erro && (
+        <p id={`${id}-erro`} role="alert" className="mt-1 text-xs font-medium text-red-600">
+          {erro}
+        </p>
+      )}
     </div>
   );
 
@@ -174,9 +211,30 @@ export default function ContactosClient() {
               <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
                 <CheckCircle2 className="h-12 w-12 text-cyan-500" />
                 <h2 className="text-lg font-bold text-tinta">Pedido recebido!</h2>
+                {/*
+                  Dizia "O profissional entra em contacto em breve" — e nenhum
+                  profissional recebe o contacto do cliente antes de ser
+                  escolhido. Este formulário cria um pedido (api/simulador/
+                  pedido): a CLYON confere-o e envia-o aos profissionais da
+                  zona, e as propostas chegam pelo link do email.
+                */}
                 <p className="text-sm text-slate-500">
-                  O profissional entra em contacto em breve. Obrigado!
+                  A CLYON confere o pedido e envia-o aos profissionais da sua zona. As propostas
+                  chegam em até {PRAZO_DE_RESPOSTA.porExtenso}
+                  {enviado?.emailDoLink ? (
+                    <>
+                      , pelo link que segue por email para{" "}
+                      <strong className="text-slate-700">{enviado.emailDoLink}</strong>.
+                    </>
+                  ) : (
+                    <>, por WhatsApp ou telefone.</>
+                  )}
                 </p>
+                {enviado?.id && (
+                  <p className="text-xs text-slate-500">
+                    Guarde o número do pedido: <strong className="text-slate-700">#{enviado.id}</strong>
+                  </p>
+                )}
                 <button
                   onClick={() => setStatus("idle")}
                   className="mt-2 rounded-xl bg-acao px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-acao-hover"
@@ -188,11 +246,12 @@ export default function ContactosClient() {
               <>
                 <h2 className="text-base font-bold text-tinta">Enviar pedido</h2>
                 <p className="mt-1 text-xs text-tinta-fraca">
-                  Preencha os dados — o profissional responde em até 6h.
+                  Preencha os dados — os profissionais da sua zona respondem em até{" "}
+                  {PRAZO_DE_RESPOSTA.porExtenso}.
                 </p>
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
                   {field("nome", "Nome completo", "text", "Ana Silva")}
-                  {field("telemovel", "Telemóvel", "tel", "+351 9xx xxx xxx")}
+                  {field("telemovel", "Telemóvel", "tel", "+351 9xx xxx xxx", erroTelemovel)}
                   {field("email", "Email", "email", "ana@exemplo.com")}
                   {field("morada", "Morada do serviço", "text", "Rua ..., Lisboa")}
 

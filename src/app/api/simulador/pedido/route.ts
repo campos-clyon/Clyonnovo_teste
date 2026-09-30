@@ -21,6 +21,7 @@ import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arranque";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
+import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,25 @@ export async function POST(req: NextRequest) {
     const { order, estimate, chatHistory } = await req.json();
     if (!order) {
       return NextResponse.json({ error: "order required" }, { status: 400 });
+    }
+
+    /*
+     * O TELEFONE TEM DE SER UM TELEFONE.
+     *
+     * Qualquer texto passava e era gravado tal como vinha. Para quem não deixa
+     * email, é o único caminho até ele — um número que não existe é um cliente
+     * à espera de propostas que nunca lhe chegam. A regra (portugueses e de
+     * fora) está em telefone-do-cliente.ts.
+     *
+     * Só as portas públicas passam por aqui (simulador, contactos). O
+     * backoffice e a ponte do WhatsApp gravam por rotas próprias.
+     */
+    const erroDoTelefone = problemaDoTelefone(order.receiver?.phone);
+    if (erroDoTelefone) {
+      return NextResponse.json(
+        { ok: false, error: erroDoTelefone, campo: "telefone" },
+        { status: 400 },
+      );
     }
 
     // ── Ligação à conta do cliente ────────────────────────────────────────────
@@ -511,6 +531,17 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    /*
+     * PARA ONDE VAI O EMAIL COM O LINK — ou `null`, se não vai nenhum.
+     *
+     * O ecrã de sucesso prometia "vai a caminho um email com o link" a toda a
+     * gente, com email ou sem ele. A condição é a mesma do `after()` acima
+     * (e a do `enviarLinkDoPedido`, que recusa endereços sem @): o ecrã só diz
+     * o que o servidor vai mesmo tentar fazer.
+     */
+    const emailDoLink =
+      valorDeArranque != null && contactEmail && contactEmail.includes("@") ? contactEmail : null;
+
     return NextResponse.json({
       ok: true,
       id: created.id,
@@ -520,6 +551,7 @@ export async function POST(req: NextRequest) {
       assignedToName: null,
       createdAt: created.createdAt,
       queue: "general",
+      emailDoLink,
       // O token vai na resposta para o formulário poder levar o cliente ao
       // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
       // que o criou — nunca numa listagem nem numa leitura posterior.
@@ -532,7 +564,7 @@ export async function POST(req: NextRequest) {
        * sai depois da resposta, por isso a mensagem diz o que se sabe com
        * certeza neste instante: o pedido está gravado, e tem número.
        */
-      message: clienteIndicouValores
+      message: emailDoLink
         ? "Pedido criado. O link de acesso segue para o seu email."
         : "Pedido criado com sucesso.",
     });

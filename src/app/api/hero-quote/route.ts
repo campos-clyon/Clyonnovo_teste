@@ -6,8 +6,13 @@ import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
+import { problemaDoTelefone, juntarIndicativo, MENSAGENS_DO_TELEFONE } from "@/lib/telefone-do-cliente";
 
 export const runtime = "nodejs";
+
+/** O que o cliente lê quando nada chegou a ficar gravado. */
+const NADA_GRAVADO =
+  "Não foi possível registar o pedido. Tente novamente ou fale connosco por WhatsApp.";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:           "Recolha de móveis",
@@ -19,20 +24,28 @@ const SERVICE_LABELS: Record<string, string> = {
   outro:                    "Outro",
 };
 
+/*
+ * As mensagens em português, campo a campo.
+ *
+ * O formulário mostra `details` por baixo de cada campo. Sem elas, o que lá
+ * aparecia era o texto por omissão do zod — em inglês — ou, como até aqui,
+ * só "Dados inválidos." no fundo do cartão, sem dizer qual.
+ */
 const HeroQuoteSchema = z.object({
-  primeiroNome:    z.string().min(2).max(60),
-  ultimoNome:      z.string().min(2).max(60),
-  indicativo:      z.string().min(1).max(6),   // ex: "+351"
-  telefone:        z.string().min(6).max(20),
-  rua:             z.string().min(2).max(200),
-  codigoPostal:    z.string().min(4).max(12),
-  numeroPosta:     z.string().max(20),
+  primeiroNome:    z.string().min(2, "Mínimo 2 caracteres").max(60, "Máximo 60 caracteres"),
+  ultimoNome:      z.string().min(2, "Mínimo 2 caracteres").max(60, "Máximo 60 caracteres"),
+  indicativo:      z.string().min(1, "Obrigatório").max(6, "Máximo 6 caracteres"),   // ex: "+351"
+  // O resto da regra do telefone está em telefone-do-cliente.ts, mais abaixo.
+  telefone:        z.string().min(1, MENSAGENS_DO_TELEFONE.falta).max(20, "Máximo 20 caracteres"),
+  rua:             z.string().min(2, "Mínimo 2 caracteres").max(200, "Máximo 200 caracteres"),
+  codigoPostal:    z.string().min(4, "Código postal inválido").max(12, "Código postal inválido"),
+  numeroPosta:     z.string().max(20, "Máximo 20 caracteres"),
   // Obrigatórios: o andar e o elevador mudam o preço mais do que quase tudo
   // o resto, e uma validação que vive só no browser não é validação.
-  andar:           z.string().min(1, "Indique o andar").max(20),
-  elevador:        z.enum(["yes", "small", "no", "unknown"]),
-  tipoServico:     z.string().min(2).max(80),
-  descricao:       z.string().max(300).optional(),
+  andar:           z.string().min(1, "Indique o andar").max(20, "Máximo 20 caracteres"),
+  elevador:        z.enum(["yes", "small", "no", "unknown"], "Indique se há elevador"),
+  tipoServico:     z.string().min(2, "Escolha um serviço").max(80, "Escolha um serviço"),
+  descricao:       z.string().max(300, "Máximo 300 caracteres").optional(),
   // UTM / rastreio opcional
   pagePath:        z.string().max(255).optional(),
   utmSource:       z.string().max(120).optional(),
@@ -95,8 +108,18 @@ export async function POST(req: NextRequest) {
   } = parsed.data;
 
   const nomeCompleto = `${primeiroNome} ${ultimoNome}`.trim();
-  const telefoneFull = `${indicativo}${telefone}`.replace(/\s+/g, "");
+  const telefoneFull = juntarIndicativo(indicativo, telefone).replace(/\s+/g, "");
   const morada = [rua, numeroPosta, codigoPostal].filter(Boolean).join(", ");
+
+  // Qualquer texto passava como telefone — e neste formulário não há email:
+  // o telefone é o único caminho até ao cliente.
+  const erroDoTelefone = problemaDoTelefone(telefoneFull);
+  if (erroDoTelefone) {
+    return NextResponse.json(
+      { error: erroDoTelefone, details: { telefone: [erroDoTelefone] } },
+      { status: 400 },
+    );
+  }
 
   // ── Motor de preços (rápido, sem Gemini) ─────────────────────────────────────
   // Estimativa de distância a partir do código postal relativamente à base CLYON em Fernão Ferro.
@@ -122,6 +145,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Criar lead ────────────────────────────────────────────────────────────────
+  let leadGravado = false;
   try {
     await createLead({
       nome:                nomeCompleto,
@@ -142,6 +166,7 @@ export async function POST(req: NextRequest) {
       utmCampaign:         utmCampaign ?? null,
       gclid:               null,
     });
+    leadGravado = true;
   } catch (e) {
     console.error("[hero-quote] createLead error:", e);
   }
@@ -225,11 +250,13 @@ export async function POST(req: NextRequest) {
 
     orderId = await createSimulatorOrder(row);
 
+    // O histórico é um extra. Se falhar, o pedido existe na mesma — e o aviso
+    // à equipa, logo abaixo, não pode ficar por mandar por causa dele.
     await appendOrderHistory(orderId, {
       type: "created",
       by: null,
       message: `Pedido criado via formulário hero (homepage). Serviço: ${tipoServico}. Prioridade: ${priority}.`,
-    });
+    }).catch((e) => console.error("[hero-quote] appendOrderHistory error:", e));
 
     notifyNewOrder({
       id: orderId,
@@ -242,6 +269,23 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error("[hero-quote] createSimulatorOrder error:", e);
+  }
+
+  /*
+   * NADA GRAVADO NÃO É SUCESSO.
+   *
+   * As duas escritas estavam em try/catch que só escreviam no log, e a rota
+   * respondia sempre {ok: true} — com `orderId: null` quando a base falhava.
+   * O cliente via "Pedido enviado com sucesso!" e ficava à espera de uma
+   * chamada que ninguém ia fazer: não havia pedido nem lead com o telefone
+   * dele em sítio nenhum.
+   *
+   * Basta uma das duas para a equipa lhe chegar (o lead também traz o
+   * telefone). Com nenhuma, diz-se-lhe — e o formulário mostra o WhatsApp.
+   */
+  const pedidoGravado = typeof orderId === "number" && orderId > 0;
+  if (!pedidoGravado && !leadGravado) {
+    return NextResponse.json({ ok: false, error: NADA_GRAVADO }, { status: 500 });
   }
 
   return NextResponse.json({

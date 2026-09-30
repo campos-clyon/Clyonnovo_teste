@@ -32,6 +32,7 @@ import CompactOrderDetails from "./components/CompactOrderDetails";
 import ValoresEFaturacao from "./components/ValoresEFaturacao";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { validarValorDesejado, type ErroDeValor } from "@/lib/pedido-valores";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import {
@@ -58,6 +59,8 @@ export default function SimulatorThreePhaseForm() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [countdown, setCountdown] = useState(0); // contagem regressiva do envio (20→0)
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
+  /** A razão por que o pedido não ficou gravado — ver o comentário em handleAnalyze. */
+  const [falhaNoEnvio, setFalhaNoEnvio] = useState<string | null>(null);
   // O token vem na resposta da criação para o cliente poder abrir o pedido sem
   // esperar pelo email. Vive só neste ecrã e nunca é guardado.
   const [acessoToken, setAcessoToken] = useState<string | null>(null);
@@ -312,6 +315,7 @@ export default function SimulatorThreePhaseForm() {
 
     setIsAnalyzing(true);
     setError(null);
+    setFalhaNoEnvio(null);
     setCountdown(20);
 
     // Contagem regressiva visível (20 → 0).
@@ -323,7 +327,7 @@ export default function SimulatorThreePhaseForm() {
     // O trabalho real (estimativa + gravação) corre em paralelo.
     const minWait = new Promise<void>((resolve) => setTimeout(resolve, 20000));
 
-    const work = (async () => {
+    const work = (async (): Promise<{ id: number } | { erro: string | null }> => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
       let apiResult: EstimateResult | null = null;
       try {
@@ -440,19 +444,39 @@ export default function SimulatorThreePhaseForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ order: orderPayload, estimate }),
         });
-        if (saveRes.ok) {
-          const saved = await saveRes.json();
+        // Uma resposta em HTML (413, 504) não é falta de rede.
+        const saved = (await saveRes.json().catch(() => ({}))) as {
+          id?: unknown;
+          acessoToken?: unknown;
+          error?: unknown;
+        };
+        const id = Number(saved.id);
+        if (saveRes.ok && Number.isInteger(id) && id > 0) {
           if (typeof saved.acessoToken === "string") setAcessoToken(saved.acessoToken);
-          return (saved.id as number) ?? null;
+          return { id };
         }
+        return { erro: typeof saved.error === "string" && saved.error ? saved.error : null };
       } catch {
-        /* gravação falhou — mostramos sucesso na mesma */
+        return { erro: "A ligação à internet falhou a meio do envio." };
       }
-      return null;
     })();
 
-    const [savedId] = await Promise.all([work, minWait]);
+    const [resultado] = await Promise.all([work, minWait]);
     clearInterval(countdownInterval);
+
+    /*
+     * Sem pedido gravado não há ecrã de sucesso.
+     *
+     * Ia para lá na mesma, com o número "#-1" e "Enviámos para o seu email um
+     * link que abre este pedido" — de um pedido que não existia. Fica aqui,
+     * com o que foi escrito, e com duas saídas: tentar outra vez ou WhatsApp.
+     */
+    if (!("id" in resultado)) {
+      setFalhaNoEnvio(resultado.erro ?? "O servidor não conseguiu registar o pedido.");
+      setIsAnalyzing(false);
+      return;
+    }
+    const savedId = resultado.id;
 
     if (savedId) {
       trackSimulatorOrderConfirmed({
@@ -465,14 +489,14 @@ export default function SimulatorThreePhaseForm() {
       });
     }
 
-    // Ir sempre para o ecrã de sucesso (savedId -1 = gravação falhou, sucesso mesmo assim).
-    setSuccessOrderId(savedId ?? -1);
+    setSuccessOrderId(savedId);
     setIsAnalyzing(false);
   };
 
   const handleReset = () => {
     setFormData({});
     setSuccessOrderId(null);
+    setFalhaNoEnvio(null);
     setCountdown(0);
     setPhase(1);
     setAddressValue("");
@@ -709,6 +733,35 @@ export default function SimulatorThreePhaseForm() {
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-sm text-red-800">{error}</p>
+                </div>
+              )}
+
+              {phase === 3 && !isAnalyzing && falhaNoEnvio && (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm font-semibold text-red-900">Não foi possível enviar o pedido.</p>
+                  <p className="mt-1 text-sm text-red-800">{falhaNoEnvio}</p>
+                  <p className="mt-1 text-xs text-red-800">
+                    O que preencheu não se perdeu. Tente outra vez, ou envie-nos o pedido por WhatsApp.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAnalyze}
+                      className="min-h-[44px] rounded-xl bg-cyan-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-cyan-700"
+                    >
+                      Tentar outra vez
+                    </button>
+                    <a
+                      href={`https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(
+                        "Olá! Tentei enviar um pedido pelo site e não consegui.",
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#25D366] px-5 text-sm font-semibold text-white"
+                    >
+                      Enviar por WhatsApp
+                    </a>
+                  </div>
                 </div>
               )}
 

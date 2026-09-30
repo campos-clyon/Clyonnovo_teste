@@ -24,6 +24,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
   const [email, setEmail] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [demasiados, setDemasiados] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -34,18 +35,30 @@ export function PremiumLoginCard({ errorMsg }: Props) {
     ev.preventDefault();
     if (aEnviar) return;
     setAEnviar(true);
+    setDemasiados(false);
+    let travado = false;
     try {
-      await fetch("/api/entrada/link", {
+      const res = await fetch("/api/entrada/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+      /*
+       * O 429 é a única resposta que não é "a mesma para todos".
+       *
+       * Vem do travão por IP, antes de a rota olhar para o email — por isso
+       * não diz nada sobre o endereço existir ou não. E nesse caso NENHUM
+       * link saiu: dizer "veja o seu email" mandava a pessoa esperar por uma
+       * coisa que não vai chegar.
+       */
+      travado = res.status === 429;
     } catch {
       /* A resposta é sempre a mesma, e uma falha de rede não a pode mudar:
          dizer "não conseguimos enviar" contava que o endereço existe. */
     } finally {
       setAEnviar(false);
-      setEnviado(true);
+      if (travado) setDemasiados(true);
+      else setEnviado(true);
     }
   };
 
@@ -170,6 +183,11 @@ export function PremiumLoginCard({ errorMsg }: Props) {
               <Mail className="h-4 w-4" aria-hidden="true" />
               {aEnviar ? "A enviar…" : "Receber link por email"}
             </button>
+            {demasiados && (
+              <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-900">
+                Demasiados pedidos. Aguarde alguns minutos e tente de novo.
+              </p>
+            )}
             <p className="text-center text-[11px] text-tinta-fraca">
               Sem palavra-passe. Enviamos um link que entra por si.
             </p>

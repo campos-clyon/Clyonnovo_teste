@@ -65,12 +65,20 @@ export default function FormularioDeCandidatura() {
           mensagem: mensagem || null,
         }),
       });
-      const dados = await res.json();
+      // Um 413 ou um 504 chegam em HTML. Sem o catch, o `res.json()` rebentava
+      // e a pessoa lia "Sem ligação" com a ligação perfeita.
+      const dados = await res.json().catch(() => ({}));
       if (!res.ok) {
         setErros(
           Array.isArray(dados.erros) && dados.erros.length > 0
             ? dados.erros
-            : [{ campo: "geral", mensagem: dados.error ?? "Não foi possível enviar." }],
+            : [
+                {
+                  campo: "geral",
+                  mensagem:
+                    dados.error ?? "Não foi possível enviar a candidatura. Tente novamente dentro de momentos.",
+                },
+              ],
         );
         return;
       }
@@ -107,8 +115,10 @@ export default function FormularioDeCandidatura() {
           Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa
           nada. Só há comissão quando fecha um trabalho.
         </p>
+        {/* Ia para /profissionais, que dá 404 a quem não tem a chave do MVP.
+            O "como funciona" do parceiro está nesta mesma página. */}
         <Link
-          href="/profissionais"
+          href="/quero-ser-parceiro#como-funciona"
           className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-xl border-2 border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
         >
           Ver como funciona

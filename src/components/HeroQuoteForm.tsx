@@ -3,6 +3,12 @@
 import { useState, useRef, useEffect, useId } from "react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { problemaDoTelefone, juntarIndicativo } from "@/lib/telefone-do-cliente";
+
+/** Quando o envio falha, o caminho que sobra. O BUSINESS_PHONE já traz o +351. */
+const WHATSAPP_DA_FALHA = `https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(
+  "Olá! Tentei pedir um orçamento pelo site e o pedido não foi enviado.",
+)}`;
 
 const SERVICE_OPTIONS = [
   { value: "recolha_moveis",           label: "Recolha de móveis" },
@@ -112,6 +118,11 @@ type FormData = {
 
 type Errors = Partial<Record<keyof FormData, string>>;
 
+/** Os campos do passo 1 — um erro do servidor num destes obriga a voltar lá. */
+const CAMPOS_DO_PASSO_1: Array<keyof FormData> = [
+  "primeiroNome", "ultimoNome", "indicativo", "telefone", "tipoServico",
+];
+
 type EstimateResult = {
   estimatedPriceWithVat: number | null;
   estimatedPriceWithoutVat: number | null;
@@ -200,7 +211,11 @@ export default function HeroQuoteForm() {
     if (form.primeiroNome.trim().length < 2) e.primeiroNome = "Mínimo 2 caracteres";
     if (form.ultimoNome.trim().length < 2)   e.ultimoNome   = "Mínimo 2 caracteres";
     if (!form.indicativo.trim())              e.indicativo   = "Obrigatório";
-    if (form.telefone.trim().length < 6)      e.telefone     = "Número inválido";
+    // A mesma regra do servidor, com a razão escrita: "Número inválido" não
+    // dizia se faltava um dígito ou o indicativo.
+    const erroDoTelefone = problemaDoTelefone(juntarIndicativo(form.indicativo, form.telefone));
+    if (!form.telefone.trim())                e.telefone     = "Indique o telefone.";
+    else if (erroDoTelefone)                  e.telefone     = erroDoTelefone;
     if (!form.tipoServico)                    e.tipoServico  = "Escolha um serviço";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -279,16 +294,46 @@ export default function HeroQuoteForm() {
         }),
       });
 
-      const data = await res.json();
+      /*
+       * Uma resposta que não é JSON não é um "erro de rede".
+       *
+       * Um 413 ou um 504 do Vercel chega em HTML. O `res.json()` rebentava, o
+       * catch lá em baixo apanhava-o e dizia "Verifique a sua ligação" a quem
+       * tinha a ligação perfeita.
+       */
+      const data: {
+        error?: string;
+        details?: Record<string, string[] | undefined>;
+        estimate?: EstimateResult | null;
+      } = await res.json().catch(() => ({}));
       if (!res.ok) {
         setLoading(false);
         setCountdown(null);
         if (countdownRef.current) clearInterval(countdownRef.current);
-        setServerError(data.error ?? "Erro ao enviar. Tente novamente.");
+
+        /*
+         * O ERRO NO CAMPO, e não "Dados inválidos." no fundo do cartão.
+         *
+         * O servidor diz qual é o campo e o que tem de errado (`details`); o
+         * formulário deitava isso fora e deixava a pessoa a adivinhar. Os do
+         * nome, do telefone e do serviço vivem no passo 1 — sem voltar lá,
+         * ficavam escondidos atrás do botão "Voltar".
+         */
+        const porCampo: Errors = {};
+        for (const [campo, mensagens] of Object.entries(data.details ?? {})) {
+          if (campo in form && mensagens?.[0]) porCampo[campo as keyof FormData] = mensagens[0];
+        }
+        if (Object.keys(porCampo).length > 0) {
+          setErrors(porCampo);
+          if (CAMPOS_DO_PASSO_1.some((c) => porCampo[c])) setStep(1);
+          return;
+        }
+
+        setServerError(data.error ?? "Não foi possível enviar o pedido. Tente novamente.");
         return;
       }
 
-      setEstimate(data.estimate);
+      setEstimate(data.estimate ?? null);
       setSent(true);
     } catch {
       setLoading(false);
@@ -356,7 +401,9 @@ export default function HeroQuoteForm() {
             <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-lg">📞</span>
               <div className="text-left">
-                <p className="text-[13px] font-semibold text-tinta">Resposta em &lt;24&nbsp;h</p>
+                {/* Dizia "Resposta em <24 h" uma linha abaixo das 6 horas do
+                    parágrafo de cima. É a mesma promessa: vem da constante. */}
+                <p className="text-[13px] font-semibold text-tinta">{PRAZO_DE_RESPOSTA.frase}</p>
                 <p className="text-[13px] text-tinta-fraca">Via chamada ou WhatsApp</p>
               </div>
             </div>
@@ -457,14 +504,14 @@ export default function HeroQuoteForm() {
                   <Label htmlFor={idDe("primeiroNome")}>Primeiro nome</Label>
                   <input id={idDe("primeiroNome")} className={inputCls(errors.primeiroNome)} aria-invalid={errors.primeiroNome ? true : undefined} aria-describedby={errors.primeiroNome ? idDoErro("primeiroNome") : undefined} placeholder="Ana"
                     value={form.primeiroNome} onChange={(e) => set("primeiroNome", e.target.value)}
-                    autoComplete="given-name" />
+                    autoComplete="given-name" maxLength={60} />
                   <Err id={idDoErro("primeiroNome")} msg={errors.primeiroNome} />
                 </div>
                 <div>
                   <Label htmlFor={idDe("ultimoNome")}>Último nome</Label>
                   <input id={idDe("ultimoNome")} className={inputCls(errors.ultimoNome)} aria-invalid={errors.ultimoNome ? true : undefined} aria-describedby={errors.ultimoNome ? idDoErro("ultimoNome") : undefined} placeholder="Silva"
                     value={form.ultimoNome} onChange={(e) => set("ultimoNome", e.target.value)}
-                    autoComplete="family-name" />
+                    autoComplete="family-name" maxLength={60} />
                   <Err id={idDoErro("ultimoNome")} msg={errors.ultimoNome} />
                 </div>
               </div>
@@ -525,7 +572,7 @@ export default function HeroQuoteForm() {
                 <Label htmlFor={idDe("rua")}>Rua / Avenida</Label>
                 <input id={idDe("rua")} className={inputCls(errors.rua)} aria-invalid={errors.rua ? true : undefined} aria-describedby={errors.rua ? idDoErro("rua") : undefined} placeholder="Rua das Flores"
                   value={form.rua} onChange={(e) => set("rua", e.target.value)}
-                  autoComplete="street-address" />
+                  autoComplete="street-address" maxLength={200} />
                 <Err id={idDoErro("rua")} msg={errors.rua} />
               </div>
 
@@ -631,10 +678,20 @@ export default function HeroQuoteForm() {
             <input ref={galleryRef} type="file" accept="image/*"
               multiple className="hidden" onChange={(e) => addImages(e.target.files)} />
 
+            {/* Com o erro vai a saída: quem não consegue enviar tem de ter
+                outro caminho à mão, e não só "tente outra vez". */}
             {serverError && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-                {serverError}
-              </p>
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                <p>{serverError}</p>
+                <a
+                  href={WHATSAPP_DA_FALHA}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block font-semibold text-red-700 underline"
+                >
+                  Falar connosco por WhatsApp
+                </a>
+              </div>
             )}
 
             {/* CTA at bottom */}

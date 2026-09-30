@@ -61,7 +61,9 @@ export default function OrcamentoClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      const json = await res.json();
+      // Uma resposta em HTML (413, 504) não é "erro de rede": sem o catch, o
+      // `res.json()` rebentava e era isso que se dizia.
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setErrorMsg(json.error ?? "Ocorreu um erro. Por favor tente novamente.");
       } else {

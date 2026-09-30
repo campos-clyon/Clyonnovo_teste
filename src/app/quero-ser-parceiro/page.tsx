@@ -126,7 +126,7 @@ export default function QueroSerParceiroPage() {
         versão que o convence a candidatar-se não pode ser mais generosa do que
         a que lê depois de entrar.
       */}
-      <section className="border-y border-[#E2EEF3] bg-white py-10 sm:py-14">
+      <section id="como-funciona" className="scroll-mt-20 border-y border-[#E2EEF3] bg-white py-10 sm:py-14">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <h2 className="text-2xl font-bold text-[#0B1929] sm:text-3xl">Como funciona</h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
