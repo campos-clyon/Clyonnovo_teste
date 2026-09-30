@@ -18,7 +18,7 @@ import { comoTratar, saudacao } from "./whatsapp-recolha";
 import { totalEmPalavras } from "./conta-em-palavras";
 import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
 import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
-import { prazoAutomaticoPorExtenso } from "./pagamento-na-plataforma";
+import { prazoAutomaticoPorExtenso, promessaDaForma } from "./pagamento-na-plataforma";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 
 /**
@@ -274,7 +274,6 @@ export function propostasDe(json: string | null | undefined): Proposta[] {
  */
 export { comoTratar };
 
-
 /**
  * TODAS as novidades que este pedido tem para contar agora.
  *
@@ -361,6 +360,13 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
     const forma = lerForma(n.formaDePagamento);
     // O preço dele, com a unidade quando é por carga.
     const dele = (valor: number) => comUnidade(precoParaOCliente(valor, taxas));
+    /*
+     * E COMO E QUANDO PAGA — 29-09-2026. Dizia-se a toda a gente «Só paga
+     * depois de o trabalho estar feito e confirmado», e a quem paga pela
+     * plataforma chega uma referência logo a seguir a fechar. Ver
+     * `pagamento-na-plataforma.ts`.
+     */
+    const comoPaga = promessaDaForma(forma).whatsappAntesDeAceitar;
 
     // ── Há uma proposta do profissional à espera de resposta ───────────────
     if (n.estado === "aberta") {
@@ -402,8 +408,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
               `${dele(pendente.valor)}. ` +
               `${totalEmPalavras(pendente.valor, n.regimeIva, taxas, forma, base)} ` +
               `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
-              `Só paga depois de o trabalho estar ` +
-              `feito e confirmado. Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
+              `${comoPaga} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
           });
         }
       }
@@ -423,7 +428,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
           `${ola} Boas notícias: ${pro} aceitou os ${dele(acordado)} que propôs para ` +
           `${servico}. ${totalEmPalavras(acordado, n.regimeIva, taxas, forma, base)} ` +
           `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
-          `Só paga depois de estar feito. Falta só a sua palavra para ficar combinado.`,
+          `${comoPaga} Falta só a sua palavra para ficar combinado.`,
       });
     }
 
@@ -631,17 +636,16 @@ export function textoDoLembrete(
       );
     }
     /*
-     * «E O PROFISSIONAL RECEBE» — NINGUÉM RECEBE NADA.
+     * «E O PROFISSIONAL RECEBE» — NÃO É O PRAZO QUE O PAGA.
      *
-     * Dizia-se ao cliente que, ficando calado, o profissional era pago. Não
-     * é: `A_PLATAFORMA_COBRA` é `false`, a CLYON não guarda dinheiro nenhum, e
-     * o que o prazo faz é escrever uma data em `confirmadoEm` e mandar um
-     * email. Depois do prazo quem deve o dinheiro ao profissional continua a
-     * ser o cliente — que acabou de ler o contrário.
+     * Dizia-se ao cliente que, ficando calado, o profissional era pago. O que
+     * o prazo faz é escrever uma data em `confirmadoEm` e mandar um email: em
+     * dinheiro, quem deve o valor ao profissional continua a ser o cliente; e
+     * pela plataforma, a CLYON só entrega o que o cliente pagou.
      *
-     * Era a frase da plataforma que COBRA, dita a quem vive na que não cobra.
-     * Vem agora do sítio onde essa distinção está escrita e testada, com o
-     * prazo a sério em vez de «dentro de poucos dias».
+     * Vem agora do sítio onde o prazo está escrito e testado, com os dias a
+     * sério em vez de «dentro de poucos dias», e a falar do trabalho e não do
+     * dinheiro — é a mesma frase para as duas formas de pagar.
      */
     return (
       `${tratamento}${prazoAutomaticoPorExtenso(DIAS_ATE_LIBERTAR_SOZINHO)}`

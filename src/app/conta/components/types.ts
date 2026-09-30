@@ -80,6 +80,8 @@ export interface NegociacaoDoPedido {
   /** A comissão com que esta negociação nasceu. Nulas = as de origem. */
   taxaCliente?: string | null;
   taxaProfissional?: string | null;
+  /** Como o cliente paga esta negociação. Nula = na plataforma. */
+  formaDePagamento?: string | null;
   propostasJson: string | null;
   execucaoEnviadaEm: string | null;
   provaJson: string | null;

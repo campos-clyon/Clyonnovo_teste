@@ -10,7 +10,8 @@ import {
 } from "./perfil-por-completar";
 import { PASSOS_DO_PROFISSIONAL, passoDaSeccao } from "./como-funciona-para-o-profissional";
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
-import { A_PLATAFORMA_COBRA, PROMESSA } from "./pagamento-na-plataforma";
+import { PROMESSA } from "./pagamento-na-plataforma";
+import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
 import { RAIO_POR_OMISSAO_KM } from "./inscricao-profissional";
 
 /**
@@ -188,15 +189,16 @@ describe("o IBAN e o MB WAY são dois caminhos para a mesma coisa", () => {
 
   it("e a razão é a mesma que a carteira dá — não promete que a CLYON tem o dinheiro", () => {
     /*
-     * Enquanto `A_PLATAFORMA_COBRA` for falso, o cliente paga ao profissional.
-     * Um aviso a dizer «não temos para onde lhe enviar o dinheiro dos
-     * trabalhos» punha a CLYON a receber o que não recebe.
+     * Fala do SALDO, que é o que se transfere — e não de «o dinheiro dos
+     * trabalhos». Em dinheiro, no local, não há nada a transferir; pela
+     * plataforma, só há saldo depois de o cliente pagar e confirmar. (Até
+     * 29-09-2026 a razão escrita aqui era o `A_PLATAFORMA_COBRA`; os textos
+     * deixaram de depender dele — ver `pagamento-na-plataforma.ts`.)
      */
     const f = faltaPelaChave(
       oQueFaltaNoPerfil({ ...CHEIO, temIban: false, ibanTitular: "", mbway: "" }),
       "onde-receber",
     );
-    expect(A_PLATAFORMA_COBRA).toBe(false);
     expect(f?.porque).toBe("Sem um destes não há para onde transferir o seu saldo.");
   });
 });
@@ -242,17 +244,24 @@ describe("o «como funciona» diz o mesmo aos dois lados", () => {
     expect(propostas?.texto).not.toMatch(/horas para responder|expirar|caduca/);
   });
 
-  it("o passo do dinheiro lê a fonte única, e não uma frase escrita à mão", () => {
+  it("o passo do dinheiro lê a fonte única, e diz as duas formas de pagar", () => {
     /*
-     * Assim o passo acompanha o interruptor: no dia em que a cobrança
-     * existir, esta frase muda sozinha nos dois ecrãs e neste teste.
+     * MUDOU A 29-09-2026. O passo seguia o interruptor da cobrança e dizia
+     * «Quem lhe paga é o cliente» — e desde 17-09-2026 quem paga pela
+     * plataforma paga à CLYON, que paga ao profissional depois da
+     * confirmação. Quem lê isto ainda não sabe que forma lhe vai calhar, e por
+     * isso o passo diz as duas. E a factura ao cliente é da parceira, e não
+     * dele («A fatura do serviço é sua» saiu com o mesmo commit).
      */
     const recebe = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "recebe");
     expect(recebe?.texto).toContain(PROMESSA.proComoRecebe);
-    if (!A_PLATAFORMA_COBRA) {
-      expect(recebe?.texto).toContain("Quem lhe paga é o cliente");
-      expect(recebe?.texto).not.toContain("fica retido");
-    }
+    expect(recebe?.texto).toContain("Pela plataforma");
+    expect(recebe?.texto).toContain("Em dinheiro");
+    expect(recebe?.texto).not.toContain("Quem lhe paga é o cliente");
+    expect(recebe?.texto).not.toContain("fica retido");
+    expect(recebe?.texto).not.toContain("A fatura do serviço é sua");
+    expect(recebe?.texto).toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
+    expect(recebe?.titulo).not.toContain("Recebe do cliente");
   });
 
   it("o passo da sugestão manda para os custos, que é onde se resolve", () => {

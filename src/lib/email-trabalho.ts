@@ -20,7 +20,9 @@ import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
-import { PROMESSA, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
+import { promessaDaForma, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
+import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { BUSINESS_EMAIL } from "./seo-data";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -55,7 +57,7 @@ function moldura(titulo: string, corpo: string): string {
         <tr><td style="background:#f8fafc;padding:18px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
             A CLYON liga clientes a profissionais independentes. Quem executa o trabalho
-            e emite a fatura é o profissional.
+            é o profissional. ${QUEM_FACTURA_EM_PALAVRAS}
           </p>
         </td></tr>
       </table>
@@ -81,6 +83,14 @@ async function enviar(para: string, assunto: string, html: string, etiqueta: str
     const resend = new Resend(k);
     const { error } = await resend.emails.send({
       from: "CLYON <noreply@clyon.pt>",
+      /*
+       * RESPONDER VAI TER A ALGUÉM — 29-09-2026.
+       *
+       * O email ao cliente diz «responda a este email antes disso — tratamos
+       * do assunto», e saía de um `noreply`: a resposta de quem tinha um
+       * problema com o trabalho não chegava a ninguém.
+       */
+      replyTo: BUSINESS_EMAIL,
       to: para,
       subject: assunto,
       html: legivelNoResumo(html),
@@ -108,12 +118,22 @@ export type AvisoDeContratacao = {
   contactoNome: string | null;
   contactoTelefone: string | null;
   recebeLiquido: number | null;
+  /**
+   * COMO O CLIENTE PAGA ESTE TRABALHO — obrigatório de propósito (29-09-2026).
+   *
+   * É o que decide a frase do dinheiro: pela plataforma recebe da CLYON depois
+   * da confirmação; em dinheiro recebe do cliente, no local, por inteiro.
+   * Opcional, quem se esquecesse de o passar mandava a versão da plataforma a
+   * quem vai receber em notas. Nulo = na plataforma.
+   */
+  formaDePagamento: string | null;
   baseUrl?: string;
 };
 
 export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
+  const promessa = promessaDaForma(p.formaDePagamento);
 
   const corpo = `
     <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
@@ -122,14 +142,14 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
     </h1>
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
       O cliente contratou-o para <strong>${e(servico)}</strong>.
-      ${PROMESSA.emailProAoContratar}
+      ${promessa.emailProAoContratar}
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;margin-bottom:20px;">
       <tr><td style="padding:16px 18px;">
         <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#047857;">Recebe</p>
         <p style="margin:0;font-size:28px;font-weight:700;color:#047857;">${euros(p.recebeLiquido)}</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#059669;">já com a taxa CLYON descontada</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#059669;">${promessa.proLegendaDoValor}</p>
       </td></tr>
     </table>
 
@@ -170,7 +190,7 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
 
     <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
       Quando estiver feito, fotografe o resultado e marque como feito na sua conta.
-      ${PROMESSA.emailProParaQueServeAProva}
+      ${promessa.emailProParaQueServeAProva}
     </p>`;
 
   return enviar(
@@ -192,12 +212,15 @@ export type PedidoDeConfirmacao = {
   token: string;
   quantasFotos: number;
   diasParaConfirmar: number;
+  /** Como o cliente paga — obrigatório pela mesma razão do aviso de contratação. */
+  formaDePagamento: string | null;
   baseUrl?: string;
 };
 
 export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise<boolean> {
   const url = linkDoPedido(p.baseUrl ?? urlDeAccao(), p.token);
   const nome = p.paraNome?.trim().split(/\s+/)[0] ?? null;
+  const promessa = promessaDaForma(p.formaDePagamento);
 
   const corpo = `
     <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
@@ -207,7 +230,7 @@ export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
       <strong>${e(p.profissionalNome)}</strong> marcou o trabalho como feito e enviou
       ${p.quantasFotos === 1 ? "uma fotografia" : `${p.quantasFotos} fotografias`}.
-      ${PROMESSA.emailClienteAoPedirConfirmacao}
+      ${promessa.emailClienteAoPedirConfirmacao}
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0">

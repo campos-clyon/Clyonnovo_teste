@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { carteiraDoCliente, type TrabalhoDoCliente } from "./carteira-do-cliente";
 import { contaDoCliente } from "./taxas-plataforma";
 
@@ -92,5 +94,46 @@ describe("carteiraDoCliente", () => {
     ]);
     expect(c.linhas).toHaveLength(1);
     expect(c.linhas[0].fase).toBe("retido");
+  });
+
+  /*
+   * AS TAXAS DE CADA TRABALHO — 29-09-2026.
+   *
+   * A carteira fazia a conta com as taxas de origem. Num trabalho em dinheiro
+   * a taxa do cliente é 11 % (leva a parte do profissional), e a carteira
+   * dizia-lhe outro número do que a proposta que ele aceitou.
+   */
+  it("usa as taxas que o trabalho gravou, e não as de origem", () => {
+    const c = carteiraDoCliente([t({ valorAcordado: 120, taxaCliente: "0.11", taxaProfissional: "0" })]);
+    // 120 + 11 % = 133,20 — o preço dele, como a página do pedido o diz.
+    expect(c.linhas[0].total).toBe(133.2);
+    expect(c.linhas[0].total).not.toBe(paga(120));
+  });
+
+  it("sem taxas gravadas, as de origem — como em todo o lado", () => {
+    const c = carteiraDoCliente([t({ valorAcordado: 120 })]);
+    expect(c.linhas[0].total).toBe(paga(120));
+  });
+});
+
+describe("o ecrã da carteira não diz «retido» a ninguém", () => {
+  /*
+   * A carteira junta trabalhos pagos pela plataforma e trabalhos pagos em
+   * notas ao profissional — e não sabe quais dos primeiros já pagaram a
+   * referência. «Retido» e «Já pago» eram falsos para uma parte deles.
+   */
+  const ECRA = readFileSync(join(process.cwd(), "src/app/conta/components/Carteira.tsx"), "utf8")
+    .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  it("cada linha diz «em curso» ou «concluído»", () => {
+    expect(ECRA).toContain('l.fase === "retido" ? "em curso" : "concluído"');
+    expect(ECRA).not.toMatch(/"retido" : "pago"/);
+    expect(ECRA).not.toContain("Já pago");
+  });
+
+  it("e as taxas de cada trabalho chegam à conta", () => {
+    expect(ECRA).toContain("taxaCliente: n.taxaCliente");
+    expect(ECRA).toContain("taxaProfissional: n.taxaProfissional");
   });
 });

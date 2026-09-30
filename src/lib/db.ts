@@ -1291,6 +1291,13 @@ export type NegociacaoNaBase = {
   /** A comissão com que ESTA negociação nasceu. Nulas = as de origem. */
   taxaCliente?: string | number | null;
   taxaProfissional?: string | number | null;
+  /**
+   * Como o cliente paga — vem no `SELECT n.*` e faltava no tipo, e por isso
+   * havia ecrãs que nunca o passavam adiante: o do pedido mostrava a conta de
+   * quem paga pela plataforma a quem ia pagar em notas. Nula = na plataforma.
+   */
+  formaDePagamento?: string | null;
+  acrescimoPagamento?: string | number | null;
 };
 
 /**

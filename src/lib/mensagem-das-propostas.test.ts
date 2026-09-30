@@ -47,6 +47,8 @@ const umaProposta = (
     taxaCliente: TAXA_CLIENTE,
     semIva: c.semIva,
     total: c.total,
+    // A forma de sempre: as fixturas são de antes de o cliente a escolher.
+    forma: "na_plataforma" as const,
   };
 };
 
@@ -65,6 +67,7 @@ describe("quem entra na lista de propostas", () => {
         taxaCliente: TAXA_CLIENTE,
         semIva: 283.5,
         total: 348.71,
+        forma: "na_plataforma",
       },
     ]);
   });
@@ -89,6 +92,7 @@ describe("quem entra na lista de propostas", () => {
         taxaCliente: TAXA_CLIENTE,
         semIva: 346.5,
         total: 426.2,
+        forma: "na_plataforma",
       },
     ]);
   });
@@ -522,6 +526,8 @@ describe("quando o trabalho já está fechado", () => {
       taxaCliente: TAXA_CLIENTE,
       semIva: 346.5,
       total: 426.2,
+      // Sem forma gravada, é a de sempre.
+      forma: "na_plataforma",
     });
   });
 
@@ -544,16 +550,70 @@ describe("quando o trabalho já está fechado", () => {
   });
 
   it("e diz-lhe o que falta fazer: confirmar no fim", () => {
-    // É a confirmação dele que liberta o pagamento ao profissional.
+    /*
+     * Pela plataforma, é a confirmação dele que deixa o profissional receber.
+     * Dizia-o com a frase de um interruptor global — «é isso que fecha o
+     * acordo dos dois lados» — a quem tinha pago a referência à CLYON.
+     */
     const m = mensagemDasPropostas({
       propostas: [],
       fechado: trabalhoFechado(fechada),
       link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("confirma-o quando estiver feito");
+    expect(m).toContain("o profissional só recebe depois dessa confirmação");
   });
 
   it("sem acordo nenhum, não inventa um", () => {
     expect(trabalhoFechado([{ estado: "aberta", profissionalNome: "X", propostasJson: proposta("profissional", 100) }])).toBeNull();
+  });
+});
+
+describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => {
+  /*
+   * Em dinheiro são duas entregas: o serviço em notas ao profissional e a
+   * comissão da CLYON por referência. A mensagem dizia um número só e «para
+   * que serve confirmar» com a frase de quem pagou à CLYON — a quem nunca vai
+   * pagar o serviço à CLYON.
+   *
+   * As taxas são as que uma negociação em dinheiro grava: a do cliente leva a
+   * parte do profissional (`taxasParaAForma`), e a dele é zero.
+   */
+  const EM_DINHEIRO = { taxaCliente: "0.11", taxaProfissional: "0", formaDePagamento: "dinheiro" };
+
+  it("a forma viaja com a proposta, lida da coluna", () => {
+    const [p] = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 120), ...EM_DINHEIRO },
+    ]);
+    expect(p.forma).toBe("dinheiro");
+    // 120 + 11 % = 133,20: o número dele, como o ecrã do pedido o mostra.
+    expect(p.semIva).toBe(133.2);
+  });
+
+  it("o fecho diz o que vai em notas e o que vai por referência", () => {
+    const fechado = trabalhoFechado([
+      { estado: "acordada", profissionalNome: "Rui", propostasJson: proposta("cliente", 120, "aceite"), ...EM_DINHEIRO },
+    ]);
+    const m = mensagemDasPropostas({ propostas: [], fechado, link: "https://clyon.pt/pedido/abc" });
+    expect(m).toContain("Está combinado com Rui: 133,20 € a pagar.");
+    expect(m).toContain("Paga 120,00 € em dinheiro ao profissional, no local");
+    expect(m).toContain("13,20 € de taxa à CLYON");
+    // Em dinheiro a factura é só da taxa: a linha dos 23 % sobre tudo não sai.
+    expect(m).not.toContain("Com factura acrescem 23 % de IVA: ");
+    // E confirmar não lhe «liberta» dinheiro nenhum para o profissional.
+    expect(m).toContain("confirma-o quando estiver feito");
+    expect(m).not.toContain("o profissional só recebe depois");
+  });
+
+  it("a lista diz a forma, e a factura só da taxa", () => {
+    const propostas = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 120), ...EM_DINHEIRO },
+    ]);
+    const m = mensagemDasPropostas({ propostas, link: "https://clyon.pt/pedido/abc" });
+    expect(m).toContain("Rui: 133,20 €");
+    expect(m).toContain("Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho.");
+    expect(m).toContain("Com factura, acrescem 23 % de IVA sobre a taxa da CLYON.");
+    // Sem voltar ao «(X € para ele mais a taxa)» — o preço dele é um número só.
+    expect(m).not.toContain("para ele mais a taxa");
   });
 });

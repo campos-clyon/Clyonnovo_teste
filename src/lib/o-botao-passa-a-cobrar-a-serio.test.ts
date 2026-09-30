@@ -87,11 +87,13 @@ describe("o backoffice cobra em produção sem o interruptor do produto", () => 
     expect(podeCobrarPeloBackoffice(producao.config).pode).toBe(true);
   });
 
-  it("mas o CLIENTE continua fechado, porque os ecrãs ainda lhe prometem outra coisa", () => {
+  it("mas o CLIENTE continua fechado — fica só o backoffice", () => {
     /*
-     * Enquanto `A_PLATAFORMA_COBRA` for falso, todos os ecrãs dizem ao cliente
-     * que ele paga ao profissional no fim. Deixá-lo pagar no site seria
-     * contrariar por software o que o software lhe escreveu.
+     * «Fica só o backoffice», decisão do dono a 21-09-2026: o cliente não paga
+     * sozinho pelo link enquanto `A_PLATAFORMA_COBRA` for falso. Até
+     * 29-09-2026 a razão escrita aqui era que os ecrãs lhe diziam que pagava
+     * ao profissional no fim; desde então os textos seguem a forma de
+     * pagamento de cada trabalho, e o interruptor só guarda esta porta.
      */
     expect(A_PLATAFORMA_COBRA).toBe(false);
     if (!producao.ok) return;

@@ -9,6 +9,7 @@ import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
 import { perfilPublicoDoProfissional } from "@/lib/perfil-publico-do-profissional";
+import { QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
 
 /**
  * O PEDIDO COMO O CLIENTE O VÊ — e num sítio só.
@@ -156,12 +157,21 @@ export default async function VistaDoPedido({
       // mesmo com que ela nasceu — e não o de hoje.
       taxaCliente: n.taxaCliente ?? null,
       taxaProfissional: n.taxaProfissional ?? null,
+      /*
+       * COMO ELE PAGA — e não chegava ao ecrã.
+       *
+       * O ecrã já sabia dividir a conta em dinheiro («ao profissional» e «à
+       * CLYON, por referência») e dizer o que acontece ao valor em cada forma,
+       * mas esta lista nunca lhe passava a forma: toda a gente lia a versão
+       * de quem paga pela plataforma.
+       */
+      formaDePagamento: n.formaDePagamento ?? null,
+      acrescimoPagamento: n.acrescimoPagamento ?? null,
       propostas: propostasDe(n.propostasJson),
       profissionalNome: n.profissionalNome,
       // O contacto do profissional só depois de o contratar — a simetria do que
       // fazemos com a morada do cliente do outro lado.
       profissionalTelefone: contratado ? (n.profissionalTelefone ?? null) : null,
-      emiteFatura: Number(n.emiteFatura) === 1,
       regimeIva: String(n.regimeIva ?? "isento"),
       guiaVerificada: n.guiaVerificadaEm != null,
       fase: faseDoTrabalho(n),
@@ -360,9 +370,14 @@ export default async function VistaDoPedido({
       </section>
       )}
 
+      {/*
+        QUEM FACTURA É A PARCEIRA — 22-09-2026. Dizia «quem executa o trabalho
+        e emite a fatura é o profissional que escolher». A primeira metade
+        continua verdade; a segunda deixou de ser.
+      */}
       <p className="mt-6 text-center text-xs leading-relaxed text-tinta-fraca">
-        A CLYON liga clientes a profissionais independentes. Quem executa o trabalho
-        e emite a fatura é o profissional que escolher.
+        A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o
+        profissional que escolher. {QUEM_FACTURA_EM_PALAVRAS}
       </p>
     </main>
   );

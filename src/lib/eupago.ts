@@ -175,12 +175,14 @@ export function configuracaoDoEupago(
 }
 
 /**
- * A PORTA. Em produção, ninguém é cobrado antes de a plataforma o assumir.
+ * A PORTA. Em produção, o cliente não paga sozinho pelo link do pedido.
  *
- * `A_PLATAFORMA_COBRA` é o interruptor do produto inteiro: enquanto for falso,
- * todos os ecrãs dizem ao cliente que paga ao profissional no fim. Cobrá-lo
- * nesse estado seria ficar-lhe com o dinheiro depois de lhe termos escrito que
- * não ficávamos.
+ * `A_PLATAFORMA_COBRA` decide se a caixa de pagamento do cliente abre. Está
+ * em falso por decisão do dono (21-09-2026, «fica só o backoffice»): as
+ * referências geram-se no backoffice, pedido a pedido. Até 29-09-2026 o
+ * interruptor decidia também o que os ecrãs diziam sobre o dinheiro, e a
+ * razão escrita aqui era essa; deixou de ser — os textos seguem agora a forma
+ * de pagamento de cada trabalho (ver `pagamento-na-plataforma.ts`).
  *
  * Na sandbox não há dinheiro nenhum, e por isso a porta está sempre aberta —
  * é o que permite provar a integração toda antes de o interruptor mexer.
@@ -193,9 +195,8 @@ export function configuracaoDoEupago(
  *
  * `podeCobrar` protege a cobrança AUTOMÁTICA: um ecrã aberto a qualquer
  * cliente, em que ninguém olha para cada caso. É por isso que lá dentro se
- * pergunta pelo `A_PLATAFORMA_COBRA` — porque o produto inteiro diz ao cliente
- * que paga ao profissional no fim, e um botão self-service contradiz isso sem
- * ninguém dar por ela.
+ * pergunta pelo `A_PLATAFORMA_COBRA` — a cobrança pelo site sem ninguém a
+ * olhar é uma decisão que o dono ainda não tomou.
  *
  * AQUI NÃO HÁ NADA DE AUTOMÁTICO. Há uma pessoa autenticada no backoffice, a
  * olhar para um pedido concreto, a decidir que aquele cliente vai pagar por
@@ -281,8 +282,8 @@ export function podeCobrar(
   return {
     pode: false,
     porque:
-      "Em produção e com A_PLATAFORMA_COBRA a falso: os ecrãs dizem ao cliente " +
-      "que paga ao profissional no fim, e cobrá-lo agora seria contrariá-los.",
+      "Em produção e com A_PLATAFORMA_COBRA a falso: o cliente não paga sozinho " +
+      "pelo link — as referências geram-se no backoffice.",
   };
 }
 

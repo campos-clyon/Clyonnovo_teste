@@ -86,7 +86,7 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
 import RegistarPedido from "./RegistarPedido";
 import PedidoDetailModal from "./PedidoDetailModal";
-import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import {
   COMO_PAGOU,
   PARA_QUE,
@@ -2484,7 +2484,8 @@ export default function AdminNegociacoesPanel({
             </p>
             <p className="mt-0.5 text-xs text-amber-200/70">
               {feito.execucaoEnviadaEm ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. ` : ""}
-              {PROMESSA.backofficeAConfirmar}
+              {/* Onde está o dinheiro depende da forma DESTE trabalho — 29-09-2026. */}
+              {promessaDaForma(feito.formaDePagamento).backofficeAConfirmar}
             </p>
 
             {/* A prova, sem ter de a ir procurar: clicar abre a fotografia. */}

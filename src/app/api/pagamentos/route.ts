@@ -36,10 +36,11 @@ export const dynamic = "force-dynamic";
  * euPago; quem diz que ela foi paga é o webhook, e mais ninguém. Uma referência
  * criada NÃO é um pagamento, e este ficheiro nunca dá nada por pago.
  *
- * A PORTA ESTÁ FECHADA EM PRODUÇÃO enquanto `A_PLATAFORMA_COBRA` for falso.
- * Todos os ecrãs dizem hoje ao cliente que paga ao profissional no fim do
- * trabalho; cobrá-lo neste estado era ficar-lhe com o dinheiro depois de lhe
- * termos escrito que não ficávamos. Na sandbox não há dinheiro e a porta abre.
+ * A PORTA ESTÁ FECHADA EM PRODUÇÃO enquanto `A_PLATAFORMA_COBRA` for falso:
+ * «fica só o backoffice», decisão do dono a 21-09-2026 — as referências
+ * geram-se lá, pedido a pedido. (Até 29-09-2026 a razão escrita aqui era que
+ * os ecrãs diziam ao cliente que pagava ao profissional no fim; deixaram de o
+ * dizer a quem paga pela plataforma.) Na sandbox não há dinheiro e a porta abre.
  */
 
 type Corpo = {
