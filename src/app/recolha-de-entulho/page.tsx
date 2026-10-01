@@ -141,7 +141,7 @@ const faqs = [
   },
   {
     question: "Qual o preço mínimo para recolha de entulho?",
-    answer: `A recolha de entulho custa a partir de ${PRECO_ENTULHO.minimo} € por ${PRECO_ENTULHO.unidade}. Para volumes maiores, o valor depende da quantidade, dos acessos e da localização. São valores orientativos e sem IVA: envie fotos para orçamento rápido.`,
+    answer: `A recolha de entulho custa a partir de ${PRECO_ENTULHO.minimo} € por ${PRECO_ENTULHO.unidade}. Para volumes maiores, o valor depende da quantidade, dos acessos e da localização. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): envie fotos para orçamento rápido.`,
   },
   {
     question: "Recolhem entulho em apartamentos?",

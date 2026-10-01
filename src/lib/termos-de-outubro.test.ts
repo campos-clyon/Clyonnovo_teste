@@ -26,7 +26,9 @@ describe("os números dos Termos vêm das constantes", () => {
   it("a quota, a taxa do dinheiro, o tecto, o prazo, o IVA e quem factura", () => {
     expect(CODIGO).toContain("quotaDaClyon(taxas)");
     expect(CODIGO).toContain("await taxasActuais()");
-    expect(CODIGO).toMatch(/taxasParaAForma\("dinheiro", taxas\)/);
+    // A taxa do dinheiro de ANTES do IVA incluído — só na frase de transição.
+    expect(CODIGO).toMatch(/taxasParaAForma\("dinheiro", taxas, "sem_iva"\)/);
+    expect(CODIGO).toContain("{IVA_INCLUIDO_DESDE_POR_EXTENSO}");
     expect(CODIGO).toContain("MAXIMO_EM_NUMERARIO");
     expect(CODIGO).toContain("{DIAS_ATE_LIBERTAR_SOZINHO}");
     expect(CODIGO).toContain("TAXA_IVA");
@@ -43,7 +45,7 @@ describe("os números dos Termos vêm das constantes", () => {
   it("com as taxas em vigor desde 29-09-2026, a CLYON fica com 11 %", () => {
     expect(quotaDaClyon({ cliente: 0.05, profissional: 0.0655 })).toBeCloseTo(0.11, 6);
     // Em dinheiro, as duas partes passam para o cliente.
-    expect(taxasParaAForma("dinheiro", { cliente: 0.05, profissional: 0.0655 })).toEqual({
+    expect(taxasParaAForma("dinheiro", { cliente: 0.05, profissional: 0.0655 }, "sem_iva")).toEqual({
       cliente: 0.1155,
       profissional: 0,
     });

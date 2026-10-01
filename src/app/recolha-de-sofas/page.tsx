@@ -101,7 +101,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um sofá?",
-    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem sofás no mesmo dia?",

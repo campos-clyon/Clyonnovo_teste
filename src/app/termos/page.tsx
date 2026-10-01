@@ -38,6 +38,7 @@ import {
 import { taxasActuais } from "@/lib/db";
 import { quotaDaClyon } from "@/lib/quota-da-clyon";
 import { MAXIMO_EM_NUMERARIO, taxasParaAForma } from "@/lib/forma-de-pagamento";
+import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 
 /** As taxas mudam no backoffice: a página relê-as de hora a hora. */
@@ -99,7 +100,8 @@ const INDICE: [string, string][] = [
 export default async function TermosPage() {
   const taxas = await taxasActuais();
   const quota = pct(quotaDaClyon(taxas));
-  const taxaNoDinheiro = pct(taxasParaAForma("dinheiro", taxas).cliente);
+  // A taxa do dinheiro ANTES do IVA incluído — só para a frase de transição.
+  const taxaNoDinheiro = pct(taxasParaAForma("dinheiro", taxas, "sem_iva").cliente);
   const iva = `${Math.round(TAXA_IVA * 100)} %`;
 
   return (
@@ -198,10 +200,14 @@ export default async function TermosPage() {
             Dizia «quem emite a fatura é o profissional». Desde 22-09-2026 a
             factura ao cliente é da `ENTIDADE_QUE_FACTURA` (ver ponto 6).
           */}
+          {/*
+            HÁ FACTURA EM TODAS AS VENDAS — 01-10-2026, decisão do dono, com os
+            preços passados a IVA incluído. Dizia «quando a pede».
+          */}
           <p>
-            A factura ao cliente, quando a pede, é emitida pela{" "}
-            {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa parceira da CLYON — ver o
-            ponto 6.
+            A factura ao cliente é emitida pela{" "}
+            {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa parceira da CLYON, em todas
+            as vendas — ver o ponto 6.
           </p>
           <p>
             O que contrata connosco é o acesso à plataforma e aos serviços que
@@ -304,21 +310,39 @@ export default async function TermosPage() {
             a taxa, e a CLYON fica com 11 % do que ele paga; o IVA só entra com
             factura, e quem factura é a parceira.
           */}
+          {/*
+            IVA INCLUÍDO — 01-10-2026, decisão do dono: "o cliente vê um número
+            só por proposta, já com a taxa da CLYON e com 23 % de IVA", e há
+            factura em todas as vendas (com NIF, se o cliente o quiser na
+            factura). O profissional continua a propor sem IVA; a quota da CLYON
+            conta-se sobre o valor sem IVA, como antes. A frase de transição é
+            a que o dono escreveu — a data vem de `IVA_INCLUIDO_DESDE`.
+          */}
           <p>
             <strong>
-              O preço de cada proposta é o que o cliente paga pelo trabalho, sem
-              IVA, e já inclui a taxa de plataforma da CLYON.
+              O preço de cada proposta é o que o cliente paga pelo trabalho, com
+              IVA incluído, e já inclui a taxa de plataforma da CLYON.
             </strong>{" "}
-            No pagamento pela plataforma, a CLYON fica com {quota} do que o
-            cliente paga, e o profissional recebe o valor que propôs, descontada
-            a comissão. No pagamento em dinheiro, a divisão é a descrita no
-            ponto 7.
+            O profissional propõe o seu valor sem IVA; ao cliente é apresentado
+            esse valor com a taxa de plataforma e com IVA à taxa de {iva}. A CLYON
+            fica com {quota} do que o cliente paga sem IVA, e o profissional
+            recebe o valor que propôs, descontada a comissão. No pagamento em
+            dinheiro, a divisão é a descrita no ponto 7.
           </p>
           <p>
-            <strong>Os valores são apresentados sem IVA.</strong> Se pedir
-            factura, acrescem {iva} de IVA sobre o preço da proposta. A factura
-            é emitida pela {ENTIDADE_QUE_FACTURA.nomeLegal}, NIF{" "}
-            {ENTIDADE_QUE_FACTURA.nif}, empresa parceira da CLYON.
+            <strong>Há factura em todas as vendas.</strong> É emitida pela{" "}
+            {ENTIDADE_QUE_FACTURA.nomeLegal}, NIF {ENTIDADE_QUE_FACTURA.nif},
+            empresa parceira da CLYON, com o NIF do cliente se ele o indicar, ou
+            como consumidor final.
+          </p>
+          <p>
+            Os preços de referência apresentados no site (por exemplo, «desde»)
+            são indicativos e sem IVA. Na proposta, o preço já vem com IVA
+            incluído.
+          </p>
+          <p>
+            Para pedidos com negociação aberta antes de {IVA_INCLUIDO_DESDE_POR_EXTENSO}{" "}
+            aplica-se o regime anterior: preço sem IVA e IVA só com factura.
           </p>
           <p>
             A CLYON não liquida IVA. Regime de IVA da CLYON:{" "}
@@ -348,15 +372,25 @@ export default async function TermosPage() {
             </li>
             <li>
               <strong>Em dinheiro, ao profissional, no fim do trabalho.</strong>{" "}
-              Paga-lhe em mão o valor que ele propôs, por inteiro, e paga à
-              CLYON, à parte e por referência MB WAY ou Multibanco, a comissão
-              da plataforma — que nesta forma é toda cobrada ao cliente:{" "}
-              {taxaNoDinheiro} sobre o valor do profissional, em vez de ser
-              repartida entre os dois. Não é possível pagar em dinheiro
+              Paga-lhe em mão o preço da proposta, com IVA incluído, e não paga
+              mais nada à parte. O profissional entrega depois à CLYON o IVA e a
+              comissão da plataforma, por referência MB WAY ou Multibanco gerada
+              quando o trabalho é confirmado. Não é possível pagar em dinheiro
               trabalhos de valor igual ou superior a{" "}
               {eurosRedondos(MAXIMO_EM_NUMERARIO)} (Lei n.º 92/2017).
             </li>
           </ul>
+          {/*
+            O DINHEIRO ANTES DO IVA INCLUÍDO — o regime de 21-09-2026, que
+            continua a valer para as negociações abertas antes do corte.
+          */}
+          <p>
+            Nas negociações abertas antes de {IVA_INCLUIDO_DESDE_POR_EXTENSO}, o
+            pagamento em dinheiro segue o regime anterior: o cliente paga em mão
+            ao profissional o valor que ele propôs e paga à CLYON, por
+            referência, a comissão da plataforma ({taxaNoDinheiro} sobre o valor
+            do profissional).
+          </p>
         </S>
 
         {/*
@@ -472,7 +506,8 @@ export default async function TermosPage() {
             pelos danos e cumpre as obrigações fiscais que lhe correspondem.
             Recebe através da CLYON o valor que propôs, descontada a comissão —
             ou em dinheiro, no local, quando o cliente escolhe essa forma de
-            pagamento.
+            pagamento: nesse caso recebe do cliente o preço com IVA incluído e
+            entrega à CLYON, por referência, o IVA e a comissão.
           </p>
           <p>
             Os dados do cliente que lhe são mostrados destinam-se{" "}

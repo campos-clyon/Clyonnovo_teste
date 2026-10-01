@@ -44,7 +44,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos na Amadora?",
-    answer: `O valor depende do volume e dos acessos: ${PRECOS.recolha_monos.etiqueta}, sem IVA. Para volumes maiores, envie fotos para orçamento rápido.`,
+    answer: `O valor depende do volume e dos acessos: ${PRECOS.recolha_monos.etiqueta}, sem IVA (na proposta, o preço já vem com IVA incluído). Para volumes maiores, envie fotos para orçamento rápido.`,
   },
   {
     question: "Recolhem móveis pesados e volumosos?",

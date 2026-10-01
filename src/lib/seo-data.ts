@@ -504,16 +504,25 @@ const IVA_EM_PALAVRAS = `${Math.round(TAXA_IVA * 100)} %`;
  * e diz-se.
  *
  * Escrita uma vez para não divergir. Já foi por não estar.
+ *
+ * E DESDE 01-10-2026, OS PREÇOS DAS PROPOSTAS SÃO COM IVA INCLUÍDO. "Preços de
+ * referência do site: FICAM COM OS MESMOS NÚMEROS e a etiqueta «sem IVA», com
+ * uma nota curta: «Na proposta, o preço já vem com IVA incluído.»" — decisão
+ * do dono. A grelha continua a ser uma estimativa sem imposto; a proposta é o
+ * preço final, e é isso que a nota diz. Há factura em todas as vendas.
  */
+export const NA_PROPOSTA_COM_IVA = "Na proposta, o preço já vem com IVA incluído.";
+
 export const NOTA_DE_PRECO = {
   /** Uma linha, para pôr junto de uma grelha. */
-  curta: "Valores orientativos, sem IVA. O preço de cada proposta já inclui a taxa da plataforma.",
+  curta:
+    "Valores orientativos, sem IVA. O preço de cada proposta já inclui a taxa da plataforma. " +
+    NA_PROPOSTA_COM_IVA,
   /** Com a explicação de quem factura, para páginas de preços. */
   completa:
     "Valores orientativos, sem IVA. O preço a sério é a proposta que recebe, fechada " +
-    "antes de o trabalho começar, e já inclui a taxa da plataforma. Se quiser factura, " +
-    `acrescem ${IVA_EM_PALAVRAS} de IVA; a factura é emitida pela ` +
-    `${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.`,
+    `antes de o trabalho começar, e já inclui a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} ` +
+    `Há factura em todas as vendas, emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.`,
 } as const;
 
 /**
@@ -525,9 +534,14 @@ export const NOTA_DE_PRECO = {
  * 22-09-2026: quem factura ao cliente é a parceira, e o imposto soma-se ao
  * preço da proposta. Uma frase, para as páginas deixarem de discordar.
  */
+/*
+ * COM IVA INCLUÍDO DESDE 01-10-2026 — o preço da proposta já leva os 23 %, e
+ * há factura em todas as vendas. Dizia «os valores são apresentados sem IVA;
+ * se pedir factura, acrescem 23 %».
+ */
 export const FACTURA_EM_PALAVRAS =
-  `Os valores são apresentados sem IVA. Se pedir factura, acrescem ${IVA_EM_PALAVRAS} de IVA ` +
-  "sobre o preço da proposta (que já inclui a taxa da plataforma). A factura é emitida " +
+  `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
+  "plataforma. Há factura em todas as vendas, com o seu NIF se o quiser na factura, emitida " +
   `pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`;
 
 /**
@@ -538,9 +552,10 @@ export const FACTURA_EM_PALAVRAS =
  * é o que a plataforma faz. As formas são as de `forma-de-pagamento.ts`, e é
  * lá que se escolhe; isto é só a explicação de antes da escolha.
  *
- * Sem percentagem de propósito: em dinheiro a comissão da CLYON é toda cobrada
- * ao cliente (`taxasParaAForma`), e o valor aparece-lhe no pedido. Escrevê-la
- * aqui era mais um número à mão a divergir das taxas do backoffice.
+ * EM DINHEIRO, DESDE 01-10-2026: o cliente paga ao profissional o preço com
+ * IVA e não paga nada à parte; o IVA e a comissão é o profissional que os
+ * entrega à CLYON (`divida-do-profissional.ts`). Dizia «paga à parte, por
+ * referência, a comissão da CLYON» — o modelo de antes do corte.
  *
  * ⚠️ SÃO DUAS FORMAS porque `PAGAR_DEPOIS_LIGADO` está desligado. No dia em que
  * o pós-recolha abrir, esta frase tem de ganhar a terceira.
@@ -549,8 +564,7 @@ export const COMO_SE_PAGA =
   "No pedido escolhe como prefere pagar: pela plataforma — depois de aceitar a proposta " +
   "recebe uma referência MB WAY ou Multibanco, e o valor fica com a CLYON até confirmar " +
   "que o trabalho está feito; só então é entregue ao profissional — ou em dinheiro, ao " +
-  "profissional, no fim do trabalho; nesse caso paga à parte, por referência, a comissão " +
-  "da CLYON, que nessa forma é toda paga por si.";
+  "profissional, no fim do trabalho: o mesmo preço, com IVA incluído, sem nada a pagar à parte.";
 
 /**
  * O prazo de resposta, num sítio só.

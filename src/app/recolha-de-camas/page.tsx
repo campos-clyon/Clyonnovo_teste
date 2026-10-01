@@ -101,7 +101,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de uma cama usada?",
-    a: `A recolha de uma cama custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos da cama e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `A recolha de uma cama custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): a forma mais rápida de fechar o valor é enviar fotos da cama e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem camas no mesmo dia?",

@@ -160,7 +160,7 @@ const HOW_IT_WORKS = [
        * preço dela, dito ao telefone. Hoje o preço é de cada profissional e
        * chega por escrito — 30-09-2026.
        */
-      `Profissionais verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e sem IVA, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
+      `Profissionais verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e com IVA incluído, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
   },
   {
     icon: Truck,

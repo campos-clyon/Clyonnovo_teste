@@ -80,7 +80,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos?",
-    answer: `A recolha de monos custa ${PRECO_MONOS.etiqueta}, consoante a quantidade e o tipo de materiais — para pequenas quantidades, a partir de ${PRECO_MONOS.minimo} €. São valores orientativos e sem IVA: envie fotos para um orçamento preciso e rápido.`,
+    answer: `A recolha de monos custa ${PRECO_MONOS.etiqueta}, consoante a quantidade e o tipo de materiais — para pequenas quantidades, a partir de ${PRECO_MONOS.minimo} €. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): envie fotos para um orçamento preciso e rápido.`,
   },
   {
     question: "Recolhem monos em apartamentos sem elevador?",

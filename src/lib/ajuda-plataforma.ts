@@ -29,8 +29,9 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
       `A comissão é de ${Math.round(TAXA_PROFISSIONAL * 100)} % sobre o valor acordado, e o ` +
       `cliente paga mais ${Math.round(TAXA_CLIENTE * 100)} % por cima. Nunca tem de fazer ` +
       "contas: os valores que vê na sua conta já são líquidos, com a comissão descontada. " +
-      "O que aparece é o que recebe. Se o cliente pagar em dinheiro, no local, recebe o " +
-      "valor acordado por inteiro: a CLYON não lhe desconta nada e cobra a parte dela ao cliente.",
+      "O que aparece é o que recebe. O cliente vê o seu valor já com a taxa e com IVA " +
+      "incluído. Se ele pagar em dinheiro, no local, recebe dele o preço com IVA e entrega " +
+      "depois à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco.",
   },
   {
     pergunta: "Quando é que recebo o dinheiro?",
@@ -100,7 +101,9 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
     pergunta: "Que IVA devo cobrar?",
     resposta:
       `Ao cliente, nenhum: quem lhe passa a factura é a ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa ` +
-      "parceira, e é ela que liquida os 23 % quando ele a pede. O seu regime continua a " +
+      "parceira, e é ela que liquida os 23 % — há factura em todas as vendas, e os preços que o " +
+      "cliente vê já vêm com IVA incluído. Em dinheiro, o IVA que recebe do cliente entrega-o à " +
+      "CLYON, com a comissão, por referência. O seu regime continua a " +
       "contar entre si e nós — declare-o em Faturação e IVA — e é com ele que nos factura " +
       "a si o que recebe.",
   },

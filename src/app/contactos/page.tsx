@@ -14,6 +14,7 @@ import {
   AVALIACOES,
   AVALIACOES_TOTAL,
   FACTURA_EM_PALAVRAS,
+  NA_PROPOSTA_COM_IVA,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
@@ -331,7 +332,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Recebe propostas com valores",
-                  `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma, sem IVA. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
+                  `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma e com IVA incluído. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [
                   "Escolhe, e só depois se paga",
@@ -393,7 +394,7 @@ export default function ContactosPage() {
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
               Valores de partida, sem IVA, para saber se vale a pena a conversa. O preço a
               sério é a proposta que o profissional faz depois de ver o seu caso — e já
-              inclui a taxa da plataforma.
+              inclui a taxa da plataforma. {NA_PROPOSTA_COM_IVA}
             </p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {REFERENCIAS.map(({ rotulo, chave, href }) => (

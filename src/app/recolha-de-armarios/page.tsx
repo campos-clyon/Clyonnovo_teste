@@ -101,7 +101,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um armário?",
-    a: `A recolha de um armário custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA: a forma mais rápida de fechar o valor é enviar fotos do armário e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `A recolha de um armário custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): a forma mais rápida de fechar o valor é enviar fotos do armário e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem armários no mesmo dia?",
