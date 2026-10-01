@@ -175,6 +175,7 @@ export default function FichaDaAgenda({
   token,
   onFechar,
   onMudou,
+  onDataMudou,
   onEditarPedido,
 }: {
   t: TrabalhoDaAgenda;
@@ -183,6 +184,15 @@ export default function FichaDaAgenda({
   onFechar: () => void;
   /** Alguma coisa foi gravada: a lista por trás tem de se recarregar. */
   onMudou: () => void;
+  /**
+   * O DIA NOVO, NO CLIQUE — 01-10-2026.
+   *
+   * Chama-se com a data combinada nova (ISO, ou `null` ao desmarcar) ANTES de
+   * ir à rota: o painel põe-na já na ficha, na lista e na grelha, em vez de
+   * esperar pela rota e pela agenda inteira. Se a rota recusar, chama-se outra
+   * vez com o erro, e o painel larga o dia que não ficou.
+   */
+  onDataMudou?: (dataCombinada: string | null, erro?: string) => void;
   /** Abrir o editor do pedido — nome, telefone, morada, fotografias. */
   onEditarPedido: (pedidoId: number) => void;
 }) {
@@ -224,8 +234,10 @@ export default function FichaDaAgenda({
         setErro("Data inválida.");
         return;
       }
+      onDataMudou?.(instante ? instante.toISOString() : null);
       const r = await gravarDiaNoBackoffice(token, t.negociacaoId, instante);
       if (!r.ok) {
+        onDataMudou?.(null, r.erro);
         setErro(r.erro);
         return;
       }

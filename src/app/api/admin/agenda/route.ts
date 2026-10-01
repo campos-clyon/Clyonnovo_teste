@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { naAgenda } from "@/lib/agenda-dos-trabalhos";
@@ -250,21 +250,33 @@ export async function POST(req: NextRequest) {
           (antes ? ` (estava ${fmt(antes)})` : "")) +
       (fechado ? ". ATENÇÃO: o trabalho já estava fechado." : ".");
 
-    await appendOrderHistory(linha.pedidoId, { type: "agenda", by: null, message: resumo });
-
-    /* O profissional VÊ esta linha. Foi-lhe mudado o dia de trabalho por
-       alguém que não é ele — descobri-lo ao chegar à porta não serve. */
-    await registarSemFalhar({
-      acontecimento: "agenda_marcada",
-      pedidoId: linha.pedidoId,
-      negociacaoId,
-      providerId: linha.providerId,
-      providerNome: linha.profissionalNome,
-      autorTipo: "clyon",
-      autorNome: porQuem,
-      valor: null,
-      resumo,
-      visivelProfissional: true,
+    /*
+     * O HISTÓRICO ESCREVE-SE DEPOIS DE RESPONDER — 01-10-2026, como na rota do
+     * profissional. *«Faz também o backoffice instantâneo ao mudar a data.»*
+     * Ler e regravar o histórico inteiro do pedido, e o registo, são três idas
+     * à base que não mudam o que a ficha mostra; `after` corre-as já com a
+     * resposta enviada, e na Vercel a função espera por elas.
+     */
+    after(async () => {
+      try {
+        await appendOrderHistory(linha.pedidoId, { type: "agenda", by: null, message: resumo });
+      } catch (e) {
+        console.error("[api/admin/agenda] histórico:", e);
+      }
+      /* O profissional VÊ esta linha. Foi-lhe mudado o dia de trabalho por
+         alguém que não é ele — descobri-lo ao chegar à porta não serve. */
+      await registarSemFalhar({
+        acontecimento: "agenda_marcada",
+        pedidoId: linha.pedidoId,
+        negociacaoId,
+        providerId: linha.providerId,
+        providerNome: linha.profissionalNome,
+        autorTipo: "clyon",
+        autorNome: porQuem,
+        valor: null,
+        resumo,
+        visivelProfissional: true,
+      });
     });
 
     /*
