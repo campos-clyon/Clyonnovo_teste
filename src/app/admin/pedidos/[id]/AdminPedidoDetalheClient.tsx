@@ -542,6 +542,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
       fotosNaoEnviadas: Number((rawOrder as Record<string, unknown>)?.fotosNaoEnviadas ?? 0),
       // Sem IVA e sem a taxa: a mensagem diz o preço como em todo o lado.
       precoFinal: order.precoFinal,
+      pedidoCriadoEm: order.createdAt ?? null,
     }),
   );
 

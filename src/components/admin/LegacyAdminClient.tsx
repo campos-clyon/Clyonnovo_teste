@@ -17,7 +17,8 @@ import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "@/lib/quota-da-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
-import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { precoDoCliente } from "@/lib/preco-do-cliente";
+import { modeloDeHoje } from "@/lib/iva-incluido";
 import {
   ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
   type EstadoTicket,
@@ -3634,15 +3635,31 @@ export default function ColaboradorAdminClient({
                           );
                         }
                         const t = { cliente: c, profissional: p };
-                        const doCliente = precoParaOCliente(350, t);
+                        /*
+                          COM IVA INCLUÍDO DESDE 01-10-2026 — o cliente vê o
+                          total com imposto, e a CLYON fica com a quota dela
+                          sobre a base SEM IVA; os 23 % são do Estado. A conta
+                          é a das funções de sempre, no modelo de hoje.
+                        */
+                        const preco = precoDoCliente(350, t, modeloDeHoje());
+                        const doCliente = preco.aPagar;
                         const doProfissional = quantoOProfissionalRecebe(350, t);
+                        const daClyon = Math.round((preco.semIva - doProfissional) * 100) / 100;
                         return (
                           <p className="mt-3 text-xs leading-relaxed text-slate-400">
                             Exemplo: o profissional propõe <strong className="text-white">350,00 €</strong> →
-                            o cliente vê <strong className="text-white">{decimal(doCliente)} €</strong> →
+                            o cliente vê <strong className="text-white">{decimal(doCliente)} €</strong>
+                            {preco.ivaIncluido ? " (IVA incluído)" : ""} →
                             o profissional recebe <strong className="text-white">{decimal(doProfissional)} €</strong> →
                             a CLYON fica com{" "}
-                            <strong className="text-white">{decimal(doCliente - doProfissional)} €</strong>.
+                            <strong className="text-white">{decimal(daClyon)} €</strong>
+                            {preco.ivaIncluido ? (
+                              <>
+                                {" "}e o IVA é <strong className="text-white">{decimal(preco.iva)} €</strong>.
+                              </>
+                            ) : (
+                              "."
+                            )}
                           </p>
                         );
                       })()}

@@ -36,6 +36,7 @@ import { quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
 
 /**
  * A negociação, do lado do profissional.
@@ -67,6 +68,7 @@ export default function NegociacaoProfissional({
   onMudou,
   taxas,
   formaDePagamento = null,
+  criadaEm = null,
 }: {
   /**
    * O token do link do email, quando se chega por aí.
@@ -100,6 +102,12 @@ export default function NegociacaoProfissional({
   taxas?: Taxas;
   /** Como o cliente paga. Em dinheiro, o botão diz «em mão». */
   formaDePagamento?: string | null;
+  /**
+   * Quando a negociação abriu — 01-10-2026. Em dinheiro com IVA incluído os
+   * textos dizem-lhe que recebe o preço com IVA e entrega à CLYON o IVA e a
+   * comissão; antes do corte, o de sempre.
+   */
+  criadaEm?: string | null;
 }) {
   const [negociacao, setNegociacao] = useState<Negociacao>({
     estado: estadoInicial as Negociacao["estado"],
@@ -189,7 +197,7 @@ export default function NegociacaoProfissional({
    * dinheiro, «Fechado em 112,80 €, já com a taxa descontada» a quem vai
    * receber 120,00 € em mão.
    */
-  const promessa = promessaDaForma(formaDePagamento);
+  const promessa = promessaDaForma(formaDePagamento, modeloDaNegociacao(criadaEm));
 
   if (negociacao.estado === "acordada") {
     return (

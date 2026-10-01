@@ -1,4 +1,6 @@
-import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
 
 export interface UserProfile {
   id: number;
@@ -82,6 +84,8 @@ export interface NegociacaoDoPedido {
   taxaProfissional?: string | null;
   /** Como o cliente paga esta negociação. Nula = na plataforma. */
   formaDePagamento?: string | null;
+  /** Quando abriu — decide o modelo do preço (IVA incluído desde o corte). */
+  createdAt?: string | null;
   propostasJson: string | null;
   execucaoEnviadaEm: string | null;
   provaJson: string | null;
@@ -227,6 +231,8 @@ export type EstadoNaPlataforma = {
   valor: number | null;
   /** O que esse valor é, para a legenda não mentir. */
   legenda: "acordado" | null;
+  /** O valor acordado já leva o IVA (negociação aberta desde o corte, 01-10-2026). */
+  ivaIncluido?: boolean;
 };
 
 export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
@@ -245,13 +251,13 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
     // IVA mudam num sítio só, e uma cópia à mão passaria a mentir no dia
     // seguinte.
     //
-    // SEM IVA, que é como se apresentam os valores desde 17-09-2026. O imposto
-    // continua calculado e continua a aparecer — na linha que diz o que
-    // acresce a quem quiser factura, e não no número grande.
+    // O NÚMERO QUE LHE FOI DITO: com IVA incluído nas negociações abertas
+    // desde o corte (01-10-2026), sem IVA nas de antes — o mesmo do detalhe.
+    const modeloDela = modeloDaNegociacao(fechada.createdAt);
+    const ivaIncluido = modeloDela === "iva_incluido";
     const paga =
       acordado != null
-        ? contaDoCliente(acordado, taxasDaNegociacao(fechada))
-            .semIva
+        ? precoParaOCliente(acordado, taxasDaNegociacao(fechada), modeloDela)
         : null;
 
     if (fechada.confirmadoEm || fechada.pagoEm) {
@@ -260,6 +266,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
         urgente: false,
         valor: paga,
         legenda: "acordado",
+        ivaIncluido,
       };
     }
     if (fechada.execucaoEnviadaEm) {
@@ -269,6 +276,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
         urgente: true,
         valor: paga,
         legenda: "acordado",
+        ivaIncluido,
       };
     }
     return {
@@ -276,6 +284,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
       urgente: false,
       valor: paga,
       legenda: "acordado",
+      ivaIncluido,
     };
   }
 

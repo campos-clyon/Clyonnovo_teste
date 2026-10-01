@@ -33,6 +33,8 @@ import { tService } from "@/lib/translations";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -97,6 +99,8 @@ export async function POST(
     taxaProfissional?: string | number | null;
     /** Como o cliente paga. Nula = na plataforma. */
     formaDePagamento?: string | null;
+    /** Quando abriu — decide o modelo do preço (IVA incluído desde o corte). */
+    createdAt?: Date | string | null;
   };
 
   const doProfissional = await negociacaoPorTokenHash(hash);
@@ -307,7 +311,7 @@ export async function POST(
        */
       const valor =
         lado === "cliente"
-          ? valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha))
+          ? valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha), modeloDaNegociacao(linha.createdAt))
           : typeof corpo.valor === "string"
             ? Number(corpo.valor.replace(",", "."))
             : Number(corpo.valor);
@@ -392,6 +396,12 @@ export async function POST(
                 ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
                 : null,
             formaDePagamento: linha.formaDePagamento ?? null,
+            criadaEm: linha.createdAt ?? null,
+            dividaEmDinheiro:
+              nova.valorAcordado != null &&
+              temDividaDoProfissional(linha.formaDePagamento, modeloDaNegociacao(linha.createdAt))
+                ? dividaDoProfissional(nova.valorAcordado, taxasDaNegociacao(linha))
+                : null,
             baseUrl: urlDeAccaoDoPedido(req.headers),
           });
 

@@ -35,6 +35,7 @@ export default async function OrcamentoPage(
     city:                  order.city ?? null,
     description:           order.description ?? null,
     precoFinal:            o.precoFinal ? Number(o.precoFinal) : null,
+    pedidoCriadoEm:        order.createdAt ? new Date(order.createdAt).toISOString() : null,
     dataAgendada:          o.scheduledDate ?? o.dataAgendada ?? null,
     mensagemCliente:       o.mensagemCliente ?? null,
     status:                order.status ?? "aprovado",

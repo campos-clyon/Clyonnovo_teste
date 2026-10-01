@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { comFacturaEmPalavras } from "@/lib/conta-em-palavras";
+import { etiquetaDoPreco, modeloDaNegociacao } from "@/lib/iva-incluido";
 
 const SERVICE_LABELS: Record<string, string> = {
   recolha_moveis:            "Recolha de móveis",
@@ -31,6 +32,13 @@ interface OrderData {
   description: string | null;
   /** Sem IVA e sem a taxa — o preço que o backoffice aprovou. */
   precoFinal: number | null;
+  /**
+   * QUANDO O PEDIDO NASCEU — decide o modelo do preço (01-10-2026): com IVA
+   * incluído nos pedidos a partir de `IVA_INCLUIDO_DESDE`, sem IVA nos de
+   * antes. Obrigatório, para o email, a página e a mensagem do mesmo
+   * orçamento dizerem o mesmo número.
+   */
+  pedidoCriadoEm: Date | string | null;
   dataAgendada: string | null;
   mensagemCliente: string | null;
   status: string;
@@ -53,10 +61,12 @@ export default function OrcamentoClient({
   const servico = SERVICE_LABELS[order.serviceType ?? ""] ?? order.serviceType ?? "Serviço";
   // O preço dele, sem IVA e já com a taxa — pelas contas de todos, a partir do
   // `precoFinal`. Ver a nota junto do número, mais abaixo.
+  // Com IVA incluído nos pedidos a partir do corte de 01-10-2026.
+  const modelo = modeloDaNegociacao(order.pedidoCriadoEm);
   const preco   = order.precoFinal != null
-    ? precoParaOCliente(order.precoFinal).toFixed(2).replace(".", ",") + " €"
+    ? precoParaOCliente(order.precoFinal, undefined, modelo).toFixed(2).replace(".", ",") + " €"
     : "Em análise";
-  const comFactura = order.precoFinal != null ? comFacturaEmPalavras(order.precoFinal, null) : "";
+  const comFactura = order.precoFinal != null ? comFacturaEmPalavras(order.precoFinal, modelo) : "";
 
   async function doAction(action: "confirmar" | "cancelar") {
     setLoading(action);
@@ -196,7 +206,7 @@ export default function OrcamentoClient({
                 passou a dizer o preço sem IVA e, à parte, o que acresce com
                 factura; esta página, que é para onde o email manda, diz o mesmo.
               */}
-              <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Preço aprovado, sem IVA</p>
+              <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Preço aprovado, {etiquetaDoPreco(modelo)}</p>
               <p className="text-3xl font-bold text-acao mt-1">{preco}</p>
             </div>
             <div className="rounded-full bg-[#00B4D8]/10 px-3 py-1">

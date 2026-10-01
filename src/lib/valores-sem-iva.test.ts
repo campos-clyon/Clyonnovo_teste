@@ -71,10 +71,18 @@ describe("o número que o cliente vê é serviço mais taxa, sem imposto", () =>
   });
 });
 
+/*
+ * ⚠️ DESDE 01-10-2026 ISTO SÓ VALE ANTES DO CORTE. "Preços com IVA incluído:
+ * o cliente vê um número só por proposta, já com a taxa da CLYON e com 23 % de
+ * IVA." As negociações abertas a partir de `IVA_INCLUIDO_DESDE` mostram o
+ * total; as de antes continuam a mostrar o `semIva` até ao fim. O número que
+ * se mostra é o `aPagar` de `precoDoCliente` — que é este `semIva` no modelo
+ * antigo. Os testes do modelo novo estão em `iva-incluido.test.ts`.
+ */
 describe("os ecrãs do cliente mostram esse número", () => {
   it("a conta do trabalho fechado tem duas linhas e um total sem IVA", () => {
     const ECRA = soCodigo(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("{euros(conta.semIva)}");
+    expect(ECRA).toContain("{euros(conta.aPagar)}");
     // A linha de IVA saiu da tabela: passou para a nota de baixo, onde diz o
     // que acresce A QUEM QUISER FACTURA em vez de aparecer como se fosse
     // devida por toda a gente.
@@ -89,15 +97,16 @@ describe("os ecrãs do cliente mostram esse número", () => {
     // é o número grande do cartão: `precoParaOCliente` é `contaDoCliente(...)
     // .semIva` — o mesmo número que o fecho mostra.
     const ECRA = soCodigo(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela)");
+    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela, modeloDela)");
     expect(ECRA).toContain("{euros(precoEmCima)}");
     const PRECO = soCodigo(ler("src/lib/preco-do-cliente.ts"));
-    expect(PRECO).toContain("contaDoCliente(valorDoProfissional, taxas ?? TAXAS_DE_ORIGEM).semIva");
+    expect(PRECO).toContain("contaDoCliente(valorDoProfissional, taxas ?? TAXAS_DE_ORIGEM, acrescimo)");
+    expect(PRECO).toContain("aPagar: ivaIncluido ? conta.total : conta.semIva");
   });
 
   it("a lista de pedidos da conta dele também", () => {
     const CONTA = soCodigo(ler("src/app/conta/components/types.ts"));
-    expect(CONTA).toContain(".semIva");
+    expect(CONTA).toContain("precoParaOCliente(acordado, taxasDaNegociacao(fechada), modeloDela)");
     expect(CONTA).not.toContain("taxasDaNegociacao(fechada)).total");
   });
 
@@ -110,7 +119,9 @@ describe("os ecrãs do cliente mostram esse número", () => {
     // o `semIva` da conta) e com as taxas DO TRABALHO — em dinheiro a taxa do
     // cliente é outra, e a carteira dizia-lhe a de origem.
     const CARTEIRA = soCodigo(ler("src/lib/carteira-do-cliente.ts"));
-    expect(CARTEIRA).toContain("precoParaOCliente(acordado, taxasDaNegociacao(t))");
+    expect(CARTEIRA).toContain(
+      "precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaNegociacao(t.createdAt))",
+    );
     expect(CARTEIRA).not.toContain(".total");
   });
 });

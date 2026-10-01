@@ -1,8 +1,15 @@
 import type { Proposta } from "./negociacao";
-import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
+import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
+import { precoDoCliente } from "./preco-do-cliente";
+import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
 
 import { promessaDaForma } from "./pagamento-na-plataforma";
-import { FORMA_EM_PALAVRAS, lerForma, type FormaDePagamento } from "./forma-de-pagamento";
+import {
+  FORMA_EM_PALAVRAS,
+  FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO,
+  lerForma,
+  type FormaDePagamento,
+} from "./forma-de-pagamento";
 import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 
@@ -63,6 +70,13 @@ export type PropostaParaOCliente = {
   /** O que pagaria COM FACTURA: o de cima mais o imposto. Fica numa linha só. */
   total: number;
   /**
+   * O MODELO DA NEGOCIAÇÃO — 01-10-2026. Com IVA incluído, o número da
+   * mensagem é o `total` (`aPagar`) e não há linha «com factura acrescem».
+   */
+  modelo: ModeloDoPreco;
+  /** O número da mensagem: o total com IVA incluído, o `semIva` antes do corte. */
+  aPagar: number;
+  /**
    * COMO O CLIENTE PAGA — 29-09-2026.
    *
    * Em dinheiro são duas entregas: o serviço em notas ao profissional e a
@@ -90,7 +104,25 @@ type NegociacaoParaLer = {
    */
   taxaCliente?: string | number | null;
   taxaProfissional?: string | number | null;
+  /** Quando a negociação abriu — decide o modelo do preço (01-10-2026). */
+  criadaEm?: string | Date | null;
 };
+
+/** A proposta, contada no modelo da negociação. */
+function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente {
+  const modelo = modeloDaNegociacao(n.criadaEm);
+  const conta = precoDoCliente(valor, taxasDaNegociacao(n), modelo);
+  return {
+    profissional: n.profissionalNome,
+    valor,
+    taxaCliente: taxasDaNegociacao(n).cliente,
+    semIva: conta.semIva,
+    total: conta.total,
+    modelo,
+    aPagar: conta.aPagar,
+    forma: lerForma(n.formaDePagamento),
+  };
+}
 
 function lerPropostas(json: string | null): Proposta[] {
   if (!json) return [];
@@ -143,16 +175,7 @@ export function propostasParaOCliente(
     /* Uma proposta recusada já não está em cima da mesa. */
     if (ultima.estado === "recusada" || ultima.estado === "expirada") continue;
 
-    const valor = Number(ultima.valor);
-    const conta = contaDoCliente(valor, taxasDaNegociacao(n));
-    saida.push({
-      profissional: n.profissionalNome,
-      valor,
-      taxaCliente: taxasDaNegociacao(n).cliente,
-      semIva: conta.semIva,
-      total: conta.total,
-      forma: lerForma(n.formaDePagamento),
-    });
+    saida.push(paraOCliente(n, Number(ultima.valor)));
   }
 
   /*
@@ -168,7 +191,7 @@ export function propostasParaOCliente(
    * lista aparecia desordenada aos olhos de quem a lia, porque os números à
    * vista não eram os números da ordenação. Ordena-se pelo que se mostra.
    */
-  return saida.sort((a, b) => a.semIva - b.semIva);
+  return saida.sort((a, b) => a.aPagar - b.aPagar);
 }
 
 /**
@@ -186,15 +209,7 @@ export function trabalhoFechado(
     const ultima = lerPropostas(n.propostasJson).at(-1);
     const valor = Number(ultima?.valor);
     if (!Number.isFinite(valor)) continue;
-    const conta = contaDoCliente(valor, taxasDaNegociacao(n));
-    return {
-      profissional: n.profissionalNome,
-      valor,
-      taxaCliente: taxasDaNegociacao(n).cliente,
-      semIva: conta.semIva,
-      total: conta.total,
-      forma: lerForma(n.formaDePagamento),
-    };
+    return paraOCliente(n, valor);
   }
   return null;
 }
@@ -208,7 +223,7 @@ export function trabalhoFechado(
  * em dinheiro, é zero e não entra aqui.
  */
 function emDinheiroEmPalavras(p: PropostaParaOCliente): string {
-  return totalEmPalavras(p.valor, null, { cliente: p.taxaCliente, profissional: 0 }, "dinheiro");
+  return totalEmPalavras(p.valor, p.modelo, { cliente: p.taxaCliente, profissional: 0 }, "dinheiro");
 }
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
@@ -224,6 +239,8 @@ const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
  * nada sobre o serviço. Agora quem factura é uma empresa parceira, e é 23 % sobre tudo.
  */
 function comFactura(p: PropostaParaOCliente): string {
+  // Com IVA incluído (01-10-2026) não há linha: o número dito já leva o imposto.
+  if (p.modelo === "iva_incluido") return "";
   if (p.total <= p.semIva) return "";
   return `Com factura acrescem ${POR_CENTO} de IVA: ${euros(p.total)}.`;
 }
@@ -338,7 +355,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     */
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
-        ` ${euros(d.fechado.semIva)} a pagar.`,
+        ` ${euros(d.fechado.aPagar)} a pagar${d.fechado.modelo === "iva_incluido" ? ", IVA incluído" : ""}.`,
     );
     if (d.fechado.forma === "dinheiro") {
       /*
@@ -363,7 +380,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     linhas.push(ORCAMENTO_A_DISTANCIA);
     linhas.push("");
     // Para que serve confirmar depende de por onde passa o dinheiro.
-    linhas.push(promessaDaForma(d.fechado.forma).whatsappConfirmar);
+    linhas.push(promessaDaForma(d.fechado.forma, d.fechado.modelo).whatsappConfirmar);
   } else if (quantas === 0) {
     /*
      * SEM PROPOSTAS TAMBÉM SE ESCREVE — e diz-se a verdade.
@@ -382,6 +399,8 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         : `Já recebemos ${quantas} propostas para ${oQue}:`,
     );
     linhas.push("");
+    const todasComIva = d.propostas.every((p) => p.modelo === "iva_incluido");
+    const misturadas = !todasComIva && d.propostas.some((p) => p.modelo === "iva_incluido");
     for (const p of d.propostas) {
       /*
         UM NÚMERO POR PROFISSIONAL — o que ele paga se não pedir factura.
@@ -392,7 +411,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         Desde 29-09-2026 negoceia-se sobre o preço do cliente — é esse que ele
         escreve quando contrapropõe —, e o parêntese saiu com a razão dele.
       */
-      linhas.push(`${p.profissional}: ${euros(p.semIva)}`);
+      linhas.push(`${p.profissional}: ${euros(p.aPagar)}${misturadas && p.modelo === "iva_incluido" ? " (IVA incluído)" : ""}`);
     }
     linhas.push("");
     /*
@@ -427,11 +446,32 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * cliente escolheu, por isso a lista é de uma forma só.
      */
     const emDinheiro = d.propostas.every((p) => p.forma === "dinheiro");
-    linhas.push(
-      emDinheiro
-        ? `Valores sem IVA. ${FORMA_EM_PALAVRAS.dinheiro.cliente} Com factura, acrescem ${POR_CENTO} de IVA sobre a taxa da CLYON.`
-        : `Valores sem IVA. Com factura acrescem ${POR_CENTO} de IVA.`,
-    );
+    /*
+     * COM IVA INCLUÍDO — 01-10-2026. "O cliente vê um número só por proposta,
+     * já com a taxa da CLYON e com 23 % de IVA." Uma frase, e nenhuma conta
+     * por fazer. Em dinheiro, a quem entrega: ao profissional, tudo.
+     *
+     * As negociações de um pedido podem ter nascido dos dois lados do corte
+     * (uma redistribuição depois dele). Aí cada linha diz o seu, e a frase
+     * explica as duas.
+     */
+    if (todasComIva) {
+      linhas.push(
+        emDinheiro
+          ? `Valores com IVA incluído. ${FORMA_EM_PALAVRAS.dinheiro.cliente}`
+          : "Valores com IVA incluído.",
+      );
+    } else if (misturadas) {
+      linhas.push(
+        `Os valores marcados «IVA incluído» já levam os ${POR_CENTO}; aos outros, com factura, acrescem ${POR_CENTO} de IVA.`,
+      );
+    } else {
+      linhas.push(
+        emDinheiro
+          ? `Valores sem IVA. ${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente} Com factura, acrescem ${POR_CENTO} de IVA sobre a taxa da CLYON.`
+          : `Valores sem IVA. Com factura acrescem ${POR_CENTO} de IVA.`,
+      );
+    }
     /*
      * COMO É QUE ESTES NÚMEROS FORAM FEITOS, na linha a seguir aos números.
      *

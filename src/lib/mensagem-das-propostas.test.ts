@@ -47,6 +47,13 @@ const umaProposta = (
     taxaCliente: TAXA_CLIENTE,
     semIva: c.semIva,
     total: c.total,
+    /*
+     * O MODELO DE ANTES DO CORTE — 01-10-2026. Estas fixturas guardam a
+     * mensagem das negociações abertas antes de `IVA_INCLUIDO_DESDE`, que
+     * continuam sem IVA até ao fim. O modelo novo tem os seus testes no fim.
+     */
+    modelo: "sem_iva" as const,
+    aPagar: c.semIva,
     // A forma de sempre: as fixturas são de antes de o cliente a escolher.
     forma: "na_plataforma" as const,
   };
@@ -67,6 +74,9 @@ describe("quem entra na lista de propostas", () => {
         taxaCliente: TAXA_CLIENTE,
         semIva: 283.5,
         total: 348.71,
+        // Sem data de abertura: o modelo de antes do corte (01-10-2026).
+        modelo: "sem_iva",
+        aPagar: 283.5,
         forma: "na_plataforma",
       },
     ]);
@@ -92,6 +102,8 @@ describe("quem entra na lista de propostas", () => {
         taxaCliente: TAXA_CLIENTE,
         semIva: 346.5,
         total: 426.2,
+        modelo: "sem_iva",
+        aPagar: 346.5,
         forma: "na_plataforma",
       },
     ]);
@@ -488,7 +500,8 @@ describe("o cliente vê o total ANTES de carregar no botão", () => {
     const ECRA = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
     // A conta vem da função, e não de um número escrito à mão no ecrã — com as
     // taxas daquela negociação.
-    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela)");
+    // E no modelo DELA — com IVA incluído desde o corte de 01-10-2026.
+    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela, modeloDela)");
     expect(ECRA).toContain("{euros(precoEmCima)}");
     expect(ECRA).not.toContain("{euros(emCima)}");
   });
@@ -526,6 +539,9 @@ describe("quando o trabalho já está fechado", () => {
       taxaCliente: TAXA_CLIENTE,
       semIva: 346.5,
       total: 426.2,
+      // Sem data de abertura, o modelo de antes do corte (01-10-2026).
+      modelo: "sem_iva",
+      aPagar: 346.5,
       // Sem forma gravada, é a de sempre.
       forma: "na_plataforma",
     });
@@ -615,5 +631,72 @@ describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => 
     expect(m).toContain("Com factura, acrescem 23 % de IVA sobre a taxa da CLYON.");
     // Sem voltar ao «(X € para ele mais a taxa)» — o preço dele é um número só.
     expect(m).not.toContain("para ele mais a taxa");
+  });
+});
+
+/**
+ * COM IVA INCLUÍDO — 01-10-2026.
+ *
+ * "Preços com IVA incluído: o cliente vê um número só por proposta, já com a
+ *  taxa da CLYON e com 23 % de IVA. Ex.: profissional propõe 350 € → cliente
+ *  vê 452,03 €." As negociações abertas a partir de `IVA_INCLUIDO_DESDE`
+ *  dizem esse número, sem linha de factura; as de antes, o de sempre.
+ */
+describe("com IVA incluído (negociações abertas desde o corte)", () => {
+  const DEPOIS = "2026-10-05T10:00:00Z";
+  const ANTES = "2026-09-25T10:00:00Z";
+  const NOVAS = { taxaCliente: "0.05", taxaProfissional: "0.0655" };
+
+  it("350 € do profissional chegam ao cliente como 452,03 €, IVA incluído", () => {
+    const [p] = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 350), criadaEm: DEPOIS, ...NOVAS },
+    ]);
+    expect(p.modelo).toBe("iva_incluido");
+    expect(p.aPagar).toBe(452.03);
+    const m = mensagemDasPropostas({ propostas: [p], link: "https://clyon.pt/pedido/abc" });
+    expect(m).toContain("Rui: 452,03 €");
+    expect(m).toContain("Valores com IVA incluído.");
+    expect(m).not.toContain("Com factura acrescem");
+    expect(m).not.toContain("Valores sem IVA");
+  });
+
+  it("a mesma proposta, aberta antes do corte, continua a 367,50 € sem IVA", () => {
+    const [p] = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 350), criadaEm: ANTES, ...NOVAS },
+    ]);
+    expect(p.modelo).toBe("sem_iva");
+    expect(p.aPagar).toBe(367.5);
+    const m = mensagemDasPropostas({ propostas: [p], link: "https://clyon.pt/pedido/abc" });
+    expect(m).toContain("Rui: 367,50 €");
+    expect(m).toContain("Valores sem IVA. Com factura acrescem 23 % de IVA.");
+  });
+
+  it("uma lista dos dois lados do corte diz cada um, e explica os dois", () => {
+    const propostas = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 350), criadaEm: DEPOIS, ...NOVAS },
+      { estado: "aberta", profissionalNome: "Ana", propostasJson: proposta("profissional", 300), criadaEm: ANTES, ...NOVAS },
+    ]);
+    const m = mensagemDasPropostas({ propostas, link: "https://clyon.pt/pedido/abc" });
+    expect(m).toContain("Rui: 452,03 € (IVA incluído)");
+    expect(m).toContain("Ana: 315,00 €");
+    expect(m).toContain("Os valores marcados «IVA incluído» já levam os 23 %");
+  });
+
+  it("em dinheiro, o fecho diz uma entrega só — tudo ao profissional", () => {
+    const fechado = trabalhoFechado([
+      {
+        estado: "acordada",
+        profissionalNome: "Rui",
+        propostasJson: proposta("cliente", 350, "aceite"),
+        criadaEm: DEPOIS,
+        formaDePagamento: "dinheiro",
+        ...NOVAS,
+      },
+    ]);
+    const m = mensagemDasPropostas({ propostas: [], fechado, link: "https://clyon.pt/pedido/abc" });
+    expect(m).toContain("Está combinado com Rui: 452,03 € a pagar, IVA incluído.");
+    expect(m).toContain("pago em dinheiro ao profissional, no local");
+    expect(m).not.toContain("de taxa à CLYON");
+    expect(m).not.toContain("por referência");
   });
 });

@@ -56,6 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description:   order.description ?? null,
       // O preço sem IVA e sem a taxa: o email faz o resto com as contas de todos.
       precoFinal:    Number((order as any).precoFinal ?? precoFinal ?? 0),
+      pedidoCriadoEm: order.createdAt ?? null,
       dataAgendada:  (order as any).scheduledDate ?? (order as any).dataAgendada ?? null,
       token,
       orderId:       Number(id),

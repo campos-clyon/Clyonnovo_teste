@@ -17,6 +17,7 @@ import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import {
   fraseDaDeclaracao,
   lerComoPagou,
@@ -318,6 +319,7 @@ export async function POST(req: NextRequest) {
           ? valorDoPagamento(
               contaDoCliente(Number(linha.valorAcordado), taxasDaNegociacao(linha)),
               paraQue,
+              modeloDaNegociacao(linha.createdAt),
             )
           : null;
       const frase = fraseDaDeclaracao(paraQue, como, valor);

@@ -23,6 +23,7 @@
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { comFacturaEmPalavras } from "@/lib/conta-em-palavras";
+import { etiquetaDoPreco, modeloDaNegociacao } from "@/lib/iva-incluido";
 
 const QUANDO: Record<string, string> = {
   today:     "para hoje",
@@ -79,6 +80,13 @@ export type DadosMensagem = {
    * — e o que acresce com factura, numa linha à parte.
    */
   precoFinal?: string | number | null;
+  /**
+   * QUANDO O PEDIDO NASCEU — decide o modelo do preço (01-10-2026): com IVA
+   * incluído nos pedidos a partir de `IVA_INCLUIDO_DESDE`, sem IVA nos de
+   * antes. Sem ela, o de antes. Os dois ecrãs que a montam passam-na, para o email, a página e a mensagem do mesmo
+   * orçamento dizerem o mesmo número.
+   */
+  pedidoCriadoEm?: Date | string | null;
 };
 
 /**
@@ -122,10 +130,11 @@ export function mensagemWhatsApp(d: DadosMensagem): string {
   // Valor, só quando já está fechado
   const aprovado = Number(d.precoFinal ?? 0);
   if (aprovado > 0) {
-    const preco = precoParaOCliente(aprovado).toFixed(2).replace(".", ",");
-    const factura = comFacturaEmPalavras(aprovado, null);
+    const modelo = modeloDaNegociacao(d.pedidoCriadoEm);
+    const preco = precoParaOCliente(aprovado, undefined, modelo).toFixed(2).replace(".", ",");
+    const factura = comFacturaEmPalavras(aprovado, modelo);
     linhas.push(
-      `O orçamento é de ${preco} €, sem IVA e já com a taxa da plataforma.` +
+      `O orçamento é de ${preco} €, ${etiquetaDoPreco(modelo)} e já com a taxa da plataforma.` +
         (factura ? ` ${factura}` : ""),
     );
   }

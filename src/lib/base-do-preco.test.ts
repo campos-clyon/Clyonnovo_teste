@@ -169,9 +169,14 @@ describe("«sem IVA» está escrito onde há um número", () => {
     const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
     expect(PROPOSTAS).toContain("Total a pagar");
     expect(PROPOSTAS).toContain("Valores sem IVA.");
-    expect(PROPOSTAS).toContain('<div className="text-xs text-tinta-fraca">sem IVA</div>');
-    // O total vem de contaDoCliente, e não de uma soma escrita à mão.
-    expect(PROPOSTAS).toContain("contaDoCliente(");
+    /*
+     * A ETIQUETA DIZ O MODELO DA NEGOCIAÇÃO — 01-10-2026: «IVA incluído»
+     * desde o corte, «sem IVA» nas de antes. Vem de `etiquetaDoPreco`.
+     */
+    expect(PROPOSTAS).toContain('<div className="text-xs text-tinta-fraca">{etiquetaDoPreco(modeloDela)}</div>');
+    // O total vem da conta da casa (`precoDoCliente`, que é `contaDoCliente`
+    // no modelo da negociação), e não de uma soma escrita à mão.
+    expect(PROPOSTAS).toContain("precoDoCliente(");
     expect(PROPOSTAS).not.toContain("decomporIva");
   });
 });

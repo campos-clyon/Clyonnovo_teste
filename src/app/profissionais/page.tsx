@@ -4,6 +4,7 @@ import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 import { taxasActuais } from "@/lib/db";
 import { COMO_RECEBE, comissaoEmPalavras } from "@/lib/como-funciona-para-o-profissional";
+import { modeloDeHoje } from "@/lib/iva-incluido";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const metadata: Metadata = {
@@ -60,7 +61,7 @@ export default async function ProfissionaisPage() {
    * CLYON fica com 11 % do que o cliente paga, e só as taxas gravadas no
    * backoffice o sabem. Sem base, `taxasActuais` devolve as de origem.
    */
-  const exemplo = comissaoEmPalavras(await taxasActuais());
+  const exemplo = comissaoEmPalavras(await taxasActuais(), modeloDeHoje());
 
   return (
     <div className="min-h-screen bg-white">
@@ -140,7 +141,11 @@ export default async function ProfissionaisPage() {
                   O cliente vê
                 </div>
                 <div className="mt-1.5 text-3xl font-bold text-[#0B1929]">{exemplo.cliente}</div>
-                <p className="mt-1 text-xs text-slate-500">Já com a taxa da plataforma</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {modeloDeHoje() === "iva_incluido"
+                    ? "Com a taxa da plataforma e IVA incluído"
+                    : "Já com a taxa da plataforma"}
+                </p>
               </div>
               <div className="bg-white px-6 py-6 text-center">
                 <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">

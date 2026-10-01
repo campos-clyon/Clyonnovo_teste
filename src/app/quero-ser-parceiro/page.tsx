@@ -10,6 +10,7 @@ import {
   comissaoEmPalavras,
 } from "@/lib/como-funciona-para-o-profissional";
 import FormularioDeCandidatura from "./FormularioDeCandidatura";
+import { modeloDeHoje } from "@/lib/iva-incluido";
 
 export const metadata: Metadata = {
   title: "Trabalhar com a CLYON — receba pedidos na sua zona",
@@ -67,7 +68,7 @@ const PORQUE = [
 export const revalidate = 3600;
 
 export default async function QueroSerParceiroPage() {
-  const exemplo = comissaoEmPalavras(await taxasActuais());
+  const exemplo = comissaoEmPalavras(await taxasActuais(), modeloDeHoje());
 
   return (
     <div className="min-h-screen bg-white">

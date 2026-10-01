@@ -16,6 +16,7 @@ import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import {
   propor,
   aceitar,
@@ -144,7 +145,12 @@ export async function POST(req: NextRequest) {
     switch (corpo.accao) {
       case "propor": {
         // O que ele escreveu é o que paga — vira aqui o valor do profissional.
-        const valor = valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha));
+        // E no modelo DELA: com IVA incluído desde o corte de 01-10-2026.
+        const valor = valorDaPropostaDoCliente(
+          corpo,
+          taxasDaNegociacao(linha),
+          modeloDaNegociacao(linha.createdAt),
+        );
         resultado = propor(estadoActual, "cliente", valor, agora);
         break;
       }

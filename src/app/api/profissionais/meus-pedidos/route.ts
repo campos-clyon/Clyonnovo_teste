@@ -491,6 +491,8 @@ export async function GET(req: NextRequest) {
          */
         taxas: taxasDela,
         formaDePagamento: lerForma(l.formaDePagamento),
+        // Quando abriu — decide o modelo do preço (IVA incluído desde 01-10-2026).
+        criadaEm: l.createdAt ? new Date(l.createdAt).toISOString() : null,
         /*
          * O VALOR QUE A CLYON PÔS NO PEDIDO — no líquido dele.
          *

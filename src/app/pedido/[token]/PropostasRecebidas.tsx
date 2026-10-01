@@ -21,8 +21,9 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { contaDoCliente, taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
-import { precoParaOCliente, precoPossivel } from "@/lib/preco-do-cliente";
+import { taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
+import { precoDoCliente, precoParaOCliente, precoPossivel } from "@/lib/preco-do-cliente";
+import { etiquetaDoPreco, modeloDaNegociacao } from "@/lib/iva-incluido";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
@@ -54,6 +55,12 @@ import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-p
  *
  * O número continua a não dançar: a taxa de cada negociação fica gravada
  * quando ela nasce, e todas as propostas dela passam pela mesma conta.
+ *
+ * E DESDE 01-10-2026 COM O IVA LÁ DENTRO. "Preços com IVA incluído: o cliente
+ * vê um número só por proposta, já com a taxa da CLYON e com 23 % de IVA." O
+ * modelo é o da negociação (`modeloDaNegociacao(n.criadaEm)`): as abertas
+ * antes do corte continuam sem IVA até ao fim, para ninguém ver um preço
+ * mudar a meio.
  */
 
 export type NegociacaoDoCliente = {
@@ -73,6 +80,11 @@ export type NegociacaoDoCliente = {
   /** Como o cliente paga esta negociação. Nulo = na plataforma. */
   formaDePagamento?: string | null;
   acrescimoPagamento?: string | number | null;
+  /**
+   * QUANDO A NEGOCIAÇÃO ABRIU — decide o modelo do preço (01-10-2026). Sem
+   * ela, o modelo antigo: ninguém vê um preço subir por um campo em falta.
+   */
+  criadaEm?: string | Date | null;
   propostas: Proposta[];
   profissionalNome: string;
   /*
@@ -304,7 +316,8 @@ export default function PropostasRecebidas({
      * pela plataforma e quem paga em notas lêem coisas diferentes, porque lhes
      * acontecem coisas diferentes. Ver `pagamento-na-plataforma.ts`.
      */
-    const promessa = promessaDaForma(acordada.formaDePagamento);
+    const modeloDela = modeloDaNegociacao(acordada.criadaEm);
+    const promessa = promessaDaForma(acordada.formaDePagamento, modeloDela);
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
@@ -326,15 +339,16 @@ export default function PropostasRecebidas({
           tabela. Fica em baixo, a dizer o que acresce A QUEM QUISER FACTURA.
         */}
         {(() => {
-          const conta = contaDoCliente(
+          const conta = precoDoCliente(
             acordada.valorAcordado ?? 0,
             taxasDaNegociacao(acordada),
+            modeloDela,
           );
           return (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
               <div className="flex items-baseline justify-between gap-4">
                 <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
-                <span className="text-lg font-bold text-emerald-700">{euros(conta.semIva)}</span>
+                <span className="text-lg font-bold text-emerald-700">{euros(conta.aPagar)}</span>
               </div>
               {/*
                 EM DINHEIRO SÃO DUAS ENTREGAS — 21-09-2026, e continuam a ser.
@@ -344,7 +358,20 @@ export default function PropostasRecebidas({
                 sítio onde a parte da CLYON aparece sozinha, porque é o único
                 onde ele a paga sozinha.
               */}
-              {lerForma(acordada.formaDePagamento) === "dinheiro" && (
+              {/*
+                COM IVA INCLUÍDO, EM DINHEIRO HÁ UMA ENTREGA SÓ — 01-10-2026. O
+                cliente paga o preço inteiro ao profissional; o IVA e a
+                comissão da CLYON é o profissional que lhos entrega depois.
+              */}
+              {conta.ivaIncluido && lerForma(acordada.formaDePagamento) === "dinheiro" && (
+                <div className="mt-2 border-t border-slate-200 pt-2 text-sm">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-slate-600">Em dinheiro, ao profissional, no local</span>
+                    <span className="font-semibold text-slate-900">{euros(conta.total)}</span>
+                  </div>
+                </div>
+              )}
+              {!conta.ivaIncluido && lerForma(acordada.formaDePagamento) === "dinheiro" && (
                 <div className="mt-2 space-y-1 border-t border-slate-200 pt-2 text-sm">
                   <div className="flex items-baseline justify-between gap-4">
                     <span className="text-slate-600">Em dinheiro, ao profissional</span>
@@ -363,8 +390,9 @@ export default function PropostasRecebidas({
                   isenção do artigo 53.º. Quem factura passou a ser a CLYON,
                   e o imposto de uma factura é o de quem a emite.
                 */}
-                Valores sem IVA.{" "}
-                {`Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
+                {conta.ivaIncluido
+                  ? `Valor com IVA incluído (${Math.round(TAXA_IVA * 100)} %: ${euros(conta.iva)}). Recebe factura.`
+                  : `Valores sem IVA. Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
                 {" "}
                 {/*
                   E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.
@@ -620,7 +648,10 @@ export default function PropostasRecebidas({
           const emCima = pendente?.valor ?? n.valorAcordado;
           // O que ele paga pelo que está em cima da mesa — ver o cabeçalho.
           const taxasDela = taxasDaNegociacao(n);
-          const precoEmCima = emCima != null ? precoParaOCliente(emCima, taxasDela) : null;
+          // E no modelo dela: com IVA incluído desde o corte de 01-10-2026.
+          const modeloDela = modeloDaNegociacao(n.criadaEm);
+          const precoEmCima =
+            emCima != null ? precoParaOCliente(emCima, taxasDela, modeloDela) : null;
           const aguarda = n.estado === "aguarda_contratacao";
 
           return (
@@ -763,7 +794,7 @@ export default function PropostasRecebidas({
                 <div className="text-right">
                   <div className="text-xl font-bold text-tinta">{euros(precoEmCima)}</div>
                   {precoEmCima != null && (
-                    <div className="text-xs text-tinta-fraca">sem IVA</div>
+                    <div className="text-xs text-tinta-fraca">{etiquetaDoPreco(modeloDela)}</div>
                   )}
                   <div className="text-xs text-tinta-fraca">
                     {/*
@@ -830,11 +861,15 @@ export default function PropostasRecebidas({
                       referencia={precoEmCima}
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
-                      ajustar={(v) => precoPossivel(v, taxasDela)}
+                      ajustar={(v) => precoPossivel(v, taxasDela, modeloDela)}
                       legendaDoValor={(v, escrito) =>
                         escrito != null && Math.abs(escrito - v) >= 0.005
-                          ? `Fica ${euros(v)} — o valor possível mais perto do que escreveu. Sem IVA.`
-                          : "É o que paga se ele aceitar, sem IVA."
+                          ? `Fica ${euros(v)} — o valor possível mais perto do que escreveu. ${
+                              modeloDela === "iva_incluido" ? "IVA incluído." : "Sem IVA."
+                            }`
+                          : modeloDela === "iva_incluido"
+                            ? "É o que paga se ele aceitar, com IVA incluído."
+                            : "É o que paga se ele aceitar, sem IVA."
                       }
                       onPropor={(preco) => agir(n.id, "propor", preco)}
                     />
@@ -860,7 +895,7 @@ export default function PropostasRecebidas({
                 }}
                 euSou="cliente"
                 // O mesmo registo, com os números que ele conhece: os dele.
-                valorVisto={(v) => precoParaOCliente(v, taxasDela)}
+                valorVisto={(v) => precoParaOCliente(v, taxasDela, modeloDela)}
               />
             </article>
           );

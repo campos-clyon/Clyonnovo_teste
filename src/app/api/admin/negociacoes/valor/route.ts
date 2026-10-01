@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerForma, excedeONumerario, MAXIMO_EM_NUMERARIO } from "@/lib/forma-de-pagamento";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { valorEmNumerario } from "@/lib/divida-do-profissional";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
@@ -79,7 +81,7 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
-              n.taxaCliente, n.taxaProfissional,
+              n.taxaCliente, n.taxaProfissional, n.createdAt,
               p.name AS profissionalNome, p.regimeIva
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
@@ -94,6 +96,7 @@ export async function POST(req: NextRequest) {
         confirmadoEm: Date | null;
         pagoEm: Date | null;
         formaDePagamento: string | null;
+        createdAt: Date | null;
         profissionalNome: string;
         regimeIva: string | null;
       }>,
@@ -134,9 +137,15 @@ export async function POST(req: NextRequest) {
      * dinheiro, um valor acima do legal não se corrige para lá: muda-se a forma
      * de pagamento primeiro.
      */
+    /*
+     * E O QUE SE MEDE É O QUE PASSA EM NOTAS — 01-10-2026. Com IVA incluído o
+     * cliente dá ao profissional o preço inteiro, com IVA, e não o acordado.
+     */
     if (
       lerForma(linha.formaDePagamento) === "dinheiro" &&
-      excedeONumerario(novo)
+      excedeONumerario(
+        valorEmNumerario(novo, taxasDaNegociacao(linha), modeloDaNegociacao(linha.createdAt)),
+      )
     ) {
       return NextResponse.json(
         {

@@ -1356,7 +1356,9 @@ describe("fala como gente", () => {
     // da casa com as taxas DAQUELA negociação (`preco-do-cliente.ts`).
     expect(CEREBRO).toContain('from "./taxas-plataforma"');
     expect(CEREBRO).toContain('from "./preco-do-cliente"');
-    expect(CEREBRO).toContain("comUnidade(precoParaOCliente(valor, taxas))");
+    // E no modelo dela — IVA incluído desde o corte de 01-10-2026.
+    expect(CEREBRO).toContain("comUnidade(precoParaOCliente(valor, taxas, modelo))");
+    expect(CEREBRO).toContain("const modelo = modeloDaNegociacao(n.criadaEm);");
     expect(CEREBRO).toContain("const taxas = taxasDaNegociacao(n);");
     expect(CEREBRO).not.toContain("para ele mais a taxa CLYON");
   });

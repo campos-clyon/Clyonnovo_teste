@@ -17,8 +17,9 @@ import {
   type Negociacao,
   type Proposta,
 } from "@/lib/negociacao";
-import { contaDoCliente, taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
-import { baseDoPrecoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
+import { taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
+import { baseDoPrecoDoCliente, precoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
+import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import {
@@ -307,8 +308,13 @@ type Alvo = {
   pedidoId: number;
   negociacaoId: number;
   profissionalNome: string;
-  /** O regime de quem factura: decide se o total leva IVA por cima. */
-  regimeIva: string | null;
+  /**
+   * O MODELO DO PREÇO DESTA NEGOCIAÇÃO — 01-10-2026. Era o regime de IVA de
+   * quem factura, que desde 22-09-2026 não entrava em conta nenhuma; o que
+   * decide agora se o preço dito leva o IVA é a data em que a negociação
+   * abriu (`IVA_INCLUIDO_DESDE`).
+   */
+  modelo: ModeloDoPreco;
   /** Como o cliente paga. Em dinheiro, a mensagem diz quanto vai em notas. */
   formaDePagamento: FormaDePagamento;
   /** As taxas gravadas nesta negociação — em dinheiro não são as de origem. */
@@ -353,7 +359,7 @@ async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | nu
   if (!n) return null;
   return {
     pedidoId,
-    regimeIva: n.regimeIva ?? null,
+    modelo: modeloDaNegociacao(n.createdAt),
     formaDePagamento: lerForma((n as { formaDePagamento?: unknown }).formaDePagamento),
     taxas: taxasDaNegociacao(n),
     base: await baseDoPedido(pedidoId),
@@ -578,7 +584,7 @@ async function fecharPeloCliente(
    * na proposta. «367,50 € (350 € para ele mais a taxa CLYON)» era a conta a
    * ser refeita à frente de quem acabou de dizer que sim.
    */
-  const conta = contaDoCliente(valor, alvo.taxas);
+  const conta = precoDoCliente(valor, alvo.taxas, alvo.modelo);
   /*
    * SE ELE JÁ DISSE O DIA, NÃO SE LHE PERGUNTA SE TEM DATA PENSADA.
    *
@@ -604,14 +610,19 @@ async function fecharPeloCliente(
    * fim do trabalho sem saber quanto trazer — ou dá tudo ao profissional e a
    * taxa fica por pagar.
    */
-  const factura = comFacturaEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas, alvo.base);
-  const preco = precoComBase(euros(conta.semIva), alvo.base);
+  /*
+   * COM IVA INCLUÍDO DESDE 01-10-2026 — o número é o total, e não há linha de
+   * factura: há em todas as vendas. Antes do corte, o de sempre.
+   */
+  const factura = comFacturaEmPalavras(valor, alvo.modelo, alvo.taxas, alvo.base);
+  const preco = precoComBase(euros(conta.aPagar), alvo.base);
   const fechado =
     alvo.formaDePagamento === "dinheiro"
       ? `Fechado com ${alvo.profissionalNome}, por ${preco}. ` +
-        `${totalEmPalavras(valor, alvo.regimeIva ?? null, alvo.taxas, "dinheiro", alvo.base)}`
-      : `Fechado com ${alvo.profissionalNome}: ${preco} a pagar, sem IVA.` +
-        (factura ? ` ${factura}` : "");
+        `${totalEmPalavras(valor, alvo.modelo, alvo.taxas, "dinheiro", alvo.base)}`
+      : `Fechado com ${alvo.profissionalNome}: ${preco} a pagar, ${
+          conta.ivaIncluido ? "IVA incluído" : "sem IVA"
+        }.` + (factura ? ` ${factura}` : "");
   await enviarTextoWhatsApp(
     telefone,
     `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
@@ -897,11 +908,12 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
             invertidas[0]?.valor ??
             null);
       const taxas = taxasDaNegociacao(n);
+      const modelo = modeloDaNegociacao(n.createdAt);
       lista.push({
         pedidoId,
         negociacaoId: Number(n.id),
         profissionalNome: n.profissionalNome,
-        regimeIva: n.regimeIva ?? null,
+        modelo,
         formaDePagamento: lerForma((n as { formaDePagamento?: unknown }).formaDePagamento),
         taxas,
         base,
@@ -911,7 +923,8 @@ async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
           propostas,
         },
         valorNaMesa,
-        precoNaMesa: valorNaMesa != null ? precoParaOCliente(Number(valorNaMesa), taxas) : null,
+        precoNaMesa:
+          valorNaMesa != null ? precoParaOCliente(Number(valorNaMesa), taxas, modelo) : null,
       });
     }
   }
@@ -1012,14 +1025,18 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
     // lêem-se daqui, das colunas gravadas.
     const taxasDela = taxasDaNegociacao(acordada);
     const formaDela = lerForma((acordada as { formaDePagamento?: unknown }).formaDePagamento);
-    const semIva = contaDoCliente(acordado, taxasDela).semIva;
+    // No modelo dela: com IVA incluído desde o corte de 01-10-2026.
+    const modeloDela = modeloDaNegociacao(acordada.createdAt);
+    const conta = precoDoCliente(acordado, taxasDela, modeloDela);
     // Um número só, o dele — ver `preco-do-cliente.ts`. Em dinheiro, o
-    // preço e as duas entregas que o fazem.
+    // preço e a quem o entrega.
     const comoPaga =
       formaDela === "dinheiro"
-        ? ` por ${precoComBase(euros(semIva), base)}. ` +
-          `${totalEmPalavras(acordado, acordada.regimeIva ?? null, taxasDela, "dinheiro", base)}`
-        : ` ${precoComBase(euros(semIva), base)} a pagar, sem IVA.`;
+        ? ` por ${precoComBase(euros(conta.aPagar), base)}. ` +
+          `${totalEmPalavras(acordado, modeloDela, taxasDela, "dinheiro", base)}`
+        : ` ${precoComBase(euros(conta.aPagar), base)} a pagar, ${
+            conta.ivaIncluido ? "IVA incluído" : "sem IVA"
+          }.`;
     return (
       `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} —${comoPaga}` +
       comNotaDaCarga(base) +
@@ -1055,7 +1072,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
     propostas.push({
       profissionalNome: n.profissionalNome,
       // O preço dele, já com a taxa — o mesmo que a proposta lhe disse.
-      valor: precoParaOCliente(Number(valor), taxasDaNegociacao(n)),
+      valor: precoParaOCliente(Number(valor), taxasDaNegociacao(n), modeloDaNegociacao(n.createdAt)),
       aSuaEspera: ultima?.por === "profissional" && ultima.estado === "pendente",
     });
   }
@@ -1087,6 +1104,8 @@ function avisoDasRetiradas(
     propostasJson: string | null;
     taxaCliente?: string | number | null;
     taxaProfissional?: string | number | null;
+    /** Quando abriu — o modelo do preço (IVA incluído desde 01-10-2026). */
+    createdAt?: Date | string | null;
   }>,
 ): string | null {
   const retiradas = linhas
@@ -1097,7 +1116,9 @@ function avisoDasRetiradas(
     // Com o preço que ele viu, para ele reconhecer de qual se fala.
     .map(
       ({ n, ultima }) =>
-        `${n.profissionalNome} (${euros(precoParaOCliente(Number(ultima!.valor), taxasDaNegociacao(n)))})`,
+        `${n.profissionalNome} (${euros(
+          precoParaOCliente(Number(ultima!.valor), taxasDaNegociacao(n), modeloDaNegociacao(n.createdAt)),
+        )})`,
     );
   if (retiradas.length === 0) return null;
   return retiradas.length === 1
@@ -1617,7 +1638,9 @@ export async function tratarMensagemDoCliente(
         );
       for (const n of candidatas) {
         const taxas = taxasDaNegociacao(n);
-        const valor = baseDoPrecoDoCliente(preco, taxas);
+        // O que ele escreve é um preço no modelo DESTA negociação (01-10-2026).
+        const modelo = modeloDaNegociacao(n.createdAt);
+        const valor = baseDoPrecoDoCliente(preco, taxas, modelo);
         if (valor == null) continue;
         const estado: Negociacao = {
           estado: n.estado as Negociacao["estado"],
@@ -1633,7 +1656,7 @@ export async function tratarMensagemDoCliente(
         });
         const baseDele = await baseDoPedido(pedidoId);
         // O que fica: o escrito, ou um cêntimo abaixo — ver `preco-do-cliente.ts`.
-        const ficou = precoParaOCliente(valor, taxas);
+        const ficou = precoParaOCliente(valor, taxas, modelo);
         await registarAccao(
           pedidoId,
           Number(n.id),
@@ -1913,6 +1936,8 @@ async function comoEstaNegociacaoSePaga(
   linhas: Awaited<ReturnType<typeof negociacoesDoPedido>>;
   taxas: Taxas;
   forma: FormaDePagamento;
+  /** O modelo do preço — com IVA incluído desde o corte de 01-10-2026. */
+  modelo: ModeloDoPreco;
 }> {
   const linhas = await negociacoesDoPedido(pedidoId).catch(() => []);
   const n = linhas.find((x) => Number(x.id) === negociacaoId);
@@ -1920,6 +1945,7 @@ async function comoEstaNegociacaoSePaga(
     linhas,
     taxas: taxasDaNegociacao(n),
     forma: lerForma((n as { formaDePagamento?: unknown } | undefined)?.formaDePagamento),
+    modelo: modeloDaNegociacao(n?.createdAt),
   };
 }
 
@@ -1930,15 +1956,13 @@ export async function aceitacaoParaOWhatsApp(dados: {
   profissionalNome: string;
   /** O valor do PROFISSIONAL — o preço do cliente faz-se cá dentro. */
   valor: number;
-  /**
-   * O regime de IVA de quem factura -- OBRIGATORIO de proposito.
-   *
-   * Deixa-lo opcional daria "isento" a quem esquecesse de o passar, e uma
-   * mensagem a prometer 371 EUR de um trabalho que custa 451,50 EUR. Sendo
-   * obrigatorio, o compilador nao deixa ninguem esquecer-se.
+  /*
+   * O REGIME DE IVA SAIU DAQUI — 01-10-2026. Era obrigatório para o total não
+   * sair sem o imposto; desde 22-09-2026 não entrava em conta nenhuma, e o que
+   * decide agora se o preço leva IVA é o modelo da negociação, lido da base
+   * (`comoEstaNegociacaoSePaga`).
    */
-  regimeIva: string | null;
-  /** Obrigatória pela mesma razão do regime: esquecê-la era dizer «300 €» a um preço por carga. */
+  /** Obrigatória: esquecê-la era dizer «300 €» a um preço por carga. */
   base: BaseDoPreco;
 }): Promise<boolean> {
   // O profissional aceitou o valor DO CLIENTE — falta só o cliente fechar.
@@ -1958,9 +1982,9 @@ export async function aceitacaoParaOWhatsApp(dados: {
    * a taxa, e é isso que se lhe devolve: «aceitou os 300,00 €», e não os
    * 285,71 € do profissional com a taxa a ser somada a seguir.
    */
-  const { taxas, forma } = await comoEstaNegociacaoSePaga(dados.pedidoId, dados.negociacaoId);
-  const preco = precoParaOCliente(dados.valor, taxas);
-  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva, taxas, forma, dados.base);
+  const { taxas, forma, modelo } = await comoEstaNegociacaoSePaga(dados.pedidoId, dados.negociacaoId);
+  const preco = precoParaOCliente(dados.valor, taxas, modelo);
+  const totalDito = totalEmPalavras(dados.valor, modelo, taxas, forma, dados.base);
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `Boas notícias: ${dados.profissionalNome} aceitou os ${precoComBase(euros(preco), dados.base)} ` +
@@ -1972,7 +1996,7 @@ export async function aceitacaoParaOWhatsApp(dados: {
        * confirmado», e a quem paga pela plataforma chega a referência logo a
        * seguir a fechar. Ver `pagamento-na-plataforma.ts`.
        */
-      `${promessaDaForma(forma).whatsappAntesDeAceitar} Falta só a sua confirmação para ficar combinado.`,
+      `${promessaDaForma(forma, modelo).whatsappAntesDeAceitar} Falta só a sua confirmação para ficar combinado.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
@@ -1988,15 +2012,8 @@ export async function propostaParaOWhatsApp(dados: {
   profissionalNome: string;
   valor: number;
   servico?: string | null;
-  /**
-   * O regime de IVA de quem factura -- OBRIGATORIO de proposito.
-   *
-   * Deixa-lo opcional daria "isento" a quem esquecesse de o passar, e uma
-   * mensagem a prometer 371 EUR de um trabalho que custa 451,50 EUR. Sendo
-   * obrigatorio, o compilador nao deixa ninguem esquecer-se.
-   */
-  regimeIva: string | null;
-  /** Obrigatória pela mesma razão do regime: esquecê-la era dizer «300 €» a um preço por carga. */
+  /* O regime de IVA saiu daqui a 01-10-2026 — ver `aceitacaoParaOWhatsApp`. */
+  /** Obrigatória: esquecê-la era dizer «300 €» a um preço por carga. */
   base: BaseDoPreco;
 }): Promise<boolean> {
   /*
@@ -2006,7 +2023,7 @@ export async function propostaParaOWhatsApp(dados: {
    * milissegundo de diferença dava duas chaves e duas mensagens.
    */
   const { chaveDaProposta } = await import("@/lib/assistente-automatico");
-  const { linhas, taxas, forma } = await comoEstaNegociacaoSePaga(
+  const { linhas, taxas, forma, modelo } = await comoEstaNegociacaoSePaga(
     dados.pedidoId,
     dados.negociacaoId,
   );
@@ -2048,8 +2065,8 @@ export async function propostaParaOWhatsApp(dados: {
    * frase de baixo, «com a taxa CLYON fica em 367,50 €» eram dois números
    * para uma proposta. Agora a proposta chega-lhe como ele a paga.
    */
-  const preco = precoParaOCliente(dados.valor, taxas);
-  const totalDito = totalEmPalavras(dados.valor, dados.regimeIva, taxas, forma, dados.base);
+  const preco = precoParaOCliente(dados.valor, taxas, modelo);
+  const totalDito = totalEmPalavras(dados.valor, modelo, taxas, forma, dados.base);
   /*
    * O SERVIÇO EM PALAVRAS, e não o identificador da base.
    *
@@ -2069,7 +2086,7 @@ export async function propostaParaOWhatsApp(dados: {
       `para ${servico} (pedido #${dados.pedidoId}).\n\n` +
       `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
       // Como e quando paga, conforme a forma que escolheu. Ver `pagamento-na-plataforma.ts`.
-      `${promessaDaForma(forma).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
+      `${promessaDaForma(forma, modelo).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },

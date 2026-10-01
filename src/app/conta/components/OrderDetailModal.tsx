@@ -128,6 +128,8 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   const naPlataforma = estadoNaPlataforma(order);
   const preco = naPlataforma.valor ?? order.precoFinalIva ?? order.precoFinal;
   const precoEAcordado = naPlataforma.legenda === "acordado";
+  // Com IVA incluído nas negociações abertas desde o corte de 01-10-2026.
+  const legendaDoAcordado = naPlataforma.ivaIncluido ? "a pagar, IVA incluído" : "a pagar, sem IVA";
 
   // O detalhe já não é uma sobreposição: bloquear o scroll da página aqui
   // deixava-a presa com o conteúdo à vista e sem forma de o rolar.
@@ -196,6 +198,8 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
         taxaCliente: n.taxaCliente ?? null,
         taxaProfissional: n.taxaProfissional ?? null,
         formaDePagamento: n.formaDePagamento ?? null,
+        // O modelo do preço — IVA incluído desde o corte de 01-10-2026.
+        criadaEm: n.createdAt ?? null,
         propostas: parseHistoryLike(n.propostasJson),
         profissionalNome: n.profissionalNome,
         profissionalTelefone: n.profissionalTelefone,
@@ -340,7 +344,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                 {formatarEuros(preco)}
               </div>
               <div className="mt-1 text-[11px] text-tinta-fraca">
-                {precoEAcordado ? "a pagar, sem IVA" : "sem IVA"}
+                {precoEAcordado ? legendaDoAcordado : "sem IVA"}
               </div>
             </div>
           ) : (
@@ -641,7 +645,8 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             <span className="text-xs text-tinta-fraca">Criado a {formatDate(order.createdAt)}</span>
             {preco != null && (
               <span className="text-base font-bold text-slate-900">
-                {formatarEuros(preco)} {precoEAcordado ? "a pagar, s/IVA" : "s/IVA"}
+                {formatarEuros(preco)}{" "}
+                {precoEAcordado ? (naPlataforma.ivaIncluido ? "a pagar, c/IVA" : "a pagar, s/IVA") : "s/IVA"}
               </span>
             )}
           </div>

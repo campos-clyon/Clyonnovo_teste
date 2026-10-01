@@ -71,6 +71,8 @@ import {
   type Taxas,
 } from "@/lib/taxas-plataforma";
 import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
@@ -2393,6 +2395,50 @@ export default function AdminNegociacoesPanel({
               */
               const recebe = quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela);
               const fraca = "text-slate-500";
+              /*
+                COM IVA INCLUÍDO — 01-10-2026. "O cliente vê um número só por
+                proposta, já com a taxa da CLYON e com 23 % de IVA." Nas
+                negociações abertas desde o corte o resumo diz esse número, e
+                em dinheiro quanto é que o profissional deve à CLYON (o IVA e a
+                comissão). As de antes continuam com as três linhas de sempre.
+              */
+              const modelo = modeloDaNegociacao(acordada.criadaEm);
+              if (modelo === "iva_incluido") {
+                const divida = temDividaDoProfissional(acordada.formaDePagamento, modelo)
+                  ? dividaDoProfissional(Number(acordada.valorAcordado), taxasDela)
+                  : null;
+                return (
+                  <div className="mt-1 space-y-0.5 text-slate-300">
+                    <p>
+                      O cliente paga{" "}
+                      <strong className="text-slate-100">{euros(conta.total)}</strong>, IVA incluído{" "}
+                      <span className={fraca}>
+                        trabalho {euros(conta.servico)} + taxa {pct(taxasDela.cliente)}{" "}
+                        {euros(conta.taxa)} + IVA {pct(TAXA_IVA)} {euros(conta.iva)}
+                      </span>
+                    </p>
+                    {divida ? (
+                      <p>
+                        Em dinheiro: o cliente paga-lhe <strong>{euros(divida.recebidoDoCliente)}</strong>{" "}
+                        em mão; ele fica com <strong>{euros(divida.liquido)}</strong> e deve à CLYON{" "}
+                        <strong>{euros(divida.total)}</strong>{" "}
+                        <span className={fraca}>
+                          IVA {euros(divida.iva)} + comissão {euros(divida.comissao)}
+                        </span>
+                      </p>
+                    ) : (
+                      <p>
+                        O profissional recebe <strong>{euros(recebe)}</strong>
+                        {" · "}a CLYON fica com{" "}
+                        <strong>
+                          {euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))}
+                        </strong>
+                        {" · "}IVA {euros(conta.iva)}
+                      </p>
+                    )}
+                  </div>
+                );
+              }
               return (
                 <div className="mt-1 space-y-0.5 text-slate-300">
                   <p>
@@ -2494,6 +2540,7 @@ export default function AdminNegociacoesPanel({
                 pedidoId={p.id}
                 valorAcordado={Number(acordada.valorAcordado)}
                 taxas={taxasDaNegociacao(acordada)}
+                modelo={modeloDaNegociacao(acordada.criadaEm)}
                 onMudou={() => carregar(true)}
                 semProva
               />
@@ -2555,7 +2602,7 @@ export default function AdminNegociacoesPanel({
             <p className="mt-0.5 text-xs text-amber-200/70">
               {feito.execucaoEnviadaEm ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. ` : ""}
               {/* Onde está o dinheiro depende da forma DESTE trabalho — 29-09-2026. */}
-              {promessaDaForma(feito.formaDePagamento).backofficeAConfirmar}
+              {promessaDaForma(feito.formaDePagamento, modeloDaNegociacao(feito.criadaEm)).backofficeAConfirmar}
             </p>
 
             {/* A prova, sem ter de a ir procurar: clicar abre a fotografia. */}
@@ -2595,6 +2642,7 @@ export default function AdminNegociacoesPanel({
                 pedidoId={p.id}
                 valorAcordado={feito.valorAcordado != null ? Number(feito.valorAcordado) : null}
                 taxas={taxasDaNegociacao(feito)}
+                modelo={modeloDaNegociacao(feito.criadaEm)}
                 onMudou={() => carregar(true)}
               />
             ) : (
@@ -4035,7 +4083,10 @@ function RespostaDaClyon({
           if (!valor.trim() || !Number.isFinite(v) || v <= 0) return null;
           return (
             <span className="text-xs text-slate-400">
-              o cliente vê {euros(precoParaOCliente(v, taxasDaNegociacao(negociacao)))}
+              o cliente vê{" "}
+              {euros(
+                precoParaOCliente(v, taxasDaNegociacao(negociacao), modeloDaNegociacao(negociacao.criadaEm)),
+              )}
             </span>
           );
         })()}
@@ -4960,12 +5011,19 @@ function ConfirmarPelaClyon({
   pedidoId,
   valorAcordado,
   taxas,
+  modelo,
   onMudou,
   semProva = false,
 }: {
   negociacaoId: number;
   pedidoId: number;
   valorAcordado: number | null;
+  /**
+   * O modelo do preço desta negociação — 01-10-2026. Com IVA incluído há
+   * factura em todas as vendas: não se pergunta «com ou sem factura», e a
+   * conta diz o número que o cliente leu.
+   */
+  modelo: ModeloDoPreco;
   /**
    * AS TAXAS DESTA NEGOCIAÇÃO, e já não o regime do profissional.
    *
@@ -4988,7 +5046,8 @@ function ConfirmarPelaClyon({
   const [erro, setErro] = useState("");
   const [aConfirmar, setAConfirmar] = useState(false);
   /* As duas respostas. Nenhuma vem escolhida: é o que se ouviu do cliente. */
-  const [paraQue, setParaQue] = useState<ParaQue | null>(null);
+  const ivaIncluido = modelo === "iva_incluido";
+  const [paraQue, setParaQue] = useState<ParaQue | null>(ivaIncluido ? "com_factura" : null);
   const [como, setComo] = useState<ComoPagou | null>(null);
 
   const confirmar = async () => {
@@ -5092,9 +5151,18 @@ function ConfirmarPelaClyon({
               {linha("O trabalho", conta.servico)}
               {linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}
               {conta.acrescimo > 0 && linha("Pagamento após a recolha", conta.acrescimo)}
-              {linha("O cliente paga", conta.semIva, true, true)}
-              {linha(`Se quiser factura — IVA (${pct(TAXA_IVA)})`, conta.iva)}
-              {linha("Com factura, paga", conta.total, true)}
+              {ivaIncluido ? (
+                <>
+                  {linha(`IVA (${pct(TAXA_IVA)})`, conta.iva)}
+                  {linha("O cliente paga, IVA incluído", conta.total, true, true)}
+                </>
+              ) : (
+                <>
+                  {linha("O cliente paga", conta.semIva, true, true)}
+                  {linha(`Se quiser factura — IVA (${pct(TAXA_IVA)})`, conta.iva)}
+                  {linha("Com factura, paga", conta.total, true)}
+                </>
+              )}
               <div className="flex items-center justify-between border-t border-slate-800 pt-1">
                 <dt className="text-slate-200">
                   O profissional recebe
@@ -5148,6 +5216,8 @@ function ConfirmarPelaClyon({
         </button>
       ) : (
         <div className="mt-2.5 space-y-3 rounded-lg border border-emerald-900/60 bg-slate-950/50 p-3">
+          {/* Com IVA incluído há factura em todas as vendas: não há pergunta. */}
+          {!ivaIncluido && (
           <fieldset>
             <legend className="text-xs font-semibold text-slate-200">
               Para que foi o pagamento?
@@ -5156,7 +5226,7 @@ function ConfirmarPelaClyon({
               {PARA_QUE.map((o) => {
                 const valor =
                   valorAcordado != null
-                    ? valorDoPagamento(contaDoCliente(valorAcordado, taxas), o.id)
+                    ? valorDoPagamento(contaDoCliente(valorAcordado, taxas), o.id, modelo)
                     : null;
                 return (
                   <button
@@ -5179,6 +5249,7 @@ function ConfirmarPelaClyon({
               })}
             </div>
           </fieldset>
+          )}
 
           <fieldset>
             <legend className="text-xs font-semibold text-slate-200">
@@ -5350,6 +5421,7 @@ function TrocaDePropostas({
                 negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null
               }
               taxas={taxasDaNegociacao(negociacao)}
+              modelo={modeloDaNegociacao(negociacao.criadaEm)}
               onMudou={onMudou}
             />
           )}

@@ -6,6 +6,7 @@ import { carteiraDoCliente, type TrabalhoDoCliente } from "@/lib/carteira-do-cli
 import { tService } from "@/lib/translations";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
+import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
 import type { Order } from "./types";
 
 function euros(v: number): string {
@@ -38,6 +39,7 @@ export default function Carteira({ orders }: { orders: Order[] }) {
       // As taxas deste trabalho: em dinheiro a do cliente é outra.
       taxaCliente: n.taxaCliente ?? null,
       taxaProfissional: n.taxaProfissional ?? null,
+      createdAt: n.createdAt ?? null,
       confirmadoEm: n.confirmadoEm,
       pagoEm: n.pagoEm,
       profissionalNome: n.profissionalNome,
@@ -139,8 +141,10 @@ export default function Carteira({ orders }: { orders: Order[] }) {
       */}
       <Nota titulo="O que é a taxa da plataforma">
         O preço de cada trabalho já inclui a taxa da plataforma — é o mesmo número
-        que leu na proposta, e o que sai da sua conta. Valores sem IVA; se pedir
-        factura, acrescem {Math.round(TAXA_IVA * 100)} %.
+        que leu na proposta, e o que sai da sua conta. Desde{" "}
+        {IVA_INCLUIDO_DESDE_POR_EXTENSO}, os preços vêm com IVA incluído e há factura em
+        todas as vendas; nos trabalhos combinados antes, o valor é sem IVA e, com factura,
+        acrescem {Math.round(TAXA_IVA * 100)} %.
       </Nota>
     </div>
   );

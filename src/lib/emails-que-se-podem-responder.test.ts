@@ -97,8 +97,10 @@ describe("o orçamento do fluxo antigo diz o preço como o resto", () => {
   it("o email já não anuncia um valor «c/ IVA»", () => {
     const email = semComentarios(ler("src/lib/email-orcamento.ts"));
     expect(email).not.toContain("c/ IVA");
-    expect(email).toContain("precoParaOCliente(p.precoFinal)");
-    expect(email).toContain("comFacturaEmPalavras(p.precoFinal, null)");
+    // No modelo do pedido — IVA incluído nos pedidos a partir de 01-10-2026.
+    expect(email).toContain("precoParaOCliente(p.precoFinal, undefined, modelo)");
+    expect(email).toContain("comFacturaEmPalavras(p.precoFinal, modelo)");
+    expect(email).toContain("modeloDaNegociacao(p.pedidoCriadoEm)");
   });
 
   it("e ninguém multiplica por 1,23 à mão", () => {
@@ -120,7 +122,8 @@ describe("o orçamento do fluxo antigo diz o preço como o resto", () => {
 
   it("a página para onde o email manda diz o mesmo número", () => {
     const pagina = semComentarios(ler("src/app/orcamento/[token]/OrcamentoClient.tsx"));
-    expect(pagina).toContain("precoParaOCliente(order.precoFinal)");
+    expect(pagina).toContain("precoParaOCliente(order.precoFinal, undefined, modelo)");
+    expect(pagina).toContain("modeloDaNegociacao(order.pedidoCriadoEm)");
     expect(pagina).not.toContain("Total aprovado");
   });
 });

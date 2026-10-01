@@ -11,6 +11,7 @@ import { e } from "./escapar-html";
 import { telefoneLegivel } from "./telefone-legivel";
 import { precoParaOCliente } from "./preco-do-cliente";
 import { comFacturaEmPalavras } from "./conta-em-palavras";
+import { etiquetaDoPreco, modeloDaNegociacao } from "./iva-incluido";
 
 /** «+351 931 632 622», como se lê — o `tel:` continua com o número cru. 29-09-2026. */
 const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
@@ -41,6 +42,13 @@ export interface SendOrcamentoEmailParams {
    * acresce com factura — os dois feitos pelas funções de toda a gente.
    */
   precoFinal: number;
+  /**
+   * QUANDO O PEDIDO NASCEU — decide o modelo do preço (01-10-2026): com IVA
+   * incluído nos pedidos a partir de `IVA_INCLUIDO_DESDE`, sem IVA nos de
+   * antes. Obrigatório, para o email, a página e a mensagem do mesmo
+   * orçamento dizerem o mesmo número.
+   */
+  pedidoCriadoEm: Date | string | null;
   dataAgendada: string | null;   // ISO date string or null
   token: string;
   orderId: number;
@@ -60,8 +68,9 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
   const pageUrl      = `${SITE_URL}/orcamento/${p.token}`;
   const servico      = SERVICE_LABELS[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const data         = formatDate(p.dataAgendada);
-  const preco        = precoParaOCliente(p.precoFinal).toFixed(2).replace(".", ",") + " €";
-  const comFactura   = comFacturaEmPalavras(p.precoFinal, null);
+  const modelo       = modeloDaNegociacao(p.pedidoCriadoEm);
+  const preco        = precoParaOCliente(p.precoFinal, undefined, modelo).toFixed(2).replace(".", ",") + " €";
+  const comFactura   = comFacturaEmPalavras(p.precoFinal, modelo);
 
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -122,7 +131,7 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
                   <!-- Preço destaque -->
                   <div style="margin-top:20px;padding-top:16px;border-top:1px solid #cce7f5;">
                     <p style="margin:0;font-size:12px;color:#0077B6;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">
-                      Preço, sem IVA
+                      Preço, ${etiquetaDoPreco(modelo)}
                     </p>
                     <p style="margin:4px 0 0;font-size:30px;font-weight:700;color:#00B4D8;">
                       ${preco}

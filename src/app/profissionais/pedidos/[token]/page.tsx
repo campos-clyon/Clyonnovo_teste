@@ -198,7 +198,7 @@ export default async function PaginaDoPedidoProfissional({
         )}
 
         <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
-          {Boolean(vista.precisaFatura) && <li>· O cliente precisa de fatura</li>}
+          {/* «O cliente precisa de fatura» saiu a 01-10-2026: a factura é da parceira, sempre. */}
           {Boolean(vista.precisaGuiaTransporte) && (
             <li>· O cliente precisa de guia de transporte</li>
           )}
@@ -268,6 +268,7 @@ export default async function PaginaDoPedidoProfissional({
         sugestao={sugestao}
         taxas={taxasDaNegociacao(negociacao)}
         formaDePagamento={(negociacao as { formaDePagamento?: string | null }).formaDePagamento ?? null}
+        criadaEm={negociacao.createdAt ? new Date(negociacao.createdAt).toISOString() : null}
       />
 
       {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email

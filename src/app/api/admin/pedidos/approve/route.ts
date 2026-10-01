@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       address:         order.address ?? null,
       description:     order.description ?? null,
       precoFinal:      Number((order as any).precoFinal ?? precoFinal),
+      pedidoCriadoEm:  order.createdAt ?? null,
       dataAgendada:    (order as any).scheduledDate ?? (order as any).dataAgendada ?? null,
       token,
       orderId:         Number(id),

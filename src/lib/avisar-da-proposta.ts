@@ -12,6 +12,7 @@ import { avisarClientePorPush } from "./avisar-por-push";
 import { lerBase } from "./base-do-preco";
 import { taxasDaNegociacao } from "./taxas-plataforma";
 import { precoParaOCliente } from "./preco-do-cliente";
+import { modeloDaNegociacao } from "./iva-incluido";
 
 /**
  * Avisar o outro lado de que há uma proposta à espera.
@@ -57,7 +58,9 @@ export async function avisarDaProposta(dados: {
        * ele paga, sem IVA. O WhatsApp faz a mesma conta lá dentro, porque
        * guarda o valor do profissional para as chaves dos avisos.
        */
-      const preco = precoParaOCliente(dados.valor, taxas);
+      // E no modelo dela — com IVA incluído desde o corte de 01-10-2026.
+      const modelo = modeloDaNegociacao(negociacao.createdAt);
+      const preco = precoParaOCliente(dados.valor, taxas, modelo);
       const email = pedido.contactEmail;
       /*
        * SEM EMAIL, A PROPOSTA SEGUE PARA O WHATSAPP — com botões.
@@ -78,8 +81,6 @@ export async function avisarDaProposta(dados: {
             negociacaoId: dados.negociacaoId,
             profissionalNome: negociacao.profissionalNome,
             valor: dados.valor,
-            // O regime de quem factura decide se o total leva IVA por cima.
-            regimeIva: negociacao.regimeIva ?? null,
             servico: pedido.serviceType ?? null,
             base,
           });
@@ -112,6 +113,7 @@ export async function avisarDaProposta(dados: {
         pedidoId: dados.pedidoId,
         profissionalNome: negociacao.profissionalNome,
         preco,
+        ivaIncluido: modelo === "iva_incluido",
         base,
         token,
         baseUrl: dados.baseUrl,

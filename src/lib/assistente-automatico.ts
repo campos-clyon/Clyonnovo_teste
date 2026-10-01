@@ -11,6 +11,7 @@ import {
 } from "./assistente-interruptores";
 import { taxasDaNegociacao } from "./taxas-plataforma";
 import { precoParaOCliente } from "./preco-do-cliente";
+import { modeloDaNegociacao } from "./iva-incluido";
 import { lerForma } from "./forma-de-pagamento";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
@@ -358,15 +359,17 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
      */
     const taxas = taxasDaNegociacao(n);
     const forma = lerForma(n.formaDePagamento);
+    // E o modelo dela: com IVA incluído desde o corte de 01-10-2026.
+    const modelo = modeloDaNegociacao(n.criadaEm);
     // O preço dele, com a unidade quando é por carga.
-    const dele = (valor: number) => comUnidade(precoParaOCliente(valor, taxas));
+    const dele = (valor: number) => comUnidade(precoParaOCliente(valor, taxas, modelo));
     /*
      * E COMO E QUANDO PAGA — 29-09-2026. Dizia-se a toda a gente «Só paga
      * depois de o trabalho estar feito e confirmado», e a quem paga pela
      * plataforma chega uma referência logo a seguir a fechar. Ver
      * `pagamento-na-plataforma.ts`.
      */
-    const comoPaga = promessaDaForma(forma).whatsappAntesDeAceitar;
+    const comoPaga = promessaDaForma(forma, modelo).whatsappAntesDeAceitar;
 
     // ── Há uma proposta do profissional à espera de resposta ───────────────
     if (n.estado === "aberta") {
@@ -406,7 +409,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             texto:
               `${ola} Acabou de receber uma proposta de ${pro} para ${servico}: ` +
               `${dele(pendente.valor)}. ` +
-              `${totalEmPalavras(pendente.valor, n.regimeIva, taxas, forma, base)} ` +
+              `${totalEmPalavras(pendente.valor, modelo, taxas, forma, base)} ` +
               `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
               `${comoPaga} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
           });
@@ -426,7 +429,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
           `${ola} Boas notícias: ${pro} aceitou os ${dele(acordado)} que propôs para ` +
-          `${servico}. ${totalEmPalavras(acordado, n.regimeIva, taxas, forma, base)} ` +
+          `${servico}. ${totalEmPalavras(acordado, modelo, taxas, forma, base)} ` +
           `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
           `${comoPaga} Falta só a sua palavra para ficar combinado.`,
       });
@@ -450,9 +453,11 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         `${ola} Está combinado com ${pro} para ${servico}` +
         (acordado != null
           ? forma === "dinheiro"
-            ? `, por ${dele(acordado)}. ${totalEmPalavras(acordado, n.regimeIva, taxas, "dinheiro", base)}` +
+            ? `, por ${dele(acordado)}. ${totalEmPalavras(acordado, modelo, taxas, "dinheiro", base)}` +
               ` Ele já tem a morada e o seu contacto.`
-            : `, por ${dele(acordado)}, sem IVA. Ele já tem a morada e o seu contacto.`
+            : `, por ${dele(acordado)}, ${
+                modelo === "iva_incluido" ? "IVA incluído" : "sem IVA"
+              }. Ele já tem a morada e o seu contacto.`
           : `. Ele já tem a morada e o seu contacto.`) +
         eANota +
         (combinada ? "" : " Se já tem dia pensado, diga-me qual que eu deixo marcado."),

@@ -130,6 +130,10 @@ export default function ContaCliente({
         pedidoId: n.pedidoId,
         estado: n.estado,
         valorAcordado: n.valorAcordado,
+        // As taxas e o modelo deste trabalho — os mesmos do ecrã da carteira.
+        taxaCliente: n.taxaCliente ?? null,
+        taxaProfissional: n.taxaProfissional ?? null,
+        createdAt: n.createdAt ?? null,
         confirmadoEm: n.confirmadoEm,
         pagoEm: n.pagoEm,
       })),

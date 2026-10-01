@@ -1408,12 +1408,11 @@ function DetalheDoTrabalho({
               )}
             </span>
           </li>
-          {pedido.precisaFatura && (
-            <li className="flex items-center gap-2">
-              <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-              O cliente precisa de fatura
-            </li>
-          )}
+          {/*
+            «O CLIENTE PRECISA DE FATURA» SAIU — 01-10-2026. Há factura em
+            todas as vendas, e é a parceira que a emite: não é assunto do
+            profissional, e a linha fazia-o pensar que era ele a passá-la.
+          */}
           {pedido.precisaGuiaTransporte && (
             <li className="flex items-center gap-2">
               <Truck className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
@@ -2088,6 +2087,7 @@ function DetalheDoTrabalho({
           onMudou={onRecarregar}
           taxas={pedido.taxas}
           formaDePagamento={pedido.formaDePagamento ?? null}
+          criadaEm={pedido.criadaEm ?? null}
         />
       )}
 

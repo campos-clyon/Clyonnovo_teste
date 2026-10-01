@@ -167,6 +167,12 @@ export default async function VistaDoPedido({
        */
       formaDePagamento: n.formaDePagamento ?? null,
       acrescimoPagamento: n.acrescimoPagamento ?? null,
+      /*
+       * QUANDO ABRIU — decide o modelo do preço (01-10-2026): com IVA
+       * incluído desde `IVA_INCLUIDO_DESDE`, sem IVA nas de antes. Em texto,
+       * para atravessar do servidor para o ecrã sem surpresas.
+       */
+      criadaEm: n.createdAt ? new Date(n.createdAt).toISOString() : null,
       propostas: propostasDe(n.propostasJson),
       profissionalNome: n.profissionalNome,
       // O contacto do profissional só depois de o contratar — a simetria do que
@@ -256,7 +262,7 @@ export default async function VistaDoPedido({
           {Boolean(pedido.precisaFatura) && (
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
-              <dd className="text-slate-700">Precisa de fatura</dd>
+              <dd className="text-slate-700">Quer o NIF na factura</dd>
             </div>
           )}
           {Boolean(pedido.precisaGuiaTransporte) && (

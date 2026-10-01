@@ -176,9 +176,12 @@ describe("o cérebro (whatsapp-negociacao)", () => {
     //
     // SEM IVA desde 17-09-2026 -- "vamos apresentar os valores sempre sem
     // IVA". O imposto continua calculado, e sai na linha da factura.
-    expect(CEREBRO).toContain("contaDoCliente(");
+    // E desde 01-10-2026 no modelo da negociação: `precoDoCliente` é a
+    // `contaDoCliente` com o IVA incluído desde o corte, e `aPagar` é o número
+    // que se lhe diz (o total com IVA, ou o `semIva` antes do corte).
+    expect(CEREBRO).toContain("precoDoCliente(");
     expect(CEREBRO).toContain("a pagar");
-    expect(CEREBRO).toContain(".semIva");
+    expect(CEREBRO).toContain(".aPagar");
   });
 });
 

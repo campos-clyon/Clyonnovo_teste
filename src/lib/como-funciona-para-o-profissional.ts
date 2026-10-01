@@ -2,6 +2,7 @@ import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import { precoParaOCliente } from "./preco-do-cliente";
+import type { ModeloDoPreco } from "./iva-incluido";
 import { quotaDaClyon } from "./quota-da-clyon";
 import { FORMA_EM_PALAVRAS } from "./forma-de-pagamento";
 import { PROMESSA } from "./pagamento-na-plataforma";
@@ -117,10 +118,10 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
      */
     texto:
       PROMESSA.proComoRecebe +
-      " Propõe o seu valor, e o cliente vê-o já com a taxa da plataforma. A comissão da " +
-      "CLYON já vem descontada em todos os números que lhe mostramos: o que aparece é o que " +
-      "fica para si. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
-      "não lhe custa um cêntimo. A factura ao cliente, quando ele a pede, é " +
+      " Propõe o seu valor, sem IVA, e o cliente vê-o já com a taxa da plataforma e com IVA " +
+      "incluído. A comissão da CLYON já vem descontada em todos os números que lhe mostramos: " +
+      "o que aparece é o que fica para si. Responder a pedidos não custa nada, e um orçamento " +
+      "que não dá em nada não lhe custa um cêntimo. Há factura em todas as vendas, " +
       `emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`,
     seccao: "banco",
   },
@@ -148,7 +149,16 @@ function pontos(fraccao: number): string {
   return `${String(Math.round(fraccao * 10000) / 100).replace(".", ",")} %`;
 }
 
-export function comissaoEmPalavras(taxas: Taxas): {
+/*
+ * E COM IVA INCLUÍDO DESDE 01-10-2026 — "profissional propõe 350 € → cliente
+ * vê 452,03 € → profissional recebe 327,08 €". O profissional continua a
+ * propor sem IVA e a ler o seu líquido; o que muda é o número do meio, e por
+ * isso o modelo é obrigatório (as páginas públicas passam o de hoje).
+ */
+export function comissaoEmPalavras(
+  taxas: Taxas,
+  modelo: ModeloDoPreco,
+): {
   proposta: string;
   cliente: string;
   recebe: string;
@@ -156,7 +166,8 @@ export function comissaoEmPalavras(taxas: Taxas): {
   frase: string;
 } {
   const proposta = euros(VALOR_DO_EXEMPLO);
-  const cliente = euros(precoParaOCliente(VALOR_DO_EXEMPLO, taxas));
+  const cliente = euros(precoParaOCliente(VALOR_DO_EXEMPLO, taxas, modelo));
+  const comIva = modelo === "iva_incluido";
   const recebe = euros(quantoOProfissionalRecebe(VALOR_DO_EXEMPLO, taxas));
   const quota = pontos(quotaDaClyon(taxas));
   return {
@@ -165,9 +176,13 @@ export function comissaoEmPalavras(taxas: Taxas): {
     recebe,
     quota,
     frase:
-      `Propõe o seu valor; o cliente vê-o já com a taxa da plataforma. A CLYON fica com ` +
-      `${quota} do que o cliente paga — ex.: propõe ${proposta}, o cliente vê ${cliente} ` +
-      `e recebe ${recebe}.`,
+      comIva
+        ? `Propõe o seu valor, sem IVA; o cliente vê-o já com a taxa da plataforma e com IVA ` +
+          `incluído. A CLYON fica com ${quota} do que o cliente paga sem IVA — ex.: propõe ` +
+          `${proposta}, o cliente vê ${cliente} (IVA incluído) e recebe ${recebe}.`
+        : `Propõe o seu valor; o cliente vê-o já com a taxa da plataforma. A CLYON fica com ` +
+          `${quota} do que o cliente paga — ex.: propõe ${proposta}, o cliente vê ${cliente} ` +
+          `e recebe ${recebe}.`,
   };
 }
 
