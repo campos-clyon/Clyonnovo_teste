@@ -247,6 +247,8 @@ export interface SimulatorOrder {
    * está à venda.
    */
   formaDePagamento?: string | null;
+  /** O NIF a pôr na factura, quando o cliente o deu (01-10-2026). */
+  nifFactura?: string | null;
   /** SHA-256 do token de acesso. O token em claro vive só no link. */
   acessoTokenHash?: string | null;
   acessoTokenExpiraEm?: Date | string | null;
@@ -362,6 +364,8 @@ export interface InsertSimulatorOrder {
   precisaFatura?: boolean | number | null;
   precisaGuiaTransporte?: boolean | number | null;
   formaDePagamento?: string | null;
+  /** O NIF a pôr na factura, quando o cliente o deu (01-10-2026). */
+  nifFactura?: string | null;
   /** Só o hash. O token em claro vive no link e mais lado nenhum. */
   acessoTokenHash?: string | null;
   acessoTokenExpiraEm?: Date | null;

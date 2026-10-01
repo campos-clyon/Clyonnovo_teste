@@ -40,9 +40,15 @@ import { TAXA_IVA } from "./taxas-plataforma";
  * que a factura vem de uma empresa com outro nome e que o valor sobe 23 %.
  * Dito na pergunta, não há surpresa no fim.
  */
+/*
+ * E DESDE 01-10-2026, COM IVA INCLUÍDO: há factura em todas as vendas e o
+ * preço não muda com ela. Dizia «se sim… acrescem 23 % de IVA». A pergunta
+ * passou a ser só se a factura leva o NIF — o «sim» guarda-se em
+ * `precisaFatura`, e o NIF pede-se a seguir, no backoffice.
+ */
 const SE_PEDIR_FACTURA =
-  `Se sim, é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira, e acrescem ` +
-  `${Math.round(TAXA_IVA * 100)} % de IVA.`;
+  `Há factura em todas as vendas, emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira, ` +
+  `e os preços já vêm com IVA incluído (${Math.round(TAXA_IVA * 100)} %).`;
 
 export type PassoDaRecolha =
   | "servico"
@@ -701,7 +707,7 @@ export function perguntaDo(
     case "descricao":
       return "Conte-me o que há para levar ou fazer: quantas peças, o tamanho, e o que houver de especial.";
     case "fatura":
-      return `Precisa de factura com NIF? ${SE_PEDIR_FACTURA}`;
+      return `Quer a factura com o seu NIF? ${SE_PEDIR_FACTURA}`;
     case "confirmar":
       return resumo(dados);
   }
@@ -719,7 +725,7 @@ export function resumo(d: DadosDaRecolha): string {
     d.serviceType === "recolha_entulho" ? `Entulho: ${d.entulhoQuantidade ?? "—"}` : null,
     `Quando: ${dataPorExtenso(d.dataDesejada) ?? d.quandoTexto ?? URGENCIA_POR_EXTENSO[d.urgency ?? "flexible"]}`,
     `Descrição: ${d.description ?? "—"}`,
-    `Factura: ${d.precisaFatura ? "sim" : "não"}`,
+    `NIF na factura: ${d.precisaFatura ? "sim" : "não"}`,
   ].filter((l): l is string => l != null);
   return `Confirme, por favor:\n\n${linhas.join("\n")}\n\nEstá tudo certo? Responda SIM para registar, ou diga-me o que está errado.`;
 }
@@ -1111,7 +1117,7 @@ export function responderNaRecolha(
     }
     case "fatura": {
       const r = simOuNaoNaFactura(t);
-      if (!r) return { estado, resposta: `Precisa de factura? Responda sim ou não. ${SE_PEDIR_FACTURA}` };
+      if (!r) return { estado, resposta: `Quer a factura com o seu NIF? Responda sim ou não. ${SE_PEDIR_FACTURA}` };
       d.precisaFatura = r === "sim";
       break;
     }

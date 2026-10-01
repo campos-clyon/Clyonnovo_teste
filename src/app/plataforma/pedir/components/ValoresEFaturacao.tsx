@@ -32,6 +32,7 @@ export default function ValoresEFaturacao({
   serviceType,
   valorDesejadoCliente,
   precisaFatura,
+  nifFactura,
   precisaGuiaTransporte,
   formaDePagamento,
   erros,
@@ -39,7 +40,9 @@ export default function ValoresEFaturacao({
 }: {
   serviceType?: string;
   valorDesejadoCliente?: string;
+  /** Quer o NIF na factura — ver `types.ts`. */
   precisaFatura?: boolean;
+  nifFactura?: string;
   precisaGuiaTransporte?: boolean;
   /** Como quer pagar. Em falta, na plataforma. */
   formaDePagamento?: string;
@@ -103,9 +106,14 @@ export default function ValoresEFaturacao({
             de 300 € lê-a como 315 €. Dito aqui, antes, é informação; dito só
             depois, seria uma surpresa.
           */}
+          {/*
+            E COM IVA INCLUÍDO DESDE 01-10-2026 — "o cliente vê um número só
+            por proposta, já com a taxa da CLYON e com 23 % de IVA". O valor
+            escrito aqui continua a ser o que os profissionais vêem, sem IVA.
+          */}
           <p className="text-xs leading-relaxed text-cyan-900">
             Os profissionais podem aceitar este valor ou propor outro. As propostas
-            chegam-lhe já com a taxa CLYON incluída, sem IVA — e só paga se contratar
+            chegam-lhe já com a taxa CLYON e com IVA incluído — e só paga se contratar
             alguém.
           </p>
         </div>
@@ -170,6 +178,11 @@ export default function ValoresEFaturacao({
         </p>
 
         <div className="mt-4 space-y-3">
+          {/*
+            QUER NIF NA FACTURA? — 01-10-2026. Era «Preciso de fatura» com «com
+            fatura, acrescem 23 % de IVA». Com IVA incluído há factura em todas
+            as vendas e o preço não muda: fica só a pergunta do NIF, opcional.
+          */}
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-gray-300 bg-white p-4 transition hover:border-cyan-400 has-[:checked]:border-cyan-600 has-[:checked]:bg-cyan-50">
             <input
               type="checkbox"
@@ -180,14 +193,31 @@ export default function ValoresEFaturacao({
             <span className="flex-1">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                Preciso de fatura
+                Quero o meu NIF na factura
               </span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
-                A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.
-                Com fatura, acrescem 23 % de IVA.
+                Há factura em todas as vendas, emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto},
+                nossa parceira. O preço é o mesmo, com ou sem NIF.
               </span>
             </span>
           </label>
+          {precisaFatura && (
+            <div>
+              <label htmlFor="nif-factura" className="block text-sm font-medium text-gray-900">
+                NIF <span className="font-normal text-slate-500">(opcional — pode dá-lo depois)</span>
+              </label>
+              <input
+                id="nif-factura"
+                type="text"
+                inputMode="numeric"
+                maxLength={9}
+                value={nifFactura ?? ""}
+                onChange={(e) => onChange("nifFactura", e.target.value.replace(/[^0-9]/g, ""))}
+                placeholder="123456789"
+                className="mt-2 w-full rounded-xl border-2 border-gray-400 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20"
+              />
+            </div>
+          )}
 
           {mostrarGuia && (
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-gray-300 bg-white p-4 transition hover:border-cyan-400 has-[:checked]:border-cyan-600 has-[:checked]:bg-cyan-50">

@@ -57,6 +57,20 @@ function aosCentimos(n: number): number {
  * Aceita string com vírgula decimal porque é o que um teclado português
  * produz — rejeitar "80,50" seria rejeitar a forma normal de escrever.
  */
+/**
+ * O NIF PARA A FACTURA, como se guarda — 01-10-2026.
+ *
+ * Opcional: com os preços a IVA incluído há factura em todas as vendas, e o NIF
+ * é só o que o cliente quer que lá fique. Nove dígitos, ou nada — um NIF meio
+ * escrito numa factura é pior do que factura nenhuma com NIF, e pede-se outra
+ * vez no backoffice.
+ */
+export function nifDaFactura(v: unknown): string | null {
+  if (typeof v !== "string" && typeof v !== "number") return null;
+  const so = String(v).replace(/[^0-9]/g, "");
+  return /^[0-9]{9}$/.test(so) ? so : null;
+}
+
 export function validarValorDesejado(valorBruto: unknown): ResultadoDeValidacao {
   const valor = comoNumero(valorBruto);
 

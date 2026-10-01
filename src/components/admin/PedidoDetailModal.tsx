@@ -55,6 +55,8 @@ export type PedidoOrder = {
    * mente, antes de gastar uma proposta a descobri-lo.
    */
   precisaFatura?: boolean | number | null;
+  /** O NIF que o cliente quer na factura (01-10-2026). */
+  nifFactura?: string | null;
   valorDesejadoCliente?: string | number | null;
   estimateTotal?: string | null;
   estimateMin?: string | null;
@@ -1230,6 +1232,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               ),
               // Sem IVA e sem a taxa: a mensagem diz o preço como em todo o lado.
               precoFinal: order.precoFinal,
+              pedidoCriadoEm: order.createdAt ?? null,
             }),
           );
 
@@ -1588,7 +1591,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               <p className="mt-1 text-sm font-semibold text-slate-800">{tUrgency(order.urgency) ?? "Normal"}</p>
                             </div>
                             <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Precisa de fatura</p>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">NIF na factura</p>
                               {order.precisaFatura == null ? (
                                 <p className="mt-1 text-sm text-slate-400">Não respondeu</p>
                               ) : (
@@ -1597,7 +1600,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                     order.precisaFatura ? "text-[#00B4CC]" : "text-slate-800"
                                   }`}
                                 >
-                                  {order.precisaFatura ? "Sim — só a quem a passa" : "Não é preciso"}
+                                  {order.precisaFatura
+                                    ? order.nifFactura
+                                      ? `Sim — NIF ${order.nifFactura}`
+                                      : "Sim — pedir o NIF"
+                                    : "Não (consumidor final)"}
                                 </p>
                               )}
                             </div>

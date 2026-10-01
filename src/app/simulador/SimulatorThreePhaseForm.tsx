@@ -399,7 +399,7 @@ export default function SimulatorThreePhaseForm() {
 
   /** O que ainda falta na fase 3, pela ordem em que aparece no ecrã. */
   const faltaNaFase3: string[] = [];
-  if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se precisa de fatura");
+  if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se quer o NIF na factura");
   if (!formData.receiver?.name) faltaNaFase3.push("o nome");
   if (!formData.receiver?.phone) faltaNaFase3.push("o telefone");
   else if (!telefoneDoClienteValido(formData.receiver.phone)) faltaNaFase3.push("um telefone válido");
@@ -722,7 +722,7 @@ export default function SimulatorThreePhaseForm() {
                 Icone: Clock,
                 cor: "text-acao",
                 titulo: `Recebe propostas em ${PRAZO_DE_RESPOSTA.porExtenso}`,
-                texto: "Cada uma com preço fechado, sem IVA, antes de haver trabalho nenhum.",
+                texto: "Cada uma com preço fechado, com IVA incluído, antes de haver trabalho nenhum.",
               },
               /*
                 «SÓ PAGA DEPOIS DE CONFIRMAR QUE FICOU FEITO» SAIU — 29-09-2026.
@@ -1890,15 +1890,22 @@ function Phase3Contact({
           semFatura ? "border-red-500 bg-red-50/40" : "border-gray-200"
         }`}
       >
-        <p className="text-sm font-semibold text-gray-900">Precisa de fatura? *</p>
+        {/*
+          QUER O NIF NA FACTURA — 01-10-2026. Era «Precisa de fatura?» com
+          «acrescem 23 % de IVA». Com os preços a IVA incluído há factura em
+          todas as vendas e o preço não muda; a pergunta passou a ser só se
+          a factura leva o NIF (a coluna `precisaFatura` guarda a resposta).
+        */}
+        <p className="text-sm font-semibold text-gray-900">Quer o seu NIF na factura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira, e acrescem
-          23 % de IVA. Dizer-nos agora evita a surpresa no fim.
+          Há factura em todas as vendas, emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa
+          parceira, e o preço das propostas já vem com IVA incluído. Com ou sem NIF, o preço é o
+          mesmo.
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           {[
-            { valor: true, rotulo: "Sim, preciso" },
-            { valor: false, rotulo: "Não é preciso" },
+            { valor: true, rotulo: "Sim, com NIF" },
+            { valor: false, rotulo: "Não, sem NIF" },
           ].map((op) => {
             const activo = formData.precisaFatura === op.valor;
             return (

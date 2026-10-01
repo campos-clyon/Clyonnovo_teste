@@ -69,11 +69,17 @@ describe("a factura é da parceira, e diz-se assim", () => {
     expect(m).not.toContain("para lhe podermos passar factura");
   });
 
-  it("no WhatsApp, a pergunta da factura diz quem a emite e quanto acresce", () => {
+  it("no WhatsApp, a pergunta da factura diz quem a emite — e que o IVA já vem no preço", () => {
+    /*
+     * MUDOU A 01-10-2026, com os preços a IVA incluído: há factura em todas
+     * as vendas e nada acresce. A pergunta passou a ser só se ele quer o NIF
+     * na factura.
+     */
     const p = perguntaDo("fatura", {});
-    expect(p).toContain("Precisa de factura com NIF?");
+    expect(p).toContain("Quer a factura com o seu NIF?");
     expect(p).toContain(`emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira`);
-    expect(p).toContain("acrescem 23 % de IVA");
+    expect(p).toContain("os preços já vêm com IVA incluído (23 %)");
+    expect(p).not.toContain("acrescem");
     // E a repetição, quando a resposta não se percebe, também.
     expect(semComentarios(ler("src/lib/whatsapp-recolha.ts"))).toContain(
       "Responda sim ou não. ${SE_PEDIR_FACTURA}",

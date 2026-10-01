@@ -136,8 +136,15 @@ export interface OrderData {
    * no servidor.
    */
   valorDesejadoCliente?: string;
-  /** Se precisa de fatura. Filtra a quem o pedido é mostrado. */
+  /**
+   * QUER O NIF NA FACTURA — 01-10-2026. Era «precisa de fatura?», e com os
+   * preços a IVA incluído há factura em todas as vendas: a pergunta deixou de
+   * mudar o preço e passou a ser só se a factura leva o NIF dele. A coluna
+   * `precisaFatura` fica, com este sentido.
+   */
   precisaFatura?: boolean;
+  /** O NIF para a factura, quando o quer lá. Opcional; 9 dígitos. */
+  nifFactura?: string;
   /** Se precisa de guia de transporte (e-GAR) — exige transportador licenciado. */
   precisaGuiaTransporte?: boolean;
   /**

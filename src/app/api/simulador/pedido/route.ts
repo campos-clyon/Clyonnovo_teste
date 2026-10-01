@@ -14,7 +14,7 @@ import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
-import { validarValorDesejado } from "@/lib/pedido-valores";
+import { nifDaFactura, validarValorDesejado } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 
@@ -395,7 +395,10 @@ export async function POST(req: NextRequest) {
 
       // ── Plataforma ──────────────────────────────────────────────────────
       ...valoresParaGravar,
+      // «Quer o NIF na factura» desde 01-10-2026 — a factura há sempre.
       precisaFatura: order.precisaFatura === true ? 1 : 0,
+      // O NIF, só se vier com 9 dígitos; o resto não se guarda.
+      nifFactura: nifDaFactura(order.nifFactura),
       precisaGuiaTransporte: order.precisaGuiaTransporte === true ? 1 : 0,
       // A escolha do cliente. `lerForma` recusa o que não está à venda.
       formaDePagamento: lerForma(order.formaDePagamento),

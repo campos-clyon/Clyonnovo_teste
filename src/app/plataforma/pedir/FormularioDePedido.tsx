@@ -1516,6 +1516,7 @@ function Phase3Contact({
         serviceType={formData.serviceType}
         valorDesejadoCliente={formData.valorDesejadoCliente}
         precisaFatura={formData.precisaFatura}
+        nifFactura={formData.nifFactura}
         precisaGuiaTransporte={formData.precisaGuiaTransporte}
         formaDePagamento={formData.formaDePagamento}
         erros={errosDeValor}
