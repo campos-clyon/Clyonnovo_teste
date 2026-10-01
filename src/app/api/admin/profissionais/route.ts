@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
               baseLat, baseLng, createdAt,
               moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
-              iban, ibanTitular, mbway,
+              iban, ibanTitular, mbway, contaDeTeste,
               -- Se tem palavra-passe, e nunca qual: o hash não sai daqui.
               (passwordHash IS NOT NULL) AS temPalavraPasse
          FROM providers
@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
        */
       iban: typeof p.iban === "string" && p.iban ? ibanEncurtado(p.iban) : "",
       temPalavraPasse: Number(p.temPalavraPasse) === 1,
+      contaDeTeste: Number(p.contaDeTeste) === 1,
       actividade:
         actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
     }));

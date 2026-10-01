@@ -57,6 +57,8 @@ type Profissional = {
   ibanTitular: string | null;
   mbway: string | null;
   temPalavraPasse: boolean;
+  /** Marcada pelo administrador: os trabalhos excluem-se sem restrição (01-10-2026). */
+  contaDeTeste?: boolean;
   actividade: Actividade;
 };
 
@@ -489,6 +491,11 @@ function Cartao({
                 guia verificada
               </span>
             )}
+            {p.contaDeTeste && (
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                conta de teste
+              </span>
+            )}
           </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
@@ -635,6 +642,32 @@ function Cartao({
             Apagar conta
           </button>
         )}
+        {/*
+          CONTA DE TESTE — 01-10-2026. «O Fred é uma conta teste, não deve ser
+          levada a sério.» Marcada, os trabalhos dela excluem-se nos Pagamentos
+          sem olhar ao dinheiro. Só o administrador o pode mudar (a rota diz-lo).
+        */}
+        <button
+          onClick={() => {
+            const marcar = !p.contaDeTeste;
+            if (
+              window.confirm(
+                marcar
+                  ? `Marcar ${p.name} como conta de teste?\n\nOs trabalhos dela passam a poder ser excluídos nos Pagamentos mesmo com dinheiro registado.`
+                  : `${p.name} deixa de ser conta de teste?`,
+              )
+            )
+              onActuar({ contaDeTeste: marcar });
+          }}
+          disabled={ocupado}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
+            p.contaDeTeste
+              ? "border-amber-600/60 text-amber-300 hover:bg-amber-950/40"
+              : "border-slate-700 text-slate-400 hover:bg-slate-800/60"
+          }`}
+        >
+          {p.contaDeTeste ? "Deixar de ser teste" : "Conta de teste"}
+        </button>
         <button
           onClick={onEditar}
           disabled={ocupado}

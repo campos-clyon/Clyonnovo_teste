@@ -50,6 +50,8 @@ export type TrabalhoParaGerir = {
   cidade: string | null;
   servico: string | null;
   profissional: string;
+  /** Conta marcada como de teste nos Profissionais — exclui-se sem restrição. */
+  contaDeTeste: boolean;
   /** O valor do trabalho, sem taxas — o número que se corrige. */
   valorAcordado: number;
   /** As taxas desta negociação, para o ecrã refazer a conta ao corrigir. */
@@ -116,7 +118,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
             n.createdAt AS negociacaoCriadaEm,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
-            pr.name AS profissional,
+            pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
        FROM negociacoes n
        JOIN providers pr ON pr.id = n.providerId
@@ -164,6 +166,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       cidade: (l.city as string) ?? null,
       servico: (l.serviceType as string) ?? null,
       profissional: String(l.profissional ?? ""),
+      contaDeTeste: Number(l.contaDeTeste) === 1,
       valorAcordado: acordado,
       taxas,
       clientePaga: valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo),

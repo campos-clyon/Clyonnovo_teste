@@ -120,6 +120,8 @@ type Estado = {
 type Trabalho = {
   negociacaoId: number;
   pedidoId: number;
+  /** Conta marcada como de teste nos Profissionais — exclui-se sem restrição. */
+  contaDeTeste?: boolean;
   /** Já vinha da rota e ninguém o lia: é o que separa por profissional sem confundir dois com o mesmo nome. */
   providerId: number;
   servico: string | null;
@@ -337,6 +339,88 @@ function GestorDoDinheiro({
   const [aberto, setAberto] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   const [quantos, setQuantos] = useState(POR_PAGINA);
+
+  /*
+   * MARCAR E EXCLUIR VÁRIOS — 01-10-2026.
+   *
+   * *«O Fred é uma conta teste… quero poder excluir tudo sem restrição, posso
+   * marcar todos e excluir.»*
+   *
+   * A marca é por trabalho e sobrevive a mudar de separador ou de filtro. Por
+   * isso a barra diz sempre quantos e quais estão marcados: nunca se exclui o
+   * que não se está a ver sem o saber. Quem decide o que pode sair é a rota —
+   * os de contas de teste saem sempre; os de contas reais com dinheiro ficam,
+   * e a resposta diz porquê.
+   */
+  const [marcados, setMarcados] = useState<Set<number>>(() => new Set());
+  const [motivoDoLote, setMotivoDoLote] = useState("");
+  const [aExcluirLote, setAExcluirLote] = useState(false);
+  const [resultadoDoLote, setResultadoDoLote] = useState("");
+
+  function marcar(ids: number[], valor: boolean) {
+    setMarcados((antes) => {
+      const novo = new Set(antes);
+      for (const id of ids) {
+        if (valor) novo.add(id);
+        else novo.delete(id);
+      }
+      return novo;
+    });
+  }
+
+  // Só os marcados que ainda existem: depois de recarregar, os que saíram já cá não estão.
+  const marcadosAqui = trabalhos.filter((t) => marcados.has(t.negociacaoId));
+
+  async function excluirMarcados() {
+    const lista = marcadosAqui;
+    if (!token || lista.length === 0 || motivoDoLote.trim().length < 3) return;
+    const pedidos = [...new Set(lista.map((t) => `#${t.pedidoId}`))];
+    if (
+      !window.confirm(
+        `Excluir ${lista.length} ${lista.length === 1 ? "trabalho" : "trabalhos"} (${pedidos.join(", ")})?\n\n` +
+          "Não se desfaz: os pedidos saem da base e ficam só no arquivo dos apagados. " +
+          "Os de contas de teste saem mesmo com dinheiro registado; os de contas reais com dinheiro ficam.",
+      )
+    )
+      return;
+    setAExcluirLote(true);
+    setResultadoDoLote("");
+    try {
+      const r = await fetch("/api/admin/pagamentos/excluir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          negociacaoIds: lista.map((t) => t.negociacaoId),
+          motivo: motivoDoLote.trim(),
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      const saidos = Array.isArray(d.apagados) ? d.apagados.length : 0;
+      const ficaram = (Array.isArray(d.recusados) ? d.recusados : []) as Array<{
+        negociacaoId: number;
+        motivo: string;
+      }>;
+      if (!r.ok) {
+        setResultadoDoLote([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível.");
+        if (saidos > 0) onMudou();
+        return;
+      }
+      setResultadoDoLote(
+        `${saidos} ${saidos === 1 ? "pedido excluído" : "pedidos excluídos"}.` +
+          (ficaram.length > 0
+            ? ` Ficaram ${ficaram.length}: ${ficaram.map((f) => f.motivo).join(" ")}`
+            : ""),
+      );
+      // Os que ficaram continuam marcados, para se ver quais são.
+      setMarcados(new Set(ficaram.map((f) => f.negociacaoId)));
+      setMotivoDoLote("");
+      onMudou();
+    } catch {
+      setResultadoDoLote("Erro de rede.");
+    } finally {
+      setAExcluirLote(false);
+    }
+  }
 
   /*
    * OS FILTROS — 01-10-2026.
@@ -640,6 +724,62 @@ function GestorDoDinheiro({
 
       {erro && !aberto && <p className="mt-2 text-xs text-red-300">{erro}</p>}
 
+      {actual.linhas.length > 0 && (
+        <label className="mt-3 flex w-fit items-center gap-2 text-xs text-slate-400">
+          <input
+            type="checkbox"
+            checked={actual.linhas.every((t) => marcados.has(t.negociacaoId))}
+            onChange={(e) => marcar(actual.linhas.map((t) => t.negociacaoId), e.target.checked)}
+            className="h-3.5 w-3.5 accent-red-500"
+          />
+          Marcar os {actual.linhas.length} desta lista
+        </label>
+      )}
+
+      {(marcadosAqui.length > 0 || resultadoDoLote) && (
+        <div className="mt-3 rounded-lg border border-red-800/60 bg-red-950/30 p-3">
+          {marcadosAqui.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-red-200">
+                {marcadosAqui.length} {marcadosAqui.length === 1 ? "trabalho marcado" : "trabalhos marcados"}:{" "}
+                <span className="font-normal text-red-200/80">
+                  {[...new Set(marcadosAqui.map((t) => `#${t.pedidoId}`))].join(", ")}
+                </span>
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  value={motivoDoLote}
+                  onChange={(e) => setMotivoDoLote(e.target.value)}
+                  maxLength={120}
+                  aria-label="Motivo da exclusão"
+                  placeholder="motivo (obrigatório) — ex.: conta de teste"
+                  className="min-w-[14rem] flex-1 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white placeholder:text-slate-600"
+                />
+                <button
+                  onClick={() => void excluirMarcados()}
+                  disabled={aExcluirLote || motivoDoLote.trim().length < 3}
+                  className="flex items-center gap-1.5 rounded-lg bg-red-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-40"
+                >
+                  {aExcluirLote && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+                  Excluir marcados
+                </button>
+                <button
+                  onClick={() => setMarcados(new Set())}
+                  className="text-[11px] text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
+                >
+                  Desmarcar
+                </button>
+              </div>
+            </>
+          )}
+          {resultadoDoLote && (
+            <p className={`text-xs text-red-100 ${marcadosAqui.length > 0 ? "mt-2" : ""}`}>
+              {resultadoDoLote}
+            </p>
+          )}
+        </div>
+      )}
+
       {actual.linhas.length === 0 && (
         <p className="mt-3 text-xs text-slate-500">
           {aFiltrar ? "Nada com estes filtros." : actual.vazio}
@@ -681,7 +821,19 @@ function GestorDoDinheiro({
                 <div key={sg.chave} className={agrupamento === "nada" ? "" : "mt-3"}>
                   {agrupamento !== "nada" && (
                     <p className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 text-xs font-semibold text-slate-200">
-                      <span>
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          aria-label={`Marcar os ${sg.linhas.length} de ${sg.titulo}`}
+                          checked={sg.linhas.every((t) => marcados.has(t.negociacaoId))}
+                          onChange={(e) =>
+                            marcar(
+                              sg.linhas.map((t) => t.negociacaoId),
+                              e.target.checked,
+                            )
+                          }
+                          className="h-3.5 w-3.5 accent-red-500"
+                        />
                         {sg.titulo}
                         <span className="font-normal text-slate-500">
                           {" "}
@@ -714,6 +866,8 @@ function GestorDoDinheiro({
                           })
                         }
                         onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
+                        marcado={marcados.has(t.negociacaoId)}
+                        onMarcar={(v) => marcar([t.negociacaoId], v)}
                       />
                     ))}
                   </div>
@@ -757,6 +911,8 @@ function Linha({
   onPaguei,
   onCorrigir,
   onExcluir,
+  marcado,
+  onMarcar,
 }: {
   t: Trabalho;
   ocupado: boolean;
@@ -767,6 +923,8 @@ function Linha({
   onPaguei: () => void;
   onCorrigir: (valor: number, motivo: string) => void;
   onExcluir: (motivo: string) => void;
+  marcado: boolean;
+  onMarcar: (valor: boolean) => void;
 }) {
   const emMao = pagouAoProfissional(t);
   const [comoEntrou, setComoEntrou] = useState(false);
@@ -774,12 +932,24 @@ function Linha({
   return (
     <div
       className={`rounded-lg border bg-slate-900/60 p-3 ${
-        aberto ? "border-cyan-600/50" : "border-slate-800"
+        marcado ? "border-red-700/60" : aberto ? "border-cyan-600/50" : "border-slate-800"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <input
+            type="checkbox"
+            checked={marcado}
+            onChange={(e) => onMarcar(e.target.checked)}
+            aria-label={`Marcar o pedido #${t.pedidoId}`}
+            className="h-3.5 w-3.5 self-center accent-red-500"
+          />
           <span className="text-sm font-semibold text-white">#{t.pedidoId}</span>
+          {t.contaDeTeste && (
+            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+              conta de teste
+            </span>
+          )}
           <span className="text-sm text-slate-200">{t.cliente ?? "—"}</span>
           {t.telefoneDoCliente && (
             <a
@@ -1223,7 +1393,8 @@ function ExcluirTrabalho({
   const [aberto, setAberto] = useState(false);
   const [motivo, setMotivo] = useState("");
 
-  if (t.clientePagouEm || t.pagoEm || pagouAoProfissional(t)) {
+  // Uma conta de teste sai sempre: o dinheiro dela é a fingir (01-10-2026).
+  if (!t.contaDeTeste && (t.clientePagouEm || t.pagoEm || pagouAoProfissional(t))) {
     return (
       <p className="mt-1 text-[11px] text-slate-500">
         Não se exclui: neste trabalho já entrou ou saiu dinheiro. Um trabalho a sério que correu
@@ -1234,13 +1405,21 @@ function ExcluirTrabalho({
 
   if (!aberto) {
     return (
-      <button
-        onClick={() => setAberto(true)}
-        disabled={ocupado}
-        className="mt-1 rounded-lg border border-red-700/60 px-2.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-950/40 disabled:opacity-50"
-      >
-        Excluir este trabalho…
-      </button>
+      <>
+        {t.contaDeTeste && (
+          <p className="mt-1 text-[11px] text-amber-300/90">
+            Conta de teste: sai mesmo com dinheiro registado, e leva com ela as linhas da carteira e
+            os recebimentos anotados à mão.
+          </p>
+        )}
+        <button
+          onClick={() => setAberto(true)}
+          disabled={ocupado}
+          className="mt-1 rounded-lg border border-red-700/60 px-2.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-950/40 disabled:opacity-50"
+        >
+          Excluir este trabalho…
+        </button>
+      </>
     );
   }
 

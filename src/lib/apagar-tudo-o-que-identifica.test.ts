@@ -123,6 +123,9 @@ const NAO_IDENTIFICAM = new Set([
    * número em claro. Sai, e sai por DELETE — ver `apagarProfissional`.
    */
   "whatsappAvisos", "whatsappAvisosEm",
+  // Uma marca do backoffice («é uma conta de teste»), não um dado da pessoa
+  // — 01-10-2026.
+  "contaDeTeste",
 ]);
 
 /** As colunas que `ensureProvidersSchema` acrescenta a `providers`. */
