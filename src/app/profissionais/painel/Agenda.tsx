@@ -18,6 +18,13 @@ import {
   proximoDepois,
 } from "@/lib/agenda-em-grelha";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import {
+  campoEmLisboa,
+  diaEmLisboa,
+  noRelogioDeLisboa,
+  pecasEmLisboa,
+  somarDiasAoDia,
+} from "@/lib/hora-de-lisboa";
 import type { Pedido } from "./tipos";
 import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
 import MarcarODia from "./MarcarODia";
@@ -69,13 +76,13 @@ function nomeDoServico(id: string | null): string {
 }
 
 function cabecalhoDoDia(d: Date): string {
-  const hoje = new Date();
-  const amanha = new Date(hoje.getTime() + 86_400_000);
-  const mesmoDia = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  if (mesmoDia(d, hoje)) return "Hoje";
-  if (mesmoDia(d, amanha)) return "Amanhã";
-  return `${DIAS[d.getDay()]}, ${d.getDate()} de ${d.toLocaleDateString("pt-PT", { month: "long" })}`;
+  // Os dias de Lisboa, e não os do telemóvel — ver `hora-de-lisboa.ts`.
+  const dia = diaEmLisboa(d);
+  const hoje = diaEmLisboa(new Date());
+  if (dia === hoje) return "Hoje";
+  if (dia === somarDiasAoDia(hoje, 1)) return "Amanhã";
+  const p = pecasEmLisboa(d);
+  return `${DIAS[p.diaDaSemana]}, ${p.dia} de ${d.toLocaleDateString("pt-PT", { month: "long" })}`;
 }
 
 /**
@@ -89,8 +96,9 @@ function cabecalhoDoDia(d: Date): string {
 function linkGoogleCalendar(p: Pedido): string {
   const inicio = new Date(quandoE(p) as string);
   const fim = new Date(inicio.getTime() + 2 * 3600_000);
-  const f = (d: Date) =>
-    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
+  // A hora de LISBOA, que é o que o `ctz` diz: com a do telemóvel, um
+  // telemóvel noutro fuso marcava o trabalho à hora errada.
+  const f = (d: Date) => `${campoEmLisboa(d).replace(/[-:]/g, "")}00`;
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: `CLYON — ${nomeDoServico(p.serviceType)}${p.contactoNome ? ` (${p.contactoNome})` : ""}`,
@@ -167,7 +175,8 @@ export default function Agenda({
    * telefone, o «Pôr no calendário do telemóvel», o mudar o dia e o arquivar.
    */
   const [vista, setVista] = useVistaDaAgenda("clyon:agenda-do-profissional:vista");
-  const [ancora, setAncora] = useState(() => new Date());
+  // A grelha conta no relógio de Lisboa — ver `noRelogioDeLisboa`.
+  const [ancora, setAncora] = useState(() => noRelogioDeLisboa(new Date()));
   const agora = useAgora();
   const [aberto, setAberto] = useState<number | null>(null);
   const [verSemData, setVerSemData] = useState(false);
@@ -199,14 +208,14 @@ export default function Agenda({
 
   const porDia = new Map<string, Pedido[]>();
   for (const p of comData) {
-    const d = new Date(quandoE(p) as string);
-    const chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const chave = diaEmLisboa(new Date(quandoE(p) as string));
     porDia.set(chave, [...(porDia.get(chave) ?? []), p]);
   }
 
   /* Os trabalhos com dia, traduzidos para a grelha. A cor diz o serviço. */
   const eventos: EventoDaAgenda[] = comData.map((p) => {
-    const inicio = new Date(quandoE(p) as string);
+    // No relógio de Lisboa: a grelha lê `getHours()`, e no Brasil eram 4 h a menos.
+    const inicio = noRelogioDeLisboa(new Date(quandoE(p) as string));
     const servico = nomeDoServico(p.serviceType);
     const onde = p.morada ?? p.city ?? null;
     return {
@@ -521,7 +530,7 @@ export default function Agenda({
             <div className="mb-2 flex items-center justify-between gap-3 pl-1">
               <p id="agenda-trabalho-aberto" className="text-sm font-semibold text-tinta">
                 {quandoE(pAberto)
-                  ? diaPorExtenso(new Date(quandoE(pAberto) as string))
+                  ? diaPorExtenso(noRelogioDeLisboa(new Date(quandoE(pAberto) as string)))
                   : "Sem data marcada"}
               </p>
               <button

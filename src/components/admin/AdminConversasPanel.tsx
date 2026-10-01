@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { ArrowLeft, ExternalLink, Loader2, RotateCcw, Search, Send, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import {
   CORES_DA_ORIGEM,
   ROTULO_DA_ORIGEM,
@@ -69,12 +70,10 @@ function quando(iso: string): string {
   const d = new Date(String(iso).replace(" ", "T"));
   const t = d.getTime();
   if (!Number.isFinite(t)) return "";
-  const agora = new Date();
-  const mesmoDia = d.toDateString() === agora.toDateString();
-  if (mesmoDia) return d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-  const ontem = new Date(agora);
-  ontem.setDate(agora.getDate() - 1);
-  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  // Os dias são os de Lisboa, e não os do computador de quem abre o painel.
+  const qual = hojeOuOntem(d);
+  if (qual === "hoje") return d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+  if (qual === "ontem") return "Ontem";
   return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" });
 }
 

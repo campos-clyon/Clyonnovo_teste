@@ -51,6 +51,127 @@ export function deslocamentoDeLisboa(instante: Date): number {
   return comoSeFosseUtc - Math.floor(instante.getTime() / 1000) * 1000;
 }
 
+/**
+ * AS PEÇAS DE UM INSTANTE NO RELÓGIO DE LISBOA — 01-10-2026.
+ *
+ * *«Deve estar sempre no horário de Lisboa, independente de onde o admin
+ * esteja.»* `getHours()` e `getDate()` dão o relógio do computador de quem
+ * olha; do Brasil eram quatro horas a menos, e às 22h de Lisboa o «hoje» dele
+ * ainda era ontem. Tudo o que conta dias ou enche um campo de data no
+ * navegador passa por aqui.
+ *
+ * `mes` vai de 1 a 12; `diaDaSemana` de 0 (domingo) a 6, como o `getDay()`.
+ */
+export type NoRelogioDeLisboa = {
+  ano: number;
+  mes: number;
+  dia: number;
+  hora: number;
+  minuto: number;
+  segundo: number;
+  diaDaSemana: number;
+};
+
+const PECAS = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Europe/Lisbon",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  weekday: "short",
+  hour12: false,
+});
+const DIAS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+export function pecasEmLisboa(instante: Date): NoRelogioDeLisboa {
+  const p: Record<string, string> = {};
+  for (const x of PECAS.formatToParts(instante)) if (x.type !== "literal") p[x.type] = x.value;
+  return {
+    ano: Number(p.year),
+    mes: Number(p.month),
+    dia: Number(p.day),
+    // Ver `deslocamentoDeLisboa`: há plataformas que dão 24 à meia-noite.
+    hora: Number(p.hour) % 24,
+    minuto: Number(p.minute),
+    segundo: Number(p.second),
+    diaDaSemana: DIAS_EN.indexOf(p.weekday),
+  };
+}
+
+const dois = (n: number) => String(n).padStart(2, "0");
+
+/** `YYYY-MM-DD` — o dia em Lisboa. Serve para um `<input type="date">` e para comparar dias. */
+export function diaEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${p.ano}-${dois(p.mes)}-${dois(p.dia)}`;
+}
+
+/**
+ * `YYYY-MM-DD` mais `n` dias, de calendário. Conta-se no papel e não no
+ * relógio: «ontem» é o dia anterior, mesmo no domingo em que o dia tem 23 ou
+ * 25 horas.
+ */
+export function somarDiasAoDia(dia: string, n: number): string {
+  const [a, m, d] = dia.split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** `"hoje"`, `"ontem"` ou `null` — contado em dias de Lisboa. */
+export function hojeOuOntem(instante: Date, agora: Date = new Date()): "hoje" | "ontem" | null {
+  const dia = diaEmLisboa(instante);
+  const hoje = diaEmLisboa(agora);
+  if (dia === hoje) return "hoje";
+  if (dia === somarDiasAoDia(hoje, -1)) return "ontem";
+  return null;
+}
+
+/** `HH:mm` — a hora em Lisboa, para um `<input type="time">`. */
+export function horaEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${dois(p.hora)}:${dois(p.minuto)}`;
+}
+
+/**
+ * `YYYY-MM-DDTHH:mm` — o valor de um `<input type="datetime-local">`, em
+ * Lisboa. Vazio para o que não for uma data.
+ *
+ * O caminho de volta é `instanteEmLisboa(valorDoCampo)`, e NUNCA
+ * `new Date(valorDoCampo)` — esse lê o texto no fuso do computador.
+ */
+export function campoEmLisboa(valor: Date | string | null | undefined): string {
+  if (valor == null || valor === "") return "";
+  const d = valor instanceof Date ? valor : new Date(valor);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${diaEmLisboa(d)}T${horaEmLisboa(d)}`;
+}
+
+/**
+ * O RELÓGIO DE LISBOA DENTRO DE UM `Date` DO COMPUTADOR.
+ *
+ * Devolve um `Date` cujos `getHours()`, `getDate()` e `getDay()` dão a hora
+ * de Lisboa, em qualquer browser. É para as contas de calendário que já
+ * trabalham com os campos locais (a agenda em grelha, «hoje»/«ontem»): passa
+ * tudo por aqui à entrada, e as contas continuam iguais.
+ *
+ * NÃO É O INSTANTE VERDADEIRO. Serve para desenhar e para comparar dias, não
+ * para gravar nem para medir intervalos. O caminho de volta é
+ * `doRelogioDeLisboa`.
+ */
+export function noRelogioDeLisboa(instante: Date): Date {
+  const p = pecasEmLisboa(instante);
+  return new Date(p.ano, p.mes - 1, p.dia, p.hora, p.minuto, p.segundo);
+}
+
+/** O instante verdadeiro de um `Date` feito por `noRelogioDeLisboa`. */
+export function doRelogioDeLisboa(local: Date): Date | null {
+  return instanteEmLisboa(
+    `${local.getFullYear()}-${dois(local.getMonth() + 1)}-${dois(local.getDate())}` +
+      `T${dois(local.getHours())}:${dois(local.getMinutes())}:${dois(local.getSeconds())}`,
+  );
+}
+
 /** `YYYY-MM-DDTHH:mm` ou `YYYY-MM-DD HH:mm`, com segundos opcionais. */
 const SEM_FUSO = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
 

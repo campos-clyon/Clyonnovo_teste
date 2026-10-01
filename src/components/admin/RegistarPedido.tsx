@@ -8,6 +8,7 @@ import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
+import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 
 const SERVICOS = [
   ["recolha_moveis", "Recolha de móveis"],
@@ -389,13 +390,8 @@ export default function RegistarPedido({
         const d = await res.json();
         const o = d.order;
         if (!vivo || !o) return;
-        const paraDataLocal = (v: unknown): string => {
-          if (!v) return "";
-          const dt = new Date(String(v));
-          if (Number.isNaN(dt.getTime())) return "";
-          const p2 = (n: number) => String(n).padStart(2, "0");
-          return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
-        };
+        // A hora de Lisboa, e não a do computador de quem edita.
+        const paraDataLocal = (v: unknown): string => (v ? campoEmLisboa(String(v)) : "");
         /*
          * O CÓDIGO POSTAL QUE VEIO DENTRO DA MORADA — 18-09-2026.
          *

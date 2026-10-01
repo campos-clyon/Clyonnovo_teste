@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerBase } from "@/lib/base-do-preco";
+import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
@@ -160,8 +161,9 @@ export async function POST(req: NextRequest) {
     let dataAgendada: Date | null = null;
     const dataCrua = texto((corpo as { dataDesejada?: unknown }).dataDesejada as string, 30);
     if (dataCrua) {
-      const d = new Date(dataCrua);
-      if (!Number.isNaN(d.getTime()) && d.getTime() > Date.now() - 3600_000) {
+      // O campo escreve a hora de Lisboa sem fuso — ver `hora-de-lisboa.ts`.
+      const d = instanteEmLisboa(dataCrua);
+      if (d && d.getTime() > Date.now() - 3600_000) {
         dataAgendada = d;
       }
     }

@@ -8,6 +8,7 @@ import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { translate, tElevator, tParking, tUrgency, tService, tFloor, FIELD_TRANSLATIONS } from "@/lib/translations";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
+import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -331,7 +332,9 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
     setEditNotasInternas(o.notasInternas ?? "");
     setEditStatus(o.status);
     setEditPriority(o.priority ?? "normal");
-    setEditDataAgendada(o.dataAgendada ? o.dataAgendada.slice(0, 16) : "");
+    // Em Lisboa: o `slice` de um ISO com Z dava a hora UTC, e gravar sem mexer
+    // recuava o trabalho uma hora no Verão.
+    setEditDataAgendada(campoEmLisboa(o.dataAgendada));
   }
 
   const fetchOrder = useCallback(async () => {

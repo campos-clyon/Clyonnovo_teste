@@ -26,6 +26,7 @@ import {
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
 
@@ -201,15 +202,10 @@ const WA = {
 function diaDaMensagem(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const mesmoDia = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-  const hoje = new Date();
-  const ontem = new Date();
-  ontem.setDate(hoje.getDate() - 1);
-  if (mesmoDia(d, hoje)) return "Hoje";
-  if (mesmoDia(d, ontem)) return "Ontem";
+  // Os dias são os de Lisboa, e não os do computador de quem abre o painel.
+  const qual = hojeOuOntem(d);
+  if (qual === "hoje") return "Hoje";
+  if (qual === "ontem") return "Ontem";
   return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 

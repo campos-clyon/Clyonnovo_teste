@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
 import type { Movimento } from "./tipos";
+import { pecasEmLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * O histórico da carteira: ano, depois mês, depois os movimentos.
@@ -44,6 +45,11 @@ function quando(m: Movimento): Date {
   return new Date(m.data);
 }
 
+// O ano e o mês de Lisboa (o mês de 0 a 11), e não os do telemóvel de quem
+// olha — um movimento das 23h30 do último dia do mês não muda de mês.
+const anoDe = (m: Movimento) => pecasEmLisboa(quando(m)).ano;
+const mesDe = (m: Movimento) => pecasEmLisboa(quando(m)).mes - 1;
+
 export default function Historico({
   movimentos,
   onVoltar,
@@ -58,10 +64,7 @@ export default function Historico({
 
   // ── Movimentos de um mês ──────────────────────────────────────────────────
   if (ano != null && mes != null) {
-    const doMes = validos.filter((m) => {
-      const d = quando(m);
-      return d.getFullYear() === ano && d.getMonth() === mes;
-    });
+    const doMes = validos.filter((m) => anoDe(m) === ano && mesDe(m) === mes);
     const total = doMes.reduce((s, m) => s + m.valor, 0);
 
     return (
@@ -118,7 +121,7 @@ export default function Historico({
   // ── Meses de um ano ───────────────────────────────────────────────────────
   if (ano != null) {
     const meses = [...new Set(
-      validos.filter((m) => quando(m).getFullYear() === ano).map((m) => quando(m).getMonth()),
+      validos.filter((m) => anoDe(m) === ano).map(mesDe),
     )].sort((a, b) => b - a);
 
     return (
@@ -141,7 +144,7 @@ export default function Historico({
   }
 
   // ── Anos ──────────────────────────────────────────────────────────────────
-  const anos = [...new Set(validos.map((m) => quando(m).getFullYear()))].sort((a, b) => b - a);
+  const anos = [...new Set(validos.map(anoDe))].sort((a, b) => b - a);
 
   return (
     <>

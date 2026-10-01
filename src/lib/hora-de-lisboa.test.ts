@@ -1,5 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { deslocamentoDeLisboa, instanteEmLisboa } from "./hora-de-lisboa";
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import ts from "typescript";
+import {
+  campoEmLisboa,
+  deslocamentoDeLisboa,
+  diaEmLisboa,
+  doRelogioDeLisboa,
+  hojeOuOntem,
+  instanteEmLisboa,
+  noRelogioDeLisboa,
+  pecasEmLisboa,
+  somarDiasAoDia,
+} from "./hora-de-lisboa";
 
 /**
  * O BUG QUE ISTO FECHA, escrito por quem o apanhou:
@@ -111,5 +125,84 @@ describe("«15:00» escrito em Lisboa é 15:00 em Lisboa", () => {
     for (const mau of ["", "   ", "amanhã de manhã", "18/09/2026 15:00", "2026-09-18"]) {
       expect(instanteEmLisboa(mau), JSON.stringify(mau)).toBeNull();
     }
+  });
+});
+
+/*
+ * AS PEÇAS PARA O NAVEGADOR — 01-10-2026.
+ *
+ * «Deve estar sempre no horário de Lisboa, independente de onde o admin
+ * esteja.» Do Brasil, `getHours()` dava quatro horas a menos e o «hoje»
+ * acabava às 4h de Lisboa. Estas são as peças que o substituem.
+ */
+describe("o relógio de Lisboa, peça a peça", () => {
+  // 23:30 em UTC no Verão: já são 00:30 do dia seguinte em Lisboa.
+  const TARDE = new Date("2026-09-28T23:30:00Z");
+
+  it("as peças são as de Lisboa, e o dia muda à meia-noite de Lisboa", () => {
+    expect(pecasEmLisboa(TARDE)).toEqual({
+      ano: 2026,
+      mes: 9,
+      dia: 29,
+      hora: 0,
+      minuto: 30,
+      segundo: 0,
+      diaDaSemana: 2, // terça
+    });
+    expect(diaEmLisboa(TARDE)).toBe("2026-09-29");
+  });
+
+  it("o campo de data mostra a hora de Lisboa, e volta ao mesmo instante", () => {
+    expect(campoEmLisboa("2026-09-28T13:32:00Z")).toBe("2026-09-28T14:32");
+    expect(campoEmLisboa("2026-12-10T13:32:00Z")).toBe("2026-12-10T13:32");
+    expect(instanteEmLisboa(campoEmLisboa(TARDE))!.toISOString()).toBe(TARDE.toISOString());
+    expect(campoEmLisboa(null)).toBe("");
+    expect(campoEmLisboa("não é data")).toBe("");
+  });
+
+  it("somar dias é no calendário: fim de mês, fim de ano, e o domingo de 25 horas", () => {
+    expect(somarDiasAoDia("2026-09-30", 1)).toBe("2026-10-01");
+    expect(somarDiasAoDia("2026-01-01", -1)).toBe("2025-12-31");
+    expect(somarDiasAoDia("2026-10-25", 1)).toBe("2026-10-26");
+  });
+
+  it("hoje e ontem são dias de Lisboa", () => {
+    const agora = new Date("2026-10-01T13:00:00Z");
+    expect(hojeOuOntem(new Date("2026-09-30T23:30:00Z"), agora)).toBe("hoje");
+    expect(hojeOuOntem(new Date("2026-09-30T22:30:00Z"), agora)).toBe("ontem");
+    expect(hojeOuOntem(new Date("2026-09-29T12:00:00Z"), agora)).toBeNull();
+  });
+
+  it("noRelogioDeLisboa dá a hora de Lisboa no getHours(), e doRelogioDeLisboa desfaz", () => {
+    const local = noRelogioDeLisboa(TARDE);
+    expect([local.getDate(), local.getHours(), local.getMinutes()]).toEqual([29, 0, 30]);
+    expect(doRelogioDeLisboa(local)!.toISOString()).toBe(TARDE.toISOString());
+  });
+
+  it("e dá o mesmo num computador em São Paulo", () => {
+    /*
+     * No processo dos testes o fuso pode ser o de Lisboa, e aí `getHours()`
+     * já dava certo sem nada. Corre-se num Node à parte, com outro relógio.
+     */
+    const fonte = readFileSync(join(process.cwd(), "src/lib/hora-de-lisboa.ts"), "utf8");
+    const js = ts.transpileModule(fonte, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    }).outputText;
+    const codigo = `
+      const module = { exports: {} };
+      const exports = module.exports;
+      ${js}
+      const h = module.exports;
+      const local = h.noRelogioDeLisboa(new Date("2026-09-28T23:30:00Z"));
+      const volta = h.doRelogioDeLisboa(local).toISOString();
+      console.log([local.getDate(), local.getHours(), local.getMinutes(), volta].join(","));
+    `;
+    const r = spawnSync(process.execPath, ["-"], {
+      input: codigo,
+      encoding: "utf8",
+      env: { ...process.env, TZ: "America/Sao_Paulo" },
+    });
+    expect(r.stderr).toBe("");
+    expect(r.stdout.trim()).toBe("29,0,30,2026-09-28T23:30:00.000Z");
   });
 });

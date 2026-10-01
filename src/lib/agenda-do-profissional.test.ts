@@ -109,8 +109,15 @@ describe("o dia muda-se de dentro da agenda", () => {
    * trabalho das 11h aparecia às 10h — e bastava gravar para o adiantar.
    */
   it("o campo não anda uma hora para trás", () => {
-    expect(MARCAR).toContain("d.getHours()");
+    /*
+     * Era `d.getHours()` — a hora do telemóvel, que acertava em Lisboa e
+     * errava fora dela. Desde 01-10-2026 o site é todo à hora de Lisboa,
+     * esteja quem olha onde estiver: o campo mostra-a e lê-a como Lisboa.
+     */
+    expect(MARCAR).toContain("return campoEmLisboa(iso);");
+    expect(MARCAR).toContain("instanteEmLisboa(quando)");
     expect(MARCAR).not.toContain("toISOString().slice(0, 16)");
+    expect(MARCAR).not.toContain("new Date(quando)");
   });
 });
 

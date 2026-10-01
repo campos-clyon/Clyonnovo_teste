@@ -22,6 +22,7 @@ import {
   type Cor,
   type Vista,
 } from "@/lib/agenda-em-grelha";
+import { noRelogioDeLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * A AGENDA EM GRELHA — a mesma para o profissional e para o backoffice.
@@ -164,11 +165,17 @@ export function useVistaDaAgenda(
   return [vista, mudar];
 }
 
-/** O relógio da linha vermelha do «agora» — acerta-se de minuto a minuto. */
+/**
+ * O relógio da linha vermelha do «agora» — acerta-se de minuto a minuto.
+ *
+ * NO RELÓGIO DE LISBOA (01-10-2026), como tudo o que entra na grelha: ela lê
+ * `getHours()` e `getDate()`, e do Brasil o «agora» ficava quatro horas atrás
+ * dos trabalhos. Ver `noRelogioDeLisboa`.
+ */
 export function useAgora(): Date {
-  const [agora, setAgora] = useState(() => new Date());
+  const [agora, setAgora] = useState(() => noRelogioDeLisboa(new Date()));
   useEffect(() => {
-    const id = window.setInterval(() => setAgora(new Date()), 60_000);
+    const id = window.setInterval(() => setAgora(noRelogioDeLisboa(new Date())), 60_000);
     return () => window.clearInterval(id);
   }, []);
   return agora;
@@ -206,7 +213,7 @@ export function BarraDaAgenda({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => onAncora(new Date())}
+            onClick={() => onAncora(noRelogioDeLisboa(new Date()))}
             className={`min-h-[40px] rounded-full border px-4 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 ${t.botao} ${t.anel}`}
           >
             Hoje

@@ -38,6 +38,7 @@ import {
   proximoDepois,
 } from "@/lib/agenda-em-grelha";
 import RegistarPedido from "./RegistarPedido";
+import { diaEmLisboa, noRelogioDeLisboa } from "@/lib/hora-de-lisboa";
 import {
   ETIQUETA,
   CORES,
@@ -210,7 +211,8 @@ export default function AdminAgendaPanel() {
     largo: "semana",
     estreito: "lista",
   });
-  const [ancora, setAncora] = useState(() => new Date());
+  // A grelha conta no relógio de Lisboa — ver `noRelogioDeLisboa`.
+  const [ancora, setAncora] = useState(() => noRelogioDeLisboa(new Date()));
   const relogio = useAgora();
 
   const carregar = useCallback(async (silencioso = false) => {
@@ -342,7 +344,8 @@ export default function AdminAgendaPanel() {
   const eventos: EventoDaAgenda[] = doBloco
     .filter((t) => t.quando)
     .map((t) => {
-      const inicio = new Date(t.quando as string);
+      // No relógio de Lisboa: a grelha lê `getHours()`, e do Brasil eram 4 h a menos.
+      const inicio = noRelogioDeLisboa(new Date(t.quando as string));
       const servico = SERVICO[t.servico ?? ""] ?? t.servico ?? "Serviço";
       const quem = t.profissionalNome || `Profissional #${t.providerId}`;
       return {
@@ -382,7 +385,7 @@ export default function AdminAgendaPanel() {
     const contagem = new Map<number, { nome: string; n: number }>();
     for (const t of doBloco) {
       if (!t.quando || !periodoNaGrelha) continue;
-      const d = new Date(t.quando);
+      const d = noRelogioDeLisboa(new Date(t.quando));
       if (d < periodoNaGrelha.de || d >= periodoNaGrelha.ate) continue;
       const atual = contagem.get(t.providerId);
       contagem.set(t.providerId, {
@@ -812,7 +815,8 @@ function LinhaDaAgenda({
   const desencontro =
     t.dataCombinada &&
     t.dataDoCliente &&
-    new Date(t.dataCombinada).toDateString() !== new Date(t.dataDoCliente).toDateString();
+    // Dias de Lisboa, e não do computador de quem abre a agenda.
+    diaEmLisboa(new Date(t.dataCombinada)) !== diaEmLisboa(new Date(t.dataDoCliente));
 
   return (
     /*

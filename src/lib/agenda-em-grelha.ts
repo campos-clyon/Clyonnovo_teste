@@ -17,9 +17,11 @@
  * trabalhos à mesma hora. Duas grelhas escritas à parte divergiam no dia em
  * que alguém corrigisse uma.
  *
- * TUDO NA HORA DO TELEMÓVEL. As datas chegam em ISO e lêem-se com `getHours()`
- * — a hora local de quem está a olhar, que é Lisboa. É o que as listas já
- * faziam, e a grelha não pode dizer outra hora do que a lista ao lado.
+ * TUDO NO RELÓGIO DE LISBOA (01-10-2026). As contas lêem-se com `getHours()` e
+ * `getDate()` — e isso é o relógio do computador de quem olha, que nem sempre
+ * é Lisboa: do Brasil, os trabalhos apareciam quatro horas antes. Por isso
+ * quem chama passa as datas por `noRelogioDeLisboa` à entrada (os eventos, o
+ * «agora», o «Hoje»), e as contas daqui ficam iguais. Ver `hora-de-lisboa.ts`.
  */
 
 export type Vista = "dia" | "semana" | "mes" | "lista";

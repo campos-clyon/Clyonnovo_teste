@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { linkGoogleMaps } from "@/lib/morada";
 import CancelarPedido from "./CancelarPedido";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   ETIQUETA,
   CORES,
@@ -267,7 +268,8 @@ export default function FichaDaAgenda({
   const desencontro =
     t.dataCombinada &&
     t.dataDoCliente &&
-    new Date(t.dataCombinada).toDateString() !== new Date(t.dataDoCliente).toDateString();
+    // Dias de Lisboa, e não do computador de quem abre a ficha.
+    diaEmLisboa(new Date(t.dataCombinada)) !== diaEmLisboa(new Date(t.dataDoCliente));
 
   return (
     /*

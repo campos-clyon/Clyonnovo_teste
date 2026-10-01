@@ -7,6 +7,7 @@ import {
   nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
 } from "@/lib/order-status-flow";
 import { displayPrice, eur, orcamentoDoPedido } from "@/lib/quote-price";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -493,7 +494,15 @@ function DetailModal({
               <label className={LABEL}>Data preferida</label>
               <input
                 type="date"
-                value={preferredDate ? preferredDate.slice(0, 10) : ""}
+                value={
+                  // O dia em Lisboa: o `slice` de um instante em UTC dava o
+                  // dia anterior a quem marcasse depois da meia-noite.
+                  !preferredDate
+                    ? ""
+                    : preferredDate.length > 10
+                      ? diaEmLisboa(new Date(preferredDate))
+                      : preferredDate
+                }
                 onChange={e => setPreferredDate(e.target.value)}
                 className={INPUT}
               />
