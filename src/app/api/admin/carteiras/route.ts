@@ -8,6 +8,7 @@ import {
   contaDoCliente,
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
+import { precoParaOCliente } from "@/lib/preco-do-cliente";
 
 export const runtime = "nodejs";
 
@@ -52,6 +53,23 @@ type TrabalhoPorPagar = {
   confirmadoEm: string | null;
   /** Prova enviada, à espera de confirmação — ou ainda por fazer. */
   aguardaConfirmacao: boolean;
+  /*
+   * A CONTA DO TRABALHO, POR EXTENSO — 01-10-2026.
+   *
+   * *«Não consigo ver de qual trabalho se trata os valores; deve ter mais
+   * informações.»* A linha dizia «Acordado 190,00 € · ele recebe 178,60 €» e
+   * nada mais: de onde vinham os 11,40 € de diferença, quanto pagou o cliente,
+   * quando foi feito, quando foi confirmado. Estava tudo na consulta e ficava
+   * aqui dentro.
+   */
+  /** Quando ele deu o trabalho por feito (mandou a prova). */
+  feitoEm: string | null;
+  /** O que o cliente pagou pelo trabalho, sem IVA — o número que lhe foi mostrado. */
+  clientePagaSemIva: number;
+  /** O que se desconta ao profissional: o valor do trabalho menos o que ele recebe. */
+  taxaDescontada: number;
+  /** Pago pela plataforma, ou em dinheiro na mão dele. */
+  forma: "plataforma" | "dinheiro";
 };
 
 export async function GET(req: NextRequest) {
@@ -211,6 +229,14 @@ export async function GET(req: NextRequest) {
         confirmadoEm: l.confirmadoEm ? new Date(l.confirmadoEm as string).toISOString() : null,
         /* Ele ja mandou a prova e falta so alguem confirmar? Muda a espera. */
         aguardaConfirmacao: l.confirmadoEm == null && l.execucaoEnviadaEm != null,
+        feitoEm: l.execucaoEnviadaEm
+          ? new Date(l.execucaoEnviadaEm as string).toISOString()
+          : null,
+        clientePagaSemIva: precoParaOCliente(acordado, taxas),
+        // Ao centimo, e no servidor: a subtraccao em virgula flutuante no ecra
+        // dava 11,399999 € na linha de um trabalho de 190 €.
+        taxaDescontada: Math.round((acordado - recebe) * 100) / 100,
+        forma: lerForma(l.formaDePagamento) === "dinheiro" ? "dinheiro" : "plataforma",
       };
 
       /* Três montes, e cada trabalho está exactamente num deles. */

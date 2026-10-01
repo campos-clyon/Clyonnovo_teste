@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
 
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
@@ -48,7 +49,45 @@ type Trabalho = {
   recebe: number;
   confirmadoEm: string | null;
   aguardaConfirmacao: boolean;
+  /** Quando ele deu o trabalho por feito. */
+  feitoEm: string | null;
+  /** O que o cliente pagou, sem IVA. */
+  clientePagaSemIva: number;
+  /** Valor do trabalho menos o que ele recebe — a parte da CLYON do lado dele. */
+  taxaDescontada: number;
+  forma: "plataforma" | "dinheiro";
 };
+
+/** «28/09» — o dia e o mês chegam; o ano é sempre este. */
+function diaCurto(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Dias inteiros desde uma data, contados pelo calendário. */
+function diasDesde(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const meiaNoite = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  return Math.max(0, Math.round((meiaNoite(new Date()) - meiaNoite(d)) / 86_400_000));
+}
+
+/* O descritivo da transferência vive em `@/lib/descritivo-da-transferencia`. */
+
+const somar = (valores: number[]) => Math.round(valores.reduce((s, v) => s + v, 0) * 100) / 100;
+
+/*
+ * AS COLUNAS DA TABELA — as mesmas no cabeçalho, em cada linha e no total.
+ *
+ * Num ecrã estreito não há tabela: cada trabalho empilha-se, e os números
+ * levam o nome ao lado. A partir de `md` é uma grelha com as colunas
+ * alinhadas, que é o que faz cada valor ler-se como sendo daquele trabalho.
+ */
+const COLUNAS =
+  "md:grid md:grid-cols-[minmax(0,1fr)_8.5rem_7.5rem_7rem_7.5rem_8.5rem] md:items-start md:gap-4";
 
 /**
  * QUEM, ONDE E QUANDO — a linha que faz o trabalho ser reconhecível.
@@ -71,32 +110,32 @@ type Trabalho = {
  * acabavam com dois formatos.
  */
 function QuemOndeQuando({ t }: { t: Trabalho }) {
-  const linha = [
-    t.cliente,
-    t.morada ?? t.cidade,
-    // A data só quando há: um "sem data" em cada linha é ruído, e a maior
-    // parte dos trabalhos fecha-se sem dia marcado.
-    t.quando ? new Date(t.quando).toLocaleDateString("pt-PT") : null,
-  ].filter(Boolean);
-
-  if (linha.length === 0 && !t.telefoneDoCliente) return null;
-
+  /*
+   * 01-10-2026: duas coisas saíram daqui. A DATA, que passou a ter coluna
+   * própria na tabela (feito, confirmado, há quantos dias espera). E o «feito
+   * por Revolution», que dentro do cartão do Revolution repetia o título em
+   * cada linha. O que fica é o que faz a ponte com o homebanking: o nome, o
+   * telefone e a morada do cliente.
+   */
+  if (!t.cliente && !t.telefoneDoCliente && !t.morada) return null;
   return (
-    <p className="text-[11px] leading-relaxed text-slate-400">
-      {linha.join(" · ")}
-      {t.telefoneDoCliente && (
-        <>
-          {linha.length > 0 ? " · " : ""}
-          <a
-            href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
-            className="text-cyan-400 hover:underline"
-          >
-            {t.telefoneDoCliente}
-          </a>
-        </>
-      )}
-      <span className="block text-slate-500">feito por {t.profissional}</span>
-    </p>
+    <div className="mt-1 text-[11px] leading-relaxed">
+      <p className="text-slate-300">
+        {t.cliente ?? "Cliente sem nome"}
+        {t.telefoneDoCliente && (
+          <>
+            {" · "}
+            <a
+              href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
+              className="text-cyan-400 hover:underline"
+            >
+              {t.telefoneDoCliente}
+            </a>
+          </>
+        )}
+      </p>
+      {t.morada && <p className="truncate text-slate-500">{t.morada}</p>}
+    </div>
   );
 }
 
@@ -135,7 +174,7 @@ const SERVICO: Record<string, string> = {
 };
 
 /** Copiar sem transcrever: um IBAN à mão são 25 caracteres para enganar. */
-function Copiar({ valor, rotulo }: { valor: string; rotulo: string }) {
+function Copiar({ valor, rotulo, texto = "Copiar" }: { valor: string; rotulo: string; texto?: string }) {
   const [feito, setFeito] = useState(false);
   return (
     <button
@@ -156,7 +195,7 @@ function Copiar({ valor, rotulo }: { valor: string; rotulo: string }) {
       ) : (
         <Copy className="h-3 w-3" aria-hidden="true" />
       )}
-      {feito ? "Copiado" : "Copiar"}
+      {feito ? "Copiado" : texto}
     </button>
   );
 }
@@ -326,49 +365,178 @@ export default function AdminCarteirasPanel() {
   const [verParados, setVerParados] = useState(false);
   const [abertos, setAbertos] = useState<Record<number, boolean>>({});
 
-  /** Uma linha de trabalho. O botão da direita é o que muda de um monte para o outro. */
+  /**
+   * UMA LINHA DA TABELA — um trabalho, e os números DELE ao lado.
+   *
+   * *«Está tudo muito confuso e misturado, não consigo ver de qual trabalho se
+   * trata os valores; deve ter mais informações.»* — 01-10-2026.
+   *
+   * O que se transferia por cada trabalho estava numa linha cinzenta de onze
+   * píxeis, «Acordado 190,00 € · ele recebe 178,60 €», e o botão verde «Já
+   * paguei» ficava do outro lado do ecrã, alinhado com o nome do serviço. O
+   * total do cartão (1 522,80 €) não aparecia em lado nenhum como a soma
+   * destas linhas.
+   *
+   * Agora cada trabalho é uma linha de uma tabela com colunas: o trabalho e o
+   * cliente, as datas, o valor do trabalho, a taxa descontada, e o que se
+   * transfere — a negrito, encostado ao botão. E a tabela fecha com o total,
+   * que é o número grande do cartão.
+   */
   function LinhaDoTrabalho({ t, nome, pagavel }: { t: Trabalho; nome: string; pagavel: boolean }) {
+    const servico = SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho";
+    const espera = pagavel ? diasDesde(t.confirmadoEm) : null;
+    const percentagem =
+      t.valorAcordado > 0 ? Math.round((t.taxaDescontada / t.valorAcordado) * 100) : null;
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-3 py-2">
+      <div className={`rounded-lg bg-slate-950/40 px-3 py-2.5 ${COLUNAS}`}>
+        {/* ── O trabalho: o que é, de quem, onde ── */}
         <div className="min-w-0">
-          <p className={`text-sm font-medium ${pagavel ? "text-slate-200" : "text-slate-400"}`}>
-            #{t.pedidoId} · {SERVICO[t.servico ?? ""] ?? t.servico ?? "Trabalho"}
-            {t.cidade ? ` · ${t.cidade}` : ""}
+          <p className={`text-sm font-semibold ${pagavel ? "text-white" : "text-slate-300"}`}>
+            <span className="mr-1.5 rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-slate-300">
+              #{t.pedidoId}
+            </span>
+            {servico}
+            {t.cidade ? <span className="font-normal text-slate-400"> · {t.cidade}</span> : null}
           </p>
           <QuemOndeQuando t={t} />
-          <p className={`text-[11px] ${pagavel ? "text-slate-500" : "text-slate-600"}`}>
-            Acordado {euros(t.valorAcordado)} · ele recebe {euros(t.recebe)}{" "}
-            <button
-              onClick={() => setACorrigir({ t, nome, valor: String(t.valorAcordado) })}
-              className="ml-1 inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-400 hover:border-cyan-600 hover:text-cyan-300"
-            >
-              <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
-              corrigir
-            </button>
-          </p>
         </div>
-        {pagavel ? (
+
+        {/* ── As datas: quando foi feito, quando foi confirmado, há quanto espera ── */}
+        <div className="mt-2 space-y-0.5 text-[11px] leading-snug text-slate-400 md:mt-0">
+          {t.feitoEm && <p>Feito {diaCurto(t.feitoEm)}</p>}
+          {t.confirmadoEm && <p>Confirmado {diaCurto(t.confirmadoEm)}</p>}
+          {!t.feitoEm && !t.confirmadoEm && t.quando && <p>Marcado {diaCurto(t.quando)}</p>}
+          {espera != null && espera > 0 && (
+            <p className={espera >= 7 ? "font-semibold text-amber-300" : "text-slate-500"}>
+              à espera há {espera} {espera === 1 ? "dia" : "dias"}
+            </p>
+          )}
+        </div>
+
+        {/* ── Os números. No telemóvel levam o nome ao lado; na tabela, o nome está no cabeçalho. ── */}
+        <div className="mt-2 grid grid-cols-3 gap-2 md:contents">
+          <div className="md:text-right">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Valor do trabalho</p>
+            <p className="text-sm tabular-nums text-slate-200">{euros(t.valorAcordado)}</p>
+            <p className="text-[10px] tabular-nums text-slate-500">
+              cliente pagou {euros(t.clientePagaSemIva)}
+            </p>
+          </div>
+          <div className="md:text-right">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Taxa CLYON</p>
+            <p className="text-sm tabular-nums text-slate-400">−{euros(t.taxaDescontada)}</p>
+            {percentagem != null && <p className="text-[10px] text-slate-500">{percentagem} %</p>}
+          </div>
+          <div className="md:text-right">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">
+              {pagavel ? "A transferir" : "Vai receber"}
+            </p>
+            <p className={`text-base font-bold tabular-nums ${pagavel ? "text-emerald-300" : "text-slate-300"}`}>
+              {euros(t.recebe)}
+            </p>
+          </div>
+        </div>
+
+        {/* ── A acção ── */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 md:mt-0 md:flex-col md:items-end">
+          {pagavel ? (
+            <button
+              onClick={() => marcarPago(t, nome)}
+              disabled={ocupado === t.negociacaoId}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+            >
+              {ocupado === t.negociacaoId ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Já paguei
+            </button>
+          ) : (
+            <span
+              className={`rounded-full px-2.5 py-1 text-center text-[11px] font-semibold leading-tight ${
+                t.forma === "dinheiro"
+                  ? "max-w-[8.5rem] bg-slate-800 text-slate-300"
+                  : t.aguardaConfirmacao
+                    ? "bg-amber-500/15 text-amber-300"
+                    : "bg-slate-800 text-slate-400"
+              }`}
+            >
+              {t.forma === "dinheiro"
+                ? "em dinheiro — nada a transferir"
+                : t.aguardaConfirmacao
+                  ? "falta confirmar"
+                  : "por fazer"}
+            </span>
+          )}
           <button
-            onClick={() => marcarPago(t, nome)}
-            disabled={ocupado === t.negociacaoId}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+            onClick={() => setACorrigir({ t, nome, valor: String(t.valorAcordado) })}
+            className="inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:border-slate-500 hover:text-slate-200"
           >
-            {ocupado === t.negociacaoId ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <Check className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            Já paguei
+            <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
+            corrigir valor
           </button>
-        ) : (
-          <span
-            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-              t.aguardaConfirmacao ? "bg-amber-500/15 text-amber-300" : "bg-slate-800 text-slate-400"
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * A TABELA: o cabeçalho, as linhas, e o total que é o número do cartão.
+   *
+   * O total é somado aqui, das linhas que estão à vista — e não lido de outro
+   * sítio —, para que o que se vê em baixo seja literalmente a soma do que se
+   * vê em cima. Se não bater com o número grande do cartão, é porque alguma
+   * coisa está mal, e vê-se.
+   */
+  function TabelaDeTrabalhos({
+    lista,
+    nome,
+    pagavel,
+  }: {
+    lista: Trabalho[];
+    nome: string;
+    pagavel: boolean;
+  }) {
+    const totalValor = somar(lista.map((t) => t.valorAcordado));
+    const totalTaxa = somar(lista.map((t) => t.taxaDescontada));
+    const totalRecebe = somar(lista.map((t) => t.recebe));
+    return (
+      <div className="space-y-1.5">
+        <div
+          className={`hidden px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500 ${COLUNAS}`}
+          aria-hidden="true"
+        >
+          <span>Trabalho e cliente</span>
+          <span>Datas</span>
+          <span className="text-right">Valor do trabalho</span>
+          <span className="text-right">Taxa CLYON</span>
+          <span className="text-right">{pagavel ? "A transferir" : "Vai receber"}</span>
+          <span />
+        </div>
+        {lista.map((t) =>
+          pagavel ? (
+            <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={nome} pagavel />
+          ) : (
+            <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={nome} pagavel={false} />
+          ),
+        )}
+        <div className={`rounded-lg border border-slate-800 px-3 py-2 ${COLUNAS}`}>
+          <p className="text-xs font-semibold text-slate-300">
+            Total · {lista.length} {lista.length === 1 ? "trabalho" : "trabalhos"}
+          </p>
+          <span className="hidden md:block" />
+          <p className="hidden text-right text-xs tabular-nums text-slate-400 md:block">{euros(totalValor)}</p>
+          <p className="hidden text-right text-xs tabular-nums text-slate-500 md:block">−{euros(totalTaxa)}</p>
+          <p
+            className={`mt-1 text-right text-base font-bold tabular-nums md:mt-0 ${
+              pagavel ? "text-emerald-300" : "text-slate-300"
             }`}
           >
-            {t.aguardaConfirmacao ? "falta confirmar" : "por fazer"}
-          </span>
-        )}
+            {euros(totalRecebe)}
+          </p>
+          <span className="hidden md:block" />
+        </div>
       </div>
     );
   }
@@ -437,21 +605,39 @@ export default function AdminCarteirasPanel() {
             </p>
             <p className="text-[11px] text-slate-500">
               {modo === "pagar"
-                ? "por transferir"
+                ? `a transferir · ${c.porPagar.length} ${c.porPagar.length === 1 ? "trabalho" : "trabalhos"}`
                 : modo === "decorrer"
                   ? "a caminho"
                   : c.jaPago > 0
                     ? `${euros(c.jaPago)} já pagos`
                     : "nada em curso"}
             </p>
+            {/*
+              O DESCRITIVO, para a transferência dizer o que paga. Sem ele, o
+              profissional vê 1 522,80 € entrar e não sabe de que trabalhos.
+            */}
+            {modo === "pagar" && c.porPagar.length > 0 && (
+              <div className="mt-1.5 flex justify-end">
+                <Copiar
+                  valor={descritivoDaTransferencia(c.porPagar.map((t) => t.pedidoId))}
+                  rotulo="o descritivo da transferência"
+                  texto="Copiar descritivo"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* ── Por onde lhe pagar: só onde se vai pagar ──────────────────── */}
         {modo === "pagar" && (
           <>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+            {/*
+              `grid-cols-1` e `min-w-0` nas caixas: sem eles o IBAN, que nao
+              parte, alargava a coluna para alem do cartao no telemovel — o
+              `truncate` do codigo so encolhe se a caixa a volta puder encolher.
+            */}
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   <Landmark className="h-3.5 w-3.5" aria-hidden="true" />
                   Transferência
@@ -459,7 +645,7 @@ export default function AdminCarteirasPanel() {
                 {c.iban ? (
                   <>
                     <div className="mt-1.5 flex items-center gap-2">
-                      <code className="min-w-0 flex-1 truncate font-mono text-sm text-slate-100">
+                      <code className="min-w-0 flex-1 break-all font-mono text-sm text-slate-100">
                         {c.iban}
                       </code>
                       <Copiar valor={c.iban} rotulo="o IBAN" />
@@ -480,7 +666,7 @@ export default function AdminCarteirasPanel() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+              <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   <Smartphone className="h-3.5 w-3.5" aria-hidden="true" />
                   MB WAY
@@ -539,10 +725,11 @@ export default function AdminCarteirasPanel() {
 
         {/* ── Os trabalhos por pagar, um a um ───────────────────────────── */}
         {modo === "pagar" && c.porPagar.length > 0 && (
-          <div className="mt-3 space-y-1.5 border-t border-slate-800 pt-3">
-            {c.porPagar.map((t) => (
-              <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={c.nome} pagavel />
-            ))}
+          <div className="mt-4 border-t border-slate-800 pt-3">
+            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+              A transferir agora — feitos e confirmados
+            </h4>
+            <TabelaDeTrabalhos lista={c.porPagar} nome={c.nome} pagavel />
           </div>
         )}
 
@@ -563,9 +750,14 @@ export default function AdminCarteirasPanel() {
               onClick={() => setAbertos((a) => ({ ...a, [c.id]: !aberto }))}
               className="flex w-full items-center justify-between gap-2 text-left"
             >
+              {/*
+                «A DECORRER · 5 TRABALHOS · 1945,80 €» por baixo de um cartão que
+                diz «1522,80 € por transferir» eram dois totais lado a lado sem
+                dizer qual é qual. Diz-se o que é: ainda não se transfere.
+              */}
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                A decorrer · {c.porFinalizar.length}{" "}
-                {c.porFinalizar.length === 1 ? "trabalho" : "trabalhos"} ·{" "}
+                Ainda não se transfere · {c.porFinalizar.length}{" "}
+                {c.porFinalizar.length === 1 ? "trabalho" : "trabalhos"} por fazer ou por confirmar ·{" "}
                 {euros(c.totalPorFinalizar)}
               </span>
               <ChevronDown
@@ -576,10 +768,8 @@ export default function AdminCarteirasPanel() {
               />
             </button>
             {aberto && (
-              <div className="mt-2 space-y-1.5">
-                {c.porFinalizar.map((t) => (
-                  <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={c.nome} pagavel={false} />
-                ))}
+              <div className="mt-2">
+                <TabelaDeTrabalhos lista={c.porFinalizar} nome={c.nome} pagavel={false} />
               </div>
             )}
           </div>
@@ -659,7 +849,7 @@ export default function AdminCarteirasPanel() {
               <button
                 onClick={gravarValor}
                 disabled={aGravar}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0E7490] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0891B2] disabled:opacity-50"
               >
                 {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 Gravar
@@ -776,7 +966,7 @@ export default function AdminCarteirasPanel() {
         comissão de um trabalho por fazer ainda não é ganho, é uma promessa.
         Só o número da direita está fechado dos dois lados.
       */}
-      <div className="mt-4 rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.06] p-4">
+      <div className="mt-4 rounded-2xl border border-cyan-500/25 bg-[#06B6D4]/[0.06] p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
             A comissão da CLYON
