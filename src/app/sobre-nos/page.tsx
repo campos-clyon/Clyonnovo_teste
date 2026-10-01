@@ -83,7 +83,7 @@ export const revalidate = 86400;
 export default function SobreNosPage() {
   return (
     <div className="min-h-screen bg-white">
-      <section className="relative overflow-hidden bg-white">
+      <section className="sob-o-menu relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(90deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,1)_52%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-12 sm:px-6 sm:pt-16 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-end">

@@ -111,9 +111,9 @@ export default function AreasDeAtuacaoPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-cyan-50 via-cyan-50/50 to-white pb-12 pt-8">
+      <section className="sob-o-menu relative overflow-hidden bg-gradient-to-br from-cyan-50 via-cyan-50/50 to-white pb-12">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(6,182,212,0.12),_transparent_32%)]" />
-        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-6 pt-8 lg:px-8">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-center">
             <div className="max-w-3xl">
               <h1 className="mt-5 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">

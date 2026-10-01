@@ -77,17 +77,22 @@ export default function SiteChrome({
       <>
         {saltarParaOConteudo}
         <Header />
-        <main id="conteudo" className="site-page-shell pt-[53px] sm:pt-[61px]">{children}</main>
+        <main id="conteudo" className="site-page-shell pt-(--altura-do-menu)">{children}</main>
       </>
     );
   }
 
+  /*
+   * Nas páginas públicas o menu fica transparente no topo e o primeiro bloco
+   * (com `sob-o-menu`) sobe para trás dele. Nos painéis não: lá o topo é a
+   * barra da aplicação, e um menu sem fundo só fazia desaparecer a fronteira.
+   */
   return (
     <>
       {saltarParaOConteudo}
-      <Header />
+      <Header transparenteNoTopo />
       {/* pb no mobile para o conteúdo não ficar escondido atrás da barra de navegação */}
-      <main id="conteudo" className="site-page-shell pt-[53px] sm:pt-[61px] pb-[72px] lg:pb-0">{children}</main>
+      <main id="conteudo" className="site-page-shell pt-(--altura-do-menu) pb-[72px] lg:pb-0">{children}</main>
       <Footer />
       <MobileBottomNav />
       <DeferredCookieConsent />

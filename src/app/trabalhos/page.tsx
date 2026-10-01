@@ -68,7 +68,7 @@ export default async function TrabalhosPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="relative overflow-hidden bg-white">
+      <section className="sob-o-menu relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_30%),linear-gradient(160deg,rgba(236,254,255,0.9)_0%,rgba(255,255,255,1)_55%)]" />
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">

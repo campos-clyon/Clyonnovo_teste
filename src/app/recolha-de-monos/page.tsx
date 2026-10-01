@@ -155,7 +155,7 @@ export default function RecolhaMonosPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-violet-50/50 to-white">
+      <section className="sob-o-menu relative overflow-hidden bg-gradient-to-br from-violet-50 via-violet-50/50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.15),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(124,58,237,0.10),_transparent_32%)]" />
         <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-center">

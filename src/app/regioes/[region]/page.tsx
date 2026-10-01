@@ -165,7 +165,7 @@ export default async function RegionPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="relative overflow-hidden bg-gradient-to-br from-cyan-100 via-cyan-50 to-white">
+      <section className="sob-o-menu relative overflow-hidden bg-gradient-to-br from-cyan-100 via-cyan-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.20),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(6,182,212,0.14),_transparent_34%)]" />
         <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
