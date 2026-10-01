@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MessageCircle, ArrowRight, CreditCard, Smartphone, Building, ShieldCheck, Wrench } from "lucide-react";
+import { MessageCircle, ArrowRight, CreditCard, Smartphone, Banknote, ShieldCheck, Wrench } from "lucide-react";
 
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -72,10 +72,17 @@ const COBERTURA = [
   { slug: "odivelas", nome: "Odivelas" },
 ];
 
+/*
+ * AS FORMAS DE PAGAR QUE O SITE TEM — 01-10-2026, decisão do dono: «Só MB WAY
+ * e Multibanco». Dizia «Revolut, MB WAY, Novo Banco», que eram contas onde
+ * se recebia por transferência antes de haver pagamentos na plataforma. Hoje
+ * o cliente paga por referência MB WAY ou Multibanco (euPago), ou em dinheiro
+ * ao profissional no fim do trabalho — ver `forma-de-pagamento.ts`.
+ */
 const PAGAMENTOS = [
-  { icone: CreditCard, nome: "Revolut" },
   { icone: Smartphone, nome: "MB WAY" },
-  { icone: Building, nome: "Novo Banco" },
+  { icone: CreditCard, nome: "Multibanco" },
+  { icone: Banknote, nome: "Dinheiro no local" },
 ];
 
 const tituloCls =
