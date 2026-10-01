@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { AlertTriangle, CheckCircle2, CreditCard, ChevronDown, Loader2, Lock, Pencil } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CreditCard,
+  ChevronDown,
+  Loader2,
+  Lock,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   ladoDoCliente,
@@ -444,6 +453,7 @@ function GestorDoDinheiro({
                       motivo: motivo || undefined,
                     })
                   }
+                  onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
                 />
               ))}
             </div>
@@ -483,6 +493,7 @@ function Linha({
   onEntrou,
   onPaguei,
   onCorrigir,
+  onExcluir,
 }: {
   t: Trabalho;
   ocupado: boolean;
@@ -492,6 +503,7 @@ function Linha({
   onEntrou: (metodo: string) => void;
   onPaguei: () => void;
   onCorrigir: (valor: number, motivo: string) => void;
+  onExcluir: (motivo: string) => void;
 }) {
   const emMao = pagouAoProfissional(t);
   const [comoEntrou, setComoEntrou] = useState(false);
@@ -752,6 +764,14 @@ function Linha({
             </p>
             <CorrigirValor t={t} ocupado={ocupado} onGravar={onCorrigir} />
           </section>
+
+          <section>
+            <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <Trash2 className="h-3 w-3" aria-hidden="true" />
+              Excluir trabalho
+            </p>
+            <ExcluirTrabalho t={t} ocupado={ocupado} onExcluir={onExcluir} />
+          </section>
         </div>
       )}
     </div>
@@ -841,6 +861,112 @@ function CorrigirValor({
         {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
         Gravar {valido ? euros(Math.round(valor * 100) / 100) : ""}
       </button>
+    </form>
+  );
+}
+
+/**
+ * EXCLUIR, PARA O QUE NUNCA FOI A SÉRIO — 01-10-2026.
+ *
+ * *«Esse trabalho 200 foi um teste, quero excluir.»*
+ *
+ * Apaga o pedido e o trabalho, pelo mesmo caminho do «Apagar pedido»: cópia no
+ * arquivo dos apagados, retrato no registo. A diferença é que este deixa passar
+ * um trabalho fechado e por confirmar — e é por isso que a regra é o dinheiro.
+ * Onde já entrou ou saiu dinheiro, o botão nem aparece, e a rota recusa na
+ * mesma (inclusive uma referência do euPago por pagar, que daqui não se vê).
+ *
+ * Fechado por omissão, e com motivo obrigatório: é o único botão deste ecrã
+ * que não se desfaz.
+ */
+function ExcluirTrabalho({
+  t,
+  ocupado,
+  onExcluir,
+}: {
+  t: Trabalho;
+  ocupado: boolean;
+  onExcluir: (motivo: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+
+  if (t.clientePagouEm || t.pagoEm || pagouAoProfissional(t)) {
+    return (
+      <p className="mt-1 text-[11px] text-slate-500">
+        Não se exclui: neste trabalho já entrou ou saiu dinheiro. Um trabalho a sério que correu
+        mal cancela-se nas Negociações.
+      </p>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => setAberto(true)}
+        disabled={ocupado}
+        className="mt-1 rounded-lg border border-red-700/60 px-2.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-950/40 disabled:opacity-50"
+      >
+        Excluir este trabalho…
+      </button>
+    );
+  }
+
+  const pronto = motivo.trim().length >= 3;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!pronto) return;
+        if (
+          window.confirm(
+            `Excluir o pedido #${t.pedidoId} e o trabalho com ${t.profissional} (${euros(t.valorAcordado)})?\n\n` +
+              "Não se desfaz: sai da base e fica só no arquivo dos apagados.",
+          )
+        )
+          onExcluir(motivo.trim());
+      }}
+      className="mt-2 space-y-2 rounded-lg border border-red-800/60 bg-red-950/20 p-2.5"
+    >
+      <p className="text-[11px] leading-relaxed text-red-200/90">
+        Apaga o pedido #{t.pedidoId} e o trabalho com {t.profissional}. Fica uma cópia no arquivo
+        dos apagados (Configs → Retenção), e {t.profissional} vê no histórico que o pedido foi
+        apagado. É para testes e enganos — um trabalho a sério que correu mal cancela-se nas
+        Negociações.
+      </p>
+
+      <label className="block text-[11px] text-slate-400">
+        Motivo (obrigatório — fica no arquivo e no histórico)
+        <input
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          maxLength={120}
+          placeholder="ex.: era um pedido de teste"
+          className="mt-1 block w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white placeholder:text-slate-600"
+        />
+      </label>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="submit"
+          disabled={ocupado || !pronto}
+          className="flex items-center gap-1.5 rounded-lg bg-red-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-40"
+        >
+          {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+          Excluir #{t.pedidoId}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setAberto(false);
+            setMotivo("");
+          }}
+          className="text-[11px] text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
+        >
+          Não excluir
+        </button>
+      </div>
     </form>
   );
 }

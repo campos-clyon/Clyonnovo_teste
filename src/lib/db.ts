@@ -6175,9 +6175,10 @@ export async function deleteSimulatorOrder(
     /**
      * Deixa passar um trabalho fechado e por confirmar.
      *
-     * Só a purga automática e o apagamento de conta a pedido do titular o
-     * usam, e esses correm depois de terem verificado por outra via. Um botão
-     * de backoffice nunca o passa.
+     * Só `excluirTrabalho` o passa, e depois de verificar por outra via: que
+     * nenhum dinheiro se moveu. Nenhuma rota o passa directamente — o botão
+     * «Excluir trabalho» dos Pagamentos vai por `excluirTrabalho`. A purga não
+     * o passa (a guarda dela está no SELECT, e esta fica armada por cima).
      */
     mesmoComTrabalhoEmCurso?: boolean;
     /**
@@ -6495,6 +6496,129 @@ export async function deleteSimulatorOrder(
     /** 404: o evento OU a agenda. Muitos de seguida são configuração partida. */
     eventoNaoEncontrado: Boolean(evento.naoEncontrado),
   };
+}
+
+/**
+ * Um trabalho onde o dinheiro já se moveu. Diz porquê, uma razão por coisa.
+ */
+export class TrabalhoComDinheiro extends Error {
+  constructor(
+    readonly pedidoId: number,
+    readonly razoes: string[],
+  ) {
+    super(
+      `O pedido #${pedidoId} não se exclui: ${razoes.join("; ")}. ` +
+        `Um trabalho onde já entrou ou saiu dinheiro fica na base.`,
+    );
+    this.name = "TrabalhoComDinheiro";
+  }
+}
+
+/**
+ * EXCLUIR UM TRABALHO QUE NÃO ERA A SÉRIO — 01-10-2026.
+ *
+ * *«Esse trabalho 200 foi um teste, quero excluir.»*
+ *
+ * O #200 é dos que já tinham sido apagados (ver o comentário de
+ * `deleteSimulatorOrder`): o pedido saiu, a negociação fechada ficou, órfã, e
+ * aparecia nos Pagamentos como «por receber 774,90 €» sem cliente, sem
+ * telefone e sem morada. Nenhum botão chegava lá: «Apagar pedido» recusa um
+ * trabalho fechado e por confirmar — e bem, porque é a guarda que impede um
+ * clique de tirar ao profissional a morada e o valor da carteira.
+ *
+ * AQUI A GUARDA É OUTRA, E É MAIS ESTREITA: NENHUM DINHEIRO SE MOVEU.
+ *
+ * Um trabalho a sério que correu mal não se exclui — cancela-se, e fica a
+ * história. Um teste exclui-se. O que os distingue sem depender de quem
+ * carrega no botão é o dinheiro, e por isso é ele que decide, verificado aqui e
+ * não no ecrã. Recusa-se, e diz-se porquê, se em QUALQUER negociação do pedido:
+ *
+ *   · a CLYON já pagou ao profissional (`pagoEm`);
+ *   · o cliente já pagou, foi reembolsado, ou tem uma referência viva por
+ *     pagar (`pagamentosQuePrendem`);
+ *   · há movimentos no livro da carteira — o livro não se reescreve, e um
+ *     movimento a apontar para um trabalho que não existe deixava de bater.
+ *
+ * Passando, vai pelo caminho de sempre: `deleteSimulatorOrder` escreve o pedido
+ * e as negociações no arquivo dos apagados, deixa o retrato no registo (com
+ * uma linha que o profissional vê), e apaga as fotografias e o evento da
+ * agenda. Funciona com o pedido ainda na base ou já órfão.
+ *
+ * Devolve `null` se a negociação não existir.
+ */
+export async function excluirTrabalho(
+  negociacaoId: number,
+  contexto: { motivo: string; autorNome: string | null },
+) {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [esta] = (await pool.execute(
+    "SELECT pedidoId FROM negociacoes WHERE id = ? LIMIT 1",
+    [negociacaoId],
+  )) as any[];
+  const pedidoId = (esta as Array<{ pedidoId: number }>)[0]?.pedidoId;
+  if (pedidoId == null) return null;
+
+  // Todas as negociações do pedido, e não só a do botão: são todas apagadas
+  // com ele, e o dinheiro de qualquer uma prende o pedido inteiro.
+  const [linhas] = (await pool.execute(
+    `SELECT n.id, n.providerId, n.pagoEm, p.name AS profissional
+       FROM negociacoes n
+       LEFT JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId = ?`,
+    [Number(pedidoId)],
+  )) as any[];
+  const negociacoes = linhas as Array<Record<string, any>>;
+  const ids = negociacoes.map((n) => Number(n.id));
+  const nome = (id: number) => {
+    const n = negociacoes.find((x) => Number(x.id) === id);
+    return (n?.profissional as string) ?? `o profissional #${n?.providerId ?? "?"}`;
+  };
+  const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+
+  const razoes: string[] = [];
+  for (const n of negociacoes) {
+    if (n.pagoEm != null) razoes.push(`a CLYON já pagou a ${nome(Number(n.id))}`);
+  }
+
+  const { pagamentosQuePrendem } = await import("@/lib/pagamentos-na-base");
+  for (const p of await pagamentosQuePrendem(ids)) {
+    razoes.push(
+      p.estado === "pendente"
+        ? `há uma referência de ${euros(p.valor)} por pagar, ainda válida`
+        : p.estado === "reembolsado"
+          ? `houve um pagamento de ${euros(p.valor)} devolvido ao cliente`
+          : `o cliente já pagou ${euros(p.valor)}`,
+    );
+  }
+
+  await ensureMovimentosTable();
+  if (ids.length > 0) {
+    const [movs] = (await pool.execute(
+      `SELECT COUNT(*) AS n FROM movimentosDaCarteira
+        WHERE negociacaoId IN (${ids.map(() => "?").join(", ")})`,
+      ids,
+    )) as any[];
+    const quantos = Number((movs as Array<{ n: number }>)[0]?.n ?? 0);
+    if (quantos > 0) {
+      razoes.push(
+        quantos === 1
+          ? "há um movimento no livro da carteira"
+          : `há ${quantos} movimentos no livro da carteira`,
+      );
+    }
+  }
+
+  if (razoes.length > 0) throw new TrabalhoComDinheiro(Number(pedidoId), razoes);
+
+  const apagado = await deleteSimulatorOrder(Number(pedidoId), {
+    motivo: contexto.motivo,
+    autorNome: contexto.autorNome,
+    mesmoComTrabalhoEmCurso: true,
+  });
+  return { pedidoId: Number(pedidoId), negociacoes: ids.length, ...apagado };
 }
 
 // ── Web Push: subscrições do navegador ───────────────────────────────────────

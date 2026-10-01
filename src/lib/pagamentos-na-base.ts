@@ -686,6 +686,54 @@ export async function negociacoesPagas(
   return mapa;
 }
 
+/**
+ * O DINHEIRO QUE PRENDE UM TRABALHO À BASE — para quem o quer excluir.
+ *
+ * *«Esse trabalho 200 foi um teste, quero excluir.»* — 01-10-2026.
+ *
+ * Um trabalho só se exclui se nada se moveu por causa dele. Daqui contam três
+ * coisas, e cada uma é uma razão diferente para não apagar:
+ *
+ *   · PAGO — `negociacaoPaga` preenchida, pelo euPago ou à mão. O cliente
+ *     pagou; apagar o trabalho apagava a dívida da CLYON ao profissional.
+ *   · DEVOLVIDO — `reembolsado`. O dinheiro foi e voltou, e isso é um facto
+ *     contabilístico que tem de continuar a apontar para alguma coisa.
+ *   · POR PAGAR, E AINDA VIVA — uma referência `pendente` que não expirou. O
+ *     cliente ainda a pode pagar, e o aviso do euPago chegava a um trabalho que
+ *     já não existe.
+ *
+ * As tentativas falhadas, expiradas, canceladas ou substituídas não prendem
+ * nada: ficam na tabela, como história do euPago, e não se apagam.
+ */
+export async function pagamentosQuePrendem(
+  negociacaoIds: number[],
+): Promise<Array<{ negociacaoId: number; estado: string; metodo: string; valor: number }>> {
+  const ids = [...new Set(negociacaoIds.filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return [];
+
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const lista = ids.map(() => "?").join(", ");
+  const [linhas] = (await pool.execute(
+    `SELECT negociacaoId, negociacaoPaga, estado, metodo, valor
+       FROM pagamentos
+      WHERE (negociacaoId IN (${lista}) OR negociacaoPaga IN (${lista}))
+        AND (negociacaoPaga IS NOT NULL
+             OR estado IN ('pago', 'reembolsado')
+             OR (estado = 'pendente' AND (expiraEm IS NULL OR expiraEm > NOW())))`,
+    [...ids, ...ids],
+  )) as any[];
+
+  return (linhas as Array<Record<string, unknown>>).map((l) => ({
+    negociacaoId: Number(l.negociacaoPaga ?? l.negociacaoId),
+    estado: l.negociacaoPaga != null ? "pago" : String(l.estado),
+    metodo: String(l.metodo ?? ""),
+    valor: Number(l.valor ?? 0),
+  }));
+}
+
 /** Os últimos, para o painel da CLYON. */
 /**
  * O DINHEIRO QUE ENTROU SEM PASSAR PELO euPAGO.
