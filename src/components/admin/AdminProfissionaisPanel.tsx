@@ -6,12 +6,14 @@ import {
   BadgeCheck,
   Check,
   ChevronDown,
+  KeyRound,
   Loader2,
   Mail,
   MapPin,
   Pencil,
   Phone,
   RefreshCw,
+  Send,
   ShieldAlert,
   Truck,
   X,
@@ -21,6 +23,7 @@ import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/Mor
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { ESTADOS_DO_PROFISSIONAL, type EstadoDoProfissional } from "@/lib/edicao-profissional";
+import { HORAS_DO_LINK_DE_REPOR, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 
 type Actividade = { recebidos: number; comProposta: number; fechados: number };
 
@@ -45,8 +48,20 @@ type Profissional = {
   baseLat: string | null;
   baseLng: string | null;
   createdAt: string;
+  moradaFiscal: string | null;
+  codigoPostalFiscal: string | null;
+  localidadeFiscal: string | null;
+  tipoVeiculo: string | null;
+  /** Encurtado pela rota (`PT50 ···· 1234`); vazio quando não há. */
+  iban: string;
+  ibanTitular: string | null;
+  mbway: string | null;
+  temPalavraPasse: boolean;
   actividade: Actividade;
 };
+
+/** O que a rota responde a uma acção — o editor precisa de o ler. */
+type Resposta = { ok: true; dados: Record<string, unknown> } | { ok: false; erro: string };
 
 const CATEGORIAS = SERVICE_CATEGORIES.filter((c) => c.id !== "outro");
 
@@ -77,7 +92,7 @@ export default function AdminProfissionaisPanel({
   /** Quantos inscritos há — para o número no separador. */
   onTotal?: (n: number) => void;
 } = {}) {
-  const { token, ready } = useAdminAuth();
+  const { token, ready, papel } = useAdminAuth();
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const totalDeInscritos = profissionais.length;
   useEffect(() => {
@@ -133,8 +148,8 @@ export default function AdminProfissionaisPanel({
    */
   useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
-  async function actuar(id: number, corpo: Record<string, unknown>) {
-    if (!token) return;
+  async function actuar(id: number, corpo: Record<string, unknown>): Promise<Resposta> {
+    if (!token) return { ok: false, erro: "Sem sessão." };
     setOcupado(id);
     setErro("");
     setAviso("");
@@ -146,8 +161,9 @@ export default function AdminProfissionaisPanel({
       });
       const dados = await res.json();
       if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível actualizar.");
-        return;
+        const mensagem = dados.error ?? "Não foi possível actualizar.";
+        setErro(mensagem);
+        return { ok: false, erro: mensagem };
       }
       /*
        * O EMAIL PODE NÃO SAIR, E ISSO NÃO PODE PASSAR EM SILÊNCIO.
@@ -176,10 +192,20 @@ export default function AdminProfissionaisPanel({
           "Alteração feita. Afecta quem recebe os pedidos NOVOS — os que já foram distribuídos não mudam.",
         );
       }
+      /*
+       * O link de repor responde no próprio editor, ao lado do botão, e o
+       * editor fica aberto, para não perder o que lá estivesse por gravar.
+       * Também não recarrega a lista: não mudou nada nela, e o `carregar()`
+       * põe o painel inteiro em «a carregar» — o editor desmontava-se e a
+       * frase «Enviado para…» desaparecia antes de se ler.
+       */
+      if (corpo.reporPalavraPasse === true) return { ok: true, dados };
       setAEditar(null);
       await carregar();
+      return { ok: true, dados };
     } catch {
       setErro("Erro de rede.");
+      return { ok: false, erro: "Erro de rede." };
     } finally {
       setOcupado(null);
     }
@@ -284,6 +310,7 @@ export default function AdminProfissionaisPanel({
       p={p}
       ocupado={ocupado === p.id}
       emEdicao={aEditar === p.id}
+      eAdministrador={papel === "admin"}
       onEditar={() => setAEditar(aEditar === p.id ? null : p.id)}
       onActuar={(corpo) => actuar(p.id, corpo)}
       onApagar={() => apagar(p.id)}
@@ -416,6 +443,7 @@ function Cartao({
   p,
   ocupado,
   emEdicao,
+  eAdministrador,
   onEditar,
   onActuar,
   onApagar,
@@ -423,8 +451,9 @@ function Cartao({
   p: Profissional;
   ocupado: boolean;
   emEdicao: boolean;
+  eAdministrador: boolean;
   onEditar: () => void;
-  onActuar: (corpo: Record<string, unknown>) => void;
+  onActuar: (corpo: Record<string, unknown>) => Promise<Resposta>;
   onApagar: () => void;
 }) {
   // A palavra escrita à mão, antes de a conta desaparecer. Um botão que apaga
@@ -663,7 +692,9 @@ function Cartao({
         </div>
       )}
 
-      {emEdicao && <Editor p={p} onGuardar={onActuar} ocupado={ocupado} />}
+      {emEdicao && (
+        <Editor p={p} onGuardar={onActuar} ocupado={ocupado} eAdministrador={eAdministrador} />
+      )}
     </article>
   );
 }
@@ -679,11 +710,79 @@ function Editor({
   p,
   onGuardar,
   ocupado,
+  eAdministrador,
 }: {
   p: Profissional;
-  onGuardar: (corpo: Record<string, unknown>) => void;
+  onGuardar: (corpo: Record<string, unknown>) => Promise<Resposta>;
   ocupado: boolean;
+  /** O email e os dados de pagamento só o administrador muda. */
+  eAdministrador: boolean;
 }) {
+  // Os dados da pessoa — 01-10-2026, «Tudo».
+  const [nome, setNome] = useState(p.name ?? "");
+  const [telefone, setTelefone] = useState(p.phone ?? "");
+  const [nif, setNif] = useState(p.nif ?? "");
+  const [email, setEmail] = useState(p.email ?? "");
+  const [tipoVeiculo, setTipoVeiculo] = useState(p.tipoVeiculo ?? "");
+  const [moradaFiscal, setMoradaFiscal] = useState(p.moradaFiscal ?? "");
+  const [codigoPostalFiscal, setCodigoPostalFiscal] = useState(p.codigoPostalFiscal ?? "");
+  const [localidadeFiscal, setLocalidadeFiscal] = useState(p.localidadeFiscal ?? "");
+  const [iban, setIban] = useState(p.iban ?? "");
+  const [ibanTitular, setIbanTitular] = useState(p.ibanTitular ?? "");
+  const [mbway, setMbway] = useState(p.mbway ?? "");
+  /** O que a rota disse do link de repor, escrito ao lado do botão. */
+  const [link, setLink] = useState<{ ok: boolean; texto: string } | null>(null);
+
+  /*
+   * SÓ VAI O QUE MUDOU, como a morada da base. Mandar tudo voltava a validar
+   * dados antigos que ninguém tocou — um telefone gravado antes da regra de
+   * hoje passava a impedir de mudar o raio.
+   */
+  const mudou = (novo: string, antigo: string | null) => novo.trim() !== (antigo ?? "").trim();
+  const emailMudou = email.trim().toLowerCase() !== (p.email ?? "").trim().toLowerCase();
+  const dadosMudados: Record<string, string> = {};
+  if (mudou(nome, p.name)) dadosMudados.nome = nome;
+  if (mudou(telefone, p.phone)) dadosMudados.telefone = telefone;
+  if (mudou(nif, p.nif)) dadosMudados.nif = nif;
+  if (mudou(tipoVeiculo, p.tipoVeiculo)) dadosMudados.tipoVeiculo = tipoVeiculo;
+  if (mudou(moradaFiscal, p.moradaFiscal)) dadosMudados.moradaFiscal = moradaFiscal;
+  if (mudou(codigoPostalFiscal, p.codigoPostalFiscal)) dadosMudados.codigoPostalFiscal = codigoPostalFiscal;
+  if (mudou(localidadeFiscal, p.localidadeFiscal)) dadosMudados.localidadeFiscal = localidadeFiscal;
+  if (eAdministrador) {
+    if (emailMudou) dadosMudados.email = email;
+    // A máscara (`PT50 ···· 1234`) é o IBAN que já lá está, não um novo.
+    if (mudou(iban, p.iban) && !iban.includes("·")) dadosMudados.iban = iban;
+    if (mudou(ibanTitular, p.ibanTitular)) dadosMudados.ibanTitular = ibanTitular;
+    if (mudou(mbway, p.mbway)) dadosMudados.mbway = mbway;
+  }
+
+  // O mesmo critério da entrada (`contaPodeEntrarNoPainel`): numa conta
+  // fechada o link não abre, e mandá-lo era prometer uma porta fechada.
+  const podeEntrar = (p.estado === "aprovado" || p.estado === "pendente") && Number(p.isActive) === 1;
+
+  async function reporPalavraPasse() {
+    setLink(null);
+    const r = await onGuardar({ reporPalavraPasse: true });
+    if (!r.ok) {
+      setLink({ ok: false, texto: r.erro });
+    } else if (r.dados.linkDeReporEnviado) {
+      setLink({
+        ok: true,
+        texto: `Enviado para ${String(r.dados.linkDeReporPara)}. Serve uma vez e dura ${HORAS_DO_LINK_DE_REPOR} horas — a palavra-passe actual continua a valer até ele o usar.`,
+      });
+    } else {
+      setLink({
+        ok: false,
+        texto: `O email para ${String(r.dados.linkDeReporPara)} não saiu. Confirme o email e tente outra vez.`,
+      });
+    }
+  }
+
+  const ROTULO = "text-xs font-semibold uppercase tracking-wide text-slate-500";
+  const LEGENDA = "text-xs text-slate-400";
+  const CAMPO =
+    "mt-1 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500";
+
   const [categorias, setCategorias] = useState<string[]>(lista(p.categorias));
   const [zonas, setZonas] = useState(lista(p.zonas).join(", "));
   const [raioKm, setRaioKm] = useState(String(p.raioKm ?? 30));
@@ -711,6 +810,200 @@ function Editor({
 
   return (
     <div className="mt-3 space-y-4 rounded-xl border border-slate-800 bg-slate-800/60 p-4">
+      {/*
+        A PALAVRA-PASSE — 01-10-2026.
+
+        «Esse profissional não consegue acessar a conta pois perdeu sua
+        senha.» O link vai só por email, como o dono escolheu: este ecrã diz
+        se saiu e para onde, e nunca o mostra. Fica em cima porque é o que se
+        procura quando ele liga a dizer que não consegue entrar.
+      */}
+      <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
+              <KeyRound className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+              Palavra-passe
+            </p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              {p.temPalavraPasse ? "Já tem palavra-passe." : "Ainda não criou palavra-passe."} O
+              link vai só por email, para{" "}
+              <span className="font-medium text-slate-200">{p.email ?? "—"}</span>, serve uma vez
+              e dura {HORAS_DO_LINK_DE_REPOR} horas.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={reporPalavraPasse}
+            disabled={ocupado || !p.email || !podeEntrar || emailMudou}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-cyan-700 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-950/40 disabled:opacity-40"
+          >
+            <Send className="h-3.5 w-3.5" aria-hidden="true" />
+            {p.temPalavraPasse ? "Enviar link para repor" : "Enviar link para criar"}
+          </button>
+        </div>
+        {!podeEntrar && (
+          <p className="mt-2 text-xs text-amber-300">
+            A conta está «{p.estado}»: o link não abriria. Reactive-a primeiro.
+          </p>
+        )}
+        {emailMudou && (
+          <p className="mt-2 text-xs text-amber-300">
+            Guarde primeiro o email novo — o link vai para o que está gravado.
+          </p>
+        )}
+        {link && (
+          <p role="status" className={`mt-2 text-xs ${link.ok ? "text-emerald-300" : "text-red-300"}`}>
+            {link.texto}
+          </p>
+        )}
+      </div>
+
+      {/* Os dados da pessoa. As regras são as do perfil que ele próprio edita. */}
+      <div>
+        <span className={ROTULO}>Dados</span>
+        <div className="mt-1.5 grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className={LEGENDA}>Nome</span>
+            <input value={nome} onChange={(e) => setNome(e.target.value)} className={CAMPO} />
+          </label>
+          <label className="block">
+            <span className={LEGENDA}>Telefone</span>
+            <input
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              inputMode="tel"
+              className={CAMPO}
+            />
+          </label>
+          <label className="block">
+            <span className={LEGENDA}>NIF</span>
+            <input
+              value={nif}
+              onChange={(e) => setNif(e.target.value)}
+              inputMode="numeric"
+              className={CAMPO}
+            />
+          </label>
+          <label className="block">
+            <span className={LEGENDA}>Viatura</span>
+            <select
+              value={tipoVeiculo}
+              onChange={(e) => setTipoVeiculo(e.target.value)}
+              className={CAMPO}
+            >
+              <option value="">— por indicar —</option>
+              {TIPOS_DE_VEICULO.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={LEGENDA}>Email de entrada</span>
+            {eAdministrador ? (
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="off"
+                className={CAMPO}
+              />
+            ) : (
+              <p className="mt-1 text-sm text-slate-300">
+                {p.email ?? "—"}{" "}
+                <span className="text-xs text-slate-400">· só o administrador o muda</span>
+              </p>
+            )}
+          </label>
+        </div>
+        {emailMudou && (
+          <p className="mt-1.5 text-xs text-amber-300">
+            Passa a entrar com este email. Um link de palavra-passe que esteja por usar deixa de
+            valer.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <span className={ROTULO}>Morada fiscal</span>
+        <div className="mt-1.5 grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+          <label className="block">
+            <span className={LEGENDA}>Rua e número</span>
+            <input
+              value={moradaFiscal}
+              onChange={(e) => setMoradaFiscal(e.target.value)}
+              className={CAMPO}
+            />
+          </label>
+          <label className="block">
+            <span className={LEGENDA}>Código postal</span>
+            <input
+              value={codigoPostalFiscal}
+              onChange={(e) => setCodigoPostalFiscal(e.target.value)}
+              placeholder="0000-000"
+              className={CAMPO}
+            />
+          </label>
+          <label className="block">
+            <span className={LEGENDA}>Localidade</span>
+            <input
+              value={localidadeFiscal}
+              onChange={(e) => setLocalidadeFiscal(e.target.value)}
+              className={CAMPO}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* Para onde vai o dinheiro dele: só o administrador muda. */}
+      <div>
+        <span className={ROTULO}>Pagamento</span>
+        {eAdministrador ? (
+          <>
+            <div className="mt-1.5 grid gap-3 sm:grid-cols-3">
+              <label className="block">
+                <span className={LEGENDA}>IBAN</span>
+                <input
+                  value={iban}
+                  onChange={(e) => setIban(e.target.value)}
+                  placeholder="PT50 …"
+                  autoComplete="off"
+                  className={CAMPO}
+                />
+              </label>
+              <label className="block">
+                <span className={LEGENDA}>Titular do IBAN</span>
+                <input
+                  value={ibanTitular}
+                  onChange={(e) => setIbanTitular(e.target.value)}
+                  className={CAMPO}
+                />
+              </label>
+              <label className="block">
+                <span className={LEGENDA}>MB WAY</span>
+                <input
+                  value={mbway}
+                  onChange={(e) => setMbway(e.target.value)}
+                  inputMode="tel"
+                  placeholder="9xx xxx xxx"
+                  className={CAMPO}
+                />
+              </label>
+            </div>
+            <p className="mt-1.5 text-xs text-slate-400">
+              O IBAN aparece encurtado. Para o mudar, apague-o e escreva o novo inteiro.
+            </p>
+          </>
+        ) : (
+          <p className="mt-1.5 text-sm text-slate-300">
+            IBAN {p.iban || "—"} · MB WAY {p.mbway || "—"}{" "}
+            <span className="text-xs text-slate-400">· só o administrador os muda</span>
+          </p>
+        )}
+      </div>
+
       {/*
         A MORADA DA BASE — 25-09-2026.
 
@@ -888,6 +1181,7 @@ function Editor({
             regimeIva,
             emiteGuiaTransporte: emiteGuia,
             numeroTransportador: emiteGuia ? numero : null,
+            ...dadosMudados,
             ...(baseMudou
               ? { cidade: base.morada, baseLat: base.lat, baseLng: base.lng }
               : {}),

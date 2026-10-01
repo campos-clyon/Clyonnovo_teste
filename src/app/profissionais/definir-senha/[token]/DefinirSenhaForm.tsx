@@ -57,7 +57,9 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-acao">
             <KeyRound className="h-6 w-6 text-white" aria-hidden="true" />
           </span>
-          <h1 className="mt-4 text-2xl font-bold text-[#0B1929]">Crie a sua palavra-passe</h1>
+          {/* «Escolha», e não «Crie»: desde 01-10-2026 chega aqui também quem
+              perdeu a palavra-passe e pediu outra (`repor-palavra-passe.ts`). */}
+          <h1 className="mt-4 text-2xl font-bold text-[#0B1929]">Escolha a sua palavra-passe</h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500">
             É com ela que entra no painel e vê todos os pedidos num sítio só.
           </p>
@@ -109,7 +111,7 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
                   href="/profissionais/entrar"
                   className="mt-2 inline-block font-semibold text-cyan-700 underline underline-offset-4"
                 >
-                  Já criou a palavra-passe? Entre aqui
+                  Entrar, ou pedir um link novo
                 </a>
               )}
             </div>

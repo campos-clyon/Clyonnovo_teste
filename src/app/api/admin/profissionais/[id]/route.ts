@@ -9,8 +9,21 @@ import {
   getPool,
   apagarProfissional,
   ContaComPendencias,
+  actualizarPerfilDoProfissional,
+  mudarEmailDoProfissional,
+  EmailDeOutraConta,
 } from "@/lib/db";
-import { validarEdicao, estadoValido, afectaDistribuicao } from "@/lib/edicao-profissional";
+import {
+  validarEdicao,
+  estadoValido,
+  afectaDistribuicao,
+  validarDados,
+  CAMPOS_DE_DADOS,
+  CAMPOS_SO_DO_ADMINISTRADOR,
+  type DadosValidados,
+} from "@/lib/edicao-profissional";
+import { contaPodeEntrarNoPainel } from "@/lib/profissional-auth";
+import { emitirLinkDeRepor, HORAS_DO_LINK_DE_REPOR } from "@/lib/repor-palavra-passe";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
@@ -24,7 +37,9 @@ import { DIAS_DO_LINK_DE_SENHA } from "@/lib/convite-profissional";
 export const runtime = "nodejs";
 
 /**
- * Gerir um profissional: estado, perfil, verificação da guia, coordenadas.
+ * Gerir um profissional: estado, perfil, verificação da guia, coordenadas, os
+ * dados da pessoa (contacto, faturação, viatura, pagamento) e o link para
+ * repor a palavra-passe.
  *
  * Uma rota com várias acções em vez de quatro rotas, porque o painel altera
  * frequentemente duas coisas ao mesmo tempo — aprovar e verificar a guia, por
@@ -55,9 +70,64 @@ export async function PATCH(
     return NextResponse.json({ error: "Pedido inválido" }, { status: 400 });
   }
 
+  /*
+   * OS DADOS DA PESSOA validam-se ANTES de qualquer escrita — 01-10-2026.
+   *
+   * Nome, telefone, NIF, email, morada fiscal, viatura, IBAN e MB WAY (o dono
+   * pediu «Tudo» no «Editar perfil»). Validar aqui em cima é o que impede um
+   * NIF errado de deixar gravada a meio a morada da base que veio no mesmo
+   * pedido.
+   *
+   * O email e os dados de pagamento só o administrador muda: por um entra-se
+   * na conta (é para lá que vai o link de repor a palavra-passe), pelos outros
+   * sai o dinheiro dele.
+   */
+  let dadosValidados: DadosValidados | null = null;
+  if (CAMPOS_DE_DADOS.some((k) => k in corpo)) {
+    if (CAMPOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin") {
+      return NextResponse.json(
+        { error: "Só o administrador muda o email e os dados de pagamento." },
+        { status: 403 },
+      );
+    }
+    const validacao = validarDados(corpo);
+    if (!validacao.ok) {
+      return NextResponse.json(
+        { error: validacao.erros[0].mensagem, erros: validacao.erros },
+        { status: 400 },
+      );
+    }
+    // A mesma regra do perfil dele: a fatura sem NIF não existe.
+    if (corpo.emiteFatura === true && validacao.dados.colunas.nif === null) {
+      return NextResponse.json({ error: "Para emitir fatura é preciso o NIF." }, { status: 400 });
+    }
+    dadosValidados = validacao.dados;
+  }
+
   try {
     const feito: string[] = [];
     let avisoDeDistribuicao = false;
+
+    // ── Os dados da pessoa ───────────────────────────────────────────────────
+    //
+    // Primeiro de tudo: um email que já é de outra conta pára o pedido antes
+    // de se escrever o que quer que seja.
+    if (dadosValidados) {
+      if (dadosValidados.email !== undefined) {
+        await mudarEmailDoProfissional(providerId, dadosValidados.email);
+        feito.push("email mudado");
+        console.info(`[admin/profissionais] email de #${providerId} mudado por ${colab.nome}`);
+      }
+      const colunas = dadosValidados.colunas;
+      if (Object.keys(colunas).length > 0) {
+        await actualizarPerfilDoProfissional(providerId, colunas);
+        feito.push("dados actualizados");
+        if ("iban" in colunas || "mbway" in colunas || "ibanTitular" in colunas) {
+          // Para onde vai o dinheiro dele: fica escrito quem o mudou.
+          console.info(`[admin/profissionais] pagamento de #${providerId} mudado por ${colab.nome}`);
+        }
+      }
+    }
 
     // ── Estado ───────────────────────────────────────────────────────────────
     let convitePorEnviar = false;
@@ -174,6 +244,51 @@ export async function PATCH(
       if (afectaDistribuicao(validacao.alteracoes)) avisoDeDistribuicao = true;
     }
 
+    // ── Repor a palavra-passe ────────────────────────────────────────────────
+    //
+    // «Esse profissional não consegue acessar a conta pois perdeu sua senha» —
+    // 01-10-2026. Até aqui o link só saía ao aprovar alguém que ainda não
+    // tinha palavra-passe, e quem a perdesse ficava fora da conta e do saldo.
+    //
+    // SÓ POR EMAIL, como o dono escolheu: a resposta diz se saiu e para onde,
+    // e nunca traz o link. Serve também o assistente — o link vai para a caixa
+    // de correio do profissional, não para as mãos de quem carregou no botão.
+    let linkDeReporEnviado: boolean | undefined;
+    let linkDeReporPara: string | undefined;
+    if (corpo.reporPalavraPasse === true) {
+      const pool = await getPool();
+      if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+      const [linhas] = (await pool.execute(
+        "SELECT name, email, estado, isActive FROM providers WHERE id = ? LIMIT 1",
+        [providerId],
+      )) as any[];
+      const p = (linhas as Array<{ name: string; email: string | null; estado: string; isActive: number }>)[0];
+      if (!p) return NextResponse.json({ error: "Profissional não encontrado." }, { status: 404 });
+      if (!p.email) {
+        return NextResponse.json(
+          { error: "Este profissional não tem email. Corrija-o primeiro no «Editar perfil»." },
+          { status: 400 },
+        );
+      }
+      // A rota de definir recusa o link a uma conta fechada: mandá-lo era
+      // prometer-lhe uma porta que não abre.
+      if (!contaPodeEntrarNoPainel(p)) {
+        return NextResponse.json(
+          { error: `A conta está «${p.estado}» e o link não abriria. Reactive-a primeiro.` },
+          { status: 409 },
+        );
+      }
+      linkDeReporEnviado = await emitirLinkDeRepor({
+        providerId,
+        nome: p.name,
+        email: p.email,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+        pedidoPor: "clyon",
+      });
+      linkDeReporPara = p.email;
+      feito.push(linkDeReporEnviado ? "link de repor enviado" : "link de repor NÃO enviado");
+    }
+
     // ── O convite para criar palavra-passe ───────────────────────────────────
     //
     // Depois de tudo o resto estar gravado: se o email falhar, a aprovação não
@@ -236,8 +351,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Nada para alterar" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, feito, avisoDeDistribuicao, conviteEnviado, linkDaSenha });
+    return NextResponse.json({
+      ok: true,
+      feito,
+      avisoDeDistribuicao,
+      conviteEnviado,
+      linkDaSenha,
+      linkDeReporEnviado,
+      linkDeReporPara,
+      horasDoLinkDeRepor: HORAS_DO_LINK_DE_REPOR,
+    });
   } catch (error) {
+    if (error instanceof EmailDeOutraConta) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("[api/admin/profissionais PATCH]", error);
     return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });
   }
