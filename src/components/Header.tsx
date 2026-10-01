@@ -71,9 +71,25 @@ const navLinks = [
   { label: "Contactos", href: "/contactos" },
 ];
 
-export default function Header() {
+/*
+ * TRANSPARENTE NO TOPO, BRANCO A DESCER — como na Toki (pedido de 01-10-2026).
+ *
+ * No topo da página o menu não tem fundo nem linha, e vê-se por trás dele o
+ * degradê do primeiro bloco (que sobe até lá com `sob-o-menu`, no globals.css).
+ * Mal se desce, ganha o fundo branco, a linha e a sombra, para o texto que
+ * passa por baixo não se misturar com os links.
+ *
+ * Só nas páginas públicas: o SiteChrome liga-o lá e não nos painéis.
+ *
+ * Começa transparente também no servidor: quase todas as visitas entram no
+ * topo, e começar branco fazia o menu piscar ao hidratar.
+ */
+const DESCIDA_QUE_CONTA = 8;
+
+export default function Header({ transparenteNoTopo = false }: { transparenteNoTopo?: boolean }) {
   const [solucoesOpen, setSolucoesOpen] = useState(false);
   const [contaOpen, setContaOpen] = useState(false);
+  const [noTopo, setNoTopo] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const contaRef = useRef<HTMLDivElement>(null);
@@ -142,6 +158,17 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    if (!transparenteNoTopo) return;
+    const ver = () => setNoTopo(window.scrollY < DESCIDA_QUE_CONTA);
+    // Uma vez já: quem volta atrás a uma página chega a meio dela, não ao topo.
+    ver();
+    window.addEventListener("scroll", ver, { passive: true });
+    return () => window.removeEventListener("scroll", ver);
+  }, [transparenteNoTopo]);
+
+  const semFundo = transparenteNoTopo && noTopo;
+
+  useEffect(() => {
     function handleContaOutside(event: MouseEvent) {
       if (contaRef.current && !contaRef.current.contains(event.target as Node)) {
         setContaOpen(false);
@@ -153,7 +180,11 @@ export default function Header() {
 
   return (
     <>
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-100 bg-white shadow-sm">
+    <header
+      className={`fixed left-0 right-0 top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 ${
+        semFundo ? "border-transparent bg-transparent shadow-none" : "border-slate-100 bg-white shadow-sm"
+      }`}
+    >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">

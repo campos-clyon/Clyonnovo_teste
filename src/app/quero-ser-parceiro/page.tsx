@@ -71,8 +71,8 @@ export default async function QueroSerParceiroPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-12 sm:py-16">
-        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+      <section className="sob-o-menu bg-gradient-to-br from-cyan-50 via-white to-blue-50 pb-12 sm:pb-16">
+        <div className="mx-auto max-w-3xl px-4 pt-12 text-center sm:px-6 sm:pt-16">
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#0B1929] sm:text-4xl">
             Tem carrinha e equipa? Receba os nossos pedidos.
           </h1>

@@ -252,7 +252,7 @@ export default function ContactosPage() {
         dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
 
-      <div className="min-h-screen bg-[#F4F8FB]">
+      <div className="sob-o-menu min-h-screen bg-[#F4F8FB]">
         <div className="mx-auto max-w-5xl px-4 pb-20 pt-24 sm:px-6 lg:px-8">
           {/* Migalhas visíveis: as mesmas do schema, para quem lê e para quem indexa. */}
           <nav aria-label="Percurso" className="mb-6 text-xs text-slate-500">

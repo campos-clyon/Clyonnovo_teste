@@ -812,15 +812,47 @@ footer .text-white {
  * `svh` e não `vh`: num telemóvel, `vh` conta a barra do browser como se ela
  * nunca estivesse lá, e a página fica sempre um pouco mais alta do que o ecrã.
  */
-.site-page-shell {
-  min-height: calc(100vh - 53px);
-  min-height: calc(100svh - 53px);
+/*
+ * A ALTURA DO MENU, NUM SÍTIO SÓ.
+ *
+ * O cabeçalho é `fixed`: não ocupa lugar, e o <main> leva este valor de
+ * padding em cima para o conteúdo começar por baixo dele (SiteChrome.tsx). O
+ * mesmo número entra na altura mínima da página e no `.sob-o-menu`. Estava
+ * escrito à mão em dois sítios (53px e 61px); um terceiro já era demais.
+ */
+:root {
+  --altura-do-menu: 53px;
 }
 @media (min-width: 640px) {
-  .site-page-shell {
-    min-height: calc(100vh - 61px);
-    min-height: calc(100svh - 61px);
+  :root {
+    --altura-do-menu: 61px;
   }
+}
+
+.site-page-shell {
+  min-height: calc(100vh - var(--altura-do-menu));
+  min-height: calc(100svh - var(--altura-do-menu));
+}
+
+/*
+ * O PRIMEIRO BLOCO DA PÁGINA CONTINUA POR TRÁS DO MENU.
+ *
+ * Pedido de 01-10-2026, com a Toki como exemplo: no topo da página o menu não
+ * tem fundo e vê-se o degradê do primeiro bloco por trás dele; o branco só
+ * aparece quando se desce (Header.tsx, `transparenteNoTopo`).
+ *
+ * Só o menu transparente não chegava: por trás dele estaria o padding do
+ * <main>, e esse é branco. Esta classe puxa o bloco para cima a altura do
+ * menu e devolve-a em padding — o fundo sobe, o conteúdo fica onde estava.
+ *
+ * Por isso só serve num bloco que NÃO tenha padding de cima próprio (este
+ * pisava-o; quem o tinha passou-o para o contentor de dentro) e que seja o
+ * primeiro elemento visível da página — senão sobe por cima do que vem antes.
+ * Fora de camada, de propósito: tem de ganhar a qualquer `pt-*` por engano.
+ */
+.sob-o-menu {
+  margin-top: calc(-1 * var(--altura-do-menu));
+  padding-top: var(--altura-do-menu);
 }
 
 /* Ocultar scrollbar nas tabs mobile sem perder funcionalidade */

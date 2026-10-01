@@ -285,7 +285,7 @@ export default function ServicosPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-white">
+      <section className="sob-o-menu relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_40%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 md:pb-12 md:pt-16 lg:px-8">
           <h1 className="max-w-[16ch] text-[2rem] font-bold leading-[1.08] tracking-tight text-tinta sm:text-5xl md:text-6xl">
