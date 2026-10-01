@@ -13,13 +13,38 @@ import { SITE_URL } from "@/lib/seo-data";
  */
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import {
+  ENTIDADE_QUE_FACTURA,
   IDENTIFICACAO,
   identificacaoCompleta,
   linhaDeIdentificacao,
   O_QUE_FALTA,
-  TAXA_CLIENTE,
-  TAXA_PROFISSIONAL,
+  TAXA_IVA,
 } from "@/lib/identificacao-legal";
+/*
+ * OS TERMOS DE 01-10-2026 — «Publicar já», decisão do dono.
+ *
+ * Reescritos a partir de docs/proposta-termos-2026-09-30.md. Os números que
+ * o site também usa vêm de onde o site os lê, pela mesma razão do comentário
+ * de cima:
+ *
+ *   · a quota da CLYON (11 % do que o cliente paga) sai das taxas EM VIGOR,
+ *     gravadas no backoffice (`taxasActuais` + `quotaDaClyon`) — como em
+ *     /profissionais. Com as de origem (5 % e 6 %) dava 10,48 %;
+ *   · a taxa do dinheiro sai de `taxasParaAForma`, que é o que a negociação
+ *     grava quando o cliente escolhe pagar em notas;
+ *   · o tecto do numerário, o prazo da confirmação automática, o IVA e quem
+ *     emite a factura vêm das constantes que o resto do site lê.
+ */
+import { taxasActuais } from "@/lib/db";
+import { quotaDaClyon } from "@/lib/quota-da-clyon";
+import { MAXIMO_EM_NUMERARIO, taxasParaAForma } from "@/lib/forma-de-pagamento";
+import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+
+/** As taxas mudam no backoffice: a página relê-as de hora a hora. */
+export const revalidate = 3600;
+
+/** O prazo, em dias, para devolver o que o cliente pagou se cancelar antes do trabalho feito. */
+const DIAS_PARA_DEVOLVER = 14;
 
 export const metadata: Metadata = {
   // Sem « — CLYON»: o template do layout já a acrescenta, e saía
@@ -33,7 +58,12 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const pct = (n: number) => `${Math.round(n * 100)} %`;
+/** 0,1155 → «11,55 %»; 0,11 → «11 %». Duas casas, vírgula portuguesa. */
+const pct = (n: number) => `${String(Math.round(n * 10000) / 100).replace(".", ",")} %`;
+
+/** 3000 → «3 000 €». */
+const eurosRedondos = (n: number) =>
+  `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} €`;
 
 /** Uma secção do documento, com âncora para o índice. */
 function S({ id, titulo, children }: { id: string; titulo: string; children: React.ReactNode }) {
@@ -53,6 +83,7 @@ const INDICE: [string, string][] = [
   ["como-funciona", "5. Como funciona um pedido"],
   ["precos", "6. Preços, taxas e IVA"],
   ["pagamento", "7. Pagamento"],
+  ["cancelamento", "7-A. Cancelamento e reembolso"],
   ["execucao", "8. Execução, confirmação e garantia"],
   ["avaliacoes", "9. Avaliações"],
   ["profissionais", "10. Se é profissional"],
@@ -65,7 +96,12 @@ const INDICE: [string, string][] = [
   ["litigios", "17. Reclamações, litígios e lei aplicável"],
 ];
 
-export default function TermosPage() {
+export default async function TermosPage() {
+  const taxas = await taxasActuais();
+  const quota = pct(quotaDaClyon(taxas));
+  const taxaNoDinheiro = pct(taxasParaAForma("dinheiro", taxas).cliente);
+  const iva = `${Math.round(TAXA_IVA * 100)} %`;
+
   return (
     <div className="min-h-screen bg-white">
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
@@ -82,7 +118,7 @@ export default function TermosPage() {
             Valem para clientes e para profissionais.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 21 de agosto de 2026.
+            Última atualização: 1 de outubro de 2026.
           </p>
         </div>
       </section>
@@ -153,16 +189,26 @@ export default function TermosPage() {
               O contrato de prestação de serviço é celebrado entre si e o
               profissional que escolher. A CLYON não é parte nesse contrato.
             </strong>{" "}
-            Quem vai a sua casa, quem carrega, quem transporta, quem trata dos
-            resíduos e quem emite a fatura é o profissional. É ele o prestador
-            do serviço, e é a ele que a lei atribui as obrigações
-            correspondentes.
+            Quem vai a sua casa, quem carrega, quem transporta e quem trata dos
+            resíduos é o profissional. É ele o prestador do serviço, e é a ele
+            que a lei atribui as obrigações correspondentes.
+          </p>
+          {/*
+            QUEM FACTURA AO CLIENTE — 01-10-2026, decisão do dono.
+            Dizia «quem emite a fatura é o profissional». Desde 22-09-2026 a
+            factura ao cliente é da `ENTIDADE_QUE_FACTURA` (ver ponto 6).
+          */}
+          <p>
+            A factura ao cliente, quando a pede, é emitida pela{" "}
+            {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa parceira da CLYON — ver o
+            ponto 6.
           </p>
           <p>
             O que contrata connosco é o acesso à plataforma e aos serviços que
             ela presta: a estimativa, a apresentação do pedido aos
             profissionais, o espaço de negociação, o registo do que foi
-            combinado e o apoio ao longo do processo.
+            combinado, o apoio ao longo do processo e, se escolher pagar pela
+            plataforma, a guarda do valor até à confirmação do trabalho.
           </p>
           <p>
             A CLYON não seleciona o profissional por si, não garante que receba
@@ -251,56 +297,125 @@ export default function TermosPage() {
             cálculo sobre o que nos descreveu e não substitui a avaliação de
             quem vai fazer o trabalho.
           </p>
+          {/*
+            PREÇOS — 01-10-2026, decisão do dono. Dizia «5 % somados ao cliente
+            e 6 % descontados ao profissional» e «o IVA é do regime de quem
+            emite a fatura». Desde 29-09-2026 o cliente vê um preço só, já com
+            a taxa, e a CLYON fica com 11 % do que ele paga; o IVA só entra com
+            factura, e quem factura é a parceira.
+          */}
           <p>
-            Sobre o valor acordado com o profissional, a CLYON cobra uma taxa de
-            plataforma: <strong>{pct(TAXA_CLIENTE)} somados ao cliente</strong> e{" "}
-            <strong>{pct(TAXA_PROFISSIONAL)} descontados ao profissional</strong>.
-            O valor que lhe mostramos como total já inclui a sua parte da taxa.
+            <strong>
+              O preço de cada proposta é o que o cliente paga pelo trabalho, sem
+              IVA, e já inclui a taxa de plataforma da CLYON.
+            </strong>{" "}
+            No pagamento pela plataforma, a CLYON fica com {quota} do que o
+            cliente paga, e o profissional recebe o valor que propôs, descontada
+            a comissão. No pagamento em dinheiro, a divisão é a descrita no
+            ponto 7.
           </p>
           <p>
-            <strong>O IVA é do regime de quem emite a fatura.</strong> Um
-            profissional em regime de isenção (artigo 53.º do CIVA) não liquida
-            IVA, e nesse caso não verá qualquer linha de imposto no valor a
-            pagar. A percentagem de IVA que apareça numa estimativa, antes de
-            haver profissional atribuído, é uma previsão; o imposto que conta é
-            o da fatura que receber.
+            <strong>Os valores são apresentados sem IVA.</strong> Se pedir
+            factura, acrescem {iva} de IVA sobre o preço da proposta. A factura
+            é emitida pela {ENTIDADE_QUE_FACTURA.nomeLegal}, NIF{" "}
+            {ENTIDADE_QUE_FACTURA.nif}, empresa parceira da CLYON.
           </p>
           <p>
-            <strong>A fatura do serviço é sempre emitida pelo profissional</strong>
-            — é ele o prestador, e é a ele que a lei atribui essa obrigação. A
-            CLYON não fatura o serviço.
-          </p>
-          <p>
-            A própria CLYON está em <strong>{IDENTIFICACAO.regimeIva}</strong>,
-            pelo que nada do que emita leva IVA.
+            A CLYON não liquida IVA. Regime de IVA da CLYON:{" "}
+            <strong>{IDENTIFICACAO.regimeIva}</strong>.
           </p>
         </S>
 
+        {/*
+          PAGAMENTO — 01-10-2026, decisão do dono. Dizia «o pagamento do
+          serviço é feito ao profissional… a CLYON não recebe nem detém o valor
+          do serviço», e «se precisa de fatura… só lhe propomos profissionais
+          que a possam passar». Nenhuma das duas é verdade: há duas formas de
+          pagar (`forma-de-pagamento.ts`), numa delas a CLYON guarda o valor, e
+          quem factura é a parceira — não há profissionais a filtrar.
+        */}
         <S id="pagamento" titulo="7. Pagamento">
+          <p>No pedido, o cliente escolhe como paga:</p>
+          <ul className="ml-5 list-disc space-y-3">
+            <li>
+              <strong>Pela plataforma.</strong> Depois de aceitar a proposta,
+              recebe uma referência MB WAY ou Multibanco, processada pelo
+              euPago, para pagar à CLYON. A CLYON guarda o valor e só o entrega
+              ao profissional depois de o cliente confirmar que o trabalho está
+              feito (ou de o trabalho se considerar confirmado, nos termos do
+              ponto 8). O profissional pede então o levantamento, que é tratado
+              em menos de 24 horas.
+            </li>
+            <li>
+              <strong>Em dinheiro, ao profissional, no fim do trabalho.</strong>{" "}
+              Paga-lhe em mão o valor que ele propôs, por inteiro, e paga à
+              CLYON, à parte e por referência MB WAY ou Multibanco, a comissão
+              da plataforma — que nesta forma é toda cobrada ao cliente:{" "}
+              {taxaNoDinheiro} sobre o valor do profissional, em vez de ser
+              repartida entre os dois. Não é possível pagar em dinheiro
+              trabalhos de valor igual ou superior a{" "}
+              {eurosRedondos(MAXIMO_EM_NUMERARIO)} (Lei n.º 92/2017).
+            </li>
+          </ul>
+        </S>
+
+        {/*
+          CANCELAMENTO E REEMBOLSO — novo a 01-10-2026, decisão do dono: o
+          prazo da devolução é de 14 dias.
+
+          O que o código faz (`cancelamento.ts`, `oQueSeDesfaz`): o cancelamento
+          passa sempre, e com trabalho contratado pede o motivo. Se o trabalho
+          já estiver confirmado (`confirmadoEm`, à mão ou pelo prazo do ponto
+          8) ou pago, o aviso diz que cancelar NÃO traz o pagamento de volta.
+          A devolução não é automática: faz-se no euPago, e o aviso de
+          reembolso que ele manda grava o pagamento como `reembolsado`
+          (`darPorReembolsado`).
+        */}
+        <S id="cancelamento" titulo="7-A. Cancelamento e reembolso">
+          <p>
+            Pode cancelar o pedido a qualquer momento, na página do pedido. Se
+            já tiver contratado um profissional, pedimos-lhe que diga porquê: o
+            profissional que perde o trabalho tem direito a saber.
+          </p>
           <p>
             <strong>
-              O pagamento do serviço é feito ao profissional, nos termos que
-              combinarem entre si.
-            </strong>{" "}
-            A CLYON não recebe nem detém o valor do serviço.
+              Se o pedido for cancelado antes de o trabalho estar feito, o que
+              tiver pago à CLYON é-lhe devolvido pelo mesmo meio, no prazo de{" "}
+              {DIAS_PARA_DEVOLVER} dias.
+            </strong>
           </p>
           <p>
-            A fatura ou recibo do serviço é emitida pelo profissional, com os
-            dados de faturação que indicar. Se precisa de fatura, diga-o no
-            pedido: só lhe propomos profissionais que a possam passar.
-          </p>
-          <p>
-            A taxa de plataforma da CLYON é devida sobre os trabalhos fechados
-            através da plataforma e é faturada por nós, separadamente do serviço.
+            Depois de o trabalho estar confirmado — por si, ou automaticamente
+            nos termos do ponto 8 — o valor é entregue ao profissional e deixa
+            de poder ser devolvido pela CLYON; cancelar o pedido a partir daí
+            não o traz de volta. Qualquer reclamação sobre o trabalho segue os
+            pontos 8 e 17.
           </p>
         </S>
 
         <S id="execucao" titulo="8. Execução, confirmação e garantia">
+          {/*
+            A CONFIRMAÇÃO AUTOMÁTICA — 01-10-2026, decisão do dono: fica, e fica
+            escrita. O prazo é `DIAS_ATE_LIBERTAR_SOZINHO` (trabalho.ts) e conta
+            a partir de `execucaoEnviadaEm` — o momento em que o profissional
+            marca o trabalho como feito, com pelo menos uma fotografia. O cron
+            `libertar-por-prazo` grava então a confirmação.
+          */}
           <p>
             O serviço é executado pelo profissional, na data e nas condições que
             combinarem. Terminado o trabalho, o profissional marca-o como feito
-            e pode juntar fotografias; pede-se-lhe depois que confirme que está
-            feito.
+            e envia fotografias do resultado; pede-se-lhe então que confirme que
+            está feito.
+          </p>
+          <p>
+            <strong>
+              Se não responder, o trabalho considera-se confirmado{" "}
+              {DIAS_ATE_LIBERTAR_SOZINHO} dias depois de o profissional enviar as
+              fotografias
+            </strong>
+            {" "}— e, no pagamento pela plataforma, o valor é entregue ao
+            profissional. Se alguma coisa estiver mal, fale connosco antes
+            disso.
           </p>
           <p>
             <strong>A garantia do serviço é do profissional.</strong> Se alguma
@@ -346,11 +461,18 @@ export default function TermosPage() {
             aceita, propõe os seus preços e organiza o seu trabalho. A CLYON não
             lhe garante volume de trabalho.
           </p>
+          {/*
+            COMO O PROFISSIONAL RECEBE — 01-10-2026, decisão do dono. Dizia
+            «emite a fatura… a CLYON fatura-lhe apenas a comissão de 6 %»: a
+            factura ao cliente é da parceira, e a comissão depende das taxas da
+            negociação. Não se diz aqui que documento ele passa à CLYON.
+          */}
           <p>
-            É o prestador do serviço perante o cliente: emite a fatura, responde
-            pela execução e pelos danos, e cumpre as obrigações fiscais que lhe
-            correspondem. A CLYON fatura-lhe apenas a comissão de{" "}
-            {pct(TAXA_PROFISSIONAL)} sobre os trabalhos que fechar.
+            É o prestador do serviço perante o cliente: responde pela execução e
+            pelos danos e cumpre as obrigações fiscais que lhe correspondem.
+            Recebe através da CLYON o valor que propôs, descontada a comissão —
+            ou em dinheiro, no local, quando o cliente escolhe essa forma de
+            pagamento.
           </p>
           <p>
             Os dados do cliente que lhe são mostrados destinam-se{" "}
@@ -408,7 +530,7 @@ export default function TermosPage() {
         <S id="suspensao" titulo="12. Suspensão e encerramento de conta">
           <p>
             Pode encerrar a sua conta quando quiser, sem custo, pedindo-o por{" "}
-            {IDENTIFICACAO.email}. Os pedidos e as faturas associados continuam
+            {IDENTIFICACAO.email}. Os pedidos e as facturas associados continuam
             guardados enquanto a lei nos obrigar a guardá-los.
           </p>
           <p>
@@ -531,8 +653,12 @@ export default function TermosPage() {
             >
               {IDENTIFICACAO.ralNome}
             </a>
-            , nos termos da Lei 144/2015, ou à plataforma europeia de resolução
-            de litígios em linha.
+            , nos termos da Lei 144/2015.
+            {/*
+              Saiu «ou à plataforma europeia de resolução de litígios em linha»
+              — 01-10-2026, decisão do dono. A plataforma ODR da UE foi encerrada
+              a 20-07-2025 (Regulamento (UE) 2024/3228).
+            */}
           </p>
           <p>
             Aplica-se a lei portuguesa. Sendo consumidor, mantém o direito de

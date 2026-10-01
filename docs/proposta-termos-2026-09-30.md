@@ -1,3 +1,5 @@
+Publicada a 01-10-2026 em src/app/termos/page.tsx
+
 # Proposta de actualização dos Termos e Condições — 30-09-2026
 
 Os Termos publicados (versão de 21-08-2026) descrevem um modelo que já não é o

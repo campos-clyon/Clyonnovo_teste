@@ -14,6 +14,7 @@ import {
   type FormaDePagamento,
 } from "@/lib/forma-de-pagamento";
 import { oQueReabrir } from "@/lib/cancelamento";
+import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
   TAXAS_DE_ORIGEM,
@@ -43,8 +44,10 @@ export async function getPool() {
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
       connectTimeout: 20000,
-      // SSL necessário para Railway — sem isto o pool falha silenciosamente
-      ssl: { rejectUnauthorized: false },
+      // SSL necessário para Railway — sem isto o pool falha silenciosamente.
+      // Desde 01-10-2026 (decisão do dono) verifica o certificado se houver
+      // MYSQL_CA_CERT; sem ela, fica como estava. Ver ssl-da-base.ts.
+      ssl: sslDaBase(),
     });
   }
   return poolInstance;
@@ -162,7 +165,8 @@ export async function withConnection<T>(
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
   const conn = await mysql.createConnection({
     uri: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    // O mesmo do pool — ver ssl-da-base.ts (01-10-2026).
+    ssl: sslDaBase(),
     connectTimeout: 20000,
   });
   try {

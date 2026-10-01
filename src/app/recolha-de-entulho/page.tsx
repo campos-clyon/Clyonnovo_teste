@@ -90,12 +90,29 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
  * 80 em mais três sítios. A composição da faixa ("110 – 120 €", travessão e o
  * símbolo uma só vez) é do PricingTable: aqui passam-se os números.
  */
+/*
+ * AS LINHAS POR VOLUME SAEM DO PREÇO POR m³ — 01-10-2026, decisão do dono:
+ * «Vale o 110 €/m³».
+ *
+ * Diziam «até 3 m³: 180–280 €» e «até 5 m³: 280–400 €» — 60 a 93 €/m³ na
+ * mesma página que anuncia «desde 110 €/m³» no título, nos metadados e no
+ * schema. Agora cada linha é o preço por m³ de `precos-publicos.ts` vezes o
+ * volume, sem tecto: «desde». Sem IVA, como o resto da grelha.
+ */
+function desdeOsMetros(m3: number): string {
+  const porM3 = PRECO_ENTULHO.minimo;
+  if (porM3 == null) {
+    throw new Error("recolha_entulho sem preço por m³ em precos-publicos.ts");
+  }
+  return `${porM3 * m3} €`;
+}
+
 const pricingRows = [
   { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: "120 €", description: `Pequenas quantidades, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg` },
-  { service: "Recolha pequena (até 1 m³)", priceFrom: "120 €", priceTo: "180 €", description: "Remodelações de WC ou cozinha" },
-  { service: "Recolha média (até 3 m³)", priceFrom: "180 €", priceTo: "280 €", description: "Obras de apartamento T1/T2" },
-  { service: "Recolha grande (até 5 m³)", priceFrom: "280 €", priceTo: "400 €", description: "Demolições e renovações completas" },
-  { service: "Recolha extra (acima de 5 m³)", priceFrom: "400 €", description: "Orçamento personalizado" },
+  { service: "Recolha pequena (até 1 m³)", priceFrom: desdeOsMetros(1), description: "Remodelações de WC ou cozinha" },
+  { service: "Recolha média (até 3 m³)", priceFrom: desdeOsMetros(3), description: "Obras de apartamento T1/T2" },
+  { service: "Recolha grande (até 5 m³)", priceFrom: desdeOsMetros(5), description: "Demolições e renovações completas" },
+  { service: "Recolha extra (acima de 5 m³)", priceFrom: "Orçamento personalizado", description: "Volumes maiores — envie fotografias" },
 ];
 
 const faqs = [
