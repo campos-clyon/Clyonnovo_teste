@@ -839,6 +839,73 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   }
 
   /*
+   * ── O DIA DO TRABALHO MUDOU — avisar o cliente ──────────────────────────
+   *
+   * *«Sim, avise o cliente pelo WhatsApp.»* — 01-10-2026. Cada mudança de data
+   * (arrasto na agenda, ficha do backoffice, painel do profissional) deixa uma
+   * linha em `avisosDeDataAoCliente`; aqui sai UMA mensagem por trabalho, e só
+   * quando a data está quieta há `MINUTOS_PARA_ASSENTAR` minutos. Ver
+   * `aviso-de-data-ao-cliente.ts`.
+   *
+   * ANTES de «com tudo em baixo» e não depois: este aviso tem o seu próprio
+   * interruptor, e não pode ficar calado por o dono ter desligado os outros.
+   *
+   * `enviarAvisoWhatsApp`, como os avisos ao profissional: é uma notícia, não
+   * uma conversa. Uma conversa entregue a uma pessoa da CLYON não pode calar o
+   * «o seu trabalho passou para sexta» — é precisamente a quem está a tratar
+   * do pedido que menos convém que o cliente não saiba. Valem o WhatsApp
+   * ligado e o número não estar bloqueado.
+   *
+   * RESPEITA A HORA, como tudo o que fala com clientes. Uma mudança às 23 h
+   * sai às 9 h; se nessa altura o dia novo já tiver passado, já não é aviso.
+   */
+  if (podeFazer("avisar_data") && horaDeFalar(agora)) {
+    const {
+      AVISOS_DE_DATA_POR_PASSAGEM,
+      MINUTOS_PARA_ASSENTAR,
+      decidirAvisoDeData,
+      textoDoAvisoDeData,
+    } = await import("@/lib/aviso-de-data-ao-cliente");
+    const { telemovelParaWhatsApp } = await import("@/lib/whatsapp-cloud");
+    const porSair = await db
+      .avisosDeDataPorSair(MINUTOS_PARA_ASSENTAR, AVISOS_DE_DATA_POR_PASSAGEM)
+      .catch(() => []);
+    for (const a of porSair) {
+      const decisao = decidirAvisoDeData(a, agora);
+      if (!decisao.avisar) {
+        await db.fecharAvisoDeData(a.negociacaoId, a.versao, decisao.porque);
+        continue;
+      }
+      /*
+       * Só telemóveis, como em todo o primeiro contacto: um fixo sem
+       * indicativo chegava a outra pessoa qualquer, com o nome do cliente e o
+       * dia em que a casa dele fica vazia.
+       */
+      const telefone = telemovelParaWhatsApp(a.telefoneDoCliente);
+      if (!telefone || !a.dataCombinada) {
+        await db.fecharAvisoDeData(a.negociacaoId, a.versao, "sem telemovel");
+        continue;
+      }
+      const texto = textoDoAvisoDeData(
+        {
+          pedidoId: a.pedidoId,
+          cliente: a.cliente,
+          servico: a.servico,
+          antes: a.conhecida,
+          depois: a.dataCombinada,
+        },
+        agora,
+      );
+      const saiu = await enviarAvisoWhatsApp(telefone, texto).catch(() => false);
+      await db.fecharAvisoDeData(a.negociacaoId, a.versao, saiu ? null : "nao saiu");
+      if (saiu) {
+        resumo.novidades++;
+        resumo.linhas.push(`Cliente avisado da data nova do pedido #${a.pedidoId}.`);
+      }
+    }
+  }
+
+  /*
    * COM TUDO EM BAIXO, NÃO SE LÊ A BASE À TOA.
    *
    * A derivação custa duas consultas e trezentos pedidos, de dez em dez

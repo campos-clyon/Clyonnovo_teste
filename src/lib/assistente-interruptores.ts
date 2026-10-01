@@ -67,7 +67,22 @@ export type Capacidade =
    * o travão de quem manda; o outro é a vontade de quem recebe. São precisos
    * os dois.
    */
-  | "avisar_profissional";
+  | "avisar_profissional"
+  /**
+   * Avisar o CLIENTE de que o dia ou a hora do trabalho dele mudou.
+   *
+   * A NONA, a 01-10-2026, no dia em que as agendas passaram a deixar
+   * arrastar um trabalho para outro dia. Até aí a mudança só ficava no
+   * histórico do pedido, e o cliente sabia-a quando o profissional não
+   * aparecia.
+   *
+   * ⚠️ NASCE LIGADA, contra a regra do topo deste ficheiro — e é a única.
+   * A regra protege o dono de uma coisa nova que ele não pediu; esta foi
+   * ele que a pediu, por escrito: *«Sim, avise o cliente pelo WhatsApp.»*
+   * Nascer desligada era entregar-lhe uma funcionalidade que não faz nada
+   * até ele dar com o botão.
+   */
+  | "avisar_data";
 
 export const CAPACIDADES: Capacidade[] = [
   "recolher",
@@ -78,6 +93,7 @@ export const CAPACIDADES: Capacidade[] = [
   "acompanhar",
   "agradecer",
   "avisar_profissional",
+  "avisar_data",
 ];
 
 export type FichaDaCapacidade = {
@@ -149,6 +165,12 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
     oQuePara:
       "Deixa de mandar WhatsApp aos profissionais quando um pedido novo lhes chega, e o lembrete de manhã dos trabalhos marcados para esse dia. O email e o aviso no telemóvel continuam a sair.",
     porOmissao: false,
+  },
+  avisar_data: {
+    titulo: "Avisar o cliente da data",
+    oQuePara:
+      "Deixa de mandar WhatsApp ao cliente quando o dia ou a hora do trabalho dele muda — na agenda, na ficha ou no painel do profissional. A mudança continua a ficar no histórico do pedido.",
+    porOmissao: true,
   },
 };
 

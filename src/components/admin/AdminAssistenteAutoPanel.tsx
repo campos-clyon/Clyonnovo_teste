@@ -347,6 +347,21 @@ export default function AdminAssistenteAutoPanel() {
                               )}
                             </p>
                           )}
+                          {/*
+                            O AVISO DA DATA tem a mesma fechadura do canal que
+                            os avisos ao profissional: é a CLYON a começar a
+                            conversa. Pela Meta só chega a quem nos escreveu
+                            nas últimas 24 h; sem canal automático, a nenhum.
+                          */}
+                          {c === "avisar_data" && ligado && estado.canal !== "ponte" && (
+                            <p className="mt-1 text-[11px] leading-relaxed text-amber-400/80">
+                              {estado.canal === "meta"
+                                ? "O canal em uso é a API da Meta: só chega aos clientes que nos escreveram nas últimas 24 h."
+                                : estado.canal === "manual"
+                                  ? "O canal em uso é à mão: o aviso fica na fila do painel do WhatsApp até alguém o enviar."
+                                  : "Não há canal ligado, por isso não sai nada."}
+                            </p>
+                          )}
                         </div>
                         <button
                           onClick={() =>

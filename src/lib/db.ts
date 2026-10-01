@@ -7526,6 +7526,224 @@ export async function fecharLembrete(
   }
 }
 
+// ─── O aviso ao cliente quando o dia do trabalho muda ────────────────────────
+//
+// «Sim, avise o cliente pelo WhatsApp.» — 01-10-2026. O texto e a decisão
+// vivem em `aviso-de-data-ao-cliente.ts`; aqui fica só o que precisa da base.
+//
+// UMA LINHA POR TRABALHO (negociação), reaproveitada a cada volta de mudanças.
+// Uma volta começa na primeira mudança depois do último aviso e acaba quando a
+// passagem do assistente a fecha. `conhecida` é o dia que o cliente sabia no
+// início da volta, e não muda com os arrastos seguintes — é o «antes era» da
+// mensagem. `versao` sobe a cada mudança: a passagem só fecha a volta que leu,
+// e uma mudança que entre entre a leitura e o fecho não se perde.
+//
+// `conhecida` é DATETIME, como `dataCombinada` e `dataAgendada`, e não um
+// texto ISO: copia-se de uma delas tal e qual, e tem de se ler da mesma maneira
+// que elas se lêem.
+//
+// Sem nome, sem telefone: o número lê-se do pedido na hora de enviar.
+let avisosDeDataReady = false;
+async function ensureAvisosDeDataTable() {
+  if (avisosDeDataReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS avisosDeDataAoCliente (
+      negociacaoId   INT NOT NULL PRIMARY KEY,
+      pedidoId       INT NOT NULL,
+      conhecida      DATETIME NULL,
+      versao         INT NOT NULL DEFAULT 1,
+      mudadaEm       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      fechadoEm      DATETIME NULL,
+      porqueNaoSaiu  VARCHAR(40) NULL,
+      KEY idx_por_sair (fechadoEm, mudadaEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  avisosDeDataReady = true;
+}
+
+/**
+ * «Este trabalho mudou de dia» — chamada pelas duas rotas que gravam a data.
+ *
+ * `antes` é a `dataCombinada` que estava; sem ela, o cliente sabia o dia que
+ * ele próprio pediu (`dataAgendada`), e é esse que conta.
+ *
+ * NUNCA LANÇA. A data já está gravada quando isto corre: um aviso que não se
+ * consegue registar não pode desfazer a mudança nem virar erro no ecrã.
+ */
+export async function registarMudancaDeData(dados: {
+  negociacaoId: number;
+  pedidoId: number;
+  antes: Date | null;
+}): Promise<void> {
+  try {
+    await ensureAvisosDeDataTable();
+    const pool = await getPool();
+    if (!pool) return;
+    /*
+     * A ORDEM DAS ATRIBUIÇÕES CONTA: o MySQL aplica-as da esquerda para a
+     * direita, e cada uma já vê o valor das anteriores. `conhecida` decide-se
+     * a olhar para `fechadoEm` ANTES de ele ser posto a NULL — com a volta
+     * aberta guarda-se o que lá estava; com ela fechada, começa outra.
+     */
+    await pool.execute(
+      `INSERT INTO avisosDeDataAoCliente (negociacaoId, pedidoId, conhecida, mudadaEm)
+       VALUES (?, ?, COALESCE(?, (SELECT o.dataAgendada FROM simulatorOrders o WHERE o.id = ?)), NOW())
+       ON DUPLICATE KEY UPDATE
+         conhecida = IF(fechadoEm IS NULL, conhecida, VALUES(conhecida)),
+         pedidoId = VALUES(pedidoId),
+         versao = versao + 1,
+         mudadaEm = NOW(),
+         fechadoEm = NULL,
+         porqueNaoSaiu = NULL`,
+      [dados.negociacaoId, dados.pedidoId, dados.antes, dados.pedidoId],
+    );
+  } catch (e) {
+    console.error("[registarMudancaDeData]", e instanceof Error ? e.message : e);
+  }
+}
+
+export type AvisoDeDataPorSair = {
+  negociacaoId: number;
+  pedidoId: number;
+  versao: number;
+  conhecida: Date | null;
+  dataCombinada: Date | null;
+  estado: string;
+  estadoDoPedido: string | null;
+  confirmadoEm: Date | null;
+  pagoEm: Date | null;
+  execucaoEnviadaEm: Date | null;
+  servico: string | null;
+  cliente: string | null;
+  telefoneDoCliente: string | null;
+};
+
+/**
+ * As voltas cuja data já assentou — a última mudança tem mais de `minutos`.
+ *
+ * A conta do tempo é do MySQL (`NOW()` dos dois lados), pela razão escrita em
+ * `guardarNaFilaWhatsApp`: dois relógios na mesma decisão dão segundos a mais
+ * ou a menos que ninguém liga ao relógio.
+ */
+export async function avisosDeDataPorSair(minutos: number, limite: number): Promise<AvisoDeDataPorSair[]> {
+  try {
+    await ensureAvisosDeDataTable();
+    const pool = await getPool();
+    if (!pool) return [];
+    /*
+     * A limpeza à boleia, como na fila: as voltas fechadas há um mês já não
+     * servem para nada, e as que ficaram abertas de um trabalho apagado (a
+     * purga leva o pedido, esta linha fica sem par no JOIN) nunca mais saem.
+     */
+    await pool
+      .execute(
+        `DELETE FROM avisosDeDataAoCliente
+          WHERE (fechadoEm IS NOT NULL AND fechadoEm < NOW() - INTERVAL 30 DAY)
+             OR (fechadoEm IS NULL AND mudadaEm < NOW() - INTERVAL 30 DAY)
+          LIMIT 200`,
+      )
+      .catch(() => {});
+    const [rows] = (await pool.execute(
+      `SELECT a.negociacaoId, a.pedidoId, a.versao, a.conhecida,
+              n.dataCombinada, n.estado, n.confirmadoEm, n.pagoEm, n.execucaoEnviadaEm,
+              o.status AS estadoDoPedido, o.serviceType, o.contactName, o.contactPhone
+         FROM avisosDeDataAoCliente a
+         JOIN negociacoes n ON n.id = a.negociacaoId
+         JOIN simulatorOrders o ON o.id = a.pedidoId
+        WHERE a.fechadoEm IS NULL
+          AND a.mudadaEm <= NOW() - INTERVAL ? MINUTE
+        ORDER BY a.mudadaEm ASC
+        LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
+      [String(Math.max(0, Math.floor(minutos)))],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const data = (v: unknown) => (v ? new Date(v as string) : null);
+    return rows.map((r) => ({
+      negociacaoId: Number(r.negociacaoId),
+      pedidoId: Number(r.pedidoId),
+      versao: Number(r.versao),
+      conhecida: data(r.conhecida),
+      dataCombinada: data(r.dataCombinada),
+      estado: String(r.estado ?? ""),
+      estadoDoPedido: (r.estadoDoPedido as string) ?? null,
+      confirmadoEm: data(r.confirmadoEm),
+      pagoEm: data(r.pagoEm),
+      execucaoEnviadaEm: data(r.execucaoEnviadaEm),
+      servico: (r.serviceType as string) ?? null,
+      cliente: (r.contactName as string) ?? null,
+      telefoneDoCliente: (r.contactPhone as string) ?? null,
+    }));
+  } catch (e) {
+    console.error("[avisosDeDataPorSair]", e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+/**
+ * Fecha a volta que se leu — e só essa.
+ *
+ * Se entretanto alguém voltou a mexer na data, `versao` já subiu e isto não
+ * toca em nada: a volta continua aberta e sai na passagem seguinte, com o dia
+ * novo. `porqueNaoSaiu` NULL quer dizer que saiu.
+ */
+export async function fecharAvisoDeData(
+  negociacaoId: number,
+  versao: number,
+  porqueNaoSaiu: string | null,
+): Promise<void> {
+  try {
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `UPDATE avisosDeDataAoCliente
+          SET fechadoEm = NOW(), porqueNaoSaiu = ?
+        WHERE negociacaoId = ? AND versao = ? AND fechadoEm IS NULL`,
+      [porqueNaoSaiu, negociacaoId, versao],
+    );
+  } catch (e) {
+    console.error("[fecharAvisoDeData]", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * Este número levou um aviso de data há menos de `horas`? Devolve o pedido.
+ *
+ * É o que faz a resposta dele ir para uma pessoa e não para o assistente —
+ * ver `aviso-de-data-ao-cliente.ts`. Só conta o que SAIU (`porqueNaoSaiu`
+ * NULL), e compara os últimos nove dígitos, como o resto da casa.
+ *
+ * Na dúvida (base em baixo), `null`: a conversa segue como seguia antes.
+ */
+export async function avisoDeDataRecente(
+  telefone: string,
+  horas: number,
+): Promise<{ pedidoId: number } | null> {
+  try {
+    const noves = telefone.replace(/\D/g, "").slice(-9);
+    if (noves.length !== 9) return null;
+    await ensureAvisosDeDataTable();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      `SELECT a.pedidoId
+         FROM avisosDeDataAoCliente a
+         JOIN simulatorOrders o ON o.id = a.pedidoId
+        WHERE a.fechadoEm IS NOT NULL
+          AND a.porqueNaoSaiu IS NULL
+          AND a.fechadoEm >= NOW() - INTERVAL ? HOUR
+          AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
+        ORDER BY a.fechadoEm DESC
+        LIMIT 1`,
+      [String(Math.max(1, Math.floor(horas))), noves],
+    )) as [Array<{ pedidoId: number }>, unknown];
+    return rows[0] ? { pedidoId: Number(rows[0].pedidoId) } : null;
+  } catch (e) {
+    console.error("[avisoDeDataRecente]", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 /** Quantos profissionais activos já disseram que sim. Para o cartão do painel. */
 export async function quantosProfissionaisQueremAvisos(): Promise<{
   sim: number;

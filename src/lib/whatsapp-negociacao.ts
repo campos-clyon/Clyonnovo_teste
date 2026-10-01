@@ -1155,6 +1155,33 @@ export async function tratarMensagemDoCliente(
       await passarAUmaPessoa(telefone, MOTIVO_NO_PAINEL, RESPOSTA_A_QUEM_ESPEROU);
       return;
     }
+
+    /*
+     * RESPONDEU AO AVISO DA DATA — 01-10-2026.
+     *
+     * «O seu trabalho mudou de dia (…) Se não lhe der jeito, responda a esta
+     * mensagem.» E ele responde. O cérebro não sabe mudar o dia de um trabalho
+     * contratado: lia «esse dia não me dá jeito» como um pedido novo, ou como
+     * um NÃO a uma proposta de outro pedido dele. Um obrigado fica registado e
+     * mais nada; o resto passa a uma pessoa. Ver `aviso-de-data-ao-cliente.ts`.
+     */
+    const { avisoDeDataRecente } = await import("@/lib/db");
+    const {
+      HORAS_PARA_RESPONDER_AO_AVISO,
+      RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO,
+      eSoUmObrigado,
+      motivoNoPainelDoAvisoDeData,
+    } = await import("@/lib/aviso-de-data-ao-cliente");
+    const aviso = await avisoDeDataRecente(telefone, HORAS_PARA_RESPONDER_AO_AVISO);
+    if (aviso) {
+      if (eSoUmObrigado(conteudo.texto)) return;
+      await passarAUmaPessoa(
+        telefone,
+        motivoNoPainelDoAvisoDeData(aviso.pedidoId),
+        RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO,
+      );
+      return;
+    }
   }
 
   const pedidos = await pedidosDoTelefone(telefone);
