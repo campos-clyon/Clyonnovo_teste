@@ -132,7 +132,9 @@ describe("as duas agendas gravam ao largar, em hora de Lisboa", () => {
     ["do backoffice", ADMIN],
   ])("a agenda %s converte ao entrar e ao gravar", (_n, src) => {
     expect(src).toContain("onMover=");
-    expect(src).toMatch(/const inicio = noRelogioDeLisboa\(new Date\(movidos\[/);
+    // No do profissional o desvio passa por `quandoAgora`, que também serve o
+    // «Marcar» dos cartões (01-10-2026); no do backoffice lê-se `movidos` directo.
+    expect(src).toMatch(/const inicio = noRelogioDeLisboa\(new Date\((movidos\[|quandoAgora\(p\))/);
     expect(src).toMatch(/useState\(\(\) => noRelogioDeLisboa\(new Date\(\)\)\)/);
     /* `useAgora` já devolve o relógio de Lisboa: convertê-lo outra vez punha o «agora» fora do sítio. */
     expect(src).not.toMatch(/noRelogioDeLisboa\(useAgora\(\)\)/);

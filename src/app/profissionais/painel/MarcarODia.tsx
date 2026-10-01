@@ -93,15 +93,17 @@ export default function MarcarODia({
    *
    * Chama-se com o instante novo (ISO, ou `null` ao desmarcar) ANTES de ir à
    * rota, para quem mostra a data a mudar já — como o arrastar da agenda. Se
-   * a gravação falhar, chama-se outra vez com o valor de antes, e o erro
-   * aparece aqui. O `onGravado` continua a recarregar tudo, por trás.
+   * a gravação falhar, chama-se outra vez com o valor de antes E o erro: na
+   * agenda o cartão muda de dia e este campo desaparece antes de a resposta
+   * chegar, e então é lá fora que o erro tem de aparecer. O `onGravado`
+   * continua a recarregar tudo, por trás.
    */
   onMudou,
 }: {
   pedido: Pedido;
   onGravado: () => void;
   compacto?: boolean;
-  onMudou?: (dataCombinada: string | null) => void;
+  onMudou?: (dataCombinada: string | null, erro?: string) => void;
 }) {
   const jaCombinado = pedido.dataCombinada ?? null;
   const [quando, setQuando] = useState(paraOCampo(jaCombinado ?? pedido.dataAgendada));
@@ -141,7 +143,7 @@ export default function MarcarODia({
       onMudou?.(quandoParaEnviar || null);
       const r = await gravarODia(pedido.negociacaoId, quandoParaEnviar);
       if (!r.ok) {
-        onMudou?.(jaCombinado ? new Date(jaCombinado).toISOString() : null);
+        onMudou?.(jaCombinado ? new Date(jaCombinado).toISOString() : null, r.erro);
         setErro(r.erro);
         return;
       }
