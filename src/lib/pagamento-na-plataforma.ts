@@ -54,11 +54,13 @@ import { FORMA_EM_PALAVRAS, lerForma, type FormaDePagamento } from "./forma-de-p
  * email — «fica só o backoffice», decisão do dono a 21-09-2026. Não mudar sem
  * ele.
  *
- * ⚠️ AINDA DECIDE UMA COISA DE DINHEIRO, e não é texto: se a carteira do
- * profissional pergunta à base quem já pagou (ver `oClientePagou` em
- * `carteira.ts`). Isso ficou como estava de propósito — ligar essa pergunta
- * punha em «por cobrar» os trabalhos anteriores a 17-09-2026, que foram pagos
- * em mão sem deixar registo, e o que fazer com eles é uma decisão do dono.
+ * ⚠️ AINDA DECIDE UMA COISA DE DINHEIRO, e não é texto: ligado, a carteira do
+ * profissional pergunta à base se o cliente pagou TODOS os trabalhos (ver
+ * `verificaOPagamento` em `carteira.ts`). Desligado, pergunta só pelos NOVOS —
+ * *«Ligar, só para trabalhos novos»*, decisão do dono a 01-10-2026: os das
+ * negociações abertas a partir de `VERIFICAR_PAGAMENTO_DESDE`. Os anteriores,
+ * entre eles os de antes de 17-09-2026 pagos em mão sem deixar registo, ficam
+ * como sempre estiveram.
  */
 export const A_PLATAFORMA_COBRA = false;
 

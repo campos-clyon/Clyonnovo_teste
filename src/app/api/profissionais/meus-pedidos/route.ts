@@ -17,8 +17,8 @@ import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
-import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
-import { negociacoesPagas } from "@/lib/pagamentos-na-base";
+import { foiPagoEmMao, verificaOPagamento } from "@/lib/carteira";
+import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
 
 export const runtime = "nodejs";
 // Nunca em cache: a sugestão de cada pedido depende dos custos que ele acabou
@@ -89,15 +89,11 @@ export async function GET(req: NextRequest) {
     /*
      * Quais é que o cliente já pagou — uma consulta para a lista toda.
      *
-     * `null` enquanto a plataforma não cobrar: não há pagamentos por onde
-     * perguntar, e uma viagem ao MySQL por cada abertura do painel de cada
-     * profissional para não devolver nada é desperdício puro.
+     * Só pelos trabalhos que a carteira verifica (`verificaOPagamento`: desde
+     * 01-10-2026, os de negociações abertas a partir do corte). Pelos outros
+     * não há pagamentos por onde perguntar.
      */
-    const pagos = A_PLATAFORMA_COBRA
-      ? new Set(
-          (await negociacoesPagas(linhas.map((l) => l.id))).keys(),
-        )
-      : null;
+    const pagos = await pagamentosAVerificar(linhas);
 
     const agora = new Date();
 
@@ -324,10 +320,19 @@ export async function GET(req: NextRequest) {
          * que pé está o dinheiro ANTES de sair de casa, em vez de descobrir
          * depois que o valor lhe ficou em «por cobrar».
          *
-         * `null` quando a plataforma ainda não cobra: aí a pergunta não existe,
-         * e o ecrã não mostra nada — que é diferente de mostrar «não pago».
+         * `null` quando a carteira não verifica o pagamento deste trabalho
+         * (anterior ao corte de 01-10-2026): aí a pergunta não existe, e o
+         * ecrã não mostra nada — que é diferente de mostrar «não pago». E
+         * `null` em dinheiro: o serviço é pago a ele, no local, e «o cliente
+         * ainda não pagou à CLYON» seria falso.
+         *
+         * A MESMA pergunta da carteira (`verificaOPagamento`), para o cartão
+         * nunca dizer «pago» de um valor que a carteira mostra por cobrar.
          */
-        clientePagou: pagos == null ? null : pagos.has(l.id),
+        clientePagou:
+          verificaOPagamento({ negociacaoCriadaEm: l.createdAt }) && !foiPagoEmMao(l)
+            ? pagos.has(l.id)
+            : null,
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,

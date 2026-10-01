@@ -33,8 +33,10 @@ import { estaLibertado, faseDoTrabalho, type Trabalho } from "./trabalho";
  * mas não pago não vai para «disponível»: fica em «por cobrar». Senão, a CLYON
  * transferia a um profissional dinheiro que nunca recebeu.
  *
- * Enquanto `A_PLATAFORMA_COBRA` for falso nada disto se aplica — não há
- * pagamentos para verificar, e a carteira é exactamente a de sempre.
+ * Enquanto `A_PLATAFORMA_COBRA` for falso, isto só se aplica aos trabalhos
+ * NOVOS — os de negociações abertas a partir de `VERIFICAR_PAGAMENTO_DESDE`
+ * (01-10-2026). Os anteriores têm a carteira exactamente de sempre. Ver
+ * `verificaOPagamento`.
  *
  * Todos os valores são LÍQUIDOS. O bruto não aparece em sítio nenhum do lado do
  * profissional: ver a decisão em taxas-plataforma.ts.
@@ -69,10 +71,18 @@ export type TrabalhoNaCarteira = Trabalho & {
    * Vem da tabela `pagamentos` (ver `negociacoesPagas`), e não da negociação:
    * um pagamento é um facto do banco, não um estado do acordo.
    *
-   * Só conta com `A_PLATAFORMA_COBRA` ligado. Antes disso é sempre nulo — não
-   * há pagamentos nenhuns — e a carteira comporta-se como sempre se comportou.
+   * Só conta quando `verificaOPagamento` diz que sim — com `A_PLATAFORMA_COBRA`
+   * ligado, ou num trabalho novo (01-10-2026). Nos outros nem se pergunta à
+   * base, e a carteira comporta-se como sempre se comportou.
    */
   clientePagouEm?: Date | string | null;
+  /**
+   * QUANDO ESTA NEGOCIAÇÃO FOI ABERTA — o `createdAt` da linha em `negociacoes`.
+   *
+   * É o marco da data de corte (`VERIFICAR_PAGAMENTO_DESDE`). Em falta, o
+   * trabalho conta como ANTERIOR ao corte: é o lado em que nada muda.
+   */
+  negociacaoCriadaEm?: Date | string | null;
 };
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
@@ -99,8 +109,9 @@ export type Carteira = {
   /**
    * Trabalho feito que o cliente ainda não pagou.
    *
-   * Não é dinheiro de ninguém e não se levanta. Zero enquanto a plataforma não
-   * cobrar — nesse mundo não há pagamentos por onde esperar.
+   * Não é dinheiro de ninguém e não se levanta. Com a plataforma a não cobrar,
+   * só os trabalhos novos (`VERIFICAR_PAGAMENTO_DESDE`) podem cá cair — nos
+   * anteriores não há pagamentos por onde esperar.
    */
   porCobrar: number;
   /** Fechado e pago pelo cliente, à espera da confirmação. */
@@ -168,17 +179,82 @@ export function recebidoEmMaoDe(trabalhos: TrabalhoNaCarteira[], agora: Date): n
 }
 
 /**
+ * A PARTIR DE QUANDO A CARTEIRA PERGUNTA SE O CLIENTE PAGOU — 01-10-2026.
+ *
+ * *«Ligar, só para trabalhos novos.»* — decisão do dono, 01-10-2026.
+ *
+ * A regra de 17-09-2026 é que um trabalho confirmado mas NÃO pago fica «por
+ * cobrar», nunca «disponível» (nem pelo prazo automático dos 7 dias). Só que
+ * ela dependia de `A_PLATAFORMA_COBRA`, que está em `false` por outra razão (o
+ * cliente não paga sozinho pelo link) — e com ele desligado a carteira mostrava
+ * «disponível», e deixava pedir o levantamento, de dinheiro que o cliente
+ * ainda não tinha pago.
+ *
+ * Ligar para todos punha em «por cobrar» os trabalhos anteriores a 17-09-2026,
+ * pagos em mão sem deixar registo. Por isso há um corte: os trabalhos novos
+ * ficam com a regra, os antigos ficam exactamente como estavam.
+ *
+ * O MARCO É A ABERTURA DA NEGOCIAÇÃO (`negociacoes.createdAt`), e não a
+ * confirmação:
+ *
+ *   · é fixo desde o primeiro dia — um trabalho nunca muda de regime a meio.
+ *     Pela confirmação, o mesmo trabalho por pagar aparecia «cativo» até ser
+ *     confirmado e saltava para «por cobrar» no dia em que o era; e a
+ *     libertação pelo prazo nem escreve a data;
+ *   · uma negociação aberta a partir do corte foi, à força, CONTRATADA a partir
+ *     do corte. Nenhum trabalho contratado antes de 01-10-2026 muda — que é a
+ *     outra metade da decisão. A confirmação não dá essa garantia: um trabalho
+ *     antigo pago em mão sem registo e confirmado hoje caía em «por cobrar»;
+ *   · não há coluna com a data da contratação (o `updatedAt` muda a cada
+ *     escrita), e uma nova só existiria para os trabalhos de hoje em diante.
+ *
+ * O preço, dito: uma negociação aberta antes do corte e contratada depois fica
+ * no regime antigo. É uma janela que se fecha sozinha em poucas semanas, e
+ * nesses trabalhos o travão continua a ser o backoffice.
+ *
+ * Meia-noite de Lisboa (UTC+1 no Verão). O `createdAt` é escrito pelo relógio
+ * do MySQL, em UTC no Railway, e lido como UTC pela Vercel.
+ */
+export const VERIFICAR_PAGAMENTO_DESDE = new Date("2026-10-01T00:00:00+01:00");
+
+function comoData(v: Date | string | null | undefined): Date | null {
+  if (v == null) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * A CARTEIRA PERGUNTA SE O CLIENTE PAGOU ESTE TRABALHO?
+ *
+ * Sim com `A_PLATAFORMA_COBRA` ligado (para todos), ou num trabalho cuja
+ * negociação foi aberta a partir de `VERIFICAR_PAGAMENTO_DESDE`. Sem data, não
+ * — o lado do corte em que nada muda.
+ *
+ * É também o que decide se se vai à tabela dos pagamentos
+ * (`carteira-do-profissional.ts`): perguntar só por estes.
+ */
+export function verificaOPagamento(
+  t: Pick<TrabalhoNaCarteira, "negociacaoCriadaEm">,
+  opcoes: ComoLerACarteira = {},
+): boolean {
+  if (opcoes.aPlataformaCobra ?? A_PLATAFORMA_COBRA) return true;
+  const criada = comoData(t.negociacaoCriadaEm);
+  return criada != null && criada.getTime() >= VERIFICAR_PAGAMENTO_DESDE.getTime();
+}
+
+/**
  * O CLIENTE JÁ PAGOU ESTE TRABALHO?
  *
- * Com a plataforma a não cobrar, a resposta é sempre «sim» — e tem de ser: não
- * existem pagamentos, e responder «não» punha a carteira inteira de todos os
- * profissionais em «por cobrar» no dia em que este ficheiro mudasse.
+ * Quando a carteira não pergunta (`verificaOPagamento` falso), a resposta é
+ * sempre «sim» — e tem de ser: para esses trabalhos não há registo de
+ * pagamentos, e responder «não» punha-os todos em «por cobrar» de um dia para
+ * o outro.
  */
 export function oClientePagou(
   t: TrabalhoNaCarteira,
   opcoes: ComoLerACarteira = {},
 ): boolean {
-  if (!(opcoes.aPlataformaCobra ?? A_PLATAFORMA_COBRA)) return true;
+  if (!verificaOPagamento(t, opcoes)) return true;
   return t.clientePagouEm != null;
 }
 

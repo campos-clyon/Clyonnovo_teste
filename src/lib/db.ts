@@ -13,7 +13,6 @@ import {
   acrescimoDaForma,
   type FormaDePagamento,
 } from "@/lib/forma-de-pagamento";
-import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
 import { oQueReabrir } from "@/lib/cancelamento";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -2697,6 +2696,11 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     taxaProfissional: string | null;
     propostasJson: string | null;
     updatedAt: Date;
+    /**
+     * Quando a negociação foi aberta. É o marco da carteira para saber se
+     * verifica o pagamento do cliente — `VERIFICAR_PAGAMENTO_DESDE`, 01-10-2026.
+     */
+    createdAt: Date;
     execucaoEnviadaEm: Date | null;
     provaJson: string | null;
     confirmadoEm: Date | null;
@@ -2764,6 +2768,10 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   if (!pool) return [];
   const [rows] = await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
+            -- A abertura da negociacao: o marco do corte de 01-10-2026 na
+            -- carteira (VERIFICAR_PAGAMENTO_DESDE). Sem ela, um trabalho novo
+            -- contava como antigo e deixava levantar o que nao foi pago.
+            n.createdAt,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
@@ -4297,7 +4305,7 @@ async function tudoOQueOLivroPrecisa(): Promise<
   const [nLinhas] = (await pool.execute(
     `SELECT id, providerId, pedidoId, estado, valorAcordado,
             taxaCliente, taxaProfissional, formaDePagamento,
-            execucaoEnviadaEm, confirmadoEm, pagoEm
+            execucaoEnviadaEm, confirmadoEm, pagoEm, createdAt
        FROM negociacoes`,
   )) as any[];
   /*
@@ -4308,10 +4316,12 @@ async function tudoOQueOLivroPrecisa(): Promise<
    * base onde ainda não existisse — o que inclui a de hoje e qualquer cópia de
    * segurança restaurada.
    */
-  const { negociacoesPagas } = await import("@/lib/pagamentos-na-base");
-  const pagos = A_PLATAFORMA_COBRA
-    ? await negociacoesPagas((nLinhas as Array<{ id: number }>).map((n) => Number(n.id)))
-    : new Map<number, Date>();
+  // A mesma pergunta da carteira do painel, pelos mesmos trabalhos: os que
+  // `verificaOPagamento` verifica (01-10-2026, «só para trabalhos novos»).
+  const { pagamentosAVerificar } = await import("@/lib/carteira-do-profissional");
+  const pagos = await pagamentosAVerificar(
+    nLinhas as Array<{ id: number; createdAt: Date | null }>,
+  );
   const [lLinhas] = (await pool.execute(
     "SELECT id, providerId, valor, estado, createdAt FROM levantamentos",
   )) as any[];
@@ -4345,6 +4355,7 @@ async function tudoOQueOLivroPrecisa(): Promise<
       // O CLIENTE a pagar à CLYON — não confundir com `pagoEm`, que é a CLYON
       // a pagar ao profissional. Ver `carteira-do-profissional.ts`.
       clientePagouEm: pagos.get(Number(n.id)) ?? null,
+      negociacaoCriadaEm: n.createdAt ?? null,
     });
   }
   for (const l of lLinhas as Array<Record<string, any>>) {
@@ -9552,7 +9563,7 @@ export async function apagarProfissional(
     // expurgados sem que isso apague o dinheiro que geraram.
     const [nLinhas] = (await conn.execute(
       `SELECT id, estado, valorAcordado, taxaCliente, taxaProfissional,
-              execucaoEnviadaEm, confirmadoEm, pagoEm
+              execucaoEnviadaEm, confirmadoEm, pagoEm, createdAt
          FROM negociacoes WHERE providerId = ?`,
       [providerId],
     )) as any[];
@@ -9565,6 +9576,8 @@ export async function apagarProfissional(
       execucaoEnviadaEm: Date | null;
       confirmadoEm: Date | null;
       pagoEm: Date | null;
+      /** O marco do corte de 01-10-2026 — ver `verificaOPagamento`. */
+      createdAt: Date | null;
     }>;
 
     const [lLinhas] = (await conn.execute(
