@@ -26,6 +26,20 @@
  * com um histórico estragado, um JSON meio escrito, ou uma mensagem sem autor.
  */
 
+/**
+ * O instante de uma data destas conversas. Um texto da base sem fuso
+ * (`2026-10-01 14:00:00`) é UTC, que é como a base grava — a mesma regra de
+ * `instanteDaBase` em `hora-de-lisboa.ts`, escrita aqui porque este ficheiro
+ * não importa nada (ver o teste: é lido no browser). `null` se não se ler.
+ */
+function instanteDaBase(valor: string | null | undefined): Date | null {
+  if (!valor) return null;
+  const texto = String(valor).trim();
+  const semFuso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(texto);
+  const d = new Date(semFuso ? `${texto.replace(" ", "T")}Z` : texto);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /** De onde veio a conversa. Decide o distintivo, e por onde a resposta sai. */
 /**
  * ⚠️ O WHATSAPP NÃO É UMA ORIGEM DESTE ECRÃ — 15-09-2026.
@@ -164,8 +178,8 @@ export function conversaDoHistorico(historyJson: unknown): MensagemDaConversa[] 
 export function ultimaEm(c: ConversaDeSuporte): number {
   const ultima = c.mensagens[c.mensagens.length - 1];
   if (!ultima) return 0;
-  const t = new Date(String(ultima.quando).replace(" ", "T")).getTime();
-  return Number.isFinite(t) ? t : 0;
+  // Um texto da base sem fuso é UTC — ver `instanteDaBase`.
+  return instanteDaBase(ultima.quando)?.getTime() ?? 0;
 }
 
 /**
@@ -182,9 +196,8 @@ export function porResponder(c: ConversaDeSuporte): boolean {
 
 /** O instante de uma data como as fontes a gravam ('2026-09-16 18:35:02'). */
 function instante(quando: string | null | undefined): number {
-  if (!quando) return 0;
-  const t = new Date(String(quando).replace(" ", "T")).getTime();
-  return Number.isFinite(t) ? t : 0;
+  // Um texto da base sem fuso é UTC — ver `instanteDaBase`.
+  return instanteDaBase(quando)?.getTime() ?? 0;
 }
 
 /**

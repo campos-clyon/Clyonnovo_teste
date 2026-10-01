@@ -84,10 +84,26 @@ export default function MarcarODia({
    * cada um dos oito trabalhos do dia empurrava para baixo o que interessa.
    */
   compacto = false,
+  /**
+   * A DATA NOVA, NO MOMENTO DO CLIQUE — 01-10-2026.
+   *
+   * *«O site é muito lento para mudar as datas e horário; mesmo que altere,
+   * ele não faz de imediato.»* O ecrã só mudava depois de a rota responder
+   * e de o painel inteiro se recarregar (trabalhos, carteira e perfil).
+   *
+   * Chama-se com o instante novo (ISO, ou `null` ao desmarcar) ANTES de ir à
+   * rota, para quem mostra a data a mudar já — como o arrastar da agenda. Se
+   * a gravação falhar, chama-se outra vez com o valor de antes E o erro: na
+   * agenda o cartão muda de dia e este campo desaparece antes de a resposta
+   * chegar, e então é lá fora que o erro tem de aparecer. O `onGravado`
+   * continua a recarregar tudo, por trás.
+   */
+  onMudou,
 }: {
   pedido: Pedido;
   onGravado: () => void;
   compacto?: boolean;
+  onMudou?: (dataCombinada: string | null, erro?: string) => void;
 }) {
   const jaCombinado = pedido.dataCombinada ?? null;
   const [quando, setQuando] = useState(paraOCampo(jaCombinado ?? pedido.dataAgendada));
@@ -124,8 +140,10 @@ export default function MarcarODia({
         quandoParaEnviar = d.toISOString();
       }
 
+      onMudou?.(quandoParaEnviar || null);
       const r = await gravarODia(pedido.negociacaoId, quandoParaEnviar);
       if (!r.ok) {
+        onMudou?.(jaCombinado ? new Date(jaCombinado).toISOString() : null, r.erro);
         setErro(r.erro);
         return;
       }

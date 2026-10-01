@@ -172,6 +172,24 @@ export function doRelogioDeLisboa(local: Date): Date | null {
   );
 }
 
+/**
+ * O INSTANTE DE UMA DATA QUE VEIO DA BASE — 01-10-2026.
+ *
+ * A base guarda em UTC (`NOW()`, `toMySQLDateTime`), e quando a data chega em
+ * texto — `2026-10-01 14:00:00`, sem fuso — é UTC. `new Date` desse texto
+ * lia-o no fuso de quem corria o código: uma hora a menos no servidor no
+ * Verão, quatro a menos num browser no Brasil. Um ISO com fuso, ou um `Date`,
+ * passam tal e qual. Devolve `null` para o que não se ler.
+ */
+export function instanteDaBase(valor: string | Date | null | undefined): Date | null {
+  if (valor == null || valor === "") return null;
+  if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : valor;
+  const texto = String(valor).trim();
+  const semFuso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(texto);
+  const d = new Date(semFuso ? `${texto.replace(" ", "T")}Z` : texto);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /** `YYYY-MM-DDTHH:mm` ou `YYYY-MM-DD HH:mm`, com segundos opcionais. */
 const SEM_FUSO = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
 

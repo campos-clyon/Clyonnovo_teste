@@ -153,3 +153,45 @@ describe("a hora que ele escreve é a hora que fica", () => {
     expect(ROTA_AGENDA).not.toContain("const d = new Date(cru)");
   });
 });
+
+describe("mudar o dia é instantâneo, no detalhe e na agenda — 01-10-2026", () => {
+  /*
+   * «O site é muito lento para mudar as datas e horário; mesmo que altere,
+   * ele não faz de imediato.» O ecrã esperava pela rota e pelo recarregamento
+   * do painel inteiro — e no detalhe nem assim mudava, porque lia a data que
+   * o cliente pediu e não a combinada.
+   */
+  const MARCAR = ler("src/app/profissionais/painel/MarcarODia.tsx");
+  const TRABALHOS = ler("src/app/profissionais/painel/Trabalhos.tsx");
+  const ROTA = ler("src/app/api/profissionais/agenda/route.ts");
+
+  it("o «Marcar» avisa com a data nova ANTES de ir à rota, e desfaz com o erro", () => {
+    const antes = MARCAR.indexOf("onMudou?.(quandoParaEnviar || null);");
+    const rota = MARCAR.indexOf("await gravarODia(pedido.negociacaoId, quandoParaEnviar)");
+    expect(antes).toBeGreaterThan(-1);
+    expect(rota).toBeGreaterThan(antes);
+    expect(MARCAR).toContain("new Date(jaCombinado).toISOString() : null, r.erro);");
+  });
+
+  it("o detalhe e os dois campos da agenda ouvem-no", () => {
+    expect(TRABALHOS).toContain("onMudou={setCombinadaAgora}");
+    expect(AGENDA.match(/onMudou=\{\(combinada, erro\) => marcarPeloCampo\(p, combinada, erro\)\}/g)).toHaveLength(2);
+    expect(AGENDA.match(/onGravado=\{\(\) => gravadoPeloCampo\(p\.negociacaoId\)\}/g)).toHaveLength(2);
+  });
+
+  it("na agenda, tudo o que se vê passa pelo dia de AGORA", () => {
+    // A grelha, a lista por dias, a hora do cartão, a janela e o calendário.
+    expect(AGENDA).toMatch(/p\.negociacaoId in movidos \? quandoE\(\{ \.\.\.p, dataCombinada: movidos\[p\.negociacaoId\] \}\) : quandoE\(p\)/);
+    const corpo = AGENDA.slice(AGENDA.indexOf("export default function Agenda("));
+    const fora = corpo.replace(/const quandoAgora[\s\S]*?: quandoE\(p\);/, "").replace(/const fica = quandoE\(/, "").replace(/const real = p \? quandoE\(p\)/, "").replace(/const local = p \? quandoE\(/, "");
+    expect(fora).not.toMatch(/quandoE\(/);
+    expect(AGENDA).toContain("linkGoogleCalendar(p, quandoAgora(p) as string)");
+  });
+
+  it("a rota responde logo a seguir a gravar; o histórico vai para depois", () => {
+    expect(ROTA).toMatch(/import \{ NextRequest, NextResponse, after \} from "next\/server";/);
+    const depois = ROTA.slice(ROTA.indexOf("after(async () => {"));
+    expect(ROTA.indexOf("after(async () => {")).toBeGreaterThan(ROTA.indexOf("UPDATE negociacoes SET dataCombinada"));
+    expect(depois.slice(0, depois.indexOf("});") + 3)).toContain("appendOrderHistory(");
+  });
+});

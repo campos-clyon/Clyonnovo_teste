@@ -46,16 +46,23 @@ export type QuandoDoTrabalho = {
   passou: boolean;
   /**
    * De onde saiu isto:
+   *  · `combinada` — o profissional marcou o dia com o cliente («Marcar»);
    *  · `marcada`  — há data e hora gravadas no pedido;
    *  · `deduzida` — o cliente disse "hoje"/"amanhã" e conta-se desde a criação;
    *  · `janela`   — "esta semana", que é um intervalo e não um dia;
    *  · `sem_data` — não há nada, e o trabalho é quando os dois quiserem.
    */
-  origem: "marcada" | "deduzida" | "janela" | "sem_data";
+  origem: "combinada" | "marcada" | "deduzida" | "janela" | "sem_data";
 };
 
 type Entrada = {
   urgency?: string | null;
+  /**
+   * O dia que o profissional combinou com o cliente (`negociacoes.dataCombinada`).
+   * Vive à parte de `dataAgendada`, que é o que o cliente PEDIU — ver a rota
+   * `/api/profissionais/agenda`.
+   */
+  dataCombinada?: string | Date | null;
   dataAgendada?: string | Date | null;
   /** Quando o cliente fez o pedido — é o zero de "amanhã". */
   criadoEm?: string | Date | null;
@@ -140,6 +147,37 @@ const ESTA_SEMANA = new Set(["this_week", "esta_semana", "semana"]);
  * não se passa.
  */
 export function quandoEOTrabalho(t: Entrada, agora: Date = new Date()): QuandoDoTrabalho {
+  /*
+   * O DIA COMBINADO GANHA A TUDO — 01-10-2026.
+   *
+   * *«O site é muito lento para mudar as datas e horário; mesmo que altere,
+   * ele não faz de imediato.»* Não fazia nunca: o «Marcar» grava em
+   * `dataCombinada`, e esta conta só lia `dataAgendada`, o dia que o cliente
+   * pediu. O profissional marcava o dia 2, via «Marcado», e por cima
+   * continuava a ler «Ontem, 30 de setembro — o dia marcado já passou».
+   *
+   * O que o cliente pediu não se perde: o detalhe mostra-o por baixo quando é
+   * diferente.
+   */
+  const combinada = paraData(t.dataCombinada);
+  if (combinada) {
+    const dias = diasEntre(agora, combinada);
+    const hora = horaDe(combinada);
+    return {
+      curto: rotuloCurto(combinada, dias),
+      dia: rotuloLongo(combinada, dias),
+      hora,
+      aviso:
+        dias < 0
+          ? "O dia combinado já passou. Se ficou para outro dia, corrija-o em baixo."
+          : hora
+            ? null
+            : "Sem hora marcada — combine-a com o cliente.",
+      passou: dias < 0,
+      origem: "combinada",
+    };
+  }
+
   const marcada = paraData(t.dataAgendada);
 
   /*

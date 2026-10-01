@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Ao tomar um pedido sem enviar assignedAt, preenche agora
   if (body.assignedToId != null && !body.assignedAt) {
-    body.assignedAt = new Date().toISOString();
+    body.assignedAt = new Date();
+  }
+
+  /*
+   * A DATA DO CAMPO É HORA DE LISBOA — 01-10-2026.
+   *
+   * Chegava em texto, `2026-10-01T15:00`, e ia tal e qual para a base, que a
+   * guardava como se fosse a hora certa. Com a base lida em UTC (`db.ts`),
+   * passa a ir como instante: as 15h de Lisboa, e não as 15h de Greenwich.
+   */
+  if (typeof body.dataAgendada === "string" && body.dataAgendada.trim()) {
+    const d = instanteEmLisboa(body.dataAgendada);
+    if (!d) return NextResponse.json({ ok: false, message: "Data inválida." }, { status: 400 });
+    body.dataAgendada = d;
   }
 
   try {

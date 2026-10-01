@@ -94,8 +94,9 @@ function cabecalhoDoDia(d: Date): string {
  * Duração por omissão: 2 horas — recolhas raramente passam disso, e um
  * bloco curto demais esconde o trabalho na grelha do dia.
  */
-function linkGoogleCalendar(p: Pedido): string {
-  const inicio = new Date(quandoE(p) as string);
+function linkGoogleCalendar(p: Pedido, quando: string): string {
+  // `quando` vem de fora: logo depois de mudar a hora, o link já leva a nova.
+  const inicio = new Date(quando);
   const fim = new Date(inicio.getTime() + 2 * 3600_000);
   // A hora de LISBOA, que é o que o `ctz` diz: com a do telemóvel, um
   // telemóvel noutro fuso marcava o trabalho à hora errada.
@@ -198,12 +199,71 @@ export default function Agenda({
    * não manda mensagem nenhuma ao cliente, só escreve no histórico do
    * pedido. Um arrasto por engano corrige-se com outro arrasto, e fica
    * registado.
+   *
+   * O CAMPO DO CARTÃO TAMBÉM — 01-10-2026. *«Faz também o campo da agenda
+   * instantâneo.»* O «Marcar» do cartão passa pelo mesmo desvio: o trabalho
+   * muda de dia no clique, e esta linha de estado diz «A gravar…», «Mudado
+   * para…» ou porque não mudou.
+   *
+   * O desvio é a DATA COMBINADA por gravar (`null` = desmarcada), e não a data
+   * que se vê: desmarcar volta a mostrar o que o cliente pediu, como fará a
+   * lista quando vier da base.
    */
-  const [movidos, setMovidos] = useState<Record<number, string>>({});
+  const [movidos, setMovidos] = useState<Record<number, string | null>>({});
   const [avisoDoArrasto, setAvisoDoArrasto] = useState<{
     tipo: "a_gravar" | "ok" | "erro";
     texto: string;
   } | null>(null);
+
+  /**
+   * O dia de um trabalho como ele o deve ver AGORA — com o que está por gravar.
+   * Passa pelo `quandoE`, que continua a ser o único a ler as colunas.
+   */
+  const quandoAgora = (p: Pedido): string | null =>
+    p.negociacaoId in movidos ? quandoE({ ...p, dataCombinada: movidos[p.negociacaoId] }) : quandoE(p);
+
+  /** «sexta-feira, 2 de outubro, às 09:00», em Lisboa. */
+  const porExtenso = (iso: string) => {
+    const parede = noRelogioDeLisboa(new Date(iso));
+    return `${diaPorExtenso(parede).toLowerCase()}, às ${horaCurta(parede)}`;
+  };
+
+  /*
+   * O «Marcar» do cartão avisa aqui duas vezes: no clique, com a data nova, e
+   * — se a rota recusar — com a de antes e o erro. O campo fecha-se logo no
+   * clique: o cartão pode ir parar a outro dia, e um campo aberto com a data
+   * antiga enquanto a nova já está no sítio só confundia.
+   */
+  const marcadoPeloCampo = useRef<Record<number, string>>({});
+  function marcarPeloCampo(p: Pedido, combinada: string | null, erro?: string) {
+    const id = p.negociacaoId;
+    if (erro) {
+      setMovidos((m) => {
+        const n = { ...m };
+        delete n[id];
+        return n;
+      });
+      setAvisoDoArrasto({ tipo: "erro", texto: `Não mudou: ${erro}` });
+      return;
+    }
+    setMovidos((m) => ({ ...m, [id]: combinada }));
+    setAMudar(null);
+    const fica = quandoE({ ...p, dataCombinada: combinada });
+    const texto = combinada
+      ? `Mudado para ${porExtenso(combinada)}.`
+      : fica
+        ? `Desmarcado — volta ao que o cliente pediu: ${porExtenso(fica)}.`
+        : "Desmarcado — fica sem data.";
+    marcadoPeloCampo.current[id] = texto;
+    setAvisoDoArrasto({
+      tipo: "a_gravar",
+      texto: combinada ? `A gravar: ${porExtenso(combinada)}…` : "A desmarcar…",
+    });
+  }
+  function gravadoPeloCampo(id: number) {
+    setAvisoDoArrasto({ tipo: "ok", texto: marcadoPeloCampo.current[id] ?? "Gravado." });
+    onRecarregar();
+  }
 
   async function moverPorArrasto(id: number, parede: Date) {
     /* A grelha larga em hora de Lisboa; a rota grava o instante verdadeiro. */
@@ -244,8 +304,13 @@ export default function Agenda({
       const n = { ...m };
       for (const [id, iso] of Object.entries(m)) {
         const p = pedidos.find((x) => x.negociacaoId === Number(id));
+        /*
+         * O desvio guarda a data COMBINADA; o que se compara é o dia que se
+         * vê com ele e sem ele. Igual quer dizer que a base já tem a nova.
+         */
         const real = p ? quandoE(p) : null;
-        if (!p || (real && new Date(real).getTime() === new Date(iso).getTime())) {
+        const local = p ? quandoE({ ...p, dataCombinada: iso }) : null;
+        if (!p || (real ? new Date(real).getTime() : null) === (local ? new Date(local).getTime() : null)) {
           delete n[Number(id)];
           mudou = true;
         }
@@ -272,23 +337,23 @@ export default function Agenda({
   const contratados = pedidos.filter((p) => p.fase === "a_executar" && !p.arquivadoEm);
 
   const comData = contratados
-    .filter((p) => quandoE(p))
+    .filter((p) => quandoAgora(p))
     .sort(
       (a, b) =>
-        new Date(quandoE(a) as string).getTime() - new Date(quandoE(b) as string).getTime(),
+        new Date(quandoAgora(a) as string).getTime() - new Date(quandoAgora(b) as string).getTime(),
     );
-  const semData = contratados.filter((p) => !quandoE(p));
+  const semData = contratados.filter((p) => !quandoAgora(p));
 
   const porDia = new Map<string, Pedido[]>();
   for (const p of comData) {
-    const chave = diaEmLisboa(new Date(quandoE(p) as string));
+    const chave = diaEmLisboa(new Date(quandoAgora(p) as string));
     porDia.set(chave, [...(porDia.get(chave) ?? []), p]);
   }
 
   /* Os trabalhos com dia, traduzidos para a grelha. A cor diz o serviço. */
   const eventos: EventoDaAgenda[] = comData.map((p) => {
     // No relógio de Lisboa: a grelha lê `getHours()`, e no Brasil eram 4 h a menos.
-    const inicio = noRelogioDeLisboa(new Date(movidos[p.negociacaoId] ?? (quandoE(p) as string)));
+    const inicio = noRelogioDeLisboa(new Date(quandoAgora(p) as string));
     const servico = nomeDoServico(p.serviceType);
     const onde = p.morada ?? p.city ?? null;
     return {
@@ -350,10 +415,8 @@ export default function Agenda({
           {comHora && (
             <p className="flex items-center gap-1.5 text-sm font-bold text-acao">
               <Clock className="h-4 w-4" aria-hidden="true" />
-              {new Date(quandoE(p) as string).toLocaleTimeString("pt-PT", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {/* Em Lisboa, e não no relógio do telemóvel — como o resto do ecrã. */}
+              {horaCurta(noRelogioDeLisboa(new Date(quandoAgora(p) as string)))}
             </p>
           )}
           <p className="mt-0.5 text-sm font-semibold text-tinta">{nomeDoServico(p.serviceType)}</p>
@@ -397,7 +460,7 @@ export default function Agenda({
 
       {comHora ? (
         <a
-          href={linkGoogleCalendar(p)}
+          href={linkGoogleCalendar(p, quandoAgora(p) as string)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#E2EEF3] bg-[#F4F8FB] text-sm font-semibold text-tinta transition active:bg-[#E2EEF3]"
@@ -419,7 +482,12 @@ export default function Agenda({
           <p className="text-xs leading-relaxed text-amber-800">
             Sem data marcada — combine com o cliente e marque aqui.
           </p>
-          <MarcarODia pedido={p} onGravado={onRecarregar} compacto />
+          <MarcarODia
+            pedido={p}
+            onGravado={() => gravadoPeloCampo(p.negociacaoId)}
+            onMudou={(combinada, erro) => marcarPeloCampo(p, combinada, erro)}
+            compacto
+          />
         </div>
       )}
 
@@ -438,10 +506,8 @@ export default function Agenda({
           {aMudar === p.negociacaoId ? (
             <MarcarODia
               pedido={p}
-              onGravado={() => {
-                setAMudar(null);
-                onRecarregar();
-              }}
+              onGravado={() => gravadoPeloCampo(p.negociacaoId)}
+              onMudou={(combinada, erro) => marcarPeloCampo(p, combinada, erro)}
               compacto
             />
           ) : (
@@ -505,8 +571,12 @@ export default function Agenda({
             O QUE ACONTECEU AO ARRASTO, em palavras: «A gravar», «Mudado para
             sexta às 14:30», ou porque não mudou. Sem isto, largar um bloco era
             um gesto sem resposta — e é dinheiro e um cliente à espera.
+
+            Serve também o «Marcar» dos cartões, e por isso aparece na lista
+            quando há o que dizer: o cartão muda de dia no clique e o campo
+            fecha-se, e é aqui que se lê se gravou.
           */}
-          {vista !== "lista" && (
+          {(vista !== "lista" || avisoDoArrasto) && (
             <p
               role="status"
               aria-live="polite"
@@ -558,7 +628,7 @@ export default function Agenda({
               {[...porDia.entries()].map(([chave, lista]) => (
                 <section key={chave}>
                   <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-tinta-fraca">
-                    {cabecalhoDoDia(new Date(quandoE(lista[0]) as string))}
+                    {cabecalhoDoDia(new Date(quandoAgora(lista[0]) as string))}
                   </h2>
                   <div className="space-y-2.5">{lista.map((p) => cartao(p, true))}</div>
                 </section>
@@ -627,8 +697,8 @@ export default function Agenda({
           >
             <div className="mb-2 flex items-center justify-between gap-3 pl-1">
               <p id="agenda-trabalho-aberto" className="text-sm font-semibold text-tinta">
-                {quandoE(pAberto)
-                  ? diaPorExtenso(noRelogioDeLisboa(new Date(quandoE(pAberto) as string)))
+                {quandoAgora(pAberto)
+                  ? diaPorExtenso(noRelogioDeLisboa(new Date(quandoAgora(pAberto) as string)))
                   : "Sem data marcada"}
               </p>
               <button
@@ -641,7 +711,21 @@ export default function Agenda({
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            {cartao(pAberto, Boolean(quandoE(pAberto)))}
+            {/* A linha de estado da agenda fica por trás desta janela; repete-se aqui. */}
+            {avisoDoArrasto && (
+              <p
+                className={`mb-2 pl-1 text-xs ${
+                  avisoDoArrasto.tipo === "erro"
+                    ? "font-semibold text-rose-700"
+                    : avisoDoArrasto.tipo === "ok"
+                      ? "font-semibold text-emerald-700"
+                      : "text-tinta-fraca"
+                }`}
+              >
+                {avisoDoArrasto.texto}
+              </p>
+            )}
+            {cartao(pAberto, Boolean(quandoAgora(pAberto)))}
           </div>
         </div>
       )}

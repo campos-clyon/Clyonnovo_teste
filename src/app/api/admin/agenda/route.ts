@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
+import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { naAgenda } from "@/lib/agenda-dos-trabalhos";
 import {
   quantoOProfissionalRecebe,
@@ -266,6 +266,17 @@ export async function POST(req: NextRequest) {
       resumo,
       visivelProfissional: true,
     });
+
+    /*
+     * E O CLIENTE FICA A SABER — 01-10-2026. Não daqui, e não já: isto só
+     * regista que o dia mudou, e a passagem do assistente manda-lhe UM
+     * WhatsApp quando a data estiver quieta uns minutos (ver
+     * `aviso-de-data-ao-cliente.ts`). Vale para o arrasto e para a
+     * ficha, que gravam os dois por aqui.
+     */
+    if ((antes?.getTime() ?? null) !== (quando?.getTime() ?? null)) {
+      await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes, porQuem: "clyon" });
+    }
 
     return NextResponse.json({ ok: true, dataCombinada: quando ? quando.toISOString() : null });
   } catch (e) {

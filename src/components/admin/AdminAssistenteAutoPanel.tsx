@@ -11,6 +11,7 @@ import {
 } from "@/lib/assistente-interruptores";
 import { ATRASOS_SUGERIDOS, atrasoPorExtenso } from "@/lib/assistente-tempo-de-resposta";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /**
  * O ECRÃ DO ASSISTENTE AUTOMÁTICO.
@@ -91,8 +92,9 @@ const PORQUE_FECHOU: Record<string, string> = {
 };
 
 function quando(iso: string): string {
-  const d = new Date(iso.replace(" ", "T"));
-  if (Number.isNaN(d.getTime())) return iso;
+  // Um texto da base sem fuso é UTC — ver `instanteDaBase`.
+  const d = instanteDaBase(iso);
+  if (!d) return iso;
   return d.toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
@@ -343,6 +345,21 @@ export default function AdminAssistenteAutoPanel() {
                                   distribuição nem chega a tentar.
                                 </span>
                               )}
+                            </p>
+                          )}
+                          {/*
+                            O AVISO DA DATA tem a mesma fechadura do canal que
+                            os avisos ao profissional: é a CLYON a começar a
+                            conversa. Pela Meta só chega a quem nos escreveu
+                            nas últimas 24 h; sem canal automático, a nenhum.
+                          */}
+                          {c === "avisar_data" && ligado && estado.canal !== "ponte" && (
+                            <p className="mt-1 text-[11px] leading-relaxed text-amber-400/80">
+                              {estado.canal === "meta"
+                                ? "O canal em uso é a API da Meta: só chega aos clientes que nos escreveram nas últimas 24 h."
+                                : estado.canal === "manual"
+                                  ? "O canal em uso é à mão: o aviso fica na fila do painel do WhatsApp até alguém o enviar."
+                                  : "Não há canal ligado, por isso não sai nada."}
                             </p>
                           )}
                         </div>

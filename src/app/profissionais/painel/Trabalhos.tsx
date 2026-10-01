@@ -839,7 +839,7 @@ export default function Trabalhos({
                         </span>
                       )}
                     </span>
-                    {(p.dataAgendada || p.urgency) && (
+                    {(p.dataCombinada || p.dataAgendada || p.urgency) && (
                       /*
                         O DIA, e não a palavra congelada.
                         Ver `quando-e-o-trabalho`: «Amanhã» só aparece quando é
@@ -1125,11 +1125,33 @@ function DetalheDoTrabalho({
     }
   }
 
+  /*
+   * O DIA QUE ELE ACABOU DE MARCAR, ANTES DE A BASE O DEVOLVER — 01-10-2026.
+   *
+   * O «Marcar» avisa aqui com a data nova no momento do clique (`onMudou`), e
+   * o dia lá em cima muda logo, em vez de esperar pela rota e pelo
+   * recarregamento do painel inteiro. Se a gravação falhar, o «Marcar» devolve
+   * o valor de antes. `undefined` quer dizer «sem desvio: vale o que veio da
+   * base»; `null` é «desmarcado».
+   */
+  const [combinadaAgora, setCombinadaAgora] = useState<string | null | undefined>(undefined);
+  /* Quando a lista chega com o mesmo instante, o desvio deixa de ser preciso. */
+  useEffect(() => {
+    if (combinadaAgora === undefined) return;
+    const daBase = pedido.dataCombinada ? new Date(pedido.dataCombinada).getTime() : null;
+    const local = combinadaAgora ? new Date(combinadaAgora).getTime() : null;
+    if (daBase === local) setCombinadaAgora(undefined);
+  }, [pedido.dataCombinada, combinadaAgora]);
+
   const doCliente = fotosDe(pedido.filesJson);
   const prova = provaDe(pedido.provaJson);
   const fechado = pedido.estado === "acordada";
-  /* O dia e a hora, para ele ver se lhe cabe na agenda. */
-  const quandoDoPedido = quandoEOTrabalho(pedido);
+  /* O dia e a hora, para ele ver se lhe cabe na agenda. O combinado ganha. */
+  const dataCombinada = combinadaAgora === undefined ? pedido.dataCombinada : combinadaAgora;
+  const quandoDoPedido = quandoEOTrabalho({ ...pedido, dataCombinada });
+  /* O que o cliente pediu, para se ver quando o combinado é outro dia. */
+  const pedidoPeloCliente =
+    quandoDoPedido.origem === "combinada" ? quandoEOTrabalho({ ...pedido, dataCombinada: null }) : null;
 
   async function marcarFeito() {
     if (fotos.length === 0) {
@@ -1406,6 +1428,20 @@ function DetalheDoTrabalho({
                   {quandoDoPedido.aviso}
                 </span>
               )}
+              {/*
+                O que o cliente pediu fica à vista quando o combinado é outro:
+                é essa diferença que diz que o trabalho mudou de dia.
+              */}
+              {pedidoPeloCliente &&
+                (pedidoPeloCliente.origem === "marcada" || pedidoPeloCliente.origem === "deduzida") &&
+                `${pedidoPeloCliente.dia}${pedidoPeloCliente.hora ?? ""}` !==
+                  `${quandoDoPedido.dia}${quandoDoPedido.hora ?? ""}` && (
+                  <span className="block text-xs text-slate-500">
+                    O cliente tinha pedido: {pedidoPeloCliente.dia.charAt(0).toLowerCase()}
+                    {pedidoPeloCliente.dia.slice(1)}
+                    {pedidoPeloCliente.hora && `, às ${pedidoPeloCliente.hora}`}
+                  </span>
+                )}
             </span>
           </li>
           {/*
@@ -1654,7 +1690,7 @@ function DetalheDoTrabalho({
             parte, e é o que deixa a CLYON ver que um trabalho pedido para
             quinta acabou marcado para sábado.
           */}
-          <MarcarODia pedido={pedido} onGravado={onRecarregar} />
+          <MarcarODia pedido={pedido} onGravado={onRecarregar} onMudou={setCombinadaAgora} />
         </section>
       )}
 

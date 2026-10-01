@@ -839,6 +839,112 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   }
 
   /*
+   * ── O DIA DO TRABALHO MUDOU — avisar o cliente e o profissional ─────────
+   *
+   * *«Sim, avise o cliente pelo WhatsApp.»* e *«Avise também o profissional
+   * quando a data mudar.»* — 01-10-2026. Cada mudança de data (arrasto na
+   * agenda, ficha do backoffice, painel do profissional) deixa uma volta em
+   * `avisosDeDataAoCliente`; aqui sai UMA mensagem a cada lado por trabalho, e
+   * só quando a data está quieta há `MINUTOS_PARA_ASSENTAR` minutos. Ver
+   * `aviso-de-data-ao-cliente.ts` e `aviso-de-data-ao-profissional.ts`.
+   *
+   * CADA LADO COM O SEU INTERRUPTOR: «Avisar o cliente da data» e «Avisar o
+   * profissional» — desligar um não cala o outro. A volta lê-se mesmo com os
+   * dois em baixo, e fecha-se como «desligado»: uma volta que ficasse aberta
+   * saía no dia em que alguém voltasse a ligar, a contar uma mudança de há uma
+   * semana como se fosse de agora.
+   *
+   * ANTES de «com tudo em baixo» e não depois, pela mesma razão.
+   *
+   * `enviarAvisoWhatsApp`, como os outros avisos: é uma notícia, não uma
+   * conversa. Uma conversa entregue a uma pessoa da CLYON não pode calar o
+   * «o seu trabalho passou para sexta». Valem o WhatsApp ligado e o número não
+   * estar bloqueado — e, do lado do profissional, o sim dele no painel.
+   *
+   * RESPEITA A HORA, como tudo o que fala com gente: das 9 h às 21 h, para os
+   * dois. Uma mudança às 23 h sai às 9 h; se nessa altura o dia novo já tiver
+   * passado, já não é aviso.
+   */
+  if (horaDeFalar(agora)) {
+    const {
+      AVISOS_DE_DATA_POR_PASSAGEM,
+      MINUTOS_PARA_ASSENTAR,
+      decidirAvisoDeData,
+      textoDoAvisoDeData,
+    } = await import("@/lib/aviso-de-data-ao-cliente");
+    const { textoDoAvisoDeDataAoProfissional } = await import("@/lib/aviso-de-data-ao-profissional");
+    const { telemovelParaWhatsApp } = await import("@/lib/whatsapp-cloud");
+    const porSair = await db
+      .avisosDeDataPorSair(MINUTOS_PARA_ASSENTAR, AVISOS_DE_DATA_POR_PASSAGEM)
+      .catch(() => []);
+    for (const a of porSair) {
+      /*
+       * Só telemóveis, como em todo o primeiro contacto: um fixo sem
+       * indicativo chegava a outra pessoa qualquer, com o nome do cliente e o
+       * dia em que a casa dele fica vazia.
+       */
+
+      // ── O cliente ──
+      let porqueNaoSaiu: string | null;
+      const paraOCliente = decidirAvisoDeData(a, agora);
+      const telefoneDoCliente = telemovelParaWhatsApp(a.telefoneDoCliente);
+      if (!podeFazer("avisar_data")) porqueNaoSaiu = "desligado";
+      else if (!paraOCliente.avisar) porqueNaoSaiu = paraOCliente.porque;
+      else if (!telefoneDoCliente || !a.dataCombinada) porqueNaoSaiu = "sem telemovel";
+      else {
+        const texto = textoDoAvisoDeData(
+          {
+            pedidoId: a.pedidoId,
+            cliente: a.cliente,
+            servico: a.servico,
+            antes: a.conhecida,
+            depois: a.dataCombinada,
+          },
+          agora,
+        );
+        const saiu = await enviarAvisoWhatsApp(telefoneDoCliente, texto).catch(() => false);
+        porqueNaoSaiu = saiu ? null : "nao saiu";
+        if (saiu) {
+          resumo.novidades++;
+          resumo.linhas.push(`Cliente avisado da data nova do pedido #${a.pedidoId}.`);
+        }
+      }
+
+      // ── O profissional — só do que a CLYON lhe mudou ──
+      let porqueNaoSaiuAoPro: string | null;
+      const paraOPro = decidirAvisoDeData({ ...a, conhecida: a.proSabe }, agora);
+      const telefoneDoPro = telemovelParaWhatsApp(a.telefoneDoProfissional);
+      if (!a.proPrecisaDeAviso) porqueNaoSaiuAoPro = "foi ele";
+      else if (!podeFazer("avisar_profissional")) porqueNaoSaiuAoPro = "desligado";
+      else if (!a.profissionalQuerAvisos) porqueNaoSaiuAoPro = "nao quer avisos";
+      else if (!paraOPro.avisar) porqueNaoSaiuAoPro = paraOPro.porque;
+      else if (!telefoneDoPro || !a.dataCombinada) porqueNaoSaiuAoPro = "sem telemovel";
+      else {
+        const texto = textoDoAvisoDeDataAoProfissional(
+          {
+            pedidoId: a.pedidoId,
+            profissional: a.profissional,
+            servico: a.servico,
+            localidade: a.localidade,
+            antes: a.proSabe,
+            depois: a.dataCombinada,
+            clienteJaSabe: porqueNaoSaiu === null,
+          },
+          agora,
+        );
+        const saiu = await enviarAvisoWhatsApp(telefoneDoPro, texto).catch(() => false);
+        porqueNaoSaiuAoPro = saiu ? null : "nao saiu";
+        if (saiu) {
+          resumo.novidades++;
+          resumo.linhas.push(`Profissional avisado da data nova do pedido #${a.pedidoId}.`);
+        }
+      }
+
+      await db.fecharAvisoDeData(a.negociacaoId, a.versao, porqueNaoSaiu, porqueNaoSaiuAoPro);
+    }
+  }
+
+  /*
    * COM TUDO EM BAIXO, NÃO SE LÊ A BASE À TOA.
    *
    * A derivação custa duas consultas e trezentos pedidos, de dez em dez

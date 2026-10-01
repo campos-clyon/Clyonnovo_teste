@@ -46,7 +46,13 @@ describe("o caminho da data até ao painel do profissional", () => {
     expect(PAINEL).toContain('import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";');
     // Uma na lista, uma no detalhe.
     expect(PAINEL).toContain("const quando = quandoEOTrabalho(p);");
-    expect(PAINEL).toContain("const quandoDoPedido = quandoEOTrabalho(pedido);");
+    /*
+     * No detalhe passa com a data combinada de AGORA — a que ele acabou de
+     * marcar, antes de a base a devolver (01-10-2026). Sem ela, o dia lá em
+     * cima ficava no que o cliente pediu e não mudava ao carregar «Marcar».
+     */
+    expect(PAINEL).toContain("const quandoDoPedido = quandoEOTrabalho({ ...pedido, dataCombinada });");
+    expect(PAINEL).toContain("onMudou={setCombinadaAgora}");
   });
 
   it("a palavra crua deixou de ser desenhada no painel", () => {

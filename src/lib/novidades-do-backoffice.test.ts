@@ -78,19 +78,19 @@ describe("que secções avisam", () => {
 describe("a partir de quando é que uma coisa é nova", () => {
   const agora = Date.parse("2026-09-17T18:00:00Z");
 
-  it("com marca, conta a partir dela", () => {
+  it("com marca, conta a partir dela — e a marca está em UTC, como a base", () => {
     /*
-     * NO FUSO DA MÁQUINA, e não em UTC — é isso que faz a volta fechar.
+     * EM UTC, desde 01-10-2026 — e não no fuso da máquina.
      *
-     * A marca sai da base como `'2026-09-17 09:30:00'`, sem fuso, e volta
-     * para lá como parâmetro de uma consulta. O driver escreve e lê pela
-     * mesma regra, e o que importa é que a ida e a volta usem a mesma: um `Z`
-     * a mais aqui punha o selo a contar a partir de uma hora que não existe
-     * em lado nenhum — e num país com hora de Verão isso é uma hora de
-     * novidades a aparecer ou a desaparecer duas vezes por ano.
+     * A marca sai da base pelo `toMySQLDateTime`, que escreve em UTC, e volta
+     * para lá como parâmetro de uma consulta. A ligação passou a ler e a
+     * escrever em UTC (`FUSO_DA_BASE` em `db.ts`), e a ida e a volta usam a
+     * mesma regra: UTC nas duas pontas. Lida «no fuso da máquina», a marca
+     * ficava uma hora atrás no Verão no servidor em Lisboa, e o selo contava
+     * como novidade o que já se tinha visto.
      */
-    expect(desdeQuando("2026-09-17 09:30:00", agora).getTime()).toBe(
-      new Date("2026-09-17T09:30:00").getTime(),
+    expect(desdeQuando("2026-09-17 09:30:00", agora).toISOString()).toBe(
+      "2026-09-17T09:30:00.000Z",
     );
   });
 

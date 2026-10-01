@@ -20,6 +20,8 @@
  * se olhar. As duas fazem falta e nenhuma substitui a outra.
  */
 
+import { instanteDaBase } from "./hora-de-lisboa";
+
 export const SECCOES_COM_AVISO = [
   "pedidos",
   "profissionais",
@@ -57,10 +59,10 @@ export const JANELA_SEM_MARCA_MS = 24 * 60 * 60 * 1000;
  * lado seguro do engano, porque esconder novidades não se vê.
  */
 export function desdeQuando(vistoEm: string | null | undefined, agora: number): Date {
-  if (vistoEm) {
-    const t = new Date(String(vistoEm).replace(" ", "T")).getTime();
-    if (Number.isFinite(t)) return new Date(t);
-  }
+  // `'2026-09-17 18:35:02'` vem de `toMySQLDateTime`, que escreve em UTC —
+  // lido sem fuso, no servidor em Lisboa, ficava uma hora atrás no Verão.
+  const d = instanteDaBase(vistoEm);
+  if (d) return d;
   return new Date(agora - JANELA_SEM_MARCA_MS);
 }
 
