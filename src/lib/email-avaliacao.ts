@@ -43,6 +43,13 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
   const servico = SERVICE_LABELS[params.serviceType ?? ""] ?? params.serviceType ?? "Serviço";
   const contaUrl = `${SITE_URL}/conta`;
 
+  /*
+   * #007A8C é a cor de acção do site (`--color-acao` no globals.css), escrita à
+   * mão porque um email não lê o CSS do site. Era #0891B2: branco sobre ele dá
+   * 3,6:1, e o botão «Deixar avaliação» é a única coisa que este email pede.
+   * Branco sobre #007A8C dá 5,04:1; o subtítulo passou a #CFFAFE para continuar
+   * legível na faixa, agora mais escura.
+   */
   const html = `<!DOCTYPE html>
 <html lang="pt">
 <head><meta charset="UTF-8"><title>Como correu? — CLYON</title></head>
@@ -51,9 +58,9 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;max-width:600px;width:100%;">
         <tr>
-          <td style="background:#0891b2;padding:28px 36px;">
+          <td style="background:#007A8C;padding:28px 36px;">
             <p style="margin:0;color:#fff;font-size:22px;font-weight:700;">CLYON</p>
-            <p style="margin:4px 0 0;color:#bae6fd;font-size:13px;">Como correu o serviço?</p>
+            <p style="margin:4px 0 0;color:#cffafe;font-size:13px;">Como correu o serviço?</p>
           </td>
         </tr>
         <tr>
@@ -64,7 +71,7 @@ export async function sendReviewRequestEmail(params: ReviewRequestParams): Promi
             </p>
             <p style="text-align:center;margin:0 0 24px;">
               <a href="${contaUrl}"
-                style="display:inline-block;background:#0891b2;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;">
+                style="display:inline-block;background:#007A8C;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;">
                 Deixar avaliação ★
               </a>
             </p>
