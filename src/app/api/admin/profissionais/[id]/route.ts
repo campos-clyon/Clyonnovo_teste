@@ -157,10 +157,17 @@ export async function PATCH(
       }
       const pool = await getPool();
       if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
-      await pool.execute("UPDATE providers SET contaDeTeste = ? WHERE id = ?", [
+      const [r] = (await pool.execute("UPDATE providers SET contaDeTeste = ? WHERE id = ?", [
         corpo.contaDeTeste ? 1 : 0,
         providerId,
-      ]);
+      ])) as [{ affectedRows?: number }, unknown];
+      // Uma marca que não pegou em linha nenhuma diz-se — não passa por feita.
+      if (Number(r?.affectedRows ?? 0) === 0) {
+        return NextResponse.json(
+          { error: `O profissional #${providerId} não foi encontrado.` },
+          { status: 404 },
+        );
+      }
       feito.push(corpo.contaDeTeste ? "marcada como conta de teste" : "deixou de ser conta de teste");
       console.info(
         `[admin/profissionais] #${providerId} ${corpo.contaDeTeste ? "marcado" : "desmarcado"} como teste por ${colab.nome}`,
