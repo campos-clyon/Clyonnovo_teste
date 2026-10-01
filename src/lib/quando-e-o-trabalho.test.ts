@@ -59,6 +59,41 @@ describe("a data marcada ganha sempre", () => {
   });
 });
 
+describe("o dia combinado pelo profissional ganha ao que o cliente pediu", () => {
+  /*
+   * 01-10-2026: o «Marcar» gravava em `dataCombinada` e esta conta só lia
+   * `dataAgendada`. Ele marcava o dia 2 e por cima continuava «Ontem, 30 de
+   * setembro — o dia marcado já passou».
+   */
+  it("mostra o combinado, e não o pedido", () => {
+    const q = quandoEOTrabalho(
+      {
+        urgency: "tomorrow",
+        dataAgendada: "2026-08-27T08:00:00.000Z", // ontem, o que o cliente pediu
+        dataCombinada: "2026-08-31T08:00:00.000Z", // segunda, às 9h em Lisboa
+      },
+      HOJE,
+    );
+    expect(q.origem).toBe("combinada");
+    expect(q.dia).toBe("Segunda-feira, 31 de agosto");
+    expect(q.hora).toBe("09:00");
+    expect(q.passou).toBe(false);
+    expect(q.aviso).toBeNull();
+  });
+
+  it("sem combinado, volta a valer o que o cliente pediu", () => {
+    const q = quandoEOTrabalho({ dataAgendada: "2026-08-29T10:00:00.000Z", dataCombinada: null }, HOJE);
+    expect(q.origem).toBe("marcada");
+  });
+
+  it("um combinado que já passou diz o que fazer, e não «antes de propor»", () => {
+    const q = quandoEOTrabalho({ dataCombinada: "2026-08-27T08:00:00.000Z" }, HOJE);
+    expect(q.passou).toBe(true);
+    expect(q.aviso).toContain("O dia combinado já passou");
+    expect(q.aviso).not.toContain("propor");
+  });
+});
+
 describe("sem data marcada, a conta faz-se desde o dia do pedido", () => {
   it("«amanhã» pedido ontem é HOJE, e não amanhã", () => {
     const q = quandoEOTrabalho(

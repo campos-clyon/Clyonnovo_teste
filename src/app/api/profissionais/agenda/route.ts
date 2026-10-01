@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
@@ -155,15 +155,30 @@ export async function POST(req: NextRequest) {
         (antes ? ` (estava ${fmt(antes)})` : "")
       : `${sessao.nome} desmarcou o dia do trabalho${antes ? ` (estava ${fmt(antes)})` : ""}`;
 
-    await appendOrderHistory(linha.pedidoId, { type: "agenda", by: null, message: resumo });
-    await registarSemFalhar({
-      acontecimento: "agenda_marcada",
-      pedidoId: linha.pedidoId,
-      negociacaoId,
-      autorTipo: "profissional",
-      autorNome: sessao.nome,
-      valor: null,
-      resumo,
+    /*
+     * O HISTÓRICO ESCREVE-SE DEPOIS DE RESPONDER — 01-10-2026.
+     *
+     * *«O site é muito lento para mudar as datas e horário.»* A resposta
+     * esperava por mais três idas à base (ler o histórico do pedido, regravá-lo
+     * inteiro, e o registo) que não mudam nada do que ele vê: o dia já está
+     * gravado na linha de cima. `after` corre-as quando a resposta já saiu, e
+     * na Vercel a função espera por elas antes de adormecer.
+     */
+    after(async () => {
+      try {
+        await appendOrderHistory(linha.pedidoId, { type: "agenda", by: null, message: resumo });
+      } catch (e) {
+        console.error("[api/profissionais/agenda] histórico:", e);
+      }
+      await registarSemFalhar({
+        acontecimento: "agenda_marcada",
+        pedidoId: linha.pedidoId,
+        negociacaoId,
+        autorTipo: "profissional",
+        autorNome: sessao.nome,
+        valor: null,
+        resumo,
+      });
     });
 
     /*
