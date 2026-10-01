@@ -5,6 +5,7 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
   BadgeCheck,
   Check,
+  ChevronDown,
   Loader2,
   Mail,
   MapPin,
@@ -91,6 +92,7 @@ export default function AdminProfissionaisPanel({
   const [filtro, setFiltro] = useState<"todos" | EstadoDoProfissional | "por_verificar">("todos");
   const [busca, setBusca] = useState("");
   const [aEditar, setAEditar] = useState<number | null>(null);
+  const [verSuspensos, setVerSuspensos] = useState(false);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -248,6 +250,18 @@ export default function AdminProfissionaisPanel({
     });
   }, [profissionais, filtro, busca]);
 
+  /*
+   * AS CONTAS SUSPENSAS À PARTE, ATRÁS DE UM BOTÃO — 01-10-2026.
+   *
+   * *«Separe contas suspensas das demais e coloque dentro de um botão.»*
+   *
+   * Vinham misturadas com as activas, com o mesmo tamanho de cartão, e quem
+   * procurava um profissional a trabalhar tinha de saltar por cima delas. Não
+   * recebem pedidos; ficam no fim, fechadas, e o botão diz quantas são.
+   */
+  const activos = visiveis.filter((p) => p.estado !== "suspenso");
+  const suspensos = visiveis.filter((p) => p.estado === "suspenso");
+
   if (!ready || aCarregar) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-400">
@@ -261,9 +275,20 @@ export default function AdminProfissionaisPanel({
     { id: "pendente", nome: "Por aprovar" },
     { id: "por_verificar", nome: "Guia por verificar" },
     { id: "aprovado", nome: "Aprovados" },
-    { id: "suspenso", nome: "Suspensos" },
     { id: "rejeitado", nome: "Rejeitados" },
   ];
+
+  const cartao = (p: Profissional) => (
+    <Cartao
+      key={p.id}
+      p={p}
+      ocupado={ocupado === p.id}
+      emEdicao={aEditar === p.id}
+      onEditar={() => setAEditar(aEditar === p.id ? null : p.id)}
+      onActuar={(corpo) => actuar(p.id, corpo)}
+      onApagar={() => apagar(p.id)}
+    />
+  );
 
   return (
     <div>
@@ -285,7 +310,11 @@ export default function AdminProfissionaisPanel({
       {/* Filtros — com as contagens, para se ver onde está o trabalho */}
       <div className="mb-4 flex flex-wrap gap-1.5">
         {FILTROS.map((f) => {
-          const n = contagens[f.id] ?? 0;
+          // «Todos» conta o que se vê nele: os suspensos estão no botão do fim.
+          const n =
+            f.id === "todos"
+              ? contagens.todos - (contagens.suspenso ?? 0)
+              : (contagens[f.id] ?? 0);
           const activo = filtro === f.id;
           const urgente = f.id === "por_verificar" && n > 0;
           return (
@@ -355,25 +384,30 @@ export default function AdminProfissionaisPanel({
         </div>
       )}
 
-      {visiveis.length === 0 && (
+      {activos.length === 0 && suspensos.length === 0 && (
         <p className="rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
           {profissionais.length === 0 ? "Ainda ninguém se inscreveu." : "Nada com esse filtro."}
         </p>
       )}
 
-      <div className="space-y-3">
-        {visiveis.map((p) => (
-          <Cartao
-            key={p.id}
-            p={p}
-            ocupado={ocupado === p.id}
-            emEdicao={aEditar === p.id}
-            onEditar={() => setAEditar(aEditar === p.id ? null : p.id)}
-            onActuar={(corpo) => actuar(p.id, corpo)}
-            onApagar={() => apagar(p.id)}
-          />
-        ))}
-      </div>
+      <div className="space-y-3">{activos.map(cartao)}</div>
+
+      {suspensos.length > 0 && (
+        <div className="mt-6 border-t border-slate-800 pt-4">
+          <button
+            onClick={() => setVerSuspensos((v) => !v)}
+            aria-expanded={verSuspensos}
+            className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/[0.06] px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+          >
+            Contas suspensas · {suspensos.length}
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition ${verSuspensos ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          {verSuspensos && <div className="mt-3 space-y-3">{suspensos.map(cartao)}</div>}
+        </div>
+      )}
     </div>
   );
 }
