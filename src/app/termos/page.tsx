@@ -40,6 +40,7 @@ import { quotaDaClyon } from "@/lib/quota-da-clyon";
 import { MAXIMO_EM_NUMERARIO, taxasParaAForma } from "@/lib/forma-de-pagamento";
 import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+import { DIAS_PARA_PAGAR_A_DIVIDA } from "@/lib/divida-do-profissional";
 
 /** As taxas mudam no backoffice: a página relê-as de hora a hora. */
 export const revalidate = 3600;
@@ -508,6 +509,18 @@ export default async function TermosPage() {
             ou em dinheiro, no local, quando o cliente escolhe essa forma de
             pagamento: nesse caso recebe do cliente o preço com IVA incluído e
             entrega à CLYON, por referência, o IVA e a comissão.
+          </p>
+          {/*
+            A DÍVIDA DOS TRABALHOS EM DINHEIRO — 01-10-2026, decisão do dono:
+            «abater no saldo + bloquear». Está aqui antes de se aplicar a
+            alguém, porque reserva saldo e restringe trabalho.
+          */}
+          <p>
+            Esse valor paga-se no prazo de {DIAS_PARA_PAGAR_A_DIVIDA} dias depois
+            de o trabalho estar confirmado. Enquanto não estiver pago, fica
+            reservado no seu saldo disponível e pode ser abatido no levantamento
+            seguinte; passado o prazo, deixa de poder aceitar ou propor em
+            trabalhos pagos em dinheiro até a dívida estar paga.
           </p>
           <p>
             Os dados do cliente que lhe são mostrados destinam-se{" "}
